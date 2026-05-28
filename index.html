@@ -753,7 +753,65 @@ footer{
 .anim-in-2{animation:fadeInUp .7s .1s ease both}
 .anim-in-3{animation:fadeInUp .7s .2s ease both}
 .anim-in-4{animation:fadeInUp .7s .3s ease both}
-.anim-in-5{animation:fadeInUp .7s .4s ease both}
+.anim-in-5{animation:fadeInUp .7s .4s ease both}@media (max-width: 1024px){
+
+  h1{
+    font-size:72px !important;
+    line-height:1.05 !important;
+  }
+
+  .hero{
+    padding:60px 20px !important;
+  }
+
+  img{
+    max-width:280px !important;
+    height:auto !important;
+  }
+}
+
+@media (max-width: 768px){
+
+  h1{
+    font-size:58px !important;
+    line-height:1.05 !important;
+    padding:0 16px;
+  }
+
+  .hero{
+    padding-top:40px !important;
+  }
+
+  nav{
+    padding:12px 16px !important;
+  }
+
+  .nav-links{
+    display:none !important;
+  }
+
+  img{
+    max-width:220px !important;
+    height:auto !important;
+  }
+
+  .subtitle{
+    font-size:16px !important;
+    padding:0 18px;
+  }
+
+  .cta-buttons{
+    flex-direction:column !important;
+    gap:12px !important;
+    width:100%;
+    padding:0 20px;
+  }
+
+  .cta-buttons a{
+    width:100%;
+    text-align:center;
+  }
+}
 </style>
 </head>
 <body>
