@@ -140,7 +140,13 @@ nav{
   letter-spacing:-.3px;white-space:nowrap;
 }
 .nav-logo-text span{color:var(--cyan)}
-.nav-links{display:none;align-items:center;gap:28px;list-style:none}
+.nav-links{
+  display:flex;
+  align-items:center;
+  gap:20px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
 .nav-links a{color:var(--text-300);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
 .nav-links a:hover{color:#fff}
 @media(min-width:900px){.nav-links{display:flex}}
