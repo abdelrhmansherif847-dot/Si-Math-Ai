@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Si Math AI — History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a87cff;--purple-soft:rgba(168,124,255,.12);--purple-border:rgba(168,124,255,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{background-color:#050a14 !important;background:#050a14 !important;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;position:relative}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
+.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:-60px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+/* TOP BAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:var(--space-3);padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:11px;background:var(--bg-card);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:13.5px;transition:all .2s}
+.back-btn:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-1px)}
+.back-btn svg{width:15px;height:15px}
+.back-btn .lbl-full{display:none}
+@media(min-width:560px){.back-btn .lbl-full{display:inline}.back-btn .lbl-short{display:none}}
+
+/* SIDEBAR */
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff;padding:0 6px 12px}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft);box-shadow:inset 0 0 18px rgba(56,189,248,.08)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+/* MAIN */
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+.page-head{margin-bottom:var(--space-5);animation:rise .6s ease both}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:inline-flex;align-items:center;gap:8px}
+.eyebrow .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
+.page-head h1{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,7vw,36px);line-height:1.08;letter-spacing:-.02em;color:#fff}
+.page-head p{color:var(--text-300);font-size:15px;margin-top:8px;max-width:560px}
+.sec-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:var(--space-7) 4px var(--space-4);display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+.card{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:var(--space-5);animation:rise .6s ease both}
+@media(min-width:768px){.card{padding:var(--space-6)}}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:var(--space-4)}
+.search-wrap .s-ic{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--text-500);display:flex}
+.search-wrap .s-ic svg{width:17px;height:17px}
+.search-wrap input{width:100%;background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--r-md);padding:14px 14px 14px 44px;color:var(--text-100);font-family:var(--font-body);font-size:15px;transition:all .2s}
+.search-wrap input::placeholder{color:var(--text-500)}
+.search-wrap input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+
+/* FILTER TABS */
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:var(--space-5)}
+.filters::-webkit-scrollbar{display:none}
+.filter{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:100px;background:var(--bg-card);border:1px solid var(--border-mid);color:var(--text-300);font-weight:600;font-size:13px;white-space:nowrap;transition:all .2s}
+.filter:hover{border-color:var(--cyan-border);color:#fff}
+.filter.on{background:var(--cyan);border-color:var(--cyan);color:#031020;box-shadow:0 0 16px rgba(56,189,248,.3)}
+.filter .fdot{width:6px;height:6px;border-radius:50%}
+.filter .fdot.chat{background:var(--cyan)}.filter .fdot.mock{background:var(--amber)}.filter .fdot.weak{background:var(--red)}.filter .fdot.focus{background:var(--green)}
+
+/* LEARNING STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(min-width:680px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{padding:16px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));border:1px solid var(--border-soft);transition:transform .25s,border-color .25s}
+.stat:hover{transform:translateY(-3px);border-color:var(--cyan-border)}
+.stat .si{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:12px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.stat .sv{font-family:var(--font-display);font-weight:800;font-size:26px;color:#fff;line-height:1}
+.stat .sl{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400);margin-top:6px}
+
+/* TIMELINE */
+.tl-group{margin-bottom:var(--space-6)}
+.tl-date{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:14px}
+.tl-date::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,var(--cyan-border),var(--border-soft))}
+.tl-item{position:relative;margin-bottom:12px;padding:14px 16px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);transition:all .2s}
+.tl-item:last-child{margin-bottom:0}
+.tl-item:hover{border-color:var(--cyan-border);transform:translateX(3px)}
+.tl-item::before{content:'';position:absolute;left:-21px;top:20px;width:11px;height:11px;border-radius:50%;border:2px solid var(--bg);background:var(--cyan)}
+.tl-item.chat::before{background:var(--cyan)}.tl-item.mock::before{background:var(--amber)}.tl-item.weak::before{background:var(--red)}.tl-item.focus::before{background:var(--green)}
+.tl-head{display:flex;align-items:center;gap:11px}
+.tl-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.tl-item.chat .tl-ic{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.tl-item.mock .tl-ic{background:var(--amber-soft);border:1px solid var(--amber-border)}
+.tl-item.weak .tl-ic{background:var(--red-soft);border:1px solid var(--red-border)}
+.tl-item.focus .tl-ic{background:var(--green-soft);border:1px solid var(--green-border)}
+.tl-meta{flex:1;min-width:0}
+.tl-t{font-family:var(--font-display);font-weight:700;font-size:14.5px;color:#fff}
+.tl-s{font-size:12.5px;color:var(--text-400);margin-top:2px}
+.tl-s b{color:var(--cyan-3);font-weight:600}
+.tl-time{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);flex-shrink:0}
+
+/* RECORD CARDS (chat/mock/weak/focus history) */
+.records{display:flex;flex-direction:column;gap:11px}
+.rec{display:flex;align-items:center;gap:13px;padding:15px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);transition:all .2s;flex-wrap:wrap}
+.rec:hover{border-color:var(--cyan-border);transform:translateX(3px)}
+.rec .rec-ic{width:44px;height:44px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.rec.mock .rec-ic{background:var(--amber-soft);border-color:var(--amber-border)}
+.rec.weak .rec-ic{background:var(--red-soft);border-color:var(--red-border)}
+.rec.focus .rec-ic{background:var(--green-soft);border-color:var(--green-border)}
+.rec .rec-body{flex:1;min-width:140px}
+.rec .rec-t{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.rec .rec-date{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)}
+.rec .rec-sub{font-size:12.5px;color:var(--text-400);margin-top:5px;display:flex;gap:14px;flex-wrap:wrap}
+.rec .rec-sub b{color:var(--text-200);font-weight:600}
+.rec .rec-sub .pos{color:var(--green)}
+.rec .rec-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.rec .rtag{font-family:var(--font-mono);font-size:10.5px;padding:2px 9px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300)}
+.rec .rec-btn{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:13px;transition:all .2s}
+.rec .rec-btn:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-1px)}
+.rec .rec-btn svg{width:14px;height:14px}
+.rec .badge-done{font-family:var(--font-mono);font-size:10.5px;color:var(--green);display:inline-flex;align-items:center;gap:5px}
+.rec .badge-done svg{width:12px;height:12px}
+
+.empty-filter{display:none;text-align:center;padding:36px 20px;color:var(--text-500);font-size:14px}
+.empty-filter .ef-ic{font-size:32px;display:block;margin-bottom:10px;opacity:.6}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="index.html" aria-label="Home">
+    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <a class="back-btn" href="dashboard.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      <span class="lbl-full">Back to Dashboard</span><span class="lbl-short">Dashboard</span>
+    </a>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <a class="side-brand" href="index.html"><span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span><span>Si<span class="mid">Math</span> <span class="ai">AI</span></span></a>
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
+  <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
+  <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- SECTION 1: HEADER -->
+  <div class="page-head">
+    <div class="eyebrow"><span class="live-dot"></span> Learning History</div>
+    <h1>History</h1>
+    <p>Track your complete learning journey across Si Math AI.</p>
+  </div>
+
+  <!-- SECTION 9: SEARCH -->
+  <div class="search-wrap">
+    <span class="s-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+    <input type="text" id="searchInput" placeholder="Search history — e.g. Geometry, Functions, Mock Exam…"/>
+  </div>
+
+  <!-- SECTION 2: FILTERS -->
+  <div class="filters" id="filters">
+    <button class="filter on" data-filter="all">All Activity</button>
+    <button class="filter" data-filter="chat"><span class="fdot chat"></span>AI Chat Sessions</button>
+    <button class="filter" data-filter="mock"><span class="fdot mock"></span>Mock Exams</button>
+    <button class="filter" data-filter="weak"><span class="fdot weak"></span>Weakness Reports</button>
+    <button class="filter" data-filter="focus"><span class="fdot focus"></span>Focus Practice Plans</button>
+  </div>
+
+  <!-- SECTION 8: LEARNING STATS -->
+  <div class="stats">
+    <div class="stat"><div class="si">✅</div><div class="sv">1,284</div><div class="sl">Questions Solved</div></div>
+    <div class="stat"><div class="si">📝</div><div class="sv">7</div><div class="sl">Mock Exams</div></div>
+    <div class="stat"><div class="si">⏱️</div><div class="sv">38h</div><div class="sl">Study Hours</div></div>
+    <div class="stat"><div class="si">🎯</div><div class="sv">3</div><div class="sl">Focus Plans Done</div></div>
+  </div>
+
+  <!-- SECTION 3: LEARNING TIMELINE -->
+  <div class="sec-label">Learning Timeline</div>
+  <div id="timelineWrap">
+    <div class="tl-group" data-types="chat weak focus">
+      <div class="tl-date">Today</div>
+      <div class="timeline">
+        <div class="tl-item chat" data-type="chat" data-text="ai chat session 25 questions geometry functions">
+          <div class="tl-head"><span class="tl-ic">🤖</span><div class="tl-meta"><div class="tl-t">AI Chat Session</div><div class="tl-s"><b>25 questions</b> solved · Geometry, Functions</div></div><span class="tl-time">2:45 PM</span></div>
+        </div>
+        <div class="tl-item weak" data-type="weak" data-text="weakness analyzer updated geometry">
+          <div class="tl-head"><span class="tl-ic">📊</span><div class="tl-meta"><div class="tl-t">Weakness Analyzer Updated</div><div class="tl-s">New weak topic detected: <b>Geometry</b></div></div><span class="tl-time">2:50 PM</span></div>
+        </div>
+        <div class="tl-item focus" data-type="focus" data-text="focus practice generated geometry plan">
+          <div class="tl-head"><span class="tl-ic">🎯</span><div class="tl-meta"><div class="tl-t">Focus Practice Generated</div><div class="tl-s">4-week plan focused on <b>Geometry</b></div></div><span class="tl-time">2:52 PM</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-group" data-types="mock">
+      <div class="tl-date">Yesterday</div>
+      <div class="timeline">
+        <div class="tl-item mock" data-type="mock" data-text="mock exam completed sat score 620">
+          <div class="tl-head"><span class="tl-ic">📝</span><div class="tl-meta"><div class="tl-t">Mock Exam Completed</div><div class="tl-s">SAT · Score <b>620</b></div></div><span class="tl-time">6:10 PM</span></div>
+        </div>
+        <div class="tl-item mock" data-type="mock" data-text="mistake analysis generated error patterns">
+          <div class="tl-head"><span class="tl-ic">🧠</span><div class="tl-meta"><div class="tl-t">Mistake Analysis Generated</div><div class="tl-s">14 mistakes diagnosed by Si</div></div><span class="tl-time">6:35 PM</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-group" data-types="focus">
+      <div class="tl-date">Last Week</div>
+      <div class="timeline">
+        <div class="tl-item focus" data-type="focus" data-text="focus practice completed geometry improvement">
+          <div class="tl-head"><span class="tl-ic">🏆</span><div class="tl-meta"><div class="tl-t">Focus Practice Completed</div><div class="tl-s">Geometry improvement: <b>+18%</b></div></div><span class="tl-time">Mon</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: AI CHAT HISTORY -->
+  <div class="sec-label" data-types="chat">AI Chat History</div>
+  <div class="records" data-types="chat">
+    <div class="rec chat" data-type="chat" data-text="may 30 42 questions geometry functions">
+      <span class="rec-ic">🤖</span>
+      <div class="rec-body">
+        <div class="rec-t">Chat Session <span class="rec-date">May 30</span></div>
+        <div class="rec-sub"><span><b>42</b> questions solved</span></div>
+        <div class="rec-tags"><span class="rtag">Geometry</span><span class="rtag">Functions</span></div>
+      </div>
+      <a class="rec-btn" href="chat.html">Open Session <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+    <div class="rec chat" data-type="chat" data-text="may 28 30 questions algebra">
+      <span class="rec-ic">🤖</span>
+      <div class="rec-body">
+        <div class="rec-t">Chat Session <span class="rec-date">May 28</span></div>
+        <div class="rec-sub"><span><b>30</b> questions solved</span></div>
+        <div class="rec-tags"><span class="rtag">Algebra</span><span class="rtag">Statistics</span></div>
+      </div>
+      <a class="rec-btn" href="chat.html">Open Session <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+
+  <!-- SECTION 5: MOCK EXAM HISTORY -->
+  <div class="sec-label" data-types="mock">Mock Exam History</div>
+  <div class="records" data-types="mock">
+    <div class="rec mock" data-type="mock" data-text="sat mock exam score 620 2h 12m">
+      <span class="rec-ic">📝</span>
+      <div class="rec-body">
+        <div class="rec-t">SAT Mock Exam <span class="rec-date">May 29</span></div>
+        <div class="rec-sub"><span>Score: <b>620</b></span><span>Time: <b>2h 12m</b></span></div>
+      </div>
+      <a class="rec-btn" href="mock-exam.html">View Analysis <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+    <div class="rec mock" data-type="mock" data-text="est mock exam score 590 3h">
+      <span class="rec-ic">📝</span>
+      <div class="rec-body">
+        <div class="rec-t">EST Mock Exam <span class="rec-date">May 22</span></div>
+        <div class="rec-sub"><span>Score: <b>590</b></span><span>Time: <b>3h 00m</b></span></div>
+      </div>
+      <a class="rec-btn" href="mock-exam.html">View Analysis <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+
+  <!-- SECTION 6: WEAKNESS ANALYZER HISTORY -->
+  <div class="sec-label" data-types="weak">Weakness Analyzer History</div>
+  <div class="records" data-types="weak">
+    <div class="rec weak" data-type="weak" data-text="may 20 weak topics geometry functions">
+      <span class="rec-ic">📊</span>
+      <div class="rec-body">
+        <div class="rec-t">Weakness Report <span class="rec-date">May 20</span></div>
+        <div class="rec-sub"><span>Weak topics:</span></div>
+        <div class="rec-tags"><span class="rtag">Geometry</span><span class="rtag">Functions</span></div>
+      </div>
+      <a class="rec-btn" href="weakness.html">View Report <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+    <div class="rec weak" data-type="weak" data-text="may 10 weak topics advanced math geometry">
+      <span class="rec-ic">📊</span>
+      <div class="rec-body">
+        <div class="rec-t">Weakness Report <span class="rec-date">May 10</span></div>
+        <div class="rec-sub"><span>Weak topics:</span></div>
+        <div class="rec-tags"><span class="rtag">Advanced Math</span><span class="rtag">Geometry</span></div>
+      </div>
+      <a class="rec-btn" href="weakness.html">View Report <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+
+  <!-- SECTION 7: FOCUS PRACTICE HISTORY -->
+  <div class="sec-label" data-types="focus">Focus Practice History</div>
+  <div class="records" data-types="focus">
+    <div class="rec focus" data-type="focus" data-text="week plan geometry 4 weeks completed">
+      <span class="rec-ic">🎯</span>
+      <div class="rec-body">
+        <div class="rec-t">4-Week Plan <span class="rec-date">May 5</span></div>
+        <div class="rec-sub"><span>Focus: <b>Geometry</b></span><span>Duration: <b>4 weeks</b></span><span class="badge-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Completed</span></div>
+      </div>
+      <a class="rec-btn" href="focus.html">View Plan <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+    <div class="rec focus" data-type="focus" data-text="week plan functions 3 weeks completed">
+      <span class="rec-ic">🎯</span>
+      <div class="rec-body">
+        <div class="rec-t">3-Week Plan <span class="rec-date">Apr 18</span></div>
+        <div class="rec-sub"><span>Focus: <b>Functions</b></span><span>Duration: <b>3 weeks</b></span><span class="badge-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Completed</span></div>
+      </div>
+      <a class="rec-btn" href="focus.html">View Plan <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+
+  <div class="empty-filter" id="emptyFilter">
+    <span class="ef-ic">🔍</span>
+    No matching history found. Try a different filter or search term.
+  </div>
+</main>
+
+<script>
+  const sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay'),hamb=document.getElementById('hamb');
+  hamb.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('show')});
+  overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('show')});
+  sidebar.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<1024){sidebar.classList.remove('open');overlay.classList.remove('show')}}));
+
+  const filters=document.querySelectorAll('.filter');
+  const searchInput=document.getElementById('searchInput');
+  const emptyFilter=document.getElementById('emptyFilter');
+  let activeFilter='all';
+
+  function applyView(){
+    const q=searchInput.value.trim().toLowerCase();
+    let anyVisible=false;
+
+    // individual items (timeline items + record cards)
+    document.querySelectorAll('.tl-item,.rec').forEach(el=>{
+      const type=el.dataset.type;
+      const text=(el.dataset.text||'')+' '+el.textContent.toLowerCase();
+      const matchFilter=(activeFilter==='all'||type===activeFilter);
+      const matchSearch=(!q||text.indexOf(q)>=0);
+      const show=matchFilter&&matchSearch;
+      el.style.display=show?'':'none';
+      if(show)anyVisible=true;
+    });
+
+    // section labels + record groups: hide if filter excludes them or no visible children
+    document.querySelectorAll('[data-types]').forEach(group=>{
+      const types=group.dataset.types.split(' ');
+      const filterOk=(activeFilter==='all'||types.indexOf(activeFilter)>=0);
+      if(!filterOk){group.style.display='none';return;}
+      // if it contains items, check if any visible
+      const items=group.querySelectorAll('.tl-item,.rec');
+      if(items.length){
+        const vis=[...items].some(i=>i.style.display!=='none');
+        group.style.display=vis?'':'none';
+      }else{
+        group.style.display='';
+      }
+    });
+
+    emptyFilter.style.display=anyVisible?'none':'block';
+  }
+
+  filters.forEach(f=>f.addEventListener('click',()=>{
+    filters.forEach(x=>x.classList.remove('on'));f.classList.add('on');
+    activeFilter=f.dataset.filter;applyView();
+  }));
+  searchInput.addEventListener('input',applyView);
+</script>
+</body>
+</html>
