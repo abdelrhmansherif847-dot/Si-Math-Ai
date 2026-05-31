@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Si Math AI — Pricing &amp; Subscription</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{background-color:#050a14 !important;background:#050a14 !important;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;position:relative}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
+.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:-60px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+/* TOP BAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:var(--space-3);padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:11px;background:var(--bg-card);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:13.5px;transition:all .2s}
+.back-btn:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-1px)}
+.back-btn svg{width:15px;height:15px}
+.back-btn .lbl-full{display:none}
+@media(min-width:560px){.back-btn .lbl-full{display:inline}.back-btn .lbl-short{display:none}}
+
+/* SIDEBAR */
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff;padding:0 6px 12px}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft);box-shadow:inset 0 0 18px rgba(56,189,248,.08)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+/* MAIN */
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1000px;margin:0 auto}
+.page-head{margin-bottom:var(--space-5);animation:rise .6s ease both}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:inline-flex;align-items:center;gap:8px}
+.eyebrow .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
+.page-head h1{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,7vw,38px);line-height:1.08;letter-spacing:-.02em;color:#fff}
+.page-head p{color:var(--text-300);font-size:15px;margin-top:8px;max-width:560px}
+.sec-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:var(--space-7) 4px var(--space-4);display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+.card{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:var(--space-5);animation:rise .6s ease both}
+@media(min-width:768px){.card{padding:var(--space-6)}}
+
+/* SECTION 2: current plan */
+.current-plan{display:flex;align-items:center;gap:14px;border:1px solid var(--border-soft);background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-5);animation:rise .6s ease both}
+.current-plan .cp-ic{width:46px;height:46px;flex-shrink:0;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border)}
+.current-plan .cp-body{flex:1;min-width:0}
+.current-plan .cp-l{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
+.current-plan .cp-v{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;margin-top:3px}
+.plan-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:100px;font-family:var(--font-mono);font-size:11px;font-weight:500;flex-shrink:0}
+.plan-badge.free{background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300)}
+.plan-badge .pb-dot{width:6px;height:6px;border-radius:50%;background:var(--text-400)}
+
+/* SECTION 3: plan cards — credit-based */
+--violet:#8b5cf6;--violet-soft:rgba(139,92,246,.12);--violet-border:rgba(139,92,246,.32);
+--gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.36);
+
+.plans{display:grid;grid-template-columns:1fr;gap:20px}
+@media(min-width:640px){.plans{grid-template-columns:1fr 1fr}}
+@media(min-width:960px){.plans{grid-template-columns:repeat(4,1fr)}}
+
+/* wrapper to allow the "most popular" ribbon to sit above the card */
+.plan-wrap{display:flex;flex-direction:column;position:relative}
+.popular-ribbon{display:inline-flex;align-items:center;gap:6px;align-self:center;margin-bottom:-1px;padding:5px 16px;border-radius:100px 100px 0 0;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a0a00;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;box-shadow:0 -4px 18px rgba(245,158,11,.35);position:relative;z-index:2}
+.popular-ribbon svg{width:11px;height:11px}
+
+.plan{position:relative;overflow:hidden;border:1px solid var(--border-soft);background:var(--bg-card);border-radius:var(--r-xl);padding:28px 24px 32px;animation:rise .6s ease both;display:flex;flex-direction:column;height:100%}
+
+/* Free */
+.plan.free{border-color:var(--border-mid)}
+/* Monthly */
+.plan.pro-monthly{border-color:var(--cyan-border);background:linear-gradient(160deg,rgba(56,189,248,.07),var(--bg-card))}
+.plan.pro-monthly::before{content:'';position:absolute;top:-60px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.14),transparent 70%);pointer-events:none}
+/* Quarterly – featured */
+.plan.pro-quarterly{border-color:var(--gold-border);background:linear-gradient(160deg,rgba(245,158,11,.12),var(--bg-card) 70%);box-shadow:0 0 0 1px rgba(245,158,11,.22),0 16px 48px rgba(245,158,11,.14)}
+.plan.pro-quarterly::before{content:'';position:absolute;top:-60px;right:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.2),transparent 70%);pointer-events:none}
+/* Annual */
+.plan.pro-annual{border-color:var(--violet-border);background:linear-gradient(160deg,rgba(139,92,246,.09),var(--bg-card))}
+.plan.pro-annual::before{content:'';position:absolute;top:-60px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.16),transparent 70%);pointer-events:none}
+
+.plan .p-name{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;position:relative;z-index:1}
+.plan .p-sub{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-top:5px;position:relative;z-index:1}
+.plan.free .p-sub{color:var(--text-500)}
+.plan.pro-monthly .p-sub{color:var(--cyan)}
+.plan.pro-quarterly .p-sub{color:var(--gold)}
+.plan.pro-annual .p-sub{color:#a78bfa}
+
+.plan .p-price-wrap{margin-top:20px;position:relative;z-index:1}
+.plan .p-price-old{font-family:var(--font-display);font-size:13px;color:var(--text-500);text-decoration:line-through;margin-bottom:4px;min-height:20px}
+.plan .p-price{font-family:var(--font-display);font-weight:800;font-size:38px;color:#fff;line-height:1}
+.plan .p-price .per{font-size:14px;font-weight:600;color:var(--text-400)}
+.plan.free .p-price{color:var(--green)}
+.plan.pro-quarterly .p-price{color:var(--gold)}
+.plan.pro-annual .p-price{color:#a78bfa}
+
+.plan .p-save{display:inline-flex;align-items:center;gap:5px;margin-top:12px;padding:6px 13px;border-radius:100px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.05em}
+.plan.pro-quarterly .p-save{background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold)}
+.plan.pro-annual .p-save{background:var(--violet-soft);border:1px solid var(--violet-border);color:#a78bfa}
+
+.plan .p-credits{display:flex;align-items:center;gap:10px;margin-top:20px;padding:14px 16px;border-radius:var(--r-sm);position:relative;z-index:1}
+.plan.free .p-credits{background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.plan.pro-monthly .p-credits{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.plan.pro-quarterly .p-credits{background:var(--gold-soft);border:1px solid var(--gold-border)}
+.plan.pro-annual .p-credits{background:var(--violet-soft);border:1px solid var(--violet-border)}
+.plan .p-credits .cr-ic{font-size:20px;flex-shrink:0}
+.plan .p-credits .cr-val{font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.plan.pro-quarterly .p-credits .cr-val{color:var(--gold)}
+.plan.pro-annual .p-credits .cr-val{color:#a78bfa}
+.plan .p-credits .cr-hint{font-size:11px;color:var(--text-400);line-height:1.3;margin-top:1px}
+
+.plan .p-feats{list-style:none;margin:24px 0 20px;display:flex;flex-direction:column;gap:14px;flex:1;position:relative;z-index:1}
+.plan .p-feats li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--text-200)}
+.plan .p-feats li .fi{width:22px;height:22px;flex-shrink:0;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.plan.free .p-feats li .fi{background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-400)}
+.plan.pro-monthly .p-feats li .fi{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
+.plan.pro-quarterly .p-feats li .fi{background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold)}
+.plan.pro-annual .p-feats li .fi{background:var(--violet-soft);border:1px solid var(--violet-border);color:#a78bfa}
+.plan .p-feats li .fi svg{width:11px;height:11px}
+
+.plan .p-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:17px;border-radius:var(--r-md);font-family:var(--font-display);font-weight:800;font-size:15px;transition:all .2s;position:relative;z-index:1;border:none;margin-top:auto}
+.plan.free .p-btn{background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-400);cursor:default}
+.plan.pro-monthly .p-btn{background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;box-shadow:0 6px 22px rgba(56,189,248,.28)}
+.plan.pro-monthly .p-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(56,189,248,.44)}
+.plan.pro-quarterly .p-btn{background:linear-gradient(135deg,#d97706,#f59e0b,#fbbf24);color:#1a0a00;box-shadow:0 6px 22px rgba(245,158,11,.36)}
+.plan.pro-quarterly .p-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(245,158,11,.52)}
+.plan.pro-annual .p-btn{background:linear-gradient(135deg,#7c3aed,#8b5cf6,#a78bfa);color:#fff;box-shadow:0 6px 22px rgba(139,92,246,.28)}
+.plan.pro-annual .p-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(139,92,246,.44)}
+.plan .p-btn svg{width:16px;height:16px}
+
+/* credit info box */
+.credit-info{margin-top:var(--space-5);padding:var(--space-5);border:1px solid var(--cyan-border-soft);background:linear-gradient(135deg,rgba(56,189,248,.06),var(--bg-card));border-radius:var(--r-lg);animation:rise .6s ease both}
+.credit-info .ci-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.credit-info .ci-title span{font-size:18px}
+.credit-info .ci-list{list-style:none;display:flex;flex-direction:column;gap:9px}
+.credit-info .ci-list li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-300)}
+.credit-info .ci-list li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--cyan);flex-shrink:0}
+
+/* extra credit packs */
+.credit-packs{display:grid;grid-template-columns:1fr;gap:var(--space-4);animation:rise .6s ease both}
+@media(min-width:560px){.credit-packs{grid-template-columns:repeat(3,1fr)}}
+.cp-card{position:relative;overflow:hidden;border:1px solid var(--amber-border);background:linear-gradient(160deg,var(--amber-soft),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-5);display:flex;flex-direction:column;gap:10px;transition:transform .2s,box-shadow .2s}
+.cp-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(245,185,66,.18)}
+.cp-card::before{content:'';position:absolute;top:-40px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(245,185,66,.18),transparent 70%);pointer-events:none}
+.cp-card .cpk-ic{font-size:24px}
+.cp-card .cpk-amount{font-family:var(--font-display);font-weight:800;font-size:22px;color:#fff}
+.cp-card .cpk-amount span{font-size:13px;font-weight:600;color:var(--text-400)}
+.cp-card .cpk-price{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--amber)}
+.cp-card .cpk-rate{font-family:var(--font-mono);font-size:10px;color:var(--text-500)}
+.cp-card .cpk-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;border-radius:var(--r-sm);background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber);font-family:var(--font-display);font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;margin-top:6px}
+.cp-card .cpk-btn:hover{background:rgba(245,185,66,.22);transform:translateY(-1px)}
+.cp-card .cpk-btn svg{width:14px;height:14px}
+.cp-note{margin-top:14px;padding:12px 16px;border-radius:var(--r-md);background:var(--amber-soft);border:1px solid var(--amber-border);font-size:12.5px;color:var(--text-300);text-align:center;font-family:var(--font-mono)}
+
+/* SECTION 4: comparison table */
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+.cmp th,.cmp td{padding:13px 10px;text-align:center;border-bottom:1px solid var(--border-soft)}
+.cmp th{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
+.cmp th.pro-col{color:var(--cyan)}
+.cmp td.feat{text-align:left;font-weight:600;color:var(--text-200)}
+.cmp td .yes{color:var(--green);display:inline-flex}
+.cmp td .no{color:var(--text-500);display:inline-flex}
+.cmp td .lim{font-family:var(--font-mono);font-size:11px;color:var(--text-400)}
+.cmp td svg{width:17px;height:17px}
+.cmp .pro-col{background:rgba(56,189,248,.05)}
+
+/* SECTION 5: payment methods */
+.pays{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(min-width:560px){.pays{grid-template-columns:repeat(4,1fr)}}
+.pay{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 10px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);transition:all .25s;text-align:center}
+.pay:hover{transform:translateY(-3px);border-color:var(--cyan-border)}
+.pay .pay-ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg-elev-1);border:1px solid var(--border-mid)}
+.pay .pay-n{font-family:var(--font-display);font-weight:700;font-size:13px;color:#fff}
+.pay .pay-chk{font-family:var(--font-mono);font-size:10px;color:var(--green);display:inline-flex;align-items:center;gap:4px}
+.pay .pay-chk svg{width:11px;height:11px}
+
+/* SECTION 6: summary */
+.summary{border:1px solid var(--cyan-border);background:linear-gradient(135deg,rgba(56,189,248,.1),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-6);animation:rise .6s ease both}
+.sum-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-soft);font-size:14px}
+.sum-row .sk{color:var(--text-400)}
+.sum-row .sv{font-family:var(--font-display);font-weight:700;color:#fff}
+.sum-row.total{border-bottom:none;padding-top:16px}
+.sum-row.total .sk{font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff}
+.sum-row.total .sv{font-size:24px;color:var(--cyan)}
+.cycle-seg{display:flex;gap:7px;background:var(--bg-elev-1);padding:5px;border-radius:13px;border:1px solid var(--border-soft);margin-bottom:18px}
+.cycle-seg button{flex:1;padding:11px;border:none;background:transparent;border-radius:9px;color:var(--text-300);font-weight:700;font-size:13.5px;font-family:var(--font-display);transition:all .25s;position:relative}
+.cycle-seg button.on{background:var(--cyan);color:#031020;box-shadow:0 0 16px rgba(56,189,248,.3)}
+.cycle-seg .save-tag{font-family:var(--font-mono);font-size:8.5px;padding:1px 6px;border-radius:100px;background:var(--green);color:#031020;margin-left:5px;vertical-align:middle}
+
+/* SECTION 7: payment confirmation */
+.proceed{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:20px;padding:17px;border-radius:var(--r-md);border:none;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-display);font-weight:800;font-size:16px;box-shadow:0 8px 28px rgba(56,189,248,.3);transition:transform .2s,box-shadow .2s}
+.proceed:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(56,189,248,.46)}
+.proceed svg{width:18px;height:18px}
+.trust{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;font-size:12px;color:var(--text-500);font-family:var(--font-mono)}
+.trust svg{width:13px;height:13px;color:var(--green)}
+
+/* SECTION 8: FAQ */
+.faq{display:flex;flex-direction:column;gap:10px}
+.faq-item{border:1px solid var(--border-soft);background:var(--bg-card);border-radius:var(--r-md);overflow:hidden;transition:border-color .2s}
+.faq-item.open{border-color:var(--cyan-border)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;font-family:var(--font-display);font-weight:600;font-size:14.5px;color:#fff;cursor:pointer}
+.faq-q .fq-x{width:24px;height:24px;flex-shrink:0;border-radius:7px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);display:flex;align-items:center;justify-content:center;color:var(--cyan);transition:transform .25s}
+.faq-q .fq-x svg{width:13px;height:13px}
+.faq-item.open .fq-x{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease;color:var(--text-300);font-size:13.5px;line-height:1.6}
+.faq-a p{padding:0 16px 16px}
+.faq-item.open .faq-a{max-height:200px}
+
+/* plan activation notice */
+.p-activation-note{display:flex;align-items:center;gap:8px;margin-top:14px;padding:13px 16px;border-radius:var(--r-sm);background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);font-size:12px;color:var(--text-400);font-family:var(--font-mono);position:relative;z-index:1;line-height:1.5}
+.p-activation-note svg{width:13px;height:13px;color:var(--green);flex-shrink:0}
+
+/* popular ribbon enhancement */
+.popular-ribbon{display:inline-flex;align-items:center;gap:6px;align-self:center;margin-bottom:-1px;padding:7px 20px;border-radius:100px 100px 0 0;background:linear-gradient(90deg,#d97706,#f59e0b,#fbbf24);color:#1a0a00;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 -6px 24px rgba(245,158,11,.4);position:relative;z-index:2}
+.popular-ribbon svg{width:12px;height:12px}
+.popular-sub{text-align:center;font-size:11px;color:var(--gold);font-family:var(--font-mono);margin-bottom:6px;margin-top:4px;letter-spacing:.04em}
+
+/* credit balance preview */
+.credit-balance{display:flex;align-items:center;gap:14px;border:1px solid var(--cyan-border-soft);background:linear-gradient(135deg,rgba(56,189,248,.08),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-5);animation:rise .6s ease both}
+.cb-icon{width:46px;height:46px;flex-shrink:0;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border)}
+.cb-body{flex:1;min-width:0}
+.cb-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500)}
+.cb-values{display:flex;align-items:baseline;gap:6px;margin-top:4px}
+.cb-current{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff}
+.cb-total{font-family:var(--font-mono);font-size:13px;color:var(--text-500)}
+.cb-bar{height:6px;border-radius:100px;background:var(--bg-elev-2);border:1px solid var(--border-soft);overflow:hidden;margin-top:8px}
+.cb-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--cyan-2),var(--cyan));width:96.7%}
+.cb-hint{font-family:var(--font-mono);font-size:10px;color:var(--text-500);margin-top:5px}
+.cb-badge{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.cb-plan{font-family:var(--font-mono);font-size:10px;padding:5px 11px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-400)}
+.cb-reset{font-family:var(--font-mono);font-size:9.5px;color:var(--text-500)}
+
+/* secure payments section */
+.secure-pay{border:1px solid var(--green-border);background:linear-gradient(135deg,rgba(34,197,94,.06),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-6);animation:rise .6s ease both}
+.sp-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.sp-ic{width:44px;height:44px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--green-soft);border:1px solid var(--green-border)}
+.sp-ic svg{width:20px;height:20px;color:var(--green)}
+.sp-title{font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.sp-sub{font-size:12px;color:var(--text-400);margin-top:2px}
+.sp-methods{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+@media(min-width:560px){.sp-methods{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:760px){.sp-methods{grid-template-columns:repeat(7,1fr)}}
+.sp-method{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);transition:all .2s;text-align:center}
+.sp-method:hover{border-color:var(--green-border);transform:translateY(-2px)}
+.sp-method .sm-ic{font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--bg-card);border:1px solid var(--border-soft)}
+.sp-method .sm-name{font-family:var(--font-mono);font-size:9.5px;color:var(--text-400);letter-spacing:.04em}
+.sp-trust{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:var(--r-sm);background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);font-size:12.5px;color:var(--text-300);margin-bottom:16px}
+.sp-trust svg{width:14px;height:14px;color:var(--green);flex-shrink:0}
+.sp-badges{display:flex;flex-wrap:wrap;gap:10px}
+.sp-badge{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-family:var(--font-mono);font-size:10.5px;color:var(--text-300)}
+.sp-badge svg{width:13px;height:13px;color:var(--green)}
+
+/* device protection */
+.device-protect{border:1px solid var(--border-soft);background:var(--bg-card);border-radius:var(--r-lg);padding:var(--space-5);animation:rise .6s ease both}
+.dp-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.dp-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border)}
+.dp-ic svg{width:17px;height:17px;color:var(--cyan)}
+.dp-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
+.dp-rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.dp-row{padding:12px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.dp-row .dr-label{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-500);margin-bottom:6px}
+.dp-row .dr-val{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff}
+.dp-row .dr-val span{font-size:12px;font-weight:600;color:var(--text-400)}
+.dp-row.pro-devices{border-color:var(--cyan-border-soft)}
+.dp-row.pro-devices .dr-val{color:var(--cyan)}
+.dp-note{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text-400);font-family:var(--font-mono)}
+.dp-note svg{width:13px;height:13px;color:var(--amber);flex-shrink:0;margin-top:1px}
+
+/* payment flow states */
+.pay-flow{display:none;border-radius:var(--r-lg);padding:var(--space-7) var(--space-5);text-align:center;margin-top:var(--space-4);animation:rise .4s ease both}
+.pay-flow.processing{border:1px solid var(--cyan-border);background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-card))}
+.pay-flow.success{border:1px solid var(--green-border);background:linear-gradient(135deg,var(--green-soft),var(--bg-card))}
+.pay-flow.failed{border:1px solid var(--red-border);background:linear-gradient(135deg,var(--red-soft),var(--bg-card))}
+.pf-icon{width:64px;height:64px;margin:0 auto 16px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.pay-flow.processing .pf-icon{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);box-shadow:0 0 24px rgba(56,189,248,.25)}
+.pay-flow.success .pf-icon{background:var(--green-soft);border:1px solid var(--green-border);box-shadow:0 0 24px rgba(34,197,94,.25)}
+.pay-flow.failed .pf-icon{background:var(--red-soft);border:1px solid var(--red-border);box-shadow:0 0 24px rgba(239,79,95,.25)}
+.pf-title{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff}
+.pf-sub{color:var(--text-300);font-size:13.5px;margin-top:8px;max-width:320px;margin-left:auto;margin-right:auto}
+.pf-spinner{width:28px;height:28px;border:3px solid rgba(56,189,248,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .9s linear infinite;margin:0 auto 4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pf-action{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:12px 22px;border-radius:var(--r-md);font-family:var(--font-display);font-weight:700;font-size:14px;cursor:pointer;border:none;transition:all .2s}
+.pay-flow.success .pf-action{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff;box-shadow:0 6px 18px rgba(34,197,94,.3)}
+.pay-flow.failed .pf-action{background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}
+
+/* updated activated state reused as success state */
+.activated{display:none;text-align:center;border:1px solid var(--green-border);background:linear-gradient(135deg,var(--green-soft),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-7) var(--space-5);margin-top:var(--space-4);animation:rise .5s ease both}
+.activated .ac-ic{width:64px;height:64px;margin:0 auto 16px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;background:var(--green-soft);border:1px solid var(--green-border);box-shadow:0 0 24px rgba(34,197,94,.3)}
+.activated .ac-t{font-family:var(--font-display);font-weight:800;font-size:22px;color:#fff}
+.activated .ac-s{color:var(--text-300);font-size:14px;margin-top:8px}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1180px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="index.html" aria-label="Home">
+    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <a class="back-btn" href="dashboard.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      <span class="lbl-full">Back to Dashboard</span><span class="lbl-short">Dashboard</span>
+    </a>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <a class="side-brand" href="index.html"><span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span><span>Si<span class="mid">Math</span> <span class="ai">AI</span></span></a>
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
+  <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
+  <a class="nav-item" href="history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- SECTION 1: HEADER -->
+  <div class="page-head">
+    <div class="eyebrow"><span class="live-dot"></span> Pricing</div>
+    <h1>Pricing &amp; Subscription</h1>
+    <p>Choose the plan that helps you achieve your target score faster.</p>
+  </div>
+
+  <!-- SECTION 2: CURRENT PLAN -->
+  <section class="current-plan">
+    <span class="cp-ic">🎓</span>
+    <div class="cp-body"><div class="cp-l">Current Plan</div><div class="cp-v">Free Plan</div></div>
+    <span class="plan-badge free"><span class="pb-dot"></span>Active</span>
+  </section>
+
+  <!-- CREDIT BALANCE PREVIEW -->
+  <div class="credit-balance">
+    <div class="cb-icon">⚡</div>
+    <div class="cb-body">
+      <div class="cb-label">Credits Remaining</div>
+      <div class="cb-values">
+        <span class="cb-current">1,450</span>
+        <span class="cb-total">/ 1,500</span>
+      </div>
+      <div class="cb-bar"><div class="cb-fill"></div></div>
+      <div class="cb-hint">Resets monthly · Next reset in 12 days</div>
+    </div>
+    <div class="cb-badge">
+      <span class="cb-plan">Free Plan</span>
+      <span class="cb-reset">Demo preview</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3: PLAN CARDS — CREDIT-BASED -->
+  <div class="sec-label">Choose Your Plan</div>
+  <div class="plans">
+
+    <!-- FREE -->
+    <div class="plan-wrap">
+      <div class="plan free">
+        <div class="p-name">Free</div>
+        <div class="p-sub">Starter</div>
+        <div class="p-price-wrap">
+          <div class="p-price-old">&nbsp;</div>
+          <div class="p-price">0 <span class="per">EGP</span></div>
+        </div>
+        <div class="p-credits">
+          <span class="cr-ic">🎁</span>
+          <div><div class="cr-val">10 Credits / Day</div><div class="cr-hint">Resets every day</div></div>
+        </div>
+        <ul class="p-feats">
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>AI Chat Access</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Basic Weakness Tracking</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Basic Focus Practice</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Limited Progress Tracking</li>
+        </ul>
+        <div class="p-btn">Current Plan</div>
+      </div>
+    </div>
+
+    <!-- PRO MONTHLY -->
+    <div class="plan-wrap">
+      <div class="plan pro-monthly">
+        <div class="p-name">Pro Monthly</div>
+        <div class="p-sub">Flexible</div>
+        <div class="p-price-wrap">
+          <div class="p-price-old">&nbsp;</div>
+          <div class="p-price">349 <span class="per">EGP / mo</span></div>
+        </div>
+        <div class="p-credits">
+          <span class="cr-ic">⚡</span>
+          <div><div class="cr-val">1,500 Credits / mo</div><div class="cr-hint">≈ 50 credits per day</div></div>
+        </div>
+        <ul class="p-feats">
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Full AI Chat Access</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Full Weakness Analyzer</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Full Focus Practice</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Exam Practice Hub</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Progress Tracking</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Achievement &amp; Rank System</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Priority Support</li>
+        </ul>
+        <button class="p-btn plan-cta" data-plan="Pro Monthly" data-price="349" data-cycle="Monthly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>Get Monthly</button>
+        <div class="p-activation-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Activated automatically after successful payment</div>
+      </div>
+    </div>
+
+    <!-- PRO QUARTERLY — MOST POPULAR -->
+    <div class="plan-wrap">
+      <div class="popular-ribbon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>Most Popular</div>
+      <div class="popular-sub">Best balance between value and flexibility</div>
+      <div class="plan pro-quarterly">
+        <div class="p-name">Pro Quarterly</div>
+        <div class="p-sub">Best Value ⭐</div>
+        <div class="p-price-wrap">
+          <div class="p-price-old">Regular: 1,047 EGP</div>
+          <div class="p-price">899 <span class="per">EGP / 3 mo</span></div>
+        </div>
+        <div class="p-save">🎉 You save 148 EGP</div>
+        <div class="p-credits">
+          <span class="cr-ic">🔥</span>
+          <div><div class="cr-val">4,500 Credits</div><div class="cr-hint">≈ 50 credits per day</div></div>
+        </div>
+        <ul class="p-feats">
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Everything in Pro Monthly</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Full AI Chat Access</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Full Weakness Analyzer</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Exam Practice Hub</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Achievement &amp; Rank System</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Priority Support</li>
+        </ul>
+        <button class="p-btn plan-cta" data-plan="Pro Quarterly" data-price="899" data-cycle="Quarterly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>Get Quarterly</button>
+        <div class="p-activation-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Activated automatically after successful payment</div>
+      </div>
+    </div>
+
+    <!-- PRO ANNUAL -->
+    <div class="plan-wrap">
+      <div class="plan pro-annual">
+        <div class="p-name">Pro Annual</div>
+        <div class="p-sub">Long-Term</div>
+        <div class="p-price-wrap">
+          <div class="p-price-old">Regular: 4,188 EGP</div>
+          <div class="p-price">2,999 <span class="per">EGP / yr</span></div>
+        </div>
+        <div class="p-save">💜 You save 1,189 EGP</div>
+        <div class="p-credits">
+          <span class="cr-ic">💎</span>
+          <div><div class="cr-val">18,000 Credits</div><div class="cr-hint">≈ 50 credits per day</div></div>
+        </div>
+        <ul class="p-feats">
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Everything in Pro Monthly</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Best Long-Term Value</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Full AI Chat Access</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Exam Practice Hub</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Achievement &amp; Rank System</li>
+          <li><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Priority Support</li>
+        </ul>
+        <button class="p-btn plan-cta" data-plan="Pro Annual" data-price="2999" data-cycle="Annual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>Get Annual</button>
+        <div class="p-activation-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Activated automatically after successful payment</div>
+      </div>
+    </div>
+
+  </div><!-- /.plans -->
+
+  <!-- CREDIT SYSTEM EXPLANATION -->
+  <div class="credit-info">
+    <div class="ci-title"><span>⚡</span> How Credits Work</div>
+    <p style="font-size:13px;color:var(--text-400);margin-bottom:14px">Credits are consumed only when AI analyzes questions. Browsing features and settings never use credits.</p>
+    <ul class="ci-list">
+      <li>1 SAT Question = 1 Credit</li>
+      <li>1 Question Image = 1 Credit</li>
+      <li>10 Questions = 10 Credits</li>
+      <li>PDF uploads consume credits based on the number of analyzed questions</li>
+    </ul>
+  </div>
+
+  <!-- EXTRA CREDIT PACKS -->
+  <div class="sec-label">Need More Credits?</div>
+  <p style="font-size:13px;color:var(--text-400);margin-bottom:16px">Purchase extra credits anytime when your monthly credits run out. Credit packs are one-time top-ups and do not replace a subscription.</p>
+  <div class="credit-packs">
+    <div class="cp-card">
+      <div class="cpk-ic">⚡</div>
+      <div class="cpk-amount">500 <span>Credits</span></div>
+      <div class="cpk-price">69 EGP</div>
+      <div class="cpk-rate">0.138 EGP per credit</div>
+      <button class="cpk-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Buy Pack</button>
+    </div>
+    <div class="cp-card">
+      <div class="cpk-ic">🔋</div>
+      <div class="cpk-amount">1,000 <span>Credits</span></div>
+      <div class="cpk-price">129 EGP</div>
+      <div class="cpk-rate">0.129 EGP per credit</div>
+      <button class="cpk-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Buy Pack</button>
+    </div>
+    <div class="cp-card">
+      <div class="cpk-ic">🚀</div>
+      <div class="cpk-amount">2,000 <span>Credits</span></div>
+      <div class="cpk-price">249 EGP</div>
+      <div class="cpk-rate">0.125 EGP per credit</div>
+      <button class="cpk-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Buy Pack</button>
+    </div>
+  </div>
+  <div class="cp-note">💡 Tip: Subscription plans offer much better value per credit. Credit packs are designed as emergency top-ups only.</div>
+
+  <!-- SECTION 4: FEATURE COMPARISON TABLE -->
+  <div class="sec-label">Feature Comparison</div>
+  <section class="card" style="overflow-x:auto">
+    <table class="cmp">
+      <thead><tr><th style="text-align:left">Feature</th><th>Free</th><th class="pro-col">Pro Plans</th></tr></thead>
+      <tbody>
+        <tr><td class="feat">Daily Credits</td><td><span class="lim">10 / day</span></td><td class="pro-col"><span class="lim" style="color:var(--cyan)">1,500–18,000</span></td></tr>
+        <tr><td class="feat">AI Chat Access</td><td><span class="lim">Basic</span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Weakness Analyzer</td><td><span class="lim">Basic</span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Focus Practice</td><td><span class="lim">Basic</span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Exam Practice Hub</td><td><span class="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Progress Tracking</td><td><span class="lim">Limited</span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Achievement System</td><td><span class="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Rank System</td><td><span class="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+        <tr><td class="feat">Priority Support</td><td><span class="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></td><td class="pro-col"><span class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SECURE PAYMENTS SECTION -->
+  <div class="sec-label">Secure Payments</div>
+  <div class="secure-pay">
+    <div class="sp-header">
+      <div class="sp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div><div class="sp-title">Secure Payment Gateway</div><div class="sp-sub">Powered by Paymob — Egypt's trusted payment infrastructure</div></div>
+    </div>
+    <div class="sp-trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>All payments are securely processed through Paymob.</div>
+    <div class="sp-methods">
+      <div class="sp-method"><div class="sm-ic">💳</div><div class="sm-name">Paymob</div></div>
+      <div class="sp-method"><div class="sm-ic">🅥</div><div class="sm-name">Visa</div></div>
+      <div class="sp-method"><div class="sm-ic">🟠</div><div class="sm-name">Mastercard</div></div>
+      <div class="sp-method"><div class="sm-ic">🇪🇬</div><div class="sm-name">Meeza</div></div>
+      <div class="sp-method"><div class="sm-ic"></div><div class="sm-name">Apple Pay</div></div>
+      <div class="sp-method"><div class="sm-ic">🏦</div><div class="sm-name">InstaPay</div></div>
+      <div class="sp-method"><div class="sm-ic">📱</div><div class="sm-name">Vodafone Cash</div></div>
+    </div>
+    <div class="sp-badges">
+      <span class="sp-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secure Payment</span>
+      <span class="sp-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Encrypted Transactions</span>
+      <span class="sp-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Trusted Payment Gateway</span>
+    </div>
+  </div>
+
+  <!-- SECTION 6 + 7: SUBSCRIPTION SUMMARY + CONFIRMATION -->
+  <div class="sec-label">Subscription Summary</div>
+  <section class="summary" id="summarySection">
+    <div class="cycle-seg" id="cycleSeg">
+      <button class="on" data-price="349" data-cycle="Monthly" data-credits="1,500">Monthly</button>
+      <button data-price="899" data-cycle="Quarterly" data-credits="4,500">Quarterly <span class="save-tag">SAVE 14%</span></button>
+      <button data-price="2999" data-cycle="Annual" data-credits="18,000">Annual <span class="save-tag">SAVE 28%</span></button>
+    </div>
+    <div class="sum-row"><span class="sk">Plan Selected</span><span class="sv" id="sumPlan">Pro Monthly</span></div>
+    <div class="sum-row"><span class="sk">Billing Cycle</span><span class="sv" id="sumCycle">Monthly</span></div>
+    <div class="sum-row"><span class="sk">Credits Included</span><span class="sv" id="sumCredits">1,500 Credits</span></div>
+    <div class="sum-row"><span class="sk">Price</span><span class="sv" id="sumPrice">349 EGP</span></div>
+    <div class="sum-row total"><span class="sk">Total</span><span class="sv" id="sumTotal">349 EGP</span></div>
+    <button class="proceed" id="proceedBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Proceed To Payment</button>
+    <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secure payment · Cancel anytime</div>
+  </section>
+
+  <!-- activated state -->
+  <div class="activated" id="activated">
+    <div class="ac-ic">🎉</div>
+    <div class="ac-t">Subscription Activated</div>
+    <div class="ac-s">Welcome to Si Math AI Pro — let's reach that target score! 🚀</div>
+  </div>
+
+  <!-- PAYMENT FLOW STATES (frontend UI only — no backend) -->
+  <div class="pay-flow processing" id="payProcessing">
+    <div class="pf-icon"><div class="pf-spinner"></div></div>
+    <div class="pf-title">Processing Payment…</div>
+    <div class="pf-sub">Please wait while we securely process your payment through Paymob. Do not close this page.</div>
+  </div>
+
+  <div class="pay-flow success" id="paySuccess">
+    <div class="pf-icon">✅</div>
+    <div class="pf-title">Payment Successful</div>
+    <div class="pf-sub">Your subscription has been activated. Credits have been added to your account.</div>
+    <button class="pf-action" onclick="document.getElementById('paySuccess').style.display='none'">Go to Dashboard</button>
+  </div>
+
+  <div class="pay-flow failed" id="payFailed">
+    <div class="pf-icon">❌</div>
+    <div class="pf-title">Payment Failed</div>
+    <div class="pf-sub">Your payment could not be processed. Please check your details and try again.</div>
+    <button class="pf-action" onclick="document.getElementById('payFailed').style.display='none'">Try Again</button>
+  </div>
+
+  <!-- DEVICE PROTECTION -->
+  <div class="sec-label">Account Protection</div>
+  <div class="device-protect">
+    <div class="dp-header">
+      <div class="dp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
+      <div class="dp-title">Active Device Limits</div>
+    </div>
+    <div class="dp-rows">
+      <div class="dp-row">
+        <div class="dr-label">Free Plan</div>
+        <div class="dr-val">2 <span>Active Devices</span></div>
+      </div>
+      <div class="dp-row pro-devices">
+        <div class="dr-label">Pro Plans</div>
+        <div class="dr-val">3 <span>Active Devices</span></div>
+      </div>
+    </div>
+    <div class="dp-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      Account sharing protection is enabled to ensure fair usage. Exceeding the device limit will require signing out of another device.
+    </div>
+  </div>
+
+  <!-- SECTION 8: FAQ -->
+  <div class="sec-label">Frequently Asked Questions</div>
+  <div class="faq" id="faq">
+    <div class="faq-item">
+      <div class="faq-q">Can I cancel anytime?<span class="fq-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+      <div class="faq-a"><p>Yes. You can cancel your Pro subscription at any time from Settings. You'll keep Pro access until the end of your current billing cycle.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Do unused credits roll over?<span class="fq-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+      <div class="faq-a"><p>Credits are valid for the duration of your billing cycle. Monthly credits reset each month; quarterly and annual credits are allocated upfront for the full period. Unused credits do not carry over after a cycle ends.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Will I lose my history if I downgrade?<span class="fq-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+      <div class="faq-a"><p>No. Your learning history is always saved. On the Free plan you'll just have limited access to older records, but nothing is deleted.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I upgrade later?<span class="fq-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+      <div class="faq-a"><p>Absolutely. You can upgrade to Pro whenever you're ready, and your progress carries over instantly.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What payment methods are supported?<span class="fq-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+      <div class="faq-a"><p>We support Visa, Mastercard, Meeza, Apple Pay, InstaPay, and Vodafone Cash — all securely processed through Paymob, Egypt's trusted payment gateway.</p></div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay'),hamb=document.getElementById('hamb');
+  hamb.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('show')});
+  overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('show')});
+  sidebar.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<1024){sidebar.classList.remove('open');overlay.classList.remove('show')}}));
+
+  // billing cycle toggle
+  const cycleSeg=document.getElementById('cycleSeg');
+  const planNames={Monthly:'Pro Monthly',Quarterly:'Pro Quarterly',Annual:'Pro Annual'};
+  cycleSeg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    cycleSeg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    const price=b.dataset.price,cycle=b.dataset.cycle,credits=b.dataset.credits;
+    document.getElementById('sumPlan').textContent=planNames[cycle]||'Pro '+cycle;
+    document.getElementById('sumCycle').textContent=cycle;
+    document.getElementById('sumCredits').textContent=credits+' Credits';
+    document.getElementById('sumPrice').textContent=price+' EGP';
+    document.getElementById('sumTotal').textContent=price+' EGP';
+  }));
+
+  // plan CTA buttons → scroll to summary and pre-select cycle
+  document.querySelectorAll('.plan-cta').forEach(btn=>btn.addEventListener('click',()=>{
+    const cycle=btn.dataset.cycle,price=btn.dataset.price;
+    cycleSeg.querySelectorAll('button').forEach(b=>{
+      b.classList.remove('on');
+      if(b.dataset.cycle===cycle){b.classList.add('on');b.click();}
+    });
+    document.getElementById('summarySection').scrollIntoView({behavior:'smooth',block:'center'});
+  }));
+
+  // proceed → show activated
+  function activate(){
+    document.getElementById('activated').style.display='block';
+    document.getElementById('activated').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  document.getElementById('proceedBtn').addEventListener('click',activate);
+
+  // FAQ accordion
+  document.querySelectorAll('#faq .faq-q').forEach(q=>q.addEventListener('click',()=>{
+    q.parentElement.classList.toggle('open');
+  }));
+</script>
+</body>
+</html>
