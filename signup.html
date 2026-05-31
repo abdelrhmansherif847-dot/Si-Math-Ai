@@ -376,11 +376,48 @@ button{font-family:inherit;cursor:pointer}
   }
   confirm.addEventListener('input',checkMatch);
 
-  document.getElementById('signupForm').addEventListener('submit',e=>{
-    e.preventDefault();
-    // backend hook goes here later
-    window.location.href='login.html';
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://igvkyxkmjnkzscqgommj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+document.getElementById('signupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const fullName = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirm').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match');
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName
+      }
+    }
   });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert('Account created successfully! Please check your email.');
+  window.location.href = "login.html";
+});
 </script>
 </body>
 </html>
