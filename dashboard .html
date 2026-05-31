@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Si Math AI — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a14;
+  --bg-elev-1:#0a1224;
+  --bg-elev-2:#0e1830;
+  --bg-card:#0c1428;
+  --bg-card-hi:#101a32;
+
+  --cyan:#38bdf8;
+  --cyan-2:#0ea5e9;
+  --cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);
+  --cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);
+  --cyan-border-soft:rgba(56,189,248,.14);
+
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+
+  --text-100:#ffffff;
+  --text-200:#dde8f7;
+  --text-300:#a8bcd9;
+  --text-400:#7a90b2;
+  --text-500:#536b8c;
+  --border-soft:#1a2540;
+  --border-mid:#26334d;
+
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;
+  --space-5:20px;--space-6:24px;--space-7:32px;--space-8:40px;
+  --space-9:56px;--space-10:72px;
+
+  --container-x:18px;
+
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+
+  --nav-h:56px;
+  --side-w:248px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  background-color:#050a14 !important;
+  background:#050a14 !important;
+  color:var(--text-200);
+  font-family:var(--font-body);
+  font-size:15px;line-height:1.55;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  min-height:100vh;position:relative;
+}
+/* atmosphere */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
+.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:20%;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+/* ============ TOP BAR ============ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:60;
+  height:calc(var(--nav-h) + env(safe-area-inset-top,0));
+  padding-top:env(safe-area-inset-top,0);
+  display:flex;align-items:center;gap:var(--space-3);
+  padding-left:var(--container-x);padding-right:var(--container-x);
+  background:rgba(5,10,20,.97);
+  border-bottom:1px solid var(--border-soft);
+}
+.hamb{
+  width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200);
+}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff}
+.logo-mark{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0e1830,#0c1428);
+  border:1px solid var(--cyan-border);color:var(--cyan);
+  font-family:var(--font-display);font-weight:800;font-size:16px;
+  box-shadow:0 0 16px rgba(56,189,248,.22);
+}
+.brand .mid{color:var(--cyan)}
+.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:var(--space-3)}
+.bell{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-300);position:relative}
+.bell svg{width:17px;height:17px}
+.bell .dot{position:absolute;top:9px;right:10px;width:7px;height:7px;background:var(--cyan);border-radius:50%;box-shadow:0 0 8px var(--cyan)}
+.avatar{
+  width:38px;height:38px;border-radius:11px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:15px;
+  box-shadow:0 0 16px rgba(56,189,248,.3);
+}
+
+/* ============ SIDEBAR ============ */
+.sidebar{
+  position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);
+  background:var(--bg-elev-1);border-right:1px solid var(--border-soft);
+  padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 16px) 14px 20px;
+  display:flex;flex-direction:column;gap:4px;
+  transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1);
+  overflow-y:auto;
+}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;
+  color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;
+  border:1px solid transparent;transition:all .2s ease;
+}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{
+  background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft);
+  box-shadow:inset 0 0 18px rgba(56,189,248,.08);
+}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.side-spacer{flex:1}
+.side-card{
+  margin-top:14px;padding:14px;border-radius:var(--r-md);
+  background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));
+  border:1px solid var(--cyan-border-soft);
+}
+.side-card h4{font-family:var(--font-display);font-size:14px;color:#fff;margin-bottom:4px}
+.side-card p{font-size:12px;color:var(--text-400);margin-bottom:10px;line-height:1.5}
+.side-card .mini-btn{display:block;text-align:center;padding:9px;border-radius:10px;background:var(--cyan);color:#031020;font-weight:700;font-size:13px}
+
+/* overlay for mobile drawer */
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+/* ============ MAIN ============ */
+.main{
+  position:relative;z-index:10;
+  padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 18px) var(--container-x) calc(76px + env(safe-area-inset-bottom,0));
+  max-width:1240px;margin:0 auto;
+}
+
+/* welcome */
+.welcome{margin-bottom:var(--space-6);animation:rise .6s ease both}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.eyebrow .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
+.welcome h1{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,7vw,38px);line-height:1.08;letter-spacing:-.02em;color:#fff}
+.welcome h1 .accent{color:var(--cyan)}
+.welcome p{color:var(--text-300);font-size:15px;margin-top:8px;max-width:520px}
+.welcome-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+  padding:13px 20px;border-radius:var(--r-md);font:700 14.5px var(--font-body);
+  border:none;transition:transform .2s,box-shadow .2s,background .2s;
+}
+.btn svg{width:15px;height:15px}
+.btn-primary{background:var(--cyan);color:#031020;box-shadow:0 6px 22px rgba(56,189,248,.26)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(56,189,248,.4)}
+.btn-ghost{background:var(--bg-card);color:#fff;border:1px solid var(--cyan-border)}
+.btn-ghost:hover{transform:translateY(-2px);border-color:var(--cyan);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:1fr;gap:var(--space-4)}
+
+/* generic card */
+.card{
+  position:relative;overflow:hidden;
+  background:var(--bg-card);
+  border:1px solid var(--border-soft);
+  border-radius:var(--r-lg);
+  padding:var(--space-5);
+  transition:transform .3s cubic-bezier(.25,.46,.45,.94),border-color .3s,box-shadow .3s;
+  animation:rise .6s ease both;
+}
+@media(min-width:768px){.card{padding:var(--space-6)}}
+.card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 0% 0%,rgba(56,189,248,.06),transparent 55%);opacity:0;transition:opacity .3s;pointer-events:none}
+.card:hover{transform:translateY(-3px);border-color:var(--cyan-border);box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.card:hover::before{opacity:1}
+.card.glow{background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));border-color:var(--cyan-border-soft)}
+
+.card-head{display:flex;align-items:center;gap:11px;margin-bottom:var(--space-5)}
+.card-ico{
+  width:42px;height:42px;flex-shrink:0;border-radius:12px;font-size:19px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);
+  box-shadow:0 0 14px rgba(56,189,248,.12);
+}
+.card-title{font-family:var(--font-display);font-weight:700;font-size:17px;color:#fff;line-height:1.1}
+.card-sub{font-size:12.5px;color:var(--text-400);margin-top:2px}
+.card-link{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--cyan);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.card-link svg{width:13px;height:13px}
+
+/* ===== Overview cards (top of dashboard) ===== */
+.overview{display:grid;grid-template-columns:1fr;gap:var(--space-4);margin-bottom:var(--space-5)}
+@media(min-width:640px){.overview{grid-template-columns:1fr 1fr}}
+@media(min-width:1080px){.overview{grid-template-columns:repeat(3,1fr)}}
+.ov{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:18px;transition:transform .3s,border-color .3s,box-shadow .3s;animation:rise .6s ease both;cursor:pointer}
+.ov:hover{transform:translateY(-3px);border-color:var(--cyan-border);box-shadow:0 14px 36px rgba(0,0,0,.42)}
+.ov-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ov-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.ov-ttl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
+.ov.weak{border-color:var(--red-border,rgba(239,79,95,.32));background:linear-gradient(135deg,rgba(239,79,95,.07),var(--bg-card))}
+.ov.weak .ov-ic{background:rgba(239,79,95,.12);border-color:rgba(239,79,95,.32)}
+.ov-topic{font-family:var(--font-display);font-weight:800;font-size:21px;color:#fff;line-height:1.1}
+.ov-topic .arrow{color:var(--text-500);font-weight:600;margin:0 5px}
+.ov-topic .sub{color:var(--cyan-3)}
+.ov-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.ov-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300)}
+.ov-tag .d{width:6px;height:6px;border-radius:50%}
+.ov-tag.sev-high{background:rgba(239,79,95,.1);border-color:rgba(239,79,95,.32);color:#ef4f5f}
+.ov-tag.sev-high .d{background:#ef4f5f;box-shadow:0 0 6px #ef4f5f}
+.ov-tag.trend-up{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.32);color:#22c55e}
+.ov-tag.trend-up .d{background:#22c55e;box-shadow:0 0 6px #22c55e}
+.ov-big{font-family:var(--font-display);font-weight:800;font-size:30px;color:#fff;line-height:1}
+.ov-big .unit{font-size:14px;font-weight:600;color:var(--text-400)}
+.ov-big.green{color:#22c55e}
+.ov-sub2{font-size:12.5px;color:var(--text-400);margin-top:7px}
+.ov-sub2 b{color:var(--cyan-3);font-weight:600}
+.ov-track{height:7px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;margin-top:12px;border:1px solid var(--border-soft)}
+.ov-track i{display:block;height:100%;border-radius:100px;background:linear-gradient(90deg,var(--cyan-2),var(--cyan));box-shadow:0 0 10px rgba(56,189,248,.45);width:0;transition:width 1.2s cubic-bezier(.25,.46,.45,.94)}
+.ov-track i.green{background:linear-gradient(90deg,#16a34a,#22c55e);box-shadow:0 0 10px rgba(34,197,94,.45)}
+.ov-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:10px;font-size:12.5px;color:var(--text-400)}
+.ov-row b{font-family:var(--font-display);color:#fff;font-size:15px}
+.ov-mini{display:flex;gap:5px;margin-top:12px}
+.ov-mini i{flex:1;height:22px;border-radius:5px;background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.ov-mini i.on{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px rgba(56,189,248,.4)}
+
+/* ===== Daily Streak ===== */
+.streak-top{display:flex;gap:14px;flex-wrap:wrap}
+.streak-stat{
+  flex:1;min-width:120px;border-radius:var(--r-md);padding:16px;
+  background:var(--bg-elev-1);border:1px solid var(--border-soft);position:relative;overflow:hidden;
+}
+.streak-stat.flame{border-color:var(--amber-border);background:linear-gradient(135deg,rgba(245,185,66,.07),var(--bg-elev-1))}
+.streak-stat .lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
+.streak-stat .val{font-family:var(--font-display);font-weight:800;font-size:30px;color:#fff;line-height:1;margin-top:8px;display:flex;align-items:baseline;gap:6px}
+.streak-stat .val span{font-size:13px;font-weight:600;color:var(--text-400)}
+.streak-stat .flame-ico{position:absolute;top:12px;right:12px;font-size:18px;filter:drop-shadow(0 0 8px rgba(245,185,66,.6))}
+
+.week-label{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
+.week-label .t{font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--text-200)}
+.week-label .c{font-size:12.5px;color:var(--cyan);font-family:var(--font-mono)}
+.week{display:flex;gap:7px;justify-content:space-between}
+.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px}
+.day .dn{font-family:var(--font-mono);font-size:10px;color:var(--text-500);text-transform:uppercase}
+.day .dd{
+  width:100%;aspect-ratio:1;max-width:40px;border-radius:11px;
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);
+  display:flex;align-items:center;justify-content:center;color:var(--text-500);
+  transition:transform .2s;
+}
+.day .dd svg{width:14px;height:14px}
+.day.done .dd{background:linear-gradient(135deg,var(--cyan-2),var(--cyan));border-color:transparent;color:#031020;box-shadow:0 0 14px rgba(56,189,248,.4)}
+.day.today .dd{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 2px rgba(56,189,248,.18)}
+.day:hover .dd{transform:translateY(-2px)}
+
+.ach-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin:22px 0 12px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge{
+  position:relative;border-radius:var(--r-md);padding:14px 10px;text-align:center;
+  background:var(--bg-elev-1);border:1px solid var(--border-soft);transition:transform .25s,box-shadow .25s;
+}
+.badge:hover{transform:translateY(-3px)}
+.badge .bi{font-size:24px;display:block;margin-bottom:7px}
+.badge .bt{font-size:11.5px;font-weight:600;color:var(--text-200);line-height:1.25}
+.badge.unlocked{border-color:var(--cyan-border);background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-elev-1));box-shadow:0 0 18px rgba(56,189,248,.14);animation:glowPulse 3.2s ease-in-out infinite}
+.badge.unlocked .bi{filter:drop-shadow(0 0 10px rgba(56,189,248,.6))}
+.badge.locked{opacity:.55}
+.badge.locked .bi{filter:grayscale(1)}
+.badge .prog{margin-top:8px;height:3px;border-radius:100px;background:var(--bg-elev-2);overflow:hidden}
+.badge .prog i{display:block;height:100%;background:var(--cyan);border-radius:100px;box-shadow:0 0 6px var(--cyan)}
+.badge .lock{position:absolute;top:8px;right:8px;font-size:10px;color:var(--text-500)}
+
+/* ===== Weakness Analyzer ===== */
+.bars{display:flex;flex-direction:column;gap:16px}
+.bar-row .bar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.bar-name{font-weight:600;font-size:14px;color:var(--text-200)}
+.bar-pct{font-family:var(--font-mono);font-size:13px;font-weight:500}
+.bar-track{height:7px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;width:0;transform-origin:left;animation:barGrow 1.3s cubic-bezier(.25,.46,.45,.94) forwards}
+.bar-fill.g{background:linear-gradient(90deg,#16a34a,var(--green));box-shadow:0 0 8px rgba(34,197,94,.5)}
+.bar-fill.y{background:linear-gradient(90deg,#d99a1f,var(--amber));box-shadow:0 0 8px rgba(245,185,66,.5)}
+.bar-fill.r{background:linear-gradient(90deg,#c0392f,var(--red));box-shadow:0 0 8px rgba(239,79,95,.5)}
+.bar-pct.g{color:var(--green)} .bar-pct.y{color:var(--amber)} .bar-pct.r{color:var(--red)}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)}
+.legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-400)}
+.legend i{width:9px;height:9px;border-radius:3px}
+.weakest{
+  margin-top:16px;display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:var(--r-md);
+  background:var(--red-soft);border:1px solid var(--red-border);
+}
+.weakest .wi{font-size:20px;filter:drop-shadow(0 0 8px rgba(239,79,95,.5))}
+.weakest .wt{font-size:13.5px;color:var(--text-200)}
+.weakest .wt b{color:var(--red);font-family:var(--font-display)}
+.full-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:16px;padding:13px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:14px;transition:all .2s}
+.full-btn:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-2px)}
+.full-btn svg{width:15px;height:15px;color:var(--cyan)}
+
+/* ===== Focus Practice ===== */
+.priority{
+  display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r-md);
+  background:linear-gradient(135deg,rgba(56,189,248,.1),var(--bg-elev-1));border:1px solid var(--cyan-border);margin-bottom:18px;
+}
+.priority .pno{
+  width:46px;height:46px;flex-shrink:0;border-radius:13px;
+  background:var(--cyan);color:#031020;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:800;line-height:1;box-shadow:0 0 18px rgba(56,189,248,.45)
+}
+.priority .pno small{font-size:8px;letter-spacing:.1em;font-weight:700;margin-top:2px}
+.priority .pno b{font-size:18px}
+.priority .pmeta .pl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-400)}
+.priority .pmeta .pt{font-family:var(--font-display);font-weight:800;font-size:22px;color:#fff;margin-top:3px}
+
+.fp-block{margin-bottom:16px}
+.fp-block .h{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-500);margin-bottom:9px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-size:12.5px;color:var(--text-200);transition:all .2s}
+.chip:hover{border-color:var(--cyan-border);color:#fff}
+.chip.res{background:var(--cyan-bg-soft);border-color:var(--cyan-border-soft);color:var(--cyan-3)}
+.chip .d{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+
+.fp-goals{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.goal{flex:1;min-width:140px;padding:14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.goal .gl{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
+.goal .gv{font-family:var(--font-display);font-weight:700;font-size:18px;color:#fff;margin-top:6px}
+.goal .gv .arrow{color:var(--cyan)}
+.goal .gv .from{color:var(--red)} .goal .gv .to{color:var(--green)}
+
+/* ===== Mock Exam ===== */
+.seg{display:flex;gap:8px;background:var(--bg-elev-1);padding:5px;border-radius:13px;border:1px solid var(--border-soft);margin-bottom:18px}
+.seg button{flex:1;padding:11px;border:none;background:transparent;border-radius:9px;color:var(--text-300);font-weight:700;font-size:14px;font-family:var(--font-display);transition:all .25s}
+.seg button.on{background:var(--cyan);color:#031020;box-shadow:0 0 16px rgba(56,189,248,.35)}
+.big-cta{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:17px;border-radius:var(--r-md);border:none;
+  background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;
+  font-family:var(--font-display);font-weight:800;font-size:16px;
+  box-shadow:0 8px 28px rgba(56,189,248,.3);transition:transform .2s,box-shadow .2s;
+}
+.big-cta:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(56,189,248,.46)}
+.big-cta svg{width:19px;height:19px}
+.feat-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.feat{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text-300)}
+.feat .fc{width:24px;height:24px;flex-shrink:0;border-radius:8px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);display:flex;align-items:center;justify-content:center}
+.feat .fc svg{width:13px;height:13px;color:var(--cyan)}
+
+/* ===== AI Tutor ===== */
+.tutor-card{background:linear-gradient(135deg,#0d1b33,var(--bg-card));border-color:var(--cyan-border-soft)}
+.tutor-desc{color:var(--text-300);font-size:14px;margin-bottom:18px}
+.fake-chat{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--cyan-border)}
+.fake-chat .attach{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid var(--cyan-border-soft);background:var(--bg-card);color:var(--text-300);display:flex;align-items:center;justify-content:center;transition:all .2s}
+.fake-chat .attach:hover{color:var(--cyan);border-color:var(--cyan);background:var(--cyan-bg-soft)}
+.fake-chat .attach svg{width:17px;height:17px}
+.fake-chat input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--text-200);font-family:var(--font-body);font-size:14px}
+.fake-chat input::placeholder{color:var(--text-500)}
+.upload-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:12px;padding:13px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px dashed var(--cyan-border);color:var(--text-200);font-weight:600;font-size:13.5px;transition:all .2s}
+.upload-btn:hover{border-color:var(--cyan);color:#fff;background:var(--cyan-bg-soft);box-shadow:0 0 18px rgba(56,189,248,.14)}
+.upload-btn svg{width:16px;height:16px;color:var(--cyan)}
+.img-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;border-radius:var(--r-md);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border)}
+.img-preview img{width:46px;height:46px;flex-shrink:0;border-radius:10px;object-fit:cover;border:1px solid var(--cyan-border)}
+.img-preview .ip-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.img-preview .ip-name{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.img-preview .ip-hint{font-size:11px;color:var(--cyan);font-family:var(--font-mono)}
+.img-preview .ip-remove{width:30px;height:30px;flex-shrink:0;border-radius:8px;border:1px solid var(--border-mid);background:var(--bg-card);color:var(--text-300);display:flex;align-items:center;justify-content:center;transition:all .2s}
+.img-preview .ip-remove:hover{color:var(--red);border-color:var(--red-border);background:var(--red-soft)}
+.img-preview .ip-remove svg{width:14px;height:14px}
+.send{width:42px;height:42px;flex-shrink:0;border-radius:50%;border:none;background:var(--cyan);color:#031020;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(56,189,248,.4);transition:transform .2s}
+.send:hover{transform:scale(1.06)}
+.send svg{width:17px;height:17px}
+.tutor-cta{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:14px;padding:15px;border-radius:var(--r-md);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:#fff;font-family:var(--font-display);font-weight:700;font-size:15px;transition:all .2s}
+.tutor-cta:hover{background:var(--cyan-bg-med);border-color:var(--cyan);transform:translateY(-2px)}
+.tutor-cta .em{font-size:18px}
+
+/* ===== BOTTOM NAV (mobile) ===== */
+.bottomnav{
+  position:fixed;z-index:55;left:0;right:0;bottom:0;
+  height:calc(62px + env(safe-area-inset-bottom,0));
+  padding-bottom:env(safe-area-inset-bottom,0);
+  display:flex;align-items:stretch;
+  background:rgba(8,14,28,.97);border-top:1px solid var(--border-soft);
+}
+.bottomnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text-500);font-size:10px;font-weight:600}
+.bottomnav a svg{width:21px;height:21px}
+.bottomnav a.active{color:var(--cyan)}
+.bottomnav a.active svg{filter:drop-shadow(0 0 6px rgba(56,189,248,.6))}
+
+/* ============ RESPONSIVE ============ */
+@media(min-width:720px){
+  .grid{grid-template-columns:1fr 1fr}
+  .card.span2{grid-column:span 2}
+  .feat-list{grid-template-columns:1fr 1fr}
+}
+@media(min-width:1024px){
+  .hamb{display:none}
+  .sidebar{transform:translateX(0)}
+  .overlay{display:none!important}
+  .bottomnav{display:none}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1400px;padding-bottom:40px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}
+  .brand.in-topbar{display:none}
+}
+@media(max-width:1023px){
+  .sidebar .side-card{display:none}
+}
+
+@media(max-width:380px){
+  :root{--container-x:14px}
+  .streak-top{gap:10px}
+  .streak-stat{min-width:0;padding:14px}
+  .streak-stat .val{font-size:26px}
+  .badges{gap:7px}
+  .badge{padding:12px 6px}
+  .badge .bt{font-size:10.5px}
+  .badge .bi{font-size:21px}
+  .fp-goals{gap:10px}
+  .goal{min-width:0}
+  .week{gap:5px}
+  .feat-list{grid-template-columns:1fr}
+  .welcome-actions .btn{flex:1}
+}
+img,svg{max-width:100%}
+.main,.grid,.card{min-width:0}
+.card{max-width:100%}
+
+/* ============ KEYFRAMES ============ */
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes barGrow{from{width:0}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 18px rgba(56,189,248,.14)}50%{box-shadow:0 0 26px rgba(56,189,248,.3)}}
+.d1{animation-delay:.05s}.d2{animation-delay:.12s}.d3{animation-delay:.19s}.d4{animation-delay:.26s}.d5{animation-delay:.33s}.d6{animation-delay:.4s}
+
+/* ===== Exam Plan stat cards ===== */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-6)}
+@media(min-width:640px){.plan-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1080px){.plan-grid{grid-template-columns:repeat(6,1fr)}}
+.pstat{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:var(--space-4);animation:rise .6s ease both}
+.pstat.hi{background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-card));border-color:var(--cyan-border-soft)}
+.pstat .ps-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);margin-bottom:11px}
+.pstat .ps-l{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
+.pstat .ps-v{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;line-height:1.1;margin-top:5px}
+.pstat .ps-v.cyan{color:var(--cyan)}
+.pstat .ps-d{font-size:11px;color:var(--text-500);margin-top:3px}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <a class="brand in-topbar" href="index.html" aria-label="Go to home page">
+    <span class="logo-mark">Si</span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <button class="bell" aria-label="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span class="dot"></span>
+    </button>
+    <a href="profile.html" class="avatar" id="topAvatar" aria-label="Profile" title="Open profile" style="text-decoration:none">A</a>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="index.html" aria-label="Go to home page" style="padding:0 8px 8px;margin-bottom:6px">
+    <span class="logo-mark">Si</span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="side-sec">Menu</div>
+  <a class="nav-item active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    Dashboard
+  </a>
+  <a class="nav-item" href="chat.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
+    AI Tutor
+  </a>
+  <a class="nav-item" href="weakness.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+    Weakness Analyzer
+  </a>
+  <a class="nav-item" href="focus.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+    Focus Practice
+  </a>
+  <a class="nav-item" href="mock-exam.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M12 1h0M9 1h6"/></svg>
+    Mock Exams
+  </a>
+  <a class="nav-item" href="history.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+    History
+  </a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+    Profile
+  </a>
+  <a class="nav-item" href="settings.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+  <a class="nav-item" href="pricing.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+    Pricing
+  </a>
+  <div class="side-spacer"></div>
+  <div class="side-card">
+    <h4>🐉 Keep your streak</h4>
+    <p>You're on a 12-day streak. Solve 3 questions today to keep it alive.</p>
+    <a class="mini-btn" href="chat.html">Solve Now</a>
+  </div>
+</aside>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- SECTION 1: WELCOME -->
+  <section class="welcome">
+    <div class="eyebrow"><span class="live-dot"></span> Student Dashboard</div>
+    <h1>Welcome back, <span class="accent" id="welcomeName">Student</span></h1>
+    <p>Logged in as <span id="welcomeEmail" style="color:var(--cyan-3)">—</span> · Let's continue improving your <span id="welcomeExam" style="color:var(--cyan-3)">SAT</span> performance.</p>
+    <div class="welcome-actions">
+      <button onclick="location.href='chat.html'" class="btn btn-primary">
+        Continue Learning
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button onclick="location.href='chat.html'" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
+        Ask AI Tutor
+      </button>
+    </div>
+  </section>
+
+  <!-- YOUR EXAM PLAN (from onboarding) -->
+  <div class="plan-grid">
+    <div class="pstat hi d1"><div class="ps-ic">📝</div><div class="ps-l">Exam Type</div><div class="ps-v cyan" id="dExamType">—</div></div>
+    <div class="pstat d2"><div class="ps-ic">🎯</div><div class="ps-l">Target Score</div><div class="ps-v" id="dTarget">—</div></div>
+    <div class="pstat d3"><div class="ps-ic">📅</div><div class="ps-l">Exam Date</div><div class="ps-v" id="dExamDate">—</div></div>
+    <div class="pstat hi d4"><div class="ps-ic">⏳</div><div class="ps-l">Days Remaining</div><div class="ps-v cyan" id="dDaysLeft">—</div><div class="ps-d" id="dDaysNote"></div></div>
+    <div class="pstat d5"><div class="ps-ic">📚</div><div class="ps-l">Sessions / Week</div><div class="ps-v" id="dSessions">—</div></div>
+    <div class="pstat d6"><div class="ps-ic">⏱️</div><div class="ps-l">Session Length</div><div class="ps-v" id="dSessionLen">—</div></div>
+  </div>
+
+  <!-- OVERVIEW CARDS (Si Math AI system at a glance) -->
+  <div class="overview">
+
+    <!-- 1. Biggest Weakness -->
+    <div class="ov weak" onclick="location.href='weakness.html'">
+      <div class="ov-head"><span class="ov-ic">⚠️</span><span class="ov-ttl">Biggest Weakness</span></div>
+      <div class="ov-topic">Geometry <span class="arrow">→</span><span class="sub">Circles</span></div>
+      <div class="ov-tags">
+        <span class="ov-tag sev-high"><span class="d"></span>Severity: High</span>
+        <span class="ov-tag trend-up"><span class="d"></span>Trend: Improving</span>
+      </div>
+    </div>
+
+    <!-- 2. Current Focus Practice -->
+    <div class="ov" onclick="location.href='focus.html'">
+      <div class="ov-head"><span class="ov-ic">🎯</span><span class="ov-ttl">Current Focus Plan</span></div>
+      <div class="ov-topic">4-Week Geometry Plan</div>
+      <div class="ov-row"><span>Tasks remaining</span><b>5 of 12</b></div>
+      <div class="ov-track"><i style="width:58%"></i></div>
+      <div class="ov-sub2"><b>58%</b> complete this week</div>
+    </div>
+
+    <!-- 3. Estimated Score -->
+    <div class="ov" onclick="location.href='mock-exam.html'">
+      <div class="ov-head"><span class="ov-ic">📊</span><span class="ov-ttl">Estimated Score</span></div>
+      <div class="ov-big">640 <span class="unit">/ 800</span></div>
+      <div class="ov-row"><span>Target</span><b>750</b></div>
+      <div class="ov-track"><i style="width:64%"></i></div>
+      <div class="ov-sub2"><b>64%</b> to your target score</div>
+    </div>
+
+    <!-- 4. Recent Improvement -->
+    <div class="ov" onclick="location.href='weakness.html'">
+      <div class="ov-head"><span class="ov-ic">📈</span><span class="ov-ttl">Recent Improvement</span></div>
+      <div class="ov-topic">Functions</div>
+      <div class="ov-big green" style="margin-top:10px">+18%</div>
+      <div class="ov-sub2">Most improved topic this month</div>
+    </div>
+
+    <!-- 5. Study Consistency -->
+    <div class="ov" onclick="location.href='history.html'">
+      <div class="ov-head"><span class="ov-ic">🔥</span><span class="ov-ttl">Study Consistency</span></div>
+      <div class="ov-big">12 <span class="unit">day streak</span></div>
+      <div class="ov-sub2" style="margin-bottom:4px">Weekly consistency: <b>5 / 7 days</b></div>
+      <div class="ov-mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    </div>
+
+  </div>
+
+  <div class="grid">
+
+    <!-- SECTION 2: DAILY STREAK -->
+    <section class="card glow d1">
+      <div class="card-head">
+        <div class="card-ico">🔥</div>
+        <div>
+          <div class="card-title">Daily Streak</div>
+          <div class="card-sub">Consistency builds mastery</div>
+        </div>
+      </div>
+
+      <div class="streak-top">
+        <div class="streak-stat flame">
+          <span class="flame-ico">🔥</span>
+          <div class="lbl">Current Streak</div>
+          <div class="val">12 <span>days</span></div>
+        </div>
+        <div class="streak-stat">
+          <div class="lbl">Best Streak</div>
+          <div class="val">27 <span>days</span></div>
+        </div>
+      </div>
+
+      <div class="week-label">
+        <span class="t">Weekly Progress</span>
+        <span class="c">5 / 7 days</span>
+      </div>
+      <div class="week">
+        <div class="day done"><span class="dn">M</span><div class="dd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
+        <div class="day done"><span class="dn">T</span><div class="dd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
+        <div class="day done"><span class="dn">W</span><div class="dd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
+        <div class="day done"><span class="dn">T</span><div class="dd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
+        <div class="day done"><span class="dn">F</span><div class="dd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
+        <div class="day today"><span class="dn">S</span><div class="dd">•</div></div>
+        <div class="day"><span class="dn">S</span><div class="dd"></div></div>
+      </div>
+
+      <div class="ach-label">Achievements</div>
+      <div class="badges">
+        <div class="badge unlocked">
+          <span class="bi">🏅</span>
+          <span class="bt">7 Day Streak</span>
+        </div>
+        <div class="badge locked">
+          <span class="lock">🔒</span>
+          <span class="bi">💎</span>
+          <span class="bt">30 Day Streak</span>
+          <div class="prog"><i style="width:40%"></i></div>
+        </div>
+        <div class="badge unlocked">
+          <span class="bi">⭐</span>
+          <span class="bt">100 Questions Solved</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: WEAKNESS ANALYZER -->
+    <section class="card d2">
+      <div class="card-head">
+        <div class="card-ico">📊</div>
+        <div>
+          <div class="card-title">Weakness Analyzer</div>
+          <div class="card-sub">Topic performance breakdown</div>
+        </div>
+      </div>
+
+      <div class="bars">
+        <div class="bar-row">
+          <div class="bar-head"><span class="bar-name">Algebra</span><span class="bar-pct g">88%</span></div>
+          <div class="bar-track"><div class="bar-fill g" style="width:88%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span class="bar-name">Geometry</span><span class="bar-pct r">43%</span></div>
+          <div class="bar-track"><div class="bar-fill r" style="width:43%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span class="bar-name">Functions</span><span class="bar-pct y">70%</span></div>
+          <div class="bar-track"><div class="bar-fill y" style="width:70%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span class="bar-name">Statistics</span><span class="bar-pct g">91%</span></div>
+          <div class="bar-track"><div class="bar-fill g" style="width:91%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span class="bar-name">Advanced Math</span><span class="bar-pct y">58%</span></div>
+          <div class="bar-track"><div class="bar-fill y" style="width:58%"></div></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--green)"></i> Strong</span>
+        <span><i style="background:var(--amber)"></i> Average</span>
+        <span><i style="background:var(--red)"></i> Weak</span>
+      </div>
+
+      <div class="weakest">
+        <span class="wi">⚠️</span>
+        <span class="wt">Biggest Weakness: <b>Geometry</b></span>
+      </div>
+
+      <button onclick="location.href='weakness.html'" class="full-btn">
+        View Full Analysis
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </section>
+
+    <!-- SECTION 4: FOCUS PRACTICE -->
+    <section class="card span2 d3">
+      <div class="card-head">
+        <div class="card-ico">🎯</div>
+        <div>
+          <div class="card-title">Focus Practice</div>
+          <div class="card-sub">Your personal study coach</div>
+        </div>
+      </div>
+
+      <div class="priority">
+        <div class="pno"><small>PRIORITY</small><b>#1</b></div>
+        <div class="pmeta">
+          <div class="pl">Top priority topic</div>
+          <div class="pt">Geometry</div>
+        </div>
+      </div>
+
+      <div class="fp-block">
+        <div class="h">Topics to review</div>
+        <div class="chips">
+          <span class="chip"><span class="d"></span>Circles</span>
+          <span class="chip"><span class="d"></span>Triangles</span>
+          <span class="chip"><span class="d"></span>Coordinate Geometry</span>
+        </div>
+      </div>
+
+      <div class="fp-block">
+        <div class="h">Recommended resources</div>
+        <div class="chips">
+          <span class="chip res">📘 Khan Academy</span>
+          <span class="chip res">🏛️ College Board Question Bank</span>
+          <span class="chip res">🐼 Panda Math</span>
+        </div>
+      </div>
+
+      <div class="fp-goals">
+        <div class="goal">
+          <div class="gl">Study Goal</div>
+          <div class="gv">4 Hours <span style="font-size:13px;color:var(--text-400);font-weight:600">/ week</span></div>
+        </div>
+        <div class="goal">
+          <div class="gl">Target — Geometry Accuracy</div>
+          <div class="gv"><span class="from">43%</span> <span class="arrow">→</span> <span class="to">70%</span></div>
+        </div>
+      </div>
+
+      <button onclick="location.href='focus.html'" class="full-btn">
+        View Study Plan
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </section>
+
+    <!-- SECTION 5: MOCK EXAM TIMER -->
+    <section class="card d4">
+      <div class="card-head">
+        <div class="card-ico">⏰</div>
+        <div>
+          <div class="card-title">Mock Exam Mode</div>
+          <div class="card-sub">Simulate a real SAT, ACT, or EST environment</div>
+        </div>
+      </div>
+
+      <div class="seg" id="examSeg">
+        <button class="on">SAT</button>
+        <button>ACT</button>
+        <button>EST</button>
+      </div>
+
+      <button onclick="location.href='mock-exam.html'" class="big-cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>
+        Start Mock Exam
+      </button>
+
+      <div class="feat-list">
+        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Official Timer</div>
+        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h0"/></svg></span>Time Warnings</div>
+        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></span>Pressure Simulation</div>
+        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v5h-5"/></svg></span>Recovery Flow</div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: QUICK AI TUTOR -->
+    <section class="card tutor-card d5">
+      <div class="card-head">
+        <div class="card-ico">🤖</div>
+        <div>
+          <div class="card-title">AI Tutor</div>
+          <div class="card-sub">Instant step-by-step help</div>
+        </div>
+      </div>
+
+      <p class="tutor-desc">Ask any SAT or EST math question instantly — type it out or upload a photo of the question, and get a clear, step-by-step explanation.</p>
+
+      <div class="fake-chat">
+        <button class="attach" id="attachBtn" aria-label="Upload question image" title="Upload question image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <input type="text" placeholder="Type your math question…"/>
+        <button class="send" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
+        </button>
+      </div>
+
+      <input type="file" id="qImage" accept="image/*" hidden/>
+
+      <button class="upload-btn" id="uploadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        Upload Question Image
+      </button>
+
+      <div class="img-preview" id="imgPreview" hidden>
+        <img id="previewThumb" alt="Question preview"/>
+        <div class="ip-meta">
+          <span class="ip-name" id="previewName">question.jpg</span>
+          <span class="ip-hint">Ready to send to Si</span>
+        </div>
+        <button class="ip-remove" id="removeImg" aria-label="Remove image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <button onclick="location.href='chat.html'" class="tutor-cta">
+        <span class="em">🐉</span> Ask Si Math AI
+      </button>
+    </section>
+
+  </div>
+</main>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottomnav">
+  <a class="active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    Home
+  </a>
+  <a href="weakness.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+    Analyze
+  </a>
+  <a href="focus.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+    Focus
+  </a>
+  <a href="mock-exam.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>
+    Exams
+  </a>
+  <a href="chat.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
+    Tutor
+  </a>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== Supabase client =====
+  const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ===== Auth guard + load profile =====
+  (async () => {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+
+    // Load profile row
+    let { data: profile, error } = await supabaseClient
+      .from('profiles').select('*').eq('id', user.id).single();
+
+    // If no profile row exists yet, create one (safety net) then re-load
+    if (error && error.code === 'PGRST116') {
+      const meta0 = user.user_metadata || {};
+      const fn0 = meta0.full_name || (user.email ? user.email.split('@')[0] : 'Student');
+      await supabaseClient.from('profiles').upsert(
+        { id: user.id, email: user.email, full_name: fn0 },
+        { onConflict: 'id' }
+      );
+      const re = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+      profile = re.data;
+      error = re.error;
+    }
+
+    // If still no profile or onboarding not finished -> onboarding
+    if (!profile || profile.onboarding_completed !== true) {
+      window.location.href = 'onboarding.html';
+      return;
+    }
+
+    // Name (profile.full_name -> metadata -> email)
+    const meta = user.user_metadata || {};
+    const fullName = profile.full_name || meta.full_name || (user.email ? user.email.split('@')[0] : 'Student');
+    const firstName = String(fullName).split(' ')[0];
+    const wn = document.getElementById('welcomeName');
+    if (wn) wn.textContent = firstName;
+
+    // Email + exam type in welcome line
+    const we = document.getElementById('welcomeEmail');
+    if (we) we.textContent = profile.email || user.email || '';
+    const wx = document.getElementById('welcomeExam');
+    if (wx) wx.textContent = profile.exam_type || 'SAT';
+
+    // Avatar initials in top bar
+    const av = document.getElementById('topAvatar');
+    if (av) {
+      const initials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'S';
+      av.textContent = initials;
+      av.title = `${fullName} — ${profile.email || user.email || ''}`;
+    }
+
+    // Exam plan stats
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('dExamType', profile.exam_type || '—');
+    set('dTarget', profile.target_score != null ? profile.target_score : '—');
+    set('dSessions', profile.study_sessions_per_week != null ? profile.study_sessions_per_week + '×' : '—');
+    set('dSessionLen', profile.session_length != null ? profile.session_length + ' min' : '—');
+
+    // Exam date + days remaining
+    if (profile.exam_date) {
+      const d = new Date(profile.exam_date + 'T00:00:00');
+      set('dExamDate', d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }));
+      const today = new Date(); today.setHours(0,0,0,0);
+      const diffDays = Math.round((d - today) / 86400000);
+      if (diffDays > 0) { set('dDaysLeft', diffDays); set('dDaysNote', 'days to go'); }
+      else if (diffDays === 0) { set('dDaysLeft', 'Today'); set('dDaysNote', 'exam day!'); }
+      else { set('dDaysLeft', 'Past'); set('dDaysNote', 'exam date passed'); }
+    } else {
+      set('dExamDate', '—'); set('dDaysLeft', '—');
+    }
+  })();
+
+  // ===== Logout =====
+  async function logout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = 'login.html';
+  }
+  window.logout = logout;
+
+
+  const sidebar=document.getElementById('sidebar');
+  const overlay=document.getElementById('overlay');
+  const hamb=document.getElementById('hamb');
+  function openSide(){sidebar.classList.add('open');overlay.classList.add('show');}
+  function closeSide(){sidebar.classList.remove('open');overlay.classList.remove('show');}
+  hamb.addEventListener('click',openSide);
+  overlay.addEventListener('click',closeSide);
+  sidebar.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{
+    sidebar.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    a.classList.add('active');
+    if(window.innerWidth<1024) closeSide();
+  }));
+
+  // AI Tutor image upload
+  const qImage=document.getElementById('qImage');
+  const uploadBtn=document.getElementById('uploadBtn');
+  const attachBtn=document.getElementById('attachBtn');
+  const imgPreview=document.getElementById('imgPreview');
+  const previewThumb=document.getElementById('previewThumb');
+  const previewName=document.getElementById('previewName');
+  const removeImg=document.getElementById('removeImg');
+  function pickImage(){qImage.click();}
+  uploadBtn.addEventListener('click',pickImage);
+  attachBtn.addEventListener('click',pickImage);
+  qImage.addEventListener('change',()=>{
+    const f=qImage.files&&qImage.files[0];
+    if(!f) return;
+    previewName.textContent=f.name;
+    previewThumb.src=URL.createObjectURL(f);
+    imgPreview.hidden=false;
+  });
+  removeImg.addEventListener('click',()=>{
+    qImage.value='';
+    imgPreview.hidden=true;
+    if(previewThumb.src) URL.revokeObjectURL(previewThumb.src);
+  });
+
+  document.querySelectorAll('#examSeg button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#examSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+  }));
+
+  // Bottom nav active
+  document.querySelectorAll('.bottomnav a').forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.bottomnav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+  }));
+</script>
+</body>
+</html>
