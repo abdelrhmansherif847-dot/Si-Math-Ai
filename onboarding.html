@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Get Started · Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;--space-8:40px;
+  --container-x:18px;--r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  background-color:#050a14 !important;background:#050a14 !important;color:var(--text-200);
+  font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  min-height:100dvh;position:relative;display:flex;flex-direction:column;
+}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
+.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:10%;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+/* top brand bar */
+.brandbar{display:flex;align-items:center;justify-content:center;gap:11px;padding:22px var(--container-x) 6px;position:relative;z-index:2}
+.logo-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:17px;color:#031020;box-shadow:0 0 18px rgba(56,189,248,.25)}
+.brandbar .bt{font-family:var(--font-display);font-weight:800;font-size:19px;color:#fff;letter-spacing:-.01em}
+.brandbar .bt span{color:var(--cyan)}
+
+.wrap{flex:1;width:100%;max-width:640px;margin:0 auto;padding:var(--space-5) var(--container-x) calc(var(--space-8) + env(safe-area-inset-bottom,0px));position:relative;z-index:2}
+
+.intro{text-align:center;margin-bottom:var(--space-6);animation:rise .6s ease both}
+.intro .eyebrow{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);padding:5px 13px;border-radius:100px;margin-bottom:14px}
+.intro h1{font-family:var(--font-display);font-weight:800;font-size:clamp(24px,6.5vw,34px);line-height:1.1;letter-spacing:-.02em;color:#fff}
+.intro h1 .accent{color:var(--cyan)}
+.intro p{color:var(--text-300);font-size:14.5px;margin-top:9px;max-width:440px;margin-left:auto;margin-right:auto}
+
+.card{
+  position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);
+  border-radius:var(--r-lg);padding:var(--space-6);animation:rise .6s ease both;
+}
+.field{margin-bottom:var(--space-6)}
+.field:last-of-type{margin-bottom:0}
+.field-label{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;margin-bottom:4px}
+.field-label .fi{width:28px;height:28px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.field-hint{font-size:12.5px;color:var(--text-400);margin:0 0 13px 37px}
+
+/* segmented (exam type) */
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.seg button{
+  padding:14px 10px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);
+  color:var(--text-300);font-family:var(--font-display);font-weight:700;font-size:15px;transition:all .18s;
+}
+.seg button .sl{display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text-500);margin-top:3px}
+.seg button:hover{border-color:var(--cyan-border);color:#fff}
+.seg button.on{background:var(--cyan-bg-med);border-color:var(--cyan);color:#fff;box-shadow:0 0 16px rgba(56,189,248,.18)}
+.seg button.on .sl{color:var(--cyan-3)}
+
+/* inputs */
+.inp{
+  width:100%;padding:14px 15px;border-radius:var(--r-md);background:var(--bg-elev-1);
+  border:1px solid var(--border-mid);color:#fff;font-family:var(--font-body);font-size:15px;transition:border-color .18s,box-shadow .18s;
+}
+.inp::placeholder{color:var(--text-500)}
+.inp:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+.inp[type=date]{color-scheme:dark}
+
+/* stepper for numbers */
+.stepper{display:flex;align-items:stretch;gap:10px}
+.stepper .inp{text-align:center;font-family:var(--font-display);font-weight:700;font-size:18px}
+.stepper button{
+  width:50px;flex-shrink:0;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);
+  color:var(--cyan);font-size:22px;font-weight:700;transition:all .18s;
+}
+.stepper button:hover{border-color:var(--cyan);background:var(--cyan-bg-soft)}
+
+.divider{height:1px;background:var(--border-soft);margin:var(--space-6) 0}
+
+.btn-primary{
+  width:100%;margin-top:var(--space-6);display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:16px;border-radius:var(--r-md);border:none;
+  background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;
+  font-family:var(--font-display);font-weight:800;font-size:16px;transition:transform .2s,box-shadow .2s;
+  box-shadow:0 10px 30px rgba(56,189,248,.25);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(56,189,248,.4)}
+.btn-primary:disabled{opacity:.6;pointer-events:none}
+.btn-primary svg{width:17px;height:17px}
+
+.footnote{text-align:center;font-size:12px;color:var(--text-500);margin-top:16px}
+
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="brandbar">
+  <span class="logo-mark">Si</span>
+  <span class="bt">Si<span>Math</span> AI</span>
+</div>
+
+<div class="wrap">
+  <div class="intro">
+    <div class="eyebrow">✦ Let's personalize your prep</div>
+    <h1>Welcome, <span class="accent" id="introName">Student</span>!</h1>
+    <p>Tell us about your goals so Si can build a study plan made just for you. This takes less than a minute.</p>
+  </div>
+
+  <form id="onboardForm" class="card" novalidate>
+    <!-- Exam Type -->
+    <div class="field">
+      <div class="field-label"><span class="fi">📝</span> Exam Type</div>
+      <div class="field-hint">Which standardized test are you preparing for?</div>
+      <div class="seg" id="examSeg">
+        <button type="button" data-val="SAT" class="on">SAT<span class="sl">Scholastic</span></button>
+        <button type="button" data-val="EST">EST<span class="sl">Egyptian</span></button>
+        <button type="button" data-val="ACT">ACT<span class="sl">American</span></button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Target Score -->
+    <div class="field">
+      <div class="field-label"><span class="fi">🎯</span> Target Score</div>
+      <div class="field-hint">What score are you aiming for?</div>
+      <input type="number" id="targetScore" class="inp" placeholder="e.g. 1450" inputmode="numeric" min="400" max="1600" value="1400"/>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Exam Date -->
+    <div class="field">
+      <div class="field-label"><span class="fi">📅</span> Exam Date</div>
+      <div class="field-hint">When is your test? We'll pace your plan around it.</div>
+      <input type="date" id="examDate" class="inp"/>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Sessions per week -->
+    <div class="field">
+      <div class="field-label"><span class="fi">📚</span> Study Sessions Per Week</div>
+      <div class="field-hint">How many days a week can you study?</div>
+      <div class="stepper">
+        <button type="button" data-step="-1" data-target="sessionsWeek">−</button>
+        <input type="number" id="sessionsWeek" class="inp" min="1" max="7" value="5" inputmode="numeric"/>
+        <button type="button" data-step="1" data-target="sessionsWeek">+</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Session length -->
+    <div class="field">
+      <div class="field-label"><span class="fi">⏱️</span> Session Length</div>
+      <div class="field-hint">How long is each study session? (minutes)</div>
+      <div class="stepper">
+        <button type="button" data-step="-15" data-target="sessionLen">−</button>
+        <input type="number" id="sessionLen" class="inp" min="15" max="180" step="15" value="45" inputmode="numeric"/>
+        <button type="button" data-step="15" data-target="sessionLen">+</button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary" id="continueBtn">
+      Continue
+      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="footnote">You can change any of this later in your profile.</div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== Supabase client =====
+  const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+
+  // ===== Auth guard + prefill =====
+  (async () => {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    currentUser = user;
+
+    // Show name from metadata if available
+    const meta = user.user_metadata || {};
+    if (meta.full_name) {
+      document.getElementById('introName').textContent = meta.full_name.split(' ')[0];
+    }
+
+    // If onboarding already completed, skip straight to dashboard
+    const { data: profile } = await supabaseClient
+      .from('profiles').select('onboarding_completed').eq('id', user.id).single();
+    if (profile && profile.onboarding_completed === true) {
+      window.location.href = 'dashboard.html';
+    }
+  })();
+
+  // ===== Exam type segmented control =====
+  let examType = 'SAT';
+  document.querySelectorAll('#examSeg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#examSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    examType = b.dataset.val;
+  }));
+
+  // ===== Steppers =====
+  document.querySelectorAll('.stepper button').forEach(b => b.addEventListener('click', () => {
+    const inp = document.getElementById(b.dataset.target);
+    const step = parseInt(b.dataset.step, 10);
+    const min = parseInt(inp.min, 10), max = parseInt(inp.max, 10);
+    let v = (parseInt(inp.value, 10) || min) + step;
+    v = Math.max(min, Math.min(max, v));
+    inp.value = v;
+  }));
+
+  // ===== Submit =====
+  document.getElementById('onboardForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) { window.location.href = 'login.html'; return; }
+
+    const targetScore = parseInt(document.getElementById('targetScore').value, 10);
+    const examDate = document.getElementById('examDate').value;
+    const sessionsWeek = parseInt(document.getElementById('sessionsWeek').value, 10);
+    const sessionLen = parseInt(document.getElementById('sessionLen').value, 10);
+
+    if (!targetScore || !examDate) {
+      alert('Please enter your target score and exam date.');
+      return;
+    }
+
+    const btn = document.getElementById('continueBtn');
+    btn.disabled = true; btn.style.opacity = '0.7';
+
+    try {
+      const { error } = await supabaseClient.from('profiles').update({
+        exam_type: examType,
+        target_score: targetScore,
+        exam_date: examDate,
+        study_sessions_per_week: sessionsWeek,
+        session_length: sessionLen,
+        onboarding_completed: true
+      }).eq('id', currentUser.id);
+
+      if (error) {
+        alert(error.message);
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    } catch (err) {
+      alert(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      btn.disabled = false; btn.style.opacity = '1';
+    }
+  });
+</script>
+</body>
+</html>
