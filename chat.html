@@ -974,7 +974,8 @@ button{font-family:inherit;cursor:pointer}
     // Read everything from the Edge Function response. If a field is missing,
     // we hide that section instead of showing fake content.
     const r = aiResponse || {};
-    const answer     = r.answer || '';
+    const answer = r.answer || r.ai_response || '';
+if (!answer) { showError('No response received. Please try again.'); return; }
     const topic      = r.topic    || sig.topic;
     const subtopic   = r.subtopic || sig.sub;
     const difficulty = r.difficulty || null;            // 'Easy' | 'Medium' | 'Hard'
