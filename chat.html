@@ -910,10 +910,12 @@ alert(
   input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px'});
 
   // image upload
-  uploadBtn.addEventListener('click',()=>qImage.click());
+  uploadBtn.addEventListener('click',()=> {
   qImage.addEventListener('change', () => {
+  alert('FILE SELECTED');
   const f = qImage.files && qImage.files[0];
   if (!f) return;
+  
 
   const reader = new FileReader();
   reader.onload = (e) => {
