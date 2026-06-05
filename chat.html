@@ -697,7 +697,10 @@ button{font-family:inherit;cursor:pointer}
 
     // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT)
     const { data, error } = await sb.functions.invoke('ai-tutor', { body: payload });
-
+alert(
+  "ERROR = " + JSON.stringify(error) +
+  "\n\nDATA = " + JSON.stringify(data)
+);
     // 4) Translate every error class into a clear user-facing message
     if (error) {
       const status = error.context && error.context.status;
