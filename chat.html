@@ -731,7 +731,7 @@ alert(
   const input=document.getElementById('input');
   const sendBtn=document.getElementById('sendBtn');
   const qImage=document.getElementById('qImage');
-const uploadBtn=document.getElementById('uploadBtn');
+  const uploadBtn=document.getElementById('uploadBtn');
   const imgPreview=document.getElementById('imgPreview');
   const previewThumb=document.getElementById('previewThumb');
   const previewName=document.getElementById('previewName');
@@ -910,12 +910,10 @@ const uploadBtn=document.getElementById('uploadBtn');
   input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px'});
 
   // image upload
-  uploadBtn.addEventListener('click',()=> {
+  uploadBtn.addEventListener('click',()=>qImage.click());
   qImage.addEventListener('change', () => {
-  alert('FILE SELECTED');
   const f = qImage.files && qImage.files[0];
   if (!f) return;
-  
 
   const reader = new FileReader();
   reader.onload = (e) => {
