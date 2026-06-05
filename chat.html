@@ -1167,8 +1167,9 @@ if (!answer) { showError('No response received. Please try again.'); return; }
     const text=input.value.trim();
     if(!text && !pendingImg) return;
     if(isSending) return;
-    var sig=SignalEngine.analyze(text||'question');
-    addUser(text,pendingImg);
+var sig=SignalEngine.analyze(text||'question');
+var imgToSend = pendingImg;
+addUser(text,pendingImg);
     input.value='';input.style.height='auto';
     pendingImg=null;qImage.value='';imgPreview.style.display='none';
     addTyping();
@@ -1179,7 +1180,7 @@ if (!answer) { showError('No response received. Please try again.'); return; }
     // Call the deployed Supabase Edge Function. No fallbacks or mock data:
     // success -> render the real AI response.
     // failure -> show an inline error message in the chat.
-    askAI(text, sig).then(response => {
+    askAI(text, sig, imgToSend).then(response => {
       removeTyping();
       addAI(sig, response);
     }).catch(err => {
