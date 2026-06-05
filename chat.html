@@ -673,7 +673,7 @@ button{font-family:inherit;cursor:pointer}
   }
 
   // ===== CALL AI VIA EDGE FUNCTION =====
-  async function askAI(question, sig) {
+  async function askAI(question, sig, imageData) {
     // 1) Require an authenticated user before invoking the function
     const { data: { session } } = await sb.auth.getSession();
     if (!session) {
@@ -691,18 +691,12 @@ button{font-family:inherit;cursor:pointer}
     // Optional extras (the function can ignore unknown fields)
     if (sig.topic) payload.topic = sig.topic;
     if (sig.sub)   payload.subtopic = sig.sub;
-    if (pendingImg && typeof pendingImg === 'string' && pendingImg.startsWith('data:')) {
-      payload.image = pendingImg;
+    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:')) {
+      payload.image = imageData;
     }
-alert(
-  "pendingImg = " + (pendingImg ? pendingImg.substring(0,50) : "NULL")
-);
     // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT)
     const { data, error } = await sb.functions.invoke('ai-tutor', { body: payload });
-alert(
-  "ERROR = " + JSON.stringify(error) +
-  "\n\nDATA = " + JSON.stringify(data)
-);
+
     // 4) Translate every error class into a clear user-facing message
     if (error) {
       const status = error.context && error.context.status;
@@ -934,8 +928,7 @@ alert(
       
       // Quality 0.2 = جودة كويسة + حجم صغير
       pendingImg = canvas.toDataURL('image/jpeg', 0.2);
-      alert('IMAGE READY');
-previewThumb.src = pendingImg;
+      previewThumb.src = pendingImg;
       previewName.textContent = f.name;
       imgPreview.style.display = 'flex';
     };
@@ -1173,11 +1166,11 @@ if (!answer) { showError('No response received. Please try again.'); return; }
     const text=input.value.trim();
     if(!text && !pendingImg) return;
     if(isSending) return;
-var sig=SignalEngine.analyze(text||'question');
-var imgToSend = pendingImg;
-addUser(text,pendingImg);
-    input.value='';input.style.height='auto';
-    pendingImg=null;qImage.value='';imgPreview.style.display='none';
+var sig = SignalEngine.analyze(text || 'question');
+    var imgToSend = pendingImg;
+    addUser(text, pendingImg);
+    input.value = ''; input.style.height = 'auto';
+    pendingImg = null; qImage.value = ''; imgPreview.style.display = 'none';
     addTyping();
     SignalEngine.bumpUsage();
     isSending = true;
