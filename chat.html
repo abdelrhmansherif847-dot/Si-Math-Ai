@@ -694,7 +694,9 @@ button{font-family:inherit;cursor:pointer}
     if (pendingImg && typeof pendingImg === 'string' && pendingImg.startsWith('data:')) {
       payload.image = pendingImg;
     }
-alert(JSON.stringify(payload));
+alert(
+  "pendingImg = " + (pendingImg ? pendingImg.substring(0,50) : "NULL")
+);
     // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT)
     const { data, error } = await sb.functions.invoke('ai-tutor', { body: payload });
 alert(
