@@ -917,8 +917,8 @@ button{font-family:inherit;cursor:pointer}
     img.onload = () => {
       const canvas = document.createElement('canvas');
       
-      // Max 600px
-      const MAX = 600;
+      // Max 500px
+      const MAX = 500;
       let w = img.width, h = img.height;
       if (w > MAX) { h = h * MAX / w; w = MAX; }
       if (h > MAX) { w = w * MAX / h; h = MAX; }
@@ -927,8 +927,8 @@ button{font-family:inherit;cursor:pointer}
       canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       
-      // Quality 0.3 = جودة كويسة + حجم صغير
-      pendingImg = canvas.toDataURL('image/jpeg', 0.3);
+      // Quality 0.25 = جودة كويسة + حجم صغير
+      pendingImg = canvas.toDataURL('image/jpeg', 0.25);
       previewThumb.src = pendingImg;
       previewName.textContent = f.name;
       imgPreview.style.display = 'flex';
