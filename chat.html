@@ -906,12 +906,37 @@ button{font-family:inherit;cursor:pointer}
 
   // image upload
   uploadBtn.addEventListener('click',()=>qImage.click());
-  qImage.addEventListener('change',()=>{
-    const f=qImage.files&&qImage.files[0]; if(!f) return;
-    pendingImg=URL.createObjectURL(f);
-    previewThumb.src=pendingImg; previewName.textContent=f.name;
-    imgPreview.style.display='flex';
-  });
+  qImage.addEventListener('change', () => {
+  const f = qImage.files && qImage.files[0];
+  if (!f) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    // Compress قبل الإرسال
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      
+      // Max 1200px
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = h * MAX / w; w = MAX; }
+      if (h > MAX) { w = w * MAX / h; h = MAX; }
+      
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      
+      // Quality 0.7 = جودة كويسة + حجم صغير
+      pendingImg = canvas.toDataURL('image/jpeg', 0.7);
+      previewThumb.src = pendingImg;
+      previewName.textContent = f.name;
+      imgPreview.style.display = 'flex';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+});
   removeImg.addEventListener('click',()=>{qImage.value='';pendingImg=null;imgPreview.style.display='none'});
 
   // Confidence selector
