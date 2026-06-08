@@ -90,7 +90,9 @@ button{font-family:inherit;cursor:pointer}
   display:flex;align-items:center;justify-content:center;
   padding:clamp(32px,7vh,60px) var(--space-5) calc(48px + env(safe-area-inset-bottom,0px));
 }
-.auth{width:100%;max-width:420px;animation:rise .6s ease both}
+.auth{width:100%;max-width:420px}
+.welcome{animation:rise .5s ease both}
+.card-zone{animation:rise .5s .08s ease both}
 
 .welcome{text-align:center;margin-bottom:var(--space-8)}
 .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:inline-flex;align-items:center;gap:8px}
@@ -105,6 +107,7 @@ button{font-family:inherit;cursor:pointer}
   width:92px;height:auto;
   transform:translate(-50%,-68%);
   z-index:3;pointer-events:none;
+  will-change:transform;
   filter:drop-shadow(0 8px 14px rgba(56,189,248,.4));
   animation:perch 4.5s ease-in-out infinite;
 }

@@ -103,15 +103,14 @@ button{font-family:inherit;cursor:pointer}
 .card-zone{position:relative;margin-top:70px}
 .mascot{
   position:absolute;left:50%;top:0;
-  width:88px;height:88px;
+  width:88px;height:auto;
   transform:translate(-50%,-72%);
   z-index:3;pointer-events:none;
   will-change:transform;
   filter:drop-shadow(0 8px 14px rgba(56,189,248,.4));
   animation:perch 4.5s ease-in-out infinite;
-  object-fit:contain;
 }
-@media(min-width:420px){.mascot{width:100px;height:100px}}
+@media(min-width:420px){.mascot{width:100px}}
 .card{
   position:relative;overflow:hidden;
   background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));
