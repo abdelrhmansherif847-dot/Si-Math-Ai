@@ -650,9 +650,11 @@ button{font-family:inherit;cursor:pointer}
     document.querySelector('.shell').classList.add('chat-mode');
     records.forEach(r => {
       addUser(r.question, r.image || null, true);
-      const sig = SignalEngine.analyze(r.question || '');
-      sig.topic = r.topic || sig.topic;
-      sig.sub   = r.subtopic || sig.sub;
+      const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question) : null;
+      if (sig) {
+        sig.topic = r.topic || sig.topic;
+        sig.sub   = r.subtopic || sig.sub;
+      }
       // Re-hydrate the AI response from whatever fields the table actually has.
       const aiResponse = {
         answer:     r.ai_response || r.answer || '',
@@ -686,11 +688,11 @@ button{font-family:inherit;cursor:pointer}
     const payload = {
       question: question,
       session_id: currentSessionId,
-      confidence: sig.confidence,
+      confidence: sig ? sig.confidence : null,
     };
     // Optional extras (the function can ignore unknown fields)
-    if (sig.topic) payload.topic = sig.topic;
-    if (sig.sub)   payload.subtopic = sig.sub;
+    if (sig && sig.topic) payload.topic = sig.topic;
+    if (sig && sig.sub)   payload.subtopic = sig.sub;
     if (imageData && typeof imageData === 'string' && imageData.startsWith('data:')) {
       payload.image = imageData;
     }
