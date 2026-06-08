@@ -733,11 +733,55 @@ button{font-family:inherit;cursor:pointer}
   let pendingImg=null;
 
   /* ============================================================
+     MATH INTENT GATE
+     Classifies whether a message is math-related before any signal
+     is generated. Non-math messages (greetings, emotional support,
+     study planning, score anxiety, casual chat) return false and are
+     excluded from the signal pipeline entirely.
+     ============================================================ */
+  function isMathMessage(text) {
+    if (!text || text.trim().length < 3) return false;
+    var t = text.toLowerCase();
+
+    // Non-math patterns — checked first for fast exit
+    var skipPatterns = [
+      /^(hi|hey|hello|good\s*(morning|afternoon|evening|night)|bye|goodbye|thanks|thank\s*you|ok|okay|sure|yes|no|yep|nope|lol|haha|hehe)[^a-z]*/,
+      /\b(stressed|stress|scared|nervous|anxious|anxiety|worried|worry|afraid|overwhelmed|tired|exhausted|sad|frustrated|fear|panic)\b/,
+      /\b(motivat|encourage|cheer me|inspire|believe in me|you can do|feel better|support me)\b/,
+      /\b(how should i study|study plan|study schedule|when should i|how many hours|plan my)\b/,
+      /\b(will i (get|pass|score|achieve)|i('m| am) (bad|terrible|awful|not good) at|i can'?t do)\b/,
+      /\b(what'?s? up|how are you|how'?s? it going|good job|well done|great job)\b/
+    ];
+    for (var i = 0; i < skipPatterns.length; i++) {
+      if (skipPatterns[i].test(t)) return false;
+    }
+
+    // Math signals — any match → treat as math
+    var mathPatterns = [
+      /\b(solve|simplify|calculate|compute|find|factor|expand|derive|integrate|differentiate|prove|evaluate|graph|sketch|plot)\b/,
+      /\b(equation|formula|expression|function|variable|coefficient|exponent|radical|inequality|matrix|vector)\b/,
+      /\b(circle|arc|radius|sector|tangent|chord|triangle|angle|sine|cosine|geometry|polygon|perimeter|area|volume)\b/,
+      /\b(quadratic|parabola|vertex|polynomial|cubic|linear|slope|intercept|system|simultaneous|elimination)\b/,
+      /\b(algebra|calculus|statistics|probability|arithmetic|trigonometry|logarithm|sequence|series)\b/,
+      /\b(sat|est|act)\s+(math|question|problem|section)\b/,
+      /\b(math|maths|mathematics)\s*(question|problem|topic|concept|help|explain)/,
+      /\b(explain|understand|confused about|don'?t understand|how (do|does|to))\b.{0,40}\b(math|equation|formula|topic|concept|problem|question)\b/,
+      /[x²³⁴]|\bx\^[0-9]\b|[√∫∑≤≥]/,
+      /\d+\s*[\+\-\*\/]\s*\d+/
+    ];
+    for (var j = 0; j < mathPatterns.length; j++) {
+      if (mathPatterns[j].test(t)) return true;
+    }
+
+    return false;
+  }
+
+  /* ============================================================
      AI TUTOR SIGNAL ENGINE
-     Every interaction generates signals that feed Weakness Analyzer:
-     Topic, Subtopic, Confidence, Resolution, Repeated-Question,
-     Multi-Concept. This is the bridge:
-     AI Chat -> (signals) -> Weakness Analyzer -> Focus Practice.
+     Signals are only generated for messages that pass the math
+     intent gate above. Non-math messages are excluded before
+     reaching this engine. This is the bridge:
+     AI Chat -> (math signals only) -> Weakness Analyzer -> Focus Practice.
      ============================================================ */
   var SignalEngine = {
     plan: (window.SI_PLAN || 'free'),      // 'free' | 'pro'
@@ -758,7 +802,7 @@ button{font-family:inherit;cursor:pointer}
         for(var j=0;j<this.map[i].kw.length;j++){ if(t.indexOf(this.map[i].kw[j])>=0){best=this.map[i];break;} }
         if(best) break;
       }
-      return best || {topic:'Algebra', sub:'Linear Equations', concepts:['Linear Equations','Slope','Substitution']};
+      return best || null;
     },
     // detect a possible SECOND concept (multi-concept question)
     detectSecondary: function(text,primary){
@@ -774,8 +818,10 @@ button{font-family:inherit;cursor:pointer}
       return on?parseInt(on.dataset.c,10):3;
     },
     analyze: function(text){
-      var p=this.detect(text), sec=this.detectSecondary(text,p), conf=this.getConfidence();
-      // repeated-topic tracking
+      var p=this.detect(text);
+      if(!p) return null;  // no math topic detected — do not generate any signal
+      var sec=this.detectSecondary(text,p), conf=this.getConfidence();
+      // repeated-topic tracking — only incremented for confirmed math messages
       this.topicCounts[p.sub]=(this.topicCounts[p.sub]||0)+1;
       var count=this.topicCounts[p.sub];
       // concept tags
@@ -991,7 +1037,8 @@ button{font-family:inherit;cursor:pointer}
   }
 
   function addAI(sig, aiResponse, skipShell){
-    sig = sig || SignalEngine.analyze('');
+    // sig is null for non-math messages — skip all signal UI but render the answer normally
+    const hasSig = sig !== null && sig !== undefined;
     const t=document.getElementById('typingMsg'); if(t) t.remove();
     if(!skipShell) document.querySelector('.shell').classList.add('chat-mode');
 
@@ -999,9 +1046,9 @@ button{font-family:inherit;cursor:pointer}
     // we hide that section instead of showing fake content.
     const r = aiResponse || {};
     const answer = r.answer || r.ai_response || '';
-if (!answer) { showError('No response received. Please try again.'); return; }
-    const topic      = r.topic    || sig.topic;
-    const subtopic   = r.subtopic || sig.sub;
+    if (!answer) { showError('No response received. Please try again.'); return; }
+    const topic      = r.topic    || (hasSig ? sig.topic : null);
+    const subtopic   = r.subtopic || (hasSig ? sig.sub   : null);
     const difficulty = r.difficulty || null;            // 'Easy' | 'Medium' | 'Hard'
     const hint       = r.hint || null;
     const concepts   = Array.isArray(r.concepts) ? r.concepts : null;
@@ -1017,18 +1064,17 @@ if (!answer) { showError('No response received. Please try again.'); return; }
       weaknessLabel = weaknessSignal ? 'Detected' : 'Not Detected';
       weaknessColor = weaknessSignal ? 'red' : 'green';
     } else if (typeof weaknessSignal === 'string' && weaknessSignal.length) {
-      // legacy: string severity like 'high' | 'medium' | 'low'
       weaknessLabel = weaknessSignal.charAt(0).toUpperCase() + weaknessSignal.slice(1);
       weaknessColor = weaknessSignal === 'high' ? 'red' : weaknessSignal === 'medium' ? 'amber' : 'green';
     }
     const helpRequest        = r.help_request === true;
     const explanationRequest = r.explanation_request === true;
-    sig.topic = topic; sig.sub = subtopic;
+    if (hasSig) { sig.topic = topic; sig.sub = subtopic; }
 
     // Build concept tags from REAL concepts when present, else from local detector
     const conceptTagsHtml = (concepts && concepts.length
         ? concepts
-        : (sig.detectedConcepts || []))
+        : (hasSig ? (sig.detectedConcepts || []) : []))
       .map(c => '<span class="concept-tag"><span class="cd"></span>'+escapeHtml(String(c))+'</span>')
       .join('');
 
@@ -1066,18 +1112,18 @@ if (!answer) { showError('No response received. Please try again.'); return; }
         '<div class="concept-tags">'+conceptTagsHtml+'</div>'+
       '</div>' : '';
 
-    const el=document.createElement('div');el.className='msg ai';
-    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Si"/></div><div class="body"><span class="who">Si Math AI</span>'+
-      '<div class="bubble">'+
-      (answer ? '<div style="white-space:pre-wrap">'+escapeHtml(answer)+'</div>' : '<div class="step" style="color:var(--text-400)">No response received. Please try again.</div>')+
+    // Topic/subtopic meta row — only shown when we have a math signal
+    const topicMetaBlock = (hasSig && topic && subtopic) ?
       '<div class="ai-meta">'+
         '<span class="meta-tag"><span class="mi t"></span>Topic: <b>'+escapeHtml(topic)+'</b></span>'+
         '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b>'+escapeHtml(subtopic)+'</b></span>'+
         diffTag+
         '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>'+
-      '</div>'+
-      conceptsBlock+
-      hintBlock+
+      '</div>' :
+      (diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
+
+    // Signal preview card + resolution buttons — only for math messages
+    const signalBlock = hasSig ?
       sig.multiConcept+
       sig.repeatedTopic+
       sig.potentialWeak+
@@ -1103,7 +1149,17 @@ if (!answer) { showError('No response received. Please try again.'); return; }
           '<span class="res-opt partial" data-r="partial">🟡 Partially Understood</span>'+
           '<span class="res-opt confused" data-r="confused">❌ Still Confused</span>'+
         '</div>'+
-      '</div>'+
+      '</div>'
+      : '';
+
+    const el=document.createElement('div');el.className='msg ai';
+    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Si"/></div><div class="body"><span class="who">Si Math AI</span>'+
+      '<div class="bubble">'+
+      (answer ? '<div style="white-space:pre-wrap">'+escapeHtml(answer)+'</div>' : '<div class="step" style="color:var(--text-400)">No response received. Please try again.</div>')+
+      topicMetaBlock+
+      conceptsBlock+
+      hintBlock+
+      signalBlock+
       rulesBlock+
       '</div>'+
       '<div class="actions">'+
@@ -1142,17 +1198,19 @@ if (!answer) { showError('No response received. Please try again.'); return; }
         el.querySelector('.msg-dropdown').classList.remove('open');
       });
     });
-    // resolution status (sends signal to Weakness Analyzer)
-    el.querySelectorAll('.res-opt').forEach(opt=>opt.addEventListener('click',function(){
-      const wrap=this.parentElement;
-      wrap.querySelectorAll('.res-opt').forEach(o=>{o.classList.remove('on');o.classList.add('locked')});
-      this.classList.add('on');this.classList.remove('locked');
-      var map={solved:['Solved It','green'],partial:['Partially Understood','amber'],confused:['Still Confused','red']};
-      var r=map[this.dataset.r];
-      var statusEl=document.getElementById(wrap.dataset.statusid);
-      if(statusEl){statusEl.textContent=r[0];statusEl.className='spc-v '+r[1];}
-      SignalEngine.sendResolution(wrap.dataset.topic,wrap.dataset.sub,this.dataset.r);
-    }));
+    // resolution buttons — only wired when a math signal exists
+    if (hasSig) {
+      el.querySelectorAll('.res-opt').forEach(opt=>opt.addEventListener('click',function(){
+        const wrap=this.parentElement;
+        wrap.querySelectorAll('.res-opt').forEach(o=>{o.classList.remove('on');o.classList.add('locked')});
+        this.classList.add('on');this.classList.remove('locked');
+        var map={solved:['Solved It','green'],partial:['Partially Understood','amber'],confused:['Still Confused','red']};
+        var r=map[this.dataset.r];
+        var statusEl=document.getElementById(wrap.dataset.statusid);
+        if(statusEl){statusEl.textContent=r[0];statusEl.className='spc-v '+r[1];}
+        SignalEngine.sendResolution(wrap.dataset.topic,wrap.dataset.sub,this.dataset.r);
+      }));
+    }
     // save to notes
     var saveBtn=el.querySelector('.save-notes-btn');
     if(saveBtn) saveBtn.addEventListener('click',function(){
@@ -1166,7 +1224,7 @@ if (!answer) { showError('No response received. Please try again.'); return; }
     const text=input.value.trim();
     if(!text && !pendingImg) return;
     if(isSending) return;
-var sig = SignalEngine.analyze(text || 'question');
+    var sig = (text && isMathMessage(text)) ? SignalEngine.analyze(text) : null;
     var imgToSend = pendingImg;
     addUser(text, pendingImg);
     input.value = ''; input.style.height = 'auto';
