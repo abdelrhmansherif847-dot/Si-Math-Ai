@@ -450,6 +450,15 @@ button{font-family:inherit;cursor:pointer}
 .str-pct{font-family:var(--font-display);font-weight:800;font-size:17px;line-height:1}
 .str-bar{width:60px;height:5px;border-radius:100px;background:var(--bg-elev-2);overflow:hidden}
 .str-fill{height:100%;border-radius:100px;transition:width .6s ease}
+/* recently mastered */
+.rm-list{display:flex;flex-direction:column;gap:10px}
+.rm-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(56,189,248,.06),var(--bg-card));border:1px solid var(--cyan-border-soft);transition:all .2s}
+.rm-item:hover{transform:translateX(3px);border-color:var(--cyan-border)}
+.rm-ic{width:32px;height:32px;flex-shrink:0;border-radius:9px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);display:flex;align-items:center;justify-content:center;font-size:15px}
+.rm-name{font-weight:700;font-size:14px;color:var(--text-100)}
+.rm-topic{font-size:12px;color:var(--text-400);margin-top:2px}
+.rm-note{font-family:var(--font-mono);font-size:10.5px;color:var(--cyan-3);margin-top:4px;opacity:.85}
+.rm-pct{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--cyan-3)}
 /* data basis badge */
 .data-basis{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-family:var(--font-mono);font-size:11.5px;color:var(--text-400);margin-bottom:18px}
 .data-basis b{color:var(--cyan-3)}
@@ -623,27 +632,44 @@ function dedupeConceptList(arr) {
 // ===== DATA LAYER =====
 const DAY = 86400000;
 
-function computeWeakness(entry) {
+function computeTopicProfile(entry) {
   const now = Date.now();
   const times = entry.records.map(t => new Date(t).getTime());
   const total = times.length;
 
-  // minimum signal threshold — need at least 2 questions to appear
+  // minimum signal threshold
   if (total < 2) return null;
 
   const last7  = times.filter(t => now - t < 7  * DAY).length;
   const last14 = times.filter(t => now - t < 14 * DAY).length;
   const prev7  = times.filter(t => now - t >= 7 * DAY && now - t < 14 * DAY).length;
 
-  // decay-weighted score: questions from last week count most
   let decayScore = 0;
-  times.forEach(t => {
-    const daysAgo = (now - t) / DAY;
-    decayScore += Math.exp(-daysAgo / 14); // 14-day half-life
-  });
+  times.forEach(t => { decayScore += Math.exp(-(now - t) / (DAY * 14)); });
 
-  const score = (total * 1.5) + (decayScore * 3) + (last7 * 2);
-  const mastery = Math.max(10, Math.round(100 - Math.min(score * 5, 90)));
+  // quality signals from question_records
+  const weakSignals = entry.weakSignals  || 0;
+  const helpReqs    = entry.helpRequests || 0;
+  const explReqs    = entry.explRequests || 0;
+  const repeated    = entry.repeated     || 0;
+  const confAfterArr = (entry.confAfterArr || []).filter(c => c != null && c > 0);
+  const avgConf      = confAfterArr.length > 0
+    ? confAfterArr.reduce((a, b) => a + b, 0) / confAfterArr.length : null;
+  const highConfCount = confAfterArr.filter(c => c >= 4).length;
+  const examMistakes  = entry.examMistakes || 0;
+
+  // mastery: use mastery_records if present, otherwise derive from signals
+  let mastery;
+  if (entry.masteryScore !== null && entry.masteryScore !== undefined) {
+    mastery = Math.round(Number(entry.masteryScore));
+  } else {
+    const chatWeaknessScore = (weakSignals * 3) + (helpReqs * 2) + (explReqs * 1.5) + (repeated * 2);
+    const baseScore = (total * 1.5) + (decayScore * 3) + (last7 * 2) + (examMistakes * 3);
+    const positiveBoost = highConfCount * 4;
+    mastery = Math.max(10, Math.min(95,
+      Math.round(100 - (baseScore + chatWeaknessScore) * 4 + positiveBoost)
+    ));
+  }
 
   let priority, priorityClass;
   if (mastery < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
@@ -652,37 +678,44 @@ function computeWeakness(entry) {
   else                   { priority = 'Low';       priorityClass = 'low';      }
 
   let trend, trendIcon;
-  if (last7 > prev7 + 1)              { trend = 'Declining'; trendIcon = '📉'; }
-  else if (prev7 > last7 && total >= 3){ trend = 'Improving'; trendIcon = '📈'; }
-  else                                 { trend = 'Stable';    trendIcon = '➖'; }
+  if (last7 > prev7 + 1)               { trend = 'Declining'; trendIcon = '📉'; }
+  else if (prev7 > last7 && total >= 3) { trend = 'Improving'; trendIcon = '📈'; }
+  else                                  { trend = 'Stable';    trendIcon = '➖'; }
 
-  // data-driven why bullets — personal, evidence-based
   const concepts = dedupeConceptList([...entry.concepts]);
+
+  // weakness explanation bullets
   const whyBullets = [];
   whyBullets.push(`You asked about this topic ${total} time${total > 1 ? 's' : ''}`);
-  if (last14 > 0) {
-    whyBullets.push(`${last14} question${last14 > 1 ? 's' : ''} in the last 14 days`);
-  }
-  if (last7 >= 2) {
-    whyBullets.push('Still actively coming up in your recent sessions');
-  }
-  if (prev7 > 0 && last7 > prev7) {
-    whyBullets.push('Questions are increasing — not yet resolved');
-  }
-  if (concepts.length > 0) {
-    whyBullets.push(`Related concepts: ${concepts.slice(0, 3).join(', ')}`);
-  }
+  if (last14 > 0)        whyBullets.push(`${last14} question${last14 > 1 ? 's' : ''} in the last 14 days`);
+  if (weakSignals > 0)   whyBullets.push(`${weakSignals} question${weakSignals > 1 ? 's' : ''} flagged as a weak signal`);
+  if (helpReqs > 0)      whyBullets.push(`You requested help ${helpReqs} time${helpReqs > 1 ? 's' : ''} on this topic`);
+  if (examMistakes > 0)  whyBullets.push(`${examMistakes} mistake${examMistakes > 1 ? 's' : ''} on mock exam questions`);
+  if (last7 >= 2)        whyBullets.push('Still actively coming up in your recent sessions');
+  if (prev7 > 0 && last7 > prev7) whyBullets.push('Questions are increasing — not yet resolved');
+  if (concepts.length > 0) whyBullets.push(`Related concepts: ${concepts.slice(0, 3).join(', ')}`);
 
-  // strength tiers — require meaningful evidence, not just 1-2 questions
-  // strength: consistently high mastery with at least 3 confirmed interactions
-  // mastered: strongest tier — 90 %+ mastery across 4+ interactions
-  const strength = mastery >= 75 && total >= 3;
-  const mastered = mastery >= 90 && total >= 4;
+  // strength evidence bullets
+  const strengthBullets = [];
+  if (total >= 3)                       strengthBullets.push(`Seen across ${total} sessions`);
+  if (avgConf !== null && avgConf >= 4) strengthBullets.push(`Average confidence: ${avgConf.toFixed(1)} / 5`);
+  if (highConfCount >= 2)               strengthBullets.push(`High confidence on ${highConfCount} occasion${highConfCount > 1 ? 's' : ''}`);
+  if (examMistakes === 0 && total >= 3) strengthBullets.push('No mock exam mistakes on this topic');
+  if (weakSignals === 0 && total >= 3)  strengthBullets.push('No weakness signals detected');
+  if (last14 === 0 && total >= 2)       strengthBullets.push('No longer appearing in recent sessions');
+  if (concepts.length > 0)             strengthBullets.push(`Concepts practiced: ${concepts.slice(0, 3).join(', ')}`);
+
+  // tier classification — require real evidence at every level
+  const mastered         = mastery >= 90 && total >= 4 && examMistakes === 0;
+  const strength         = mastery >= 75 && total >= 3 && !mastered;
+  const recentlyMastered = !strength && !mastered && mastery >= 70 && total >= 2 && last14 === 0;
+
   return {
     topic: entry.topic, sub: entry.sub, mastery,
     priority, priorityClass, trend, trendIcon,
-    whyBullets, total, last7, last14,
-    strength, mastered, concepts, decayScore
+    whyBullets, strengthBullets,
+    total, last7, last14, avgConf, examMistakes, weakSignals,
+    strength, mastered, recentlyMastered, concepts, decayScore
   };
 }
 
@@ -690,44 +723,101 @@ async function loadData() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) { window.location.href = 'login.html'; return; }
 
-  const { data: sessions, error: sErr } = await sb
+  // get chat session IDs
+  const { data: sessions } = await sb
     .from('chat_sessions').select('id').eq('user_id', user.id);
-  if (sErr || !sessions || sessions.length === 0) { renderEmpty(); return; }
+  const sessionIds = (sessions || []).map(s => s.id);
 
-  const ids = sessions.map(s => s.id);
-  const { data: records, error: rErr } = await sb
-    .from('question_records')
-    .select('topic, subtopic, concepts, created_at')
-    .in('session_id', ids)
-    .not('topic', 'is', null)
-    .not('subtopic', 'is', null)
-    .order('created_at', { ascending: true });
+  // fetch all three learning signal sources in parallel
+  const [qRes, mRes, eRes] = await Promise.all([
+    sessionIds.length > 0
+      ? sb.from('question_records')
+          .select('topic, subtopic, concepts, created_at, weakness_signal, help_request, explanation_request, repeated_question, confidence_after')
+          .in('session_id', sessionIds)
+          .not('topic', 'is', null).not('subtopic', 'is', null)
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] }),
+    sb.from('mastery_records')
+      .select('topic, subtopic, mastery_score, questions_seen, last_updated')
+      .eq('user_id', user.id),
+    sb.from('exam_mistakes')
+      .select('topic, subtopic')
+      .eq('user_id', user.id)
+  ]);
 
-  if (rErr || !records || records.length === 0) { renderEmpty(); return; }
+  const records  = qRes.data  || [];
+  const mastRecs = mRes.data  || [];
+  const examMist = eRes.data  || [];
 
-  // filter to academic topics only
+  // filter academic
   const academic = records.filter(r => isAcademicTopic(r.topic) && isAcademicTopic(r.subtopic));
-  if (academic.length === 0) { renderEmpty(); return; }
 
-  // aggregate by topic+subtopic
+  if (academic.length === 0 && mastRecs.length === 0) { renderEmpty(); return; }
+
+  // mastery_records map: key → { masteryScore, questionsSeen }
+  const mastMap = {};
+  mastRecs.filter(m => isAcademicTopic(m.topic) && isAcademicTopic(m.subtopic)).forEach(m => {
+    mastMap[m.topic.trim() + '::' + m.subtopic.trim()] = {
+      masteryScore: Number(m.mastery_score),
+      questionsSeen: m.questions_seen || 0
+    };
+  });
+
+  // exam mistakes map: key → count
+  const examMap = {};
+  examMist.filter(e => isAcademicTopic(e.topic) && isAcademicTopic(e.subtopic)).forEach(e => {
+    const k = e.topic.trim() + '::' + e.subtopic.trim();
+    examMap[k] = (examMap[k] || 0) + 1;
+  });
+
+  // aggregate chat records
   const map = {};
   academic.forEach(r => {
     const key = r.topic.trim() + '::' + r.subtopic.trim();
-    if (!map[key]) map[key] = { topic: r.topic.trim(), sub: r.subtopic.trim(), records: [], concepts: new Set() };
+    if (!map[key]) map[key] = {
+      topic: r.topic.trim(), sub: r.subtopic.trim(),
+      records: [], concepts: new Set(),
+      weakSignals: 0, helpRequests: 0, explRequests: 0, repeated: 0, confAfterArr: []
+    };
     map[key].records.push(r.created_at);
     if (Array.isArray(r.concepts)) r.concepts.forEach(c => map[key].concepts.add(c));
+    if (r.weakness_signal)      map[key].weakSignals++;
+    if (r.help_request)         map[key].helpRequests++;
+    if (r.explanation_request)  map[key].explRequests++;
+    if (r.repeated_question)    map[key].repeated++;
+    if (r.confidence_after != null) map[key].confAfterArr.push(r.confidence_after);
   });
 
-  const all = Object.values(map).map(computeWeakness).filter(Boolean);
-  // sort: highest decay score first (most recently active weaknesses at top)
+  // include topics only in mastery_records (no chat history yet)
+  mastRecs.filter(m => isAcademicTopic(m.topic) && isAcademicTopic(m.subtopic) && (m.questions_seen || 0) >= 2).forEach(m => {
+    const key = m.topic.trim() + '::' + m.subtopic.trim();
+    if (!map[key]) {
+      const fakeTs = [];
+      for (let i = 0; i < Math.min(m.questions_seen || 2, 10); i++) fakeTs.push(m.last_updated);
+      map[key] = { topic: m.topic.trim(), sub: m.subtopic.trim(), records: fakeTs, concepts: new Set(), weakSignals: 0, helpRequests: 0, explRequests: 0, repeated: 0, confAfterArr: [] };
+    }
+  });
+
+  // compute profile for each topic
+  const all = Object.entries(map).map(([key, entry]) => {
+    const mData = mastMap[key] || {};
+    return computeTopicProfile({
+      ...entry,
+      masteryScore: mData.masteryScore !== undefined ? mData.masteryScore : null,
+      examMistakes: examMap[key] || 0
+    });
+  }).filter(Boolean);
+
   all.sort((a, b) => b.decayScore - a.decayScore);
 
-  const weaknesses = all.filter(w => !w.strength);
-  const strengths  = all.filter(w => w.strength && !w.mastered);
-  const mastered   = all.filter(w => w.mastered);
+  const weaknesses       = all.filter(w => !w.strength && !w.recentlyMastered && !w.mastered);
+  const strengths        = all.filter(w => w.strength);
+  const recentlyMastered = all.filter(w => w.recentlyMastered);
+  const mastered         = all.filter(w => w.mastered);
   _weaknesses = weaknesses;
 
-  render(weaknesses, strengths, mastered, academic[academic.length - 1].created_at, academic.length);
+  const lastTs = academic.length > 0 ? academic[academic.length - 1].created_at : new Date().toISOString();
+  render(weaknesses, strengths, recentlyMastered, mastered, lastTs, academic.length);
 }
 
 // ===== RENDER =====
@@ -782,7 +872,7 @@ function whyBulletsHtml(w) {
   return '<ul class="why-bullets">' + w.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('') + '</ul>';
 }
 
-function render(weaknesses, strengths, mastered, lastDate, totalAnalyzed) {
+function render(weaknesses, strengths, recentlyMastered, mastered, lastDate, totalAnalyzed) {
   // update timestamp
   const d = new Date(lastDate);
   const now = new Date();
@@ -961,12 +1051,43 @@ function render(weaknesses, strengths, mastered, lastDate, totalAnalyzed) {
           <div style="flex:1;min-width:0">
             <div class="str-name">${escHtml(w.sub)}</div>
             <div class="str-topic">${escHtml(w.topic)}</div>
-            <div class="str-evidence">Confirmed across ${w.total} session${w.total > 1 ? 's' : ''}</div>
+            ${w.strengthBullets.slice(0, 2).map(b => `<div class="str-evidence">${escHtml(b)}</div>`).join('')}
           </div>
           <div class="str-right">
             <div class="str-pct" style="color:${masteryColor(w.mastery)}">${w.mastery}%</div>
             <div class="str-bar"><div class="str-fill" style="width:${w.mastery}%;background:${masteryColor(w.mastery)}"></div></div>
           </div>
+        </div>`).join('')}
+      </div>
+    </section>`;
+  }
+
+  // ── RECENTLY MASTERED ────────────────────────────────────────────
+  if (recentlyMastered.length > 0) {
+    html += `
+    <div class="sec-label">Recently Mastered</div>
+    <section class="card">
+      <div class="card-head">
+        <div class="card-ico" style="background:var(--cyan-bg-soft);border-color:var(--cyan-border)">🎯</div>
+        <div>
+          <div class="card-title">Topics You've Moved Past</div>
+          <div class="card-sub">No longer appearing in your recent sessions — this is progress</div>
+        </div>
+      </div>
+      <div class="rm-list">
+        ${recentlyMastered.map(w => `
+        <div class="rm-item">
+          <div class="rm-ic">🎯</div>
+          <div style="flex:1;min-width:0">
+            <div class="rm-name">${escHtml(w.sub)}</div>
+            <div class="rm-topic">${escHtml(w.topic)}</div>
+            <div class="rm-note">${
+              w.examMistakes === 0 && w.weakSignals === 0
+                ? 'You worked through this topic with no weak signals'
+                : 'No longer appearing in your recent sessions'
+            }</div>
+          </div>
+          <div class="rm-pct">${w.mastery}%</div>
         </div>`).join('')}
       </div>
     </section>`;
