@@ -474,7 +474,7 @@ img,svg{max-width:100%}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
       <span class="dot"></span>
     </button>
-    <a href="profile.html" class="avatar" id="topAvatar" aria-label="Profile" title="Open profile" style="text-decoration:none">A</a>
+    <a href="profile.html" class="avatar" id="topAvatar" aria-label="Profile" title="Open profile" style="text-decoration:none;visibility:hidden"></a>
   </div>
 </header>
 
@@ -538,7 +538,7 @@ img,svg{max-width:100%}
   <!-- SECTION 1: WELCOME -->
   <section class="welcome">
     <div class="eyebrow"><span class="live-dot"></span> Student Dashboard</div>
-    <h1>Welcome back, <span class="accent" id="welcomeName">Student</span></h1>
+    <h1>Welcome back, <span class="accent" id="welcomeName"></span></h1>
     <p>Logged in as <span id="welcomeEmail" style="color:var(--cyan-3)">—</span> · Let's continue improving your <span id="welcomeExam" style="color:var(--cyan-3)">SAT</span> performance.</p>
     <div class="welcome-actions">
       <button onclick="location.href='chat.html'" class="btn btn-primary">
@@ -920,12 +920,13 @@ img,svg{max-width:100%}
     const wx = document.getElementById('welcomeExam');
     if (wx) wx.textContent = profile.exam_type || 'SAT';
 
-    // Avatar initials in top bar
+    // Avatar initials in top bar — reveal only after real data is set
     const av = document.getElementById('topAvatar');
     if (av) {
       const initials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'S';
       av.textContent = initials;
       av.title = `${fullName} — ${profile.email || user.email || ''}`;
+      av.style.visibility = 'visible';
     }
 
     // Exam plan stats
