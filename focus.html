@@ -412,7 +412,7 @@ function computeTopicProfile(entry) {
     topic: entry.topic, sub: entry.sub, mastery,
     priority, priorityClass, trend, trendIcon,
     whyBullets, strengthBullets,
-    total, last7, last14, avgConf, examMistakes, weakSignals,
+    total, last7, last14, avgConf, confAfterArr, examMistakes, weakSignals, helpReqs,
     strength, mastered, recentlyMastered, concepts, decayScore
   };
 }
@@ -503,11 +503,13 @@ function renderEmpty() {
     </div>`;
 }
 
-function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile) {
+function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank) {
   const sessionLength = (profile && profile.session_length) ? profile.session_length : 45;
   const sessions      = generateSessions(sessionLength);
   const examType      = (profile && profile.exam_type)    ? profile.exam_type    : 'SAT';
   const targetScore   = (profile && profile.target_score) ? profile.target_score : '—';
+  const examDate      = (profile && profile.exam_date)    ? profile.exam_date    : null;
+  const rank          = primaryRank != null ? primaryRank : 1;
 
   const checkpoints = [50, 70, 85, 90];
   const m = primaryTopic.mastery;
@@ -517,17 +519,42 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
            '&subtopic=' + encodeURIComponent(subtopic) +
            '&difficulty=' + encodeURIComponent(difficulty || 'medium');
   }
-
   function priColor(pc) {
     if (pc === 'critical') return '#f87171';
     if (pc === 'high')     return 'var(--red)';
     if (pc === 'med')      return 'var(--amber)';
     return 'var(--green)';
   }
+  function fmtDate(d) {
+    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+    catch(e) { return d; }
+  }
 
   const otherWeaknesses = weaknesses.filter(w => w !== primaryTopic);
 
+  function sessionTaskPreview(sessionMins) {
+    let rem = sessionMins;
+    const out = [];
+    for (const t of tasks) {
+      const mins = t.estimated_minutes || t.minutes || 10;
+      if (rem >= mins) { out.push(t.task_title || t.title); rem -= mins; }
+      else break;
+    }
+    return out;
+  }
+
+  const logoB64 = 'data:image/png;base64,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';
+
   const html = `
+    ${rank === 1 ? `
+    <div class="airec" style="margin-bottom:20px;animation:rise .6s ease both">
+      <div class="ai-av"><img src="${logoB64}" alt="Zero"/></div>
+      <div class="ai-body">
+        <div class="al">Zero · Dragon Mentor</div>
+        <p><b>${escHtml(primaryTopic.sub)}</b> is currently your <b>biggest weakness</b>. Improving it will likely produce the <b>fastest score gain</b> on your ${escHtml(examType)}.</p>
+      </div>
+    </div>` : ''}
+
     <div class="page-head">
       <div class="eyebrow"><span class="live-dot"></span> Focus Practice</div>
       <h1>${escHtml(primaryTopic.sub)}</h1>
@@ -535,9 +562,10 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     </div>
 
     <div class="plan-context" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
-      <span class="pc-chip" style="background:var(--surface-2);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--text-300)">${escHtml(examType)}</span>
-      <span class="pc-chip" style="background:var(--surface-2);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--text-300)">Session: ${sessionLength} min</span>
-      <span class="pc-chip" style="background:var(--surface-2);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--text-300)">Target: ${escHtml(String(targetScore))}</span>
+      <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/></svg>${escHtml(examType)}</span>
+      <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Session: <b>${sessionLength} min</b></span>
+      <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Target: <b>${escHtml(String(targetScore))}</b></span>
+      ${examDate ? `<span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Exam: <b>${escHtml(fmtDate(examDate))}</b></span>` : ''}
     </div>
 
     <div class="sec-label">Primary Mission</div>
@@ -549,11 +577,17 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
           <div class="t" style="font-size:18px;font-weight:700;color:var(--text-100)">${escHtml(primaryTopic.sub)}</div>
           <div style="font-size:12px;color:var(--text-400);margin-top:2px">${escHtml(primaryTopic.topic)}</div>
         </div>
-        <span class="sev-pill ${escHtml(primaryTopic.priorityClass)}" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${priColor(primaryTopic.priorityClass)}22;color:${priColor(primaryTopic.priorityClass)}">${escHtml(primaryTopic.priority)}</span>
+        <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${priColor(primaryTopic.priorityClass)}22;color:${priColor(primaryTopic.priorityClass)}">${escHtml(primaryTopic.priority)}</span>
+      </div>
+      <div class="rx-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div class="rx-stat"><div class="l">Rank</div><div class="v" style="color:var(--red)">#${rank}</div></div>
+        <div class="rx-stat"><div class="l">Mastery</div><div class="v cur">${m}%</div></div>
+        <div class="rx-stat"><div class="l">Questions</div><div class="v time">${primaryTopic.total}</div></div>
+        <div class="rx-stat"><div class="l">Help Reqs</div><div class="v gain">${primaryTopic.helpReqs || 0}</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
         <span style="font-family:var(--font-mono);font-size:13px;color:${masteryColor(m)};font-weight:700">Mastery ${m}%</span>
-        <div style="flex:1;height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden">
+        <div style="flex:1;height:6px;background:var(--bg-elev-1);border-radius:3px;overflow:hidden">
           <div style="width:${m}%;height:100%;background:${masteryColor(m)};border-radius:3px;transition:width .6s ease"></div>
         </div>
       </div>
@@ -564,62 +598,99 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     </section>
 
     <div class="sec-label">Why This Was Chosen</div>
-    <div class="why-card" style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:24px">
-      <ul class="why-bullets" style="margin:0;padding-left:20px;color:var(--text-300);font-size:13.5px;line-height:1.8">
+    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:16px 20px;margin-bottom:24px">
+      <ul style="margin:0;padding-left:20px;color:var(--text-300);font-size:13.5px;line-height:1.8">
         ${primaryTopic.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('')}
       </ul>
+      ${primaryTopic.avgConf != null ? `
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:20px">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Avg Confidence</div>
+          <div style="font-size:16px;font-weight:700;color:${primaryTopic.avgConf < 3 ? 'var(--red)' : primaryTopic.avgConf < 4 ? 'var(--amber)' : 'var(--green)'}">${primaryTopic.avgConf.toFixed(1)} / 5</div>
+        </div>
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Trend</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-200)">${primaryTopic.trendIcon} ${escHtml(primaryTopic.trend)}</div>
+        </div>
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Confidence Points</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-200)">${primaryTopic.confAfterArr ? primaryTopic.confAfterArr.length : 0} recorded</div>
+        </div>
+      </div>` : ''}
     </div>
 
     <div class="sec-label">Focus Tasks</div>
-    <div class="week-plan" style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px">
+    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;overflow:hidden;margin-bottom:24px">
       ${tasks.map(t => `
-        <div class="wp-day" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div class="wp-day" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-soft)">
           <input type="checkbox" class="wp-check" data-task-id="${escHtml(String(t.id || ''))}" ${t.status === 'DONE' ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--cyan-3);cursor:pointer" />
           <span style="flex:1;font-size:13.5px;color:var(--text-200);${t.status === 'DONE' ? 'text-decoration:line-through;opacity:.5' : ''}">${escHtml(t.task_title || t.title)}</span>
-          <span class="wp-est" style="font-size:11px;color:var(--text-400);font-family:var(--font-mono)">${t.estimated_minutes || t.minutes} min</span>
+          <span style="font-size:11px;color:var(--text-400);font-family:var(--font-mono)">${t.estimated_minutes || t.minutes} min</span>
         </div>`).join('')}
     </div>
 
     <div class="sec-label">Session Options</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
-      ${sessions.map(s => `
-        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
+      ${sessions.map(s => {
+        const preview = sessionTaskPreview(s.minutes);
+        return `
+        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--cyan-border)'" onmouseout="this.style.borderColor='var(--border-soft)'">
           <div style="font-weight:700;font-size:14px;color:var(--text-100)">${escHtml(s.label)}</div>
-          <div style="font-size:12px;color:var(--text-400)">${escHtml(s.desc)}</div>
           <div style="font-family:var(--font-mono);font-size:13px;color:var(--cyan-3);font-weight:700">${s.minutes} min</div>
-          <a href="${chatUrl(primaryTopic.topic, primaryTopic.sub, 'medium')}" style="display:inline-block;margin-top:4px;background:var(--surface-3);color:var(--text-200);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;text-align:center">Start →</a>
-        </div>`).join('')}
+          <div style="flex:1;font-size:11.5px;color:var(--text-400);line-height:1.6">
+            ${preview.length > 0
+              ? preview.map((pt, i) => `<div style="display:flex;gap:6px"><span style="font-family:var(--font-mono);color:var(--text-500);font-size:10px;flex-shrink:0;margin-top:1px">${i+1}.</span><span>${escHtml(pt)}</span></div>`).join('')
+              : `<div style="color:var(--text-500)">No tasks fit this time slot</div>`}
+          </div>
+          <a href="${chatUrl(primaryTopic.topic, primaryTopic.sub, 'medium')}" style="display:inline-block;margin-top:4px;background:var(--bg-elev-2);color:var(--text-200);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;text-align:center;border:1px solid var(--border-mid)">Start →</a>
+        </div>`;
+      }).join('')}
     </div>
 
     <div class="sec-label">Progress Milestones</div>
-    <div class="miles" style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;flex-wrap:wrap;gap:12px">
-      ${checkpoints.map(cp => {
-        const reached = m >= cp;
-        return `<div class="mile" style="display:flex;align-items:center;gap:8px;font-size:13px;color:${reached ? 'var(--green)' : 'var(--text-400)'}">
-          <span style="font-size:16px">${reached ? '✅' : '⬜'}</span>
-          <span>${cp}% Mastery${reached ? ' — Reached!' : ''}</span>
-        </div>`;
-      }).join('')}
+    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:20px;margin-bottom:24px">
+      <div style="position:relative;margin:20px 4px 36px">
+        <div style="height:10px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;border:1px solid var(--border-soft)">
+          <div style="width:${m}%;height:100%;background:${masteryColor(m)};border-radius:100px;transition:width .8s cubic-bezier(.25,.46,.45,.94);box-shadow:0 0 10px ${masteryColor(m)}66"></div>
+        </div>
+        ${checkpoints.map(cp => `
+          <div style="position:absolute;top:-3px;left:${cp}%;transform:translateX(-50%);width:2px;height:16px;background:${m >= cp ? 'var(--green)' : 'var(--border-mid)'}"></div>
+          <div style="position:absolute;top:18px;left:${cp}%;transform:translateX(-50%);font-family:var(--font-mono);font-size:10px;color:${m >= cp ? 'var(--green)' : 'var(--text-500)'};white-space:nowrap;text-align:center">${cp}%${m >= cp ? ' ✓' : ''}</div>`).join('')}
+        <div style="position:absolute;top:-22px;left:${Math.min(Math.max(m,4),96)}%;transform:translateX(-50%);font-family:var(--font-mono);font-size:11px;color:${masteryColor(m)};font-weight:700;white-space:nowrap;background:var(--bg-card);padding:2px 7px;border-radius:5px;border:1px solid ${masteryColor(m)}55">You: ${m}%</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px">
+        ${checkpoints.map(cp => {
+          const reached = m >= cp;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:${reached ? 'var(--green-soft)' : 'var(--bg-elev-1)'};border:1px solid ${reached ? 'var(--green-border)' : 'var(--border-soft)'}">
+            <span style="font-size:14px">${reached ? '✅' : '⬜'}</span>
+            <span style="font-size:12.5px;color:${reached ? 'var(--green)' : 'var(--text-400)'};font-weight:${reached ? '600' : '400'}">${cp}% Mastery${reached ? ' — Reached!' : ''}</span>
+          </div>`;
+        }).join('')}
+      </div>
     </div>
 
     ${otherWeaknesses.length > 0 ? `
     <div class="sec-label">Other Weaknesses</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
-      ${otherWeaknesses.slice(0, 5).map(w => `
-        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
-          <div style="flex:1">
+      ${otherWeaknesses.slice(0, 3).map(w => {
+        const wRank = weaknesses.indexOf(w) + 1;
+        return `
+        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--cyan-border)'" onmouseout="this.style.borderColor='var(--border-soft)'">
+          <div style="width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--bg-elev-1);border:1px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-400)">#${wRank}</div>
+          <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600;color:var(--text-100)">${escHtml(w.sub)}</div>
-            <div style="font-size:11px;color:var(--text-400)">${escHtml(w.topic)} · <span style="color:${masteryColor(w.mastery)}">${w.mastery}%</span></div>
+            <div style="font-size:11px;color:var(--text-400);margin-top:2px">${escHtml(w.topic)} · <span style="color:${masteryColor(w.mastery)}">${w.mastery}% mastery</span> · ${escHtml(w.priority)}</div>
           </div>
-          <a href="focus.html?topic=${encodeURIComponent(w.topic)}&subtopic=${encodeURIComponent(w.sub)}&mastery=${w.mastery}" style="background:var(--surface-3);color:var(--text-200);padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none">Switch Focus</a>
-        </div>`).join('')}
+          <a href="focus.html?topic=${encodeURIComponent(w.topic)}&subtopic=${encodeURIComponent(w.sub)}&mastery=${w.mastery}" style="background:var(--bg-elev-2);color:var(--text-200);padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid var(--border-mid);white-space:nowrap">Switch Focus</a>
+        </div>`;
+      }).join('')}
     </div>` : ''}
 
     ${strengths.length > 0 ? `
     <div class="sec-label">Your Strengths</div>
-    <div class="strength-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
       ${strengths.slice(0, 5).map(w => `
-        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
+        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--text-100)">${escHtml(w.sub)}</div>
             <div style="font-size:11px;color:var(--text-400)">${escHtml(w.topic)}</div>
@@ -631,9 +702,9 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
 
     ${mastered.length > 0 ? `
     <div class="sec-label">Mastered Topics</div>
-    <div class="mastered-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
       ${mastered.slice(0, 5).map(w => `
-        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
+        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
           <span style="font-size:18px">🏆</span>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--text-100)">${escHtml(w.sub)}</div>
@@ -673,7 +744,7 @@ async function loadData() {
   const urlMastery = params.get('mastery') ? Number(params.get('mastery')) : null;
 
   const [profRes, sessRes, mastRes, examRes] = await Promise.all([
-    sb.from('profiles').select('*').eq('user_id', user.id).single(),
+    sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('chat_sessions').select('id').eq('user_id', user.id),
     sb.from('mastery_records').select('topic, subtopic, mastery_score, questions_seen, last_updated').eq('user_id', user.id),
     sb.from('exam_mistakes').select('topic, subtopic').eq('user_id', user.id),
@@ -812,7 +883,8 @@ async function loadData() {
     console.warn('focus_plans/focus_tasks not available:', e.message);
   }
 
-  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile);
+  const primaryRank = weaknesses.indexOf(primaryTopic) + 1;
+  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank);
 }
 
 loadData().catch(err => {
