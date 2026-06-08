@@ -205,6 +205,12 @@ button{font-family:inherit;cursor:pointer}
 .icon-btn{width:40px;height:40px;flex-shrink:0;border-radius:11px;border:1px solid var(--cyan-border-soft);background:var(--bg-elev-1);color:var(--text-300);display:flex;align-items:center;justify-content:center;transition:all .2s}
 .icon-btn:hover{color:var(--cyan);border-color:var(--cyan);background:var(--cyan-bg-soft)}
 .icon-btn svg{width:18px;height:18px}
+/* Upload menu dropdown */
+.upload-menu{display:none;position:absolute;bottom:calc(100% + 8px);left:0;z-index:60;background:var(--bg-elev-2);border:1px solid var(--border-mid);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.5);overflow:hidden;min-width:180px}
+.upload-menu.open{display:block;animation:msgIn .18s ease both}
+.upload-opt{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;background:none;border:none;color:var(--text-200);font-size:13.5px;font-family:var(--font-body);cursor:pointer;transition:background .15s;text-align:left}
+.upload-opt:hover{background:var(--bg-card);color:#fff}
+.upload-opt svg{width:15px;height:15px;flex-shrink:0;color:var(--cyan)}
 .input-bar textarea{
   flex:1;min-width:0;background:none;border:none;outline:none;resize:none;
   color:var(--text-100);font-family:var(--font-body);font-size:15px;line-height:1.5;
@@ -594,8 +600,17 @@ button{font-family:inherit;cursor:pointer}
       </div>
 
       <input type="file" id="qImage" accept="image/*" capture="environment" hidden/>
+      <input type="file" id="qGallery" accept="image/*" hidden/>
       <input type="file" id="qPdf" accept="application/pdf" hidden/>
-      <div class="input-bar">
+      <div class="input-bar" style="position:relative">
+        <div class="upload-menu" id="uploadMenu">
+          <button class="upload-opt" id="optCamera" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Take Photo
+          </button>
+          <button class="upload-opt" id="optGallery" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Choose from Gallery
+          </button>
+        </div>
         <button class="icon-btn" id="uploadBtn" aria-label="Upload image" title="Upload Image">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         </button>
@@ -984,36 +999,45 @@ button{font-family:inherit;cursor:pointer}
   // auto-grow textarea
   input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px'});
 
-  // image upload
-  uploadBtn.addEventListener('click',()=>qImage.click());
-  qImage.addEventListener('change', () => {
-    const f = qImage.files && qImage.files[0];
-    if (!f) return;
+  // Upload menu toggle
+  const uploadMenu = document.getElementById('uploadMenu');
+  uploadBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    uploadMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => uploadMenu.classList.remove('open'));
+  document.getElementById('optCamera').addEventListener('click', () => {
+    uploadMenu.classList.remove('open');
+    qImage.click();
+  });
+  const qGallery = document.getElementById('qGallery');
+  document.getElementById('optGallery').addEventListener('click', () => {
+    uploadMenu.classList.remove('open');
+    qGallery.click();
+  });
 
-    // File size guard: reject files over 20MB before attempting to load
+  // Shared image processing — used by both camera and gallery inputs
+  function processImageFile(f, inputEl) {
+    if (!f) return;
     if (f.size > 20 * 1024 * 1024) {
       alert('Image is too large (max 20MB). Please choose a smaller file.');
-      qImage.value = '';
+      if (inputEl) inputEl.value = '';
       return;
     }
-
-    // Format check: only allow common image types
     const allowed = ['image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif'];
     if (!allowed.includes(f.type) && !f.type.startsWith('image/')) {
       alert('Unsupported file type. Please upload a JPEG, PNG, WebP, or HEIC image.');
-      qImage.value = '';
+      if (inputEl) inputEl.value = '';
       return;
     }
-
     const reader = new FileReader();
     reader.onerror = () => {
       alert('Could not read the image file. Please try again.');
-      qImage.value = '';
+      if (inputEl) inputEl.value = '';
     };
     reader.onload = (e) => {
       const img = new Image();
       img.onerror = () => {
-        // HEIC and some formats can't be decoded by the browser — send as-is
         pendingImg = e.target.result;
         previewThumb.style.display = 'none';
         previewName.textContent = f.name;
@@ -1021,15 +1045,12 @@ button{font-family:inherit;cursor:pointer}
       };
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Max 800px — preserves math handwriting readability
         const MAX = 800;
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        // Quality 0.65 — readable for vision models, reasonable file size
         pendingImg = canvas.toDataURL('image/jpeg', 0.65);
         previewThumb.src = pendingImg;
         previewThumb.style.display = '';
@@ -1039,8 +1060,11 @@ button{font-family:inherit;cursor:pointer}
       img.src = e.target.result;
     };
     reader.readAsDataURL(f);
-  });
-  removeImg.addEventListener('click',()=>{qImage.value='';pendingImg=null;imgPreview.style.display='none'});
+  }
+
+  qImage.addEventListener('change', () => processImageFile(qImage.files && qImage.files[0], qImage));
+  qGallery.addEventListener('change', () => processImageFile(qGallery.files && qGallery.files[0], qGallery));
+  removeImg.addEventListener('click', () => { qImage.value=''; qGallery.value=''; pendingImg=null; imgPreview.style.display='none'; });
 
   // Confidence selector
   const confHints={1:'1/5 · Not confident',2:'2/5 · A little unsure',3:'3/5 · Somewhat confident',4:'4/5 · Fairly confident',5:'5/5 · Very confident'};
