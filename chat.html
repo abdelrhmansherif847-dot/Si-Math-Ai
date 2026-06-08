@@ -435,8 +435,9 @@ button{font-family:inherit;cursor:pointer}
 .repeated-topic .rt-s{font-size:12px;color:var(--text-300);margin-top:1px}
 .repeated-topic .rt-count{font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--amber);flex-shrink:0}
 
-/* save to notes button (added into actions) */
-.act.saved{background:var(--green-soft);border-color:var(--green-border);color:var(--green)}
+/* dragon advice card */
+.dragon-advice{margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);font-size:13.5px;color:var(--text-200)}
+.dragon-advice b{color:#a78bfa}
 </style>
 </head>
 <body>
@@ -1202,7 +1203,7 @@ button{font-family:inherit;cursor:pointer}
     // Optional difficulty meta tag (only when present)
     const diffTag = difficulty ? '<span class="meta-tag"><span class="mi d"></span>Difficulty: <b>'+escapeHtml(difficulty)+'</b></span>' : '';
     // Optional hint block (only when present)
-    const hintBlock = hint ? '<div class="hint-card" style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--amber-soft);border:1px solid var(--amber-border);font-size:13.5px;color:var(--text-200)"><b style="color:var(--amber)">💡 Hint:</b> '+escapeHtml(hint)+'</div>' : '';
+    const hintBlock = hint ? '<div class="dragon-advice"><b>🐉 Old Dragon Advice:</b> '+escapeHtml(hint)+'</div>' : '';
     // Concepts block (only when we actually have concepts)
     const conceptsBlock = conceptTagsHtml ?
       '<div class="concepts-card">'+
@@ -1261,9 +1262,8 @@ button{font-family:inherit;cursor:pointer}
       rulesBlock+
       '</div>'+
       '<div class="actions">'+
-        '<button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h0"/></svg>Explain Simpler</button>'+
-        '<button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>Similar Question</button>'+
-        '<button class="act save-notes-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save to Notes</button>'+
+        '<button class="act btn-explain-simpler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h0"/></svg>Explain Simpler</button>'+
+        '<button class="act btn-similar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>Similar Question</button>'+
         '<button class="act copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy Solution</button>'+
       '</div>'+
       '<div class="msg-menu-wrap">'+
@@ -1308,12 +1308,16 @@ button{font-family:inherit;cursor:pointer}
         SignalEngine.sendResolution(wrap.dataset.topic,wrap.dataset.sub,this.dataset.r);
       }));
     }
-    // save to notes
-    var saveBtn=el.querySelector('.save-notes-btn');
-    if(saveBtn) saveBtn.addEventListener('click',function(){
-      this.classList.add('saved');
-      this.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Saved to Notes';
-      var self=this;setTimeout(()=>{self.classList.remove('saved');self.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save to Notes';},1800);
+    // explain simpler
+    el.querySelector('.btn-explain-simpler').addEventListener('click',function(){
+      input.value='Can you explain that more simply?';
+      send();
+    });
+    // similar question
+    el.querySelector('.btn-similar').addEventListener('click',function(){
+      var t = (topic && subtopic) ? topic+' ('+subtopic+')' : (topic || 'this topic');
+      input.value='Give me a similar SAT/ACT question on '+t;
+      send();
     });
   }
 
