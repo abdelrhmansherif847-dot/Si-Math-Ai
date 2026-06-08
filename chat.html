@@ -562,7 +562,7 @@ button{font-family:inherit;cursor:pointer}
         <button class="ip-remove" id="removeImg" aria-label="Remove image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
 
-      <input type="file" id="qImage" accept="image/*" hidden/>
+      <input type="file" id="qImage" accept="image/*" capture="environment" hidden/>
       <input type="file" id="qPdf" accept="application/pdf" hidden/>
       <div class="input-bar">
         <button class="icon-btn" id="uploadBtn" aria-label="Upload image" title="Upload Image">
@@ -693,8 +693,10 @@ button{font-family:inherit;cursor:pointer}
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
     if (sig && sig.sub)   payload.subtopic = sig.sub;
-    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:')) {
+    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:image/')) {
       payload.image = imageData;
+    } else if (imageData && typeof imageData === 'string' && imageData.startsWith('data:application/pdf')) {
+      payload.pdf = imageData;
     }
     // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT)
     const { data, error } = await sb.functions.invoke('ai-tutor', { body: payload });
@@ -954,36 +956,59 @@ button{font-family:inherit;cursor:pointer}
   // image upload
   uploadBtn.addEventListener('click',()=>qImage.click());
   qImage.addEventListener('change', () => {
-  const f = qImage.files && qImage.files[0];
-  if (!f) return;
+    const f = qImage.files && qImage.files[0];
+    if (!f) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    // Compress قبل الإرسال
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      
-      // Max 400px
-      const MAX = 400;
-      let w = img.width, h = img.height;
-      if (w > MAX) { h = h * MAX / w; w = MAX; }
-      if (h > MAX) { w = w * MAX / h; h = MAX; }
-      
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      
-      // Quality 0.2 = جودة كويسة + حجم صغير
-      pendingImg = canvas.toDataURL('image/jpeg', 0.2);
-      previewThumb.src = pendingImg;
-      previewName.textContent = f.name;
-      imgPreview.style.display = 'flex';
+    // File size guard: reject files over 20MB before attempting to load
+    if (f.size > 20 * 1024 * 1024) {
+      alert('Image is too large (max 20MB). Please choose a smaller file.');
+      qImage.value = '';
+      return;
+    }
+
+    // Format check: only allow common image types
+    const allowed = ['image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif'];
+    if (!allowed.includes(f.type) && !f.type.startsWith('image/')) {
+      alert('Unsupported file type. Please upload a JPEG, PNG, WebP, or HEIC image.');
+      qImage.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      alert('Could not read the image file. Please try again.');
+      qImage.value = '';
     };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(f);
-});
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => {
+        // HEIC and some formats can't be decoded by the browser — send as-is
+        pendingImg = e.target.result;
+        previewThumb.style.display = 'none';
+        previewName.textContent = f.name;
+        imgPreview.style.display = 'flex';
+      };
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Max 800px — preserves math handwriting readability
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        // Quality 0.65 — readable for vision models, reasonable file size
+        pendingImg = canvas.toDataURL('image/jpeg', 0.65);
+        previewThumb.src = pendingImg;
+        previewThumb.style.display = '';
+        previewName.textContent = f.name;
+        imgPreview.style.display = 'flex';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  });
   removeImg.addEventListener('click',()=>{qImage.value='';pendingImg=null;imgPreview.style.display='none'});
 
   // Confidence selector
@@ -1000,10 +1025,20 @@ button{font-family:inherit;cursor:pointer}
   pdfBtn.addEventListener('click',()=>qPdf.click());
   qPdf.addEventListener('change',()=>{
     const f=qPdf.files&&qPdf.files[0]; if(!f) return;
-    document.getElementById('previewName').textContent=f.name;
-    document.getElementById('previewThumb').style.display='none';
-    imgPreview.style.display='flex';
-    pendingImg='pdf';
+    if (f.size > 10 * 1024 * 1024) {
+      alert('PDF is too large (max 10MB). Please upload a smaller file.');
+      qPdf.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => { alert('Could not read the PDF. Please try again.'); qPdf.value=''; };
+    reader.onload = (e) => {
+      pendingImg = e.target.result; // data:application/pdf;base64,...
+      document.getElementById('previewThumb').style.display='none';
+      document.getElementById('previewName').textContent=f.name;
+      imgPreview.style.display='flex';
+    };
+    reader.readAsDataURL(f);
   });
 
   // quick prompts
