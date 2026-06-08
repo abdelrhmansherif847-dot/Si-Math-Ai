@@ -273,9 +273,9 @@ button{font-family:inherit;cursor:pointer}
     <div class="rank-badge">🧗</div>
     <div class="rank-body">
       <div class="rank-l">Your Rank</div>
-      <div class="rank-name">Problem Solver</div>
-      <div class="rank-next">Next: <b style="color:var(--cyan-3)">Advanced Solver</b> — keep going!</div>
-      <div class="rank-track"><i style="width:62%"></i></div>
+      <div class="rank-name" style="color:var(--text-400)">—</div>
+      <div class="rank-next" style="color:var(--text-500)">Keep practicing to earn your rank</div>
+      <div class="rank-track"><i style="width:0%"></i></div>
     </div>
   </section>
 
@@ -289,79 +289,67 @@ button{font-family:inherit;cursor:pointer}
     </div>
     <div class="status-card">
       <div class="sc-l">Current Estimated Score</div>
-      <div class="sc-v">620–660</div>
+      <div class="sc-v" style="color:var(--text-400)">—</div>
       <div class="ring-wrap">
         <div class="ring">
           <svg width="96" height="96" viewBox="0 0 96 96">
             <circle cx="48" cy="48" r="42" fill="none" stroke="#1a2540" stroke-width="8"/>
-            <circle cx="48" cy="48" r="42" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="95" style="filter:drop-shadow(0 0 6px rgba(56,189,248,.6))"/>
+            <circle cx="48" cy="48" r="42" fill="none" stroke="#1a2540" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="0"/>
           </svg>
-          <span class="ring-pct">64%</span>
+          <span class="ring-pct" style="color:var(--text-400)">—</span>
         </div>
         <div class="ring-info">
-          <div class="ring-row"><span class="k">Current</span><span class="v cur">640</span></div>
-          <div class="ring-row"><span class="k">Target</span><span class="v tgt">750</span></div>
-          <div class="ring-row"><span class="k">Progress</span><span class="v">64%</span></div>
+          <div class="ring-row"><span class="k">Current</span><span class="v cur" style="color:var(--text-400)">—</span></div>
+          <div class="ring-row"><span class="k">Target</span><span class="v tgt" id="profileTargetScore" style="color:var(--text-400)">—</span></div>
+          <div class="ring-row"><span class="k">Progress</span><span class="v" style="color:var(--text-400)">—</span></div>
         </div>
       </div>
+      <div style="margin-top:14px;font-size:12.5px;color:var(--text-500)">Complete a mock exam to generate your estimated score</div>
     </div>
   </div>
 
   <!-- SECTION 4: LEARNING SNAPSHOT -->
   <div class="sec-label">Learning Snapshot</div>
   <div class="snapshot">
-    <div class="snap weak"><div class="sn-ic">⚠️</div><div class="sn-l">Current Weakest Topic</div><div class="sn-v">Coordinate Geometry</div></div>
-    <div class="snap imp"><div class="sn-ic">📈</div><div class="sn-l">Most Improved Topic</div><div class="sn-v">Functions</div></div>
-    <div class="snap act"><div class="sn-ic">🎯</div><div class="sn-l">Active Focus Area</div><div class="sn-v">Advanced Math</div></div>
+    <div class="snap weak"><div class="sn-ic">⚠️</div><div class="sn-l">Current Weakest Topic</div><div class="sn-v" style="color:var(--text-400)">—</div></div>
+    <div class="snap imp"><div class="sn-ic">📈</div><div class="sn-l">Most Improved Topic</div><div class="sn-v" style="color:var(--text-400)">—</div></div>
+    <div class="snap act"><div class="sn-ic">🎯</div><div class="sn-l">Active Focus Area</div><div class="sn-v" style="color:var(--text-400)">—</div></div>
   </div>
 
   <!-- STUDY STATISTICS -->
   <div class="sec-label">Study Statistics</div>
   <div class="stats4">
-    <div class="st4"><div class="s4-ic">✅</div><div class="s4-v">1,284</div><div class="s4-l">Questions Solved</div></div>
-    <div class="st4"><div class="s4-ic">📝</div><div class="s4-v">7</div><div class="s4-l">Mock Exams</div></div>
-    <div class="st4"><div class="s4-ic">⏱️</div><div class="s4-v">38h</div><div class="s4-l">Study Hours</div></div>
-    <div class="st4"><div class="s4-ic">🎯</div><div class="s4-v">3</div><div class="s4-l">Focus Plans Done</div></div>
+    <div class="st4"><div class="s4-ic">✅</div><div class="s4-v" style="color:var(--text-400)">—</div><div class="s4-l">Questions Solved</div></div>
+    <div class="st4"><div class="s4-ic">📝</div><div class="s4-v" style="color:var(--text-400)">—</div><div class="s4-l">Mock Exams</div></div>
+    <div class="st4"><div class="s4-ic">⏱️</div><div class="s4-v" style="color:var(--text-400)">—</div><div class="s4-l">Study Hours</div></div>
+    <div class="st4"><div class="s4-ic">🎯</div><div class="s4-v" style="color:var(--text-400)">—</div><div class="s4-l">Focus Plans Done</div></div>
   </div>
 
   <!-- MASTERED TOPICS -->
   <div class="sec-label">Mastered Topics</div>
   <section class="card">
-    <div class="mastered">
-      <span class="mtag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Statistics</span>
-      <span class="mtag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Algebra</span>
-      <span class="mtag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Linear Equations</span>
-      <span class="mtag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Data Analysis</span>
-    </div>
+    <div style="padding:12px 0;color:var(--text-400);font-size:14px">No mastered topics yet — keep practicing to unlock them.</div>
   </section>
 
   <!-- LEARNING JOURNEY -->
   <div class="sec-label">Learning Journey</div>
   <section class="card">
-    <div class="journey">
-      <div class="jrow done"><div class="j-t">Joined Si Math AI</div><div class="j-d">Started with a 570 estimated score</div><div class="j-date">March 2026</div></div>
-      <div class="jrow done"><div class="j-t">First Weakness Analysis</div><div class="j-d">Discovered Geometry as biggest weakness</div><div class="j-date">March 2026</div></div>
-      <div class="jrow done"><div class="j-t">Mastered Statistics &amp; Algebra</div><div class="j-d">Reached 90%+ accuracy</div><div class="j-date">April 2026</div></div>
-      <div class="jrow"><div class="j-t">Now: Improving Geometry</div><div class="j-d">Estimated score climbed to 640</div><div class="j-date">May 2026</div></div>
-    </div>
+    <div style="padding:12px 0;color:var(--text-400);font-size:14px">Your journey milestones will appear here as you use Si Math AI.</div>
   </section>
 
   <!-- SECTION 5: RECENT ACTIVITY -->
   <div class="sec-label">Recent Activity</div>
   <div class="acts">
-    <div class="act-item"><span class="ac-ic">🤖</span><div class="ac-body"><div class="ac-t">Last AI Chat Session</div><div class="ac-s">25 questions solved · Geometry, Functions</div></div><span class="ac-date">Today</span></div>
-    <div class="act-item"><span class="ac-ic">📝</span><div class="ac-body"><div class="ac-t">Last Mock Exam Analysis</div><div class="ac-s">SAT · Score 620 · 14 mistakes diagnosed</div></div><span class="ac-date">Yesterday</span></div>
-    <div class="act-item"><span class="ac-ic">📊</span><div class="ac-body"><div class="ac-t">Last Weakness Analyzer Update</div><div class="ac-s">New weak topic: Coordinate Geometry</div></div><span class="ac-date">Today</span></div>
-    <div class="act-item"><span class="ac-ic">🎯</span><div class="ac-body"><div class="ac-t">Last Focus Practice Update</div><div class="ac-s">4-week Geometry plan in progress</div></div><span class="ac-date">2d ago</span></div>
+    <div class="act-item" style="justify-content:center;padding:20px"><span style="color:var(--text-400);font-size:14px">No recent activity yet — start a chat session to see your history here.</span></div>
   </div>
 
   <!-- SECTION 6: ACHIEVEMENTS -->
   <div class="sec-label">Achievements</div>
   <div class="ach-grid">
-    <div class="ach"><span class="ah-ic">📊</span><span class="ah-t">First Weakness Analysis</span></div>
-    <div class="ach"><span class="ah-ic">📝</span><span class="ah-t">First Mock Exam Analyzed</span></div>
-    <div class="ach"><span class="ah-ic">🎯</span><span class="ah-t">First Focus Practice Done</span></div>
-    <div class="ach"><span class="ah-ic">💯</span><span class="ah-t">100 Questions Practiced</span></div>
+    <div class="ach" style="opacity:.45;filter:grayscale(.8)"><span class="ah-ic" style="filter:none">📊</span><span class="ah-t" style="color:var(--text-400)">First Weakness Analysis</span></div>
+    <div class="ach" style="opacity:.45;filter:grayscale(.8)"><span class="ah-ic" style="filter:none">📝</span><span class="ah-t" style="color:var(--text-400)">First Mock Exam Analyzed</span></div>
+    <div class="ach" style="opacity:.45;filter:grayscale(.8)"><span class="ah-ic" style="filter:none">🎯</span><span class="ah-t" style="color:var(--text-400)">First Focus Practice Done</span></div>
+    <div class="ach" style="opacity:.45;filter:grayscale(.8)"><span class="ah-ic" style="filter:none">💯</span><span class="ah-t" style="color:var(--text-400)">100 Questions Practiced</span></div>
   </div>
 
   <!-- SECTION 7: STUDY GOALS (read-only display, edit in Settings) -->
