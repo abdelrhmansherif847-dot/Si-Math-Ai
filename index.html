@@ -152,7 +152,7 @@ nav{
   transition:all .2s;text-decoration:none;
 }
 .btn-ghost:hover{border-color:var(--cyan-border);color:#fff}
-@media(max-width:640px){.btn-ghost.hide-sm{display:none}}
+@media(max-width:640px){.btn-ghost{padding:6px 10px;font-size:12.5px}}
 .btn-pri{
   display:inline-flex;align-items:center;gap:6px;
   padding:7px 14px;background:var(--cyan);color:#031020;
@@ -786,8 +786,8 @@ footer{
     <li><a href="#pricing">Pricing</a></li>
   </ul>
   <div class="nav-actions">
-    <a class="btn-ghost hide-sm" href="login.html">Sign in</a>
-    <a class="btn-pri" href="signup.html">Start Free
+    <a class="btn-ghost" id="navSignIn" href="login.html">Sign in</a>
+    <a class="btn-pri" id="navStart" href="signup.html">Start Free
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
   </div>
@@ -1156,5 +1156,26 @@ st.addEventListener('click',()=>{
   window.scrollTo({top:0,behavior:'smooth'});
 });
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Auth-aware nav: swap Sign In / Start Free → Dashboard if already logged in
+(async () => {
+  try {
+    const sb = window.supabase.createClient(
+      'https://igvkyxkmjnkzscqgommj.supabase.co',
+      'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp'
+    );
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) {
+      const signIn = document.getElementById('navSignIn');
+      const start  = document.getElementById('navStart');
+      if (signIn) { signIn.textContent = 'Dashboard'; signIn.href = 'dashboard.html'; signIn.className = 'btn-ghost'; }
+      if (start)  { start.textContent  = 'Open App →';  start.href  = 'dashboard.html'; }
+    }
+  } catch(_) {}
+})();
+</script>
+
 </body>
 </html>
