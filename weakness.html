@@ -438,6 +438,18 @@ button{font-family:inherit;cursor:pointer}
 /* view all toggle */
 .view-all-btn{width:100%;margin-top:12px;padding:11px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
 .view-all-btn:hover{border-color:var(--cyan-border);color:#fff}
+/* strength items */
+.strength-list{display:flex;flex-direction:column;gap:10px}
+.strength-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(34,197,94,.06),var(--bg-card));border:1px solid var(--green-border);transition:all .2s}
+.strength-item:hover{transform:translateX(3px);border-color:var(--green)}
+.str-ic{width:32px;height:32px;flex-shrink:0;border-radius:9px;background:rgba(34,197,94,.12);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;font-size:15px}
+.str-name{font-weight:700;font-size:14px;color:var(--text-100)}
+.str-topic{font-size:12px;color:var(--text-400);margin-top:2px}
+.str-evidence{font-family:var(--font-mono);font-size:10.5px;color:var(--green);margin-top:4px;opacity:.8}
+.str-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.str-pct{font-family:var(--font-display);font-weight:800;font-size:17px;line-height:1}
+.str-bar{width:60px;height:5px;border-radius:100px;background:var(--bg-elev-2);overflow:hidden}
+.str-fill{height:100%;border-radius:100px;transition:width .6s ease}
 /* data basis badge */
 .data-basis{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-family:var(--font-mono);font-size:11.5px;color:var(--text-400);margin-bottom:18px}
 .data-basis b{color:var(--cyan-3)}
@@ -661,12 +673,16 @@ function computeWeakness(entry) {
     whyBullets.push(`Related concepts: ${concepts.slice(0, 3).join(', ')}`);
   }
 
-  const mastered = mastery >= 85 && total >= 2;
+  // strength tiers — require meaningful evidence, not just 1-2 questions
+  // strength: consistently high mastery with at least 3 confirmed interactions
+  // mastered: strongest tier — 90 %+ mastery across 4+ interactions
+  const strength = mastery >= 75 && total >= 3;
+  const mastered = mastery >= 90 && total >= 4;
   return {
     topic: entry.topic, sub: entry.sub, mastery,
     priority, priorityClass, trend, trendIcon,
     whyBullets, total, last7, last14,
-    mastered, concepts, decayScore
+    strength, mastered, concepts, decayScore
   };
 }
 
@@ -706,11 +722,12 @@ async function loadData() {
   // sort: highest decay score first (most recently active weaknesses at top)
   all.sort((a, b) => b.decayScore - a.decayScore);
 
-  const weaknesses = all.filter(w => !w.mastered);
+  const weaknesses = all.filter(w => !w.strength);
+  const strengths  = all.filter(w => w.strength && !w.mastered);
   const mastered   = all.filter(w => w.mastered);
   _weaknesses = weaknesses;
 
-  render(weaknesses, mastered, academic[academic.length - 1].created_at, academic.length);
+  render(weaknesses, strengths, mastered, academic[academic.length - 1].created_at, academic.length);
 }
 
 // ===== RENDER =====
@@ -765,7 +782,7 @@ function whyBulletsHtml(w) {
   return '<ul class="why-bullets">' + w.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('') + '</ul>';
 }
 
-function render(weaknesses, mastered, lastDate, totalAnalyzed) {
+function render(weaknesses, strengths, mastered, lastDate, totalAnalyzed) {
   // update timestamp
   const d = new Date(lastDate);
   const now = new Date();
@@ -925,16 +942,46 @@ function render(weaknesses, mastered, lastDate, totalAnalyzed) {
     </div>`;
   }
 
+  // ── STRENGTHS ────────────────────────────────────────────────────
+  if (strengths.length > 0) {
+    html += `
+    <div class="sec-label">Your Strengths</div>
+    <section class="card">
+      <div class="card-head">
+        <div class="card-ico" style="background:rgba(34,197,94,.12);border-color:var(--green-border)">💪</div>
+        <div>
+          <div class="card-title">Topics You Handle Well</div>
+          <div class="card-sub">Confirmed across multiple sessions — keep it up</div>
+        </div>
+      </div>
+      <div class="strength-list">
+        ${strengths.map(w => `
+        <div class="strength-item">
+          <div class="str-ic">⭐</div>
+          <div style="flex:1;min-width:0">
+            <div class="str-name">${escHtml(w.sub)}</div>
+            <div class="str-topic">${escHtml(w.topic)}</div>
+            <div class="str-evidence">Confirmed across ${w.total} session${w.total > 1 ? 's' : ''}</div>
+          </div>
+          <div class="str-right">
+            <div class="str-pct" style="color:${masteryColor(w.mastery)}">${w.mastery}%</div>
+            <div class="str-bar"><div class="str-fill" style="width:${w.mastery}%;background:${masteryColor(w.mastery)}"></div></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </section>`;
+  }
+
   // ── MASTERED TOPICS ───────────────────────────────────────────────
   if (mastered.length > 0) {
     html += `
     <div class="sec-label">Mastered Topics</div>
     <section class="card">
       <div class="card-head">
-        <div class="card-ico">🏆</div>
+        <div class="card-ico" style="background:rgba(34,197,94,.16);border-color:var(--green-border)">🏆</div>
         <div>
-          <div class="card-title">Topics You've Mastered</div>
-          <div class="card-sub">Keep it up — these are solid</div>
+          <div class="card-title">Topics You've Fully Mastered</div>
+          <div class="card-sub">90 %+ mastery · 4 or more confirmed interactions</div>
         </div>
       </div>
       <div class="mastered-list">
@@ -943,7 +990,7 @@ function render(weaknesses, mastered, lastDate, totalAnalyzed) {
           <div class="mi-check">✓</div>
           <div style="flex:1">
             <div class="mi-name">${escHtml(w.sub)}</div>
-            <div class="mi-sub">${escHtml(w.topic)}</div>
+            <div class="mi-sub">${escHtml(w.topic)} · ${w.total} interactions</div>
           </div>
           <span style="font-family:var(--font-mono);font-size:13px;color:var(--green);font-weight:700">${w.mastery}%</span>
         </div>`).join('')}
