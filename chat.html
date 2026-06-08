@@ -650,9 +650,11 @@ button{font-family:inherit;cursor:pointer}
     document.querySelector('.shell').classList.add('chat-mode');
     records.forEach(r => {
       addUser(r.question, r.image || null, true);
-      const sig = SignalEngine.analyze(r.question || '');
-      sig.topic = r.topic || sig.topic;
-      sig.sub   = r.subtopic || sig.sub;
+      const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question) : null;
+      if (sig) {
+        sig.topic = r.topic || sig.topic;
+        sig.sub   = r.subtopic || sig.sub;
+      }
       // Re-hydrate the AI response from whatever fields the table actually has.
       const aiResponse = {
         answer:     r.ai_response || r.answer || '',
@@ -686,11 +688,11 @@ button{font-family:inherit;cursor:pointer}
     const payload = {
       question: question,
       session_id: currentSessionId,
-      confidence: sig.confidence,
+      confidence: sig ? sig.confidence : null,
     };
     // Optional extras (the function can ignore unknown fields)
-    if (sig.topic) payload.topic = sig.topic;
-    if (sig.sub)   payload.subtopic = sig.sub;
+    if (sig && sig.topic) payload.topic = sig.topic;
+    if (sig && sig.sub)   payload.subtopic = sig.sub;
     if (imageData && typeof imageData === 'string' && imageData.startsWith('data:')) {
       payload.image = imageData;
     }
@@ -1118,7 +1120,7 @@ button{font-family:inherit;cursor:pointer}
         '<span class="meta-tag"><span class="mi t"></span>Topic: <b>'+escapeHtml(topic)+'</b></span>'+
         '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b>'+escapeHtml(subtopic)+'</b></span>'+
         diffTag+
-        '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>'+
+        (sig && sig.confidence != null ? '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>' : '')+
       '</div>' :
       (diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
 
@@ -1131,9 +1133,9 @@ button{font-family:inherit;cursor:pointer}
         '<div class="sp-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Weakness Analyzer Update</div>'+
         '<div class="sp-grid">'+
           '<div class="sp-cell"><div class="spc-l">Topic</div><div class="spc-v">'+escapeHtml(topic)+' → '+escapeHtml(subtopic)+'</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Confidence</div><div class="spc-v cyan">'+sig.confidence+'/5</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Status</div><div class="spc-v '+sig.statusColor+'" id="'+sig.statusId+'">Awaiting feedback</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Signal Strength</div><div class="spc-v '+(weaknessColor || sig.strengthColor)+'">'+escapeHtml(weaknessLabel || sig.strength)+'</div></div>'+
+          '<div class="sp-cell"><div class="spc-l">Confidence</div><div class="spc-v cyan">'+(sig ? sig.confidence : '')+'/5</div></div>'+
+          '<div class="sp-cell"><div class="spc-l">Status</div><div class="spc-v '+(sig ? sig.statusColor : '')+'" id="'+(sig ? sig.statusId : '')+'">Awaiting feedback</div></div>'+
+          '<div class="sp-cell"><div class="spc-l">Signal Strength</div><div class="spc-v '+(weaknessColor || (sig ? sig.strengthColor : ''))+'">'+escapeHtml(weaknessLabel || (sig ? sig.strength : ''))+'</div></div>'+
         '</div>'+
         ((helpRequest||explanationRequest) ?
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+
@@ -1144,7 +1146,7 @@ button{font-family:inherit;cursor:pointer}
       '</div>'+
       '<div class="resolution">'+
         '<div class="res-q">Did this explanation help?</div>'+
-        '<div class="res-opts" data-statusid="'+sig.statusId+'" data-topic="'+escapeHtml(topic)+'" data-sub="'+escapeHtml(subtopic)+'">'+
+        '<div class="res-opts" data-statusid="'+(sig ? sig.statusId : '')+'" data-topic="'+escapeHtml(topic||'')+'" data-sub="'+escapeHtml(subtopic||'')+'">'+
           '<span class="res-opt solved" data-r="solved">✅ Solved It</span>'+
           '<span class="res-opt partial" data-r="partial">🟡 Partially Understood</span>'+
           '<span class="res-opt confused" data-r="confused">❌ Still Confused</span>'+
