@@ -588,19 +588,19 @@ button{font-family:inherit;cursor:pointer}
   const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   let currentUser = null;
+  let userInitials = '';
   let currentSessionId = null;
   let isSending = false;
 
   // ===== AUTH GUARD =====
   (async () => {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.href = 'login.html'; return; }
-    currentUser = session.user;
-    const meta = currentUser.user_metadata || {};
-    const fullName = meta.full_name || currentUser.email.split('@')[0];
-    const initials = fullName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-    const av = document.querySelector('.topbar .avatar');
-    if (av) av.textContent = initials;
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    currentUser = user;
+    const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+    const meta = user.user_metadata || {};
+    const fullName = (profile && profile.full_name) || meta.full_name || user.email.split('@')[0];
+    userInitials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
     loadChatHistory();
     renderEmptyStateHistory();
   })();
@@ -675,8 +675,8 @@ button{font-family:inherit;cursor:pointer}
   // ===== CALL AI VIA EDGE FUNCTION =====
   async function askAI(question, sig, imageData) {
     // 1) Require an authenticated user before invoking the function
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
+    const { data: { user: freshUser } } = await sb.auth.getUser();
+    if (!freshUser) {
       window.location.href = 'login.html';
       throw new Error('Not authenticated');
     }
@@ -974,7 +974,7 @@ button{font-family:inherit;cursor:pointer}
     if(empty) empty.style.display='none';
     activateChatMode();
     const el=document.createElement('div');el.className='msg user';
-    el.innerHTML='<div class="av">A</div><div class="body"><span class="who">You</span><div class="bubble">'+
+    el.innerHTML='<div class="av">'+escapeHtml(userInitials)+'</div><div class="body"><span class="who">You</span><div class="bubble">'+
       (img?'<img class="q-img" src="'+img+'" alt="question"/>':'')+
       (text?escapeHtml(text):'')+'</div></div>';
     inner.appendChild(el);scrollDown();
