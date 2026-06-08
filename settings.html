@@ -448,9 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== Auth guard + load profile =====
   async function loadProfile() {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.href = 'login.html'; return; }
-    currentUser = session.user;
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    currentUser = user;
 
     let { data: profile, error } = await sb
       .from('profiles').select('*').eq('id', currentUser.id).single();
