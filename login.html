@@ -47,6 +47,7 @@ body{
   color:var(--text-200);
   font-family:var(--font-body);
   font-size:15px;line-height:1.55;
+  visibility:hidden;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
@@ -308,10 +309,15 @@ button{font-family:inherit;cursor:pointer}
     }
   }
 
-  // ===== Session check — redirect if already logged in =====
+  // ===== Auth check — redirect if already logged in =====
+  // Use getUser() (server-validated) to avoid stale cached session flicker
   (async () => {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session && session.user) routeAfterAuth(session.user.id);
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) { routeAfterAuth(user.id); return; }
+    } catch (_) {}
+    // Not logged in — reveal the page
+    document.body.style.visibility = 'visible';
   })();
 
   // ===== Show / hide password =====
