@@ -438,6 +438,15 @@ button{font-family:inherit;cursor:pointer}
 /* view all toggle */
 .view-all-btn{width:100%;margin-top:12px;padding:11px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
 .view-all-btn:hover{border-color:var(--cyan-border);color:#fff}
+/* data basis badge */
+.data-basis{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-family:var(--font-mono);font-size:11.5px;color:var(--text-400);margin-bottom:18px}
+.data-basis b{color:var(--cyan-3)}
+/* hero focus hint */
+.bw-focus-hint{font-size:14px;color:var(--cyan-3);font-weight:600;margin-bottom:10px;opacity:.9}
+/* why bullets */
+.why-bullets{list-style:none;display:flex;flex-direction:column;gap:8px;margin:0;padding:0}
+.why-bullets li{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text-200);line-height:1.5}
+.why-bullets li::before{content:'•';color:var(--cyan);font-weight:700;flex-shrink:0;margin-top:1px}
 </style>
 </head>
 <body>
@@ -518,14 +527,14 @@ button{font-family:inherit;cursor:pointer}
       </button>
     </div>
     <div class="m-block">
-      <div class="mb-h">🔍 Why Zero thinks this needs work</div>
+      <div class="mb-h">🔍 Why Zero recommends focusing here</div>
       <div class="why-card" style="margin-top:0"><p id="mWhy"></p></div>
     </div>
     <div class="m-block" id="mConcepts">
       <div class="mb-h">📘 Concepts to review</div>
       <div class="chips" id="mConceptList"></div>
     </div>
-    <button class="m-cta" onclick="location.href='focus.html'">
+    <button class="m-cta" id="mCtaBtn" onclick="goFocus()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
       Start Focus Practice on This Topic
     </button>
@@ -549,6 +558,56 @@ sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', (
   if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
 }));
 
+// ===== SYSTEM TOPIC FILTER =====
+const SYSTEM_TOPICS = new Set([
+  'confidence','session start','study coaching','problem clarification',
+  'off-topic','specialization','zero','general','greeting','feedback',
+  'test taking','motivation','other','none','unknown','miscellaneous',
+  'meta','system','chat','intro','introduction','clarification','encouragement',
+  'off topic','test-taking','hint','hints','explanation','review'
+]);
+function isAcademicTopic(topic) {
+  if (!topic || topic.trim().length < 2) return false;
+  return !SYSTEM_TOPICS.has(topic.toLowerCase().trim());
+}
+
+// ===== CONCEPT NORMALIZER =====
+const CONCEPT_CANON = {
+  'isolation of variable':'Isolating Variables','isolating variable':'Isolating Variables',
+  'isolation of variables':'Isolating Variables','isolating a variable':'Isolating Variables',
+  'isolate variable':'Isolating Variables','isolate variables':'Isolating Variables',
+  'linear equation':'Linear Equations','linear equations':'Linear Equations',
+  'inverse operation':'Inverse Operations','inverse operations':'Inverse Operations',
+  'solving for variable':'Solving for Variables','solving for variables':'Solving for Variables',
+  'solving for x':'Solving for Variables','solve for x':'Solving for Variables',
+  'quadratic equation':'Quadratic Equations','quadratic equations':'Quadratic Equations',
+  'systems of equation':'Systems of Equations','system of equations':'Systems of Equations',
+  'slope intercept form':'Slope-Intercept Form','slope-intercept':'Slope-Intercept Form',
+  'slope intercept':'Slope-Intercept Form',
+  'order of operation':'Order of Operations','order of operations':'Order of Operations',
+  'substitution method':'Substitution Method','elimination method':'Elimination Method',
+  'distributive property':'Distributive Property','combining like terms':'Combining Like Terms',
+  'combining like term':'Combining Like Terms',
+};
+function normalizeConcept(c) {
+  if (!c) return null;
+  const t = c.trim();
+  const key = t.toLowerCase();
+  if (CONCEPT_CANON[key]) return CONCEPT_CANON[key];
+  return t.replace(/\b\w/g, ch => ch.toUpperCase());
+}
+function dedupeConceptList(arr) {
+  const seen = new Set();
+  const out = [];
+  for (const c of arr) {
+    const n = normalizeConcept(c);
+    if (!n) continue;
+    const k = n.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(n); }
+  }
+  return out;
+}
+
 // ===== DATA LAYER =====
 const DAY = 86400000;
 
@@ -556,39 +615,58 @@ function computeWeakness(entry) {
   const now = Date.now();
   const times = entry.records.map(t => new Date(t).getTime());
   const total = times.length;
-  const last7 = times.filter(t => now - t < 7 * DAY).length;
-  const prev7 = times.filter(t => now - t >= 7 * DAY && now - t < 14 * DAY).length;
-  // mastery: more recent questions = lower mastery
-  const score = (total * 2) + (last7 * 1.5);
-  const mastery = Math.max(10, Math.round(100 - Math.min(score * 8, 90)));
-  // priority
+
+  // minimum signal threshold — need at least 2 questions to appear
+  if (total < 2) return null;
+
+  const last7  = times.filter(t => now - t < 7  * DAY).length;
+  const last14 = times.filter(t => now - t < 14 * DAY).length;
+  const prev7  = times.filter(t => now - t >= 7 * DAY && now - t < 14 * DAY).length;
+
+  // decay-weighted score: questions from last week count most
+  let decayScore = 0;
+  times.forEach(t => {
+    const daysAgo = (now - t) / DAY;
+    decayScore += Math.exp(-daysAgo / 14); // 14-day half-life
+  });
+
+  const score = (total * 1.5) + (decayScore * 3) + (last7 * 2);
+  const mastery = Math.max(10, Math.round(100 - Math.min(score * 5, 90)));
+
   let priority, priorityClass;
-  if (mastery < 30) { priority = 'Critical'; priorityClass = 'critical'; }
-  else if (mastery < 50) { priority = 'High'; priorityClass = 'high'; }
-  else if (mastery < 70) { priority = 'Medium'; priorityClass = 'med'; }
-  else { priority = 'Low'; priorityClass = 'low'; }
-  // trend
+  if (mastery < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
+  else if (mastery < 50) { priority = 'High';     priorityClass = 'high';     }
+  else if (mastery < 70) { priority = 'Medium';   priorityClass = 'med';      }
+  else                   { priority = 'Low';       priorityClass = 'low';      }
+
   let trend, trendIcon;
-  if (last7 > prev7 + 1) { trend = 'Declining'; trendIcon = '📉'; }
-  else if (prev7 > last7 && total >= 3) { trend = 'Improving'; trendIcon = '📈'; }
-  else { trend = 'Stable'; trendIcon = '➖'; }
-  // student-friendly "why" — no numbers, tutor voice
-  let why;
-  if (mastery < 30) {
-    why = 'This is currently your biggest challenge area. Zero has seen this topic come up repeatedly in your sessions and thinks focused practice here will make the biggest difference to your score.';
-  } else if (last7 >= 2) {
-    why = 'You\'ve revisited this topic recently, which tells Zero that it\'s still something you\'re working through. A little more focused practice here will help it click.';
-  } else if (total >= 3) {
-    why = 'This topic has appeared in your sessions a few times. Zero thinks that building a stronger foundation here will make related questions much easier going forward.';
-  } else {
-    why = 'This topic appeared in your questions and Zero wants to make sure you have a solid understanding before moving on.';
+  if (last7 > prev7 + 1)              { trend = 'Declining'; trendIcon = '📉'; }
+  else if (prev7 > last7 && total >= 3){ trend = 'Improving'; trendIcon = '📈'; }
+  else                                 { trend = 'Stable';    trendIcon = '➖'; }
+
+  // data-driven why bullets — personal, evidence-based
+  const concepts = dedupeConceptList([...entry.concepts]);
+  const whyBullets = [];
+  whyBullets.push(`You asked about this topic ${total} time${total > 1 ? 's' : ''}`);
+  if (last14 > 0) {
+    whyBullets.push(`${last14} question${last14 > 1 ? 's' : ''} in the last 14 days`);
   }
-  // mastered: high mastery + seen at least twice means student has it down
+  if (last7 >= 2) {
+    whyBullets.push('Still actively coming up in your recent sessions');
+  }
+  if (prev7 > 0 && last7 > prev7) {
+    whyBullets.push('Questions are increasing — not yet resolved');
+  }
+  if (concepts.length > 0) {
+    whyBullets.push(`Related concepts: ${concepts.slice(0, 3).join(', ')}`);
+  }
+
   const mastered = mastery >= 85 && total >= 2;
   return {
     topic: entry.topic, sub: entry.sub, mastery,
-    priority, priorityClass, trend, trendIcon, why, mastered,
-    concepts: [...entry.concepts]
+    priority, priorityClass, trend, trendIcon,
+    whyBullets, total, last7, last14,
+    mastered, concepts, decayScore
   };
 }
 
@@ -611,25 +689,28 @@ async function loadData() {
 
   if (rErr || !records || records.length === 0) { renderEmpty(); return; }
 
+  // filter to academic topics only
+  const academic = records.filter(r => isAcademicTopic(r.topic) && isAcademicTopic(r.subtopic));
+  if (academic.length === 0) { renderEmpty(); return; }
+
   // aggregate by topic+subtopic
   const map = {};
-  records.forEach(r => {
-    if (!r.topic || !r.subtopic) return;
-    const key = r.topic + '::' + r.subtopic;
-    if (!map[key]) map[key] = { topic: r.topic, sub: r.subtopic, records: [], concepts: new Set() };
+  academic.forEach(r => {
+    const key = r.topic.trim() + '::' + r.subtopic.trim();
+    if (!map[key]) map[key] = { topic: r.topic.trim(), sub: r.subtopic.trim(), records: [], concepts: new Set() };
     map[key].records.push(r.created_at);
     if (Array.isArray(r.concepts)) r.concepts.forEach(c => map[key].concepts.add(c));
   });
 
-  const all = Object.values(map).map(computeWeakness);
-  // sort: weakest first (lowest mastery)
-  all.sort((a, b) => a.mastery - b.mastery);
+  const all = Object.values(map).map(computeWeakness).filter(Boolean);
+  // sort: highest decay score first (most recently active weaknesses at top)
+  all.sort((a, b) => b.decayScore - a.decayScore);
 
   const weaknesses = all.filter(w => !w.mastered);
-  const mastered = all.filter(w => w.mastered);
+  const mastered   = all.filter(w => w.mastered);
   _weaknesses = weaknesses;
 
-  render(weaknesses, mastered, records[records.length - 1].created_at);
+  render(weaknesses, mastered, academic[academic.length - 1].created_at, academic.length);
 }
 
 // ===== RENDER =====
@@ -673,7 +754,18 @@ function renderEmpty() {
     </div>`;
 }
 
-function render(weaknesses, mastered, lastDate) {
+function focusUrl(w, rank) {
+  return 'focus.html?topic=' + encodeURIComponent(w.topic)
+    + '&subtopic=' + encodeURIComponent(w.sub)
+    + '&rank=' + rank
+    + '&mastery=' + w.mastery;
+}
+
+function whyBulletsHtml(w) {
+  return '<ul class="why-bullets">' + w.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('') + '</ul>';
+}
+
+function render(weaknesses, mastered, lastDate, totalAnalyzed) {
   // update timestamp
   const d = new Date(lastDate);
   const now = new Date();
@@ -687,6 +779,9 @@ function render(weaknesses, mastered, lastDate) {
 
   let html = '';
 
+  // ── DATA BASIS BADGE ────────────────────────────────────────────
+  html += `<div class="data-basis">📊 Based on <b>${totalAnalyzed}</b> question${totalAnalyzed !== 1 ? 's' : ''} analyzed</div>`;
+
   // ── HERO: Biggest Weakness ──────────────────────────────────────
   if (weaknesses.length > 0) {
     const top = weaknesses[0];
@@ -696,12 +791,13 @@ function render(weaknesses, mastered, lastDate) {
       <div class="bw-label"><span class="wi">⚠️</span> Biggest Weakness</div>
       <div class="bw-sub">${escHtml(top.topic)}</div>
       <h2>${escHtml(top.sub)}</h2>
+      <div class="bw-focus-hint">Focus here first for the fastest score improvement.</div>
       <div class="bw-meta">
         ${pillHtml(top)}
         ${trendHtml(top)}
         <span style="font-family:var(--font-mono);font-size:12px;color:${masteryColor(top.mastery)};font-weight:700">Mastery ${top.mastery}%</span>
       </div>
-      <button class="big-cta" onclick="location.href='focus.html'">
+      <button class="big-cta" onclick="location.href='${focusUrl(top, 1)}'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
         Start Focus Practice
       </button>
@@ -723,7 +819,7 @@ function render(weaknesses, mastered, lastDate) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--red)"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
           Why Zero flagged this topic
         </div>
-        <p>${escHtml(top.why)}</p>
+        ${whyBulletsHtml(top)}
       </div>
       ${top.concepts.length > 0 ? `
       <div style="margin-top:14px">
@@ -860,7 +956,7 @@ function render(weaknesses, mastered, lastDate) {
     const top = weaknesses[0];
     html += `
     <div class="sec-label">What Happens Next</div>
-    <div class="focus-link" onclick="location.href='focus.html'">
+    <div class="focus-link" onclick="location.href='${focusUrl(top, 1)}'">
       <span class="fl-ic">🔦</span>
       <div class="fl-body">
         <div class="fl-t">Ready to turn this weakness into a strength?</div>
@@ -875,9 +971,15 @@ function render(weaknesses, mastered, lastDate) {
 
 // ===== MODAL (detail per weakness) =====
 let _weaknesses = [];
+let _modalIdx = 0;
+function goFocus() {
+  const w = _weaknesses[_modalIdx];
+  if (w) location.href = focusUrl(w, _modalIdx + 1);
+}
 function openModal(idx) {
   const w = _weaknesses[idx];
   if (!w) return;
+  _modalIdx = idx;
   document.getElementById('mTitle').textContent = w.sub;
   document.getElementById('mTopic').textContent = w.topic;
   document.getElementById('mPct').textContent = 'Mastery ' + w.mastery + '%';
@@ -886,7 +988,7 @@ function openModal(idx) {
   priEl.className = 'sev-pill ' + w.priorityClass;
   priEl.innerHTML = `<span class="d"></span>${w.priority}`;
   document.getElementById('mTrend').innerHTML = trendHtml(w);
-  document.getElementById('mWhy').textContent = w.why;
+  document.getElementById('mWhy').innerHTML = whyBulletsHtml(w);
   const conEl = document.getElementById('mConcepts');
   if (w.concepts.length > 0) {
     conEl.style.display = '';
