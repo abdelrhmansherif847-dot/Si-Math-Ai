@@ -6,943 +6,573 @@
 <title>Si Math AI — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#050a14;
-  --bg-elev-1:#0a1224;
-  --bg-elev-2:#0e1830;
-  --bg-card:#0c1428;
-  --bg-card-hi:#101a32;
-
-  --cyan:#38bdf8;
-  --cyan-2:#0ea5e9;
-  --cyan-3:#7dd3fc;
-  --cyan-bg-soft:rgba(56,189,248,.1);
-  --cyan-bg-med:rgba(56,189,248,.16);
-  --cyan-border:rgba(56,189,248,.28);
-  --cyan-border-soft:rgba(56,189,248,.14);
-
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
   --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
   --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
   --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
-
-  --text-100:#ffffff;
-  --text-200:#dde8f7;
-  --text-300:#a8bcd9;
-  --text-400:#7a90b2;
-  --text-500:#536b8c;
-  --border-soft:#1a2540;
-  --border-mid:#26334d;
-
-  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;
-  --space-5:20px;--space-6:24px;--space-7:32px;--space-8:40px;
-  --space-9:56px;--space-10:72px;
-
-  --container-x:18px;
-
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
   --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
-  --font-display:'Manrope',sans-serif;
-  --font-body:'DM Sans',sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
-
-  --nav-h:56px;
-  --side-w:248px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;--side-w:262px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;overflow-x:hidden}
-body{
-  background-color:#050a14 !important;
-  background:#050a14 !important;
-  color:var(--text-200);
-  font-family:var(--font-body);
-  font-size:15px;line-height:1.55;
-  overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-  min-height:100vh;position:relative;
-}
-/* atmosphere */
+html{overflow-x:hidden}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
 .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
-.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:20%;left:-100px}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.11),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer}
 
-/* ============ TOP BAR ============ */
-.topbar{
-  position:fixed;top:0;left:0;right:0;z-index:60;
-  height:calc(var(--nav-h) + env(safe-area-inset-top,0));
-  padding-top:env(safe-area-inset-top,0);
-  display:flex;align-items:center;gap:var(--space-3);
-  padding-left:var(--container-x);padding-right:var(--container-x);
-  background:rgba(5,10,20,.97);
-  border-bottom:1px solid var(--border-soft);
-}
-.hamb{
-  width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200);
-}
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
 .hamb svg{width:18px;height:18px}
-.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff}
-.logo-mark{
-  width:34px;height:34px;border-radius:10px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#0e1830,#0c1428);
-  border:1px solid var(--cyan-border);color:var(--cyan);
-  font-family:var(--font-display);font-weight:800;font-size:16px;
-  box-shadow:0 0 16px rgba(56,189,248,.22);
-}
-.brand .mid{color:var(--cyan)}
-.brand .ai{color:var(--text-300);font-weight:700}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:var(--space-3)}
-.bell{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-300);position:relative}
-.bell svg{width:17px;height:17px}
-.bell .dot{position:absolute;top:9px;right:10px;width:7px;height:7px;background:var(--cyan);border-radius:50%;box-shadow:0 0 8px var(--cyan)}
-.avatar{
-  width:38px;height:38px;border-radius:11px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;
-  display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:15px;
-  box-shadow:0 0 16px rgba(56,189,248,.3);
-}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan);cursor:pointer}
 
-/* ============ SIDEBAR ============ */
-.sidebar{
-  position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);
-  background:var(--bg-elev-1);border-right:1px solid var(--border-soft);
-  padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 16px) 14px 20px;
-  display:flex;flex-direction:column;gap:4px;
-  transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1);
-  overflow-y:auto;
-}
+/* SIDEBAR */
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
 .sidebar.open{transform:translateX(0)}
 .side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
-.nav-item{
-  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;
-  color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;
-  border:1px solid transparent;transition:all .2s ease;
-}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
 .nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
 .nav-item:hover{background:var(--bg-card);color:var(--text-100)}
 .nav-item:hover svg{color:var(--cyan)}
-.nav-item.active{
-  background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft);
-  box-shadow:inset 0 0 18px rgba(56,189,248,.08);
-}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
 .nav-item.active svg{color:var(--cyan)}
 .nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
-.side-spacer{flex:1}
-.side-card{
-  margin-top:14px;padding:14px;border-radius:var(--r-md);
-  background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));
-  border:1px solid var(--cyan-border-soft);
-}
-.side-card h4{font-family:var(--font-display);font-size:14px;color:#fff;margin-bottom:4px}
-.side-card p{font-size:12px;color:var(--text-400);margin-bottom:10px;line-height:1.5}
-.side-card .mini-btn{display:block;text-align:center;padding:9px;border-radius:10px;background:var(--cyan);color:#031020;font-weight:700;font-size:13px}
-
-/* overlay for mobile drawer */
 .overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
 .overlay.show{opacity:1;visibility:visible}
 
-/* ============ MAIN ============ */
-.main{
-  position:relative;z-index:10;
-  padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 18px) var(--container-x) calc(76px + env(safe-area-inset-bottom,0));
-  max-width:1240px;margin:0 auto;
-}
+/* MAIN */
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
 
-/* welcome */
-.welcome{margin-bottom:var(--space-6);animation:rise .6s ease both}
-.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.eyebrow .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
-.welcome h1{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,7vw,38px);line-height:1.08;letter-spacing:-.02em;color:#fff}
-.welcome h1 .accent{color:var(--cyan)}
-.welcome p{color:var(--text-300);font-size:15px;margin-top:8px;max-width:520px}
-.welcome-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-.btn{
-  display:inline-flex;align-items:center;gap:8px;justify-content:center;
-  padding:13px 20px;border-radius:var(--r-md);font:700 14.5px var(--font-body);
-  border:none;transition:transform .2s,box-shadow .2s,background .2s;
-}
-.btn svg{width:15px;height:15px}
-.btn-primary{background:var(--cyan);color:#031020;box-shadow:0 6px 22px rgba(56,189,248,.26)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(56,189,248,.4)}
-.btn-ghost{background:var(--bg-card);color:#fff;border:1px solid var(--cyan-border)}
-.btn-ghost:hover{transform:translateY(-2px);border-color:var(--cyan);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+/* GRID */
+.dash-grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:768px){.dash-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1100px){.dash-grid-3{grid-template-columns:1fr 1fr 1fr}}
 
-/* grid */
-.grid{display:grid;grid-template-columns:1fr;gap:var(--space-4)}
+/* CARDS */
+.card{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.card-ico{width:40px;height:40px;flex-shrink:0;border-radius:11px;font-size:18px;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border)}
+.card-title{font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff}
+.card-sub{font-size:12px;color:var(--text-400);margin-top:1px}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:28px 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
 
-/* generic card */
-.card{
-  position:relative;overflow:hidden;
-  background:var(--bg-card);
-  border:1px solid var(--border-soft);
-  border-radius:var(--r-lg);
-  padding:var(--space-5);
-  transition:transform .3s cubic-bezier(.25,.46,.45,.94),border-color .3s,box-shadow .3s;
-  animation:rise .6s ease both;
-}
-@media(min-width:768px){.card{padding:var(--space-6)}}
-.card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 0% 0%,rgba(56,189,248,.06),transparent 55%);opacity:0;transition:opacity .3s;pointer-events:none}
-.card:hover{transform:translateY(-3px);border-color:var(--cyan-border);box-shadow:0 16px 40px rgba(0,0,0,.45)}
-.card:hover::before{opacity:1}
-.card.glow{background:linear-gradient(135deg,var(--bg-card-hi),var(--bg-card));border-color:var(--cyan-border-soft)}
+/* WELCOME */
+.welcome{background:linear-gradient(135deg,rgba(56,189,248,.14),var(--bg-card));border:1px solid var(--cyan-border);border-radius:var(--r-xl);padding:24px;animation:rise .5s ease both}
+.welcome-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.welcome-av{width:52px;height:52px;border-radius:14px;background:#fff;border:1px solid var(--cyan-border);overflow:hidden;flex-shrink:0}
+.welcome-av img{width:100%;height:100%;object-fit:contain}
+.welcome-greeting{font-family:var(--font-display);font-weight:800;font-size:clamp(20px,5vw,26px);color:#fff;line-height:1.1}
+.welcome-date{font-family:var(--font-mono);font-size:11px;color:var(--text-400);margin-top:3px}
+.zero-msg{display:flex;align-items:flex-start;gap:10px;background:rgba(56,189,248,.07);border:1px solid var(--cyan-border-soft);border-radius:12px;padding:12px 14px}
+.zero-msg .zm-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);flex-shrink:0;margin-top:5px}
+.zero-msg p{font-size:13.5px;color:var(--text-300);line-height:1.5}
+.zero-msg p b{color:#fff}
 
-.card-head{display:flex;align-items:center;gap:11px;margin-bottom:var(--space-5)}
-.card-ico{
-  width:42px;height:42px;flex-shrink:0;border-radius:12px;font-size:19px;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);
-  box-shadow:0 0 14px rgba(56,189,248,.12);
-}
-.card-title{font-family:var(--font-display);font-weight:700;font-size:17px;color:#fff;line-height:1.1}
-.card-sub{font-size:12.5px;color:var(--text-400);margin-top:2px}
-.card-link{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--cyan);display:flex;align-items:center;gap:5px;white-space:nowrap}
-.card-link svg{width:13px;height:13px}
+/* GOALS CHIPS */
+.goals-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0}
+.goal-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-size:12.5px;color:var(--text-300)}
+.goal-chip svg{width:13px;height:13px;color:var(--cyan);flex-shrink:0}
+.goal-chip b{color:#fff;font-weight:600}
+.goal-chip.green{border-color:var(--green-border);background:var(--green-soft)}
+.goal-chip.green b{color:var(--green)}
+.goal-chip.amber{border-color:var(--amber-border);background:var(--amber-soft)}
+.goal-chip.amber b{color:var(--amber)}
+.goal-chip.red{border-color:var(--red-border);background:var(--red-soft)}
+.goal-chip.red b{color:var(--red)}
 
-/* ===== Overview cards (top of dashboard) ===== */
-.overview{display:grid;grid-template-columns:1fr;gap:var(--space-4);margin-bottom:var(--space-5)}
-@media(min-width:640px){.overview{grid-template-columns:1fr 1fr}}
-@media(min-width:1080px){.overview{grid-template-columns:repeat(3,1fr)}}
-.ov{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:18px;transition:transform .3s,border-color .3s,box-shadow .3s;animation:rise .6s ease both;cursor:pointer}
-.ov:hover{transform:translateY(-3px);border-color:var(--cyan-border);box-shadow:0 14px 36px rgba(0,0,0,.42)}
-.ov-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.ov-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
-.ov-ttl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
-.ov.weak{border-color:var(--red-border,rgba(239,79,95,.32));background:linear-gradient(135deg,rgba(239,79,95,.07),var(--bg-card))}
-.ov.weak .ov-ic{background:rgba(239,79,95,.12);border-color:rgba(239,79,95,.32)}
-.ov-topic{font-family:var(--font-display);font-weight:800;font-size:21px;color:#fff;line-height:1.1}
-.ov-topic .arrow{color:var(--text-500);font-weight:600;margin:0 5px}
-.ov-topic .sub{color:var(--cyan-3)}
-.ov-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-.ov-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300)}
-.ov-tag .d{width:6px;height:6px;border-radius:50%}
-.ov-tag.sev-high{background:rgba(239,79,95,.1);border-color:rgba(239,79,95,.32);color:#ef4f5f}
-.ov-tag.sev-high .d{background:#ef4f5f;box-shadow:0 0 6px #ef4f5f}
-.ov-tag.trend-up{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.32);color:#22c55e}
-.ov-tag.trend-up .d{background:#22c55e;box-shadow:0 0 6px #22c55e}
-.ov-big{font-family:var(--font-display);font-weight:800;font-size:30px;color:#fff;line-height:1}
-.ov-big .unit{font-size:14px;font-weight:600;color:var(--text-400)}
-.ov-big.green{color:#22c55e}
-.ov-sub2{font-size:12.5px;color:var(--text-400);margin-top:7px}
-.ov-sub2 b{color:var(--cyan-3);font-weight:600}
-.ov-track{height:7px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;margin-top:12px;border:1px solid var(--border-soft)}
-.ov-track i{display:block;height:100%;border-radius:100px;background:linear-gradient(90deg,var(--cyan-2),var(--cyan));box-shadow:0 0 10px rgba(56,189,248,.45);width:0;transition:width 1.2s cubic-bezier(.25,.46,.45,.94)}
-.ov-track i.green{background:linear-gradient(90deg,#16a34a,#22c55e);box-shadow:0 0 10px rgba(34,197,94,.45)}
-.ov-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:10px;font-size:12.5px;color:var(--text-400)}
-.ov-row b{font-family:var(--font-display);color:#fff;font-size:15px}
-.ov-mini{display:flex;gap:5px;margin-top:12px}
-.ov-mini i{flex:1;height:22px;border-radius:5px;background:var(--bg-elev-1);border:1px solid var(--border-soft)}
-.ov-mini i.on{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px rgba(56,189,248,.4)}
+/* WEAKNESS CARD */
+.weakness-card{background:linear-gradient(135deg,var(--red-soft),var(--bg-card));border:1px solid var(--red-border);border-radius:var(--r-lg);padding:20px;animation:rise .5s .05s ease both}
+.wk-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.wk-badge{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:100px;background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}
+.wk-title{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff}
+.wk-sub{font-size:12.5px;color:var(--text-400);margin-top:2px}
+.wk-mastery{display:flex;align-items:center;gap:10px;margin:12px 0}
+.wk-bar{flex:1;height:6px;background:var(--bg-elev-1);border-radius:3px;overflow:hidden}
+.wk-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.wk-start-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:10px 18px;border-radius:10px;font-weight:700;font-size:13.5px;border:none;transition:all .2s;text-decoration:none}
+.wk-start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(56,189,248,.35)}
+.wk-start-btn svg{width:15px;height:15px}
 
-/* ===== Daily Streak ===== */
-.streak-top{display:flex;gap:14px;flex-wrap:wrap}
-.streak-stat{
-  flex:1;min-width:120px;border-radius:var(--r-md);padding:16px;
-  background:var(--bg-elev-1);border:1px solid var(--border-soft);position:relative;overflow:hidden;
-}
-.streak-stat.flame{border-color:var(--amber-border);background:linear-gradient(135deg,rgba(245,185,66,.07),var(--bg-elev-1))}
-.streak-stat .lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
-.streak-stat .val{font-family:var(--font-display);font-weight:800;font-size:30px;color:#fff;line-height:1;margin-top:8px;display:flex;align-items:baseline;gap:6px}
-.streak-stat .val span{font-size:13px;font-weight:600;color:var(--text-400)}
-.streak-stat .flame-ico{position:absolute;top:12px;right:12px;font-size:18px;filter:drop-shadow(0 0 8px rgba(245,185,66,.6))}
+/* QUICK ACTIONS */
+.qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qa-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-200);transition:all .2s;text-align:center}
+.qa-btn:hover{border-color:var(--cyan-border);transform:translateY(-2px);background:var(--cyan-bg-soft);color:#fff}
+.qa-btn .qa-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;background:var(--bg-card);border:1px solid var(--border-mid)}
+.qa-btn:hover .qa-ico{background:var(--cyan-bg-soft);border-color:var(--cyan-border)}
+.qa-btn span{font-size:12px;font-weight:600}
 
-.week-label{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
-.week-label .t{font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--text-200)}
-.week-label .c{font-size:12.5px;color:var(--cyan);font-family:var(--font-mono)}
-.week{display:flex;gap:7px;justify-content:space-between}
-.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px}
-.day .dn{font-family:var(--font-mono);font-size:10px;color:var(--text-500);text-transform:uppercase}
-.day .dd{
-  width:100%;aspect-ratio:1;max-width:40px;border-radius:11px;
-  background:var(--bg-elev-2);border:1px solid var(--border-soft);
-  display:flex;align-items:center;justify-content:center;color:var(--text-500);
-  transition:transform .2s;
-}
-.day .dd svg{width:14px;height:14px}
-.day.done .dd{background:linear-gradient(135deg,var(--cyan-2),var(--cyan));border-color:transparent;color:#031020;box-shadow:0 0 14px rgba(56,189,248,.4)}
-.day.today .dd{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 2px rgba(56,189,248,.18)}
-.day:hover .dd{transform:translateY(-2px)}
+/* RECENT ACTIVITY */
+.activity-list{display:flex;flex-direction:column;gap:8px}
+.act-item{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);transition:all .2s}
+.act-item:hover{border-color:var(--cyan-border-soft)}
+.act-ico{width:34px;height:34px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.act-ico.chat{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.act-ico.exam{background:var(--green-soft);border:1px solid var(--green-border)}
+.act-body{flex:1;min-width:0}
+.act-name{font-size:13px;font-weight:600;color:var(--text-200);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:1px}
 
-.ach-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin:22px 0 12px}
-.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.badge{
-  position:relative;border-radius:var(--r-md);padding:14px 10px;text-align:center;
-  background:var(--bg-elev-1);border:1px solid var(--border-soft);transition:transform .25s,box-shadow .25s;
-}
-.badge:hover{transform:translateY(-3px)}
-.badge .bi{font-size:24px;display:block;margin-bottom:7px}
-.badge .bt{font-size:11.5px;font-weight:600;color:var(--text-200);line-height:1.25}
-.badge.unlocked{border-color:var(--cyan-border);background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-elev-1));box-shadow:0 0 18px rgba(56,189,248,.14);animation:glowPulse 3.2s ease-in-out infinite}
-.badge.unlocked .bi{filter:drop-shadow(0 0 10px rgba(56,189,248,.6))}
-.badge.locked{opacity:.55}
-.badge.locked .bi{filter:grayscale(1)}
-.badge .prog{margin-top:8px;height:3px;border-radius:100px;background:var(--bg-elev-2);overflow:hidden}
-.badge .prog i{display:block;height:100%;background:var(--cyan);border-radius:100px;box-shadow:0 0 6px var(--cyan)}
-.badge .lock{position:absolute;top:8px;right:8px;font-size:10px;color:var(--text-500)}
+/* WEEKLY CHART */
+.week-chart{display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:8px}
+.wc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.wc-bar-wrap{flex:1;display:flex;align-items:flex-end;width:100%}
+.wc-bar{width:100%;border-radius:4px 4px 0 0;background:var(--cyan-bg-med);border:1px solid var(--cyan-border-soft);min-height:4px;transition:height .6s ease}
+.wc-bar.has-data{background:linear-gradient(180deg,var(--cyan),var(--cyan-2));border-color:var(--cyan-border)}
+.wc-day{font-family:var(--font-mono);font-size:9px;color:var(--text-500);text-align:center}
+.wc-day.today{color:var(--cyan)}
 
-/* ===== Weakness Analyzer ===== */
-.bars{display:flex;flex-direction:column;gap:16px}
-.bar-row .bar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
-.bar-name{font-weight:600;font-size:14px;color:var(--text-200)}
-.bar-pct{font-family:var(--font-mono);font-size:13px;font-weight:500}
-.bar-track{height:7px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden}
-.bar-fill{height:100%;border-radius:100px;width:0;transform-origin:left;animation:barGrow 1.3s cubic-bezier(.25,.46,.45,.94) forwards}
-.bar-fill.g{background:linear-gradient(90deg,#16a34a,var(--green));box-shadow:0 0 8px rgba(34,197,94,.5)}
-.bar-fill.y{background:linear-gradient(90deg,#d99a1f,var(--amber));box-shadow:0 0 8px rgba(245,185,66,.5)}
-.bar-fill.r{background:linear-gradient(90deg,#c0392f,var(--red));box-shadow:0 0 8px rgba(239,79,95,.5)}
-.bar-pct.g{color:var(--green)} .bar-pct.y{color:var(--amber)} .bar-pct.r{color:var(--red)}
+/* XP CARD */
+.xp-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s .1s ease both}
+.rank-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:100px;font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:14px}
+.xp-bar-wrap{height:8px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;margin:10px 0 8px}
+.xp-bar-fill{height:100%;border-radius:100px;transition:width 1s ease;box-shadow:0 0 10px currentColor}
+.xp-labels{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--text-400)}
+.rank-ladder{display:flex;gap:4px;margin-top:14px;overflow-x:auto}
+.rl-item{flex:1;min-width:48px;text-align:center;padding:6px 4px;border-radius:6px;border:1px solid var(--border-soft);background:var(--bg-elev-1)}
+.rl-item.current{border-color:currentColor}
+.rl-dot{width:8px;height:8px;border-radius:50%;margin:0 auto 4px}
+.rl-name{font-family:var(--font-mono);font-size:8px;color:var(--text-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rl-item.current .rl-name{font-weight:700}
 
-.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)}
-.legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-400)}
-.legend i{width:9px;height:9px;border-radius:3px}
-.weakest{
-  margin-top:16px;display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:var(--r-md);
-  background:var(--red-soft);border:1px solid var(--red-border);
-}
-.weakest .wi{font-size:20px;filter:drop-shadow(0 0 8px rgba(239,79,95,.5))}
-.weakest .wt{font-size:13.5px;color:var(--text-200)}
-.weakest .wt b{color:var(--red);font-family:var(--font-display)}
-.full-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:16px;padding:13px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:14px;transition:all .2s}
-.full-btn:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-2px)}
-.full-btn svg{width:15px;height:15px;color:var(--cyan)}
+/* ACHIEVEMENTS */
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(min-width:480px){.ach-grid{grid-template-columns:repeat(3,1fr)}}
+.ach-item{padding:12px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);text-align:center}
+.ach-item.earned{border-color:var(--amber-border);background:var(--gold-soft)}
+.ach-ico{font-size:22px;margin-bottom:6px}
+.ach-name{font-size:11.5px;font-weight:700;color:var(--text-200)}
+.ach-item.earned .ach-name{color:var(--gold)}
+.ach-date{font-family:var(--font-mono);font-size:9.5px;color:var(--text-500);margin-top:2px}
 
-/* ===== Focus Practice ===== */
-.priority{
-  display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r-md);
-  background:linear-gradient(135deg,rgba(56,189,248,.1),var(--bg-elev-1));border:1px solid var(--cyan-border);margin-bottom:18px;
-}
-.priority .pno{
-  width:46px;height:46px;flex-shrink:0;border-radius:13px;
-  background:var(--cyan);color:#031020;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-family:var(--font-display);font-weight:800;line-height:1;box-shadow:0 0 18px rgba(56,189,248,.45)
-}
-.priority .pno small{font-size:8px;letter-spacing:.1em;font-weight:700;margin-top:2px}
-.priority .pno b{font-size:18px}
-.priority .pmeta .pl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-400)}
-.priority .pmeta .pt{font-family:var(--font-display);font-weight:800;font-size:22px;color:#fff;margin-top:3px}
-
-.fp-block{margin-bottom:16px}
-.fp-block .h{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-500);margin-bottom:9px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-size:12.5px;color:var(--text-200);transition:all .2s}
-.chip:hover{border-color:var(--cyan-border);color:#fff}
-.chip.res{background:var(--cyan-bg-soft);border-color:var(--cyan-border-soft);color:var(--cyan-3)}
-.chip .d{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
-
-.fp-goals{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.goal{flex:1;min-width:140px;padding:14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
-.goal .gl{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
-.goal .gv{font-family:var(--font-display);font-weight:700;font-size:18px;color:#fff;margin-top:6px}
-.goal .gv .arrow{color:var(--cyan)}
-.goal .gv .from{color:var(--red)} .goal .gv .to{color:var(--green)}
-
-/* ===== Mock Exam ===== */
-.seg{display:flex;gap:8px;background:var(--bg-elev-1);padding:5px;border-radius:13px;border:1px solid var(--border-soft);margin-bottom:18px}
-.seg button{flex:1;padding:11px;border:none;background:transparent;border-radius:9px;color:var(--text-300);font-weight:700;font-size:14px;font-family:var(--font-display);transition:all .25s}
-.seg button.on{background:var(--cyan);color:#031020;box-shadow:0 0 16px rgba(56,189,248,.35)}
-.big-cta{
-  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
-  padding:17px;border-radius:var(--r-md);border:none;
-  background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;
-  font-family:var(--font-display);font-weight:800;font-size:16px;
-  box-shadow:0 8px 28px rgba(56,189,248,.3);transition:transform .2s,box-shadow .2s;
-}
-.big-cta:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(56,189,248,.46)}
-.big-cta svg{width:19px;height:19px}
-.feat-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.feat{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text-300)}
-.feat .fc{width:24px;height:24px;flex-shrink:0;border-radius:8px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);display:flex;align-items:center;justify-content:center}
-.feat .fc svg{width:13px;height:13px;color:var(--cyan)}
-
-/* ===== AI Tutor ===== */
-.tutor-card{background:linear-gradient(135deg,#0d1b33,var(--bg-card));border-color:var(--cyan-border-soft)}
-.tutor-desc{color:var(--text-300);font-size:14px;margin-bottom:18px}
-.fake-chat{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--cyan-border)}
-.fake-chat .attach{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid var(--cyan-border-soft);background:var(--bg-card);color:var(--text-300);display:flex;align-items:center;justify-content:center;transition:all .2s}
-.fake-chat .attach:hover{color:var(--cyan);border-color:var(--cyan);background:var(--cyan-bg-soft)}
-.fake-chat .attach svg{width:17px;height:17px}
-.fake-chat input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--text-200);font-family:var(--font-body);font-size:14px}
-.fake-chat input::placeholder{color:var(--text-500)}
-.upload-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:12px;padding:13px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px dashed var(--cyan-border);color:var(--text-200);font-weight:600;font-size:13.5px;transition:all .2s}
-.upload-btn:hover{border-color:var(--cyan);color:#fff;background:var(--cyan-bg-soft);box-shadow:0 0 18px rgba(56,189,248,.14)}
-.upload-btn svg{width:16px;height:16px;color:var(--cyan)}
-.img-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;border-radius:var(--r-md);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border)}
-.img-preview img{width:46px;height:46px;flex-shrink:0;border-radius:10px;object-fit:cover;border:1px solid var(--cyan-border)}
-.img-preview .ip-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.img-preview .ip-name{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.img-preview .ip-hint{font-size:11px;color:var(--cyan);font-family:var(--font-mono)}
-.img-preview .ip-remove{width:30px;height:30px;flex-shrink:0;border-radius:8px;border:1px solid var(--border-mid);background:var(--bg-card);color:var(--text-300);display:flex;align-items:center;justify-content:center;transition:all .2s}
-.img-preview .ip-remove:hover{color:var(--red);border-color:var(--red-border);background:var(--red-soft)}
-.img-preview .ip-remove svg{width:14px;height:14px}
-.send{width:42px;height:42px;flex-shrink:0;border-radius:50%;border:none;background:var(--cyan);color:#031020;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(56,189,248,.4);transition:transform .2s}
-.send:hover{transform:scale(1.06)}
-.send svg{width:17px;height:17px}
-.tutor-cta{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:14px;padding:15px;border-radius:var(--r-md);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:#fff;font-family:var(--font-display);font-weight:700;font-size:15px;transition:all .2s}
-.tutor-cta:hover{background:var(--cyan-bg-med);border-color:var(--cyan);transform:translateY(-2px)}
-.tutor-cta .em{font-size:18px}
-
-/* ===== BOTTOM NAV (mobile) ===== */
-.bottomnav{
-  position:fixed;z-index:55;left:0;right:0;bottom:0;
-  height:calc(62px + env(safe-area-inset-bottom,0));
-  padding-bottom:env(safe-area-inset-bottom,0);
-  display:flex;align-items:stretch;
-  background:rgba(8,14,28,.97);border-top:1px solid var(--border-soft);
-}
-.bottomnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text-500);font-size:10px;font-weight:600}
-.bottomnav a svg{width:21px;height:21px}
-.bottomnav a.active{color:var(--cyan)}
-.bottomnav a.active svg{filter:drop-shadow(0 0 6px rgba(56,189,248,.6))}
-
-/* ============ RESPONSIVE ============ */
-@media(min-width:720px){
-  .grid{grid-template-columns:1fr 1fr}
-  .card.span2{grid-column:span 2}
-  .feat-list{grid-template-columns:1fr 1fr}
-}
 @media(min-width:1024px){
-  .hamb{display:none}
-  .sidebar{transform:translateX(0)}
-  .overlay{display:none!important}
-  .bottomnav{display:none}
-  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1400px;padding-bottom:40px}
-  .topbar{padding-left:calc(var(--side-w) + 28px)}
-  .brand.in-topbar{display:none}
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
 }
-@media(max-width:1023px){
-  .sidebar .side-card{display:none}
-}
-
-@media(max-width:380px){
-  :root{--container-x:14px}
-  .streak-top{gap:10px}
-  .streak-stat{min-width:0;padding:14px}
-  .streak-stat .val{font-size:26px}
-  .badges{gap:7px}
-  .badge{padding:12px 6px}
-  .badge .bt{font-size:10.5px}
-  .badge .bi{font-size:21px}
-  .fp-goals{gap:10px}
-  .goal{min-width:0}
-  .week{gap:5px}
-  .feat-list{grid-template-columns:1fr}
-  .welcome-actions .btn{flex:1}
-}
-img,svg{max-width:100%}
-.main,.grid,.card{min-width:0}
-.card{max-width:100%}
-
-/* ============ KEYFRAMES ============ */
-@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes barGrow{from{width:0}}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
-@keyframes glowPulse{0%,100%{box-shadow:0 0 18px rgba(56,189,248,.14)}50%{box-shadow:0 0 26px rgba(56,189,248,.3)}}
-.d1{animation-delay:.05s}.d2{animation-delay:.12s}.d3{animation-delay:.19s}.d4{animation-delay:.26s}.d5{animation-delay:.33s}.d6{animation-delay:.4s}
-
-/* ===== Exam Plan stat cards ===== */
-.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-6)}
-@media(min-width:640px){.plan-grid{grid-template-columns:repeat(3,1fr)}}
-@media(min-width:1080px){.plan-grid{grid-template-columns:repeat(6,1fr)}}
-.pstat{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:var(--space-4);animation:rise .6s ease both}
-.pstat.hi{background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-card));border-color:var(--cyan-border-soft)}
-.pstat .ps-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);margin-bottom:11px}
-.pstat .ps-l{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
-.pstat .ps-v{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;line-height:1.1;margin-top:5px}
-.pstat .ps-v.cyan{color:var(--cyan)}
-.pstat .ps-d{font-size:11px;color:var(--text-500);margin-top:3px}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 </style>
 </head>
 <body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
 
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-
-<!-- TOP BAR -->
 <header class="topbar">
-  <button class="hamb" id="hamb" aria-label="Menu">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-  </button>
-  <a class="brand in-topbar" href="index.html" aria-label="Go to home page">
-    <span class="logo-mark">Si</span>
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="dashboard.html">
+    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
     <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
   </a>
   <div class="topbar-right">
-    <button class="bell" aria-label="Notifications">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-      <span class="dot"></span>
-    </button>
-    <a href="profile.html" class="avatar" id="topAvatar" aria-label="Profile" title="Open profile" style="text-decoration:none;visibility:hidden"></a>
+    <div class="top-avatar" id="topAvatar">?</div>
   </div>
 </header>
 
-<!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
-  <a class="brand" href="index.html" aria-label="Go to home page" style="padding:0 8px 8px;margin-bottom:6px">
-    <span class="logo-mark">Si</span>
-    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
-  </a>
   <div class="side-sec">Menu</div>
-  <a class="nav-item active" href="#">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-    Dashboard
-  </a>
-  <a class="nav-item" href="chat.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
-    AI Tutor
-  </a>
-  <a class="nav-item" href="weakness.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
-    Weakness Analyzer
-  </a>
-  <a class="nav-item" href="focus.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
-    Focus Practice
-  </a>
-  <a class="nav-item" href="mock-exam.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M12 1h0M9 1h6"/></svg>
-    Mock Exams
-  </a>
-  <a class="nav-item" href="history.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
-    History
-  </a>
+  <a class="nav-item active" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
+  <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
+  <a class="nav-item" href="history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
   <div class="side-sec">Account</div>
-  <a class="nav-item" href="profile.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
-    Profile
-  </a>
-  <a class="nav-item" href="settings.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    Settings
-  </a>
-  <a class="nav-item" href="pricing.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
-    Pricing
-  </a>
-  <div class="side-spacer"></div>
-  <div class="side-card">
-    <h4>🐉 Keep studying!</h4>
-    <p>Use the AI Tutor daily to build your skills and track your progress.</p>
-    <a class="mini-btn" href="chat.html">Solve Now</a>
-  </div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="devices.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
 </aside>
-
 <div class="overlay" id="overlay"></div>
 
-<!-- MAIN -->
-<main class="main">
-
-  <!-- SECTION 1: WELCOME -->
-  <section class="welcome">
-    <div class="eyebrow"><span class="live-dot"></span> Student Dashboard</div>
-    <h1>Welcome back, <span class="accent" id="welcomeName"></span></h1>
-    <p>Logged in as <span id="welcomeEmail" style="color:var(--cyan-3)">—</span> · Let's continue improving your <span id="welcomeExam" style="color:var(--cyan-3)">SAT</span> performance.</p>
-    <div class="welcome-actions">
-      <button onclick="location.href='chat.html'" class="btn btn-primary">
-        Continue Learning
-        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button onclick="location.href='chat.html'" class="btn btn-ghost">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
-        Ask AI Tutor
-      </button>
-    </div>
-  </section>
-
-  <!-- YOUR EXAM PLAN (from onboarding) -->
-  <div class="plan-grid">
-    <div class="pstat hi d1"><div class="ps-ic">📝</div><div class="ps-l">Exam Type</div><div class="ps-v cyan" id="dExamType">—</div></div>
-    <div class="pstat d2"><div class="ps-ic">🎯</div><div class="ps-l">Target Score</div><div class="ps-v" id="dTarget">—</div></div>
-    <div class="pstat d3"><div class="ps-ic">📅</div><div class="ps-l">Exam Date</div><div class="ps-v" id="dExamDate">—</div></div>
-    <div class="pstat hi d4"><div class="ps-ic">⏳</div><div class="ps-l">Days Remaining</div><div class="ps-v cyan" id="dDaysLeft">—</div><div class="ps-d" id="dDaysNote"></div></div>
-    <div class="pstat d5"><div class="ps-ic">📚</div><div class="ps-l">Sessions / Week</div><div class="ps-v" id="dSessions">—</div></div>
-    <div class="pstat d6"><div class="ps-ic">⏱️</div><div class="ps-l">Session Length</div><div class="ps-v" id="dSessionLen">—</div></div>
-  </div>
-
-  <!-- OVERVIEW CARDS (Si Math AI system at a glance) -->
-  <div class="overview">
-
-    <!-- 1. Biggest Weakness -->
-    <div class="ov weak" onclick="location.href='weakness.html'">
-      <div class="ov-head"><span class="ov-ic">⚠️</span><span class="ov-ttl">Biggest Weakness</span></div>
-      <div class="ov-topic" style="color:var(--text-400);font-size:16px">—</div>
-      <div class="ov-sub2" style="margin-top:10px">Start chatting with the AI Tutor to see your weaknesses</div>
-    </div>
-
-    <!-- 2. Current Focus Practice -->
-    <div class="ov" onclick="location.href='focus.html'">
-      <div class="ov-head"><span class="ov-ic">🎯</span><span class="ov-ttl">Current Focus Plan</span></div>
-      <div class="ov-topic" style="color:var(--text-400);font-size:16px">—</div>
-      <div class="ov-sub2" style="margin-top:10px">No active plan yet</div>
-    </div>
-
-    <!-- 3. Estimated Score -->
-    <div class="ov" onclick="location.href='mock-exam.html'">
-      <div class="ov-head"><span class="ov-ic">📊</span><span class="ov-ttl">Estimated Score</span></div>
-      <div class="ov-big" style="color:var(--text-400)">— <span class="unit">/ —</span></div>
-      <div class="ov-sub2" style="margin-top:10px">Complete a mock exam to get your estimate</div>
-    </div>
-
-    <!-- 4. Recent Improvement -->
-    <div class="ov" onclick="location.href='weakness.html'">
-      <div class="ov-head"><span class="ov-ic">📈</span><span class="ov-ttl">Recent Improvement</span></div>
-      <div class="ov-topic" style="color:var(--text-400);font-size:16px">—</div>
-      <div class="ov-sub2" style="margin-top:10px">No improvement data yet</div>
-    </div>
-
-    <!-- 5. Study Consistency -->
-    <div class="ov" onclick="location.href='history.html'">
-      <div class="ov-head"><span class="ov-ic">🔥</span><span class="ov-ttl">Study Consistency</span></div>
-      <div class="ov-big" style="color:var(--text-400)">— <span class="unit">day streak</span></div>
-      <div class="ov-sub2" style="margin-bottom:4px">Weekly consistency: <b style="color:var(--text-400)">— / 7 days</b></div>
-      <div class="ov-mini"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    </div>
-
-  </div>
-
-  <div class="grid">
-
-    <!-- SECTION 2: DAILY STREAK -->
-    <section class="card glow d1">
-      <div class="card-head">
-        <div class="card-ico">🔥</div>
-        <div>
-          <div class="card-title">Daily Streak</div>
-          <div class="card-sub">Consistency builds mastery</div>
-        </div>
-      </div>
-
-      <div class="streak-top">
-        <div class="streak-stat flame">
-          <span class="flame-ico">🔥</span>
-          <div class="lbl">Current Streak</div>
-          <div class="val" style="color:var(--text-400)">— <span>days</span></div>
-        </div>
-        <div class="streak-stat">
-          <div class="lbl">Best Streak</div>
-          <div class="val" style="color:var(--text-400)">— <span>days</span></div>
-        </div>
-      </div>
-
-      <div class="week-label">
-        <span class="t">Weekly Progress</span>
-        <span class="c" style="color:var(--text-500)">— / 7 days</span>
-      </div>
-      <div class="week">
-        <div class="day"><span class="dn">M</span><div class="dd"></div></div>
-        <div class="day"><span class="dn">T</span><div class="dd"></div></div>
-        <div class="day"><span class="dn">W</span><div class="dd"></div></div>
-        <div class="day"><span class="dn">T</span><div class="dd"></div></div>
-        <div class="day"><span class="dn">F</span><div class="dd"></div></div>
-        <div class="day"><span class="dn">S</span><div class="dd"></div></div>
-        <div class="day"><span class="dn">S</span><div class="dd"></div></div>
-      </div>
-
-      <div class="ach-label">Achievements</div>
-      <div class="badges">
-        <div class="badge locked">
-          <span class="lock">🔒</span>
-          <span class="bi">🏅</span>
-          <span class="bt">7 Day Streak</span>
-          <div class="prog"><i style="width:0%"></i></div>
-        </div>
-        <div class="badge locked">
-          <span class="lock">🔒</span>
-          <span class="bi">💎</span>
-          <span class="bt">30 Day Streak</span>
-          <div class="prog"><i style="width:0%"></i></div>
-        </div>
-        <div class="badge locked">
-          <span class="lock">🔒</span>
-          <span class="bi">⭐</span>
-          <span class="bt">100 Questions Solved</span>
-          <div class="prog"><i style="width:0%"></i></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 3: WEAKNESS ANALYZER -->
-    <section class="card d2">
-      <div class="card-head">
-        <div class="card-ico">📊</div>
-        <div>
-          <div class="card-title">Weakness Analyzer</div>
-          <div class="card-sub">Topic performance breakdown</div>
-        </div>
-      </div>
-
-      <div style="padding:24px 0;text-align:center;color:var(--text-400);font-size:14px;line-height:1.7">
-        <div style="font-size:28px;margin-bottom:10px">📊</div>
-        <div style="font-weight:600;color:var(--text-300);margin-bottom:6px">No data yet</div>
-        <div>Ask the AI Tutor math questions to generate your weakness analysis.</div>
-      </div>
-
-      <button onclick="location.href='weakness.html'" class="full-btn">
-        View Full Analysis
-        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </section>
-
-    <!-- SECTION 4: FOCUS PRACTICE -->
-    <section class="card span2 d3">
-      <div class="card-head">
-        <div class="card-ico">🎯</div>
-        <div>
-          <div class="card-title">Focus Practice</div>
-          <div class="card-sub">Your personal study coach</div>
-        </div>
-      </div>
-
-      <div style="padding:24px 0;text-align:center;color:var(--text-400);font-size:14px;line-height:1.7">
-        <div style="font-size:28px;margin-bottom:10px">🎯</div>
-        <div style="font-weight:600;color:var(--text-300);margin-bottom:6px">No focus plan yet</div>
-        <div>Your personalized study plan will appear here once the AI Tutor identifies your weak areas.</div>
-      </div>
-
-      <button onclick="location.href='focus.html'" class="full-btn">
-        View Study Plan
-        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </section>
-
-    <!-- SECTION 5: MOCK EXAM TIMER -->
-    <section class="card d4">
-      <div class="card-head">
-        <div class="card-ico">⏰</div>
-        <div>
-          <div class="card-title">Mock Exam Mode</div>
-          <div class="card-sub">Simulate a real SAT, ACT, or EST environment</div>
-        </div>
-      </div>
-
-      <div class="seg" id="examSeg">
-        <button class="on">SAT</button>
-        <button>ACT</button>
-        <button>EST</button>
-      </div>
-
-      <button onclick="location.href='mock-exam.html'" class="big-cta">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>
-        Start Mock Exam
-      </button>
-
-      <div class="feat-list">
-        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Official Timer</div>
-        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h0"/></svg></span>Time Warnings</div>
-        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></span>Pressure Simulation</div>
-        <div class="feat"><span class="fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v5h-5"/></svg></span>Recovery Flow</div>
-      </div>
-    </section>
-
-    <!-- SECTION 6: QUICK AI TUTOR -->
-    <section class="card tutor-card d5">
-      <div class="card-head">
-        <div class="card-ico">🤖</div>
-        <div>
-          <div class="card-title">AI Tutor</div>
-          <div class="card-sub">Instant step-by-step help</div>
-        </div>
-      </div>
-
-      <p class="tutor-desc">Ask any SAT or EST math question instantly — type it out or upload a photo of the question, and get a clear, step-by-step explanation.</p>
-
-      <div class="fake-chat">
-        <button class="attach" id="attachBtn" aria-label="Upload question image" title="Upload question image">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        </button>
-        <input type="text" placeholder="Type your math question…"/>
-        <button class="send" aria-label="Send">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
-        </button>
-      </div>
-
-      <input type="file" id="qImage" accept="image/*" hidden/>
-
-      <button class="upload-btn" id="uploadBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-        Upload Question Image
-      </button>
-
-      <div class="img-preview" id="imgPreview" hidden>
-        <img id="previewThumb" alt="Question preview"/>
-        <div class="ip-meta">
-          <span class="ip-name" id="previewName">question.jpg</span>
-          <span class="ip-hint">Ready to send to Si</span>
-        </div>
-        <button class="ip-remove" id="removeImg" aria-label="Remove image">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <button onclick="location.href='chat.html'" class="tutor-cta">
-        <span class="em">🐉</span> Ask Si Math AI
-      </button>
-    </section>
-
+<main class="main" id="pageContent">
+  <div style="text-align:center;padding:60px;color:var(--text-400)">
+    <div style="width:32px;height:32px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div>
+    Loading dashboard…
   </div>
 </main>
-
-<!-- BOTTOM NAV (mobile) -->
-<nav class="bottomnav">
-  <a class="active" href="#">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-    Home
-  </a>
-  <a href="weakness.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
-    Analyze
-  </a>
-  <a href="focus.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
-    Focus
-  </a>
-  <a href="mock-exam.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>
-    Exams
-  </a>
-  <a href="chat.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
-    Tutor
-  </a>
-</nav>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ===== Supabase client =====
-  const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ===== Auth guard + load profile =====
-  (async () => {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) { window.location.href = 'login.html'; return; }
+// Sidebar
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+document.getElementById('hamb').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
-    // Load profile row
-    let { data: profile, error } = await supabaseClient
-      .from('profiles').select('*').eq('id', user.id).single();
+// ===== SYSTEM TOPICS FILTER =====
+const SYSTEM_TOPICS = new Set(['confidence','session start','study coaching','problem clarification','off-topic','specialization','zero','general','greeting','feedback','test taking','motivation','other','none','unknown','miscellaneous','meta','system','chat','intro','introduction','clarification','encouragement','off topic','test-taking','hint','hints','explanation','review']);
+function isAcademicTopic(t) { return !!(t && t.trim().length >= 2 && !SYSTEM_TOPICS.has(t.toLowerCase().trim())); }
 
-    // If no profile row exists yet, create one (safety net) then re-load
-    if (error && error.code === 'PGRST116') {
-      const meta0 = user.user_metadata || {};
-      const fn0 = meta0.full_name || (user.email ? user.email.split('@')[0] : 'Student');
-      await supabaseClient.from('profiles').upsert(
-        { id: user.id, email: user.email, full_name: fn0 },
-        { onConflict: 'id' }
-      );
-      const re = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-      profile = re.data;
-      error = re.error;
-    }
-
-    // If still no profile or onboarding not finished -> onboarding
-    if (!profile || profile.onboarding_completed !== true) {
-      window.location.href = 'onboarding.html';
-      return;
-    }
-
-    // Name (profile.full_name -> metadata -> email)
-    const meta = user.user_metadata || {};
-    const fullName = profile.full_name || meta.full_name || (user.email ? user.email.split('@')[0] : 'Student');
-    const firstName = String(fullName).split(' ')[0];
-    const wn = document.getElementById('welcomeName');
-    if (wn) wn.textContent = firstName;
-
-    // Email + exam type in welcome line
-    const we = document.getElementById('welcomeEmail');
-    if (we) we.textContent = profile.email || user.email || '';
-    const wx = document.getElementById('welcomeExam');
-    if (wx) wx.textContent = profile.exam_type || 'SAT';
-
-    // Avatar initials in top bar — reveal only after real data is set
-    const av = document.getElementById('topAvatar');
-    if (av) {
-      const initials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'S';
-      av.textContent = initials;
-      av.title = `${fullName} — ${profile.email || user.email || ''}`;
-      av.style.visibility = 'visible';
-    }
-
-    // Exam plan stats
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set('dExamType', profile.exam_type || '—');
-    set('dTarget', profile.target_score != null ? profile.target_score : '—');
-    set('dSessions', profile.study_sessions_per_week != null ? profile.study_sessions_per_week + '×' : '—');
-    set('dSessionLen', profile.session_length != null ? profile.session_length + ' min' : '—');
-
-    // Exam date + days remaining
-    if (profile.exam_date) {
-      const d = new Date(profile.exam_date + 'T00:00:00');
-      set('dExamDate', d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }));
-      const today = new Date(); today.setHours(0,0,0,0);
-      const diffDays = Math.round((d - today) / 86400000);
-      if (diffDays > 0) { set('dDaysLeft', diffDays); set('dDaysNote', 'days to go'); }
-      else if (diffDays === 0) { set('dDaysLeft', 'Today'); set('dDaysNote', 'exam day!'); }
-      else { set('dDaysLeft', 'Past'); set('dDaysNote', 'exam date passed'); }
-    } else {
-      set('dExamDate', '—'); set('dDaysLeft', '—');
-    }
-  })();
-
-  // ===== Logout =====
-  async function logout() {
-    await supabaseClient.auth.signOut();
-    window.location.href = 'login.html';
+// ===== computeTopicProfile (same as focus.html) =====
+const DAY = 86400000;
+function computeTopicProfile(entry) {
+  const now = Date.now();
+  const times = entry.records.map(t => new Date(t).getTime());
+  const total = times.length;
+  if (total < 2) return null;
+  const last7  = times.filter(t => now - t < 7  * DAY).length;
+  const last14 = times.filter(t => now - t < 14 * DAY).length;
+  const prev7  = times.filter(t => now - t >= 7 * DAY && now - t < 14 * DAY).length;
+  let decayScore = 0;
+  times.forEach(t => { decayScore += Math.exp(-(now - t) / (DAY * 14)); });
+  const weakSignals = entry.weakSignals || 0;
+  const helpReqs    = entry.helpRequests || 0;
+  const examMistakes = entry.examMistakes || 0;
+  const confAfterArr = (entry.confAfterArr || []).filter(c => c != null && c > 0);
+  const avgConf = confAfterArr.length > 0 ? confAfterArr.reduce((a,b)=>a+b,0)/confAfterArr.length : null;
+  const highConfCount = confAfterArr.filter(c => c >= 4).length;
+  let mastery;
+  if (entry.masteryScore !== null && entry.masteryScore !== undefined) {
+    mastery = Math.round(Number(entry.masteryScore));
+  } else {
+    const chatWeaknessScore = (weakSignals * 3) + (helpReqs * 2) + (entry.explRequests||0) * 1.5 + (entry.repeated||0) * 2;
+    const baseScore = (total * 1.5) + (decayScore * 3) + (last7 * 2) + (examMistakes * 3);
+    mastery = Math.max(10, Math.min(95, Math.round(100 - (baseScore + chatWeaknessScore) * 4 + highConfCount * 4)));
   }
-  window.logout = logout;
+  let priority, priorityClass;
+  if (mastery < 30)      { priority='Critical'; priorityClass='critical'; }
+  else if (mastery < 50) { priority='High';     priorityClass='high'; }
+  else if (mastery < 70) { priority='Medium';   priorityClass='med'; }
+  else                   { priority='Low';       priorityClass='low'; }
+  const mastered = mastery >= 90 && total >= 4 && examMistakes === 0;
+  const strength = mastery >= 75 && total >= 3 && !mastered;
+  const recentlyMastered = !strength && !mastered && mastery >= 70 && total >= 2 && last14 === 0;
+  return { topic: entry.topic, sub: entry.sub, mastery, priority, priorityClass, total, decayScore, strength, mastered, recentlyMastered };
+}
 
+// ===== XP / RANK helpers =====
+const RANKS = [
+  { name:'Beginner',      min:0,    color:'#7a90b2', bg:'rgba(122,144,178,.12)', border:'rgba(122,144,178,.3)' },
+  { name:'Learner',       min:100,  color:'#38bdf8', bg:'rgba(56,189,248,.12)',  border:'rgba(56,189,248,.3)' },
+  { name:'Solver',        min:300,  color:'#f5b942', bg:'rgba(245,185,66,.12)',  border:'rgba(245,185,66,.3)' },
+  { name:'Scholar',       min:600,  color:'#22c55e', bg:'rgba(34,197,94,.12)',   border:'rgba(34,197,94,.3)' },
+  { name:'Expert',        min:1000, color:'#a855f7', bg:'rgba(168,85,247,.12)', border:'rgba(168,85,247,.3)' },
+  { name:'Master',        min:1500, color:'#ef4f5f', bg:'rgba(239,79,95,.12)',  border:'rgba(239,79,95,.3)' },
+  { name:'Elite Scholar', min:2500, color:'#f59e0b', bg:'rgba(245,158,11,.12)', border:'rgba(245,158,11,.3)' },
+];
+function getRankInfo(xp) {
+  let r = RANKS[0];
+  for (const rank of RANKS) { if (xp >= rank.min) r = rank; }
+  return r;
+}
+function getNextRank(xp) { return RANKS.find(r => r.min > xp) || null; }
 
-  const sidebar=document.getElementById('sidebar');
-  const overlay=document.getElementById('overlay');
-  const hamb=document.getElementById('hamb');
-  function openSide(){sidebar.classList.add('open');overlay.classList.add('show');}
-  function closeSide(){sidebar.classList.remove('open');overlay.classList.remove('show');}
-  hamb.addEventListener('click',openSide);
-  overlay.addEventListener('click',closeSide);
-  sidebar.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{
-    sidebar.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-    a.classList.add('active');
-    if(window.innerWidth<1024) closeSide();
-  }));
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function relTime(dateStr) {
+  const d = new Date(dateStr), now = Date.now(), diff = now - d.getTime();
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  if (diff < 172800000) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+}
+function masteryColor(m) {
+  if (m < 30) return '#f87171';
+  if (m < 50) return 'var(--red)';
+  if (m < 70) return 'var(--amber)';
+  return 'var(--green)';
+}
 
-  // AI Tutor image upload
-  const qImage=document.getElementById('qImage');
-  const uploadBtn=document.getElementById('uploadBtn');
-  const attachBtn=document.getElementById('attachBtn');
-  const imgPreview=document.getElementById('imgPreview');
-  const previewThumb=document.getElementById('previewThumb');
-  const previewName=document.getElementById('previewName');
-  const removeImg=document.getElementById('removeImg');
-  function pickImage(){qImage.click();}
-  uploadBtn.addEventListener('click',pickImage);
-  attachBtn.addEventListener('click',pickImage);
-  qImage.addEventListener('change',()=>{
-    const f=qImage.files&&qImage.files[0];
-    if(!f) return;
-    previewName.textContent=f.name;
-    previewThumb.src=URL.createObjectURL(f);
-    imgPreview.hidden=false;
+// ===== ZERO MESSAGES =====
+const ZERO_MSGS = [
+  'Every question you answer brings you closer to your target score. Keep going — consistency beats talent every time.',
+  'Your biggest weakness today is your biggest opportunity. Focus Practice is ready when you are.',
+  'The SAT rewards pattern recognition. The more you practice, the faster you\'ll spot the patterns.',
+  'Struggling with a topic is a signal, not a failure. It tells Zero exactly where to help you most.',
+  'Small daily progress compounds into massive improvement. You\'re building something real here.',
+];
+
+// ===== MAIN =====
+async function loadDashboard() {
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  // Update avatar
+  const initials = (user.email || '?').slice(0,1).toUpperCase();
+  document.getElementById('topAvatar').textContent = initials;
+
+  const [profRes, sessRes, examRes, achRes, mastRes, examMistRes] = await Promise.all([
+    sb.from('profiles').select('*').eq('id', user.id).single(),
+    sb.from('chat_sessions').select('id,title,created_at').eq('user_id', user.id).order('created_at', { ascending:false }).limit(10),
+    sb.from('exam_practice_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending:false }).limit(10),
+    sb.from('achievements').select('*').eq('user_id', user.id).order('unlocked_at', { ascending:false }).limit(3),
+    sb.from('mastery_records').select('topic,subtopic,mastery_score,questions_seen,last_updated').eq('user_id', user.id),
+    sb.from('exam_mistakes').select('topic,subtopic').eq('user_id', user.id),
+  ]);
+
+  const profile  = profRes.data || {};
+  const sessions = sessRes.data || [];
+  const exams    = examRes.data || [];
+  const achievements = achRes.data || [];
+  const mastRecs = mastRes.data || [];
+  const examMist = examMistRes.data || [];
+
+  // Fetch question records for weakness analysis
+  const sessionIds = sessions.map(s => s.id);
+  let records = [];
+  if (sessionIds.length > 0) {
+    const { data:qData } = await sb.from('question_records')
+      .select('topic,subtopic,concepts,created_at,weakness_signal,help_request,explanation_request,repeated_question,confidence_after')
+      .in('session_id', sessionIds)
+      .not('topic','is',null).not('subtopic','is',null)
+      .order('created_at', { ascending:true });
+    records = qData || [];
+  }
+
+  // Build topic profiles for biggest weakness
+  const academic = records.filter(r => isAcademicTopic(r.topic) && isAcademicTopic(r.subtopic));
+  const mastMap = {};
+  mastRecs.filter(m => isAcademicTopic(m.topic) && isAcademicTopic(m.subtopic)).forEach(m => {
+    mastMap[m.topic.trim()+'::'+m.subtopic.trim()] = { masteryScore: Number(m.mastery_score), questionsSeen: m.questions_seen||0 };
   });
-  removeImg.addEventListener('click',()=>{
-    qImage.value='';
-    imgPreview.hidden=true;
-    if(previewThumb.src) URL.revokeObjectURL(previewThumb.src);
+  const examMap = {};
+  examMist.filter(e => isAcademicTopic(e.topic) && isAcademicTopic(e.subtopic)).forEach(e => {
+    const k = e.topic.trim()+'::'+e.subtopic.trim();
+    examMap[k] = (examMap[k]||0) + 1;
   });
+  const map = {};
+  academic.forEach(r => {
+    const key = r.topic.trim()+'::'+r.subtopic.trim();
+    if (!map[key]) map[key] = { topic:r.topic.trim(), sub:r.subtopic.trim(), records:[], weakSignals:0, helpRequests:0, explRequests:0, repeated:0, confAfterArr:[] };
+    map[key].records.push(r.created_at);
+    if (r.weakness_signal)     map[key].weakSignals++;
+    if (r.help_request)        map[key].helpRequests++;
+    if (r.explanation_request) map[key].explRequests++;
+    if (r.repeated_question)   map[key].repeated++;
+    if (r.confidence_after != null) map[key].confAfterArr.push(r.confidence_after);
+  });
+  mastRecs.filter(m => isAcademicTopic(m.topic) && isAcademicTopic(m.subtopic) && (m.questions_seen||0) >= 2).forEach(m => {
+    const key = m.topic.trim()+'::'+m.subtopic.trim();
+    if (!map[key]) {
+      const fakeTs = [];
+      for (let i = 0; i < Math.min(m.questions_seen||2, 6); i++) fakeTs.push(m.last_updated);
+      map[key] = { topic:m.topic.trim(), sub:m.subtopic.trim(), records:fakeTs, weakSignals:0, helpRequests:0, explRequests:0, repeated:0, confAfterArr:[] };
+    }
+  });
+  const all = Object.entries(map).map(([key, entry]) => {
+    const mData = mastMap[key] || {};
+    return computeTopicProfile({ ...entry, masteryScore: mData.masteryScore !== undefined ? mData.masteryScore : null, examMistakes: examMap[key]||0 });
+  }).filter(Boolean).sort((a,b) => b.decayScore - a.decayScore);
+  const weaknesses = all.filter(w => !w.strength && !w.recentlyMastered && !w.mastered);
+  const topWeakness = weaknesses[0] || null;
 
-  document.querySelectorAll('#examSeg button').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('#examSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-  }));
+  // Weekly chart data (last 7 days)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekDays = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    weekDays.push({ date: d, label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()], count: 0 });
+  }
+  const allActivity = [
+    ...sessions.map(s => ({ date: new Date(s.created_at) })),
+    ...exams.map(e => ({ date: new Date(e.created_at) })),
+  ];
+  allActivity.forEach(a => {
+    const d = new Date(a.date); d.setHours(0,0,0,0);
+    const slot = weekDays.find(w => w.date.getTime() === d.getTime());
+    if (slot) slot.count++;
+  });
+  const maxCount = Math.max(...weekDays.map(w => w.count), 1);
 
-  // Bottom nav active
-  document.querySelectorAll('.bottomnav a').forEach(a=>a.addEventListener('click',e=>{
-    e.preventDefault();
-    document.querySelectorAll('.bottomnav a').forEach(x=>x.classList.remove('active'));
-    a.classList.add('active');
-  }));
+  // Recent activity (merged, last 5)
+  const activityItems = [
+    ...sessions.slice(0,5).map(s => ({ type:'chat', title: s.title||'Chat Session', date: s.created_at })),
+    ...exams.slice(0,5).map(e => ({ type:'exam', title: (e.exam_type||'Exam') + ' Practice', date: e.created_at, score: e.score })),
+  ].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,5);
+
+  // XP data
+  const xp = profile.xp || 0;
+  const rankName = profile.rank_name || 'Beginner';
+  const rankInfo = getRankInfo(xp);
+  const nextRank = getNextRank(xp);
+  const xpPct = nextRank ? Math.min(100, ((xp - rankInfo.min) / (nextRank.min - rankInfo.min)) * 100) : 100;
+
+  // Days remaining
+  const days = daysUntil(profile.exam_date);
+  let daysClass = '';
+  if (days !== null) { if (days > 30) daysClass='green'; else if (days > 7) daysClass='amber'; else daysClass='red'; }
+
+  // Zero message
+  const zeroMsg = ZERO_MSGS[new Date().getHours() % ZERO_MSGS.length];
+
+  // Greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = (profile.full_name || user.email || 'Student').split(' ')[0];
+
+  // Render
+  const html = `
+    <!-- WELCOME -->
+    <div class="welcome">
+      <div class="welcome-top">
+        <div class="welcome-av"><img src="data:image/png;base64,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" alt="Zero"/></div>
+        <div>
+          <div class="welcome-greeting">${escHtml(greeting)}, ${escHtml(firstName)}! 👋</div>
+          <div class="welcome-date">${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}</div>
+        </div>
+      </div>
+      <div class="zero-msg"><div class="zm-dot"></div><p>${escHtml(zeroMsg)}</p></div>
+    </div>
+
+    <!-- GOALS -->
+    <div class="sec-label">Study Goals</div>
+    <div class="goals-row">
+      <span class="goal-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>${escHtml(profile.exam_type||'SAT')}</span>
+      <span class="goal-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Target: <b>${profile.target_score||'—'}</b></span>
+      ${profile.exam_date ? `<span class="goal-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Exam: <b>${fmtDate(profile.exam_date)}</b></span>` : ''}
+      ${days !== null ? `<span class="goal-chip ${daysClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><b>${days > 0 ? days + ' days left' : 'Exam today!'}</b></span>` : ''}
+    </div>
+
+    <!-- TWO-COL GRID -->
+    <div class="dash-grid" style="margin-top:16px">
+
+      <!-- BIGGEST WEAKNESS -->
+      ${topWeakness ? `
+      <div class="weakness-card">
+        <div class="wk-top">
+          <span style="font-size:20px">🎯</span>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:2px">Biggest Weakness</div>
+            <div class="wk-title">${escHtml(topWeakness.sub)}</div>
+            <div class="wk-sub">${escHtml(topWeakness.topic)}</div>
+          </div>
+          <span class="wk-badge" style="margin-left:auto">${escHtml(topWeakness.priority)}</span>
+        </div>
+        <div class="wk-mastery">
+          <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:${masteryColor(topWeakness.mastery)}">${topWeakness.mastery}%</span>
+          <div class="wk-bar" style="flex:1"><div class="wk-bar-fill" style="width:${topWeakness.mastery}%;background:${masteryColor(topWeakness.mastery)}"></div></div>
+        </div>
+        <a class="wk-start-btn" href="focus.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start Focus Practice
+        </a>
+      </div>` : `
+      <div class="card">
+        <div class="card-head"><div class="card-ico">🎯</div><div><div class="card-title">Biggest Weakness</div><div class="card-sub">No data yet</div></div></div>
+        <p style="font-size:13px;color:var(--text-400);margin-bottom:14px">Start chatting with Zero AI Tutor to discover your weaknesses.</p>
+        <a href="chat.html" style="display:inline-flex;align-items:center;gap:7px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);padding:9px 16px;border-radius:9px;font-weight:600;font-size:13px">Start Chatting →</a>
+      </div>`}
+
+      <!-- XP & RANK -->
+      <div class="xp-card">
+        <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-500);margin-bottom:10px">XP & Rank</div>
+        <span class="rank-badge" style="background:${rankInfo.bg};border:1px solid ${rankInfo.border};color:${rankInfo.color}">
+          <span style="font-size:16px">${rankInfo.name === 'Elite Scholar' ? '👑' : rankInfo.name === 'Master' ? '🔥' : rankInfo.name === 'Expert' ? '⚡' : rankInfo.name === 'Scholar' ? '🎓' : rankInfo.name === 'Solver' ? '💡' : rankInfo.name === 'Learner' ? '📚' : '🌱'}</span>
+          ${escHtml(rankInfo.name)}
+        </span>
+        <div style="font-family:var(--font-display);font-weight:800;font-size:26px;color:#fff;line-height:1">${xp.toLocaleString()} <span style="font-size:14px;color:var(--text-400);font-weight:400">XP</span></div>
+        ${nextRank ? `
+        <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${xpPct}%;background:${rankInfo.color};box-shadow:0 0 10px ${rankInfo.color}66"></div></div>
+        <div class="xp-labels"><span>${xp} XP</span><span>${nextRank.name} at ${nextRank.min} XP</span></div>` : `
+        <div style="margin-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--gold)">🏆 Maximum rank achieved!</div>`}
+        <div class="rank-ladder">
+          ${RANKS.map(r => `<div class="rl-item ${r.name===rankInfo.name?'current':''}" style="${r.name===rankInfo.name?'border-color:'+r.color+';background:'+r.bg : ''}"><div class="rl-dot" style="background:${xp>=r.min?r.color:'var(--border-mid)'}"></div><div class="rl-name" style="${r.name===rankInfo.name?'color:'+r.color:''}">${r.name.split(' ')[0]}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="sec-label">Quick Actions</div>
+    <div class="qa-grid">
+      <a class="qa-btn" href="chat.html"><div class="qa-ico">🤖</div><span>AI Tutor</span></a>
+      <a class="qa-btn" href="focus.html"><div class="qa-ico">🎯</div><span>Focus Practice</span></a>
+      <a class="qa-btn" href="mock-exam.html"><div class="qa-ico">⏱️</div><span>Mock Exam</span></a>
+    </div>
+
+    <!-- TWO-COL: ACTIVITY + WEEKLY -->
+    <div class="dash-grid" style="margin-top:0">
+
+      <!-- RECENT ACTIVITY -->
+      <div class="card" style="animation-delay:.05s">
+        <div class="card-head"><div class="card-ico">📋</div><div><div class="card-title">Recent Activity</div><div class="card-sub">Your last 5 sessions</div></div></div>
+        ${activityItems.length > 0 ? `
+        <div class="activity-list">
+          ${activityItems.map(a => `
+          <div class="act-item">
+            <div class="act-ico ${a.type}">${a.type==='chat'?'💬':'📝'}</div>
+            <div class="act-body">
+              <div class="act-name">${escHtml(a.title)}</div>
+              <div class="act-meta">${relTime(a.date)}${a.score ? ' · Score: '+a.score : ''}</div>
+            </div>
+          </div>`).join('')}
+        </div>` : `<div style="text-align:center;padding:20px;color:var(--text-500);font-size:13px">No activity yet. Start studying!</div>`}
+        <a href="history.html" style="display:block;text-align:center;margin-top:12px;font-family:var(--font-mono);font-size:11px;color:var(--cyan)">View all history →</a>
+      </div>
+
+      <!-- WEEKLY PROGRESS -->
+      <div class="card" style="animation-delay:.1s">
+        <div class="card-head"><div class="card-ico">📊</div><div><div class="card-title">Weekly Progress</div><div class="card-sub">Sessions last 7 days</div></div></div>
+        <div class="week-chart">
+          ${weekDays.map(d => `
+          <div class="wc-col">
+            <div class="wc-bar-wrap">
+              <div class="wc-bar ${d.count>0?'has-data':''}" style="height:${Math.max(4, (d.count/maxCount)*100)}%"></div>
+            </div>
+            <div class="wc-day ${d.date.getTime()===today.getTime()?'today':''}">${d.label}</div>
+          </div>`).join('')}
+        </div>
+        <div style="margin-top:14px;font-size:12.5px;color:var(--text-400)">
+          Goal: <b style="color:#fff">${profile.study_sessions_per_week||3} sessions/week</b>
+          · This week: <b style="color:var(--cyan)">${weekDays.reduce((s,d)=>s+d.count,0)} sessions</b>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACHIEVEMENTS PREVIEW -->
+    ${achievements.length > 0 ? `
+    <div class="sec-label">Recent Achievements</div>
+    <div class="ach-grid">
+      ${achievements.map(a => `
+      <div class="ach-item earned">
+        <div class="ach-ico">🏆</div>
+        <div class="ach-name">${escHtml(a.achievement_name)}</div>
+        <div class="ach-date">${relTime(a.unlocked_at)}</div>
+      </div>`).join('')}
+      <div class="ach-item" style="display:flex;align-items:center;justify-content:center">
+        <a href="profile.html" style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">View all →</a>
+      </div>
+    </div>` : ''}
+  `;
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+loadDashboard().catch(err => {
+  document.getElementById('pageContent').innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-400)"><div style="font-size:40px;margin-bottom:12px">⚠️</div><p>${err.message}</p></div>`;
+});
 </script>
 </body>
 </html>

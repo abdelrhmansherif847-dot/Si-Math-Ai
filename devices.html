@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Device Management – Si Math AI</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#21253a;--border:#2a2f45;
+  --text:#e2e8f0;--muted:#8892a4;--accent:#6c63ff;--accent2:#4ade80;
+  --warn:#f59e0b;--danger:#ef4444;--radius:12px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;flex-shrink:0}
+.logo{padding:0 20px 24px;font-size:1.2rem;font-weight:700;color:var(--accent)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--muted);text-decoration:none;font-size:.9rem;transition:.15s}
+.nav-item:hover,.nav-item.active{color:var(--text);background:var(--surface2)}
+.nav-item.active{border-right:3px solid var(--accent)}
+.main{flex:1;overflow-y:auto}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:1.1rem;font-weight:600}
+.content{padding:32px;max-width:900px}
+.section{margin-bottom:32px}
+.section-title{font-size:1rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-free{background:rgba(139,92,246,.15);color:#a78bfa}
+.badge-pro{background:rgba(251,191,36,.15);color:#fbbf24}
+.badge-current{background:rgba(74,222,128,.15);color:#4ade80}
+.badge-suspicious{background:rgba(239,68,68,.15);color:#ef4444}
+.plan-bar{background:var(--surface2);border-radius:8px;height:8px;overflow:hidden;margin-top:8px}
+.plan-fill{height:100%;border-radius:8px;transition:width .5s}
+.device-list{display:flex;flex-direction:column;gap:12px}
+.device-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px}
+.device-card.current-device{border-color:var(--accent);background:rgba(108,99,255,.05)}
+.device-card.suspicious{border-color:var(--danger)}
+.device-icon{font-size:2rem;flex-shrink:0}
+.device-info{flex:1;min-width:0}
+.device-name{font-weight:600;font-size:.95rem;margin-bottom:4px}
+.device-meta{font-size:.8rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.device-meta span{display:flex;align-items:center;gap:4px}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;font-weight:500;transition:.15s}
+.btn-danger{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.22)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5854e0}
+.btn-muted{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.sessions-list{display:flex;flex-direction:column;gap:10px}
+.session-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px}
+.session-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.session-dot.active{background:var(--accent2)}
+.session-dot.inactive{background:var(--muted)}
+.session-info{flex:1;min-width:0}
+.session-name{font-size:.9rem;font-weight:500}
+.session-meta{font-size:.78rem;color:var(--muted);margin-top:2px}
+.alert{padding:14px 18px;border-radius:10px;font-size:.88rem;display:flex;gap:12px;align-items:flex-start;margin-bottom:20px}
+.alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--warn)}
+.alert-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger)}
+.alert-info{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.3);color:#a78bfa}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:.9rem}
+.limit-display{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.limit-text{font-size:.85rem;color:var(--muted)}
+.limit-count{font-size:.85rem;font-weight:600}
+.upgrade-cta{background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(74,222,128,.1));border:1px solid var(--accent);border-radius:var(--radius);padding:20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.upgrade-cta .text{flex:1}
+.upgrade-cta .title{font-weight:600;margin-bottom:4px}
+.upgrade-cta .sub{font-size:.85rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">⚡ Si Math AI</div>
+  <a href="dashboard.html" class="nav-item">🏠 Dashboard</a>
+  <a href="chat.html" class="nav-item">💬 AI Tutor</a>
+  <a href="focus.html" class="nav-item">🎯 Focus Practice</a>
+  <a href="mock-exam.html" class="nav-item">📝 Mock Exam</a>
+  <a href="weakness.html" class="nav-item">📊 Weakness Analyzer</a>
+  <a href="history.html" class="nav-item">📅 History</a>
+  <a href="devices.html" class="nav-item active">🔒 Devices</a>
+  <a href="profile.html" class="nav-item">👤 Profile</a>
+  <a href="pricing.html" class="nav-item">💎 Plans</a>
+</nav>
+<div class="main">
+  <div class="topbar">
+    <h1>🔒 Device Management</h1>
+    <div id="planBadge"></div>
+  </div>
+  <div class="content">
+    <div id="alerts"></div>
+    <div id="pageContent"><div class="empty"><div class="spinner"></div><br>Loading devices…</div></div>
+  </div>
+</div>
+<script>
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PLAN_LIMITS = { free: 2, pro: 3 };
+
+function getDeviceFingerprint() {
+  const ua = navigator.userAgent;
+  const platform = navigator.platform || '';
+  const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
+  const lang = navigator.language || '';
+  const raw = ua + platform + screen + lang;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let browser = 'Unknown Browser';
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+  else if (/Opera|OPR\//.test(ua)) browser = 'Opera';
+
+  let os = 'Unknown OS';
+  if (/Windows NT/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua)) os = 'macOS';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  let icon = '💻';
+  if (/Android|iPhone|iPad/.test(ua)) icon = '📱';
+  else if (/Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua)) icon = '🍎';
+
+  const deviceName = `${browser} on ${os}`;
+  return { browser, os_name: os, deviceName, icon };
+}
+
+function relTime(ts) {
+  if (!ts) return 'never';
+  const d = new Date(ts), now = Date.now(), diff = now - d.getTime();
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+  if (diff < 604800000) return `${Math.floor(diff/86400000)}d ago`;
+  return d.toLocaleDateString();
+}
+
+function showAlert(type, msg) {
+  const div = document.createElement('div');
+  div.className = `alert alert-${type}`;
+  div.innerHTML = `<span>${type === 'danger' ? '⚠️' : type === 'warn' ? '⚡' : 'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('alerts').appendChild(div);
+}
+
+async function registerCurrentDevice(userId) {
+  const fp = getDeviceFingerprint();
+  const info = getDeviceInfo();
+  const existing = await sb.from('user_devices')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('device_fingerprint', fp)
+    .single();
+  if (!existing.data) {
+    await sb.from('user_devices').insert({
+      user_id: userId,
+      device_fingerprint: fp,
+      device_name: info.deviceName,
+      browser: info.browser,
+      os_name: info.os_name,
+      is_active: true,
+      last_seen: new Date().toISOString()
+    });
+  } else {
+    await sb.from('user_devices').update({ last_seen: new Date().toISOString(), is_active: true })
+      .eq('id', existing.data.id);
+  }
+  return fp;
+}
+
+async function removeDevice(deviceId, userId) {
+  if (!confirm('Remove this device? It will be signed out on next access.')) return;
+  const { error } = await sb.from('user_devices').delete().eq('id', deviceId).eq('user_id', userId);
+  if (error) { alert('Failed to remove device.'); return; }
+  loadPage();
+}
+
+async function revokeSession(sessionId, userId) {
+  if (!confirm('End this session?')) return;
+  await sb.from('user_sessions').update({ is_active: false }).eq('id', sessionId).eq('user_id', userId);
+  loadPage();
+}
+
+async function loadPage() {
+  const { data: { user }, error: authErr } = await sb.auth.getUser();
+  if (authErr || !user) { window.location.href = 'index.html'; return; }
+
+  const { data: profile } = await sb.from('profiles').select('plan,xp,rank_name').eq('id', user.id).single();
+  const plan = profile?.plan || 'free';
+  const limit = PLAN_LIMITS[plan] || 2;
+
+  document.getElementById('planBadge').innerHTML =
+    `<span class="badge badge-${plan}">${plan === 'pro' ? '⭐ Pro' : '🆓 Free'}</span>`;
+
+  const currentFp = await registerCurrentDevice(user.id);
+
+  const [devResult, sessResult] = await Promise.all([
+    sb.from('user_devices').select('*').eq('user_id', user.id).eq('is_active', true).order('last_seen', { ascending: false }),
+    sb.from('user_sessions').select('*').eq('user_id', user.id).eq('is_active', true).order('last_activity', { ascending: false }).limit(10)
+  ]);
+
+  const devices = devResult.data || [];
+  const sessions = sessResult.data || [];
+
+  document.getElementById('alerts').innerHTML = '';
+
+  // Suspicious detection: >2 different countries or >limit devices
+  if (devices.length > limit) {
+    showAlert('danger', `You have ${devices.length} active devices but your ${plan} plan allows ${limit}. Please remove old devices to stay within your limit.`);
+  }
+
+  const html = buildHTML(devices, sessions, plan, limit, currentFp, user);
+  document.getElementById('pageContent').innerHTML = html;
+
+  // Attach remove handlers
+  document.querySelectorAll('.btn-remove-device').forEach(btn => {
+    btn.addEventListener('click', () => removeDevice(btn.dataset.id, user.id));
+  });
+  document.querySelectorAll('.btn-revoke-session').forEach(btn => {
+    btn.addEventListener('click', () => revokeSession(btn.dataset.id, user.id));
+  });
+}
+
+function buildHTML(devices, sessions, plan, limit, currentFp, user) {
+  const used = devices.length;
+  const pct = Math.min(100, (used / limit) * 100);
+  const fillColor = pct >= 100 ? 'var(--danger)' : pct >= 75 ? 'var(--warn)' : 'var(--accent)';
+
+  let html = `
+  <div class="section">
+    <div class="section-title">Device Usage</div>
+    <div class="card">
+      <div class="limit-display">
+        <span class="limit-text">${plan === 'pro' ? '⭐ Pro Plan' : '🆓 Free Plan'} — ${limit} device${limit>1?'s':''} allowed</span>
+        <span class="limit-count">${used} / ${limit} used</span>
+      </div>
+      <div class="plan-bar"><div class="plan-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+      <p style="font-size:.8rem;color:var(--muted);margin-top:8px">Each browser profile on a different physical device counts as one device.</p>
+    </div>
+  </div>`;
+
+  if (plan === 'free' && limit === 2) {
+    html += `
+  <div class="section">
+    <div class="upgrade-cta">
+      <div class="text">
+        <div class="title">⭐ Upgrade to Pro — 3 Devices</div>
+        <div class="sub">Access Si Math AI on all your devices: laptop, tablet, phone.</div>
+      </div>
+      <a href="pricing.html" class="btn btn-primary">View Plans</a>
+    </div>
+  </div>`;
+  }
+
+  html += `<div class="section"><div class="section-title">Active Devices (${used})</div><div class="device-list">`;
+
+  if (devices.length === 0) {
+    html += `<div class="empty">No devices found.</div>`;
+  } else {
+    devices.forEach(d => {
+      const isCurrent = d.device_fingerprint === currentFp;
+      const info = { icon: /Android|iOS/.test(d.os_name || '') ? '📱' : /macOS/.test(d.os_name || '') ? '🍎' : '💻' };
+      html += `
+      <div class="device-card${isCurrent ? ' current-device' : ''}">
+        <div class="device-icon">${info.icon}</div>
+        <div class="device-info">
+          <div class="device-name">${escHtml(d.device_name || 'Unknown Device')} ${isCurrent ? '<span class="badge badge-current">This Device</span>' : ''}</div>
+          <div class="device-meta">
+            <span>🌐 ${escHtml(d.browser || '?')}</span>
+            <span>💻 ${escHtml(d.os_name || '?')}</span>
+            <span>🕐 Last seen ${relTime(d.last_seen)}</span>
+            ${d.ip_address ? `<span>📍 ${escHtml(d.ip_address)}</span>` : ''}
+          </div>
+        </div>
+        ${!isCurrent ? `<button class="btn btn-danger btn-remove-device" data-id="${d.id}">Remove</button>` : `<button class="btn btn-muted" disabled>Current</button>`}
+      </div>`;
+    });
+  }
+  html += `</div></div>`;
+
+  // Sessions
+  html += `<div class="section"><div class="section-title">Active Sessions (${sessions.length})</div>`;
+  if (sessions.length === 0) {
+    html += `<div class="card"><p style="color:var(--muted);font-size:.88rem">No active sessions tracked.</p></div>`;
+  } else {
+    html += `<div class="sessions-list">`;
+    sessions.forEach(s => {
+      html += `
+      <div class="session-row">
+        <div class="session-dot active"></div>
+        <div class="session-info">
+          <div class="session-name">${escHtml(s.session_type || 'Web Session')}</div>
+          <div class="session-meta">Started ${relTime(s.created_at)} · Last active ${relTime(s.last_activity)}</div>
+        </div>
+        <button class="btn btn-danger btn-revoke-session" data-id="${s.id}">End</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Security info
+  html += `
+  <div class="section">
+    <div class="section-title">Security Information</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:1.3rem">🔐</span>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">Device Fingerprinting</div>
+          <div style="font-size:.82rem;color:var(--muted)">We identify devices using browser, OS, and screen signature. No personal hardware data is stored.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:1.3rem">⚠️</span>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">Account Sharing Detection</div>
+          <div style="font-size:.82rem;color:var(--muted)">Simultaneous logins from more devices than your plan allows will be flagged. Excess devices will need to be removed.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:1.3rem">📧</span>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">Suspicious Activity</div>
+          <div style="font-size:.82rem;color:var(--muted)">If you notice a device you don't recognize, remove it immediately and change your password. Contact support if needed.</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadPage();
+</script>
+</body>
+</html>
