@@ -222,6 +222,50 @@
     },
 
     /**
+     * Called from ExamMistakesLogger for each topic in the exam mistake list.
+     *
+     * opts:
+     *   mistakeCount      {number}  mistakes on this topic (1+)
+     *   priorSessionCount {number}  # of prior exam sessions with mistakes on this topic
+     */
+    onExamMistake: async function (sb, userId, topic, subtopic, opts) {
+      if (!sb || !userId || !topic || !subtopic) return;
+      opts = opts || {};
+
+      try {
+        var existing = await fetchRecord(sb, userId, topic, subtopic);
+        var base = existing
+          ? applyTimeDecay(Number(existing.mastery_score) || MASTERY_BASELINE, existing.last_updated)
+          : MASTERY_BASELINE;
+
+        // mistakeDelta: -3 per mistake, up to 3 mistakes (max -9)
+        var mistakeDelta  = -3 * Math.min(opts.mistakeCount || 1, 3);
+        // repeatPenalty: -2 per prior session, up to 3 prior sessions (max -6)
+        var repeatPenalty = (opts.priorSessionCount || 0) >= 1
+          ? -2 * Math.min(opts.priorSessionCount, 3)
+          : 0;
+
+        var delta      = mistakeDelta + repeatPenalty;
+        var newMastery = clamp(base + delta, MASTERY_MIN, MASTERY_MAX);
+
+        await writeRecord(sb, userId, topic, subtopic, {
+          _existing:  existing,
+          mastery:    newMastery,
+          addAttempt: true,
+          addCorrect: false
+        });
+
+        console.log('[mastery] onExamMistake:', topic, '>', subtopic,
+          '| base:', base, '| delta:', delta, '| new:', newMastery);
+
+        if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
+
+      } catch (err) {
+        console.warn('[mastery] onExamMistake failed:', err.message || err);
+      }
+    },
+
+    /**
      * Called from mock-exam / future quiz sessions.
      * Bulk-updates mastery from a results array.
      *

@@ -339,6 +339,10 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
   <div id="pageContent"></div>
 </main>
 
+<script src="regenerate-reports.js"></script>
+<script src="mastery-updater.js"></script>
+<script src="exam-mistakes-logger.js"></script>
+
 <script type="module">
 // ─── SUPABASE CLIENT (ESM CDN) ───────────────────────────────────────────────
 const SB_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -658,7 +662,7 @@ function syncResults() {
 function afterResults() {
   document.getElementById('btnToMistakes')?.addEventListener('click', () => {
     syncResults();
-    if (s.mistakeRows.length === 0) s.mistakeRows = [{ topic: '', subtopic: '', count: 1 }];
+    if (s.mistakeRows.length === 0) s.mistakeRows = [{ topic: '', subtopic: '', count: 1, question_id: null, correct_answer: null, student_answer: null }];
     s.view = 'MISTAKES';
     render();
   });
@@ -733,7 +737,7 @@ function syncMistakes() {
 function afterMistakes() {
   document.getElementById('btnAddRow')?.addEventListener('click', () => {
     syncMistakes();
-    s.mistakeRows.push({ topic: '', subtopic: '', count: 1 });
+    s.mistakeRows.push({ topic: '', subtopic: '', count: 1, question_id: null, correct_answer: null, student_answer: null });
     render();
     requestAnimationFrame(() => {
       const rows = document.querySelectorAll('.mistake-row');
@@ -806,15 +810,35 @@ async function doSave() {
     if (validMistakes.length > 0) {
       const { error: mkErr } = await sb.from('exam_mistakes').insert(
         validMistakes.map(r => ({
-          user_id: user.id,
-          session_id: sessionId,
-          topic: r.topic.trim(),
-          subtopic: r.subtopic?.trim() || null,
-          mistake_count: r.count || 1,
-          mistake_type: 'EXAM_MISTAKE'
+          user_id:        user.id,
+          session_id:     sessionId,
+          topic:          r.topic.trim(),
+          subtopic:       r.subtopic?.trim() || null,
+          mistake_count:  r.count || 1,
+          mistake_type:   'EXAM_MISTAKE',
+          question_id:    r.question_id    || null,
+          correct_answer: r.correct_answer || null,
+          student_answer: r.student_answer || null
         }))
       );
       if (mkErr) console.warn('Mistakes insert warning:', mkErr.message);
+
+      // Stage 6 — feed mistakes into mastery + weakness pipeline
+      if (window.ExamMistakesLogger) {
+        const sessionStats = {
+          correct:         s.correct ? parseInt(s.correct) : null,
+          wrong:           s.wrong   ? parseInt(s.wrong)   : null,
+          omitted:         s.omitted ? parseInt(s.omitted) : null,
+          total_questions: s.correct || s.wrong
+            ? (parseInt(s.correct || 0) + parseInt(s.wrong || 0) + parseInt(s.omitted || 0)) || null
+            : null
+        };
+        try {
+          await window.ExamMistakesLogger.process(sb, user.id, sessionId, validMistakes, sessionStats);
+        } catch (e) {
+          console.warn('ExamMistakesLogger error:', e.message || e);
+        }
+      }
     }
 
     // XP award
