@@ -734,27 +734,67 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   });
 }
 
+// ===== HELPERS: convert weakness_reports row to computeTopicProfile format =====
+function reportToProfile(report, qData) {
+  const m = report.mastery_score != null ? Math.round(report.mastery_score)
+           : (qData && qData.mastery != null ? qData.mastery : 45);
+  let priority, priorityClass;
+  if (m < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
+  else if (m < 50) { priority = 'High';     priorityClass = 'high';     }
+  else if (m < 70) { priority = 'Medium';   priorityClass = 'med';      }
+  else             { priority = 'Low';       priorityClass = 'low';      }
+  let trend = 'Stable', trendIcon = '➖';
+  const imp = report.improvement_score;
+  if (imp != null && imp > 5)  { trend = 'Improving'; trendIcon = '📈'; }
+  if (imp != null && imp < -5) { trend = 'Declining'; trendIcon = '📉'; }
+  const whyBullets = [];
+  if (report.total_signals) whyBullets.push(`${report.total_signals} weakness signal${report.total_signals > 1 ? 's' : ''} detected`);
+  if (trend === 'Improving') whyBullets.push('Showing improvement recently — keep going');
+  else if (trend === 'Declining') whyBullets.push('Weakness signals increasing — needs attention');
+  if (report.biggest_weakness) whyBullets.push('Ranked as your #1 biggest weakness');
+  if (qData) whyBullets.push(...(qData.whyBullets || []));
+  const sub = report.subtopic || report.topic;
+  return {
+    topic: report.topic, sub,
+    mastery: m, priority, priorityClass, trend, trendIcon,
+    whyBullets, strengthBullets: qData ? (qData.strengthBullets || []) : [],
+    total: report.total_signals || (qData ? qData.total : 0) || 0,
+    last7: qData ? qData.last7 : 0, last14: qData ? qData.last14 : 0,
+    avgConf: qData ? qData.avgConf : null,
+    confAfterArr: qData ? (qData.confAfterArr || []) : [],
+    examMistakes: qData ? (qData.examMistakes || 0) : 0,
+    weakSignals: qData ? (qData.weakSignals || 0) : 0,
+    helpReqs: qData ? (qData.helpReqs || 0) : 0,
+    strength: m >= 75, mastered: m >= 90, recentlyMastered: false,
+    concepts: qData ? (qData.concepts || []) : [],
+    decayScore: qData ? (qData.decayScore || 0) : 0,
+    weaknessScore: report.weakness_score, priorityRank: report.priority_rank
+  };
+}
+
 // ===== MAIN DATA LOAD =====
 async function loadData() {
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) { window.location.href = 'login.html'; return; }
+  if (!user) { window.location.href = 'index.html'; return; }
 
   const params     = new URLSearchParams(window.location.search);
   const urlTopic   = params.get('topic') || '';
   const urlSub     = params.get('subtopic') || '';
   const urlMastery = params.get('mastery') ? Number(params.get('mastery')) : null;
 
-  const [profRes, sessRes, mastRes, examRes] = await Promise.all([
+  const [profRes, sessRes, mastRes, examRes, repRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('chat_sessions').select('id').eq('user_id', user.id),
     sb.from('mastery_records').select('topic, subtopic, mastery_score, questions_seen, last_updated').eq('user_id', user.id),
     sb.from('exam_mistakes').select('topic, subtopic').eq('user_id', user.id),
+    sb.from('weakness_reports').select('*').eq('user_id', user.id).order('priority_rank', { ascending: true }),
   ]);
 
   const profile    = profRes.data  || null;
   const sessions   = sessRes.data  || [];
   const mastRecs   = mastRes.data  || [];
   const examMist   = examRes.data  || [];
+  const wReports   = repRes.data   || [];
   const sessionIds = sessions.map(s => s.id);
 
   let records = [];
@@ -819,39 +859,96 @@ async function loadData() {
     });
   }).filter(Boolean);
 
-  all.sort((a, b) => b.decayScore - a.decayScore);
+  // Build a lookup of question_records profiles by topic::subtopic key (lowercase)
+  const qProfileMap = {};
+  all.forEach(p => {
+    qProfileMap[(p.topic||'').toLowerCase()+'::'+p.sub.toLowerCase()] = p;
+  });
 
-  const weaknesses       = all.filter(w => !w.strength && !w.recentlyMastered && !w.mastered);
-  const strengths        = all.filter(w => w.strength);
-  const recentlyMastered = all.filter(w => w.recentlyMastered);
-  const mastered         = all.filter(w => w.mastered);
+  // ── Consume weakness_reports as the authoritative ranked list ──
+  // Build a rank map from weakness_reports for re-sorting
+  const reportRankMap = {};
+  wReports.forEach(r => {
+    const k = (r.topic||'').toLowerCase() + '::' + (r.subtopic||r.topic||'').toLowerCase();
+    reportRankMap[k] = r;
+  });
 
-  if (weaknesses.length === 0) { renderEmpty(); return; }
+  let weaknesses, strengths, recentlyMastered, mastered;
+
+  if (wReports.length > 0) {
+    // Convert weakness_reports to profiles, merging question_records data for richer bullets
+    const reportProfiles = wReports.map(r => {
+      const k = (r.topic||'').toLowerCase() + '::' + (r.subtopic||r.topic||'').toLowerCase();
+      const qp = qProfileMap[k] || null;
+      return reportToProfile(r, qp);
+    });
+
+    weaknesses       = reportProfiles.filter(w => !w.mastered && !w.strength);
+    strengths        = reportProfiles.filter(w => w.strength);
+    recentlyMastered = [];
+    mastered         = reportProfiles.filter(w => w.mastered);
+
+    // Also include any strengths/mastered from question_records not in reports
+    all.filter(p => p.strength || p.mastered).forEach(p => {
+      const k = p.topic.toLowerCase()+'::'+p.sub.toLowerCase();
+      if (!reportRankMap[k]) {
+        if (p.mastered) mastered.push(p);
+        else if (p.strength) strengths.push(p);
+      }
+    });
+  } else {
+    // Fallback: build entirely from question_records (existing behavior)
+    all.sort((a, b) => b.decayScore - a.decayScore);
+    weaknesses       = all.filter(w => !w.strength && !w.recentlyMastered && !w.mastered);
+    strengths        = all.filter(w => w.strength);
+    recentlyMastered = all.filter(w => w.recentlyMastered);
+    mastered         = all.filter(w => w.mastered);
+  }
+
+  if (weaknesses.length === 0 && wReports.length === 0) { renderEmpty(); return; }
+  if (weaknesses.length === 0 && wReports.length > 0) {
+    // All topics are strengths/mastered — show best weakness or first report
+    const top = wReports[0];
+    const k = (top.topic||'').toLowerCase()+'::'+(top.subtopic||top.topic||'').toLowerCase();
+    weaknesses = [reportToProfile(top, qProfileMap[k] || null)];
+  }
 
   let primaryTopic = weaknesses[0];
-  if (urlTopic) {
+  if (urlTopic || urlSub) {
+    // Try to match in weaknesses list first
     const match = weaknesses.find(w =>
       w.topic.toLowerCase() === urlTopic.toLowerCase() ||
       w.sub.toLowerCase() === (urlSub || urlTopic).toLowerCase()
     );
     if (match) {
       primaryTopic = match;
-    } else if (urlSub) {
-      const fakeM = urlMastery !== null ? urlMastery : 40;
-      let priority, priorityClass;
-      if (fakeM < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
-      else if (fakeM < 50) { priority = 'High';     priorityClass = 'high';     }
-      else if (fakeM < 70) { priority = 'Medium';   priorityClass = 'med';      }
-      else                  { priority = 'Low';       priorityClass = 'low';      }
-      primaryTopic = {
-        topic: urlTopic, sub: urlSub, mastery: fakeM,
-        priority, priorityClass, trend: 'Stable', trendIcon: '➖',
-        whyBullets: ['Manually selected as focus topic'],
-        strengthBullets: [], total: 0, last7: 0, last14: 0,
-        avgConf: null, examMistakes: 0, weakSignals: 0,
-        strength: false, mastered: false, recentlyMastered: false,
-        concepts: [], decayScore: 0
-      };
+    } else {
+      // Try weakness_reports directly
+      const rMatch = wReports.find(r =>
+        (r.topic||'').toLowerCase() === urlTopic.toLowerCase() ||
+        (r.subtopic||'').toLowerCase() === (urlSub||urlTopic).toLowerCase()
+      );
+      if (rMatch) {
+        const k = rMatch.topic.toLowerCase()+'::'+(rMatch.subtopic||rMatch.topic).toLowerCase();
+        primaryTopic = reportToProfile(rMatch, qProfileMap[k] || null);
+      } else if (urlSub) {
+        // Manual selection not in DB — build synthetic profile
+        const fakeM = urlMastery !== null ? urlMastery : 45;
+        let priority, priorityClass;
+        if (fakeM < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
+        else if (fakeM < 50) { priority = 'High';     priorityClass = 'high';     }
+        else if (fakeM < 70) { priority = 'Medium';   priorityClass = 'med';      }
+        else                  { priority = 'Low';       priorityClass = 'low';      }
+        primaryTopic = {
+          topic: urlTopic, sub: urlSub, mastery: fakeM,
+          priority, priorityClass, trend: 'Stable', trendIcon: '➖',
+          whyBullets: ['Selected from Weakness Analyzer'],
+          strengthBullets: [], total: 0, last7: 0, last14: 0,
+          avgConf: null, examMistakes: 0, weakSignals: 0,
+          strength: false, mastered: false, recentlyMastered: false,
+          concepts: [], decayScore: 0
+        };
+      }
     }
   }
 
@@ -884,7 +981,10 @@ async function loadData() {
     console.warn('focus_plans/focus_tasks not available:', e.message);
   }
 
-  const primaryRank = weaknesses.indexOf(primaryTopic) + 1;
+  // Use weakness_reports.priority_rank if available, else position in list
+  const primaryRank = primaryTopic.priorityRank
+    || (weaknesses.indexOf(primaryTopic) + 1)
+    || 1;
   renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank);
 }
 
