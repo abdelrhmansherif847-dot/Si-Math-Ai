@@ -1343,16 +1343,51 @@ button{font-family:inherit;cursor:pointer}
     isSending = true;
     sendBtn.disabled = true;
 
-    askAI(apiText, sig, imgToSend).then(response => {
+    // Credit gate: consume_credits RPC pre-authorises the message before hitting the edge fn.
+    // Tokens are not known yet — pass 0; the edge function handles actual token logging.
+    sb.rpc('consume_credits', {
+      p_user_id:    currentUser ? currentUser.id : null,
+      p_feature:    'AI_CHAT_MESSAGE',
+      p_model_name: 'claude-3-5-haiku',
+      p_prompt_tok:  0,
+      p_comp_tok:    0,
+      p_cost_usd:    0,
+      p_session_id:  currentSessionId || null
+    }).then(({ data: creditResult, error: creditError }) => {
+      if (creditError || !creditResult) {
+        removeTyping();
+        showError('Could not verify your credits. Please refresh and try again.');
+        isSending = false; sendBtn.disabled = false;
+        return;
+      }
+      if (!creditResult.ok) {
+        removeTyping();
+        if (creditResult.reason === 'daily_limit_reached') {
+          showCreditError('You\'ve used all your free messages for today. <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">Upgrade to Pro</a> for unlimited daily messages.');
+        } else if (creditResult.reason === 'insufficient_credits') {
+          showCreditError('Not enough credits remaining. <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or upgrade your plan to continue.');
+        } else {
+          showCreditError('Access check failed: ' + escapeHtml(creditResult.reason || 'unknown'));
+        }
+        isSending = false; sendBtn.disabled = false;
+        return;
+      }
+      // Credits OK — proceed with the AI call
+      askAI(apiText, sig, imgToSend).then(response => {
+        removeTyping();
+        addAI(sig, response);
+        awardChatXP();
+      }).catch(err => {
+        removeTyping();
+        showError(err && err.message ? err.message : 'Could not reach Zero. Please try again.');
+      }).finally(() => {
+        isSending = false;
+        sendBtn.disabled = false;
+      });
+    }).catch(() => {
       removeTyping();
-      addAI(sig, response);
-      awardChatXP();
-    }).catch(err => {
-      removeTyping();
-      showError(err && err.message ? err.message : 'Could not reach Zero. Please try again.');
-    }).finally(() => {
-      isSending = false;
-      sendBtn.disabled = false;
+      showError('Network error checking your credits. Please try again.');
+      isSending = false; sendBtn.disabled = false;
     });
   }
 
@@ -1433,6 +1468,15 @@ button{font-family:inherit;cursor:pointer}
         '<strong style="color:var(--red)">⚠️ Something went wrong</strong>'+
         '<div class="step" style="margin-top:6px;color:var(--text-200)">'+escapeHtml(msg)+'</div>'+
         '<div class="step" style="margin-top:6px;color:var(--text-400);font-size:12px">Check your connection and try sending the question again.</div>'+
+      '</div></div>';
+    inner.appendChild(el); scrollDown();
+  }
+  function showCreditError(htmlMsg){
+    const el=document.createElement('div');el.className='msg ai';
+    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span>'+
+      '<div class="bubble" style="border-color:var(--amber-border);background:var(--amber-soft)">'+
+        '<strong style="color:var(--amber)">⚡ Access Blocked</strong>'+
+        '<div class="step" style="margin-top:6px;color:var(--text-200)">'+htmlMsg+'</div>'+
       '</div></div>';
     inner.appendChild(el); scrollDown();
   }

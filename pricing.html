@@ -103,6 +103,9 @@ button{font-family:inherit;cursor:pointer}
 
 /* Founder badge */
 .founder-badge{display:inline-flex;align-items:center;gap:6px;background:var(--purple-soft);border:1px solid var(--purple-border);border-radius:100px;padding:4px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;margin-bottom:10px;white-space:nowrap}
+.founder-benefits{background:rgba(168,85,247,.06);border:1px solid var(--purple-border);border-radius:var(--r-md);padding:12px 14px;margin-bottom:18px;display:flex;flex-direction:column;gap:7px}
+.fb-row{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--text-300)}
+.fb-row svg{width:14px;height:14px;flex-shrink:0;color:var(--purple);margin-top:1px}
 .slots-remaining{display:inline-flex;align-items:center;gap:6px;background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:100px;padding:4px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.06em;margin-bottom:10px;white-space:nowrap}
 .slots-remaining.urgent{background:var(--red-soft);border-color:var(--red-border);color:var(--red)}
 
@@ -110,7 +113,10 @@ button{font-family:inherit;cursor:pointer}
 .pc-price{font-family:var(--font-display);font-weight:800;font-size:2.4rem;color:#fff;margin:12px 0 2px;line-height:1}
 .pc-price-unit{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--text-500);margin-left:2px}
 .pc-cycle{font-size:13px;color:var(--text-500);margin-bottom:6px}
-.pc-credits-line{font-family:var(--font-mono);font-size:11.5px;color:var(--cyan);margin-bottom:18px;background:var(--cyan-bg-soft);border-radius:8px;padding:6px 10px;display:inline-block}
+.pc-credits-line{font-family:var(--font-mono);font-size:11.5px;color:var(--cyan);margin-bottom:6px;background:var(--cyan-bg-soft);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:8px}
+.pc-credits-line b{color:#fff;font-weight:700}
+.pc-devices-line{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-400);margin-bottom:18px;padding:0 2px}
+.pc-devices-line svg{width:12px;height:12px;flex-shrink:0;color:var(--cyan)}
 .pc-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;flex:1}
 .pc-features li{display:flex;gap:10px;font-size:13.5px;align-items:flex-start}
 .f-check{color:var(--green);flex-shrink:0;font-weight:700}
@@ -136,6 +142,8 @@ button{font-family:inherit;cursor:pointer}
 .pack-credits-label{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);letter-spacing:.1em;text-transform:uppercase}
 .pack-price{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:#fff;margin-top:2px}
 .pack-per-credit{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)}
+.pack-no-expire{display:inline-flex;align-items:center;gap:5px;background:var(--green-soft);border:1px solid var(--green-border);border-radius:100px;padding:3px 10px;font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--green);letter-spacing:.06em}
+.pack-no-expire svg{width:10px;height:10px;flex-shrink:0}
 .btn-buy-pack{width:100%;padding:10px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);font-family:var(--font-display);font-weight:700;font-size:13.5px;background:var(--cyan-bg-soft);color:var(--cyan);transition:all .2s;cursor:pointer}
 .btn-buy-pack:hover{background:var(--cyan-bg-med);box-shadow:0 4px 16px rgba(56,189,248,.2)}
 
@@ -529,10 +537,10 @@ async function loadPage() {
       <div class="pb-title">${bannerIcon} ${escHtml(bannerName)}</div>
       <div class="pb-sub">${isPaid ? 'Your active plan — full access unlocked.' : pendingSub ? 'Pro upgrade pending — check your email.' : 'Upgrade to unlock credits and unlimited daily messages.'}</div>
       ${renewDate ? `<div class="pb-billing">Renews ${escHtml(renewDate)}</div>` : ''}
-      ${isPaid ? `<div class="pb-credits">
-        <div class="credit-chip"><span class="cc-val">${(profile.subscription_credits||0).toLocaleString()}</span><span class="cc-lbl">sub credits</span></div>
-        <div class="credit-chip"><span class="cc-val">${(profile.pack_credits||0).toLocaleString()}</span><span class="cc-lbl">pack credits</span></div>
-      </div>` : ''}
+      <div class="pb-credits">
+        <div class="credit-chip"><span class="cc-val">${(profile.subscription_credits||0).toLocaleString()}</span><span class="cc-lbl">sub credits${isPaid ? '' : ' (upgrade to get)'}</span></div>
+        <div class="credit-chip"><span class="cc-val">${(profile.pack_credits||0).toLocaleString()}</span><span class="cc-lbl">pack credits${!isPaid && (profile.pack_credits||0)===0 ? ' (buy a pack)' : ''}</span></div>
+      </div>
     </div>
     ${!isPaid && !pendingSub ? `<button style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:11px 22px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:14px;border:none;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(56,189,248,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openModal('PRO_MONTHLY','Pro Monthly')">⭐ Upgrade Now</button>` : ''}
   </div>`;
@@ -582,11 +590,21 @@ async function loadPage() {
     if (isFree) {
       html += `<div class="pc-price">0<span class="pc-price-unit"> EGP</span></div>
       <div class="pc-cycle">free forever</div>
-      <div style="height:30px"></div>`;
+      <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
     } else {
+      const perDay = Math.round(plan.credits_granted / (plan.plan_code.endsWith('_ANNUAL') ? 365 : plan.plan_code.endsWith('_QUARTERLY') ? 91 : 30));
       html += `<div class="pc-price">${Number(plan.price_egp).toLocaleString('en-EG',{maximumFractionDigits:0})}<span class="pc-price-unit"> EGP</span></div>
       <div class="pc-cycle">${cycleLabel(plan.plan_code)}</div>
-      <div class="pc-credits-line">+${plan.credits_granted.toLocaleString()} credits ${cycleLabel(plan.plan_code).replace('/ ','per ')}</div>`;
+      <div class="pc-credits-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>${plan.credits_granted.toLocaleString()}</b> credits ${cycleLabel(plan.plan_code).replace('/ ','per ')} <span style="color:var(--text-500)">≈ ${perDay}/day</span></div>
+      <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
+    }
+
+    if (isFounderPlan) {
+      html += `<div class="founder-benefits">
+        <div class="fb-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Price locked for life — no future increases ever</div>
+        <div class="fb-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M12 13v9m-3-3 3 3 3-3"/></svg>Permanent Founder badge shown on your profile</div>
+        <div class="fb-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Badge stays forever, even if you pause or cancel</div>
+      </div>`;
     }
 
     html += `<ul class="pc-features">
@@ -612,7 +630,8 @@ async function loadPage() {
         <div class="pack-credits-label">credits</div>
         <div class="pack-price">${fmtPrice(pack.price_egp)}</div>
         <div class="pack-per-credit">${perCredit} EGP / credit</div>
-        <button class="btn-buy-pack" onclick="openPackModal('${escHtml(pack.id)}','${escHtml(pack.name)}')" style="margin-top:6px">Buy ${escHtml(pack.name)}</button>
+        <div class="pack-no-expire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>NEVER EXPIRES</div>
+        <button class="btn-buy-pack" onclick="openPackModal('${escHtml(pack.id)}','${escHtml(pack.name)}')" style="margin-top:2px">Buy ${escHtml(pack.name)}</button>
       </div>`;
     });
 
