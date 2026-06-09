@@ -64,13 +64,24 @@ button{font-family:inherit;cursor:pointer}
 .sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:28px 4px 12px;display:flex;align-items:center;gap:8px}
 .sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
 
+/* Support badges */
+.support-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;animation:rise .4s ease both}
+.sbadge{display:flex;align-items:center;gap:6px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);border-radius:100px;padding:6px 14px;font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--cyan);letter-spacing:.06em}
+.sbadge svg{width:14px;height:14px;flex-shrink:0}
+
 /* Current plan banner */
 .plan-banner{border-radius:var(--r-xl);padding:22px 26px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;animation:rise .5s ease both}
 .plan-banner.is-free{background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-card));border:1px solid var(--cyan-border)}
-.plan-banner.is-pro{background:linear-gradient(135deg,var(--gold-soft),var(--bg-card));border:1px solid var(--gold-border)}
-.pb-title{font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff;margin-bottom:4px}
+.plan-banner.is-paid{background:linear-gradient(135deg,var(--gold-soft),var(--bg-card));border:1px solid var(--gold-border)}
+.plan-banner.is-founder{background:linear-gradient(135deg,var(--purple-soft),var(--bg-card));border:1px solid var(--purple-border)}
+.pb-left{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pb-title{font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
 .pb-sub{font-size:13px;color:var(--text-400)}
 .pb-billing{font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:5px}
+.pb-credits{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+.credit-chip{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-300)}
+.credit-chip .cc-val{font-weight:700;color:var(--cyan)}
+.credit-chip .cc-lbl{color:var(--text-500)}
 
 /* Pending badge */
 .pending-notice{background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:var(--r-md);padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:14px;animation:rise .4s ease both}
@@ -78,28 +89,55 @@ button{font-family:inherit;cursor:pointer}
 .pending-notice .pn-title{font-family:var(--font-display);font-weight:700;font-size:13.5px;color:var(--amber)}
 .pending-notice .pn-sub{font-size:12px;color:var(--text-400);margin-top:2px}
 
-/* Plan cards grid */
+/* Plans grid */
 .plans-grid{display:grid;grid-template-columns:1fr;gap:16px}
-@media(min-width:640px){.plans-grid{grid-template-columns:1fr 1fr}}
-.plan-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:28px;display:flex;flex-direction:column;gap:0;position:relative;overflow:hidden;animation:rise .5s ease both}
-.plan-card.pro-card{border-color:var(--cyan-border);background:linear-gradient(160deg,rgba(56,189,248,.07),var(--bg-card))}
-.plan-card.pro-card::before{content:'RECOMMENDED';position:absolute;top:14px;right:-26px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-mono);font-size:.6rem;font-weight:700;padding:4px 36px;transform:rotate(45deg);letter-spacing:.08em}
+@media(min-width:640px){.plans-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.plans-grid{grid-template-columns:repeat(3,1fr)}}
+
+.plan-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:28px;display:flex;flex-direction:column;position:relative;overflow:hidden;animation:rise .5s ease both;transition:border-color .2s,box-shadow .2s}
+.plan-card:hover{border-color:var(--cyan-border-soft);box-shadow:0 8px 32px rgba(56,189,248,.07)}
+.plan-card.is-recommended{border-color:var(--cyan-border);background:linear-gradient(160deg,rgba(56,189,248,.07),var(--bg-card))}
+.plan-card.is-recommended::before{content:'RECOMMENDED';position:absolute;top:14px;right:-26px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-mono);font-size:.6rem;font-weight:700;padding:4px 36px;transform:rotate(45deg);letter-spacing:.08em}
+.plan-card.is-founder-card{border-color:var(--purple-border);background:linear-gradient(160deg,rgba(168,85,247,.07),var(--bg-card))}
+.plan-card.is-founder-card:hover{border-color:var(--purple-border);box-shadow:0 8px 32px rgba(168,85,247,.1)}
+
+/* Founder badge */
+.founder-badge{display:inline-flex;align-items:center;gap:6px;background:var(--purple-soft);border:1px solid var(--purple-border);border-radius:100px;padding:4px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;margin-bottom:10px;white-space:nowrap}
+.slots-remaining{display:inline-flex;align-items:center;gap:6px;background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:100px;padding:4px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.06em;margin-bottom:10px;white-space:nowrap}
+.slots-remaining.urgent{background:var(--red-soft);border-color:var(--red-border);color:var(--red)}
+
 .pc-name{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;margin-bottom:4px}
-.pc-price{font-family:var(--font-display);font-weight:800;font-size:2.6rem;color:#fff;margin:14px 0 4px;line-height:1}
-.pc-period{font-family:var(--font-body);font-size:14px;font-weight:400;color:var(--text-400)}
-.pc-desc{font-size:13px;color:var(--text-400);margin-bottom:22px;margin-top:6px}
-.pc-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:26px;flex:1}
+.pc-price{font-family:var(--font-display);font-weight:800;font-size:2.4rem;color:#fff;margin:12px 0 2px;line-height:1}
+.pc-price-unit{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--text-500);margin-left:2px}
+.pc-cycle{font-size:13px;color:var(--text-500);margin-bottom:6px}
+.pc-credits-line{font-family:var(--font-mono);font-size:11.5px;color:var(--cyan);margin-bottom:18px;background:var(--cyan-bg-soft);border-radius:8px;padding:6px 10px;display:inline-block}
+.pc-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;flex:1}
 .pc-features li{display:flex;gap:10px;font-size:13.5px;align-items:flex-start}
 .f-check{color:var(--green);flex-shrink:0;font-weight:700}
 .f-cross{color:var(--text-500);flex-shrink:0}
 .f-cross + span{color:var(--text-500)}
 
-/* Plan action buttons */
 .btn-upgrade{display:block;width:100%;padding:13px;border-radius:var(--r-sm);border:none;font-family:var(--font-display);font-weight:700;font-size:14px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;transition:all .2s;cursor:pointer;text-align:center}
 .btn-upgrade:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(56,189,248,.4)}
+.btn-upgrade-founder{display:block;width:100%;padding:13px;border-radius:var(--r-sm);border:none;font-family:var(--font-display);font-weight:700;font-size:14px;background:linear-gradient(135deg,#7c3aed,var(--purple));color:#fff;transition:all .2s;cursor:pointer;text-align:center}
+.btn-upgrade-founder:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(168,85,247,.4)}
 .btn-current{display:block;width:100%;padding:13px;border-radius:var(--r-sm);border:1px solid var(--border-mid);font-family:var(--font-display);font-weight:700;font-size:14px;background:var(--bg-elev-1);color:var(--text-500);cursor:default;text-align:center}
 .btn-outline-plan{display:block;width:100%;padding:13px;border-radius:var(--r-sm);border:1px solid var(--border-mid);font-family:var(--font-display);font-weight:600;font-size:14px;background:transparent;color:var(--text-400);cursor:pointer;text-align:center;transition:all .2s}
 .btn-outline-plan:hover{color:var(--text-200);border-color:var(--border-soft)}
+
+/* Credit packs */
+.packs-grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:540px){.packs-grid{grid-template-columns:repeat(3,1fr)}}
+.pack-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:22px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;position:relative;overflow:hidden;animation:rise .5s ease both;transition:border-color .2s,box-shadow .2s}
+.pack-card:hover{border-color:var(--cyan-border-soft);box-shadow:0 6px 24px rgba(56,189,248,.08)}
+.pack-card.is-best-value{border-color:var(--cyan-border);background:linear-gradient(160deg,rgba(56,189,248,.06),var(--bg-card))}
+.pack-card.is-best-value::before{content:'BEST VALUE';position:absolute;top:11px;right:-22px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-mono);font-size:.55rem;font-weight:700;padding:3px 32px;transform:rotate(45deg);letter-spacing:.08em}
+.pack-credits-amount{font-family:var(--font-display);font-weight:800;font-size:2rem;color:var(--cyan);line-height:1}
+.pack-credits-label{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);letter-spacing:.1em;text-transform:uppercase}
+.pack-price{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:#fff;margin-top:2px}
+.pack-per-credit{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)}
+.btn-buy-pack{width:100%;padding:10px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);font-family:var(--font-display);font-weight:700;font-size:13.5px;background:var(--cyan-bg-soft);color:var(--cyan);transition:all .2s;cursor:pointer}
+.btn-buy-pack:hover{background:var(--cyan-bg-med);box-shadow:0 4px 16px rgba(56,189,248,.2)}
 
 /* Usage card */
 .usage-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:22px;display:flex;flex-direction:column;gap:18px;animation:rise .5s ease both}
@@ -126,8 +164,9 @@ button{font-family:inherit;cursor:pointer}
 /* Upgrade modal */
 .upgrade-modal{display:none;position:fixed;inset:0;background:rgba(2,6,14,.75);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .upgrade-modal.open{display:flex}
-.modal-box{background:var(--bg-elev-1);border:1px solid var(--cyan-border);border-radius:var(--r-xl);padding:32px;max-width:460px;width:100%;margin:16px;box-shadow:0 0 60px rgba(56,189,248,.15)}
-.modal-title{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;margin-bottom:8px}
+.modal-box{background:var(--bg-elev-1);border:1px solid var(--cyan-border);border-radius:var(--r-xl);padding:32px;max-width:480px;width:100%;margin:16px;box-shadow:0 0 60px rgba(56,189,248,.15)}
+.modal-title{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;margin-bottom:6px}
+.modal-plan-chip{display:inline-flex;align-items:center;gap:6px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);border-radius:100px;padding:4px 12px;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:.06em;margin-bottom:10px}
 .modal-sub{font-size:13.5px;color:var(--text-400);margin-bottom:22px;line-height:1.6}
 .modal-form{display:flex;flex-direction:column;gap:12px}
 .modal-form textarea{background:var(--bg-card);border:1px solid var(--border-mid);border-radius:var(--r-sm);padding:13px 14px;color:var(--text-200);font-size:14px;resize:vertical;min-height:90px;font-family:var(--font-body);transition:border-color .2s}
@@ -140,7 +179,13 @@ button{font-family:inherit;cursor:pointer}
 .modal-btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .success-box{background:var(--green-soft);border:1px solid var(--green-border);border-radius:var(--r-md);padding:16px;font-size:13.5px;color:var(--green);display:none}
 
+/* Pack request modal */
+.pack-modal{display:none;position:fixed;inset:0;background:rgba(2,6,14,.75);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.pack-modal.open{display:flex}
+.pack-success-box{background:var(--green-soft);border:1px solid var(--green-border);border-radius:var(--r-md);padding:16px;font-size:13.5px;color:var(--green);display:none;margin-bottom:12px}
+
 .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(3,16,32,.3);border-top-color:#031020;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle}
+.spin-dark{border:2px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
 .empty-state{text-align:center;padding:60px 20px;color:var(--text-400)}
 .big-spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
 
@@ -159,7 +204,7 @@ button{font-family:inherit;cursor:pointer}
 <header class="topbar">
   <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   <a class="brand in-topbar" href="dashboard.html">
-    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
+    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
     <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
   </a>
   <div class="topbar-right">
@@ -192,14 +237,32 @@ button{font-family:inherit;cursor:pointer}
 <!-- Upgrade Request Modal -->
 <div class="upgrade-modal" id="upgradeModal">
   <div class="modal-box">
-    <div class="modal-title">⭐ Request Pro Upgrade</div>
-    <div class="modal-sub">Tell us a bit about yourself and why you'd like Pro access. We'll get back to you within 24 hours.</div>
-    <div id="upgradeSuccess" class="success-box">✅ Your upgrade request has been sent! We'll contact you at your email within 24 hours.</div>
+    <div class="modal-title">Request Upgrade</div>
+    <div class="modal-plan-chip" id="modalPlanChip">— Plan</div>
+    <div class="modal-sub">Tell us a bit about yourself. We'll activate your plan and email you within 24 hours.</div>
+    <div id="upgradeSuccess" class="success-box">✅ Upgrade request sent! We'll email you within 24 hours once your plan is activated.</div>
     <div class="modal-form" id="upgradeForm">
-      <textarea id="upgradeNote" placeholder="Optional: share your goals or why you want Pro…" rows="3"></textarea>
+      <textarea id="upgradeNote" placeholder="Optional: share your goals or anything else…" rows="3"></textarea>
       <div class="modal-actions">
         <button class="modal-btn-cancel" onclick="closeModal()">Cancel</button>
         <button class="modal-btn-submit" id="submitUpgradeBtn" onclick="submitUpgrade()">Send Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Credit Pack Request Modal -->
+<div class="pack-modal" id="packModal">
+  <div class="modal-box">
+    <div class="modal-title">Buy Credit Pack</div>
+    <div class="modal-plan-chip" id="packModalChip">— Pack</div>
+    <div class="modal-sub">We'll process your payment and top up your credits within 24 hours.</div>
+    <div id="packSuccess" class="pack-success-box">✅ Pack request sent! Credits will be added to your account within 24 hours.</div>
+    <div id="packForm" class="modal-form">
+      <textarea id="packNote" placeholder="Optional: leave a note for us…" rows="2"></textarea>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" onclick="closePackModal()">Cancel</button>
+        <button class="modal-btn-submit" id="submitPackBtn" onclick="submitPackRequest()">Send Request</button>
       </div>
     </div>
   </div>
@@ -210,69 +273,66 @@ const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Sidebar toggle
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('overlay');
 document.getElementById('hamb').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
-const PLANS = {
-  free: {
-    name: 'Free',
-    price: '$0',
-    period: '/ forever',
-    desc: 'Perfect for getting started with SAT/ACT prep.',
-    features: [
-      { ok: true,  text: 'Unlimited AI Tutor questions' },
-      { ok: true,  text: 'Full Weakness Analyzer' },
-      { ok: true,  text: 'Focus Practice sessions' },
-      { ok: true,  text: 'Mock Exam timer & results' },
-      { ok: true,  text: 'History & Progress tracking' },
-      { ok: true,  text: 'XP & Achievement system' },
-      { ok: true,  text: 'Up to 2 active devices' },
-      { ok: false, text: 'Priority AI responses' },
-      { ok: false, text: 'Up to 3 active devices' },
-      { ok: false, text: 'Advanced analytics export' },
-      { ok: false, text: 'Priority support' },
-    ]
-  },
-  pro: {
-    name: 'Pro',
-    price: '$9',
-    period: '/ month',
-    desc: 'For serious students who want every edge.',
-    features: [
-      { ok: true, text: 'Everything in Free' },
-      { ok: true, text: 'Priority AI responses' },
-      { ok: true, text: 'Up to 3 active devices' },
-      { ok: true, text: 'Advanced analytics export' },
-      { ok: true, text: 'Priority support' },
-      { ok: true, text: 'Early access to new features' },
-    ]
-  }
-};
-
 let currentUser = null;
-let currentPlan = 'free';
+let currentPlanCode = 'FREE';
+let selectedPlanCode = null;
+let selectedPackId = null;
+let selectedPackName = null;
 
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function openModal() {
-  document.getElementById('upgradeModal').classList.add('open');
+function fmtPrice(egp) {
+  return Number(egp).toLocaleString('en-EG', { maximumFractionDigits: 0 }) + ' EGP';
+}
+
+function cycleLabel(code) {
+  if (!code) return '';
+  if (code.endsWith('_ANNUAL')) return '/ year';
+  if (code.endsWith('_QUARTERLY')) return '/ 3 months';
+  return '/ month';
+}
+
+function openModal(planCode, planName) {
+  selectedPlanCode = planCode;
+  document.getElementById('modalPlanChip').textContent = planName;
   document.getElementById('upgradeForm').style.display = 'flex';
   document.getElementById('upgradeSuccess').style.display = 'none';
+  document.getElementById('upgradeNote').value = '';
+  document.getElementById('submitUpgradeBtn').disabled = false;
+  document.getElementById('submitUpgradeBtn').textContent = 'Send Request';
+  document.getElementById('upgradeModal').classList.add('open');
 }
 function closeModal() {
   document.getElementById('upgradeModal').classList.remove('open');
 }
-document.getElementById('upgradeModal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) closeModal();
-});
+document.getElementById('upgradeModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+function openPackModal(packId, packName) {
+  selectedPackId = packId;
+  selectedPackName = packName;
+  document.getElementById('packModalChip').textContent = packName;
+  document.getElementById('packForm').style.display = 'flex';
+  document.getElementById('packSuccess').style.display = 'none';
+  document.getElementById('packNote').value = '';
+  document.getElementById('submitPackBtn').disabled = false;
+  document.getElementById('submitPackBtn').textContent = 'Send Request';
+  document.getElementById('packModal').classList.add('open');
+}
+function closePackModal() {
+  document.getElementById('packModal').classList.remove('open');
+}
+document.getElementById('packModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePackModal(); });
 
 async function submitUpgrade() {
+  if (!selectedPlanCode) return;
   const btn = document.getElementById('submitUpgradeBtn');
   const note = document.getElementById('upgradeNote').value.trim();
   btn.disabled = true;
@@ -281,29 +341,28 @@ async function submitUpgrade() {
   const now = new Date().toISOString();
   const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // 1. Mark profile as pending upgrade
   await sb.from('profiles').update({
     upgrade_requested: true,
     upgrade_note: note || null,
     upgrade_requested_at: now
   }).eq('id', currentUser.id);
 
-  // 2. Deactivate any prior pending subscriptions for this user
   await sb.from('subscriptions')
     .update({ active: false, status: 'inactive' })
     .eq('user_id', currentUser.id)
     .eq('status', 'pending');
 
-  // 3. Insert a pending subscription record so admin can activate it
   await sb.from('subscriptions').insert({
     user_id: currentUser.id,
-    plan_type: 'PRO_MONTHLY',
+    plan_type: selectedPlanCode,
+    plan_code: selectedPlanCode,
     active: false,
     status: 'pending',
     start_date: now,
     end_date: periodEnd,
     current_period_end: periodEnd,
-    credits_remaining: 0
+    credits_remaining: 0,
+    credits_granted: 0
   });
 
   document.getElementById('upgradeForm').style.display = 'none';
@@ -312,8 +371,66 @@ async function submitUpgrade() {
   btn.textContent = 'Send Request';
 }
 
+async function submitPackRequest() {
+  if (!selectedPackId) return;
+  const btn = document.getElementById('submitPackBtn');
+  const note = document.getElementById('packNote').value.trim();
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Sending…';
+
+  const now = new Date().toISOString();
+  await sb.from('profiles').update({
+    upgrade_requested: true,
+    upgrade_note: (note ? '[CREDIT PACK: ' + selectedPackName + '] ' + note : '[CREDIT PACK: ' + selectedPackName + ']'),
+    upgrade_requested_at: now
+  }).eq('id', currentUser.id);
+
+  document.getElementById('packForm').style.display = 'none';
+  document.getElementById('packSuccess').style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = 'Send Request';
+}
+
 function toggleFaq(el) {
   el.closest('.faq-item').classList.toggle('open');
+}
+
+function buildPlanFeatures(plan) {
+  const code = plan.plan_code;
+  const limit = plan.daily_limit;
+  const devices = plan.device_limit;
+  const credits = plan.credits_granted;
+
+  const features = [];
+  if (code === 'FREE') {
+    features.push({ ok: true,  text: limit + ' AI messages per day' });
+    features.push({ ok: true,  text: 'Full Weakness Analyzer' });
+    features.push({ ok: true,  text: 'Focus Practice sessions' });
+    features.push({ ok: true,  text: 'Mock Exam timer & results' });
+    features.push({ ok: true,  text: 'History & progress tracking' });
+    features.push({ ok: true,  text: 'XP & Achievement system' });
+    features.push({ ok: true,  text: devices + ' active devices' });
+    features.push({ ok: false, text: 'Credit-based AI access (unlimited/day)' });
+    features.push({ ok: false, text: 'Priority AI responses' });
+    features.push({ ok: false, text: 'Priority support' });
+  } else {
+    features.push({ ok: true,  text: credits.toLocaleString() + ' credits / ' + (code.endsWith('_ANNUAL') ? 'year' : code.endsWith('_QUARTERLY') ? '3 months' : 'month') });
+    features.push({ ok: true,  text: 'Unlimited daily AI messages (credit-based)' });
+    features.push({ ok: true,  text: 'Priority AI responses' });
+    features.push({ ok: true,  text: devices + ' active devices' });
+    features.push({ ok: true,  text: 'Full Weakness Analyzer' });
+    features.push({ ok: true,  text: 'Focus Practice & Mock Exam' });
+    features.push({ ok: true,  text: 'History & progress tracking' });
+    features.push({ ok: true,  text: 'Priority support' });
+    if (plan.is_founder) {
+      features.push({ ok: true,  text: 'Permanent Founder badge on your profile' });
+      features.push({ ok: true,  text: 'All future price increases locked out' });
+    }
+    if (code.endsWith('_ANNUAL')) {
+      features.push({ ok: true,  text: 'Best value — save vs monthly' });
+    }
+  }
+  return features;
 }
 
 async function loadPage() {
@@ -321,114 +438,197 @@ async function loadPage() {
   if (authErr || !user) { window.location.href = 'index.html'; return; }
   currentUser = user;
 
-  const initials = (user.email || '?')[0].toUpperCase();
-  document.getElementById('topAvatar').textContent = initials;
+  document.getElementById('topAvatar').textContent = (user.email || '?')[0].toUpperCase();
 
-  const [profileRes, subRes, pendingSubRes, chatRes, examRes, analysisRes, deviceRes] = await Promise.all([
-    sb.from('profiles').select('plan,xp,rank_name,upgrade_requested,upgrade_requested_at').eq('id', user.id).single(),
-    sb.from('subscriptions').select('*').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).single(),
-    sb.from('subscriptions').select('id,status,created_at').eq('user_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).single(),
-    sb.from('chat_sessions').select('id').eq('user_id', user.id),
-    sb.from('exam_practice_sessions').select('id').eq('user_id', user.id),
-    sb.from('mastery_records').select('id').eq('user_id', user.id),
-    sb.from('user_devices').select('id').eq('user_id', user.id).eq('is_active', true),
+  const [
+    profileRes, subRes, pendingSubRes,
+    plansRes, packsRes, slotsRes,
+    chatRes, examRes, deviceRes, todayUsageRes
+  ] = await Promise.all([
+    sb.from('profiles')
+      .select('plan_code,plan,xp,rank_name,upgrade_requested,upgrade_requested_at,subscription_credits,pack_credits,credits_balance,subscription_expires_at,is_founder,founder_badge')
+      .eq('id', user.id).single(),
+    sb.from('subscriptions')
+      .select('plan_code,plan_type,current_period_end,auto_renew')
+      .eq('user_id', user.id).eq('status', 'active')
+      .order('created_at', { ascending: false }).limit(1).single(),
+    sb.from('subscriptions')
+      .select('id,status,plan_code,plan_type,created_at')
+      .eq('user_id', user.id).eq('status', 'pending')
+      .order('created_at', { ascending: false }).limit(1).single(),
+    sb.from('pricing_settings').select('*').eq('active', true).order('sort_order'),
+    sb.from('credit_packs').select('*').eq('active', true).order('sort_order'),
+    sb.from('system_settings').select('value').eq('key', 'founder_slots_remaining').single(),
+    sb.from('chat_sessions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    sb.from('exam_practice_sessions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    sb.from('user_devices').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_active', true),
+    sb.from('ai_usage_logs').select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', new Date().toISOString().slice(0,10)),
   ]);
 
   const profile = profileRes.data || {};
-  currentPlan = profile.plan || 'free';
+  currentPlanCode = profile.plan_code || (profile.plan === 'pro' ? 'PRO_MONTHLY' : 'FREE');
+
   const sub = subRes.data;
   const pendingSub = pendingSubRes.data;
+  const plans = plansRes.data || [];
+  const packs = packsRes.data || [];
+  const founderSlots = parseInt(slotsRes.data?.value || '50', 10);
 
-  const chatCount = chatRes.data?.length || 0;
-  const examCount = examRes.data?.length || 0;
-  const analysisCount = analysisRes.data?.length || 0;
-  const deviceCount = deviceRes.data?.length || 0;
-  const deviceLimit = currentPlan === 'pro' ? 3 : 2;
+  const chatCount = chatRes.count || 0;
+  const examCount = examRes.count || 0;
+  const deviceCount = deviceRes.count || 0;
+  const todayUsage = todayUsageRes.count || 0;
 
-  const freePlan = PLANS.free;
-  const proPlan = PLANS.pro;
-
-  let billingInfo = '';
-  if (sub) {
-    const renewDate = sub.current_period_end
-      ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      : 'N/A';
-    billingInfo = `<div class="pb-billing">Renews ${renewDate}</div>`;
-  }
-
-  const hasPending = !!pendingSub;
-  const requestedDate = profile.upgrade_requested_at
-    ? new Date(profile.upgrade_requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : '';
+  const activePlan = plans.find(p => p.plan_code === currentPlanCode);
+  const deviceLimit = activePlan?.device_limit || 2;
+  const dailyLimit = activePlan?.daily_limit || null;
 
   let html = '';
 
+  // Support badges
+  html += `
+  <div class="support-badges">
+    <div class="sbadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> SAT Prep</div>
+    <div class="sbadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ACT Prep</div>
+    <div class="sbadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> EST Prep</div>
+  </div>`;
+
   // Pending upgrade notice
-  if (hasPending && currentPlan !== 'pro') {
+  if (pendingSub && currentPlanCode === 'FREE') {
+    const requestedDate = profile.upgrade_requested_at
+      ? new Date(profile.upgrade_requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : '';
     html += `
   <div class="pending-notice">
     <div class="pn-ico">⏳</div>
     <div>
       <div class="pn-title">Upgrade Request Pending</div>
-      <div class="pn-sub">Submitted ${requestedDate} · We'll activate your Pro plan and email you within 24 hours.</div>
+      <div class="pn-sub">Submitted ${requestedDate} · We'll activate your plan and email you within 24 hours.</div>
     </div>
   </div>`;
   }
 
   // Current plan banner
+  const isFounder = profile.is_founder;
+  const isPaid = currentPlanCode !== 'FREE';
+  let bannerClass = isPaid ? (isFounder ? 'is-founder' : 'is-paid') : 'is-free';
+  let bannerIcon = isPaid ? (isFounder ? '👑' : '⭐') : '🆓';
+  let bannerName = activePlan?.display_name || currentPlanCode;
+  let renewDate = '';
+  if (sub?.current_period_end) {
+    renewDate = new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  } else if (profile.subscription_expires_at) {
+    renewDate = new Date(profile.subscription_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
   html += `
-  <div class="plan-banner ${currentPlan === 'pro' ? 'is-pro' : 'is-free'}">
-    <div>
-      <div class="pb-title">${currentPlan === 'pro' ? '⭐ Pro Plan' : '🆓 Free Plan'}</div>
-      <div class="pb-sub">${currentPlan === 'pro' ? 'Full access to all Pro features.' : hasPending ? 'Pro upgrade pending — check your email.' : 'Upgrade to Pro for more devices and priority features.'}</div>
-      ${billingInfo}
+  <div class="plan-banner ${bannerClass}">
+    <div class="pb-left">
+      <div class="pb-title">${bannerIcon} ${escHtml(bannerName)}</div>
+      <div class="pb-sub">${isPaid ? 'Your active plan — full access unlocked.' : pendingSub ? 'Pro upgrade pending — check your email.' : 'Upgrade to unlock credits and unlimited daily messages.'}</div>
+      ${renewDate ? `<div class="pb-billing">Renews ${escHtml(renewDate)}</div>` : ''}
+      ${isPaid ? `<div class="pb-credits">
+        <div class="credit-chip"><span class="cc-val">${(profile.subscription_credits||0).toLocaleString()}</span><span class="cc-lbl">sub credits</span></div>
+        <div class="credit-chip"><span class="cc-val">${(profile.pack_credits||0).toLocaleString()}</span><span class="cc-lbl">pack credits</span></div>
+      </div>` : ''}
     </div>
-    ${currentPlan === 'free' && !hasPending
-      ? `<button style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:11px 22px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:14px;border:none;cursor:pointer;transition:all .2s;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(56,189,248,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openModal()">⭐ Upgrade to Pro</button>`
-      : ''}
-  </div>
+    ${!isPaid && !pendingSub ? `<button style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:11px 22px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:14px;border:none;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(56,189,248,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openModal('PRO_MONTHLY','Pro Monthly')">⭐ Upgrade Now</button>` : ''}
+  </div>`;
 
-  <div class="sec-label">Compare Plans</div>
-  <div class="plans-grid">
-    <div class="plan-card">
-      <div class="pc-name">🆓 Free</div>
-      <div class="pc-price">$0<span class="pc-period"> / forever</span></div>
-      <div class="pc-desc">${freePlan.desc}</div>
-      <ul class="pc-features">
-        ${freePlan.features.map(f => `<li><span class="${f.ok ? 'f-check' : 'f-cross'}">${f.ok ? '✓' : '✗'}</span><span>${f.text}</span></li>`).join('')}
-      </ul>
-      <button class="${currentPlan === 'free' ? 'btn-current' : 'btn-outline-plan'}" ${currentPlan === 'free' ? 'disabled' : ''}>
-        ${currentPlan === 'free' ? '✓ Current Plan' : 'Downgrade'}
-      </button>
-    </div>
-    <div class="plan-card pro-card">
-      <div class="pc-name">⭐ Pro</div>
-      <div class="pc-price">$9<span class="pc-period"> / month</span></div>
-      <div class="pc-desc">${proPlan.desc}</div>
-      <ul class="pc-features">
-        ${proPlan.features.map(f => `<li><span class="f-check">✓</span><span>${f.text}</span></li>`).join('')}
-      </ul>
-      <button class="${currentPlan === 'pro' ? 'btn-current' : 'btn-upgrade'}" ${currentPlan === 'pro' ? 'disabled' : ''} onclick="${currentPlan === 'pro' ? '' : 'openModal()'}">
-        ${currentPlan === 'pro' ? '✓ Current Plan' : '⭐ Upgrade to Pro'}
-      </button>
-    </div>
-  </div>
+  // Plans grid
+  html += `<div class="sec-label">Choose Your Plan</div>
+  <div class="plans-grid">`;
 
-  <div class="sec-label">Your Usage</div>
+  for (const plan of plans) {
+    const isCurrent = plan.plan_code === currentPlanCode;
+    const isFounderPlan = plan.is_founder;
+    const slotsLeft = founderSlots;
+    const slotsUrgent = slotsLeft <= 10;
+
+    if (isFounderPlan && slotsLeft <= 0) continue;
+
+    const features = buildPlanFeatures(plan);
+    const isFree = plan.plan_code === 'FREE';
+    const isRecommended = plan.plan_code === 'PRO_MONTHLY' && !isFounderPlan;
+
+    let cardClass = 'plan-card';
+    if (isFounderPlan) cardClass += ' is-founder-card';
+    else if (isRecommended) cardClass += ' is-recommended';
+
+    let btnHtml = '';
+    if (isCurrent) {
+      btnHtml = `<button class="btn-current" disabled>✓ Current Plan</button>`;
+    } else if (isFree) {
+      btnHtml = `<button class="btn-outline-plan" disabled>Free forever</button>`;
+    } else if (isFounderPlan) {
+      btnHtml = `<button class="btn-upgrade-founder" onclick="openModal('${escHtml(plan.plan_code)}','${escHtml(plan.display_name)}')">👑 Claim Founder Spot</button>`;
+    } else {
+      btnHtml = `<button class="btn-upgrade" onclick="openModal('${escHtml(plan.plan_code)}','${escHtml(plan.display_name)}')">⭐ Upgrade to ${escHtml(plan.display_name)}</button>`;
+    }
+
+    html += `<div class="${cardClass}">`;
+
+    if (isFounderPlan) {
+      html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="founder-badge">👑 Founding Member – Limited to First 50 Students</span>
+      </div>
+      <div class="slots-remaining${slotsUrgent ? ' urgent' : ''}">🔥 Only ${slotsLeft} spot${slotsLeft===1?'':'s'} remaining</div>`;
+    }
+
+    html += `<div class="pc-name">${escHtml(plan.display_name)}</div>`;
+
+    if (isFree) {
+      html += `<div class="pc-price">0<span class="pc-price-unit"> EGP</span></div>
+      <div class="pc-cycle">free forever</div>
+      <div style="height:30px"></div>`;
+    } else {
+      html += `<div class="pc-price">${Number(plan.price_egp).toLocaleString('en-EG',{maximumFractionDigits:0})}<span class="pc-price-unit"> EGP</span></div>
+      <div class="pc-cycle">${cycleLabel(plan.plan_code)}</div>
+      <div class="pc-credits-line">+${plan.credits_granted.toLocaleString()} credits ${cycleLabel(plan.plan_code).replace('/ ','per ')}</div>`;
+    }
+
+    html += `<ul class="pc-features">
+      ${features.map(f => `<li><span class="${f.ok ? 'f-check' : 'f-cross'}">${f.ok ? '✓' : '✗'}</span><span>${escHtml(f.text)}</span></li>`).join('')}
+    </ul>
+    ${btnHtml}
+    </div>`;
+  }
+
+  html += `</div>`;
+
+  // Credit packs
+  if (packs.length > 0) {
+    html += `<div class="sec-label">Buy Credit Packs</div>
+    <div style="font-size:13px;color:var(--text-400);margin-bottom:14px;margin-top:-8px">Credits never expire. Use them any time, across any plan.</div>
+    <div class="packs-grid">`;
+
+    packs.forEach((pack, idx) => {
+      const perCredit = (pack.price_egp / pack.credits).toFixed(2);
+      const isBest = idx === 1;
+      html += `<div class="pack-card${isBest ? ' is-best-value' : ''}">
+        <div class="pack-credits-amount">${pack.credits.toLocaleString()}</div>
+        <div class="pack-credits-label">credits</div>
+        <div class="pack-price">${fmtPrice(pack.price_egp)}</div>
+        <div class="pack-per-credit">${perCredit} EGP / credit</div>
+        <button class="btn-buy-pack" onclick="openPackModal('${escHtml(pack.id)}','${escHtml(pack.name)}')" style="margin-top:6px">Buy ${escHtml(pack.name)}</button>
+      </div>`;
+    });
+
+    html += `</div>`;
+  }
+
+  // Usage meters
+  html += `<div class="sec-label">Your Usage</div>
   <div class="usage-card">
     <div class="usage-row">
       <div class="usage-header">
-        <span class="usage-label">💬 AI Tutor Sessions</span>
-        <span class="usage-count">${chatCount} sessions</span>
+        <span class="usage-label">💬 AI Messages Today</span>
+        <span class="usage-count" style="color:${dailyLimit && todayUsage >= dailyLimit ? 'var(--red)' : 'var(--text-400)'}">${todayUsage}${dailyLimit ? ' / ' + dailyLimit : ' (unlimited)'}</span>
       </div>
-      <div class="usage-note">Unlimited on all plans</div>
-    </div>
-    <div class="usage-row">
-      <div class="usage-header">
-        <span class="usage-label">📝 Mock Exams</span>
-        <span class="usage-count">${examCount} exams</span>
-      </div>
-      <div class="usage-note">Unlimited on all plans</div>
+      ${dailyLimit ? `<div class="usage-bar"><div class="usage-fill" style="width:${Math.min(100,(todayUsage/dailyLimit)*100)}%;background:${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'};box-shadow:0 0 6px ${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'}66"></div></div>` : ''}
+      ${dailyLimit ? `<div class="usage-note">Resets at midnight UTC · Upgrade for unlimited</div>` : `<div class="usage-note">No daily limit on your plan</div>`}
     </div>
     <div class="usage-row">
       <div class="usage-header">
@@ -439,8 +639,15 @@ async function loadPage() {
     </div>
     <div class="usage-row">
       <div class="usage-header">
-        <span class="usage-label">📊 Topics Analyzed</span>
-        <span class="usage-count">${analysisCount} topics</span>
+        <span class="usage-label">💬 Total AI Sessions</span>
+        <span class="usage-count">${chatCount.toLocaleString()} sessions</span>
+      </div>
+      <div class="usage-note">Unlimited on all plans</div>
+    </div>
+    <div class="usage-row">
+      <div class="usage-header">
+        <span class="usage-label">📝 Mock Exams</span>
+        <span class="usage-count">${examCount.toLocaleString()} exams</span>
       </div>
       <div class="usage-note">Unlimited on all plans</div>
     </div>
@@ -448,19 +655,20 @@ async function loadPage() {
 
   <div class="sec-label">Frequently Asked Questions</div>
   ${[
-    ['What happens when I upgrade?', 'Your account is instantly upgraded to Pro. You get access to 3 devices and priority AI responses immediately.'],
-    ['How does the upgrade process work?', "Since we're in beta, upgrades are handled manually. Submit a request and we'll activate your Pro plan within 24 hours and reach you by email."],
-    ['Can I cancel anytime?', "Yes. Contact us and we'll process your cancellation. You'll keep Pro access until the end of your billing period."],
-    ['What counts as a "device"?', 'Each unique browser profile on a different physical device counts as one device. Incognito mode on the same browser may register as a separate device.'],
-    ['Is my data safe?', 'Absolutely. All data is stored in Supabase with row-level security. Your practice data is private and never shared.'],
-    ['What is the Free plan missing?', 'The Free plan is fully functional for studying. Pro adds a 3rd device slot, priority AI, and future advanced analytics.'],
+    ['What are credits?', 'Credits power AI features. Each AI Tutor message costs 5 credits, Weakness Analysis costs 10 credits, and Focus Plan costs 10 credits. Free plan users get a daily message limit instead of credits.'],
+    ['Do credits expire?', 'Subscription credits expire when your subscription ends. Credit pack credits never expire — they stay in your account forever.'],
+    ['How does the upgrade process work?', "Since we're in beta, upgrades are handled manually. Submit a request and we'll activate your plan within 24 hours and email you confirmation."],
+    ['What is the Founder plan?', "The Founder plan is limited to the first 50 students. Founders get the monthly Pro price locked in for life, a permanent Founder badge on their profile, and are protected from all future price increases."],
+    ['Can I cancel anytime?', "Yes — contact us and we'll process your cancellation. You keep access until the end of your billing period. Your Founder badge and status remain forever if you're a Founder."],
+    ['What counts as a device?', 'Each unique browser on a different physical device counts as one device. Clearing cookies or using a different browser profile may register as a new device.'],
+    ['Is my data safe?', 'All data is stored in Supabase with row-level security. Your practice data is private, encrypted at rest, and never shared with third parties.'],
   ].map(([q,a]) => `
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">
-      <span>${q}</span>
+      <span>${escHtml(q)}</span>
       <span class="faq-chevron">▾</span>
     </div>
-    <div class="faq-a">${a}</div>
+    <div class="faq-a">${escHtml(a)}</div>
   </div>`).join('')}`;
 
   document.getElementById('pageContent').innerHTML = html;
