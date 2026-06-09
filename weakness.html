@@ -384,90 +384,6 @@ button{font-family:inherit;cursor:pointer}
 .m-cta{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:var(--space-4);padding:15px;border-radius:var(--r-md);border:none;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:0 8px 26px rgba(56,189,248,.3);transition:transform .2s,box-shadow .2s}
 .m-cta:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(56,189,248,.44)}
 .m-cta svg{width:17px;height:17px}
-/* trend pills */
-.trend-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:10.5px;font-weight:500;white-space:nowrap}
-.trend-pill.improving{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
-.trend-pill.declining{background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}
-.trend-pill.stable{background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-400)}
-/* critical priority (extends existing high/med/low) */
-.sev-pill.critical{background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.5);color:#f87171}
-.sev-pill.critical .d{background:#f87171;box-shadow:0 0 6px #f87171}
-.rank-row.p-critical{border-left-color:#f87171}
-.rank-row.p-critical .rank-num{background:rgba(220,38,38,.18);border-color:rgba(220,38,38,.5);color:#f87171}
-.rank-row.p-critical .rm-v{color:#f87171}
-/* accordion */
-.acc-item{border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);overflow:hidden;margin-bottom:10px;transition:border-color .2s}
-.acc-item:hover{border-color:var(--cyan-border-soft)}
-.acc-head{display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;user-select:none}
-.acc-head .acc-icon{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
-.acc-head .acc-title{flex:1;font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
-.acc-head .acc-count{font-family:var(--font-mono);font-size:11px;color:var(--text-400);background:var(--bg-elev-1);border:1px solid var(--border-mid);padding:3px 8px;border-radius:100px}
-.acc-head .acc-chev{width:18px;height:18px;color:var(--text-400);transition:transform .3s,color .2s;flex-shrink:0}
-.acc-item.open .acc-chev{transform:rotate(90deg);color:var(--cyan)}
-.acc-body{display:none;padding:0 16px 14px}
-.acc-item.open .acc-body{display:block}
-.acc-sub{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);margin-bottom:8px;transition:all .2s}
-.acc-sub:last-child{margin-bottom:0}
-.acc-sub:hover{border-color:var(--cyan-border-soft);transform:translateX(3px)}
-.acc-sub .asub-name{flex:1;font-weight:600;font-size:13.5px;color:var(--text-100)}
-.acc-sub .asub-mastery{font-family:var(--font-display);font-weight:700;font-size:14px}
-/* mastered topics */
-.mastered-list{display:flex;flex-direction:column;gap:9px}
-.mastered-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(34,197,94,.07),var(--bg-card));border:1px solid var(--green-border);transition:all .2s}
-.mastered-item:hover{transform:translateX(3px);border-color:var(--green)}
-.mastered-item .mi-check{width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--green-soft);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;font-size:14px}
-.mastered-item .mi-name{flex:1;font-weight:600;font-size:14px;color:var(--text-100)}
-.mastered-item .mi-sub{font-size:12px;color:var(--text-400)}
-/* empty state */
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;border-radius:var(--r-lg);background:var(--bg-card);border:1px solid var(--border-soft)}
-.empty-state .es-icon{font-size:52px;margin-bottom:20px}
-.empty-state h2{font-family:var(--font-display);font-weight:800;font-size:22px;color:#fff;margin-bottom:12px}
-.empty-state p{color:var(--text-300);font-size:14.5px;max-width:380px;line-height:1.6;margin-bottom:28px}
-.empty-state .es-cta{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:var(--r-md);border:none;background:var(--cyan);color:#031020;font-family:var(--font-body);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 22px rgba(56,189,248,.26);transition:transform .2s,box-shadow .2s}
-.empty-state .es-cta:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(56,189,248,.4)}
-/* loading */
-.page-loading{display:flex;align-items:center;justify-content:center;min-height:320px;flex-direction:column;gap:16px;color:var(--text-400);font-size:14px}
-.page-loading .ld-dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 1.2s infinite}
-/* why card */
-.why-card{padding:18px;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(239,79,95,.07),var(--bg-card));border:1px solid var(--red-border)}
-.why-card .wc-head{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff;margin-bottom:8px}
-.why-card p{font-size:14px;color:var(--text-200);line-height:1.65}
-/* hero sub+meta */
-.bw-sub{font-size:15px;color:var(--cyan-3);margin-bottom:4px;font-weight:600}
-.bw-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;margin-top:8px}
-/* view all toggle */
-.view-all-btn{width:100%;margin-top:12px;padding:11px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
-.view-all-btn:hover{border-color:var(--cyan-border);color:#fff}
-/* strength items */
-.strength-list{display:flex;flex-direction:column;gap:10px}
-.strength-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(34,197,94,.06),var(--bg-card));border:1px solid var(--green-border);transition:all .2s}
-.strength-item:hover{transform:translateX(3px);border-color:var(--green)}
-.str-ic{width:32px;height:32px;flex-shrink:0;border-radius:9px;background:rgba(34,197,94,.12);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;font-size:15px}
-.str-name{font-weight:700;font-size:14px;color:var(--text-100)}
-.str-topic{font-size:12px;color:var(--text-400);margin-top:2px}
-.str-evidence{font-family:var(--font-mono);font-size:10.5px;color:var(--green);margin-top:4px;opacity:.8}
-.str-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
-.str-pct{font-family:var(--font-display);font-weight:800;font-size:17px;line-height:1}
-.str-bar{width:60px;height:5px;border-radius:100px;background:var(--bg-elev-2);overflow:hidden}
-.str-fill{height:100%;border-radius:100px;transition:width .6s ease}
-/* recently mastered */
-.rm-list{display:flex;flex-direction:column;gap:10px}
-.rm-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(56,189,248,.06),var(--bg-card));border:1px solid var(--cyan-border-soft);transition:all .2s}
-.rm-item:hover{transform:translateX(3px);border-color:var(--cyan-border)}
-.rm-ic{width:32px;height:32px;flex-shrink:0;border-radius:9px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);display:flex;align-items:center;justify-content:center;font-size:15px}
-.rm-name{font-weight:700;font-size:14px;color:var(--text-100)}
-.rm-topic{font-size:12px;color:var(--text-400);margin-top:2px}
-.rm-note{font-family:var(--font-mono);font-size:10.5px;color:var(--cyan-3);margin-top:4px;opacity:.85}
-.rm-pct{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--cyan-3)}
-/* data basis badge */
-.data-basis{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-mid);font-family:var(--font-mono);font-size:11.5px;color:var(--text-400);margin-bottom:18px}
-.data-basis b{color:var(--cyan-3)}
-/* hero focus hint */
-.bw-focus-hint{font-size:14px;color:var(--cyan-3);font-weight:600;margin-bottom:10px;opacity:.9}
-/* why bullets */
-.why-bullets{list-style:none;display:flex;flex-direction:column;gap:8px;margin:0;padding:0}
-.why-bullets li{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text-200);line-height:1.5}
-.why-bullets li::before{content:'•';color:var(--cyan);font-weight:700;flex-shrink:0;margin-top:1px}
 </style>
 </head>
 <body>
@@ -499,13 +415,12 @@ button{font-family:inherit;cursor:pointer}
   <div class="side-sec">Menu</div>
   <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
   <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
-  <a class="nav-item active" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
   <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
   <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
   <a class="nav-item" href="history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
   <div class="side-sec">Account</div>
   <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
-  <a class="nav-item" href="devices.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices</a>
   <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
   <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
 </aside>
@@ -514,705 +429,854 @@ button{font-family:inherit;cursor:pointer}
 <!-- MAIN -->
 <main class="main">
   <div class="page-head">
-    <div class="eyebrow"><span class="live-dot"></span> Learning Diagnostics</div>
+    <div class="eyebrow"><span class="live-dot"></span> Analytics</div>
     <h1>Weakness Analyzer</h1>
-    <p>Discover what's holding back your score and where to focus your practice.</p>
+    <p>Discover your weakest SAT &amp; EST topics and get a personalized improvement plan.</p>
     <div class="head-actions">
       <button class="gen-btn" id="genBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-        Refresh Analysis
+        <span id="genBtnLbl">Refresh Analysis</span>
       </button>
-      <span class="updated" id="updatedWrap" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Updated: <b id="updatedAt"></b></span>
+      <span class="updated"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Last updated: <b id="updatedAt">Today, 2:45 PM</b></span>
     </div>
   </div>
-  <div id="pageContent">
-    <div class="page-loading"><div class="ld-dot"></div>Loading your analysis…</div>
+
+  <!-- SECTION 1 -->
+  <div class="sec-label">Overall Performance</div>
+  <div class="stats">
+    <div class="stat d1">
+      <div class="si">🎯</div>
+      <div class="sl">Overall Accuracy</div>
+      <div class="sv">76%</div>
+      <div class="sd up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>On track</div>
+    </div>
+    <div class="stat d2">
+      <div class="si">✅</div>
+      <div class="sl">Questions Solved</div>
+      <div class="sv">327</div>
+      <div class="sd">last 30 days</div>
+    </div>
+    <div class="stat d3">
+      <div class="si">📈</div>
+      <div class="sl">Improvement Rate</div>
+      <div class="sv">+12%</div>
+      <div class="sd up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>vs last month</div>
+    </div>
+  </div>
+
+  <!-- SECTION: WEAKNESS RANKING -->
+  <div class="sec-label">Weakness Ranking</div>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-ico">🏆</div>
+      <div><div class="card-title">Your Top Weaknesses</div><div class="card-sub">Ranked by priority — tackle #1 first</div></div>
+    </div>
+    <div class="rank-table">
+      <div class="rank-row p-high" onclick="location.href='focus.html'" data-accuracy="43" data-mistakes="24" data-confidence="low" data-frequency="high">
+        <div class="rank-num">1</div>
+        <div class="rank-body">
+          <div class="rank-topic">Geometry</div>
+          <div class="rank-sub"><span class="tree">└─</span> <span class="sname">Circles</span></div>
+        </div>
+        <div class="rank-right"><span class="sev-pill high"><span class="d"></span>High</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">43%</span></div></div>
+      </div>
+      <div class="rank-row p-med" onclick="location.href='focus.html'" data-accuracy="65" data-mistakes="14" data-confidence="medium" data-frequency="medium">
+        <div class="rank-num">2</div>
+        <div class="rank-body">
+          <div class="rank-topic">Advanced Math</div>
+          <div class="rank-sub"><span class="tree">└─</span> <span class="sname">Polynomials</span></div>
+        </div>
+        <div class="rank-right"><span class="sev-pill med"><span class="d"></span>Medium</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">65%</span></div></div>
+      </div>
+      <div class="rank-row p-med" onclick="location.href='focus.html'" data-accuracy="71" data-mistakes="9" data-confidence="medium" data-frequency="low">
+        <div class="rank-num">3</div>
+        <div class="rank-body">
+          <div class="rank-topic">Functions</div>
+          <div class="rank-sub"><span class="tree">└─</span> <span class="sname">Quadratics</span></div>
+        </div>
+        <div class="rank-right"><span class="sev-pill med"><span class="d"></span>Medium</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">71%</span></div></div>
+      </div>
+    </div>
+    <div class="sev-legend">
+      <span><i style="background:var(--red)"></i> Red = High Priority</span>
+      <span><i style="background:var(--amber)"></i> Orange = Medium Priority</span>
+      <span><i style="background:var(--green)"></i> Green = Low Priority</span>
+    </div>
+    <div class="mastery-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span><b>Mastery Score</b> reflects more than accuracy — it combines accuracy, repeated mistakes, confidence level, time decay, and how often each topic appears. The lower the score, the higher the priority.</span>
+    </div>
+  </section>
+
+  <!-- SECTION: WHY THIS IS A WEAKNESS -->
+  <div class="sec-label">Why This Is A Weakness</div>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-ico">🔍</div>
+      <div><div class="card-title">Geometry → Circles</div><div class="card-sub">The evidence behind this ranking</div></div>
+    </div>
+    <div class="ex-why">
+      <div class="exw-h">⚠️ Why this weakness exists</div>
+      <p>You consistently miss questions involving circle theorems, arc length, and sector area. Most errors come from applying the wrong formula under time pressure rather than not knowing the concept — which means this is highly improvable with focused practice.</p>
+    </div>
+    <div class="evidence-grid">
+      <div class="ev-stat"><div class="ev-v red">24</div><div class="ev-l">Wrong Answers</div></div>
+      <div class="ev-stat"><div class="ev-v amber">18</div><div class="ev-l">Low Confidence Attempts</div></div>
+      <div class="ev-stat"><div class="ev-v amber">7</div><div class="ev-l">Repeated Questions</div></div>
+      <div class="ev-stat"><div class="ev-v cyan">12</div><div class="ev-l">AI Help Requests</div></div>
+    </div>
+  </section>
+
+  <!-- SECTION: ANALYSIS SOURCES -->
+  <div class="sec-label">Analysis Sources</div>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-ico">🛰️</div>
+      <div><div class="card-title">Where This Analysis Comes From</div><div class="card-sub">Si combines signals from all your learning activities</div></div>
+    </div>
+    <div class="sources-row">
+      <div class="src-box"><span class="src-v">127</span><span class="src-l">AI Chat Questions</span></div>
+      <span class="src-plus">+</span>
+      <div class="src-box"><span class="src-v">3</span><span class="src-l">Mock Exams</span></div>
+    </div>
+    <div class="mastery-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span>The Weakness Analyzer doesn't rely on a single test. It continuously combines every question you ask Si and every mock exam you upload to build an accurate picture of your real weaknesses.</span>
+    </div>
+  </section>
+
+  <!-- SECTION: SIGNAL BREAKDOWN -->
+  <div class="sec-label">Signal Breakdown</div>
+  <section class="card">
+    <div class="signal-cols">
+      <div class="sig-col chat">
+        <div class="sc-h"><span class="sc-ic">🤖</span>AI Chat Signals</div>
+        <ul>
+          <li><span class="sd"></span>Asked for explanation of circle theorems</li>
+          <li><span class="sd"></span>Repeated the same concept multiple times</li>
+          <li><span class="sd"></span>Low confidence on submitted questions</li>
+        </ul>
+      </div>
+      <div class="sig-col exam">
+        <div class="sc-h"><span class="sc-ic">📝</span>Exam Practice Signals</div>
+        <ul>
+          <li><span class="sd"></span>Wrong answers on circle questions</li>
+          <li><span class="sd"></span>Time management issues on this topic</li>
+          <li><span class="sd"></span>Repeated exam mistakes across mocks</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2 -->
+  <div class="sec-label">Topic Breakdown</div>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-ico">📊</div>
+      <div><div class="card-title">Performance by Topic</div><div class="card-sub">Where you're strong and where to focus</div></div>
+    </div>
+    <div class="bars">
+      <div class="bar-row"><div class="bar-head"><span class="bar-name">Algebra</span><span class="bar-pct g">88%</span></div><div class="bar-track"><div class="bar-fill g" data-w="88"></div></div><div class="bar-stats"><span>Attempted: <b>96</b></span><span>Correct: <b>84</b></span><span>Accuracy: <b>88%</b></span></div></div>
+      <div class="bar-row"><div class="bar-head"><span class="bar-name">Geometry</span><span class="bar-pct r">43%</span></div><div class="bar-track"><div class="bar-fill r" data-w="43"></div></div><div class="bar-stats"><span>Attempted: <b>74</b></span><span>Correct: <b>32</b></span><span>Accuracy: <b>43%</b></span></div></div>
+      <div class="bar-row"><div class="bar-head"><span class="bar-name">Functions</span><span class="bar-pct y">71%</span></div><div class="bar-track"><div class="bar-fill y" data-w="71"></div></div><div class="bar-stats"><span>Attempted: <b>62</b></span><span>Correct: <b>44</b></span><span>Accuracy: <b>71%</b></span></div></div>
+      <div class="bar-row"><div class="bar-head"><span class="bar-name">Statistics</span><span class="bar-pct g">91%</span></div><div class="bar-track"><div class="bar-fill g" data-w="91"></div></div><div class="bar-stats"><span>Attempted: <b>58</b></span><span>Correct: <b>53</b></span><span>Accuracy: <b>91%</b></span></div></div>
+      <div class="bar-row"><div class="bar-head"><span class="bar-name">Advanced Math</span><span class="bar-pct y">65%</span></div><div class="bar-track"><div class="bar-fill y" data-w="65"></div></div><div class="bar-stats"><span>Attempted: <b>37</b></span><span>Correct: <b>24</b></span><span>Accuracy: <b>65%</b></span></div></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i> Strong</span>
+      <span><i style="background:var(--amber)"></i> Average</span>
+      <span><i style="background:var(--red)"></i> Weak</span>
+    </div>
+  </section>
+
+  <!-- SECTION 3 -->
+  <div class="sec-label">Strengths &amp; Weaknesses</div>
+  <div class="sw-grid">
+    <div class="card sw-card strong">
+      <div class="sw-title"><span class="ic">💪</span> Your Strengths</div>
+      <div class="rank"><span class="rn">1</span><span class="rt">Statistics</span><span class="rp">91%</span></div>
+      <div class="rank"><span class="rn">2</span><span class="rt">Algebra</span><span class="rp">88%</span></div>
+    </div>
+    <div class="card sw-card weak">
+      <div class="sw-title"><span class="ic">⚠️</span> Needs Work</div>
+      <div class="rank clickable" data-topic="Geometry" data-pct="43" data-attempted="74" data-correct="32">
+        <span class="rn">1</span>
+        <div class="rmeta">
+          <div class="rtop"><span class="rt">Geometry</span><span class="rp">43%</span><span class="pri high"><span class="pd"></span>Priority: High</span></div>
+          <span class="rsub">74 attempted · 32 correct</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="rank clickable" data-topic="Advanced Math" data-pct="65" data-attempted="37" data-correct="24">
+        <span class="rn">2</span>
+        <div class="rmeta">
+          <div class="rtop"><span class="rt">Advanced Math</span><span class="rp">65%</span><span class="pri med"><span class="pd"></span>Priority: Medium</span></div>
+          <span class="rsub">37 attempted · 24 correct</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="sec-label">Biggest Weakness</div>
+  <section class="biggest">
+    <div class="bw-label"><span class="wi">⚠️</span> Biggest Weakness</div>
+    <h2>Geometry</h2>
+    <p>Students struggle most with circles, triangles, and coordinate geometry. Targeting this topic will give you the fastest score gains.</p>
+    <button class="big-cta" id="focusCta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Start Focus Practice
+    </button>
+  </section>
+
+  <!-- PREDICTED + AI REC -->
+  <div class="sec-label">Estimated Score Impact</div>
+  <div class="sw-grid">
+    <section class="predict">
+      <div class="pi">🚀</div>
+      <div class="pl">Potential Gain</div>
+      <div class="pbig"><span class="plus">+40</span> SAT points</div>
+      <div class="pnote">Possible if <b style="color:#fff">Geometry → Circles</b> improves from 43% → 75% mastery.</div>
+      <div class="impact-box conf" style="margin-top:14px"><div class="ib-l">Estimation Confidence</div><div class="ib-v">High</div><div class="ib-d">based on 127 data points</div></div>
+    </section>
+    <section class="airec">
+      <div class="ai-av"><img src="data:image/png;base64,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" alt="Si"/></div>
+      <div class="ai-body">
+        <div class="al">AI Recommendation</div>
+        <p>Spend <b>3 days on Geometry</b> before moving to Advanced Math. It has the highest priority and the biggest score impact right now.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="sec-label">Mastery Progress</div>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-ico">📈</div>
+      <div><div class="card-title">Mastery Over Time</div><div class="card-sub">How your mastery of each weakness is improving</div></div>
+    </div>
+    <div class="track">
+      <div class="track-row">
+        <div class="tr-head"><span class="tr-name">Geometry</span><span class="tr-gain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>+24%</span></div>
+        <div class="steps">
+          <div class="step-col"><div class="step-bar" style="height:54px"></div><div class="step-val">43%</div><div class="step-lbl">Wk 1</div></div>
+          <div class="step-col"><div class="step-bar" style="height:70px"></div><div class="step-val">55%</div><div class="step-lbl">Wk 2</div></div>
+          <div class="step-col"><div class="step-bar" style="height:86px"></div><div class="step-val">67%</div><div class="step-lbl">Wk 3</div></div>
+        </div>
+      </div>
+      <div class="track-row fn">
+        <div class="tr-head"><span class="tr-name">Functions</span><span class="tr-gain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>+21%</span></div>
+        <div class="steps">
+          <div class="step-col"><div class="step-bar" style="height:62px"></div><div class="step-val">50%</div><div class="step-lbl">Wk 1</div></div>
+          <div class="step-col"><div class="step-bar" style="height:80px"></div><div class="step-val">63%</div><div class="step-lbl">Wk 2</div></div>
+          <div class="step-col"><div class="step-bar" style="height:92px"></div><div class="step-val">71%</div><div class="step-lbl">Wk 3</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6 -->
+  <div class="sec-label">Recommended Next Step</div>
+  <section class="card">
+    <div class="card-head">
+      <div class="card-ico">🎯</div>
+      <div><div class="card-title">Recommended Focus Topic</div><div class="card-sub">Start here for the biggest impact</div></div>
+    </div>
+    <div class="priority">
+      <div class="pno"><small>PRIORITY</small><b>#1</b></div>
+      <div class="pmeta"><div class="pl">Top priority topic</div><div class="pt">Geometry</div></div>
+    </div>
+    <div class="rev-label">Topics to review</div>
+    <div class="chips">
+      <span class="chip"><span class="d"></span>Circles</span>
+      <span class="chip"><span class="d"></span>Triangles</span>
+      <span class="chip"><span class="d"></span>Coordinate Geometry</span>
+    </div>
+    <button class="full-btn">
+      View Focus Practice
+      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </section>
+
+  <!-- SECTION: FOCUS PRACTICE CONNECTION -->
+  <div class="sec-label">What Happens Next</div>
+  <div class="focus-link" onclick="location.href='focus.html'">
+    <span class="fl-ic">🔦</span>
+    <div class="fl-body">
+      <div class="fl-t">Weakness Analyzer identifies problems. Focus Practice fixes them.</div>
+      <div class="fl-s">This page found <b style="color:var(--cyan-3)">Geometry → Circles</b> as your weakest subtopic. Focus Practice turns it into a step-by-step study plan. Tap to start.</div>
+    </div>
+    <span class="fl-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
   </div>
 </main>
 
-<!-- WEAKNESS DETAIL MODAL -->
-<div class="modal-ov" id="modalOv" onclick="if(event.target===this)closeModal()">
+<!-- TOPIC DETAIL MODAL -->
+<div class="modal-ov" id="modalOv">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-head">
-      <div class="mh-ic" style="font-size:22px">⚠️</div>
+      <div class="mh-ic" id="mIc">⚠️</div>
       <div class="mh-meta">
-        <h3 id="mTitle"></h3>
-        <div style="font-size:12.5px;color:var(--text-400);margin-top:3px" id="mTopic"></div>
-        <div class="mh-sub" style="margin-top:6px">
-          <span id="mPct" style="font-family:var(--font-mono);font-size:12px"></span>
-          <span id="mPri" class="sev-pill"></span>
-          <span id="mTrend"></span>
-        </div>
+        <h3 id="mTitle">Geometry</h3>
+        <div class="mh-sub"><span class="mh-pct" id="mPct">Mastery 43%</span><span class="pri high" id="mPri"><span class="pd"></span>Priority: High</span></div>
       </div>
-      <button class="modal-close" onclick="closeModal()" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
+      <button class="modal-close" id="mClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
+
     <div class="m-block">
-      <div class="mb-h">🔍 Why Zero recommends focusing here</div>
-      <div class="why-card" style="margin-top:0"><p id="mWhy"></p></div>
+      <div class="mb-h">❌ Common Mistakes</div>
+      <div class="m-list" id="mMistakes"></div>
     </div>
-    <div class="m-block" id="mConcepts">
-      <div class="mb-h">📘 Concepts to review</div>
-      <div class="chips" id="mConceptList"></div>
+
+    <div class="m-block">
+      <div class="mb-h">📘 Recommended Lessons</div>
+      <div class="m-list" id="mLessons"></div>
     </div>
-    <button class="m-cta" id="mCtaBtn" onclick="goFocus()">
+
+    <div class="m-block">
+      <div class="mb-h">📝 Recommended Practice Sets</div>
+      <div class="m-list" id="mSets"></div>
+    </div>
+
+    <div class="m-block">
+      <div class="mb-h">📈 Estimated Improvement Potential</div>
+      <div class="m-improve">
+        <div class="imp-v" id="mImpV">+32%</div>
+        <div class="imp-t" id="mImpT">Potential accuracy gain with focused practice over 2 weeks.</div>
+      </div>
+    </div>
+
+    <button class="m-cta" id="mCta">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
-      Start Focus Practice on This Topic
+      Start Focus Practice
     </button>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="regenerate-reports.js"></script>
+<script src="mastery-updater.js"></script>
 <script>
-// ===== SUPABASE INIT =====
-const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* ── sidebar ── */
+const sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay'),hamb=document.getElementById('hamb');
+hamb.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('show')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('show')});
+sidebar.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<1024){sidebar.classList.remove('open');overlay.classList.remove('show')}}));
 
-// ===== SIDEBAR TOGGLE =====
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('overlay');
-const hamb = document.getElementById('hamb');
-hamb.addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
-overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
-sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => {
-  if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
-}));
+/* ── supabase ── */
+const SB_URL='https://igvkyxkmjnkzscqgommj.supabase.co';
+const SB_KEY='sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+const sb=supabase.createClient(SB_URL,SB_KEY);
 
-// ===== SYSTEM TOPIC FILTER =====
-const SYSTEM_TOPICS = new Set([
-  'confidence','session start','study coaching','problem clarification',
-  'off-topic','specialization','zero','general','greeting','feedback',
-  'test taking','motivation','other','none','unknown','miscellaneous',
-  'meta','system','chat','intro','introduction','clarification','encouragement',
-  'off topic','test-taking','hint','hints','explanation','review'
-]);
-function isAcademicTopic(topic) {
-  if (!topic || topic.trim().length < 2) return false;
-  return !SYSTEM_TOPICS.has(topic.toLowerCase().trim());
+let currentUser=null, allReports=[], allMastery=[], allSignals=[], currentModalReport=null;
+
+/* ── constants ── */
+const DAY=86400000;
+
+/* ── helpers ── */
+// Priority uses mastery thresholds (consistent with focus.html: <30=high, <50=high, <70=med, ≥70=low)
+function getPri(r){
+  const m=r.mastery_score;
+  if(m!=null){if(m<50)return'high';if(m<70)return'med';return'low';}
+  const s=r.weakness_score||0;if(s>=0.6)return'high';if(s>=0.3)return'med';return'low';
+}
+function priLabel(p){return p==='high'?'High':p==='med'?'Medium':'Low';}
+// Mastery: DB record → report field → compute from signals
+function masteryPct(report,mastery){
+  const mr=mastery.find(m=>m.topic===report.topic&&m.subtopic===report.subtopic);
+  if(mr&&mr.mastery_score!=null)return Math.round(mr.mastery_score);
+  if(report.mastery_score!=null)return Math.round(report.mastery_score);
+  // Compute from _meta signals if available (set by buildFromSignals)
+  if(report._meta&&report._meta.signals)return computeMastery(report._meta.signals);
+  return null;
+}
+// Mastery from signals — same formula as focus.html
+function computeMastery(signals){
+  const now=Date.now();
+  const times=signals.map(s=>new Date(s.created_at||0).getTime());
+  const total=times.length;if(!total)return null;
+  const last7=times.filter(t=>now-t<7*DAY).length;
+  let decayScore=0;
+  times.forEach(t=>{decayScore+=Math.exp(-(now-t)/(DAY*14));});
+  const weakSigs=signals.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0.4).length;
+  const helpReqs=signals.filter(s=>s.signal_type==='multi_concept').length;
+  const repeated=signals.filter(s=>s.signal_type==='repeated').length;
+  // low weight on topic signal = high confidence
+  const highConf=signals.filter(s=>s.signal_type==='topic'&&(s.weight||1)<0.3).length;
+  const understood=signals.filter(s=>s.signal_type==='resolution'&&(s.weight||0)<0).length;
+  const chatWeaknessScore=(weakSigs*3)+(helpReqs*2)+(repeated*2);
+  const baseScore=(total*1.5)+(decayScore*3)+(last7*2);
+  const positiveBoost=(understood*5)+(highConf*4);
+  return Math.max(10,Math.min(95,Math.round(100-(baseScore+chatWeaknessScore)*4+positiveBoost)));
+}
+function fmt(n){return n==null?'—':n;}
+function topicLabel(r){return[r.topic,r.subtopic].filter(Boolean).join(' → ');}
+function ts(){const now=new Date();let h=now.getHours(),m=now.getMinutes();const ap=h>=12?'PM':'AM';h=h%12||12;m=m<10?'0'+m:m;return'Today, '+h+':'+m+' '+ap;}
+
+/* ── animate bars ── */
+function animateBars(){
+  document.querySelectorAll('.bar-fill').forEach((b,i)=>{
+    b.style.width='0';
+    setTimeout(()=>{b.style.width=(b.dataset.w||'0')+'%'},120+i*90);
+  });
 }
 
-// ===== CONCEPT NORMALIZER =====
-const CONCEPT_CANON = {
-  'isolation of variable':'Isolating Variables','isolating variable':'Isolating Variables',
-  'isolation of variables':'Isolating Variables','isolating a variable':'Isolating Variables',
-  'isolate variable':'Isolating Variables','isolate variables':'Isolating Variables',
-  'linear equation':'Linear Equations','linear equations':'Linear Equations',
-  'inverse operation':'Inverse Operations','inverse operations':'Inverse Operations',
-  'solving for variable':'Solving for Variables','solving for variables':'Solving for Variables',
-  'solving for x':'Solving for Variables','solve for x':'Solving for Variables',
-  'quadratic equation':'Quadratic Equations','quadratic equations':'Quadratic Equations',
-  'systems of equation':'Systems of Equations','system of equations':'Systems of Equations',
-  'slope intercept form':'Slope-Intercept Form','slope-intercept':'Slope-Intercept Form',
-  'slope intercept':'Slope-Intercept Form',
-  'order of operation':'Order of Operations','order of operations':'Order of Operations',
-  'substitution method':'Substitution Method','elimination method':'Elimination Method',
-  'distributive property':'Distributive Property','combining like terms':'Combining Like Terms',
-  'combining like term':'Combining Like Terms',
-};
-function normalizeConcept(c) {
-  if (!c) return null;
-  const t = c.trim();
-  const key = t.toLowerCase();
-  if (CONCEPT_CANON[key]) return CONCEPT_CANON[key];
-  return t.replace(/\b\w/g, ch => ch.toUpperCase());
-}
-function dedupeConceptList(arr) {
-  const seen = new Set();
-  const out = [];
-  for (const c of arr) {
-    const n = normalizeConcept(c);
-    if (!n) continue;
-    const k = n.toLowerCase();
-    if (!seen.has(k)) { seen.add(k); out.push(n); }
-  }
-  return out;
-}
+/* ── init ── */
+async function init(){
+  const {data:{user}}=await sb.auth.getUser();
+  if(!user){window.location.href='index.html';return;}
+  currentUser=user;
 
-// ===== DATA LAYER =====
-const DAY = 86400000;
-
-function computeTopicProfile(entry) {
-  const now = Date.now();
-  const times = entry.records.map(t => new Date(t).getTime());
-  const total = times.length;
-
-  // minimum signal threshold
-  if (total < 2) return null;
-
-  const last7  = times.filter(t => now - t < 7  * DAY).length;
-  const last14 = times.filter(t => now - t < 14 * DAY).length;
-  const prev7  = times.filter(t => now - t >= 7 * DAY && now - t < 14 * DAY).length;
-
-  let decayScore = 0;
-  times.forEach(t => { decayScore += Math.exp(-(now - t) / (DAY * 14)); });
-
-  // quality signals from question_records
-  const weakSignals = entry.weakSignals  || 0;
-  const helpReqs    = entry.helpRequests || 0;
-  const explReqs    = entry.explRequests || 0;
-  const repeated    = entry.repeated     || 0;
-  const confAfterArr = (entry.confAfterArr || []).filter(c => c != null && c > 0);
-  const avgConf      = confAfterArr.length > 0
-    ? confAfterArr.reduce((a, b) => a + b, 0) / confAfterArr.length : null;
-  const highConfCount = confAfterArr.filter(c => c >= 4).length;
-  const examMistakes  = entry.examMistakes || 0;
-
-  // mastery: use mastery_records if present, otherwise derive from signals
-  let mastery;
-  if (entry.masteryScore !== null && entry.masteryScore !== undefined) {
-    mastery = Math.round(Number(entry.masteryScore));
-  } else {
-    const chatWeaknessScore = (weakSignals * 3) + (helpReqs * 2) + (explReqs * 1.5) + (repeated * 2);
-    const baseScore = (total * 1.5) + (decayScore * 3) + (last7 * 2) + (examMistakes * 3);
-    const positiveBoost = highConfCount * 4;
-    mastery = Math.max(10, Math.min(95,
-      Math.round(100 - (baseScore + chatWeaknessScore) * 4 + positiveBoost)
-    ));
+  const {data:prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
+  if(prof?.is_admin){
+    const adminLink=document.createElement('a');
+    adminLink.className='nav-item';adminLink.href='admin.html';
+    adminLink.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin Panel';
+    document.querySelector('.sidebar').appendChild(adminLink);
   }
 
-  let priority, priorityClass;
-  if (mastery < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
-  else if (mastery < 50) { priority = 'High';     priorityClass = 'high';     }
-  else if (mastery < 70) { priority = 'Medium';   priorityClass = 'med';      }
-  else                   { priority = 'Low';       priorityClass = 'low';      }
-
-  let trend, trendIcon;
-  if (last7 > prev7 + 1)               { trend = 'Declining'; trendIcon = '📉'; }
-  else if (prev7 > last7 && total >= 3) { trend = 'Improving'; trendIcon = '📈'; }
-  else                                  { trend = 'Stable';    trendIcon = '➖'; }
-
-  const concepts = dedupeConceptList([...entry.concepts]);
-
-  // weakness explanation bullets
-  const whyBullets = [];
-  whyBullets.push(`You asked about this topic ${total} time${total > 1 ? 's' : ''}`);
-  if (last14 > 0)        whyBullets.push(`${last14} question${last14 > 1 ? 's' : ''} in the last 14 days`);
-  if (weakSignals > 0)   whyBullets.push(`${weakSignals} question${weakSignals > 1 ? 's' : ''} flagged as a weak signal`);
-  if (helpReqs > 0)      whyBullets.push(`You requested help ${helpReqs} time${helpReqs > 1 ? 's' : ''} on this topic`);
-  if (examMistakes > 0)  whyBullets.push(`${examMistakes} mistake${examMistakes > 1 ? 's' : ''} on mock exam questions`);
-  if (last7 >= 2)        whyBullets.push('Still actively coming up in your recent sessions');
-  if (prev7 > 0 && last7 > prev7) whyBullets.push('Questions are increasing — not yet resolved');
-  if (concepts.length > 0) whyBullets.push(`Related concepts: ${concepts.slice(0, 3).join(', ')}`);
-
-  // strength evidence bullets
-  const strengthBullets = [];
-  if (total >= 3)                       strengthBullets.push(`Seen across ${total} sessions`);
-  if (avgConf !== null && avgConf >= 4) strengthBullets.push(`Average confidence: ${avgConf.toFixed(1)} / 5`);
-  if (highConfCount >= 2)               strengthBullets.push(`High confidence on ${highConfCount} occasion${highConfCount > 1 ? 's' : ''}`);
-  if (examMistakes === 0 && total >= 3) strengthBullets.push('No mock exam mistakes on this topic');
-  if (weakSignals === 0 && total >= 3)  strengthBullets.push('No weakness signals detected');
-  if (last14 === 0 && total >= 2)       strengthBullets.push('No longer appearing in recent sessions');
-  if (concepts.length > 0)             strengthBullets.push(`Concepts practiced: ${concepts.slice(0, 3).join(', ')}`);
-
-  // tier classification — require real evidence at every level
-  const mastered         = mastery >= 90 && total >= 4 && examMistakes === 0;
-  const strength         = mastery >= 75 && total >= 3 && !mastered;
-  const recentlyMastered = !strength && !mastered && mastery >= 70 && total >= 2 && last14 === 0;
-
-  return {
-    topic: entry.topic, sub: entry.sub, mastery,
-    priority, priorityClass, trend, trendIcon,
-    whyBullets, strengthBullets,
-    total, last7, last14, avgConf, examMistakes, weakSignals,
-    strength, mastered, recentlyMastered, concepts, decayScore
-  };
+  await loadData();
 }
 
-async function loadData() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) { window.location.href = 'login.html'; return; }
+/* ── load data ── */
+async function loadData(forceRegen){
+  const uid=currentUser.id;
 
-  // get chat session IDs
-  const { data: sessions } = await sb
-    .from('chat_sessions').select('id').eq('user_id', user.id);
-  const sessionIds = (sessions || []).map(s => s.id);
+  // Always regenerate when explicitly requested; also regenerate if signals exist but reports are stale
+  if(forceRegen&&window.regenerateWeaknessReports){
+    try{await window.regenerateWeaknessReports(sb,uid);}
+    catch(e){console.warn('[weakness] regen error:',e.message);}
+  }
 
-  // fetch all three learning signal sources in parallel
-  const [qRes, mRes, eRes] = await Promise.all([
-    sessionIds.length > 0
-      ? sb.from('question_records')
-          .select('topic, subtopic, concepts, created_at, weakness_signal, help_request, explanation_request, repeated_question, confidence_after')
-          .in('session_id', sessionIds)
-          .not('topic', 'is', null).not('subtopic', 'is', null)
-          .order('created_at', { ascending: true })
-      : Promise.resolve({ data: [] }),
-    sb.from('mastery_records')
-      .select('topic, subtopic, mastery_score, questions_seen, last_updated')
-      .eq('user_id', user.id),
-    sb.from('exam_mistakes')
-      .select('topic, subtopic')
-      .eq('user_id', user.id)
+  const [rr,mr,sr]=await Promise.all([
+    sb.from('weakness_reports').select('*').eq('user_id',uid).order('priority_rank',{ascending:true}),
+    sb.from('mastery_records').select('*').eq('user_id',uid),
+    sb.from('weakness_signals').select('*').eq('user_id',uid)
   ]);
+  allReports=rr.data||[];
+  allMastery=mr.data||[];
+  allSignals=sr.data||[];
 
-  const records  = qRes.data  || [];
-  const mastRecs = mRes.data  || [];
-  const examMist = eRes.data  || [];
+  // If reports are missing but signals exist, regenerate now then reload
+  if(allReports.length===0&&allSignals.length>0&&!forceRegen&&window.regenerateWeaknessReports){
+    try{await window.regenerateWeaknessReports(sb,uid);}
+    catch(e){console.warn('[weakness] auto-regen error:',e.message);}
+    const fresh=await sb.from('weakness_reports').select('*').eq('user_id',uid).order('priority_rank',{ascending:true});
+    allReports=fresh.data||[];
+  }
 
-  // filter academic
-  const academic = records.filter(r => isAcademicTopic(r.topic) && isAcademicTopic(r.subtopic));
+  if(allReports.length===0&&allSignals.length===0){showEmpty();return;}
 
-  if (academic.length === 0 && mastRecs.length === 0) { renderEmpty(); return; }
+  const reports=allReports.length>0?allReports:buildFromSignals(allSignals);
+  renderAll(reports,allMastery,allSignals);
+}
 
-  // mastery_records map: key → { masteryScore, questionsSeen }
-  const mastMap = {};
-  mastRecs.filter(m => isAcademicTopic(m.topic) && isAcademicTopic(m.subtopic)).forEach(m => {
-    mastMap[m.topic.trim() + '::' + m.subtopic.trim()] = {
-      masteryScore: Number(m.mastery_score),
-      questionsSeen: m.questions_seen || 0
-    };
-  });
-
-  // exam mistakes map: key → count
-  const examMap = {};
-  examMist.filter(e => isAcademicTopic(e.topic) && isAcademicTopic(e.subtopic)).forEach(e => {
-    const k = e.topic.trim() + '::' + e.subtopic.trim();
-    examMap[k] = (examMap[k] || 0) + 1;
-  });
-
-  // aggregate chat records
-  const map = {};
-  academic.forEach(r => {
-    const key = r.topic.trim() + '::' + r.subtopic.trim();
-    if (!map[key]) map[key] = {
-      topic: r.topic.trim(), sub: r.subtopic.trim(),
-      records: [], concepts: new Set(),
-      weakSignals: 0, helpRequests: 0, explRequests: 0, repeated: 0, confAfterArr: []
-    };
-    map[key].records.push(r.created_at);
-    if (Array.isArray(r.concepts)) r.concepts.forEach(c => map[key].concepts.add(c));
-    if (r.weakness_signal)      map[key].weakSignals++;
-    if (r.help_request)         map[key].helpRequests++;
-    if (r.explanation_request)  map[key].explRequests++;
-    if (r.repeated_question)    map[key].repeated++;
-    if (r.confidence_after != null) map[key].confAfterArr.push(r.confidence_after);
-  });
-
-  // include topics only in mastery_records (no chat history yet)
-  mastRecs.filter(m => isAcademicTopic(m.topic) && isAcademicTopic(m.subtopic) && (m.questions_seen || 0) >= 2).forEach(m => {
-    const key = m.topic.trim() + '::' + m.subtopic.trim();
-    if (!map[key]) {
-      const fakeTs = [];
-      for (let i = 0; i < Math.min(m.questions_seen || 2, 10); i++) fakeTs.push(m.last_updated);
-      map[key] = { topic: m.topic.trim(), sub: m.subtopic.trim(), records: fakeTs, concepts: new Set(), weakSignals: 0, helpRequests: 0, explRequests: 0, repeated: 0, confAfterArr: [] };
+function buildFromSignals(sigs){
+  /*
+   * Scoring formula:
+   *   decayed_weight(s) = s.weight × exp(−age_ms / (14×DAY))
+   *   weakness_score    = clamp(Σ decayed_weight / 5, 0, 1)
+   *   improvement_score = (prev7_raw − recent7_raw) / max(prev7_raw,0.01) × 100
+   *   mastery           = computeMastery(topicSignals)   ← focus.html formula
+   *   priority          = mastery<50→high | <70→med | ≥70→low
+   */
+  const now=Date.now();
+  const map={};
+  sigs.forEach(s=>{
+    const k=(s.topic||'')+'|'+(s.subtopic||'');
+    if(!map[k])map[k]={topic:s.topic,subtopic:s.subtopic,signals:[],
+      totalDecayed:0, recent7Raw:0, prev7Raw:0, resolveDecayed:0};
+    const e=map[k];
+    const age=now-new Date(s.created_at||0).getTime();
+    const decay=Math.exp(-age/(DAY*14));
+    const dw=(s.weight||0)*decay;
+    const raw=s.weight||0;
+    e.signals.push(s);
+    if(s.signal_type==='resolution'){
+      e.resolveDecayed+=dw; // negative weight for 'understood' reduces score
+    } else {
+      e.totalDecayed+=dw;
+      if(age<7*DAY) e.recent7Raw+=raw;
+      else if(age<14*DAY) e.prev7Raw+=raw;
     }
   });
-
-  // compute profile for each topic
-  const all = Object.entries(map).map(([key, entry]) => {
-    const mData = mastMap[key] || {};
-    return computeTopicProfile({
-      ...entry,
-      masteryScore: mData.masteryScore !== undefined ? mData.masteryScore : null,
-      examMistakes: examMap[key] || 0
-    });
-  }).filter(Boolean);
-
-  all.sort((a, b) => b.decayScore - a.decayScore);
-
-  const weaknesses       = all.filter(w => !w.strength && !w.recentlyMastered && !w.mastered);
-  const strengths        = all.filter(w => w.strength);
-  const recentlyMastered = all.filter(w => w.recentlyMastered);
-  const mastered         = all.filter(w => w.mastered);
-  _weaknesses = weaknesses;
-
-  const lastTs = academic.length > 0 ? academic[academic.length - 1].created_at : new Date().toISOString();
-  render(weaknesses, strengths, recentlyMastered, mastered, lastTs, academic.length);
-}
-
-// ===== RENDER =====
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function priorityColor(pc) {
-  if (pc === 'critical') return '#f87171';
-  if (pc === 'high') return 'var(--red)';
-  if (pc === 'med') return 'var(--amber)';
-  return 'var(--green)';
-}
-
-function masteryColor(m) {
-  if (m < 30) return '#f87171';
-  if (m < 50) return 'var(--red)';
-  if (m < 70) return 'var(--amber)';
-  return 'var(--green)';
-}
-
-function trendHtml(w) {
-  const cls = w.trend === 'Improving' ? 'improving' : w.trend === 'Declining' ? 'declining' : 'stable';
-  return `<span class="trend-pill ${cls}">${w.trendIcon} ${w.trend}</span>`;
-}
-
-function pillHtml(w) {
-  return `<span class="sev-pill ${w.priorityClass}"><span class="d"></span>${w.priority}</span>`;
-}
-
-function renderEmpty() {
-  document.getElementById('pageContent').innerHTML = `
-    <div class="empty-state">
-      <div class="es-icon">📚</div>
-      <h2>No data yet</h2>
-      <p>Keep studying with Zero and your weakness analysis will appear here automatically. The more you practice, the better the insights.</p>
-      <button class="es-cta" onclick="location.href='chat.html'">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
-        Start Practicing with Zero
-      </button>
-    </div>`;
-}
-
-function focusUrl(w, rank) {
-  return 'focus.html?topic=' + encodeURIComponent(w.topic)
-    + '&subtopic=' + encodeURIComponent(w.sub)
-    + '&rank=' + rank
-    + '&mastery=' + w.mastery;
-}
-
-function whyBulletsHtml(w) {
-  return '<ul class="why-bullets">' + w.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('') + '</ul>';
-}
-
-function render(weaknesses, strengths, recentlyMastered, mastered, lastDate, totalAnalyzed) {
-  // update timestamp
-  const d = new Date(lastDate);
-  const now = new Date();
-  let label;
-  const diffH = (now - d) / 3600000;
-  if (diffH < 1) label = 'Just now';
-  else if (diffH < 24) label = Math.floor(diffH) + ' hours ago';
-  else label = 'Today';
-  document.getElementById('updatedAt').textContent = label;
-  document.getElementById('updatedWrap').style.display = '';
-
-  let html = '';
-
-  // ── DATA BASIS BADGE ────────────────────────────────────────────
-  html += `<div class="data-basis">📊 Based on <b>${totalAnalyzed}</b> question${totalAnalyzed !== 1 ? 's' : ''} analyzed</div>`;
-
-  // ── HERO: Biggest Weakness ──────────────────────────────────────
-  if (weaknesses.length > 0) {
-    const top = weaknesses[0];
-    html += `
-    <div class="sec-label">Biggest Weakness</div>
-    <section class="biggest">
-      <div class="bw-label"><span class="wi">⚠️</span> Biggest Weakness</div>
-      <div class="bw-sub">${escHtml(top.topic)}</div>
-      <h2>${escHtml(top.sub)}</h2>
-      <div class="bw-focus-hint">Focus here first for the fastest score improvement.</div>
-      <div class="bw-meta">
-        ${pillHtml(top)}
-        ${trendHtml(top)}
-        <span style="font-family:var(--font-mono);font-size:12px;color:${masteryColor(top.mastery)};font-weight:700">Mastery ${top.mastery}%</span>
-      </div>
-      <button class="big-cta" onclick="location.href='${focusUrl(top, 1)}'">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-        Start Focus Practice
-      </button>
-    </section>`;
-
-    // ── WHY THIS IS A WEAKNESS ──────────────────────────────────────
-    html += `
-    <div class="sec-label">Why This Is A Weakness</div>
-    <section class="card">
-      <div class="card-head">
-        <div class="card-ico">🔍</div>
-        <div>
-          <div class="card-title">${escHtml(top.topic)} → ${escHtml(top.sub)}</div>
-          <div class="card-sub">Zero's assessment of this topic</div>
-        </div>
-      </div>
-      <div class="why-card">
-        <div class="wc-head">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--red)"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-          Why Zero flagged this topic
-        </div>
-        ${whyBulletsHtml(top)}
-      </div>
-      ${top.concepts.length > 0 ? `
-      <div style="margin-top:14px">
-        <div class="rev-label">Related concepts to review</div>
-        <div class="chips">${top.concepts.map(c => `<span class="chip"><span class="d"></span>${escHtml(c)}</span>`).join('')}</div>
-      </div>` : ''}
-    </section>`;
-  }
-
-  // ── TOP WEAKNESSES RANKING ──────────────────────────────────────
-  if (weaknesses.length > 0) {
-    const top5 = weaknesses.slice(0, 5);
-    const rest = weaknesses.slice(5);
-    html += `
-    <div class="sec-label">Weakness Ranking</div>
-    <section class="card">
-      <div class="card-head">
-        <div class="card-ico">🏆</div>
-        <div>
-          <div class="card-title">Your Top Weaknesses</div>
-          <div class="card-sub">Ranked by priority — tackle #1 first</div>
-        </div>
-      </div>
-      <div class="rank-table" id="rankTable">
-        ${top5.map((w, i) => `
-        <div class="rank-row p-${w.priorityClass}" data-idx="${i}" style="cursor:pointer" onclick="openModal(${i})">
-          <div class="rank-num">${i + 1}</div>
-          <div class="rank-body">
-            <div class="rank-topic">${escHtml(w.topic)}</div>
-            <div class="rank-sub"><span class="tree">└─</span> <span class="sname">${escHtml(w.sub)}</span></div>
-          </div>
-          <div class="rank-right">
-            ${pillHtml(w)}
-            ${trendHtml(w)}
-            <div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">${w.mastery}%</span></div>
-          </div>
-        </div>`).join('')}
-      </div>
-      ${rest.length > 0 ? `
-      <div id="rankExtra" style="display:none">
-        <div class="rank-table" style="margin-top:10px">
-          ${rest.map((w, i) => `
-          <div class="rank-row p-${w.priorityClass}" style="cursor:pointer" onclick="openModal(${i + 5})">
-            <div class="rank-num">${i + 6}</div>
-            <div class="rank-body">
-              <div class="rank-topic">${escHtml(w.topic)}</div>
-              <div class="rank-sub"><span class="tree">└─</span> <span class="sname">${escHtml(w.sub)}</span></div>
-            </div>
-            <div class="rank-right">
-              ${pillHtml(w)}
-              ${trendHtml(w)}
-              <div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">${w.mastery}%</span></div>
-            </div>
-          </div>`).join('')}
-        </div>
-      </div>
-      <button class="view-all-btn" id="viewAllBtn" onclick="toggleViewAll()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg>
-        View all ${weaknesses.length} weaknesses
-      </button>` : ''}
-      <div class="sev-legend" style="margin-top:14px">
-        <span><i style="background:#f87171;border-radius:3px;width:11px;height:11px;display:inline-block"></i> Critical</span>
-        <span><i style="background:var(--red);border-radius:3px;width:11px;height:11px;display:inline-block"></i> High</span>
-        <span><i style="background:var(--amber);border-radius:3px;width:11px;height:11px;display:inline-block"></i> Medium</span>
-        <span><i style="background:var(--green);border-radius:3px;width:11px;height:11px;display:inline-block"></i> Low</span>
-      </div>
-    </section>`;
-  }
-
-  // ── TOPIC ACCORDION ──────────────────────────────────────────────
-  if (weaknesses.length > 0) {
-    // group by topic
-    const grouped = {};
-    weaknesses.forEach(w => {
-      if (!grouped[w.topic]) grouped[w.topic] = [];
-      grouped[w.topic].push(w);
-    });
-    const topicIcons = {
-      'Geometry': '📐', 'Algebra': '➕', 'Functions': '📈',
-      'Advanced Math': '🔢', 'Statistics': '📊', 'Calculus': '∫'
+  const entries=Object.values(map).map(e=>{
+    const netDecayed=e.totalDecayed+e.resolveDecayed; // resolveDecayed can be negative
+    const ws=Math.max(0,Math.min(1,netDecayed/5));
+    // improvement: positive = fewer weakness signals recently (getting better)
+    const impScore=e.prev7Raw>0
+      ?Math.round((e.prev7Raw-e.recent7Raw)/Math.max(e.prev7Raw,0.01)*100)
+      :null;
+    const mastery=computeMastery(e.signals);
+    return{
+      topic:e.topic,subtopic:e.subtopic,
+      weakness_score:ws,
+      improvement_score:impScore,
+      total_signals:e.signals.length,
+      mastery_score:mastery,
+      biggest_weakness:false,
+      priority_rank:0,
+      _meta:{signals:e.signals,recent7Raw:e.recent7Raw,prev7Raw:e.prev7Raw}
     };
-    html += `
-    <div class="sec-label">Topic Breakdown</div>
-    <div id="accordion">
-      ${Object.entries(grouped).map(([topic, subs], ti) => `
-      <div class="acc-item${ti === 0 ? ' open' : ''}" id="acc-${ti}">
-        <div class="acc-head" onclick="toggleAcc(${ti})">
-          <div class="acc-icon">${topicIcons[topic] || '📚'}</div>
-          <div class="acc-title">${escHtml(topic)}</div>
-          <span class="acc-count">${subs.length} subtopic${subs.length > 1 ? 's' : ''}</span>
-          <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-        </div>
-        <div class="acc-body">
-          ${subs.map(w => `
-          <div class="acc-sub" onclick="openModalBySub('${escHtml(w.topic)}','${escHtml(w.sub)}')">
-            <div class="asub-name">${escHtml(w.sub)}</div>
-            ${pillHtml(w)}
-            ${trendHtml(w)}
-            <div class="asub-mastery" style="color:${masteryColor(w.mastery)}">${w.mastery}%</div>
-          </div>`).join('')}
-        </div>
-      </div>`).join('')}
-    </div>`;
-  }
-
-  // ── STRENGTHS ────────────────────────────────────────────────────
-  if (strengths.length > 0) {
-    html += `
-    <div class="sec-label">Your Strengths</div>
-    <section class="card">
-      <div class="card-head">
-        <div class="card-ico" style="background:rgba(34,197,94,.12);border-color:var(--green-border)">💪</div>
-        <div>
-          <div class="card-title">Topics You Handle Well</div>
-          <div class="card-sub">Confirmed across multiple sessions — keep it up</div>
-        </div>
-      </div>
-      <div class="strength-list">
-        ${strengths.map(w => `
-        <div class="strength-item">
-          <div class="str-ic">⭐</div>
-          <div style="flex:1;min-width:0">
-            <div class="str-name">${escHtml(w.sub)}</div>
-            <div class="str-topic">${escHtml(w.topic)}</div>
-            ${w.strengthBullets.slice(0, 2).map(b => `<div class="str-evidence">${escHtml(b)}</div>`).join('')}
-          </div>
-          <div class="str-right">
-            <div class="str-pct" style="color:${masteryColor(w.mastery)}">${w.mastery}%</div>
-            <div class="str-bar"><div class="str-fill" style="width:${w.mastery}%;background:${masteryColor(w.mastery)}"></div></div>
-          </div>
-        </div>`).join('')}
-      </div>
-    </section>`;
-  }
-
-  // ── RECENTLY MASTERED ────────────────────────────────────────────
-  if (recentlyMastered.length > 0) {
-    html += `
-    <div class="sec-label">Recently Mastered</div>
-    <section class="card">
-      <div class="card-head">
-        <div class="card-ico" style="background:var(--cyan-bg-soft);border-color:var(--cyan-border)">🎯</div>
-        <div>
-          <div class="card-title">Topics You've Moved Past</div>
-          <div class="card-sub">No longer appearing in your recent sessions — this is progress</div>
-        </div>
-      </div>
-      <div class="rm-list">
-        ${recentlyMastered.map(w => `
-        <div class="rm-item">
-          <div class="rm-ic">🎯</div>
-          <div style="flex:1;min-width:0">
-            <div class="rm-name">${escHtml(w.sub)}</div>
-            <div class="rm-topic">${escHtml(w.topic)}</div>
-            <div class="rm-note">${
-              w.examMistakes === 0 && w.weakSignals === 0
-                ? 'You worked through this topic with no weak signals'
-                : 'No longer appearing in your recent sessions'
-            }</div>
-          </div>
-          <div class="rm-pct">${w.mastery}%</div>
-        </div>`).join('')}
-      </div>
-    </section>`;
-  }
-
-  // ── MASTERED TOPICS ───────────────────────────────────────────────
-  if (mastered.length > 0) {
-    html += `
-    <div class="sec-label">Mastered Topics</div>
-    <section class="card">
-      <div class="card-head">
-        <div class="card-ico" style="background:rgba(34,197,94,.16);border-color:var(--green-border)">🏆</div>
-        <div>
-          <div class="card-title">Topics You've Fully Mastered</div>
-          <div class="card-sub">90 %+ mastery · 4 or more confirmed interactions</div>
-        </div>
-      </div>
-      <div class="mastered-list">
-        ${mastered.map(w => `
-        <div class="mastered-item">
-          <div class="mi-check">✓</div>
-          <div style="flex:1">
-            <div class="mi-name">${escHtml(w.sub)}</div>
-            <div class="mi-sub">${escHtml(w.topic)} · ${w.total} interactions</div>
-          </div>
-          <span style="font-family:var(--font-mono);font-size:13px;color:var(--green);font-weight:700">${w.mastery}%</span>
-        </div>`).join('')}
-      </div>
-    </section>`;
-  }
-
-  // ── FOCUS PRACTICE CTA ─────────────────────────────────────────────
-  if (weaknesses.length > 0) {
-    const top = weaknesses[0];
-    html += `
-    <div class="sec-label">What Happens Next</div>
-    <div class="focus-link" onclick="location.href='${focusUrl(top, 1)}'">
-      <span class="fl-ic">🔦</span>
-      <div class="fl-body">
-        <div class="fl-t">Ready to turn this weakness into a strength?</div>
-        <div class="fl-s">Zero identified <b style="color:var(--cyan-3)">${escHtml(top.topic)} → ${escHtml(top.sub)}</b> as your top priority. Focus Practice builds a targeted study plan around it.</div>
-      </div>
-      <span class="fl-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
-    </div>`;
-  }
-
-  document.getElementById('pageContent').innerHTML = html;
-}
-
-// ===== MODAL (detail per weakness) =====
-let _weaknesses = [];
-let _modalIdx = 0;
-function goFocus() {
-  const w = _weaknesses[_modalIdx];
-  if (w) location.href = focusUrl(w, _modalIdx + 1);
-}
-function openModal(idx) {
-  const w = _weaknesses[idx];
-  if (!w) return;
-  _modalIdx = idx;
-  document.getElementById('mTitle').textContent = w.sub;
-  document.getElementById('mTopic').textContent = w.topic;
-  document.getElementById('mPct').textContent = 'Mastery ' + w.mastery + '%';
-  document.getElementById('mPct').style.color = masteryColor(w.mastery);
-  const priEl = document.getElementById('mPri');
-  priEl.className = 'sev-pill ' + w.priorityClass;
-  priEl.innerHTML = `<span class="d"></span>${w.priority}`;
-  document.getElementById('mTrend').innerHTML = trendHtml(w);
-  document.getElementById('mWhy').innerHTML = whyBulletsHtml(w);
-  const conEl = document.getElementById('mConcepts');
-  if (w.concepts.length > 0) {
-    conEl.style.display = '';
-    document.getElementById('mConceptList').innerHTML = w.concepts.map(c => `<span class="chip"><span class="d"></span>${escHtml(c)}</span>`).join('');
-  } else {
-    conEl.style.display = 'none';
-  }
-  document.getElementById('modalOv').classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-function openModalBySub(topic, sub) {
-  const idx = _weaknesses.findIndex(w => w.topic === topic && w.sub === sub);
-  if (idx >= 0) openModal(idx);
-}
-function closeModal() {
-  document.getElementById('modalOv').classList.remove('show');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-// ===== VIEW ALL TOGGLE =====
-let viewAllOpen = false;
-function toggleViewAll() {
-  viewAllOpen = !viewAllOpen;
-  const extra = document.getElementById('rankExtra');
-  const btn = document.getElementById('viewAllBtn');
-  if (!extra || !btn) return;
-  if (viewAllOpen) {
-    extra.style.display = '';
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m18 15-6-6-6 6"/></svg> Show fewer`;
-  } else {
-    extra.style.display = 'none';
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg> View all ${_weaknesses.length} weaknesses`;
-  }
-}
-
-// ===== ACCORDION =====
-function toggleAcc(idx) {
-  const el = document.getElementById('acc-' + idx);
-  if (el) el.classList.toggle('open');
-}
-
-// ===== GEN BUTTON =====
-document.getElementById('genBtn').addEventListener('click', () => {
-  document.getElementById('genBtn').classList.add('spin');
-  document.getElementById('pageContent').innerHTML = '<div class="page-loading"><div class="ld-dot"></div>Refreshing analysis…</div>';
-  loadData().finally(() => {
-    setTimeout(() => document.getElementById('genBtn').classList.remove('spin'), 600);
+  }).filter(r=>r.total_signals>0);
+  // Sort: primary by mastery asc (lower mastery = more urgent), secondary by weakness_score desc
+  entries.sort((a,b)=>{
+    const ma=a.mastery_score??50, mb=b.mastery_score??50;
+    if(Math.abs(ma-mb)>5)return ma-mb; // lower mastery = higher priority
+    return b.weakness_score-a.weakness_score;
   });
+  entries.forEach((e,i)=>{e.priority_rank=i+1;e.biggest_weakness=i===0;});
+  return entries;
+}
+
+function showEmpty(){
+  document.querySelector('.stats').innerHTML='<div class="stat d1" style="grid-column:1/-1"><div class="si">📊</div><div class="sl">No Analysis Yet</div><div class="sv" style="font-size:18px">Start chatting with Si to generate your weakness analysis</div><div class="sd"><a href="chat.html" style="color:var(--cyan-3)">Go to AI Tutor →</a></div></div>';
+  document.querySelector('.rank-table').innerHTML='<div style="padding:24px;text-align:center;color:var(--text-400)">No weakness data yet — ask Si some math questions to get started.</div>';
+}
+
+/* ── render all ── */
+function renderAll(reports,mastery,signals){
+  renderStats(reports,mastery,signals);
+  renderRankTable(reports,mastery);
+  renderWhy(reports[0],signals);
+  renderSources(signals);
+  renderSignalCols(reports[0],signals);
+  renderBars(mastery,reports);
+  renderSWGrid(reports,mastery);
+  renderBiggest(reports[0]);
+  renderTrack(mastery,reports);
+  renderRecommended(reports[0],reports);
+  renderFocusLink(reports[0]);
+  renderAIRec(reports[0],reports[1]);
+  document.getElementById('updatedAt').textContent=ts();
+  animateBars();
+}
+
+/* ── stats ── */
+function renderStats(reports,mastery,signals){
+  const upSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>';
+  // Stat 1: average mastery across all weak topics (from mastery_records or computed)
+  const masteryVals=reports.map(r=>masteryPct(r,mastery)).filter(v=>v!=null);
+  const avgMastery=masteryVals.length?Math.round(masteryVals.reduce((a,b)=>a+b,0)/masteryVals.length):null;
+  const d1=document.querySelector('.stat.d1');
+  if(d1){
+    d1.querySelector('.si').textContent='🎯';
+    d1.querySelector('.sl').textContent='Avg Mastery (weak topics)';
+    d1.querySelector('.sv').textContent=avgMastery!=null?avgMastery+'%':'—';
+    d1.querySelector('.sd').className='sd'+(avgMastery!=null&&avgMastery>=60?' up':'');
+    d1.querySelector('.sd').innerHTML=avgMastery!=null?(avgMastery>=60?upSvg+'Progressing':'Needs work'):'No data yet';
+  }
+  // Stat 2: total signals tracked
+  const qSolved=signals.length;
+  const d2=document.querySelector('.stat.d2');
+  if(d2){
+    d2.querySelector('.si').textContent='✅';
+    d2.querySelector('.sl').textContent='Signals Tracked';
+    d2.querySelector('.sv').textContent=qSolved||'0';
+    d2.querySelector('.sd').textContent='across all topics';
+  }
+  // Stat 3: topics improving (improvement_score > 0)
+  const improving=reports.filter(r=>r.improvement_score!=null&&r.improvement_score>5).length;
+  const d3=document.querySelector('.stat.d3');
+  if(d3){
+    d3.querySelector('.si').textContent='📈';
+    d3.querySelector('.sl').textContent='Topics Improving';
+    d3.querySelector('.sv').textContent=improving+' / '+reports.length;
+    d3.querySelector('.sd').className='sd'+(improving>0?' up':'');
+    d3.querySelector('.sd').innerHTML=improving>0?upSvg+'Getting better':'Keep practicing';
+  }
+}
+
+/* ── rank table ── */
+function renderRankTable(reports,mastery){
+  const rt=document.querySelector('.rank-table');if(!rt)return;
+  if(!reports.length){rt.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-400)">No ranked data yet.</div>';return;}
+  const top5=reports.slice(0,5);
+  rt.innerHTML=top5.map((r,i)=>{
+    const p=getPri(r);
+    const mPct=masteryPct(r,mastery);
+    const lbl=topicLabel(r);
+    const sub=r.subtopic||r.topic||'';
+    const topic=r.topic||r.subtopic||'—';
+    return`<div class="rank-row p-${p}" style="cursor:pointer" data-idx="${i}">
+      <div class="rank-num">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-topic">${topic}</div>
+        ${r.subtopic?`<div class="rank-sub"><span class="tree">└─</span> <span class="sname">${r.subtopic}</span></div>`:''}
+      </div>
+      <div class="rank-right"><span class="sev-pill ${p}"><span class="d"></span>${priLabel(p)}</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">${mPct!==null?mPct+'%':'—'}</span></div></div>
+    </div>`;
+  }).join('');
+  rt.querySelectorAll('.rank-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const idx=parseInt(row.dataset.idx);
+      const r=reports[idx];
+      const mPct=masteryPct(r,mastery);
+      openModal(r,mPct,mastery);
+    });
+  });
+}
+
+/* ── why card ── */
+function renderWhy(report,signals){
+  if(!report)return;
+  const cardHead=document.querySelectorAll('section.card .card-head')[1];
+  if(cardHead){
+    cardHead.querySelector('.card-title').textContent=topicLabel(report);
+    cardHead.querySelector('.card-sub').textContent='The evidence behind this ranking';
+  }
+  const exWhy=document.querySelector('.ex-why p');
+  if(exWhy){
+    const subtopic=report.subtopic||report.topic;
+    const total=report.total_signals||signals.filter(s=>s.topic===report.topic||s.subtopic===report.subtopic).length;
+    exWhy.textContent=`You have ${total} weakness signal${total!==1?'s':''} around "${subtopic}". This includes low-confidence answers, repeated questions, and help requests — meaning this is improvable with focused practice.`;
+  }
+  const eg=document.querySelector('.evidence-grid');
+  if(eg){
+    const topicSigs=signals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic));
+    // Low confidence = topic signals with weight > 0.4 (confidence ≈ 6 - weight*5 < 4)
+    const lowConf=topicSigs.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0.4).length;
+    const repeated=topicSigs.filter(s=>s.signal_type==='repeated').length;
+    const multi=topicSigs.filter(s=>s.signal_type==='multi_concept').length;
+    const resolved=topicSigs.filter(s=>s.signal_type==='resolution'&&(s.weight||0)<0).length;
+    // Average inferred confidence from topic signals (weight = (6-conf)/5 → conf = 6-weight*5)
+    const confSigs=topicSigs.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0);
+    const avgConf=confSigs.length?Math.round(confSigs.reduce((a,s)=>a+(6-(s.weight||0.5)*5),0)/confSigs.length*10)/10:null;
+    eg.innerHTML=`
+      <div class="ev-stat"><div class="ev-v red">${lowConf||topicSigs.length}</div><div class="ev-l">Low Confidence</div></div>
+      <div class="ev-stat"><div class="ev-v amber">${repeated}</div><div class="ev-l">Repeated Questions</div></div>
+      <div class="ev-stat"><div class="ev-v amber">${multi}</div><div class="ev-l">Multi-concept Issues</div></div>
+      <div class="ev-stat"><div class="ev-v cyan">${resolved}</div><div class="ev-l">Resolved ✓</div></div>`;
+    if(avgConf!=null){
+      const exWhy=document.querySelector('.ex-why p');
+      if(exWhy)exWhy.textContent=`Average confidence: ${avgConf}/5 on "${report.subtopic||report.topic}". Low confidence, repeated questions, and multi-concept errors all increase the weakness score. Resolution signals (when you understand) reduce it.`;
+    }
+  }
+}
+
+/* ── sources ── */
+function renderSources(signals){
+  const chatSigs=signals.filter(s=>s.source==='AI_CHAT').length;
+  const examSigs=signals.filter(s=>s.source&&s.source!=='AI_CHAT').length;
+  const boxes=document.querySelectorAll('.src-box .src-v');
+  if(boxes[0])boxes[0].textContent=chatSigs;
+  if(boxes[1])boxes[1].textContent=examSigs;
+}
+
+/* ── signal columns ── */
+function renderSignalCols(report,signals){
+  const cols=document.querySelector('.signal-cols');if(!cols)return;
+  const topicSigs=report?signals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic)):signals.slice(0,6);
+  const chatSigs=topicSigs.filter(s=>!s.source||s.source==='AI_CHAT').slice(0,4);
+  const examSigs=topicSigs.filter(s=>s.source&&s.source!=='AI_CHAT').slice(0,4);
+  const mkLi=s=>`<li><span class="sd"></span>${s.signal_type==='repeated'?'Repeated question on '+(s.subtopic||s.topic||'this topic'):s.signal_type==='resolution'?(s.weight<0?'Understood concept: '+(s.subtopic||s.topic||''):'Still struggling: '+(s.subtopic||s.topic||'')):s.signal_type==='multi_concept'?'Multi-concept difficulty on '+(s.topic||s.subtopic||''):'Low confidence on '+(s.subtopic||s.topic||'this topic')}</li>`;
+  const chatCol=cols.querySelector('.sig-col.chat ul');
+  const examCol=cols.querySelector('.sig-col.exam ul');
+  if(chatCol)chatCol.innerHTML=chatSigs.length?chatSigs.map(mkLi).join(''):'<li><span class="sd"></span>No signals yet</li>';
+  if(examCol)examCol.innerHTML=examSigs.length?examSigs.map(mkLi).join(''):'<li><span class="sd"></span>No exam signals yet</li>';
+}
+
+/* ── topic bars ── */
+function renderBars(mastery,reports){
+  const barsEl=document.querySelector('.bars');if(!barsEl)return;
+  if(!mastery.length&&!reports.length){barsEl.innerHTML='<div style="padding:16px;color:var(--text-400)">No topic data yet.</div>';return;}
+  const topicMap={};
+  mastery.forEach(m=>{
+    const k=m.topic||m.subtopic;
+    if(!topicMap[k])topicMap[k]={topic:k,seen:0,correct:0,mastery:m.mastery_score};
+    topicMap[k].seen+=m.questions_seen||0;topicMap[k].correct+=m.questions_correct||0;
+    if(m.mastery_score)topicMap[k].mastery=m.mastery_score;
+  });
+  const topics=Object.values(topicMap).sort((a,b)=>b.seen-a.seen).slice(0,6);
+  if(!topics.length){
+    reports.slice(0,5).forEach(r=>{topicMap[r.topic]=topicMap[r.topic]||{topic:r.topic,seen:r.total_signals||1,correct:0,mastery:r.mastery_score};});
+    topics.push(...Object.values(topicMap));
+  }
+  barsEl.innerHTML=topics.map(t=>{
+    const acc=t.seen>0?Math.round(t.correct/t.seen*100):(t.mastery!=null?Math.round(t.mastery):50);
+    const cls=acc>=80?'g':acc>=60?'y':'r';
+    return`<div class="bar-row">
+      <div class="bar-head"><span class="bar-name">${t.topic}</span><span class="bar-pct ${cls}">${acc}%</span></div>
+      <div class="bar-track"><div class="bar-fill ${cls}" data-w="${acc}" style="width:0"></div></div>
+      <div class="bar-stats"><span>Attempted: <b>${t.seen||'?'}</b></span><span>Correct: <b>${t.correct||'?'}</b></span><span>Accuracy: <b>${acc}%</b></span></div>
+    </div>`;
+  }).join('');
+  animateBars();
+}
+
+/* ── S&W grid ── */
+function renderSWGrid(reports,mastery){
+  const weakCard=document.querySelector('.sw-card.weak');
+  const strongCard=document.querySelector('.sw-card.strong');
+  if(weakCard){
+    const weak=reports.slice(0,3);
+    weakCard.querySelector('.sw-title').innerHTML='<span class="ic">⚠️</span> Needs Work';
+    const existing=weakCard.querySelectorAll('.rank');
+    existing.forEach(r=>r.remove());
+    weak.forEach((r,i)=>{
+      const p=getPri(r);const mPct=masteryPct(r,mastery);
+      const div=document.createElement('div');
+      div.className='rank clickable';
+      div.dataset.idx=i;
+      div.innerHTML=`<span class="rn">${i+1}</span><div class="rmeta"><div class="rtop"><span class="rt">${topicLabel(r)}</span><span class="rp">${mPct!==null?mPct+'%':'—'}</span><span class="pri ${p}"><span class="pd"></span>Priority: ${priLabel(p)}</span></div><span class="rsub">${r.total_signals||0} signals</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+      div.addEventListener('click',()=>openModal(r,mPct,mastery));
+      weakCard.appendChild(div);
+    });
+  }
+  if(strongCard&&mastery.length){
+    const strong=mastery.filter(m=>m.mastery_score!=null&&m.mastery_score>=70).sort((a,b)=>b.mastery_score-a.mastery_score).slice(0,2);
+    const existing=strongCard.querySelectorAll('.rank');
+    existing.forEach(r=>r.remove());
+    strongCard.querySelector('.sw-title').innerHTML='<span class="ic">💪</span> Your Strengths';
+    if(strong.length){
+      strong.forEach((m,i)=>{
+        const div=document.createElement('div');div.className='rank';
+        div.innerHTML=`<span class="rn">${i+1}</span><span class="rt">${m.topic||m.subtopic}</span><span class="rp">${Math.round(m.mastery_score)}%</span>`;
+        strongCard.appendChild(div);
+      });
+    } else {
+      const div=document.createElement('div');div.className='rank';
+      div.innerHTML='<span class="rt" style="color:var(--text-400)">Keep practicing to build strengths!</span>';
+      strongCard.appendChild(div);
+    }
+  }
+}
+
+/* ── biggest weakness ── */
+function renderBiggest(report){
+  if(!report)return;
+  const big=document.querySelector('.biggest');if(!big)return;
+  big.querySelector('h2').textContent=topicLabel(report);
+  big.querySelector('p').textContent=`Your analysis shows "${topicLabel(report)}" is your biggest weakness right now. Focused practice on this topic will give you the fastest score improvement.`;
+  const cta=document.getElementById('focusCta');
+  if(cta)cta.onclick=()=>goFocus(report);
+}
+
+/* ── mastery track ── */
+function renderTrack(mastery,reports){
+  const track=document.querySelector('.track');if(!track)return;
+  const weak=reports.slice(0,2);
+  if(!weak.length){track.innerHTML='<div style="padding:16px;color:var(--text-400)">No mastery data yet.</div>';return;}
+  const upSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>';
+  const dnSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17 13.5 8.5 8.5 13.5 2 7"/><path d="M16 17h6v-6"/></svg>';
+  track.innerHTML=weak.map((r,ri)=>{
+    const mr=mastery.find(x=>x.topic===r.topic&&x.subtopic===r.subtopic);
+    const now=r.mastery_score!=null?Math.round(r.mastery_score):(mr?.mastery_score!=null?Math.round(mr.mastery_score):null);
+    const nowPct=now??50;
+    // Compute mastery from older signals only (>14 days) to get a "start" value
+    let startPct=nowPct;
+    if(r._meta&&r._meta.signals){
+      const older=r._meta.signals.filter(s=>Date.now()-new Date(s.created_at||0).getTime()>14*DAY);
+      if(older.length>0){const om=computeMastery(older);if(om!=null)startPct=om;}
+    }
+    const targetPct=Math.min(95,nowPct+15);
+    // Improvement: use improvement_score if available, else derive from start/now delta
+    const imp=r.improvement_score;
+    let gainLabel,gainSvg;
+    if(imp!=null&&Math.abs(imp)>5){
+      gainLabel=(imp>0?'+':'')+Math.round(imp)+'%';
+      gainSvg=imp>0?upSvg:dnSvg;
+    } else if(startPct<nowPct){
+      gainLabel='+'+(nowPct-startPct)+'%';gainSvg=upSvg;
+    } else {
+      gainLabel='Stable';gainSvg='➖';
+    }
+    const cls=ri===0?'':'fn';
+    const toH=v=>Math.max(Math.round(v*1.1),5); // scale pct to px height (110px=100%)
+    return`<div class="track-row ${cls}">
+      <div class="tr-head"><span class="tr-name">${topicLabel(r)}</span><span class="tr-gain">${gainSvg}${gainLabel}</span></div>
+      <div class="steps">
+        <div class="step-col"><div class="step-bar" style="height:${toH(startPct)}px"></div><div class="step-val">${startPct}%</div><div class="step-lbl">Baseline</div></div>
+        <div class="step-col"><div class="step-bar" style="height:${toH(nowPct)}px"></div><div class="step-val">${nowPct}%</div><div class="step-lbl">Current</div></div>
+        <div class="step-col"><div class="step-bar" style="height:${toH(targetPct)}px"></div><div class="step-val">${targetPct}%</div><div class="step-lbl">Target</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── recommended step ── */
+function renderRecommended(report,reports){
+  if(!report)return;
+  const ptEl=document.querySelector('.priority .pt');if(ptEl)ptEl.textContent=topicLabel(report);
+  const plEl=document.querySelector('.priority .pl');if(plEl)plEl.textContent='Top priority topic';
+  const chips=document.querySelector('.chips');
+  if(chips){
+    const related=reports.filter(r=>r.topic===report.topic).slice(0,4);
+    if(related.length>0){
+      chips.innerHTML=related.map(r=>`<span class="chip"><span class="d"></span>${r.subtopic||r.topic}</span>`).join('');
+    }
+  }
+  document.querySelectorAll('.full-btn').forEach(b=>b.onclick=()=>goFocus(report));
+}
+
+/* ── focus link ── */
+function renderFocusLink(report){
+  if(!report)return;
+  const flS=document.querySelector('.focus-link .fl-s');
+  if(flS)flS.innerHTML=`This page found <b style="color:var(--cyan-3)">${topicLabel(report)}</b> as your weakest area. Focus Practice turns it into a step-by-step study plan. Tap to start.`;
+  const fl=document.querySelector('.focus-link');
+  if(fl)fl.onclick=()=>goFocus(report);
+}
+
+/* ── AI rec ── */
+function renderAIRec(top,second){
+  const airec=document.querySelector('.airec .ai-body p');
+  if(!airec||!top)return;
+  airec.innerHTML=`Spend <b>3 days on ${topicLabel(top)}</b>${second?' before moving to '+topicLabel(second):''} — it has the highest priority and the biggest score impact right now.`;
+}
+
+/* ── focus navigation ── */
+function goFocus(report){
+  if(report){
+    const p=new URLSearchParams();
+    if(report.topic)p.set('topic',report.topic);
+    if(report.subtopic)p.set('subtopic',report.subtopic);
+    window.location.href='focus.html?'+p.toString();
+  } else {
+    window.location.href='focus.html';
+  }
+}
+
+/* ── generate button ── */
+document.getElementById('genBtn').addEventListener('click',async()=>{
+  const btn=document.getElementById('genBtn');
+  const lbl=document.getElementById('genBtnLbl');
+  btn.classList.add('spin');btn.disabled=true;
+  if(lbl) lbl.textContent='Regenerating…';
+  await loadData(true); // forceRegen=true
+  btn.classList.remove('spin');btn.disabled=false;
+  if(lbl) lbl.textContent='Refresh Analysis';
+  document.getElementById('updatedAt').textContent=ts();
 });
 
-// ===== BOOT =====
-loadData().then(data => {
-  // store weaknesses for modal after render populates them
-}).catch(() => renderEmpty());
+/* ── modal ── */
+const modalOv=document.getElementById('modalOv');
+function openModal(report,mPct,mastery){
+  currentModalReport=report;
+  const p=getPri(report);
+  document.getElementById('mTitle').textContent=topicLabel(report);
+  document.getElementById('mPct').textContent='Mastery '+(mPct!==null?mPct+'%':'—');
+  const pri=document.getElementById('mPri');pri.className='pri '+p;pri.innerHTML='<span class="pd"></span>Priority: '+priLabel(p);
+  const topicSigs=allSignals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic));
+  const mistakes=topicSigs.filter(s=>s.signal_type==='topic'&&s.weight>0.4).slice(0,4);
+  document.getElementById('mMistakes').innerHTML=mistakes.length
+    ?mistakes.map(s=>`<div class="m-item mistake"><span class="mi-ic">✕</span>Low confidence on ${s.subtopic||s.topic||'this topic'}</div>`).join('')
+    :'<div class="m-item"><span class="mi-ic">›</span>Practice more questions to identify specific mistakes</div>';
+  document.getElementById('mLessons').innerHTML=`<div class="m-item"><span class="mi-ic">›</span>${topicLabel(report)} — Core concepts</div><div class="m-item"><span class="mi-ic">›</span>${topicLabel(report)} — Problem-solving strategies</div>`;
+  document.getElementById('mSets').innerHTML=`<div class="m-item"><span class="mi-ic">›</span>${report.topic||'Topic'} Starter — 15 Qs</div><div class="m-item"><span class="mi-ic">›</span>${report.topic||'Topic'} Drill — 20 Qs</div>`;
+  const impPct=mPct!==null&&mPct<80?'+'+(80-mPct)+'%':'+15%';
+  document.getElementById('mImpV').textContent=impPct;
+  document.getElementById('mImpT').textContent='Potential accuracy gain with focused practice over 2 weeks.';
+  modalOv.classList.add('show');document.body.style.overflow='hidden';
+}
+function closeModal(){modalOv.classList.remove('show');document.body.style.overflow='';}
+document.getElementById('mClose').addEventListener('click',closeModal);
+modalOv.addEventListener('click',e=>{if(e.target===modalOv)closeModal();});
+document.getElementById('mCta').addEventListener('click',()=>{closeModal();goFocus(currentModalReport);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+/* ── start ── */
+init();
 </script>
 </body>
 </html>
