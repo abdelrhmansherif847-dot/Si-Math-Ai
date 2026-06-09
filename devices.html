@@ -160,12 +160,27 @@ function showAlert(type, msg) {
 async function registerCurrentDevice(userId) {
   const fp = getDeviceFingerprint();
   const info = getDeviceInfo();
+  const now = new Date().toISOString();
+
   const existing = await sb.from('user_devices')
     .select('id')
     .eq('user_id', userId)
     .eq('device_fingerprint', fp)
     .single();
+
   if (!existing.data) {
+    // Ask the DB function if registration is allowed (backend enforcement)
+    const { data: allowed, error: fnErr } = await sb.rpc('can_register_device', {
+      p_user_id: userId,
+      p_fingerprint: fp
+    });
+
+    if (fnErr || !allowed) {
+      // Device limit reached — show warning but don't block page load
+      showAlert('warn', 'Device limit reached for your plan. Remove an existing device to register this one, or upgrade to Pro.');
+      return fp;
+    }
+
     await sb.from('user_devices').insert({
       user_id: userId,
       device_fingerprint: fp,
@@ -173,10 +188,13 @@ async function registerCurrentDevice(userId) {
       browser: info.browser,
       os_name: info.os_name,
       is_active: true,
-      last_seen: new Date().toISOString()
+      last_seen: now,
+      last_active: now
     });
   } else {
-    await sb.from('user_devices').update({ last_seen: new Date().toISOString(), is_active: true })
+    // Existing device — always allowed to update last seen
+    await sb.from('user_devices')
+      .update({ last_seen: now, last_active: now, is_active: true })
       .eq('id', existing.data.id);
   }
   return fp;

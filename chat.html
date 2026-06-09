@@ -1346,6 +1346,7 @@ button{font-family:inherit;cursor:pointer}
     askAI(apiText, sig, imgToSend).then(response => {
       removeTyping();
       addAI(sig, response);
+      awardChatXP();
     }).catch(err => {
       removeTyping();
       showError(err && err.message ? err.message : 'Could not reach Zero. Please try again.');
@@ -1353,6 +1354,75 @@ button{font-family:inherit;cursor:pointer}
       isSending = false;
       sendBtn.disabled = false;
     });
+  }
+
+  const RANK_THRESHOLDS = [
+    { name: 'Elite Scholar', min: 2500 }, { name: 'Master', min: 1500 },
+    { name: 'Expert', min: 1000 }, { name: 'Scholar', min: 600 },
+    { name: 'Solver', min: 300 }, { name: 'Learner', min: 100 }, { name: 'Beginner', min: 0 }
+  ];
+  function getRankName(xp) {
+    for (const r of RANK_THRESHOLDS) if (xp >= r.min) return r.name;
+    return 'Beginner';
+  }
+
+  async function awardChatXP() {
+    if (!currentUser) return;
+    try {
+      const { data: profile } = await sb.from('profiles')
+        .select('xp, rank_name')
+        .eq('id', currentUser.id)
+        .single();
+      const currentXP = profile?.xp || 0;
+      const newXP = currentXP + 5;
+      const newRank = getRankName(newXP);
+      await sb.from('profiles').update({ xp: newXP, rank_name: newRank }).eq('id', currentUser.id);
+
+      // Check first_question achievement
+      const { count: qCount } = await sb.from('question_records')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', currentUser.id);
+      if (qCount === 1) {
+        await sb.from('achievements').upsert({
+          user_id: currentUser.id,
+          achievement_key: 'first_question',
+          name: 'First Question',
+          description: 'Asked your first question to the AI Tutor',
+          earned_at: new Date().toISOString()
+        }, { onConflict: 'user_id,achievement_key', ignoreDuplicates: true });
+      }
+
+      // Check 100_questions achievement
+      if (qCount === 100) {
+        await sb.from('achievements').upsert({
+          user_id: currentUser.id,
+          achievement_key: 'questions_100',
+          name: '100 Questions Solved',
+          description: 'Asked 100 questions to the AI Tutor',
+          earned_at: new Date().toISOString()
+        }, { onConflict: 'user_id,achievement_key', ignoreDuplicates: true });
+        showXpToast('+5 XP · 🏅 100 Questions Solved!');
+      } else if (getRankName(newXP) !== getRankName(currentXP)) {
+        showXpToast('+5 XP · Rank up: ' + getRankName(newXP) + '!');
+      }
+    } catch (e) {
+      // XP is non-critical; never block the chat on XP errors
+    }
+  }
+
+  let xpToastTimer = null;
+  function showXpToast(msg) {
+    let toast = document.getElementById('xpToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'xpToast';
+      toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#21253a;border:1px solid #6c63ff;color:#e2e8f0;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(xpToastTimer);
+    xpToastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
   }
 
   // Inline error bubble shown in the chat when the Edge Function fails

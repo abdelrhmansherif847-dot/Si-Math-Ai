@@ -183,12 +183,33 @@ async function submitUpgrade() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
 
-  // Save upgrade request to Supabase (using subscriptions table or a simple note in profiles)
+  const now = new Date().toISOString();
+  const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  // 1. Mark profile as pending upgrade
   await sb.from('profiles').update({
     upgrade_requested: true,
     upgrade_note: note || null,
-    upgrade_requested_at: new Date().toISOString()
+    upgrade_requested_at: now
   }).eq('id', currentUser.id);
+
+  // 2. Deactivate any prior pending subscriptions for this user
+  await sb.from('subscriptions')
+    .update({ active: false, status: 'inactive' })
+    .eq('user_id', currentUser.id)
+    .eq('status', 'pending');
+
+  // 3. Insert a pending subscription record so admin can activate it
+  await sb.from('subscriptions').insert({
+    user_id: currentUser.id,
+    plan_type: 'PRO_MONTHLY',
+    active: false,
+    status: 'pending',
+    start_date: now,
+    end_date: periodEnd,
+    current_period_end: periodEnd,
+    credits_remaining: 0
+  });
 
   document.getElementById('upgradeForm').style.display = 'none';
   document.getElementById('upgradeSuccess').style.display = 'block';
@@ -205,9 +226,10 @@ async function loadPage() {
   if (authErr || !user) { window.location.href = 'index.html'; return; }
   currentUser = user;
 
-  const [profileRes, subRes, chatRes, examRes, analysisRes, deviceRes] = await Promise.all([
-    sb.from('profiles').select('plan,xp,rank_name,upgrade_requested').eq('id', user.id).single(),
-    sb.from('subscriptions').select('*').eq('user_id', user.id).eq('status', 'active').single(),
+  const [profileRes, subRes, pendingSubRes, chatRes, examRes, analysisRes, deviceRes] = await Promise.all([
+    sb.from('profiles').select('plan,xp,rank_name,upgrade_requested,upgrade_requested_at').eq('id', user.id).single(),
+    sb.from('subscriptions').select('*').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).single(),
+    sb.from('subscriptions').select('id,status,created_at').eq('user_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).single(),
     sb.from('chat_sessions').select('id').eq('user_id', user.id),
     sb.from('exam_practice_sessions').select('id').eq('user_id', user.id),
     sb.from('mastery_records').select('id').eq('user_id', user.id),
@@ -217,6 +239,7 @@ async function loadPage() {
   const profile = profileRes.data || {};
   currentPlan = profile.plan || 'free';
   const sub = subRes.data;
+  const pendingSub = pendingSubRes.data;
 
   const chatCount = chatRes.data?.length || 0;
   const examCount = examRes.data?.length || 0;
@@ -233,18 +256,37 @@ async function loadPage() {
     billingInfo = `<p style="font-size:.82rem;color:var(--muted);margin-top:4px">Renews ${renewDate}</p>`;
   }
 
+  const hasPending = !!pendingSub;
+  const requestedDate = profile.upgrade_requested_at
+    ? new Date(profile.upgrade_requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+
   const planBannerClass = currentPlan === 'pro' ? 'pro' : 'free';
   const planIcon = currentPlan === 'pro' ? '⭐' : '🆓';
   const planLabel = currentPlan === 'pro' ? 'Pro Plan' : 'Free Plan';
 
-  let html = `
+  let html = '';
+
+  // Pending upgrade notice
+  if (hasPending && currentPlan !== 'pro') {
+    html += `
+  <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:center">
+    <span style="font-size:1.3rem">⏳</span>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:.9rem;color:#f59e0b">Upgrade Request Pending</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:2px">Submitted ${requestedDate} · We'll activate your Pro plan and email you within 24 hours.</div>
+    </div>
+  </div>`;
+  }
+
+  html += `
   <div class="current-plan-banner ${planBannerClass}">
     <div>
       <div class="plan-title">${planIcon} Your Current Plan: ${planLabel}</div>
-      <div class="plan-sub">${currentPlan === 'pro' ? 'You have full access to all Pro features.' : 'Upgrade to Pro for more devices and priority features.'}</div>
+      <div class="plan-sub">${currentPlan === 'pro' ? 'You have full access to all Pro features.' : hasPending ? 'Pro upgrade pending — check your email.' : 'Upgrade to Pro for more devices and priority features.'}</div>
       ${billingInfo}
     </div>
-    ${currentPlan === 'free' ? `<button class="btn btn-primary" style="width:auto;padding:10px 20px" onclick="openModal()">⭐ Upgrade to Pro</button>` : ''}
+    ${currentPlan === 'free' && !hasPending ? `<button class="btn btn-primary" style="width:auto;padding:10px 20px" onclick="openModal()">⭐ Upgrade to Pro</button>` : ''}
   </div>
 
   <!-- Plans comparison -->
