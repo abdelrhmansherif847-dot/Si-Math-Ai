@@ -209,6 +209,23 @@ button{font-family:inherit;cursor:pointer}
 .airec .ai-result .arr.r1 b{color:var(--cyan)}
 .airec .ai-result .arr.r2 b{color:var(--green)}
 
+/* task 3-state toggle */
+.task-toggle{width:26px;height:26px;flex-shrink:0;border-radius:8px;border:2px solid var(--border-mid);background:var(--bg-elev-1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:transparent;font-size:13px;font-weight:700;user-select:none}
+.task-toggle.inprogress{background:var(--amber);border-color:var(--amber);color:#031020}
+.task-toggle.done{background:var(--green);border-color:var(--green);color:#031020}
+/* action cards */
+.act-grid{display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
+.act-card{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft)}
+.act-ic{width:34px;height:34px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.act-body{flex:1;min-width:0}
+.act-title{font-family:var(--font-display);font-weight:700;font-size:13.5px;color:#fff;margin-bottom:3px}
+.act-desc{font-size:12.5px;color:var(--text-300);line-height:1.5}
+/* time estimate banner */
+.time-banner{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--cyan-bg-soft),var(--bg-card));border:1px solid var(--cyan-border-soft);margin-bottom:24px}
+.tb-val{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--cyan);line-height:1;flex-shrink:0}
+.tb-body{flex:1;min-width:0}
+.tb-label{font-size:12px;color:var(--text-400);margin-bottom:2px}
+.tb-detail{font-size:13px;color:var(--text-200)}
 /* CTA BAR */
 .cta-bar{display:flex;flex-direction:column;gap:12px;margin-top:var(--space-7)}
 @media(min-width:560px){.cta-bar{flex-direction:row}}
@@ -430,36 +447,92 @@ function masteryColor(m) {
 }
 
 // ===== TASK GENERATION =====
-function generateTasks(sub, topic, mastery) {
+function generateTasksV2(topic, sub, mastery, improvementScore, profile, daysUntilExam) {
+  const isUrgent = daysUntilExam != null && daysUntilExam < 30;
+  const declining = improvementScore != null && improvementScore < -8;
+  const improving = improvementScore != null && improvementScore > 8;
+  let tasks;
   if (mastery < 30) {
-    return [
-      { title: 'Review ' + sub + ' concepts',          minutes: 10 },
-      { title: 'Practice easy ' + sub + ' questions',  minutes: 15 },
-      { title: 'Practice ' + sub + ' with guidance',   minutes: 15 },
-      { title: 'Check your ' + sub + ' progress',      minutes: 10 },
+    tasks = [
+      { title: 'Study ' + sub + ' fundamentals',           minutes: 10 },
+      { title: 'Practice easy ' + sub + ' questions',      minutes: 15 },
+      { title: 'Ask Zero to explain ' + sub,               minutes: 10 },
+      { title: 'Guided practice: ' + sub + ' step-by-step', minutes: 15 },
+      { title: 'Review your ' + sub + ' progress',         minutes: 10 },
     ];
   } else if (mastery < 50) {
-    return [
-      { title: 'Review ' + sub + ' core concepts',         minutes: 10 },
+    tasks = [
+      { title: 'Review ' + sub + ' core formulas',         minutes: 10 },
       { title: 'Practice medium ' + sub + ' questions',    minutes: 15 },
+      { title: 'Diagnose ' + sub + ' gaps with Zero',      minutes: 10 },
       { title: 'Practice hard ' + sub + ' questions',      minutes: 20 },
-      { title: 'Retest ' + sub + ' understanding',         minutes: 10 },
+      { title: 'Self-test: ' + sub + ' understanding',     minutes: 10 },
     ];
   } else if (mastery < 70) {
-    return [
-      { title: 'Practice medium ' + sub + ' questions',    minutes: 15 },
-      { title: 'Practice hard ' + sub + ' questions',      minutes: 20 },
+    tasks = [
+      { title: 'Timed drill: ' + sub + ' questions',       minutes: 15 },
       { title: 'Mixed ' + topic + ' practice',             minutes: 20 },
-      { title: 'Retest ' + sub + ' understanding',         minutes: 10 },
+      { title: 'Ask Zero for ' + sub + ' exam tips',       minutes: 10 },
+      { title: 'Practice hard ' + sub + ' questions',      minutes: 20 },
+      { title: 'Exam-style ' + sub + ' section',           minutes: 15 },
     ];
   } else {
-    return [
-      { title: 'Advanced ' + sub + ' practice',                   minutes: 20 },
-      { title: 'Mixed ' + topic + ' practice',                    minutes: 20 },
-      { title: 'Assess ' + sub + ' mastery',                      minutes: 10 },
-      { title: 'Challenge: advanced ' + topic + ' problems',      minutes: 20 },
+    tasks = [
+      { title: 'Advanced ' + sub + ' challenge',           minutes: 20 },
+      { title: 'Exam-style ' + topic + ' section',         minutes: 20 },
+      { title: 'Mini mastery test: ' + sub,                minutes: 10 },
+      { title: 'Teach back ' + sub + ' to Zero',           minutes: 15 },
     ];
   }
+  if (declining) tasks.unshift({ title: 'Foundation review: ' + sub + ' basics', minutes: 10 });
+  if (improving) tasks.push({ title: 'Consolidate: connect ' + sub + ' to ' + topic, minutes: 10 });
+  if (isUrgent) tasks = tasks.slice(0, 3);
+  return tasks;
+}
+
+// ===== TIME-TO-IMPROVE =====
+function estimatedTimeToImprove(mastery, improvementScore, profile) {
+  const sessPerWeek = (profile && profile.study_sessions_per_week) || 3;
+  const base = mastery < 30 ? 24 : mastery < 50 ? 16 : mastery < 70 ? 10 : 5;
+  const mult = improvementScore > 8 ? 0.75 : improvementScore < -8 ? 1.35 : 1.0;
+  const sessNeeded = Math.round(base * mult);
+  const weeks = Math.max(1, Math.round(sessNeeded / sessPerWeek));
+  return { weeks, sessNeeded, sessPerWeek };
+}
+
+// ===== RECOMMENDED ACTIONS =====
+function getRecommendedActions(sub, topic, mastery) {
+  if (mastery < 30) return [
+    { icon: '🧱', title: 'Build the Foundation', desc: 'Start with core definitions and basic rules for ' + sub + '. Don\'t skip steps.' },
+    { icon: '💬', title: 'Chat with Zero', desc: 'Ask Zero to walk through ' + sub + ' with worked examples tailored to your level.' },
+    { icon: '📋', title: 'Easy Question Sets', desc: 'Do easy ' + sub + ' questions until you feel confident before moving up.' },
+  ];
+  if (mastery < 50) return [
+    { icon: '🔍', title: 'Diagnose Your Gaps', desc: 'Ask Zero which parts of ' + sub + ' you keep getting wrong. Find the pattern.' },
+    { icon: '📘', title: 'Review Core Formulas', desc: 'Make sure all key ' + sub + ' formulas are memorized and you can apply them cold.' },
+    { icon: '⚡', title: 'Medium Practice Sets', desc: 'Build stamina with medium-difficulty ' + sub + ' questions until accuracy is stable.' },
+  ];
+  if (mastery < 70) return [
+    { icon: '⏱️', title: 'Timed Practice Drills', desc: 'Do timed sets of ' + sub + ' questions to build exam-speed accuracy.' },
+    { icon: '🎯', title: 'Attack Hard Questions', desc: 'Push into harder ' + sub + ' problems — that\'s the band you need to crack.' },
+    { icon: '🔄', title: 'Mixed Topic Practice', desc: 'Combine ' + topic + ' subtopics so you can switch context fast on exam day.' },
+  ];
+  return [
+    { icon: '🏆', title: 'Advanced Challenges', desc: 'Seek the hardest ' + sub + ' questions available. You\'re close to mastery.' },
+    { icon: '📝', title: 'Exam Simulation', desc: 'Practice full timed exam sections that include ' + sub + ' under real conditions.' },
+    { icon: '🗣️', title: 'Teach It Back to Zero', desc: 'Explain ' + sub + ' back to Zero. Teaching exposes hidden gaps you didn\'t know you had.' },
+  ];
+}
+
+// ===== RECOMMENDED RESOURCES =====
+function getRecommendedResources(topic, sub, mastery) {
+  const diff = mastery < 50 ? 'easy' : mastery < 70 ? 'medium' : 'hard';
+  const base = 'chat.html?topic=' + encodeURIComponent(topic) + '&subtopic=' + encodeURIComponent(sub);
+  return [
+    { label: 'Practice with Zero — ' + sub, url: base + '&difficulty=' + diff, tag: 'AI Tutor', rank: 'si' },
+    { label: 'Quiz mode — ' + diff + ' level', url: base + '&difficulty=' + diff + '&mode=quiz', tag: 'Quiz', rank: 'si' },
+    { label: 'View Weakness Analysis', url: 'weakness.html', tag: 'Analysis', rank: 'si' },
+  ];
 }
 
 // ===== SESSION OPTIONS =====
@@ -471,26 +544,77 @@ function generateSessions(sessionLength) {
   ];
 }
 
-// ===== PLAN SAVE / LOAD =====
-async function savePlan(user, primaryTopic, tasks) {
+// ===== PLAN UPSERT (stable — no reshuffle) =====
+async function upsertPlan(user, primaryTopic, newTaskDefs) {
+  const title = 'Focus Plan: ' + primaryTopic.sub;
+  const { data: existing } = await sb.from('focus_plans')
+    .select('id').eq('user_id', user.id).eq('title', title).eq('status', 'ACTIVE')
+    .order('generated_date', { ascending: false }).limit(1).maybeSingle();
+
+  if (existing) {
+    const { data: exTasks } = await sb.from('focus_tasks')
+      .select('*').eq('plan_id', existing.id).order('priority');
+    const tasks = exTasks || [];
+    const doneCount = tasks.filter(t => t.status === 'DONE').length;
+    const pendingCount = tasks.filter(t => t.status !== 'DONE').length;
+
+    if (tasks.length > 0 && pendingCount === 0) {
+      // All done — append a fresh wave
+      const maxP = Math.max(...tasks.map(t => t.priority || 0));
+      await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
+        plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
+        task_title: t.title, priority: maxP + i + 1, estimated_minutes: t.minutes, status: 'NOT_STARTED'
+      })));
+      const { data: updated } = await sb.from('focus_tasks').select('*').eq('plan_id', existing.id).order('priority');
+      return updated || tasks;
+    }
+
+    if (doneCount >= 1 && pendingCount <= 2) {
+      // Near done — append harder tasks (second half of new set)
+      const harder = newTaskDefs.slice(Math.floor(newTaskDefs.length / 2));
+      const maxP = Math.max(...tasks.map(t => t.priority || 0));
+      if (harder.length > 0) {
+        await sb.from('focus_tasks').insert(harder.map((t, i) => ({
+          plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
+          task_title: t.title + ' (Advanced)', priority: maxP + i + 1, estimated_minutes: t.minutes, status: 'NOT_STARTED'
+        })));
+      }
+      const { data: updated } = await sb.from('focus_tasks').select('*').eq('plan_id', existing.id).order('priority');
+      return updated || tasks;
+    }
+
+    // Stable — return as-is
+    return tasks;
+  }
+
+  // Create new plan
   const { data: plan } = await sb.from('focus_plans').insert({
-    user_id: user.id,
-    title: 'Focus Plan: ' + primaryTopic.sub,
+    user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],
-    biggest_weakness_topic: primaryTopic.topic,
-    status: 'ACTIVE'
+    biggest_weakness_topic: primaryTopic.topic, status: 'ACTIVE'
   }).select().single();
-  if (!plan) return null;
-  const taskRows = tasks.map((t, i) => ({
+  if (!plan) return newTaskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
+  await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
     plan_id: plan.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
     task_title: t.title, priority: i + 1, estimated_minutes: t.minutes, status: 'NOT_STARTED'
-  }));
-  await sb.from('focus_tasks').insert(taskRows);
-  return plan.id;
+  })));
+  const { data: newTasks } = await sb.from('focus_tasks').select('*').eq('plan_id', plan.id).order('priority');
+  return newTasks || [];
 }
 
-async function toggleTask(taskId, newStatus) {
-  await sb.from('focus_tasks').update({ status: newStatus }).eq('id', taskId);
+// ===== 3-STATE TASK TOGGLE =====
+async function cycleTask(taskId, currentStatus, btn, label) {
+  const next = currentStatus === 'NOT_STARTED' ? 'IN_PROGRESS'
+             : currentStatus === 'IN_PROGRESS'  ? 'DONE'
+             : 'NOT_STARTED';
+  btn.setAttribute('data-status', next);
+  btn.className = 'task-toggle' + (next === 'IN_PROGRESS' ? ' inprogress' : next === 'DONE' ? ' done' : '');
+  btn.textContent = next === 'IN_PROGRESS' ? '▶' : next === 'DONE' ? '✓' : '';
+  if (label) {
+    label.style.textDecoration = next === 'DONE' ? 'line-through' : '';
+    label.style.opacity = next === 'DONE' ? '0.5' : '';
+  }
+  if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
 }
 
 // ===== RENDER =====
@@ -504,7 +628,7 @@ function renderEmpty() {
     </div>`;
 }
 
-function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank) {
+function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank, timeToImprove) {
   const sessionLength = (profile && profile.session_length) ? profile.session_length : 45;
   const sessions      = generateSessions(sessionLength);
   const examType      = (profile && profile.exam_type)    ? profile.exam_type    : 'SAT';
@@ -562,12 +686,22 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       <p>Your personalized action plan.</p>
     </div>
 
-    <div class="plan-context" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
+    <div class="plan-context" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/></svg>${escHtml(examType)}</span>
       <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Session: <b>${sessionLength} min</b></span>
       <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Target: <b>${escHtml(String(targetScore))}</b></span>
       ${examDate ? `<span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Exam: <b>${escHtml(fmtDate(examDate))}</b></span>` : ''}
     </div>
+
+    ${timeToImprove ? `
+    <div class="time-banner">
+      <div style="width:42px;height:42px;flex-shrink:0;border-radius:var(--r-sm);background:var(--cyan-bg-med);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-size:20px">⏱️</div>
+      <div class="tb-body">
+        <div class="tb-label">Estimated Time To Improve</div>
+        <div class="tb-val">${timeToImprove.weeks} week${timeToImprove.weeks !== 1 ? 's' : ''}</div>
+        <div class="tb-detail">${timeToImprove.sessNeeded} sessions × ${sessionLength} min · ${escHtml(primaryTopic.trendIcon)} <b>${escHtml(primaryTopic.trend)}</b></div>
+      </div>
+    </div>` : ''}
 
     <div class="sec-label">Primary Mission</div>
     <section class="rx" style="margin-bottom:24px">
@@ -604,7 +738,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
         ${primaryTopic.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('')}
       </ul>
       ${primaryTopic.avgConf != null ? `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:20px">
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:20px;flex-wrap:wrap">
         <div>
           <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Avg Confidence</div>
           <div style="font-size:16px;font-weight:700;color:${primaryTopic.avgConf < 3 ? 'var(--red)' : primaryTopic.avgConf < 4 ? 'var(--amber)' : 'var(--green)'}">${primaryTopic.avgConf.toFixed(1)} / 5</div>
@@ -620,14 +754,42 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       </div>` : ''}
     </div>
 
+    <div class="sec-label">Recommended Actions</div>
+    <div class="act-grid">
+      ${getRecommendedActions(primaryTopic.sub, primaryTopic.topic, m).map(a => `
+      <div class="act-card">
+        <div class="act-ic">${escHtml(a.icon)}</div>
+        <div class="act-body">
+          <div class="act-title">${escHtml(a.title)}</div>
+          <div class="act-desc">${escHtml(a.desc)}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+
+    <div class="sec-label">Recommended Resources</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;overflow:hidden;margin-bottom:24px">
+      ${getRecommendedResources(primaryTopic.topic, primaryTopic.sub, m).map(r => `
+      <div class="res-item" style="padding:11px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:10px">
+        <span style="font-family:var(--font-mono);font-size:9.5px;padding:3px 8px;border-radius:100px;white-space:nowrap;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)">${escHtml(r.tag)}</span>
+        <a href="${r.url}" style="flex:1;font-size:13.5px;color:var(--text-200);text-decoration:none" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--text-200)'">${escHtml(r.label)}</a>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-500);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`).join('')}
+    </div>
+
     <div class="sec-label">Focus Tasks</div>
     <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;overflow:hidden;margin-bottom:24px">
-      ${tasks.map(t => `
+      ${tasks.map(t => {
+        const st = t.status || 'NOT_STARTED';
+        const btnCls = 'task-toggle' + (st === 'IN_PROGRESS' ? ' inprogress' : st === 'DONE' ? ' done' : '');
+        const btnTxt = st === 'IN_PROGRESS' ? '▶' : st === 'DONE' ? '✓' : '';
+        const labelStyle = st === 'DONE' ? 'flex:1;font-size:13.5px;color:var(--text-200);text-decoration:line-through;opacity:.5' : 'flex:1;font-size:13.5px;color:var(--text-200)';
+        return `
         <div class="wp-day" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-soft)">
-          <input type="checkbox" class="wp-check" data-task-id="${escHtml(String(t.id || ''))}" ${t.status === 'DONE' ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--cyan-3);cursor:pointer" />
-          <span style="flex:1;font-size:13.5px;color:var(--text-200);${t.status === 'DONE' ? 'text-decoration:line-through;opacity:.5' : ''}">${escHtml(t.task_title || t.title)}</span>
-          <span style="font-size:11px;color:var(--text-400);font-family:var(--font-mono)">${t.estimated_minutes || t.minutes} min</span>
-        </div>`).join('')}
+          <button class="${btnCls}" data-task-id="${escHtml(String(t.id || ''))}" data-status="${st}" title="Click to cycle: Not Started → In Progress → Done">${btnTxt}</button>
+          <span style="${labelStyle}" class="task-label">${escHtml(t.task_title || t.title)}</span>
+          <span style="font-size:11px;color:var(--text-400);font-family:var(--font-mono);flex-shrink:0">${t.estimated_minutes || t.minutes} min</span>
+        </div>`;
+      }).join('')}
     </div>
 
     <div class="sec-label">Session Options</div>
@@ -718,18 +880,14 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
 
   document.getElementById('pageContent').innerHTML = html;
 
-  // wire up checkboxes
-  document.querySelectorAll('.wp-check').forEach(cb => {
-    cb.addEventListener('change', async function() {
+  // wire up 3-state task toggles
+  document.querySelectorAll('.task-toggle').forEach(btn => {
+    btn.addEventListener('click', async function() {
       const taskId = this.getAttribute('data-task-id');
-      const newStatus = this.checked ? 'DONE' : 'NOT_STARTED';
+      const currentStatus = this.getAttribute('data-status') || 'NOT_STARTED';
       const row = this.closest('.wp-day');
-      const label = row ? row.querySelector('span[style*="flex:1"]') : null;
-      if (label) {
-        label.style.textDecoration = this.checked ? 'line-through' : '';
-        label.style.opacity = this.checked ? '0.5' : '';
-      }
-      if (taskId) await toggleTask(taskId, newStatus);
+      const label = row ? row.querySelector('.task-label') : null;
+      await cycleTask(taskId, currentStatus, this, label);
     });
   });
 }
@@ -768,7 +926,8 @@ function reportToProfile(report, qData) {
     strength: m >= 75, mastered: m >= 90, recentlyMastered: false,
     concepts: qData ? (qData.concepts || []) : [],
     decayScore: qData ? (qData.decayScore || 0) : 0,
-    weaknessScore: report.weakness_score, priorityRank: report.priority_rank
+    weaknessScore: report.weakness_score, priorityRank: report.priority_rank,
+    improvementScore: report.improvement_score != null ? report.improvement_score : null
   };
 }
 
@@ -952,40 +1111,32 @@ async function loadData() {
     }
   }
 
-  const taskDefs = generateTasks(primaryTopic.sub, primaryTopic.topic, primaryTopic.mastery);
+  // Compute days until exam
+  let daysUntilExam = null;
+  if (profile && profile.exam_date) {
+    const examMs = new Date(profile.exam_date).getTime() - Date.now();
+    if (!isNaN(examMs)) daysUntilExam = Math.max(0, Math.round(examMs / 86400000));
+  }
+
+  const impScore = primaryTopic.improvementScore != null ? primaryTopic.improvementScore : null;
+  const taskDefs = generateTasksV2(primaryTopic.topic, primaryTopic.sub, primaryTopic.mastery, impScore, profile, daysUntilExam);
+  const timeToImprove = estimatedTimeToImprove(primaryTopic.mastery, impScore, profile);
+
   let tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
 
   try {
-    const { data: planRow } = await sb.from('focus_plans')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('biggest_weakness_topic', primaryTopic.topic)
-      .eq('status', 'ACTIVE')
-      .order('generated_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (planRow) {
-      const { data: existingTasks } = await sb.from('focus_tasks')
-        .select('*').eq('plan_id', planRow.id).order('priority');
-      if (existingTasks && existingTasks.length > 0) tasksToRender = existingTasks;
-    } else {
-      const planId = await savePlan(user, primaryTopic, taskDefs);
-      if (planId) {
-        const { data: newTasks } = await sb.from('focus_tasks')
-          .select('*').eq('plan_id', planId).order('priority');
-        if (newTasks && newTasks.length > 0) tasksToRender = newTasks;
-      }
+    tasksToRender = await upsertPlan(user, primaryTopic, taskDefs);
+    if (!tasksToRender || tasksToRender.length === 0) {
+      tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
     }
   } catch (e) {
     console.warn('focus_plans/focus_tasks not available:', e.message);
   }
 
-  // Use weakness_reports.priority_rank if available, else position in list
   const primaryRank = primaryTopic.priorityRank
     || (weaknesses.indexOf(primaryTopic) + 1)
     || 1;
-  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank);
+  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove);
 }
 
 loadData().catch(err => {
