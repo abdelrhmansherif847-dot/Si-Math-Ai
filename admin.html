@@ -273,10 +273,19 @@ select.search-input{cursor:pointer}
 
   <!-- TAB: PENDING -->
   <div id="tab-pending">
+    <!-- Upgrade requests from students -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico amber">🙋</div>
+        <div><div class="card-title">Upgrade Requests</div><div class="card-sub">Students who submitted a payment request and are waiting for activation</div></div>
+      </div>
+      <div id="upgradeRequestsList"><div class="empty"><div class="ico">⏳</div><p>Loading…</p></div></div>
+    </div>
+    <!-- Manual PENDING payments in DB -->
     <div class="card">
       <div class="card-head">
         <div class="card-ico amber">⏳</div>
-        <div><div class="card-title">Pending Payment Queue</div><div class="card-sub">Approve or reject upgrade requests and credit pack purchases</div></div>
+        <div><div class="card-title">Pending Payment Queue</div><div class="card-sub">Manually created PENDING payment records awaiting approval</div></div>
       </div>
       <div id="pendingList"><div class="empty"><div class="ico">⏳</div><p>Loading…</p></div></div>
     </div>
@@ -338,6 +347,49 @@ select.search-input{cursor:pointer}
 
 </main>
 
+<!-- CREATE & APPROVE PAYMENT MODAL -->
+<div class="modal-bg" id="approveModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Create &amp; Approve Payment</h3>
+      <button class="modal-close" onclick="closeApproveModal()">✕</button>
+    </div>
+    <div id="approveModalBody">
+      <div class="modal-row"><span class="modal-lbl">Student</span><span class="modal-val" id="apvStudentName">—</span></div>
+      <div class="modal-row"><span class="modal-lbl">Request</span><span class="modal-val" id="apvNote" style="color:var(--amber)">—</span></div>
+      <div class="modal-sep"></div>
+      <div class="modal-subhd">Payment Details</div>
+      <div style="display:grid;gap:12px;margin-bottom:14px">
+        <div class="input-group">
+          <label>Payment Type</label>
+          <select id="apvType" class="search-input" style="padding:9px 12px;font-size:13.5px">
+            <option value="CREDIT_PACK">CREDIT_PACK</option>
+            <option value="SUBSCRIPTION">SUBSCRIPTION</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Reference ID (plan_code or pack name)</label>
+          <input type="text" id="apvRef" placeholder="e.g. pro / Basic Pack"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="input-group">
+            <label>Amount (EGP)</label>
+            <input type="number" id="apvAmount" placeholder="e.g. 250" min="0"/>
+          </div>
+          <div class="input-group">
+            <label>Credits to Grant</label>
+            <input type="number" id="apvCredits" placeholder="e.g. 500" min="1"/>
+          </div>
+        </div>
+      </div>
+      <div id="apvMsg" style="display:none;font-size:13px;padding:10px 13px;border-radius:10px;margin-bottom:12px"></div>
+      <button class="btn btn-primary" style="width:100%;padding:13px" id="apvConfirmBtn" onclick="confirmApprove()">
+        ✅ Create Payment &amp; Activate
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- USER MODAL -->
 <div class="modal-bg" id="userModal">
   <div class="modal">
@@ -385,6 +437,7 @@ async function init() {
   document.getElementById('mainContent').style.display = 'block';
   loadStats();
   loadPending();
+  loadUpgradeRequests();
 }
 
 // Sidebar
@@ -429,6 +482,118 @@ async function loadStats() {
     document.getElementById('statFounder').textContent = rem ? rem.value : '—';
     document.getElementById('statFounderSub').textContent = `of ${tot ? tot.value : '—'} total`;
   }
+}
+
+// Upgrade requests (profiles with upgrade_requested=true)
+async function loadUpgradeRequests() {
+  const { data, error } = await sb
+    .from('profiles')
+    .select('id, full_name, email, plan_code, upgrade_note, credits_balance')
+    .eq('upgrade_requested', true)
+    .order('id');
+
+  const el = document.getElementById('upgradeRequestsList');
+  if (error || !data || data.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="ico">✅</div><p>No pending upgrade requests.</p></div>';
+    return;
+  }
+  el.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Student</th><th>Request</th><th>Current Plan</th><th>Credits</th><th>Action</th></tr></thead>
+    <tbody>${data.map(u => `<tr>
+      <td><div class="bold">${esc(u.full_name || '—')}</div><div style="font-size:11.5px;color:var(--text-500)">${esc(u.email || u.id)}</div></td>
+      <td><span class="chip amber">${esc(u.upgrade_note || 'Upgrade request')}</span></td>
+      <td><span class="chip ${planChip(u.plan_code)}">${u.plan_code || 'FREE'}</span></td>
+      <td class="mono">${(u.credits_balance || 0).toLocaleString()}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-green btn-sm" onclick="openApproveModal('${u.id}','${esc(u.full_name||u.email||u.id)}','${esc(u.upgrade_note||'')}')">Create &amp; Approve</button>
+        <button class="btn btn-red btn-sm" onclick="rejectUpgradeRequest('${u.id}')">Reject</button>
+      </div></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// Create & Approve modal
+let apvUserId = null;
+function openApproveModal(userId, name, note) {
+  apvUserId = userId;
+  document.getElementById('apvStudentName').textContent = name;
+  document.getElementById('apvNote').textContent = note || 'No note provided';
+  // Auto-fill type and ref from note
+  const isPackReq = note.includes('[CREDIT PACK:');
+  document.getElementById('apvType').value = isPackReq ? 'CREDIT_PACK' : 'SUBSCRIPTION';
+  const refMatch = note.match(/\[CREDIT PACK: (.+)\]/);
+  document.getElementById('apvRef').value = refMatch ? refMatch[1] : '';
+  document.getElementById('apvAmount').value = '';
+  document.getElementById('apvCredits').value = '';
+  document.getElementById('apvMsg').style.display = 'none';
+  document.getElementById('apvConfirmBtn').disabled = false;
+  document.getElementById('apvConfirmBtn').textContent = '✅ Create Payment & Activate';
+  document.getElementById('approveModal').classList.add('show');
+}
+function closeApproveModal() { document.getElementById('approveModal').classList.remove('show'); apvUserId = null; }
+document.getElementById('approveModal').addEventListener('click', e => { if (e.target === document.getElementById('approveModal')) closeApproveModal(); });
+
+async function confirmApprove() {
+  if (!apvUserId) return;
+  const type = document.getElementById('apvType').value;
+  const ref  = document.getElementById('apvRef').value.trim();
+  const amt  = parseFloat(document.getElementById('apvAmount').value);
+  const cred = parseInt(document.getElementById('apvCredits').value);
+  const msgEl = document.getElementById('apvMsg');
+
+  const showErr = (msg) => {
+    msgEl.textContent = msg;
+    msgEl.style.display = 'block';
+    msgEl.style.background = 'rgba(239,79,95,.12)';
+    msgEl.style.border = '1px solid rgba(239,79,95,.32)';
+    msgEl.style.color = '#ef4f5f';
+  };
+
+  if (!ref) { showErr('Reference ID is required.'); return; }
+  if (isNaN(amt) || amt < 0) { showErr('Enter a valid amount (0 or more).'); return; }
+  if (isNaN(cred) || cred < 1) { showErr('Credits must be at least 1.'); return; }
+
+  const btn = document.getElementById('apvConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+  msgEl.style.display = 'none';
+
+  const { data: { session } } = await sb.auth.getSession();
+  const res = await fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({
+      action: 'create_and_approve_payment',
+      target_user_id: apvUserId,
+      payment_type: type,
+      reference_id: ref,
+      amount_egp: amt,
+      credits_to_grant: cred
+    })
+  });
+  const result = await res.json();
+  if (!res.ok || result.error) {
+    btn.disabled = false;
+    btn.textContent = '✅ Create Payment & Activate';
+    showErr('Error: ' + (result.error || 'Unknown error'));
+    return;
+  }
+
+  closeApproveModal();
+  toast(`Payment approved! ${result.credits_granted ? result.credits_granted.toLocaleString() + ' credits granted.' : ''}`, 'green');
+  loadUpgradeRequests();
+  loadPending();
+  loadStats();
+}
+
+async function rejectUpgradeRequest(userId) {
+  if (!confirm('Reject this upgrade request? The student will be notified to resubmit.')) return;
+  const { error } = await sb.from('profiles')
+    .update({ upgrade_requested: false, upgrade_note: null })
+    .eq('id', userId);
+  if (error) { toast('Error: ' + error.message, 'red'); return; }
+  toast('Request rejected', 'red');
+  loadUpgradeRequests();
 }
 
 // Pending payments
