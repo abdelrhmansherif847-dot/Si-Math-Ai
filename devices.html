@@ -2,103 +2,190 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Device Management – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1117;--surface:#1a1d27;--surface2:#21253a;--border:#2a2f45;
-  --text:#e2e8f0;--muted:#8892a4;--accent:#6c63ff;--accent2:#4ade80;
-  --warn:#f59e0b;--danger:#ef4444;--radius:12px;
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;--side-w:262px;
 }
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex}
-.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;flex-shrink:0}
-.logo{padding:0 20px 24px;font-size:1.2rem;font-weight:700;color:var(--accent)}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--muted);text-decoration:none;font-size:.9rem;transition:.15s}
-.nav-item:hover,.nav-item.active{color:var(--text);background:var(--surface2)}
-.nav-item.active{border-right:3px solid var(--accent)}
-.main{flex:1;overflow-y:auto}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
-.topbar h1{font-size:1.1rem;font-weight:600}
-.content{padding:32px;max-width:900px}
-.section{margin-bottom:32px}
-.section-title{font-size:1rem;font-weight:600;margin-bottom:16px;color:var(--text)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
-.badge-free{background:rgba(139,92,246,.15);color:#a78bfa}
-.badge-pro{background:rgba(251,191,36,.15);color:#fbbf24}
-.badge-current{background:rgba(74,222,128,.15);color:#4ade80}
-.badge-suspicious{background:rgba(239,68,68,.15);color:#ef4444}
-.plan-bar{background:var(--surface2);border-radius:8px;height:8px;overflow:hidden;margin-top:8px}
-.plan-fill{height:100%;border-radius:8px;transition:width .5s}
-.device-list{display:flex;flex-direction:column;gap:12px}
-.device-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px}
-.device-card.current-device{border-color:var(--accent);background:rgba(108,99,255,.05)}
-.device-card.suspicious{border-color:var(--danger)}
-.device-icon{font-size:2rem;flex-shrink:0}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.11),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan);cursor:pointer}
+
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:24px 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+/* Plan bar */
+.limit-display{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.limit-text{font-size:13px;color:var(--text-300)}
+.limit-count{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text-100)}
+.plan-bar{background:var(--bg-elev-1);border-radius:100px;height:7px;overflow:hidden;margin-bottom:8px}
+.plan-fill{height:100%;border-radius:100px;transition:width .5s ease}
+.plan-note{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)}
+
+/* Upgrade CTA */
+.upgrade-cta{background:linear-gradient(135deg,rgba(56,189,248,.1),var(--bg-card));border:1px solid var(--cyan-border);border-radius:var(--r-lg);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;animation:rise .5s .05s ease both;flex-wrap:wrap}
+.upgrade-cta .uc-text{flex:1}
+.upgrade-cta .uc-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;margin-bottom:4px}
+.upgrade-cta .uc-sub{font-size:13px;color:var(--text-400)}
+.btn-cyan{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:10px 20px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:13.5px;border:none;transition:all .2s;text-decoration:none;white-space:nowrap}
+.btn-cyan:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(56,189,248,.35)}
+
+/* Device cards */
+.device-list{display:flex;flex-direction:column;gap:10px}
+.device-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:16px 20px;display:flex;align-items:center;gap:16px;transition:all .2s;flex-wrap:wrap}
+.device-card:hover{border-color:var(--cyan-border-soft)}
+.device-card.current-device{border-color:var(--cyan-border);background:var(--cyan-bg-soft)}
+.device-card.suspicious{border-color:var(--red-border)}
+.device-icon{font-size:1.8rem;flex-shrink:0}
 .device-info{flex:1;min-width:0}
-.device-name{font-weight:600;font-size:.95rem;margin-bottom:4px}
-.device-meta{font-size:.8rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
-.device-meta span{display:flex;align-items:center;gap:4px}
-.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;font-weight:500;transition:.15s}
-.btn-danger{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
-.btn-danger:hover{background:rgba(239,68,68,.22)}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:#5854e0}
-.btn-muted{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.sessions-list{display:flex;flex-direction:column;gap:10px}
-.session-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px}
+.device-name{font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff;margin-bottom:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.device-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-400);display:flex;gap:14px;flex-wrap:wrap}
+.d-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:100px;font-family:var(--font-mono);font-size:10px;font-weight:600}
+.d-badge-current{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
+.d-badge-free{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
+.d-badge-pro{background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold)}
+
+/* Buttons */
+.btn-remove{padding:8px 14px;border-radius:var(--r-sm);background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);font-size:12.5px;font-weight:600;transition:all .2s}
+.btn-remove:hover{background:rgba(239,79,95,.2);transform:translateY(-1px)}
+.btn-disabled{padding:8px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-500);font-size:12.5px;cursor:not-allowed}
+
+/* Session rows */
+.sessions-list{display:flex;flex-direction:column;gap:8px}
+.session-row{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:13px 18px;display:flex;align-items:center;gap:14px;transition:all .2s;flex-wrap:wrap}
+.session-row:hover{border-color:var(--cyan-border-soft)}
 .session-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.session-dot.active{background:var(--accent2)}
-.session-dot.inactive{background:var(--muted)}
+.session-dot.active{background:var(--green);box-shadow:0 0 8px var(--green)}
+.session-dot.inactive{background:var(--text-500)}
 .session-info{flex:1;min-width:0}
-.session-name{font-size:.9rem;font-weight:500}
-.session-meta{font-size:.78rem;color:var(--muted);margin-top:2px}
-.alert{padding:14px 18px;border-radius:10px;font-size:.88rem;display:flex;gap:12px;align-items:flex-start;margin-bottom:20px}
-.alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--warn)}
-.alert-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger)}
-.alert-info{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.3);color:#a78bfa}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+.session-name{font-size:13.5px;font-weight:600;color:var(--text-200)}
+.session-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:2px}
+
+/* Alerts */
+.alert-box{padding:13px 16px;border-radius:var(--r-md);font-size:13px;display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;animation:rise .4s ease both}
+.alert-warn{background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber)}
+.alert-danger{background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}
+.alert-info{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan-3)}
+
+/* Security info */
+.sec-info-grid{display:flex;flex-direction:column;gap:14px}
+.sec-info-row{display:flex;gap:14px;align-items:flex-start}
+.sec-info-ico{font-size:1.4rem;flex-shrink:0;margin-top:1px}
+.sec-info-title{font-family:var(--font-display);font-weight:700;font-size:13.5px;color:#fff;margin-bottom:3px}
+.sec-info-desc{font-size:12.5px;color:var(--text-400);line-height:1.5}
+
+.empty-card{text-align:center;padding:32px;color:var(--text-400);font-family:var(--font-mono);font-size:12px}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-400)}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:40px;color:var(--muted);font-size:.9rem}
-.limit-display{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.limit-text{font-size:.85rem;color:var(--muted)}
-.limit-count{font-size:.85rem;font-weight:600}
-.upgrade-cta{background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(74,222,128,.1));border:1px solid var(--accent);border-radius:var(--radius);padding:20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.upgrade-cta .text{flex:1}
-.upgrade-cta .title{font-weight:600;margin-bottom:4px}
-.upgrade-cta .sub{font-size:.85rem;color:var(--muted)}
 </style>
 </head>
 <body>
-<nav class="sidebar">
-  <div class="logo">⚡ Si Math AI</div>
-  <a href="dashboard.html" class="nav-item">🏠 Dashboard</a>
-  <a href="chat.html" class="nav-item">💬 AI Tutor</a>
-  <a href="focus.html" class="nav-item">🎯 Focus Practice</a>
-  <a href="mock-exam.html" class="nav-item">📝 Mock Exam</a>
-  <a href="weakness.html" class="nav-item">📊 Weakness Analyzer</a>
-  <a href="history.html" class="nav-item">📅 History</a>
-  <a href="devices.html" class="nav-item active">🔒 Devices</a>
-  <a href="profile.html" class="nav-item">👤 Profile</a>
-  <a href="pricing.html" class="nav-item">💎 Plans</a>
-</nav>
-<div class="main">
-  <div class="topbar">
-    <h1>🔒 Device Management</h1>
-    <div id="planBadge"></div>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="dashboard.html">
+    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <div class="top-avatar" id="topAvatar">?</div>
+    <div id="planBadgeTop" style="font-family:var(--font-mono);font-size:11px"></div>
   </div>
-  <div class="content">
-    <div id="alerts"></div>
-    <div id="pageContent"><div class="empty"><div class="spinner"></div><br>Loading devices…</div></div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
+  <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
+  <a class="nav-item" href="history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item active" href="devices.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<main class="main">
+  <div id="alerts"></div>
+  <div id="pageContent">
+    <div class="empty-state"><div class="spin"></div><br>Loading devices…</div>
   </div>
-</div>
+</main>
+
 <script>
 const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Sidebar toggle
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+document.getElementById('hamb').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
 const PLAN_LIMITS = { free: 2, pro: 3 };
 
@@ -152,7 +239,7 @@ function relTime(ts) {
 
 function showAlert(type, msg) {
   const div = document.createElement('div');
-  div.className = `alert alert-${type}`;
+  div.className = `alert-box alert-${type}`;
   div.innerHTML = `<span>${type === 'danger' ? '⚠️' : type === 'warn' ? '⚡' : 'ℹ️'}</span><span>${msg}</span>`;
   document.getElementById('alerts').appendChild(div);
 }
@@ -217,12 +304,16 @@ async function loadPage() {
   const { data: { user }, error: authErr } = await sb.auth.getUser();
   if (authErr || !user) { window.location.href = 'index.html'; return; }
 
+  const initials = (user.email || '?')[0].toUpperCase();
+  document.getElementById('topAvatar').textContent = initials;
+
   const { data: profile } = await sb.from('profiles').select('plan,xp,rank_name').eq('id', user.id).single();
   const plan = profile?.plan || 'free';
   const limit = PLAN_LIMITS[plan] || 2;
 
-  document.getElementById('planBadge').innerHTML =
-    `<span class="badge badge-${plan}">${plan === 'pro' ? '⭐ Pro' : '🆓 Free'}</span>`;
+  document.getElementById('planBadgeTop').innerHTML = plan === 'pro'
+    ? `<span style="background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold);padding:3px 10px;border-radius:100px">⭐ Pro</span>`
+    : `<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan);padding:3px 10px;border-radius:100px">Free</span>`;
 
   const currentFp = await registerCurrentDevice(user.id);
 
@@ -236,7 +327,6 @@ async function loadPage() {
 
   document.getElementById('alerts').innerHTML = '';
 
-  // Suspicious detection: >2 different countries or >limit devices
   if (devices.length > limit) {
     showAlert('danger', `You have ${devices.length} active devices but your ${plan} plan allows ${limit}. Please remove old devices to stay within your limit.`);
   }
@@ -244,7 +334,6 @@ async function loadPage() {
   const html = buildHTML(devices, sessions, plan, limit, currentFp, user);
   document.getElementById('pageContent').innerHTML = html;
 
-  // Attach remove handlers
   document.querySelectorAll('.btn-remove-device').forEach(btn => {
     btn.addEventListener('click', () => removeDevice(btn.dataset.id, user.id));
   });
@@ -256,64 +345,68 @@ async function loadPage() {
 function buildHTML(devices, sessions, plan, limit, currentFp, user) {
   const used = devices.length;
   const pct = Math.min(100, (used / limit) * 100);
-  const fillColor = pct >= 100 ? 'var(--danger)' : pct >= 75 ? 'var(--warn)' : 'var(--accent)';
+  const fillColor = pct >= 100 ? 'var(--red)' : pct >= 75 ? 'var(--amber)' : 'var(--cyan)';
 
   let html = `
-  <div class="section">
-    <div class="section-title">Device Usage</div>
-    <div class="card">
-      <div class="limit-display">
-        <span class="limit-text">${plan === 'pro' ? '⭐ Pro Plan' : '🆓 Free Plan'} — ${limit} device${limit>1?'s':''} allowed</span>
-        <span class="limit-count">${used} / ${limit} used</span>
-      </div>
-      <div class="plan-bar"><div class="plan-fill" style="width:${pct}%;background:${fillColor}"></div></div>
-      <p style="font-size:.8rem;color:var(--muted);margin-top:8px">Each browser profile on a different physical device counts as one device.</p>
+  <div class="sec-label" style="margin-top:0">Device Usage</div>
+  <div class="card">
+    <div class="limit-display">
+      <span class="limit-text">${plan === 'pro' ? '⭐ Pro Plan' : '🆓 Free Plan'} — ${limit} device${limit>1?'s':''} allowed</span>
+      <span class="limit-count" style="color:${fillColor}">${used} / ${limit}</span>
     </div>
+    <div class="plan-bar"><div class="plan-fill" style="width:${pct}%;background:${fillColor};box-shadow:0 0 8px ${fillColor}66"></div></div>
+    <p class="plan-note">Each browser profile on a different physical device counts as one device.</p>
   </div>`;
 
-  if (plan === 'free' && limit === 2) {
+  if (plan === 'free') {
     html += `
-  <div class="section">
-    <div class="upgrade-cta">
-      <div class="text">
-        <div class="title">⭐ Upgrade to Pro — 3 Devices</div>
-        <div class="sub">Access Si Math AI on all your devices: laptop, tablet, phone.</div>
-      </div>
-      <a href="pricing.html" class="btn btn-primary">View Plans</a>
+  <div class="upgrade-cta" style="margin-top:14px">
+    <div class="uc-text">
+      <div class="uc-title">⭐ Upgrade to Pro — 3 Devices</div>
+      <div class="uc-sub">Access Si Math AI on your laptop, tablet, and phone simultaneously.</div>
     </div>
+    <a href="pricing.html" class="btn-cyan">View Plans</a>
   </div>`;
   }
 
-  html += `<div class="section"><div class="section-title">Active Devices (${used})</div><div class="device-list">`;
+  html += `
+  <div class="sec-label">Active Devices (${used})</div>
+  <div class="device-list">`;
 
   if (devices.length === 0) {
-    html += `<div class="empty">No devices found.</div>`;
+    html += `<div class="empty-card">No active devices found.</div>`;
   } else {
     devices.forEach(d => {
       const isCurrent = d.device_fingerprint === currentFp;
-      const info = { icon: /Android|iOS/.test(d.os_name || '') ? '📱' : /macOS/.test(d.os_name || '') ? '🍎' : '💻' };
+      const osIcon = /Android|iOS/.test(d.os_name || '') ? '📱' : /macOS/.test(d.os_name || '') ? '🍎' : '💻';
       html += `
       <div class="device-card${isCurrent ? ' current-device' : ''}">
-        <div class="device-icon">${info.icon}</div>
+        <div class="device-icon">${osIcon}</div>
         <div class="device-info">
-          <div class="device-name">${escHtml(d.device_name || 'Unknown Device')} ${isCurrent ? '<span class="badge badge-current">This Device</span>' : ''}</div>
+          <div class="device-name">
+            ${escHtml(d.device_name || 'Unknown Device')}
+            ${isCurrent ? '<span class="d-badge d-badge-current">This Device</span>' : ''}
+          </div>
           <div class="device-meta">
             <span>🌐 ${escHtml(d.browser || '?')}</span>
             <span>💻 ${escHtml(d.os_name || '?')}</span>
-            <span>🕐 Last seen ${relTime(d.last_seen)}</span>
+            <span>🕐 ${relTime(d.last_seen)}</span>
             ${d.ip_address ? `<span>📍 ${escHtml(d.ip_address)}</span>` : ''}
           </div>
         </div>
-        ${!isCurrent ? `<button class="btn btn-danger btn-remove-device" data-id="${d.id}">Remove</button>` : `<button class="btn btn-muted" disabled>Current</button>`}
+        ${!isCurrent
+          ? `<button class="btn-remove btn-remove-device" data-id="${d.id}">Remove</button>`
+          : `<button class="btn-disabled" disabled>Current</button>`}
       </div>`;
     });
   }
-  html += `</div></div>`;
+  html += `</div>`;
 
-  // Sessions
-  html += `<div class="section"><div class="section-title">Active Sessions (${sessions.length})</div>`;
+  html += `
+  <div class="sec-label">Active Sessions (${sessions.length})</div>`;
+
   if (sessions.length === 0) {
-    html += `<div class="card"><p style="color:var(--muted);font-size:.88rem">No active sessions tracked.</p></div>`;
+    html += `<div class="card"><p style="color:var(--text-400);font-family:var(--font-mono);font-size:12px">No active sessions tracked.</p></div>`;
   } else {
     html += `<div class="sessions-list">`;
     sessions.forEach(s => {
@@ -324,37 +417,35 @@ function buildHTML(devices, sessions, plan, limit, currentFp, user) {
           <div class="session-name">${escHtml(s.session_type || 'Web Session')}</div>
           <div class="session-meta">Started ${relTime(s.created_at)} · Last active ${relTime(s.last_activity)}</div>
         </div>
-        <button class="btn btn-danger btn-revoke-session" data-id="${s.id}">End</button>
+        <button class="btn-remove btn-revoke-session" data-id="${s.id}">End</button>
       </div>`;
     });
     html += `</div>`;
   }
-  html += `</div>`;
 
-  // Security info
   html += `
-  <div class="section">
-    <div class="section-title">Security Information</div>
-    <div class="card" style="display:flex;flex-direction:column;gap:14px">
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <span style="font-size:1.3rem">🔐</span>
+  <div class="sec-label">Security Information</div>
+  <div class="card">
+    <div class="sec-info-grid">
+      <div class="sec-info-row">
+        <div class="sec-info-ico">🔐</div>
         <div>
-          <div style="font-weight:600;margin-bottom:4px">Device Fingerprinting</div>
-          <div style="font-size:.82rem;color:var(--muted)">We identify devices using browser, OS, and screen signature. No personal hardware data is stored.</div>
+          <div class="sec-info-title">Device Fingerprinting</div>
+          <div class="sec-info-desc">We identify devices using browser, OS, and screen signature. No personal hardware data is stored.</div>
         </div>
       </div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <span style="font-size:1.3rem">⚠️</span>
+      <div class="sec-info-row">
+        <div class="sec-info-ico">⚠️</div>
         <div>
-          <div style="font-weight:600;margin-bottom:4px">Account Sharing Detection</div>
-          <div style="font-size:.82rem;color:var(--muted)">Simultaneous logins from more devices than your plan allows will be flagged. Excess devices will need to be removed.</div>
+          <div class="sec-info-title">Account Sharing Detection</div>
+          <div class="sec-info-desc">Simultaneous logins from more devices than your plan allows will be flagged. Excess devices will need to be removed.</div>
         </div>
       </div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <span style="font-size:1.3rem">📧</span>
+      <div class="sec-info-row">
+        <div class="sec-info-ico">📧</div>
         <div>
-          <div style="font-weight:600;margin-bottom:4px">Suspicious Activity</div>
-          <div style="font-size:.82rem;color:var(--muted)">If you notice a device you don't recognize, remove it immediately and change your password. Contact support if needed.</div>
+          <div class="sec-info-title">Suspicious Activity</div>
+          <div class="sec-info-desc">If you notice a device you don't recognize, remove it immediately and change your password. Contact support if needed.</div>
         </div>
       </div>
     </div>

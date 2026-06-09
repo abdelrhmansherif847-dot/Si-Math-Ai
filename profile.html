@@ -2,97 +2,179 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Profile – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1117;--surface:#1a1d27;--surface2:#21253a;--border:#2a2f45;
-  --text:#e2e8f0;--muted:#8892a4;--accent:#6c63ff;--accent2:#4ade80;
-  --warn:#f59e0b;--danger:#ef4444;--radius:12px;
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;--side-w:262px;
 }
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex}
-.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;flex-shrink:0}
-.logo{padding:0 20px 24px;font-size:1.2rem;font-weight:700;color:var(--accent)}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--muted);text-decoration:none;font-size:.9rem;transition:.15s}
-.nav-item:hover,.nav-item.active{color:var(--text);background:var(--surface2)}
-.nav-item.active{border-right:3px solid var(--accent)}
-.nav-spacer{flex:1}
-.nav-item.signout{color:var(--danger)}
-.nav-item.signout:hover{background:rgba(239,68,68,.1)}
-.main{flex:1;overflow-y:auto}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
-.topbar h1{font-size:1.1rem;font-weight:600}
-.content{padding:32px;max-width:900px}
-.profile-hero{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;align-items:center;gap:24px;margin-bottom:28px}
-.avatar{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;border:3px solid var(--accent)}
-.hero-info{flex:1}
-.hero-name{font-size:1.3rem;font-weight:700;margin-bottom:4px}
-.hero-email{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.11),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan);cursor:pointer}
+
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+
+.card{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:28px 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+/* Profile hero */
+.profile-hero{background:linear-gradient(135deg,rgba(56,189,248,.1),var(--bg-card));border:1px solid var(--cyan-border);border-radius:var(--r-xl);padding:28px;display:flex;align-items:center;gap:24px;margin-bottom:8px;animation:rise .5s ease both;flex-wrap:wrap}
+.hero-avatar{width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;border:2px solid var(--cyan-border);box-shadow:0 0 24px rgba(56,189,248,.2)}
+.hero-info{flex:1;min-width:0}
+.hero-name{font-family:var(--font-display);font-weight:800;font-size:clamp(18px,4vw,24px);color:#fff;margin-bottom:3px}
+.hero-email{font-family:var(--font-mono);font-size:12px;color:var(--text-400);margin-bottom:12px}
 .hero-badges{display:flex;gap:8px;flex-wrap:wrap}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:600}
-.rank-badge{padding:6px 14px;font-size:.85rem;border-radius:8px}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
-.stat-val{font-size:1.8rem;font-weight:700;margin-bottom:4px}
-.stat-lbl{font-size:.78rem;color:var(--muted)}
-.section{margin-bottom:28px}
-.section-title{font-size:1rem;font-weight:600;margin-bottom:14px}
-.xp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-.xp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.xp-rank-name{font-size:1.1rem;font-weight:700}
-.xp-count{font-size:.85rem;color:var(--muted)}
-.xp-bar{background:var(--surface2);border-radius:8px;height:10px;overflow:hidden;margin-bottom:8px}
-.xp-fill{height:100%;border-radius:8px;transition:width .6s}
-.xp-labels{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)}
-.rank-ladder{margin-top:20px;display:flex;flex-direction:column;gap:0}
-.rank-step{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
-.rank-step:last-child{border-bottom:none}
-.rank-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.rank-step-name{font-size:.88rem;font-weight:500;flex:1}
-.rank-step-xp{font-size:.78rem;color:var(--muted)}
-.achievements-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.achievement-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;align-items:flex-start;gap:12px}
-.achievement-card.earned{border-color:var(--accent);background:rgba(108,99,255,.05)}
-.achievement-card.locked{opacity:.5;filter:grayscale(.8)}
-.ach-icon{font-size:1.8rem;flex-shrink:0}
-.ach-info{flex:1;min-width:0}
-.ach-name{font-size:.88rem;font-weight:600;margin-bottom:3px}
-.ach-desc{font-size:.75rem;color:var(--muted);line-height:1.4}
-.ach-date{font-size:.72rem;color:var(--accent2);margin-top:4px}
-.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+.h-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-family:var(--font-display);font-weight:700;font-size:12px}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:8px}
+@media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:18px;text-align:center;animation:rise .5s ease both}
+.stat-val{font-family:var(--font-display);font-weight:800;font-size:1.9rem;margin-bottom:4px}
+.stat-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
+
+/* XP section */
+.xp-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.xp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.xp-rank-name{font-family:var(--font-display);font-weight:800;font-size:18px}
+.xp-count-txt{font-family:var(--font-mono);font-size:12px;color:var(--text-400)}
+.xp-bar-wrap{height:8px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;margin-bottom:8px}
+.xp-bar-fill{height:100%;border-radius:100px;transition:width 1s ease;box-shadow:0 0 10px currentColor}
+.xp-labels{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--text-400);margin-bottom:18px}
+
+/* Rank ladder */
+.rank-ladder-grid{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.rl-step{flex:1;min-width:68px;text-align:center;padding:10px 6px;border-radius:var(--r-sm);border:1px solid var(--border-soft);background:var(--bg-elev-1)}
+.rl-step.rl-current{border-color:currentColor;background:var(--cyan-bg-soft)}
+.rl-step.rl-earned{opacity:.7}
+.rl-dot{width:10px;height:10px;border-radius:50%;margin:0 auto 6px}
+.rl-name{font-family:var(--font-mono);font-size:8.5px;color:var(--text-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rl-xp{font-family:var(--font-mono);font-size:8px;color:var(--text-500);margin-top:2px}
+.rl-you{font-family:var(--font-mono);font-size:7.5px;color:var(--cyan);font-weight:700;margin-top:3px}
+
+/* Achievements */
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(min-width:500px){.ach-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:900px){.ach-grid{grid-template-columns:repeat(4,1fr)}}
+.ach-item{padding:16px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);text-align:center;transition:all .2s}
+.ach-item.earned{border-color:var(--amber-border);background:var(--gold-soft);box-shadow:0 0 16px rgba(245,158,11,.1)}
+.ach-item.locked{opacity:.45}
+.ach-ico{font-size:26px;margin-bottom:8px}
+.ach-name{font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-200)}
+.ach-item.earned .ach-name{color:var(--gold)}
+.ach-desc{font-size:11px;color:var(--text-400);line-height:1.4;margin-top:3px}
+.ach-date{font-family:var(--font-mono);font-size:9.5px;color:var(--text-500);margin-top:5px}
+
+.signout-row{margin-top:28px;display:flex;justify-content:flex-end}
+.btn-signout{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--r-sm);background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);font-size:13.5px;font-weight:600;transition:all .2s}
+.btn-signout:hover{background:rgba(239,79,95,.2);transform:translateY(-1px)}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-400)}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:60px;color:var(--muted)}
 </style>
 </head>
 <body>
-<nav class="sidebar">
-  <div class="logo">⚡ Si Math AI</div>
-  <a href="dashboard.html" class="nav-item">🏠 Dashboard</a>
-  <a href="chat.html" class="nav-item">💬 AI Tutor</a>
-  <a href="focus.html" class="nav-item">🎯 Focus Practice</a>
-  <a href="mock-exam.html" class="nav-item">📝 Mock Exam</a>
-  <a href="weakness.html" class="nav-item">📊 Weakness Analyzer</a>
-  <a href="history.html" class="nav-item">📅 History</a>
-  <a href="devices.html" class="nav-item">🔒 Devices</a>
-  <a href="profile.html" class="nav-item active">👤 Profile</a>
-  <a href="pricing.html" class="nav-item">💎 Plans</a>
-  <div class="nav-spacer"></div>
-  <a href="#" class="nav-item signout" id="signOutBtn">🚪 Sign Out</a>
-</nav>
-<div class="main">
-  <div class="topbar">
-    <h1>👤 My Profile</h1>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="dashboard.html">
+    <span class="logo-mark"><img src="data:image/png;base64,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" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <div class="top-avatar" id="topAvatar">?</div>
   </div>
-  <div class="content">
-    <div id="pageContent"><div class="empty"><div class="spinner"></div><br>Loading profile…</div></div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
+  <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
+  <a class="nav-item" href="history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item active" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="devices.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<main class="main">
+  <div id="pageContent">
+    <div class="empty-state"><div class="spin"></div><br>Loading profile…</div>
   </div>
-</div>
+</main>
+
 <script>
 const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Sidebar toggle
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+document.getElementById('hamb').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
 const RANKS = [
   { name: 'Beginner',      min: 0,    color: '#7a90b2', bg: 'rgba(122,144,178,.15)', icon: '🌱' },
@@ -138,6 +220,10 @@ async function loadPage() {
   const { data: { user }, error: authErr } = await sb.auth.getUser();
   if (authErr || !user) { window.location.href = 'index.html'; return; }
 
+  // Update avatar
+  const initials = (user.email || '?')[0].toUpperCase();
+  document.getElementById('topAvatar').textContent = initials;
+
   const [profileRes, achRes, qRes, examRes, masteryRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('achievements').select('*').eq('user_id', user.id),
@@ -159,97 +245,97 @@ async function loadPage() {
   const masteredTopics = masteryRecords.filter(m => (m.mastery_score || 0) >= 80).length;
 
   const displayName = profile.full_name || user.email?.split('@')[0] || 'Student';
-  const xpInRange = nextRank ? xp - rank.min : xp - rank.min;
+  const xpInRange = xp - rank.min;
   const rangeSize = nextRank ? nextRank.min - rank.min : 1;
   const xpPct = nextRank ? Math.min(100, (xpInRange / rangeSize) * 100) : 100;
   const xpToNext = nextRank ? nextRank.min - xp : 0;
 
+  const planBadge = profile.plan === 'pro'
+    ? `<span class="h-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">⭐ Pro</span>`
+    : `<span class="h-badge" style="background:var(--cyan-bg-soft);color:var(--cyan);border:1px solid var(--cyan-border-soft)">🆓 Free</span>`;
+
   let html = `
   <div class="profile-hero">
-    <div class="avatar" style="background:${rank.bg};border-color:${rank.color}">${rank.icon}</div>
+    <div class="hero-avatar" style="background:${rank.bg};border-color:${rank.color};box-shadow:0 0 24px ${rank.color}33">${rank.icon}</div>
     <div class="hero-info">
       <div class="hero-name">${escHtml(displayName)}</div>
       <div class="hero-email">${escHtml(user.email)}</div>
       <div class="hero-badges">
-        <span class="badge rank-badge" style="background:${rank.bg};color:${rank.color}">${rank.icon} ${rank.name}</span>
-        <span class="badge" style="background:rgba(108,99,255,.15);color:#a78bfa">⚡ ${xp.toLocaleString()} XP</span>
-        ${profile.plan === 'pro'
-          ? '<span class="badge" style="background:rgba(251,191,36,.15);color:#fbbf24">⭐ Pro</span>'
-          : '<span class="badge" style="background:rgba(139,92,246,.15);color:#a78bfa">🆓 Free</span>'}
+        <span class="h-badge" style="background:${rank.bg};color:${rank.color};border:1px solid ${rank.color}44">${rank.icon} ${rank.name}</span>
+        <span class="h-badge" style="background:var(--cyan-bg-soft);color:var(--cyan);border:1px solid var(--cyan-border-soft)">⚡ ${xp.toLocaleString()} XP</span>
+        ${planBadge}
       </div>
     </div>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-val" style="color:#60a5fa">${totalQuestions.toLocaleString()}</div>
+      <div class="stat-val" style="color:var(--cyan)">${totalQuestions.toLocaleString()}</div>
       <div class="stat-lbl">Questions Asked</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val" style="color:#f59e0b">${totalExams.toLocaleString()}</div>
+      <div class="stat-val" style="color:var(--amber)">${totalExams.toLocaleString()}</div>
       <div class="stat-lbl">Exams Taken</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val" style="color:#a78bfa">${topicsStudied.toLocaleString()}</div>
+      <div class="stat-val" style="color:var(--purple)">${topicsStudied.toLocaleString()}</div>
       <div class="stat-lbl">Topics Studied</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val" style="color:#4ade80">${masteredTopics.toLocaleString()}</div>
+      <div class="stat-val" style="color:var(--green)">${masteredTopics.toLocaleString()}</div>
       <div class="stat-lbl">Topics Mastered</div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">⚡ XP & Rank Progress</div>
-    <div class="xp-section">
-      <div class="xp-header">
-        <span class="xp-rank-name" style="color:${rank.color}">${rank.icon} ${rank.name}</span>
-        <span class="xp-count">${xp.toLocaleString()} XP${nextRank ? ` · ${xpToNext} to ${nextRank.name}` : ' · Maximum rank!'}</span>
-      </div>
-      <div class="xp-bar"><div class="xp-fill" style="width:${xpPct}%;background:${rank.color}"></div></div>
-      <div class="xp-labels">
-        <span>${rank.min.toLocaleString()} XP</span>
-        ${nextRank ? `<span>${nextRank.min.toLocaleString()} XP</span>` : '<span>MAX</span>'}
-      </div>
-      <div class="rank-ladder">
-        ${RANKS.map(r => {
-          const isCurrent = r.name === rank.name;
-          const isEarned = xp >= r.min;
-          return `<div class="rank-step${isCurrent ? ' current' : isEarned ? ' earned' : ''}">
-            <div class="rank-dot" style="background:${isEarned ? r.color : 'var(--border)'}"></div>
-            <div class="rank-step-name" style="${isCurrent ? `color:${r.color}` : ''}">${r.icon} ${r.name}${isCurrent ? ' <span style="font-size:.72rem;color:var(--accent2)">← You</span>' : ''}</div>
-            <div class="rank-step-xp">${r.min.toLocaleString()} XP</div>
-          </div>`;
-        }).join('')}
-      </div>
+  <div class="sec-label">XP &amp; Rank Progress</div>
+  <div class="xp-card">
+    <div class="xp-header">
+      <span class="xp-rank-name" style="color:${rank.color}">${rank.icon} ${rank.name}</span>
+      <span class="xp-count-txt">${xp.toLocaleString()} XP${nextRank ? ` · ${xpToNext} to ${nextRank.name}` : ' · Maximum rank!'}</span>
     </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">🏆 Achievements (${earned.length} / ${ALL_ACHIEVEMENTS.length})</div>
-    <div class="achievements-grid">
-      ${ALL_ACHIEVEMENTS.map(a => {
-        const e = earned.find(x => x.achievement_key === a.key);
-        return `<div class="achievement-card ${e ? 'earned' : 'locked'}">
-          <div class="ach-icon">${e ? a.icon : '🔒'}</div>
-          <div class="ach-info">
-            <div class="ach-name">${a.name}</div>
-            <div class="ach-desc">${a.desc}</div>
-            ${e ? `<div class="ach-date">Earned ${fmtDate(e.earned_at)}</div>` : ''}
-          </div>
+    <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${xpPct}%;background:${rank.color};color:${rank.color}"></div></div>
+    <div class="xp-labels">
+      <span>${rank.min.toLocaleString()} XP</span>
+      ${nextRank ? `<span>${nextRank.min.toLocaleString()} XP</span>` : '<span>MAX</span>'}
+    </div>
+    <div class="rank-ladder-grid">
+      ${RANKS.map(r => {
+        const isCurrent = r.name === rank.name;
+        const isEarned = xp >= r.min;
+        return `<div class="rl-step${isCurrent ? ' rl-current' : isEarned ? ' rl-earned' : ''}" style="${isCurrent ? `border-color:${r.color}` : ''}">
+          <div class="rl-dot" style="background:${isEarned ? r.color : 'var(--border-mid)'}${isCurrent ? `;box-shadow:0 0 8px ${r.color}` : ''}"></div>
+          <div class="rl-name" style="${isCurrent ? `color:${r.color};font-weight:700` : ''}">${r.icon} ${r.name}</div>
+          <div class="rl-xp">${r.min.toLocaleString()}</div>
+          ${isCurrent ? '<div class="rl-you">← You</div>' : ''}
         </div>`;
       }).join('')}
     </div>
+  </div>
+
+  <div class="sec-label">Achievements (${earned.length} / ${ALL_ACHIEVEMENTS.length})</div>
+  <div class="ach-grid">
+    ${ALL_ACHIEVEMENTS.map(a => {
+      const e = earned.find(x => x.achievement_key === a.key);
+      return `<div class="ach-item ${e ? 'earned' : 'locked'}">
+        <div class="ach-ico">${e ? a.icon : '🔒'}</div>
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+        ${e ? `<div class="ach-date">Earned ${fmtDate(e.earned_at)}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="signout-row">
+    <button class="btn-signout" id="signOutBtn">Sign Out</button>
   </div>`;
 
   document.getElementById('pageContent').innerHTML = html;
-}
 
-document.getElementById('signOutBtn').addEventListener('click', async (e) => {
-  e.preventDefault();
-  await sb.auth.signOut();
-  window.location.href = 'index.html';
-});
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = 'index.html';
+  });
+}
 
 loadPage();
 </script>
