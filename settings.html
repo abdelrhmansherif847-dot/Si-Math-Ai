@@ -150,6 +150,52 @@ button{font-family:inherit;cursor:pointer}
 .btn-tile .bt-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
 .btn-tile .bt-ic svg{width:17px;height:17px}
 
+/* credits bar */
+.cred-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.cred-lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-400)}
+.cred-val{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
+.cred-bar-wrap{background:var(--bg-elev-2);border-radius:100px;height:6px;overflow:hidden;margin-bottom:16px}
+.cred-bar-inner{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--cyan-2),var(--cyan));transition:width .6s ease}
+.cred-split{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.cred-chip{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:100px;font-family:var(--font-mono);font-size:10.5px}
+.cred-chip.sub{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan-3)}
+.cred-chip.pack{background:rgba(245,185,66,.1);border:1px solid rgba(245,185,66,.28);color:var(--amber)}
+.cred-chip .chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.sub-expiry{font-size:12px;color:var(--text-400);margin-bottom:20px}
+.sub-expiry span{color:var(--amber);font-weight:600}
+/* pending notice */
+.pending-notice{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r-md);background:var(--amber-soft);border:1px solid var(--amber-border);margin-bottom:18px}
+.pending-notice svg{width:15px;height:15px;flex-shrink:0;color:var(--amber);margin-top:1px}
+.pending-notice .pn-t{font-weight:700;font-size:13px;color:var(--amber)}
+.pending-notice .pn-s{font-size:12px;color:var(--text-300);margin-top:2px}
+/* transaction history */
+.tx-head{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.tx-head::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+.tx-list{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.tx-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.tx-ic{width:30px;height:30px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.tx-ic.plus{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
+.tx-ic.minus{background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}
+.tx-body{flex:1;min-width:0}
+.tx-desc{font-size:13px;color:var(--text-200);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-date{font-family:var(--font-mono);font-size:10px;color:var(--text-500);margin-top:1px}
+.tx-amount{font-family:var(--font-display);font-weight:700;font-size:14px;flex-shrink:0}
+.tx-amount.plus{color:var(--green)}.tx-amount.minus{color:var(--red)}
+/* pack grid */
+.pack-sec-lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.pack-sec-lbl::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+.pack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px}
+.pack-tile{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 12px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);cursor:pointer;transition:all .2s;text-align:center}
+.pack-tile:hover{border-color:var(--cyan-border);transform:translateY(-2px)}
+.pack-tile.selected{border-color:var(--cyan);background:var(--cyan-bg-soft);box-shadow:0 0 18px rgba(56,189,248,.15)}
+.pack-tile .pt-credits{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff}
+.pack-tile .pt-label{font-size:11.5px;color:var(--text-300)}
+.pack-tile .pt-price{font-family:var(--font-mono);font-size:11px;color:var(--cyan);margin-top:2px}
+.req-pack-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:13px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--cyan-border);color:#fff;font-family:var(--font-display);font-weight:700;font-size:14px;transition:all .2s}
+.req-pack-btn:hover{background:var(--cyan-bg-soft);transform:translateY(-2px)}
+.req-pack-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.req-pack-btn svg{width:15px;height:15px}
+
 /* account actions */
 .logout-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-family:var(--font-display);font-weight:700;font-size:14.5px;transition:all .2s;margin-bottom:14px}
 .logout-btn:hover{border-color:var(--cyan-border);transform:translateY(-2px)}
@@ -341,18 +387,14 @@ button{font-family:inherit;cursor:pointer}
 
   <!-- SECTION 6: SUBSCRIPTION -->
   <div class="sec-label">Subscription</div>
-  <section class="sub-card">
-    <div class="sub-top">
-      <div><div class="st-l">Current Plan</div><div class="st-v">Free Plan</div></div>
-      <span class="plan-badge free">Free</span>
-    </div>
-    <div class="benefits">
-      <div class="benefit"><span class="b-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>AI Tutor &amp; basic practice</div>
-      <div class="benefit"><span class="b-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Weakness Analyzer</div>
-      <div class="benefit locked"><span class="b-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>Unlimited mock exam analysis</div>
-      <div class="benefit locked"><span class="b-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>Advanced AI study plans</div>
-    </div>
-    <button class="upgrade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>Upgrade Plan</button>
+  <section class="sub-card" id="subCard">
+    <div id="subLoading" style="text-align:center;padding:24px;color:var(--text-400);font-size:13px">Loading subscription…</div>
+  </section>
+
+  <!-- SECTION 6b: CREDIT PACKS -->
+  <div class="sec-label" id="packSectionLabel" style="display:none">Buy Credit Pack</div>
+  <section class="card" id="packSection" style="display:none">
+    <div id="packLoading" style="font-size:13px;color:var(--text-400);text-align:center;padding:12px">Loading packs…</div>
   </section>
 
   <!-- SECTION 7: PRIVACY & SECURITY -->
@@ -499,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profile.study_sessions_per_week != null) document.getElementById('fldSessions').value = String(profile.study_sessions_per_week);
     if (profile.session_length != null) document.getElementById('fldSessionLen').value = String(profile.session_length);
   }
-  loadProfile();
 
   // ===== Sidebar =====
   const sidebar = document.getElementById('sidebar');
@@ -707,6 +748,207 @@ document.addEventListener('DOMContentLoaded', () => {
   if (delBtn) delBtn.addEventListener('click', () => {
     alert('Account deletion needs to be handled via a secure server function. Please contact support.');
   });
+
+  // ===== Subscription Section =====
+  const PLAN_NAMES = { free:'Free Plan', basic:'Basic Plan', pro:'Pro Plan', founder:'Founder Plan' };
+  const BADGE_CLASS = { free:'free', basic:'free', pro:'', founder:'' };
+
+  function fmtDate(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  }
+
+  function fmtTxDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  async function loadSubscription() {
+    if (!currentUser || !currentProfile) return;
+    const p = currentProfile;
+    const subCard = document.getElementById('subCard');
+
+    // Parallel fetches
+    const [subRes, txRes] = await Promise.all([
+      sb.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status','active').maybeSingle(),
+      sb.from('credit_transactions').select('*').eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false }).limit(10)
+    ]);
+
+    const sub = subRes.data;
+    const txs = txRes.data || [];
+
+    const planCode = p.plan_code || 'free';
+    const planName = p.is_founder ? 'Founder Plan' : (PLAN_NAMES[planCode] || planCode);
+    const subCred  = p.subscription_credits || 0;
+    const packCred = p.pack_credits || 0;
+    const total    = p.credits_balance || (subCred + packCred);
+    const maxCred  = Math.max(total, 100);
+    const barPct   = total === 0 ? 0 : Math.min(100, Math.round((total / maxCred) * 100));
+
+    const expiryStr = p.subscription_expires_at ? fmtDate(p.subscription_expires_at) : null;
+    const isPending = !!p.upgrade_requested;
+
+    const badgeCls = p.is_founder ? '' : (BADGE_CLASS[planCode] !== undefined ? BADGE_CLASS[planCode] : '');
+    const badgeStyle = p.is_founder
+      ? 'background:linear-gradient(135deg,rgba(245,185,66,.18),rgba(245,185,66,.06));border:1px solid rgba(245,185,66,.4);color:#f5b942'
+      : (planCode !== 'free' && planCode !== 'basic')
+        ? 'background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan)'
+        : '';
+
+    // Build founder badge HTML
+    const founderBadge = p.is_founder
+      ? `<span class="plan-badge" style="${badgeStyle}">⭐ Founder</span>` : '';
+
+    // Build main plan badge
+    const planBadge = p.is_founder
+      ? `<span class="plan-badge" style="${badgeStyle}">Founder</span>`
+      : planCode === 'free'
+        ? `<span class="plan-badge free">Free</span>`
+        : `<span class="plan-badge" style="background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan)">${planName.replace(' Plan','')}</span>`;
+
+    // Pending notice
+    const pendingHtml = isPending ? `
+      <div class="pending-notice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div>
+          <div class="pn-t">Payment Request Pending</div>
+          <div class="pn-s">${p.upgrade_note ? 'Request: ' + p.upgrade_note : 'Your upgrade request is awaiting admin approval.'} You will receive credits once confirmed.</div>
+        </div>
+      </div>` : '';
+
+    // Expiry
+    const expiryHtml = expiryStr
+      ? `<div class="sub-expiry">Subscription expires: <span>${expiryStr}</span></div>` : '';
+
+    // Transaction history
+    let txHtml = '';
+    if (txs.length > 0) {
+      const rows = txs.map(tx => {
+        const isPlus = tx.credits > 0;
+        const cls = isPlus ? 'plus' : 'minus';
+        const icon = isPlus
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>`;
+        const desc = tx.description || tx.transaction_type || 'Transaction';
+        return `<div class="tx-item">
+          <div class="tx-ic ${cls}">${icon}</div>
+          <div class="tx-body"><div class="tx-desc">${desc}</div><div class="tx-date">${fmtTxDate(tx.created_at)}</div></div>
+          <div class="tx-amount ${cls}">${isPlus ? '+' : ''}${tx.credits}</div>
+        </div>`;
+      }).join('');
+      txHtml = `<div class="tx-head">Credit History</div><div class="tx-list">${rows}</div>`;
+    }
+
+    // Upgrade button
+    const upgradeHtml = planCode === 'free' || planCode === 'basic'
+      ? `<a href="pricing.html" class="upgrade" style="display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>
+           Upgrade Plan
+         </a>` : '';
+
+    subCard.innerHTML = `
+      <div class="sub-top">
+        <div>
+          <div class="st-l">Current Plan</div>
+          <div class="st-v">${planName}</div>
+        </div>
+        ${planBadge}
+      </div>
+      ${pendingHtml}
+      <div class="cred-row"><span class="cred-lbl">Credits Balance</span><span class="cred-val">${total}</span></div>
+      <div class="cred-bar-wrap"><div class="cred-bar-inner" style="width:${barPct}%"></div></div>
+      <div class="cred-split">
+        <div class="cred-chip sub"><span class="chip-dot"></span>${subCred} subscription credits</div>
+        <div class="cred-chip pack"><span class="chip-dot"></span>${packCred} pack credits</div>
+      </div>
+      ${expiryHtml}
+      ${txHtml}
+      ${upgradeHtml}
+    `;
+  }
+
+  // ===== Credit Packs Section =====
+  let selectedPackId = null;
+
+  async function loadCreditPacks() {
+    const { data: packs } = await sb.from('credit_packs')
+      .select('*').eq('active', true).order('sort_order', { ascending: true });
+
+    if (!packs || packs.length === 0) return;
+
+    document.getElementById('packSectionLabel').style.display = '';
+    const packSection = document.getElementById('packSection');
+    packSection.style.display = '';
+
+    const tiles = packs.map(pk => `
+      <div class="pack-tile" data-pack-id="${pk.id}" data-pack-name="${pk.name}" data-pack-credits="${pk.credits}" data-pack-price="${pk.price_egp}">
+        <div class="pt-credits">${pk.credits}</div>
+        <div class="pt-label">${pk.name}</div>
+        <div class="pt-price">${pk.price_egp} EGP</div>
+      </div>`).join('');
+
+    packSection.innerHTML = `
+      <div class="pack-sec-lbl">Available Packs</div>
+      <div class="pack-grid" id="packGrid">${tiles}</div>
+      <div id="packMsg" style="margin-bottom:12px;font-size:13px;display:none;padding:11px 14px;border-radius:var(--r-md)"></div>
+      <button class="req-pack-btn" id="reqPackBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Select a pack to request
+      </button>
+    `;
+
+    document.getElementById('packGrid').addEventListener('click', e => {
+      const tile = e.target.closest('.pack-tile');
+      if (!tile) return;
+      document.querySelectorAll('.pack-tile').forEach(t => t.classList.remove('selected'));
+      tile.classList.add('selected');
+      selectedPackId = tile.dataset.packId;
+      const btn = document.getElementById('reqPackBtn');
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg>Request ${tile.dataset.packName} (${tile.dataset.packCredits} credits — ${tile.dataset.packPrice} EGP)`;
+    });
+
+    document.getElementById('reqPackBtn').addEventListener('click', async () => {
+      if (!selectedPackId || !currentUser) return;
+      const tile = document.querySelector(`.pack-tile[data-pack-id="${selectedPackId}"]`);
+      if (!tile) return;
+      if (currentProfile && currentProfile.upgrade_requested) {
+        showMsg('packMsg', 'error', 'You already have a pending payment request. Please wait for admin approval.');
+        return;
+      }
+      const btn = document.getElementById('reqPackBtn');
+      btn.disabled = true;
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = '…Submitting request';
+      const note = `[CREDIT PACK: ${tile.dataset.packName}]`;
+      const { error } = await sb.from('profiles').update({
+        upgrade_requested: true,
+        upgrade_note: note
+      }).eq('id', currentUser.id);
+      if (error) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+        showMsg('packMsg', 'error', 'Could not submit request: ' + error.message);
+        return;
+      }
+      if (currentProfile) { currentProfile.upgrade_requested = true; currentProfile.upgrade_note = note; }
+      showMsg('packMsg', 'success', '✅ Request submitted! Admin will review and activate your credits after payment confirmation.');
+      btn.innerHTML = '✅ Request Submitted';
+      setTimeout(() => loadSubscription(), 800);
+    });
+  }
+
+  // Kick off everything
+  async function initAll() {
+    await loadProfile();
+    await Promise.all([loadSubscription(), loadCreditPacks()]);
+  }
+  initAll();
 });
 </script>
 </body>
