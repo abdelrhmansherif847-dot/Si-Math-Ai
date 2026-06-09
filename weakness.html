@@ -768,14 +768,44 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let currentUser=null, allReports=[], allMastery=[], allSignals=[], currentModalReport=null;
 
+/* ── constants ── */
+const DAY=86400000;
+
 /* ── helpers ── */
-function getPri(score){if(score>=0.6)return'high';if(score>=0.3)return'med';return'low';}
+// Priority uses mastery thresholds (consistent with focus.html: <30=high, <50=high, <70=med, ≥70=low)
+function getPri(r){
+  const m=r.mastery_score;
+  if(m!=null){if(m<50)return'high';if(m<70)return'med';return'low';}
+  const s=r.weakness_score||0;if(s>=0.6)return'high';if(s>=0.3)return'med';return'low';
+}
 function priLabel(p){return p==='high'?'High':p==='med'?'Medium':'Low';}
+// Mastery: DB record → report field → compute from signals
 function masteryPct(report,mastery){
   const mr=mastery.find(m=>m.topic===report.topic&&m.subtopic===report.subtopic);
   if(mr&&mr.mastery_score!=null)return Math.round(mr.mastery_score);
   if(report.mastery_score!=null)return Math.round(report.mastery_score);
+  // Compute from _meta signals if available (set by buildFromSignals)
+  if(report._meta&&report._meta.signals)return computeMastery(report._meta.signals);
   return null;
+}
+// Mastery from signals — same formula as focus.html
+function computeMastery(signals){
+  const now=Date.now();
+  const times=signals.map(s=>new Date(s.created_at||0).getTime());
+  const total=times.length;if(!total)return null;
+  const last7=times.filter(t=>now-t<7*DAY).length;
+  let decayScore=0;
+  times.forEach(t=>{decayScore+=Math.exp(-(now-t)/(DAY*14));});
+  const weakSigs=signals.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0.4).length;
+  const helpReqs=signals.filter(s=>s.signal_type==='multi_concept').length;
+  const repeated=signals.filter(s=>s.signal_type==='repeated').length;
+  // low weight on topic signal = high confidence
+  const highConf=signals.filter(s=>s.signal_type==='topic'&&(s.weight||1)<0.3).length;
+  const understood=signals.filter(s=>s.signal_type==='resolution'&&(s.weight||0)<0).length;
+  const chatWeaknessScore=(weakSigs*3)+(helpReqs*2)+(repeated*2);
+  const baseScore=(total*1.5)+(decayScore*3)+(last7*2);
+  const positiveBoost=(understood*5)+(highConf*4);
+  return Math.max(10,Math.min(95,Math.round(100-(baseScore+chatWeaknessScore)*4+positiveBoost)));
 }
 function fmt(n){return n==null?'—':n;}
 function topicLabel(r){return[r.topic,r.subtopic].filter(Boolean).join(' → ');}
@@ -825,15 +855,61 @@ async function loadData(){
 }
 
 function buildFromSignals(sigs){
+  /*
+   * Scoring formula:
+   *   decayed_weight(s) = s.weight × exp(−age_ms / (14×DAY))
+   *   weakness_score    = clamp(Σ decayed_weight / 5, 0, 1)
+   *   improvement_score = (prev7_raw − recent7_raw) / max(prev7_raw,0.01) × 100
+   *   mastery           = computeMastery(topicSignals)   ← focus.html formula
+   *   priority          = mastery<50→high | <70→med | ≥70→low
+   */
+  const now=Date.now();
   const map={};
   sigs.forEach(s=>{
     const k=(s.topic||'')+'|'+(s.subtopic||'');
-    if(!map[k])map[k]={topic:s.topic,subtopic:s.subtopic,tw:0,cnt:0};
-    map[k].tw+=s.weight||0;map[k].cnt++;
+    if(!map[k])map[k]={topic:s.topic,subtopic:s.subtopic,signals:[],
+      totalDecayed:0, recent7Raw:0, prev7Raw:0, resolveDecayed:0};
+    const e=map[k];
+    const age=now-new Date(s.created_at||0).getTime();
+    const decay=Math.exp(-age/(DAY*14));
+    const dw=(s.weight||0)*decay;
+    const raw=s.weight||0;
+    e.signals.push(s);
+    if(s.signal_type==='resolution'){
+      e.resolveDecayed+=dw; // negative weight for 'understood' reduces score
+    } else {
+      e.totalDecayed+=dw;
+      if(age<7*DAY) e.recent7Raw+=raw;
+      else if(age<14*DAY) e.prev7Raw+=raw;
+    }
   });
-  return Object.values(map).filter(r=>r.tw>0)
-    .sort((a,b)=>b.tw-a.tw)
-    .map((r,i)=>({topic:r.topic,subtopic:r.subtopic,weakness_score:Math.min(r.tw/5,1),priority_rank:i+1,biggest_weakness:i===0,total_signals:r.cnt,mastery_score:null,improvement_score:null}));
+  const entries=Object.values(map).map(e=>{
+    const netDecayed=e.totalDecayed+e.resolveDecayed; // resolveDecayed can be negative
+    const ws=Math.max(0,Math.min(1,netDecayed/5));
+    // improvement: positive = fewer weakness signals recently (getting better)
+    const impScore=e.prev7Raw>0
+      ?Math.round((e.prev7Raw-e.recent7Raw)/Math.max(e.prev7Raw,0.01)*100)
+      :null;
+    const mastery=computeMastery(e.signals);
+    return{
+      topic:e.topic,subtopic:e.subtopic,
+      weakness_score:ws,
+      improvement_score:impScore,
+      total_signals:e.signals.length,
+      mastery_score:mastery,
+      biggest_weakness:false,
+      priority_rank:0,
+      _meta:{signals:e.signals,recent7Raw:e.recent7Raw,prev7Raw:e.prev7Raw}
+    };
+  }).filter(r=>r.total_signals>0);
+  // Sort: primary by mastery asc (lower mastery = more urgent), secondary by weakness_score desc
+  entries.sort((a,b)=>{
+    const ma=a.mastery_score??50, mb=b.mastery_score??50;
+    if(Math.abs(ma-mb)>5)return ma-mb; // lower mastery = higher priority
+    return b.weakness_score-a.weakness_score;
+  });
+  entries.forEach((e,i)=>{e.priority_rank=i+1;e.biggest_weakness=i===0;});
+  return entries;
 }
 
 function showEmpty(){
@@ -861,19 +937,37 @@ function renderAll(reports,mastery,signals){
 
 /* ── stats ── */
 function renderStats(reports,mastery,signals){
-  let seen=0,correct=0;
-  mastery.forEach(m=>{seen+=m.questions_seen||0;correct+=m.questions_correct||0;});
-  const acc=seen>0?Math.round(correct/seen*100):null;
-  const qSolved=seen||signals.length;
   const upSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>';
+  // Stat 1: average mastery across all weak topics (from mastery_records or computed)
+  const masteryVals=reports.map(r=>masteryPct(r,mastery)).filter(v=>v!=null);
+  const avgMastery=masteryVals.length?Math.round(masteryVals.reduce((a,b)=>a+b,0)/masteryVals.length):null;
   const d1=document.querySelector('.stat.d1');
-  if(d1){d1.querySelector('.sv').textContent=acc!==null?acc+'%':'—';
-    d1.querySelector('.sd').className='sd'+(acc!==null&&acc>=70?' up':'');
-    d1.querySelector('.sd').innerHTML=acc!==null?(acc>=70?upSvg+'On track':'Needs work'):'No data yet';}
+  if(d1){
+    d1.querySelector('.si').textContent='🎯';
+    d1.querySelector('.sl').textContent='Avg Mastery (weak topics)';
+    d1.querySelector('.sv').textContent=avgMastery!=null?avgMastery+'%':'—';
+    d1.querySelector('.sd').className='sd'+(avgMastery!=null&&avgMastery>=60?' up':'');
+    d1.querySelector('.sd').innerHTML=avgMastery!=null?(avgMastery>=60?upSvg+'Progressing':'Needs work'):'No data yet';
+  }
+  // Stat 2: total signals tracked
+  const qSolved=signals.length;
   const d2=document.querySelector('.stat.d2');
-  if(d2){d2.querySelector('.sv').textContent=qSolved||'0';d2.querySelector('.sd').textContent='from AI chat';}
+  if(d2){
+    d2.querySelector('.si').textContent='✅';
+    d2.querySelector('.sl').textContent='Signals Tracked';
+    d2.querySelector('.sv').textContent=qSolved||'0';
+    d2.querySelector('.sd').textContent='across all topics';
+  }
+  // Stat 3: topics improving (improvement_score > 0)
+  const improving=reports.filter(r=>r.improvement_score!=null&&r.improvement_score>5).length;
   const d3=document.querySelector('.stat.d3');
-  if(d3){d3.querySelector('.sv').textContent=reports.length;d3.querySelector('.sd').textContent='weak topics found';}
+  if(d3){
+    d3.querySelector('.si').textContent='📈';
+    d3.querySelector('.sl').textContent='Topics Improving';
+    d3.querySelector('.sv').textContent=improving+' / '+reports.length;
+    d3.querySelector('.sd').className='sd'+(improving>0?' up':'');
+    d3.querySelector('.sd').innerHTML=improving>0?upSvg+'Getting better':'Keep practicing';
+  }
 }
 
 /* ── rank table ── */
@@ -882,7 +976,7 @@ function renderRankTable(reports,mastery){
   if(!reports.length){rt.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-400)">No ranked data yet.</div>';return;}
   const top5=reports.slice(0,5);
   rt.innerHTML=top5.map((r,i)=>{
-    const p=getPri(r.weakness_score);
+    const p=getPri(r);
     const mPct=masteryPct(r,mastery);
     const lbl=topicLabel(r);
     const sub=r.subtopic||r.topic||'';
@@ -923,15 +1017,23 @@ function renderWhy(report,signals){
   const eg=document.querySelector('.evidence-grid');
   if(eg){
     const topicSigs=signals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic));
-    const wrong=topicSigs.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0.5).length;
-    const lowConf=topicSigs.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0).length;
+    // Low confidence = topic signals with weight > 0.4 (confidence ≈ 6 - weight*5 < 4)
+    const lowConf=topicSigs.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0.4).length;
     const repeated=topicSigs.filter(s=>s.signal_type==='repeated').length;
     const multi=topicSigs.filter(s=>s.signal_type==='multi_concept').length;
+    const resolved=topicSigs.filter(s=>s.signal_type==='resolution'&&(s.weight||0)<0).length;
+    // Average inferred confidence from topic signals (weight = (6-conf)/5 → conf = 6-weight*5)
+    const confSigs=topicSigs.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0);
+    const avgConf=confSigs.length?Math.round(confSigs.reduce((a,s)=>a+(6-(s.weight||0.5)*5),0)/confSigs.length*10)/10:null;
     eg.innerHTML=`
-      <div class="ev-stat"><div class="ev-v red">${wrong||topicSigs.length}</div><div class="ev-l">Weakness Signals</div></div>
-      <div class="ev-stat"><div class="ev-v amber">${lowConf}</div><div class="ev-l">Low Confidence</div></div>
+      <div class="ev-stat"><div class="ev-v red">${lowConf||topicSigs.length}</div><div class="ev-l">Low Confidence</div></div>
       <div class="ev-stat"><div class="ev-v amber">${repeated}</div><div class="ev-l">Repeated Questions</div></div>
-      <div class="ev-stat"><div class="ev-v cyan">${multi}</div><div class="ev-l">Multi-concept Issues</div></div>`;
+      <div class="ev-stat"><div class="ev-v amber">${multi}</div><div class="ev-l">Multi-concept Issues</div></div>
+      <div class="ev-stat"><div class="ev-v cyan">${resolved}</div><div class="ev-l">Resolved ✓</div></div>`;
+    if(avgConf!=null){
+      const exWhy=document.querySelector('.ex-why p');
+      if(exWhy)exWhy.textContent=`Average confidence: ${avgConf}/5 on "${report.subtopic||report.topic}". Low confidence, repeated questions, and multi-concept errors all increase the weakness score. Resolution signals (when you understand) reduce it.`;
+    }
   }
 }
 
@@ -995,7 +1097,7 @@ function renderSWGrid(reports,mastery){
     const existing=weakCard.querySelectorAll('.rank');
     existing.forEach(r=>r.remove());
     weak.forEach((r,i)=>{
-      const p=getPri(r.weakness_score);const mPct=masteryPct(r,mastery);
+      const p=getPri(r);const mPct=masteryPct(r,mastery);
       const div=document.createElement('div');
       div.className='rank clickable';
       div.dataset.idx=i;
@@ -1038,19 +1140,38 @@ function renderTrack(mastery,reports){
   const track=document.querySelector('.track');if(!track)return;
   const weak=reports.slice(0,2);
   if(!weak.length){track.innerHTML='<div style="padding:16px;color:var(--text-400)">No mastery data yet.</div>';return;}
+  const upSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>';
+  const dnSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17 13.5 8.5 8.5 13.5 2 7"/><path d="M16 17h6v-6"/></svg>';
   track.innerHTML=weak.map((r,ri)=>{
-    const m=mastery.find(x=>x.topic===r.topic&&x.subtopic===r.subtopic);
-    const base=m?Math.round(m.mastery_score||50):50;
-    const w1=Math.max(base-15,5),w2=Math.max(base-7,10),w3=base;
-    const gain=r.improvement_score!=null?'+'+Math.round(r.improvement_score)+'%':'+?%';
+    const mr=mastery.find(x=>x.topic===r.topic&&x.subtopic===r.subtopic);
+    const now=r.mastery_score!=null?Math.round(r.mastery_score):(mr?.mastery_score!=null?Math.round(mr.mastery_score):null);
+    const nowPct=now??50;
+    // Compute mastery from older signals only (>14 days) to get a "start" value
+    let startPct=nowPct;
+    if(r._meta&&r._meta.signals){
+      const older=r._meta.signals.filter(s=>Date.now()-new Date(s.created_at||0).getTime()>14*DAY);
+      if(older.length>0){const om=computeMastery(older);if(om!=null)startPct=om;}
+    }
+    const targetPct=Math.min(95,nowPct+15);
+    // Improvement: use improvement_score if available, else derive from start/now delta
+    const imp=r.improvement_score;
+    let gainLabel,gainSvg;
+    if(imp!=null&&Math.abs(imp)>5){
+      gainLabel=(imp>0?'+':'')+Math.round(imp)+'%';
+      gainSvg=imp>0?upSvg:dnSvg;
+    } else if(startPct<nowPct){
+      gainLabel='+'+(nowPct-startPct)+'%';gainSvg=upSvg;
+    } else {
+      gainLabel='Stable';gainSvg='➖';
+    }
     const cls=ri===0?'':'fn';
-    const upSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>';
+    const toH=v=>Math.max(Math.round(v*1.1),5); // scale pct to px height (110px=100%)
     return`<div class="track-row ${cls}">
-      <div class="tr-head"><span class="tr-name">${topicLabel(r)}</span><span class="tr-gain">${upSvg}${gain}</span></div>
+      <div class="tr-head"><span class="tr-name">${topicLabel(r)}</span><span class="tr-gain">${gainSvg}${gainLabel}</span></div>
       <div class="steps">
-        <div class="step-col"><div class="step-bar" style="height:${w1}px"></div><div class="step-val">${w1}%</div><div class="step-lbl">Start</div></div>
-        <div class="step-col"><div class="step-bar" style="height:${w2}px"></div><div class="step-val">${w2}%</div><div class="step-lbl">Now</div></div>
-        <div class="step-col"><div class="step-bar" style="height:${w3}px"></div><div class="step-val">${w3}%</div><div class="step-lbl">Target</div></div>
+        <div class="step-col"><div class="step-bar" style="height:${toH(startPct)}px"></div><div class="step-val">${startPct}%</div><div class="step-lbl">Baseline</div></div>
+        <div class="step-col"><div class="step-bar" style="height:${toH(nowPct)}px"></div><div class="step-val">${nowPct}%</div><div class="step-lbl">Current</div></div>
+        <div class="step-col"><div class="step-bar" style="height:${toH(targetPct)}px"></div><div class="step-val">${targetPct}%</div><div class="step-lbl">Target</div></div>
       </div>
     </div>`;
   }).join('');
@@ -1112,7 +1233,7 @@ document.getElementById('genBtn').addEventListener('click',async()=>{
 const modalOv=document.getElementById('modalOv');
 function openModal(report,mPct,mastery){
   currentModalReport=report;
-  const p=getPri(report.weakness_score);
+  const p=getPri(report);
   document.getElementById('mTitle').textContent=topicLabel(report);
   document.getElementById('mPct').textContent='Mastery '+(mPct!==null?mPct+'%':'—');
   const pri=document.getElementById('mPri');pri.className='pri '+p;pri.innerHTML='<span class="pd"></span>Priority: '+priLabel(p);
