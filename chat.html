@@ -702,10 +702,10 @@ button{font-family:inherit;cursor:pointer}
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
     if (error) { console.warn('openSession error:', error.message); return; }
-    if (!records || records.length === 0) return;
     inner.innerHTML = '';
     empty.style.display = 'none';
     document.querySelector('.shell').classList.add('chat-mode');
+    if (!records || records.length === 0) { scrollDown(); return; }
     records.forEach(r => {
       addUser(r.question, r.image || null, true);
       const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question) : null;
@@ -936,9 +936,32 @@ button{font-family:inherit;cursor:pointer}
       this.sendSignal({type:'resolution', topic:topic, sub:sub, resolution:res});
     },
     sendSignal: function(sig){
-      // In production this POSTs to the Weakness Analyzer service.
-      // Here we just record it on window for traceability.
       (window.__SI_SIGNALS = window.__SI_SIGNALS || []).push(sig);
+      if (!currentUser) return;
+      var row = { user_id: currentUser.id, source: 'AI_CHAT' };
+      if (sig.type === 'topic') {
+        row.topic = sig.topic; row.subtopic = sig.sub;
+        row.signal_type = 'topic';
+        // weight 0.2..1.0 — lower confidence = higher weakness weight
+        row.weight = sig.confidence ? Math.max(0.2, (6 - sig.confidence) / 5) : 0.5;
+      } else if (sig.type === 'multi_concept' || sig.type === 'multi-concept') {
+        row.topic = sig.primary || sig.topic; row.subtopic = sig.primary || sig.sub;
+        row.signal_type = 'multi_concept'; row.weight = 0.3;
+      } else if (sig.type === 'repeated') {
+        row.topic = null; row.subtopic = sig.sub;
+        row.signal_type = 'repeated';
+        row.weight = Math.min((sig.count || 1) * 0.4, 2.0);
+      } else if (sig.type === 'resolution') {
+        row.topic = sig.topic; row.subtopic = sig.sub;
+        row.signal_type = 'resolution';
+        // negative weight = understood (strength), positive = still confused (weakness)
+        row.weight = (sig.resolution === 'understood' || sig.resolution === '1') ? -0.5 : 0.5;
+      } else {
+        return; // unknown type — skip
+      }
+      sb.from('weakness_signals').insert(row).then(({ error }) => {
+        if (error) console.warn('weakness_signals insert failed:', error.message);
+      });
     },
     bumpUsage: function(){
       var max = this.plan==='pro'?200:10;
@@ -1381,13 +1404,24 @@ button{font-family:inherit;cursor:pointer}
         return;
       }
       // Credits OK — proceed with the AI call
+      const creditLogId = creditResult.log_id || null;
       askAI(apiText, sig, imgToSend).then(response => {
         removeTyping();
         addAI(sig, response);
         awardChatXP();
       }).catch(err => {
         removeTyping();
-        showError(err && err.message ? err.message : 'Could not reach Zero. Please try again.');
+        showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
+        // Refund the credit deducted before the failed AI call
+        if (creditLogId) {
+          sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
+            .then(({ data: rd }) => {
+              if (rd && rd.ok && rd.refunded > 0) {
+                console.info('Credit refunded after AI failure:', rd.refunded);
+              }
+            })
+            .catch(e => console.warn('Refund RPC failed:', e));
+        }
       }).finally(() => {
         isSending = false;
         sendBtn.disabled = false;
