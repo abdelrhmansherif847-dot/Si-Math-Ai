@@ -639,6 +639,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="regenerate-reports.js"></script>
 <script>
   // ===== SUPABASE INIT =====
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -960,7 +961,10 @@ button{font-family:inherit;cursor:pointer}
         return; // unknown type — skip
       }
       sb.from('weakness_signals').insert(row).then(({ error }) => {
-        if (error) console.warn('weakness_signals insert failed:', error.message);
+        if (error) { console.warn('weakness_signals insert failed:', error.message); return; }
+        if (window.scheduleReportRegen && currentUser) {
+          window.scheduleReportRegen(sb, currentUser.id);
+        }
       });
     },
     bumpUsage: function(){

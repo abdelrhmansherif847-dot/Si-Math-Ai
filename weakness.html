@@ -435,7 +435,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="head-actions">
       <button class="gen-btn" id="genBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-        Generate New Analysis
+        <span id="genBtnLbl">Refresh Analysis</span>
       </button>
       <span class="updated"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Last updated: <b id="updatedAt">Today, 2:45 PM</b></span>
     </div>
@@ -754,6 +754,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="regenerate-reports.js"></script>
 <script>
 /* ── sidebar ── */
 const sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay'),hamb=document.getElementById('hamb');
@@ -837,16 +838,31 @@ async function init(){
 }
 
 /* ── load data ── */
-async function loadData(){
+async function loadData(forceRegen){
   const uid=currentUser.id;
+
+  // Always regenerate when explicitly requested; also regenerate if signals exist but reports are stale
+  if(forceRegen&&window.regenerateWeaknessReports){
+    try{await window.regenerateWeaknessReports(sb,uid);}
+    catch(e){console.warn('[weakness] regen error:',e.message);}
+  }
+
   const [rr,mr,sr]=await Promise.all([
-    sb.from('weakness_reports').select('*').eq('user_id',uid).order('weakness_score',{ascending:false}),
+    sb.from('weakness_reports').select('*').eq('user_id',uid).order('priority_rank',{ascending:true}),
     sb.from('mastery_records').select('*').eq('user_id',uid),
     sb.from('weakness_signals').select('*').eq('user_id',uid)
   ]);
   allReports=rr.data||[];
   allMastery=mr.data||[];
   allSignals=sr.data||[];
+
+  // If reports are missing but signals exist, regenerate now then reload
+  if(allReports.length===0&&allSignals.length>0&&!forceRegen&&window.regenerateWeaknessReports){
+    try{await window.regenerateWeaknessReports(sb,uid);}
+    catch(e){console.warn('[weakness] auto-regen error:',e.message);}
+    const fresh=await sb.from('weakness_reports').select('*').eq('user_id',uid).order('priority_rank',{ascending:true});
+    allReports=fresh.data||[];
+  }
 
   if(allReports.length===0&&allSignals.length===0){showEmpty();return;}
 
@@ -1223,9 +1239,12 @@ function goFocus(report){
 /* ── generate button ── */
 document.getElementById('genBtn').addEventListener('click',async()=>{
   const btn=document.getElementById('genBtn');
+  const lbl=document.getElementById('genBtnLbl');
   btn.classList.add('spin');btn.disabled=true;
-  await loadData();
+  if(lbl) lbl.textContent='Regenerating…';
+  await loadData(true); // forceRegen=true
   btn.classList.remove('spin');btn.disabled=false;
+  if(lbl) lbl.textContent='Refresh Analysis';
   document.getElementById('updatedAt').textContent=ts();
 });
 
