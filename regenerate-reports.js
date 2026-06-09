@@ -117,18 +117,46 @@
     if (!sb || !userId) return;
 
     try {
-      // 1. Load all signals for this user
-      var sigRes = await sb
-        .from('weakness_signals')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
+      // 1. Load signals AND mastery_records in parallel
+      var results = await Promise.all([
+        sb.from('weakness_signals').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+        sb.from('mastery_records').select('topic, subtopic, mastery_score').eq('user_id', userId)
+      ]);
 
-      var signals = (sigRes.data) || [];
+      var signals  = (results[0].data) || [];
+      var mastRecs = (results[1].data) || [];
       if (signals.length === 0) return; // nothing to compute
 
-      // 2. Compute new reports from signals
+      // Build authoritative mastery lookup from mastery_records
+      var mastMap = {};
+      mastRecs.forEach(function (m) {
+        if (m.topic && m.subtopic && m.mastery_score != null) {
+          mastMap[(m.topic + '|' + m.subtopic).toLowerCase()] = Number(m.mastery_score);
+        }
+      });
+
+      // 2. Compute new reports from signals (mastery_records overrides signal-computed mastery)
       var computed = buildFromSignals(signals);
+
+      // Inject authoritative mastery from mastery_records where available
+      computed.forEach(function (c) {
+        var k = ((c.topic || '') + '|' + (c.subtopic || '')).toLowerCase();
+        if (mastMap[k] != null) {
+          c.mastery_score = mastMap[k];
+        }
+      });
+
+      // Re-sort after mastery override (mastery_records may change ordering)
+      computed.sort(function (a, b) {
+        var ma = a.mastery_score != null ? a.mastery_score : 50;
+        var mb = b.mastery_score != null ? b.mastery_score : 50;
+        if (Math.abs(ma - mb) > 5) return ma - mb;
+        return b.weakness_score - a.weakness_score;
+      });
+      computed.forEach(function (c, i) {
+        c.priority_rank = i + 1;
+        c.biggest_weakness = i === 0;
+      });
       if (computed.length === 0) return;
 
       // 3. Load existing reports to determine update vs insert

@@ -640,6 +640,7 @@ button{font-family:inherit;cursor:pointer}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="regenerate-reports.js"></script>
+<script src="mastery-updater.js"></script>
 <script>
   // ===== SUPABASE INIT =====
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -1345,6 +1346,10 @@ button{font-family:inherit;cursor:pointer}
         var statusEl=document.getElementById(wrap.dataset.statusid);
         if(statusEl){statusEl.textContent=r[0];statusEl.className='spc-v '+r[1];}
         SignalEngine.sendResolution(wrap.dataset.topic,wrap.dataset.sub,this.dataset.r);
+        // Update mastery_records with resolution feedback
+        if (window.MasteryEngine && currentUser && wrap.dataset.topic && wrap.dataset.sub) {
+          window.MasteryEngine.onResolution(sb, currentUser.id, wrap.dataset.topic, wrap.dataset.sub, this.dataset.r);
+        }
       }));
     }
     // explain simpler
@@ -1413,6 +1418,15 @@ button{font-family:inherit;cursor:pointer}
         removeTyping();
         addAI(sig, response);
         awardChatXP();
+        // Update mastery_records for this interaction
+        if (window.MasteryEngine && currentUser && sig && sig.topic && sig.sub) {
+          window.MasteryEngine.onQuestion(sb, currentUser.id, sig.topic, sig.sub, {
+            confidence:     sig.confidence || null,
+            weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
+            isMultiConcept: !!(sig.multiConcept && sig.multiConcept.length > 0),
+            isRepeat:       (SignalEngine.topicCounts[sig.sub] || 0) >= 2
+          });
+        }
       }).catch(err => {
         removeTyping();
         showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
