@@ -187,7 +187,7 @@ document.getElementById('hamb').addEventListener('click', () => { sidebar.classL
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
-const PLAN_LIMITS = { free: 2, pro: 3 };
+function getPlanLimit(planCode) { return planCode === 'FREE' ? 2 : 3; }
 
 function getDeviceFingerprint() {
   const ua = navigator.userAgent;
@@ -288,15 +288,8 @@ async function registerCurrentDevice(userId) {
 }
 
 async function removeDevice(deviceId, userId) {
-  if (!confirm('Remove this device? It will be signed out on next access.')) return;
   const { error } = await sb.from('user_devices').delete().eq('id', deviceId).eq('user_id', userId);
-  if (error) { alert('Failed to remove device.'); return; }
-  loadPage();
-}
-
-async function revokeSession(sessionId, userId) {
-  if (!confirm('End this session?')) return;
-  await sb.from('user_sessions').update({ is_active: false }).eq('id', sessionId).eq('user_id', userId);
+  if (error) { showAlert('danger', 'Failed to remove device. Please try again.'); return; }
   loadPage();
 }
 
@@ -307,42 +300,36 @@ async function loadPage() {
   const initials = (user.email || '?')[0].toUpperCase();
   document.getElementById('topAvatar').textContent = initials;
 
-  const { data: profile } = await sb.from('profiles').select('plan,xp,rank_name').eq('id', user.id).single();
-  const plan = profile?.plan || 'free';
-  const limit = PLAN_LIMITS[plan] || 2;
+  const { data: profile } = await sb.from('profiles').select('plan_code').eq('id', user.id).single();
+  const planCode = (profile && profile.plan_code) || 'FREE';
+  const limit = getPlanLimit(planCode);
 
-  document.getElementById('planBadgeTop').innerHTML = plan === 'pro'
+  document.getElementById('planBadgeTop').innerHTML = planCode !== 'FREE'
     ? `<span style="background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold);padding:3px 10px;border-radius:100px">⭐ Pro</span>`
     : `<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan);padding:3px 10px;border-radius:100px">Free</span>`;
 
   const currentFp = await registerCurrentDevice(user.id);
 
-  const [devResult, sessResult] = await Promise.all([
-    sb.from('user_devices').select('*').eq('user_id', user.id).eq('is_active', true).order('last_seen', { ascending: false }),
-    sb.from('user_sessions').select('*').eq('user_id', user.id).eq('is_active', true).order('last_activity', { ascending: false }).limit(10)
-  ]);
-
-  const devices = devResult.data || [];
-  const sessions = sessResult.data || [];
+  const { data: devices } = await sb.from('user_devices').select('*').eq('user_id', user.id).eq('is_active', true).order('last_seen', { ascending: false });
+  const deviceList = devices || [];
 
   document.getElementById('alerts').innerHTML = '';
 
-  if (devices.length > limit) {
-    showAlert('danger', `You have ${devices.length} active devices but your ${plan} plan allows ${limit}. Please remove old devices to stay within your limit.`);
+  if (new URLSearchParams(window.location.search).get('blocked') === '1') {
+    showAlert('warn', 'This device is not registered for your account. Please remove an existing device below to free up a slot.');
+  } else if (deviceList.length > limit) {
+    showAlert('danger', `You have ${deviceList.length} active devices but your plan allows ${limit}. Please remove old devices to stay within your limit.`);
   }
 
-  const html = buildHTML(devices, sessions, plan, limit, currentFp, user);
+  const html = buildHTML(deviceList, planCode, limit, currentFp, user);
   document.getElementById('pageContent').innerHTML = html;
 
   document.querySelectorAll('.btn-remove-device').forEach(btn => {
     btn.addEventListener('click', () => removeDevice(btn.dataset.id, user.id));
   });
-  document.querySelectorAll('.btn-revoke-session').forEach(btn => {
-    btn.addEventListener('click', () => revokeSession(btn.dataset.id, user.id));
-  });
 }
 
-function buildHTML(devices, sessions, plan, limit, currentFp, user) {
+function buildHTML(devices, planCode, limit, currentFp, user) {
   const used = devices.length;
   const pct = Math.min(100, (used / limit) * 100);
   const fillColor = pct >= 100 ? 'var(--red)' : pct >= 75 ? 'var(--amber)' : 'var(--cyan)';
@@ -351,14 +338,14 @@ function buildHTML(devices, sessions, plan, limit, currentFp, user) {
   <div class="sec-label" style="margin-top:0">Device Usage</div>
   <div class="card">
     <div class="limit-display">
-      <span class="limit-text">${plan === 'pro' ? '⭐ Pro Plan' : '🆓 Free Plan'} — ${limit} device${limit>1?'s':''} allowed</span>
+      <span class="limit-text">${planCode !== 'FREE' ? '⭐ Pro Plan' : '🆓 Free Plan'} — ${limit} device${limit>1?'s':''} allowed</span>
       <span class="limit-count" style="color:${fillColor}">${used} / ${limit}</span>
     </div>
     <div class="plan-bar"><div class="plan-fill" style="width:${pct}%;background:${fillColor};box-shadow:0 0 8px ${fillColor}66"></div></div>
     <p class="plan-note">Each browser profile on a different physical device counts as one device.</p>
   </div>`;
 
-  if (plan === 'free') {
+  if (planCode === 'FREE') {
     html += `
   <div class="upgrade-cta" style="margin-top:14px">
     <div class="uc-text">
@@ -401,27 +388,6 @@ function buildHTML(devices, sessions, plan, limit, currentFp, user) {
     });
   }
   html += `</div>`;
-
-  html += `
-  <div class="sec-label">Active Sessions (${sessions.length})</div>`;
-
-  if (sessions.length === 0) {
-    html += `<div class="card"><p style="color:var(--text-400);font-family:var(--font-mono);font-size:12px">No active sessions tracked.</p></div>`;
-  } else {
-    html += `<div class="sessions-list">`;
-    sessions.forEach(s => {
-      html += `
-      <div class="session-row">
-        <div class="session-dot active"></div>
-        <div class="session-info">
-          <div class="session-name">${escHtml(s.session_type || 'Web Session')}</div>
-          <div class="session-meta">Started ${relTime(s.created_at)} · Last active ${relTime(s.last_activity)}</div>
-        </div>
-        <button class="btn-remove btn-revoke-session" data-id="${s.id}">End</button>
-      </div>`;
-    });
-    html += `</div>`;
-  }
 
   html += `
   <div class="sec-label">Security Information</div>

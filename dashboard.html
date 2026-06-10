@@ -1503,11 +1503,21 @@ var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 var CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
+async function deviceGuard(sb, userId) {
+  var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+  var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
+  var fp=(h>>>0).toString(16).padStart(8,'0');
+  var{data:d}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+  if(!d){window.location.href='devices.html?blocked=1';return false;}
+  return true;
+}
+
 async function loadDashboard() {
   /* ── Auth ── */
   var authRes = await sb.auth.getUser();
   var user = authRes.data && authRes.data.user;
   if (!user) { window.location.href = 'login.html'; return; }
+  if (!(await deviceGuard(sb, user.id))) return;
 
   /* Set avatar initial immediately while rest loads */
   var topAvatar = document.getElementById('topAvatar');

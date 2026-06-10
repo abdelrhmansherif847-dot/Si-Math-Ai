@@ -1024,7 +1024,17 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
-render();
+(async function() {
+  const user = await getCurrentUser();
+  if (!user) { window.location.href = 'login.html'; return; }
+  const sb = await getSb();
+  var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+  var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
+  var fp=(h>>>0).toString(16).padStart(8,'0');
+  var{data:d}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+  if(!d){window.location.href='devices.html?blocked=1';return;}
+  render();
+})();
 </script>
 </body>
 </html>

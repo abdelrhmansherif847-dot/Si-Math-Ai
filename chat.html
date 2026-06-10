@@ -646,6 +646,16 @@ button{font-family:inherit;cursor:pointer}
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  async function deviceGuard(sb, userId) {
+    var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+    var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
+    var fp=(h>>>0).toString(16).padStart(8,'0');
+    var{data:d}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+    if(!d){window.location.href='devices.html?blocked=1';return false;}
+    return true;
+  }
+
   let currentUser = null;
   let userInitials = '';
   let currentSessionId = null;
@@ -656,6 +666,7 @@ button{font-family:inherit;cursor:pointer}
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { window.location.href = 'login.html'; return; }
     currentUser = user;
+    if (!(await deviceGuard(sb, user.id))) return;
     const { data: profile } = await sb.from('profiles').select('full_name, is_admin, plan_code').eq('id', user.id).single();
     const meta = user.user_metadata || {};
     const fullName = (profile && profile.full_name) || meta.full_name || user.email.split('@')[0];
