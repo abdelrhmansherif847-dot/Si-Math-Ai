@@ -362,7 +362,10 @@ if (!window.supabase) { document.getElementById('pageContent').innerHTML = '<div
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 async function getCurrentUser() {
-  const { data: { user } } = await sb.auth.getUser();
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Auth timeout — please refresh')), 10000)
+  );
+  const { data: { user } } = await Promise.race([sb.auth.getUser(), timeout]);
   return user;
 }
 
@@ -999,23 +1002,21 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
-function _bootStatus(msg) {
-  var pc = document.getElementById('pageContent');
-  if (pc) pc.innerHTML = '<div style="padding:48px 20px;text-align:center;color:var(--text-400);font-size:14px">' + msg + '</div>';
-}
-
 (async function() {
-  _bootStatus('Checking session…');
+  // Step 1: auth — redirect if not logged in
   const user = await getCurrentUser();
   if (!user) { window.location.href = 'login.html'; return; }
 
-  _bootStatus('Loading profile…');
-  const{data:_prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
-  const _isAdmin=_prof&&_prof.is_admin;
-  if(_isAdmin){var _an=document.getElementById('adminNavSection');if(_an)_an.style.display='block';}
+  // Step 2: render immediately so the page is usable
+  render();
 
-  if(!_isAdmin){
-    _bootStatus('Verifying device…');
+  // Step 3: admin + device check runs in background (non-blocking)
+  try {
+    const{data:_prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
+    const _isAdmin=_prof&&_prof.is_admin;
+    if(_isAdmin){var _an=document.getElementById('adminNavSection');if(_an)_an.style.display='block'; return;}
+
+    // Device guard for non-admin
     (function(){function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
     var _tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
     var _sw=Math.min(screen.width,screen.height),_sh=Math.max(screen.width,screen.height);
@@ -1035,11 +1036,11 @@ function _bootStatus(msg) {
       }
       if(!_migrated){window.location.href='devices.html?blocked=1';return;}
     }
-  }
-  render();
+  } catch(e) { console.error('[mock-exam] bg check error:',e); }
 }).catch(err=>{
   console.error('[mock-exam] boot error:',err);
-  _bootStatus('⚠️ Failed to load — <a href="mock-exam.html" style="color:var(--cyan-3)">Retry</a> &nbsp;·&nbsp; <a href="dashboard.html" style="color:var(--cyan-3)">Dashboard</a><br><small style="font-size:11px;opacity:.6;display:block;margin-top:8px">' + (err && err.message ? err.message : String(err)) + '</small>');
+  var pc=document.getElementById('pageContent');
+  if(pc)pc.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--text-400)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;color:var(--text-200);margin-bottom:8px">Failed to load</div><div style="font-size:13px;margin-bottom:8px">'+( err&&err.message?err.message:String(err))+'</div><a href="mock-exam.html" style="color:var(--cyan-3);text-decoration:underline;margin-right:16px">Retry</a><a href="dashboard.html" style="color:var(--cyan-3);text-decoration:underline">Dashboard</a></div>';
 });
 
 // Force full reload when iOS Safari restores page from back-forward cache
