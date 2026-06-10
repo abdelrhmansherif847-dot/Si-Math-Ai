@@ -701,7 +701,11 @@ async function loadPage() {
   document.getElementById('pageContent').innerHTML = html;
 }
 
-loadPage();
+loadPage().catch(err => {
+  console.error('[pricing] load error:', err);
+  const pc = document.getElementById('pageContent');
+  if (pc) pc.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--text-400)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;color:var(--text-200);margin-bottom:8px">Failed to load pricing</div><div style="font-size:13px;margin-bottom:20px">Check your connection and try again.</div><a href="javascript:location.reload()" style="color:var(--cyan-3,#7dd3fc);text-decoration:underline">Reload page</a></div>';
+});
 </script>
 </body>
 </html>

@@ -1852,7 +1852,11 @@ async function loadDashboard() {
 loadDashboard().catch(function(err) {
   console.error('Dashboard load error:', err);
   var heroName = document.getElementById('heroName');
-  if (heroName) heroName.textContent = 'Error loading data';
+  if (heroName) heroName.textContent = 'Could not load';
+  var errBanner = document.createElement('div');
+  errBanner.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:99;background:rgba(239,79,95,.12);border:1px solid rgba(239,79,95,.32);border-radius:10px;padding:12px 20px;color:#fca5a5;font-size:13px;text-align:center;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  errBanner.innerHTML = '⚠️ Dashboard failed to load. Check your connection. <a href="javascript:location.reload()" style="color:#7dd3fc;text-decoration:underline;margin-left:8px">Reload</a> <button onclick="this.parentNode.remove()" style="margin-left:10px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  document.body.appendChild(errBanner);
 });
 </script>
 </body>
