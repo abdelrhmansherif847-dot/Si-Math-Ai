@@ -1449,9 +1449,9 @@ button{font-family:inherit;cursor:pointer}
       if (!creditResult.ok) {
         removeTyping();
         if (creditResult.reason === 'daily_limit_reached') {
-          showCreditError('You\'ve used all your free messages for today. <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">Upgrade to Pro</a> for unlimited daily messages.');
+          showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (starts at 69 EGP, never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
         } else if (creditResult.reason === 'insufficient_credits') {
-          showCreditError('Not enough credits remaining. <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or upgrade your plan to continue.');
+          showCreditError('Not enough credits remaining (balance: ' + (creditResult.balance || 0) + '). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> to top up, or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade your plan</a> for a new monthly allowance.');
         } else {
           showCreditError('Access check failed: ' + escapeHtml(creditResult.reason || 'unknown'));
         }

@@ -557,7 +557,7 @@ async function loadPage() {
   </div>`;
 
   // Plans grid
-  html += `<div class="sec-label">Choose Your Plan</div>
+  html += `<div class="sec-label" id="plans">Choose Your Plan</div>
   <div class="plans-grid">`;
 
   for (const plan of plans) {
@@ -629,8 +629,8 @@ async function loadPage() {
 
   // Credit packs
   if (packs.length > 0) {
-    html += `<div class="sec-label">Buy Credit Packs</div>
-    <div style="font-size:13px;color:var(--text-400);margin-bottom:14px;margin-top:-8px">Credits never expire. Use them any time, across any plan.</div>
+    html += `<div class="sec-label" id="packs">Buy Credit Packs</div>
+    <div style="font-size:13px;color:var(--text-400);margin-bottom:14px;margin-top:-8px">Credits never expire. Available to all users — no subscription required. Free plan users get their 10 daily messages first, then credits are used after the daily allowance runs out.</div>
     <div class="packs-grid">`;
 
     packs.forEach((pack, idx) => {
@@ -658,7 +658,7 @@ async function loadPage() {
         <span class="usage-count" style="color:${dailyLimit && todayUsage >= dailyLimit ? 'var(--red)' : 'var(--text-400)'}">${todayUsage}${dailyLimit ? ' / ' + dailyLimit : ' (unlimited)'}</span>
       </div>
       ${dailyLimit ? `<div class="usage-bar"><div class="usage-fill" style="width:${Math.min(100,(todayUsage/dailyLimit)*100)}%;background:${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'};box-shadow:0 0 6px ${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'}66"></div></div>` : ''}
-      ${dailyLimit ? `<div class="usage-note">Resets at midnight UTC · Upgrade for unlimited</div>` : `<div class="usage-note">No daily limit on your plan</div>`}
+      ${dailyLimit ? `<div class="usage-note">Resets at midnight UTC · <a href="#packs" style="color:var(--cyan)">Buy a pack</a> to continue after the daily limit · <a href="#plans" style="color:var(--cyan)">Upgrade</a> for unlimited</div>` : `<div class="usage-note">No daily limit on your plan</div>`}
     </div>
     <div class="usage-row">
       <div class="usage-header">
@@ -685,7 +685,7 @@ async function loadPage() {
 
   <div class="sec-label">Frequently Asked Questions</div>
   ${[
-    ['What are credits?', 'Credits power AI features. Each AI Tutor message costs 5 credits, Weakness Analysis costs 10 credits, and Focus Plan costs 10 credits. Free plan users get a daily message limit instead of credits.'],
+    ['What are credits?', 'Credits power the AI Tutor. Each AI Chat message costs 5 credits. Weakness Analyzer, Focus Practice, and Mock Exams are always free on every plan — credits are only used for AI Chat. Free plan users get 10 free AI Chat messages per day; credit packs let you send more messages after your daily allowance runs out.'],
     ['Do credits expire?', 'Subscription credits expire when your subscription ends. Credit pack credits never expire — they stay in your account forever.'],
     ['How does the upgrade process work?', "Since we're in beta, upgrades are handled manually. Submit a request and we'll activate your plan within 24 hours and email you confirmation."],
     ['What is the Founder plan?', "The Founder plan is limited to the first 50 students. Founders get the monthly Pro price locked in for life, a permanent Founder badge on their profile, and are protected from all future price increases."],
