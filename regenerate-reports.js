@@ -240,11 +240,6 @@
 
       await Promise.all(ops);
 
-      console.log(
-        '[regenerate] done — ' + toInsert.length + ' inserted, ' +
-        toUpdate.length + ' updated, ' + toDeleteIds.length + ' deleted'
-      );
-
     } catch (err) {
       console.warn('[regenerate] failed:', err.message || err);
     }

@@ -84,7 +84,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* ── Snapshot rail ── */
 .snap-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-@media(min-width:540px){.snap-grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:540px){.snap-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
 .snap-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:18px 16px;text-align:center;animation:rise .5s ease both;transition:border-color .2s}
 .snap-card:hover{border-color:var(--border-mid)}
 .snap-icon{font-size:1.4rem;margin-bottom:6px;display:block}
@@ -96,6 +96,7 @@ button{font-family:inherit;cursor:pointer}
 .snap-card.c-xp .snap-val{color:var(--gold)}
 .snap-card.c-mastery .snap-val{color:var(--green)}
 .snap-card.c-exams .snap-val{color:var(--cyan)}
+.snap-card.c-questions .snap-val{color:var(--purple)}
 
 /* ── Mastery topic grid ── */
 .topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
@@ -276,6 +277,12 @@ button{font-family:inherit;cursor:pointer}
       <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
       <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
     </div>
+    <div class="snap-card c-questions">
+      <span class="snap-icon">✏️</span>
+      <div class="snap-val skel" style="height:32px;width:60px;margin:0 auto 6px">&nbsp;</div>
+      <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
+      <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
+    </div>
   </div>
 
   <!-- Biggest improvement -->
@@ -367,12 +374,33 @@ function tierColor(score){
   return 'var(--red)';
 }
 
+// ── Device guard ──
+async function deviceGuard(sb, userId) {
+  function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
+  var tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
+  var sw=Math.min(screen.width,screen.height), sh=Math.max(screen.width,screen.height);
+  var fp=_d2([navigator.userAgent,sw+'x'+sh+'x'+screen.colorDepth,navigator.language||'',tz].join('|'));
+  var{data:d}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+  if(d) return true;
+  var migs=[
+    _d2([navigator.userAgent,screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',tz].join('|')),
+    _d2([navigator.userAgent,screen.height+'x'+screen.width+'x'+screen.colorDepth,navigator.language||'',tz].join('|')),
+    _d2([navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',tz].join('|'))
+  ];
+  for(var _i=0;_i<migs.length;_i++){
+    var{data:m}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',migs[_i]).eq('is_active',true).maybeSingle();
+    if(m){var now=new Date().toISOString();await sb.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',m.id);return true;}
+  }
+  window.location.href='devices.html?blocked=1';return false;
+}
+
 // ── Main init ──
 (async function(){
   try {
     var _auth = await sb.auth.getUser();
     var user  = _auth.data.user;
     if (!user){ window.location.href = 'login.html'; return; }
+    if (!await deviceGuard(sb, user.id)) return;
 
     // Avatar initial
     var avatarEl = document.getElementById('avatarEl');
@@ -391,10 +419,15 @@ function tierColor(score){
       sb.from('exam_practice_sessions').select('score,created_at,exam_type,correct_answers').eq('user_id', user.id).order('created_at', {ascending:false}),
       // 5 weakness_reports: topic, mastery_estimate (used as prior for improvement delta)
       sb.from('weakness_reports').select('topic,mastery_estimate,priority_rank').eq('user_id', user.id).order('priority_rank', {ascending:true}),
+      // 6 question_records: count + distinct topics for "Questions Solved" snap card
+      sb.from('question_records').select('topic', { count: 'exact' }).eq('user_id', user.id),
     ]);
 
     var profile   = results[0].data  || {};
     var mastRecs  = results[1].data  || [];
+    var qRecs     = results[6].data  || [];
+    var qCount    = results[6].count || qRecs.length || 0;
+    var qTopics   = new Set(qRecs.map(function(q){ return q.topic; }).filter(Boolean)).size;
     var achieves  = results[2].data  || [];
     var chatSess  = results[3].data  || [];
     var exams     = results[4].data  || [];
@@ -490,7 +523,13 @@ function tierColor(score){
               return '<div class="snap-sub">Avg score: ' + avg + '</div>';
             })()
           : '<div class="snap-sub">Try your first exam</div>')
-      + '</div>';
+      + '</div>' +
+      '<div class="snap-card c-questions">' +
+        '<span class="snap-icon">✏️</span>' +
+        '<div class="snap-val">' + qCount.toLocaleString() + '</div>' +
+        '<div class="snap-lbl">Questions Solved</div>' +
+        '<div class="snap-sub">' + (qTopics > 0 ? 'across ' + qTopics + ' topic' + (qTopics === 1 ? '' : 's') : 'Keep practicing') + '</div>' +
+      '</div>';
 
     // ── Biggest improvement ──
     // Data: mastery_records.mastery_score (current) vs weakness_reports.mastery_estimate (prior reading)

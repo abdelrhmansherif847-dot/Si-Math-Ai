@@ -651,12 +651,23 @@ button{font-family:inherit;cursor:pointer}
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   async function deviceGuard(sb, userId) {
-    var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
-    var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
-    var fp=(h>>>0).toString(16).padStart(8,'0');
+    function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
+    var tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
+    var sw=Math.min(screen.width,screen.height), sh=Math.max(screen.width,screen.height);
+    var fp=_d2([navigator.userAgent,sw+'x'+sh+'x'+screen.colorDepth,navigator.language||'',tz].join('|'));
     var{data:d}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
-    if(!d){window.location.href='devices.html?blocked=1';return false;}
-    return true;
+    if(d) return true;
+    // Migration: v2 current orientation → v2 swapped orientation (iPad portrait↔landscape fix) → legacy (with platform)
+    var migs=[
+      _d2([navigator.userAgent,screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',tz].join('|')),
+      _d2([navigator.userAgent,screen.height+'x'+screen.width+'x'+screen.colorDepth,navigator.language||'',tz].join('|')),
+      _d2([navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',tz].join('|'))
+    ];
+    for(var _i=0;_i<migs.length;_i++){
+      var{data:m}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',migs[_i]).eq('is_active',true).maybeSingle();
+      if(m){var now=new Date().toISOString();await sb.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',m.id);return true;}
+    }
+    window.location.href='devices.html?blocked=1';return false;
   }
 
   let currentUser = null;
@@ -683,7 +694,7 @@ button{font-family:inherit;cursor:pointer}
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .gte('created_at', todayUTC);
-      SignalEngine.plan = planCode;
+      SignalEngine.plan = planCode.toLowerCase(); // normalize: 'PRO_MONTHLY' → 'pro_monthly'
       SignalEngine.usage = usageCount || 0;
       SignalEngine.renderUsage();
       loadChatHistory();
@@ -1001,18 +1012,23 @@ button{font-family:inherit;cursor:pointer}
         }
       });
     },
+    isPaid: function(){
+      // free/basic = limited; any pro/founder/premium variant = paid
+      var p = this.plan;
+      return p !== 'free' && p !== 'basic' && p !== '' && p !== 'free plan';
+    },
     bumpUsage: function(){
-      var max = this.plan==='pro'?200:10;
+      var max = this.isPaid()?200:10;
       this.usage = Math.min(this.usage+1, max);
       this.renderUsage();
     },
     renderUsage: function(){
-      var max = this.plan==='pro'?200:10;
+      var max = this.isPaid()?200:10;
       var nowEl=document.getElementById('usageNow'), maxEl=document.getElementById('usageMax'),
           planEl=document.getElementById('usagePlan'), barEl=document.getElementById('usageBar');
       if(nowEl) nowEl.textContent=this.usage;
       if(maxEl) maxEl.textContent=max;
-      if(planEl) planEl.textContent=this.plan==='pro'?'(Pro)':'(Free)';
+      if(planEl) planEl.textContent=this.isPaid()?'(Pro)':'(Free)';
       if(barEl) barEl.style.width=Math.round(this.usage/max*100)+'%';
     }
   };
@@ -1435,9 +1451,9 @@ button{font-family:inherit;cursor:pointer}
       if (!creditResult.ok) {
         removeTyping();
         if (creditResult.reason === 'daily_limit_reached') {
-          showCreditError('You\'ve used all your free messages for today. <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">Upgrade to Pro</a> for unlimited daily messages.');
+          showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (starts at 69 EGP, never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
         } else if (creditResult.reason === 'insufficient_credits') {
-          showCreditError('Not enough credits remaining. <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or upgrade your plan to continue.');
+          showCreditError('Not enough credits remaining (balance: ' + (creditResult.balance || 0) + '). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> to top up, or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade your plan</a> for a new monthly allowance.');
         } else {
           showCreditError('Access check failed: ' + escapeHtml(creditResult.reason || 'unknown'));
         }
