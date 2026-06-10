@@ -362,7 +362,10 @@ if (!window.supabase) { document.getElementById('pageContent').innerHTML = '<div
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 async function getCurrentUser() {
-  const { data: { user } } = await sb.auth.getUser();
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Auth timeout — please refresh')), 10000)
+  );
+  const { data: { user } } = await Promise.race([sb.auth.getUser(), timeout]);
   return user;
 }
 
