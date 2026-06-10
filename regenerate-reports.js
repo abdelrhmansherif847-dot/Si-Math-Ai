@@ -25,9 +25,10 @@
       var age = now - t;
       decayScore += Math.exp(-age / (DAY * 14));
       if (age < 7 * DAY) last7++;
-      if (s.signal_type === 'topic' && (s.weight || 0) > 0.4) weakSigs++;
+      var examMult = (s.source === 'MOCK_EXAM') ? 2 : 1;
+      if (s.signal_type === 'topic' && (s.weight || 0) > 0.4) weakSigs += examMult;
       if (s.signal_type === 'multi_concept') helpReqs++;
-      if (s.signal_type === 'repeated') repeated++;
+      if (s.signal_type === 'repeated') repeated += examMult;
       if (s.signal_type === 'topic' && (s.weight != null ? s.weight : 1) < 0.3) highConf++;
       if (s.signal_type === 'resolution' && (s.weight || 0) < 0) understood++;
     }

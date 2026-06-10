@@ -798,9 +798,9 @@ function computeMastery(signals){
   const last7=times.filter(t=>now-t<7*DAY).length;
   let decayScore=0;
   times.forEach(t=>{decayScore+=Math.exp(-(now-t)/(DAY*14));});
-  const weakSigs=signals.filter(s=>s.signal_type==='topic'&&(s.weight||0)>0.4).length;
+  const weakSigs=signals.reduce((n,s)=>{const m=s.source==='MOCK_EXAM'?2:1;return n+(s.signal_type==='topic'&&(s.weight||0)>0.4?m:0);},0);
   const helpReqs=signals.filter(s=>s.signal_type==='multi_concept').length;
-  const repeated=signals.filter(s=>s.signal_type==='repeated').length;
+  const repeated=signals.reduce((n,s)=>{const m=s.source==='MOCK_EXAM'?2:1;return n+(s.signal_type==='repeated'?m:0);},0);
   // low weight on topic signal = high confidence
   const highConf=signals.filter(s=>s.signal_type==='topic'&&(s.weight||1)<0.3).length;
   const understood=signals.filter(s=>s.signal_type==='resolution'&&(s.weight||0)<0).length;
