@@ -168,6 +168,13 @@ button{font-family:inherit;cursor:pointer}
   <a class="nav-item active" href="devices.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices</a>
   <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
   <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
+  <div id="adminNavSection" style="display:none">
+    <div class="side-sec">Admin</div>
+    <a class="nav-item" href="admin.html" style="color:#ef4f5f">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      Admin Dashboard
+    </a>
+  </div>
 </aside>
 <div class="overlay" id="overlay"></div>
 
@@ -193,17 +200,11 @@ sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', (
 function getPlanLimit(planCode) { return planCode === 'FREE' ? 2 : 3; }
 
 function getDeviceFingerprint() {
-  const ua = navigator.userAgent;
-  const platform = navigator.platform || '';
-  const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-  const lang = navigator.language || '';
-  const raw = ua + platform + screen + lang;
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) {
-    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16).padStart(8, '0');
+  // Must be identical to deviceGuard() on all protected pages
+  function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
+  var tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
+  var sw=Math.min(screen.width,screen.height), sh=Math.max(screen.width,screen.height);
+  return _d2([navigator.userAgent,sw+'x'+sh+'x'+screen.colorDepth,navigator.language||'',tz].join('|'));
 }
 
 function getDeviceInfo() {
@@ -247,7 +248,7 @@ function showAlert(type, msg) {
   document.getElementById('alerts').appendChild(div);
 }
 
-async function registerCurrentDevice(userId) {
+async function registerCurrentDevice(userId, isAdmin) {
   const fp = getDeviceFingerprint();
   const info = getDeviceInfo();
   const now = new Date().toISOString();
@@ -256,17 +257,16 @@ async function registerCurrentDevice(userId) {
     .select('id')
     .eq('user_id', userId)
     .eq('device_fingerprint', fp)
-    .single();
+    .maybeSingle();
 
   if (!existing.data) {
-    // Ask the DB function if registration is allowed (backend enforcement)
-    const { data: allowed, error: fnErr } = await sb.rpc('can_register_device', {
+    // Admins bypass device limit — always register
+    const allowed = isAdmin ? true : (await sb.rpc('can_register_device', {
       p_user_id: userId,
       p_fingerprint: fp
-    });
+    })).data;
 
-    if (fnErr || !allowed) {
-      // Device limit reached — show warning but don't block page load
+    if (!allowed) {
       showAlert('warn', 'Device limit reached for your plan. Remove an existing device to register this one, or upgrade to Pro.');
       return fp;
     }
@@ -298,20 +298,23 @@ async function removeDevice(deviceId, userId) {
 
 async function loadPage() {
   const { data: { user }, error: authErr } = await sb.auth.getUser();
-  if (authErr || !user) { window.location.href = 'index.html'; return; }
+  if (authErr || !user) { window.location.href = 'login.html'; return; }
 
   const initials = (user.email || '?')[0].toUpperCase();
   document.getElementById('topAvatar').textContent = initials;
 
-  const { data: profile } = await sb.from('profiles').select('plan_code').eq('id', user.id).single();
+  const { data: profile } = await sb.from('profiles').select('plan_code, is_admin').eq('id', user.id).single();
   const planCode = (profile && profile.plan_code) || 'FREE';
+  const isAdmin = !!(profile && profile.is_admin);
   const limit = getPlanLimit(planCode);
+
+  if (isAdmin) { const an = document.getElementById('adminNavSection'); if (an) an.style.display = 'block'; }
 
   document.getElementById('planBadgeTop').innerHTML = planCode !== 'FREE'
     ? `<span style="background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold);padding:3px 10px;border-radius:100px">⭐ Pro</span>`
     : `<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan);padding:3px 10px;border-radius:100px">Free</span>`;
 
-  const currentFp = await registerCurrentDevice(user.id);
+  const currentFp = await registerCurrentDevice(user.id, isAdmin);
 
   const { data: devices } = await sb.from('user_devices').select('*').eq('user_id', user.id).eq('is_active', true).order('last_seen', { ascending: false });
   const deviceList = devices || [];
