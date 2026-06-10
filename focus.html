@@ -938,6 +938,8 @@ function reportToProfile(report, qData) {
 
 // ===== MAIN DATA LOAD =====
 async function deviceGuard(sb, userId) {
+  var{data:_ap}=await sb.from('profiles').select('is_admin').eq('id',userId).single();
+  if(_ap&&_ap.is_admin)return true;
   function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
   var tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
   var sw=Math.min(screen.width,screen.height), sh=Math.max(screen.width,screen.height);
