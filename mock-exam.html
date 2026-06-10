@@ -1002,21 +1002,42 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
+function _dbg(msg) {
+  var el = document.getElementById('_bootDbg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_bootDbg';
+    el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0a1224;border-top:1px solid #334;padding:10px 16px;font-size:11px;font-family:monospace;color:#7dd3fc;z-index:9999;max-height:160px;overflow-y:auto';
+    document.body.appendChild(el);
+  }
+  el.innerHTML += '<div>' + new Date().toISOString().slice(11,23) + ' ' + msg + '</div>';
+  el.scrollTop = el.scrollHeight;
+  console.log('[mock-exam]', msg);
+}
+
 (async function() {
   // Step 1: auth — redirect if not logged in
+  _dbg('Step 1: checking auth…');
   const user = await getCurrentUser();
-  if (!user) { window.location.href = 'login.html'; return; }
+  if (!user) { _dbg('No session → redirecting to login'); window.location.href = 'login.html'; return; }
+  _dbg('Auth OK — user.id: ' + user.id);
 
   // Step 2: render immediately so the page is usable
+  _dbg('Step 2: calling render()…');
   render();
+  _dbg('render() completed — Step 1 UI should be visible');
 
   // Step 3: admin + device check runs in background (non-blocking)
   try {
-    const{data:_prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
+    _dbg('Step 3: loading profile…');
+    const{data:_prof,error:_pErr}=await sb.from('profiles').select('is_admin,plan_code,credits_balance').eq('id',user.id).single();
+    if(_pErr) { _dbg('Profile error: ' + _pErr.message); }
+    else { _dbg('Profile: is_admin=' + (_prof&&_prof.is_admin) + ' plan=' + (_prof&&_prof.plan_code) + ' credits=' + (_prof&&_prof.credits_balance)); }
     const _isAdmin=_prof&&_prof.is_admin;
-    if(_isAdmin){var _an=document.getElementById('adminNavSection');if(_an)_an.style.display='block'; return;}
+    if(_isAdmin){var _an=document.getElementById('adminNavSection');if(_an)_an.style.display='block'; _dbg('Admin nav shown'); return;}
 
     // Device guard for non-admin
+    _dbg('Step 4: verifying device…');
     (function(){function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
     var _tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
     var _sw=Math.min(screen.width,screen.height),_sh=Math.max(screen.width,screen.height);
@@ -1034,10 +1055,13 @@ document.getElementById('overlay')?.addEventListener('click', () => {
         var{data:_m}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',window._examMigs[_mi]).eq('is_active',true).maybeSingle();
         if(_m){var _now=new Date().toISOString();await sb.from('user_devices').update({device_fingerprint:fp,last_seen:_now,last_active:_now}).eq('id',_m.id);_migrated=true;break;}
       }
-      if(!_migrated){window.location.href='devices.html?blocked=1';return;}
-    }
-  } catch(e) { console.error('[mock-exam] bg check error:',e); }
+      if(!_migrated){ _dbg('Device not found → redirecting to devices.html'); window.location.href='devices.html?blocked=1';return;}
+      _dbg('Device migrated OK');
+    } else { _dbg('Device fingerprint matched'); }
+  } catch(e) { _dbg('BG check error: ' + (e&&e.message?e.message:String(e))); console.error('[mock-exam] bg check error:',e); }
+  _dbg('Boot complete');
 }).catch(err=>{
+  _dbg('BOOT CRASHED: ' + (err&&err.message?err.message:String(err)));
   console.error('[mock-exam] boot error:',err);
   var pc=document.getElementById('pageContent');
   if(pc)pc.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--text-400)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;color:var(--text-200);margin-bottom:8px">Failed to load</div><div style="font-size:13px;margin-bottom:8px">'+( err&&err.message?err.message:String(err))+'</div><a href="mock-exam.html" style="color:var(--cyan-3);text-decoration:underline;margin-right:16px">Retry</a><a href="dashboard.html" style="color:var(--cyan-3);text-decoration:underline">Dashboard</a></div>';
