@@ -224,6 +224,31 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 @keyframes pop{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
 .anim-pop{animation:pop .5s cubic-bezier(.25,.46,.45,.94) both}
 .d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}
+
+/* EXAM GRID — 2-col on tablet+ */
+@media(min-width:600px){.exam-grid{grid-template-columns:repeat(2,1fr)}}
+.exam-card.ec-full{grid-column:1/-1}
+
+/* SAT MODULE PICKER */
+.sat-module-group{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.module-btn{width:100%;padding:11px 14px;border-radius:10px;background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300);font-size:13.5px;font-weight:600;text-align:left;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center}
+.module-btn:hover{border-color:var(--cyan-border);color:#fff;background:var(--cyan-bg-soft)}
+.module-btn.active-mod{background:var(--cyan-bg-med);border-color:var(--cyan);color:#fff}
+.module-btn .mb-name{font-family:var(--font-display);font-weight:700;font-size:13.5px}
+.module-btn .mb-meta{font-size:11.5px;color:var(--text-500);margin-top:1px}
+.module-btn.active-mod .mb-meta{color:var(--cyan-3)}
+.module-btn .mb-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border-mid);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-elev-2);transition:all .2s}
+.module-btn.active-mod .mb-check{background:var(--cyan);border-color:var(--cyan)}
+
+/* PRACTICE CARD */
+.practice-q-group{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.practice-time-preview{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:10px;background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.ptp-label{font-size:11px;color:var(--text-500);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+.ptp-val{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--cyan)}
+
+/* CALCULATOR BADGE */
+.calc-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;background:var(--green-soft);border:1px solid var(--green-border);color:var(--green);font-size:11.5px;font-weight:600;margin-top:10px}
+.calc-badge svg{width:12px;height:12px}
 </style>
 </head>
 <body>
@@ -370,10 +395,14 @@ async function getCurrentUser() {
 }
 
 // ─── EXAM CONFIGS ─────────────────────────────────────────────────────────────
-const EXAMS = {
-  SAT: { key: 'SAT', label: 'SAT', org: 'College Board Digital SAT', duration: 134, scoreMin: 400, scoreMax: 1600 },
-  ACT: { key: 'ACT', label: 'ACT', org: 'ACT Composite Exam', duration: 175, scoreMin: 1, scoreMax: 36 },
-  EST: { key: 'EST', label: 'EST', org: 'Emirates Standardized Test', duration: 90, scoreMin: 200, scoreMax: 800 }
+const EXAM_CONFIGS = {
+  SAT_MODULE_1:  { code:'SAT_MODULE_1',  examType:'SAT',      displayName:'SAT Math — Module 1',     shortName:'Module 1',     org:'College Board · Digital SAT',              duration:35,  questions:22, calculator:true, scoreMin:200, scoreMax:800  },
+  SAT_MODULE_2:  { code:'SAT_MODULE_2',  examType:'SAT',      displayName:'SAT Math — Module 2',     shortName:'Module 2',     org:'College Board · Digital SAT',              duration:35,  questions:22, calculator:true, scoreMin:200, scoreMax:800  },
+  SAT_FULL:      { code:'SAT_FULL',      examType:'SAT',      displayName:'Full SAT Math',            shortName:'Full SAT',     org:'College Board · Digital SAT (Both Modules)',duration:70,  questions:44, calculator:true, scoreMin:200, scoreMax:800  },
+  EST_MATH_1:    { code:'EST_MATH_1',    examType:'EST',      displayName:'EST Math 1',               shortName:'EST Math 1',   org:'Emirates Standardized Test',               duration:75,  questions:50, calculator:true, scoreMin:200, scoreMax:800  },
+  EST_MATH_2_L1: { code:'EST_MATH_2_L1', examType:'EST',     displayName:'EST Math 2 — Level 1',    shortName:'EST Math 2 L1',org:'Emirates Standardized Test',               duration:60,  questions:40, calculator:true, scoreMin:200, scoreMax:800  },
+  ACT_MATH:      { code:'ACT_MATH',      examType:'ACT',      displayName:'ACT Math',                 shortName:'ACT Math',     org:'ACT Inc.',                                 duration:60,  questions:60, calculator:true, scoreMin:1,   scoreMax:36   },
+  PRACTICE:      { code:'PRACTICE',      examType:'PRACTICE', displayName:'Practice Timer',           shortName:'Practice',     org:'General Practice & Drills',                duration:null,questions:null,calculator:true, scoreMin:0,   scoreMax:9999 }
 };
 
 const RANK_THRESHOLDS = [
@@ -399,8 +428,49 @@ const s = {
   score: '', correct: '', wrong: '', omitted: '',
   mistakeRows: [],
   sessionId: null,
-  successData: null
+  successData: null,
+  practiceQuestions: 0
 };
+
+// ─── TIMER PERSISTENCE ───────────────────────────────────────────────────────
+const TIMER_KEY = 'simath_mock_timer';
+
+function saveTimerState() {
+  if (s.view !== 'TIMER' || !s.exam) return;
+  try {
+    localStorage.setItem(TIMER_KEY, JSON.stringify({
+      examCode: s.exam.code,
+      timerTotal: s.timerTotal,
+      timerSec: s.timerSec,
+      startedAt: s.startedAt,
+      practiceQuestions: s.practiceQuestions,
+      savedAt: Date.now()
+    }));
+  } catch(e) {}
+}
+
+function clearTimerState() {
+  try { localStorage.removeItem(TIMER_KEY); } catch(e) {}
+}
+
+function restoreTimerState() {
+  try {
+    const raw = localStorage.getItem(TIMER_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (Date.now() - saved.savedAt > 24 * 60 * 60 * 1000) { clearTimerState(); return false; }
+    const cfg = EXAM_CONFIGS[saved.examCode];
+    if (!cfg) { clearTimerState(); return false; }
+    s.exam = cfg;
+    s.timerTotal = saved.timerTotal;
+    s.timerSec = saved.timerSec;
+    s.timerRunning = true;
+    s.startedAt = saved.startedAt;
+    s.practiceQuestions = saved.practiceQuestions || 0;
+    s.view = 'TIMER';
+    return true;
+  } catch(e) { clearTimerState(); return false; }
+}
 
 // ─── STEP INDICATOR ──────────────────────────────────────────────────────────
 const VIEW_STEP = { SELECT: 0, TIMER: 1, RESULTS: 2, MISTAKES: 3, SAVING: 4, SUCCESS: 4 };
@@ -432,52 +502,144 @@ function render() {
 }
 
 // ─── SELECT ───────────────────────────────────────────────────────────────────
+const CALC_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>`;
+const CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
 function htmlSelect() {
-  const cards = Object.values(EXAMS).map((ex, ci) => {
-    const sel = s.exam?.key === ex.key;
-    const h = Math.floor(ex.duration / 60), m = ex.duration % 60;
-    const dur = h > 0 ? `${h}h ${m}m` : `${m} min`;
-    return `
-    <div class="exam-card${sel ? ' selected' : ''}" data-exam="${ex.key}" style="animation-delay:${ci*0.08}s">
-      <div class="exam-check">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  const selCode = s.exam?.code || '';
+
+  // SAT card with module picker
+  const satMods = ['SAT_MODULE_1','SAT_MODULE_2','SAT_FULL'];
+  const satSelected = satMods.includes(selCode);
+  const satModsHtml = satMods.map(code => {
+    const cfg = EXAM_CONFIGS[code];
+    const active = selCode === code;
+    return `<button class="module-btn${active?' active-mod':''}" data-config="${code}">
+      <div>
+        <div class="mb-name">${cfg.shortName}</div>
+        <div class="mb-meta">${cfg.questions} questions · ${cfg.duration} min</div>
       </div>
-      <div class="exam-badge">${ex.key}</div>
-      <div class="exam-name">${ex.label}</div>
-      <div class="exam-org">${ex.org}</div>
+      <div class="mb-check">${active?`<svg viewBox="0 0 24 24" fill="none" stroke="#031020" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><polyline points="20 6 9 17 4 12"/></svg>`:''}</div>
+    </button>`;
+  }).join('');
+
+  const satCard = `<div class="exam-card ec-full${satSelected?' selected':''}">
+    <div class="exam-check">${satSelected?CHECK_ICON:''}</div>
+    <div class="exam-badge">SAT</div>
+    <div class="exam-name">SAT Math</div>
+    <div class="exam-org">College Board · Digital SAT</div>
+    <div class="sat-module-group">${satModsHtml}</div>
+    <div class="calc-badge">${CALC_ICON}Calculator Allowed</div>
+  </div>`;
+
+  // Standard exam cards
+  const stdCards = ['EST_MATH_1','EST_MATH_2_L1','ACT_MATH'].map((code, ci) => {
+    const cfg = EXAM_CONFIGS[code];
+    const sel = selCode === code;
+    return `<div class="exam-card${sel?' selected':''}" data-config="${code}" style="animation-delay:${(ci+1)*0.08}s">
+      <div class="exam-check">${CHECK_ICON}</div>
+      <div class="exam-badge">${cfg.examType}</div>
+      <div class="exam-name">${cfg.displayName}</div>
+      <div class="exam-org">${cfg.org}</div>
       <div class="exam-meta">
         <div class="exam-meta-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>
-          Duration: <b>${dur}</b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Questions: <b>${cfg.questions}</b>
         </div>
         <div class="exam-meta-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
-          Score Range: <b>${ex.scoreMin}–${ex.scoreMax}</b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>
+          Duration: <b>${cfg.duration} min</b>
         </div>
       </div>
+      <div class="calc-badge">${CALC_ICON}Calculator Allowed</div>
     </div>`;
   }).join('');
 
+  // Practice card
+  const pracSel = selCode === 'PRACTICE';
+  const pracQ = s.practiceQuestions || '';
+  const pracMin = pracQ ? Math.ceil(pracQ * 1.5) : 0;
+  const practiceCard = `<div class="exam-card ec-full${pracSel?' selected':''}" id="practiceCard" style="animation-delay:0.32s">
+    <div class="exam-check">${CHECK_ICON}</div>
+    <div class="exam-badge" style="background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber)">PRACTICE</div>
+    <div class="exam-name">Practice Timer</div>
+    <div class="exam-org">Train your pacing and speed — homework, drills, and focus practice</div>
+    <div class="practice-q-group">
+      <div>
+        <label for="practiceQInput">Number of Questions</label>
+        <input type="number" id="practiceQInput" min="1" max="200" placeholder="e.g. 20" value="${pracQ}" style="max-width:220px"/>
+      </div>
+      <div class="practice-time-preview">
+        <span class="ptp-label">Calculated Time</span>
+        <span class="ptp-val" id="pracTimeVal">${pracMin > 0 ? pracMin + ' min' : '—'}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-500);line-height:1.5">Recommended: Try to keep your average time at <b style="color:var(--text-300)">1.5 minutes or less</b> per question during practice.</div>
+    </div>
+  </div>`;
+
   return `
-  <div class="exam-grid">${cards}</div>
+  <div class="exam-grid">
+    ${satCard}
+    ${stdCards}
+    ${practiceCard}
+  </div>
   <div class="exam-start-bar">
     <button class="cta-primary" id="btnStart" ${s.exam ? '' : 'disabled'}>
       <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Start ${s.exam ? s.exam.label + ' Exam' : 'Exam'}
+      ${s.exam ? 'Start ' + s.exam.shortName : 'Select an Exam'}
     </button>
   </div>`;
 }
 
 function afterSelect() {
-  document.querySelectorAll('.exam-card').forEach(card => {
-    card.addEventListener('click', () => { s.exam = EXAMS[card.dataset.exam]; render(); });
+  // SAT module buttons
+  document.querySelectorAll('.module-btn').forEach(btn => {
+    btn.addEventListener('click', () => { s.exam = EXAM_CONFIGS[btn.dataset.config]; render(); });
   });
+
+  // EST / ACT direct-select cards
+  document.querySelectorAll('.exam-card[data-config]').forEach(card => {
+    card.addEventListener('click', () => { s.exam = EXAM_CONFIGS[card.dataset.config]; render(); });
+  });
+
+  // Practice card — select on click, live time preview on input
+  const practiceCard = document.getElementById('practiceCard');
+  if (practiceCard) {
+    practiceCard.addEventListener('click', (e) => {
+      if (e.target.closest('#practiceQInput')) return;
+      if (s.exam?.code === 'PRACTICE') return;
+      s.exam = EXAM_CONFIGS.PRACTICE;
+      render();
+    });
+  }
+  const practiceInput = document.getElementById('practiceQInput');
+  if (practiceInput) {
+    practiceInput.addEventListener('focus', () => {
+      if (s.exam?.code !== 'PRACTICE') { s.exam = EXAM_CONFIGS.PRACTICE; render(); }
+    });
+    practiceInput.addEventListener('input', () => {
+      s.practiceQuestions = parseInt(practiceInput.value) || 0;
+      const min = s.practiceQuestions > 0 ? Math.ceil(s.practiceQuestions * 1.5) : 0;
+      const tv = document.getElementById('pracTimeVal');
+      if (tv) tv.textContent = min > 0 ? min + ' min' : '—';
+      const btn = document.getElementById('btnStart');
+      if (btn) btn.disabled = s.practiceQuestions < 1;
+    });
+  }
+
   document.getElementById('btnStart')?.addEventListener('click', async () => {
     if (!s.exam) return;
+
+    // Practice validation
+    if (s.exam.code === 'PRACTICE') {
+      const q = parseInt(document.getElementById('practiceQInput')?.value) || 0;
+      if (q < 1) { document.getElementById('practiceQInput')?.focus(); return; }
+      s.practiceQuestions = q;
+    }
+
     const btn = document.getElementById('btnStart');
     if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
 
-    // Auth check
     const user = await getCurrentUser();
     if (!user) { window.location.href = 'login.html'; return; }
 
@@ -506,8 +668,9 @@ function afterSelect() {
       }
     } catch(e) { console.error('[mock-exam] device check error:',e); }
 
-    // Mock Exam is free — start immediately
-    s.timerTotal = s.exam.duration * 60;
+    s.timerTotal = s.exam.code === 'PRACTICE'
+      ? Math.ceil(s.practiceQuestions * 1.5) * 60
+      : s.exam.duration * 60;
     s.timerSec = s.timerTotal;
     s.timerRunning = true;
     s.startedAt = new Date().toISOString();
@@ -548,10 +711,13 @@ function htmlTimer() {
     ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
+  const totalMin = Math.round(s.timerTotal / 60);
+  const qCount = s.exam.code === 'PRACTICE' ? s.practiceQuestions : s.exam.questions;
+
   return `
   <div class="timer-wrapper">
     <div class="timer-card ${cls}" id="timerCard">
-      <div class="timer-exam-label">${s.exam.label}</div>
+      <div class="timer-exam-label">${s.exam.displayName}</div>
       <div class="timer-exam-org">${s.exam.org}</div>
       <div class="timer-display" id="timerDisplay">${fmtSec(s.timerSec)}</div>
       <div class="timer-info-row">
@@ -565,11 +731,15 @@ function htmlTimer() {
         </div>
         <div class="timer-info-item">
           <div class="ti-label">Total</div>
-          <div class="ti-val">${s.exam.duration} min</div>
+          <div class="ti-val">${totalMin} min</div>
         </div>
+        ${qCount ? `<div class="timer-info-item"><div class="ti-label">Questions</div><div class="ti-val">${qCount}</div></div>` : ''}
       </div>
       <div class="timer-progress-wrap">
         <div class="timer-progress-bar" id="timerBar" style="width:${pct}%"></div>
+      </div>
+      <div style="text-align:center;margin-bottom:14px">
+        <span class="calc-badge">${CALC_ICON}Calculator Allowed</span>
       </div>
       <div class="timer-controls">
         <button class="btn-pause${s.timerRunning ? '' : ' paused-state'}" id="btnPause">
@@ -591,10 +761,12 @@ function tickTimer() {
     s.timerSec = 0;
     s.timerRunning = false;
     clearInterval(s.timerInterval);
+    clearTimerState();
     updateTimerDOM();
     setTimeout(() => { s.endedAt = new Date().toISOString(); s.view = 'RESULTS'; render(); }, 900);
     return;
   }
+  saveTimerState();
   updateTimerDOM();
 }
 
@@ -658,13 +830,13 @@ function htmlResults() {
         <div class="card-ico">📊</div>
         <div>
           <div class="card-title">Enter Your Score</div>
-          <div class="card-sub">${ex.label} — score range ${ex.scoreMin}–${ex.scoreMax}</div>
+          <div class="card-sub">${ex.displayName} — score range ${ex.scoreMin}–${ex.scoreMax}</div>
         </div>
       </div>
       <div class="form-group">
         <label for="inScore">Score</label>
         <input type="number" id="inScore" min="${ex.scoreMin}" max="${ex.scoreMax}" placeholder="${ex.scoreMin}–${ex.scoreMax}" value="${s.score}"/>
-        <div class="score-hint">Enter your ${ex.label} composite score</div>
+        <div class="score-hint">Enter your ${ex.displayName} score${ex.code==='PRACTICE'?' (optional)':''}</div>
       </div>
     </div>
     <div class="card d2">
@@ -833,17 +1005,19 @@ async function doSave() {
       .limit(1);
     const isFirst = !prev || prev.length === 0;
 
+    clearTimerState();
+
     // Insert session
     const { data: sess, error: sessErr } = await sb
       .from('exam_practice_sessions')
       .insert({
         user_id: user.id,
-        exam_type: s.exam.key,
+        exam_type: s.exam.code,
         score: s.score ? parseInt(s.score) : null,
         correct_answers: s.correct ? parseInt(s.correct) : null,
         wrong_answers: s.wrong ? parseInt(s.wrong) : null,
         omitted_answers: s.omitted ? parseInt(s.omitted) : null,
-        duration_minutes: s.exam.duration,
+        duration_minutes: Math.round(s.timerTotal / 60),
         started_at: s.startedAt,
         ended_at: s.endedAt || new Date().toISOString()
       })
@@ -978,7 +1152,7 @@ function htmlSuccess() {
   <div class="success-center anim-pop">
     <div class="success-icon">✅</div>
     <div class="success-title">Session Saved!</div>
-    <div class="success-sub">Your ${d.exam.label} mock exam has been recorded. Keep practicing to improve!</div>
+    <div class="success-sub">Your ${d.exam.displayName} session has been recorded. Keep practicing to improve!</div>
     ${stats ? `<div class="success-stats">${stats}</div>` : ''}
     <div class="xp-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -1028,8 +1202,9 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
-// Render the exam selection UI immediately — no network calls needed.
-// Auth + device guard run only when the user clicks Start Exam (in afterSelect).
+// Restore active timer if the user refreshed or closed the tab mid-exam.
+// Otherwise render the exam selection UI immediately — no network calls needed.
+restoreTimerState();
 render();
 
 // Show admin nav in background without blocking the page
