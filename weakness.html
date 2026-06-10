@@ -822,10 +822,19 @@ function animateBars(){
 }
 
 /* ── init ── */
+async function deviceGuard(sb,userId){
+  var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+  var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
+  var fp=(h>>>0).toString(16).padStart(8,'0');
+  var{data:d}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+  if(!d){window.location.href='devices.html?blocked=1';return false;}
+  return true;
+}
 async function init(){
   const {data:{user}}=await sb.auth.getUser();
   if(!user){window.location.href='index.html';return;}
   currentUser=user;
+  if(!(await deviceGuard(sb,user.id)))return;
 
   const {data:prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
   if(prof?.is_admin){
@@ -1239,15 +1248,66 @@ function goFocus(report){
 
 /* ── generate button ── */
 document.getElementById('genBtn').addEventListener('click',async()=>{
+  if(!currentUser) return;
   const btn=document.getElementById('genBtn');
   const lbl=document.getElementById('genBtnLbl');
   btn.classList.add('spin');btn.disabled=true;
+  if(lbl) lbl.textContent='Checking credits…';
+
+  const { data: creditResult, error: creditError } = await sb.rpc('consume_credits', {
+    p_user_id:    currentUser.id,
+    p_feature:    'WEAKNESS_ANALYSIS',
+    p_model_name: 'claude-3-5-haiku',
+    p_prompt_tok:  0,
+    p_comp_tok:    0,
+    p_cost_usd:    0,
+    p_session_id:  null
+  });
+
+  if (creditError || !creditResult) {
+    btn.classList.remove('spin'); btn.disabled=false;
+    if(lbl) lbl.textContent='Refresh Analysis';
+    showWeaknessPaywall('Could not verify your credits. Please refresh and try again.', false);
+    return;
+  }
+  if (!creditResult.ok) {
+    btn.classList.remove('spin'); btn.disabled=false;
+    if(lbl) lbl.textContent='Refresh Analysis';
+    if (creditResult.reason === 'daily_limit_reached') {
+      showWeaknessPaywall('You\'ve used your free analyses for today. Resets at midnight UTC. <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Upgrade to Pro →</a>', false);
+    } else if (creditResult.reason === 'insufficient_credits') {
+      showWeaknessPaywall('Not enough credits (10 needed). <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Buy more credits →</a>', false);
+    } else {
+      showWeaknessPaywall('Access check failed: ' + (creditResult.reason || 'unknown'), false);
+    }
+    return;
+  }
+
+  const creditLogId = creditResult.log_id || null;
   if(lbl) lbl.textContent='Regenerating…';
-  await loadData(true); // forceRegen=true
+  try {
+    await loadData(true); // forceRegen=true
+  } catch(err) {
+    if (creditLogId) {
+      sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
+        .catch(e => console.warn('Refund RPC failed:', e));
+    }
+  }
   btn.classList.remove('spin');btn.disabled=false;
   if(lbl) lbl.textContent='Refresh Analysis';
   document.getElementById('updatedAt').textContent=ts();
 });
+
+function showWeaknessPaywall(msg, autoHide) {
+  var existing = document.getElementById('weaknessPaywall');
+  if (existing) existing.remove();
+  var el = document.createElement('div');
+  el.id = 'weaknessPaywall';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;background:#1a1a2e;border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:14px 20px;color:#f87171;font-size:13px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+  el.innerHTML = msg + ' <button onclick="this.parentNode.remove()" style="margin-left:12px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  document.body.appendChild(el);
+  if (autoHide !== false) setTimeout(() => el.remove(), 6000);
+}
 
 /* ── modal ── */
 const modalOv=document.getElementById('modalOv');

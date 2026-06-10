@@ -31,285 +31,540 @@ body{
   min-height:100dvh;position:relative;display:flex;flex-direction:column;
 }
 .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
-.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:10%;left:-100px}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.13),transparent 70%);top:-140px;right:-140px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:10%;left:-100px}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer}
 
-/* top brand bar */
-.brandbar{display:flex;align-items:center;justify-content:center;gap:11px;padding:22px var(--container-x) 6px;position:relative;z-index:2}
-.logo-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:17px;color:#031020;box-shadow:0 0 18px rgba(56,189,248,.25)}
+/* ── brand bar ── */
+.brandbar{
+  display:flex;align-items:center;justify-content:center;gap:11px;
+  padding:22px var(--container-x) 6px;position:relative;z-index:2;
+  animation:rise .5s ease both;
+}
+.logo-mark{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--cyan-2),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:800;font-size:17px;color:#031020;
+  box-shadow:0 0 18px rgba(56,189,248,.25);
+}
 .brandbar .bt{font-family:var(--font-display);font-weight:800;font-size:19px;color:#fff;letter-spacing:-.01em}
 .brandbar .bt span{color:var(--cyan)}
 
-.wrap{flex:1;width:100%;max-width:640px;margin:0 auto;padding:var(--space-5) var(--container-x) calc(var(--space-8) + env(safe-area-inset-bottom,0px));position:relative;z-index:2}
+/* ── progress dots ── */
+.progress-row{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:14px var(--container-x) 0;position:relative;z-index:2;
+  animation:rise .5s .05s ease both;opacity:0;
+}
+.pdot{
+  width:8px;height:8px;border-radius:50%;background:var(--border-mid);
+  transition:all .3s;
+}
+.pdot.done{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.4)}
+.pdot.active{width:24px;border-radius:4px;background:var(--cyan);box-shadow:0 0 10px rgba(56,189,248,.4)}
 
-.intro{text-align:center;margin-bottom:var(--space-6);animation:rise .6s ease both}
-.intro .eyebrow{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);padding:5px 13px;border-radius:100px;margin-bottom:14px}
-.intro h1{font-family:var(--font-display);font-weight:800;font-size:clamp(24px,6.5vw,34px);line-height:1.1;letter-spacing:-.02em;color:#fff}
+/* ── layout ── */
+.wrap{
+  flex:1;width:100%;max-width:600px;margin:0 auto;
+  padding:var(--space-5) var(--container-x) calc(var(--space-8) + env(safe-area-inset-bottom,0px));
+  position:relative;z-index:2;
+}
+
+/* ── intro ── */
+.intro{text-align:center;margin-bottom:var(--space-6);animation:rise .55s .1s ease both;opacity:0}
+.intro .eyebrow{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cyan);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);
+  padding:5px 13px;border-radius:100px;margin-bottom:14px;
+}
+.intro h1{font-family:var(--font-display);font-weight:800;font-size:clamp(22px,6vw,32px);line-height:1.1;letter-spacing:-.02em;color:#fff}
 .intro h1 .accent{color:var(--cyan)}
 .intro p{color:var(--text-300);font-size:14.5px;margin-top:9px;max-width:440px;margin-left:auto;margin-right:auto}
 
+/* ── step card ── */
+.step{display:none}
+.step.active{display:block}
+
 .card{
   position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);
-  border-radius:var(--r-lg);padding:var(--space-6);animation:rise .6s ease both;
+  border-radius:var(--r-lg);padding:var(--space-6);
 }
-.field{margin-bottom:var(--space-6)}
+.card-label{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--font-display);font-weight:800;font-size:13px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:var(--space-5);
+}
+.card-label .cl-num{
+  width:26px;height:26px;border-radius:8px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:12px;color:var(--cyan);flex-shrink:0;
+}
+
+.field{margin-bottom:var(--space-5)}
 .field:last-of-type{margin-bottom:0}
-.field-label{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;margin-bottom:4px}
-.field-label .fi{width:28px;height:28px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
-.field-hint{font-size:12.5px;color:var(--text-400);margin:0 0 13px 37px}
+.field-label{
+  display:flex;align-items:center;gap:9px;
+  font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;margin-bottom:5px;
+}
+.field-label .fi{
+  width:28px;height:28px;flex-shrink:0;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);
+}
+.field-hint{font-size:12.5px;color:var(--text-400);margin:0 0 11px 37px}
 
 /* segmented (exam type) */
 .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
 .seg button{
-  padding:14px 10px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);
-  color:var(--text-300);font-family:var(--font-display);font-weight:700;font-size:15px;transition:all .18s;
+  padding:16px 10px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);
+  color:var(--text-300);font-family:var(--font-display);font-weight:700;font-size:16px;
+  transition:all .18s;line-height:1.2;
 }
-.seg button .sl{display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text-500);margin-top:3px}
-.seg button:hover{border-color:var(--cyan-border);color:#fff}
-.seg button.on{background:var(--cyan-bg-med);border-color:var(--cyan);color:#fff;box-shadow:0 0 16px rgba(56,189,248,.18)}
+.seg button .sl{
+  display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:500;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--text-500);margin-top:4px;
+}
+.seg button:hover{border-color:var(--cyan-border);color:#fff;background:var(--cyan-bg-soft)}
+.seg button.on{background:var(--cyan-bg-med);border-color:var(--cyan);color:#fff;box-shadow:0 0 18px rgba(56,189,248,.18)}
 .seg button.on .sl{color:var(--cyan-3)}
 
-/* inputs */
+/* text / number inputs */
 .inp{
   width:100%;padding:14px 15px;border-radius:var(--r-md);background:var(--bg-elev-1);
-  border:1px solid var(--border-mid);color:#fff;font-family:var(--font-body);font-size:15px;transition:border-color .18s,box-shadow .18s;
+  border:1px solid var(--border-mid);color:#fff;font-family:var(--font-body);font-size:15px;
+  transition:border-color .18s,box-shadow .18s;-webkit-appearance:none;
 }
 .inp::placeholder{color:var(--text-500)}
 .inp:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
 .inp[type=date]{color-scheme:dark}
+.inp.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,79,95,.12)}
 
-/* stepper for numbers */
+/* stepper */
 .stepper{display:flex;align-items:stretch;gap:10px}
-.stepper .inp{text-align:center;font-family:var(--font-display);font-weight:700;font-size:18px}
-.stepper button{
-  width:50px;flex-shrink:0;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);
+.stepper .inp{text-align:center;font-family:var(--font-display);font-weight:700;font-size:20px}
+.stepper .step-btn{
+  width:52px;flex-shrink:0;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);
   color:var(--cyan);font-size:22px;font-weight:700;transition:all .18s;
 }
-.stepper button:hover{border-color:var(--cyan);background:var(--cyan-bg-soft)}
+.stepper .step-btn:hover{border-color:var(--cyan);background:var(--cyan-bg-soft)}
 
-.divider{height:1px;background:var(--border-soft);margin:var(--space-6) 0}
+/* score range hint */
+.score-range{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:11px;color:var(--text-500);
+  margin-top:8px;margin-left:37px;
+}
+.score-range span{color:var(--cyan-3)}
 
-.btn-primary{
-  width:100%;margin-top:var(--space-6);display:flex;align-items:center;justify-content:center;gap:9px;
+/* nav buttons */
+.nav-row{display:flex;gap:10px;margin-top:var(--space-6)}
+.btn-back{
+  flex:0 0 52px;height:52px;border-radius:var(--r-md);border:1px solid var(--border-mid);
+  background:transparent;color:var(--text-400);font-size:18px;transition:all .18s;
+}
+.btn-back:hover{border-color:var(--cyan-border);color:var(--cyan)}
+.btn-next{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:9px;
   padding:16px;border-radius:var(--r-md);border:none;
   background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;
-  font-family:var(--font-display);font-weight:800;font-size:16px;transition:transform .2s,box-shadow .2s;
+  font-family:var(--font-display);font-weight:800;font-size:16px;
+  transition:transform .2s,box-shadow .2s,opacity .2s;
   box-shadow:0 10px 30px rgba(56,189,248,.25);
 }
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(56,189,248,.4)}
-.btn-primary:disabled{opacity:.6;pointer-events:none}
-.btn-primary svg{width:17px;height:17px}
+.btn-next:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 14px 38px rgba(56,189,248,.4)}
+.btn-next:disabled{opacity:.55;pointer-events:none}
+.btn-next svg{width:17px;height:17px}
 
-.footnote{text-align:center;font-size:12px;color:var(--text-500);margin-top:16px}
+/* error banner */
+.err-banner{
+  display:none;align-items:center;gap:10px;
+  background:var(--red-soft);border:1px solid var(--red-border);
+  border-radius:var(--r-sm);padding:11px 14px;
+  font-size:13px;color:#fca5a5;margin-top:var(--space-4);
+}
+.err-banner.show{display:flex}
+.err-banner .eb-ic{flex-shrink:0;font-size:16px}
 
-@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+/* footnote */
+.footnote{text-align:center;font-size:12px;color:var(--text-500);margin-top:14px}
+
+/* ── animations ── */
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.step-enter{animation:rise .38s ease both}
+
+/* ── loading overlay ── */
+.page-loader{
+  position:fixed;inset:0;background:#050a14;z-index:999;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .4s;
+}
+.page-loader.hide{opacity:0;pointer-events:none}
+.loader-ring{
+  width:44px;height:44px;border:3px solid rgba(56,189,248,.15);
+  border-top-color:var(--cyan);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
+<!-- Loading overlay — shown until auth resolves -->
+<div class="page-loader" id="pageLoader">
+  <div class="loader-ring"></div>
+</div>
+
 <div class="brandbar">
   <span class="logo-mark">Si</span>
   <span class="bt">Si<span>Math</span> AI</span>
 </div>
 
+<!-- progress indicator -->
+<div class="progress-row" id="progressRow">
+  <div class="pdot active" id="pd1"></div>
+  <div class="pdot" id="pd2"></div>
+  <div class="pdot" id="pd3"></div>
+</div>
+
 <div class="wrap">
-  <div class="intro">
-    <div class="eyebrow">✦ Let's personalize your prep</div>
+  <div class="intro" id="introBlock">
+    <div class="eyebrow">✦ Personalize your prep</div>
     <h1>Welcome, <span class="accent" id="introName">Student</span>!</h1>
-    <p>Tell us about your goals so Si can build a study plan made just for you. This takes less than a minute.</p>
+    <p id="introSub">Tell us about yourself so Si can build a study plan made just for you. Takes under a minute.</p>
   </div>
 
-  <form id="onboardForm" class="card" novalidate>
-    <!-- Exam Type -->
-    <div class="field">
-      <div class="field-label"><span class="fi">📝</span> Exam Type</div>
-      <div class="field-hint">Which standardized test are you preparing for?</div>
-      <div class="seg" id="examSeg">
-        <button type="button" data-val="SAT" class="on">SAT<span class="sl">Scholastic</span></button>
-        <button type="button" data-val="EST">EST<span class="sl">Egyptian</span></button>
-        <button type="button" data-val="ACT">ACT<span class="sl">American</span></button>
+  <!-- ═══ STEP 1: Name + Exam Type ═══ -->
+  <div class="step active" id="step1">
+    <div class="card step-enter">
+      <div class="card-label"><span class="cl-num">1</span> About You</div>
+
+      <div class="field">
+        <div class="field-label"><span class="fi">👤</span> Full Name</div>
+        <div class="field-hint">How should Si address you?</div>
+        <input type="text" id="fullName" class="inp" placeholder="e.g. Sara Ahmed" autocomplete="name" spellcheck="false"/>
+      </div>
+
+      <div class="field" style="margin-top:var(--space-5)">
+        <div class="field-label"><span class="fi">📝</span> Exam Type</div>
+        <div class="field-hint">Which standardized test are you preparing for?</div>
+        <div class="seg" id="examSeg">
+          <button type="button" data-val="SAT" class="on">SAT<span class="sl">Scholastic</span></button>
+          <button type="button" data-val="EST">EST<span class="sl">Egyptian</span></button>
+          <button type="button" data-val="ACT">ACT<span class="sl">American</span></button>
+        </div>
+      </div>
+
+      <div class="err-banner" id="err1"><span class="eb-ic">⚠</span><span id="err1Msg">Please enter your full name.</span></div>
+
+      <div class="nav-row">
+        <button class="btn-next" id="next1Btn" type="button">
+          Continue
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
     </div>
+    <p class="footnote">You can change these anytime in Settings.</p>
+  </div>
 
-    <div class="divider"></div>
+  <!-- ═══ STEP 2: Target Score + Exam Date ═══ -->
+  <div class="step" id="step2">
+    <div class="card step-enter">
+      <div class="card-label"><span class="cl-num">2</span> Your Goal</div>
 
-    <!-- Target Score -->
-    <div class="field">
-      <div class="field-label"><span class="fi">🎯</span> Target Score</div>
-      <div class="field-hint">What score are you aiming for?</div>
-      <input type="number" id="targetScore" class="inp" placeholder="e.g. 1450" inputmode="numeric" min="400" max="1600" value="1400"/>
-    </div>
+      <div class="field">
+        <div class="field-label"><span class="fi">🎯</span> Target Score</div>
+        <div class="field-hint">What score are you aiming for?</div>
+        <input type="number" id="targetScore" class="inp" placeholder="e.g. 1450" inputmode="numeric"/>
+        <div class="score-range" id="scoreRangeHint">Range: <span id="scoreRangeVal">400 – 1600</span></div>
+      </div>
 
-    <div class="divider"></div>
+      <div class="field" style="margin-top:var(--space-5)">
+        <div class="field-label"><span class="fi">📅</span> Exam Date</div>
+        <div class="field-hint">When is your test? Si will pace your plan around it.</div>
+        <input type="date" id="examDate" class="inp"/>
+      </div>
 
-    <!-- Exam Date -->
-    <div class="field">
-      <div class="field-label"><span class="fi">📅</span> Exam Date</div>
-      <div class="field-hint">When is your test? We'll pace your plan around it.</div>
-      <input type="date" id="examDate" class="inp"/>
-    </div>
+      <div class="err-banner" id="err2"><span class="eb-ic">⚠</span><span id="err2Msg">Please enter your target score and exam date.</span></div>
 
-    <div class="divider"></div>
-
-    <!-- Sessions per week -->
-    <div class="field">
-      <div class="field-label"><span class="fi">📚</span> Study Sessions Per Week</div>
-      <div class="field-hint">How many days a week can you study?</div>
-      <div class="stepper">
-        <button type="button" data-step="-1" data-target="sessionsWeek">−</button>
-        <input type="number" id="sessionsWeek" class="inp" min="1" max="7" value="5" inputmode="numeric"/>
-        <button type="button" data-step="1" data-target="sessionsWeek">+</button>
+      <div class="nav-row">
+        <button class="btn-back" id="back2Btn" type="button">←</button>
+        <button class="btn-next" id="next2Btn" type="button">
+          Continue
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
     </div>
+    <p class="footnote">Your exam date helps Si calculate time remaining.</p>
+  </div>
 
-    <div class="divider"></div>
+  <!-- ═══ STEP 3: Study Frequency + Submit ═══ -->
+  <div class="step" id="step3">
+    <div class="card step-enter">
+      <div class="card-label"><span class="cl-num">3</span> Study Habits</div>
 
-    <!-- Session length -->
-    <div class="field">
-      <div class="field-label"><span class="fi">⏱️</span> Session Length</div>
-      <div class="field-hint">How long is each study session? (minutes)</div>
-      <div class="stepper">
-        <button type="button" data-step="-15" data-target="sessionLen">−</button>
-        <input type="number" id="sessionLen" class="inp" min="15" max="180" step="15" value="45" inputmode="numeric"/>
-        <button type="button" data-step="15" data-target="sessionLen">+</button>
+      <div class="field">
+        <div class="field-label"><span class="fi">📚</span> Sessions Per Week</div>
+        <div class="field-hint">How many days a week can you study?</div>
+        <div class="stepper">
+          <button type="button" class="step-btn" data-step="-1" data-target="sessionsWeek">−</button>
+          <input type="number" id="sessionsWeek" class="inp" min="1" max="7" value="5" inputmode="numeric" readonly/>
+          <button type="button" class="step-btn" data-step="1" data-target="sessionsWeek">+</button>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:var(--space-5)">
+        <div class="field-label"><span class="fi">⏱</span> Session Length</div>
+        <div class="field-hint">How long is each study session? (minutes)</div>
+        <div class="stepper">
+          <button type="button" class="step-btn" data-step="-15" data-target="sessionLen">−</button>
+          <input type="number" id="sessionLen" class="inp" min="15" max="180" step="15" value="45" inputmode="numeric" readonly/>
+          <button type="button" class="step-btn" data-step="15" data-target="sessionLen">+</button>
+        </div>
+      </div>
+
+      <div class="err-banner" id="err3"><span class="eb-ic">⚠</span><span id="err3Msg">Something went wrong. Please try again.</span></div>
+
+      <div class="nav-row">
+        <button class="btn-back" id="back3Btn" type="button">←</button>
+        <button class="btn-next" id="submitBtn" type="button">
+          <span id="submitLabel">Start Learning</span>
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
     </div>
-
-    <button type="submit" class="btn-primary" id="continueBtn">
-      Continue
-      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="footnote">You can change any of this later in your settings.</div>
-  </form>
-</div>
+    <p class="footnote">You can adjust your schedule anytime in Settings.</p>
+  </div>
+</div><!-- /wrap -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ===== Supabase client =====
-  const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  let currentUser = null;
+  var currentUser = null;
+  var examType = 'SAT';
+  var currentStep = 1;
 
-  // ===== Auth guard + prefill =====
+  // Score ranges per exam
+  var SCORE_RANGES = { SAT: [400, 1600], ACT: [1, 36], EST: [200, 800] };
+  var SCORE_DEFAULTS = { SAT: 1400, ACT: 30, EST: 650 };
+
+  // ── Auth guard ──
   (async () => {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    var authRes = await sb.auth.getUser();
+    var user = authRes.data && authRes.data.user;
     if (!user) { window.location.href = 'login.html'; return; }
     currentUser = user;
 
-    // Show name from metadata if available
-    const meta = user.user_metadata || {};
-    const fullName = meta.full_name || (user.email ? user.email.split('@')[0] : 'Student');
-    document.getElementById('introName').textContent = fullName.split(' ')[0];
-
-    // Make sure a profile row exists for this user (safety net in case the
-    // database trigger didn't run). This is idempotent.
+    // Safety: ensure profile row exists
+    var meta = user.user_metadata || {};
+    var metaName = meta.full_name || (user.email ? user.email.split('@')[0] : '');
     try {
-      await supabaseClient.from('profiles').upsert(
-        { id: user.id, email: user.email, full_name: fullName },
-        { onConflict: 'id', ignoreDuplicates: false }
+      await sb.from('profiles').upsert(
+        { id: user.id, email: user.email, full_name: metaName },
+        { onConflict: 'id', ignoreDuplicates: true }
       );
-    } catch (_) { /* ignore — RLS or duplicates */ }
+    } catch (_) {}
 
-    // If onboarding already completed, skip straight to dashboard
-    const { data: profile } = await supabaseClient
-      .from('profiles').select('onboarding_completed, exam_type, target_score, exam_date, study_sessions_per_week, session_length')
+    // Check onboarding_completed
+    var { data: profile } = await sb
+      .from('profiles')
+      .select('onboarding_completed, full_name, exam_type, target_score, exam_date, study_sessions_per_week, session_length')
       .eq('id', user.id).single();
 
     if (profile && profile.onboarding_completed === true) {
-      window.location.href = 'dashboard.html';
-      return;
+      window.location.href = 'dashboard.html'; return;
     }
 
-    // Prefill any previously-saved partial values
+    // Prefill saved partial values
     if (profile) {
+      if (profile.full_name) document.getElementById('fullName').value = profile.full_name;
+      else if (metaName) document.getElementById('fullName').value = metaName;
+
       if (profile.exam_type) {
+        examType = profile.exam_type;
         document.querySelectorAll('#examSeg button').forEach(x => x.classList.remove('on'));
-        const tgt = document.querySelector(`#examSeg button[data-val="${profile.exam_type}"]`);
-        if (tgt) { tgt.classList.add('on'); examType = profile.exam_type; }
+        var tgt = document.querySelector('#examSeg button[data-val="' + profile.exam_type + '"]');
+        if (tgt) tgt.classList.add('on');
+        updateScoreRange();
       }
       if (profile.target_score) document.getElementById('targetScore').value = profile.target_score;
       if (profile.exam_date) document.getElementById('examDate').value = profile.exam_date;
       if (profile.study_sessions_per_week) document.getElementById('sessionsWeek').value = profile.study_sessions_per_week;
       if (profile.session_length) document.getElementById('sessionLen').value = profile.session_length;
+    } else {
+      if (metaName) document.getElementById('fullName').value = metaName;
     }
+
+    var firstName = (profile && profile.full_name) ? profile.full_name.split(' ')[0]
+                  : (metaName ? metaName.split(' ')[0] : 'Student');
+    document.getElementById('introName').textContent = firstName;
+
+    // Hide loader
+    var loader = document.getElementById('pageLoader');
+    loader.classList.add('hide');
+    setTimeout(function(){ loader.style.display = 'none'; }, 400);
   })();
 
-  // ===== Exam type segmented control =====
-  let examType = 'SAT';
-  document.querySelectorAll('#examSeg button').forEach(b => b.addEventListener('click', () => {
-    document.querySelectorAll('#examSeg button').forEach(x => x.classList.remove('on'));
-    b.classList.add('on');
-    examType = b.dataset.val;
-  }));
+  // ── Score range hint ──
+  function updateScoreRange() {
+    var r = SCORE_RANGES[examType] || [400, 1600];
+    document.getElementById('scoreRangeVal').textContent = r[0] + ' – ' + r[1];
+    var inp = document.getElementById('targetScore');
+    inp.min = r[0]; inp.max = r[1];
+    // Update default if field is empty or still at old default
+    var prevDef = Object.values(SCORE_DEFAULTS);
+    if (!inp.value || prevDef.indexOf(parseInt(inp.value, 10)) !== -1) {
+      inp.value = SCORE_DEFAULTS[examType] || r[0];
+    }
+  }
 
-  // ===== Steppers =====
-  document.querySelectorAll('.stepper button').forEach(b => b.addEventListener('click', () => {
-    const inp = document.getElementById(b.dataset.target);
-    const step = parseInt(b.dataset.step, 10);
-    const min = parseInt(inp.min, 10), max = parseInt(inp.max, 10);
-    let v = (parseInt(inp.value, 10) || min) + step;
-    v = Math.max(min, Math.min(max, v));
-    inp.value = v;
-  }));
+  // ── Exam type select ──
+  document.querySelectorAll('#examSeg button').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#examSeg button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      examType = b.dataset.val;
+      updateScoreRange();
+    });
+  });
 
-  // ===== Submit =====
-  document.getElementById('onboardForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // ── Steppers ──
+  document.querySelectorAll('.step-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var inp = document.getElementById(b.dataset.target);
+      var step = parseInt(b.dataset.step, 10);
+      var min = parseInt(inp.min, 10), max = parseInt(inp.max, 10);
+      var v = (parseInt(inp.value, 10) || min) + step;
+      v = Math.max(min, Math.min(max, v));
+      inp.value = v;
+    });
+  });
+
+  // ── Progress dots ──
+  function setProgress(n) {
+    currentStep = n;
+    for (var i = 1; i <= 3; i++) {
+      var dot = document.getElementById('pd' + i);
+      dot.className = 'pdot';
+      if (i < n) dot.classList.add('done');
+      else if (i === n) dot.classList.add('active');
+    }
+    // Update intro subtitle per step
+    var subs = [
+      'Tell us about yourself so Si can build a study plan made just for you.',
+      'Set your target and timeline — Si will build your path to success.',
+      'Last step! Tell us how much time you can commit each week.'
+    ];
+    document.getElementById('introSub').textContent = subs[n - 1];
+  }
+
+  // ── Step transitions ──
+  function goTo(n) {
+    document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
+    var target = document.getElementById('step' + n);
+    target.classList.add('active');
+    var card = target.querySelector('.card');
+    if (card) { card.classList.remove('step-enter'); void card.offsetWidth; card.classList.add('step-enter'); }
+    setProgress(n);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Error helpers ──
+  function showErr(id, msg) {
+    var b = document.getElementById(id);
+    var m = document.getElementById(id + 'Msg');
+    if (m && msg) m.textContent = msg;
+    b.classList.add('show');
+  }
+  function hideErr(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+
+  // ── Step 1 → 2 ──
+  document.getElementById('next1Btn').addEventListener('click', function() {
+    hideErr('err1');
+    var name = document.getElementById('fullName').value.trim();
+    if (!name) { showErr('err1', 'Please enter your full name.'); document.getElementById('fullName').classList.add('err'); return; }
+    document.getElementById('fullName').classList.remove('err');
+    updateScoreRange();
+    goTo(2);
+  });
+
+  // ── Step 2 → 3 ──
+  document.getElementById('next2Btn').addEventListener('click', function() {
+    hideErr('err2');
+    var score = parseInt(document.getElementById('targetScore').value, 10);
+    var examDate = document.getElementById('examDate').value;
+    var r = SCORE_RANGES[examType];
+    if (!score || score < r[0] || score > r[1]) {
+      showErr('err2', 'Please enter a valid target score (' + r[0] + '–' + r[1] + ').');
+      document.getElementById('targetScore').classList.add('err'); return;
+    }
+    document.getElementById('targetScore').classList.remove('err');
+    if (!examDate) { showErr('err2', 'Please select your exam date.'); document.getElementById('examDate').classList.add('err'); return; }
+    var examMs = new Date(examDate).getTime();
+    if (examMs < Date.now()) { showErr('err2', 'Exam date must be in the future.'); document.getElementById('examDate').classList.add('err'); return; }
+    document.getElementById('examDate').classList.remove('err');
+    goTo(3);
+  });
+
+  // ── Back buttons ──
+  document.getElementById('back2Btn').addEventListener('click', function(){ goTo(1); });
+  document.getElementById('back3Btn').addEventListener('click', function(){ goTo(2); });
+
+  // ── Final submit ──
+  document.getElementById('submitBtn').addEventListener('click', async function() {
     if (!currentUser) { window.location.href = 'login.html'; return; }
+    hideErr('err3');
 
-    const targetScore = parseInt(document.getElementById('targetScore').value, 10);
-    const examDate = document.getElementById('examDate').value;
-    const sessionsWeek = parseInt(document.getElementById('sessionsWeek').value, 10);
-    const sessionLen = parseInt(document.getElementById('sessionLen').value, 10);
+    var btn = document.getElementById('submitBtn');
+    var lbl = document.getElementById('submitLabel');
+    btn.disabled = true;
+    lbl.textContent = 'Saving…';
 
-    if (!targetScore || !examDate) {
-      alert('Please enter your target score and exam date.');
+    var fullName = document.getElementById('fullName').value.trim();
+    var targetScore = parseInt(document.getElementById('targetScore').value, 10);
+    var examDate = document.getElementById('examDate').value;
+    var sessionsWeek = parseInt(document.getElementById('sessionsWeek').value, 10);
+    var sessionLen = parseInt(document.getElementById('sessionLen').value, 10);
+
+    var payload = {
+      id: currentUser.id,
+      email: currentUser.email,
+      full_name: fullName,
+      exam_type: examType,
+      target_score: targetScore,
+      exam_date: examDate,
+      study_sessions_per_week: sessionsWeek,
+      session_length: sessionLen,
+      onboarding_completed: true
+    };
+
+    var { error } = await sb.from('profiles').upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      btn.disabled = false;
+      lbl.textContent = 'Start Learning';
+      showErr('err3', error.message || 'Could not save your profile. Please try again.');
       return;
     }
 
-    const btn = document.getElementById('continueBtn');
-    btn.disabled = true; btn.style.opacity = '0.7';
-
-    try {
-      // Make sure email + full_name are persisted on the profile row even if
-      // the auth trigger didn't run. Use update first; if no row exists we
-      // upsert.
-      const meta = currentUser.user_metadata || {};
-      const fullName = meta.full_name || (currentUser.email ? currentUser.email.split('@')[0] : null);
-
-      const payload = {
-        id: currentUser.id,
-        email: currentUser.email,
-        full_name: fullName,
-        exam_type: examType,
-        target_score: targetScore,
-        exam_date: examDate,
-        study_sessions_per_week: sessionsWeek,
-        session_length: sessionLen,
-        onboarding_completed: true
-      };
-
-      const { error } = await supabaseClient
-        .from('profiles')
-        .upsert(payload, { onConflict: 'id' });
-
-      if (error) {
-        alert(error.message);
-      } else {
-        window.location.href = 'dashboard.html';
-      }
-    } catch (err) {
-      alert(err.message || 'Something went wrong. Please try again.');
-    } finally {
-      btn.disabled = false; btn.style.opacity = '1';
-    }
+    // Success — brief celebration then redirect
+    lbl.textContent = 'Welcome to Si! 🎉';
+    setTimeout(function(){ window.location.href = 'dashboard.html'; }, 900);
   });
+
+  // Initialise score range on load
+  updateScoreRange();
 </script>
 </body>
 </html>

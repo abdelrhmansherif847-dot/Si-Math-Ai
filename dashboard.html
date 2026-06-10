@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
-<title>Si Math AI — Dashboard (Redesign Preview)</title>
+<title>Si Math AI — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ═══════════════════════════════════════════════════
    DESIGN TOKENS — Si Math AI (unchanged brand)
@@ -866,7 +867,7 @@ body::before{
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
       <span class="notif-dot"></span>
     </button>
-    <a href="profile.html" class="avatar-btn" aria-label="Profile">A</a>
+    <a href="profile.html" class="avatar-btn" id="topAvatar" aria-label="Profile">?</a>
   </div>
 </header>
 
@@ -915,7 +916,7 @@ body::before{
   <div class="side-mentor">
     <span class="side-mentor-icon">🐉</span>
     <h4>Keep your streak!</h4>
-    <p>You're on a 12-day streak. Solve 3 questions today to keep it alive.</p>
+    <p id="sidebarMentorTip">Start your session today to build your streak!</p>
     <a class="mini-btn" href="chat.html">Solve Now →</a>
   </div>
 </aside>
@@ -931,8 +932,8 @@ body::before{
       <span class="live-dot"></span>
       Student Dashboard
     </div>
-    <h1>Welcome back,<br><span class="name-grad">Alex</span></h1>
-    <p class="hero-sub">Logged in as <span class="hl">alex@example.com</span> · Let's keep improving your <span class="hl">SAT</span> score — you're 47 days out.</p>
+    <h1>Welcome back,<br><span class="name-grad" id="heroName">…</span></h1>
+    <p class="hero-sub" id="heroSub">Loading your dashboard…</p>
     <div class="hero-actions">
       <button onclick="location.href='chat.html'" class="btn-primary">
         Continue Learning
@@ -950,7 +951,7 @@ body::before{
     <div class="pstat hi reveal" style="transition-delay:.05s">
       <div class="ps-icon">📝</div>
       <div class="ps-label">Exam Type</div>
-      <div class="ps-val cyan">SAT</div>
+      <div class="ps-val cyan" id="examTypeVal">—</div>
     </div>
     <div class="pstat reveal" style="transition-delay:.1s">
       <div class="ps-icon">🎯</div>
@@ -960,7 +961,7 @@ body::before{
     <div class="pstat reveal" style="transition-delay:.15s">
       <div class="ps-icon">📅</div>
       <div class="ps-label">Exam Date</div>
-      <div class="ps-val" style="font-size:14px">Jul 26, 2026</div>
+      <div class="ps-val" style="font-size:14px" id="examDateVal">—</div>
     </div>
     <div class="pstat hi reveal" style="transition-delay:.2s">
       <div class="ps-icon">⏳</div>
@@ -971,12 +972,12 @@ body::before{
     <div class="pstat reveal" style="transition-delay:.25s">
       <div class="ps-icon">📚</div>
       <div class="ps-label">Sessions / Week</div>
-      <div class="ps-val">4</div>
+      <div class="ps-val" id="sessionsVal">—</div>
     </div>
     <div class="pstat reveal" style="transition-delay:.3s">
       <div class="ps-icon">⏱️</div>
       <div class="ps-label">Session Length</div>
-      <div class="ps-val">60<span style="font-size:12px;color:var(--text-400);font-weight:600"> min</span></div>
+      <div class="ps-val"><span id="sessionLenVal">—</span><span style="font-size:12px;color:var(--text-400);font-weight:600" id="sessionLenUnit"></span></div>
     </div>
   </div>
 
@@ -991,29 +992,29 @@ body::before{
         <span class="ov-badge bad">High</span>
       </div>
       <div class="ov-label">Biggest Weakness</div>
-      <div class="ov-main">Geometry<br><span class="sub">Circles</span></div>
-      <div class="ov-row"><span>Mastery</span><b style="color:var(--red)">43%</b></div>
-      <div class="ov-track"><div class="ov-fill" style="background:linear-gradient(90deg,#c0392f,var(--red));box-shadow:0 0 8px rgba(239,79,95,.5)" data-width="43"></div></div>
+      <div class="ov-main" id="ovWeakTopic">—<br><span class="sub" id="ovWeakSub"></span></div>
+      <div class="ov-row"><span>Mastery</span><b style="color:var(--red)" id="ovWeakMastery">—</b></div>
+      <div class="ov-track"><div class="ov-fill" id="ovWeakFill" style="background:linear-gradient(90deg,#c0392f,var(--red));box-shadow:0 0 8px rgba(239,79,95,.5)" data-width="0"></div></div>
     </div>
 
     <!-- Focus Plan with progress ring -->
     <div class="ov reveal" onclick="location.href='focus.html'" tabindex="0" role="button" aria-label="View focus plan" style="transition-delay:.06s">
       <div class="ov-head">
         <div class="ov-ic">🎯</div>
-        <span class="ov-badge">58%</span>
+        <span class="ov-badge" id="ovFocusBadge">0%</span>
       </div>
       <div class="ov-label">Current Focus Plan</div>
       <div style="display:flex;align-items:center;gap:14px;margin-top:6px">
         <div class="ring-wrap">
           <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
             <circle class="ring-bg" cx="28" cy="28" r="22"/>
-            <circle class="ring-fg" cx="28" cy="28" r="22" data-pct="58" style="stroke-dashoffset:138"/>
+            <circle class="ring-fg" id="focusRingFg" cx="28" cy="28" r="22" data-pct="0" style="stroke-dashoffset:138"/>
           </svg>
-          <div class="ring-label">58%</div>
+          <div class="ring-label" id="focusRingLabel">0%</div>
         </div>
         <div>
-          <div class="ov-main" style="font-size:15px">4-Week Plan</div>
-          <div class="ov-sub" style="margin-top:4px">5 of 12 tasks done</div>
+          <div class="ov-main" style="font-size:15px" id="focusPlanTitle">No Plan</div>
+          <div class="ov-sub" style="margin-top:4px" id="focusTaskCount">—</div>
         </div>
       </div>
     </div>
@@ -1022,24 +1023,24 @@ body::before{
     <div class="ov reveal" onclick="location.href='mock-exam.html'" tabindex="0" role="button" aria-label="View mock exam" style="transition-delay:.12s">
       <div class="ov-head">
         <div class="ov-ic">📊</div>
-        <span class="ov-badge">SAT</span>
+        <span class="ov-badge" id="ovExamTypeBadge">—</span>
       </div>
-      <div class="ov-label">Estimated Score</div>
-      <div class="ov-num"><span id="cntScore">0</span> <span class="unit">/ 1600</span></div>
-      <div class="ov-row"><span>Target</span><b>1450</b></div>
-      <div class="ov-track"><div class="ov-fill" data-width="78"></div></div>
+      <div class="ov-label">Latest Exam Score</div>
+      <div class="ov-num"><span id="cntScore">0</span> <span class="unit">/ <span id="ovScoreMax">1600</span></span></div>
+      <div class="ov-row"><span>Target</span><b id="ovScoreTarget">—</b></div>
+      <div class="ov-track"><div class="ov-fill" id="ovScoreFill" data-width="0"></div></div>
     </div>
 
     <!-- Recent Improvement -->
     <div class="ov reveal" onclick="location.href='weakness.html'" tabindex="0" role="button" aria-label="View improvement" style="transition-delay:.18s">
       <div class="ov-head">
         <div class="ov-ic">📈</div>
-        <span class="ov-badge good">↑ Up</span>
+        <span class="ov-badge good" id="ovTopBadge">—</span>
       </div>
-      <div class="ov-label">Recent Improvement</div>
-      <div class="ov-main">Functions</div>
-      <div class="ov-num green" style="margin-top:10px">+<span id="cntImprove">0</span>%</div>
-      <div class="ov-sub">Most improved this month</div>
+      <div class="ov-label">Strongest Topic</div>
+      <div class="ov-main" id="ovTopTopicName">—</div>
+      <div class="ov-num green" style="margin-top:10px"><span id="cntImprove">0</span>%</div>
+      <div class="ov-sub">Highest mastery score</div>
     </div>
 
     <!-- Study Streak -->
@@ -1050,10 +1051,9 @@ body::before{
       </div>
       <div class="ov-label">Study Streak</div>
       <div class="ov-num"><span id="cntStreak">0</span> <span class="unit">days</span></div>
-      <div class="ov-sub" style="margin-bottom:6px">This week: 5/7 days</div>
-      <div class="ov-mini">
-        <span class="on"></span><span class="on"></span><span class="on"></span>
-        <span class="on"></span><span class="on"></span><span></span><span></span>
+      <div class="ov-sub" style="margin-bottom:6px" id="ovStreakThisWeek">This week: 0/7 days</div>
+      <div class="ov-mini" id="ovMiniDots">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
 
@@ -1093,35 +1093,24 @@ body::before{
 
       <div class="week-header">
         <span class="wh-l">Weekly Progress</span>
-        <span class="wh-r">5 / 7 days</span>
+        <span class="wh-r" id="weekProgressText">0 / 7 days</span>
       </div>
-      <div class="week">
-        <div class="day done"><span class="dn">M</span><div class="day-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
-        <div class="day done"><span class="dn">T</span><div class="day-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
-        <div class="day done"><span class="dn">W</span><div class="day-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
-        <div class="day done"><span class="dn">T</span><div class="day-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
-        <div class="day done"><span class="dn">F</span><div class="day-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div></div>
-        <div class="day today"><span class="dn">S</span><div class="day-dot">·</div></div>
+      <div class="week" id="weekDotContainer">
+        <div class="day"><span class="dn">M</span><div class="day-dot"></div></div>
+        <div class="day"><span class="dn">T</span><div class="day-dot"></div></div>
+        <div class="day"><span class="dn">W</span><div class="day-dot"></div></div>
+        <div class="day"><span class="dn">T</span><div class="day-dot"></div></div>
+        <div class="day"><span class="dn">F</span><div class="day-dot"></div></div>
+        <div class="day"><span class="dn">S</span><div class="day-dot"></div></div>
         <div class="day"><span class="dn">S</span><div class="day-dot"></div></div>
       </div>
 
       <div class="ach-section">
         <div class="ach-label">Achievements</div>
-        <div class="badges">
-          <div class="badge unlocked" aria-label="Achievement: 7 Day Streak (unlocked)">
-            <span class="bi">🏅</span>
-            <span class="bt">7-Day Streak</span>
-          </div>
-          <div class="badge locked" aria-label="Achievement: 30 Day Streak (locked, 40% progress)">
-            <span class="lock-ico">🔒</span>
-            <span class="bi">💎</span>
-            <span class="bt">30-Day Streak</span>
-            <div class="prog"><i style="width:40%"></i></div>
-          </div>
-          <div class="badge unlocked" aria-label="Achievement: 100 Questions Solved (unlocked)">
-            <span class="bi">⭐</span>
-            <span class="bt">100 Solved</span>
-          </div>
+        <div class="badges" id="achievementBadgesContainer">
+          <div class="badge locked"><span class="bi">🏅</span><span class="bt">Loading…</span></div>
+          <div class="badge locked"><span class="bi">💎</span><span class="bt">Loading…</span></div>
+          <div class="badge locked"><span class="bi">⭐</span><span class="bt">Loading…</span></div>
         </div>
       </div>
     </section>
@@ -1141,26 +1130,9 @@ body::before{
       </div>
 
       <div class="bars" id="barsContainer">
-        <div class="bar-row">
-          <div class="bar-head"><span class="bar-name">Algebra</span><span class="bar-pct g">88%</span></div>
-          <div class="bar-track"><div class="bar-fill g" data-width="88"></div></div>
-        </div>
-        <div class="bar-row">
-          <div class="bar-head"><span class="bar-name">Geometry</span><span class="bar-pct r">43%</span></div>
-          <div class="bar-track"><div class="bar-fill r" data-width="43"></div></div>
-        </div>
-        <div class="bar-row">
-          <div class="bar-head"><span class="bar-name">Functions</span><span class="bar-pct y">70%</span></div>
-          <div class="bar-track"><div class="bar-fill y" data-width="70"></div></div>
-        </div>
-        <div class="bar-row">
-          <div class="bar-head"><span class="bar-name">Statistics</span><span class="bar-pct g">91%</span></div>
-          <div class="bar-track"><div class="bar-fill g" data-width="91"></div></div>
-        </div>
-        <div class="bar-row">
-          <div class="bar-head"><span class="bar-name">Advanced Math</span><span class="bar-pct y">58%</span></div>
-          <div class="bar-track"><div class="bar-fill y" data-width="58"></div></div>
-        </div>
+        <div class="bar-row"><div class="bar-head"><span class="skel skel-line" style="width:90px;height:13px"></span><span class="skel skel-line" style="width:30px;height:13px"></span></div><div class="bar-track"><div class="skel" style="height:6px;border-radius:100px;width:70%"></div></div></div>
+        <div class="bar-row"><div class="bar-head"><span class="skel skel-line" style="width:80px;height:13px"></span><span class="skel skel-line" style="width:30px;height:13px"></span></div><div class="bar-track"><div class="skel" style="height:6px;border-radius:100px;width:40%"></div></div></div>
+        <div class="bar-row"><div class="bar-head"><span class="skel skel-line" style="width:75px;height:13px"></span><span class="skel skel-line" style="width:30px;height:13px"></span></div><div class="bar-track"><div class="skel" style="height:6px;border-radius:100px;width:60%"></div></div></div>
       </div>
 
       <div class="bar-legend">
@@ -1171,7 +1143,7 @@ body::before{
 
       <div class="weakest-banner">
         <span class="wi">⚠️</span>
-        <span class="wt">Biggest Weakness: <b>Geometry → Circles</b></span>
+        <span class="wt" id="weakestBannerText">Loading…</span>
       </div>
 
       <button onclick="location.href='weakness.html'" class="full-btn">
@@ -1198,16 +1170,14 @@ body::before{
         <div class="pno"><small>PRIORITY</small><b>#1</b></div>
         <div class="pmeta">
           <div class="pm-label">Top priority topic</div>
-          <div class="pm-val">Geometry</div>
+          <div class="pm-val" id="fpPriorityTopic">—</div>
         </div>
       </div>
 
       <div class="fp-section">
-        <div class="fp-section-label">Topics to review</div>
-        <div class="chips">
-          <span class="chip"><span class="cd"></span>Circles</span>
-          <span class="chip"><span class="cd"></span>Triangles</span>
-          <span class="chip"><span class="cd"></span>Coordinate Geometry</span>
+        <div class="fp-section-label">Subtopics to review</div>
+        <div class="chips" id="fpTopicChips">
+          <span class="chip"><span class="cd"></span>Loading…</span>
         </div>
       </div>
 
@@ -1227,11 +1197,11 @@ body::before{
         </div>
         <div class="goal-card">
           <div class="goal-label">Target Accuracy</div>
-          <div class="goal-val"><span class="from">43%</span><span class="arr">→</span><span class="to">70%</span></div>
+          <div class="goal-val"><span class="from" id="fpCurrentMastery">—</span><span class="arr">→</span><span class="to" id="fpTargetMastery">—</span></div>
         </div>
         <div class="goal-card">
-          <div class="goal-label">Est. Time</div>
-          <div class="goal-val" style="color:var(--cyan)">~3 weeks</div>
+          <div class="goal-label">Focus Plan</div>
+          <div class="goal-val" style="color:var(--cyan)" id="fpPlanStatus">Open Plan</div>
         </div>
       </div>
 
@@ -1330,15 +1300,15 @@ body::before{
         <div class="zero-role">Your AI Math Mentor</div>
       </div>
     </div>
-    <p class="zero-insight">
-      Based on your last 7 sessions, <span class="topic-hl">Geometry → Circles</span> is your highest-priority weakness right now. Your mastery dropped 8% this week. I'd recommend <span class="time-hl">3 focused sessions</span> before your exam — start with arc length and sector area, then move to circle theorems. You're close to a breakthrough.
+    <p class="zero-insight" id="zeroInsightText">
+      Loading your personalised insight…
     </p>
     <div class="zero-ctas">
       <a href="focus.html" class="zero-btn-primary">
         <svg viewBox="0 0 16 16" fill="none" style="width:15px;height:15px"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Open Focus Plan
       </a>
-      <a href="chat.html" class="zero-btn-ghost">Ask Si About Circles</a>
+      <a href="chat.html" class="zero-btn-ghost" id="zeroChatBtn">Ask Si</a>
     </div>
   </div>
 
@@ -1370,186 +1340,520 @@ body::before{
 
 <script>
 /* ═══════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════ */
+var SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+
+var ACHIEVEMENT_MAP = {
+  'first_correct':   { emoji: '⭐', title: 'First Correct' },
+  'first_session':   { emoji: '🚀', title: 'First Session' },
+  '7_day_streak':    { emoji: '🏅', title: '7-Day Streak' },
+  '14_day_streak':   { emoji: '🔥', title: '14-Day Streak' },
+  '30_day_streak':   { emoji: '💎', title: '30-Day Streak' },
+  '100_questions':   { emoji: '💯', title: '100 Solved' },
+  '500_questions':   { emoji: '🏆', title: '500 Solved' },
+  'first_exam':      { emoji: '📝', title: 'First Exam' },
+  'exam_complete':   { emoji: '✅', title: 'Exam Done' },
+  'perfect_score':   { emoji: '🎯', title: 'Perfect Score' },
+  'weakness_found':  { emoji: '🔍', title: 'Self-Aware' },
+  'founder':         { emoji: '👑', title: 'Founder' },
+};
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = (val !== null && val !== undefined) ? val : '—';
+}
+
+/* ═══════════════════════════════════════════
    1. SIDEBAR TOGGLE
 ═══════════════════════════════════════════ */
-const hamb = document.getElementById('hamb');
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('overlay');
+var hamb = document.getElementById('hamb');
+var sidebar = document.getElementById('sidebar');
+var overlay = document.getElementById('overlay');
 function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('show'); }
 function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('show'); }
-hamb?.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
-overlay?.addEventListener('click', closeSidebar);
+hamb && hamb.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeSidebar() : openSidebar(); });
+overlay && overlay.addEventListener('click', closeSidebar);
 
 /* ═══════════════════════════════════════════
    2. INTERSECTION OBSERVER — stagger reveal
 ═══════════════════════════════════════════ */
-const revealEls = document.querySelectorAll('.reveal');
-const revealObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('in-view');
-      revealObs.unobserve(e.target);
-    }
+var revealEls = document.querySelectorAll('.reveal');
+var revealObs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (e.isIntersecting) { e.target.classList.add('in-view'); revealObs.unobserve(e.target); }
   });
 }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
-revealEls.forEach(el => revealObs.observe(el));
+revealEls.forEach(function(el){ revealObs.observe(el); });
 
 /* ═══════════════════════════════════════════
    3. ANIMATED COUNTERS
 ═══════════════════════════════════════════ */
 function animateCounter(el, target, duration, suffix) {
-  if (!el) return;
-  const start = performance.now();
-  const update = (now) => {
-    const pct = Math.min((now - start) / duration, 1);
-    // ease-out cubic
-    const ease = 1 - Math.pow(1 - pct, 3);
+  if (!el || !target) return;
+  var start = performance.now();
+  var update = function(now) {
+    var pct = Math.min((now - start) / duration, 1);
+    var ease = 1 - Math.pow(1 - pct, 3);
     el.textContent = Math.round(ease * target) + (suffix || '');
     if (pct < 1) requestAnimationFrame(update);
   };
   requestAnimationFrame(update);
 }
 
-// Trigger counters when hero is visible
-const heroObs = new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting) {
-    setTimeout(() => {
-      animateCounter(document.getElementById('cntTarget'), 1450, 1400);
-      animateCounter(document.getElementById('cntDays'),   47,   1200);
-      animateCounter(document.getElementById('cntScore'),  1240, 1600);
-      animateCounter(document.getElementById('cntImprove'),18,   1300);
-      animateCounter(document.getElementById('cntStreak'), 12,   1000);
-      animateCounter(document.getElementById('cntStreak2'),12,   1000);
-      animateCounter(document.getElementById('cntBest'),   27,   1200);
-      animateCounter(document.getElementById('cntXP'),     1840, 1600);
-    }, 300);
-    heroObs.disconnect();
-  }
-}, { threshold: 0.2 });
-heroObs.observe(document.querySelector('.hero'));
-
 /* ═══════════════════════════════════════════
-   4. BAR CHART GROW ON SCROLL
+   4. BAR CHART — called after dynamic render
 ═══════════════════════════════════════════ */
-const bars = document.querySelectorAll('.bar-fill[data-width]');
-const barObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      setTimeout(() => { e.target.style.width = e.target.dataset.width + '%'; }, 100);
-      barObs.unobserve(e.target);
-    }
+function initBars() {
+  document.querySelectorAll('.bar-fill[data-width]').forEach(function(b) {
+    b.style.width = '0%';
+    setTimeout(function(){ b.style.width = b.dataset.width + '%'; }, 200);
   });
-}, { threshold: 0.3 });
-bars.forEach(b => { b.style.width = '0%'; barObs.observe(b); });
+}
 
 /* ═══════════════════════════════════════════
    5. OVERVIEW FILL BARS
 ═══════════════════════════════════════════ */
-const ovFills = document.querySelectorAll('.ov-fill[data-width]');
-const ovObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      setTimeout(() => { e.target.style.width = e.target.dataset.width + '%'; }, 200);
-      ovObs.unobserve(e.target);
-    }
+function initOvFills() {
+  document.querySelectorAll('.ov-fill[data-width]').forEach(function(f) {
+    f.style.width = '0%';
+    setTimeout(function(){ f.style.width = f.dataset.width + '%'; }, 300);
   });
-}, { threshold: 0.2 });
-ovFills.forEach(f => { f.style.width = '0%'; ovObs.observe(f); });
+}
 
 /* ═══════════════════════════════════════════
    6. PROGRESS RING
 ═══════════════════════════════════════════ */
-const rings = document.querySelectorAll('.ring-fg[data-pct]');
-const ringObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      const pct = +e.target.dataset.pct / 100;
-      const circumference = 2 * Math.PI * 22; // r=22
-      setTimeout(() => {
-        e.target.style.strokeDashoffset = circumference * (1 - pct);
-      }, 200);
-      ringObs.unobserve(e.target);
-    }
-  });
-}, { threshold: 0.3 });
-rings.forEach(r => {
-  const c = 2 * Math.PI * 22;
-  r.style.strokeDasharray = c;
-  r.style.strokeDashoffset = c;
-  ringObs.observe(r);
-});
+function animateRing(ringEl, labelEl, pct) {
+  if (!ringEl) return;
+  var c = 2 * Math.PI * 22;
+  ringEl.style.strokeDasharray = c;
+  ringEl.style.strokeDashoffset = c;
+  setTimeout(function(){
+    ringEl.style.strokeDashoffset = c * (1 - pct / 100);
+  }, 400);
+  if (labelEl) labelEl.textContent = Math.round(pct) + '%';
+}
 
 /* ═══════════════════════════════════════════
-   7. EXAM SEGMENT PILL (slide indicator)
+   7. EXAM SEGMENT PILL
 ═══════════════════════════════════════════ */
-const seg = document.getElementById('examSeg');
-const pill = document.getElementById('segPill');
-const segBtns = seg?.querySelectorAll('button');
-
+var seg = document.getElementById('examSeg');
+var pill = document.getElementById('segPill');
+var segBtns = seg ? seg.querySelectorAll('button') : [];
 function movePill(btn) {
   if (!pill || !btn) return;
   pill.style.width = btn.offsetWidth + 'px';
-  pill.style.transform = `translateX(${btn.offsetLeft - 4}px)`;
+  pill.style.transform = 'translateX(' + (btn.offsetLeft - 4) + 'px)';
 }
-
-if (segBtns?.length) {
-  // Init pill on first button
-  requestAnimationFrame(() => movePill(segBtns[0]));
-  segBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      segBtns.forEach(b => b.classList.remove('on'));
-      btn.classList.add('on');
-      movePill(btn);
+if (segBtns.length) {
+  requestAnimationFrame(function(){ movePill(segBtns[0]); });
+  segBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      segBtns.forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on'); movePill(btn);
     });
   });
 }
 
 /* ═══════════════════════════════════════════
-   8. MAGNETIC HOVER on primary buttons
+   8. MAGNETIC HOVER
 ═══════════════════════════════════════════ */
-document.querySelectorAll('.btn-primary, .big-cta, .zero-btn-primary').forEach(btn => {
-  btn.addEventListener('mousemove', e => {
-    const r = btn.getBoundingClientRect();
-    const x = e.clientX - r.left - r.width / 2;
-    const y = e.clientY - r.top - r.height / 2;
-    btn.style.transform = `translateY(-2px) translate(${x * .06}px, ${y * .06}px)`;
+document.querySelectorAll('.btn-primary, .big-cta, .zero-btn-primary').forEach(function(btn) {
+  btn.addEventListener('mousemove', function(e) {
+    var r = btn.getBoundingClientRect();
+    var x = e.clientX - r.left - r.width / 2;
+    var y = e.clientY - r.top - r.height / 2;
+    btn.style.transform = 'translateY(-2px) translate(' + (x * .06) + 'px,' + (y * .06) + 'px)';
   });
-  btn.addEventListener('mouseleave', () => {
-    btn.style.transform = '';
-  });
+  btn.addEventListener('mouseleave', function(){ btn.style.transform = ''; });
 });
 
 /* ═══════════════════════════════════════════
-   9. KEYBOARD ACCESSIBILITY for ov cards
+   9. KEYBOARD ACCESS
 ═══════════════════════════════════════════ */
-document.querySelectorAll('.ov[tabindex]').forEach(card => {
-  card.addEventListener('keydown', e => {
+document.querySelectorAll('.ov[tabindex]').forEach(function(card) {
+  card.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
   });
 });
 
 /* ═══════════════════════════════════════════
-   10. WEEK DAY POP ANIMATION (staggered)
+   10. WEEK DAY POP ANIMATION — called after render
 ═══════════════════════════════════════════ */
-const dayDots = document.querySelectorAll('.day-dot');
-const weekObs = new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting) {
-    dayDots.forEach((dot, i) => {
-      setTimeout(() => {
-        dot.style.transition = 'transform .3s cubic-bezier(.23,1,.32,1), box-shadow .3s, opacity .3s';
-        dot.style.opacity = '0';
-        dot.style.transform = 'scale(.6)';
-        setTimeout(() => {
-          dot.style.opacity = '1';
-          dot.style.transform = 'scale(1)';
-        }, 40);
-      }, i * 60);
-    });
-    weekObs.disconnect();
+function initWeekPop() {
+  var dots = document.querySelectorAll('.day-dot');
+  dots.forEach(function(dot, i) {
+    setTimeout(function(){
+      dot.style.transition = 'transform .3s cubic-bezier(.23,1,.32,1), box-shadow .3s, opacity .3s';
+      dot.style.opacity = '0'; dot.style.transform = 'scale(.6)';
+      setTimeout(function(){ dot.style.opacity = '1'; dot.style.transform = 'scale(1)'; }, 40);
+    }, i * 60);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   SUPABASE DATA LAYER
+═══════════════════════════════════════════ */
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+var CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+async function deviceGuard(sb, userId) {
+  var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+  var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
+  var fp=(h>>>0).toString(16).padStart(8,'0');
+  var{data:d}=await sb.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+  if(!d){window.location.href='devices.html?blocked=1';return false;}
+  return true;
+}
+
+async function loadDashboard() {
+  /* ── Auth ── */
+  var authRes = await sb.auth.getUser();
+  var user = authRes.data && authRes.data.user;
+  if (!user) { window.location.href = 'login.html'; return; }
+  if (!(await deviceGuard(sb, user.id))) return;
+
+  /* Set avatar initial immediately while rest loads */
+  var topAvatar = document.getElementById('topAvatar');
+  if (topAvatar) topAvatar.textContent = (user.email || '?').slice(0,1).toUpperCase();
+
+  /* ── Parallel queries ── */
+  var now = new Date();
+  var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  var results = await Promise.all([
+    sb.from('profiles').select('*').eq('id', user.id).single(),
+    sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
+    sb.from('mastery_records').select('topic,subtopic,mastery_score,last_updated').eq('user_id', user.id),
+    sb.from('weakness_reports').select('topic,subtopic,priority,weakness_score,mastery_estimate').eq('user_id', user.id).order('priority', {ascending:true}).limit(10),
+    sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}).limit(6),
+    sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
+    sb.from('question_records').select('created_at').eq('user_id', user.id).gte('created_at', monthStart),
+    sb.from('subscriptions').select('plan,status,credits_remaining').eq('user_id', user.id).eq('status','active').limit(1).maybeSingle(),
+  ]);
+
+  var prof        = (results[0].data) || {};
+  var exams       = (results[1].data) || [];
+  var masteryRecs = (results[2].data) || [];
+  var weakReports = (results[3].data) || [];
+  var achievements= (results[4].data) || [];
+  var chatSess    = (results[5].data) || [];
+  var monthQs     = (results[6].data) || [];
+  var subscription= results[7].data;
+
+  /* ── Derived: user ── */
+  var displayName = prof.full_name || user.email.split('@')[0] || 'Student';
+  var examType    = prof.exam_type || 'SAT';
+  var targetScore = prof.target_score || 0;
+  var scoreMax    = examType === 'ACT' ? 36 : examType === 'EST' ? 900 : 1600;
+
+  /* Update avatar with real name initial */
+  if (topAvatar) topAvatar.textContent = displayName.slice(0,1).toUpperCase();
+
+  /* ── Derived: exam date ── */
+  var daysRemaining = 0;
+  var examDateStr = 'Not set';
+  if (prof.exam_date) {
+    var examDate = new Date(prof.exam_date);
+    var today0 = new Date(); today0.setHours(0,0,0,0);
+    daysRemaining = Math.max(0, Math.ceil((examDate - today0) / 86400000));
+    examDateStr = examDate.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
   }
-}, { threshold: 0.5 });
-const weekEl = document.querySelector('.week');
-if (weekEl) weekObs.observe(weekEl);
+
+  /* ── Derived: latest exam score ── */
+  var latestScore  = exams.length ? (exams[0].score || 0) : 0;
+  var scorePct     = scoreMax > 0 && latestScore > 0 ? Math.round((latestScore / scoreMax) * 100) : 0;
+
+  /* ── Derived: mastery by topic (avg subtopics) ── */
+  var topicMap = {};
+  masteryRecs.forEach(function(m) {
+    if (!topicMap[m.topic]) topicMap[m.topic] = {sum:0, n:0};
+    topicMap[m.topic].sum += m.mastery_score;
+    topicMap[m.topic].n   += 1;
+  });
+  var topicList = Object.keys(topicMap).map(function(t) {
+    return { topic: t, mastery: Math.round(topicMap[t].sum / topicMap[t].n) };
+  }).sort(function(a,b){ return a.mastery - b.mastery; }); // weakest first
+
+  /* ── Derived: biggest weakness (from weakness_reports, fallback mastery) ── */
+  var weakness = null;
+  if (weakReports.length) {
+    weakness = weakReports[0];
+    if (!weakness.mastery_estimate && topicMap[weakness.topic]) {
+      var tm = topicMap[weakness.topic];
+      weakness = Object.assign({}, weakness, {mastery_estimate: Math.round(tm.sum / tm.n)});
+    }
+  } else if (topicList.length) {
+    weakness = {topic: topicList[0].topic, subtopic: null, mastery_estimate: topicList[0].mastery};
+  }
+
+  /* ── Derived: strongest topic ── */
+  var topTopic = topicList.length ? topicList[topicList.length - 1] : null;
+
+  /* ── Derived: streaks ── */
+  var actSet = new Set();
+  chatSess.concat(exams).forEach(function(s) {
+    if (s.created_at) actSet.add(new Date(s.created_at).toDateString());
+  });
+
+  var todayStr = new Date().toDateString();
+  var ydayDate = new Date(); ydayDate.setDate(ydayDate.getDate() - 1);
+  var ydayStr  = ydayDate.toDateString();
+
+  var currentStreak = 0;
+  var anchor = actSet.has(todayStr) ? new Date() : actSet.has(ydayStr) ? ydayDate : null;
+  if (anchor) {
+    var d = new Date(anchor); d.setHours(0,0,0,0);
+    while (actSet.has(d.toDateString())) { currentStreak++; d.setDate(d.getDate()-1); }
+  }
+
+  var bestStreak = 0, run = 0;
+  var sortedDates = Array.from(actSet).map(function(x){ return new Date(x); }).sort(function(a,b){ return a-b; });
+  for (var i=0; i<sortedDates.length; i++) {
+    run = (i === 0 || (sortedDates[i]-sortedDates[i-1]) !== 86400000) ? 1 : run + 1;
+    if (run > bestStreak) bestStreak = run;
+  }
+
+  /* ── Derived: this week M–S ── */
+  var today0 = new Date(); today0.setHours(0,0,0,0);
+  var dow = today0.getDay();
+  var mondayOff = dow === 0 ? -6 : 1 - dow;
+  var weekMon = new Date(today0); weekMon.setDate(today0.getDate() + mondayOff);
+  var DAY_LABELS = ['M','T','W','T','F','S','S'];
+  var weekData = Array.from({length:7}, function(_,i) {
+    var day = new Date(weekMon); day.setDate(weekMon.getDate() + i);
+    return {
+      label:    DAY_LABELS[i],
+      date:     day,
+      isDone:   actSet.has(day.toDateString()),
+      isToday:  day.toDateString() === todayStr,
+      isFuture: day > today0,
+    };
+  });
+  var weekActive = weekData.filter(function(d){ return d.isDone; }).length;
+
+  /* ── Derived: monthly activity ── */
+  var monthQCount = monthQs.length;
+  var totalXP = (prof.xp != null) ? prof.xp : monthQCount;
+
+  /* ── Derived: plan study settings (graceful if columns missing) ── */
+  var sessPerWeek = prof.sessions_per_week || prof.weekly_sessions || null;
+  var sessLen     = prof.session_duration_minutes || prof.session_length || null;
+
+  /* ── POPULATE: hero ── */
+  setText('heroName', displayName);
+  var heroSub = document.getElementById('heroSub');
+  if (heroSub) {
+    var sub = 'Logged in as <span class="hl">' + user.email + '</span>';
+    if (examType) sub += ' &middot; Preparing for <span class="hl">' + examType + '</span>';
+    if (daysRemaining > 0) sub += ' &mdash; <span class="hl">' + daysRemaining + ' days</span> remaining';
+    else if (prof.exam_date) sub += ' &mdash; exam day is here!';
+    heroSub.innerHTML = sub;
+  }
+
+  /* ── POPULATE: plan grid ── */
+  setText('examTypeVal', examType);
+  setText('examDateVal', examDateStr);
+  setText('sessionsVal', sessPerWeek !== null ? sessPerWeek : '—');
+  if (sessLen !== null) {
+    setText('sessionLenVal', sessLen);
+    setText('sessionLenUnit', ' min');
+  } else {
+    setText('sessionLenVal', '—');
+  }
+
+  /* ── POPULATE: overview weakness ── */
+  if (weakness) {
+    var wM = weakness.mastery_estimate || 0;
+    setText('ovWeakTopic',   weakness.topic || '—');
+    setText('ovWeakSub',     weakness.subtopic || '');
+    setText('ovWeakMastery', wM + '%');
+    var wFill = document.getElementById('ovWeakFill');
+    if (wFill) wFill.dataset.width = wM;
+  } else {
+    setText('ovWeakTopic',   'No data yet');
+    setText('ovWeakSub',     '');
+    setText('ovWeakMastery', '—');
+  }
+
+  /* ── POPULATE: overview score ── */
+  setText('ovExamTypeBadge', examType);
+  setText('ovScoreMax',      scoreMax);
+  setText('ovScoreTarget',   targetScore || '—');
+  var ovScoreFill = document.getElementById('ovScoreFill');
+  if (ovScoreFill) ovScoreFill.dataset.width = scorePct;
+
+  /* ── POPULATE: overview top topic ── */
+  if (topTopic) {
+    setText('ovTopTopicName', topTopic.topic);
+    setText('ovTopBadge', topTopic.mastery + '%');
+  } else {
+    setText('ovTopTopicName', 'No data yet');
+    setText('ovTopBadge', '—');
+  }
+
+  /* ── POPULATE: overview streak mini-dots ── */
+  var miniDots = document.getElementById('ovMiniDots');
+  if (miniDots) {
+    miniDots.innerHTML = weekData.map(function(d) {
+      return '<span class="' + (d.isDone ? 'on' : '') + '" title="' + d.date.toLocaleDateString() + '"></span>';
+    }).join('');
+  }
+  setText('ovStreakThisWeek', 'This week: ' + weekActive + '/7 days');
+
+  /* ── POPULATE: streak card ── */
+  setText('weekProgressText', weekActive + ' / 7 days');
+  var weekCont = document.getElementById('weekDotContainer');
+  if (weekCont) {
+    weekCont.innerHTML = weekData.map(function(d) {
+      var cls = 'day' + (d.isDone ? ' done' : d.isToday && !d.isDone ? ' today' : '');
+      var inner = d.isDone ? CHECK_SVG : d.isToday ? '·' : '';
+      return '<div class="' + cls + '"><span class="dn">' + d.label + '</span><div class="day-dot">' + inner + '</div></div>';
+    }).join('');
+    initWeekPop();
+  }
+
+  /* ── POPULATE: achievements ── */
+  var achCont = document.getElementById('achievementBadgesContainer');
+  if (achCont) {
+    if (!achievements.length) {
+      achCont.innerHTML = '<div style="grid-column:span 3;text-align:center;color:var(--text-500);font-size:12.5px;padding:12px">Complete sessions to earn achievements</div>';
+    } else {
+      achCont.innerHTML = achievements.slice(0,3).map(function(a) {
+        var meta = ACHIEVEMENT_MAP[a.achievement_key] || {emoji:'🏅', title: (a.achievement_key || 'Achievement').replace(/_/g,' ')};
+        return '<div class="badge unlocked" aria-label="Achievement: ' + meta.title + ' (unlocked)"><span class="bi">' + meta.emoji + '</span><span class="bt">' + meta.title + '</span></div>';
+      }).join('');
+    }
+  }
+
+  /* ── POPULATE: mastery bars ── */
+  var barsContainer = document.getElementById('barsContainer');
+  if (barsContainer) {
+    if (!topicList.length) {
+      barsContainer.innerHTML = '<div style="text-align:center;color:var(--text-500);font-size:13px;padding:24px 0">No mastery data yet — start practising to see your progress</div>';
+    } else {
+      var toShow = topicList.slice().sort(function(a,b){ return b.mastery - a.mastery; }).slice(0,8);
+      barsContainer.innerHTML = toShow.map(function(t) {
+        var pct = Math.max(0, Math.min(100, Math.round(t.mastery)));
+        var cls = pct >= 75 ? 'g' : pct >= 50 ? 'y' : 'r';
+        return '<div class="bar-row"><div class="bar-head"><span class="bar-name">' + t.topic + '</span><span class="bar-pct ' + cls + '">' + pct + '%</span></div><div class="bar-track"><div class="bar-fill ' + cls + '" data-width="' + pct + '" style="width:0%"></div></div></div>';
+      }).join('');
+    }
+  }
+
+  /* ── POPULATE: weakest banner ── */
+  var weakBanner = document.getElementById('weakestBannerText');
+  if (weakBanner) {
+    if (weakness) {
+      var loc = weakness.subtopic ? weakness.topic + ' &rarr; ' + weakness.subtopic : weakness.topic;
+      weakBanner.innerHTML = 'Biggest Weakness: <b>' + loc + '</b>';
+    } else {
+      weakBanner.textContent = 'No weakness data yet — keep practising';
+    }
+  }
+
+  /* ── POPULATE: focus practice card ── */
+  if (weakness) {
+    setText('fpPriorityTopic', weakness.topic || '—');
+    var relatedSubs = weakReports.filter(function(r){ return r.topic === weakness.topic && r.subtopic; }).slice(0,4);
+    var fpChips = document.getElementById('fpTopicChips');
+    if (fpChips) {
+      fpChips.innerHTML = relatedSubs.length
+        ? relatedSubs.map(function(r){ return '<span class="chip"><span class="cd"></span>' + r.subtopic + '</span>'; }).join('')
+        : '<span class="chip"><span class="cd"></span>' + weakness.topic + '</span>';
+    }
+    var curM = weakness.mastery_estimate || 0;
+    var tgtM = Math.min(curM + 30, 80);
+    setText('fpCurrentMastery', curM + '%');
+    setText('fpTargetMastery',  tgtM + '%');
+  } else {
+    setText('fpPriorityTopic', 'Start practising');
+    var fpChips2 = document.getElementById('fpTopicChips');
+    if (fpChips2) fpChips2.innerHTML = '<span class="chip"><span class="cd"></span>No topics yet</span>';
+    setText('fpCurrentMastery', '—');
+    setText('fpTargetMastery',  '—');
+  }
+
+  /* ── POPULATE: sidebar mentor tip ── */
+  var tip = document.getElementById('sidebarMentorTip');
+  if (tip) {
+    tip.textContent = currentStreak > 0
+      ? "You're on a " + currentStreak + "-day streak. Keep it alive!"
+      : 'Start your session today to begin your streak!';
+  }
+
+  /* ── POPULATE: Zero insight card ── */
+  var zeroEl = document.getElementById('zeroInsightText');
+  var chatBtn = document.getElementById('zeroChatBtn');
+  if (zeroEl) {
+    if (weakness && masteryRecs.length) {
+      var wLoc = weakness.subtopic ? weakness.topic + ' &rarr; ' + weakness.subtopic : weakness.topic;
+      var sessCount = Math.min(chatSess.length + exams.length, 7);
+      var sessPhrase = sessCount > 0 ? 'Based on your last ' + sessCount + ' sessions' : 'Based on your activity';
+      var mastPhrase = (weakness.mastery_estimate != null) ? ' Your current mastery is <span class="time-hl">' + weakness.mastery_estimate + '%</span>.' : '';
+      var dayPhrase  = daysRemaining > 0 ? ' You have <span class="time-hl">' + daysRemaining + ' days</span> until your exam.' : '';
+      zeroEl.innerHTML = sessPhrase + ', <span class="topic-hl">' + wLoc + '</span> is your highest-priority weakness right now.' + mastPhrase + dayPhrase + ' Open your focus plan to start improving now.';
+      if (chatBtn) { chatBtn.href = 'chat.html'; chatBtn.textContent = 'Ask Si About ' + weakness.topic; }
+    } else if (!masteryRecs.length) {
+      zeroEl.textContent = 'Welcome! Start practising with the AI Tutor or take a Mock Exam. Your personalised insight will appear here after your first session.';
+      if (chatBtn) chatBtn.textContent = 'Start with AI Tutor';
+    } else {
+      zeroEl.textContent = "Great work so far! Keep practising daily to maintain your streak and improve your weakest topics. Check the Weakness Analyzer for detailed insights.";
+    }
+  }
+
+  /* ── POPULATE: focus plan progress (sequential — needs plan ID) ── */
+  try {
+    var planRes = await sb.from('focus_plans').select('id,title,topic,status').eq('user_id', user.id).in('status', ['active','in_progress']).order('created_at',{ascending:false}).limit(1);
+    var activePlan = planRes.data && planRes.data[0];
+    var focusPct = 0, doneCount = 0, totalCount = 0;
+    if (activePlan) {
+      setText('focusPlanTitle', activePlan.title || activePlan.topic || 'Active Plan');
+      var tasksRes = await sb.from('focus_tasks').select('id,status').eq('plan_id', activePlan.id);
+      var tasks = tasksRes.data || [];
+      totalCount = tasks.length;
+      doneCount  = tasks.filter(function(t){ return t.status === 'done' || t.status === 'completed'; }).length;
+      focusPct   = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+      setText('focusTaskCount', totalCount > 0 ? doneCount + ' of ' + totalCount + ' tasks done' : 'Plan active');
+      setText('fpPlanStatus', totalCount > 0 ? doneCount + '/' + totalCount + ' tasks' : 'Open Plan');
+    } else {
+      setText('focusPlanTitle', 'No active plan');
+      setText('focusTaskCount', 'Create one in Focus Practice');
+    }
+    setText('ovFocusBadge', focusPct + '%');
+    animateRing(document.getElementById('focusRingFg'), document.getElementById('focusRingLabel'), focusPct);
+  } catch(e) { /* focus_plans query failed gracefully */ }
+
+  /* ── ANIMATE counters with real values ── */
+  setTimeout(function() {
+    animateCounter(document.getElementById('cntTarget'),  targetScore,    1400);
+    animateCounter(document.getElementById('cntDays'),    daysRemaining,  1200);
+    animateCounter(document.getElementById('cntScore'),   latestScore,    1600);
+    animateCounter(document.getElementById('cntImprove'), topTopic ? topTopic.mastery : 0, 1300);
+    animateCounter(document.getElementById('cntStreak'),  currentStreak,  1000);
+    animateCounter(document.getElementById('cntStreak2'), currentStreak,  1000);
+    animateCounter(document.getElementById('cntBest'),    bestStreak,     1200);
+    animateCounter(document.getElementById('cntXP'),      totalXP,        1600);
+  }, 350);
+
+  /* ── ANIMATE bars & fills (after dynamic HTML inserted) ── */
+  setTimeout(function() {
+    initBars();
+    initOvFills();
+  }, 450);
+}
+
+loadDashboard().catch(function(err) {
+  console.error('Dashboard load error:', err);
+  var heroName = document.getElementById('heroName');
+  if (heroName) heroName.textContent = 'Error loading data';
+});
 </script>
 </body>
 </html>

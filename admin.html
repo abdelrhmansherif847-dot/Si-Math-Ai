@@ -316,6 +316,19 @@ select.search-input{cursor:pointer}
         </table>
       </div>
     </div>
+    <!-- Suspicious accounts -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-head">
+        <div class="card-ico" style="background:rgba(245,185,66,.12);color:#f5b942">⚠️</div>
+        <div><div class="card-title">Suspicious Accounts</div><div class="card-sub">Accounts with more active devices than their plan allows (last 24h)</div></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Email</th><th>Plan</th><th>Allowed</th><th>Active Devices</th></tr></thead>
+          <tbody id="suspiciousTbody"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-500)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- TAB: FOUNDERS -->
@@ -451,7 +464,7 @@ const TABS = ['pending','users','founders','settings'];
 function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
-  if (name === 'users' && allUsers.length === 0) loadUsers();
+  if (name === 'users') { if (allUsers.length === 0) loadUsers(); loadSuspiciousAccounts(); }
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
 }
@@ -761,6 +774,39 @@ async function revokeDevice(deviceId, userId) {
   if (!res.ok || result.error) { toast('Error: ' + (result.error || 'unknown'), 'red'); return; }
   toast('Device revoked', 'green');
   openUserModal(userId);
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Suspicious accounts
+async function loadSuspiciousAccounts() {
+  const tbody = document.getElementById('suspiciousTbody');
+  if (!tbody) return;
+  try {
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const { data, error } = await sb.from('user_devices')
+      .select('user_id, device_fingerprint, profiles!inner(email, plan_code)')
+      .eq('is_active', true)
+      .gte('last_seen', since);
+    if (error || !data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--red)">Failed to load.</td></tr>'; return; }
+    const byUser = {};
+    data.forEach(function(row) {
+      const uid = row.user_id;
+      if (!byUser[uid]) byUser[uid] = { email: row.profiles.email, planCode: row.profiles.plan_code, fps: new Set() };
+      byUser[uid].fps.add(row.device_fingerprint);
+    });
+    const rows = Object.values(byUser).filter(function(u) {
+      const limit = u.planCode === 'FREE' ? 2 : 3;
+      return u.fps.size > limit;
+    }).sort((a, b) => b.fps.size - a.fps.size);
+    if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-500)">No suspicious accounts found.</td></tr>'; return; }
+    tbody.innerHTML = rows.map(function(u) {
+      const limit = u.planCode === 'FREE' ? 2 : 3;
+      return `<tr><td>${escHtml(u.email)}</td><td>${escHtml(u.planCode)}</td><td>${limit}</td><td style="color:var(--red);font-weight:700">${u.fps.size}</td></tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--red)">Error loading data.</td></tr>';
+  }
 }
 
 // Founders
