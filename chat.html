@@ -663,27 +663,36 @@ button{font-family:inherit;cursor:pointer}
 
   // ===== AUTH GUARD =====
   (async () => {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) { window.location.href = 'login.html'; return; }
-    currentUser = user;
-    if (!(await deviceGuard(sb, user.id))) return;
-    const { data: profile } = await sb.from('profiles').select('full_name, is_admin, plan_code').eq('id', user.id).single();
-    const meta = user.user_metadata || {};
-    const fullName = (profile && profile.full_name) || meta.full_name || user.email.split('@')[0];
-    userInitials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
-    if (profile?.is_admin) { const s = document.getElementById('adminNavSection'); if (s) s.style.display = 'block'; }
-    // Load real plan and today's usage count
-    const planCode = (profile && profile.plan_code) || 'free';
-    const todayUTC = new Date().toISOString().slice(0, 10);
-    const { count: usageCount } = await sb.from('ai_usage_logs')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', todayUTC);
-    SignalEngine.plan = planCode;
-    SignalEngine.usage = usageCount || 0;
-    SignalEngine.renderUsage();
-    loadChatHistory();
-    renderEmptyStateHistory();
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { window.location.href = 'login.html'; return; }
+      currentUser = user;
+      if (!(await deviceGuard(sb, user.id))) return;
+      const { data: profile } = await sb.from('profiles').select('full_name, is_admin, plan_code').eq('id', user.id).single();
+      const meta = user.user_metadata || {};
+      const fullName = (profile && profile.full_name) || meta.full_name || user.email.split('@')[0];
+      userInitials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+      if (profile?.is_admin) { const s = document.getElementById('adminNavSection'); if (s) s.style.display = 'block'; }
+      // Load real plan and today's usage count
+      const planCode = (profile && profile.plan_code) || 'free';
+      const todayUTC = new Date().toISOString().slice(0, 10);
+      const { count: usageCount } = await sb.from('ai_usage_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', todayUTC);
+      SignalEngine.plan = planCode;
+      SignalEngine.usage = usageCount || 0;
+      SignalEngine.renderUsage();
+      loadChatHistory();
+      renderEmptyStateHistory();
+    } catch(err) {
+      console.error('[chat] init error:', err);
+      const chatArea = document.getElementById('chatMessages') || document.querySelector('.chat-area') || document.body;
+      const errBanner = document.createElement('div');
+      errBanner.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:99;background:rgba(239,79,95,.12);border:1px solid rgba(239,79,95,.32);border-radius:10px;padding:12px 20px;color:#fca5a5;font-size:13px;text-align:center;max-width:90vw';
+      errBanner.innerHTML = '⚠️ Failed to load chat. Check your connection. <a href="javascript:location.reload()" style="color:var(--cyan-3,#7dd3fc);text-decoration:underline;margin-left:8px">Reload</a>';
+      document.body.appendChild(errBanner);
+    }
   })();
 
   // ===== LOAD CHAT HISTORY =====

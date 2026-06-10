@@ -820,7 +820,11 @@ async function init(){
     document.querySelector('.sidebar').appendChild(adminLink);
   }
 
-  await loadData();
+  await loadData().catch(err=>{
+    console.error('[weakness] loadData error:',err);
+    const rt=document.querySelector('.rank-table');
+    if(rt)rt.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-400);font-size:13px">⚠️ Could not fetch your analysis. Check your connection and <a href="javascript:location.reload()" style="color:var(--cyan-3)">reload</a>.</div>';
+  });
 }
 
 /* ── load data ── */
@@ -1361,7 +1365,13 @@ document.getElementById('mCta').addEventListener('click',()=>{closeModal();goFoc
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
 /* ── start ── */
-init();
+init().catch(err=>{
+  console.error('[weakness] init error:',err);
+  const stats=document.querySelector('.stats');
+  if(stats)stats.innerHTML='<div class="stat d1" style="grid-column:1/-1"><div class="si">⚠️</div><div class="sl">Failed to load</div><div class="sv" style="font-size:16px;color:var(--red)">Connection error</div><div class="sd"><button onclick="location.reload()" style="background:none;border:none;color:var(--cyan-3);cursor:pointer;font-size:13px;text-decoration:underline">Tap to retry</button></div></div>';
+  const rt=document.querySelector('.rank-table');
+  if(rt)rt.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-400);font-size:13px">Could not load your data. Check your connection and <a href="javascript:location.reload()" style="color:var(--cyan-3)">reload</a>.</div>';
+});
 </script>
 </body>
 </html>
