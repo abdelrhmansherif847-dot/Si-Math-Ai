@@ -589,7 +589,22 @@ async function upsertPlan(user, primaryTopic, newTaskDefs) {
     return tasks;
   }
 
-  // Create new plan
+  // Create new plan — gate on consume_credits before inserting
+  const { data: creditResult, error: creditError } = await sb.rpc('consume_credits', {
+    p_user_id:    user.id,
+    p_feature:    'FOCUS_PLAN',
+    p_model_name: 'claude-3-5-haiku',
+    p_prompt_tok:  0,
+    p_comp_tok:    0,
+    p_cost_usd:    0,
+    p_session_id:  null
+  });
+  if (creditError || !creditResult || !creditResult.ok) {
+    const reason = (!creditResult || creditError) ? 'error' : (creditResult.reason || 'unknown');
+    showFocusPaywall(reason);
+    throw new Error('focus_plan_credit_blocked:' + reason);
+  }
+
   const { data: plan } = await sb.from('focus_plans').insert({
     user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],
@@ -1132,6 +1147,7 @@ async function loadData() {
       tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
     }
   } catch (e) {
+    if (e.message && e.message.startsWith('focus_plan_credit_blocked')) return;
     console.warn('focus_plans/focus_tasks not available:', e.message);
   }
 
@@ -1139,6 +1155,21 @@ async function loadData() {
     || (weaknesses.indexOf(primaryTopic) + 1)
     || 1;
   renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove);
+}
+
+function showFocusPaywall(reason) {
+  var existing = document.getElementById('focusPaywall');
+  if (existing) existing.remove();
+  var msg = reason === 'daily_limit_reached'
+    ? 'Daily limit reached. Resets at midnight UTC. <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Upgrade to Pro →</a>'
+    : reason === 'insufficient_credits'
+    ? 'Not enough credits (10 needed to generate a plan). <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Buy more credits →</a>'
+    : 'Could not verify your credits. Please refresh and try again.';
+  var el = document.createElement('div');
+  el.id = 'focusPaywall';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;background:#1a1a2e;border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:14px 20px;color:#f87171;font-size:13px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+  el.innerHTML = msg + ' <button onclick="this.parentNode.remove()" style="margin-left:12px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  document.body.appendChild(el);
 }
 
 loadData().catch(err => {

@@ -540,8 +540,8 @@ button{font-family:inherit;cursor:pointer}
           <span class="u-ic">⚡</span>
           <div class="u-body">
             <div class="u-l">Today's AI Analyses</div>
-            <div class="u-v"><span id="usageNow">3</span> / <span id="usageMax">10</span> <span class="u-plan" id="usagePlan">(Free)</span></div>
-            <div class="u-track"><i id="usageBar" style="width:30%"></i></div>
+            <div class="u-v"><span id="usageNow">0</span> / <span id="usageMax">10</span> <span class="u-plan" id="usagePlan">(Free)</span></div>
+            <div class="u-track"><i id="usageBar" style="width:0%"></i></div>
           </div>
         </div>
         <div class="continue-bar" id="continueBar" style="display:none">
@@ -656,11 +656,21 @@ button{font-family:inherit;cursor:pointer}
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { window.location.href = 'login.html'; return; }
     currentUser = user;
-    const { data: profile } = await sb.from('profiles').select('full_name, is_admin').eq('id', user.id).single();
+    const { data: profile } = await sb.from('profiles').select('full_name, is_admin, plan_code').eq('id', user.id).single();
     const meta = user.user_metadata || {};
     const fullName = (profile && profile.full_name) || meta.full_name || user.email.split('@')[0];
     userInitials = String(fullName).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
     if (profile?.is_admin) { const s = document.getElementById('adminNavSection'); if (s) s.style.display = 'block'; }
+    // Load real plan and today's usage count
+    const planCode = (profile && profile.plan_code) || 'free';
+    const todayUTC = new Date().toISOString().slice(0, 10);
+    const { count: usageCount } = await sb.from('ai_usage_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', todayUTC);
+    SignalEngine.plan = planCode;
+    SignalEngine.usage = usageCount || 0;
+    SignalEngine.renderUsage();
     loadChatHistory();
     renderEmptyStateHistory();
   })();
@@ -849,8 +859,8 @@ button{font-family:inherit;cursor:pointer}
      AI Chat -> (math signals only) -> Weakness Analyzer -> Focus Practice.
      ============================================================ */
   var SignalEngine = {
-    plan: (window.SI_PLAN || 'free'),      // 'free' | 'pro'
-    usage: 3,                               // today's analyses so far
+    plan: 'free',      // set from profiles.plan_code after auth
+    usage: 0,          // set from ai_usage_logs count after auth
     topicCounts: {},                        // subtopic -> times asked
     // simple keyword -> topic/subtopic map (in production: real NLP)
     map: [
@@ -1379,7 +1389,6 @@ button{font-family:inherit;cursor:pointer}
     input.value = ''; input.style.height = 'auto';
     pendingImg = null; qImage.value = ''; imgPreview.style.display = 'none';
     addTyping();
-    SignalEngine.bumpUsage();
     isSending = true;
     sendBtn.disabled = true;
 
@@ -1413,6 +1422,7 @@ button{font-family:inherit;cursor:pointer}
         return;
       }
       // Credits OK — proceed with the AI call
+      SignalEngine.bumpUsage();
       const creditLogId = creditResult.log_id || null;
       askAI(apiText, sig, imgToSend).then(response => {
         removeTyping();

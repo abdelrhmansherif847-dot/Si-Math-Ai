@@ -465,8 +465,42 @@ function afterSelect() {
   document.querySelectorAll('.exam-card').forEach(card => {
     card.addEventListener('click', () => { s.exam = EXAMS[card.dataset.exam]; render(); });
   });
-  document.getElementById('btnStart')?.addEventListener('click', () => {
+  document.getElementById('btnStart')?.addEventListener('click', async () => {
     if (!s.exam) return;
+    const btn = document.getElementById('btnStart');
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking credits…'; }
+
+    const user = await getCurrentUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    const sb = await getSb();
+
+    const { data: creditResult, error: creditError } = await sb.rpc('consume_credits', {
+      p_user_id:    user.id,
+      p_feature:    'MOCK_EXAM',
+      p_model_name: 'claude-3-5-haiku',
+      p_prompt_tok:  0,
+      p_comp_tok:    0,
+      p_cost_usd:    0,
+      p_session_id:  null
+    });
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Start Exam'; }
+
+    if (creditError || !creditResult) {
+      showExamPaywall('Could not verify your credits. Please refresh and try again.'); return;
+    }
+    if (!creditResult.ok) {
+      if (creditResult.reason === 'daily_limit_reached') {
+        showExamPaywall('Daily limit reached. Resets at midnight UTC. <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Upgrade to Pro →</a>');
+      } else if (creditResult.reason === 'insufficient_credits') {
+        showExamPaywall('Not enough credits (10 needed). <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Buy more credits →</a>');
+      } else {
+        showExamPaywall('Access check failed: ' + (creditResult.reason || 'unknown'));
+      }
+      return;
+    }
+
+    // Credits OK — start exam (no refund needed: no AI call)
     s.timerTotal = s.exam.duration * 60;
     s.timerSec = s.timerTotal;
     s.timerRunning = true;
@@ -474,6 +508,16 @@ function afterSelect() {
     s.view = 'TIMER';
     render();
   });
+}
+
+function showExamPaywall(msg) {
+  var existing = document.getElementById('examPaywall');
+  if (existing) existing.remove();
+  var el = document.createElement('div');
+  el.id = 'examPaywall';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;background:#1a1a2e;border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:14px 20px;color:#f87171;font-size:13px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+  el.innerHTML = msg + ' <button onclick="this.parentNode.remove()" style="margin-left:12px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  document.body.appendChild(el);
 }
 
 // ─── TIMER ────────────────────────────────────────────────────────────────────
