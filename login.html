@@ -464,7 +464,19 @@ button{font-family:inherit;cursor:pointer}
     if(submitBtn){submitBtn.disabled=true;submitBtn.style.opacity='0.7';}
     try{
       var{data,error}=await supabaseClient.auth.signInWithPassword({email,password});
-      if(error){showErr(error.message);if(submitBtn){submitBtn.disabled=false;submitBtn.style.opacity='1';}}
+      if(error){
+        if(error.message&&(error.message.toLowerCase().includes('email not confirmed')||error.message.toLowerCase().includes('not confirmed'))){
+          showErr('Your email address is not confirmed. Please check your inbox (and spam folder) for a confirmation link. <button id="resendBtn" style="background:none;border:none;color:var(--cyan);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;margin-left:4px">Resend email</button>');
+          document.getElementById('resendBtn')?.addEventListener('click',async function(){
+            this.disabled=true;this.textContent='Sending…';
+            var r=await supabaseClient.auth.resend({type:'signup',email:email,options:{emailRedirectTo:'https://www.si-math-ai.com/login.html'}});
+            this.textContent=r.error?'Failed — try again':'Sent! Check your inbox';
+          });
+        } else {
+          showErr(error.message);
+        }
+        if(submitBtn){submitBtn.disabled=false;submitBtn.style.opacity='1';}
+      }
       else{routeAfterAuth(data.user.id);}
     }catch(err){
       showErr(err.message||'Something went wrong. Please try again.');
