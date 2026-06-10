@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Progress – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:500px;height:500px;background:radial-gradient(circle,rgba(56,189,248,.09),transparent 70%);top:-160px;right:-150px}
+.orb-2{width:320px;height:320px;background:radial-gradient(circle,rgba(168,85,247,.06),transparent 70%);bottom:-80px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft);backdrop-filter:blur(12px)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22)}
+.logo-mark span{font-family:var(--font-display);font-weight:800;font-size:14px;color:#050a14}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan)}
+
+/* ── Sidebar ── */
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff;padding:0 8px 12px;margin-bottom:4px;border-bottom:1px solid var(--border-soft)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft);box-shadow:inset 0 0 18px rgba(56,189,248,.08)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+@media(min-width:1024px){.sidebar{transform:translateX(0)}.hamb{display:none}.main{padding-left:calc(var(--side-w) + 28px)}}
+
+/* ── Main layout ── */
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 24px) 16px calc(48px + env(safe-area-inset-bottom,0px));max-width:960px;margin:0 auto}
+
+/* ── Skeleton ── */
+.skel{background:linear-gradient(90deg,var(--bg-elev-2) 25%,var(--bg-card-hi) 50%,var(--bg-elev-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px;display:block}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── Section label ── */
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:32px 4px 14px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+/* ── Page hero ── */
+.pg-hero{background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(168,85,247,.05),var(--bg-card));border:1px solid var(--cyan-border-soft);border-radius:var(--r-xl);padding:28px 28px 24px;margin-bottom:4px;animation:rise .5s ease both}
+.pg-hero-top{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.pg-hero-icon{width:52px;height:52px;border-radius:14px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+.pg-hero-text{flex:1;min-width:0}
+.pg-hero-title{font-family:var(--font-display);font-weight:800;font-size:clamp(18px,4vw,24px);color:#fff;margin-bottom:4px}
+.pg-hero-sub{font-size:14px;color:var(--text-400);line-height:1.5}
+.pg-hero-sub .hl{color:var(--cyan);font-weight:600}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Snapshot rail ── */
+.snap-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:540px){.snap-grid{grid-template-columns:repeat(4,1fr)}}
+.snap-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:18px 16px;text-align:center;animation:rise .5s ease both;transition:border-color .2s}
+.snap-card:hover{border-color:var(--border-mid)}
+.snap-icon{font-size:1.4rem;margin-bottom:6px;display:block}
+.snap-val{font-family:var(--font-display);font-weight:800;font-size:2rem;color:#fff;line-height:1;margin-bottom:4px}
+.snap-val .unit{font-size:14px;font-weight:600;color:var(--text-400)}
+.snap-lbl{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500)}
+.snap-sub{font-size:11px;color:var(--text-500);margin-top:3px}
+.snap-card.c-streak .snap-val{color:var(--amber)}
+.snap-card.c-xp .snap-val{color:var(--gold)}
+.snap-card.c-mastery .snap-val{color:var(--green)}
+.snap-card.c-exams .snap-val{color:var(--cyan)}
+
+/* ── Mastery topic grid ── */
+.topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.topic-tile{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:14px 14px 12px;transition:border-color .2s,transform .15s}
+.topic-tile:hover{transform:translateY(-1px)}
+.tt-bar-wrap{height:5px;background:var(--bg-elev-2);border-radius:100px;overflow:hidden;margin:8px 0 6px}
+.tt-bar-fill{height:100%;border-radius:100px;transition:width 1.1s ease}
+.tt-name{font-size:13px;font-weight:600;color:var(--text-200);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt-score{font-family:var(--font-mono);font-size:11px;color:var(--text-400)}
+.tt-badge{font-size:9px;font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:100px;margin-top:4px;display:inline-block}
+
+/* Mastery color tiers */
+.m-weak  {border-color:var(--red-border)}
+.m-weak .tt-bar-fill{background:var(--red);box-shadow:0 0 6px rgba(239,79,95,.4)}
+.m-weak .tt-badge{background:var(--red-soft);color:var(--red)}
+.m-grow  {border-color:var(--amber-border)}
+.m-grow .tt-bar-fill{background:var(--amber);box-shadow:0 0 6px rgba(245,185,66,.4)}
+.m-grow .tt-badge{background:var(--amber-soft);color:var(--amber)}
+.m-strong{border-color:var(--cyan-border-soft)}
+.m-strong .tt-bar-fill{background:var(--cyan);box-shadow:0 0 6px rgba(56,189,248,.4)}
+.m-strong .tt-badge{background:var(--cyan-bg-soft);color:var(--cyan)}
+.m-master{border-color:var(--green-border)}
+.m-master .tt-bar-fill{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.4)}
+.m-master .tt-badge{background:var(--green-soft);color:var(--green)}
+
+/* ── Biggest improvement ── */
+.improve-card{background:linear-gradient(135deg,rgba(34,197,94,.06),var(--bg-card));border:1px solid var(--green-border);border-radius:var(--r-lg);padding:22px;animation:rise .5s ease both}
+.improve-inner{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.improve-ring{position:relative;flex-shrink:0;width:80px;height:80px}
+.improve-ring svg{transform:rotate(-90deg)}
+.improve-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.improve-ring-pct{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff}
+.improve-ring-sub{font-family:var(--font-mono);font-size:8px;color:var(--text-500);margin-top:2px}
+.improve-details{flex:1;min-width:0}
+.improve-topic{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;margin-bottom:4px}
+.improve-delta{display:inline-flex;align-items:center;gap:6px;background:var(--green-soft);border:1px solid var(--green-border);border-radius:8px;padding:4px 10px;font-family:var(--font-mono);font-size:12px;color:var(--green);margin-bottom:10px}
+.improve-desc{font-size:13px;color:var(--text-400);line-height:1.55}
+.improve-disclaimer{font-size:11px;color:var(--text-500);margin-top:8px;font-style:italic}
+
+/* ── Milestones ── */
+.milestone-list{display:flex;flex-direction:column;gap:10px}
+.ms-item{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:16px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.ms-item:hover{border-color:var(--border-mid)}
+.ms-icon{font-size:1.5rem;flex-shrink:0;width:40px;text-align:center}
+.ms-body{flex:1;min-width:0}
+.ms-title{font-size:14px;font-weight:600;color:var(--text-200);margin-bottom:3px}
+.ms-sub{font-size:12px;color:var(--text-500)}
+.ms-bar-wrap{height:4px;background:var(--bg-elev-2);border-radius:100px;overflow:hidden;margin-top:8px}
+.ms-bar-fill{height:100%;border-radius:100px;transition:width 1s ease}
+.ms-cta{font-family:var(--font-mono);font-size:11px;color:var(--cyan);white-space:nowrap;flex-shrink:0;padding:6px 12px;border-radius:8px;border:1px solid var(--cyan-border-soft);background:var(--cyan-bg-soft);transition:all .2s}
+.ms-cta:hover{background:var(--cyan-bg-med)}
+
+/* ── Timeline ── */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border-soft);animation:rise .4s ease both}
+.tl-item:last-child{border-bottom:none}
+.tl-dot-col{display:flex;flex-direction:column;align-items:center;gap:0;padding-top:3px}
+.tl-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1px solid var(--border-soft);background:var(--bg-elev-2)}
+.tl-dot.d-achieve{background:var(--gold-soft);border-color:var(--gold-border)}
+.tl-dot.d-mastery{background:var(--green-soft);border-color:var(--green-border)}
+.tl-dot.d-exam{background:var(--cyan-bg-soft);border-color:var(--cyan-border)}
+.tl-line{width:1px;flex:1;background:var(--border-soft);margin-top:4px;min-height:12px}
+.tl-body{flex:1;min-width:0;padding-bottom:4px}
+.tl-title{font-size:14px;font-weight:600;color:var(--text-200);margin-bottom:2px}
+.tl-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-500)}
+.tl-badge{font-size:11px;color:var(--text-400);margin-top:3px}
+
+/* ── Empty / loading states ── */
+.empty-state{padding:32px 20px;text-align:center;color:var(--text-500)}
+.empty-state .ei{font-size:2.2rem;margin-bottom:10px}
+.empty-state .et{font-weight:600;color:var(--text-300);margin-bottom:6px;font-size:15px}
+.empty-state .es{font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <button class="hamb" id="hambBtn" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <a class="brand" href="dashboard.html">
+    <span class="logo-mark"><span>Si</span></span>
+    <span>Si<span class="mid">Math</span><span class="ai"> AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <div class="top-avatar" id="avatarEl">?</div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard
+  </a>
+  <a class="nav-item" href="chat.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor
+  </a>
+  <a class="nav-item" href="weakness.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer
+  </a>
+  <a class="nav-item" href="focus.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice
+  </a>
+  <a class="nav-item" href="mock-exam.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer
+  </a>
+  <a class="nav-item" href="history.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History
+  </a>
+  <a class="nav-item active" href="progress.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress
+  </a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile
+  </a>
+  <a class="nav-item" href="devices.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices
+  </a>
+  <a class="nav-item" href="settings.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings
+  </a>
+  <a class="nav-item" href="pricing.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing
+  </a>
+  <div id="adminNavSection" style="display:none">
+    <div class="side-sec">Admin</div>
+    <a class="nav-item" href="admin.html" style="color:var(--red)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin Panel
+    </a>
+  </div>
+</aside>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- Page hero -->
+  <div class="pg-hero" id="pgHero">
+    <div class="pg-hero-top">
+      <div class="pg-hero-icon">📈</div>
+      <div class="pg-hero-text">
+        <div class="pg-hero-title" id="heroTitle">Your Progress</div>
+        <div class="pg-hero-sub" id="heroSub">Loading your progress data…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Snapshot rail -->
+  <div class="sec-label">At a Glance</div>
+  <div class="snap-grid" id="snapGrid">
+    <div class="snap-card c-streak">
+      <span class="snap-icon">🔥</span>
+      <div class="snap-val skel" style="height:32px;width:60px;margin:0 auto 6px">&nbsp;</div>
+      <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
+      <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
+    </div>
+    <div class="snap-card c-xp">
+      <span class="snap-icon">⭐</span>
+      <div class="snap-val skel" style="height:32px;width:60px;margin:0 auto 6px">&nbsp;</div>
+      <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
+      <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
+    </div>
+    <div class="snap-card c-mastery">
+      <span class="snap-icon">🎯</span>
+      <div class="snap-val skel" style="height:32px;width:60px;margin:0 auto 6px">&nbsp;</div>
+      <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
+      <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
+    </div>
+    <div class="snap-card c-exams">
+      <span class="snap-icon">📝</span>
+      <div class="snap-val skel" style="height:32px;width:60px;margin:0 auto 6px">&nbsp;</div>
+      <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
+      <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
+    </div>
+  </div>
+
+  <!-- Biggest improvement -->
+  <div class="sec-label">Biggest Improvement</div>
+  <div id="improveSection"><div class="skel" style="height:110px;border-radius:var(--r-lg)"></div></div>
+
+  <!-- What to focus on next -->
+  <div class="sec-label">What to Focus on Next</div>
+  <div class="milestone-list" id="milestoneList">
+    <div class="skel" style="height:70px;border-radius:var(--r-md)"></div>
+    <div class="skel" style="height:70px;border-radius:var(--r-md);margin-top:10px"></div>
+    <div class="skel" style="height:70px;border-radius:var(--r-md);margin-top:10px"></div>
+  </div>
+
+  <!-- Topic mastery grid -->
+  <div class="sec-label">Topic Mastery</div>
+  <div class="topic-grid" id="topicGrid">
+    <div class="skel" style="height:90px;border-radius:var(--r-md)"></div>
+    <div class="skel" style="height:90px;border-radius:var(--r-md)"></div>
+    <div class="skel" style="height:90px;border-radius:var(--r-md)"></div>
+    <div class="skel" style="height:90px;border-radius:var(--r-md)"></div>
+  </div>
+
+  <!-- Activity timeline -->
+  <div class="sec-label">Achievement Timeline</div>
+  <div class="timeline" id="timeline">
+    <div class="skel" style="height:56px;border-radius:var(--r-md);margin-bottom:10px"></div>
+    <div class="skel" style="height:56px;border-radius:var(--r-md);margin-bottom:10px"></div>
+    <div class="skel" style="height:56px;border-radius:var(--r-md)"></div>
+  </div>
+
+</main>
+
+<script>
+var SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+var SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+var sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ── XP rank definitions (mirrors profile.html) ──
+var RANKS = [
+  { name: 'Beginner',      min: 0,    color: '#7a90b2', icon: '🌱' },
+  { name: 'Learner',       min: 100,  color: '#60a5fa', icon: '📘' },
+  { name: 'Solver',        min: 300,  color: '#a78bfa', icon: '🔧' },
+  { name: 'Scholar',       min: 600,  color: '#4ade80', icon: '🎓' },
+  { name: 'Expert',        min: 1000, color: '#f59e0b', icon: '⭐' },
+  { name: 'Master',        min: 1500, color: '#f97316', icon: '🏆' },
+  { name: 'Elite Scholar', min: 2500, color: '#f59e0b', icon: '👑' },
+];
+function getRank(xp){ var r=RANKS[0]; for(var i=0;i<RANKS.length;i++){ if(xp>=RANKS[i].min) r=RANKS[i]; } return r; }
+function getNextRank(xp){ for(var i=0;i<RANKS.length;i++){ if(xp<RANKS[i].min) return RANKS[i]; } return null; }
+
+// ── Sidebar toggle ──
+var sidebar  = document.getElementById('sidebar');
+var overlay  = document.getElementById('overlay');
+var hambBtn  = document.getElementById('hambBtn');
+function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('show'); }
+function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('show'); }
+hambBtn  && hambBtn.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeSidebar() : openSidebar(); });
+overlay  && overlay.addEventListener('click', closeSidebar);
+sidebar  && sidebar.querySelectorAll('.nav-item').forEach(function(a){ a.addEventListener('click', function(){ if(window.innerWidth < 1024) closeSidebar(); }); });
+
+// ── Helpers ──
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function relDate(d){
+  var ms = Date.now() - new Date(d).getTime();
+  var days = Math.floor(ms/86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return days + ' days ago';
+  if (days < 365) return Math.floor(days/30) + ' months ago';
+  return Math.floor(days/365) + 'y ago';
+}
+function tier(score){
+  if (score >= 80) return 'm-master';
+  if (score >= 70) return 'm-strong';
+  if (score >= 40) return 'm-grow';
+  return 'm-weak';
+}
+function tierLabel(score){
+  if (score >= 80) return 'Mastered';
+  if (score >= 70) return 'Strong';
+  if (score >= 40) return 'Growing';
+  return 'Needs work';
+}
+function tierColor(score){
+  if (score >= 80) return 'var(--green)';
+  if (score >= 70) return 'var(--cyan)';
+  if (score >= 40) return 'var(--amber)';
+  return 'var(--red)';
+}
+
+// ── Main init ──
+(async function(){
+  try {
+    var _auth = await sb.auth.getUser();
+    var user  = _auth.data.user;
+    if (!user){ window.location.href = 'login.html'; return; }
+
+    // Avatar initial
+    var avatarEl = document.getElementById('avatarEl');
+
+    // Parallel DB fetches — all from existing tables, no writes
+    var results = await Promise.all([
+      // 0 profile: xp, full_name, exam_date, exam_type, target_score, is_admin
+      sb.from('profiles').select('full_name,xp,exam_date,exam_type,target_score,is_admin').eq('id', user.id).single(),
+      // 1 mastery_records: topic, mastery_score, last_updated, questions_seen
+      sb.from('mastery_records').select('topic,mastery_score,last_updated,questions_seen').eq('user_id', user.id),
+      // 2 achievements: achievement_key, unlocked_at
+      sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}),
+      // 3 chat_sessions: created_at (for streak calculation — mirrors dashboard.html)
+      sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(500),
+      // 4 exam_practice_sessions: score, created_at, exam_type, correct_answers
+      sb.from('exam_practice_sessions').select('score,created_at,exam_type,correct_answers').eq('user_id', user.id).order('created_at', {ascending:false}),
+      // 5 weakness_reports: topic, mastery_estimate (used as prior for improvement delta)
+      sb.from('weakness_reports').select('topic,mastery_estimate,priority_rank').eq('user_id', user.id).order('priority_rank', {ascending:true}),
+    ]);
+
+    var profile   = results[0].data  || {};
+    var mastRecs  = results[1].data  || [];
+    var achieves  = results[2].data  || [];
+    var chatSess  = results[3].data  || [];
+    var exams     = results[4].data  || [];
+    var weakReps  = results[5].data  || [];
+
+    var xp        = profile.xp || 0;
+    var rank      = getRank(xp);
+    var nextRank  = getNextRank(xp);
+    var name      = profile.full_name || user.email || 'Mathematician';
+    var firstName = name.split(' ')[0];
+
+    // Avatar
+    avatarEl.textContent = (name[0] || '?').toUpperCase();
+
+    // Admin nav
+    if (profile.is_admin) {
+      var ans = document.getElementById('adminNavSection');
+      if (ans) ans.style.display = 'block';
+    }
+
+    // ── Streak calculation (exact algorithm from dashboard.html) ──
+    var actSet = new Set();
+    chatSess.concat(exams).forEach(function(s){
+      if (s.created_at) actSet.add(new Date(s.created_at).toDateString());
+    });
+    var todayStr = new Date().toDateString();
+    var ydayDate = new Date(); ydayDate.setDate(ydayDate.getDate() - 1);
+    var ydayStr  = ydayDate.toDateString();
+    var currentStreak = 0;
+    var anchor = actSet.has(todayStr) ? new Date() : actSet.has(ydayStr) ? ydayDate : null;
+    if (anchor){
+      var d = new Date(anchor); d.setHours(0,0,0,0);
+      while (actSet.has(d.toDateString())){ currentStreak++; d.setDate(d.getDate()-1); }
+    }
+    var bestStreak = 0, run = 0;
+    var sortedDates = Array.from(actSet).map(function(x){ return new Date(x); }).sort(function(a,b){ return a-b; });
+    for (var i=0;i<sortedDates.length;i++){
+      run = (i===0||(sortedDates[i]-sortedDates[i-1])!==86400000) ? 1 : run+1;
+      if (run > bestStreak) bestStreak = run;
+    }
+
+    // ── Derived counts ──
+    var masteredTopics = mastRecs.filter(function(m){ return (m.mastery_score||0) >= 80; }).length;
+    var totalTopics    = mastRecs.length;
+    var examCount      = exams.length;
+
+    // ── Hero subtitle ──
+    var heroTitle = document.getElementById('heroTitle');
+    var heroSub   = document.getElementById('heroSub');
+    heroTitle.textContent = firstName + "'s Progress";
+    var subParts = ['Rank: <span class="hl">' + rank.icon + ' ' + rank.name + '</span>'];
+    if (profile.exam_type) subParts.push('Preparing for <span class="hl">' + esc(profile.exam_type) + '</span>');
+    if (profile.exam_date){
+      var daysLeft = Math.ceil((new Date(profile.exam_date) - Date.now()) / 86400000);
+      if (daysLeft > 0) subParts.push('<span class="hl">' + daysLeft + ' days</span> to exam');
+    }
+    heroSub.innerHTML = subParts.join(' &middot; ');
+
+    // ── Snapshot rail ──
+    var snapGrid = document.getElementById('snapGrid');
+    var xpInRange    = xp - rank.min;
+    var rankRange    = nextRank ? (nextRank.min - rank.min) : 1;
+    var xpPct        = nextRank ? Math.min(100, Math.round((xpInRange/rankRange)*100)) : 100;
+    var xpToNext     = nextRank ? (nextRank.min - xp) : 0;
+    snapGrid.innerHTML =
+      '<div class="snap-card c-streak">' +
+        '<span class="snap-icon">🔥</span>' +
+        '<div class="snap-val">' + currentStreak + '<span class="unit">d</span></div>' +
+        '<div class="snap-lbl">Current Streak</div>' +
+        '<div class="snap-sub">Best: ' + bestStreak + ' days</div>' +
+      '</div>' +
+      '<div class="snap-card c-xp">' +
+        '<span class="snap-icon">' + rank.icon + '</span>' +
+        '<div class="snap-val" style="color:' + rank.color + '">' + xp.toLocaleString() + '<span class="unit">xp</span></div>' +
+        '<div class="snap-lbl">' + esc(rank.name) + '</div>' +
+        '<div class="snap-sub">' + (nextRank ? xpToNext + ' xp to ' + nextRank.name : 'Max rank!') + '</div>' +
+      '</div>' +
+      '<div class="snap-card c-mastery">' +
+        '<span class="snap-icon">🎯</span>' +
+        '<div class="snap-val">' + masteredTopics + '</div>' +
+        '<div class="snap-lbl">Topics Mastered</div>' +
+        '<div class="snap-sub">' + (totalTopics > 0 ? 'of ' + totalTopics + ' practiced' : 'Keep practicing') + '</div>' +
+      '</div>' +
+      '<div class="snap-card c-exams">' +
+        '<span class="snap-icon">📝</span>' +
+        '<div class="snap-val">' + examCount + '</div>' +
+        '<div class="snap-lbl">Exams Completed</div>' +
+        (examCount > 0
+          ? (function(){
+              var scored = exams.filter(function(e){ return e.score != null; });
+              if (!scored.length) return '<div class="snap-sub">Log a score next time</div>';
+              var avg = Math.round(scored.reduce(function(s,e){ return s + e.score; },0) / scored.length);
+              return '<div class="snap-sub">Avg score: ' + avg + '</div>';
+            })()
+          : '<div class="snap-sub">Try your first exam</div>')
+      + '</div>';
+
+    // ── Biggest improvement ──
+    // Data: mastery_records.mastery_score (current) vs weakness_reports.mastery_estimate (prior reading)
+    // weakness_reports.mastery_estimate is the model's estimate at the time the weakness was identified.
+    // A positive delta means the user improved on that topic since it was flagged.
+    var improveSection = document.getElementById('improveSection');
+    var bestImprove = null;
+    if (mastRecs.length > 0 && weakReps.length > 0){
+      // Build a map of topic → mastery_estimate from weakness_reports
+      var priorMap = {};
+      weakReps.forEach(function(w){
+        if (w.topic && w.mastery_estimate != null) priorMap[w.topic.toLowerCase()] = w.mastery_estimate;
+      });
+      // Find the biggest positive delta
+      mastRecs.forEach(function(m){
+        var key = (m.topic||'').toLowerCase();
+        if (priorMap[key] != null){
+          var delta = (m.mastery_score||0) - priorMap[key];
+          if (!bestImprove || delta > bestImprove.delta){
+            bestImprove = { topic: m.topic, current: m.mastery_score||0, prior: priorMap[key], delta: delta };
+          }
+        }
+      });
+    }
+    // Fallback: highest mastery_score topic with no delta claim
+    var fallbackBest = mastRecs.length > 0
+      ? mastRecs.slice().sort(function(a,b){ return (b.mastery_score||0)-(a.mastery_score||0); })[0]
+      : null;
+
+    if (bestImprove && bestImprove.delta > 0){
+      var ringPct = Math.min(100, bestImprove.current);
+      var circ    = 2 * Math.PI * 30; // r=30
+      var offset  = circ * (1 - ringPct/100);
+      var tc = tierColor(bestImprove.current);
+      improveSection.innerHTML =
+        '<div class="improve-card">' +
+          '<div class="improve-inner">' +
+            '<div class="improve-ring">' +
+              '<svg width="80" height="80" viewBox="0 0 80 80">' +
+                '<circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>' +
+                '<circle cx="40" cy="40" r="30" fill="none" stroke="' + tc + '" stroke-width="7" stroke-linecap="round"' +
+                  ' stroke-dasharray="' + circ.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"/>' +
+              '</svg>' +
+              '<div class="improve-ring-label">' +
+                '<div class="improve-ring-pct">' + Math.round(bestImprove.current) + '%</div>' +
+                '<div class="improve-ring-sub">now</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="improve-details">' +
+              '<div class="improve-topic">' + esc(bestImprove.topic) + '</div>' +
+              '<div class="improve-delta">▲ +' + Math.round(bestImprove.delta) + ' points improvement</div>' +
+              '<div class="improve-desc">Up from <strong>' + Math.round(bestImprove.prior) + '%</strong> when this topic was flagged as a weakness. ' +
+                (bestImprove.current >= 80 ? 'You have now mastered this topic. Excellent work!' :
+                  'Keep going — ' + (80 - Math.round(bestImprove.current)) + ' more points to reach mastery.') +
+              '</div>' +
+              '<div class="improve-disclaimer">Prior score: last recorded weakness report estimate. Current score: latest mastery record.</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    } else if (fallbackBest && (fallbackBest.mastery_score||0) > 0){
+      var rb = Math.min(100, fallbackBest.mastery_score||0);
+      var circb = 2*Math.PI*30;
+      var offsetb = circb*(1-rb/100);
+      var tcb = tierColor(rb);
+      improveSection.innerHTML =
+        '<div class="improve-card">' +
+          '<div class="improve-inner">' +
+            '<div class="improve-ring">' +
+              '<svg width="80" height="80" viewBox="0 0 80 80">' +
+                '<circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>' +
+                '<circle cx="40" cy="40" r="30" fill="none" stroke="' + tcb + '" stroke-width="7" stroke-linecap="round"' +
+                  ' stroke-dasharray="' + circb.toFixed(1) + '" stroke-dashoffset="' + offsetb.toFixed(1) + '"/>' +
+              '</svg>' +
+              '<div class="improve-ring-label">' +
+                '<div class="improve-ring-pct">' + Math.round(rb) + '%</div>' +
+                '<div class="improve-ring-sub">mastery</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="improve-details">' +
+              '<div class="improve-topic">' + esc(fallbackBest.topic) + '</div>' +
+              '<div class="improve-desc">Your highest-mastery topic so far.' +
+                (rb >= 80 ? ' This topic is fully mastered — great work!' : ' Keep practicing to reach 80% mastery.') +
+              '</div>' +
+              '<div class="improve-disclaimer">Improvement delta not available yet — requires a weakness report for this topic to establish a prior baseline.</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    } else {
+      improveSection.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="ei">📊</div>' +
+          '<div class="et">No improvement data yet</div>' +
+          '<div class="es">Practice topics with the <a href="chat.html" style="color:var(--cyan)">AI Tutor</a> to start tracking mastery.</div>' +
+        '</div>';
+    }
+
+    // ── Next milestones ──
+    var milestones = [];
+
+    // 1. Streak milestone
+    var nextStreakGoals = [7,14,30];
+    var nextStreakGoal = null;
+    for (var si=0;si<nextStreakGoals.length;si++){
+      if (currentStreak < nextStreakGoals[si]){ nextStreakGoal = nextStreakGoals[si]; break; }
+    }
+    if (nextStreakGoal){
+      var streakPct = Math.round((currentStreak/nextStreakGoal)*100);
+      milestones.push({
+        icon: currentStreak >= 3 ? '🔥' : '📅',
+        title: 'Reach a ' + nextStreakGoal + '-day streak',
+        sub: currentStreak + ' of ' + nextStreakGoal + ' days — practice today to keep it alive',
+        pct: streakPct,
+        barColor: 'var(--amber)',
+        href: 'chat.html',
+        cta: 'Practice Now',
+      });
+    }
+
+    // 2. Nearest topic to mastery (highest mastery_score that's still < 80)
+    var almostMastered = mastRecs.filter(function(m){ return (m.mastery_score||0) < 80 && (m.mastery_score||0) > 0; })
+      .sort(function(a,b){ return (b.mastery_score||0)-(a.mastery_score||0); });
+    if (almostMastered.length > 0){
+      var am = almostMastered[0];
+      var amPct = Math.round((am.mastery_score/80)*100);
+      milestones.push({
+        icon: '🎯',
+        title: 'Master ' + am.topic,
+        sub: 'Currently at ' + Math.round(am.mastery_score) + '% — need 80% to reach mastery',
+        pct: Math.min(99, amPct),
+        barColor: tierColor(am.mastery_score),
+        href: 'focus.html?topic=' + encodeURIComponent(am.topic) + '&mastery=' + Math.round(am.mastery_score),
+        cta: 'Focus Now',
+      });
+    } else if (mastRecs.length === 0) {
+      milestones.push({
+        icon: '🎯',
+        title: 'Identify your first weakness',
+        sub: 'Ask the AI Tutor a question to start building your mastery profile',
+        pct: 0,
+        barColor: 'var(--cyan)',
+        href: 'chat.html',
+        cta: 'Start Learning',
+      });
+    }
+
+    // 3. Exam count milestone
+    var examMilestones = [1,3,5,10,20];
+    var nextExamGoal = null;
+    for (var ei2=0;ei2<examMilestones.length;ei2++){
+      if (examCount < examMilestones[ei2]){ nextExamGoal = examMilestones[ei2]; break; }
+    }
+    if (nextExamGoal){
+      var examPct = Math.round((examCount/nextExamGoal)*100);
+      var examLeft = nextExamGoal - examCount;
+      milestones.push({
+        icon: '📝',
+        title: 'Complete ' + nextExamGoal + ' mock exam' + (nextExamGoal===1?'':'s'),
+        sub: examCount + ' of ' + nextExamGoal + ' — ' + examLeft + ' more to go',
+        pct: examPct,
+        barColor: 'var(--cyan)',
+        href: 'mock-exam.html',
+        cta: 'Take Exam',
+      });
+    }
+
+    // 4. XP / rank milestone
+    if (nextRank){
+      milestones.push({
+        icon: rank.icon,
+        title: 'Reach ' + nextRank.icon + ' ' + nextRank.name,
+        sub: xp.toLocaleString() + ' / ' + nextRank.min.toLocaleString() + ' XP — ' + xpToNext + ' to go',
+        pct: Math.min(99, Math.round((xpInRange/rankRange)*100)),
+        barColor: nextRank.color || 'var(--gold)',
+        href: 'chat.html',
+        cta: 'Earn XP',
+      });
+    }
+
+    var mlEl = document.getElementById('milestoneList');
+    if (milestones.length === 0){
+      mlEl.innerHTML = '<div class="empty-state"><div class="ei">🏆</div><div class="et">All current milestones complete!</div><div class="es">Check back after more practice sessions.</div></div>';
+    } else {
+      mlEl.innerHTML = milestones.map(function(m){
+        return '<div class="ms-item">' +
+          '<div class="ms-icon">' + m.icon + '</div>' +
+          '<div class="ms-body">' +
+            '<div class="ms-title">' + esc(m.title) + '</div>' +
+            '<div class="ms-sub">' + esc(m.sub) + '</div>' +
+            '<div class="ms-bar-wrap"><div class="ms-bar-fill" style="width:' + m.pct + '%;background:' + m.barColor + '"></div></div>' +
+          '</div>' +
+          '<a class="ms-cta" href="' + m.href + '">' + m.cta + ' →</a>' +
+        '</div>';
+      }).join('');
+    }
+
+    // ── Topic mastery grid ──
+    var topicGrid = document.getElementById('topicGrid');
+    if (mastRecs.length === 0){
+      topicGrid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">📚</div><div class="et">No topic data yet</div><div class="es">Mastery is tracked as you practice with the <a href="chat.html" style="color:var(--cyan)">AI Tutor</a>.</div></div>';
+    } else {
+      var sorted = mastRecs.slice().sort(function(a,b){ return (b.mastery_score||0)-(a.mastery_score||0); });
+      topicGrid.innerHTML = sorted.map(function(m){
+        var score = Math.round(m.mastery_score||0);
+        var t = tier(score);
+        var tc2 = tierColor(score);
+        return '<div class="topic-tile ' + t + '">' +
+          '<div class="tt-name">' + esc(m.topic||'Unknown') + '</div>' +
+          '<div class="tt-bar-wrap"><div class="tt-bar-fill" style="width:' + score + '%;background:' + tc2 + '"></div></div>' +
+          '<div class="tt-score">' + score + '%</div>' +
+          '<span class="tt-badge">' + tierLabel(score) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    // ── Activity timeline ──
+    // Merge: achievements, mastered topics (score≥80, by last_updated), exams
+    var events = [];
+    achieves.forEach(function(a){
+      if (!a.unlocked_at) return;
+      var labels = {
+        'first_question':       { icon:'💬', title:'First Question Asked',     type:'achieve' },
+        'first_mock_exam':      { icon:'📝', title:'First Mock Exam Completed', type:'achieve' },
+        'streak_7':             { icon:'🔥', title:'7-Day Streak Reached',      type:'achieve' },
+        'streak_30':            { icon:'⚡', title:'30-Day Streak Reached',     type:'achieve' },
+        'first_mastered_topic': { icon:'🎯', title:'First Topic Mastered',      type:'achieve' },
+        'questions_100':        { icon:'💯', title:'100 Questions Solved',       type:'achieve' },
+        'consistency_champion': { icon:'🏅', title:'Consistency Champion',      type:'achieve' },
+        'first_correct':        { icon:'⭐', title:'First Correct Answer',       type:'achieve' },
+        'first_exam':           { icon:'📋', title:'First Exam Attempted',       type:'achieve' },
+        'exam_complete':        { icon:'✅', title:'Exam Completed',             type:'achieve' },
+        'weakness_found':       { icon:'🔍', title:'Weakness Identified',        type:'achieve' },
+      };
+      var meta = labels[a.achievement_key] || { icon:'🏅', title: (a.achievement_key||'Achievement').replace(/_/g,' '), type:'achieve' };
+      events.push({ date: new Date(a.unlocked_at), icon: meta.icon, title: meta.title, sub: relDate(a.unlocked_at), type: meta.type });
+    });
+    mastRecs.forEach(function(m){
+      if ((m.mastery_score||0) >= 80 && m.last_updated){
+        events.push({ date: new Date(m.last_updated), icon:'🎓', title: esc(m.topic||'Topic') + ' Mastered', sub: relDate(m.last_updated) + ' · ' + Math.round(m.mastery_score) + '% mastery', type:'mastery' });
+      }
+    });
+    exams.forEach(function(e){
+      if (!e.created_at) return;
+      var label = 'Mock Exam Completed';
+      if (e.exam_type) label += ' — ' + e.exam_type;
+      var detail = relDate(e.created_at);
+      if (e.score != null) detail += ' · Score: ' + e.score;
+      events.push({ date: new Date(e.created_at), icon:'📝', title: label, sub: detail, type:'exam' });
+    });
+
+    events.sort(function(a,b){ return b.date - a.date; });
+    var topEvents = events.slice(0,20);
+
+    var tlEl = document.getElementById('timeline');
+    if (topEvents.length === 0){
+      tlEl.innerHTML = '<div class="empty-state"><div class="ei">🗓️</div><div class="et">No events yet</div><div class="es">Your achievements, mastered topics, and completed exams will appear here.</div></div>';
+    } else {
+      tlEl.innerHTML = topEvents.map(function(ev, idx){
+        var dotClass = ev.type === 'achieve' ? 'd-achieve' : ev.type === 'mastery' ? 'd-mastery' : 'd-exam';
+        var showLine  = idx < topEvents.length - 1;
+        return '<div class="tl-item">' +
+          '<div class="tl-dot-col">' +
+            '<div class="tl-dot ' + dotClass + '">' + ev.icon + '</div>' +
+            (showLine ? '<div class="tl-line"></div>' : '') +
+          '</div>' +
+          '<div class="tl-body">' +
+            '<div class="tl-title">' + ev.title + '</div>' +
+            '<div class="tl-meta">' + ev.sub + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+  } catch(err){
+    console.error('[progress] init error:', err);
+    var main = document.querySelector('.main');
+    if (main){
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'background:rgba(239,79,95,.1);border:1px solid rgba(239,79,95,.3);border-radius:14px;padding:20px;text-align:center;color:#ef4f5f;margin-top:20px';
+      errDiv.innerHTML = '<div style="font-size:1.5rem;margin-bottom:8px">⚠️</div>' +
+        '<div style="font-weight:600;margin-bottom:6px">Failed to load progress</div>' +
+        '<div style="font-size:13px;color:#a8bcd9;margin-bottom:14px">Check your connection and try again.</div>' +
+        '<a href="javascript:location.reload()" style="color:#38bdf8;text-decoration:underline;font-size:13px">Reload page</a>';
+      main.prepend(errDiv);
+    }
+  }
+})();
+</script>
+</body>
+</html>

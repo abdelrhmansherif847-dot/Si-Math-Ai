@@ -272,6 +272,9 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
   <a class="nav-item" href="history.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History
   </a>
+  <a class="nav-item" href="progress.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress
+  </a>
   <div class="side-sec">Account</div>
   <a class="nav-item" href="profile.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile
@@ -493,7 +496,7 @@ function afterSelect() {
       if (creditResult.reason === 'daily_limit_reached') {
         showExamPaywall('Daily limit reached. Resets at midnight UTC. <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Upgrade to Pro →</a>');
       } else if (creditResult.reason === 'insufficient_credits') {
-        showExamPaywall('Not enough credits (10 needed). <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Buy more credits →</a>');
+        showExamPaywall('Not enough credits (' + examCreditCost + ' needed). <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Buy more credits →</a>');
       } else {
         showExamPaywall('Access check failed: ' + (creditResult.reason || 'unknown'));
       }
@@ -1024,6 +1027,7 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
+var examCreditCost = 10; // fallback; overwritten from DB below
 (async function() {
   const user = await getCurrentUser();
   if (!user) { window.location.href = 'login.html'; return; }
@@ -1033,8 +1037,17 @@ document.getElementById('overlay')?.addEventListener('click', () => {
   var fp=(h>>>0).toString(16).padStart(8,'0');
   var{data:d}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
   if(!d){window.location.href='devices.html?blocked=1';return;}
+  // Fetch real credit cost for MOCK_EXAM from DB
+  try {
+    const{data:cc}=await sb.from('credit_costs').select('credits_required').eq('feature_name','MOCK_EXAM').maybeSingle();
+    if(cc&&cc.credits_required!=null)examCreditCost=cc.credits_required;
+  } catch(e){/* keep fallback */}
   render();
-})();
+}).catch(err=>{
+  console.error('[mock-exam] boot error:',err);
+  var app=document.getElementById('app');
+  if(app)app.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--text-400)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;color:var(--text-200);margin-bottom:8px">Failed to load</div><div style="font-size:13px;margin-bottom:20px">Check your connection and try again.</div><a href="dashboard.html" style="color:var(--cyan-3);text-decoration:underline">Back to Dashboard</a></div>';
+});
 </script>
 </body>
 </html>

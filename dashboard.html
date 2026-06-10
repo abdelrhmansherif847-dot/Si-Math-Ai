@@ -903,14 +903,25 @@ body::before{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
     <span class="nav-label">History</span>
   </a>
+  <a class="nav-item" href="progress.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress
+  </a>
   <div class="side-sec">Account</div>
   <a class="nav-item" href="profile.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
     <span class="nav-label">Profile</span>
   </a>
+  <a class="nav-item" href="devices.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+    <span class="nav-label">Devices</span>
+  </a>
   <a class="nav-item" href="settings.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     <span class="nav-label">Settings</span>
+  </a>
+  <a class="nav-item" href="pricing.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+    <span class="nav-label">Pricing</span>
   </a>
   <div class="side-spacer"></div>
   <div class="side-mentor">
@@ -1852,7 +1863,11 @@ async function loadDashboard() {
 loadDashboard().catch(function(err) {
   console.error('Dashboard load error:', err);
   var heroName = document.getElementById('heroName');
-  if (heroName) heroName.textContent = 'Error loading data';
+  if (heroName) heroName.textContent = 'Could not load';
+  var errBanner = document.createElement('div');
+  errBanner.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:99;background:rgba(239,79,95,.12);border:1px solid rgba(239,79,95,.32);border-radius:10px;padding:12px 20px;color:#fca5a5;font-size:13px;text-align:center;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  errBanner.innerHTML = '⚠️ Dashboard failed to load. Check your connection. <a href="javascript:location.reload()" style="color:#7dd3fc;text-decoration:underline;margin-left:8px">Reload</a> <button onclick="this.parentNode.remove()" style="margin-left:10px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  document.body.appendChild(errBanner);
 });
 </script>
 </body>
