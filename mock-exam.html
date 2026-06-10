@@ -288,6 +288,13 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
   <a class="nav-item" href="pricing.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Pricing
   </a>
+  <div id="adminNavSection" style="display:none">
+    <div class="side-sec">Admin</div>
+    <a class="nav-item" href="admin.html" style="color:#ef4f5f">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      Admin Dashboard
+    </a>
+  </div>
 </aside>
 
 <div class="overlay" id="overlay"></div>
@@ -471,39 +478,14 @@ function afterSelect() {
   document.getElementById('btnStart')?.addEventListener('click', async () => {
     if (!s.exam) return;
     const btn = document.getElementById('btnStart');
-    if (btn) { btn.disabled = true; btn.textContent = 'Checking credits…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
 
     const user = await getCurrentUser();
     if (!user) { window.location.href = 'login.html'; return; }
-    const sb = await getSb();
-
-    const { data: creditResult, error: creditError } = await sb.rpc('consume_credits', {
-      p_user_id:    user.id,
-      p_feature:    'MOCK_EXAM',
-      p_model_name: 'claude-3-5-haiku',
-      p_prompt_tok:  0,
-      p_comp_tok:    0,
-      p_cost_usd:    0,
-      p_session_id:  null
-    });
 
     if (btn) { btn.disabled = false; btn.textContent = 'Start Exam'; }
 
-    if (creditError || !creditResult) {
-      showExamPaywall('Could not verify your credits. Please refresh and try again.'); return;
-    }
-    if (!creditResult.ok) {
-      if (creditResult.reason === 'daily_limit_reached') {
-        showExamPaywall('Daily limit reached. Resets at midnight UTC. <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Upgrade to Pro →</a>');
-      } else if (creditResult.reason === 'insufficient_credits') {
-        showExamPaywall('Not enough credits (' + examCreditCost + ' needed). <a href="pricing.html" style="color:#22d3ee;text-decoration:underline;font-weight:600">Buy more credits →</a>');
-      } else {
-        showExamPaywall('Access check failed: ' + (creditResult.reason || 'unknown'));
-      }
-      return;
-    }
-
-    // Credits OK — start exam (no refund needed: no AI call)
+    // Mock Exam is free — start immediately
     s.timerTotal = s.exam.duration * 60;
     s.timerSec = s.timerTotal;
     s.timerRunning = true;
@@ -1027,7 +1009,6 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
-var examCreditCost = 10; // fallback; overwritten from DB below
 (async function() {
   const user = await getCurrentUser();
   if (!user) { window.location.href = 'login.html'; return; }
@@ -1051,11 +1032,11 @@ var examCreditCost = 10; // fallback; overwritten from DB below
     }
     if(!_migrated){window.location.href='devices.html?blocked=1';return;}
   }
-  // Fetch real credit cost for MOCK_EXAM from DB
+  // Reveal admin nav for admin users
   try {
-    const{data:cc}=await sb.from('credit_costs').select('credit_cost').eq('feature_name','MOCK_EXAM').maybeSingle();
-    if(cc&&cc.credit_cost!=null)examCreditCost=cc.credit_cost;
-  } catch(e){/* keep fallback */}
+    const{data:_prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
+    if(_prof&&_prof.is_admin){var _an=document.getElementById('adminNavSection');if(_an)_an.style.display='block';}
+  } catch(e){}
   render();
 }).catch(err=>{
   console.error('[mock-exam] boot error:',err);

@@ -592,22 +592,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs) {
     return tasks;
   }
 
-  // Create new plan — gate on consume_credits before inserting
-  const { data: creditResult, error: creditError } = await sb.rpc('consume_credits', {
-    p_user_id:    user.id,
-    p_feature:    'FOCUS_PLAN',
-    p_model_name: 'claude-3-5-haiku',
-    p_prompt_tok:  0,
-    p_comp_tok:    0,
-    p_cost_usd:    0,
-    p_session_id:  null
-  });
-  if (creditError || !creditResult || !creditResult.ok) {
-    const reason = (!creditResult || creditError) ? 'error' : (creditResult.reason || 'unknown');
-    showFocusPaywall(reason);
-    throw new Error('focus_plan_credit_blocked:' + reason);
-  }
-
+  // Focus Practice is free — no credit gate
   const { data: plan } = await sb.from('focus_plans').insert({
     user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],

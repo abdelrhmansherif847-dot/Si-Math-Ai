@@ -1295,46 +1295,11 @@ document.getElementById('genBtn').addEventListener('click',async()=>{
   const btn=document.getElementById('genBtn');
   const lbl=document.getElementById('genBtnLbl');
   btn.classList.add('spin');btn.disabled=true;
-  if(lbl) lbl.textContent='Checking credits…';
-
-  const { data: creditResult, error: creditError } = await sb.rpc('consume_credits', {
-    p_user_id:    currentUser.id,
-    p_feature:    'WEAKNESS_ANALYSIS',
-    p_model_name: 'claude-3-5-haiku',
-    p_prompt_tok:  0,
-    p_comp_tok:    0,
-    p_cost_usd:    0,
-    p_session_id:  null
-  });
-
-  if (creditError || !creditResult) {
-    btn.classList.remove('spin'); btn.disabled=false;
-    if(lbl) lbl.textContent='Refresh Analysis';
-    showWeaknessPaywall('Could not verify your credits. Please refresh and try again.', false);
-    return;
-  }
-  if (!creditResult.ok) {
-    btn.classList.remove('spin'); btn.disabled=false;
-    if(lbl) lbl.textContent='Refresh Analysis';
-    if (creditResult.reason === 'daily_limit_reached') {
-      showWeaknessPaywall('You\'ve used your free analyses for today. Resets at midnight UTC. <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Upgrade to Pro →</a>', false);
-    } else if (creditResult.reason === 'insufficient_credits') {
-      showWeaknessPaywall('Not enough credits (10 needed). <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Buy more credits →</a>', false);
-    } else {
-      showWeaknessPaywall('Access check failed: ' + (creditResult.reason || 'unknown'), false);
-    }
-    return;
-  }
-
-  const creditLogId = creditResult.log_id || null;
   if(lbl) lbl.textContent='Regenerating…';
   try {
-    await loadData(true); // forceRegen=true
+    await loadData(true); // forceRegen=true — free feature, no credit gate
   } catch(err) {
-    if (creditLogId) {
-      sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
-        .catch(e => console.warn('Refund RPC failed:', e));
-    }
+    // error already handled inside loadData
   }
   btn.classList.remove('spin');btn.disabled=false;
   if(lbl) lbl.textContent='Refresh Analysis';
