@@ -692,7 +692,7 @@ button{font-family:inherit;cursor:pointer}
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .gte('created_at', todayUTC);
-      SignalEngine.plan = planCode;
+      SignalEngine.plan = planCode.toLowerCase(); // normalize: 'PRO_MONTHLY' → 'pro_monthly'
       SignalEngine.usage = usageCount || 0;
       SignalEngine.renderUsage();
       loadChatHistory();
@@ -1010,18 +1010,23 @@ button{font-family:inherit;cursor:pointer}
         }
       });
     },
+    isPaid: function(){
+      // free/basic = limited; any pro/founder/premium variant = paid
+      var p = this.plan;
+      return p !== 'free' && p !== 'basic' && p !== '' && p !== 'free plan';
+    },
     bumpUsage: function(){
-      var max = this.plan==='pro'?200:10;
+      var max = this.isPaid()?200:10;
       this.usage = Math.min(this.usage+1, max);
       this.renderUsage();
     },
     renderUsage: function(){
-      var max = this.plan==='pro'?200:10;
+      var max = this.isPaid()?200:10;
       var nowEl=document.getElementById('usageNow'), maxEl=document.getElementById('usageMax'),
           planEl=document.getElementById('usagePlan'), barEl=document.getElementById('usageBar');
       if(nowEl) nowEl.textContent=this.usage;
       if(maxEl) maxEl.textContent=max;
-      if(planEl) planEl.textContent=this.plan==='pro'?'(Pro)':'(Free)';
+      if(planEl) planEl.textContent=this.isPaid()?'(Pro)':'(Free)';
       if(barEl) barEl.style.width=Math.round(this.usage/max*100)+'%';
     }
   };

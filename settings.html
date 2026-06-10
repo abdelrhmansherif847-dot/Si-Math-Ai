@@ -753,8 +753,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ===== Subscription Section =====
-  const PLAN_NAMES = { free:'Free Plan', basic:'Basic Plan', pro:'Pro Plan', founder:'Founder Plan' };
-  const BADGE_CLASS = { free:'free', basic:'free', pro:'', founder:'' };
+  const PLAN_NAMES = {
+    'free':'Free Plan', 'FREE':'Free Plan',
+    'basic':'Basic Plan', 'BASIC':'Basic Plan',
+    'pro':'Pro Plan', 'PRO':'Pro Plan', 'PRO_MONTHLY':'Pro Plan', 'PRO_ANNUAL':'Pro Plan',
+    'premium':'Premium Plan', 'PREMIUM':'Premium Plan',
+    'founder':'Founder Plan', 'FOUNDER':'Founder Plan',
+  };
+  const BADGE_CLASS = {
+    'free':'free', 'FREE':'free',
+    'basic':'free', 'BASIC':'free',
+  };
+  // Normalize for comparisons: treat any plan not free/basic as paid
+  function isPaidPlan(code) {
+    var c = (code||'').toLowerCase();
+    return c !== 'free' && c !== 'basic' && c !== '';
+  }
 
   function fmtDate(iso) {
     if (!iso) return null;
@@ -799,7 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeCls = p.is_founder ? '' : (BADGE_CLASS[planCode] !== undefined ? BADGE_CLASS[planCode] : '');
     const badgeStyle = p.is_founder
       ? 'background:linear-gradient(135deg,rgba(245,185,66,.18),rgba(245,185,66,.06));border:1px solid rgba(245,185,66,.4);color:#f5b942'
-      : (planCode !== 'free' && planCode !== 'basic')
+      : isPaidPlan(planCode)
         ? 'background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan)'
         : '';
 
@@ -810,7 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Build main plan badge
     const planBadge = p.is_founder
       ? `<span class="plan-badge" style="${badgeStyle}">Founder</span>`
-      : planCode === 'free'
+      : !isPaidPlan(planCode)
         ? `<span class="plan-badge free">Free</span>`
         : `<span class="plan-badge" style="background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan)">${planName.replace(' Plan','')}</span>`;
 
@@ -848,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Upgrade button
-    const upgradeHtml = planCode === 'free' || planCode === 'basic'
+    const upgradeHtml = !isPaidPlan(planCode)
       ? `<a href="pricing.html" class="upgrade" style="display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>
            Upgrade Plan
