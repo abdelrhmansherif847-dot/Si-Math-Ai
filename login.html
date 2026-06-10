@@ -340,6 +340,12 @@ button{font-family:inherit;cursor:pointer}
   }
 
   function buildFingerprint() {
+    // navigator.platform excluded: unstable on iPadOS 13+ (toggles MacIntel/iPad with desktop/mobile mode)
+    var raw = [navigator.userAgent, screen.width+'x'+screen.height+'x'+screen.colorDepth, navigator.language||'', (typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+    var h=5381; for(var i=0;i<raw.length;i++) h=((h<<5)+h)^raw.charCodeAt(i);
+    return (h>>>0).toString(16).padStart(8,'0');
+  }
+  function buildFingerprintLegacy() {
     var raw = [navigator.userAgent, navigator.platform||'', screen.width+'x'+screen.height+'x'+screen.colorDepth, navigator.language||'', (typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
     var h=5381; for(var i=0;i<raw.length;i++) h=((h<<5)+h)^raw.charCodeAt(i);
     return (h>>>0).toString(16).padStart(8,'0');
@@ -397,10 +403,17 @@ button{font-family:inherit;cursor:pointer}
       if(existingDev){
         await supabaseClient.from('user_devices').update({last_seen:now,last_active:now}).eq('id',existingDev.id);
       } else {
-        var{data:allowed}=await supabaseClient.rpc('can_register_device',{p_user_id:userId,p_fingerprint:fp});
-        if(!allowed){showDeviceWall(userId,(profile&&profile.plan_code)||'FREE');return;}
-        var info=getDeviceName();
-        await supabaseClient.from('user_devices').insert({user_id:userId,device_fingerprint:fp,device_name:info.name,browser:info.browser,os_name:info.os,is_active:true,last_seen:now,last_active:now});
+        // Migration: check legacy fp (included navigator.platform, unstable on iPadOS)
+        var fpLeg=buildFingerprintLegacy();
+        var{data:legacyDev}=await supabaseClient.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fpLeg).eq('is_active',true).maybeSingle();
+        if(legacyDev){
+          await supabaseClient.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',legacyDev.id);
+        } else {
+          var{data:allowed}=await supabaseClient.rpc('can_register_device',{p_user_id:userId,p_fingerprint:fp});
+          if(!allowed){showDeviceWall(userId,(profile&&profile.plan_code)||'FREE');return;}
+          var info=getDeviceName();
+          await supabaseClient.from('user_devices').insert({user_id:userId,device_fingerprint:fp,device_name:info.name,browser:info.browser,os_name:info.os,is_active:true,last_seen:now,last_active:now});
+        }
       }
       if(profile&&profile.onboarding_completed===true){window.location.href='dashboard.html';}
       else{window.location.href='onboarding.html';}

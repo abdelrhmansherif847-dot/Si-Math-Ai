@@ -1032,11 +1032,20 @@ var examCreditCost = 10; // fallback; overwritten from DB below
   const user = await getCurrentUser();
   if (!user) { window.location.href = 'login.html'; return; }
   const sb = await getSb();
-  var r=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+  var r=[navigator.userAgent,screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
   var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
   var fp=(h>>>0).toString(16).padStart(8,'0');
   var{data:d}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
-  if(!d){window.location.href='devices.html?blocked=1';return;}
+  if(!d){
+    var rLeg=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
+    var hLeg=5381;for(var j=0;j<rLeg.length;j++)hLeg=((hLeg<<5)+hLeg)^rLeg.charCodeAt(j);
+    var fpLeg=(hLeg>>>0).toString(16).padStart(8,'0');
+    var{data:dLeg}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',fpLeg).eq('is_active',true).maybeSingle();
+    if(dLeg){
+      var now=new Date().toISOString();
+      await sb.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',dLeg.id);
+    } else {window.location.href='devices.html?blocked=1';return;}
+  }
   // Fetch real credit cost for MOCK_EXAM from DB
   try {
     const{data:cc}=await sb.from('credit_costs').select('credits_required').eq('feature_name','MOCK_EXAM').maybeSingle();
