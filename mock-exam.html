@@ -347,7 +347,7 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
   </div>
 
   <!-- Dynamic page content -->
-  <div id="pageContent"></div>
+  <div id="pageContent"><div style="padding:48px 20px;text-align:center;color:var(--text-400);font-size:14px">Loading…</div></div>
 </main>
 
 <script src="regenerate-reports.js"></script>
@@ -1032,6 +1032,11 @@ document.getElementById('overlay')?.addEventListener('click', () => {
   console.error('[mock-exam] boot error:',err);
   var app=document.getElementById('pageContent');
   if(app)app.innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--text-400)"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;color:var(--text-200);margin-bottom:8px">Failed to load</div><div style="font-size:13px;margin-bottom:20px">Check your connection and try again.</div><a href="dashboard.html" style="color:var(--cyan-3);text-decoration:underline">Back to Dashboard</a></div>';
+});
+
+// Force full reload when iOS Safari restores page from back-forward cache
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) window.location.reload();
 });
 </script>
 </body>
