@@ -1032,24 +1032,29 @@ var examCreditCost = 10; // fallback; overwritten from DB below
   const user = await getCurrentUser();
   if (!user) { window.location.href = 'login.html'; return; }
   const sb = await getSb();
-  var r=[navigator.userAgent,screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
-  var h=5381;for(var i=0;i<r.length;i++)h=((h<<5)+h)^r.charCodeAt(i);
-  var fp=(h>>>0).toString(16).padStart(8,'0');
+  (function(){function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
+  var _tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
+  var _sw=Math.min(screen.width,screen.height),_sh=Math.max(screen.width,screen.height);
+  window._examFp=_d2([navigator.userAgent,_sw+'x'+_sh+'x'+screen.colorDepth,navigator.language||'',_tz].join('|'));
+  window._examMigs=[
+    _d2([navigator.userAgent,screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',_tz].join('|')),
+    _d2([navigator.userAgent,screen.height+'x'+screen.width+'x'+screen.colorDepth,navigator.language||'',_tz].join('|')),
+    _d2([navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',_tz].join('|'))
+  ];})();
+  var fp=window._examFp;
   var{data:d}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
   if(!d){
-    var rLeg=[navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
-    var hLeg=5381;for(var j=0;j<rLeg.length;j++)hLeg=((hLeg<<5)+hLeg)^rLeg.charCodeAt(j);
-    var fpLeg=(hLeg>>>0).toString(16).padStart(8,'0');
-    var{data:dLeg}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',fpLeg).eq('is_active',true).maybeSingle();
-    if(dLeg){
-      var now=new Date().toISOString();
-      await sb.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',dLeg.id);
-    } else {window.location.href='devices.html?blocked=1';return;}
+    var _migrated=false;
+    for(var _mi=0;_mi<window._examMigs.length;_mi++){
+      var{data:_m}=await sb.from('user_devices').select('id').eq('user_id',user.id).eq('device_fingerprint',window._examMigs[_mi]).eq('is_active',true).maybeSingle();
+      if(_m){var _now=new Date().toISOString();await sb.from('user_devices').update({device_fingerprint:fp,last_seen:_now,last_active:_now}).eq('id',_m.id);_migrated=true;break;}
+    }
+    if(!_migrated){window.location.href='devices.html?blocked=1';return;}
   }
   // Fetch real credit cost for MOCK_EXAM from DB
   try {
-    const{data:cc}=await sb.from('credit_costs').select('credits_required').eq('feature_name','MOCK_EXAM').maybeSingle();
-    if(cc&&cc.credits_required!=null)examCreditCost=cc.credits_required;
+    const{data:cc}=await sb.from('credit_costs').select('credit_cost').eq('feature_name','MOCK_EXAM').maybeSingle();
+    if(cc&&cc.credit_cost!=null)examCreditCost=cc.credit_cost;
   } catch(e){/* keep fallback */}
   render();
 }).catch(err=>{

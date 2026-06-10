@@ -339,16 +339,24 @@ button{font-family:inherit;cursor:pointer}
     if (el) el.classList.remove('show');
   }
 
+  function _djb2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
+  function _fpTz(){return(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''; }
   function buildFingerprint() {
-    // navigator.platform excluded: unstable on iPadOS 13+ (toggles MacIntel/iPad with desktop/mobile mode)
-    var raw = [navigator.userAgent, screen.width+'x'+screen.height+'x'+screen.colorDepth, navigator.language||'', (typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
-    var h=5381; for(var i=0;i<raw.length;i++) h=((h<<5)+h)^raw.charCodeAt(i);
-    return (h>>>0).toString(16).padStart(8,'0');
+    // Orientation-normalized: min/max so portrait↔landscape produce identical fingerprint (iPad fix)
+    var sw=Math.min(screen.width,screen.height), sh=Math.max(screen.width,screen.height);
+    return _djb2([navigator.userAgent,sw+'x'+sh+'x'+screen.colorDepth,navigator.language||'',_fpTz()].join('|'));
+  }
+  function buildFingerprintV2() {
+    // Previous formula (no platform, orientation-sensitive) — migration only
+    return _djb2([navigator.userAgent,screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',_fpTz()].join('|'));
+  }
+  function buildFingerprintV2Swapped() {
+    // Previous formula with swapped dimensions — catches devices registered in opposite orientation
+    return _djb2([navigator.userAgent,screen.height+'x'+screen.width+'x'+screen.colorDepth,navigator.language||'',_fpTz()].join('|'));
   }
   function buildFingerprintLegacy() {
-    var raw = [navigator.userAgent, navigator.platform||'', screen.width+'x'+screen.height+'x'+screen.colorDepth, navigator.language||'', (typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''].join('|');
-    var h=5381; for(var i=0;i<raw.length;i++) h=((h<<5)+h)^raw.charCodeAt(i);
-    return (h>>>0).toString(16).padStart(8,'0');
+    // Original formula (included navigator.platform, unstable on iPadOS) — migration only
+    return _djb2([navigator.userAgent,navigator.platform||'',screen.width+'x'+screen.height+'x'+screen.colorDepth,navigator.language||'',_fpTz()].join('|'));
   }
 
   function getDeviceName() {
@@ -403,12 +411,17 @@ button{font-family:inherit;cursor:pointer}
       if(existingDev){
         await supabaseClient.from('user_devices').update({last_seen:now,last_active:now}).eq('id',existingDev.id);
       } else {
-        // Migration: check legacy fp (included navigator.platform, unstable on iPadOS)
-        var fpLeg=buildFingerprintLegacy();
-        var{data:legacyDev}=await supabaseClient.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fpLeg).eq('is_active',true).maybeSingle();
-        if(legacyDev){
-          await supabaseClient.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',legacyDev.id);
-        } else {
+        // Migration chain: v2 current orientation → v2 swapped orientation (iPad fix) → legacy (with platform)
+        var migFps=[buildFingerprintV2(),buildFingerprintV2Swapped(),buildFingerprintLegacy()];
+        var migrated=false;
+        for(var _mi=0;_mi<migFps.length;_mi++){
+          var{data:migDev}=await supabaseClient.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',migFps[_mi]).eq('is_active',true).maybeSingle();
+          if(migDev){
+            await supabaseClient.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',migDev.id);
+            migrated=true; break;
+          }
+        }
+        if(!migrated){
           var{data:allowed}=await supabaseClient.rpc('can_register_device',{p_user_id:userId,p_fingerprint:fp});
           if(!allowed){showDeviceWall(userId,(profile&&profile.plan_code)||'FREE');return;}
           var info=getDeviceName();

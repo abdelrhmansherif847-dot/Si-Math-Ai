@@ -96,6 +96,7 @@ button{font-family:inherit;cursor:pointer}
 .snap-card.c-xp .snap-val{color:var(--gold)}
 .snap-card.c-mastery .snap-val{color:var(--green)}
 .snap-card.c-exams .snap-val{color:var(--cyan)}
+.snap-card.c-questions .snap-val{color:var(--purple)}
 
 /* ── Mastery topic grid ── */
 .topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
@@ -276,6 +277,12 @@ button{font-family:inherit;cursor:pointer}
       <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
       <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
     </div>
+    <div class="snap-card c-questions">
+      <span class="snap-icon">✏️</span>
+      <div class="snap-val skel" style="height:32px;width:60px;margin:0 auto 6px">&nbsp;</div>
+      <div class="snap-lbl skel" style="height:10px;width:80px;margin:0 auto 4px">&nbsp;</div>
+      <div class="snap-sub skel" style="height:10px;width:60px;margin:0 auto">&nbsp;</div>
+    </div>
   </div>
 
   <!-- Biggest improvement -->
@@ -391,10 +398,15 @@ function tierColor(score){
       sb.from('exam_practice_sessions').select('score,created_at,exam_type,correct_answers').eq('user_id', user.id).order('created_at', {ascending:false}),
       // 5 weakness_reports: topic, mastery_estimate (used as prior for improvement delta)
       sb.from('weakness_reports').select('topic,mastery_estimate,priority_rank').eq('user_id', user.id).order('priority_rank', {ascending:true}),
+      // 6 question_records: count + distinct topics for "Questions Solved" snap card
+      sb.from('question_records').select('topic', { count: 'exact' }).eq('user_id', user.id),
     ]);
 
     var profile   = results[0].data  || {};
     var mastRecs  = results[1].data  || [];
+    var qRecs     = results[6].data  || [];
+    var qCount    = results[6].count || qRecs.length || 0;
+    var qTopics   = new Set(qRecs.map(function(q){ return q.topic; }).filter(Boolean)).size;
     var achieves  = results[2].data  || [];
     var chatSess  = results[3].data  || [];
     var exams     = results[4].data  || [];
@@ -490,7 +502,13 @@ function tierColor(score){
               return '<div class="snap-sub">Avg score: ' + avg + '</div>';
             })()
           : '<div class="snap-sub">Try your first exam</div>')
-      + '</div>';
+      + '</div>' +
+      '<div class="snap-card c-questions">' +
+        '<span class="snap-icon">✏️</span>' +
+        '<div class="snap-val">' + qCount.toLocaleString() + '</div>' +
+        '<div class="snap-lbl">Questions Solved</div>' +
+        '<div class="snap-sub">' + (qTopics > 0 ? 'across ' + qTopics + ' topic' + (qTopics === 1 ? '' : 's') : 'Keep practicing') + '</div>' +
+      '</div>';
 
     // ── Biggest improvement ──
     // Data: mastery_records.mastery_score (current) vs weakness_reports.mastery_estimate (prior reading)
