@@ -140,8 +140,6 @@
           await window.regenerateWeaknessReports(sb, userId);
         }
 
-        console.log('[exam-logger] done — ' + signalsToInsert.length + ' signals written');
-
       } catch (err) {
         console.warn('[exam-logger] process failed:', err.message || err);
       }

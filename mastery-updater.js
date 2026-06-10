@@ -175,9 +175,6 @@
           addCorrect:  isCorrect
         });
 
-        console.log('[mastery] onQuestion:', topic, '>', subtopic,
-          '| base:', base, '| delta:', delta, '| new:', newMastery);
-
         // Cascade: re-sync weakness_reports
         if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
 
@@ -210,9 +207,6 @@
           addAttempt: false,  // attempt already counted in onQuestion
           addCorrect: isCorrect
         });
-
-        console.log('[mastery] onResolution:', resolution,
-          '| base:', base, '| delta:', delta, '| new:', newMastery);
 
         if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
 
@@ -254,9 +248,6 @@
           addAttempt: true,
           addCorrect: false
         });
-
-        console.log('[mastery] onExamMistake:', topic, '>', subtopic,
-          '| base:', base, '| delta:', delta, '| new:', newMastery);
 
         if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
 

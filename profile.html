@@ -247,7 +247,7 @@ async function deviceGuard(sb, userId) {
 
 async function loadPage() {
   const { data: { user }, error: authErr } = await sb.auth.getUser();
-  if (authErr || !user) { window.location.href = 'index.html'; return; }
+  if (authErr || !user) { window.location.href = 'login.html'; return; }
   if (!await deviceGuard(sb, user.id)) return;
 
   // Update avatar

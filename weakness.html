@@ -822,7 +822,7 @@ async function deviceGuard(sb,userId){
 async function init(){
   showLoading();
   const {data:{user}}=await sb.auth.getUser();
-  if(!user){window.location.href='index.html';return;}
+  if(!user){window.location.href='login.html';return;}
   currentUser=user;
   if(!(await deviceGuard(sb,user.id)))return;
 
