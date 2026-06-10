@@ -84,7 +84,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* ── Snapshot rail ── */
 .snap-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-@media(min-width:540px){.snap-grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:540px){.snap-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
 .snap-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:18px 16px;text-align:center;animation:rise .5s ease both;transition:border-color .2s}
 .snap-card:hover{border-color:var(--border-mid)}
 .snap-icon{font-size:1.4rem;margin-bottom:6px;display:block}
