@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -352,12 +353,12 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="exam-mistakes-logger.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 const SB_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SB_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+if (!window.supabase) { document.getElementById('pageContent').innerHTML = '<div style="padding:60px 20px;text-align:center;color:#f87171"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;margin-bottom:8px">Failed to load — refresh the page</div><a href="dashboard.html" style="color:#38bdf8;text-decoration:underline">Back to Dashboard</a></div>'; throw new Error('Supabase SDK not loaded'); }
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 async function getCurrentUser() {
