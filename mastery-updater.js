@@ -148,7 +148,7 @@
      *   isRepeat       {boolean} user has asked about this subtopic before (count>=2)
      */
     onQuestion: async function (sb, userId, topic, subtopic, opts) {
-      if (!sb || !userId || !topic || !subtopic) return;
+      if (!sb || !userId || !topic || subtopic == null) return;
       opts = opts || {};
 
       try {
@@ -188,7 +188,7 @@
      * Applies an additional mastery delta on top of the question-level update.
      */
     onResolution: async function (sb, userId, topic, subtopic, resolution) {
-      if (!sb || !userId || !topic || !subtopic) return;
+      if (!sb || !userId || !topic || subtopic == null) return;
 
       try {
         var existing = await fetchRecord(sb, userId, topic, subtopic);
@@ -223,7 +223,7 @@
      *   priorSessionCount {number}  # of prior exam sessions with mistakes on this topic
      */
     onExamMistake: async function (sb, userId, topic, subtopic, opts) {
-      if (!sb || !userId || !topic || !subtopic) return;
+      if (!sb || !userId || !topic || subtopic == null) return;
       opts = opts || {};
 
       try {
