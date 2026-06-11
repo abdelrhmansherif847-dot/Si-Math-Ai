@@ -1374,6 +1374,7 @@ var ACHIEVEMENT_MAP = {
 /* ═══════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════ */
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function setText(id, val) {
   var el = document.getElementById(id);
   if (el) el.textContent = (val !== null && val !== undefined) ? val : '—';
@@ -1571,7 +1572,7 @@ async function loadDashboard() {
   var subscription= results[7].data;
 
   /* ── Derived: user ── */
-  var displayName = prof.full_name || user.email.split('@')[0] || 'Student';
+  var displayName = prof.full_name || (user.email ? user.email.split('@')[0] : '') || 'Student';
   var examType    = prof.exam_type || 'SAT';
   var targetScore = prof.target_score || 0;
   var scoreMax    = examType === 'ACT' ? 36 : examType === 'EST' ? 900 : 1600;
@@ -1676,7 +1677,7 @@ async function loadDashboard() {
   setText('heroName', displayName);
   var heroSub = document.getElementById('heroSub');
   if (heroSub) {
-    var sub = 'Logged in as <span class="hl">' + user.email + '</span>';
+    var sub = 'Logged in as <span class="hl">' + esc(user.email||'') + '</span>';
     if (examType) sub += ' &middot; Preparing for <span class="hl">' + examType + '</span>';
     if (daysRemaining > 0) sub += ' &mdash; <span class="hl">' + daysRemaining + ' days</span> remaining';
     else if (prof.exam_date) sub += ' &mdash; exam day is here!';
