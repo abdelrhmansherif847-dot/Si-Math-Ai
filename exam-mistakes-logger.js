@@ -84,7 +84,6 @@
           // Primary exam-mistake signal
           signalsToInsert.push({
             user_id:     userId,
-            session_id:  sessionId,
             topic:       topic,
             subtopic:    subtopic,
             signal_type: 'topic',
@@ -97,7 +96,6 @@
           if (priorCount > 0) {
             signalsToInsert.push({
               user_id:     userId,
-              session_id:  sessionId,
               topic:       topic,
               subtopic:    subtopic,
               signal_type: 'repeated',
