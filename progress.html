@@ -63,6 +63,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* ── Main layout ── */
 .main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 24px) 16px calc(48px + env(safe-area-inset-bottom,0px));max-width:960px;margin:0 auto}
+@media(min-width:1024px){.main{max-width:1360px;margin:0}}
 
 /* ── Skeleton ── */
 .skel{background:linear-gradient(90deg,var(--bg-elev-2) 25%,var(--bg-card-hi) 50%,var(--bg-elev-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px;display:block}
@@ -228,8 +229,8 @@ button{font-family:inherit;cursor:pointer}
   </a>
   <div id="adminNavSection" style="display:none">
     <div class="side-sec">Admin</div>
-    <a class="nav-item" href="admin.html" style="color:var(--red)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin Panel
+    <a class="nav-item" href="admin.html" style="color:#ef4f5f">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Admin Dashboard
     </a>
   </div>
 </aside>
