@@ -59,11 +59,9 @@ button{font-family:inherit;cursor:pointer}
 .nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
 .overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
 .overlay.show{opacity:1;visibility:visible}
-@media(min-width:1024px){.sidebar{transform:translateX(0)}.hamb{display:none}.overlay{display:none!important}.main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}}
-
 /* ── Main layout ── */
 .main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 24px) 16px calc(48px + env(safe-area-inset-bottom,0px));max-width:960px;margin:0 auto}
-@media(min-width:1024px){.main{max-width:1360px;margin:0}}
+@media(min-width:1024px){.sidebar{transform:translateX(0)}.hamb{display:none}.overlay{display:none!important}.main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px;margin:0}}
 
 /* ── Skeleton ── */
 .skel{background:linear-gradient(90deg,var(--bg-elev-2) 25%,var(--bg-card-hi) 50%,var(--bg-elev-2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px;display:block}
