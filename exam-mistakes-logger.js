@@ -72,7 +72,7 @@
         for (var i = 0; i < mistakes.length; i++) {
           var m = mistakes[i];
           var topic    = (m.topic || '').trim();
-          var subtopic = (m.subtopic || '').trim() || null;
+          var subtopic = (m.subtopic || '').trim(); // keep as '' not null — weakness_signals.subtopic is NOT NULL
           if (!topic) continue;
 
           var count  = Math.max(1, m.count || 1);
@@ -84,7 +84,6 @@
           // Primary exam-mistake signal
           signalsToInsert.push({
             user_id:     userId,
-            session_id:  sessionId,
             topic:       topic,
             subtopic:    subtopic,
             signal_type: 'topic',
@@ -97,7 +96,6 @@
           if (priorCount > 0) {
             signalsToInsert.push({
               user_id:     userId,
-              session_id:  sessionId,
               topic:       topic,
               subtopic:    subtopic,
               signal_type: 'repeated',
@@ -120,7 +118,7 @@
           for (var j = 0; j < mistakes.length; j++) {
             var mk = mistakes[j];
             var t  = (mk.topic || '').trim();
-            var st = (mk.subtopic || '').trim() || null;
+            var st = (mk.subtopic || '').trim(); // keep as '' not null
             if (!t) continue;
             var ukey = t + '|' + (st || '');
             if (seen[ukey]) continue;
