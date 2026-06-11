@@ -1477,12 +1477,15 @@ button{font-family:inherit;cursor:pointer}
         addAI(sig, response);
         awardChatXP();
         // Update mastery_records for this interaction
-        if (window.MasteryEngine && currentUser && sig && sig.topic && sig.sub) {
-          window.MasteryEngine.onQuestion(sb, currentUser.id, sig.topic, sig.sub, {
-            confidence:     sig.confidence || null,
+        // Use topic/subtopic from AI response first (most accurate), fall back to sig
+        const mTopic = (response && response.topic) || (sig && sig.topic) || null;
+        const mSub   = (response && response.subtopic) || (sig && sig.sub) || null;
+        if (window.MasteryEngine && currentUser && mTopic && mSub != null) {
+          window.MasteryEngine.onQuestion(sb, currentUser.id, mTopic, mSub, {
+            confidence:     sig ? (sig.confidence || null) : null,
             weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
-            isMultiConcept: !!(sig.multiConcept && sig.multiConcept.length > 0),
-            isRepeat:       (SignalEngine.topicCounts[sig.sub] || 0) >= 2
+            isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
+            isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
           });
         }
       }).catch(err => {
