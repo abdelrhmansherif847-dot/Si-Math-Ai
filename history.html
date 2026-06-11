@@ -360,7 +360,8 @@ async function fetchAll() {
 
   const sessions = chatRes.data    || [];
   const exams    = examRes.data    || [];
-  const mastery  = masteryRes.data || [];
+  const NON_ACAD = /^(coaching|study planning|study coaching|exam strategy|motivation|confidence|mindset|planning|scheduling|out_of_scope)/i;
+  const mastery  = (masteryRes.data || []).filter(m => !NON_ACAD.test(m.topic || ''));
 
   // Count questions per chat session
   const qCountMap = {};
@@ -404,9 +405,13 @@ function chatCard(s, qCountMap, typeTag) {
 }
 
 function examCard(e, mistakeMap, typeTag) {
+  const hasData  = e.correct_answers != null || e.wrong_answers != null;
   const total    = (e.correct_answers || 0) + (e.wrong_answers || 0);
-  const pct      = total > 0 ? Math.round((e.correct_answers || 0) / total * 100) : Math.round(e.score || 0);
-  const cls      = scoreCls(pct);
+  const accPct   = total > 0 ? Math.round((e.correct_answers || 0) / total * 100) : null;
+  // Show actual exam score (e.g. 770) when available, else accuracy %, else —
+  const scoreDisplay = e.score != null ? e.score : (accPct != null ? accPct + '%' : '—');
+  const cls      = e.score != null ? scoreCls(Math.round((e.score / 800) * 100))
+                 : (accPct != null ? scoreCls(accPct) : '');
   const date     = relDate(e.created_at);
   const mistakes = mistakeMap[e.id] || 0;
   const dur      = e.duration_minutes != null ? e.duration_minutes + ' min' : null;
@@ -421,12 +426,12 @@ function examCard(e, mistakeMap, typeTag) {
           ${dur ? `<span class="card-date">· ${dur}</span>` : ''}
         </div>
         <div class="card-badges">
-          <span class="chip c-${cls === 'g' ? 'green' : cls === 'y' ? 'amber' : 'red'}">${e.correct_answers || 0} correct</span>
-          <span class="chip">${e.wrong_answers || 0} wrong</span>
-          ${mistakes > 0 ? `<span class="chip c-red">${mistakes} mistake${mistakes !== 1 ? 's' : ''}</span>` : ''}
+          ${hasData ? `<span class="chip c-green">${e.correct_answers ?? '—'} correct</span>
+          <span class="chip c-red">${e.wrong_answers ?? '—'} wrong</span>` : '<span class="chip">No score entered</span>'}
+          ${mistakes > 0 ? `<span class="chip c-red">${mistakes} mistake${mistakes !== 1 ? 's' : ''} logged</span>` : ''}
         </div>
       </div>
-      <div class="score-big ${cls}">${pct}%</div>
+      <div class="score-big ${cls}">${scoreDisplay}</div>
     </div>
   </div>`;
 }
