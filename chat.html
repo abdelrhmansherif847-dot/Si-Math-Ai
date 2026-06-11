@@ -1401,6 +1401,13 @@ button{font-family:inherit;cursor:pointer}
         if (window.MasteryEngine && currentUser && wrap.dataset.topic && wrap.dataset.sub) {
           window.MasteryEngine.onResolution(sb, currentUser.id, wrap.dataset.topic, wrap.dataset.sub, this.dataset.r);
         }
+        // Still Confused → auto-trigger a re-explanation using a different approach
+        if (this.dataset.r === 'confused') {
+          setTimeout(() => {
+            input.value = 'I still don\'t understand. Can you explain it differently with a simpler example?';
+            send();
+          }, 400);
+        }
       }));
     }
     // explain simpler

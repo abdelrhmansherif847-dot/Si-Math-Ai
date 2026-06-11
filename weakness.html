@@ -680,7 +680,7 @@ button{font-family:inherit;cursor:pointer}
 
   <!-- SECTION: FOCUS PRACTICE CONNECTION -->
   <div class="sec-label">What Happens Next</div>
-  <div class="focus-link" onclick="location.href='focus.html'">
+  <div class="focus-link" id="focusLinkEl" onclick="goFocus(window._currentFocusReport||null)">
     <span class="fl-ic">🔦</span>
     <div class="fl-body">
       <div class="fl-t">Weakness Analyzer identifies problems. Focus Practice fixes them.</div>
@@ -1266,11 +1266,10 @@ function renderRecommended(report,reports){
 
 /* ── focus link ── */
 function renderFocusLink(report){
+  window._currentFocusReport = report || null;
   if(!report)return;
   const flS=document.getElementById('focusLinkSub');
   if(flS)flS.innerHTML=`This page found <b style="color:var(--cyan-3)">${topicLabel(report)}</b> as your weakest area. Focus Practice turns it into a step-by-step study plan. Tap to start.`;
-  const fl=document.querySelector('.focus-link');
-  if(fl)fl.onclick=()=>goFocus(report);
 }
 
 /* ── AI rec ── */
