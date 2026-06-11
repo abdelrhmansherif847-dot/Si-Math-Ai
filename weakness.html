@@ -859,9 +859,10 @@ async function loadData(forceRegen){
     sb.from('mastery_records').select('*').eq('user_id',uid),
     sb.from('weakness_signals').select('*').eq('user_id',uid)
   ]);
-  allReports=rr.data||[];
-  allMastery=mr.data||[];
-  allSignals=sr.data||[];
+  const NON_ACADEMIC = /^(coaching|study planning|study coaching|exam strategy|motivation|progress|confidence|mindset|planning|scheduling|out_of_scope)/i;
+  allReports=(rr.data||[]).filter(r=>!NON_ACADEMIC.test(r.topic||''));
+  allMastery=(mr.data||[]).filter(m=>!NON_ACADEMIC.test(m.topic||''));
+  allSignals=(sr.data||[]).filter(s=>!NON_ACADEMIC.test(s.topic||''));
 
   // If reports are missing but signals exist, regenerate now then reload
   if(allReports.length===0&&allSignals.length>0&&!forceRegen&&window.regenerateWeaknessReports){
@@ -1173,12 +1174,16 @@ function renderBars(mastery,reports){
     topics.push(...Object.values(topicMap));
   }
   barsEl.innerHTML=topics.map(t=>{
-    const acc=t.seen>0?Math.round(t.correct/t.seen*100):(t.mastery!=null?Math.round(t.mastery):50);
-    const cls=acc>=80?'g':acc>=60?'y':'r';
+    // Use accuracy when we have confirmed correct answers; fall back to mastery score otherwise
+    const hasAccuracy = t.seen > 0 && t.correct > 0;
+    const displayVal  = hasAccuracy ? Math.round(t.correct/t.seen*100)
+                      : (t.mastery!=null ? Math.round(t.mastery) : 0);
+    const cls=displayVal>=80?'g':displayVal>=60?'y':'r';
+    const accLabel = hasAccuracy ? displayVal+'%' : (t.mastery!=null ? Math.round(t.mastery)+'% mastery' : '—');
     return`<div class="bar-row">
-      <div class="bar-head"><span class="bar-name">${t.topic}</span><span class="bar-pct ${cls}">${acc}%</span></div>
-      <div class="bar-track"><div class="bar-fill ${cls}" data-w="${acc}" style="width:0"></div></div>
-      <div class="bar-stats"><span>Attempted: <b>${t.seen||'?'}</b></span><span>Correct: <b>${t.correct||'?'}</b></span><span>Accuracy: <b>${acc}%</b></span></div>
+      <div class="bar-head"><span class="bar-name">${t.topic}</span><span class="bar-pct ${cls}">${displayVal}%</span></div>
+      <div class="bar-track"><div class="bar-fill ${cls}" data-w="${displayVal}" style="width:0"></div></div>
+      <div class="bar-stats"><span>Attempted: <b>${t.seen||'—'}</b></span><span>Correct: <b>${t.correct||'—'}</b></span><span>${hasAccuracy?'Accuracy':'Mastery'}: <b>${accLabel}</b></span></div>
     </div>`;
   }).join('');
   animateBars();
