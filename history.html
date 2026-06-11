@@ -302,14 +302,14 @@ let user;
 try {
   const { data: authData } = await sb.auth.getUser();
   user = authData?.user;
-} catch(e) { location.href = 'login.html'; }
-if (!user) { location.href = 'login.html'; }
+} catch(e) { location.href = 'login.html'; throw e; }
+if (!user) { location.href = 'login.html'; throw new Error('unauthenticated'); }
 
 // Device guard — don't block page if it fails, just warn
 try {
   const allowed = await deviceGuard(sb, user.id);
-  if (!allowed) { location.href = 'login.html'; }
-} catch(e) { console.warn('[history] deviceGuard error:', e.message); }
+  if (!allowed) { location.href = 'login.html'; throw new Error('blocked'); }
+} catch(e) { if (e.message === 'blocked') throw e; console.warn('[history] deviceGuard error:', e.message); }
 
 // Avatar
 let profile = null;

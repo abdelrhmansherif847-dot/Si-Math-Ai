@@ -789,7 +789,9 @@ function computeMastery(signals){
   return Math.max(10,Math.min(95,Math.round(100-(baseScore+chatWeaknessScore)*4+positiveBoost)));
 }
 function fmt(n){return n==null?'—':n;}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function topicLabel(r){return[r.topic,r.subtopic].filter(Boolean).join(' → ');}
+function escTopicLabel(r){return esc(topicLabel(r));}
 function ts(){const now=new Date();let h=now.getHours(),m=now.getMinutes();const ap=h>=12?'PM':'AM';h=h%12||12;m=m<10?'0'+m:m;return'Today, '+h+':'+m+' '+ap;}
 
 /* ── animate bars ── */
@@ -1082,8 +1084,8 @@ function renderRankTable(reports,mastery){
     return`<div class="rank-row p-${p}" style="cursor:pointer" data-idx="${i}">
       <div class="rank-num">${i+1}</div>
       <div class="rank-body">
-        <div class="rank-topic">${topic}</div>
-        ${r.subtopic?`<div class="rank-sub"><span class="tree">└─</span> <span class="sname">${r.subtopic}</span></div>`:''}
+        <div class="rank-topic">${esc(topic)}</div>
+        ${r.subtopic?`<div class="rank-sub"><span class="tree">└─</span> <span class="sname">${esc(r.subtopic)}</span></div>`:''}
       </div>
       <div class="rank-right"><span class="sev-pill ${p}"><span class="d"></span>${priLabel(p)}</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">${mPct!==null?mPct+'%':'—'}</span></div></div>
     </div>`;
@@ -1203,7 +1205,7 @@ function renderSWGrid(reports,mastery){
       const div=document.createElement('div');
       div.className='rank clickable';
       div.dataset.idx=i;
-      div.innerHTML=`<span class="rn">${i+1}</span><div class="rmeta"><div class="rtop"><span class="rt">${topicLabel(r)}</span><span class="rp">${mPct!==null?mPct+'%':'—'}</span><span class="pri ${p}"><span class="pd"></span>Priority: ${priLabel(p)}</span></div><span class="rsub">${r.total_signals||0} signals</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+      div.innerHTML=`<span class="rn">${i+1}</span><div class="rmeta"><div class="rtop"><span class="rt">${escTopicLabel(r)}</span><span class="rp">${mPct!==null?mPct+'%':'—'}</span><span class="pri ${p}"><span class="pd"></span>Priority: ${priLabel(p)}</span></div><span class="rsub">${r.total_signals||0} signals</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
       div.addEventListener('click',()=>openModal(r,mPct,mastery));
       weakCard.appendChild(div);
     });
@@ -1216,7 +1218,7 @@ function renderSWGrid(reports,mastery){
     if(strong.length){
       strong.forEach((m,i)=>{
         const div=document.createElement('div');div.className='rank';
-        div.innerHTML=`<span class="rn">${i+1}</span><span class="rt">${m.topic||m.subtopic}</span><span class="rp">${Math.round(m.mastery_score)}%</span>`;
+        div.innerHTML=`<span class="rn">${i+1}</span><span class="rt">${esc(m.topic||m.subtopic)}</span><span class="rp">${Math.round(m.mastery_score)}%</span>`;
         strongCard.appendChild(div);
       });
     } else {
@@ -1288,7 +1290,7 @@ function renderRecommended(report,reports){
   if(chips){
     const related=reports.filter(r=>r.topic===report.topic).slice(0,4);
     if(related.length>0){
-      chips.innerHTML=related.map(r=>`<span class="chip"><span class="d"></span>${r.subtopic||r.topic}</span>`).join('');
+      chips.innerHTML=related.map(r=>`<span class="chip"><span class="d"></span>${esc(r.subtopic||r.topic)}</span>`).join('');
     }
   }
   document.querySelectorAll('.full-btn').forEach(b=>b.onclick=()=>goFocus(report));
@@ -1299,14 +1301,14 @@ function renderFocusLink(report){
   window._currentFocusReport = report || null;
   if(!report)return;
   const flS=document.getElementById('focusLinkSub');
-  if(flS)flS.innerHTML=`This page found <b style="color:var(--cyan-3)">${topicLabel(report)}</b> as your weakest area. Focus Practice turns it into a step-by-step study plan. Tap to start.`;
+  if(flS)flS.innerHTML=`This page found <b style="color:var(--cyan-3)">${escTopicLabel(report)}</b> as your weakest area. Focus Practice turns it into a step-by-step study plan. Tap to start.`;
 }
 
 /* ── AI rec ── */
 function renderAIRec(top,second){
   const airec=document.querySelector('.airec .ai-body p');
   if(!airec||!top)return;
-  airec.innerHTML=`Spend <b>3 days on ${topicLabel(top)}</b>${second?' before moving to '+topicLabel(second):''} — it has the highest priority and the biggest score impact right now.`;
+  airec.innerHTML=`Spend <b>3 days on ${escTopicLabel(top)}</b>${second?' before moving to '+escTopicLabel(second):''} — it has the highest priority and the biggest score impact right now.`;
 }
 
 /* ── focus navigation ── */
@@ -1360,10 +1362,10 @@ function openModal(report,mPct,mastery){
   const topicSigs=allSignals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic));
   const mistakes=topicSigs.filter(s=>s.signal_type==='topic'&&s.weight>0.4).slice(0,4);
   document.getElementById('mMistakes').innerHTML=mistakes.length
-    ?mistakes.map(s=>`<div class="m-item mistake"><span class="mi-ic">✕</span>Low confidence on ${s.subtopic||s.topic||'this topic'}</div>`).join('')
+    ?mistakes.map(s=>`<div class="m-item mistake"><span class="mi-ic">✕</span>Low confidence on ${esc(s.subtopic||s.topic||'this topic')}</div>`).join('')
     :'<div class="m-item"><span class="mi-ic">›</span>Practice more questions to identify specific mistakes</div>';
-  document.getElementById('mLessons').innerHTML=`<div class="m-item"><span class="mi-ic">›</span>${topicLabel(report)} — Core concepts</div><div class="m-item"><span class="mi-ic">›</span>${topicLabel(report)} — Problem-solving strategies</div>`;
-  document.getElementById('mSets').innerHTML=`<div class="m-item"><span class="mi-ic">›</span>${report.topic||'Topic'} Starter — 15 Qs</div><div class="m-item"><span class="mi-ic">›</span>${report.topic||'Topic'} Drill — 20 Qs</div>`;
+  document.getElementById('mLessons').innerHTML=`<div class="m-item"><span class="mi-ic">›</span>${escTopicLabel(report)} — Core concepts</div><div class="m-item"><span class="mi-ic">›</span>${escTopicLabel(report)} — Problem-solving strategies</div>`;
+  document.getElementById('mSets').innerHTML=`<div class="m-item"><span class="mi-ic">›</span>${esc(report.topic||'Topic')} Starter — 15 Qs</div><div class="m-item"><span class="mi-ic">›</span>${esc(report.topic||'Topic')} Drill — 20 Qs</div>`;
   const impPct=mPct!==null&&mPct<80?'+'+(80-mPct)+'%':'+15%';
   document.getElementById('mImpV').textContent=impPct;
   document.getElementById('mImpT').textContent='Potential accuracy gain with focused practice over 2 weeks.';
