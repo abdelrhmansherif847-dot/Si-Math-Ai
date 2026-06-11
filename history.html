@@ -298,12 +298,25 @@ async function deviceGuard(sb, userId) {
 }
 
 // Auth guard
-const { data: { user } } = await sb.auth.getUser();
+let user;
+try {
+  const { data: authData } = await sb.auth.getUser();
+  user = authData?.user;
+} catch(e) { location.href = 'login.html'; }
 if (!user) { location.href = 'login.html'; }
-if (!await deviceGuard(sb, user.id)) throw new Error('blocked');
+
+// Device guard — don't block page if it fails, just warn
+try {
+  const allowed = await deviceGuard(sb, user.id);
+  if (!allowed) { location.href = 'login.html'; }
+} catch(e) { console.warn('[history] deviceGuard error:', e.message); }
 
 // Avatar
-const { data: profile } = await sb.from('profiles').select('full_name, is_admin').eq('id', user.id).single();
+let profile = null;
+try {
+  const { data: p } = await sb.from('profiles').select('full_name, is_admin').eq('id', user.id).single();
+  profile = p;
+} catch(e) { console.warn('[history] profile fetch error:', e.message); }
 const initial = (profile?.full_name || user.email || '?')[0].toUpperCase();
 document.getElementById('avatarEl').textContent = initial;
 if (profile?.is_admin) {
