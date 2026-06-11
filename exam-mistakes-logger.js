@@ -56,6 +56,48 @@
     return map;
   }
 
+  /* ── Topic name normalizer ──
+   * Canonicalises user-typed topic/subtopic strings so typos and
+   * capitalisation variants map to the same entry in the DB.
+   * e.g. "GEOmetry" → "Geometry", "algebra" → "Algebra", "Circle" → "Circles"
+   */
+  var TOPIC_ALIASES = {
+    'geometry': 'Geometry',
+    'geometery': 'Geometry',
+    'geomtry': 'Geometry',
+    'algebra': 'Algebra',
+    'algebera': 'Algebra',
+    'algepra': 'Algebra',
+    'trigonometry': 'Trigonometry',
+    'trig': 'Trigonometry',
+    'statistics': 'Statistics',
+    'probability': 'Probability',
+    'calculus': 'Calculus',
+    'number theory': 'Number Theory',
+  };
+  var SUBTOPIC_ALIASES = {
+    'circle': 'Circles',
+    'circles': 'Circles',
+    'linear equation': 'Linear Equations',
+    'linear equations': 'Linear Equations',
+    'linear': 'Linear',
+    'order of operations': 'Order of operations',
+    'order of operations (pemdas)': 'Order of operations',
+    'pemdas': 'Order of operations',
+  };
+  function normalizeTopic(s) {
+    if (!s) return s;
+    var t = s.trim();
+    var lower = t.toLowerCase();
+    return TOPIC_ALIASES[lower] || (t.charAt(0).toUpperCase() + t.slice(1));
+  }
+  function normalizeSubtopic(s) {
+    if (!s) return s;
+    var t = s.replace(/\s*\([^)]+\)\s*$/, '').trim();
+    var lower = t.toLowerCase();
+    return SUBTOPIC_ALIASES[lower] || t;
+  }
+
   /* ── Main pipeline ── */
   var ExamMistakesLogger = {
 
@@ -71,8 +113,8 @@
 
         for (var i = 0; i < mistakes.length; i++) {
           var m = mistakes[i];
-          var topic    = (m.topic || '').trim();
-          var subtopic = (m.subtopic || '').trim(); // keep as '' not null — weakness_signals.subtopic is NOT NULL
+          var topic    = normalizeTopic((m.topic || '').trim());
+          var subtopic = normalizeSubtopic((m.subtopic || '').trim()); // keep as '' not null — weakness_signals.subtopic is NOT NULL
           if (!topic) continue;
 
           var count  = Math.max(1, m.count || 1);
@@ -117,8 +159,8 @@
           var seen = {};
           for (var j = 0; j < mistakes.length; j++) {
             var mk = mistakes[j];
-            var t  = (mk.topic || '').trim();
-            var st = (mk.subtopic || '').trim(); // keep as '' not null
+            var t  = normalizeTopic((mk.topic || '').trim());
+            var st = normalizeSubtopic((mk.subtopic || '').trim()); // keep as '' not null
             if (!t) continue;
             var ukey = t + '|' + (st || '');
             if (seen[ukey]) continue;
