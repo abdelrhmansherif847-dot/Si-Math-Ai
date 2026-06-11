@@ -246,6 +246,125 @@ button{font-family:inherit;cursor:pointer}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
 @keyframes glowPulse{0%,100%{box-shadow:0 0 18px rgba(56,189,248,.14)}50%{box-shadow:0 0 26px rgba(56,189,248,.3)}}
 .d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}
+
+/* PAGE LOADING */
+.page-loading{display:flex;align-items:center;gap:10px;padding:80px 20px;color:var(--text-400);justify-content:center;font-size:14px}
+.ld-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse 1.2s infinite;flex-shrink:0}
+
+/* MISSION CARD */
+.mission-card{position:relative;overflow:hidden;border:1px solid var(--cyan-border);background:linear-gradient(135deg,rgba(56,189,248,.13),var(--bg-card));border-radius:var(--r-xl);padding:var(--space-6);margin-bottom:24px;animation:rise .5s ease both}
+.mission-card::before{content:'';position:absolute;top:-60px;right:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.18),transparent 70%);pointer-events:none}
+.mission-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
+.mission-ic{width:50px;height:50px;flex-shrink:0;border-radius:14px;background:rgba(56,189,248,.18);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 18px rgba(56,189,248,.3)}
+.mission-meta{flex:1;min-width:0}
+.mission-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin-bottom:4px}
+.mission-title{font-family:var(--font-display);font-weight:800;font-size:clamp(20px,5vw,26px);color:#fff;line-height:1.1}
+.mission-sub{font-size:13px;color:var(--text-400);margin-top:4px}
+.mission-tasks{display:flex;flex-direction:column;gap:9px;margin-bottom:20px}
+.mission-task{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-md);background:rgba(255,255,255,.04);border:1px solid var(--border-soft);transition:border-color .2s}
+.mission-task:hover{border-color:var(--cyan-border-soft)}
+.mt-check{width:24px;height:24px;flex-shrink:0;border-radius:7px;border:2px solid var(--border-mid);background:var(--bg-elev-1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:transparent;font-size:12px;font-weight:700;user-select:none}
+.mt-check.inprogress{background:var(--amber);border-color:var(--amber);color:#031020}
+.mt-check.done{background:var(--green);border-color:var(--green);color:#031020}
+.mt-body{flex:1;min-width:0}
+.mt-title{font-size:14px;font-weight:600;color:var(--text-100);transition:all .2s}
+.mt-title.done{text-decoration:line-through;opacity:.45}
+.mt-type{font-family:var(--font-mono);font-size:10px;color:var(--text-500);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+.mt-time{font-family:var(--font-mono);font-size:11px;color:var(--text-400);flex-shrink:0}
+.mission-footer{display:flex;align-items:center;gap:14px;padding-top:16px;border-top:1px solid var(--border-soft);flex-wrap:wrap;gap:10px}
+.mission-est{font-size:13px;color:var(--text-400)}
+.mission-est b{color:var(--cyan-3);font-family:var(--font-display)}
+.mission-cta{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:var(--r-md);border:none;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-display);font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(56,189,248,.3);transition:transform .2s,box-shadow .2s;text-decoration:none;white-space:nowrap}
+.mission-cta:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(56,189,248,.45)}
+.mission-cta svg{width:15px;height:15px}
+
+/* WEEK TRACKER */
+.week-tracker{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:var(--space-5);margin-bottom:24px;animation:rise .55s ease both}
+.wt-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.wt-title{font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff}
+.wt-badge{font-family:var(--font-mono);font-size:10.5px;padding:4px 10px;border-radius:100px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
+.wt-rows{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.wt-row{display:grid;grid-template-columns:90px 1fr 72px;align-items:center;gap:10px}
+.wr-lbl{font-size:12.5px;color:var(--text-400)}
+.wr-track{height:7px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;border:1px solid var(--border-soft)}
+.wr-fill{height:100%;border-radius:100px;transition:width 1s cubic-bezier(.25,.46,.45,.94)}
+.wr-fill.q{background:linear-gradient(90deg,var(--cyan-2),var(--cyan));box-shadow:0 0 8px rgba(56,189,248,.4)}
+.wr-fill.s{background:linear-gradient(90deg,#8b5cf6,#a78bfa);box-shadow:0 0 8px rgba(139,92,246,.4)}
+.wr-val{font-family:var(--font-mono);font-size:11px;color:var(--text-300);text-align:right;white-space:nowrap}
+.wt-mastery{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.wm-now{flex-shrink:0;text-align:center}
+.wm-label{font-family:var(--font-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin-bottom:3px}
+.wm-val{font-family:var(--font-display);font-weight:800;font-size:20px;line-height:1}
+.wm-arrow{color:var(--text-500);font-size:18px;flex-shrink:0}
+.wm-track{flex:1;height:8px;background:var(--border-soft);border-radius:100px;overflow:hidden;position:relative}
+.wm-fill{height:100%;border-radius:100px;background:var(--green);transition:width 1s ease}
+
+/* COVERAGE MAP */
+.coverage-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:var(--space-5);margin-bottom:24px;animation:rise .6s ease both}
+.cov-intro{font-size:13px;color:var(--text-400);margin-bottom:16px;line-height:1.5}
+.cov-subtopics{display:flex;flex-direction:column;gap:7px}
+.cov-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--bg-elev-1);border:1px solid var(--border-soft);transition:border-color .2s;cursor:pointer;text-decoration:none}
+.cov-row:hover{border-color:var(--cyan-border-soft)}
+.cr-check{width:20px;height:20px;flex-shrink:0;border-radius:6px;border:1.5px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s;color:transparent}
+.cov-row.practiced .cr-check{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan)}
+.cr-name{flex:1;min-width:0;font-size:13px;color:var(--text-300);font-weight:500}
+.cov-row.practiced .cr-name{color:#fff}
+.cr-bar-wrap{width:56px;height:5px;background:var(--bg-card);border-radius:100px;overflow:hidden}
+.cr-bar{height:100%;border-radius:100px;background:var(--cyan);transition:width .8s ease}
+.cr-count{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);flex-shrink:0;width:38px;text-align:right}
+
+/* DAY CARDS */
+.day-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.day-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);overflow:hidden;transition:border-color .3s;animation:rise .65s ease both}
+.day-card.active{border-color:var(--cyan-border)}
+.day-card-head{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;user-select:none;transition:background .2s}
+.day-card-head:hover{background:rgba(255,255,255,.02)}
+.dc-num{width:38px;height:38px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:14px;border:1px solid var(--border-mid);background:var(--bg-elev-1);color:var(--text-400);transition:all .3s}
+.day-card.active .dc-num{background:rgba(56,189,248,.18);border-color:var(--cyan-border);color:var(--cyan)}
+.day-card.done-all .dc-num{background:rgba(34,197,94,.12);border-color:var(--green-border);color:var(--green)}
+.dc-meta{flex:1;min-width:0}
+.dc-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text-300);transition:color .3s}
+.day-card.active .dc-title{color:#fff}
+.dc-sub{font-size:12px;color:var(--text-500);margin-top:2px;transition:color .3s}
+.day-card.active .dc-sub{color:var(--text-400)}
+.dc-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.dc-badge{font-family:var(--font-mono);font-size:10px;padding:3px 9px;border-radius:100px;white-space:nowrap}
+.dc-badge.today{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
+.dc-badge.done{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
+.dc-badge.locked{background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-500)}
+.dc-chev{color:var(--text-500);transition:transform .3s;font-size:14px;line-height:1}
+.day-card.open .dc-chev{transform:rotate(180deg)}
+.day-body{display:none;padding:0 18px 16px;flex-direction:column;gap:8px}
+.day-card.open .day-body{display:flex}
+.day-task{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.dt-ic{width:32px;height:32px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.dt-ic.learn{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3)}
+.dt-ic.practice{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft)}
+.dt-ic.review{background:var(--amber-soft);border:1px solid var(--amber-border)}
+.dt-ic.ask_zero{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.28)}
+.dt-ic.drill{background:var(--red-soft);border:1px solid var(--red-border)}
+.dt-meta{flex:1;min-width:0}
+.dt-title{font-size:13.5px;font-weight:600;color:var(--text-200)}
+.dt-type{font-family:var(--font-mono);font-size:10px;color:var(--text-500);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.dt-time{font-family:var(--font-mono);font-size:11px;color:var(--text-400);flex-shrink:0}
+.day-check{width:24px;height:24px;flex-shrink:0;border-radius:7px;border:2px solid var(--border-mid);background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:transparent;font-size:12px;font-weight:700;user-select:none}
+.day-check.inprogress{background:var(--amber);border-color:var(--amber);color:#031020}
+.day-check.done{background:var(--green);border-color:var(--green);color:#031020}
+
+/* MASTERY CARD */
+.mastery-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:var(--space-5);margin-bottom:24px;animation:rise .7s ease both}
+.mc-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.mc-stat{text-align:center;padding:12px 14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);min-width:68px;flex:1}
+.ms-l{font-family:var(--font-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin-bottom:4px}
+.ms-v{font-family:var(--font-display);font-weight:800;font-size:20px;line-height:1}
+.mc-bar-wrap{margin-bottom:14px}
+.mc-bar-track{height:10px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;border:1px solid var(--border-soft);margin-bottom:8px}
+.mc-bar-fill{height:100%;border-radius:100px;transition:width .9s cubic-bezier(.25,.46,.45,.94)}
+.mc-cps{display:flex;justify-content:space-between}
+.mc-cp{font-family:var(--font-mono);font-size:10px;color:var(--text-500)}
+.mc-cp.hit{color:var(--green)}
+.mc-trend{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-300);padding:10px 14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft)}
+.mc-trend b{color:#fff}
 </style>
 </head>
 <body>
@@ -451,48 +570,90 @@ function masteryColor(m) {
   return 'var(--green)';
 }
 
-// ===== TASK GENERATION =====
-function generateTasksV2(topic, sub, mastery, improvementScore, profile, daysUntilExam) {
-  const isUrgent = daysUntilExam != null && daysUntilExam < 30;
-  const declining = improvementScore != null && improvementScore < -8;
-  const improving = improvementScore != null && improvementScore > 8;
-  let tasks;
-  if (mastery < 30) {
-    tasks = [
-      { title: 'Study ' + sub + ' fundamentals',           minutes: 10 },
-      { title: 'Practice easy ' + sub + ' questions',      minutes: 15 },
-      { title: 'Ask Zero to explain ' + sub,               minutes: 10 },
-      { title: 'Guided practice: ' + sub + ' step-by-step', minutes: 15 },
-      { title: 'Review your ' + sub + ' progress',         minutes: 10 },
-    ];
-  } else if (mastery < 50) {
-    tasks = [
-      { title: 'Review ' + sub + ' core formulas',         minutes: 10 },
-      { title: 'Practice medium ' + sub + ' questions',    minutes: 15 },
-      { title: 'Diagnose ' + sub + ' gaps with Zero',      minutes: 10 },
-      { title: 'Practice hard ' + sub + ' questions',      minutes: 20 },
-      { title: 'Self-test: ' + sub + ' understanding',     minutes: 10 },
-    ];
-  } else if (mastery < 70) {
-    tasks = [
-      { title: 'Timed drill: ' + sub + ' questions',       minutes: 15 },
-      { title: 'Mixed ' + topic + ' practice',             minutes: 20 },
-      { title: 'Ask Zero for ' + sub + ' exam tips',       minutes: 10 },
-      { title: 'Practice hard ' + sub + ' questions',      minutes: 20 },
-      { title: 'Exam-style ' + sub + ' section',           minutes: 15 },
-    ];
-  } else {
-    tasks = [
-      { title: 'Advanced ' + sub + ' challenge',           minutes: 20 },
-      { title: 'Exam-style ' + topic + ' section',         minutes: 20 },
-      { title: 'Mini mastery test: ' + sub,                minutes: 10 },
-      { title: 'Teach back ' + sub + ' to Zero',           minutes: 15 },
-    ];
+// ===== SUBTOPIC MAP =====
+const SUBTOPIC_MAP = {
+  'Algebra': ['Linear Equations','Systems of Equations','Quadratic Equations','Polynomials','Inequalities','Absolute Value','Exponents & Radicals','Functions','Sequences & Patterns'],
+  'Geometry': ['Triangles','Circles','Angles & Lines','Coordinate Geometry','Area & Volume','Similar Figures','Transformations','3D Shapes'],
+  'Word Problems': ['Linear Word Problems','Percent Problems','Ratio Problems','Rate & Work Problems','Mixture Problems','Distance & Speed Problems','Statistics Word Problems'],
+  'Statistics': ['Mean, Median, Mode','Standard Deviation','Data Tables','Scatter Plots','Probability','Sampling Methods','Survey Design'],
+  'Trigonometry': ['Sin, Cos, Tan','Unit Circle','Trig Identities','Radian Measure','Inverse Trig','Law of Sines & Cosines'],
+  'Number Theory': ['Integers','Fractions & Decimals','Percentages','Ratios & Proportions','Prime Numbers','Factors & Multiples'],
+  'Calculus': ['Limits','Derivatives','Chain Rule','Product Rule','Integration','Optimization Problems'],
+  'Probability': ['Basic Probability','Compound Events','Conditional Probability','Combinations','Permutations'],
+  'Linear Equations': ['One-Variable Equations','Two-Variable Equations','Slope & Rate of Change','Intercepts','Parallel & Perpendicular Lines'],
+  'Order of Operations': ['PEMDAS Rules','Nested Parentheses','Integer Operations','Fraction Operations'],
+  'Quadratic Equations': ['Factoring','Quadratic Formula','Completing the Square','Vertex Form','Discriminant'],
+  'Complex Numbers': ['Imaginary Numbers','Operations with Complex Numbers','Complex Conjugates','Modulus & Argument'],
+};
+
+// ===== EXAM FREQUENCY WEIGHTS =====
+const EXAM_FREQ = {
+  'algebra':1.0,'word problems':0.9,'linear equations':0.9,'order of operations':0.85,
+  'geometry':0.8,'statistics':0.75,'quadratic equations':0.75,'number theory':0.7,
+  'probability':0.7,'trigonometry':0.55,'calculus':0.45,'complex numbers':0.4,
+};
+
+// ===== QUESTION TARGET PER DAY =====
+function computeQTarget(mastery, topic, examType) {
+  const freq = EXAM_FREQ[(topic||'').toLowerCase()] || 0.6;
+  const weakness = (100 - mastery) / 100;
+  const priority = weakness * 0.6 + freq * 0.4;
+  if (priority >= 0.72) return 80;
+  if (priority >= 0.52) return 50;
+  if (priority >= 0.32) return 30;
+  return 15;
+}
+
+// ===== TASK ICONS =====
+const TASK_ICONS = { learn:'📖', practice:'✏️', review:'🔍', ask_zero:'💬', drill:'⏱️' };
+
+// ===== DAILY PLAN — 9 TASKS ACROSS 3 DAYS =====
+function generateAllDayTasks(sub, topic, mastery, qTarget) {
+  const easy  = Math.max(5, Math.round(qTarget * 0.45));
+  const drill = Math.max(5, Math.round(qTarget * 0.75));
+  return [
+    { day:1, type:'learn',    title:'Learn ' + sub + ' — core concepts & rules',         minutes:10,  priority:1 },
+    { day:1, type:'practice', title:'Solve ' + easy + ' easy ' + sub + ' questions',     minutes:15,  priority:2 },
+    { day:1, type:'review',   title:'Review every mistake — find the pattern',           minutes:10,  priority:3 },
+    { day:2, type:'practice', title:'Solve ' + qTarget + ' medium ' + sub + ' questions',minutes:20,  priority:4 },
+    { day:2, type:'review',   title:'Identify your repeated mistakes',                   minutes:10,  priority:5 },
+    { day:2, type:'ask_zero', title:'Ask Zero about 2 confusing questions',              minutes:10,  priority:6 },
+    { day:3, type:'drill',    title:'Timed drill — ' + drill + ' questions in 20 min',   minutes:20,  priority:7 },
+    { day:3, type:'review',   title:'Review under pressure — what slowed you down?',     minutes:10,  priority:8 },
+    { day:3, type:'practice', title:'Final accuracy check — target 80%+ on ' + sub,     minutes:15,  priority:9 },
+  ];
+}
+
+// ===== TASK DAY GROUPING =====
+function groupTasksByDay(tasks) {
+  var g = {1:[],2:[],3:[]};
+  tasks.forEach(function(t) {
+    var p = t.priority || 1;
+    var d = p <= 3 ? 1 : p <= 6 ? 2 : 3;
+    g[d].push(t);
+  });
+  return g;
+}
+function getCurrentDay(groups) {
+  for (var d = 1; d <= 3; d++) {
+    var ts = groups[d] || [];
+    if (ts.length === 0 || ts.some(function(t){ return (t.status||'NOT_STARTED') !== 'DONE'; })) return d;
   }
-  if (declining) tasks.unshift({ title: 'Foundation review: ' + sub + ' basics', minutes: 10 });
-  if (improving) tasks.push({ title: 'Consolidate: connect ' + sub + ' to ' + topic, minutes: 10 });
-  if (isUrgent) tasks = tasks.slice(0, 3);
-  return tasks;
+  return 3;
+}
+
+// ===== WEEKLY STATS =====
+function computeWeeklyStats(allRecords, qTarget, profile) {
+  var now = new Date();
+  var day = now.getDay();
+  var daysSinceMon = (day + 6) % 7;
+  var weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - daysSinceMon);
+  weekStart.setHours(0,0,0,0);
+  var qDone = (allRecords||[]).filter(function(r){ return new Date(r.created_at) >= weekStart; }).length;
+  var sessPerWeek = (profile && (profile.sessions_per_week || profile.weekly_sessions)) || 5;
+  var qWeeklyTarget = qTarget * sessPerWeek;
+  return { qDone: qDone, qWeeklyTarget: qWeeklyTarget, sessPerWeek: sessPerWeek };
 }
 
 // ===== TIME-TO-IMPROVE =====
@@ -505,49 +666,6 @@ function estimatedTimeToImprove(mastery, improvementScore, profile) {
   return { weeks, sessNeeded, sessPerWeek };
 }
 
-// ===== RECOMMENDED ACTIONS =====
-function getRecommendedActions(sub, topic, mastery) {
-  if (mastery < 30) return [
-    { icon: '🧱', title: 'Build the Foundation', desc: 'Start with core definitions and basic rules for ' + sub + '. Don\'t skip steps.' },
-    { icon: '💬', title: 'Chat with Zero', desc: 'Ask Zero to walk through ' + sub + ' with worked examples tailored to your level.' },
-    { icon: '📋', title: 'Easy Question Sets', desc: 'Do easy ' + sub + ' questions until you feel confident before moving up.' },
-  ];
-  if (mastery < 50) return [
-    { icon: '🔍', title: 'Diagnose Your Gaps', desc: 'Ask Zero which parts of ' + sub + ' you keep getting wrong. Find the pattern.' },
-    { icon: '📘', title: 'Review Core Formulas', desc: 'Make sure all key ' + sub + ' formulas are memorized and you can apply them cold.' },
-    { icon: '⚡', title: 'Medium Practice Sets', desc: 'Build stamina with medium-difficulty ' + sub + ' questions until accuracy is stable.' },
-  ];
-  if (mastery < 70) return [
-    { icon: '⏱️', title: 'Timed Practice Drills', desc: 'Do timed sets of ' + sub + ' questions to build exam-speed accuracy.' },
-    { icon: '🎯', title: 'Attack Hard Questions', desc: 'Push into harder ' + sub + ' problems — that\'s the band you need to crack.' },
-    { icon: '🔄', title: 'Mixed Topic Practice', desc: 'Combine ' + topic + ' subtopics so you can switch context fast on exam day.' },
-  ];
-  return [
-    { icon: '🏆', title: 'Advanced Challenges', desc: 'Seek the hardest ' + sub + ' questions available. You\'re close to mastery.' },
-    { icon: '📝', title: 'Exam Simulation', desc: 'Practice full timed exam sections that include ' + sub + ' under real conditions.' },
-    { icon: '🗣️', title: 'Teach It Back to Zero', desc: 'Explain ' + sub + ' back to Zero. Teaching exposes hidden gaps you didn\'t know you had.' },
-  ];
-}
-
-// ===== RECOMMENDED RESOURCES =====
-function getRecommendedResources(topic, sub, mastery) {
-  const diff = mastery < 50 ? 'easy' : mastery < 70 ? 'medium' : 'hard';
-  const base = 'chat.html?topic=' + encodeURIComponent(topic) + '&subtopic=' + encodeURIComponent(sub);
-  return [
-    { label: 'Practice with Zero — ' + sub, url: base + '&difficulty=' + diff, tag: 'AI Tutor', rank: 'si' },
-    { label: 'Quiz mode — ' + diff + ' level', url: base + '&difficulty=' + diff + '&mode=quiz', tag: 'Quiz', rank: 'si' },
-    { label: 'View Weakness Analysis', url: 'weakness.html', tag: 'Analysis', rank: 'si' },
-  ];
-}
-
-// ===== SESSION OPTIONS =====
-function generateSessions(sessionLength) {
-  return [
-    { label: 'Quick Focus',  minutes: Math.round(sessionLength * 0.6), desc: 'Quick warm-up session' },
-    { label: 'Standard',     minutes: sessionLength,                    desc: 'Standard practice session' },
-    { label: 'Deep Focus',   minutes: Math.round(sessionLength * 1.5), desc: 'Extended deep-dive session' },
-  ];
-}
 
 // ===== PLAN UPSERT (stable — no reshuffle) =====
 async function upsertPlan(user, primaryTopic, newTaskDefs) {
@@ -622,277 +740,270 @@ async function cycleTask(taskId, currentStatus, btn, label) {
   if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
 }
 
-// ===== RENDER =====
+// ===== RENDER EMPTY =====
 function renderEmpty() {
   document.getElementById('pageContent').innerHTML = `
-    <div class="empty-state" style="text-align:center;padding:60px 20px;color:var(--text-400)">
-      <div style="font-size:48px;margin-bottom:16px">🎯</div>
-      <h2 style="color:var(--text-100);margin-bottom:8px">No focus data yet</h2>
-      <p style="margin-bottom:24px">Start chatting with Zero to build your personalized focus plan.</p>
-      <a href="chat.html" style="display:inline-block;background:var(--cyan-3);color:#000;padding:10px 24px;border-radius:8px;font-weight:600;text-decoration:none">Start Practice →</a>
+    <div style="text-align:center;padding:80px 20px;color:var(--text-400)">
+      <div style="font-size:52px;margin-bottom:16px">🎯</div>
+      <h2 style="color:var(--text-100);font-family:var(--font-display);margin-bottom:8px">No focus data yet</h2>
+      <p style="margin-bottom:8px;max-width:360px;margin-left:auto;margin-right:auto">Start chatting with Zero or take a mock exam to build your personalized study plan.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px">
+        <a href="chat.html" style="display:inline-flex;align-items:center;gap:8px;background:var(--cyan);color:#031020;padding:12px 22px;border-radius:10px;font-weight:700;text-decoration:none;font-size:14px">💬 Chat with Zero</a>
+        <a href="weakness.html" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg-card);color:var(--text-200);padding:12px 22px;border-radius:10px;font-weight:600;text-decoration:none;font-size:14px;border:1px solid var(--border-mid)">📊 View Weaknesses</a>
+      </div>
     </div>`;
 }
 
-function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank, timeToImprove) {
-  const sessionLength = (profile && profile.session_length) ? profile.session_length : 45;
-  const sessions      = generateSessions(sessionLength);
-  const examType      = (profile && profile.exam_type)    ? profile.exam_type    : 'SAT';
-  const targetScore   = (profile && profile.target_score) ? profile.target_score : '—';
-  const examDate      = (profile && profile.exam_date)    ? profile.exam_date    : null;
-  const rank          = primaryRank != null ? primaryRank : 1;
+function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank, timeToImprove, allRecords) {
+  var examType    = (profile && profile.exam_type)    || 'SAT';
+  var m = primaryTopic.mastery;
+  var mTarget = Math.min(m + 15, 100);
+  var qTarget = computeQTarget(m, primaryTopic.topic, examType);
+  var weekStats = computeWeeklyStats(allRecords || [], qTarget, profile);
 
-  const checkpoints = [50, 70, 85, 90];
-  const m = primaryTopic.mastery;
+  // merge DB task statuses with generated day plan
+  var taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, m, qTarget);
+  var merged = taskDefs.map(function(def, i) {
+    var dbTask = tasks.find(function(t){ return t.priority === i+1; }) || tasks[i];
+    return Object.assign({}, def, {
+      id: dbTask ? dbTask.id : null,
+      status: dbTask ? (dbTask.status || 'NOT_STARTED') : 'NOT_STARTED',
+      priority: i + 1,
+    });
+  });
+  var groups = groupTasksByDay(merged);
+  var currentDay = getCurrentDay(groups);
+  var todayTasks = groups[currentDay] || [];
+  var todayEstMins = todayTasks.reduce(function(s,t){ return s + (t.minutes||0); }, 0);
+  var doneTodayCount = todayTasks.filter(function(t){ return t.status==='DONE'; }).length;
 
-  function chatUrl(topic, subtopic, difficulty) {
-    return 'chat.html?topic=' + encodeURIComponent(topic) +
-           '&subtopic=' + encodeURIComponent(subtopic) +
-           '&difficulty=' + encodeURIComponent(difficulty || 'medium');
-  }
-  function priColor(pc) {
-    if (pc === 'critical') return '#f87171';
-    if (pc === 'high')     return 'var(--red)';
-    if (pc === 'med')      return 'var(--amber)';
-    return 'var(--green)';
-  }
-  function fmtDate(d) {
-    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
-    catch(e) { return d; }
-  }
+  // coverage map subtopics
+  var covSubs = SUBTOPIC_MAP[primaryTopic.topic] || SUBTOPIC_MAP[primaryTopic.sub] || [];
+  var qBySub = {};
+  (allRecords||[]).forEach(function(r){
+    var k = (r.subtopic||'').toLowerCase();
+    qBySub[k] = (qBySub[k]||0) + 1;
+  });
+  var maxCovQ = Math.max.apply(null, [1].concat(covSubs.map(function(s){ return qBySub[s.toLowerCase()]||0; })));
 
-  const otherWeaknesses = weaknesses.filter(w => w !== primaryTopic);
-
-  function sessionTaskPreview(sessionMins) {
-    let rem = sessionMins;
-    const out = [];
-    for (const t of tasks) {
-      const mins = t.estimated_minutes || t.minutes || 10;
-      if (rem >= mins) { out.push(t.task_title || t.title); rem -= mins; }
-      else break;
-    }
-    return out;
+  function chatUrl(topic, sub, diff) {
+    return 'chat.html?topic=' + encodeURIComponent(topic) + '&subtopic=' + encodeURIComponent(sub) + '&difficulty=' + encodeURIComponent(diff||'medium');
   }
 
-  const logoB64 = 'data:image/png;base64,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';
+  var DAY_NAMES = {1:'Foundation Day',2:'Accuracy Day',3:'Pressure Day'};
+  var DAY_DESCS = {1:'Learn concepts & solve easy questions',2:'Build accuracy with medium questions',3:'Timed drills & pressure practice'};
 
-  const html = `
-    ${rank === 1 ? `
-    <div class="airec" style="margin-bottom:20px;animation:rise .6s ease both">
-      <div class="ai-av"><img src="${logoB64}" alt="Zero"/></div>
-      <div class="ai-body">
-        <div class="al">Zero · Dragon Mentor</div>
-        <p><b>${escHtml(primaryTopic.sub)}</b> is currently your <b>biggest weakness</b>. Improving it will likely produce the <b>fastest score gain</b> on your ${escHtml(examType)}.</p>
-      </div>
-    </div>` : ''}
+  var otherWeak = weaknesses.filter(function(w){ return w !== primaryTopic; }).slice(0,3);
+  var chatDiff = m < 40 ? 'easy' : m < 65 ? 'medium' : 'hard';
 
-    <div class="page-head">
-      <div class="eyebrow"><span class="live-dot"></span> Focus Practice</div>
-      <h1>${escHtml(primaryTopic.sub)}</h1>
-      <p>Your personalized action plan.</p>
-    </div>
+  var html = '';
 
-    <div class="plan-context" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
-      <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/></svg>${escHtml(examType)}</span>
-      <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Session: <b>${sessionLength} min</b></span>
-      <span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Target: <b>${escHtml(String(targetScore))}</b></span>
-      ${examDate ? `<span class="pc-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Exam: <b>${escHtml(fmtDate(examDate))}</b></span>` : ''}
-    </div>
+  // ── ZONE 1: TODAY'S MISSION ──
+  html += '<div class="page-head" style="margin-bottom:16px"><div class="eyebrow"><span class="live-dot"></span>Focus Practice</div>';
+  html += '<h1 style="font-size:clamp(22px,6vw,30px)">' + escHtml(primaryTopic.sub) + '</h1></div>';
 
-    ${timeToImprove ? `
-    <div class="time-banner">
-      <div style="width:42px;height:42px;flex-shrink:0;border-radius:var(--r-sm);background:var(--cyan-bg-med);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-size:20px">⏱️</div>
-      <div class="tb-body">
-        <div class="tb-label">Estimated Time To Improve</div>
-        <div class="tb-val">${timeToImprove.weeks} week${timeToImprove.weeks !== 1 ? 's' : ''}</div>
-        <div class="tb-detail">${timeToImprove.sessNeeded} sessions × ${sessionLength} min · ${escHtml(primaryTopic.trendIcon)} <b>${escHtml(primaryTopic.trend)}</b></div>
-      </div>
-    </div>` : ''}
+  html += '<div class="mission-card">';
+  html += '<div class="mission-header">';
+  html += '<div class="mission-ic">🎯</div>';
+  html += '<div class="mission-meta">';
+  html += '<div class="mission-label">Today\'s Mission &middot; Day ' + currentDay + ' of 3</div>';
+  html += '<div class="mission-title">' + escHtml(DAY_NAMES[currentDay]) + '</div>';
+  html += '<div class="mission-sub">' + escHtml(primaryTopic.sub) + ' &middot; ' + escHtml(DAY_DESCS[currentDay]) + '</div>';
+  html += '</div></div>';
 
-    <div class="sec-label">Primary Mission</div>
-    <section class="rx" style="margin-bottom:24px">
-      <div class="rx-top" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <div class="rx-ic" style="font-size:28px">🎯</div>
-        <div>
-          <div class="l" style="font-size:11px;color:var(--text-400);text-transform:uppercase;letter-spacing:.08em">Primary Focus</div>
-          <div class="t" style="font-size:18px;font-weight:700;color:var(--text-100)">${escHtml(primaryTopic.sub)}</div>
-          <div style="font-size:12px;color:var(--text-400);margin-top:2px">${escHtml(primaryTopic.topic)}</div>
-        </div>
-        <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${priColor(primaryTopic.priorityClass)}22;color:${priColor(primaryTopic.priorityClass)}">${escHtml(primaryTopic.priority)}</span>
-      </div>
-      <div class="rx-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-        <div class="rx-stat"><div class="l">Rank</div><div class="v" style="color:var(--red)">#${rank}</div></div>
-        <div class="rx-stat"><div class="l">Mastery</div><div class="v cur">${m}%</div></div>
-        <div class="rx-stat"><div class="l">Questions</div><div class="v time">${primaryTopic.total}</div></div>
-        <div class="rx-stat"><div class="l">Help Reqs</div><div class="v gain">${primaryTopic.helpReqs || 0}</div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-        <span style="font-family:var(--font-mono);font-size:13px;color:${masteryColor(m)};font-weight:700">Mastery ${m}%</span>
-        <div style="flex:1;height:6px;background:var(--bg-elev-1);border-radius:3px;overflow:hidden">
-          <div style="width:${m}%;height:100%;background:${masteryColor(m)};border-radius:3px;transition:width .6s ease"></div>
-        </div>
-      </div>
-      <a href="${chatUrl(primaryTopic.topic, primaryTopic.sub, 'easy')}" style="display:inline-flex;align-items:center;gap:8px;background:var(--cyan-3);color:#000;padding:10px 20px;border-radius:8px;font-weight:600;text-decoration:none;font-size:14px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
-        Start Practice Session
-      </a>
-    </section>
+  html += '<div class="mission-tasks">';
+  todayTasks.forEach(function(t) {
+    var st = t.status || 'NOT_STARTED';
+    var btnCls = 'mt-check' + (st==='IN_PROGRESS'?' inprogress':st==='DONE'?' done':'');
+    var btnTxt = st==='IN_PROGRESS'?'&#9654;':st==='DONE'?'&#10003;':'';
+    var titleCls = 'mt-title' + (st==='DONE'?' done':'');
+    html += '<div class="mission-task">';
+    html += '<button class="' + btnCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '">' + btnTxt + '</button>';
+    html += '<div class="mt-body"><div class="' + titleCls + '">' + escHtml(t.title) + '</div>';
+    html += '<div class="mt-type">' + escHtml(t.type) + '</div></div>';
+    if (t.minutes) html += '<div class="mt-time">' + t.minutes + ' min</div>';
+    html += '</div>';
+  });
+  html += '</div>';
 
-    <div class="sec-label">Why This Was Chosen</div>
-    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:16px 20px;margin-bottom:24px">
-      <ul style="margin:0;padding-left:20px;color:var(--text-300);font-size:13.5px;line-height:1.8">
-        ${primaryTopic.whyBullets.map(b => `<li>${escHtml(b)}</li>`).join('')}
-      </ul>
-      ${primaryTopic.avgConf != null ? `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-        <div>
-          <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Avg Confidence</div>
-          <div style="font-size:16px;font-weight:700;color:${primaryTopic.avgConf < 3 ? 'var(--red)' : primaryTopic.avgConf < 4 ? 'var(--amber)' : 'var(--green)'}">${primaryTopic.avgConf.toFixed(1)} / 5</div>
-        </div>
-        <div>
-          <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Trend</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text-200)">${primaryTopic.trendIcon} ${escHtml(primaryTopic.trend)}</div>
-        </div>
-        <div>
-          <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-500);margin-bottom:3px">Confidence Points</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text-200)">${primaryTopic.confAfterArr ? primaryTopic.confAfterArr.length : 0} recorded</div>
-        </div>
-      </div>` : ''}
-    </div>
+  html += '<div class="mission-footer">';
+  html += '<div class="mission-est">Estimated: <b>' + todayEstMins + ' min</b> &middot; ' + doneTodayCount + '/' + todayTasks.length + ' done</div>';
+  html += '<a href="' + chatUrl(primaryTopic.topic, primaryTopic.sub, chatDiff) + '" class="mission-cta">';
+  html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg> Start Session &rarr;';
+  html += '</a></div></div>';
 
-    <div class="sec-label">Recommended Actions</div>
-    <div class="act-grid">
-      ${getRecommendedActions(primaryTopic.sub, primaryTopic.topic, m).map(a => `
-      <div class="act-card">
-        <div class="act-ic">${escHtml(a.icon)}</div>
-        <div class="act-body">
-          <div class="act-title">${escHtml(a.title)}</div>
-          <div class="act-desc">${escHtml(a.desc)}</div>
-        </div>
-      </div>`).join('')}
-    </div>
+  // ── ZONE 2: WEEKLY GOAL ──
+  html += '<div class="sec-label">Weekly Goal</div>';
+  html += '<div class="week-tracker">';
+  html += '<div class="wt-header"><div class="wt-title">This Week\'s Progress</div><div class="wt-badge">' + escHtml(examType) + '</div></div>';
+  var qPct = Math.min(100, Math.round(weekStats.qDone / Math.max(1,weekStats.qWeeklyTarget) * 100));
+  html += '<div class="wt-rows">';
+  html += '<div class="wt-row"><div class="wr-lbl">Questions</div><div class="wr-track"><div class="wr-fill q" style="width:' + qPct + '%"></div></div><div class="wr-val">' + weekStats.qDone + ' / ' + weekStats.qWeeklyTarget + '</div></div>';
+  html += '<div class="wt-row"><div class="wr-lbl">Daily Target</div><div class="wr-track"><div class="wr-fill s" style="width:100%"></div></div><div class="wr-val">' + qTarget + ' Qs/day</div></div>';
+  html += '</div>';
+  html += '<div class="wt-mastery">';
+  html += '<div class="wm-now"><div class="wm-label">Now</div><div class="wm-val" style="color:' + masteryColor(m) + '">' + m + '%</div></div>';
+  html += '<div class="wm-arrow">&rarr;</div>';
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+  html += '<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-500)">WEEK TARGET</span>';
+  html += '<span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--green)">' + mTarget + '%</span></div>';
+  var mastPct = Math.min(100, Math.round(m / mTarget * 100));
+  html += '<div class="wm-track"><div class="wm-fill" style="width:' + mastPct + '%"></div></div>';
+  html += '</div></div></div>';
 
-    <div class="sec-label">Recommended Resources</div>
-    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;overflow:hidden;margin-bottom:24px">
-      ${getRecommendedResources(primaryTopic.topic, primaryTopic.sub, m).map(r => `
-      <div class="res-item" style="padding:11px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:10px">
-        <span style="font-family:var(--font-mono);font-size:9.5px;padding:3px 8px;border-radius:100px;white-space:nowrap;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)">${escHtml(r.tag)}</span>
-        <a href="${r.url}" style="flex:1;font-size:13.5px;color:var(--text-200);text-decoration:none" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--text-200)'">${escHtml(r.label)}</a>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-500);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>`).join('')}
-    </div>
+  // ── ZONE 3: COVERAGE MAP ──
+  if (covSubs.length > 0) {
+    html += '<div class="sec-label">Topic Coverage Map</div>';
+    html += '<div class="coverage-card">';
+    html += '<div class="cov-intro">Work through each sub-concept of <b style="color:#fff">' + escHtml(primaryTopic.topic) + '</b> to build complete mastery.</div>';
+    html += '<div class="cov-subtopics">';
+    covSubs.forEach(function(sub) {
+      var count = qBySub[sub.toLowerCase()] || 0;
+      var practiced = count > 0;
+      var barW = Math.round(count / maxCovQ * 100);
+      var url = 'chat.html?topic=' + encodeURIComponent(primaryTopic.topic) + '&subtopic=' + encodeURIComponent(sub) + '&difficulty=' + (m < 40 ? 'easy' : 'medium');
+      html += '<a href="' + url + '" class="cov-row' + (practiced?' practiced':'') + '">';
+      html += '<div class="cr-check">' + (practiced ? '&#10003;' : '') + '</div>';
+      html += '<div class="cr-name">' + escHtml(sub) + '</div>';
+      html += '<div class="cr-bar-wrap"><div class="cr-bar" style="width:' + barW + '%"></div></div>';
+      html += '<div class="cr-count">' + (count > 0 ? count + ' Qs' : '0 Qs') + '</div>';
+      html += '</a>';
+    });
+    html += '</div></div>';
+  }
 
-    <div class="sec-label">Focus Tasks</div>
-    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;overflow:hidden;margin-bottom:24px">
-      ${tasks.map(t => {
-        const st = t.status || 'NOT_STARTED';
-        const btnCls = 'task-toggle' + (st === 'IN_PROGRESS' ? ' inprogress' : st === 'DONE' ? ' done' : '');
-        const btnTxt = st === 'IN_PROGRESS' ? '▶' : st === 'DONE' ? '✓' : '';
-        const labelStyle = st === 'DONE' ? 'flex:1;font-size:13.5px;color:var(--text-200);text-decoration:line-through;opacity:.5' : 'flex:1;font-size:13.5px;color:var(--text-200)';
-        return `
-        <div class="wp-day" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-soft)">
-          <button class="${btnCls}" data-task-id="${escHtml(String(t.id || ''))}" data-status="${st}" title="Click to cycle: Not Started → In Progress → Done">${btnTxt}</button>
-          <span style="${labelStyle}" class="task-label">${escHtml(t.task_title || t.title)}</span>
-          <span style="font-size:11px;color:var(--text-400);font-family:var(--font-mono);flex-shrink:0">${t.estimated_minutes || t.minutes} min</span>
-        </div>`;
-      }).join('')}
-    </div>
+  // ── ZONE 4: DAILY CHECKLIST ──
+  html += '<div class="sec-label">3-Day Study Plan</div>';
+  html += '<div class="day-cards">';
+  [1,2,3].forEach(function(d) {
+    var dayTasks = groups[d] || [];
+    var allDone = dayTasks.length > 0 && dayTasks.every(function(t){ return t.status==='DONE'; });
+    var isToday = d === currentDay;
+    var isUpcoming = d > currentDay;
+    var cardCls = 'day-card' + (isToday?' active open':'') + (allDone?' done-all':'');
+    var badgeCls = allDone ? 'done' : isToday ? 'today' : 'locked';
+    var badgeTxt = allDone ? '&#10003; Done' : isToday ? 'Today' : 'Upcoming';
+    html += '<div class="' + cardCls + '">';
+    html += '<div class="day-card-head">';
+    html += '<div class="dc-num">' + d + '</div>';
+    html += '<div class="dc-meta">';
+    html += '<div class="dc-title">' + escHtml(DAY_NAMES[d]) + '</div>';
+    html += '<div class="dc-sub">' + escHtml(DAY_DESCS[d]) + '</div>';
+    html += '</div>';
+    html += '<div class="dc-right"><span class="dc-badge ' + badgeCls + '">' + badgeTxt + '</span><span class="dc-chev">&#9660;</span></div>';
+    html += '</div>';
+    html += '<div class="day-body">';
+    dayTasks.forEach(function(t) {
+      var st = t.status || 'NOT_STARTED';
+      var chkCls = 'day-check' + (st==='IN_PROGRESS'?' inprogress':st==='DONE'?' done':'');
+      var chkTxt = st==='IN_PROGRESS'?'&#9654;':st==='DONE'?'&#10003;':'';
+      var icon = TASK_ICONS[t.type] || '&#128204;';
+      html += '<div class="day-task">';
+      html += '<div class="dt-ic ' + escHtml(t.type) + '">' + icon + '</div>';
+      html += '<div class="dt-meta"><div class="dt-title">' + escHtml(t.title) + '</div>';
+      html += '<div class="dt-type">' + escHtml(t.type) + '</div></div>';
+      if (t.minutes) html += '<div class="dt-time">' + t.minutes + ' min</div>';
+      html += '<button class="' + chkCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '">' + chkTxt + '</button>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
 
-    <div class="sec-label">Session Options</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
-      ${sessions.map(s => {
-        const preview = sessionTaskPreview(s.minutes);
-        return `
-        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--cyan-border)'" onmouseout="this.style.borderColor='var(--border-soft)'">
-          <div style="font-weight:700;font-size:14px;color:var(--text-100)">${escHtml(s.label)}</div>
-          <div style="font-family:var(--font-mono);font-size:13px;color:var(--cyan-3);font-weight:700">${s.minutes} min</div>
-          <div style="flex:1;font-size:11.5px;color:var(--text-400);line-height:1.6">
-            ${preview.length > 0
-              ? preview.map((pt, i) => `<div style="display:flex;gap:6px"><span style="font-family:var(--font-mono);color:var(--text-500);font-size:10px;flex-shrink:0;margin-top:1px">${i+1}.</span><span>${escHtml(pt)}</span></div>`).join('')
-              : `<div style="color:var(--text-500)">No tasks fit this time slot</div>`}
-          </div>
-          <a href="${chatUrl(primaryTopic.topic, primaryTopic.sub, 'medium')}" style="display:inline-block;margin-top:4px;background:var(--bg-elev-2);color:var(--text-200);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;text-align:center;border:1px solid var(--border-mid)">Start →</a>
-        </div>`;
-      }).join('')}
-    </div>
+  // ── ZONE 5: MASTERY PROGRESS ──
+  html += '<div class="sec-label">Mastery Progress</div>';
+  html += '<div class="mastery-card">';
+  html += '<div class="mc-stats">';
+  html += '<div class="mc-stat"><div class="ms-l">Current</div><div class="ms-v" style="color:' + masteryColor(m) + '">' + m + '%</div></div>';
+  html += '<div class="mc-stat"><div class="ms-l">Target</div><div class="ms-v" style="color:var(--green)">' + mTarget + '%</div></div>';
+  html += '<div class="mc-stat"><div class="ms-l">Daily Qs</div><div class="ms-v" style="color:var(--cyan)">' + qTarget + '</div></div>';
+  if (timeToImprove) html += '<div class="mc-stat"><div class="ms-l">Est. Time</div><div class="ms-v" style="color:var(--amber)">' + timeToImprove.weeks + 'w</div></div>';
+  html += '</div>';
+  html += '<div class="mc-bar-wrap">';
+  html += '<div class="mc-bar-track"><div class="mc-bar-fill" style="width:' + m + '%;background:' + masteryColor(m) + ';box-shadow:0 0 10px ' + masteryColor(m) + '55"></div></div>';
+  html += '<div class="mc-cps">';
+  [25,50,75,90].forEach(function(cp){ html += '<span class="mc-cp' + (m>=cp?' hit':'') + '">' + cp + '%' + (m>=cp?' &#10003;':'') + '</span>'; });
+  html += '</div></div>';
+  html += '<div class="mc-trend"><span style="font-size:18px">' + escHtml(primaryTopic.trendIcon) + '</span>';
+  html += '<span>Trend: <b>' + escHtml(primaryTopic.trend) + '</b> &middot; ' + primaryTopic.total + ' questions seen &middot; ' + (primaryTopic.examMistakes||0) + ' exam mistake' + ((primaryTopic.examMistakes||0)!==1?'s':'') + '</span></div>';
+  html += '</div>';
 
-    <div class="sec-label">Progress Milestones</div>
-    <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:20px;margin-bottom:24px">
-      <div style="position:relative;margin:20px 4px 36px">
-        <div style="height:10px;background:var(--bg-elev-1);border-radius:100px;overflow:hidden;border:1px solid var(--border-soft)">
-          <div style="width:${m}%;height:100%;background:${masteryColor(m)};border-radius:100px;transition:width .8s cubic-bezier(.25,.46,.45,.94);box-shadow:0 0 10px ${masteryColor(m)}66"></div>
-        </div>
-        ${checkpoints.map(cp => `
-          <div style="position:absolute;top:-3px;left:${cp}%;transform:translateX(-50%);width:2px;height:16px;background:${m >= cp ? 'var(--green)' : 'var(--border-mid)'}"></div>
-          <div style="position:absolute;top:18px;left:${cp}%;transform:translateX(-50%);font-family:var(--font-mono);font-size:10px;color:${m >= cp ? 'var(--green)' : 'var(--text-500)'};white-space:nowrap;text-align:center">${cp}%${m >= cp ? ' ✓' : ''}</div>`).join('')}
-        <div style="position:absolute;top:-22px;left:${Math.min(Math.max(m,4),96)}%;transform:translateX(-50%);font-family:var(--font-mono);font-size:11px;color:${masteryColor(m)};font-weight:700;white-space:nowrap;background:var(--bg-card);padding:2px 7px;border-radius:5px;border:1px solid ${masteryColor(m)}55">You: ${m}%</div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px">
-        ${checkpoints.map(cp => {
-          const reached = m >= cp;
-          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:${reached ? 'var(--green-soft)' : 'var(--bg-elev-1)'};border:1px solid ${reached ? 'var(--green-border)' : 'var(--border-soft)'}">
-            <span style="font-size:14px">${reached ? '✅' : '⬜'}</span>
-            <span style="font-size:12.5px;color:${reached ? 'var(--green)' : 'var(--text-400)'};font-weight:${reached ? '600' : '400'}">${cp}% Mastery${reached ? ' — Reached!' : ''}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
+  // ── OTHER WEAKNESSES ──
+  if (otherWeak.length > 0) {
+    html += '<div class="sec-label">Other Weaknesses</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">';
+    otherWeak.forEach(function(w) {
+      html += '<div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color .2s" onmouseover="this.style.borderColor=\'var(--cyan-border)\'" onmouseout="this.style.borderColor=\'var(--border-soft)\'">';
+      html += '<div style="width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--bg-elev-1);border:1px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-400)">#' + (weaknesses.indexOf(w)+1) + '</div>';
+      html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text-100)">' + escHtml(w.sub) + '</div>';
+      html += '<div style="font-size:11px;color:var(--text-400);margin-top:2px">' + escHtml(w.topic) + ' &middot; <span style="color:' + masteryColor(w.mastery) + '">' + w.mastery + '% mastery</span></div></div>';
+      html += '<a href="focus.html?topic=' + encodeURIComponent(w.topic) + '&subtopic=' + encodeURIComponent(w.sub) + '&mastery=' + w.mastery + '" style="background:var(--bg-elev-2);color:var(--text-200);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid var(--border-mid);white-space:nowrap;flex-shrink:0">Switch &rarr;</a>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
 
-    ${otherWeaknesses.length > 0 ? `
-    <div class="sec-label">Other Weaknesses</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
-      ${otherWeaknesses.slice(0, 3).map(w => {
-        const wRank = weaknesses.indexOf(w) + 1;
-        return `
-        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--cyan-border)'" onmouseout="this.style.borderColor='var(--border-soft)'">
-          <div style="width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--bg-elev-1);border:1px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-400)">#${wRank}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:var(--text-100)">${escHtml(w.sub)}</div>
-            <div style="font-size:11px;color:var(--text-400);margin-top:2px">${escHtml(w.topic)} · <span style="color:${masteryColor(w.mastery)}">${w.mastery}% mastery</span> · ${escHtml(w.priority)}</div>
-          </div>
-          <a href="focus.html?topic=${encodeURIComponent(w.topic)}&subtopic=${encodeURIComponent(w.sub)}&mastery=${w.mastery}" style="background:var(--bg-elev-2);color:var(--text-200);padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid var(--border-mid);white-space:nowrap">Switch Focus</a>
-        </div>`;
-      }).join('')}
-    </div>` : ''}
-
-    ${strengths.length > 0 ? `
-    <div class="sec-label">Your Strengths</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
-      ${strengths.slice(0, 5).map(w => `
-        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--text-100)">${escHtml(w.sub)}</div>
-            <div style="font-size:11px;color:var(--text-400)">${escHtml(w.topic)}</div>
-            ${w.strengthBullets.slice(0,2).map(b => `<div style="font-size:11px;color:var(--text-400);margin-top:2px">${escHtml(b)}</div>`).join('')}
-          </div>
-          <span style="font-family:var(--font-mono);font-size:13px;color:${masteryColor(w.mastery)};font-weight:700">${w.mastery}%</span>
-        </div>`).join('')}
-    </div>` : ''}
-
-    ${mastered.length > 0 ? `
-    <div class="sec-label">Mastered Topics</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
-      ${mastered.slice(0, 5).map(w => `
-        <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">
-          <span style="font-size:18px">🏆</span>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--text-100)">${escHtml(w.sub)}</div>
-            <div style="font-size:11px;color:var(--text-400)">${escHtml(w.topic)}</div>
-          </div>
-          <span style="font-family:var(--font-mono);font-size:13px;color:var(--green);font-weight:700">${w.mastery}%</span>
-        </div>`).join('')}
-    </div>` : ''}
-  `;
+  // ── STRENGTHS ──
+  if (strengths.length > 0) {
+    html += '<div class="sec-label">Your Strengths</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:32px">';
+    strengths.slice(0,4).forEach(function(w) {
+      html += '<div style="background:var(--bg-card);border:1px solid var(--green-border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">';
+      html += '<span style="font-size:18px">&#128170;</span>';
+      html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text-100)">' + escHtml(w.sub) + '</div><div style="font-size:11px;color:var(--text-400)">' + escHtml(w.topic) + '</div></div>';
+      html += '<span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--green)">' + w.mastery + '%</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
 
   document.getElementById('pageContent').innerHTML = html;
 
-  // wire up 3-state task toggles
-  document.querySelectorAll('.task-toggle').forEach(btn => {
+  // Wire mission task checkboxes
+  document.querySelectorAll('.mt-check').forEach(function(btn) {
     btn.addEventListener('click', async function() {
-      const taskId = this.getAttribute('data-task-id');
-      const currentStatus = this.getAttribute('data-status') || 'NOT_STARTED';
-      const row = this.closest('.wp-day');
-      const label = row ? row.querySelector('.task-label') : null;
-      await cycleTask(taskId, currentStatus, this, label);
+      var taskId = this.getAttribute('data-task-id');
+      var st = this.getAttribute('data-status') || 'NOT_STARTED';
+      var next = st==='NOT_STARTED'?'IN_PROGRESS':st==='IN_PROGRESS'?'DONE':'NOT_STARTED';
+      this.setAttribute('data-status', next);
+      this.className = 'mt-check' + (next==='IN_PROGRESS'?' inprogress':next==='DONE'?' done':'');
+      this.textContent = next==='IN_PROGRESS'?'▶':next==='DONE'?'✓':'';
+      var row = this.closest('.mission-task');
+      var lbl = row ? row.querySelector('.mt-title') : null;
+      if (lbl) { if (next==='DONE') lbl.classList.add('done'); else lbl.classList.remove('done'); }
+      // sync day-check
+      var dc = document.querySelector('.day-check[data-task-id="' + (taskId||'').replace(/"/g,'&quot;') + '"]');
+      if (dc) { dc.setAttribute('data-status',next); dc.className='day-check'+(next==='IN_PROGRESS'?' inprogress':next==='DONE'?' done':''); dc.textContent=next==='IN_PROGRESS'?'▶':next==='DONE'?'✓':''; }
+      if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+    });
+  });
+
+  // Wire day-card accordion
+  document.querySelectorAll('.day-card-head').forEach(function(head) {
+    head.addEventListener('click', function() {
+      this.closest('.day-card').classList.toggle('open');
+    });
+  });
+
+  // Wire day-card checkboxes
+  document.querySelectorAll('.day-check').forEach(function(btn) {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      var taskId = this.getAttribute('data-task-id');
+      var st = this.getAttribute('data-status') || 'NOT_STARTED';
+      var next = st==='NOT_STARTED'?'IN_PROGRESS':st==='IN_PROGRESS'?'DONE':'NOT_STARTED';
+      this.setAttribute('data-status', next);
+      this.className = 'day-check' + (next==='IN_PROGRESS'?' inprogress':next==='DONE'?' done':'');
+      this.textContent = next==='IN_PROGRESS'?'▶':next==='DONE'?'✓':'';
+      // sync mission check
+      var mc = document.querySelector('.mt-check[data-task-id="' + (taskId||'').replace(/"/g,'&quot;') + '"]');
+      if (mc) {
+        mc.setAttribute('data-status',next); mc.className='mt-check'+(next==='IN_PROGRESS'?' inprogress':next==='DONE'?' done':''); mc.textContent=next==='IN_PROGRESS'?'▶':next==='DONE'?'✓':'';
+        var row = mc.closest('.mission-task'); var lbl = row ? row.querySelector('.mt-title') : null;
+        if (lbl) { if (next==='DONE') lbl.classList.add('done'); else lbl.classList.remove('done'); }
+      }
+      if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
     });
   });
 }
@@ -1153,7 +1264,9 @@ async function loadData() {
   }
 
   const impScore = primaryTopic.improvementScore != null ? primaryTopic.improvementScore : null;
-  const taskDefs = generateTasksV2(primaryTopic.topic, primaryTopic.sub, primaryTopic.mastery, impScore, profile, daysUntilExam);
+  const examTypeForPlan = (profile && profile.exam_type) || 'SAT';
+  const qTargetForPlan = computeQTarget(primaryTopic.mastery, primaryTopic.topic, examTypeForPlan);
+  const taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, primaryTopic.mastery, qTargetForPlan);
   const timeToImprove = estimatedTimeToImprove(primaryTopic.mastery, impScore, profile);
 
   let tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
@@ -1171,7 +1284,7 @@ async function loadData() {
   const primaryRank = primaryTopic.priorityRank
     || (weaknesses.indexOf(primaryTopic) + 1)
     || 1;
-  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove);
+  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove, academic);
 }
 
 function showFocusPaywall(reason) {
