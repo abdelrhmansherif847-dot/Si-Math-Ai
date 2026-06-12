@@ -476,30 +476,7 @@ button{font-family:inherit;cursor:pointer}
   </button>
 
   <div class="side-sec">Chat History</div>
-  <a class="history-item" href="#" data-id="1">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <span class="h-title">Quadratic equations help</span>
-    <span class="h-actions">
-      <button class="h-btn" title="Rename" onclick="renameChat(this,event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button class="h-btn del" title="Delete" onclick="deleteChat(this,event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
-    </span>
-  </a>
-  <a class="history-item" href="#" data-id="2">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <span class="h-title">SAT geometry — circles</span>
-    <span class="h-actions">
-      <button class="h-btn" title="Rename" onclick="renameChat(this,event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button class="h-btn del" title="Delete" onclick="deleteChat(this,event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
-    </span>
-  </a>
-  <a class="history-item" href="#" data-id="3">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <span class="h-title">EST practice set 3</span>
-    <span class="h-actions">
-      <button class="h-btn" title="Rename" onclick="renameChat(this,event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button class="h-btn del" title="Delete" onclick="deleteChat(this,event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
-    </span>
-  </a>
+  <div id="chatHistory"></div>
 
   <div class="side-sec">Menu</div>
   <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
@@ -675,6 +652,7 @@ button{font-family:inherit;cursor:pointer}
   let currentUser = null;
   let userInitials = '';
   let currentSessionId = null;
+  let sessionMessages = [];
   let isSending = false;
 
   // ===== AUTH GUARD =====
@@ -751,9 +729,13 @@ button{font-family:inherit;cursor:pointer}
       .order('created_at', { ascending: true });
     if (error) { console.warn('openSession error:', error.message); return; }
     inner.innerHTML = '';
-    empty.style.display = 'none';
+    sessionMessages = [];
     document.querySelector('.shell').classList.add('chat-mode');
-    if (!records || records.length === 0) { scrollDown(); return; }
+    if (!records || records.length === 0) {
+      empty.style.display = 'flex';
+      scrollDown(); return;
+    }
+    empty.style.display = 'none';
     records.forEach(r => {
       addUser(r.question, r.image || null, true);
       const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question) : null;
@@ -772,6 +754,8 @@ button{font-family:inherit;cursor:pointer}
         rules:      Array.isArray(r.rules)    ? r.rules    : null,
       };
       addAI(sig, aiResponse, true);
+      sessionMessages.push({role:'user', content: r.question || ''});
+      sessionMessages.push({role:'assistant', content: r.ai_response || r.answer || ''});
     });
     scrollDown();
     if (window.innerWidth < 1024) {
@@ -795,6 +779,7 @@ button{font-family:inherit;cursor:pointer}
       question: question,
       session_id: currentSessionId,
       confidence: sig ? sig.confidence : null,
+      messages: sessionMessages.slice(-10),
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -1488,6 +1473,8 @@ button{font-family:inherit;cursor:pointer}
       askAI(apiText, sig, imgToSend).then(response => {
         removeTyping();
         addAI(sig, response);
+        sessionMessages.push({role:'user', content: apiText});
+        sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
         awardChatXP();
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
@@ -1626,7 +1613,8 @@ button{font-family:inherit;cursor:pointer}
   input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
 
   document.getElementById('newChat').addEventListener('click',()=>{
-    currentSessionId = null;            // next askAI() will create a new chat_sessions row
+    currentSessionId = null;
+    sessionMessages = [];
     inner.innerHTML='';empty.style.display='flex';scrollDown();
     document.querySelector('.shell').classList.remove('chat-mode');
     renderEmptyStateHistory();          // refresh real history in the empty state
