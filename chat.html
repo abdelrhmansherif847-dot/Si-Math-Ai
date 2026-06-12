@@ -1543,14 +1543,8 @@ button{font-family:inherit;cursor:pointer}
             isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
           });
         }
-        // Fetch the just-created question_record ID so resolution can update it
-        const sid = response.session_id || currentSessionId;
-        if (sid && currentUser) {
-          sb.from('question_records')
-            .select('id').eq('session_id', sid).eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false }).limit(1)
-            .then(({ data }) => { if (data && data[0]) window.__lastQRecId = data[0].id; });
-        }
+        // record_id now returned directly by ai-tutor v43 — no race with async INSERT.
+        window.__lastQRecId = (response && response.record_id) || null;
       }).catch(err => {
         removeTyping();
         showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
