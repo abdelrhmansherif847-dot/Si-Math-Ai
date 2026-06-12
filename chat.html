@@ -941,7 +941,7 @@ button{font-family:inherit;cursor:pointer}
         repeatedTopic='<div class="repeated-topic"><span class="rt-ic">🔁</span><div class="rt-body">'+
           '<div class="rt-t">Repeated Topic Detected</div><div class="rt-s">'+p.sub+' — this raises its weakness priority</div></div>'+
           '<span class="rt-count">'+count+'</span></div>';
-        this.sendSignal({type:'repeated', sub:p.sub, count:count});
+        this.sendSignal({type:'repeated', topic:p.topic, sub:p.sub, count:count});
       }
       // potential weakness block (low confidence + repeats + confusion risk)
       var potentialWeak='';
@@ -986,14 +986,18 @@ button{font-family:inherit;cursor:pointer}
         row.topic = sig.primary || sig.topic; row.subtopic = sig.primary || sig.sub;
         row.signal_type = 'multi_concept'; row.weight = 0.3;
       } else if (sig.type === 'repeated') {
-        row.topic = null; row.subtopic = sig.sub;
+        // topic column is NOT NULL — null here made every repeated-signal insert fail
+        row.topic = sig.topic || 'General'; row.subtopic = sig.sub;
         row.signal_type = 'repeated';
         row.weight = Math.min((sig.count || 1) * 0.4, 2.0);
       } else if (sig.type === 'resolution') {
-        row.topic = sig.topic; row.subtopic = sig.sub;
+        row.topic = sig.topic || 'General'; row.subtopic = sig.sub;
         row.signal_type = 'resolution';
-        // negative weight = understood (strength), positive = still confused (weakness)
-        row.weight = (sig.resolution === 'understood' || sig.resolution === '1') ? -0.5 : 0.5;
+        // negative weight = strength, positive = weakness.
+        // solved → strength; partial → mild weakness; confused → strong escalation
+        row.weight = (sig.resolution === 'solved' || sig.resolution === 'understood' || sig.resolution === '1') ? -0.5
+                   : (sig.resolution === 'partial') ? 0.3
+                   : 2.0;
       } else {
         return; // unknown type — skip
       }
@@ -1305,7 +1309,18 @@ button{font-family:inherit;cursor:pointer}
       '</div>' :
       (diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
 
-    // Signal preview card + resolution buttons — only for math messages
+    // Resolution buttons render for ANY math response (keyword-map sig OR
+    // AI-classified math via topic/subtopic), so Still Confused always works.
+    const resolutionHtml =
+      '<div class="resolution">'+
+        '<div class="res-q">Did this explanation help?</div>'+
+        '<div class="res-opts" data-statusid="'+(sig ? sig.statusId : '')+'" data-topic="'+escapeHtml(topic||'')+'" data-sub="'+escapeHtml(subtopic||'')+'">'+
+          '<span class="res-opt solved" data-r="solved">✅ Solved It</span>'+
+          '<span class="res-opt partial" data-r="partial">🟡 Partially Understood</span>'+
+          '<span class="res-opt confused" data-r="confused">❌ Still Confused</span>'+
+        '</div>'+
+      '</div>';
+    // Signal preview card — only for keyword-map math messages
     const signalBlock = hasSig ?
       sig.multiConcept+
       sig.repeatedTopic+
@@ -1325,15 +1340,8 @@ button{font-family:inherit;cursor:pointer}
           '</div>' : '')+
         '<div class="sp-sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sent to Weakness Analyzer automatically</div>'+
       '</div>'+
-      '<div class="resolution">'+
-        '<div class="res-q">Did this explanation help?</div>'+
-        '<div class="res-opts" data-statusid="'+(sig ? sig.statusId : '')+'" data-topic="'+escapeHtml(topic||'')+'" data-sub="'+escapeHtml(subtopic||'')+'">'+
-          '<span class="res-opt solved" data-r="solved">✅ Solved It</span>'+
-          '<span class="res-opt partial" data-r="partial">🟡 Partially Understood</span>'+
-          '<span class="res-opt confused" data-r="confused">❌ Still Confused</span>'+
-        '</div>'+
-      '</div>'
-      : '';
+      resolutionHtml
+      : ((topic && subtopic) ? resolutionHtml : '');
 
     const el=document.createElement('div');el.className='msg ai';
     el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span>'+
@@ -1379,8 +1387,8 @@ button{font-family:inherit;cursor:pointer}
         el.querySelector('.msg-dropdown').classList.remove('open');
       });
     });
-    // resolution buttons — only wired when a math signal exists
-    if (hasSig) {
+    // resolution buttons — wired for keyword-map signals AND AI-classified math
+    if (hasSig || (topic && subtopic)) {
       el.querySelectorAll('.res-opt').forEach(opt=>opt.addEventListener('click',function(){
         const wrap=this.parentElement;
         wrap.querySelectorAll('.res-opt').forEach(o=>{o.classList.remove('on');o.classList.add('locked')});
@@ -1478,6 +1486,12 @@ button{font-family:inherit;cursor:pointer}
         addAI(sig, response);
         sessionMessages.push({role:'user', content: apiText});
         sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
+        // Pipeline unification: when the AI flags a weakness on a topic the local
+        // keyword map missed (sig is null), record it in weakness_signals so the
+        // Weakness Analyzer sees AI-detected weaknesses too.
+        if (response && response.weakness_signal === true && !sig && response.topic && response.subtopic) {
+          SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: 2});
+        }
         awardChatXP();
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
