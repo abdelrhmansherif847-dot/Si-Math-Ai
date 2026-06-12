@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v45
-// Fixes: confidence_before always written, follow_up_type persisted, fallbackRules()
+// ai-tutor Edge Function v47
+// Fixes: math intent classifier (no rules/difficulty on non-math), session column name (started_at -> created_at)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -93,6 +93,42 @@ function fallbackRules(topic: string, subtopic: string): Array<{name:string;form
   return match ? match[1] : [];
 }
 
+// ── isMathTopic: strict classifier — only real math content gets rules/difficulty ──
+function isMathTopic(topic: string, subtopic: string): boolean {
+  const t = ((topic || '') + ' ' + (subtopic || '')).toLowerCase().trim();
+  if (!t) return false;
+
+  // Explicit NON-math topics (do NOT show rules/difficulty)
+  const nonMathPatterns = [
+    'coaching', 'study planning', 'study strategy', 'motivation', 'mindset',
+    'exam preparation', 'exam structure', 'exam format', 'exam day',
+    'time management', 'study schedule', 'answer sheet', 'bubble sheet',
+    'study methods', 'study habits', 'tips', 'advice', 'general',
+    'الاستعداد', 'نصائح', 'إدارة', 'دراسة', 'تخطيط', 'معنويات',
+    'word problems', // generic — actual word problem solving will have algebra/percent/etc
+  ];
+  if (nonMathPatterns.some(p => t.includes(p))) {
+    // Exception: if it ALSO contains a real math keyword, allow it
+    const mathKw = ['algebra', 'geometry', 'equation', 'function', 'percent', 'ratio',
+                    'probability', 'statistic', 'trig', 'polynomial', 'quadratic',
+                    'circle', 'triangle', 'slope', 'exponent', 'inequality',
+                    'الجبر', 'هندسة', 'معادل', 'دالة', 'نسبة', 'دائرة', 'مثلث'];
+    return mathKw.some(k => t.includes(k));
+  }
+
+  // Explicit math keywords
+  const mathPatterns = [
+    'algebra', 'geometry', 'math', 'equation', 'function', 'percent', 'ratio',
+    'probability', 'statistic', 'trig', 'polynomial', 'quadratic', 'circle',
+    'triangle', 'slope', 'exponent', 'inequality', 'arithmetic', 'fraction',
+    'decimal', 'integer', 'mean', 'median', 'mode', 'graph', 'coordinate',
+    'system', 'expression', 'simplify', 'factor', 'radical', 'absolute value',
+    'الرياضيات', 'الجبر', 'هندسة', 'معادل', 'دالة', 'نسبة', 'احتمال',
+    'إحصاء', 'مثلث', 'دائرة', 'كسر', 'عدد',
+  ];
+  return mathPatterns.some(p => t.includes(p));
+}
+
 // ── normalizeRules ────────────────────────────────────────────────────────────
 function normalizeRules(raw: unknown): Array<{name:string;formula:string;desc:string}> {
   if (!Array.isArray(raw)) return [];
@@ -173,11 +209,21 @@ serve(async (req) => {
     // ── Session resolution ────────────────────────────────────────────────────
     let resolvedSessionId = sessionId;
     if (!resolvedSessionId) {
-      const { data: sess } = await sbAdmin.from('chat_sessions').insert({
-        user_id: user.id,
-        started_at: new Date().toISOString(),
+      const now = new Date().toISOString();
+      const sessionTitle = (question || 'New conversation').slice(0, 60);
+      const { data: sess, error: sessErr } = await sbAdmin.from('chat_sessions').insert({
+        user_id:         user.id,
+        title:           sessionTitle,
+        created_at:      now,
+        last_message_at: now,
       }).select('id').single();
+      if (sessErr) console.error('chat_sessions insert failed:', sessErr);
       resolvedSessionId = sess?.id ?? null;
+    } else {
+      // Touch last_message_at on existing session
+      await sbAdmin.from('chat_sessions')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', resolvedSessionId);
     }
 
     // ── Context retrieval ─────────────────────────────────────────────────────
@@ -287,25 +333,26 @@ ALWAYS include attention_marker for math questions. Common examples: "Watch sign
       parsed = {};
     }
 
-    // ── Post-process rules ────────────────────────────────────────────────────
+    // ── Post-process rules + difficulty (math-intent classifier) ─────────────
+    const finalTopic    = String(parsed.topic || topic || '');
+    const finalSubtopic = String(parsed.subtopic || subtopic || '');
+    const isMath = isMathTopic(finalTopic, finalSubtopic);
+
     let rules = normalizeRules(parsed.rules);
-    const isMath = !!(topic || subtopic || (parsed.topic as string));
     if (isMath && rules.length === 0) {
-      const fb = fallbackRules(
-        (parsed.topic as string) || topic,
-        (parsed.subtopic as string) || subtopic
-      );
+      const fb = fallbackRules(finalTopic, finalSubtopic);
       if (fb.length > 0) rules = fb;
     }
+    // Non-math: NEVER persist rules or difficulty
+    if (!isMath) {
+      rules = [];
+    }
+    const finalDifficulty = isMath ? String(parsed.difficulty || 'Medium') : '';
 
     // ── Post-process hint ─────────────────────────────────────────────────────
     let hint = String(parsed.hint || '').trim();
     if (isMath && hint.length === 0) {
-      hint = fallbackHint(
-        (parsed.topic as string) || topic,
-        (parsed.subtopic as string) || subtopic,
-        lang
-      );
+      hint = fallbackHint(finalTopic, finalSubtopic, lang);
     }
 
     // ── Persist question_record (synchronous — record_id returned to client) ──
@@ -314,27 +361,27 @@ ALWAYS include attention_marker for math questions. Common examples: "Watch sign
       user_id:           user.id,
       question:          question,
       ai_response:       String(parsed.answer || ''),
-      topic:             String(parsed.topic || topic || ''),
-      subtopic:          String(parsed.subtopic || subtopic || ''),
-      difficulty:        String(parsed.difficulty || 'Medium'),
+      topic:             finalTopic,
+      subtopic:          finalSubtopic,
+      difficulty:        finalDifficulty,
       concepts:          Array.isArray(parsed.concepts) ? parsed.concepts : [],
       rules:             rules,
-      confidence_before: confidence,   // v45: ALWAYS written, default 3 if no dot selected
+      confidence_before: confidence,
       weakness_signal:   parsed.weakness_signal === true,
       help_request:      false,
       explanation_request: followUpType != null,
       repeated_question: false,
       hint:              hint,
-      follow_up_type:    followUpType, // v45: persisted
+      follow_up_type:    followUpType,
     }).select('id').single();
 
     // ── Build response ────────────────────────────────────────────────────────
     return new Response(JSON.stringify({
       answer:          parsed.answer || '',
       hint,
-      topic:           parsed.topic || topic || '',
-      subtopic:        parsed.subtopic || subtopic || '',
-      difficulty:      parsed.difficulty || 'Medium',
+      topic:           finalTopic,
+      subtopic:        finalSubtopic,
+      difficulty:      finalDifficulty,
       concepts:        Array.isArray(parsed.concepts) ? parsed.concepts : [],
       rules,
       weakness_signal: parsed.weakness_signal === true,
@@ -342,6 +389,7 @@ ALWAYS include attention_marker for math questions. Common examples: "Watch sign
       session_id:      resolvedSessionId,
       record_id:       newRecord?.id ?? null,
       hint_mode:       hintMode,
+      is_math:         isMath,
     }), {
       headers: {
         'Content-Type': 'application/json',
