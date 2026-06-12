@@ -1331,8 +1331,23 @@ button{font-family:inherit;cursor:pointer}
 
     // Optional difficulty meta tag (only when present)
     const diffTag = difficulty ? '<span class="meta-tag"><span class="mi d"></span>Difficulty: <b>'+escapeHtml(difficulty)+'</b></span>' : '';
-    // Optional hint block (only when present)
-    const hintBlock = hint ? '<div class="dragon-advice"><div class="da-header"><img class="da-avatar" src="'+DRAGON_MENTOR+'" alt="Wise Zero"/><span class="da-label">Old Dragon Advice</span></div>'+escapeHtml(hint)+'</div>' : '';
+    // Dragon Advice — always shown for math messages.
+    // Uses the Edge Function hint when present; otherwise picks a short tip keyed to the topic
+    // so the same topic always gets the same tip (deterministic, not random).
+    var DRAGON_TIPS_POOL = [
+      'Focus on understanding the method, not just memorising the answer.',
+      'A wrong answer you understand is worth more than a right answer you don\'t.',
+      'Speed comes from mastery. Slow down to build the method — the speed follows.',
+      'Every concept you master is one less thing that can surprise you on exam day.',
+      'Draw the problem when you\'re stuck. Visualisation unlocks what words hide.',
+      'In algebra, balance is everything — what you do to one side, do to the other.',
+      'Word problems hide simple equations. Find the unknown first, then translate.',
+      'Geometry lives in relationships. Label everything you know before you solve.',
+      'When you get stuck, ask: what do I know, and what am I looking for?',
+    ];
+    var _tipIdx = topic ? topic.split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % DRAGON_TIPS_POOL.length : 0;
+    var _dragonMsg = hint || DRAGON_TIPS_POOL[_tipIdx];
+    const hintBlock = hasSig ? '<div class="dragon-advice"><div class="da-header"><img class="da-avatar" src="'+DRAGON_MENTOR+'" alt="Wise Zero"/><span class="da-label">Old Dragon Advice</span></div>'+escapeHtml(_dragonMsg)+'</div>' : '';
     // Concepts block (only when we actually have concepts)
     const conceptsBlock = conceptTagsHtml ?
       '<div class="concepts-card">'+
@@ -1341,35 +1356,41 @@ button{font-family:inherit;cursor:pointer}
       '</div>' : '';
 
     // Topic/subtopic meta row — only shown when we have a math signal
+    // Confidence is tracked internally but not displayed to students
     const topicMetaBlock = (hasSig && topic && subtopic) ?
       '<div class="ai-meta">'+
         '<span class="meta-tag"><span class="mi t"></span>Topic: <b>'+escapeHtml(topic)+'</b></span>'+
         '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b>'+escapeHtml(subtopic)+'</b></span>'+
         diffTag+
-        (sig && sig.confidence != null ? '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>' : '')+
       '</div>' :
       (diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
 
-    // Signal preview card + resolution buttons — only for math messages
-    const signalBlock = hasSig ?
-      sig.multiConcept+
-      sig.repeatedTopic+
-      sig.potentialWeak+
+    // ── SIGNAL BLOCK ──────────────────────────────────────────────────────────
+    // Signal strength: derive from Edge Function result first, then local calc.
+    // Signal Strength and Status are intentionally kept internal (not shown to students).
+    var _sigHigh   = weaknessSignal === true  || (sig && sig.strengthColor === 'red');
+    var _sigMedium = !_sigHigh && (sig && sig.strengthColor === 'amber');
+
+    // Alert chips (Repeated Topic, Multi-Concept) — shown when they fire
+    var _sigAlerts = hasSig ? (sig.multiConcept + sig.repeatedTopic + sig.potentialWeak) : '';
+
+    // Weakness Analyzer Update card — only when signal is Medium or High
+    var _weaknessUpdateBlock = (hasSig && (_sigHigh || _sigMedium)) ?
       '<div class="signal-preview">'+
         '<div class="sp-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Weakness Analyzer Update</div>'+
         '<div class="sp-grid">'+
-          '<div class="sp-cell"><div class="spc-l">Topic</div><div class="spc-v">'+escapeHtml(topic)+' → '+escapeHtml(subtopic)+'</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Confidence</div><div class="spc-v cyan">'+(sig ? sig.confidence : '')+'/5</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Status</div><div class="spc-v '+(sig ? sig.statusColor : '')+'" id="'+(sig ? sig.statusId : '')+'">Awaiting feedback</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Signal Strength</div><div class="spc-v '+(weaknessColor || (sig ? sig.strengthColor : ''))+'">'+escapeHtml(weaknessLabel || (sig ? sig.strength : ''))+'</div></div>'+
+          '<div class="sp-cell" style="grid-column:1/-1"><div class="spc-l">Area</div><div class="spc-v">'+escapeHtml(topic)+' → '+escapeHtml(subtopic)+'</div></div>'+
+          (helpRequest||explanationRequest ?
+            '<div class="sp-cell" style="grid-column:1/-1"><div class="spc-l">Flags</div><div class="spc-v" style="display:flex;gap:6px;flex-wrap:wrap">'+
+              (helpRequest    ? '<span style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:6px;padding:2px 8px;font-size:11px;color:#fbbf24">Help Request</span>' : '')+
+              (explanationRequest ? '<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--cyan)">Explanation Request</span>' : '')+
+            '</div></div>' : '')+
         '</div>'+
-        ((helpRequest||explanationRequest) ?
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+
-            (helpRequest ? '<span class="meta-tag" style="background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber)">🆘 Help Request</span>' : '')+
-            (explanationRequest ? '<span class="meta-tag" style="background:var(--cyan-bg-soft);border-color:var(--cyan-border-soft);color:var(--cyan)">📖 Explanation Request</span>' : '')+
-          '</div>' : '')+
-        '<div class="sp-sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sent to Weakness Analyzer automatically</div>'+
-      '</div>'+
+        '<div class="sp-sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Recorded for your Weakness Analyzer</div>'+
+      '</div>' : '';
+
+    // Resolution buttons — always shown for math messages; feedback drives mastery tracking
+    var _resolutionBlock = hasSig ?
       '<div class="resolution">'+
         '<div class="res-q">Did this explanation help?</div>'+
         '<div class="res-opts" data-statusid="'+(sig ? sig.statusId : '')+'" data-topic="'+escapeHtml(topic||'')+'" data-sub="'+escapeHtml(subtopic||'')+'">'+
@@ -1377,8 +1398,9 @@ button{font-family:inherit;cursor:pointer}
           '<span class="res-opt partial" data-r="partial">🟡 Partially Understood</span>'+
           '<span class="res-opt confused" data-r="confused">❌ Still Confused</span>'+
         '</div>'+
-      '</div>'
-      : '';
+      '</div>' : '';
+
+    const signalBlock = _sigAlerts + _weaknessUpdateBlock + _resolutionBlock;
 
     const el=document.createElement('div');el.className='msg ai';
     el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span>'+
