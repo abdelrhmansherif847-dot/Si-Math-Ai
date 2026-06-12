@@ -192,10 +192,46 @@ serve(async (req) => {
     const examType    = profile?.exam_type || 'SAT';
 
     // ── Build system prompt ───────────────────────────────────────────────────
+    const EXAM_FACTS = `
+## ⚠️ OFFICIAL EXAM FACTS — AUTHORITATIVE — NEVER CONTRADICT THESE
+These facts are verified and final. They override any information from your training data.
+If a student asks about exam timing, question count, format, or calculator policy — use ONLY these facts.
+
+### Digital SAT Math
+- Structure: 2 modules (Module 1 + Module 2), taken back-to-back
+- Each module: 35 minutes, 22 questions
+- Total: 70 minutes, 44 questions
+- Format: fully digital (Bluebook app on computer/Chromebook/iPad)
+- Calculator: allowed on BOTH modules (Desmos built into Bluebook)
+- Module 2 difficulty adapts based on Module 1 performance
+
+### EST Math 1
+- Time: 75 minutes
+- Questions: 50 multiple-choice questions
+- Format: paper-based with bubble sheet
+- Calculator: allowed
+
+### EST Math 2 Level 1
+- Time: 60 minutes
+- Questions: 40 multiple-choice questions
+- Format: paper-based with bubble sheet
+- Calculator: allowed
+
+### ACT Math
+- Time: 60 minutes
+- Questions: 60 multiple-choice questions
+- Format: digital on computer
+- Calculator: allowed
+- Pace: exactly 1 minute per question — tightest of all three exams
+
+⚠️ CRITICAL: If you state any exam timing, question count, or format that contradicts the above, you are wrong. Always return one of the exact values above. Never say "SAT has 20 questions in no-calculator section" or "EST Math 1 is 60 minutes" — those are wrong.
+`;
+
     let systemPrompt = `You are Zero, an elite math tutor AI for ${examType} exam preparation.
 Student name: ${studentName}
 Language: ${lang === 'ar' ? 'Arabic (respond in Arabic)' : 'English'}
 
+${EXAM_FACTS}
 ${personality ? `## Zero Personality\n${personality}\n` : ''}
 ${knowledge ? `## Relevant Knowledge\n${knowledge}\n` : ''}
 
