@@ -561,7 +561,7 @@ button{font-family:inherit;cursor:pointer}
         <button class="chip dragon-chip" id="dragonChip">🐉 Ask Zero for Wisdom</button>
       </div>
 
-      <div class="conf-bar">
+      <div class="conf-bar" id="confBar" style="display:none">
         <span class="conf-l">Your confidence:</span>
         <div class="conf-dots" id="confDots">
           <button class="conf-dot" data-c="1">1</button>
@@ -573,7 +573,7 @@ button{font-family:inherit;cursor:pointer}
         <span class="conf-hint" id="confHint">3/5 · Somewhat confident</span>
       </div>
 
-      <div class="hint-bar">
+      <div class="hint-bar" id="hintBar" style="display:none">
         <button class="hint-toggle" id="hintToggleBtn" onclick="toggleHintMode()" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
           <span id="hintToggleLabel">Hint Mode</span>
@@ -1234,12 +1234,32 @@ button{font-family:inherit;cursor:pointer}
     const r = aiResponse || {};
     const answer = r.answer || r.ai_response || '';
     if (!answer) { showError('No response received. Please try again.'); return; }
+
+    // Single source of truth: backend's isMathTopic classifier
+    const isMath = r.is_math === true;
+
+    // Show/hide confidence & hint-mode widgets based on math context
+    var confBarEl = document.getElementById('confBar');
+    var hintBarEl = document.getElementById('hintBar');
+    if (confBarEl) confBarEl.style.display = isMath ? '' : 'none';
+    if (hintBarEl) hintBarEl.style.display = isMath ? '' : 'none';
+    // Reset hint mode when non-math detected
+    if (!isMath && hintModeActive) {
+      hintModeActive = false;
+      var hintBtn = document.getElementById('hintToggleBtn');
+      var hintLbl = document.getElementById('hintToggleLabel');
+      var hintDesc = document.getElementById('hintToggleDesc');
+      if (hintBtn) hintBtn.classList.remove('active');
+      if (hintLbl) hintLbl.textContent = 'Hint Mode';
+      if (hintDesc) hintDesc.textContent = 'Get a hint, not the full solution';
+    }
+
     const topic      = r.topic    || (hasSig ? sig.topic : null);
     const subtopic   = r.subtopic || (hasSig ? sig.sub   : null);
-    const difficulty = r.difficulty || null;            // 'Easy' | 'Medium' | 'Hard'
-    const hint       = r.hint || null;
-    const concepts   = Array.isArray(r.concepts) ? r.concepts : null;
-    const rules      = Array.isArray(r.rules) ? r.rules : null;
+    const difficulty = (isMath && r.difficulty) ? r.difficulty : null;
+    const hint       = (isMath && r.hint) ? r.hint : null;
+    const concepts   = (isMath && Array.isArray(r.concepts)) ? r.concepts : null;
+    const rules      = (isMath && Array.isArray(r.rules)) ? r.rules : null;
     // Backend returns a boolean (true = weakness detected, false = not detected).
     // Accept boolean or null/undefined; tolerate legacy string values for back-compat.
     const weaknessSignal     = (typeof r.weakness_signal === 'boolean')
@@ -1258,12 +1278,14 @@ button{font-family:inherit;cursor:pointer}
     const explanationRequest = r.explanation_request === true;
     if (hasSig) { sig.topic = topic; sig.sub = subtopic; }
 
-    // Build concept tags from REAL concepts when present, else from local detector
-    const conceptTagsHtml = (concepts && concepts.length
-        ? concepts
-        : (hasSig ? (sig.detectedConcepts || []) : []))
-      .map(c => '<span class="concept-tag"><span class="cd"></span>'+escapeHtml(String(c))+'</span>')
-      .join('');
+    // Build concept tags only for math messages
+    const conceptTagsHtml = isMath
+      ? ((concepts && concepts.length
+          ? concepts
+          : (hasSig ? (sig.detectedConcepts || []) : []))
+        .map(c => '<span class="concept-tag"><span class="cd"></span>'+escapeHtml(String(c))+'</span>')
+        .join(''))
+      : '';
 
     // Build Rules Used block ONLY if the Edge Function returned rules
     let rulesBlock = '';
@@ -1273,7 +1295,7 @@ button{font-family:inherit;cursor:pointer}
         const isStr   = typeof rl === 'string';
         const name    = escapeHtml(isStr ? rl : (rl.name || rl.title || ''));
         const formula = (!isStr && rl.formula) ? '<span class="rule-formula">'+escapeHtml(rl.formula)+'</span>' : '';
-        const desc    = (!isStr && rl.description) ? '<span class="rule-desc">'+escapeHtml(rl.description)+'</span>' : '';
+        const desc    = (!isStr && (rl.desc || rl.description)) ? '<span class="rule-desc">'+escapeHtml(rl.desc || rl.description)+'</span>' : '';
         if (!name) return '';
         return '<div class="rule-item">'+
           '<div class="rule-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>'+
@@ -1302,19 +1324,18 @@ button{font-family:inherit;cursor:pointer}
         '<div class="concept-tags">'+conceptTagsHtml+'</div>'+
       '</div>' : '';
 
-    // Topic/subtopic meta row — only shown when we have a math signal
-    const topicMetaBlock = (hasSig && topic && subtopic) ?
+    // Topic/subtopic meta row — only shown for math with a local keyword signal
+    const topicMetaBlock = (isMath && hasSig && topic && subtopic) ?
       '<div class="ai-meta">'+
         '<span class="meta-tag"><span class="mi t"></span>Topic: <b>'+escapeHtml(topic)+'</b></span>'+
         '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b>'+escapeHtml(subtopic)+'</b></span>'+
         diffTag+
         (sig && sig.confidence != null ? '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>' : '')+
       '</div>' :
-      (diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
+      (isMath && diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
 
-    // Resolution buttons render for ANY math response (keyword-map sig OR
-    // AI-classified math via topic/subtopic), so Still Confused always works.
-    const resolutionHtml =
+    // Resolution buttons — only for math messages
+    const resolutionHtml = isMath ?
       '<div class="resolution">'+
         '<div class="res-q">Did this explanation help?</div>'+
         '<div class="res-opts" data-statusid="'+(sig ? sig.statusId : '')+'" data-topic="'+escapeHtml(topic||'')+'" data-sub="'+escapeHtml(subtopic||'')+'">'+
@@ -1322,9 +1343,10 @@ button{font-family:inherit;cursor:pointer}
           '<span class="res-opt partial" data-r="partial">🟡 Partially Understood</span>'+
           '<span class="res-opt confused" data-r="confused">❌ Still Confused</span>'+
         '</div>'+
-      '</div>';
-    // Signal preview card — only for keyword-map math messages
-    const signalBlock = hasSig ?
+      '</div>' : '';
+
+    // Signal preview card — only for math with a local keyword signal
+    const signalBlock = (isMath && hasSig) ?
       sig.multiConcept+
       sig.repeatedTopic+
       sig.potentialWeak+
@@ -1344,7 +1366,7 @@ button{font-family:inherit;cursor:pointer}
         '<div class="sp-sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sent to Weakness Analyzer automatically</div>'+
       '</div>'+
       resolutionHtml
-      : ((topic && subtopic) ? resolutionHtml : '');
+      : resolutionHtml;
 
     const el=document.createElement('div');el.className='msg ai';
     el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span>'+

@@ -204,6 +204,7 @@ serve(async (req) => {
     const messages:    Array<{role:string;content:string}> = Array.isArray(body.messages) ? body.messages : [];
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
+    const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
     const lang:        string  = /[؀-ۿ]/.test(question) ? 'ar' : 'en';
 
     // ── Session resolution ────────────────────────────────────────────────────
@@ -307,20 +308,29 @@ ALWAYS include attention_marker for math questions. Common examples: "Watch sign
     }
 
     // ── OpenAI call ───────────────────────────────────────────────────────────
+    // When an image is attached, use GPT-4o vision with multimodal content.
+    // The model OCRs and solves the problem in one pass.
+    const userContent: unknown = imageData
+      ? [
+          { type: 'text', text: question || 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.' },
+          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+        ]
+      : question;
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.slice(-10),
-      { role: 'user', content: question },
+      { role: 'user', content: userContent },
     ];
 
     const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
         messages: openaiMessages,
         response_format: { type: 'json_object' },
-        max_tokens: 1200,
+        max_tokens: 1400,
         temperature: 0.4,
       }),
     });
