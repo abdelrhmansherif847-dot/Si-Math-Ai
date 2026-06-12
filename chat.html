@@ -775,16 +775,14 @@ button{font-family:inherit;cursor:pointer}
 
     // 2) Build payload — session_id is null on the very first message so the
     //    Edge Function creates a new chat_sessions row and returns its id.
-    // Pull the user's selected confidence from the UI dots — falls back to SignalEngine's
-    // auto-analyzed confidence, then to 3 (neutral). This is what persists as confidence_before.
-    const userConfDot = document.querySelector('#confDots .conf-dot.on');
-    const userConf    = userConfDot ? parseInt(userConfDot.dataset.c, 10) : null;
+    const capturedFollowUpType = pendingFollowUpType;
+    pendingFollowUpType = null;
     const payload = {
       question: question,
       session_id: currentSessionId,
-      confidence: userConf || (sig ? sig.confidence : null) || 3,
-      hint_mode: !!hintModeActive,
+      confidence: sig ? sig.confidence : SignalEngine.getConfidence(),
       messages: sessionMessages.slice(-10),
+      follow_up_type: capturedFollowUpType,
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -1267,23 +1265,16 @@ button{font-family:inherit;cursor:pointer}
       .map(c => '<span class="concept-tag"><span class="cd"></span>'+escapeHtml(String(c))+'</span>')
       .join('');
 
-    // Build Rules Used block — only when at least one rule has BOTH name and formula.
-    // Edge Function v43+ returns {name, formula, desc}. Legacy string rules and rules missing
-    // a formula are filtered out so we never render an empty/half-populated Rules Used card.
+    // Build Rules Used block ONLY if the Edge Function returned rules
     let rulesBlock = '';
-    const validRules = (Array.isArray(rules) ? rules : []).filter(rl => {
-      if (!rl || typeof rl !== 'object') return false;
-      const name    = (rl.name || rl.title || '').toString().trim();
-      const formula = (rl.formula || '').toString().trim();
-      return name.length > 0 && formula.length > 0;
-    });
-    if (validRules.length) {
-      const ruleItems = validRules.map(rl => {
-        const name    = escapeHtml(String(rl.name || rl.title || '').trim());
-        const formula = '<span class="rule-formula">'+escapeHtml(String(rl.formula).trim())+'</span>';
-        // Accept both `desc` (current Edge Function schema) and `description` (legacy).
-        const descText = String(rl.desc || rl.description || '').trim();
-        const desc    = descText ? '<span class="rule-desc">'+escapeHtml(descText)+'</span>' : '';
+    if (rules && rules.length) {
+      const ruleItems = rules.map(rl => {
+        // Edge Function returns rules as plain strings; tolerate legacy {name, formula, description} objects
+        const isStr   = typeof rl === 'string';
+        const name    = escapeHtml(isStr ? rl : (rl.name || rl.title || ''));
+        const formula = (!isStr && rl.formula) ? '<span class="rule-formula">'+escapeHtml(rl.formula)+'</span>' : '';
+        const desc    = (!isStr && rl.description) ? '<span class="rule-desc">'+escapeHtml(rl.description)+'</span>' : '';
+        if (!name) return '';
         return '<div class="rule-item">'+
           '<div class="rule-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>'+
           '<div class="rule-text"><span class="rule-name">'+name+'</span>'+formula+desc+'</div>'+
@@ -1293,7 +1284,7 @@ button{font-family:inherit;cursor:pointer}
         '<div class="rules-used-head" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'collapsed\')">'+
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'+
           '<span class="ru-label">Rules Used</span>'+
-          '<span class="ru-count">'+validRules.length+' rule'+(validRules.length===1?'':'s')+'</span>'+
+          '<span class="ru-count">'+rules.length+' rule'+(rules.length===1?'':'s')+'</span>'+
           '<svg class="ru-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'+
         '</div>'+
         '<div class="rules-used-body collapsed">'+ruleItems+'</div>'+
@@ -1425,6 +1416,7 @@ button{font-family:inherit;cursor:pointer}
         // Still Confused → auto-trigger a re-explanation using a different approach
         if (this.dataset.r === 'confused') {
           setTimeout(() => {
+            pendingFollowUpType = 'still_confused';
             input.value = 'I still don\'t understand. Can you explain it differently with a simpler example?';
             send();
           }, 400);
@@ -1433,6 +1425,7 @@ button{font-family:inherit;cursor:pointer}
     }
     // explain simpler
     el.querySelector('.btn-explain-simpler').addEventListener('click',function(){
+      pendingFollowUpType = 'explain_simpler';
       input.value='Can you explain that more simply?';
       send();
     });
@@ -1517,14 +1510,8 @@ button{font-family:inherit;cursor:pointer}
             isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
           });
         }
-        // Fetch the just-created question_record ID so resolution can update it
-        const sid = response.session_id || currentSessionId;
-        if (sid && currentUser) {
-          sb.from('question_records')
-            .select('id').eq('session_id', sid).eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false }).limit(1)
-            .then(({ data }) => { if (data && data[0]) window.__lastQRecId = data[0].id; });
-        }
+        // Use record_id returned by edge function (v45: synchronous INSERT, no race)
+        window.__lastQRecId = (response && response.record_id) || null;
       }).catch(err => {
         removeTyping();
         showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
@@ -1728,6 +1715,9 @@ button{font-family:inherit;cursor:pointer}
     }
     return '<div class="ai-md">'+out.join('')+'</div>';
   }
+
+  // ===== FOLLOW-UP TYPE (explain_again / explain_simpler / still_confused) =====
+  var pendingFollowUpType = null;
 
   // ===== HINT MODE =====
   var hintModeActive = false;
