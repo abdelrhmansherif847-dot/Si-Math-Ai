@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v57
-// Adds: save image to question_records (admin Feedback Review image display)
+// ai-tutor Edge Function v58
+// Adds: image question consistency (force isMath=true), hint mode fallback, lang from profile
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -216,7 +216,7 @@ serve(async (req) => {
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
     const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
-    const lang:        string  = /[؀-ۿ]/.test(question) ? 'ar' : 'en';
+    // lang resolved after profile fetch so language_preference is respected
 
     // ── Session resolution ────────────────────────────────────────────────────
     let resolvedSessionId = sessionId;
@@ -251,6 +251,14 @@ serve(async (req) => {
     const examDateRaw   = profile?.exam_date   || null;
     const targetScore   = profile?.target_score || null;
     const studyGoals    = profile?.biggest_weakness || null;
+    // Use language_preference from profile; fall back to question script detection.
+    // For image-only questions (empty text), default to 'ar' since this platform targets Arabic-speaking students.
+    const langPref = profile?.language_preference || null;
+    const lang: string = langPref === 'en' ? 'en'
+      : langPref === 'ar' ? 'ar'
+      : /[؀-ۿ]/.test(question) ? 'ar'
+      : (imageData && !question.trim()) ? 'ar'
+      : 'en';
 
     // Days until exam (used by Zero for personalised responses)
     let daysUntilExam: number | null = null;
@@ -515,7 +523,8 @@ If the student asks "مين عملك؟", "مين بناك؟", "مين صنعك؟
 ## Math Classification (CRITICAL)
 Determine if this is a math message and set "is_math" accordingly:
 - is_math = true: solving equations, algebra, geometry, percentages, word problems with calculations, graph reading, statistics
-- is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation
+- is_math = true: ANY message that includes an image — if an image is attached it is ALWAYS a math problem; set is_math=true regardless of how short or vague the text is ("حل", "solve", "help", "?", or even empty text)
+- is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation — and ONLY when NO image is attached
 - When is_math = false: set topic="General", subtopic="Conversation", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
 
@@ -617,9 +626,11 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     const finalTopic    = String(parsed.topic || topic || '');
     const finalSubtopic = String(parsed.subtopic || subtopic || '');
     // GPT's explicit is_math flag takes priority over the local keyword classifier.
-    // This fixes casual greetings being classified as math (GPT returns topic:"Mathematics").
+    // For image questions: always treat as math (this platform is math-only; images are always problems).
     const gptIsMath = typeof parsed.is_math === 'boolean' ? parsed.is_math : undefined;
-    const isMath = gptIsMath !== undefined ? gptIsMath : isMathTopic(finalTopic, finalSubtopic);
+    const isMath = imageData
+      ? true
+      : (gptIsMath !== undefined ? gptIsMath : isMathTopic(finalTopic, finalSubtopic));
 
     let rules = normalizeRules(parsed.rules);
     if (isMath && rules.length === 0) {
@@ -636,6 +647,11 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     let hint = String(parsed.hint || '').trim();
     if (isMath && hint.length === 0) {
       hint = fallbackHint(finalTopic, finalSubtopic, lang);
+    }
+    // Hint mode safety: if GPT returned empty answer (parse failure or refusal),
+    // populate with the hint so the student always gets a useful response.
+    if (hintMode && !String(parsed.answer || '').trim()) {
+      parsed.answer = hint || fallbackHint(finalTopic, finalSubtopic, lang);
     }
 
     // ── Persist question_record (synchronous — record_id returned to client) ──

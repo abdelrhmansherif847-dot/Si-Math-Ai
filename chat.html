@@ -1344,13 +1344,13 @@ button{font-family:inherit;cursor:pointer}
         '<div class="concept-tags">'+conceptTagsHtml+'</div>'+
       '</div>' : '';
 
-    // Topic/subtopic meta row — only shown for math with a local keyword signal
-    const topicMetaBlock = (isMath && hasSig && topic && subtopic) ?
+    // Topic/subtopic meta row — show for any math response that has topic/subtopic (text or image)
+    const topicMetaBlock = (isMath && topic && subtopic) ?
       '<div class="ai-meta">'+
         '<span class="meta-tag"><span class="mi t"></span>Topic: <b>'+escapeHtml(topic)+'</b></span>'+
         '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b>'+escapeHtml(subtopic)+'</b></span>'+
         diffTag+
-        (sig && sig.confidence != null ? '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>' : '')+
+        (hasSig && sig && sig.confidence != null ? '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>' : '')+
       '</div>' :
       (isMath && diffTag ? '<div class="ai-meta">'+diffTag+'</div>' : '');
 
