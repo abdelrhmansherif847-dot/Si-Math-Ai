@@ -1614,6 +1614,15 @@ button{font-family:inherit;cursor:pointer}
         if (response && response.weakness_signal === true && !sig && response.topic && response.subtopic) {
           SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: 2});
         }
+        // Image / short-text math questions: local keyword classifier can't see
+        // the image content, so sig is null. Emit a topic signal anyway when the
+        // backend confirms it's math (is_math=true) and student's confidence is low.
+        else if (response && response.is_math === true && !sig && response.topic && response.subtopic) {
+          var sentConf = SignalEngine.getConfidence();
+          if (sentConf != null && sentConf <= 3) {
+            SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: sentConf});
+          }
+        }
         awardChatXP();
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig

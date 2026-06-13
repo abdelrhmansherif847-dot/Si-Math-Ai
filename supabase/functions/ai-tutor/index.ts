@@ -1,6 +1,5 @@
-// ai-tutor Edge Function v62
-// Personality Priority Hierarchy: enforces Zero Personality > Context > Coaching > Knowledge > Answer
-// Adds 8-point personality self-check before response finalization
+// ai-tutor Edge Function v63
+// Adds explicit guidance for when to set weakness_signal=true (confusion, low confidence, follow-ups)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -582,6 +581,16 @@ Determine if this is a math message and set "is_math" accordingly:
 - is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation — and ONLY when NO image is attached
 - When is_math = false: set topic="General", subtopic="Conversation", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
+
+## Weakness Signal — WHEN to set weakness_signal=true (CRITICAL)
+Default is false. Set to **true** when ANY of these are true:
+- Student's message expresses confusion: "مش فاهم", "مش عارف", "I don't get it", "confused", "stuck"
+- Student says they can't solve / don't know how to start: "مش عارف ابدأ منين", "I have no idea"
+- The student's sent confidence is ≤ 2 (low confidence on this topic)
+- The student is asking a follow-up because the first explanation didn't land (explain_simpler / still_confused)
+- The student got the wrong answer on a problem they previously attempted
+- The student repeats a similar mistake across the conversation
+Set to **false** for casual chat, motivation questions, or when the student clearly understood.
 
 ## ✅ Final Personality Checklist (run this MENTALLY before finalizing the answer)
 Before returning your JSON, verify ALL eight items below. If ANY fail → rewrite.

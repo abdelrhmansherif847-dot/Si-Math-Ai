@@ -1558,7 +1558,7 @@ async function loadDashboard() {
     sb.from('weakness_reports').select('topic,subtopic,priority,weakness_score,mastery_estimate').eq('user_id', user.id).order('priority', {ascending:true}).limit(10),
     sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
-    sb.from('question_records').select('created_at').eq('user_id', user.id).gte('created_at', monthStart),
+    sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
     sb.from('subscriptions').select('plan,status,credits_remaining').eq('user_id', user.id).eq('status','active').limit(1).maybeSingle(),
   ]);
 
