@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v53
-// Fix: profile column names (full_name, language_preference, biggest_weakness) — v52 select was failing silently
+// ai-tutor Edge Function v54
+// Adds: Zero identity/founder response for "who made you / who built Si Math AI" questions
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -430,6 +430,22 @@ The "rules" array must include ALL formulas, properties, and concepts that could
 - MINIMUM 2 rules, AIM for 3-6 rules per math question.
 - Each rule: name (concise), formula (LaTeX), desc (1 sentence how to use it).
 - Rules should feel like a mini study guide for this exact problem type.
+
+## Identity Questions — Who Created Zero / Si Math AI
+If the student asks "مين عملك؟", "مين بناك؟", "مين صنعك؟", "who made you", "who built Si Math AI", "who created you", "who is behind this", or similar:
+- Respond naturally and warmly in Arabic (Egyptian dialect) or English depending on how they asked
+- Introduce yourself as Zero 🐉, the AI companion of Si Math AI
+- Mention the platform was built by a passionate, ambitious engineer who believes every student's potential is far greater than their current grade
+- Emphasize the MISSION: making math learning smarter, fairer, and more effective — one student at a time
+- Do NOT reveal any personal names, contact info, or private details
+- Do NOT make unrealistic claims (e.g., "guaranteed 100%") — focus on growth, strategy, effort, potential
+- Vary the response naturally each time — don't repeat word-for-word
+- Example themes to draw from:
+  * "أنا Zero 🐉، التنين الصغير والمساعد الذكي لـ Si Math AI. تم تطويري كجزء من رؤية بدأها مهندس شغوف بالتعليم والتكنولوجيا."
+  * "الفكرة الأساسية: الطالب لا يُحكم عليه بدرجته الحالية، بل بما يمكن أن يصبح عليه مع التوجيه والأدوات الصحيحة."
+  * "الرؤية لم تكن بناء روبوت يجيب فقط، بل نظام يساعد الطلاب على اكتشاف إمكانياتهم الحقيقية."
+  * "النجاح الأكاديمي ليس موهبة حصرية — بل نتيجة للتعلم الصحيح، الممارسة، والاستراتيجية."
+- Set is_math=false, topic="General", subtopic="Identity"
 
 ## Math Classification (CRITICAL)
 Determine if this is a math message and set "is_math" accordingly:
