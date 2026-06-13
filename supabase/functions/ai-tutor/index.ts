@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v60
-// Improves response structure (educational cards), coaching style, mobile readability
+// ai-tutor Edge Function v61
+// Exam strategy as structured action plan: 3 phases, table, step-by-step execution order
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -347,61 +347,64 @@ If a student asks about exam timing, question count, format, or calculator polic
     const examStrategyForType = `
 ## Zero Exam Strategy — Block Method (UNIVERSAL CORE METHODOLOGY)
 
-This is Zero's universal testing strategy. It applies to EVERY exam — EST, SAT, ACT, or any other. Teach it whenever the student asks about exam strategy, time management, score improvement, or how to approach their exam. Always adapt the block structure to the student's specific exam.
+This is Zero's universal testing strategy. It applies to EVERY exam — EST, SAT, ACT, or any other. Teach it whenever the student asks about exam strategy, time management, score improvement, or how to approach their exam.
 
-### CORE PRINCIPLE
-The goal is NOT to solve questions in numerical order.
-The goal is: **maximize score per minute.**
-
-Break the exam into blocks of ~10 questions.
-Inside every block, follow 3 steps:
-
-**STEP 1 — Fast & Confident:**
-Solve every question you can answer quickly and confidently.
-"Confident" = you immediately recognize the topic AND you're strong at it.
-This is personal — not globally "easy." It means easy FOR YOU.
-
-**STEP 2 — Solvable but Slow:**
-If a question is solvable but will take extra time → mark it, skip it, return later.
-
-**STEP 3 — Hard / Confusing:**
-If a question looks difficult or confusing → mark it, leave it for the final pass.
-
-After completing all blocks:
-- **First return:** Solve all marked medium-time questions.
-- **Second return:** Attempt the hardest questions.
-
-**Why this works:**
-- Prevents getting stuck early and losing easy points
-- Builds confidence and momentum
-- Secures every easy point before time pressure starts
-- Benefits strong, average, AND weak students
+**WHEN TEACHING THIS STRATEGY — always present it as a structured action plan, NOT as a paragraph. Use the exact format below:**
 
 ---
 
-### BLOCK STRUCTURE BY EXAM
+### 🗂️ PHASE 1 — SET UP YOUR BLOCKS
 
-**EST Math 1** — 50 questions, 75 min
-Blocks: 1–10 | 11–20 | 21–30 | 31–40 | 41–50
+Before you start, mentally divide the exam into blocks of ~10 questions.
 
-**EST Math 2** — 40 questions, 60 min
-Blocks: 1–10 | 11–20 | 21–30 | 31–40
-
-**Digital SAT Math** — 22 questions per module, 35 min per module
-Blocks: 1–10 | 11–20 | 21–22
-(Apply inside each module separately)
-Key insight: Module 2 difficulty adapts to Module 1 performance — a harder Module 2 means a higher score ceiling.
-
-**ACT Math** — 60 questions, 60 min
-Blocks: 1–10 | 11–20 | 21–30 | 31–40 | 41–50 | 51–60
-
-**For any other exam:** Auto-adapt using blocks of ~10. The principle never changes — the exact block sizes adjust to the exam's question count.
+| Exam | Questions | Your Blocks |
+|------|-----------|-------------|
+| EST Math 1 | 50 Q / 75 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 |
+| EST Math 2 | 40 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 |
+| SAT Math | 22 Q / module | 1–10 · 11–20 · 21–22 (per module) |
+| ACT Math | 60 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 · 51–60 |
 
 ---
 
-**IMPORTANT:** Zero teaches the PRINCIPLE, not memorized numbers. If a student's exam has a different question count, automatically adapt the block structure. The three-step process and two-pass return always apply.
+### ⚡ PHASE 2 — INSIDE EACH BLOCK (repeat for every block)
 
-The student's exam is **${examType}**. Apply the correct block structure above.
+**Step 1 — Fast & Confident ✅**
+Answer every question you recognize immediately AND you're strong at.
+→ "Confident" = easy FOR YOU, not globally easy.
+→ Don't stop for hard ones — keep moving.
+
+**Step 2 — Solvable but Slow ⏱️**
+You know HOW to solve it, but it will take time.
+→ Mark it. Skip it. Come back.
+
+**Step 3 — Hard or Confusing ❓**
+You don't know where to start, or it looks very complex.
+→ Mark it. Leave it for last.
+
+---
+
+### 🔁 PHASE 3 — AFTER ALL BLOCKS
+
+**First Return:** Go back to all Step 2 questions (medium-time).
+Solve them now — you're warmed up and confident.
+
+**Second Return:** Attempt Step 3 questions (hard).
+Use remaining time. Eliminate wrong answers. Make your best guess.
+
+---
+
+### 🎯 WHY THIS WORKS
+
+- ✅ You collect every easy point before time pressure starts
+- ✅ You never get stuck and waste 10 minutes on one hard question
+- ✅ You build momentum and confidence through the exam
+- ✅ Even if you run out of time, you've already secured the maximum possible score
+
+---
+
+**IMPORTANT:** Zero teaches the PRINCIPLE — if a student's exam has a different question count, automatically adapt the block sizes. The three phases always apply.
+
+The student's exam is **${examType}**. Use the correct row from the table above.
 `;
 
     // Normal (non-hint) system prompt
