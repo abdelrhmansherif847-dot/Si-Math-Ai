@@ -790,6 +790,7 @@ button{font-family:inherit;cursor:pointer}
       confidence: sig ? sig.confidence : SignalEngine.getConfidence(),
       messages: sessionMessages.slice(-10),
       follow_up_type: capturedFollowUpType,
+      hint_mode: hintModeActive,
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -1697,10 +1698,23 @@ button{font-family:inherit;cursor:pointer}
   // ===== MARKDOWN RENDERER =====
   function renderMarkdown(raw) {
     if (!raw) return '';
-    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    // Protect code blocks
+    // Step 1: Protect LaTeX blocks BEFORE any escaping — store them as placeholders.
+    // This prevents esc() from corrupting LaTeX that uses < > & characters,
+    // and prevents inlineFmt from converting * inside math to <em>.
+    var mathBlocks = [];
+    function saveMath(m) { return '\x01M' + (mathBlocks.push(m) - 1) + '\x01'; }
+    var s = raw;
+    s = s.replace(/\$\$[\s\S]*?\$\$/g, saveMath);          // $$...$$  display
+    s = s.replace(/\\\[[\s\S]*?\\\]/g, saveMath);           // \[...\]  display
+    s = s.replace(/\$[^\$\n]+?\$/g, saveMath);              // $...$    inline
+    s = s.replace(/\\\([\s\S]*?\\\)/g, saveMath);           // \(...\)  inline
+    function restoreMath(t) {
+      return t.replace(/\x01M(\d+)\x01/g, function(_,n){ return mathBlocks[+n]; });
+    }
+    function esc(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    // Step 2: Protect code blocks
     var codeBlocks = [];
-    var s = raw.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_,code){
+    s = s.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_,code){
       var idx = codeBlocks.push('<pre class="ai-md" style="display:block"><code>'+esc(code.trim())+'</code></pre>') - 1;
       return '\x00CODE'+idx+'\x00';
     });
@@ -1744,26 +1758,38 @@ button{font-family:inherit;cursor:pointer}
       out.push('<p>'+inlineFmt(esc(line))+'</p>');
       i++;
     }
-    return '<div class="ai-md">'+out.join('')+'</div>';
+    // Step 3: Restore LaTeX blocks AFTER all HTML processing (they land as raw text in the DOM,
+    // which KaTeX's renderMathInElement will then find and render as math).
+    return '<div class="ai-md">'+restoreMath(out.join(''))+'</div>';
   }
 
   // ===== KATEX MATH RENDERING =====
   function renderMathInEl(el) {
     function doRender() {
       if (window.renderMathInElement) {
-        window.renderMathInElement(el, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true  },
-            { left: '$',  right: '$',  display: false },
-            { left: '\\(', right: '\\)', display: false },
-            { left: '\\[', right: '\\]', display: true  },
-          ],
-          throwOnError: false,
-        });
+        try {
+          window.renderMathInElement(el, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true  },
+              { left: '$',  right: '$',  display: false },
+              { left: '\\(', right: '\\)', display: false },
+              { left: '\\[', right: '\\]', display: true  },
+            ],
+            throwOnError: false,
+          });
+        } catch(e) { /* KaTeX render error — show raw math as fallback */ }
       }
     }
-    if (window.__katexReady) { doRender(); }
-    else { window.addEventListener('load', doRender, { once: true }); }
+    if (window.renderMathInElement) {
+      doRender();
+    } else {
+      // Poll until KaTeX auto-render script loads (handles slow CDN / deferred loading)
+      var _poll = setInterval(function() {
+        if (window.renderMathInElement) { clearInterval(_poll); doRender(); }
+      }, 80);
+      // Give up after 8 seconds
+      setTimeout(function() { clearInterval(_poll); }, 8000);
+    }
   }
 
   // ===== FOLLOW-UP TYPE (explain_again / explain_simpler / still_confused) =====

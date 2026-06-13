@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v47
-// Fixes: math intent classifier (no rules/difficulty on non-math), session column name (started_at -> created_at)
+// ai-tutor Edge Function v51
+// Fixes: is_math from GPT (casual chat gating), hint_mode payload, personality fallback, LaTeX in rules
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -239,10 +239,19 @@ serve(async (req) => {
     }
 
     // ── Context retrieval ─────────────────────────────────────────────────────
-    const [personality, knowledge] = await Promise.all([
+    const [personalityRaw, knowledge] = await Promise.all([
       get_zero_personality(sbAdmin),
       search_zero_knowledge(sbAdmin, question + ' ' + topic + ' ' + subtopic),
     ]);
+    // Always have a personality even if the DB table is empty
+    const DEFAULT_PERSONALITY = `- Address the student by their first name warmly (e.g. "يا عبد الرحمن" or "يا محمد").
+- Be enthusiastic, supportive, and a little playful — like a cool older sibling who's great at math.
+- For casual messages, respond in a natural, friendly way — NOT like a chatbot template. Be spontaneous.
+- Use motivating phrases when the student does well: "أنت بتفهم بسرعة والله!"
+- Be gentle and encouraging when confused: "مفيش مشكلة، خطوة خطوة 😊"
+- When responding in Arabic, use warm Egyptian dialect naturally mixed with English math terms.
+- Never say "مرحباً يا Student" — always use the actual name.`;
+    const personality = personalityRaw || DEFAULT_PERSONALITY;
 
     // ── Profile fetch (expanded) ──────────────────────────────────────────────
     const { data: profile } = await sbAdmin
@@ -359,9 +368,17 @@ The "rules" array must include ALL formulas, properties, and concepts that could
 - Each rule: name (concise), formula (LaTeX), desc (1 sentence how to use it).
 - Rules should feel like a mini study guide for this exact problem type.
 
+## Math Classification (CRITICAL)
+Determine if this is a math message and set "is_math" accordingly:
+- is_math = true: solving equations, algebra, geometry, percentages, word problems with calculations, graph reading, statistics
+- is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation
+- When is_math = false: set topic="General", subtopic="Conversation", difficulty="", rules=[], concepts=[], weakness_signal=false
+- For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
+
 ## Response Format
 Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON.
 {
+  "is_math": true,
   "answer": "structured markdown explanation with LaTeX math",
   "hint": "one Socratic hint (1-2 sentences, no solution, ends with a guiding question)",
   "topic": "detected math topic",
@@ -377,22 +394,33 @@ Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON
     const HINT_SYSTEM_PROMPT = `You are Zero — a Socratic math tutor. You are in HINT MODE.
 
 ${STUDENT_PROFILE_BLOCK}
-Language: ${lang === 'ar' ? 'Arabic' : 'English'}
+Language: ${lang === 'ar' ? 'Arabic — warm Egyptian dialect welcome' : 'English'}
 
-## HINT MODE — ABSOLUTE RULES (no exceptions)
-1. You must NEVER reveal the final answer or complete solution.
-2. You must NEVER show full step-by-step working.
-3. The "answer" field must contain ONLY: one Socratic hint of 1-2 sentences that nudges the student toward the NEXT step, followed by one guiding question.
-4. Ask "What do you think the next step is?" or similar at the end.
-5. The student must do the actual work — you only guide.
-6. If the student already showed some work, acknowledge it and guide the NEXT step only.
+## Personality (even in hint mode)
+- Be warm and encouraging, use the student's name: ${studentName}
+- Acknowledge effort: "برافو إنك حاولت!" / "Good thinking!"
+- Keep tone supportive and Socratic
+
+## HINT MODE — ABSOLUTE RULES (no exceptions whatsoever)
+1. NEVER reveal the final answer. Not even "the answer is close to X". Never.
+2. NEVER show full step-by-step working. One step at a time only.
+3. The "answer" field must contain ONLY:
+   - One observation about what the student knows / the problem setup (1 sentence)
+   - One Socratic hint nudging toward the NEXT single step (1 sentence, use LaTeX if needed)
+   - One guiding question ending with "؟" or "?"
+4. Total "answer" length: 3-5 sentences maximum. Stop there.
+5. If the student showed partial work: acknowledge it briefly, then guide the NEXT step only.
+6. Examples of good hint responses:
+   - "لاحظ إن عندنا معادلتين وجهولين. فكر: لو حليت الأولى بالنسبة لـ $x$، ممكن تعوضها في التانية. ما هو قيمة $x$ من المعادلة الأولى؟"
+   - "You've set up the equation correctly! Notice the left side has $x^2$ — what operation could isolate $x$? What do you think the next step is?"
 
 ## Math Formatting
 Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
 
 ## Response Format
 {
-  "answer": "ONE hint (1-2 sentences). ONE guiding question. NO solution. NO final answer.",
+  "is_math": true,
+  "answer": "ONE observation + ONE hint (with LaTeX if needed) + ONE guiding question. MAXIMUM 5 sentences. NO complete solution.",
   "hint": "",
   "topic": "detected math topic",
   "subtopic": "specific subtopic",
@@ -444,7 +472,10 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // ── Post-process rules + difficulty (math-intent classifier) ─────────────
     const finalTopic    = String(parsed.topic || topic || '');
     const finalSubtopic = String(parsed.subtopic || subtopic || '');
-    const isMath = isMathTopic(finalTopic, finalSubtopic);
+    // GPT's explicit is_math flag takes priority over the local keyword classifier.
+    // This fixes casual greetings being classified as math (GPT returns topic:"Mathematics").
+    const gptIsMath = typeof parsed.is_math === 'boolean' ? parsed.is_math : undefined;
+    const isMath = gptIsMath !== undefined ? gptIsMath : isMathTopic(finalTopic, finalSubtopic);
 
     let rules = normalizeRules(parsed.rules);
     if (isMath && rules.length === 0) {
