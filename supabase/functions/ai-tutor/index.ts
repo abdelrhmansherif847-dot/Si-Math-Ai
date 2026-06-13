@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v63
-// Adds explicit guidance for when to set weakness_signal=true (confusion, low confidence, follow-ups)
+// ai-tutor Edge Function v64
+// Increase max_tokens 1400→2800 to prevent JSON truncation on longer system prompts (v60-v63 additions)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -687,7 +687,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
         messages: openaiMessages,
         response_format: { type: 'json_object' },
-        max_tokens: 1400,
+        max_tokens: 2800,
         temperature: 0.4,
       }),
     });
