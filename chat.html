@@ -568,7 +568,7 @@ button{font-family:inherit;cursor:pointer}
         <button class="chip dragon-chip" id="dragonChip">🐉 Ask Zero for Wisdom</button>
       </div>
 
-      <div class="conf-bar" id="confBar" style="display:none">
+      <div class="conf-bar" id="confBar">
         <span class="conf-l">Your confidence:</span>
         <div class="conf-dots" id="confDots">
           <button class="conf-dot" data-c="1">1</button>
@@ -580,7 +580,7 @@ button{font-family:inherit;cursor:pointer}
         <span class="conf-hint" id="confHint">3/5 · Somewhat confident</span>
       </div>
 
-      <div class="hint-bar" id="hintBar" style="display:none">
+      <div class="hint-bar" id="hintBar">
         <button class="hint-toggle" id="hintToggleBtn" onclick="toggleHintMode()" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
           <span id="hintToggleLabel">Hint Mode</span>
@@ -1246,21 +1246,9 @@ button{font-family:inherit;cursor:pointer}
     // Single source of truth: backend's isMathTopic classifier
     const isMath = r.is_math === true;
 
-    // Show/hide confidence & hint-mode widgets based on math context
-    var confBarEl = document.getElementById('confBar');
-    var hintBarEl = document.getElementById('hintBar');
-    if (confBarEl) confBarEl.style.display = isMath ? '' : 'none';
-    if (hintBarEl) hintBarEl.style.display = isMath ? '' : 'none';
-    // Reset hint mode when non-math detected
-    if (!isMath && hintModeActive) {
-      hintModeActive = false;
-      var hintBtn = document.getElementById('hintToggleBtn');
-      var hintLbl = document.getElementById('hintToggleLabel');
-      var hintDesc = document.getElementById('hintToggleDesc');
-      if (hintBtn) hintBtn.classList.remove('active');
-      if (hintLbl) hintLbl.textContent = 'Hint Mode';
-      if (hintDesc) hintDesc.textContent = 'Get a hint, not the full solution';
-    }
+    // Hint Mode and Confidence widgets remain always visible — the student
+    // needs to be able to turn Hint Mode ON before sending a math question.
+    // We only gate the math-analysis UI blocks (rules/concepts/difficulty) below.
 
     const topic      = r.topic    || (hasSig ? sig.topic : null);
     const subtopic   = r.subtopic || (hasSig ? sig.sub   : null);
