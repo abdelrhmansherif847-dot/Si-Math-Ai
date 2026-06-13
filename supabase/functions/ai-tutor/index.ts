@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v56
-// Adds: teaching philosophy (explain WHY, not just WHAT) + corrected exam strategy
+// ai-tutor Edge Function v57
+// Adds: save image to question_records (admin Feedback Review image display)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -643,6 +643,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       session_id:        resolvedSessionId,
       user_id:           user.id,
       question:          question,
+      image:             imageData,
       ai_response:       String(parsed.answer || ''),
       topic:             finalTopic,
       subtopic:          finalSubtopic,
