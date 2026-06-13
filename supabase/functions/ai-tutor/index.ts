@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v52
-// Adds: exam strategy coaching, 4-phase strategy, 10Q blocks (EST), stronger personality, onboarding data usage
+// ai-tutor Edge Function v53
+// Fix: profile column names (full_name, language_preference, biggest_weakness) — v52 select was failing silently
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -239,16 +239,18 @@ serve(async (req) => {
     }
 
     // ── Profile fetch (expanded) — must come before DEFAULT_PERSONALITY ─────────
-    const { data: profile } = await sbAdmin
+    const { data: profile, error: profileErr } = await sbAdmin
       .from('profiles')
-      .select('name, exam_type, exam_date, language, target_score, study_goals')
+      .select('full_name, exam_type, exam_date, language_preference, target_score, biggest_weakness, mastered_topics')
       .eq('id', user.id)
       .single();
-    const studentName   = profile?.name        || 'Student';
+    if (profileErr) console.error('profile fetch failed:', profileErr);
+    const fullName      = profile?.full_name   || '';
+    const studentName   = (fullName.trim().split(/\s+/)[0]) || 'Student';
     const examType      = profile?.exam_type   || 'SAT';
     const examDateRaw   = profile?.exam_date   || null;
     const targetScore   = profile?.target_score || null;
-    const studyGoals    = profile?.study_goals  || null;
+    const studyGoals    = profile?.biggest_weakness || null;
 
     // Days until exam (used by Zero for personalised responses)
     let daysUntilExam: number | null = null;
