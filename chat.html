@@ -178,6 +178,30 @@ button{font-family:inherit;cursor:pointer}
 .report svg{width:13px;height:13px}
 .report.done{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
 
+/* feedback buttons */
+.btn-helpful{color:#22c55e!important}
+.btn-helpful:hover{border-color:rgba(34,197,94,.5)!important;background:rgba(34,197,94,.1)!important;color:#22c55e!important}
+.btn-helpful.done{background:rgba(34,197,94,.15)!important;border-color:rgba(34,197,94,.5)!important;opacity:.7;pointer-events:none}
+.btn-incorrect{color:#ef4f5f!important}
+.btn-incorrect:hover{border-color:rgba(239,79,95,.5)!important;background:rgba(239,79,95,.1)!important;color:#ef4f5f!important}
+.btn-incorrect.done{background:rgba(239,79,95,.15)!important;border-color:rgba(239,79,95,.5)!important;opacity:.7;pointer-events:none}
+
+/* feedback dialog */
+.fb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.fb-dialog{background:#0f1923;border:1px solid var(--border-mid);border-radius:18px;padding:28px 26px 22px;width:min(420px,92vw);display:flex;flex-direction:column;gap:14px}
+.fb-dialog h3{font-size:16px;font-weight:700;color:#fff;margin:0}
+.fb-dialog p{font-size:13px;color:var(--text-400);margin:0}
+.fb-opts{display:flex;flex-direction:column;gap:8px}
+.fb-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-300);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-align:left}
+.fb-opt:hover,.fb-opt.sel{border-color:rgba(239,79,95,.5);background:rgba(239,79,95,.08);color:#fff}
+.fb-opt.sel{font-weight:700}
+.fb-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.fb-cancel{padding:9px 18px;border-radius:100px;background:transparent;border:1px solid var(--border-mid);color:var(--text-400);font-size:13px;cursor:pointer;transition:all .2s}
+.fb-cancel:hover{border-color:var(--border-mid);color:var(--text-200)}
+.fb-submit{padding:9px 20px;border-radius:100px;background:rgba(239,79,95,.15);border:1px solid rgba(239,79,95,.4);color:#ef4f5f;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.fb-submit:hover{background:rgba(239,79,95,.25)}
+.fb-submit:disabled{opacity:.4;pointer-events:none}
+
 /* typing indicator */
 .typing{display:flex;gap:5px;padding:14px 16px}
 .typing i{width:8px;height:8px;border-radius:50%;background:var(--cyan);opacity:.5;animation:typing 1.2s infinite}
@@ -1378,6 +1402,8 @@ button{font-family:inherit;cursor:pointer}
         '<button class="act btn-explain-simpler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h0"/></svg>Explain Simpler</button>'+
         '<button class="act btn-similar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>Similar Question</button>'+
         '<button class="act copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy Solution</button>'+
+        '<button class="act btn-helpful"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>Helpful</button>'+
+        '<button class="act btn-incorrect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>Incorrect Answer</button>'+
       '</div>'+
       '<div class="msg-menu-wrap">'+
         '<button class="msg-menu-btn" onclick="toggleMsgMenu(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>'+
@@ -1454,6 +1480,77 @@ button{font-family:inherit;cursor:pointer}
       var t = (topic && subtopic) ? topic+' ('+subtopic+')' : (topic || 'this topic');
       input.value='Give me a similar SAT/ACT question on '+t;
       send();
+    });
+    // helpful feedback
+    var recIdForFeedback = window.__lastQRecId;
+    var sesIdForFeedback = currentSessionId || null;
+    var topicForFeedback = topic || null;
+    var subForFeedback   = subtopic || null;
+    el.querySelector('.btn-helpful').addEventListener('click', function(){
+      var btn = this;
+      if (!currentUser) return;
+      btn.classList.add('done');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Thanks!';
+      sb.from('response_feedback').insert({
+        user_id:       currentUser.id,
+        record_id:     recIdForFeedback,
+        session_id:    sesIdForFeedback,
+        feedback_type: 'helpful',
+        topic:         topicForFeedback,
+        subtopic:      subForFeedback
+      }).then(function(){});
+    });
+    // incorrect answer feedback
+    el.querySelector('.btn-incorrect').addEventListener('click', function(){
+      if (!currentUser) return;
+      var overlay = document.createElement('div');
+      overlay.className = 'fb-overlay';
+      var errorTypes = [
+        {val:'wrong_answer',    label:'❌ Wrong Final Answer'},
+        {val:'wrong_explanation',label:'📖 Wrong Explanation'},
+        {val:'wrong_steps',     label:'🔢 Wrong Math Steps'},
+        {val:'formatting_issue',label:'📐 Math Formatting Issue'},
+        {val:'other',           label:'💬 Other'}
+      ];
+      overlay.innerHTML = '<div class="fb-dialog">'+
+        '<h3>What\'s wrong with this answer?</h3>'+
+        '<p>Help Zero improve by selecting the type of error.</p>'+
+        '<div class="fb-opts">'+
+          errorTypes.map(e=>'<button class="fb-opt" data-v="'+e.val+'">'+e.label+'</button>').join('')+
+        '</div>'+
+        '<div class="fb-actions">'+
+          '<button class="fb-cancel">Cancel</button>'+
+          '<button class="fb-submit" disabled>Submit</button>'+
+        '</div>'+
+      '</div>';
+      document.body.appendChild(overlay);
+      var selectedVal = null;
+      overlay.querySelectorAll('.fb-opt').forEach(function(opt){
+        opt.addEventListener('click',function(){
+          overlay.querySelectorAll('.fb-opt').forEach(o=>o.classList.remove('sel'));
+          this.classList.add('sel');
+          selectedVal = this.dataset.v;
+          overlay.querySelector('.fb-submit').disabled = false;
+        });
+      });
+      overlay.querySelector('.fb-cancel').addEventListener('click',function(){ overlay.remove(); });
+      overlay.querySelector('.fb-submit').addEventListener('click',function(){
+        if (!selectedVal) return;
+        overlay.remove();
+        var btn2 = el.querySelector('.btn-incorrect');
+        btn2.classList.add('done');
+        btn2.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Reported';
+        sb.from('response_feedback').insert({
+          user_id:       currentUser.id,
+          record_id:     recIdForFeedback,
+          session_id:    sesIdForFeedback,
+          feedback_type: 'incorrect',
+          error_type:    selectedVal,
+          topic:         topicForFeedback,
+          subtopic:      subForFeedback
+        }).then(function(){});
+      });
+      overlay.addEventListener('click',function(e){ if(e.target===overlay) overlay.remove(); });
     });
   }
 
