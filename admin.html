@@ -269,6 +269,7 @@ select.search-input{cursor:pointer}
     <button class="tab" onclick="switchTab('users')">Users</button>
     <button class="tab" onclick="switchTab('founders')">Founders</button>
     <button class="tab" onclick="switchTab('settings')">System Settings</button>
+    <button class="tab" onclick="switchTab('feedback')">Feedback</button>
   </div>
 
   <!-- TAB: PENDING -->
@@ -355,6 +356,35 @@ select.search-input{cursor:pointer}
         <div><div class="card-title">System Settings</div><div class="card-sub">Global configuration values</div></div>
       </div>
       <div id="settingsList"><div class="empty"><div class="ico">⚙️</div><p>Loading…</p></div></div>
+    </div>
+  </div>
+
+  <!-- TAB: FEEDBACK -->
+  <div id="tab-feedback" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
+      <div class="stat-card green"><div class="lbl">👍 Helpful</div><div class="val" id="fbStatHelpful">—</div><div class="sub">total positive</div></div>
+      <div class="stat-card red"><div class="lbl">👎 Incorrect Reports</div><div class="val" id="fbStatIncorrect">—</div><div class="sub">error reports</div></div>
+    </div>
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico red">🔢</div>
+        <div><div class="card-title">Most Common Error Types</div><div class="card-sub">Breakdown of incorrect answer reports by error category</div></div>
+      </div>
+      <div id="fbErrorTypes"><div class="empty"><div class="ico">📊</div><p>Loading…</p></div></div>
+    </div>
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico amber">📚</div>
+        <div><div class="card-title">Most Reported Topics</div><div class="card-sub">Topics with the most incorrect answer reports</div></div>
+      </div>
+      <div id="fbTopics"><div class="empty"><div class="ico">📊</div><p>Loading…</p></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">📋</div>
+        <div><div class="card-title">Recent Feedback</div><div class="card-sub">Latest 50 feedback entries</div></div>
+      </div>
+      <div id="fbRecent"><div class="empty"><div class="ico">📋</div><p>Loading…</p></div></div>
     </div>
   </div>
 
@@ -460,13 +490,14 @@ document.getElementById('hambBtn').addEventListener('click', () => { sidebar.cla
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 
 // Tabs
-const TABS = ['pending','users','founders','settings'];
+const TABS = ['pending','users','founders','settings','feedback'];
 function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
   if (name === 'users') { if (allUsers.length === 0) loadUsers(); loadSuspiciousAccounts(); }
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
+  if (name === 'feedback') loadFeedback();
 }
 
 // Toast
@@ -848,6 +879,60 @@ async function saveSetting(key) {
   if (!res.ok || result.error) { toast('Error: ' + (result.error || 'unknown'), 'red'); return; }
   toast(`"${key}" updated`, 'green');
   if (key === 'founder_slots_remaining') document.getElementById('statFounder').textContent = val;
+}
+
+// Feedback tab
+async function loadFeedback() {
+  const [helpfulRes, incorrectRes, recentRes] = await Promise.all([
+    sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'helpful'),
+    sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'incorrect'),
+    sb.from('response_feedback').select('id, created_at, feedback_type, error_type, topic, subtopic, profiles(full_name, email)').order('created_at', { ascending: false }).limit(50)
+  ]);
+  document.getElementById('fbStatHelpful').textContent   = helpfulRes.count   ?? '—';
+  document.getElementById('fbStatIncorrect').textContent = incorrectRes.count ?? '—';
+
+  // Error type breakdown
+  const { data: errData } = await sb.from('response_feedback')
+    .select('error_type').eq('feedback_type', 'incorrect').not('error_type', 'is', null);
+  const errCounts = {};
+  (errData || []).forEach(r => { errCounts[r.error_type] = (errCounts[r.error_type] || 0) + 1; });
+  const errLabels = { wrong_answer:'Wrong Final Answer', wrong_explanation:'Wrong Explanation', wrong_steps:'Wrong Math Steps', formatting_issue:'Formatting Issue', other:'Other' };
+  const errEl = document.getElementById('fbErrorTypes');
+  const errSorted = Object.entries(errCounts).sort((a,b) => b[1]-a[1]);
+  errEl.innerHTML = errSorted.length === 0
+    ? '<div class="empty"><p>No incorrect reports yet.</p></div>'
+    : `<div class="tbl-wrap"><table><thead><tr><th>Error Type</th><th>Count</th></tr></thead><tbody>${
+        errSorted.map(([k,v]) => `<tr><td>${esc(errLabels[k]||k)}</td><td class="bold">${v}</td></tr>`).join('')
+      }</tbody></table></div>`;
+
+  // Most reported topics
+  const { data: topicData } = await sb.from('response_feedback')
+    .select('topic').eq('feedback_type', 'incorrect').not('topic', 'is', null);
+  const topicCounts = {};
+  (topicData || []).forEach(r => { topicCounts[r.topic] = (topicCounts[r.topic] || 0) + 1; });
+  const topicEl = document.getElementById('fbTopics');
+  const topicSorted = Object.entries(topicCounts).sort((a,b) => b[1]-a[1]).slice(0, 20);
+  topicEl.innerHTML = topicSorted.length === 0
+    ? '<div class="empty"><p>No topic data yet.</p></div>'
+    : `<div class="tbl-wrap"><table><thead><tr><th>Topic</th><th>Reports</th></tr></thead><tbody>${
+        topicSorted.map(([k,v]) => `<tr><td>${esc(k)}</td><td class="bold">${v}</td></tr>`).join('')
+      }</tbody></table></div>`;
+
+  // Recent feedback
+  const recentEl = document.getElementById('fbRecent');
+  const rows = recentRes.data || [];
+  recentEl.innerHTML = rows.length === 0
+    ? '<div class="empty"><p>No feedback yet.</p></div>'
+    : `<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th>Subtopic</th></tr></thead><tbody>${
+        rows.map(r => `<tr>
+          <td class="mono">${fmtDate(r.created_at)}</td>
+          <td>${esc(r.profiles?.full_name || r.profiles?.email || '—')}</td>
+          <td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍 Helpful':'👎 Incorrect'}</span></td>
+          <td>${r.error_type ? esc(errLabels[r.error_type]||r.error_type) : '—'}</td>
+          <td>${esc(r.topic||'—')}</td>
+          <td>${esc(r.subtopic||'—')}</td>
+        </tr>`).join('')
+      }</tbody></table></div>`;
 }
 
 // Helpers
