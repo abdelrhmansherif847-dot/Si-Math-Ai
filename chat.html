@@ -1481,8 +1481,8 @@ button{font-family:inherit;cursor:pointer}
       input.value='Give me a similar SAT/ACT question on '+t;
       send();
     });
-    // helpful feedback
-    var recIdForFeedback = window.__lastQRecId;
+    // helpful feedback — read record_id from this response (window.__lastQRecId is set after addAI returns)
+    var recIdForFeedback = (aiResponse && aiResponse.record_id) || window.__lastQRecId || null;
     var sesIdForFeedback = currentSessionId || null;
     var topicForFeedback = topic || null;
     var subForFeedback   = subtopic || null;
