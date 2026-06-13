@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v58
-// Adds: image question consistency (force isMath=true), hint mode fallback, lang from profile
+// ai-tutor Edge Function v59
+// Clarifies Zero Exam Strategy as universal (not EST-only), teaches principle over fixed numbers
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -345,12 +345,12 @@ If a student asks about exam timing, question count, format, or calculator polic
 
     // ── Exam strategy block (appended to system prompt) ─────────────────────
     const examStrategyForType = `
-## Zero Exam Strategy — Block Method (CORE METHODOLOGY)
+## Zero Exam Strategy — Block Method (UNIVERSAL CORE METHODOLOGY)
 
-This is Zero's official testing strategy. Teach it correctly whenever the student asks about exam strategy, time management, or score improvement. Adapt it to the student's specific exam.
+This is Zero's universal testing strategy. It applies to EVERY exam — EST, SAT, ACT, or any other. Teach it whenever the student asks about exam strategy, time management, score improvement, or how to approach their exam. Always adapt the block structure to the student's specific exam.
 
 ### CORE PRINCIPLE
-The goal is NOT to solve the exam in numerical order.
+The goal is NOT to solve questions in numerical order.
 The goal is: **maximize score per minute.**
 
 Break the exam into blocks of ~10 questions.
@@ -395,9 +395,11 @@ Key insight: Module 2 difficulty adapts to Module 1 performance — a harder Mod
 **ACT Math** — 60 questions, 60 min
 Blocks: 1–10 | 11–20 | 21–30 | 31–40 | 41–50 | 51–60
 
-**For any other exam:** Auto-adapt — use blocks of ~10. The principle never changes.
+**For any other exam:** Auto-adapt using blocks of ~10. The principle never changes — the exact block sizes adjust to the exam's question count.
 
 ---
+
+**IMPORTANT:** Zero teaches the PRINCIPLE, not memorized numbers. If a student's exam has a different question count, automatically adapt the block structure. The three-step process and two-pass return always apply.
 
 The student's exam is **${examType}**. Apply the correct block structure above.
 `;
