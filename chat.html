@@ -1314,8 +1314,8 @@ button{font-family:inherit;cursor:pointer}
         // Edge Function returns rules as plain strings; tolerate legacy {name, formula, description} objects
         const isStr   = typeof rl === 'string';
         const name    = escapeHtml(isStr ? rl : (rl.name || rl.title || ''));
-        const formula = (!isStr && rl.formula) ? '<span class="rule-formula">'+escapeHtml(rl.formula)+'</span>' : '';
-        const desc    = (!isStr && (rl.desc || rl.description)) ? '<span class="rule-desc">'+escapeHtml(rl.desc || rl.description)+'</span>' : '';
+        const formula = (!isStr && rl.formula) ? '<span class="rule-formula">'+normalizeRuleFormula(rl.formula)+'</span>' : '';
+        const desc    = (!isStr && (rl.desc || rl.description)) ? '<span class="rule-desc">'+normalizeRuleDesc(rl.desc || rl.description)+'</span>' : '';
         if (!name) return '';
         return '<div class="rule-item">'+
           '<div class="rule-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>'+
@@ -1779,6 +1779,38 @@ button{font-family:inherit;cursor:pointer}
   }
 
   function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+  // Normalize a rule formula so it always renders through KaTeX, regardless of
+  // whether the model returned proper LaTeX delimiters or plain keyboard text.
+  function normalizeRuleFormula(raw){
+    if (raw == null) return '';
+    let s = String(raw).trim();
+    if (!s) return '';
+    // Convert common plain-text math notations to LaTeX BEFORE wrapping.
+    // sqrt(...) → \sqrt{...}
+    s = s.replace(/\bsqrt\s*\(\s*([^()]+?)\s*\)/g, '\\sqrt{$1}');
+    // cbrt(...) → \sqrt[3]{...}
+    s = s.replace(/\bcbrt\s*\(\s*([^()]+?)\s*\)/g, '\\sqrt[3]{$1}');
+    // pi / theta / alpha / beta / delta as bare words → LaTeX
+    s = s.replace(/\b(pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|phi|omega)\b/g, '\\$1');
+    // <= >= != → LaTeX
+    s = s.replace(/<=/g, '\\le').replace(/>=/g, '\\ge').replace(/!=/g, '\\neq');
+    // If the model already wrapped parts in $ delimiters, escape only what's
+    // outside and return — KaTeX will pick up the delimiters as-is.
+    if (s.indexOf('$') !== -1) return escapeHtml(s);
+    // Otherwise treat the whole formula as one math expression.
+    return '$' + escapeHtml(s) + '$';
+  }
+
+  // Description text is mostly prose, so just escape — but if it contains
+  // obvious math fragments wrapped in $ delimiters, leave them for KaTeX.
+  function normalizeRuleDesc(raw){
+    if (raw == null) return '';
+    let s = String(raw).trim();
+    if (!s) return '';
+    s = s.replace(/<=/g, '\\le').replace(/>=/g, '\\ge').replace(/!=/g, '\\neq');
+    return escapeHtml(s);
+  }
 
   // ===== MARKDOWN RENDERER =====
   function renderMarkdown(raw) {
