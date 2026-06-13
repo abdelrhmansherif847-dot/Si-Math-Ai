@@ -31,62 +31,79 @@ function fallbackHint(topic: string, subtopic: string, lang: string): string {
   return lang === 'ar' ? hints[key].ar : hints[key].en;
 }
 
-// ── fallbackRules: topic-keyed educational rule dictionary ──────────────────
+// ── fallbackRules: topic-keyed educational rule dictionary (LaTeX formulas) ──
 function fallbackRules(topic: string, subtopic: string): Array<{name:string;formula:string;desc:string}> {
   const t = (topic + ' ' + subtopic).toLowerCase();
   const map: Array<[string, Array<{name:string;formula:string;desc:string}>]> = [
     ['linear equation', [
-      { name: 'Linear Equation Rule', formula: 'ax + b = c → x = (c - b) / a', desc: 'Isolate x by moving constants to the other side and dividing by the coefficient.' }
+      { name: 'Linear Equation', formula: '$ax + b = c \\Rightarrow x = \\frac{c-b}{a}$', desc: 'Isolate x by moving constants to the right side, then divide by the coefficient.' },
+      { name: 'Balance Rule', formula: 'Same operation on both sides keeps equality', desc: 'Whatever you do to one side, do to the other.' },
     ]],
     ['quadratic', [
-      { name: 'Quadratic Formula', formula: 'x = (-b ± √(b²-4ac)) / 2a', desc: 'Use when factoring is not obvious. a, b, c are coefficients from ax²+bx+c=0.' },
-      { name: 'Factoring Rule', formula: '(x + p)(x + q) = 0 → x = -p or x = -q', desc: 'Find two numbers that multiply to c and add to b.' }
+      { name: 'Quadratic Formula', formula: '$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$', desc: 'Solves any quadratic — use when factoring is not obvious.' },
+      { name: 'Factoring', formula: '$(x+p)(x+q)=0 \\Rightarrow x=-p \\text{ or } x=-q$', desc: 'Find two numbers that multiply to c and add to b.' },
+      { name: 'Vertex Form', formula: '$f(x)=a(x-h)^2+k$, vertex at $(h,k)$', desc: 'Use to find the vertex (maximum/minimum) directly.' },
+      { name: 'Discriminant', formula: '$\\Delta = b^2 - 4ac$', desc: 'Δ>0: two real roots; Δ=0: one root; Δ<0: no real roots.' },
     ]],
     ['system', [
-      { name: 'Substitution Method', formula: 'Solve one equation for x, substitute into the other', desc: 'Express one variable in terms of the other to reduce to a single equation.' },
-      { name: 'Elimination Method', formula: 'Add/subtract equations to cancel a variable', desc: 'Multiply equations so one variable cancels when added or subtracted.' }
+      { name: 'Substitution', formula: 'Solve one for $x$, substitute into the other', desc: 'Express one variable in terms of the other to get one equation.' },
+      { name: 'Elimination', formula: 'Multiply then add/subtract to cancel a variable', desc: 'Scale equations so one variable cancels when you add them.' },
     ]],
     ['percent', [
-      { name: 'Percent Formula', formula: 'Percent = (Part / Whole) × 100', desc: 'Express a quantity as parts per hundred.' },
-      { name: 'Percent Change', formula: 'Change% = ((New - Old) / Old) × 100', desc: 'Measures relative increase or decrease between two values.' }
+      { name: 'Percent Formula', formula: '$\\text{Percent} = \\frac{\\text{Part}}{\\text{Whole}} \\times 100$', desc: 'Expresses a quantity as parts per hundred.' },
+      { name: 'Percent Change', formula: '$\\%\\Delta = \\frac{\\text{New}-\\text{Old}}{\\text{Old}} \\times 100$', desc: 'Measures relative increase or decrease between two values.' },
+      { name: 'Percent of a Number', formula: '$x\\% \\text{ of } n = \\frac{x}{100} \\times n$', desc: 'Convert percent to decimal then multiply.' },
     ]],
     ['ratio', [
-      { name: 'Ratio Rule', formula: 'a : b = a/b', desc: 'A ratio compares two quantities. Convert to fractions to calculate.' }
+      { name: 'Ratio as Fraction', formula: '$a:b = \\frac{a}{b}$', desc: 'A ratio compares two quantities — convert to fractions to calculate.' },
+      { name: 'Proportion', formula: '$\\frac{a}{b} = \\frac{c}{d} \\Rightarrow ad = bc$', desc: 'Cross-multiply to solve for an unknown in a proportion.' },
     ]],
     ['probability', [
-      { name: 'Probability Formula', formula: 'P(E) = Favorable Outcomes / Total Outcomes', desc: 'Always between 0 (impossible) and 1 (certain).' },
-      { name: 'Complement Rule', formula: 'P(not E) = 1 - P(E)', desc: 'The probability that an event does NOT occur equals 1 minus its probability.' }
+      { name: 'Basic Probability', formula: '$P(E) = \\frac{\\text{Favorable}}{\\text{Total}}$', desc: 'Always between 0 (impossible) and 1 (certain).' },
+      { name: 'Complement Rule', formula: '$P(\\text{not }E) = 1 - P(E)$', desc: 'The probability an event does NOT occur.' },
+      { name: 'Independent Events', formula: '$P(A \\cap B) = P(A) \\times P(B)$', desc: 'Multiply probabilities when events do not affect each other.' },
     ]],
     ['statistic', [
-      { name: 'Mean Formula', formula: 'Mean = Σx / n', desc: 'Sum all values then divide by the count.' },
-      { name: 'Median Rule', formula: 'Middle value when data is sorted', desc: 'For even count: average of two middle values.' }
+      { name: 'Mean', formula: '$\\bar{x} = \\frac{\\sum x}{n}$', desc: 'Sum all values then divide by the count.' },
+      { name: 'Median', formula: 'Middle value when data is sorted', desc: 'For even count: average of the two middle values.' },
+      { name: 'Range', formula: '$\\text{Range} = \\text{Max} - \\text{Min}$', desc: 'Measures spread of the data set.' },
     ]],
     ['circle', [
-      { name: 'Circumference', formula: 'C = 2πr', desc: 'Distance around the circle.' },
-      { name: 'Area of Circle', formula: 'A = πr²', desc: 'Space enclosed within the circle.' }
+      { name: 'Circumference', formula: '$C = 2\\pi r = \\pi d$', desc: 'Distance around the circle.' },
+      { name: 'Area', formula: '$A = \\pi r^2$', desc: 'Space enclosed within the circle.' },
+      { name: 'Arc Length', formula: '$L = \\frac{\\theta}{360} \\times 2\\pi r$', desc: 'Portion of the circumference, where θ is the central angle in degrees.' },
+      { name: 'Sector Area', formula: '$A_{\\text{sector}} = \\frac{\\theta}{360} \\times \\pi r^2$', desc: 'Slice of the circle, proportional to the central angle.' },
+      { name: 'Diameter & Radius', formula: '$d = 2r$', desc: 'Diameter is twice the radius.' },
     ]],
     ['triangle', [
-      { name: 'Triangle Angle Sum', formula: 'A + B + C = 180°', desc: 'The three interior angles of any triangle sum to 180 degrees.' },
-      { name: 'Area of Triangle', formula: 'A = ½ × base × height', desc: 'Height must be perpendicular to the base.' },
-      { name: 'Pythagorean Theorem', formula: 'a² + b² = c²', desc: 'Only for right triangles: c is the hypotenuse.' }
+      { name: 'Angle Sum', formula: '$A + B + C = 180°$', desc: 'The three interior angles of any triangle always sum to 180°.' },
+      { name: 'Area', formula: '$A = \\frac{1}{2} \\times b \\times h$', desc: 'Height must be perpendicular to the base.' },
+      { name: 'Pythagorean Theorem', formula: '$a^2 + b^2 = c^2$', desc: 'Only for right triangles — c is the hypotenuse (longest side).' },
+      { name: 'Exterior Angle', formula: 'Exterior $= $ sum of two non-adjacent interior angles', desc: 'An exterior angle equals the sum of the two opposite interior angles.' },
     ]],
     ['function', [
-      { name: 'Function Notation', formula: 'f(x) = expression in x', desc: 'f(x) means "evaluate the expression at x". Replace x with the given value.' },
-      { name: 'Domain & Range', formula: 'Domain: valid inputs; Range: valid outputs', desc: 'Domain restrictions include division by zero and even roots of negatives.' }
+      { name: 'Function Notation', formula: '$f(x)$ — evaluate by substituting $x$', desc: 'Replace x with the given value to find the output.' },
+      { name: 'Domain & Range', formula: 'Domain: valid inputs; Range: valid outputs', desc: 'Avoid division by zero and square roots of negatives.' },
+      { name: 'Composition', formula: '$(f \\circ g)(x) = f(g(x))$', desc: 'Apply g first, then apply f to the result.' },
     ]],
     ['slope', [
-      { name: 'Slope Formula', formula: 'm = (y₂ - y₁) / (x₂ - x₁)', desc: 'Measures steepness of a line. Positive = rises right; negative = falls right.' },
-      { name: 'Slope-Intercept Form', formula: 'y = mx + b', desc: 'm is slope, b is y-intercept (where line crosses y-axis).' }
+      { name: 'Slope Formula', formula: '$m = \\frac{y_2 - y_1}{x_2 - x_1}$', desc: 'Rise over run between two points.' },
+      { name: 'Slope-Intercept', formula: '$y = mx + b$', desc: 'm is slope, b is y-intercept.' },
+      { name: 'Point-Slope Form', formula: '$y - y_1 = m(x - x_1)$', desc: 'Use when you have a point and the slope.' },
     ]],
     ['exponent', [
-      { name: 'Product Rule', formula: 'aᵐ × aⁿ = aᵐ⁺ⁿ', desc: 'When multiplying same base, add exponents.' },
-      { name: 'Power Rule', formula: '(aᵐ)ⁿ = aᵐⁿ', desc: 'When raising a power to a power, multiply exponents.' }
+      { name: 'Product Rule', formula: '$a^m \\times a^n = a^{m+n}$', desc: 'Same base: add exponents when multiplying.' },
+      { name: 'Power Rule', formula: '$(a^m)^n = a^{mn}$', desc: 'Raise a power to a power: multiply exponents.' },
+      { name: 'Quotient Rule', formula: '$\\frac{a^m}{a^n} = a^{m-n}$', desc: 'Same base: subtract exponents when dividing.' },
+      { name: 'Zero & Negative Exponents', formula: '$a^0 = 1$, $a^{-n} = \\frac{1}{a^n}$', desc: 'Any non-zero base to the 0 power equals 1.' },
     ]],
     ['inequalit', [
-      { name: 'Inequality Rule', formula: 'Flip sign when multiplying/dividing by negative', desc: 'ax > b → x < b/a when a is negative.' }
+      { name: 'Inequality Flip Rule', formula: 'Multiply/divide by negative → flip $<$ to $>$', desc: 'The direction reverses when both sides are multiplied or divided by a negative.' },
+      { name: 'Interval Notation', formula: '$(a,b)$ open; $[a,b]$ closed', desc: 'Parentheses exclude endpoints; brackets include them.' },
     ]],
     ['algebra', [
-      { name: 'Distributive Property', formula: 'a(b + c) = ab + ac', desc: 'Multiply the term outside the parentheses by each term inside.' }
+      { name: 'Distributive Property', formula: '$a(b+c) = ab + ac$', desc: 'Multiply the outside term by each term inside the parentheses.' },
+      { name: 'FOIL', formula: '$(a+b)(c+d) = ac+ad+bc+bd$', desc: 'First, Outer, Inner, Last — for expanding two binomials.' },
     ]],
   ];
   const match = map.find(([key]) => t.includes(key));
@@ -173,12 +190,6 @@ async function search_zero_knowledge(sb: ReturnType<typeof createClient>, query:
   ).join('\n');
 }
 
-const HINT_MODE_OVERRIDE = `
-CRITICAL OVERRIDE — HINT MODE ACTIVE:
-Your answer must contain ONLY: one Socratic hint (1–2 sentences) that guides the student toward the answer, followed by one guiding question.
-MUST NOT contain: the final numerical answer, step-by-step labels (Step 1/2/3), completed calculations, or any full solution.
-End your hint with: "What do you think the next step is?"
-`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -233,10 +244,25 @@ serve(async (req) => {
       search_zero_knowledge(sbAdmin, question + ' ' + topic + ' ' + subtopic),
     ]);
 
-    // ── Profile fetch ─────────────────────────────────────────────────────────
-    const { data: profile } = await sbAdmin.from('profiles').select('name, exam_type, exam_date, language').eq('id', user.id).single();
-    const studentName = profile?.name || 'Student';
-    const examType    = profile?.exam_type || 'SAT';
+    // ── Profile fetch (expanded) ──────────────────────────────────────────────
+    const { data: profile } = await sbAdmin
+      .from('profiles')
+      .select('name, exam_type, exam_date, language, target_score, study_goals')
+      .eq('id', user.id)
+      .single();
+    const studentName   = profile?.name        || 'Student';
+    const examType      = profile?.exam_type   || 'SAT';
+    const examDateRaw   = profile?.exam_date   || null;
+    const targetScore   = profile?.target_score || null;
+    const studyGoals    = profile?.study_goals  || null;
+
+    // Days until exam (used by Zero for personalised responses)
+    let daysUntilExam: number | null = null;
+    if (examDateRaw) {
+      const today   = new Date(); today.setHours(0,0,0,0);
+      const examDay = new Date(examDateRaw); examDay.setHours(0,0,0,0);
+      daysUntilExam = Math.ceil((examDay.getTime() - today.getTime()) / 86_400_000);
+    }
 
     // ── Build system prompt ───────────────────────────────────────────────────
     const EXAM_FACTS = `
@@ -271,41 +297,113 @@ If a student asks about exam timing, question count, format, or calculator polic
 - Calculator: allowed
 - Pace: exactly 1 minute per question — tightest of all three exams
 
-⚠️ CRITICAL: If you state any exam timing, question count, or format that contradicts the above, you are wrong. Always return one of the exact values above. Never say "SAT has 20 questions in no-calculator section" or "EST Math 1 is 60 minutes" — those are wrong.
+⚠️ CRITICAL: If you state any exam timing, question count, or format that contradicts the above, you are wrong.
 `;
 
-    let systemPrompt = `You are Zero, an elite math tutor AI for ${examType} exam preparation.
-Student name: ${studentName}
-Language: ${lang === 'ar' ? 'Arabic (respond in Arabic)' : 'English'}
+    const STUDENT_PROFILE_BLOCK = [
+      `Student name: ${studentName}`,
+      `Target exam: ${examType}`,
+      examDateRaw    ? `Exam date: ${examDateRaw}${daysUntilExam !== null ? ` (${daysUntilExam > 0 ? daysUntilExam + ' days from now' : daysUntilExam === 0 ? 'TODAY' : Math.abs(daysUntilExam) + ' days ago'})` : ''}` : null,
+      targetScore    ? `Target score: ${targetScore}` : null,
+      studyGoals     ? `Study goals: ${studyGoals}` : null,
+    ].filter(Boolean).join('\n');
+
+    // Normal (non-hint) system prompt
+    const NORMAL_SYSTEM_PROMPT = `You are Zero — a friendly, sharp, and encouraging math tutor AI for ${examType} exam prep.
+${STUDENT_PROFILE_BLOCK}
+Language: ${lang === 'ar' ? 'Arabic — respond entirely in Arabic, warm Egyptian dialect welcome for greetings/chitchat' : 'English'}
 
 ${EXAM_FACTS}
 ${personality ? `## Zero Personality\n${personality}\n` : ''}
 ${knowledge ? `## Relevant Knowledge\n${knowledge}\n` : ''}
 
+## Personality Rules
+- Be warm, encouraging, and a little playful — you care about the student.
+- For greetings or casual chat, respond naturally and personally. Use the student's name and profile data when relevant.
+- If the student asks "فاضل قد ايه على امتحاني؟" or similar — calculate from the exam date above and give a motivating answer.
+- Never be robotic or list-only for conversational messages.
+
+## Math Formatting Rules (CRITICAL)
+- Always write math using LaTeX notation inside dollar signs: inline as $x^2 + 1$ and display as $$\\frac{a}{b}$$
+- Fractions: $$\\frac{numerator}{denominator}$$
+- Powers: $x^{2}$, $a^{n}$
+- Roots: $\\sqrt{x}$, $\\sqrt[3]{x}$
+- Greek letters: $\\pi$, $\\theta$, $\\alpha$
+- Equations on their own line: $$2x + 3 = 7$$
+- Never write math as plain text like "x^2" or "sqrt(x)" — always use LaTeX
+
+## Response Structure Rules (for math explanations)
+Structure the answer field like this:
+**🎯 Understanding the Problem**
+[1-2 sentences identifying what's being asked]
+
+**📐 Step 1 — [step name]**
+[explanation with LaTeX math]
+
+**📐 Step 2 — [step name]**
+[explanation with LaTeX math]
+
+(continue for each step)
+
+**✅ Final Answer**
+$$[final answer in LaTeX]$$
+
+[1 sentence confirming the answer]
+
+## Rules Field — COMPREHENSIVE (most important fix)
+The "rules" array must include ALL formulas, properties, and concepts that could help solve OR understand this problem.
+- For a circle question: include radius def, diameter, circumference $C=2\\pi r$, area $A=\\pi r^2$, arc, chord, tangent — all that apply.
+- For quadratics: vertex form, standard form, quadratic formula, discriminant, factoring, completing the square.
+- For triangles: angle sum, Pythagorean theorem, area, sine rule, cosine rule — all that apply.
+- MINIMUM 2 rules, AIM for 3-6 rules per math question.
+- Each rule: name (concise), formula (LaTeX), desc (1 sentence how to use it).
+- Rules should feel like a mini study guide for this exact problem type.
+
 ## Response Format
-You MUST respond with valid JSON only. No markdown fences. No extra text.
+Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON.
 {
-  "answer": "your explanation in markdown",
-  "hint": "one Socratic hint (1-2 sentences, no full solution)",
+  "answer": "structured markdown explanation with LaTeX math",
+  "hint": "one Socratic hint (1-2 sentences, no solution, ends with a guiding question)",
   "topic": "detected math topic",
   "subtopic": "specific subtopic",
   "difficulty": "Easy|Medium|Hard",
   "concepts": ["concept1", "concept2"],
-  "rules": [{"name":"Rule Name","formula":"formula","desc":"short explanation"}],
+  "rules": [{"name":"Rule Name","formula":"LaTeX formula","desc":"one sentence"}],
   "weakness_signal": false,
   "attention_marker": "key concept or common mistake to highlight"
-}
+}`;
 
-## Rules for Rules field
-Always include at least 1-2 rules for math questions. Rules must have: name (rule name), formula (mathematical formula or statement), desc (1-sentence explanation).
+    // Hint-mode system prompt — completely separate, enforces NO full solution
+    const HINT_SYSTEM_PROMPT = `You are Zero — a Socratic math tutor. You are in HINT MODE.
 
-## Attention Markers
-ALWAYS include attention_marker for math questions. Common examples: "Watch sign changes", "Don't forget to distribute", "Check both solutions".
-`;
+${STUDENT_PROFILE_BLOCK}
+Language: ${lang === 'ar' ? 'Arabic' : 'English'}
 
-    if (hintMode) {
-      systemPrompt = HINT_MODE_OVERRIDE + '\n' + systemPrompt;
-    }
+## HINT MODE — ABSOLUTE RULES (no exceptions)
+1. You must NEVER reveal the final answer or complete solution.
+2. You must NEVER show full step-by-step working.
+3. The "answer" field must contain ONLY: one Socratic hint of 1-2 sentences that nudges the student toward the NEXT step, followed by one guiding question.
+4. Ask "What do you think the next step is?" or similar at the end.
+5. The student must do the actual work — you only guide.
+6. If the student already showed some work, acknowledge it and guide the NEXT step only.
+
+## Math Formatting
+Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
+
+## Response Format
+{
+  "answer": "ONE hint (1-2 sentences). ONE guiding question. NO solution. NO final answer.",
+  "hint": "",
+  "topic": "detected math topic",
+  "subtopic": "specific subtopic",
+  "difficulty": "Easy|Medium|Hard",
+  "concepts": ["concept1"],
+  "rules": [{"name":"Most relevant rule","formula":"LaTeX","desc":"one sentence"}],
+  "weakness_signal": false,
+  "attention_marker": "what the student should focus on next"
+}`;
+
+    const systemPrompt = hintMode ? HINT_SYSTEM_PROMPT : NORMAL_SYSTEM_PROMPT;
 
     // ── OpenAI call ───────────────────────────────────────────────────────────
     // When an image is attached, use GPT-4o vision with multimodal content.
