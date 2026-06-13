@@ -892,16 +892,28 @@ async function saveSetting(key) {
 const FB_ERR_LABELS = { wrong_answer:'Wrong Final Answer', wrong_explanation:'Wrong Explanation', wrong_steps:'Wrong Math Steps', formatting_issue:'Formatting Issue', other:'Other' };
 
 async function loadFeedback() {
-  const [helpfulRes, incorrectRes, recentRes] = await Promise.all([
+  const [helpfulRes, incorrectRes, rowsRes] = await Promise.all([
     sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'helpful'),
     sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'incorrect'),
     sb.from('response_feedback')
-      .select('id, created_at, feedback_type, error_type, topic, subtopic, user_id, session_id, record_id, question_records(question, ai_response, image, topic, subtopic, created_at), profiles(full_name, email)')
+      .select('id, created_at, feedback_type, error_type, topic, subtopic, user_id, session_id, record_id')
       .order('created_at', { ascending: false })
       .limit(50)
   ]);
   document.getElementById('fbStatHelpful').textContent   = helpfulRes.count   ?? '—';
   document.getElementById('fbStatIncorrect').textContent = incorrectRes.count ?? '—';
+
+  // Fetch question_records and profiles separately to avoid broken FK joins
+  const rawRows = rowsRes.data || [];
+  const recordIds = [...new Set(rawRows.map(r => r.record_id).filter(Boolean))];
+  const userIds   = [...new Set(rawRows.map(r => r.user_id).filter(Boolean))];
+  const [qrRes, profileRes] = await Promise.all([
+    recordIds.length ? sb.from('question_records').select('id, question, ai_response, image, created_at').in('id', recordIds) : Promise.resolve({ data: [] }),
+    userIds.length   ? sb.from('profiles').select('id, full_name, email').in('id', userIds)                                   : Promise.resolve({ data: [] })
+  ]);
+  const qrMap      = Object.fromEntries((qrRes.data      || []).map(r => [r.id, r]));
+  const profileMap = Object.fromEntries((profileRes.data || []).map(r => [r.id, r]));
+  const rows = rawRows.map(r => ({ ...r, _qr: qrMap[r.record_id] || null, _profile: profileMap[r.user_id] || null }));
 
   // Error type breakdown
   const { data: errData } = await sb.from('response_feedback')
@@ -931,19 +943,19 @@ async function loadFeedback() {
 
   // Recent feedback — with expandable full context
   const recentEl = document.getElementById('fbRecent');
-  const rows = recentRes.data || [];
   if (rows.length === 0) { recentEl.innerHTML = '<div class="empty"><p>No feedback yet.</p></div>'; return; }
 
   let html = `<div class="tbl-wrap"><table>
     <thead><tr><th>#</th><th>Date</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th>Detail</th></tr></thead>
     <tbody>`;
   rows.forEach((r, idx) => {
-    const qr = r.question_records;
+    const qr = r._qr;
+    const profile = r._profile;
     const rowId = 'fbrow-' + r.id.replace(/-/g,'');
     html += `<tr>
       <td class="mono" style="color:var(--text-500)">#${idx+1}</td>
       <td class="mono">${fmtDate(r.created_at)}</td>
-      <td>${esc(r.profiles?.full_name || r.profiles?.email || '—')}</td>
+      <td>${esc(profile?.full_name || profile?.email || r.user_id?.slice(0,8) || '—')}</td>
       <td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍 Helpful':'👎 Incorrect'}</span></td>
       <td>${r.error_type ? esc(FB_ERR_LABELS[r.error_type]||r.error_type) : '—'}</td>
       <td>${esc(r.topic||'—')}</td>
