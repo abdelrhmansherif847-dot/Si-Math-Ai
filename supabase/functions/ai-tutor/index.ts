@@ -1,5 +1,5 @@
-// ai-tutor Edge Function v54
-// Adds: Zero identity/founder response for "who made you / who built Si Math AI" questions
+// ai-tutor Edge Function v55
+// Adds: corrected Zero Block Method exam strategy (official methodology)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -336,32 +336,62 @@ If a student asks about exam timing, question count, format, or calculator polic
     ].filter(Boolean).join('\n');
 
     // ── Exam strategy block (appended to system prompt) ─────────────────────
-    const examStrategyForType = examType === 'EST' ? `
-## EST Math Strategy — Ten-Question Block Method
-When a student asks about EST Math strategy, exam planning, or how to manage time, share this:
-EST Math 1 has 50 questions in 75 minutes = 1.5 min/question. Divide the exam into 5 blocks of 10:
-- Block 1 (Q1-10): Warm up, do ALL — mostly easy
-- Block 2 (Q11-20): Do confident ones, mark ❓ anything taking >90 seconds
-- Block 3 (Q21-30): Same approach — mark and move, don't get stuck
-- Block 4 (Q31-40): Speed up — skip anything with no clear starting point
-- Block 5 (Q41-50): Answer all remaining marked questions with your best guess
-Key rule: "Never leave a question blank — wrong answer = 0, blank = 0. Always guess if unsure."
-` : examType === 'SAT' ? `
-## SAT Math Strategy
-Digital SAT Math: 2 modules × 22 questions × 35 minutes each.
-4-Phase approach per module:
-- Phase 1 (first pass): Answer all questions you can solve in <60 seconds — mark the rest
-- Phase 2 (second pass): Return to marked questions, now spend 90-120 seconds each
-- Phase 3 (hard questions): Attempt remaining — use elimination, plug-in numbers, or skip
-- Phase 4 (last 2 minutes): Check for blanks — always guess, no penalty for wrong answers
-Key insight: Module 2 gets harder if you did well on Module 1 — that's GOOD, it means higher score ceiling.
-` : `
-## ACT Math Strategy
-60 questions in 60 minutes = exactly 1 minute per question. Tightest pacing of all exams.
-- Never spend >90 seconds on any single question — mark and return
-- Questions are NOT ordered by difficulty — hard ones can appear anywhere
-- Always eliminate obvious wrong answers before guessing
-- Last 5 minutes: fill in every blank (no guessing penalty)
+    const examStrategyForType = `
+## Zero Exam Strategy — Block Method (CORE METHODOLOGY)
+
+This is Zero's official testing strategy. Teach it correctly whenever the student asks about exam strategy, time management, or score improvement. Adapt it to the student's specific exam.
+
+### CORE PRINCIPLE
+The goal is NOT to solve the exam in numerical order.
+The goal is: **maximize score per minute.**
+
+Break the exam into blocks of ~10 questions.
+Inside every block, follow 3 steps:
+
+**STEP 1 — Fast & Confident:**
+Solve every question you can answer quickly and confidently.
+"Confident" = you immediately recognize the topic AND you're strong at it.
+This is personal — not globally "easy." It means easy FOR YOU.
+
+**STEP 2 — Solvable but Slow:**
+If a question is solvable but will take extra time → mark it, skip it, return later.
+
+**STEP 3 — Hard / Confusing:**
+If a question looks difficult or confusing → mark it, leave it for the final pass.
+
+After completing all blocks:
+- **First return:** Solve all marked medium-time questions.
+- **Second return:** Attempt the hardest questions.
+
+**Why this works:**
+- Prevents getting stuck early and losing easy points
+- Builds confidence and momentum
+- Secures every easy point before time pressure starts
+- Benefits strong, average, AND weak students
+
+---
+
+### BLOCK STRUCTURE BY EXAM
+
+**EST Math 1** — 50 questions, 75 min
+Blocks: 1–10 | 11–20 | 21–30 | 31–40 | 41–50
+
+**EST Math 2** — 40 questions, 60 min
+Blocks: 1–10 | 11–20 | 21–30 | 31–40
+
+**Digital SAT Math** — 22 questions per module, 35 min per module
+Blocks: 1–10 | 11–20 | 21–22
+(Apply inside each module separately)
+Key insight: Module 2 difficulty adapts to Module 1 performance — a harder Module 2 means a higher score ceiling.
+
+**ACT Math** — 60 questions, 60 min
+Blocks: 1–10 | 11–20 | 21–30 | 31–40 | 41–50 | 51–60
+
+**For any other exam:** Auto-adapt — use blocks of ~10. The principle never changes.
+
+---
+
+The student's exam is **${examType}**. Apply the correct block structure above.
 `;
 
     // Normal (non-hint) system prompt
