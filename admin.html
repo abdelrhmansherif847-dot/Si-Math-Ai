@@ -99,6 +99,13 @@ td{padding:13px 16px;font-size:13.5px;color:var(--text-300);vertical-align:middl
 td.bold{color:#fff;font-weight:600}
 td.mono{font-family:var(--font-mono);font-size:12px}
 
+/* FEEDBACK DETAIL PANEL */
+.fb-detail-panel{background:var(--bg-elev-1);border-top:1px solid var(--border-soft);padding:4px 0 8px}
+.fb-detail-row{display:flex;align-items:baseline;gap:12px;padding:8px 16px 2px}
+.fb-detail-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);min-width:120px;flex-shrink:0}
+.fb-detail-block{margin:2px 16px 10px;padding:12px 14px;background:var(--bg-base);border:1px solid var(--border-soft);border-radius:10px;font-size:12.5px;color:var(--text-300);white-space:pre-wrap;word-break:break-word;line-height:1.6}
+.fb-detail-divider{height:1px;background:var(--border-soft);margin:10px 16px}
+
 /* CHIPS */
 .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-family:var(--font-mono);font-size:10.5px;white-space:nowrap}
 .chip.green{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
@@ -882,11 +889,16 @@ async function saveSetting(key) {
 }
 
 // Feedback tab
+const FB_ERR_LABELS = { wrong_answer:'Wrong Final Answer', wrong_explanation:'Wrong Explanation', wrong_steps:'Wrong Math Steps', formatting_issue:'Formatting Issue', other:'Other' };
+
 async function loadFeedback() {
   const [helpfulRes, incorrectRes, recentRes] = await Promise.all([
     sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'helpful'),
     sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'incorrect'),
-    sb.from('response_feedback').select('id, created_at, feedback_type, error_type, topic, subtopic, profiles(full_name, email)').order('created_at', { ascending: false }).limit(50)
+    sb.from('response_feedback')
+      .select('id, created_at, feedback_type, error_type, topic, subtopic, user_id, session_id, record_id, question_records(question, ai_response, image, topic, subtopic, created_at), profiles(full_name, email)')
+      .order('created_at', { ascending: false })
+      .limit(50)
   ]);
   document.getElementById('fbStatHelpful').textContent   = helpfulRes.count   ?? '—';
   document.getElementById('fbStatIncorrect').textContent = incorrectRes.count ?? '—';
@@ -896,13 +908,12 @@ async function loadFeedback() {
     .select('error_type').eq('feedback_type', 'incorrect').not('error_type', 'is', null);
   const errCounts = {};
   (errData || []).forEach(r => { errCounts[r.error_type] = (errCounts[r.error_type] || 0) + 1; });
-  const errLabels = { wrong_answer:'Wrong Final Answer', wrong_explanation:'Wrong Explanation', wrong_steps:'Wrong Math Steps', formatting_issue:'Formatting Issue', other:'Other' };
   const errEl = document.getElementById('fbErrorTypes');
   const errSorted = Object.entries(errCounts).sort((a,b) => b[1]-a[1]);
   errEl.innerHTML = errSorted.length === 0
     ? '<div class="empty"><p>No incorrect reports yet.</p></div>'
     : `<div class="tbl-wrap"><table><thead><tr><th>Error Type</th><th>Count</th></tr></thead><tbody>${
-        errSorted.map(([k,v]) => `<tr><td>${esc(errLabels[k]||k)}</td><td class="bold">${v}</td></tr>`).join('')
+        errSorted.map(([k,v]) => `<tr><td>${esc(FB_ERR_LABELS[k]||k)}</td><td class="bold">${v}</td></tr>`).join('')
       }</tbody></table></div>`;
 
   // Most reported topics
@@ -918,21 +929,60 @@ async function loadFeedback() {
         topicSorted.map(([k,v]) => `<tr><td>${esc(k)}</td><td class="bold">${v}</td></tr>`).join('')
       }</tbody></table></div>`;
 
-  // Recent feedback
+  // Recent feedback — with expandable full context
   const recentEl = document.getElementById('fbRecent');
   const rows = recentRes.data || [];
-  recentEl.innerHTML = rows.length === 0
-    ? '<div class="empty"><p>No feedback yet.</p></div>'
-    : `<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th>Subtopic</th></tr></thead><tbody>${
-        rows.map(r => `<tr>
-          <td class="mono">${fmtDate(r.created_at)}</td>
-          <td>${esc(r.profiles?.full_name || r.profiles?.email || '—')}</td>
-          <td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍 Helpful':'👎 Incorrect'}</span></td>
-          <td>${r.error_type ? esc(errLabels[r.error_type]||r.error_type) : '—'}</td>
-          <td>${esc(r.topic||'—')}</td>
-          <td>${esc(r.subtopic||'—')}</td>
-        </tr>`).join('')
-      }</tbody></table></div>`;
+  if (rows.length === 0) { recentEl.innerHTML = '<div class="empty"><p>No feedback yet.</p></div>'; return; }
+
+  let html = `<div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Date</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th>Detail</th></tr></thead>
+    <tbody>`;
+  rows.forEach((r, idx) => {
+    const qr = r.question_records;
+    const rowId = 'fbrow-' + r.id.replace(/-/g,'');
+    html += `<tr>
+      <td class="mono" style="color:var(--text-500)">#${idx+1}</td>
+      <td class="mono">${fmtDate(r.created_at)}</td>
+      <td>${esc(r.profiles?.full_name || r.profiles?.email || '—')}</td>
+      <td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍 Helpful':'👎 Incorrect'}</span></td>
+      <td>${r.error_type ? esc(FB_ERR_LABELS[r.error_type]||r.error_type) : '—'}</td>
+      <td>${esc(r.topic||'—')}</td>
+      <td><button class="btn btn-sm" onclick="toggleFbDetail('${rowId}')">View</button></td>
+    </tr>
+    <tr id="${rowId}" style="display:none">
+      <td colspan="7" style="padding:0">
+        <div class="fb-detail-panel">
+          <div class="fb-detail-row"><span class="fb-detail-lbl">Report ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.id)}</span></div>
+          <div class="fb-detail-row"><span class="fb-detail-lbl">User ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.user_id||'—')}</span></div>
+          <div class="fb-detail-row"><span class="fb-detail-lbl">Session ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.session_id||'—')}</span></div>
+          <div class="fb-detail-row"><span class="fb-detail-lbl">Record ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.record_id||'—')}</span></div>
+          ${r.error_type ? `<div class="fb-detail-row"><span class="fb-detail-lbl">Error Type</span><span style="color:#ef4f5f;font-weight:700">${esc(FB_ERR_LABELS[r.error_type]||r.error_type)}</span></div>` : ''}
+          <div class="fb-detail-divider"></div>
+          ${qr ? `
+          <div class="fb-detail-row"><span class="fb-detail-lbl">Question</span></div>
+          <div class="fb-detail-block">${esc(qr.question||'—')}</div>
+          ${qr.image ? `
+          <div class="fb-detail-row" style="margin-top:10px"><span class="fb-detail-lbl">Attached Image</span></div>
+          <div style="padding:0 16px 12px"><img src="${esc(qr.image)}" style="max-width:320px;max-height:220px;border-radius:10px;border:1px solid var(--border-mid);display:block" alt="question image"/></div>
+          ` : ''}
+          <div class="fb-detail-row" style="margin-top:4px"><span class="fb-detail-lbl">Zero Response</span></div>
+          <div class="fb-detail-block" style="max-height:260px;overflow-y:auto">${esc(qr.ai_response||'—')}</div>
+          ` : '<div style="padding:12px 16px;color:var(--text-500);font-size:13px">No linked question record found.</div>'}
+        </div>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  recentEl.innerHTML = html;
+}
+
+function toggleFbDetail(rowId) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? '' : 'none';
+  const btn = row.previousElementSibling?.querySelector('button');
+  if (btn) btn.textContent = isHidden ? 'Hide' : 'View';
 }
 
 // Helpers
