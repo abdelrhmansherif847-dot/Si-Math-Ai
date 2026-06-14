@@ -432,19 +432,11 @@ async function deviceGuard(sb, userId) {
     var achieves  = results[2].data  || [];
     var chatSess  = results[3].data  || [];
     var exams     = results[4].data  || [];
-    // Derive per-topic mastery view (mastRecs shape) from weakness_reports.
-    // Aggregate subtopic rows up to topic level: average mastery, max last_updated.
-    var _topicAgg = {};
-    weakReps.forEach(function(r){
-      var t = r.topic; if (!t) return;
-      if (!_topicAgg[t]) _topicAgg[t] = { topic:t, sum:0, n:0, last_updated:null, questions_seen:0 };
-      var a = _topicAgg[t];
-      if (r.mastery_score != null) { a.sum += Number(r.mastery_score); a.n += 1; }
-      if (r.last_updated && (!a.last_updated || new Date(r.last_updated) > new Date(a.last_updated))) a.last_updated = r.last_updated;
-      a.questions_seen += (r.total_signals || 0);
-    });
-    var mastRecs = Object.values(_topicAgg).map(function(a){
-      return { topic: a.topic, mastery_score: a.n ? a.sum / a.n : 0, last_updated: a.last_updated, questions_seen: a.questions_seen };
+    // Derive mastRecs shape from individual weakness_reports subtopic rows.
+    // Keeps subtopic-level granularity so masteredTopics counts and milestone links
+    // match the old mastery_records behaviour (one row per topic+subtopic).
+    var mastRecs = weakReps.map(function(r){
+      return { topic: r.topic, mastery_score: r.mastery_score, last_updated: r.last_updated, questions_seen: r.total_signals || 0 };
     });
 
     var xp        = profile.xp || 0;
@@ -546,24 +538,17 @@ async function deviceGuard(sb, userId) {
       '</div>';
 
     // ── Biggest improvement ──
-    // Both sides now read from weakness_reports (single source of truth).
-    // Improvement delta will be 0 until the analyzer is enriched to record prior baselines.
-    // A positive delta means the user improved on that topic since it was flagged.
+    // improvement_score is computed by regenerate-reports.js from signal decay.
+    // Use it directly from weakness_reports when available; fall back to highest-mastery topic.
     var improveSection = document.getElementById('improveSection');
     var bestImprove = null;
-    if (mastRecs.length > 0 && weakReps.length > 0){
-      // Build a map of topic → mastery_score from weakness_reports
-      var priorMap = {};
+    if (weakReps.length > 0){
+      // Find the report with the highest positive improvement_score
       weakReps.forEach(function(w){
-        if (w.topic && w.mastery_score != null) priorMap[w.topic.toLowerCase()] = w.mastery_score;
-      });
-      // Find the biggest positive delta
-      mastRecs.forEach(function(m){
-        var key = (m.topic||'').toLowerCase();
-        if (priorMap[key] != null){
-          var delta = (m.mastery_score||0) - priorMap[key];
+        if (w.improvement_score != null && w.improvement_score > 0){
+          var delta = w.improvement_score;
           if (!bestImprove || delta > bestImprove.delta){
-            bestImprove = { topic: m.topic, current: m.mastery_score||0, prior: priorMap[key], delta: delta };
+            bestImprove = { topic: w.topic, current: w.mastery_score||0, prior: null, delta: delta };
           }
         }
       });
@@ -595,7 +580,7 @@ async function deviceGuard(sb, userId) {
             '<div class="improve-details">' +
               '<div class="improve-topic">' + esc(bestImprove.topic) + '</div>' +
               '<div class="improve-delta">▲ +' + Math.round(bestImprove.delta) + ' points improvement</div>' +
-              '<div class="improve-desc">Up from <strong>' + Math.round(bestImprove.prior) + '%</strong> when this topic was flagged as a weakness. ' +
+              '<div class="improve-desc">Improvement score: +' + Math.round(bestImprove.delta) + '. ' +
                 (bestImprove.current >= 80 ? 'You have now mastered this topic. Excellent work!' :
                   'Keep going — ' + (80 - Math.round(bestImprove.current)) + ' more points to reach mastery.') +
               '</div>' +
