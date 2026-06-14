@@ -95,11 +95,29 @@
           totalDecayed: 0,
           recent7Raw: 0,
           prev7Raw: 0,
-          resolveDecayed: 0
+          resolveDecayed: 0,
+          /* ── Phase 4 recency aggregates (ACTIVITY, not weakness) ──
+           * recent7Count / recent14Count count EVERY signal_type — topic,
+           * multi_concept, repeated, AND resolution. Semantics: how recently
+           * the topic was touched in any way, NOT how many fresh weakness
+           * signals fired.
+           *
+           * Implication: a topic where the student keeps clicking "Solved It"
+           * registers as highly active. If we later need a weakness-only
+           * recency count, Phase 6 (signal-family grouping) will introduce it
+           * as a separate column; do not silently change the meaning of these.
+           */
+          recent7Count: 0,
+          recent14Count: 0,
+          lastSignalAt: null
         };
       }
       var e = map[k];
-      var age = now - new Date(s.created_at || 0).getTime();
+      var ts = new Date(s.created_at || 0).getTime();
+      var age = now - ts;
+      if (e.lastSignalAt == null || ts > e.lastSignalAt) e.lastSignalAt = ts;
+      if (age < 7  * DAY) e.recent7Count++;
+      if (age < 14 * DAY) e.recent14Count++;
       var decay = Math.exp(-age / (DAY * 14));
       var dw = (s.weight || 0) * decay;
       var raw = s.weight || 0;
@@ -129,6 +147,9 @@
         mastery_score: mastery,
         severity_band: severityFromMastery(mastery),
         trend: trendFromImprovement(impScore, e.signals.length),
+        recent7_count: e.recent7Count,
+        recent14_count: e.recent14Count,
+        last_signal_at: e.lastSignalAt ? new Date(e.lastSignalAt).toISOString() : null,
         biggest_weakness: false,
         priority_rank: 0
       };
@@ -234,6 +255,9 @@
           biggest_weakness: c.biggest_weakness,
           severity_band: c.severity_band,
           trend: c.trend,
+          recent7_count: c.recent7_count,
+          recent14_count: c.recent14_count,
+          last_signal_at: c.last_signal_at,
           last_updated: now
         };
         if (existMap[k] != null) {
@@ -256,7 +280,7 @@
       // Rollout-safe: if a phase-added column doesn't exist on the deployed DB yet,
       // strip the optional field and retry once. Keeps the analyzer working during
       // staged rollouts where code lands before the migration.
-      var OPTIONAL_COLS = ['severity_band', 'trend'];
+      var OPTIONAL_COLS = ['severity_band', 'trend', 'recent7_count', 'recent14_count', 'last_signal_at'];
       function stripOptional(row) {
         var clean = Object.assign({}, row);
         OPTIONAL_COLS.forEach(function (k) { delete clean[k]; });
