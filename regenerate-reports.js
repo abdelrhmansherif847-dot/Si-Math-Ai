@@ -195,10 +195,17 @@
   var _running = new Map();   // userId → Promise<void>
   var _pending = new Set();   // userId set
 
+  // ── Phase 10: aggregate telemetry counters keyed by userId ──
+  // _dedupCounters[userId] tracks how many concurrent calls were collapsed into
+  // the in-flight regen. _doRegenerate reads this at start, includes it in the
+  // analyzer_runs row, and resets it. Telemetry is best-effort; never throws.
+  var _dedupCounters = new Map();
+
   async function regenerateWeaknessReports(sb, userId) {
     if (!sb || !userId) return;
     if (_running.has(userId)) {
       _pending.add(userId);
+      _dedupCounters.set(userId, (_dedupCounters.get(userId) || 0) + 1);
       return _running.get(userId);
     }
     var p = _doRegenerate(sb, userId).finally(function () {
@@ -213,13 +220,63 @@
     return p;
   }
 
+  // Phase 10: fire-and-forget telemetry write. Failure is logged and swallowed —
+  // the analyzer must never be coupled to observability writes.
+  function writeMetricsAsync(sb, metrics) {
+    try {
+      sb.from('analyzer_runs').insert(metrics).then(function (res) {
+        if (res && res.error) {
+          // Missing table during rollout window — swallow silently.
+          var m = (res.error && res.error.message) || '';
+          if (!/relation .* does not exist|schema cache/i.test(m)) {
+            console.warn('[analyzer_runs] insert error:', m);
+          }
+        }
+      }, function (err) {
+        // Promise rejection path — also swallow.
+        console.warn('[analyzer_runs] insert rejected:', (err && err.message) || err);
+      });
+    } catch (e) {
+      console.warn('[analyzer_runs] write threw:', (e && e.message) || e);
+    }
+  }
+
   async function _doRegenerate(sb, userId) {
     if (!sb || !userId) return;
 
+    // Phase 9: capture wall-clock ONCE per run. Every age / decay / recency
+    // calculation inside this run uses this frozen baseline.
+    var runNow = Date.now();
+
+    // Phase 10: aggregate, PII-free telemetry. No topic/subtopic names recorded.
+    // Snapshot the dedup counter that accumulated for this user during the
+    // in-flight window (reset on read).
+    var dedupCollapsed = (_dedupCounters.get(userId) || 0);
+    _dedupCounters.delete(userId);
+    var metrics = {
+      user_id: userId,
+      started_at: new Date(runNow).toISOString(),
+      duration_ms: null,
+      signals_read: null,
+      mastery_records_read: null,
+      reports_existing: null,
+      reports_computed: null,
+      reports_inserted: null,
+      reports_updated: null,
+      reports_deleted: null,
+      read_phase_ms: null,
+      compute_phase_ms: null,
+      write_phase_ms: null,
+      dedup_collapsed: dedupCollapsed > 0,
+      pending_rerun_triggered: false,
+      strip_retry_count: 0,
+      outcome: null,
+      error_message: null,
+      error_phase: null,
+    };
+    var readDoneAt = null, computeDoneAt = null;
+
     try {
-      // Phase 9: capture wall-clock ONCE per run. Every age / decay / recency
-      // calculation inside this run uses this frozen baseline.
-      var runNow = Date.now();
 
       // Phase 9: parallel three-read — narrows the signals-vs-existing drift
       // window from two round-trips to one. Combined with the in-flight dedup,
@@ -233,7 +290,18 @@
       var signals    = (results[0].data) || [];
       var mastRecs   = (results[1].data) || [];
       var _existing0 = (results[2].data) || [];  // used in step 3 below
-      if (signals.length === 0) return; // nothing to compute
+
+      // Phase 10: read-phase telemetry capture
+      readDoneAt = Date.now();
+      metrics.read_phase_ms = readDoneAt - runNow;
+      metrics.signals_read = signals.length;
+      metrics.mastery_records_read = mastRecs.length;
+      metrics.reports_existing = _existing0.length;
+
+      if (signals.length === 0) {
+        metrics.outcome = 'no_signals';
+        return;
+      }
 
       // Build authoritative mastery lookup from mastery_records
       var mastMap = {};
@@ -272,7 +340,15 @@
         c.priority_rank = i + 1;
         c.biggest_weakness = i === 0;
       });
-      if (computed.length === 0) return;
+      if (computed.length === 0) {
+        // No computed rows but signals existed — record what we know and exit.
+        computeDoneAt = Date.now();
+        metrics.compute_phase_ms = computeDoneAt - readDoneAt;
+        metrics.reports_computed = 0;
+        metrics.outcome = 'success';
+        return;
+      }
+      metrics.reports_computed = computed.length;
 
       // 3. Phase 9: existing reports were loaded in the parallel Promise.all above
       // (results[2]) — re-using the same MVCC-close snapshot as signals + mastery.
@@ -323,6 +399,13 @@
         })
         .map(function (r) { return r.id; });
 
+      // Phase 10: compute-phase telemetry capture (before DB writes start)
+      computeDoneAt = Date.now();
+      metrics.compute_phase_ms = computeDoneAt - readDoneAt;
+      metrics.reports_inserted = toInsert.length;
+      metrics.reports_updated  = toUpdate.length;
+      metrics.reports_deleted  = toDeleteIds.length;
+
       // 6. Execute all DB operations in parallel
       var ops = [];
 
@@ -344,6 +427,7 @@
         ops.push(
           sb.from('weakness_reports').insert(toInsert).then(function (res) {
             if (res.error && isMissingColumnError(res.error)) {
+              metrics.strip_retry_count++;  // Phase 10: schema-rollout health counter
               return sb.from('weakness_reports').insert(toInsert.map(stripOptional)).then(function (r2) {
                 if (r2.error) console.warn('[regenerate] insert error (after strip):', r2.error.message);
               });
@@ -360,6 +444,7 @@
         ops.push(
           sb.from('weakness_reports').update(payload).eq('id', id).then(function (res) {
             if (res.error && isMissingColumnError(res.error)) {
+              metrics.strip_retry_count++;  // Phase 10: schema-rollout health counter
               return sb.from('weakness_reports').update(stripOptional(payload)).eq('id', id).then(function (r2) {
                 if (r2.error) console.warn('[regenerate] update error (after strip):', r2.error.message);
               });
@@ -379,8 +464,23 @@
 
       await Promise.all(ops);
 
+      // Phase 10: write-phase telemetry + success outcome.
+      metrics.write_phase_ms = Date.now() - computeDoneAt;
+      metrics.outcome = 'success';
+
     } catch (err) {
+      // Phase 10: failure-phase localization. Categorize by which phase had completed.
+      metrics.outcome = 'failure';
+      metrics.error_message = String((err && err.message) || err).slice(0, 200);
+      metrics.error_phase = (readDoneAt === null) ? 'read'
+                          : (computeDoneAt === null) ? 'compute'
+                          : 'write';
       console.warn('[regenerate] failed:', err.message || err);
+    } finally {
+      // Phase 10: always record duration and pending-rerun flag, fire-and-forget telemetry.
+      metrics.duration_ms = Date.now() - runNow;
+      metrics.pending_rerun_triggered = _pending.has(userId);
+      writeMetricsAsync(sb, metrics);
     }
   }
 
