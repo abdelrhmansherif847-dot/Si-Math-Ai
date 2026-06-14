@@ -658,10 +658,11 @@ function computeWeeklyStats(allRecords, qTarget, profile) {
 }
 
 // ===== TIME-TO-IMPROVE =====
-function estimatedTimeToImprove(mastery, improvementScore, profile) {
+function estimatedTimeToImprove(mastery, trendStr, profile) {
   const sessPerWeek = (profile && profile.study_sessions_per_week) || 3;
   const base = mastery < 30 ? 24 : mastery < 50 ? 16 : mastery < 70 ? 10 : 5;
-  const mult = improvementScore > 8 ? 0.75 : improvementScore < -8 ? 1.35 : 1.0;
+  const t = (trendStr || 'Stable').toLowerCase();
+  const mult = t === 'improving' ? 0.75 : t === 'declining' ? 1.35 : 1.0;
   const sessNeeded = Math.round(base * mult);
   const weeks = Math.max(1, Math.round(sessNeeded / sessPerWeek));
   return { weeks, sessNeeded, sessPerWeek };
@@ -1032,31 +1033,45 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
 }
 
 // ===== HELPERS: convert weakness_reports row to computeTopicProfile format =====
+// Focus Practice is a CONSUMER of weakness_reports.
+// severity_band, trend, recent7_count, recent14_count, last_signal_at are
+// authoritative from the analyzer. No local derivation in this path.
+var SEV_BAND_MAP = {
+  critical: { priority: 'Critical', priorityClass: 'critical' },
+  high:     { priority: 'High',     priorityClass: 'high'     },
+  medium:   { priority: 'Medium',   priorityClass: 'med'      },
+  low:      { priority: 'Low',      priorityClass: 'low'      },
+};
+var TREND_STR_MAP = {
+  improving: { trend: 'Improving', trendIcon: '📈' },
+  declining: { trend: 'Declining', trendIcon: '📉' },
+  stable:    { trend: 'Stable',    trendIcon: '➖' },
+};
 function reportToProfile(report, qData) {
   const m = report.mastery_score != null ? Math.round(report.mastery_score)
            : (qData && qData.mastery != null ? qData.mastery : 45);
-  let priority, priorityClass;
-  if (m < 30)      { priority = 'Critical'; priorityClass = 'critical'; }
-  else if (m < 50) { priority = 'High';     priorityClass = 'high';     }
-  else if (m < 70) { priority = 'Medium';   priorityClass = 'med';      }
-  else             { priority = 'Low';       priorityClass = 'low';      }
-  let trend = 'Stable', trendIcon = '➖';
-  const imp = report.improvement_score;
-  if (imp != null && imp > 5)  { trend = 'Improving'; trendIcon = '📈'; }
-  if (imp != null && imp < -5) { trend = 'Declining'; trendIcon = '📉'; }
+  const sev = SEV_BAND_MAP[(report.severity_band || 'low').toLowerCase()]
+           || SEV_BAND_MAP.low;
+  const tr  = TREND_STR_MAP[(report.trend || 'stable').toLowerCase()]
+           || TREND_STR_MAP.stable;
+  const last7  = report.recent7_count  != null ? report.recent7_count  : 0;
+  const last14 = report.recent14_count != null ? report.recent14_count : 0;
+  const lastSignalAt = report.last_signal_at || null;
   const whyBullets = [];
   if (report.total_signals) whyBullets.push(`${report.total_signals} weakness signal${report.total_signals > 1 ? 's' : ''} detected`);
-  if (trend === 'Improving') whyBullets.push('Showing improvement recently — keep going');
-  else if (trend === 'Declining') whyBullets.push('Weakness signals increasing — needs attention');
+  if (tr.trend === 'Improving')      whyBullets.push('Showing improvement recently — keep going');
+  else if (tr.trend === 'Declining') whyBullets.push('Weakness signals increasing — needs attention');
   if (report.biggest_weakness) whyBullets.push('Ranked as your #1 biggest weakness');
   if (qData) whyBullets.push(...(qData.whyBullets || []));
   const sub = report.subtopic || report.topic;
   return {
     topic: report.topic, sub,
-    mastery: m, priority, priorityClass, trend, trendIcon,
+    mastery: m,
+    priority: sev.priority, priorityClass: sev.priorityClass,
+    trend: tr.trend, trendIcon: tr.trendIcon,
     whyBullets, strengthBullets: qData ? (qData.strengthBullets || []) : [],
-    total: report.total_signals || (qData ? qData.total : 0) || 0,
-    last7: qData ? qData.last7 : 0, last14: qData ? qData.last14 : 0,
+    total: report.total_signals || 0,
+    last7, last14, lastSignalAt,
     avgConf: qData ? qData.avgConf : null,
     confAfterArr: qData ? (qData.confAfterArr || []) : [],
     examMistakes: qData ? (qData.examMistakes || 0) : 0,
@@ -1066,7 +1081,7 @@ function reportToProfile(report, qData) {
     concepts: qData ? (qData.concepts || []) : [],
     decayScore: qData ? (qData.decayScore || 0) : 0,
     weaknessScore: report.weakness_score, priorityRank: report.priority_rank,
-    improvementScore: report.improvement_score != null ? report.improvement_score : null
+    improvementScore: null
   };
 }
 
@@ -1292,11 +1307,10 @@ async function loadData() {
     if (!isNaN(examMs)) daysUntilExam = Math.max(0, Math.round(examMs / 86400000));
   }
 
-  const impScore = primaryTopic.improvementScore != null ? primaryTopic.improvementScore : null;
   const examTypeForPlan = (profile && profile.exam_type) || 'SAT';
   const qTargetForPlan = computeQTarget(primaryTopic.mastery, primaryTopic.topic, examTypeForPlan);
   const taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, primaryTopic.mastery, qTargetForPlan);
-  const timeToImprove = estimatedTimeToImprove(primaryTopic.mastery, impScore, profile);
+  const timeToImprove = estimatedTimeToImprove(primaryTopic.mastery, primaryTopic.trend, profile);
 
   let tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
 
