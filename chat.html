@@ -769,7 +769,7 @@ button{font-family:inherit;cursor:pointer}
     empty.style.display = 'none';
     records.forEach(r => {
       addUser(r.question, r.image || null, true);
-      const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question) : null;
+      const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question, true) : null;
       if (sig) {
         sig.topic = r.topic || sig.topic;
         sig.sub   = r.subtopic || sig.sub;
@@ -948,13 +948,13 @@ button{font-family:inherit;cursor:pointer}
       var on=document.querySelector('#confDots .conf-dot.on');
       return on?parseInt(on.dataset.c,10):3;
     },
-    analyze: function(text){
+    analyze: function(text, skipSignals){
       var p=this.detect(text);
       if(!p) return null;  // no math topic detected — do not generate any signal
       var sec=this.detectSecondary(text,p), conf=this.getConfidence();
-      // repeated-topic tracking — only incremented for confirmed math messages
-      this.topicCounts[p.sub]=(this.topicCounts[p.sub]||0)+1;
-      var count=this.topicCounts[p.sub];
+      // repeated-topic tracking — skip during history replay to avoid inflating counts
+      if (!skipSignals) this.topicCounts[p.sub]=(this.topicCounts[p.sub]||0)+1;
+      var count=this.topicCounts[p.sub]||0;
       // concept tags
       var conceptTags=p.concepts.map(function(c){return '<span class="concept-tag"><span class="cd"></span>'+c+'</span>';}).join('');
       // signal strength: low confidence or repeats => stronger weakness signal
@@ -968,7 +968,7 @@ button{font-family:inherit;cursor:pointer}
           '<div class="mc-box primary"><div class="mc-l">Primary Topic</div><div class="mc-v">'+p.topic+' → '+p.sub+'</div></div>'+
           '<div class="mc-box"><div class="mc-l">Secondary Topic</div><div class="mc-v">'+sec.topic+' → '+sec.sub+'</div></div>'+
         '</div>';
-        this.sendSignal({type:'multi-concept', primary:p.sub, secondary:sec.sub});
+        if (!skipSignals) this.sendSignal({type:'multi-concept', primary:p.sub, secondary:sec.sub});
       }
       // repeated-topic block
       var repeatedTopic='';
@@ -976,7 +976,7 @@ button{font-family:inherit;cursor:pointer}
         repeatedTopic='<div class="repeated-topic"><span class="rt-ic">🔁</span><div class="rt-body">'+
           '<div class="rt-t">Repeated Topic Detected</div><div class="rt-s">'+p.sub+' — this raises its weakness priority</div></div>'+
           '<span class="rt-count">'+count+'</span></div>';
-        this.sendSignal({type:'repeated', topic:p.topic, sub:p.sub, count:count});
+        if (!skipSignals) this.sendSignal({type:'repeated', topic:p.topic, sub:p.sub, count:count});
       }
       // potential weakness block (low confidence + repeats + confusion risk)
       var potentialWeak='';
@@ -991,8 +991,8 @@ button{font-family:inherit;cursor:pointer}
           '<button class="pw-btn" onclick="location.href=\'weakness.html\'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Analyze This Topic</button></div>';
       }
       var statusId='st_'+Math.random().toString(36).slice(2,8);
-      // fire base signals to Weakness Analyzer
-      this.sendSignal({type:'topic', topic:p.topic, sub:p.sub, confidence:conf, concepts:p.concepts});
+      // fire base signals to Weakness Analyzer (skip during history replay)
+      if (!skipSignals) this.sendSignal({type:'topic', topic:p.topic, sub:p.sub, confidence:conf, concepts:p.concepts});
       return {
         topic:p.topic, sub:p.sub, confidence:conf, conceptTags:conceptTags, detectedConcepts:p.concepts,
         multiConcept:multiConcept, repeatedTopic:repeatedTopic, potentialWeak:potentialWeak,
