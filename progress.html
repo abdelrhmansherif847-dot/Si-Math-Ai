@@ -410,29 +410,42 @@ async function deviceGuard(sb, userId) {
     var results = await Promise.all([
       // 0 profile: xp, full_name, exam_date, exam_type, target_score, is_admin
       sb.from('profiles').select('full_name,xp,exam_date,exam_type,target_score,is_admin').eq('id', user.id).single(),
-      // 1 mastery_records: topic, mastery_score, last_updated, questions_seen
-      sb.from('mastery_records').select('topic,mastery_score,last_updated,questions_seen').eq('user_id', user.id).limit(150),
+      // 1 weakness_reports (single source of truth — mastery aggregated by topic below)
+      sb.from('weakness_reports').select('topic,subtopic,mastery_score,priority_rank,last_updated,total_signals').eq('user_id', user.id).order('priority_rank', {ascending:true}),
       // 2 achievements: achievement_key, unlocked_at
       sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}),
       // 3 chat_sessions: created_at (for streak calculation — mirrors dashboard.html)
       sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(500),
       // 4 exam_practice_sessions: score, created_at, exam_type, correct_answers
       sb.from('exam_practice_sessions').select('score,created_at,exam_type,correct_answers').eq('user_id', user.id).order('created_at', {ascending:false}).limit(200),
-      // 5 weakness_reports: topic, mastery_estimate (used as prior for improvement delta)
-      sb.from('weakness_reports').select('topic,mastery_estimate,priority_rank').eq('user_id', user.id).order('priority_rank', {ascending:true}),
+      // 5 (slot kept for shape compatibility — weakReps is reassigned from results[1] below)
+      Promise.resolve({ data: [] }),
       // 6 question_records: count + distinct topics for "Questions Solved" snap card
       sb.from('question_records').select('topic', { count: 'exact' }).eq('user_id', user.id),
     ]);
 
     var profile   = results[0].data  || {};
-    var mastRecs  = results[1].data  || [];
+    var weakReps  = results[1].data  || [];
     var qRecs     = results[6].data  || [];
     var qCount    = results[6].count || qRecs.length || 0;
     var qTopics   = new Set(qRecs.map(function(q){ return q.topic; }).filter(Boolean)).size;
     var achieves  = results[2].data  || [];
     var chatSess  = results[3].data  || [];
     var exams     = results[4].data  || [];
-    var weakReps  = results[5].data  || [];
+    // Derive per-topic mastery view (mastRecs shape) from weakness_reports.
+    // Aggregate subtopic rows up to topic level: average mastery, max last_updated.
+    var _topicAgg = {};
+    weakReps.forEach(function(r){
+      var t = r.topic; if (!t) return;
+      if (!_topicAgg[t]) _topicAgg[t] = { topic:t, sum:0, n:0, last_updated:null, questions_seen:0 };
+      var a = _topicAgg[t];
+      if (r.mastery_score != null) { a.sum += Number(r.mastery_score); a.n += 1; }
+      if (r.last_updated && (!a.last_updated || new Date(r.last_updated) > new Date(a.last_updated))) a.last_updated = r.last_updated;
+      a.questions_seen += (r.total_signals || 0);
+    });
+    var mastRecs = Object.values(_topicAgg).map(function(a){
+      return { topic: a.topic, mastery_score: a.n ? a.sum / a.n : 0, last_updated: a.last_updated, questions_seen: a.questions_seen };
+    });
 
     var xp        = profile.xp || 0;
     var rank      = getRank(xp);
@@ -533,16 +546,16 @@ async function deviceGuard(sb, userId) {
       '</div>';
 
     // ── Biggest improvement ──
-    // Data: mastery_records.mastery_score (current) vs weakness_reports.mastery_estimate (prior reading)
-    // weakness_reports.mastery_estimate is the model's estimate at the time the weakness was identified.
+    // Both sides now read from weakness_reports (single source of truth).
+    // Improvement delta will be 0 until the analyzer is enriched to record prior baselines.
     // A positive delta means the user improved on that topic since it was flagged.
     var improveSection = document.getElementById('improveSection');
     var bestImprove = null;
     if (mastRecs.length > 0 && weakReps.length > 0){
-      // Build a map of topic → mastery_estimate from weakness_reports
+      // Build a map of topic → mastery_score from weakness_reports
       var priorMap = {};
       weakReps.forEach(function(w){
-        if (w.topic && w.mastery_estimate != null) priorMap[w.topic.toLowerCase()] = w.mastery_estimate;
+        if (w.topic && w.mastery_score != null) priorMap[w.topic.toLowerCase()] = w.mastery_score;
       });
       // Find the biggest positive delta
       mastRecs.forEach(function(m){

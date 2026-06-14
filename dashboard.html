@@ -1554,8 +1554,7 @@ async function loadDashboard() {
   var results = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
-    sb.from('mastery_records').select('topic,subtopic,mastery_score,last_updated').eq('user_id', user.id),
-    sb.from('weakness_reports').select('topic,subtopic,priority,weakness_score,mastery_estimate').eq('user_id', user.id).order('priority', {ascending:true}).limit(10),
+    sb.from('weakness_reports').select('topic,subtopic,priority_rank,weakness_score,mastery_score,last_updated').eq('user_id', user.id).order('priority_rank', {ascending:true}).limit(50),
     sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
     sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
@@ -1564,12 +1563,13 @@ async function loadDashboard() {
 
   var prof        = (results[0].data) || {};
   var exams       = (results[1].data) || [];
-  var masteryRecs = (results[2].data) || [];
-  var weakReports = (results[3].data) || [];
-  var achievements= (results[4].data) || [];
-  var chatSess    = (results[5].data) || [];
-  var monthQs     = (results[6].data) || [];
-  var subscription= results[7].data;
+  var weakReports = (results[2].data) || [];
+  var achievements= (results[3].data) || [];
+  var chatSess    = (results[4].data) || [];
+  var monthQs     = (results[5].data) || [];
+  var subscription= results[6].data;
+  // Derive per-topic mastery from weakness_reports (single source of truth)
+  var masteryRecs = weakReports.map(function(r){ return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: r.last_updated }; });
 
   /* ── Derived: user ── */
   var displayName = prof.full_name || (user.email ? user.email.split('@')[0] : '') || 'Student';
@@ -1612,12 +1612,12 @@ async function loadDashboard() {
   var weakness = null;
   if (weakReports.length) {
     weakness = weakReports[0];
-    if (!weakness.mastery_estimate && topicMap[weakness.topic]) {
+    if (weakness.mastery_score == null && topicMap[weakness.topic]) {
       var tm = topicMap[weakness.topic];
-      weakness = Object.assign({}, weakness, {mastery_estimate: Math.round(tm.sum / tm.n)});
+      weakness = Object.assign({}, weakness, {mastery_score: Math.round(tm.sum / tm.n)});
     }
   } else if (topicList.length) {
-    weakness = {topic: topicList[0].topic, subtopic: null, mastery_estimate: topicList[0].mastery};
+    weakness = {topic: topicList[0].topic, subtopic: null, mastery_score: topicList[0].mastery};
   }
 
   /* ── Derived: strongest topic ── */
@@ -1697,7 +1697,7 @@ async function loadDashboard() {
 
   /* ── POPULATE: overview weakness ── */
   if (weakness) {
-    var wM = weakness.mastery_estimate || 0;
+    var wM = weakness.mastery_score || 0;
     setText('ovWeakTopic',   weakness.topic || '—');
     setText('ovWeakSub',     weakness.subtopic || '');
     setText('ovWeakMastery', wM + '%');
@@ -1795,7 +1795,7 @@ async function loadDashboard() {
         ? relatedSubs.map(function(r){ return '<span class="chip"><span class="cd"></span>' + r.subtopic + '</span>'; }).join('')
         : '<span class="chip"><span class="cd"></span>' + weakness.topic + '</span>';
     }
-    var curM = weakness.mastery_estimate || 0;
+    var curM = weakness.mastery_score || 0;
     var tgtM = Math.min(curM + 30, 80);
     setText('fpCurrentMastery', curM + '%');
     setText('fpTargetMastery',  tgtM + '%');
@@ -1823,7 +1823,7 @@ async function loadDashboard() {
       var wLoc = weakness.subtopic ? weakness.topic + ' &rarr; ' + weakness.subtopic : weakness.topic;
       var sessCount = Math.min(chatSess.length + exams.length, 7);
       var sessPhrase = sessCount > 0 ? 'Based on your last ' + sessCount + ' sessions' : 'Based on your activity';
-      var mastPhrase = (weakness.mastery_estimate != null) ? ' Your current mastery is <span class="time-hl">' + weakness.mastery_estimate + '%</span>.' : '';
+      var mastPhrase = (weakness.mastery_score != null) ? ' Your current mastery is <span class="time-hl">' + weakness.mastery_score + '%</span>.' : '';
       var dayPhrase  = daysRemaining > 0 ? ' You have <span class="time-hl">' + daysRemaining + ' days</span> until your exam.' : '';
       zeroEl.innerHTML = sessPhrase + ', <span class="topic-hl">' + wLoc + '</span> is your highest-priority weakness right now.' + mastPhrase + dayPhrase + ' Open your focus plan to start improving now.';
       if (chatBtn) { chatBtn.href = 'chat.html'; chatBtn.textContent = 'Ask Si About ' + weakness.topic; }

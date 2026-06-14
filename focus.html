@@ -1100,10 +1100,9 @@ async function loadData() {
   const urlSub     = params.get('subtopic') || '';
   const urlMastery = params.get('mastery') ? Number(params.get('mastery')) : null;
 
-  const [profRes, sessRes, mastRes, examRes, repRes] = await Promise.all([
+  const [profRes, sessRes, examRes, repRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('chat_sessions').select('id').eq('user_id', user.id),
-    sb.from('mastery_records').select('topic, subtopic, mastery_score, questions_seen, last_updated').eq('user_id', user.id),
     sb.from('exam_mistakes').select('topic, subtopic').eq('user_id', user.id),
     sb.from('weakness_reports').select('*').eq('user_id', user.id).order('priority_rank', { ascending: true }),
   ]);
@@ -1118,9 +1117,16 @@ async function loadData() {
     document.querySelector('.sidebar').appendChild(adminLink);
   }
   const sessions   = sessRes.data  || [];
-  const mastRecs   = mastRes.data  || [];
   const examMist   = examRes.data  || [];
   const wReports   = repRes.data   || [];
+  // Derive mastery view from weakness_reports (single source of truth).
+  // total_signals proxies questions_seen for the legacy code paths below.
+  const mastRecs   = wReports.map(r => ({
+    topic: r.topic, subtopic: r.subtopic,
+    mastery_score: r.mastery_score,
+    questions_seen: r.total_signals || 0,
+    last_updated: r.last_updated
+  }));
   const sessionIds = sessions.map(s => s.id);
 
   let records = [];
