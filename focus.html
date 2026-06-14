@@ -439,55 +439,11 @@ sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', (
   if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
 }));
 
-// ===== SYSTEM TOPIC FILTER =====
-const SYSTEM_TOPICS = new Set([
-  'confidence','session start','study coaching','problem clarification',
-  'off-topic','specialization','zero','general','greeting','feedback',
-  'test taking','motivation','other','none','unknown','miscellaneous',
-  'meta','system','chat','intro','introduction','clarification','encouragement',
-  'off topic','test-taking','hint','hints','explanation','review'
-]);
-function isAcademicTopic(topic) {
-  if (!topic || topic.trim().length < 2) return false;
-  return !SYSTEM_TOPICS.has(topic.toLowerCase().trim());
-}
-
-// ===== CONCEPT NORMALIZER =====
-const CONCEPT_CANON = {
-  'isolation of variable':'Isolating Variables','isolating variable':'Isolating Variables',
-  'isolation of variables':'Isolating Variables','isolating a variable':'Isolating Variables',
-  'isolate variable':'Isolating Variables','isolate variables':'Isolating Variables',
-  'linear equation':'Linear Equations','linear equations':'Linear Equations',
-  'inverse operation':'Inverse Operations','inverse operations':'Inverse Operations',
-  'solving for variable':'Solving for Variables','solving for variables':'Solving for Variables',
-  'solving for x':'Solving for Variables','solve for x':'Solving for Variables',
-  'quadratic equation':'Quadratic Equations','quadratic equations':'Quadratic Equations',
-  'systems of equation':'Systems of Equations','system of equations':'Systems of Equations',
-  'slope intercept form':'Slope-Intercept Form','slope-intercept':'Slope-Intercept Form',
-  'slope intercept':'Slope-Intercept Form',
-  'order of operation':'Order of Operations','order of operations':'Order of Operations',
-  'substitution method':'Substitution Method','elimination method':'Elimination Method',
-  'distributive property':'Distributive Property','combining like terms':'Combining Like Terms',
-  'combining like term':'Combining Like Terms',
-};
-function normalizeConcept(c) {
-  if (!c) return null;
-  const t = c.trim();
-  const key = t.toLowerCase();
-  if (CONCEPT_CANON[key]) return CONCEPT_CANON[key];
-  return t.replace(/\b\w/g, ch => ch.toUpperCase());
-}
-function dedupeConceptList(arr) {
-  const seen = new Set();
-  const out = [];
-  for (const c of arr) {
-    const n = normalizeConcept(c);
-    if (!n) continue;
-    const k = n.toLowerCase();
-    if (!seen.has(k)) { seen.add(k); out.push(n); }
-  }
-  return out;
-}
+// ===== SYSTEM TOPIC FILTER / CONCEPT NORMALIZER =====
+// Delegated to window.Taxonomy (taxonomy.js loaded before this script).
+const isAcademicTopic   = window.Taxonomy.isAcademicTopic;
+const normalizeConcept  = window.Taxonomy.normalizeConcept;
+const dedupeConceptList = window.Taxonomy.dedupeConceptList;
 
 // ===== computeTopicProfile =====
 const DAY = 86400000;
@@ -1081,7 +1037,6 @@ function reportToProfile(report, qData) {
     concepts: qData ? (qData.concepts || []) : [],
     decayScore: qData ? (qData.decayScore || 0) : 0,
     weaknessScore: report.weakness_score, priorityRank: report.priority_rank,
-    improvementScore: null
   };
 }
 
