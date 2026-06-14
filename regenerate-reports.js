@@ -11,6 +11,20 @@
 (function () {
   var DAY = 86400000;
 
+  /* ── Severity classification (Phase 2) ──
+   * Analyzer is the SOLE authority for severity_band.
+   * Thresholds live here only — consumers must not re-derive from mastery_score.
+   * Bands map mastery_score → {critical,high,medium,low}.
+   */
+  var SEVERITY_THRESHOLDS = { critical: 30, high: 50, medium: 70 };
+  function severityFromMastery(mastery) {
+    if (mastery == null) return null;
+    if (mastery < SEVERITY_THRESHOLDS.critical) return 'critical';
+    if (mastery < SEVERITY_THRESHOLDS.high)     return 'high';
+    if (mastery < SEVERITY_THRESHOLDS.medium)   return 'medium';
+    return 'low';
+  }
+
   /* ── Core formulas (must match weakness.html exactly) ── */
 
   function computeMastery(signals) {
@@ -91,6 +105,7 @@
         improvement_score: impScore,
         total_signals: e.signals.length,
         mastery_score: mastery,
+        severity_band: severityFromMastery(mastery),
         biggest_weakness: false,
         priority_rank: 0
       };
@@ -144,6 +159,8 @@
         var k = ((c.topic || '') + '|' + (c.subtopic || '')).toLowerCase();
         if (mastMap[k] != null) {
           c.mastery_score = mastMap[k];
+          // severity_band must always match the final mastery_score (Phase 2).
+          c.severity_band = severityFromMastery(c.mastery_score);
         }
       });
 
@@ -192,6 +209,7 @@
           total_signals: c.total_signals,
           priority_rank: c.priority_rank,
           biggest_weakness: c.biggest_weakness,
+          severity_band: c.severity_band,
           last_updated: now
         };
         if (existMap[k] != null) {
@@ -211,9 +229,28 @@
       // 6. Execute all DB operations in parallel
       var ops = [];
 
+      // Rollout-safe: if a phase-added column doesn't exist on the deployed DB yet,
+      // strip the optional field and retry once. Keeps the analyzer working during
+      // staged rollouts where code lands before the migration.
+      var OPTIONAL_COLS = ['severity_band'];
+      function stripOptional(row) {
+        var clean = Object.assign({}, row);
+        OPTIONAL_COLS.forEach(function (k) { delete clean[k]; });
+        return clean;
+      }
+      function isMissingColumnError(err) {
+        var m = (err && err.message) || '';
+        return /column.*does not exist|schema cache/i.test(m);
+      }
+
       if (toInsert.length > 0) {
         ops.push(
           sb.from('weakness_reports').insert(toInsert).then(function (res) {
+            if (res.error && isMissingColumnError(res.error)) {
+              return sb.from('weakness_reports').insert(toInsert.map(stripOptional)).then(function (r2) {
+                if (r2.error) console.warn('[regenerate] insert error (after strip):', r2.error.message);
+              });
+            }
             if (res.error) console.warn('[regenerate] insert error:', res.error.message);
           })
         );
@@ -225,6 +262,11 @@
         delete payload.id;
         ops.push(
           sb.from('weakness_reports').update(payload).eq('id', id).then(function (res) {
+            if (res.error && isMissingColumnError(res.error)) {
+              return sb.from('weakness_reports').update(stripOptional(payload)).eq('id', id).then(function (r2) {
+                if (r2.error) console.warn('[regenerate] update error (after strip):', r2.error.message);
+              });
+            }
             if (res.error) console.warn('[regenerate] update error:', res.error.message);
           })
         );

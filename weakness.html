@@ -753,11 +753,28 @@ let currentUser=null, allReports=[], allMastery=[], allSignals=[], currentModalR
 const DAY=86400000;
 
 /* ── helpers ── */
-// Priority uses mastery thresholds (consistent with focus.html: <30=high, <50=high, <70=med, ≥70=low)
+// Phase 2: severity_band is analyzer-owned. Read from the row; never re-derive.
+// getPriCss returns the CSS class for the existing 3-color pill set (Phase 8 will
+// introduce a distinct 'critical' visual). getPriLabel returns the analyzer's
+// canonical 4-band label. severity_band may be null on legacy rows during the
+// rollout gap before the analyzer next runs — fall back to 'low' for display only.
 function getPri(r){
-  const m=r.mastery_score;
-  if(m!=null){if(m<50)return'high';if(m<70)return'med';return'low';}
-  const s=r.weakness_score||0;if(s>=0.6)return'high';if(s>=0.3)return'med';return'low';
+  switch(r.severity_band){
+    case 'critical': return 'high';  // visually share the red pill until Phase 8 redesign
+    case 'high':     return 'high';
+    case 'medium':   return 'med';
+    case 'low':      return 'low';
+    default:         return 'low';
+  }
+}
+function getSeverityLabel(r){
+  switch(r.severity_band){
+    case 'critical': return 'Critical';
+    case 'high':     return 'High';
+    case 'medium':   return 'Medium';
+    case 'low':      return 'Low';
+    default:         return 'Low';
+  }
 }
 function priLabel(p){return p==='high'?'High':p==='med'?'Medium':'Low';}
 // Mastery: DB record → report field → compute from signals
@@ -1087,7 +1104,7 @@ function renderRankTable(reports,mastery){
         <div class="rank-topic">${esc(topic)}</div>
         ${r.subtopic?`<div class="rank-sub"><span class="tree">└─</span> <span class="sname">${esc(r.subtopic)}</span></div>`:''}
       </div>
-      <div class="rank-right"><span class="sev-pill ${p}"><span class="d"></span>${priLabel(p)}</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">${mPct!==null?mPct+'%':'—'}</span></div></div>
+      <div class="rank-right"><span class="sev-pill ${p}"><span class="d"></span>${getSeverityLabel(r)}</span><div class="rank-mastery"><span class="rm-l">Mastery</span><span class="rm-v">${mPct!==null?mPct+'%':'—'}</span></div></div>
     </div>`;
   }).join('');
   rt.querySelectorAll('.rank-row').forEach(row=>{
@@ -1205,7 +1222,7 @@ function renderSWGrid(reports,mastery){
       const div=document.createElement('div');
       div.className='rank clickable';
       div.dataset.idx=i;
-      div.innerHTML=`<span class="rn">${i+1}</span><div class="rmeta"><div class="rtop"><span class="rt">${escTopicLabel(r)}</span><span class="rp">${mPct!==null?mPct+'%':'—'}</span><span class="pri ${p}"><span class="pd"></span>Priority: ${priLabel(p)}</span></div><span class="rsub">${r.total_signals||0} signals</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+      div.innerHTML=`<span class="rn">${i+1}</span><div class="rmeta"><div class="rtop"><span class="rt">${escTopicLabel(r)}</span><span class="rp">${mPct!==null?mPct+'%':'—'}</span><span class="pri ${p}"><span class="pd"></span>Priority: ${getSeverityLabel(r)}</span></div><span class="rsub">${r.total_signals||0} signals</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
       div.addEventListener('click',()=>openModal(r,mPct,mastery));
       weakCard.appendChild(div);
     });
@@ -1358,7 +1375,7 @@ function openModal(report,mPct,mastery){
   const p=getPri(report);
   document.getElementById('mTitle').textContent=topicLabel(report);
   document.getElementById('mPct').textContent='Mastery '+(mPct!==null?mPct+'%':'—');
-  const pri=document.getElementById('mPri');pri.className='pri '+p;pri.innerHTML='<span class="pd"></span>Priority: '+priLabel(p);
+  const pri=document.getElementById('mPri');pri.className='pri '+p;pri.innerHTML='<span class="pd"></span>Priority: '+getSeverityLabel(report);
   const topicSigs=allSignals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic));
   const mistakes=topicSigs.filter(s=>s.signal_type==='topic'&&s.weight>0.4).slice(0,4);
   document.getElementById('mMistakes').innerHTML=mistakes.length
