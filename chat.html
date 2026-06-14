@@ -650,6 +650,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="taxonomy.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script>
@@ -1005,28 +1006,36 @@ button{font-family:inherit;cursor:pointer}
     },
     normalizeSubtopic: function(sub) {
       if (!sub) return sub;
-      // Strip parenthetical qualifiers to unify variants like "Order of operations (PEMDAS)" → "Order of operations"
+      if (window.Taxonomy) return window.Taxonomy.normalizeSubtopic(sub);
+      // Fallback: strip parenthetical qualifiers only (taxonomy.js not yet loaded)
       return sub.replace(/\s*\([^)]+\)\s*$/, '').trim();
+    },
+    normalizeTopic: function(topic) {
+      if (!topic) return topic;
+      if (window.Taxonomy) return window.Taxonomy.normalizeTopic(topic);
+      // Fallback: title-case first char only
+      var t = topic.trim();
+      return t.charAt(0).toUpperCase() + t.slice(1);
     },
     sendSignal: function(sig){
       (window.__SI_SIGNALS = window.__SI_SIGNALS || []).push(sig);
       if (!currentUser) return;
       var row = { user_id: currentUser.id, source: 'AI_CHAT' };
       if (sig.type === 'topic') {
-        row.topic = sig.topic; row.subtopic = this.normalizeSubtopic(sig.sub);
+        row.topic = this.normalizeTopic(sig.topic); row.subtopic = this.normalizeSubtopic(sig.sub);
         row.signal_type = 'topic';
         // weight 0.2..1.0 — lower confidence = higher weakness weight
         row.weight = sig.confidence ? Math.max(0.2, (6 - sig.confidence) / 5) : 0.5;
       } else if (sig.type === 'multi_concept' || sig.type === 'multi-concept') {
-        row.topic = sig.primary || sig.topic; row.subtopic = sig.primary || sig.sub;
+        row.topic = this.normalizeTopic(sig.primary || sig.topic); row.subtopic = this.normalizeSubtopic(sig.primary || sig.sub);
         row.signal_type = 'multi_concept'; row.weight = 0.3;
       } else if (sig.type === 'repeated') {
         // topic column is NOT NULL — null here made every repeated-signal insert fail
-        row.topic = sig.topic || 'General'; row.subtopic = sig.sub;
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
         row.signal_type = 'repeated';
         row.weight = Math.min((sig.count || 1) * 0.4, 2.0);
       } else if (sig.type === 'resolution') {
-        row.topic = sig.topic || 'General'; row.subtopic = sig.sub;
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
         row.signal_type = 'resolution';
         // negative weight = strength, positive = weakness.
         // solved → strength; partial → mild weakness; confused → strong escalation

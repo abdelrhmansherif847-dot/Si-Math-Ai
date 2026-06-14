@@ -57,45 +57,20 @@
   }
 
   /* ── Topic name normalizer ──
-   * Canonicalises user-typed topic/subtopic strings so typos and
-   * capitalisation variants map to the same entry in the DB.
-   * e.g. "GEOmetry" → "Geometry", "algebra" → "Algebra", "Circle" → "Circles"
+   * Delegates to window.Taxonomy (taxonomy.js) when available.
+   * Inline fallback preserves behaviour during rollout if taxonomy.js
+   * has not yet loaded.
    */
-  var TOPIC_ALIASES = {
-    'geometry': 'Geometry',
-    'geometery': 'Geometry',
-    'geomtry': 'Geometry',
-    'algebra': 'Algebra',
-    'algebera': 'Algebra',
-    'algepra': 'Algebra',
-    'trigonometry': 'Trigonometry',
-    'trig': 'Trigonometry',
-    'statistics': 'Statistics',
-    'probability': 'Probability',
-    'calculus': 'Calculus',
-    'number theory': 'Number Theory',
-  };
-  var SUBTOPIC_ALIASES = {
-    'circle': 'Circles',
-    'circles': 'Circles',
-    'linear equation': 'Linear Equations',
-    'linear equations': 'Linear Equations',
-    'linear': 'Linear',
-    'order of operations': 'Order of operations',
-    'order of operations (pemdas)': 'Order of operations',
-    'pemdas': 'Order of operations',
-  };
   function normalizeTopic(s) {
+    if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeTopic(s);
     if (!s) return s;
     var t = s.trim();
-    var lower = t.toLowerCase();
-    return TOPIC_ALIASES[lower] || (t.charAt(0).toUpperCase() + t.slice(1));
+    return t.charAt(0).toUpperCase() + t.slice(1);
   }
   function normalizeSubtopic(s) {
+    if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeSubtopic(s);
     if (!s) return s;
-    var t = s.replace(/\s*\([^)]+\)\s*$/, '').trim();
-    var lower = t.toLowerCase();
-    return SUBTOPIC_ALIASES[lower] || t;
+    return s.replace(/\s*\([^)]+\)\s*$/, '').trim();
   }
 
   /* ── Main pipeline ── */
