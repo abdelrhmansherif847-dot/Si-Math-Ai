@@ -121,6 +121,21 @@
               created_at:  now
             });
           }
+
+          // exam_confused: persistent exam failure across ≥2 prior sessions —
+          // escalation marker that the student has been repeatedly examined and
+          // continues to struggle. Supplements (does not replace) the topic signal.
+          if (priorCount >= 2) {
+            signalsToInsert.push({
+              user_id:     userId,
+              topic:       topic,
+              subtopic:    subtopic,
+              signal_type: 'exam_confused',
+              source:      'MOCK_EXAM',
+              weight:      1.2,
+              created_at:  now
+            });
+          }
         }
 
         // Write all signals in one batch

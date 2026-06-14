@@ -919,6 +919,7 @@ button{font-family:inherit;cursor:pointer}
     plan: 'free',      // set from profiles.plan_code after auth
     usage: 0,          // set from ai_usage_logs count after auth
     topicCounts: {},                        // subtopic -> times asked
+    lastActiveTopic: null,                  // { topic, sub } — most recent topic signal this session
     // simple keyword -> topic/subtopic map (in production: real NLP)
     map: [
       {kw:['circle','arc','radius','sector','tangent','chord'], topic:'Geometry', sub:'Circles', concepts:['Circle Theorems','Arc Length','Sector Area']},
@@ -993,13 +994,44 @@ button{font-family:inherit;cursor:pointer}
       }
       var statusId='st_'+Math.random().toString(36).slice(2,8);
       // fire base signals to Weakness Analyzer (skip during history replay)
-      if (!skipSignals) this.sendSignal({type:'topic', topic:p.topic, sub:p.sub, confidence:conf, concepts:p.concepts});
+      if (!skipSignals) {
+        this.sendSignal({type:'topic', topic:p.topic, sub:p.sub, confidence:conf, concepts:p.concepts});
+        this.lastActiveTopic = { topic: p.topic, sub: p.sub };
+        // hint_used and explanation_repeated detection — only when topic context is established
+        if (this.detectHintRequest(text)) {
+          this.sendSignal({type:'hint_used', topic:p.topic, sub:p.sub});
+        }
+        if (this.detectReExplanationRequest(text)) {
+          this.sendSignal({type:'explanation_repeated', topic:p.topic, sub:p.sub});
+        }
+      }
       return {
         topic:p.topic, sub:p.sub, confidence:conf, conceptTags:conceptTags, detectedConcepts:p.concepts,
         multiConcept:multiConcept, repeatedTopic:repeatedTopic, potentialWeak:potentialWeak,
         strength:strength, strengthColor:strengthColor,
         statusId:statusId, statusColor:'cyan'
       };
+    },
+    detectHintRequest: function(text) {
+      var t = (text || '').toLowerCase();
+      return /\bhint\b|i'?m stuck|im stuck|give me a clue|i need a clue|i don'?t know how|i dont know how/.test(t);
+    },
+    detectReExplanationRequest: function(text) {
+      var t = (text || '').toLowerCase();
+      return /i still don'?t understand|i still dont understand|explain (that |it |this )?again|can you re-?explain|don'?t (get|understand) (it|this)|dont (get|understand) (it|this)|i'?m (still )?confused|im (still )?confused/.test(t);
+    },
+    // Called for every student message that fails topic detection but may still
+    // carry a meta-signal (hint request / re-explanation) attributable to the
+    // last active topic from earlier in the session.
+    analyzeMetaRequest: function(text) {
+      if (!this.lastActiveTopic) return; // no topic context — cannot attribute
+      var ctx = this.lastActiveTopic;
+      if (this.detectHintRequest(text)) {
+        this.sendSignal({type:'hint_used', topic:ctx.topic, sub:ctx.sub});
+      }
+      if (this.detectReExplanationRequest(text)) {
+        this.sendSignal({type:'explanation_repeated', topic:ctx.topic, sub:ctx.sub});
+      }
     },
     sendResolution: function(topic,sub,res){
       this.sendSignal({type:'resolution', topic:topic, sub:sub, resolution:res});
@@ -1042,6 +1074,12 @@ button{font-family:inherit;cursor:pointer}
         row.weight = (sig.resolution === 'solved' || sig.resolution === 'understood' || sig.resolution === '1') ? -0.5
                    : (sig.resolution === 'partial') ? 0.3
                    : 2.0;
+      } else if (sig.type === 'hint_used') {
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        row.signal_type = 'hint_used'; row.weight = 0.4;
+      } else if (sig.type === 'explanation_repeated') {
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        row.signal_type = 'explanation_repeated'; row.weight = 0.6;
       } else {
         return; // unknown type — skip
       }
@@ -1572,6 +1610,9 @@ button{font-family:inherit;cursor:pointer}
       ? text + '\n\n[Hint mode: please give me only a hint — do not reveal the full solution or steps]'
       : text;
     var sig = (apiText && isMathMessage(apiText)) ? SignalEngine.analyze(apiText) : null;
+    // Meta-signal pass: if topic detection yielded nothing but the message carries
+    // a hint/re-explanation phrase, attribute it to the last known active topic.
+    if (!sig && apiText) SignalEngine.analyzeMetaRequest(apiText);
     var imgToSend = pendingImg;
     addUser(text, pendingImg); // display original text (without hint suffix)
     input.value = ''; input.style.height = 'auto';
