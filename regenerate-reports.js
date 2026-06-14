@@ -25,6 +25,28 @@
     return 'low';
   }
 
+  /* ── Trend detection (Phase 3) ──
+   * Analyzer is the SOLE authority for trend. Consumers must NOT re-derive.
+   *
+   * trend ∈ {improving, stable, declining, null}, derived from improvement_score.
+   *
+   * Confidence gate (MIN_HISTORY_FOR_TREND): below 5 signals on a topic, the
+   * improvement_score is dominated by single-event noise (one signal added or
+   * removed swings it by ~50–100%), so we hold trend = null until the topic has
+   * enough density to make percentage-change meaningful. null also represents
+   * the "improvement_score is null" case (no signals in the 7–14 day window),
+   * giving consumers one unified "not enough history yet" state.
+   */
+  var TREND_THRESHOLDS = { improving: 5, declining: -5 };      // percentage-point bands
+  var MIN_HISTORY_FOR_TREND = 5;                                // minimum total_signals
+  function trendFromImprovement(imp, totalSignals) {
+    if (imp == null) return null;
+    if ((totalSignals || 0) < MIN_HISTORY_FOR_TREND) return null;
+    if (imp >  TREND_THRESHOLDS.improving) return 'improving';
+    if (imp <  TREND_THRESHOLDS.declining) return 'declining';
+    return 'stable';
+  }
+
   /* ── Core formulas (must match weakness.html exactly) ── */
 
   function computeMastery(signals) {
@@ -106,6 +128,7 @@
         total_signals: e.signals.length,
         mastery_score: mastery,
         severity_band: severityFromMastery(mastery),
+        trend: trendFromImprovement(impScore, e.signals.length),
         biggest_weakness: false,
         priority_rank: 0
       };
@@ -210,6 +233,7 @@
           priority_rank: c.priority_rank,
           biggest_weakness: c.biggest_weakness,
           severity_band: c.severity_band,
+          trend: c.trend,
           last_updated: now
         };
         if (existMap[k] != null) {
@@ -232,7 +256,7 @@
       // Rollout-safe: if a phase-added column doesn't exist on the deployed DB yet,
       // strip the optional field and retry once. Keeps the analyzer working during
       // staged rollouts where code lands before the migration.
-      var OPTIONAL_COLS = ['severity_band'];
+      var OPTIONAL_COLS = ['severity_band', 'trend'];
       function stripOptional(row) {
         var clean = Object.assign({}, row);
         OPTIONAL_COLS.forEach(function (k) { delete clean[k]; });

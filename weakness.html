@@ -777,6 +777,23 @@ function getSeverityLabel(r){
   }
 }
 function priLabel(p){return p==='high'?'High':p==='med'?'Medium':'Low';}
+// Phase 3: trend is analyzer-owned. Read r.trend directly. null = no badge.
+function getTrendIcon(r){
+  switch(r.trend){
+    case 'improving': return '📈';
+    case 'declining': return '📉';
+    case 'stable':    return '➖';
+    default:          return '';
+  }
+}
+function getTrendLabel(r){
+  switch(r.trend){
+    case 'improving': return 'Improving';
+    case 'declining': return 'Declining';
+    case 'stable':    return 'Stable';
+    default:          return '';
+  }
+}
 // Mastery: DB record → report field → compute from signals
 function masteryPct(report,mastery){
   const mr=mastery.find(m=>m.topic===report.topic&&m.subtopic===report.subtopic);
@@ -1075,8 +1092,8 @@ function renderStats(reports,mastery,signals){
     d2.querySelector('.sv').textContent=qSolved||'0';
     d2.querySelector('.sd').textContent='across all topics';
   }
-  // Stat 3: topics improving (improvement_score > 0)
-  const improving=reports.filter(r=>r.improvement_score!=null&&r.improvement_score>5).length;
+  // Stat 3: topics improving — read analyzer-owned trend directly (Phase 3)
+  const improving=reports.filter(r=>r.trend==='improving').length;
   const d3=document.querySelector('.stat.d3');
   if(d3){
     d3.querySelector('.si').textContent='📈';
@@ -1274,16 +1291,20 @@ function renderTrack(mastery,reports){
       if(older.length>0){const om=computeMastery(older);if(om!=null)startPct=om;}
     }
     const targetPct=Math.min(95,nowPct+15);
-    // Improvement: use improvement_score if available, else derive from start/now delta
+    // Phase 3: read analyzer-owned trend. improvement_score % shown as supplementary
+    // value when the analyzer has classified the trend as improving/declining.
     const imp=r.improvement_score;
     let gainLabel,gainSvg;
-    if(imp!=null&&Math.abs(imp)>5){
-      gainLabel=(imp>0?'+':'')+Math.round(imp)+'%';
-      gainSvg=imp>0?upSvg:dnSvg;
+    if(r.trend==='improving'){
+      gainLabel=(imp!=null?'+'+Math.round(imp)+'%':'Improving');gainSvg=upSvg;
+    } else if(r.trend==='declining'){
+      gainLabel=(imp!=null?Math.round(imp)+'%':'Declining');gainSvg=dnSvg;
+    } else if(r.trend==='stable'){
+      gainLabel='Stable';gainSvg='➖';
     } else if(startPct<nowPct){
       gainLabel='+'+(nowPct-startPct)+'%';gainSvg=upSvg;
     } else {
-      gainLabel='Stable';gainSvg='➖';
+      gainLabel='—';gainSvg='';
     }
     const cls=ri===0?'':'fn';
     const toH=v=>Math.max(Math.round(v*1.1),5); // scale pct to px height (110px=100%)
