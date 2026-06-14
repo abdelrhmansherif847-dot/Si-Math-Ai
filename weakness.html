@@ -394,6 +394,83 @@ button{font-family:inherit;cursor:pointer}
 .m-cta{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:var(--space-4);padding:15px;border-radius:var(--r-md);border:none;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:0 8px 26px rgba(56,189,248,.3);transition:transform .2s,box-shadow .2s}
 .m-cta:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(56,189,248,.44)}
 .m-cta svg{width:17px;height:17px}
+/* ════════════════ Phase 8 — Weakness Analyzer Redesign ════════════════ */
+/* Severity — adds 'critical' distinct from 'high' and a 4-segment meter */
+.sev-pill.crit{background:#3a0a14;border:1px solid var(--red);color:#ffd0d6;animation:critPulse 2.2s ease-in-out infinite}
+.sev-pill.crit .d{background:var(--red);box-shadow:0 0 10px var(--red);animation:critDot 1.4s ease-in-out infinite}
+@keyframes critPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,79,95,.45)}50%{box-shadow:0 0 0 6px rgba(239,79,95,0)}}
+@keyframes critDot{0%,100%{opacity:.55}50%{opacity:1}}
+.sev-meter{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px}
+.sev-meter .seg{height:6px;border-radius:3px;background:rgba(255,255,255,.06);transition:background .35s}
+.sev-meter[data-band="low"]    .seg:nth-child(4){background:var(--green)}
+.sev-meter[data-band="medium"] .seg:nth-child(3){background:var(--amber)}
+.sev-meter[data-band="high"]   .seg:nth-child(2){background:#ff8a50}
+.sev-meter[data-band="critical"] .seg:nth-child(1){background:var(--red);box-shadow:0 0 12px rgba(239,79,95,.5)}
+.sev-meter .seg-l{position:absolute;font-size:10px;color:var(--text-500);font-family:var(--font-mono);letter-spacing:.06em}
+/* Trend chip — separates from signal count text */
+.trend-chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid;background:rgba(255,255,255,.02)}
+.trend-chip.up  {color:var(--green);border-color:var(--green-border)}
+.trend-chip.dn  {color:var(--red);border-color:var(--red-border)}
+.trend-chip.eq  {color:var(--text-300);border-color:rgba(255,255,255,.12)}
+.trend-chip svg{width:11px;height:11px}
+/* Recency block */
+.rec-block{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px;color:var(--text-300);align-items:center}
+.rec-block .rk{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500)}
+.rec-block .rv{color:var(--text-200)}
+.rec-block.dormant{padding:10px 14px;border-radius:var(--r-md);background:rgba(255,255,255,.025);border:1px dashed rgba(255,255,255,.08);color:var(--text-400)}
+/* Weakness card — two-tier redesign */
+.wc-list{display:flex;flex-direction:column;gap:14px}
+.wc-card{position:relative;border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);background:var(--bg-card);padding:18px 20px;transition:border-color .25s,transform .15s;cursor:pointer}
+.wc-card:hover{border-color:rgba(255,255,255,.16);transform:translateY(-1px)}
+.wc-card.sev-critical{border-left:4px solid var(--red)}
+.wc-card.sev-high    {border-left:4px solid #ff8a50}
+.wc-card.sev-medium  {border-left:4px solid var(--amber)}
+.wc-card.sev-low     {border-left:4px solid var(--green)}
+.wc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.wc-head .wc-rk{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--text-500);margin-bottom:4px}
+.wc-head h3{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;line-height:1.25;margin:0}
+.wc-head .wc-sub{font-size:12.5px;color:var(--text-400);margin-top:3px}
+.wc-stat{font-family:var(--font-mono);font-size:11px;color:var(--text-400);margin-top:6px;letter-spacing:.04em}
+.wc-context{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 0;margin:12px 0;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)}
+.wc-context .rec-block{flex:1 1 220px}
+.wc-explain{font-size:13px;line-height:1.55;color:var(--text-300);margin-bottom:14px}
+.wc-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.wc-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--text-200);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .2s,border-color .2s}
+.wc-btn:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.2)}
+.wc-btn.primary{background:linear-gradient(135deg,var(--cyan-2),var(--cyan));border-color:transparent;color:#031020}
+.wc-btn.primary:hover{filter:brightness(1.05)}
+.wc-btn svg{width:13px;height:13px}
+.wc-card.dormant .wc-btn.primary{background:rgba(255,255,255,.05);color:var(--text-300)}
+/* Evidence section (collapsed by default) */
+.wc-evidence{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.05);display:none}
+.wc-card.expanded .wc-evidence{display:block}
+.wc-card.expanded .wc-toggle svg{transform:rotate(180deg)}
+.wc-toggle svg{transition:transform .2s}
+.ev-list{display:flex;flex-direction:column;gap:8px}
+.ev-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.025);font-size:12.5px}
+.ev-row .ev-src{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500);width:42px;flex-shrink:0}
+.ev-row .ev-src.chat{color:var(--cyan-3)}
+.ev-row .ev-src.exam{color:var(--amber)}
+.ev-row .ev-when{color:var(--text-400);font-size:11.5px;width:80px;flex-shrink:0}
+.ev-row .ev-body{flex:1;min-width:0;color:var(--text-200);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-row .ev-open{color:var(--cyan-3);text-decoration:none;font-size:11.5px;font-weight:600;flex-shrink:0}
+.ev-row .ev-open:hover{text-decoration:underline}
+.ev-row.muted .ev-body{color:var(--text-500);font-style:italic}
+.ev-empty{font-size:12px;color:var(--text-500);padding:10px;text-align:center}
+/* Spotlight enrichment overlay (re-uses .biggest container) */
+.bw-stats{display:flex;flex-wrap:wrap;gap:18px;margin:14px 0 18px;align-items:center}
+.bw-stats .bw-st{display:flex;flex-direction:column;gap:2px}
+.bw-stats .bw-st-l{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-500)}
+.bw-stats .bw-st-v{font-family:var(--font-display);font-weight:700;font-size:22px;color:#fff;line-height:1}
+.bw-stats .bw-st-v.crit{color:#ffd0d6}
+.bw-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+@media(max-width:720px){
+  .wc-head{flex-wrap:wrap}
+  .wc-context{flex-direction:column;align-items:stretch}
+  .bw-stats{gap:12px}
+  .bw-stats .bw-st-v{font-size:18px}
+  .biggest h2{font-size:22px}
+}
 </style>
 </head>
 <body>
@@ -749,6 +826,10 @@ const SB_KEY='sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let currentUser=null, allReports=[], allMastery=[], allSignals=[], currentModalReport=null;
+// Phase 8 — evidence map keyed by 'topic|subtopic' → up to 3 enriched evidence rows.
+// Populated by loadEvidenceBatched() after weakness_reports load. Expanding a card
+// reads from this map; no per-card queries.
+let evidenceMap=new Map();
 
 /* ── constants ── */
 const DAY=86400000;
@@ -760,13 +841,68 @@ const DAY=86400000;
 // canonical 4-band label. severity_band may be null on legacy rows during the
 // rollout gap before the analyzer next runs — fall back to 'low' for display only.
 function getPri(r){
+  // Phase 8: critical gets its own visual treatment (.crit) — distinct from 'high'.
   switch(r.severity_band){
-    case 'critical': return 'high';  // visually share the red pill until Phase 8 redesign
+    case 'critical': return 'crit';
     case 'high':     return 'high';
     case 'medium':   return 'med';
     case 'low':      return 'low';
     default:         return 'low';
   }
+}
+// Phase 8 — severity meter (4 segments) reads the canonical band directly.
+function severityMeterHTML(r){
+  const band=(r.severity_band||'low');
+  return `<div class="sev-meter" data-band="${band}" title="Severity band: ${band}"><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div></div>`;
+}
+// Phase 8 — trend chip. Null trend (insufficient history) → no chip.
+function trendChipHTML(r){
+  if(!r.trend) return '';
+  const arrowUp='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+  const arrowDn='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7 17 17M17 9v8H9"/></svg>';
+  const arrowEq='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>';
+  switch(r.trend){
+    case 'improving': return `<span class="trend-chip up">${arrowUp}Getting better</span>`;
+    case 'declining': return `<span class="trend-chip dn">${arrowDn}Getting weaker</span>`;
+    case 'stable':    return `<span class="trend-chip eq">${arrowEq}Holding steady</span>`;
+    default:          return '';
+  }
+}
+// Phase 8 — recency block. Two-line, derived from existing analyzer fields only.
+function recencyBlockHTML(r){
+  const r14=r.recent14_count, r7=r.recent7_count, last=r.last_signal_at;
+  if(r14===0){
+    let line='No recent activity';
+    if(last){
+      const days=Math.floor((Date.now()-new Date(last).getTime())/86400000);
+      line=days<=0?'No recent activity':`Dormant — last touched ${days} days ago`;
+    }
+    return `<div class="rec-block dormant">◌ ${esc(line)}</div>`;
+  }
+  const weekLine = (r7!=null && r14!=null) ? `${r7} of ${r14} signals` : `${r14||0} in 14 days`;
+  let touched='—';
+  if(last){
+    const days=Math.floor((Date.now()-new Date(last).getTime())/86400000);
+    touched=days<=0?'today':(days===1?'yesterday':`${days} days ago`);
+  }
+  return `<div class="rec-block"><span class="rk">Active this week</span><span class="rv">${esc(weekLine)}</span><span class="rk">Last touched</span><span class="rv">${esc(touched)}</span></div>`;
+}
+// Phase 8 — plain-language explanation. Uses existing fields only.
+function explainWeakness(r){
+  const parts=[];
+  switch(r.severity_band){
+    case 'critical': parts.push(`This is a critical weakness — your mastery is very low.`);break;
+    case 'high':     parts.push(`This topic needs urgent attention.`);break;
+    case 'medium':   parts.push(`This topic is only partially understood.`);break;
+    case 'low':      parts.push(`You're close to mastering this topic.`);break;
+  }
+  if(r.trend==='declining')      parts.push(`Your performance has dropped recently.`);
+  else if(r.trend==='improving') parts.push(`You're improving — keep going.`);
+  else if(r.trend==='stable')    parts.push(`Your level has held steady.`);
+  if(r.recent14_count===0)            parts.push(`No recent practice — start a session to build momentum.`);
+  else if((r.recent7_count||0)>=3)    parts.push(`You've practiced ${r.recent7_count} times this week.`);
+  if(r.total_signals)            parts.push(`Based on ${r.total_signals} signal${r.total_signals!==1?'s':''} from your sessions.`);
+  return parts.join(' ');
 }
 function getSeverityLabel(r){
   switch(r.severity_band){
@@ -924,6 +1060,10 @@ async function loadData(forceRegen){
   if(allReports.length===0&&allSignals.length===0){showEmpty();return;}
 
   const reports=allReports.length>0?allReports:buildFromSignals(allSignals);
+  // Phase 8: batched evidence pre-load — at most 3 queries (signals + question_records + exam_mistakes)
+  // regardless of how many weakness cards are rendered. Card expansion is DOM-only afterwards.
+  try { await loadEvidenceBatched(reports, 5); }
+  catch(e){ console.warn('[evidence] preload failed (graceful degrade):', e.message); }
   renderAll(reports,allMastery,allSignals);
 }
 
@@ -1063,6 +1203,171 @@ function renderPredict(report,mastery,signals){
   if(ib)ib.innerHTML=`<div class="ib-l">Estimation Confidence</div><div class="ib-v" style="color:${confColor}">${conf}</div><div class="ib-d">${sigCount} signal${sigCount!==1?'s':''} tracked on this topic</div>`;
 }
 
+/* ── Phase 8: batched evidence loader ──
+ * Single round-trip per data type. For top N topics (default 5):
+ *   1. ONE query: weakness_signals filtered to user + IN-list of (topic,subtopic),
+ *      ordered DESC, limit ~N*3 to bound row count.
+ *   2. ONE query: question_records WHERE id IN (collected source_question_id list)
+ *      for AI_CHAT-sourced signals.
+ *   3. ONE query: exam_mistakes WHERE id IN (...) for MOCK_EXAM-sourced signals.
+ * Result merged into evidenceMap keyed by 'topic|subtopic'. Card expansion is
+ * a pure DOM operation reading from this map — no further DB calls.
+ */
+async function loadEvidenceBatched(reports, topN){
+  evidenceMap = new Map();
+  if (!reports.length || !currentUser) return;
+  const top = reports.slice(0, topN || 5);
+  // Collect topic + subtopic pairs
+  const topics = Array.from(new Set(top.map(r => r.topic).filter(Boolean)));
+  const subs   = Array.from(new Set(top.map(r => r.subtopic).filter(Boolean)));
+  if (!topics.length) return;
+  // Query 1: signals batch — limit by 3× topN gives ~15 rows max for the default
+  let sigQ = sb.from('weakness_signals')
+    .select('id, topic, subtopic, signal_type, source, weight, created_at, source_question_id, source_session_id')
+    .eq('user_id', currentUser.id)
+    .in('topic', topics)
+    .order('created_at', { ascending: false })
+    .limit((topN || 5) * 6);
+  const sigRes = await sigQ;
+  if (sigRes.error) { console.warn('[evidence] signals batch error:', sigRes.error.message); return; }
+  const sigs = sigRes.data || [];
+  // Bucket per topic|subtopic, keep 3 most recent
+  const buckets = new Map();
+  for (const s of sigs) {
+    const k = (s.topic||'') + '|' + (s.subtopic||'');
+    if (!buckets.has(k)) buckets.set(k, []);
+    const b = buckets.get(k);
+    if (b.length < 3) b.push(s);
+  }
+  // Collect IDs for batched question/exam lookups
+  const chatIds = []; const examIds = [];
+  for (const list of buckets.values()) {
+    for (const s of list) {
+      if (!s.source_question_id) continue;
+      if (s.source === 'AI_CHAT')      chatIds.push(s.source_question_id);
+      else if (s.source === 'MOCK_EXAM') examIds.push(s.source_question_id);
+    }
+  }
+  // Queries 2 & 3 in parallel — batched IN-list lookups
+  const [qrRes, emRes] = await Promise.all([
+    chatIds.length
+      ? sb.from('question_records').select('id, question, session_id').in('id', chatIds)
+      : Promise.resolve({ data: [] }),
+    examIds.length
+      ? sb.from('exam_mistakes').select('id, session_id, topic, subtopic').in('id', examIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const qrMap = new Map((qrRes.data || []).map(q => [q.id, q]));
+  const emMap = new Map((emRes.data || []).map(e => [e.id, e]));
+  // Build enriched evidence rows per bucket
+  for (const [k, list] of buckets.entries()) {
+    const rows = list.map(s => {
+      const ageDays = Math.floor((Date.now() - new Date(s.created_at||0).getTime()) / 86400000);
+      const when = ageDays <= 0 ? 'today' : (ageDays === 1 ? '1 day ago' : `${ageDays} days ago`);
+      if (s.source === 'AI_CHAT') {
+        const q = s.source_question_id ? qrMap.get(s.source_question_id) : null;
+        return {
+          src: 'chat', when,
+          body: q && q.question ? q.question : 'Earlier chat signal',
+          link: q && q.session_id ? `chat.html?session=${encodeURIComponent(q.session_id)}` : null,
+          linked: !!q,
+        };
+      } else if (s.source === 'MOCK_EXAM') {
+        const e = s.source_question_id ? emMap.get(s.source_question_id) : null;
+        return {
+          src: 'exam', when,
+          body: e ? `Mock exam mistake — ${e.topic || ''}${e.subtopic ? ' → ' + e.subtopic : ''}` : 'Earlier exam signal',
+          link: e && e.session_id ? `mock-exam.html?session=${encodeURIComponent(e.session_id)}` : null,
+          linked: !!e,
+        };
+      }
+      return { src: (s.source||'').toLowerCase(), when, body: 'Earlier signal', link: null, linked: false };
+    });
+    evidenceMap.set(k, rows);
+  }
+}
+function evidenceRowsHTML(r){
+  const k = (r.topic||'') + '|' + (r.subtopic||'');
+  const rows = evidenceMap.get(k);
+  if (!rows || !rows.length) {
+    return '<div class="ev-empty">No linked evidence available yet — older signals may not be linked to their source question.</div>';
+  }
+  return `<div class="ev-list">${rows.map(row => {
+    const srcClass = row.src === 'chat' ? 'chat' : row.src === 'exam' ? 'exam' : '';
+    const open = row.link ? `<a class="ev-open" href="${esc(row.link)}">Open →</a>` : '';
+    return `<div class="ev-row${row.linked ? '' : ' muted'}">
+      <span class="ev-src ${srcClass}">${row.src}</span>
+      <span class="ev-when">${esc(row.when)}</span>
+      <span class="ev-body" title="${esc(row.body)}">${esc(row.body)}</span>
+      ${open}
+    </div>`;
+  }).join('')}</div>`;
+}
+/* ── Phase 8: weakness cards (two-tier layout, reads evidenceMap on expand) ── */
+function renderWeaknessCards(reports, mastery){
+  // Reuses existing .sw-card.weak container — replaces the simple rank list with rich cards.
+  const weakCard = document.querySelector('.sw-card.weak');
+  if (!weakCard) return;
+  const existing = weakCard.querySelectorAll('.rank, .wc-list');
+  existing.forEach(n => n.remove());
+  weakCard.querySelector('.sw-title').innerHTML = '<span class="ic">⚠️</span> Needs Work';
+  if (!reports.length) {
+    weakCard.insertAdjacentHTML('beforeend', emptyMsg('📚','No data yet','Your weaknesses will appear here as you practice.'));
+    return;
+  }
+  const list = document.createElement('div');
+  list.className = 'wc-list';
+  reports.slice(0, 5).forEach((r, i) => {
+    const p = getPri(r);
+    const mPct = masteryPct(r, mastery);
+    const band = r.severity_band || 'low';
+    const dormant = r.recent14_count === 0 ? ' dormant' : '';
+    const card = document.createElement('article');
+    card.className = `wc-card sev-${band}${dormant}`;
+    card.dataset.idx = i;
+    card.innerHTML = `
+      <div class="wc-head">
+        <div>
+          <div class="wc-rk">#${i+1} weakness</div>
+          <h3>${escTopicLabel(r)}</h3>
+          <div class="wc-sub">${r.total_signals||0} signal${(r.total_signals||0)!==1?'s':''} tracked</div>
+          <div class="wc-stat">Mastery ${mPct!=null?mPct+'%':'—'}</div>
+          ${severityMeterHTML(r)}
+        </div>
+        <div><span class="sev-pill ${p}"><span class="d"></span>${getSeverityLabel(r)}</span></div>
+      </div>
+      <div class="wc-context">
+        ${recencyBlockHTML(r)}
+        ${trendChipHTML(r)}
+      </div>
+      <p class="wc-explain">${esc(explainWeakness(r))}</p>
+      <div class="wc-actions">
+        <button class="wc-btn wc-toggle" type="button">View evidence <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="wc-btn primary" type="button">Practice this now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="wc-evidence"></div>
+    `;
+    // Toggle: read from evidenceMap, render on first expand only
+    const toggleBtn = card.querySelector('.wc-toggle');
+    const evBox     = card.querySelector('.wc-evidence');
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const expanded = card.classList.toggle('expanded');
+      if (expanded && !evBox.dataset.rendered) {
+        evBox.innerHTML = evidenceRowsHTML(r);
+        evBox.dataset.rendered = '1';
+      }
+    });
+    card.querySelector('.wc-btn.primary').addEventListener('click', (e) => {
+      e.stopPropagation();
+      goFocus(r);
+    });
+    // Clicking the card opens the existing detail modal (preserves old behavior).
+    card.addEventListener('click', () => openModal(r, mPct, mastery));
+    list.appendChild(card);
+  });
+  weakCard.appendChild(list);
+}
 /* ── render all ── */
 function renderAll(reports,mastery,signals){
   renderStats(reports,mastery,signals);
@@ -1072,7 +1377,8 @@ function renderAll(reports,mastery,signals){
   renderPredict(reports[0],mastery,signals);
   renderSignalCols(reports[0],signals);
   renderBars(mastery,reports);
-  renderSWGrid(reports,mastery);
+  renderWeaknessCards(reports, mastery);          // Phase 8 — replaces old Needs Work list
+  renderSWGrid(reports,mastery);                   // keeps the Strengths side
   renderBiggest(reports[0]);
   renderTrack(mastery,reports);
   renderRecommended(reports[0],reports);
@@ -1242,7 +1548,8 @@ function renderBars(mastery,reports){
 function renderSWGrid(reports,mastery){
   const weakCard=document.querySelector('.sw-card.weak');
   const strongCard=document.querySelector('.sw-card.strong');
-  if(weakCard){
+  // Phase 8: weakCard is now owned by renderWeaknessCards(); skip the old flat list.
+  if(false&&weakCard){
     const weak=reports.slice(0,3);
     weakCard.querySelector('.sw-title').innerHTML='<span class="ic">⚠️</span> Needs Work';
     const existing=weakCard.querySelectorAll('.rank');
@@ -1278,14 +1585,52 @@ function renderSWGrid(reports,mastery){
   }
 }
 
-/* ── biggest weakness ── */
+/* ── biggest weakness (Phase 8 spotlight) ── */
 function renderBiggest(report){
   if(!report)return;
   const big=document.querySelector('.biggest');if(!big)return;
-  big.querySelector('h2').textContent=topicLabel(report);
-  big.querySelector('p').textContent=`Your analysis shows "${topicLabel(report)}" is your biggest weakness right now. Focused practice on this topic will give you the fastest score improvement.`;
+  const mPct=masteryPct(report,allMastery);
+  const p=getPri(report);
+  const band=report.severity_band||'low';
+  // Headline + severity pill
+  const h2=big.querySelector('h2');
+  if(h2) h2.innerHTML = `${escTopicLabel(report)} <span class="sev-pill ${p}" style="vertical-align:middle;margin-left:8px;font-size:11px"><span class="d"></span>${getSeverityLabel(report)}</span>`;
+  // Replace the static <p> with three-stat strip + explanation + actions
+  const p_old=big.querySelector('p');
+  if(p_old){
+    const masteryClass = band==='critical' ? 'crit' : '';
+    const trendHTML = trendChipHTML(report);
+    const recHTML   = recencyBlockHTML(report);
+    p_old.outerHTML = `
+      <div class="bw-stats">
+        <div class="bw-st"><span class="bw-st-l">Mastery</span><span class="bw-st-v ${masteryClass}">${mPct!=null?mPct+'%':'—'}</span></div>
+        <div class="bw-st"><span class="bw-st-l">Trend</span><span class="bw-st-v">${trendHTML || '<span style="font-size:14px;color:var(--text-400)">Not enough history</span>'}</span></div>
+        <div class="bw-st" style="flex:1;min-width:200px"><span class="bw-st-l">Activity</span>${recHTML}</div>
+      </div>
+      ${severityMeterHTML(report)}
+      <p style="color:var(--text-300);font-size:14px;max-width:520px;margin:16px 0 18px">${esc(explainWeakness(report))}</p>
+      <div class="bw-actions">
+        <button class="wc-btn primary" id="bwPracticeBtn" type="button">Practice this now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></button>
+        <button class="wc-btn" id="bwEvidenceBtn" type="button">See the evidence</button>
+      </div>
+    `;
+    const practiceBtn=document.getElementById('bwPracticeBtn');
+    if(practiceBtn) practiceBtn.onclick=()=>goFocus(report);
+    const evBtn=document.getElementById('bwEvidenceBtn');
+    if(evBtn) evBtn.onclick=()=>{
+      // Scroll to and expand the matching weakness card
+      const cards=document.querySelectorAll('.wc-card');
+      if(cards[0]){
+        cards[0].classList.add('expanded');
+        const evBox=cards[0].querySelector('.wc-evidence');
+        if(evBox && !evBox.dataset.rendered){ evBox.innerHTML=evidenceRowsHTML(report); evBox.dataset.rendered='1'; }
+        cards[0].scrollIntoView({ behavior:'smooth', block:'center' });
+      }
+    };
+  }
+  // Existing CTA in template (id=focusCta) still works for legacy bind
   const cta=document.getElementById('focusCta');
-  if(cta)cta.onclick=()=>goFocus(report);
+  if(cta) cta.onclick=()=>goFocus(report);
 }
 
 /* ── mastery track ── */
