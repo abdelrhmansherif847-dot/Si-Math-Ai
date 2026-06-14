@@ -1116,10 +1116,15 @@ function buildFromSignals(sigs){
     };
   }).filter(r=>r.total_signals>0);
   // Sort: primary by mastery asc (lower mastery = more urgent), secondary by weakness_score desc
+  // Phase 9: deterministic sort — adds lexicographic tertiary tiebreaker to
+  // resolve previously-undefined ordering when mastery & weakness_score tie.
   entries.sort((a,b)=>{
     const ma=a.mastery_score??50, mb=b.mastery_score??50;
-    if(Math.abs(ma-mb)>5)return ma-mb; // lower mastery = higher priority
-    return b.weakness_score-a.weakness_score;
+    if(Math.abs(ma-mb)>5)return ma-mb;
+    if(a.weakness_score!==b.weakness_score)return b.weakness_score-a.weakness_score;
+    const ka=(a.topic||'')+'|'+(a.subtopic||'');
+    const kb=(b.topic||'')+'|'+(b.subtopic||'');
+    return ka<kb?-1:ka>kb?1:0;
   });
   entries.forEach((e,i)=>{e.priority_rank=i+1;e.biggest_weakness=i===0;});
   return entries;
