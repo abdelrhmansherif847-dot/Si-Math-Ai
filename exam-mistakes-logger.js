@@ -98,27 +98,34 @@
 
           var weight = examSignalWeight(count, priorCount);
 
+          // question_id is an optional field on each mistake; null when not provided.
+          var qId = m.question_id || null;
+
           // Primary exam-mistake signal
           signalsToInsert.push({
-            user_id:     userId,
-            topic:       topic,
-            subtopic:    subtopic,
-            signal_type: 'topic',
-            source:      'MOCK_EXAM',
-            weight:      weight,
-            created_at:  now
+            user_id:              userId,
+            topic:                topic,
+            subtopic:             subtopic,
+            signal_type:          'topic',
+            source:               'MOCK_EXAM',
+            weight:               weight,
+            created_at:           now,
+            source_session_id:    sessionId,
+            source_question_id:   qId,
           });
 
           // Repeated signal if seen in prior sessions
           if (priorCount > 0) {
             signalsToInsert.push({
-              user_id:     userId,
-              topic:       topic,
-              subtopic:    subtopic,
-              signal_type: 'repeated',
-              source:      'MOCK_EXAM',
-              weight:      Math.min(2.0, 0.5 * priorCount),
-              created_at:  now
+              user_id:            userId,
+              topic:              topic,
+              subtopic:           subtopic,
+              signal_type:        'repeated',
+              source:             'MOCK_EXAM',
+              weight:             Math.min(2.0, 0.5 * priorCount),
+              created_at:         now,
+              source_session_id:  sessionId,
+              source_question_id: qId,
             });
           }
 
@@ -127,13 +134,15 @@
           // continues to struggle. Supplements (does not replace) the topic signal.
           if (priorCount >= 2) {
             signalsToInsert.push({
-              user_id:     userId,
-              topic:       topic,
-              subtopic:    subtopic,
-              signal_type: 'exam_confused',
-              source:      'MOCK_EXAM',
-              weight:      1.2,
-              created_at:  now
+              user_id:            userId,
+              topic:              topic,
+              subtopic:           subtopic,
+              signal_type:        'exam_confused',
+              source:             'MOCK_EXAM',
+              weight:             1.2,
+              created_at:         now,
+              source_session_id:  sessionId,
+              source_question_id: qId,
             });
           }
         }

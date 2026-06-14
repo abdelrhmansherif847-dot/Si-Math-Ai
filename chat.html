@@ -920,6 +920,7 @@ button{font-family:inherit;cursor:pointer}
     usage: 0,          // set from ai_usage_logs count after auth
     topicCounts: {},                        // subtopic -> times asked
     lastActiveTopic: null,                  // { topic, sub } — most recent topic signal this session
+    _buffer: null,                          // null = immediate-write; [] = buffering for current message
     // simple keyword -> topic/subtopic map (in production: real NLP)
     map: [
       {kw:['circle','arc','radius','sector','tangent','chord'], topic:'Geometry', sub:'Circles', concepts:['Circle Theorems','Arc Length','Sector Area']},
@@ -1033,6 +1034,32 @@ button{font-family:inherit;cursor:pointer}
         this.sendSignal({type:'explanation_repeated', topic:ctx.topic, sub:ctx.sub});
       }
     },
+    // ── Phase 7: per-message signal buffer ──
+    // beginBuffer() must be called at the start of send() before analyze().
+    // flushBuffer(questionId, sessionId) batch-inserts all buffered rows with
+    // source_question_id and source_session_id set — called after askAI() resolves
+    // so record_id is known. discardBuffer() is called on any error/abort path.
+    beginBuffer: function() {
+      this._buffer = [];
+    },
+    flushBuffer: function(questionId, sessionId) {
+      var rows = this._buffer;
+      this._buffer = null;
+      if (!rows || rows.length === 0 || !currentUser) return;
+      rows.forEach(function(row) {
+        row.source_question_id = questionId || null;
+        row.source_session_id  = sessionId  || null;
+      });
+      sb.from('weakness_signals').insert(rows).then(function({ error }) {
+        if (error) { console.warn('[weakness_signals] batch insert failed:', error.message); return; }
+        if (window.scheduleReportRegen && currentUser) {
+          window.scheduleReportRegen(sb, currentUser.id);
+        }
+      });
+    },
+    discardBuffer: function() {
+      this._buffer = null;
+    },
     sendResolution: function(topic,sub,res){
       this.sendSignal({type:'resolution', topic:topic, sub:sub, resolution:res});
     },
@@ -1083,6 +1110,16 @@ button{font-family:inherit;cursor:pointer}
       } else {
         return; // unknown type — skip
       }
+      if (this._buffer) {
+        // Buffered path: signal will be batch-inserted by flushBuffer() after
+        // askAI() resolves, so source_question_id is known at insert time.
+        this._buffer.push(row);
+        return;
+      }
+      // Immediate path: fires outside the ask/response cycle (e.g. resolution buttons).
+      // Use the most-recently-returned record_id and current session if available.
+      row.source_question_id = window.__lastQRecId || null;
+      row.source_session_id  = currentSessionId    || null;
       sb.from('weakness_signals').insert(row).then(({ error }) => {
         if (error) { console.warn('weakness_signals insert failed:', error.message); return; }
         if (window.scheduleReportRegen && currentUser) {
@@ -1609,6 +1646,9 @@ button{font-family:inherit;cursor:pointer}
     var apiText = (hintModeActive && text)
       ? text + '\n\n[Hint mode: please give me only a hint — do not reveal the full solution or steps]'
       : text;
+    // Begin per-message signal buffer — all sendSignal() calls until flushBuffer()
+    // are held in memory and batch-inserted after askAI() resolves with record_id.
+    SignalEngine.beginBuffer();
     var sig = (apiText && isMathMessage(apiText)) ? SignalEngine.analyze(apiText) : null;
     // Meta-signal pass: if topic detection yielded nothing but the message carries
     // a hint/re-explanation phrase, attribute it to the last known active topic.
@@ -1633,12 +1673,14 @@ button{font-family:inherit;cursor:pointer}
       p_session_id:  currentSessionId || null
     }).then(({ data: creditResult, error: creditError }) => {
       if (creditError || !creditResult) {
+        SignalEngine.discardBuffer();
         removeTyping();
         showError('Could not verify your credits. Please refresh and try again.');
         isSending = false; sendBtn.disabled = false;
         return;
       }
       if (!creditResult.ok) {
+        SignalEngine.discardBuffer();
         removeTyping();
         if (creditResult.reason === 'daily_limit_reached') {
           showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (starts at 69 EGP, never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
@@ -1661,6 +1703,8 @@ button{font-family:inherit;cursor:pointer}
         // Pipeline unification: when the AI flags a weakness on a topic the local
         // keyword map missed (sig is null), record it in weakness_signals so the
         // Weakness Analyzer sees AI-detected weaknesses too.
+        // These sendSignal() calls run while _buffer is still active so they join
+        // the same per-message batch and receive the same source_question_id.
         if (response && response.weakness_signal === true && !sig && response.topic && response.subtopic) {
           SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: 2});
         }
@@ -1673,6 +1717,10 @@ button{font-family:inherit;cursor:pointer}
             SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: sentConf});
           }
         }
+        // Flush buffer — record_id is now known; every signal for this message is
+        // batch-inserted with source_question_id and source_session_id set exactly.
+        window.__lastQRecId = (response && response.record_id) || null;
+        SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         awardChatXP();
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
@@ -1686,9 +1734,8 @@ button{font-family:inherit;cursor:pointer}
             isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
           });
         }
-        // Use record_id returned by edge function (v45: synchronous INSERT, no race)
-        window.__lastQRecId = (response && response.record_id) || null;
       }).catch(err => {
+        SignalEngine.discardBuffer();
         removeTyping();
         showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
         // Refund the credit deducted before the failed AI call
@@ -1706,6 +1753,7 @@ button{font-family:inherit;cursor:pointer}
         sendBtn.disabled = false;
       });
     }).catch(() => {
+      SignalEngine.discardBuffer();
       removeTyping();
       showError('Network error checking your credits. Please try again.');
       isSending = false; sendBtn.disabled = false;
