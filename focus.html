@@ -742,14 +742,17 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
     if (tasks.length > 0 && pendingCount === 0) {
       // All active tasks done — append a fresh wave.
 
-      // 27-task cap: if at or above cap, archive the oldest completed wave first.
+      // 27-task cap: archive the oldest complete wave (exactly WAVE_SIZE tasks) as a unit.
+      // Sorting by priority ensures Wave 1 (priorities 1–9) is always selected whole.
+      // Guard: only archive when the slice is exactly WAVE_SIZE — never create partial waves.
       if (tasks.length >= TASK_CAP) {
-        const lowestPriorities = tasks.slice().sort((a, b) => (a.priority || 0) - (b.priority || 0))
-          .slice(0, WAVE_SIZE).map(t => t.id).filter(Boolean);
-        if (lowestPriorities.length > 0) {
+        const sorted = tasks.slice().sort((a, b) => (a.priority || 0) - (b.priority || 0));
+        const waveToArchive = sorted.slice(0, WAVE_SIZE);
+        if (waveToArchive.length === WAVE_SIZE) {
+          const ids = waveToArchive.map(t => t.id).filter(Boolean);
           await sb.from('focus_tasks')
             .update({ archived_at: now })
-            .in('id', lowestPriorities);
+            .in('id', ids);
         }
       }
 
