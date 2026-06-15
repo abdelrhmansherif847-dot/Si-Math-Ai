@@ -527,21 +527,8 @@ function masteryColor(m) {
   return 'var(--green)';
 }
 
-// ===== SUBTOPIC MAP =====
-const SUBTOPIC_MAP = {
-  'Algebra': ['Linear Equations','Systems of Equations','Quadratic Equations','Polynomials','Inequalities','Absolute Value','Exponents & Radicals','Functions','Sequences & Patterns'],
-  'Geometry': ['Triangles','Circles','Angles & Lines','Coordinate Geometry','Area & Volume','Similar Figures','Transformations','3D Shapes'],
-  'Word Problems': ['Linear Word Problems','Percent Problems','Ratio Problems','Rate & Work Problems','Mixture Problems','Distance & Speed Problems','Statistics Word Problems'],
-  'Statistics': ['Mean, Median, Mode','Standard Deviation','Data Tables','Scatter Plots','Probability','Sampling Methods','Survey Design'],
-  'Trigonometry': ['Sin, Cos, Tan','Unit Circle','Trig Identities','Radian Measure','Inverse Trig','Law of Sines & Cosines'],
-  'Number Theory': ['Integers','Fractions & Decimals','Percentages','Ratios & Proportions','Prime Numbers','Factors & Multiples'],
-  'Calculus': ['Limits','Derivatives','Chain Rule','Product Rule','Integration','Optimization Problems'],
-  'Probability': ['Basic Probability','Compound Events','Conditional Probability','Combinations','Permutations'],
-  'Linear Equations': ['One-Variable Equations','Two-Variable Equations','Slope & Rate of Change','Intercepts','Parallel & Perpendicular Lines'],
-  'Order of Operations': ['PEMDAS Rules','Nested Parentheses','Integer Operations','Fraction Operations'],
-  'Quadratic Equations': ['Factoring','Quadratic Formula','Completing the Square','Vertex Form','Discriminant'],
-  'Complex Numbers': ['Imaginary Numbers','Operations with Complex Numbers','Complex Conjugates','Modulus & Argument'],
-};
+// ===== SUBTOPIC MAP — delegated to Taxonomy =====
+const subtopicsFor = window.Taxonomy.subtopicsFor;
 
 // ===== EXAM FREQUENCY WEIGHTS =====
 const EXAM_FREQ = {
@@ -708,25 +695,64 @@ function estimatedTimeToImprove(mastery, trendStr, profile) {
 }
 
 
+// ===== INACTIVITY ARCHIVAL SWEEP =====
+// Runs before upsertPlan. Archives ACTIVE plans not referenced in 30+ days.
+// Skips NULL last_referenced_at — legacy plans opt in on first interaction.
+// Topic-shift never triggers archival; a student can hold multiple active plans.
+const PLAN_STALE_MS = 30 * 86400000;
+async function sweepStalePlans(userId) {
+  const cutoff = new Date(Date.now() - PLAN_STALE_MS).toISOString();
+  await sb.from('focus_plans')
+    .update({ status: 'ARCHIVED' })
+    .eq('user_id', userId)
+    .eq('status', 'ACTIVE')
+    .lt('last_referenced_at', cutoff);
+  // Rows with last_referenced_at IS NULL are deliberately left active.
+}
+
 // ===== PLAN UPSERT (stable — no reshuffle) =====
 // dominant: string|null — written to focus_plans (cache) and focus_tasks (historical record).
 // Never written to existing in-progress tasks; only new wave inserts carry it.
+// 27-task cap: when all tasks across 3 waves are done, the oldest completed wave
+// is rolled to archived_at = now() before a new wave is inserted.
+// DONE stays DONE; execution state is independent from archival state.
+// Render callers filter tasks with archived_at IS NULL.
+const TASK_CAP = 27;
+const WAVE_SIZE = 9;
 async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
   const title = 'Focus Plan: ' + primaryTopic.sub;
+  const now = new Date().toISOString();
+
   const { data: existing } = await sb.from('focus_plans')
     .select('id').eq('user_id', user.id).eq('title', title).eq('status', 'ACTIVE')
     .order('generated_date', { ascending: false }).limit(1).maybeSingle();
 
   if (existing) {
+    // Stamp last_referenced_at on every interaction (throttled by caller).
+    await sb.from('focus_plans')
+      .update({ last_referenced_at: now })
+      .eq('id', existing.id);
+
     const { data: exTasks } = await sb.from('focus_tasks')
-      .select('*').eq('plan_id', existing.id).order('priority');
+      .select('*').eq('plan_id', existing.id).is('archived_at', null).order('priority');
     const tasks = exTasks || [];
     const doneCount = tasks.filter(t => t.status === 'DONE').length;
     const pendingCount = tasks.filter(t => t.status !== 'DONE').length;
 
     if (tasks.length > 0 && pendingCount === 0) {
-      // All done — append a fresh wave with current dominant diagnosis.
-      // Update plan-level cache to reflect new wave; existing task rows untouched.
+      // All active tasks done — append a fresh wave.
+
+      // 27-task cap: if at or above cap, archive the oldest completed wave first.
+      if (tasks.length >= TASK_CAP) {
+        const lowestPriorities = tasks.slice().sort((a, b) => (a.priority || 0) - (b.priority || 0))
+          .slice(0, WAVE_SIZE).map(t => t.id).filter(Boolean);
+        if (lowestPriorities.length > 0) {
+          await sb.from('focus_tasks')
+            .update({ archived_at: now })
+            .in('id', lowestPriorities);
+        }
+      }
+
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
       await sb.from('focus_plans').update({ dominant_signal: dominant || null }).eq('id', existing.id);
       await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
@@ -734,22 +760,24 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
         task_title: t.title, priority: maxP + i + 1, estimated_minutes: t.minutes,
         status: 'NOT_STARTED', dominant_signal: dominant || null
       })));
-      const { data: updated } = await sb.from('focus_tasks').select('*').eq('plan_id', existing.id).order('priority');
+      const { data: updated } = await sb.from('focus_tasks')
+        .select('*').eq('plan_id', existing.id).is('archived_at', null).order('priority');
       return updated || tasks;
     }
 
     if (doneCount >= 1 && pendingCount <= 2) {
-      // Near done — append harder tasks. New tasks carry current dominant; old tasks untouched.
+      // Near done — append harder tasks if still under cap.
       const harder = newTaskDefs.slice(Math.floor(newTaskDefs.length / 2));
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
-      if (harder.length > 0) {
+      if (harder.length > 0 && tasks.length < TASK_CAP) {
         await sb.from('focus_tasks').insert(harder.map((t, i) => ({
           plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
           task_title: t.title + ' (Advanced)', priority: maxP + i + 1, estimated_minutes: t.minutes,
           status: 'NOT_STARTED', dominant_signal: dominant || null
         })));
       }
-      const { data: updated } = await sb.from('focus_tasks').select('*').eq('plan_id', existing.id).order('priority');
+      const { data: updated } = await sb.from('focus_tasks')
+        .select('*').eq('plan_id', existing.id).is('archived_at', null).order('priority');
       return updated || tasks;
     }
 
@@ -757,12 +785,13 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
     return tasks;
   }
 
-  // New plan — write dominant_signal to plan row and all initial task rows.
+  // New plan — write dominant_signal and last_referenced_at to plan row and all initial task rows.
   const { data: plan } = await sb.from('focus_plans').insert({
     user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],
     biggest_weakness_topic: primaryTopic.topic, status: 'ACTIVE',
-    dominant_signal: dominant || null
+    dominant_signal: dominant || null,
+    last_referenced_at: now,
   }).select().single();
   if (!plan) return newTaskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
   await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
@@ -770,7 +799,8 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
     task_title: t.title, priority: i + 1, estimated_minutes: t.minutes,
     status: 'NOT_STARTED', dominant_signal: dominant || null
   })));
-  const { data: newTasks } = await sb.from('focus_tasks').select('*').eq('plan_id', plan.id).order('priority');
+  const { data: newTasks } = await sb.from('focus_tasks')
+    .select('*').eq('plan_id', plan.id).is('archived_at', null).order('priority');
   return newTasks || [];
 }
 
@@ -804,6 +834,7 @@ function renderEmpty() {
 }
 
 function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank, timeToImprove, allRecords, dominant) {
+  var planId = (tasks && tasks[0] && tasks[0].plan_id) || null;
   var examType    = (profile && profile.exam_type)    || 'SAT';
   var m = primaryTopic.mastery;
   var mTarget = Math.min(m + 15, 100);
@@ -827,7 +858,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   var doneTodayCount = todayTasks.filter(function(t){ return t.status==='DONE'; }).length;
 
   // coverage map subtopics
-  var covSubs = SUBTOPIC_MAP[primaryTopic.topic] || SUBTOPIC_MAP[primaryTopic.sub] || [];
+  var covSubs = subtopicsFor(primaryTopic.topic) || subtopicsFor(primaryTopic.sub) || [];
   var qBySub = {};
   (allRecords||[]).forEach(function(r){
     var k = (r.subtopic||'').toLowerCase();
@@ -1051,7 +1082,10 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       // sync day-check
       var dc = document.querySelector('.day-check[data-task-id="' + (taskId||'').replace(/"/g,'&quot;') + '"]');
       if (dc) { dc.setAttribute('data-status',next); dc.className='day-check'+(next==='IN_PROGRESS'?' inprogress':next==='DONE'?' done':''); dc.textContent=next==='IN_PROGRESS'?'▶':next==='DONE'?'✓':''; }
-      if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+      if (taskId) {
+        await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+        if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
+      }
     });
   });
 
@@ -1079,7 +1113,10 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
         var row = mc.closest('.mission-task'); var lbl = row ? row.querySelector('.mt-title') : null;
         if (lbl) { if (next==='DONE') lbl.classList.add('done'); else lbl.classList.remove('done'); }
       }
-      if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+      if (taskId) {
+        await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+        if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
+      }
     });
   });
 }
@@ -1167,9 +1204,8 @@ async function loadData() {
   const urlSub     = params.get('subtopic') || '';
   const urlMastery = params.get('mastery') ? Number(params.get('mastery')) : null;
 
-  const [profRes, sessRes, examRes, repRes] = await Promise.all([
+  const [profRes, examRes, repRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
-    sb.from('chat_sessions').select('id').eq('user_id', user.id),
     sb.from('exam_mistakes').select('topic, subtopic').eq('user_id', user.id),
     sb.from('weakness_reports').select('*').eq('user_id', user.id).order('priority_rank', { ascending: true }),
   ]);
@@ -1183,7 +1219,6 @@ async function loadData() {
     adminLink.style.color = '#ef4f5f';
     document.querySelector('.sidebar').appendChild(adminLink);
   }
-  const sessions   = sessRes.data  || [];
   const examMist   = examRes.data  || [];
   const wReports   = repRes.data   || [];
   // Derive mastery view from weakness_reports (single source of truth).
@@ -1194,17 +1229,17 @@ async function loadData() {
     questions_seen: r.total_signals || 0,
     last_updated: r.last_updated
   }));
-  const sessionIds = sessions.map(s => s.id);
 
-  let records = [];
-  if (sessionIds.length > 0) {
-    const { data: qData } = await sb.from('question_records')
-      .select('topic, subtopic, concepts, created_at, weakness_signal, help_request, explanation_request, repeated_question, confidence_after')
-      .in('session_id', sessionIds)
-      .not('topic', 'is', null).not('subtopic', 'is', null)
-      .order('created_at', { ascending: true });
-    records = qData || [];
-  }
+  // Query question_records directly by user_id + created_at (last 90 days).
+  // Replaces the former chat_sessions IN-list pattern.
+  const since90 = new Date(Date.now() - 90 * 86400000).toISOString();
+  const { data: qData } = await sb.from('question_records')
+    .select('topic, subtopic, concepts, created_at, weakness_signal, help_request, explanation_request, repeated_question, confidence_after')
+    .eq('user_id', user.id)
+    .gte('created_at', since90)
+    .not('topic', 'is', null).not('subtopic', 'is', null)
+    .order('created_at', { ascending: true });
+  const records = qData || [];
 
   const academic = records.filter(r => isAcademicTopic(r.topic) && isAcademicTopic(r.subtopic));
 
@@ -1350,6 +1385,9 @@ async function loadData() {
       }
     }
   }
+
+  // Inactivity archival sweep — runs before upsertPlan so stale plans are cleared first.
+  try { await sweepStalePlans(user.id); } catch (_) { /* non-critical */ }
 
   // Compute days until exam
   let daysUntilExam = null;

@@ -127,6 +127,34 @@
     return out;
   }
 
+  /* ── Subtopic coverage map ──
+   * Canonical topic → ordered list of subtopics for the coverage rail.
+   * Keys are canonical display form (post-normalizeTopic).
+   * subtopicsFor() normalises raw input before lookup; returns [] for unknowns.
+   * Callers must tolerate an empty array — do not infer subtopics from other sources.
+   */
+  var SUBTOPIC_MAP = {
+    'Algebra':             ['Linear Equations','Systems of Equations','Quadratic Equations','Polynomials','Inequalities','Absolute Value','Exponents & Radicals','Functions','Sequences & Patterns'],
+    'Geometry':            ['Triangles','Circles','Angles & Lines','Coordinate Geometry','Area & Volume','Similar Figures','Transformations','3D Shapes'],
+    'Word Problems':       ['Linear Word Problems','Percent Problems','Ratio Problems','Rate & Work Problems','Mixture Problems','Distance & Speed Problems','Statistics Word Problems'],
+    'Statistics':          ['Mean, Median, Mode','Standard Deviation','Data Tables','Scatter Plots','Probability','Sampling Methods','Survey Design'],
+    'Trigonometry':        ['Sin, Cos, Tan','Unit Circle','Trig Identities','Radian Measure','Inverse Trig','Law of Sines & Cosines'],
+    'Number Theory':       ['Integers','Fractions & Decimals','Percentages','Ratios & Proportions','Prime Numbers','Factors & Multiples'],
+    'Calculus':            ['Limits','Derivatives','Chain Rule','Product Rule','Integration','Optimization Problems'],
+    'Probability':         ['Basic Probability','Compound Events','Conditional Probability','Combinations','Permutations'],
+    'Linear Equations':    ['One-Variable Equations','Two-Variable Equations','Slope & Rate of Change','Intercepts','Parallel & Perpendicular Lines'],
+    'Order of operations': ['PEMDAS Rules','Nested Parentheses','Integer Operations','Fraction Operations'],
+    'Quadratic Equations': ['Factoring','Quadratic Formula','Completing the Square','Vertex Form','Discriminant'],
+    'Complex Numbers':     ['Imaginary Numbers','Operations with Complex Numbers','Complex Conjugates','Modulus & Argument'],
+  };
+
+  /* subtopicsFor normalises before lookup so callers can pass raw strings. */
+  function subtopicsFor(topic) {
+    if (!topic) return [];
+    var canonical = normalizeTopic(topic);
+    return SUBTOPIC_MAP[canonical] || SUBTOPIC_MAP[topic] || [];
+  }
+
   /* Strip trailing parenthetical qualifier, e.g. "Foo (Bar)" → "Foo" */
   function stripParens(s) {
     return s.replace(/\s*\([^)]+\)\s*$/, '').trim();
@@ -152,10 +180,12 @@
     isAcademicTopic:     isAcademicTopic,
     normalizeConcept:    normalizeConcept,
     dedupeConceptList:   dedupeConceptList,
+    subtopicsFor:        subtopicsFor,
     /* Exposed for tests and introspection — do not mutate at runtime */
     _topicAliases:      TOPIC_ALIASES,
     _subtopicAliases:   SUBTOPIC_ALIASES,
     _systemTopics:      SYSTEM_TOPICS,
     _conceptAliases:    CONCEPT_CANON,
+    _subtopicMap:       SUBTOPIC_MAP,
   };
 }));
