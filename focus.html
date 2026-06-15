@@ -792,7 +792,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
   const { data: plan } = await sb.from('focus_plans').insert({
     user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],
-    biggest_weakness_topic: primaryTopic.topic, status: 'ACTIVE',
+    status: 'ACTIVE',
     dominant_signal: dominant || null,
     last_referenced_at: now,
   }).select().single();
@@ -805,21 +805,6 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
   const { data: newTasks } = await sb.from('focus_tasks')
     .select('*').eq('plan_id', plan.id).is('archived_at', null).order('priority');
   return newTasks || [];
-}
-
-// ===== 3-STATE TASK TOGGLE =====
-async function cycleTask(taskId, currentStatus, btn, label) {
-  const next = currentStatus === 'NOT_STARTED' ? 'IN_PROGRESS'
-             : currentStatus === 'IN_PROGRESS'  ? 'DONE'
-             : 'NOT_STARTED';
-  btn.setAttribute('data-status', next);
-  btn.className = 'task-toggle' + (next === 'IN_PROGRESS' ? ' inprogress' : next === 'DONE' ? ' done' : '');
-  btn.textContent = next === 'IN_PROGRESS' ? '▶' : next === 'DONE' ? '✓' : '';
-  if (label) {
-    label.style.textDecoration = next === 'DONE' ? 'line-through' : '';
-    label.style.opacity = next === 'DONE' ? '0.5' : '';
-  }
-  if (taskId) await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
 }
 
 // ===== RENDER EMPTY =====
@@ -1424,7 +1409,6 @@ async function loadData() {
       tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
     }
   } catch (e) {
-    if (e.message && e.message.startsWith('focus_plan_credit_blocked')) return;
     console.warn('focus_plans/focus_tasks not available:', e.message);
   }
 
@@ -1432,21 +1416,6 @@ async function loadData() {
     || (weaknesses.indexOf(primaryTopic) + 1)
     || 1;
   renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove, academic, dominant);
-}
-
-function showFocusPaywall(reason) {
-  var existing = document.getElementById('focusPaywall');
-  if (existing) existing.remove();
-  var msg = reason === 'daily_limit_reached'
-    ? 'Daily limit reached. Resets at midnight UTC. <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Upgrade to Pro →</a>'
-    : reason === 'insufficient_credits'
-    ? 'Not enough credits (10 needed to generate a plan). <a href="pricing.html" style="color:var(--cyan,#22d3ee);text-decoration:underline;font-weight:600">Buy more credits →</a>'
-    : 'Could not verify your credits. Please refresh and try again.';
-  var el = document.createElement('div');
-  el.id = 'focusPaywall';
-  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;background:#1a1a2e;border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:14px 20px;color:#f87171;font-size:13px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)';
-  el.innerHTML = msg + ' <button onclick="this.parentNode.remove()" style="margin-left:12px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
-  document.body.appendChild(el);
 }
 
 loadData().catch(err => {
