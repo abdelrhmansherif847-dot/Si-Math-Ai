@@ -687,6 +687,80 @@ button{font-family:inherit;cursor:pointer}
   let sessionMessages = [];
   let isSending = false;
 
+  // ── CAI-P1: client_request_id idempotency + sessionStorage recovery ──────────
+  // pendingRequestId survives across retries within the same JS context.
+  // sessionStorage 'simath_chat_inflight' survives page refresh within the same
+  // tab (120s TTL) so a refresh-during-send can recover the committed answer
+  // instead of consuming a second credit.
+  let pendingRequestId = null;
+  const INFLIGHT_KEY = 'simath_chat_inflight';
+  const INFLIGHT_TTL_MS = 120000;
+  const REFUND_QUEUE_KEY = 'simath_chat_refund_queue';
+  const REFUND_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+  function caiUuid() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  function writeInflight(requestId, creditLogId) {
+    try {
+      sessionStorage.setItem(INFLIGHT_KEY, JSON.stringify({
+        request_id: requestId, credit_log_id: creditLogId || null, ts: Date.now()
+      }));
+    } catch (e) { /* sessionStorage unavailable — degrade to memory-only */ }
+  }
+  function clearInflight() {
+    try { sessionStorage.removeItem(INFLIGHT_KEY); } catch (e) {}
+  }
+  function enqueueRefund(logId) {
+    if (!logId) return;
+    try {
+      const queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]');
+      queue.push({ log_id: logId, ts: Date.now() });
+      localStorage.setItem(REFUND_QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {}
+  }
+  async function drainRefundQueue() {
+    let queue;
+    try { queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]'); }
+    catch (e) { return; }
+    if (!Array.isArray(queue) || queue.length === 0) return;
+    const remaining = [];
+    const now = Date.now();
+    for (const item of queue) {
+      if (!item || !item.log_id || (now - (item.ts || 0)) > REFUND_MAX_AGE_MS) continue;
+      try {
+        const { data: rd, error: rerr } = await sb.rpc('refund_ai_credit', { p_log_id: item.log_id });
+        if (rerr || !rd || !rd.ok) remaining.push(item);
+      } catch (e) { remaining.push(item); }
+    }
+    try { localStorage.setItem(REFUND_QUEUE_KEY, JSON.stringify(remaining)); } catch (e) {}
+  }
+  async function recoverInflight() {
+    if (!currentUser) return;
+    let inflight;
+    try { inflight = JSON.parse(sessionStorage.getItem(INFLIGHT_KEY) || 'null'); }
+    catch (e) { return; }
+    if (!inflight || !inflight.request_id) return;
+    if (Date.now() - (inflight.ts || 0) > INFLIGHT_TTL_MS) { clearInflight(); return; }
+    const { data: row } = await sb
+      .from('question_records')
+      .select('id, session_id, ai_response')
+      .eq('user_id', currentUser.id)
+      .eq('client_request_id', inflight.request_id)
+      .maybeSingle();
+    if (row) {
+      clearInflight();
+      if (row.session_id) openSession(row.session_id);
+    } else {
+      // Edge Function never committed. Refund the credit if we have a log id.
+      if (inflight.credit_log_id) enqueueRefund(inflight.credit_log_id);
+      clearInflight();
+    }
+  }
+
   // ===== AUTH GUARD =====
   (async () => {
     try {
@@ -711,6 +785,8 @@ button{font-family:inherit;cursor:pointer}
       SignalEngine.renderUsage();
       loadChatHistory();
       renderEmptyStateHistory();
+      drainRefundQueue();
+      recoverInflight();
     } catch(err) {
       console.error('[chat] init error:', err);
       const chatArea = document.getElementById('chatMessages') || document.querySelector('.chat-area') || document.body;
@@ -816,6 +892,7 @@ button{font-family:inherit;cursor:pointer}
       messages: sessionMessages.slice(-10),
       follow_up_type: capturedFollowUpType,
       hint_mode: hintModeActive,
+      client_request_id: pendingRequestId,
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -1665,6 +1742,11 @@ button{font-family:inherit;cursor:pointer}
     isSending = true;
     sendBtn.disabled = true;
 
+    // CAI-P1: generate (or reuse) the idempotency key for this logical send.
+    // Persist before any network call so a refresh-during-send can recover.
+    if (!pendingRequestId) pendingRequestId = caiUuid();
+    writeInflight(pendingRequestId, null);
+
     // Credit gate: consume_credits RPC pre-authorises the message before hitting the edge fn.
     // Tokens are not known yet — pass 0; the edge function handles actual token logging.
     sb.rpc('consume_credits', {
@@ -1680,12 +1762,14 @@ button{font-family:inherit;cursor:pointer}
         SignalEngine.discardBuffer();
         removeTyping();
         showError('Could not verify your credits. Please refresh and try again.');
+        clearInflight(); pendingRequestId = null;
         isSending = false; sendBtn.disabled = false;
         return;
       }
       if (!creditResult.ok) {
         SignalEngine.discardBuffer();
         removeTyping();
+        clearInflight(); pendingRequestId = null;
         if (creditResult.reason === 'daily_limit_reached') {
           showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (starts at 69 EGP, never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
         } else if (creditResult.reason === 'insufficient_credits') {
@@ -1699,7 +1783,14 @@ button{font-family:inherit;cursor:pointer}
       // Credits OK — proceed with the AI call
       SignalEngine.bumpUsage();
       const creditLogId = creditResult.log_id || null;
+      // Re-write inflight with credit_log_id so a refresh-during-send can refund
+      // the credit if the Edge Function never commits a row.
+      writeInflight(pendingRequestId, creditLogId);
       askAI(apiText, sig, imgToSend).then(response => {
+        // CAI-P1 success-path ordering: clear inflight → render → clear pendingRequestId.
+        // Clearance precedes render so a refresh between steps cannot replay
+        // an already-rendered answer via the recovery query.
+        clearInflight();
         removeTyping();
         addAI(sig, response);
         sessionMessages.push({role:'user', content: apiText});
@@ -1742,17 +1833,21 @@ button{font-family:inherit;cursor:pointer}
         SignalEngine.discardBuffer();
         removeTyping();
         showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
-        // Refund the credit deducted before the failed AI call
+        // Refund the credit deducted before the failed AI call. If the refund
+        // RPC itself fails (network/transient), enqueue it for retry on next load.
         if (creditLogId) {
           sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
-            .then(({ data: rd }) => {
-              if (rd && rd.ok && rd.refunded > 0) {
-                console.info('Credit refunded after AI failure:', rd.refunded);
-              }
+            .then(({ data: rd, error: rerr }) => {
+              if (rerr || !rd || !rd.ok) { enqueueRefund(creditLogId); return; }
+              if (rd.refunded > 0) console.info('Credit refunded after AI failure:', rd.refunded);
             })
-            .catch(e => console.warn('Refund RPC failed:', e));
+            .catch(e => { console.warn('Refund RPC failed:', e); enqueueRefund(creditLogId); });
         }
       }).finally(() => {
+        // CAI-P1: failure clears inflight + pendingRequestId. The send is
+        // terminal — a manual retry generates a fresh request_id.
+        clearInflight();
+        pendingRequestId = null;
         isSending = false;
         sendBtn.disabled = false;
       });
@@ -1760,6 +1855,7 @@ button{font-family:inherit;cursor:pointer}
       SignalEngine.discardBuffer();
       removeTyping();
       showError('Network error checking your credits. Please try again.');
+      clearInflight(); pendingRequestId = null;
       isSending = false; sendBtn.disabled = false;
     });
   }
