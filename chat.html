@@ -1066,13 +1066,17 @@ button{font-family:inherit;cursor:pointer}
     normalizeSubtopic: function(sub) {
       if (!sub) return sub;
       if (window.Taxonomy) return window.Taxonomy.normalizeSubtopic(sub);
-      // Fallback: strip parenthetical qualifiers only (taxonomy.js not yet loaded)
+      // Guard: this path is unreachable under correct load order — surface loudly.
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeSubtopic — split-key risk', { subtopic: sub });
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
       return sub.replace(/\s*\([^)]+\)\s*$/, '').trim();
     },
     normalizeTopic: function(topic) {
       if (!topic) return topic;
       if (window.Taxonomy) return window.Taxonomy.normalizeTopic(topic);
-      // Fallback: title-case first char only
+      // Guard: this path is unreachable under correct load order — surface loudly.
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeTopic — split-key risk', { topic: topic });
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
       var t = topic.trim();
       return t.charAt(0).toUpperCase() + t.slice(1);
     },

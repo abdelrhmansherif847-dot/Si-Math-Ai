@@ -64,12 +64,26 @@
   function normalizeTopic(s) {
     if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeTopic(s);
     if (!s) return s;
+    // Guard: this path is unreachable under correct load order — surface loudly.
+    if (typeof console !== 'undefined' && console.error) {
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeTopic — split-key risk', { topic: s });
+    }
+    if (typeof window !== 'undefined') {
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
+    }
     var t = s.trim();
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
   function normalizeSubtopic(s) {
     if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeSubtopic(s);
     if (!s) return s;
+    // Guard: this path is unreachable under correct load order — surface loudly.
+    if (typeof console !== 'undefined' && console.error) {
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeSubtopic — split-key risk', { subtopic: s });
+    }
+    if (typeof window !== 'undefined') {
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
+    }
     return s.replace(/\s*\([^)]+\)\s*$/, '').trim();
   }
 

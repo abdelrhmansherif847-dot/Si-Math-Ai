@@ -789,13 +789,28 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
   }
 
   // New plan — write dominant_signal and last_referenced_at to plan row and all initial task rows.
-  const { data: plan } = await sb.from('focus_plans').insert({
+  const { data: plan, error: insertErr } = await sb.from('focus_plans').insert({
     user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],
     status: 'ACTIVE',
     dominant_signal: dominant || null,
     last_referenced_at: now,
   }).select().single();
+
+  // 23505 = unique_violation on uniq_focus_plans_active_per_user_title.
+  // A concurrent tab/device already inserted the ACTIVE plan — adopt theirs.
+  if (insertErr && insertErr.code === '23505') {
+    const { data: winner } = await sb.from('focus_plans')
+      .select('id').eq('user_id', user.id).eq('title', title).eq('status', 'ACTIVE')
+      .order('generated_date', { ascending: false }).limit(1).maybeSingle();
+    if (winner) {
+      const { data: wTasks } = await sb.from('focus_tasks')
+        .select('*').eq('plan_id', winner.id).is('archived_at', null).order('priority');
+      return wTasks || [];
+    }
+    return newTaskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
+  }
+
   if (!plan) return newTaskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
   await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
     plan_id: plan.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
