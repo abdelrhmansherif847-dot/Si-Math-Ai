@@ -564,20 +564,103 @@ function computeQTarget(mastery, topic, examType) {
 // ===== TASK ICONS =====
 const TASK_ICONS = { learn:'📖', practice:'✏️', review:'🔍', ask_zero:'💬', drill:'⏱️' };
 
+// ===== DOMINANT SIGNAL DETECTION =====
+// Reads pre-fetched GROUP BY rows from weakness_signals for the primary topic.
+// Returns one of: 'exam_confused'|'hint_used'|'explanation_repeated'|'repeated'|null.
+// Gate: total signals in window must be >= 5, candidate share >= 40%, candidate count >= 3.
+const DIAGNOSABLE_SIGNALS = ['exam_confused', 'hint_used', 'explanation_repeated', 'repeated'];
+function detectDominantSignal(rows) {
+  if (!rows || rows.length === 0) return null;
+  var mix = {};
+  var total = 0;
+  rows.forEach(function(r) { mix[r.signal_type] = Number(r.cnt); total += Number(r.cnt); });
+  if (total < 5) return null;
+  var best = null, bestCount = 0;
+  for (var i = 0; i < DIAGNOSABLE_SIGNALS.length; i++) {
+    var type = DIAGNOSABLE_SIGNALS[i];
+    var cnt = mix[type] || 0;
+    if (cnt >= 3 && cnt / total >= 0.40 && cnt > bestCount) {
+      best = type;
+      bestCount = cnt;
+    }
+  }
+  return best;
+}
+
 // ===== DAILY PLAN — 9 TASKS ACROSS 3 DAYS =====
-function generateAllDayTasks(sub, topic, mastery, qTarget) {
-  const easy  = Math.max(5, Math.round(qTarget * 0.45));
-  const drill = Math.max(5, Math.round(qTarget * 0.75));
+// dominant: null → default plan; one of DIAGNOSABLE_SIGNALS → specialized plan.
+function generateAllDayTasks(sub, topic, mastery, qTarget, dominant) {
+  const easy   = Math.max(5, Math.round(qTarget * 0.45));
+  const medium = Math.max(5, Math.round(qTarget * 0.60));
+  const drill  = Math.max(5, Math.round(qTarget * 0.75));
+
+  if (dominant === 'exam_confused') {
+    return [
+      { day:1, type:'learn',    title:'Rapid review ' + sub + ' — rules only, 5 min',                      minutes:5,  priority:1 },
+      { day:1, type:'practice', title:'Solve ' + easy + ' ' + sub + ' questions — timed, 60 sec each',     minutes:15, priority:2 },
+      { day:1, type:'review',   title:'Review every mistake — find the pattern',                            minutes:10, priority:3 },
+      { day:2, type:'practice', title:'Timed: ' + qTarget + ' medium ' + sub + ' questions in 18 min',     minutes:18, priority:4 },
+      { day:2, type:'review',   title:'Identify your repeated mistakes',                                    minutes:10, priority:5 },
+      { day:2, type:'ask_zero', title:'Ask Zero about 2 confusing questions',                               minutes:10, priority:6 },
+      { day:3, type:'drill',    title:'Mock-exam drill — ' + drill + ' mixed-topic questions in 20 min',   minutes:20, priority:7 },
+      { day:3, type:'review',   title:'Review under pressure — what slowed you down?',                     minutes:10, priority:8 },
+      { day:3, type:'practice', title:'Final accuracy check — target 80%+ on ' + sub,                     minutes:15, priority:9 },
+    ];
+  }
+
+  if (dominant === 'hint_used') {
+    return [
+      { day:1, type:'learn',    title:'Walk through 3 worked examples of ' + sub + ' without hints',       minutes:10, priority:1 },
+      { day:1, type:'practice', title:'Solve ' + easy + ' easy ' + sub + ' questions — no hints, no help', minutes:15, priority:2 },
+      { day:1, type:'review',   title:'Review every mistake — find the pattern',                            minutes:10, priority:3 },
+      { day:2, type:'practice', title:'Solve ' + qTarget + ' medium ' + sub + ' questions — no-hint streak: 5 in a row', minutes:20, priority:4 },
+      { day:2, type:'review',   title:'Identify your repeated mistakes',                                    minutes:10, priority:5 },
+      { day:2, type:'ask_zero', title:'Ask Zero about 2 confusing questions',                               minutes:10, priority:6 },
+      { day:3, type:'drill',    title:'Timed drill — ' + drill + ' questions in 20 min',                   minutes:20, priority:7 },
+      { day:3, type:'review',   title:'Review under pressure — what slowed you down?',                     minutes:10, priority:8 },
+      { day:3, type:'practice', title:'Final accuracy check — no hints allowed',                           minutes:15, priority:9 },
+    ];
+  }
+
+  if (dominant === 'explanation_repeated') {
+    return [
+      { day:1, type:'learn',    title:'Learn ' + sub + ' — focus on WHY the rule works, not just HOW',     minutes:15, priority:1 },
+      { day:1, type:'practice', title:'Solve ' + easy + ' easy ' + sub + ' questions — accuracy only, no rush', minutes:15, priority:2 },
+      { day:1, type:'review',   title:'Review every mistake — find the pattern',                            minutes:10, priority:3 },
+      { day:2, type:'practice', title:'Solve ' + medium + ' medium ' + sub + ' questions — quality over quantity', minutes:15, priority:4 },
+      { day:2, type:'review',   title:'Identify your repeated mistakes',                                    minutes:10, priority:5 },
+      { day:2, type:'ask_zero', title:'Explain ' + sub + ' back to Zero in your own words',                minutes:10, priority:6 },
+      { day:3, type:'ask_zero', title:'Ask Zero: identify the 3 concepts you still find confusing',        minutes:10, priority:7 },
+      { day:3, type:'review',   title:'Review under pressure — what slowed you down?',                     minutes:10, priority:8 },
+      { day:3, type:'practice', title:'Final accuracy check — explain each answer you get right',          minutes:15, priority:9 },
+    ];
+  }
+
+  if (dominant === 'repeated') {
+    return [
+      { day:1, type:'review',   title:'Review your last 5 mistakes in ' + sub + ' — find the error pattern', minutes:10, priority:1 },
+      { day:1, type:'practice', title:'Solve ' + easy + ' easy ' + sub + ' questions — predict your mistake before checking', minutes:15, priority:2 },
+      { day:1, type:'review',   title:'Review every mistake — find the pattern',                            minutes:10, priority:3 },
+      { day:2, type:'practice', title:'Solve ' + qTarget + ' medium ' + sub + ' questions',                minutes:20, priority:4 },
+      { day:2, type:'review',   title:'Categorise mistakes: rule error, calculation slip, or setup',       minutes:10, priority:5 },
+      { day:2, type:'ask_zero', title:'Ask Zero about 2 confusing questions',                               minutes:10, priority:6 },
+      { day:3, type:'drill',    title:'Timed drill — ' + drill + ' questions in 20 min',                   minutes:20, priority:7 },
+      { day:3, type:'review',   title:'Spot the error: identify the mistake in 5 worked solutions',        minutes:10, priority:8 },
+      { day:3, type:'practice', title:'Final accuracy check — target 80%+ on ' + sub,                     minutes:15, priority:9 },
+    ];
+  }
+
+  // Default plan (dominant = null)
   return [
-    { day:1, type:'learn',    title:'Learn ' + sub + ' — core concepts & rules',         minutes:10,  priority:1 },
-    { day:1, type:'practice', title:'Solve ' + easy + ' easy ' + sub + ' questions',     minutes:15,  priority:2 },
-    { day:1, type:'review',   title:'Review every mistake — find the pattern',           minutes:10,  priority:3 },
-    { day:2, type:'practice', title:'Solve ' + qTarget + ' medium ' + sub + ' questions',minutes:20,  priority:4 },
-    { day:2, type:'review',   title:'Identify your repeated mistakes',                   minutes:10,  priority:5 },
-    { day:2, type:'ask_zero', title:'Ask Zero about 2 confusing questions',              minutes:10,  priority:6 },
-    { day:3, type:'drill',    title:'Timed drill — ' + drill + ' questions in 20 min',   minutes:20,  priority:7 },
-    { day:3, type:'review',   title:'Review under pressure — what slowed you down?',     minutes:10,  priority:8 },
-    { day:3, type:'practice', title:'Final accuracy check — target 80%+ on ' + sub,     minutes:15,  priority:9 },
+    { day:1, type:'learn',    title:'Learn ' + sub + ' — core concepts & rules',          minutes:10, priority:1 },
+    { day:1, type:'practice', title:'Solve ' + easy + ' easy ' + sub + ' questions',      minutes:15, priority:2 },
+    { day:1, type:'review',   title:'Review every mistake — find the pattern',            minutes:10, priority:3 },
+    { day:2, type:'practice', title:'Solve ' + qTarget + ' medium ' + sub + ' questions', minutes:20, priority:4 },
+    { day:2, type:'review',   title:'Identify your repeated mistakes',                    minutes:10, priority:5 },
+    { day:2, type:'ask_zero', title:'Ask Zero about 2 confusing questions',               minutes:10, priority:6 },
+    { day:3, type:'drill',    title:'Timed drill — ' + drill + ' questions in 20 min',    minutes:20, priority:7 },
+    { day:3, type:'review',   title:'Review under pressure — what slowed you down?',      minutes:10, priority:8 },
+    { day:3, type:'practice', title:'Final accuracy check — target 80%+ on ' + sub,      minutes:15, priority:9 },
   ];
 }
 
@@ -626,7 +709,9 @@ function estimatedTimeToImprove(mastery, trendStr, profile) {
 
 
 // ===== PLAN UPSERT (stable — no reshuffle) =====
-async function upsertPlan(user, primaryTopic, newTaskDefs) {
+// dominant: string|null — written to focus_plans (cache) and focus_tasks (historical record).
+// Never written to existing in-progress tasks; only new wave inserts carry it.
+async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
   const title = 'Focus Plan: ' + primaryTopic.sub;
   const { data: existing } = await sb.from('focus_plans')
     .select('id').eq('user_id', user.id).eq('title', title).eq('status', 'ACTIVE')
@@ -640,44 +725,50 @@ async function upsertPlan(user, primaryTopic, newTaskDefs) {
     const pendingCount = tasks.filter(t => t.status !== 'DONE').length;
 
     if (tasks.length > 0 && pendingCount === 0) {
-      // All done — append a fresh wave
+      // All done — append a fresh wave with current dominant diagnosis.
+      // Update plan-level cache to reflect new wave; existing task rows untouched.
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
+      await sb.from('focus_plans').update({ dominant_signal: dominant || null }).eq('id', existing.id);
       await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
         plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
-        task_title: t.title, priority: maxP + i + 1, estimated_minutes: t.minutes, status: 'NOT_STARTED'
+        task_title: t.title, priority: maxP + i + 1, estimated_minutes: t.minutes,
+        status: 'NOT_STARTED', dominant_signal: dominant || null
       })));
       const { data: updated } = await sb.from('focus_tasks').select('*').eq('plan_id', existing.id).order('priority');
       return updated || tasks;
     }
 
     if (doneCount >= 1 && pendingCount <= 2) {
-      // Near done — append harder tasks (second half of new set)
+      // Near done — append harder tasks. New tasks carry current dominant; old tasks untouched.
       const harder = newTaskDefs.slice(Math.floor(newTaskDefs.length / 2));
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
       if (harder.length > 0) {
         await sb.from('focus_tasks').insert(harder.map((t, i) => ({
           plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
-          task_title: t.title + ' (Advanced)', priority: maxP + i + 1, estimated_minutes: t.minutes, status: 'NOT_STARTED'
+          task_title: t.title + ' (Advanced)', priority: maxP + i + 1, estimated_minutes: t.minutes,
+          status: 'NOT_STARTED', dominant_signal: dominant || null
         })));
       }
       const { data: updated } = await sb.from('focus_tasks').select('*').eq('plan_id', existing.id).order('priority');
       return updated || tasks;
     }
 
-    // Stable — return as-is
+    // Stable — in-progress plan. Return as-is; do NOT update dominant_signal.
     return tasks;
   }
 
-  // Focus Practice is free — no credit gate
+  // New plan — write dominant_signal to plan row and all initial task rows.
   const { data: plan } = await sb.from('focus_plans').insert({
     user_id: user.id, title,
     generated_date: new Date().toISOString().split('T')[0],
-    biggest_weakness_topic: primaryTopic.topic, status: 'ACTIVE'
+    biggest_weakness_topic: primaryTopic.topic, status: 'ACTIVE',
+    dominant_signal: dominant || null
   }).select().single();
   if (!plan) return newTaskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
   await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
     plan_id: plan.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
-    task_title: t.title, priority: i + 1, estimated_minutes: t.minutes, status: 'NOT_STARTED'
+    task_title: t.title, priority: i + 1, estimated_minutes: t.minutes,
+    status: 'NOT_STARTED', dominant_signal: dominant || null
   })));
   const { data: newTasks } = await sb.from('focus_tasks').select('*').eq('plan_id', plan.id).order('priority');
   return newTasks || [];
@@ -712,7 +803,7 @@ function renderEmpty() {
     </div>`;
 }
 
-function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank, timeToImprove, allRecords) {
+function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasks, profile, primaryRank, timeToImprove, allRecords, dominant) {
   var examType    = (profile && profile.exam_type)    || 'SAT';
   var m = primaryTopic.mastery;
   var mTarget = Math.min(m + 15, 100);
@@ -720,7 +811,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   var weekStats = computeWeeklyStats(allRecords || [], qTarget, profile);
 
   // merge DB task statuses with generated day plan
-  var taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, m, qTarget);
+  var taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, m, qTarget, dominant);
   var merged = taskDefs.map(function(def, i) {
     var dbTask = tasks.find(function(t){ return t.priority === i+1; }) || tasks[i];
     return Object.assign({}, def, {
@@ -752,7 +843,12 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   var DAY_DESCS = {1:'Learn concepts & solve easy questions',2:'Build accuracy with medium questions',3:'Timed drills & pressure practice'};
 
   var otherWeak = weaknesses.filter(function(w){ return w !== primaryTopic; }).slice(0,3);
-  var chatDiff = m < 40 ? 'easy' : m < 65 ? 'medium' : 'hard';
+  // Signal-aware CTA difficulty. exam_confused → hard (pressure); hint_used → medium
+  // (procedural); explanation_repeated → easy (conceptual); others → mastery-gated.
+  var chatDiff = dominant === 'exam_confused'       ? 'hard'
+               : dominant === 'hint_used'           ? 'medium'
+               : dominant === 'explanation_repeated' ? 'easy'
+               : (m < 40 ? 'easy' : m < 65 ? 'medium' : 'hard');
 
   var html = '';
 
@@ -1262,15 +1358,27 @@ async function loadData() {
     if (!isNaN(examMs)) daysUntilExam = Math.max(0, Math.round(examMs / 86400000));
   }
 
+  // ── Signal-mix detection — exactly one additional query, primary topic only ──
+  let dominant = null;
+  try {
+    const { data: sigRows } = await sb.from('weakness_signals')
+      .select('signal_type, cnt:signal_type.count()')
+      .eq('user_id', user.id)
+      .eq('topic', primaryTopic.topic)
+      .eq('subtopic', primaryTopic.sub)
+      .gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString());
+    dominant = detectDominantSignal(sigRows || []);
+  } catch (_) { /* non-critical — fall back to default plan */ }
+
   const examTypeForPlan = (profile && profile.exam_type) || 'SAT';
   const qTargetForPlan = computeQTarget(primaryTopic.mastery, primaryTopic.topic, examTypeForPlan);
-  const taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, primaryTopic.mastery, qTargetForPlan);
+  const taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, primaryTopic.mastery, qTargetForPlan, dominant);
   const timeToImprove = estimatedTimeToImprove(primaryTopic.mastery, primaryTopic.trend, profile);
 
   let tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
 
   try {
-    tasksToRender = await upsertPlan(user, primaryTopic, taskDefs);
+    tasksToRender = await upsertPlan(user, primaryTopic, taskDefs, dominant);
     if (!tasksToRender || tasksToRender.length === 0) {
       tasksToRender = taskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
     }
@@ -1282,7 +1390,7 @@ async function loadData() {
   const primaryRank = primaryTopic.priorityRank
     || (weaknesses.indexOf(primaryTopic) + 1)
     || 1;
-  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove, academic);
+  renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, mastered, tasksToRender, profile, primaryRank, timeToImprove, academic, dominant);
 }
 
 function showFocusPaywall(reason) {
