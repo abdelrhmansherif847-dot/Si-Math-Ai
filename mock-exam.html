@@ -430,8 +430,28 @@ const s = {
   mistakeRows: [],
   sessionId: null,
   successData: null,
-  practiceQuestions: 0
+  practiceQuestions: 0,
+  // ME-P1: client-side idempotency token; generated lazily on first save attempt
+  // and reused across network retries within the same exam attempt.
+  idempotencyKey: null,
+  // ME-P1: double-click / re-entry guard for doSave().
+  saving: false
 };
+
+// ME-P1: lazy idempotency token. Uses crypto.randomUUID() when available;
+// falls back to a v4-shaped string for older browsers.
+function ensureIdempotencyKey() {
+  if (s.idempotencyKey) return s.idempotencyKey;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    s.idempotencyKey = crypto.randomUUID();
+  } else {
+    s.idempotencyKey = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  return s.idempotencyKey;
+}
 
 // ─── TIMER PERSISTENCE ───────────────────────────────────────────────────────
 const TIMER_KEY = 'simath_mock_timer';
@@ -882,31 +902,105 @@ function syncResults() {
   s.omitted = document.getElementById('inOmitted')?.value || '';
 }
 
+// ME-P1: score integrity validation.
+// Returns { hard: string|null, soft: string|null } — `hard` blocks the flow,
+// `soft` shows a confirmation dialog ("Save anyway"). All-blank input skips
+// validation to preserve the existing "log mistakes without scoring" flow.
+function validateScoreIntegrity() {
+  const allBlank = !s.score && !s.correct && !s.wrong && !s.omitted;
+  if (allBlank) return { hard: null, soft: null };
+
+  const ex = s.exam;
+  const c = s.correct ? parseInt(s.correct, 10) : 0;
+  const w = s.wrong   ? parseInt(s.wrong,   10) : 0;
+  const o = s.omitted ? parseInt(s.omitted, 10) : 0;
+  const entered = c + w + o;
+  const expected = (ex.code === 'PRACTICE') ? (s.practiceQuestions || null) : ex.questions;
+
+  if (c < 0 || w < 0 || o < 0) {
+    return { hard: 'Counts cannot be negative.', soft: null };
+  }
+  if (expected && c > expected) {
+    return { hard: 'Correct answers (' + c + ') cannot exceed total questions (' + expected + ').', soft: null };
+  }
+  if (expected && entered > Math.round(expected * 1.5)) {
+    return { hard: 'Total entered (' + entered + ') is far above this exam’s question count (' + expected + ').', soft: null };
+  }
+
+  const softMsgs = [];
+  if (expected && entered !== expected) {
+    softMsgs.push('Correct + Wrong + Omitted = ' + entered + ', but ' + ex.displayName + ' has ' + expected + ' questions.');
+  }
+  if (s.score) {
+    const sc = parseInt(s.score, 10);
+    if (!isNaN(sc) && (sc < ex.scoreMin || sc > ex.scoreMax)) {
+      softMsgs.push('Score ' + sc + ' is outside the expected range ' + ex.scoreMin + '–' + ex.scoreMax + '.');
+    }
+  }
+  return { hard: null, soft: softMsgs.length ? softMsgs.join(' ') : null };
+}
+
 function afterResults() {
   document.getElementById('btnToMistakes')?.addEventListener('click', () => {
     syncResults();
+    const v = validateScoreIntegrity();
+    if (v.hard) { alert(v.hard); return; }
+    if (v.soft && !confirm(v.soft + '\n\nSave anyway?')) return;
     if (s.mistakeRows.length === 0) s.mistakeRows = [{ topic: '', subtopic: '', count: 1, question_id: null, correct_answer: null, student_answer: null }];
     s.view = 'MISTAKES';
     render();
   });
   document.getElementById('btnSkipMistakes')?.addEventListener('click', () => {
     syncResults();
+    const v = validateScoreIntegrity();
+    if (v.hard) { alert(v.hard); return; }
+    if (v.soft && !confirm(v.soft + '\n\nSave anyway?')) return;
     s.mistakeRows = [];
     doSave();
   });
 }
 
 // ─── MISTAKES ────────────────────────────────────────────────────────────────
+// ME-P1: taxonomy-backed canonical topic list for the topic datalist.
+// Free-text input is still accepted; the datalist is a hint, not a constraint.
+// Taxonomy normalization at the logger boundary remains the SSOT.
+function taxonomyTopicOptions() {
+  if (typeof window === 'undefined' || !window.Taxonomy || !window.Taxonomy._topicAliases) return [];
+  const canonical = new Set();
+  const aliases = window.Taxonomy._topicAliases || {};
+  Object.keys(aliases).forEach(k => { const v = aliases[k]; if (v) canonical.add(v); });
+  return Array.from(canonical).sort();
+}
+function taxonomySubtopicOptions(topicRaw) {
+  if (typeof window === 'undefined' || !window.Taxonomy || !window.Taxonomy.subtopicsFor) return [];
+  try { return window.Taxonomy.subtopicsFor(topicRaw) || []; } catch (e) { return []; }
+}
+
 function htmlMistakes() {
-  const rowsHtml = s.mistakeRows.map((row, i) => `
+  const topicOpts = taxonomyTopicOptions();
+  const topicListHtml = '<datalist id="me-topic-options">' +
+    topicOpts.map(t => '<option value="' + esc(t) + '"></option>').join('') +
+    '</datalist>';
+
+  const rowsHtml = s.mistakeRows.map((row, i) => {
+    const subOpts = taxonomySubtopicOptions(row.topic);
+    const subListId = 'me-sub-options-' + i;
+    const subListHtml = '<datalist id="' + subListId + '">' +
+      subOpts.map(t => '<option value="' + esc(t) + '"></option>').join('') +
+      '</datalist>';
+    return `
     <div class="mistake-row" id="mrow-${i}">
-      <input type="text" class="mc-topic" data-i="${i}" placeholder="Topic (e.g. Algebra)" value="${esc(row.topic)}"/>
-      <input type="text" class="mc-subtopic" data-i="${i}" placeholder="Subtopic (e.g. Linear Equations)" value="${esc(row.subtopic)}"/>
+      <input type="text" class="mc-topic" data-i="${i}" list="me-topic-options" placeholder="Topic (e.g. Algebra)" value="${esc(row.topic)}"/>
+      <input type="text" class="mc-subtopic" data-i="${i}" list="${subListId}" placeholder="Subtopic (e.g. Linear Equations)" value="${esc(row.subtopic)}"/>
       <input type="number" class="mc-count" data-i="${i}" min="1" placeholder="#" value="${row.count}" style="width:80px"/>
       <button class="mistake-del" data-i="${i}" title="Remove">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
-    </div>`).join('');
+      ${subListHtml}
+    </div>`;
+  }).join('');
+
+  const rowsWithTopicList = topicListHtml + rowsHtml;
 
   return `
   <div class="mistakes-section">
@@ -922,7 +1016,7 @@ function htmlMistakes() {
       <div class="mistakes-col-headers">
         <span>Topic</span><span>Subtopic</span><span>Count</span><span></span>
       </div>
-      <div id="mistakesList">${rowsHtml}</div>
+      <div id="mistakesList">${rowsWithTopicList}</div>
       <button class="btn-add-row" id="btnAddRow">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         Add Row
@@ -977,7 +1071,11 @@ function afterMistakes() {
     });
   });
 
-  document.getElementById('btnSave')?.addEventListener('click', () => {
+  document.getElementById('btnSave')?.addEventListener('click', (ev) => {
+    // ME-P1: defense-in-depth UI-level guard against double-click.
+    const btn = ev.currentTarget;
+    if (btn && btn.disabled) return;
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     syncMistakes();
     doSave();
   });
@@ -991,8 +1089,17 @@ function afterMistakes() {
 
 // ─── SAVE ─────────────────────────────────────────────────────────────────────
 async function doSave() {
+  // ME-P1: in-flight guard. Blocks doSave re-entry from double-clicks or
+  // accidental dispatch. Cleared on terminal state (SUCCESS or SAVE_FAILED).
+  if (s.saving) return;
+  s.saving = true;
+
   s.view = 'SAVING';
   render();
+
+  // ME-P1: lazy idempotency token. Same key is reused across network retries
+  // within the same attempt so 23505 recovery converges to one session row.
+  const idempotencyKey = ensureIdempotencyKey();
 
   try {
     const user = await getCurrentUser();
@@ -1020,10 +1127,44 @@ async function doSave() {
         omitted_answers: s.omitted ? parseInt(s.omitted) : null,
         duration_minutes: Math.round(s.timerTotal / 60),
         started_at: s.startedAt,
-        ended_at: s.endedAt || new Date().toISOString()
+        ended_at: s.endedAt || new Date().toISOString(),
+        idempotency_key: idempotencyKey
       })
       .select('id')
       .single();
+
+    // ME-P1: 23505 recovery. If a prior attempt already committed under this
+    // idempotency_key, re-fetch the winner and skip ALL downstream side effects
+    // (mistakes, signals, mastery, XP, achievement). The winner already wrote
+    // them. The losing client converges to the winner's observable state.
+    if (sessErr && sessErr.code === '23505') {
+      const { data: winner } = await sb
+        .from('exam_practice_sessions')
+        .select('id, score, correct_answers, wrong_answers, exam_type')
+        .eq('user_id', user.id)
+        .eq('idempotency_key', idempotencyKey)
+        .maybeSingle();
+      if (winner) {
+        s.successData = {
+          exam: s.exam,
+          score: winner.score != null ? String(winner.score) : '',
+          correct: winner.correct_answers != null ? String(winner.correct_answers) : '',
+          wrong: winner.wrong_answers != null ? String(winner.wrong_answers) : '',
+          xpGain: 0,
+          isFirst: false,
+          newRank: null,
+          mistakesLogged: 0,
+          adoptedFromIdempotency: true
+        };
+        s.idempotencyKey = null;
+        s.saving = false;
+        s.view = 'SUCCESS';
+        render();
+        return;
+      }
+      // Winner not found despite 23505 — fall through to error path.
+      throw new Error('Duplicate submission detected but prior session could not be located.');
+    }
     if (sessErr) throw new Error(sessErr.message);
 
     const sessionId = sess.id;
@@ -1100,10 +1241,18 @@ async function doSave() {
       mistakesLogged: validMistakes.length
     };
 
+    // ME-P1: terminal success — release guard, drop idempotency token so a
+    // fresh exam attempt generates a new key.
+    s.idempotencyKey = null;
+    s.saving = false;
+
     s.view = 'SUCCESS';
     render();
 
   } catch (err) {
+    // ME-P1: release in-flight guard so the user can retry. The idempotency
+    // token is preserved so the retry converges on the same session row.
+    s.saving = false;
     console.error('Save error:', err);
     document.getElementById('pageContent').innerHTML = `
     <div class="saving-center">
