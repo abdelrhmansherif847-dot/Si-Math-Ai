@@ -1,0 +1,4 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS current_streak    INT  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS best_streak       INT  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_active_date  DATE;
