@@ -2,6 +2,9 @@
 // CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
 // existing row when the same key arrives twice; 23505 on INSERT triggers
 // re-SELECT and returns the winner row instead of creating a duplicate.
+// Observability (C1+C2): structured [ai-tutor] console.log tags at key
+// decision points; response envelope carries `version`, `idempotency_recovered`,
+// and `degraded` flags. Additive only — no behavior change.
 // Increase max_tokens 1400→2800 to prevent JSON truncation on longer system prompts (v60-v63 additions)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -9,6 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const AI_TUTOR_VERSION = 'v65';
 
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
 function fallbackHint(topic: string, subtopic: string, lang: string): string {
@@ -234,6 +238,9 @@ serve(async (req) => {
         .eq('client_request_id', clientRequestId)
         .maybeSingle();
       if (existing) {
+        console.log('[ai-tutor] idempotency-hit', JSON.stringify({
+          uid: user.id.slice(0, 8), crid: clientRequestId, record_id: existing.id,
+        }));
         return new Response(JSON.stringify({
           answer:          existing.ai_response || '',
           hint:            existing.hint || '',
@@ -249,6 +256,8 @@ serve(async (req) => {
           hint_mode:       hintMode,
           is_math:         true,
           recovered:       true,
+          idempotency_recovered: true,
+          version:         AI_TUTOR_VERSION,
         }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
       }
     }
@@ -264,7 +273,12 @@ serve(async (req) => {
         created_at:      now,
         last_message_at: now,
       }).select('id').single();
-      if (sessErr) console.error('chat_sessions insert failed:', sessErr);
+      if (sessErr) {
+        console.error('chat_sessions insert failed:', sessErr);
+        console.log('[ai-tutor] session-insert-failed', JSON.stringify({
+          uid: user.id.slice(0, 8), code: sessErr.code, msg: sessErr.message,
+        }));
+      }
       resolvedSessionId = sess?.id ?? null;
     } else {
       // Touch last_message_at on existing session
@@ -279,7 +293,12 @@ serve(async (req) => {
       .select('full_name, exam_type, exam_date, language_preference, target_score, biggest_weakness, mastered_topics')
       .eq('id', user.id)
       .single();
-    if (profileErr) console.error('profile fetch failed:', profileErr);
+    if (profileErr) {
+      console.error('profile fetch failed:', profileErr);
+      console.log('[ai-tutor] profile-fetch-failed', JSON.stringify({
+        uid: user.id.slice(0, 8), code: profileErr.code, msg: profileErr.message,
+      }));
+    }
     const fullName      = profile?.full_name   || '';
     const studentName   = (fullName.trim().split(/\s+/)[0]) || 'Student';
     const examType      = profile?.exam_type   || 'SAT';
@@ -729,10 +748,15 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
 
     const oaiData = await oaiRes.json();
     let parsed: Record<string, unknown> = {};
+    let degraded = false;
     try {
       parsed = JSON.parse(oaiData.choices?.[0]?.message?.content || '{}');
-    } catch {
+    } catch (parseErr) {
       parsed = {};
+      degraded = true;
+      console.log('[ai-tutor] parse-failed', JSON.stringify({
+        uid: user.id.slice(0, 8), msg: String(parseErr),
+      }));
     }
 
     // ── Post-process rules + difficulty (math-intent classifier) ─────────────
@@ -748,7 +772,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     let rules = normalizeRules(parsed.rules);
     if (isMath && rules.length === 0) {
       const fb = fallbackRules(finalTopic, finalSubtopic);
-      if (fb.length > 0) rules = fb;
+      if (fb.length > 0) { rules = fb; degraded = true; }
     }
     // Non-math: NEVER persist rules or difficulty
     if (!isMath) {
@@ -760,6 +784,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     let hint = String(parsed.hint || '').trim();
     if (isMath && hint.length === 0) {
       hint = fallbackHint(finalTopic, finalSubtopic, lang);
+      degraded = true;
     }
     // Hint mode safety: if GPT returned empty answer (parse failure or refusal),
     // populate with the hint so the student always gets a useful response.
@@ -791,13 +816,22 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       client_request_id: clientRequestId,
     }).select('id').single();
     let newRecord = insertRes.data;
+    let idempotencyRecovered = false;
     if (insertRes.error && insertRes.error.code === '23505' && clientRequestId) {
+      console.log('[ai-tutor] 23505-conflict-recovery', JSON.stringify({
+        uid: user.id.slice(0, 8), crid: clientRequestId,
+      }));
       const { data: winner } = await sbAdmin.from('question_records')
         .select('id')
         .eq('user_id', user.id)
         .eq('client_request_id', clientRequestId)
         .maybeSingle();
       newRecord = winner ?? null;
+      idempotencyRecovered = true;
+    } else if (insertRes.error) {
+      console.log('[ai-tutor] qr-insert-failed', JSON.stringify({
+        uid: user.id.slice(0, 8), code: insertRes.error.code, msg: insertRes.error.message,
+      }));
     }
 
     // ── Build response ────────────────────────────────────────────────────────
@@ -815,6 +849,9 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       record_id:       newRecord?.id ?? null,
       hint_mode:       hintMode,
       is_math:         isMath,
+      version:         AI_TUTOR_VERSION,
+      idempotency_recovered: idempotencyRecovered,
+      degraded:        degraded,
     }), {
       headers: {
         'Content-Type': 'application/json',
@@ -824,6 +861,9 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
 
   } catch (err) {
     console.error('ai-tutor error:', err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    console.log('[ai-tutor] unhandled-error', JSON.stringify({
+      msg: (err instanceof Error ? err.message : String(err)),
+    }));
+    return new Response(JSON.stringify({ error: String(err), version: AI_TUTOR_VERSION }), { status: 500 });
   }
 });
