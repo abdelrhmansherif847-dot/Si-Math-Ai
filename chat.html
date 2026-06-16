@@ -1909,8 +1909,16 @@ button{font-family:inherit;cursor:pointer}
       } else if (getRankName(newXP) !== getRankName(currentXP)) {
         showXpToast('+5 XP · Rank up: ' + getRankName(newXP) + '!');
       }
-    } catch (e) {
-      // XP is non-critical; never block the chat on XP errors
+    } catch (err) {
+      // XP is non-critical; never block the chat on XP errors.
+      // Diagnostic logging to surface silent upsert failures.
+      console.error('[xp-award-failed]', {
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code,
+        error: err
+      });
     }
   }
 
