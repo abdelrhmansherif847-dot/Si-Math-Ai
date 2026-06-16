@@ -297,6 +297,26 @@ button{font-family:inherit;cursor:pointer}
 /* Hide suggestion chips */
 .shell.chat-mode .prompts{display:none!important}
 
+/* ===== DRILL MODE BAR (Phase 3B) ===== */
+#drillBar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(90deg,rgba(251,191,36,.10),rgba(251,191,36,.04));border-bottom:1px solid rgba(251,191,36,.28)}
+#drillBar .db-ic{width:30px;height:30px;border-radius:8px;background:rgba(251,191,36,.18);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+#drillBar .db-body{flex:1;min-width:0}
+#drillBar .db-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+#drillBar .db-label{font-size:12px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#drillBar .db-counter{font-family:var(--font-mono,monospace);font-size:11px;color:#fbbf24;font-weight:700;flex-shrink:0}
+#drillBar .db-track{height:5px;border-radius:100px;background:rgba(251,191,36,.14);overflow:hidden}
+#drillBar .db-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:100px;transition:width .35s cubic-bezier(.4,0,.2,1)}
+#drillBar .db-exit{width:26px;height:26px;border-radius:7px;border:1px solid rgba(251,191,36,.3);background:transparent;color:rgba(251,191,36,.7);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+#drillBar .db-exit:hover{background:rgba(251,191,36,.12);color:#fff;border-color:rgba(251,191,36,.5)}
+#drillBar.complete{background:linear-gradient(90deg,rgba(34,197,94,.12),rgba(34,197,94,.04));border-bottom-color:rgba(34,197,94,.32)}
+#drillBar.complete .db-ic{background:rgba(34,197,94,.2)}
+#drillBar.complete .db-counter{color:#22c55e}
+#drillBar.complete .db-fill{background:linear-gradient(90deg,#22c55e,#16a34a)}
+@media(max-width:560px){
+  #drillBar{padding:9px 12px;gap:10px}
+  #drillBar .db-label{font-size:11.5px}
+}
+
 /* ===== COMPOSER: always sticky at bottom ===== */
 .composer{
   flex-shrink:0;
@@ -537,6 +557,18 @@ button{font-family:inherit;cursor:pointer}
 
 <!-- CHAT SHELL -->
 <div class="shell">
+  <!-- DRILL MODE PROGRESS BAR (Phase 3B) — first flex child, persists across empty/chat-mode -->
+  <div id="drillBar" style="display:none">
+    <div class="db-ic">⚡</div>
+    <div class="db-body">
+      <div class="db-row">
+        <span class="db-label" id="drillLabel">Drill Mode</span>
+        <span class="db-counter" id="drillCounter">0 / 0</span>
+      </div>
+      <div class="db-track"><div class="db-fill" id="drillFill" style="width:0%"></div></div>
+    </div>
+    <button class="db-exit" id="drillExitBtn" type="button" title="Exit drill" aria-label="Exit drill">✕</button>
+  </div>
   <div class="chat-head">
     <div class="eyebrow"><span class="live-dot"></span> AI Tutor</div>
     <h1>Ask Zero</h1>
@@ -693,6 +725,112 @@ button{font-family:inherit;cursor:pointer}
   let seededTopic     = _urlParams.get('topic')    || null;
   let seededSubtopic  = _urlParams.get('subtopic') || null;
 
+  // ── Drill Mode state (Phase 3B) ─────────────────────────────────────────────
+  // ?drill=true&topics=<JSON array of {topic,subtopic}>
+  let drillMode       = false;
+  let drillTopics     = [];   // [{topic, subtopic}, …]
+  let drillTopicIndex = 0;
+  let drillQCount     = 0;    // questions on current topic
+  let drillTotalQ     = 0;    // cumulative across drill
+  let drillComplete   = false;
+  const DRILL_Q_PER_TOPIC = 5;
+  const DRILL_BONUS_XP    = 30;
+
+  if (_urlParams.get('drill') === 'true') {
+    try {
+      const raw = _urlParams.get('topics');
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        drillTopics = parsed
+          .filter(t => t && typeof t.topic === 'string' && t.topic.length > 0)
+          .map(t => ({ topic: t.topic, subtopic: (t.subtopic || '') }));
+        if (drillTopics.length > 0) {
+          drillMode      = true;
+          seededTopic    = drillTopics[0].topic;
+          seededSubtopic = drillTopics[0].subtopic || null;
+        }
+      }
+    } catch (e) {
+      console.warn('[drill] malformed topics param — degrading to non-drill mode');
+      drillMode = false;
+    }
+  }
+
+  function drillRenderBar() {
+    const bar = document.getElementById('drillBar');
+    if (!bar) return;
+    if (!drillMode) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    if (drillComplete) {
+      bar.classList.add('complete');
+      document.getElementById('drillLabel').textContent  = '✅ Drill Complete · +' + DRILL_BONUS_XP + ' XP Bonus';
+      document.getElementById('drillCounter').textContent = drillTotalQ + ' / ' + drillTotalQ;
+      document.getElementById('drillFill').style.width    = '100%';
+      return;
+    }
+    const cur = drillTopics[drillTopicIndex];
+    const name = cur.subtopic ? cur.topic + ' → ' + cur.subtopic : cur.topic;
+    document.getElementById('drillLabel').textContent =
+      'Drill ' + (drillTopicIndex + 1) + '/' + drillTopics.length + ': ' + name;
+    document.getElementById('drillCounter').textContent =
+      drillQCount + ' / ' + DRILL_Q_PER_TOPIC;
+    const pct = Math.round((drillQCount / DRILL_Q_PER_TOPIC) * 100);
+    document.getElementById('drillFill').style.width = pct + '%';
+  }
+
+  function drillAppendCard(html, kind) {
+    // Local UI card injected into .messages — not an AI call, not credit-consuming,
+    // not persisted to question_records.
+    const inner = document.querySelector('#messages .inner') || document.getElementById('messages');
+    if (!inner) return;
+    const card = document.createElement('div');
+    card.style.cssText = 'margin:6px auto;max-width:560px;padding:11px 16px;border-radius:12px;font-size:13px;text-align:center;line-height:1.5;' + (
+      kind === 'complete'
+        ? 'background:linear-gradient(135deg,rgba(34,197,94,.13),rgba(34,197,94,.04));border:1px solid rgba(34,197,94,.34);color:#86efac'
+        : 'background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.26);color:#fde68a'
+    );
+    card.innerHTML = html;
+    inner.appendChild(card);
+    const msgs = document.getElementById('messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function drillOnQuestionAnswered() {
+    if (!drillMode || drillComplete) return;
+    drillQCount  += 1;
+    drillTotalQ  += 1;
+    if (drillQCount >= DRILL_Q_PER_TOPIC) {
+      // Topic finished
+      const finished = drillTopics[drillTopicIndex];
+      drillTopicIndex += 1;
+      drillQCount      = 0;
+      if (drillTopicIndex >= drillTopics.length) {
+        drillComplete = true;
+        seededTopic   = null;
+        seededSubtopic = null;
+        drillRenderBar();
+        const inner = '<b>✅ Drill Complete!</b><br>You worked through ' + drillTopics.length +
+                      ' topic' + (drillTopics.length === 1 ? '' : 's') + ' · ' + drillTotalQ + ' questions' +
+                      '<br><span style="color:#fbbf24;font-weight:700">+' + DRILL_BONUS_XP + ' XP Bonus awarded</span>' +
+                      '<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">' +
+                        '<a href="dashboard.html" style="padding:7px 14px;border-radius:9px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.32);color:#7dd3fc;text-decoration:none;font-weight:600;font-size:12.5px">Back to Dashboard</a>' +
+                      '</div>';
+        drillAppendCard(inner, 'complete');
+        if (typeof awardChatXP === 'function' && currentUser) awardChatXP(DRILL_BONUS_XP);
+      } else {
+        const nxt  = drillTopics[drillTopicIndex];
+        seededTopic    = nxt.topic;
+        seededSubtopic = nxt.subtopic || null;
+        const fname = finished.subtopic ? finished.topic + ' → ' + finished.subtopic : finished.topic;
+        const nname = nxt.subtopic      ? nxt.topic      + ' → ' + nxt.subtopic      : nxt.topic;
+        drillAppendCard('Nice work on <b>' + fname + '</b>! Next up: <b>' + nname + '</b>', 'transition');
+        drillRenderBar();
+      }
+    } else {
+      drillRenderBar();
+    }
+  }
+
   // ── CAI-P1: client_request_id idempotency + sessionStorage recovery ──────────
   // pendingRequestId survives across retries within the same JS context.
   // sessionStorage 'simath_chat_inflight' survives page refresh within the same
@@ -793,7 +931,7 @@ button{font-family:inherit;cursor:pointer}
       renderEmptyStateHistory();
       drainRefundQueue();
       recoverInflight();
-      if (seededTopic) {
+      if (seededTopic && !drillMode) {
         const chip = document.createElement('div');
         chip.id = 'seedTopicChip';
         chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin:12px 0 4px;padding:7px 12px;border-radius:20px;background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.26);font-size:12px;color:#7dd3fc;cursor:pointer';
@@ -802,6 +940,19 @@ button{font-family:inherit;cursor:pointer}
         chip.onclick = function() { chip.remove(); seededTopic = null; seededSubtopic = null; };
         const empty = document.getElementById('empty');
         if (empty) empty.insertBefore(chip, empty.firstChild);
+      }
+      if (drillMode) {
+        drillRenderBar();
+        const exitBtn = document.getElementById('drillExitBtn');
+        if (exitBtn) exitBtn.onclick = function() {
+          if (drillComplete || confirm('Exit drill? Per-question XP earned is kept; the +' + DRILL_BONUS_XP + ' completion bonus will be lost.')) {
+            drillMode    = false;
+            seededTopic  = null;
+            seededSubtopic = null;
+            const bar = document.getElementById('drillBar');
+            if (bar) bar.style.display = 'none';
+          }
+        };
       }
     } catch(err) {
       console.error('[chat] init error:', err);
@@ -1840,6 +1991,7 @@ button{font-family:inherit;cursor:pointer}
         SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         awardChatXP();
         if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
+        drillOnQuestionAnswered();
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
         const mTopic = (response && response.topic) || (sig && sig.topic) || null;
@@ -1893,17 +2045,23 @@ button{font-family:inherit;cursor:pointer}
     return 'Beginner';
   }
 
-  async function awardChatXP() {
+  async function awardChatXP(bonusXP) {
     if (!currentUser) return;
+    const bonus = (typeof bonusXP === 'number' && bonusXP > 0) ? bonusXP : 0;
+    const base  = bonus > 0 ? 0 : 5;  // pure bonus call (drill complete) skips per-question +5
     try {
       const { data: profile } = await sb.from('profiles')
         .select('xp, rank_name')
         .eq('id', currentUser.id)
         .single();
       const currentXP = profile?.xp || 0;
-      const newXP = currentXP + 5;
+      const newXP = currentXP + base + bonus;
       const newRank = getRankName(newXP);
       await sb.from('profiles').update({ xp: newXP, rank_name: newRank }).eq('id', currentUser.id);
+      if (bonus > 0) {
+        showXpToast('+' + bonus + ' XP · Drill Complete! 🎯');
+        return;
+      }
 
       // Check first_question achievement
       const { count: qCount } = await sb.from('question_records')
