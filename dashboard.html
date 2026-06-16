@@ -553,6 +553,15 @@ body::before{
 .bar-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)}
 .bar-legend span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-400)}
 .bar-legend i{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+.due-review{margin-top:16px;padding-top:14px;border-top:1px solid var(--border-soft)}
+.due-review-title{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-400);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.due-review-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:9px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);margin-bottom:6px;cursor:pointer;text-decoration:none;transition:background .15s,border-color .15s}
+.due-review-item:last-child{margin-bottom:0}
+.due-review-item:hover{background:var(--cyan-bg-med);border-color:var(--cyan-border)}
+.due-review-item-text{min-width:0}
+.due-review-item-name{font-size:12.5px;color:var(--text-100);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.due-review-item-meta{font-size:11px;color:var(--text-400);margin-top:1px}
+.due-review-item-arrow{color:var(--cyan);flex-shrink:0;margin-left:10px;opacity:.7}
 .weakest-banner{
   margin-top:14px;display:flex;align-items:center;gap:12px;
   padding:13px 16px;border-radius:var(--r-md);
@@ -1152,6 +1161,8 @@ body::before{
         <span><i style="background:var(--red)"></i>Weak &lt;50%</span>
       </div>
 
+      <div class="due-review" id="dueReviewSection" style="display:none"></div>
+
       <div class="weakest-banner">
         <span class="wi">⚠️</span>
         <span class="wt" id="weakestBannerText">Loading…</span>
@@ -1549,7 +1560,7 @@ async function loadDashboard() {
   var results = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
-    sb.from('weakness_reports').select('topic,subtopic,priority_rank,weakness_score,mastery_score,last_updated').eq('user_id', user.id).order('priority_rank', {ascending:true}).limit(50),
+    sb.from('weakness_reports').select('topic,subtopic,priority_rank,weakness_score,mastery_score,last_signal_at,recent7_count').eq('user_id', user.id).order('priority_rank', {ascending:true}).limit(50),
     sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
     sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
@@ -1562,7 +1573,7 @@ async function loadDashboard() {
   var chatSess    = (results[4].data) || [];
   var monthQs     = (results[5].data) || [];
   // Derive per-topic mastery from weakness_reports (single source of truth)
-  var masteryRecs = weakReports.map(function(r){ return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: r.last_updated }; });
+  var masteryRecs = weakReports.map(function(r){ return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: r.last_signal_at }; });
 
   /* ── Derived: user ── */
   var displayName = prof.full_name || (user.email ? user.email.split('@')[0] : '') || 'Student';
@@ -1751,6 +1762,41 @@ async function loadDashboard() {
         var cls = pct >= 75 ? 'g' : pct >= 50 ? 'y' : 'r';
         return '<div class="bar-row"><div class="bar-head"><span class="bar-name">' + t.topic + '</span><span class="bar-pct ' + cls + '">' + pct + '%</span></div><div class="bar-track"><div class="bar-fill ' + cls + '" data-width="' + pct + '" style="width:0%"></div></div></div>';
       }).join('');
+    }
+  }
+
+  /* ── POPULATE: Due for Review (Spaced Repetition Queue) ── */
+  var dueSection = document.getElementById('dueReviewSection');
+  if (dueSection && weakReports.length) {
+    var sevenDaysAgo = Date.now() - 7 * 86400000;
+    var staleTopics = weakReports.filter(function(r) {
+      if ((r.mastery_score || 0) >= 80) return false;     // already mastered
+      if (r.recent7_count > 0) return false;               // active this week
+      if (r.last_signal_at && new Date(r.last_signal_at).getTime() > sevenDaysAgo) return false;
+      return true;
+    }).slice(0, 3);
+
+    if (staleTopics.length) {
+      var daysAgo = function(iso) {
+        if (!iso) return 'Never reviewed';
+        var d = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
+        return d === 0 ? 'Last seen today' : d === 1 ? 'Last seen yesterday' : 'Last seen ' + d + ' days ago';
+      };
+      dueSection.innerHTML = '<div class="due-review-title">📚 Due for Review</div>' +
+        staleTopics.map(function(r) {
+          var name = r.subtopic || r.topic;
+          var meta = daysAgo(r.last_signal_at) + ' · ' + (r.mastery_score || 0) + '% mastery';
+          var href = 'chat.html?topic=' + encodeURIComponent(r.topic) +
+                     (r.subtopic ? '&subtopic=' + encodeURIComponent(r.subtopic) : '');
+          return '<a class="due-review-item" href="' + href + '">' +
+            '<div class="due-review-item-text">' +
+              '<div class="due-review-item-name">' + name + '</div>' +
+              '<div class="due-review-item-meta">' + meta + '</div>' +
+            '</div>' +
+            '<svg class="due-review-item-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '</a>';
+        }).join('');
+      dueSection.style.display = '';
     }
   }
 
