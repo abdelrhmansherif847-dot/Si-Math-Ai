@@ -1837,11 +1837,11 @@ async function loadDashboard() {
 
   /* ── POPULATE: focus plan progress (sequential — needs plan ID) ── */
   try {
-    var planRes = await sb.from('focus_plans').select('id,title,topic,status').eq('user_id', user.id).in('status', ['active','in_progress']).order('created_at',{ascending:false}).limit(1);
+    var planRes = await sb.from('focus_plans').select('id,title,biggest_weakness_topic,status').eq('user_id', user.id).eq('status', 'ACTIVE').order('generated_date',{ascending:false}).limit(1);
     var activePlan = planRes.data && planRes.data[0];
     var focusPct = 0, doneCount = 0, totalCount = 0;
     if (activePlan) {
-      setText('focusPlanTitle', activePlan.title || activePlan.topic || 'Active Plan');
+      setText('focusPlanTitle', activePlan.title || activePlan.biggest_weakness_topic || 'Active Plan');
       var tasksRes = await sb.from('focus_tasks').select('id,status').eq('plan_id', activePlan.id);
       var tasks = tasksRes.data || [];
       totalCount = tasks.length;
