@@ -365,7 +365,7 @@ async function fetchAll() {
       .select('id,exam_type,score,correct_answers,wrong_answers,duration_minutes,created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
-    sb.from('mastery_records')
+    sb.from('weakness_reports')
       .select('topic,subtopic,mastery_score,last_updated')
       .eq('user_id', user.id)
       .order('last_updated', { ascending: false })

@@ -650,6 +650,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="taxonomy.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script>
@@ -686,6 +687,80 @@ button{font-family:inherit;cursor:pointer}
   let sessionMessages = [];
   let isSending = false;
 
+  // ── CAI-P1: client_request_id idempotency + sessionStorage recovery ──────────
+  // pendingRequestId survives across retries within the same JS context.
+  // sessionStorage 'simath_chat_inflight' survives page refresh within the same
+  // tab (120s TTL) so a refresh-during-send can recover the committed answer
+  // instead of consuming a second credit.
+  let pendingRequestId = null;
+  const INFLIGHT_KEY = 'simath_chat_inflight';
+  const INFLIGHT_TTL_MS = 120000;
+  const REFUND_QUEUE_KEY = 'simath_chat_refund_queue';
+  const REFUND_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+  function caiUuid() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  function writeInflight(requestId, creditLogId) {
+    try {
+      sessionStorage.setItem(INFLIGHT_KEY, JSON.stringify({
+        request_id: requestId, credit_log_id: creditLogId || null, ts: Date.now()
+      }));
+    } catch (e) { /* sessionStorage unavailable — degrade to memory-only */ }
+  }
+  function clearInflight() {
+    try { sessionStorage.removeItem(INFLIGHT_KEY); } catch (e) {}
+  }
+  function enqueueRefund(logId) {
+    if (!logId) return;
+    try {
+      const queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]');
+      queue.push({ log_id: logId, ts: Date.now() });
+      localStorage.setItem(REFUND_QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {}
+  }
+  async function drainRefundQueue() {
+    let queue;
+    try { queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]'); }
+    catch (e) { return; }
+    if (!Array.isArray(queue) || queue.length === 0) return;
+    const remaining = [];
+    const now = Date.now();
+    for (const item of queue) {
+      if (!item || !item.log_id || (now - (item.ts || 0)) > REFUND_MAX_AGE_MS) continue;
+      try {
+        const { data: rd, error: rerr } = await sb.rpc('refund_ai_credit', { p_log_id: item.log_id });
+        if (rerr || !rd || !rd.ok) remaining.push(item);
+      } catch (e) { remaining.push(item); }
+    }
+    try { localStorage.setItem(REFUND_QUEUE_KEY, JSON.stringify(remaining)); } catch (e) {}
+  }
+  async function recoverInflight() {
+    if (!currentUser) return;
+    let inflight;
+    try { inflight = JSON.parse(sessionStorage.getItem(INFLIGHT_KEY) || 'null'); }
+    catch (e) { return; }
+    if (!inflight || !inflight.request_id) return;
+    if (Date.now() - (inflight.ts || 0) > INFLIGHT_TTL_MS) { clearInflight(); return; }
+    const { data: row } = await sb
+      .from('question_records')
+      .select('id, session_id, ai_response')
+      .eq('user_id', currentUser.id)
+      .eq('client_request_id', inflight.request_id)
+      .maybeSingle();
+    if (row) {
+      clearInflight();
+      if (row.session_id) openSession(row.session_id);
+    } else {
+      // Edge Function never committed. Refund the credit if we have a log id.
+      if (inflight.credit_log_id) enqueueRefund(inflight.credit_log_id);
+      clearInflight();
+    }
+  }
+
   // ===== AUTH GUARD =====
   (async () => {
     try {
@@ -710,6 +785,8 @@ button{font-family:inherit;cursor:pointer}
       SignalEngine.renderUsage();
       loadChatHistory();
       renderEmptyStateHistory();
+      drainRefundQueue();
+      recoverInflight();
     } catch(err) {
       console.error('[chat] init error:', err);
       const chatArea = document.getElementById('chatMessages') || document.querySelector('.chat-area') || document.body;
@@ -769,7 +846,7 @@ button{font-family:inherit;cursor:pointer}
     empty.style.display = 'none';
     records.forEach(r => {
       addUser(r.question, r.image || null, true);
-      const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question) : null;
+      const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question, true) : null;
       if (sig) {
         sig.topic = r.topic || sig.topic;
         sig.sub   = r.subtopic || sig.sub;
@@ -815,6 +892,7 @@ button{font-family:inherit;cursor:pointer}
       messages: sessionMessages.slice(-10),
       follow_up_type: capturedFollowUpType,
       hint_mode: hintModeActive,
+      client_request_id: pendingRequestId,
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -918,6 +996,8 @@ button{font-family:inherit;cursor:pointer}
     plan: 'free',      // set from profiles.plan_code after auth
     usage: 0,          // set from ai_usage_logs count after auth
     topicCounts: {},                        // subtopic -> times asked
+    lastActiveTopic: null,                  // { topic, sub } — most recent topic signal this session
+    _buffer: null,                          // null = immediate-write; [] = buffering for current message
     // simple keyword -> topic/subtopic map (in production: real NLP)
     map: [
       {kw:['circle','arc','radius','sector','tangent','chord'], topic:'Geometry', sub:'Circles', concepts:['Circle Theorems','Arc Length','Sector Area']},
@@ -948,13 +1028,13 @@ button{font-family:inherit;cursor:pointer}
       var on=document.querySelector('#confDots .conf-dot.on');
       return on?parseInt(on.dataset.c,10):3;
     },
-    analyze: function(text){
+    analyze: function(text, skipSignals){
       var p=this.detect(text);
       if(!p) return null;  // no math topic detected — do not generate any signal
       var sec=this.detectSecondary(text,p), conf=this.getConfidence();
-      // repeated-topic tracking — only incremented for confirmed math messages
-      this.topicCounts[p.sub]=(this.topicCounts[p.sub]||0)+1;
-      var count=this.topicCounts[p.sub];
+      // repeated-topic tracking — skip during history replay to avoid inflating counts
+      if (!skipSignals) this.topicCounts[p.sub]=(this.topicCounts[p.sub]||0)+1;
+      var count=this.topicCounts[p.sub]||0;
       // concept tags
       var conceptTags=p.concepts.map(function(c){return '<span class="concept-tag"><span class="cd"></span>'+c+'</span>';}).join('');
       // signal strength: low confidence or repeats => stronger weakness signal
@@ -968,7 +1048,7 @@ button{font-family:inherit;cursor:pointer}
           '<div class="mc-box primary"><div class="mc-l">Primary Topic</div><div class="mc-v">'+p.topic+' → '+p.sub+'</div></div>'+
           '<div class="mc-box"><div class="mc-l">Secondary Topic</div><div class="mc-v">'+sec.topic+' → '+sec.sub+'</div></div>'+
         '</div>';
-        this.sendSignal({type:'multi-concept', primary:p.sub, secondary:sec.sub});
+        if (!skipSignals) this.sendSignal({type:'multi-concept', primary:p.sub, secondary:sec.sub});
       }
       // repeated-topic block
       var repeatedTopic='';
@@ -976,7 +1056,7 @@ button{font-family:inherit;cursor:pointer}
         repeatedTopic='<div class="repeated-topic"><span class="rt-ic">🔁</span><div class="rt-body">'+
           '<div class="rt-t">Repeated Topic Detected</div><div class="rt-s">'+p.sub+' — this raises its weakness priority</div></div>'+
           '<span class="rt-count">'+count+'</span></div>';
-        this.sendSignal({type:'repeated', topic:p.topic, sub:p.sub, count:count});
+        if (!skipSignals) this.sendSignal({type:'repeated', topic:p.topic, sub:p.sub, count:count});
       }
       // potential weakness block (low confidence + repeats + confusion risk)
       var potentialWeak='';
@@ -991,8 +1071,18 @@ button{font-family:inherit;cursor:pointer}
           '<button class="pw-btn" onclick="location.href=\'weakness.html\'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Analyze This Topic</button></div>';
       }
       var statusId='st_'+Math.random().toString(36).slice(2,8);
-      // fire base signals to Weakness Analyzer
-      this.sendSignal({type:'topic', topic:p.topic, sub:p.sub, confidence:conf, concepts:p.concepts});
+      // fire base signals to Weakness Analyzer (skip during history replay)
+      if (!skipSignals) {
+        this.sendSignal({type:'topic', topic:p.topic, sub:p.sub, confidence:conf, concepts:p.concepts});
+        this.lastActiveTopic = { topic: p.topic, sub: p.sub };
+        // hint_used and explanation_repeated detection — only when topic context is established
+        if (this.detectHintRequest(text)) {
+          this.sendSignal({type:'hint_used', topic:p.topic, sub:p.sub});
+        }
+        if (this.detectReExplanationRequest(text)) {
+          this.sendSignal({type:'explanation_repeated', topic:p.topic, sub:p.sub});
+        }
+      }
       return {
         topic:p.topic, sub:p.sub, confidence:conf, conceptTags:conceptTags, detectedConcepts:p.concepts,
         multiConcept:multiConcept, repeatedTopic:repeatedTopic, potentialWeak:potentialWeak,
@@ -1000,42 +1090,117 @@ button{font-family:inherit;cursor:pointer}
         statusId:statusId, statusColor:'cyan'
       };
     },
+    detectHintRequest: function(text) {
+      var t = (text || '').toLowerCase();
+      return /\bhint\b|i'?m stuck|im stuck|give me a clue|i need a clue|i don'?t know how|i dont know how/.test(t);
+    },
+    detectReExplanationRequest: function(text) {
+      var t = (text || '').toLowerCase();
+      return /i still don'?t understand|i still dont understand|explain (that |it |this )?again|can you re-?explain|don'?t (get|understand) (it|this)|dont (get|understand) (it|this)|i'?m (still )?confused|im (still )?confused/.test(t);
+    },
+    // Called for every student message that fails topic detection but may still
+    // carry a meta-signal (hint request / re-explanation) attributable to the
+    // last active topic from earlier in the session.
+    analyzeMetaRequest: function(text) {
+      if (!this.lastActiveTopic) return; // no topic context — cannot attribute
+      var ctx = this.lastActiveTopic;
+      if (this.detectHintRequest(text)) {
+        this.sendSignal({type:'hint_used', topic:ctx.topic, sub:ctx.sub});
+      }
+      if (this.detectReExplanationRequest(text)) {
+        this.sendSignal({type:'explanation_repeated', topic:ctx.topic, sub:ctx.sub});
+      }
+    },
+    // ── Phase 7: per-message signal buffer ──
+    // beginBuffer() must be called at the start of send() before analyze().
+    // flushBuffer(questionId, sessionId) batch-inserts all buffered rows with
+    // source_question_id and source_session_id set — called after askAI() resolves
+    // so record_id is known. discardBuffer() is called on any error/abort path.
+    beginBuffer: function() {
+      this._buffer = [];
+    },
+    flushBuffer: function(questionId, sessionId) {
+      var rows = this._buffer;
+      this._buffer = null;
+      if (!rows || rows.length === 0 || !currentUser) return;
+      rows.forEach(function(row) {
+        row.source_question_id = questionId || null;
+        row.source_session_id  = sessionId  || null;
+      });
+      sb.from('weakness_signals').insert(rows).then(function({ error }) {
+        if (error) { console.warn('[weakness_signals] batch insert failed:', error.message); return; }
+        if (window.scheduleReportRegen && currentUser) {
+          window.scheduleReportRegen(sb, currentUser.id);
+        }
+      });
+    },
+    discardBuffer: function() {
+      this._buffer = null;
+    },
     sendResolution: function(topic,sub,res){
       this.sendSignal({type:'resolution', topic:topic, sub:sub, resolution:res});
     },
     normalizeSubtopic: function(sub) {
       if (!sub) return sub;
-      // Strip parenthetical qualifiers to unify variants like "Order of operations (PEMDAS)" → "Order of operations"
+      if (window.Taxonomy) return window.Taxonomy.normalizeSubtopic(sub);
+      // Guard: this path is unreachable under correct load order — surface loudly.
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeSubtopic — split-key risk', { subtopic: sub });
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
       return sub.replace(/\s*\([^)]+\)\s*$/, '').trim();
+    },
+    normalizeTopic: function(topic) {
+      if (!topic) return topic;
+      if (window.Taxonomy) return window.Taxonomy.normalizeTopic(topic);
+      // Guard: this path is unreachable under correct load order — surface loudly.
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeTopic — split-key risk', { topic: topic });
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
+      var t = topic.trim();
+      return t.charAt(0).toUpperCase() + t.slice(1);
     },
     sendSignal: function(sig){
       (window.__SI_SIGNALS = window.__SI_SIGNALS || []).push(sig);
       if (!currentUser) return;
       var row = { user_id: currentUser.id, source: 'AI_CHAT' };
       if (sig.type === 'topic') {
-        row.topic = sig.topic; row.subtopic = this.normalizeSubtopic(sig.sub);
+        row.topic = this.normalizeTopic(sig.topic); row.subtopic = this.normalizeSubtopic(sig.sub);
         row.signal_type = 'topic';
         // weight 0.2..1.0 — lower confidence = higher weakness weight
         row.weight = sig.confidence ? Math.max(0.2, (6 - sig.confidence) / 5) : 0.5;
       } else if (sig.type === 'multi_concept' || sig.type === 'multi-concept') {
-        row.topic = sig.primary || sig.topic; row.subtopic = sig.primary || sig.sub;
+        row.topic = this.normalizeTopic(sig.primary || sig.topic); row.subtopic = this.normalizeSubtopic(sig.primary || sig.sub);
         row.signal_type = 'multi_concept'; row.weight = 0.3;
       } else if (sig.type === 'repeated') {
         // topic column is NOT NULL — null here made every repeated-signal insert fail
-        row.topic = sig.topic || 'General'; row.subtopic = sig.sub;
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
         row.signal_type = 'repeated';
         row.weight = Math.min((sig.count || 1) * 0.4, 2.0);
       } else if (sig.type === 'resolution') {
-        row.topic = sig.topic || 'General'; row.subtopic = sig.sub;
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
         row.signal_type = 'resolution';
         // negative weight = strength, positive = weakness.
         // solved → strength; partial → mild weakness; confused → strong escalation
         row.weight = (sig.resolution === 'solved' || sig.resolution === 'understood' || sig.resolution === '1') ? -0.5
                    : (sig.resolution === 'partial') ? 0.3
                    : 2.0;
+      } else if (sig.type === 'hint_used') {
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        row.signal_type = 'hint_used'; row.weight = 0.4;
+      } else if (sig.type === 'explanation_repeated') {
+        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        row.signal_type = 'explanation_repeated'; row.weight = 0.6;
       } else {
         return; // unknown type — skip
       }
+      if (this._buffer) {
+        // Buffered path: signal will be batch-inserted by flushBuffer() after
+        // askAI() resolves, so source_question_id is known at insert time.
+        this._buffer.push(row);
+        return;
+      }
+      // Immediate path: fires outside the ask/response cycle (e.g. resolution buttons).
+      // Use the most-recently-returned record_id and current session if available.
+      row.source_question_id = window.__lastQRecId || null;
+      row.source_session_id  = currentSessionId    || null;
       sb.from('weakness_signals').insert(row).then(({ error }) => {
         if (error) { console.warn('weakness_signals insert failed:', error.message); return; }
         if (window.scheduleReportRegen && currentUser) {
@@ -1562,7 +1727,13 @@ button{font-family:inherit;cursor:pointer}
     var apiText = (hintModeActive && text)
       ? text + '\n\n[Hint mode: please give me only a hint — do not reveal the full solution or steps]'
       : text;
+    // Begin per-message signal buffer — all sendSignal() calls until flushBuffer()
+    // are held in memory and batch-inserted after askAI() resolves with record_id.
+    SignalEngine.beginBuffer();
     var sig = (apiText && isMathMessage(apiText)) ? SignalEngine.analyze(apiText) : null;
+    // Meta-signal pass: if topic detection yielded nothing but the message carries
+    // a hint/re-explanation phrase, attribute it to the last known active topic.
+    if (!sig && apiText) SignalEngine.analyzeMetaRequest(apiText);
     var imgToSend = pendingImg;
     addUser(text, pendingImg); // display original text (without hint suffix)
     input.value = ''; input.style.height = 'auto';
@@ -1570,6 +1741,11 @@ button{font-family:inherit;cursor:pointer}
     addTyping();
     isSending = true;
     sendBtn.disabled = true;
+
+    // CAI-P1: generate (or reuse) the idempotency key for this logical send.
+    // Persist before any network call so a refresh-during-send can recover.
+    if (!pendingRequestId) pendingRequestId = caiUuid();
+    writeInflight(pendingRequestId, null);
 
     // Credit gate: consume_credits RPC pre-authorises the message before hitting the edge fn.
     // Tokens are not known yet — pass 0; the edge function handles actual token logging.
@@ -1583,13 +1759,17 @@ button{font-family:inherit;cursor:pointer}
       p_session_id:  currentSessionId || null
     }).then(({ data: creditResult, error: creditError }) => {
       if (creditError || !creditResult) {
+        SignalEngine.discardBuffer();
         removeTyping();
         showError('Could not verify your credits. Please refresh and try again.');
+        clearInflight(); pendingRequestId = null;
         isSending = false; sendBtn.disabled = false;
         return;
       }
       if (!creditResult.ok) {
+        SignalEngine.discardBuffer();
         removeTyping();
+        clearInflight(); pendingRequestId = null;
         if (creditResult.reason === 'daily_limit_reached') {
           showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (starts at 69 EGP, never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
         } else if (creditResult.reason === 'insufficient_credits') {
@@ -1603,7 +1783,14 @@ button{font-family:inherit;cursor:pointer}
       // Credits OK — proceed with the AI call
       SignalEngine.bumpUsage();
       const creditLogId = creditResult.log_id || null;
+      // Re-write inflight with credit_log_id so a refresh-during-send can refund
+      // the credit if the Edge Function never commits a row.
+      writeInflight(pendingRequestId, creditLogId);
       askAI(apiText, sig, imgToSend).then(response => {
+        // CAI-P1 success-path ordering: clear inflight → render → clear pendingRequestId.
+        // Clearance precedes render so a refresh between steps cannot replay
+        // an already-rendered answer via the recovery query.
+        clearInflight();
         removeTyping();
         addAI(sig, response);
         sessionMessages.push({role:'user', content: apiText});
@@ -1611,6 +1798,8 @@ button{font-family:inherit;cursor:pointer}
         // Pipeline unification: when the AI flags a weakness on a topic the local
         // keyword map missed (sig is null), record it in weakness_signals so the
         // Weakness Analyzer sees AI-detected weaknesses too.
+        // These sendSignal() calls run while _buffer is still active so they join
+        // the same per-message batch and receive the same source_question_id.
         if (response && response.weakness_signal === true && !sig && response.topic && response.subtopic) {
           SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: 2});
         }
@@ -1623,6 +1812,10 @@ button{font-family:inherit;cursor:pointer}
             SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: sentConf});
           }
         }
+        // Flush buffer — record_id is now known; every signal for this message is
+        // batch-inserted with source_question_id and source_session_id set exactly.
+        window.__lastQRecId = (response && response.record_id) || null;
+        SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         awardChatXP();
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
@@ -1636,28 +1829,33 @@ button{font-family:inherit;cursor:pointer}
             isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
           });
         }
-        // Use record_id returned by edge function (v45: synchronous INSERT, no race)
-        window.__lastQRecId = (response && response.record_id) || null;
       }).catch(err => {
+        SignalEngine.discardBuffer();
         removeTyping();
         showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
-        // Refund the credit deducted before the failed AI call
+        // Refund the credit deducted before the failed AI call. If the refund
+        // RPC itself fails (network/transient), enqueue it for retry on next load.
         if (creditLogId) {
           sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
-            .then(({ data: rd }) => {
-              if (rd && rd.ok && rd.refunded > 0) {
-                console.info('Credit refunded after AI failure:', rd.refunded);
-              }
+            .then(({ data: rd, error: rerr }) => {
+              if (rerr || !rd || !rd.ok) { enqueueRefund(creditLogId); return; }
+              if (rd.refunded > 0) console.info('Credit refunded after AI failure:', rd.refunded);
             })
-            .catch(e => console.warn('Refund RPC failed:', e));
+            .catch(e => { console.warn('Refund RPC failed:', e); enqueueRefund(creditLogId); });
         }
       }).finally(() => {
+        // CAI-P1: failure clears inflight + pendingRequestId. The send is
+        // terminal — a manual retry generates a fresh request_id.
+        clearInflight();
+        pendingRequestId = null;
         isSending = false;
         sendBtn.disabled = false;
       });
     }).catch(() => {
+      SignalEngine.discardBuffer();
       removeTyping();
       showError('Network error checking your credits. Please try again.');
+      clearInflight(); pendingRequestId = null;
       isSending = false; sendBtn.disabled = false;
     });
   }

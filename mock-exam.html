@@ -375,6 +375,7 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
   <div id="pageContent"><div style="padding:48px 20px;text-align:center;color:var(--text-400);font-size:14px">Loading…</div></div>
 </main>
 
+<script src="taxonomy.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="exam-mistakes-logger.js"></script>
@@ -429,22 +430,100 @@ const s = {
   mistakeRows: [],
   sessionId: null,
   successData: null,
-  practiceQuestions: 0
+  practiceQuestions: 0,
+  // ME-P1: client-side idempotency token; generated lazily on first save attempt
+  // and reused across network retries within the same exam attempt.
+  idempotencyKey: null,
+  // ME-P1: double-click / re-entry guard for doSave().
+  saving: false,
+  // ME-P3a: in-memory paused flag.
+  pausedAt: null,
+  // ME-P3b: stable identity for this tab within the multi-tab ownership protocol.
+  tabId: null,
+  // ME-P3b: heartbeat interval id; cleared on every non-TIMER view transition.
+  heartbeatInterval: null
 };
 
+// ME-P1: lazy idempotency token. Uses crypto.randomUUID() when available;
+// falls back to a v4-shaped string for older browsers.
+function ensureIdempotencyKey() {
+  if (s.idempotencyKey) return s.idempotencyKey;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    s.idempotencyKey = crypto.randomUUID();
+  } else {
+    s.idempotencyKey = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  return s.idempotencyKey;
+}
+
 // ─── TIMER PERSISTENCE ───────────────────────────────────────────────────────
-const TIMER_KEY = 'simath_mock_timer';
+const TIMER_KEY      = 'simath_mock_timer';
+const ACTIVE_TAB_KEY = 'simath_mock_active_tab';
+
+// ME-P3b: stale-ownership threshold (ms). Heartbeat interval is 2 s;
+// 15 s absorbs tab throttling, mobile backgrounding, and sleep/wake cycles.
+const TAB_STALE_MS = 15000;
+
+// ── ME-P3b: UUID helper (reuses ME-P1 polyfill pattern) ──
+function makeTabId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// ── ME-P3b: active-tab record helpers ──
+function readActiveTab() {
+  try { return JSON.parse(localStorage.getItem(ACTIVE_TAB_KEY)); } catch(e) { return null; }
+}
+function claimActiveTab() {
+  if (!s.tabId || !s.exam) return;
+  try {
+    localStorage.setItem(ACTIVE_TAB_KEY, JSON.stringify({
+      tabId:    s.tabId,
+      examCode: s.exam.code,
+      lastBeat: Date.now()
+    }));
+  } catch(e) {}
+}
+function releaseActiveTab() {
+  try {
+    const v = readActiveTab();
+    if (v && v.tabId === s.tabId) localStorage.removeItem(ACTIVE_TAB_KEY);
+  } catch(e) {}
+}
+function startHeartbeat() {
+  stopHeartbeat();
+  claimActiveTab();
+  s.heartbeatInterval = setInterval(claimActiveTab, 2000);
+}
+function stopHeartbeat() {
+  clearInterval(s.heartbeatInterval);
+  s.heartbeatInterval = null;
+}
+
+// ── ME-P3a: timer save/clear/restore ──
+// P3a additions to simath_mock_timer: `timerRunning` (bool) and `pausedAt`
+// (number|null). Old rows missing these fields default to running + no pause.
 
 function saveTimerState() {
   if (s.view !== 'TIMER' || !s.exam) return;
   try {
     localStorage.setItem(TIMER_KEY, JSON.stringify({
-      examCode: s.exam.code,
-      timerTotal: s.timerTotal,
-      timerSec: s.timerSec,
-      startedAt: s.startedAt,
+      examCode:          s.exam.code,
+      timerTotal:        s.timerTotal,
+      timerSec:          s.timerSec,
+      startedAt:         s.startedAt,
       practiceQuestions: s.practiceQuestions,
-      savedAt: Date.now()
+      savedAt:           Date.now(),
+      timerRunning:      s.timerRunning,    // ME-P3a
+      pausedAt:          s.pausedAt         // ME-P3a
     }));
   } catch(e) {}
 }
@@ -453,6 +532,8 @@ function clearTimerState() {
   try { localStorage.removeItem(TIMER_KEY); } catch(e) {}
 }
 
+// Returns 'running' | 'paused' | false.
+// Caller must await P3b ownership check before calling render().
 function restoreTimerState() {
   try {
     const raw = localStorage.getItem(TIMER_KEY);
@@ -461,14 +542,29 @@ function restoreTimerState() {
     if (Date.now() - saved.savedAt > 24 * 60 * 60 * 1000) { clearTimerState(); return false; }
     const cfg = EXAM_CONFIGS[saved.examCode];
     if (!cfg) { clearTimerState(); return false; }
-    s.exam = cfg;
-    s.timerTotal = saved.timerTotal;
-    s.timerSec = saved.timerSec;
-    s.timerRunning = true;
-    s.startedAt = saved.startedAt;
+
+    s.exam              = cfg;
+    s.timerTotal        = saved.timerTotal;
+    s.startedAt         = saved.startedAt;
     s.practiceQuestions = saved.practiceQuestions || 0;
+
+    // P3a: honour the persisted pause flag (default: running for legacy rows).
+    const wasRunning = saved.timerRunning !== false;
+    s.timerRunning   = wasRunning;
+    s.pausedAt       = saved.pausedAt || null;
+
+    if (wasRunning) {
+      // Absorb real elapsed time since the last tick was persisted so the clock
+      // doesn't "gift" the student any time they were away from the tab.
+      const elapsed = Math.floor((Date.now() - saved.savedAt) / 1000);
+      s.timerSec = Math.max(0, saved.timerSec - elapsed);
+    } else {
+      // Paused: time is frozen at exactly where the student stopped.
+      s.timerSec = saved.timerSec;
+    }
+
     s.view = 'TIMER';
-    return true;
+    return wasRunning ? 'running' : 'paused';
   } catch(e) { clearTimerState(); return false; }
 }
 
@@ -490,6 +586,9 @@ function updateSteps() {
 function render() {
   updateSteps();
   clearInterval(s.timerInterval);
+  // ME-P3b: stop heartbeat on every render; afterTimer() re-starts it when
+  // the TIMER view is entered. This prevents interval leaks across view changes.
+  if (s.view !== 'TIMER') stopHeartbeat();
   const pc = document.getElementById('pageContent');
   switch (s.view) {
     case 'SELECT':   pc.innerHTML = htmlSelect();   afterSelect();   break;
@@ -760,7 +859,10 @@ function tickTimer() {
   if (s.timerSec <= 0) {
     s.timerSec = 0;
     s.timerRunning = false;
+    s.pausedAt = null;
     clearInterval(s.timerInterval);
+    stopHeartbeat();              // ME-P3b
+    releaseActiveTab();           // ME-P3b
     clearTimerState();
     updateTimerDOM();
     setTimeout(() => { s.endedAt = new Date().toISOString(); s.view = 'RESULTS'; render(); }, 900);
@@ -793,11 +895,22 @@ function afterTimer() {
     s.timerInterval = setInterval(tickTimer, 1000);
   }
 
+  // ME-P3b: start (or re-enter) heartbeat ownership of this tab.
+  if (!s.tabId) s.tabId = makeTabId();
+  startHeartbeat();
+
   document.getElementById('btnPause')?.addEventListener('click', () => {
     s.timerRunning = !s.timerRunning;
     clearInterval(s.timerInterval);
     if (s.timerRunning) {
+      // ME-P3a: resuming — clear pausedAt and tick.
+      s.pausedAt = null;
       s.timerInterval = setInterval(tickTimer, 1000);
+    } else {
+      // ME-P3a: pausing — record the wall-clock moment and persist immediately
+      // so a tab close during pause restores the correct paused state.
+      s.pausedAt = Date.now();
+      saveTimerState();
     }
     // Update button label in-place
     const btn = document.getElementById('btnPause');
@@ -813,7 +926,10 @@ function afterTimer() {
 
   document.getElementById('btnEnd')?.addEventListener('click', () => {
     clearInterval(s.timerInterval);
+    stopHeartbeat();
+    releaseActiveTab();           // ME-P3b: relinquish tab ownership on intentional end
     s.timerRunning = false;
+    s.pausedAt = null;
     s.endedAt = new Date().toISOString();
     s.view = 'RESULTS';
     render();
@@ -881,31 +997,105 @@ function syncResults() {
   s.omitted = document.getElementById('inOmitted')?.value || '';
 }
 
+// ME-P1: score integrity validation.
+// Returns { hard: string|null, soft: string|null } — `hard` blocks the flow,
+// `soft` shows a confirmation dialog ("Save anyway"). All-blank input skips
+// validation to preserve the existing "log mistakes without scoring" flow.
+function validateScoreIntegrity() {
+  const allBlank = !s.score && !s.correct && !s.wrong && !s.omitted;
+  if (allBlank) return { hard: null, soft: null };
+
+  const ex = s.exam;
+  const c = s.correct ? parseInt(s.correct, 10) : 0;
+  const w = s.wrong   ? parseInt(s.wrong,   10) : 0;
+  const o = s.omitted ? parseInt(s.omitted, 10) : 0;
+  const entered = c + w + o;
+  const expected = (ex.code === 'PRACTICE') ? (s.practiceQuestions || null) : ex.questions;
+
+  if (c < 0 || w < 0 || o < 0) {
+    return { hard: 'Counts cannot be negative.', soft: null };
+  }
+  if (expected && c > expected) {
+    return { hard: 'Correct answers (' + c + ') cannot exceed total questions (' + expected + ').', soft: null };
+  }
+  if (expected && entered > Math.round(expected * 1.5)) {
+    return { hard: 'Total entered (' + entered + ') is far above this exam’s question count (' + expected + ').', soft: null };
+  }
+
+  const softMsgs = [];
+  if (expected && entered !== expected) {
+    softMsgs.push('Correct + Wrong + Omitted = ' + entered + ', but ' + ex.displayName + ' has ' + expected + ' questions.');
+  }
+  if (s.score) {
+    const sc = parseInt(s.score, 10);
+    if (!isNaN(sc) && (sc < ex.scoreMin || sc > ex.scoreMax)) {
+      softMsgs.push('Score ' + sc + ' is outside the expected range ' + ex.scoreMin + '–' + ex.scoreMax + '.');
+    }
+  }
+  return { hard: null, soft: softMsgs.length ? softMsgs.join(' ') : null };
+}
+
 function afterResults() {
   document.getElementById('btnToMistakes')?.addEventListener('click', () => {
     syncResults();
+    const v = validateScoreIntegrity();
+    if (v.hard) { alert(v.hard); return; }
+    if (v.soft && !confirm(v.soft + '\n\nSave anyway?')) return;
     if (s.mistakeRows.length === 0) s.mistakeRows = [{ topic: '', subtopic: '', count: 1, question_id: null, correct_answer: null, student_answer: null }];
     s.view = 'MISTAKES';
     render();
   });
   document.getElementById('btnSkipMistakes')?.addEventListener('click', () => {
     syncResults();
+    const v = validateScoreIntegrity();
+    if (v.hard) { alert(v.hard); return; }
+    if (v.soft && !confirm(v.soft + '\n\nSave anyway?')) return;
     s.mistakeRows = [];
     doSave();
   });
 }
 
 // ─── MISTAKES ────────────────────────────────────────────────────────────────
+// ME-P1: taxonomy-backed canonical topic list for the topic datalist.
+// Free-text input is still accepted; the datalist is a hint, not a constraint.
+// Taxonomy normalization at the logger boundary remains the SSOT.
+function taxonomyTopicOptions() {
+  if (typeof window === 'undefined' || !window.Taxonomy || !window.Taxonomy._topicAliases) return [];
+  const canonical = new Set();
+  const aliases = window.Taxonomy._topicAliases || {};
+  Object.keys(aliases).forEach(k => { const v = aliases[k]; if (v) canonical.add(v); });
+  return Array.from(canonical).sort();
+}
+function taxonomySubtopicOptions(topicRaw) {
+  if (typeof window === 'undefined' || !window.Taxonomy || !window.Taxonomy.subtopicsFor) return [];
+  try { return window.Taxonomy.subtopicsFor(topicRaw) || []; } catch (e) { return []; }
+}
+
 function htmlMistakes() {
-  const rowsHtml = s.mistakeRows.map((row, i) => `
+  const topicOpts = taxonomyTopicOptions();
+  const topicListHtml = '<datalist id="me-topic-options">' +
+    topicOpts.map(t => '<option value="' + esc(t) + '"></option>').join('') +
+    '</datalist>';
+
+  const rowsHtml = s.mistakeRows.map((row, i) => {
+    const subOpts = taxonomySubtopicOptions(row.topic);
+    const subListId = 'me-sub-options-' + i;
+    const subListHtml = '<datalist id="' + subListId + '">' +
+      subOpts.map(t => '<option value="' + esc(t) + '"></option>').join('') +
+      '</datalist>';
+    return `
     <div class="mistake-row" id="mrow-${i}">
-      <input type="text" class="mc-topic" data-i="${i}" placeholder="Topic (e.g. Algebra)" value="${esc(row.topic)}"/>
-      <input type="text" class="mc-subtopic" data-i="${i}" placeholder="Subtopic (e.g. Linear Equations)" value="${esc(row.subtopic)}"/>
+      <input type="text" class="mc-topic" data-i="${i}" list="me-topic-options" placeholder="Topic (e.g. Algebra)" value="${esc(row.topic)}"/>
+      <input type="text" class="mc-subtopic" data-i="${i}" list="${subListId}" placeholder="Subtopic (e.g. Linear Equations)" value="${esc(row.subtopic)}"/>
       <input type="number" class="mc-count" data-i="${i}" min="1" placeholder="#" value="${row.count}" style="width:80px"/>
       <button class="mistake-del" data-i="${i}" title="Remove">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
-    </div>`).join('');
+      ${subListHtml}
+    </div>`;
+  }).join('');
+
+  const rowsWithTopicList = topicListHtml + rowsHtml;
 
   return `
   <div class="mistakes-section">
@@ -921,7 +1111,7 @@ function htmlMistakes() {
       <div class="mistakes-col-headers">
         <span>Topic</span><span>Subtopic</span><span>Count</span><span></span>
       </div>
-      <div id="mistakesList">${rowsHtml}</div>
+      <div id="mistakesList">${rowsWithTopicList}</div>
       <button class="btn-add-row" id="btnAddRow">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         Add Row
@@ -976,7 +1166,11 @@ function afterMistakes() {
     });
   });
 
-  document.getElementById('btnSave')?.addEventListener('click', () => {
+  document.getElementById('btnSave')?.addEventListener('click', (ev) => {
+    // ME-P1: defense-in-depth UI-level guard against double-click.
+    const btn = ev.currentTarget;
+    if (btn && btn.disabled) return;
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     syncMistakes();
     doSave();
   });
@@ -990,8 +1184,17 @@ function afterMistakes() {
 
 // ─── SAVE ─────────────────────────────────────────────────────────────────────
 async function doSave() {
+  // ME-P1: in-flight guard. Blocks doSave re-entry from double-clicks or
+  // accidental dispatch. Cleared on terminal state (SUCCESS or SAVE_FAILED).
+  if (s.saving) return;
+  s.saving = true;
+
   s.view = 'SAVING';
   render();
+
+  // ME-P1: lazy idempotency token. Same key is reused across network retries
+  // within the same attempt so 23505 recovery converges to one session row.
+  const idempotencyKey = ensureIdempotencyKey();
 
   try {
     const user = await getCurrentUser();
@@ -1019,10 +1222,44 @@ async function doSave() {
         omitted_answers: s.omitted ? parseInt(s.omitted) : null,
         duration_minutes: Math.round(s.timerTotal / 60),
         started_at: s.startedAt,
-        ended_at: s.endedAt || new Date().toISOString()
+        ended_at: s.endedAt || new Date().toISOString(),
+        idempotency_key: idempotencyKey
       })
       .select('id')
       .single();
+
+    // ME-P1: 23505 recovery. If a prior attempt already committed under this
+    // idempotency_key, re-fetch the winner and skip ALL downstream side effects
+    // (mistakes, signals, mastery, XP, achievement). The winner already wrote
+    // them. The losing client converges to the winner's observable state.
+    if (sessErr && sessErr.code === '23505') {
+      const { data: winner } = await sb
+        .from('exam_practice_sessions')
+        .select('id, score, correct_answers, wrong_answers, exam_type')
+        .eq('user_id', user.id)
+        .eq('idempotency_key', idempotencyKey)
+        .maybeSingle();
+      if (winner) {
+        s.successData = {
+          exam: s.exam,
+          score: winner.score != null ? String(winner.score) : '',
+          correct: winner.correct_answers != null ? String(winner.correct_answers) : '',
+          wrong: winner.wrong_answers != null ? String(winner.wrong_answers) : '',
+          xpGain: 0,
+          isFirst: false,
+          newRank: null,
+          mistakesLogged: 0,
+          adoptedFromIdempotency: true
+        };
+        s.idempotencyKey = null;
+        s.saving = false;
+        s.view = 'SUCCESS';
+        render();
+        return;
+      }
+      // Winner not found despite 23505 — fall through to error path.
+      throw new Error('Duplicate submission detected but prior session could not be located.');
+    }
     if (sessErr) throw new Error(sessErr.message);
 
     const sessionId = sess.id;
@@ -1099,10 +1336,18 @@ async function doSave() {
       mistakesLogged: validMistakes.length
     };
 
+    // ME-P1: terminal success — release guard, drop idempotency token so a
+    // fresh exam attempt generates a new key.
+    s.idempotencyKey = null;
+    s.saving = false;
+
     s.view = 'SUCCESS';
     render();
 
   } catch (err) {
+    // ME-P1: release in-flight guard so the user can retry. The idempotency
+    // token is preserved so the retry converges on the same session row.
+    s.saving = false;
     console.error('Save error:', err);
     document.getElementById('pageContent').innerHTML = `
     <div class="saving-center">
@@ -1202,10 +1447,168 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
-// Restore active timer if the user refreshed or closed the tab mid-exam.
-// Otherwise render the exam selection UI immediately — no network calls needed.
-restoreTimerState();
-render();
+// ME-P3a + ME-P3b: ownership-aware restore.
+// Order: (1) try to restore timer state, (2) check active-tab ownership,
+// (3) show appropriate modal or resume automatically.
+(function boot() {
+  const restored = restoreTimerState();
+
+  if (!restored) {
+    // No active exam — render SELECT immediately.
+    render();
+    return;
+  }
+
+  // P3b: check if another live tab currently owns the exam.
+  const owner = readActiveTab();
+  const now   = Date.now();
+  const ownerAlive = owner && owner.tabId &&
+    (now - owner.lastBeat) <= TAB_STALE_MS &&
+    owner.examCode === s.exam.code;
+  const ownerIsUs = owner && owner.tabId === s.tabId; // s.tabId is null on fresh load
+
+  if (ownerAlive && !ownerIsUs) {
+    // Another live tab is running this exam — ask before taking over.
+    const elapsed = Math.round((now - owner.lastBeat) / 1000);
+    const timeStr = fmtSec(s.timerSec);
+    const pc = document.getElementById('pageContent');
+    if (pc) {
+      pc.innerHTML = `
+        <div class="saving-center">
+          <div style="font-size:42px">📋</div>
+          <div class="saving-title">Exam in Progress</div>
+          <div class="saving-sub">
+            Your ${s.exam.displayName} (${timeStr} remaining) is already open in another tab
+            (last seen ${elapsed}s ago).<br>
+            Taking over here will pause the other tab.
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:20px">
+            <button class="cta-primary"   id="btnTakeOver">Take Over Here</button>
+            <button class="cta-secondary" id="btnCancelRestore">Cancel</button>
+          </div>
+        </div>`;
+    }
+    document.getElementById('btnTakeOver')?.addEventListener('click', () => {
+      if (!s.tabId) s.tabId = makeTabId();
+      claimActiveTab();       // write our tabId — sibling storage-event fires
+      console.info('[mock-exam] tab take-over', { from: owner.tabId, to: s.tabId, examCode: s.exam.code });
+      _finishRestore(restored);
+    });
+    document.getElementById('btnCancelRestore')?.addEventListener('click', () => {
+      // Do not restore — clear only if the sibling has already abandoned it.
+      s.exam = null; s.view = 'SELECT';
+      render();
+    });
+    return;
+  }
+
+  // No live sibling — proceed directly.
+  if (!s.tabId) s.tabId = makeTabId();
+  _finishRestore(restored);
+})();
+
+// Completes the restore after any ownership checks have passed.
+function _finishRestore(restored) {
+  if (restored === 'paused') {
+    // P3a: show pause-restore confirmation dialog.
+    const mins   = Math.floor(s.timerSec / 60);
+    const secs   = s.timerSec % 60;
+    const timeStr = fmtSec(s.timerSec);
+    const agoMs  = s.pausedAt ? Date.now() - s.pausedAt : null;
+    const agoStr = agoMs == null ? '' :
+      agoMs < 60000 ? ` (paused ${Math.round(agoMs / 1000)}s ago)` :
+      agoMs < 3600000 ? ` (paused ${Math.round(agoMs / 60000)}m ago)` :
+      ` (paused ${Math.round(agoMs / 3600000)}h ago)`;
+    const pc = document.getElementById('pageContent');
+    if (pc) {
+      pc.innerHTML = `
+        <div class="saving-center">
+          <div style="font-size:42px">⏸️</div>
+          <div class="saving-title">Paused Exam Found</div>
+          <div class="saving-sub">
+            Your ${s.exam.displayName} is paused at ${timeStr}${agoStr}.
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:20px">
+            <button class="cta-primary"   id="btnResumePaused">Resume Paused Exam</button>
+            <button class="cta-secondary" id="btnDiscardPaused">Discard</button>
+          </div>
+        </div>`;
+    }
+    document.getElementById('btnResumePaused')?.addEventListener('click', () => {
+      s.timerRunning = true;
+      s.pausedAt = null;
+      s.view = 'TIMER';
+      render();
+    });
+    document.getElementById('btnDiscardPaused')?.addEventListener('click', () => {
+      clearTimerState();
+      releaseActiveTab();
+      s.exam = null; s.view = 'SELECT';
+      render();
+    });
+    return;
+  }
+
+  // Running restore (P3a clock-drift already applied in restoreTimerState).
+  if (s.timerSec <= 0) {
+    // Timer expired while away — auto-complete.
+    s.endedAt = new Date().toISOString();
+    s.view = 'RESULTS';
+    clearTimerState();
+    releaseActiveTab();
+    render();
+    return;
+  }
+
+  s.view = 'TIMER';
+  render();
+}
+
+// ME-P3b: cross-tab storage event — another tab claimed ownership while we are
+// running. Pause our timer and show a non-blocking banner.
+window.addEventListener('storage', function(e) {
+  if (e.key !== ACTIVE_TAB_KEY) return;
+  var incoming = null;
+  try { incoming = e.newValue ? JSON.parse(e.newValue) : null; } catch(_) {}
+  if (!incoming || !s.tabId || incoming.tabId === s.tabId) return;
+  if (s.view !== 'TIMER') return;
+  // A different tab just claimed — pause us.
+  if (s.timerRunning) {
+    s.timerRunning = false;
+    s.pausedAt = Date.now();
+    clearInterval(s.timerInterval);
+    saveTimerState();
+    console.info('[mock-exam] paused by sibling tab claim', { sibling: incoming.tabId });
+  }
+  // Show banner (non-blocking; dismissible).
+  var existing = document.getElementById('siblingBanner');
+  if (existing) existing.remove();
+  var banner = document.createElement('div');
+  banner.id = 'siblingBanner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:var(--amber,#f59e0b);color:#000;' +
+    'text-align:center;padding:10px 16px;font-size:14px;font-weight:600;z-index:9999;display:flex;' +
+    'align-items:center;justify-content:center;gap:12px';
+  banner.innerHTML = 'Exam resumed in another tab. ' +
+    '<button id="btnReclaimTab" style="background:#000;color:#fff;border:none;border-radius:6px;' +
+    'padding:4px 12px;cursor:pointer;font-size:13px">Take Back</button>';
+  document.body.prepend(banner);
+  document.getElementById('btnReclaimTab')?.addEventListener('click', function() {
+    if (!s.tabId) s.tabId = makeTabId();
+    claimActiveTab();
+    console.info('[mock-exam] tab reclaim', { tabId: s.tabId });
+    banner.remove();
+    if (s.view === 'TIMER') {
+      s.timerRunning = true;
+      s.pausedAt = null;
+      saveTimerState();
+      render();
+    }
+  });
+});
+
+// ME-P3b: release tab ownership on unload so a fresh page-load doesn't see a
+// stale owner and prompt unnecessarily. Guard: only release if it's ours.
+window.addEventListener('beforeunload', function() { releaseActiveTab(); });
 
 // Show admin nav in background without blocking the page
 (async function() {

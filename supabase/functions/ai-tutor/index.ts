@@ -1,5 +1,8 @@
-// ai-tutor Edge Function v63
-// Adds explicit guidance for when to set weakness_signal=true (confusion, low confidence, follow-ups)
+// ai-tutor Edge Function v65
+// CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
+// existing row when the same key arrives twice; 23505 on INSERT triggers
+// re-SELECT and returns the winner row instead of creating a duplicate.
+// Increase max_tokens 1400→2800 to prevent JSON truncation on longer system prompts (v60-v63 additions)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -212,11 +215,43 @@ serve(async (req) => {
     const confidence:  number  = typeof body.confidence === 'number' ? body.confidence : 3;
     const hintMode:    boolean = body.hint_mode === true;
     const followUpType: string | null = body.follow_up_type || null;
+    const clientRequestId: string | null = (typeof body.client_request_id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.client_request_id))
+      ? body.client_request_id
+      : null;
     const messages:    Array<{role:string;content:string}> = Array.isArray(body.messages) ? body.messages : [];
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
     const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
     // lang resolved after profile fetch so language_preference is respected
+
+    // ── CAI-P1 pre-flight: if this client_request_id already produced a row,
+    // return the stored answer without consuming OpenAI tokens or creating a
+    // duplicate row. Handles retries after network/disconnect mid-send.
+    if (clientRequestId) {
+      const { data: existing } = await sbAdmin.from('question_records')
+        .select('id, session_id, ai_response, topic, subtopic, difficulty, concepts, rules, hint, weakness_signal')
+        .eq('user_id', user.id)
+        .eq('client_request_id', clientRequestId)
+        .maybeSingle();
+      if (existing) {
+        return new Response(JSON.stringify({
+          answer:          existing.ai_response || '',
+          hint:            existing.hint || '',
+          topic:           existing.topic || '',
+          subtopic:        existing.subtopic || '',
+          difficulty:      existing.difficulty || '',
+          concepts:        Array.isArray(existing.concepts) ? existing.concepts : [],
+          rules:           Array.isArray(existing.rules) ? existing.rules : [],
+          weakness_signal: existing.weakness_signal === true,
+          attention_marker: '',
+          session_id:      existing.session_id,
+          record_id:       existing.id,
+          hint_mode:       hintMode,
+          is_math:         true,
+          recovered:       true,
+        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
+    }
 
     // ── Session resolution ────────────────────────────────────────────────────
     let resolvedSessionId = sessionId;
@@ -687,7 +722,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
         messages: openaiMessages,
         response_format: { type: 'json_object' },
-        max_tokens: 1400,
+        max_tokens: 2800,
         temperature: 0.4,
       }),
     });
@@ -733,7 +768,9 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     }
 
     // ── Persist question_record (synchronous — record_id returned to client) ──
-    const { data: newRecord } = await sbAdmin.from('question_records').insert({
+    // CAI-P1: include client_request_id; on 23505 (unique_violation) the winning
+    // row was committed by a concurrent retry — re-SELECT and return it.
+    const insertRes = await sbAdmin.from('question_records').insert({
       session_id:        resolvedSessionId,
       user_id:           user.id,
       question:          question,
@@ -751,7 +788,17 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       repeated_question: false,
       hint:              hint,
       follow_up_type:    followUpType,
+      client_request_id: clientRequestId,
     }).select('id').single();
+    let newRecord = insertRes.data;
+    if (insertRes.error && insertRes.error.code === '23505' && clientRequestId) {
+      const { data: winner } = await sbAdmin.from('question_records')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('client_request_id', clientRequestId)
+        .maybeSingle();
+      newRecord = winner ?? null;
+    }
 
     // ── Build response ────────────────────────────────────────────────────────
     return new Response(JSON.stringify({

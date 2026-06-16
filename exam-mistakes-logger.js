@@ -57,45 +57,34 @@
   }
 
   /* ── Topic name normalizer ──
-   * Canonicalises user-typed topic/subtopic strings so typos and
-   * capitalisation variants map to the same entry in the DB.
-   * e.g. "GEOmetry" → "Geometry", "algebra" → "Algebra", "Circle" → "Circles"
+   * Delegates to window.Taxonomy (taxonomy.js) when available.
+   * Inline fallback preserves behaviour during rollout if taxonomy.js
+   * has not yet loaded.
    */
-  var TOPIC_ALIASES = {
-    'geometry': 'Geometry',
-    'geometery': 'Geometry',
-    'geomtry': 'Geometry',
-    'algebra': 'Algebra',
-    'algebera': 'Algebra',
-    'algepra': 'Algebra',
-    'trigonometry': 'Trigonometry',
-    'trig': 'Trigonometry',
-    'statistics': 'Statistics',
-    'probability': 'Probability',
-    'calculus': 'Calculus',
-    'number theory': 'Number Theory',
-  };
-  var SUBTOPIC_ALIASES = {
-    'circle': 'Circles',
-    'circles': 'Circles',
-    'linear equation': 'Linear Equations',
-    'linear equations': 'Linear Equations',
-    'linear': 'Linear',
-    'order of operations': 'Order of operations',
-    'order of operations (pemdas)': 'Order of operations',
-    'pemdas': 'Order of operations',
-  };
   function normalizeTopic(s) {
+    if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeTopic(s);
     if (!s) return s;
+    // Guard: this path is unreachable under correct load order — surface loudly.
+    if (typeof console !== 'undefined' && console.error) {
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeTopic — split-key risk', { topic: s });
+    }
+    if (typeof window !== 'undefined') {
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
+    }
     var t = s.trim();
-    var lower = t.toLowerCase();
-    return TOPIC_ALIASES[lower] || (t.charAt(0).toUpperCase() + t.slice(1));
+    return t.charAt(0).toUpperCase() + t.slice(1);
   }
   function normalizeSubtopic(s) {
+    if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeSubtopic(s);
     if (!s) return s;
-    var t = s.replace(/\s*\([^)]+\)\s*$/, '').trim();
-    var lower = t.toLowerCase();
-    return SUBTOPIC_ALIASES[lower] || t;
+    // Guard: this path is unreachable under correct load order — surface loudly.
+    if (typeof console !== 'undefined' && console.error) {
+      console.error('[SI-DIAG] Taxonomy unavailable at normalizeSubtopic — split-key risk', { subtopic: s });
+    }
+    if (typeof window !== 'undefined') {
+      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
+    }
+    return s.replace(/\s*\([^)]+\)\s*$/, '').trim();
   }
 
   /* ── Main pipeline ── */
@@ -123,27 +112,51 @@
 
           var weight = examSignalWeight(count, priorCount);
 
+          // question_id is an optional field on each mistake; null when not provided.
+          var qId = m.question_id || null;
+
           // Primary exam-mistake signal
           signalsToInsert.push({
-            user_id:     userId,
-            topic:       topic,
-            subtopic:    subtopic,
-            signal_type: 'topic',
-            source:      'MOCK_EXAM',
-            weight:      weight,
-            created_at:  now
+            user_id:              userId,
+            topic:                topic,
+            subtopic:             subtopic,
+            signal_type:          'topic',
+            source:               'MOCK_EXAM',
+            weight:               weight,
+            created_at:           now,
+            source_session_id:    sessionId,
+            source_question_id:   qId,
           });
 
           // Repeated signal if seen in prior sessions
           if (priorCount > 0) {
             signalsToInsert.push({
-              user_id:     userId,
-              topic:       topic,
-              subtopic:    subtopic,
-              signal_type: 'repeated',
-              source:      'MOCK_EXAM',
-              weight:      Math.min(2.0, 0.5 * priorCount),
-              created_at:  now
+              user_id:            userId,
+              topic:              topic,
+              subtopic:           subtopic,
+              signal_type:        'repeated',
+              source:             'MOCK_EXAM',
+              weight:             Math.min(2.0, 0.5 * priorCount),
+              created_at:         now,
+              source_session_id:  sessionId,
+              source_question_id: qId,
+            });
+          }
+
+          // exam_confused: persistent exam failure across ≥2 prior sessions —
+          // escalation marker that the student has been repeatedly examined and
+          // continues to struggle. Supplements (does not replace) the topic signal.
+          if (priorCount >= 2) {
+            signalsToInsert.push({
+              user_id:            userId,
+              topic:              topic,
+              subtopic:           subtopic,
+              signal_type:        'exam_confused',
+              source:             'MOCK_EXAM',
+              weight:             1.2,
+              created_at:         now,
+              source_session_id:  sessionId,
+              source_question_id: qId,
             });
           }
         }
