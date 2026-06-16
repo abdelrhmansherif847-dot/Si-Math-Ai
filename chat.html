@@ -688,6 +688,11 @@ button{font-family:inherit;cursor:pointer}
   let sessionMessages = [];
   let isSending = false;
 
+  // Topic pre-seed from ?topic= / ?subtopic= URL params (Spaced Repetition Queue)
+  const _urlParams    = new URLSearchParams(window.location.search);
+  let seededTopic     = _urlParams.get('topic')    || null;
+  let seededSubtopic  = _urlParams.get('subtopic') || null;
+
   // ── CAI-P1: client_request_id idempotency + sessionStorage recovery ──────────
   // pendingRequestId survives across retries within the same JS context.
   // sessionStorage 'simath_chat_inflight' survives page refresh within the same
@@ -788,6 +793,16 @@ button{font-family:inherit;cursor:pointer}
       renderEmptyStateHistory();
       drainRefundQueue();
       recoverInflight();
+      if (seededTopic) {
+        const chip = document.createElement('div');
+        chip.id = 'seedTopicChip';
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin:12px 0 4px;padding:7px 12px;border-radius:20px;background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.26);font-size:12px;color:#7dd3fc;cursor:pointer';
+        const label = seededSubtopic ? seededTopic + ' → ' + seededSubtopic : seededTopic;
+        chip.innerHTML = '📚 Reviewing: <b style="color:#fff;margin-left:2px">' + label + '</b><span style="margin-left:6px;color:rgba(56,189,248,.5);font-size:10px" title="Click to dismiss">✕</span>';
+        chip.onclick = function() { chip.remove(); seededTopic = null; seededSubtopic = null; };
+        const empty = document.getElementById('empty');
+        if (empty) empty.insertBefore(chip, empty.firstChild);
+      }
     } catch(err) {
       console.error('[chat] init error:', err);
       const chatArea = document.getElementById('chatMessages') || document.querySelector('.chat-area') || document.body;
@@ -898,6 +913,12 @@ button{font-family:inherit;cursor:pointer}
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
     if (sig && sig.sub)   payload.subtopic = sig.sub;
+    // Spaced Repetition pre-seed: use seeded topic as fallback when SignalEngine
+    // has not detected a topic from user input (no Edge Function contract change).
+    if (!payload.topic && seededTopic) {
+      payload.topic    = seededTopic;
+      payload.subtopic = seededSubtopic || '';
+    }
     if (imageData && typeof imageData === 'string' && imageData.startsWith('data:image/')) {
       payload.image = imageData;
     } else if (imageData && typeof imageData === 'string' && imageData.startsWith('data:application/pdf')) {
