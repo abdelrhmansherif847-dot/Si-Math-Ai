@@ -1553,7 +1553,6 @@ async function loadDashboard() {
     sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
     sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
-    sb.from('subscriptions').select('plan,status,credits_remaining').eq('user_id', user.id).eq('status','active').limit(1).maybeSingle(),
   ]);
 
   var prof        = (results[0].data) || {};
@@ -1562,7 +1561,6 @@ async function loadDashboard() {
   var achievements= (results[3].data) || [];
   var chatSess    = (results[4].data) || [];
   var monthQs     = (results[5].data) || [];
-  var subscription= results[6].data;
   // Derive per-topic mastery from weakness_reports (single source of truth)
   var masteryRecs = weakReports.map(function(r){ return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: r.last_updated }; });
 

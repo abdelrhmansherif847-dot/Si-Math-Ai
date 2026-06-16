@@ -135,6 +135,22 @@
     }
   }
 
+  /* ── Award first_mastered_topic once any topic crosses the mastery threshold ── */
+  async function maybeAwardMasteryAchievement(sb, userId, newMastery) {
+    if (newMastery < 80) return;
+    try {
+      await sb.from('achievements').upsert({
+        user_id:         userId,
+        achievement_key: 'first_mastered_topic',
+        name:            'First Mastered Topic',
+        description:     'Reached mastery on a topic.',
+        earned_at:       new Date().toISOString()
+      }, { onConflict: 'user_id,achievement_key', ignoreDuplicates: true });
+    } catch (err) {
+      console.warn('[mastery] achievement award failed:', err.message || err);
+    }
+  }
+
   /* ── MasteryEngine ── */
   var MasteryEngine = {
 
@@ -175,6 +191,8 @@
           addCorrect:  isCorrect
         });
 
+        maybeAwardMasteryAchievement(sb, userId, newMastery);
+
         // Cascade: re-sync weakness_reports
         if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
 
@@ -207,6 +225,8 @@
           addAttempt: false,  // attempt already counted in onQuestion
           addCorrect: isCorrect
         });
+
+        maybeAwardMasteryAchievement(sb, userId, newMastery);
 
         if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
 
@@ -285,6 +305,8 @@
             addAttempt: false,  // exam counts are already totals — merge below
             addCorrect: false
           });
+
+          maybeAwardMasteryAchievement(sb, userId, newMastery);
 
           // Also bump the raw counts from exam
           if (existing) {
