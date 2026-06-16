@@ -653,6 +653,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="taxonomy.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
+<script src="assets/streak.js"></script>
 <script>
   // ===== SUPABASE INIT =====
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -1817,6 +1818,7 @@ button{font-family:inherit;cursor:pointer}
         window.__lastQRecId = (response && response.record_id) || null;
         SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         awardChatXP();
+        if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
         const mTopic = (response && response.topic) || (sig && sig.topic) || null;

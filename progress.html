@@ -409,7 +409,7 @@ async function deviceGuard(sb, userId) {
     // Parallel DB fetches — all from existing tables, no writes
     var results = await Promise.all([
       // 0 profile: xp, full_name, exam_date, exam_type, target_score, is_admin
-      sb.from('profiles').select('full_name,xp,exam_date,exam_type,target_score,is_admin').eq('id', user.id).single(),
+      sb.from('profiles').select('full_name,xp,exam_date,exam_type,target_score,is_admin,current_streak,best_streak').eq('id', user.id).single(),
       // 1 weakness_reports (single source of truth — mastery aggregated by topic below)
       sb.from('weakness_reports').select('topic,subtopic,mastery_score,priority_rank,last_updated,total_signals').eq('user_id', user.id).order('priority_rank', {ascending:true}),
       // 2 achievements: achievement_key, earned_at (canonical timestamp; legacy unlocked_at retained on table but not used by writers)
@@ -454,26 +454,9 @@ async function deviceGuard(sb, userId) {
       if (ans) ans.style.display = 'block';
     }
 
-    // ── Streak calculation (exact algorithm from dashboard.html) ──
-    var actSet = new Set();
-    chatSess.concat(exams).forEach(function(s){
-      if (s.created_at) actSet.add(new Date(s.created_at).toDateString());
-    });
-    var todayStr = new Date().toDateString();
-    var ydayDate = new Date(); ydayDate.setDate(ydayDate.getDate() - 1);
-    var ydayStr  = ydayDate.toDateString();
-    var currentStreak = 0;
-    var anchor = actSet.has(todayStr) ? new Date() : actSet.has(ydayStr) ? ydayDate : null;
-    if (anchor){
-      var d = new Date(anchor); d.setHours(0,0,0,0);
-      while (actSet.has(d.toDateString())){ currentStreak++; d.setDate(d.getDate()-1); }
-    }
-    var bestStreak = 0, run = 0;
-    var sortedDates = Array.from(actSet).map(function(x){ return new Date(x); }).sort(function(a,b){ return a-b; });
-    for (var i=0;i<sortedDates.length;i++){
-      run = (i===0||(sortedDates[i]-sortedDates[i-1])!==86400000) ? 1 : run+1;
-      if (run > bestStreak) bestStreak = run;
-    }
+    // ── Streaks (read from profiles, written by assets/streak.js) ──
+    var currentStreak = profile.current_streak ?? 0;
+    var bestStreak    = profile.best_streak    ?? 0;
 
     // ── Derived counts ──
     var masteredTopics = mastRecs.filter(function(m){ return (m.mastery_score||0) >= 80; }).length;
