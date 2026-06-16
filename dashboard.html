@@ -1555,7 +1555,7 @@ async function loadDashboard() {
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
     sb.from('weakness_reports').select('topic,subtopic,priority_rank,weakness_score,mastery_score,last_updated').eq('user_id', user.id).order('priority_rank', {ascending:true}).limit(50),
-    sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}).limit(6),
+    sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
     sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
     sb.from('subscriptions').select('plan,status,credits_remaining').eq('user_id', user.id).eq('status','active').limit(1).maybeSingle(),

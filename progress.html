@@ -412,8 +412,8 @@ async function deviceGuard(sb, userId) {
       sb.from('profiles').select('full_name,xp,exam_date,exam_type,target_score,is_admin').eq('id', user.id).single(),
       // 1 weakness_reports (single source of truth — mastery aggregated by topic below)
       sb.from('weakness_reports').select('topic,subtopic,mastery_score,priority_rank,last_updated,total_signals').eq('user_id', user.id).order('priority_rank', {ascending:true}),
-      // 2 achievements: achievement_key, unlocked_at
-      sb.from('achievements').select('achievement_key,unlocked_at').eq('user_id', user.id).order('unlocked_at', {ascending:false}),
+      // 2 achievements: achievement_key, earned_at (canonical timestamp; legacy unlocked_at retained on table but not used by writers)
+      sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}),
       // 3 chat_sessions: created_at (for streak calculation — mirrors dashboard.html)
       sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(500),
       // 4 exam_practice_sessions: score, created_at, exam_type, correct_answers
@@ -747,7 +747,7 @@ async function deviceGuard(sb, userId) {
     // Merge: achievements, mastered topics (score≥80, by last_updated), exams
     var events = [];
     achieves.forEach(function(a){
-      if (!a.unlocked_at) return;
+      if (!a.earned_at) return;
       var labels = {
         'first_question':       { icon:'💬', title:'First Question Asked',     type:'achieve' },
         'first_mock_exam':      { icon:'📝', title:'First Mock Exam Completed', type:'achieve' },
@@ -762,7 +762,7 @@ async function deviceGuard(sb, userId) {
         'weakness_found':       { icon:'🔍', title:'Weakness Identified',        type:'achieve' },
       };
       var meta = labels[a.achievement_key] || { icon:'🏅', title: (a.achievement_key||'Achievement').replace(/_/g,' '), type:'achieve' };
-      events.push({ date: new Date(a.unlocked_at), icon: meta.icon, title: meta.title, sub: relDate(a.unlocked_at), type: meta.type });
+      events.push({ date: new Date(a.earned_at), icon: meta.icon, title: meta.title, sub: relDate(a.earned_at), type: meta.type });
     });
     mastRecs.forEach(function(m){
       if ((m.mastery_score||0) >= 80 && m.last_updated){
