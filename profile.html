@@ -261,7 +261,7 @@ async function loadPage() {
     sb.from('achievements').select('*').eq('user_id', user.id),
     sb.from('question_records').select('id').eq('user_id', user.id),
     sb.from('exam_practice_sessions').select('id').eq('user_id', user.id),
-    sb.from('weakness_reports').select('topic,mastery_score').eq('user_id', user.id),
+    sb.from('mastery_records').select('topic,mastery_score').eq('user_id', user.id),
   ]);
 
   const profile = profileRes.data || {};
@@ -275,7 +275,7 @@ async function loadPage() {
   const totalExams = examRes.data?.length || 0;
   const masteryRecords = masteryRes.data || [];
   const topicsStudied = masteryRecords.length;
-  const masteredTopics = masteryRecords.filter(m => (m.mastery_score || 0) >= 80).length;
+  const masteredTopics = masteryRecords.filter(m => (m.mastery_score || 0) >= 70).length;
 
   const displayName = profile.full_name || user.email?.split('@')[0] || 'Student';
   const xpInRange = xp - rank.min;
