@@ -1592,7 +1592,7 @@ function renderSWGrid(reports,mastery){
     const strong=mastery.filter(m=>m.mastery_score!=null&&m.mastery_score>=70).sort((a,b)=>b.mastery_score-a.mastery_score).slice(0,2);
     const existing=strongCard.querySelectorAll('.rank');
     existing.forEach(r=>r.remove());
-    strongCard.querySelector('.sw-title').innerHTML='<span class="ic">💪</span> Your Strengths';
+    strongCard.querySelector('.sw-title').innerHTML='<span class="ic">💪</span> Your Strengths <span style="font-size:11px;font-weight:400;color:var(--text-400);margin-left:6px">Mastery Score ≥ 70%</span>';
     if(strong.length){
       strong.forEach((m,i)=>{
         const div=document.createElement('div');div.className='rank';
