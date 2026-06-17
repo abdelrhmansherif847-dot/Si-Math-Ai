@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v70
+// ai-tutor Edge Function v71
 // Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
 // shadow mode on every math question and records verification_tier +
 // verification_meta on question_records. The verification pipeline itself
@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v70';
+const AI_TUTOR_VERSION = 'v71';
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 
 // ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
@@ -327,6 +327,102 @@ function detectorGptTier(s: string | null | undefined): DifficultyTier | null {
   return null;
 }
 
+// ── Worksheet Navigation Guard ────────────────────────────────────────────────
+// Prevents Zero from confidently solving or inventing a worksheet question when
+// the student references a question number but provides neither the image nor
+// the actual problem text. Returns null when the guard should not fire.
+// Gated by WORKSHEET_GUARD_ENABLED env var (default true).
+
+interface WorksheetGuardResult {
+  answer: string;
+  q_number: string;
+  lang: string;
+}
+
+function worksheetGuardCheck(
+  question: string,
+  imageData: string | null,
+  messages: Array<{role: string; content: string}>,
+  lang: string,
+): WorksheetGuardResult | null {
+  // Kill switch
+  const guardEnabled = (Deno.env.get('WORKSHEET_GUARD_ENABLED') ?? 'true') !== 'false';
+  if (!guardEnabled) return null;
+
+  // Guard never fires when an image is attached — student has provided the worksheet
+  if (imageData) return null;
+
+  const text = question.trim();
+  if (!text) return null;
+
+  // ── Step 1: Detect question-number reference ────────────────────────────────
+  // English: Q9, Question 9, question number 9, problem 9, #9, solve question 9
+  const EN_Q_REF = /\b(?:Q|question|prob(?:lem)?|number|num|#)\s*\.?\s*#?\s*(\d{1,3}|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i;
+  // Arabic: سؤال 9, السؤال رقم 9, مسألة 9, رقم 9, ordinals
+  const AR_Q_REF = /(?:سؤال|السؤال|مسألة|المسألة|رقم|نمرة)\s*(?:رقم\s*)?([٠-٩]{1,3}|\d{1,3}|الأول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر|واحد|اتنين|اثنين|تلاتة|ثلاثة|أربعة|خمسة|ستة|سبعة|ثمانية|تسعة|عشرة)/;
+  // Franco: so2al 9, rakam 9, nemrit 9
+  const FR_Q_REF = /\b(?:so2al|so2aal|s2al|rakam|ra2m|nemra|nemrit)\s*\.?\s*(\d{1,3})\b/i;
+  // Bare digit/ordinal alone (e.g. student sends just "9" or "Q9")
+  const BARE_Q = /^(?:Q\s*\.?\s*)?(\d{1,3})$/i;
+
+  let qMatch = EN_Q_REF.exec(text) || AR_Q_REF.exec(text) || FR_Q_REF.exec(text) || BARE_Q.exec(text);
+  if (!qMatch) return null;
+  const q_number = qMatch[1] || qMatch[0];
+
+  // ── Step 2: Skip when explanation/meta intent is present ───────────────────
+  // Student is discussing prior work, not asking Zero to identify a new question
+  const SKIP_EN = /\b(?:why|how come|what does|explain|clarify|step\s*\d|your|you did|makes sense|i got|my answer|i solved|i got it|i answered)\b/i;
+  const SKIP_AR = /ليه|ازاي|إزاي|يعني|وضح|اشرح|حليت|إجابتي|اجابتي|طلعتلي|جبت/;
+  const SKIP_FR = /\b(?:leeh|ezay|ya3ni|ana gbt|ana 7alit|gawabi)\b/i;
+  if (SKIP_EN.test(text) || SKIP_AR.test(text) || SKIP_FR.test(text)) return null;
+
+  // ── Step 3: Skip when the student provided substantial problem content ──────
+  // Strip the question-reference span and check remaining text
+  const stripped = text
+    .replace(EN_Q_REF, '').replace(AR_Q_REF, '').replace(FR_Q_REF, '').replace(BARE_Q, '')
+    .trim();
+  const hasEquation    = /[=≤≥≠]/.test(stripped) || /\d+\s*[+\-×÷*/^]\s*\d+/.test(stripped);
+  const hasLatex       = /\\\(|\\\[|\$/.test(stripped);
+  const hasFuncNotation = /[fg]\s*\(/.test(stripped);
+  const hasSubstantialText = stripped.length >= 80;
+  if (hasEquation || hasLatex || hasFuncNotation || hasSubstantialText) return null;
+
+  // ── Step 4: Skip if Zero already solved this exact question number ──────────
+  // Scan last 10 user turns. If user sent an image alongside a reference to this
+  // same Q-number, Zero already has the real context — safe to continue.
+  // Per user decision (adjustment #5): history inference alone is NOT enough.
+  // Guard fires unless the *current* turn has an image — checked above.
+  // This step only checks for prior direct solves to avoid pestering on follow-ups.
+  const prior10 = messages.slice(-10);
+  for (let i = 0; i < prior10.length - 1; i++) {
+    const uTurn = prior10[i];
+    const aTurn = prior10[i + 1];
+    if (uTurn?.role !== 'user' || aTurn?.role !== 'assistant') continue;
+    const uText = typeof uTurn.content === 'string' ? uTurn.content : '';
+    // Prior user turn referenced this same Q-number AND the assistant gave a
+    // full math answer (heuristic: answer is long and contains step markers)
+    const priorRefSame = EN_Q_REF.exec(uText)?.[1] === q_number ||
+                         AR_Q_REF.exec(uText)?.[1] === q_number ||
+                         FR_Q_REF.exec(uText)?.[1] === q_number;
+    const aText = typeof aTurn.content === 'string' ? aTurn.content : '';
+    const priorSolved  = aText.length > 200 && /step|خطوة|📐/.test(aText);
+    if (priorRefSame && priorSolved) return null;
+  }
+
+  // ── Guard fires ─────────────────────────────────────────────────────────────
+  const GUARD_MSGS: Record<string, string> = {
+    en: `I want to make sure I solve the exact question ${q_number} from your worksheet, not a similar problem I've guessed. Could you re-attach the worksheet image (or paste the question text)? That way I won't risk explaining a completely different problem.`,
+    ar: `عشان أحل سؤال ${q_number} بالظبط من ورقتك ومش سؤال شبيه اخترعته، ممكن ترفع صورة الورقة تاني (أو تكتب نص السؤال)؟ كده مش هاكون في خطر إني أشرح مسألة مختلفة خالص.`,
+    franco: `3ashan a7el so2al ${q_number} bel zabt mn waraqtak msh so2al shabeeh ana fakarto, mumken terfa3 el sora tani (aw tekteb nas el so2al)? keda msh hakoun fi khatar enni ashra7 mas2ala mokhtelfa khales.`,
+  };
+
+  return {
+    answer: GUARD_MSGS[lang] ?? GUARD_MSGS['en'],
+    q_number: String(q_number),
+    lang,
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
@@ -456,6 +552,37 @@ serve(async (req) => {
     else if (langPref === 'en') lang = 'en';
     else if (imageData && !question.trim()) lang = 'ar';
     else lang = 'en';
+
+    // ── Worksheet Navigation Guard (early-return, 0 tokens) ───────────────────
+    // Must run after lang resolution (guard messages are language-aware) and
+    // before any OpenAI call. Guard turns are not persisted to question_records.
+    const worksheetGuard = worksheetGuardCheck(question, imageData, messages, lang);
+    if (worksheetGuard) {
+      console.log('[ai-tutor] worksheet-guard-fired', JSON.stringify({
+        uid:    user.id.slice(0, 8),
+        guard:  'worksheet',
+        reason: 'question_reference_without_image',
+        q_number: worksheetGuard.q_number,
+        lang:   worksheetGuard.lang,
+      }));
+      return new Response(JSON.stringify({
+        answer:          worksheetGuard.answer,
+        hint:            '',
+        topic:           'General',
+        subtopic:        'Worksheet Navigation',
+        difficulty:      '',
+        concepts:        [],
+        rules:           [],
+        weakness_signal: false,
+        attention_marker: '',
+        session_id:      resolvedSessionId,
+        record_id:       null,
+        hint_mode:       hintMode,
+        is_math:         false,
+        version:         AI_TUTOR_VERSION,
+        worksheet_guard: true,
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
 
     // Days until exam (used by Zero for personalised responses)
     let daysUntilExam: number | null = null;
