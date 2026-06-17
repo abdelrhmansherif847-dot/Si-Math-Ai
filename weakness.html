@@ -947,6 +947,12 @@ function getRecencyLabel(r){
 function masteryPct(report,mastery){
   const mr=mastery.find(m=>m.topic===report.topic&&m.subtopic===report.subtopic);
   if(mr&&mr.mastery_score!=null)return Math.round(mr.mastery_score);
+  // The AI tutor may record subtopics as top-level topics in mastery_records.
+  // Try matching report.subtopic against mastery_records.topic when the exact join misses.
+  if(report.subtopic){
+    const mr2=mastery.find(m=>m.topic===report.subtopic&&(m.subtopic==null||m.subtopic===report.subtopic));
+    if(mr2&&mr2.mastery_score!=null)return Math.round(mr2.mastery_score);
+  }
   if(report.mastery_score!=null)return Math.round(report.mastery_score);
   // Compute from _meta signals if available (set by buildFromSignals)
   if(report._meta&&report._meta.signals)return computeMastery(report._meta.signals);
@@ -1044,7 +1050,7 @@ async function loadData(forceRegen){
     sb.from('mastery_records').select('*').eq('user_id',uid),
     sb.from('weakness_signals').select('*').eq('user_id',uid)
   ]);
-  const NON_ACADEMIC = /^(coaching|study planning|study coaching|exam strategy|motivation|progress|confidence|mindset|planning|scheduling|out_of_scope)/i;
+  const NON_ACADEMIC = /^(coaching|study[\s_]planning|study[\s_]coaching|exam[\s_]strategy|motivation|progress|confidence|mindset|planning|scheduling|out_of_scope|general[\s_]conversation|conversation|التخطيط|تخطيط|اختبار\s*EST|EST\s*اختبار|استراتيجي|إدارة الوقت)/i;
   allReports=(rr.data||[]).filter(r=>!NON_ACADEMIC.test(r.topic||''));
   allMastery=(mr.data||[]).filter(m=>!NON_ACADEMIC.test(m.topic||''));
   allSignals=(sr.data||[]).filter(s=>!NON_ACADEMIC.test(s.topic||''));
@@ -1523,8 +1529,11 @@ function renderBars(mastery,reports){
   if(!mastery.length&&!reports.length){barsEl.innerHTML='<div style="padding:16px;color:var(--text-400)">No topic data yet.</div>';return;}
   const topicMap={};
   mastery.forEach(m=>{
-    const k=m.topic||m.subtopic;
-    if(!topicMap[k])topicMap[k]={topic:k,seen:0,correct:0,mastery:m.mastery_score};
+    // Normalize key so "Algebra" / "algebra" / "الجبر" duplicates collapse.
+    const rawLabel=m.topic||m.subtopic||'';
+    const k=rawLabel.trim().toLowerCase();
+    if(!k)return;
+    if(!topicMap[k])topicMap[k]={topic:rawLabel,seen:0,correct:0,mastery:m.mastery_score};
     topicMap[k].seen+=m.questions_seen||0;topicMap[k].correct+=m.questions_correct||0;
     if(m.mastery_score)topicMap[k].mastery=m.mastery_score;
   });
@@ -1583,9 +1592,7 @@ function renderSWGrid(reports,mastery){
         strongCard.appendChild(div);
       });
     } else {
-      const div=document.createElement('div');div.className='rank';
-      div.innerHTML='<span class="rt" style="color:var(--text-400)">Keep practicing to build strengths!</span>';
-      strongCard.appendChild(div);
+      strongCard.style.display='none';
     }
   }
 }

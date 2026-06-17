@@ -418,24 +418,26 @@ async function deviceGuard(sb, userId) {
       sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(500),
       // 4 exam_practice_sessions: score, created_at, exam_type, correct_answers
       sb.from('exam_practice_sessions').select('score,created_at,exam_type,correct_answers').eq('user_id', user.id).order('created_at', {ascending:false}).limit(200),
-      // 5 (slot kept for shape compatibility — weakReps is reassigned from results[1] below)
-      Promise.resolve({ data: [] }),
+      // 5 mastery_records: true mastery scores from MasteryEngine (delta-based)
+      sb.from('mastery_records').select('topic,subtopic,mastery_score,questions_seen,questions_correct').eq('user_id', user.id),
       // 6 question_records: count + distinct topics for "Questions Solved" snap card
       sb.from('question_records').select('topic', { count: 'exact' }).eq('user_id', user.id),
     ]);
 
-    var profile   = results[0].data  || {};
-    var weakReps  = results[1].data  || [];
-    var qRecs     = results[6].data  || [];
-    var qCount    = results[6].count || qRecs.length || 0;
-    var qTopics   = new Set(qRecs.map(function(q){ return q.topic; }).filter(Boolean)).size;
-    var achieves  = results[2].data  || [];
-    var chatSess  = results[3].data  || [];
-    var exams     = results[4].data  || [];
-    // Derive mastRecs shape from individual weakness_reports subtopic rows.
-    // Keeps subtopic-level granularity so masteredTopics counts and milestone links
-    // match the old mastery_records behaviour (one row per topic+subtopic).
-    var mastRecs = weakReps.map(function(r){
+    var profile      = results[0].data  || {};
+    var weakReps     = results[1].data  || [];
+    var masteryRecs  = results[5].data  || [];
+    var qRecs        = results[6].data  || [];
+    var qCount       = results[6].count || qRecs.length || 0;
+    var qTopics      = new Set(qRecs.map(function(q){ return q.topic; }).filter(Boolean)).size;
+    var achieves     = results[2].data  || [];
+    var chatSess     = results[3].data  || [];
+    var exams        = results[4].data  || [];
+    // mastRecs: prefer mastery_records (MasteryEngine delta-based) for mastery scores.
+    // Fall back to weakness_reports if mastery_records is empty.
+    var mastRecs = masteryRecs.length > 0 ? masteryRecs.map(function(r){
+      return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: null, questions_seen: r.questions_seen || 0 };
+    }) : weakReps.map(function(r){
       return { topic: r.topic, mastery_score: r.mastery_score, last_updated: r.last_updated, questions_seen: r.total_signals || 0 };
     });
 
@@ -459,7 +461,7 @@ async function deviceGuard(sb, userId) {
     var bestStreak    = profile.best_streak    ?? 0;
 
     // ── Derived counts ──
-    var masteredTopics = mastRecs.filter(function(m){ return (m.mastery_score||0) >= 80; }).length;
+    var masteredTopics = mastRecs.filter(function(m){ return (m.mastery_score||0) >= 70; }).length;
     var totalTopics    = mastRecs.length;
     var examCount      = exams.length;
 
@@ -630,16 +632,16 @@ async function deviceGuard(sb, userId) {
       });
     }
 
-    // 2. Nearest topic to mastery (highest mastery_score that's still < 80)
-    var almostMastered = mastRecs.filter(function(m){ return (m.mastery_score||0) < 80 && (m.mastery_score||0) > 0; })
+    // 2. Nearest topic to mastery (highest mastery_score that's still < 70)
+    var almostMastered = mastRecs.filter(function(m){ return (m.mastery_score||0) < 70 && (m.mastery_score||0) > 0; })
       .sort(function(a,b){ return (b.mastery_score||0)-(a.mastery_score||0); });
     if (almostMastered.length > 0){
       var am = almostMastered[0];
-      var amPct = Math.round((am.mastery_score/80)*100);
+      var amPct = Math.round((am.mastery_score/70)*100);
       milestones.push({
         icon: '🎯',
         title: 'Master ' + am.topic,
-        sub: 'Currently at ' + Math.round(am.mastery_score) + '% — need 80% to reach mastery',
+        sub: 'Currently at ' + Math.round(am.mastery_score) + '% — need 70% to reach mastery',
         pct: Math.min(99, amPct),
         barColor: tierColor(am.mastery_score),
         href: 'focus.html?topic=' + encodeURIComponent(am.topic) + '&mastery=' + Math.round(am.mastery_score),
@@ -748,7 +750,7 @@ async function deviceGuard(sb, userId) {
       events.push({ date: new Date(a.earned_at), icon: meta.icon, title: meta.title, sub: relDate(a.earned_at), type: meta.type });
     });
     mastRecs.forEach(function(m){
-      if ((m.mastery_score||0) >= 80 && m.last_updated){
+      if ((m.mastery_score||0) >= 70 && m.last_updated){
         events.push({ date: new Date(m.last_updated), icon:'🎓', title: esc(m.topic||'Topic') + ' Mastered', sub: relDate(m.last_updated) + ' · ' + Math.round(m.mastery_score) + '% mastery', type:'mastery' });
       }
     });
