@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v67
+// ai-tutor Edge Function v68
 // CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
 // existing row when the same key arrives twice; 23505 on INSERT triggers
 // re-SELECT and returns the winner row instead of creating a duplicate.
@@ -12,7 +12,35 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v67';
+const AI_TUTOR_VERSION = 'v68';
+
+// ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
+// Franco = Egyptian Arabic written in Latin letters + digits (3=ع, 7=ح, 2=ء, 5=خ).
+// We detect by (a) Latin words containing 2/3/5/7/8 (the distinctive digit-letters),
+// or (b) a hit on common Franco function words. Arabic-script messages are never
+// classified as Franco.
+function detectFranco(text: string): boolean {
+  const t = (text || '').trim();
+  if (!t) return false;
+  if (/[؀-ۿ]/.test(t)) return false;
+  if (/[a-z]*[23578][a-z]+|[a-z]+[23578][a-z]*/i.test(t)) return true;
+  const words = t.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const FRANCO_WORDS = new Set([
+    'msh','mesh','ezayak','ezzayak','ezay','izay','keda','kda','delwa2ty','dlw2ty',
+    'fahem','fahma','m3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','sa7','sah',
+    'b2a','ba2a','yala','yalla','3awz','3awez','3ayz','3andy','3andi','3ayza',
+    '5alas','5las','tb','tab','7aga','7d','7add','sho2l','shar7','msh3arf'
+  ]);
+  return words.some(w => FRANCO_WORDS.has(w));
+}
+
+// Explicit "switch to Franco" request — sticky until student switches scripts.
+function detectExplicitFrancoRequest(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  if (!t) return false;
+  return /(speak|talk|reply|respond|answer|write|use)\s+(in\s+)?franco|in\s+franco|franco\s+please|switch\s+to\s+franco/i.test(t)
+      || /(اكتب|كلمني|اتكلم|رد|جاوب)\s*فرانكو/i.test(t);
+}
 
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
 function fallbackHint(topic: string, subtopic: string, lang: string): string {
@@ -306,14 +334,28 @@ serve(async (req) => {
     const examDateRaw   = profile?.exam_date   || null;
     const targetScore   = profile?.target_score || null;
     const studyGoals    = profile?.biggest_weakness || null;
-    // Use language_preference from profile; fall back to question script detection.
-    // For image-only questions (empty text), default to 'ar' since this platform targets Arabic-speaking students.
+    // Per-message language mirroring with Franco (Arabizi) support.
+    // Order: explicit per-message script wins; sticky franco from prior explicit
+    // request applies when current message is ambiguous; profile preference and
+    // image-only fallback apply only when nothing else matches.
     const langPref = profile?.language_preference || null;
-    const lang: string = langPref === 'en' ? 'en'
-      : langPref === 'ar' ? 'ar'
-      : /[؀-ۿ]/.test(question) ? 'ar'
-      : (imageData && !question.trim()) ? 'ar'
-      : 'en';
+    const currentIsArabic       = /[؀-ۿ]/.test(question);
+    const currentIsFranco       = !currentIsArabic && detectFranco(question);
+    const currentRequestsFranco = detectExplicitFrancoRequest(question);
+    // Stickiness: if any of the last 10 user turns explicitly asked for Franco,
+    // keep replying in Franco for the rest of this conversation unless the
+    // student switches scripts (Arabic on this turn breaks stickiness).
+    const priorFrancoExplicit = messages.slice(-10).some((m) =>
+      m && m.role === 'user' && typeof m.content === 'string' && detectExplicitFrancoRequest(m.content)
+    );
+    let lang: string;
+    if (currentIsArabic) lang = 'ar';
+    else if (currentIsFranco || currentRequestsFranco) lang = 'franco';
+    else if (priorFrancoExplicit && question.trim()) lang = 'franco';
+    else if (langPref === 'ar') lang = 'ar';
+    else if (langPref === 'en') lang = 'en';
+    else if (imageData && !question.trim()) lang = 'ar';
+    else lang = 'en';
 
     // Days until exam (used by Zero for personalised responses)
     let daysUntilExam: number | null = null;
@@ -495,7 +537,19 @@ ${personality}
 ---
 
 ${STUDENT_PROFILE_BLOCK}
-Language: ${lang === 'ar' ? 'Arabic — respond entirely in Arabic, warm Egyptian dialect welcome for greetings/chitchat' : 'English'}
+Language: ${
+  lang === 'ar'
+    ? 'Arabic — respond entirely in Arabic, warm Egyptian dialect welcome for greetings/chitchat'
+    : lang === 'franco'
+    ? `Franco (Egyptian Arabizi — Arabic written in Latin letters with digits as letter substitutes: 3=ع, 7=ح, 2=ء, 5=خ, 8=غ).
+- Mirror the student's Franco style: casual Egyptian dialect, short sentences, natural rhythm.
+- Examples of Franco coaching: "tmam ya ${studentName}, fakker m3aya el khatwa el gaya", "ezay el so2al da? te2dar te3zel x?", "7elw awy! da bel zabt el tafkir el sa7."
+- Keep math expressions, equations, formulas, variables, and SAT/EST terminology in standard notation/English: $x^2 + 3x - 4 = 0$, "quadratic formula", "slope", "Module 1". DO NOT transliterate math.
+- Numbers in calculations stay as digits (not Franco letter-numbers). Franco's 3/7/2/5 are letters only inside Arabic words.
+- Coaching, encouragement, explanations of WHY, and emotional tone → all in Franco.
+- Educational accuracy and structure (cards, steps, LaTeX, common-mistake notes) remain identical to other languages.`
+    : 'English'
+}
 
 ${EXAM_FACTS}
 ${knowledge ? `## 📚 Relevant Knowledge Base (Priority 4)\n${knowledge}\n` : ''}
@@ -682,7 +736,11 @@ Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON
     const HINT_SYSTEM_PROMPT = `You are Zero — a Socratic math tutor. You are in HINT MODE.
 
 ${STUDENT_PROFILE_BLOCK}
-Language: ${lang === 'ar' ? 'Arabic — warm Egyptian dialect welcome' : 'English'}
+Language: ${
+  lang === 'ar' ? 'Arabic — warm Egyptian dialect welcome'
+  : lang === 'franco' ? 'Franco (Egyptian Arabizi: Latin letters + 3/7/2/5 as Arabic-letter substitutes). Mirror the student\'s Franco style. Keep math expressions ($x^2$, formulas, variables) and SAT/EST terms in standard notation/English — never transliterate math.'
+  : 'English'
+}
 
 ## Personality (even in hint mode)
 - Be warm and encouraging, use the student's name: ${studentName}
