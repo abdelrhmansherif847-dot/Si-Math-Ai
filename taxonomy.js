@@ -21,18 +21,35 @@
    * Add new aliases here; do not add them to individual callers.
    */
   var TOPIC_ALIASES = {
-    'geometry':     'Geometry',
-    'geometery':    'Geometry',
-    'geomtry':      'Geometry',
-    'algebra':      'Algebra',
-    'algebera':     'Algebra',
-    'algepra':      'Algebra',
-    'trigonometry': 'Trigonometry',
-    'trig':         'Trigonometry',
-    'statistics':   'Statistics',
-    'probability':  'Probability',
-    'calculus':     'Calculus',
-    'number theory':'Number Theory',
+    'geometry':          'Geometry',
+    'geometery':         'Geometry',
+    'geomtry':           'Geometry',
+    'الهندسة':           'Geometry',
+    'algebra':           'Algebra',
+    'algebera':          'Algebra',
+    'algepra':           'Algebra',
+    'الجبر':             'Algebra',
+    'trigonometry':      'Trigonometry',
+    'trig':              'Trigonometry',
+    'حساب المثلثات':     'Trigonometry',
+    'statistics':        'Statistics',
+    'الإحصاء':           'Statistics',
+    'probability':       'Probability',
+    'الاحتمالات':        'Probability',
+    'calculus':          'Calculus',
+    'number theory':     'Number Theory',
+    'نظرية الأعداد':     'Number Theory',
+    'word problems':     'Word Problems',
+    'مسائل كلامية':      'Word Problems',
+    'sat math':          'SAT Math',
+    'sat mathematics':   'SAT Math',
+    'est math':          'SAT Math',
+    'linear equations':  'Linear Equations',
+    'quadratic equations':'Quadratic Equations',
+    'order of operations':'Order of Operations',
+    'complex numbers':   'Complex Numbers',
+    'functions':         'Functions',
+    'inequalities':      'Inequalities',
   };
 
   /* ── Subtopic alias map ──
@@ -58,12 +75,32 @@
    * null, empty, or shorter than 2 characters.
    */
   var SYSTEM_TOPICS = new Set([
+    // Meta / coaching
     'confidence', 'session start', 'study coaching', 'problem clarification',
-    'off-topic', 'specialization', 'zero', 'general', 'greeting', 'feedback',
-    'test taking', 'motivation', 'other', 'none', 'unknown', 'miscellaneous',
-    'meta', 'system', 'chat', 'intro', 'introduction', 'clarification',
-    'encouragement', 'off topic', 'test-taking', 'hint', 'hints',
-    'explanation', 'review',
+    'off-topic', 'off topic', 'specialization', 'zero', 'general', 'greeting',
+    'feedback', 'motivation', 'encouragement', 'clarification', 'meta', 'system',
+    'chat', 'intro', 'introduction', 'explanation', 'review',
+    'other', 'none', 'unknown', 'miscellaneous', 'hint', 'hints',
+    // Generic math labels (too broad to be useful as topics)
+    'math', 'mathematics', 'maths', 'general math', 'basic math',
+    // Arabic generic labels
+    'الرياضيات', 'رياضيات', 'العلوم',
+    // Test-taking / strategy
+    'test taking', 'test-taking', 'test strategy', 'test strategies',
+    'test-taking strategies', 'test taking strategies',
+    'exam strategy', 'exam strategies', 'exam preparation', 'exam prep',
+    'exam structure', 'exam tips', 'exam technique', 'exam techniques',
+    'sat', 'gpa', 'est', 'sat prep', 'est prep',
+    // Study skills
+    'study methods', 'study method', 'study techniques', 'study technique',
+    'study skills', 'study skill', 'study tips', 'study tip', 'study habits',
+    'study planning', 'study plan',
+    'bubblesheet technique', 'bubble sheet', 'bubblesheets', 'answer sheet',
+    // Time / planning
+    'time management', 'planning', 'scheduling', 'organization',
+    // Arabic equivalents
+    'التخطيط', 'تخطيط', 'إدارة الوقت', 'استراتيجية', 'استراتيجي',
+    'التخطيط للامتحان', 'اختبار', 'الامتحان',
   ]);
 
   function isAcademicTopic(topic) {

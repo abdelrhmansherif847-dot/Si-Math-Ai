@@ -560,7 +560,7 @@ button{font-family:inherit;cursor:pointer}
   <section class="card">
     <div class="card-head">
       <div class="card-ico">🏆</div>
-      <div><div class="card-title">Your Top Weaknesses</div><div class="card-sub">Ranked by priority — tackle #1 first</div></div>
+      <div><div class="card-title">Your Top Weaknesses</div><div class="card-sub">Ranked by priority — % shown is <b>Mastery Score</b> (higher = stronger)</div></div>
     </div>
     <div class="rank-table">
       <span class="skel skel-xl" style="display:block;margin-bottom:8px"></span>
@@ -643,7 +643,7 @@ button{font-family:inherit;cursor:pointer}
   <section class="card">
     <div class="card-head">
       <div class="card-ico">📊</div>
-      <div><div class="card-title">Performance by Topic</div><div class="card-sub">Where you're strong and where to focus</div></div>
+      <div><div class="card-title">Performance by Topic</div><div class="card-sub">Accuracy % when quiz data exists · Mastery Score % otherwise</div></div>
     </div>
     <div class="bars">
       <div class="bar-row"><div class="bar-head"><span class="skel skel-row" style="width:80px;display:inline-block"></span><span class="skel" style="width:40px;height:14px;display:inline-block"></span></div><div class="bar-track"><div class="bar-fill" style="width:0"></div></div></div>
@@ -1050,10 +1050,14 @@ async function loadData(forceRegen){
     sb.from('mastery_records').select('*').eq('user_id',uid),
     sb.from('weakness_signals').select('*').eq('user_id',uid)
   ]);
-  const NON_ACADEMIC = /^(coaching|study[\s_]planning|study[\s_]coaching|exam[\s_]strategy|motivation|progress|confidence|mindset|planning|scheduling|out_of_scope|general[\s_]conversation|conversation|التخطيط|تخطيط|اختبار\s*EST|EST\s*اختبار|استراتيجي|إدارة الوقت)/i;
-  allReports=(rr.data||[]).filter(r=>!NON_ACADEMIC.test(r.topic||''));
-  allMastery=(mr.data||[]).filter(m=>!NON_ACADEMIC.test(m.topic||''));
-  allSignals=(sr.data||[]).filter(s=>!NON_ACADEMIC.test(s.topic||''));
+  // Use Taxonomy.isAcademicTopic when available (taxonomy.js covers all known non-academic
+  // strings: coaching, study skills, generic "Math", Arabic planning terms, etc.).
+  // The regex below is a safety net for when taxonomy.js hasn't loaded yet.
+  const NON_ACADEMIC_RE = /^(coaching|study[\s_]planning|study[\s_]coaching|exam[\s_]strategy|motivation|progress|confidence|mindset|planning|scheduling|out_of_scope|general[\s_]conversation|conversation|التخطيط|تخطيط|اختبار|استراتيجي|إدارة الوقت)/i;
+  function isAcademicRow(t){ const s=t||''; if(!s)return false; if(window.Taxonomy)return window.Taxonomy.isAcademicTopic(s); return !NON_ACADEMIC_RE.test(s); }
+  allReports=(rr.data||[]).filter(r=>isAcademicRow(r.topic));
+  allMastery=(mr.data||[]).filter(m=>isAcademicRow(m.topic));
+  allSignals=(sr.data||[]).filter(s=>isAcademicRow(s.topic));
 
   // If reports are missing but signals exist, regenerate now then reload
   if(allReports.length===0&&allSignals.length>0&&!forceRegen&&window.regenerateWeaknessReports){
@@ -1529,13 +1533,16 @@ function renderBars(mastery,reports){
   if(!mastery.length&&!reports.length){barsEl.innerHTML='<div style="padding:16px;color:var(--text-400)">No topic data yet.</div>';return;}
   const topicMap={};
   mastery.forEach(m=>{
-    // Normalize key so "Algebra" / "algebra" / "الجبر" duplicates collapse.
     const rawLabel=m.topic||m.subtopic||'';
-    const k=rawLabel.trim().toLowerCase();
-    if(!k)return;
-    if(!topicMap[k])topicMap[k]={topic:rawLabel,seen:0,correct:0,mastery:m.mastery_score};
-    topicMap[k].seen+=m.questions_seen||0;topicMap[k].correct+=m.questions_correct||0;
-    if(m.mastery_score)topicMap[k].mastery=m.mastery_score;
+    if(!rawLabel.trim())return;
+    // Canonical form: run through Taxonomy so "algebra"/"Algebra"/"الجبر" all map to "Algebra".
+    const canonical=(window.Taxonomy?window.Taxonomy.normalizeTopic(rawLabel):null)||rawLabel;
+    if(!window.Taxonomy||window.Taxonomy.isAcademicTopic(canonical)){
+      const k=canonical.trim().toLowerCase();
+      if(!topicMap[k])topicMap[k]={topic:canonical,seen:0,correct:0,mastery:m.mastery_score};
+      topicMap[k].seen+=m.questions_seen||0;topicMap[k].correct+=m.questions_correct||0;
+      if(m.mastery_score)topicMap[k].mastery=m.mastery_score;
+    }
   });
   const topics=Object.values(topicMap).sort((a,b)=>b.seen-a.seen).slice(0,6);
   if(!topics.length){
@@ -1549,10 +1556,11 @@ function renderBars(mastery,reports){
                       : (t.mastery!=null ? Math.round(t.mastery) : 0);
     const cls=displayVal>=80?'g':displayVal>=60?'y':'r';
     const accLabel = hasAccuracy ? displayVal+'%' : (t.mastery!=null ? Math.round(t.mastery)+'% mastery' : '—');
+    const metricLabel=hasAccuracy?'Accuracy':'Mastery Score';
     return`<div class="bar-row">
-      <div class="bar-head"><span class="bar-name">${t.topic}</span><span class="bar-pct ${cls}">${displayVal}%</span></div>
+      <div class="bar-head"><span class="bar-name">${t.topic}</span><span class="bar-pct ${cls}" title="${metricLabel}">${displayVal}%<span style="font-size:9px;font-weight:500;opacity:.65;margin-left:3px;text-transform:uppercase;letter-spacing:.5px">${hasAccuracy?'acc':'mast'}</span></span></div>
       <div class="bar-track"><div class="bar-fill ${cls}" data-w="${displayVal}" style="width:0"></div></div>
-      <div class="bar-stats"><span>Attempted: <b>${t.seen||'—'}</b></span><span>Correct: <b>${t.correct||'—'}</b></span><span>${hasAccuracy?'Accuracy':'Mastery'}: <b>${accLabel}</b></span></div>
+      <div class="bar-stats"><span>Attempted: <b>${t.seen||'—'}</b></span><span>Correct: <b>${t.correct||'—'}</b></span><span>${metricLabel}: <b>${accLabel}</b></span></div>
     </div>`;
   }).join('');
   animateBars();
@@ -1653,8 +1661,9 @@ function renderTrack(mastery,reports){
   const upSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></svg>';
   const dnSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17 13.5 8.5 8.5 13.5 2 7"/><path d="M16 17h6v-6"/></svg>';
   track.innerHTML=weak.map((r,ri)=>{
-    const mr=mastery.find(x=>x.topic===r.topic&&x.subtopic===r.subtopic);
-    const now=r.mastery_score!=null?Math.round(r.mastery_score):(mr?.mastery_score!=null?Math.round(mr.mastery_score):null);
+    // Use masteryPct() so the track reads from the same source as all other widgets
+    // (mastery_records delta-score first, weakness_reports signal-score as fallback).
+    const now=masteryPct(r,mastery)??(r.mastery_score!=null?Math.round(r.mastery_score):null);
     const nowPct=now??50;
     // Compute mastery from older signals only (>14 days) to get a "start" value
     let startPct=nowPct;
