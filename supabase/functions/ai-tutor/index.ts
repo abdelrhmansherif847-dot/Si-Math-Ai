@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v65
+// ai-tutor Edge Function v66
 // CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
 // existing row when the same key arrives twice; 23505 on INSERT triggers
 // re-SELECT and returns the winner row instead of creating a duplicate.
@@ -12,7 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v65';
+const AI_TUTOR_VERSION = 'v66';
 
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
 function fallbackHint(topic: string, subtopic: string, lang: string): string {
@@ -190,7 +190,7 @@ async function get_zero_personality(sb: ReturnType<typeof createClient>): Promis
 
 // ── Knowledge search ──────────────────────────────────────────────────────────
 async function search_zero_knowledge(sb: ReturnType<typeof createClient>, query: string): Promise<string> {
-  const { data } = await sb.rpc('search_zero_knowledge', { query, max_results: 5 });
+  const { data } = await sb.rpc('search_zero_knowledge', { search_query: query, max_results: 5 });
   if (!data || data.length === 0) return '';
   return data.map((r: {title:string;body:string;category_name:string;subcategory_name:string}) =>
     `[${r.category_name} > ${r.subcategory_name}] ${r.title}: ${r.body}`
