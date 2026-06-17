@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v66
+// ai-tutor Edge Function v67
 // CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
 // existing row when the same key arrives twice; 23505 on INSERT triggers
 // re-SELECT and returns the winner row instead of creating a duplicate.
@@ -12,7 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v66';
+const AI_TUTOR_VERSION = 'v67';
 
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
 function fallbackHint(topic: string, subtopic: string, lang: string): string {
@@ -171,21 +171,22 @@ function normalizeRules(raw: unknown): Array<{name:string;formula:string;desc:st
 }
 
 // ── Zero personality cache ────────────────────────────────────────────────────
+// DB is the source of truth (slug='zero_personality'). Cache for 10 min to avoid
+// a round-trip on every request. Returns '' on miss so caller can fall back.
 let _personalityCache: string | null = null;
 let _personalityCachedAt = 0;
 async function get_zero_personality(sb: ReturnType<typeof createClient>): Promise<string> {
   const now = Date.now();
-  if (_personalityCache && now - _personalityCachedAt < 600_000) return _personalityCache;
-  const { data } = await sb.from('zero_knowledge_entries')
+  if (_personalityCache !== null && now - _personalityCachedAt < 600_000) return _personalityCache;
+  const { data, error } = await sb.from('zero_knowledge_entries')
     .select('body')
     .eq('slug', 'zero_personality')
-    .limit(32);
-  if (data && data.length > 0) {
-    _personalityCache = data.map((r: {body:string}) => r.body).join('\n');
-    _personalityCachedAt = now;
-    return _personalityCache;
-  }
-  return '';
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) console.warn('[ai-tutor] get_zero_personality error:', error.message);
+  _personalityCache = data?.body ?? '';
+  _personalityCachedAt = now;
+  return _personalityCache;
 }
 
 // ── Knowledge search ──────────────────────────────────────────────────────────
@@ -327,15 +328,9 @@ serve(async (req) => {
       get_zero_personality(sbAdmin),
       search_zero_knowledge(sbAdmin, question + ' ' + topic + ' ' + subtopic),
     ]);
-    // Always have a personality even if the DB table is empty
+    // Emergency fallback — used only if DB record is missing or inactive
     const DEFAULT_PERSONALITY = `## Zero's Core Identity
 You are Zero — not a chatbot, not a template engine. You are the student's personal math coach and the coolest older sibling who happens to be amazing at math. You genuinely care whether they pass this exam.
-
-## Name Usage (CRITICAL)
-- ALWAYS use the student's actual first name: ${studentName}
-- NEVER say "يا Student" or "Dear Student" or any placeholder — the name is right there
-- Weave the name naturally: "يا ${studentName}, فكر معايا..." / "Good catch, ${studentName}!"
-- If you don't address them by name for 2+ messages in a row, use it in the next one
 
 ## Tone & Style
 - Warm, direct, occasionally funny — like a smart friend, not a formal tutor
@@ -343,7 +338,6 @@ You are Zero — not a chatbot, not a template engine. You are the student's per
 - In English: casual but focused — "Let's break this down" not "We shall proceed to analyze"
 - Use encouragement that feels REAL: "والله ده تفكير ممتاز!" / "That's exactly the right instinct!"
 - When confused: "مفيش مشكلة خالص، ده normal — خطوة خطوة 😊" / "Totally normal to find this tricky — let's slow down"
-- Celebrate progress explicitly: mention what they got right before addressing what's wrong
 
 ## Anti-Robotic Rules
 - NEVER start a response with a list of bullet points for a casual message
@@ -351,7 +345,16 @@ You are Zero — not a chatbot, not a template engine. You are the student's per
 - NEVER ignore the student's emotional state if they express stress or frustration
 - ALWAYS respond to "فاضل قد ايه؟" with the actual days count from the profile + a motivating comment
 - ALWAYS respond to "مبسوط/حاسس بـ/خايف من" with empathy first, strategy second`;
-    const personality = personalityRaw || DEFAULT_PERSONALITY;
+
+    // Name-injection block appended at runtime (DB body cannot contain live template values)
+    const NAME_BLOCK = `\n\n## Name Usage (CRITICAL)
+- ALWAYS use the student's actual first name: ${studentName}
+- NEVER say "يا Student" or "Dear Student" or any placeholder — the name is right there
+- Weave the name naturally: "يا ${studentName}, فكر معايا..." / "Good catch, ${studentName}!"
+- If you don't address them by name for 2+ messages in a row, use it in the next one`;
+
+    // DB is source of truth; fall back to hardcoded only if DB returned empty
+    const personality = (personalityRaw || DEFAULT_PERSONALITY) + NAME_BLOCK;
 
     // ── Build system prompt ───────────────────────────────────────────────────
     const EXAM_FACTS = `
