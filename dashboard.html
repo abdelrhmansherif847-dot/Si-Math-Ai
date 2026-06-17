@@ -1574,6 +1574,9 @@ async function loadDashboard() {
     sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
     sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
+    // Activity source for weekly heatmap — matches what assets/streak.js uses so the two
+    // numbers can never disagree. question_records (any topic) ∪ exam_practice_sessions.
+    sb.from('question_records').select('created_at').eq('user_id', user.id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()),
   ]);
 
   var prof        = (results[0].data) || {};
@@ -1582,6 +1585,7 @@ async function loadDashboard() {
   var achievements= (results[3].data) || [];
   var chatSess    = (results[4].data) || [];
   var monthQs     = (results[5].data) || [];
+  var weeklyQrs   = (results[6].data) || [];
   // Derive per-topic mastery from weakness_reports (single source of truth)
   var masteryRecs = weakReports.map(function(r){ return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: r.last_signal_at }; });
 
@@ -1641,9 +1645,10 @@ async function loadDashboard() {
   var currentStreak = prof.current_streak ?? 0;
   var bestStreak    = prof.best_streak    ?? 0;
 
-  /* actSet still used for weekly activity heatmap */
+  /* Weekly heatmap activity source — MUST match assets/streak.js so the two
+   * numbers stay consistent. Use question_records (any topic) ∪ exam sessions. */
   var actSet = new Set();
-  chatSess.concat(exams).forEach(function(s) {
+  weeklyQrs.concat(exams).forEach(function(s) {
     if (s.created_at) actSet.add(new Date(s.created_at).toDateString());
   });
   var todayStr = new Date().toDateString();

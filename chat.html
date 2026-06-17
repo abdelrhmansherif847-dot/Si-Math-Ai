@@ -1005,11 +1005,36 @@ button{font-family:inherit;cursor:pointer}
         const empty = document.getElementById('empty');
         if (empty) empty.insertBefore(chip, empty.firstChild);
       }
-      // Bug #3 fix: hydrate drill from localStorage if no URL-driven drill is active.
-      // URL drill always wins (explicit user intent); otherwise restore in-progress drill
-      // so a page refresh mid-drill doesn't lose state.
+      // Drill hydration. Two flows:
+      //  (a) URL has ?drill=true → drillMode already true with fresh 0/5 state.
+      //      If localStorage holds a saved drill for the SAME topic list, restore
+      //      its progress so a page refresh mid-drill doesn't reset 2/5 to 0/5.
+      //  (b) No URL drill → try to restore an in-progress drill from localStorage.
       if (drillMode) {
-        // URL-driven start — persist initial state immediately so reload restores it.
+        try {
+          const raw = localStorage.getItem(DRILL_STATE_KEY + currentUser.id);
+          if (raw) {
+            const s = JSON.parse(raw);
+            const fresh = Date.now() - (s.ts || 0) <= DRILL_STATE_TTL_MS;
+            const sameTopics = fresh && Array.isArray(s.drillTopics)
+              && s.drillTopics.length === drillTopics.length
+              && s.drillTopics.every((t, i) =>
+                   t && drillTopics[i]
+                   && (t.topic || '').toLowerCase()    === (drillTopics[i].topic    || '').toLowerCase()
+                   && (t.subtopic || '').toLowerCase() === (drillTopics[i].subtopic || '').toLowerCase());
+            if (sameTopics) {
+              drillTopicIndex = s.drillTopicIndex || 0;
+              drillQCount     = s.drillQCount     || 0;
+              drillTotalQ     = s.drillTotalQ     || 0;
+              const cur = drillTopics[drillTopicIndex];
+              if (cur) {
+                seededTopic    = cur.topic;
+                seededSubtopic = cur.subtopic || null;
+              }
+            }
+          }
+        } catch (e) { /* corrupt storage — fall through with fresh state */ }
+        // Persist (either resumed progress or a fresh start) so future reloads restore it.
         drillSaveState();
       } else if (drillLoadState()) {
         // Restored from previous session.
@@ -2042,44 +2067,52 @@ button{font-family:inherit;cursor:pointer}
         addAI(sig, response);
         sessionMessages.push({role:'user', content: apiText});
         sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
-        // Pipeline unification: when the AI flags a weakness on a topic the local
-        // keyword map missed (sig is null), record it in weakness_signals so the
-        // Weakness Analyzer sees AI-detected weaknesses too.
-        // These sendSignal() calls run while _buffer is still active so they join
-        // the same per-message batch and receive the same source_question_id.
-        if (response && response.weakness_signal === true && !sig && response.topic && response.subtopic) {
-          SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: 2});
-        }
-        // Image / short-text math questions: local keyword classifier can't see
-        // the image content, so sig is null. Emit a topic signal anyway when the
-        // backend confirms it's math (is_math=true) and student's confidence is low.
-        else if (response && response.is_math === true && !sig && response.topic && response.subtopic) {
-          var sentConf = SignalEngine.getConfidence();
-          if (sentConf != null && sentConf <= 3) {
-            SignalEngine.sendSignal({type:'topic', topic: response.topic, sub: response.subtopic, confidence: sentConf});
+        const _respTopic = (response && response.topic)    || null;
+        const _respSub   = (response && response.subtopic) || null;
+        // When a drill is active and the answered question is off-topic for the drill,
+        // the drill banner says one topic while the analyzer/mastery records another.
+        // Suppress all analyzer/mastery emissions for off-topic answers so the entire
+        // drill session stays attributed to exactly one topic.
+        const _drillActive   = (typeof drillMode !== 'undefined') && drillMode && !drillComplete;
+        const _drillOffTopic = _drillActive && !drillQuestionMatchesActiveTopic(_respTopic, _respSub);
+
+        if (_drillOffTopic) {
+          // Discard buffered per-message signals; do not emit post-response signals.
+          SignalEngine.discardBuffer();
+        } else {
+          // Pipeline unification: when the AI flags a weakness on a topic the local
+          // keyword map missed (sig is null), record it in weakness_signals so the
+          // Weakness Analyzer sees AI-detected weaknesses too.
+          if (response && response.weakness_signal === true && !sig && _respTopic && _respSub) {
+            SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
           }
+          // Image / short-text math questions: local keyword classifier can't see
+          // the image content, so sig is null. Emit a topic signal anyway when the
+          // backend confirms it's math (is_math=true) and student's confidence is low.
+          else if (response && response.is_math === true && !sig && _respTopic && _respSub) {
+            var sentConf = SignalEngine.getConfidence();
+            if (sentConf != null && sentConf <= 3) {
+              SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: sentConf});
+            }
+          }
+          window.__lastQRecId = (response && response.record_id) || null;
+          SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         }
-        // Flush buffer — record_id is now known; every signal for this message is
-        // batch-inserted with source_question_id and source_session_id set exactly.
-        window.__lastQRecId = (response && response.record_id) || null;
-        SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         awardChatXP();
         if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
-        drillOnQuestionAnswered(
-          (response && response.topic)    || (sig && sig.topic) || null,
-          (response && response.subtopic) || (sig && sig.sub)   || null
-        );
-        // Update mastery_records for this interaction
-        // Use topic/subtopic from AI response first (most accurate), fall back to sig
-        const mTopic = (response && response.topic) || (sig && sig.topic) || null;
-        const mSub   = (response && response.subtopic) || (sig && sig.sub) || null;
-        if (window.MasteryEngine && currentUser && mTopic && mSub != null) {
-          window.MasteryEngine.onQuestion(sb, currentUser.id, mTopic, mSub, {
-            confidence:     sig ? (sig.confidence || null) : null,
-            weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
-            isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
-            isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
-          });
+        drillOnQuestionAnswered(_respTopic, _respSub);
+        // Update mastery_records for this interaction — gated by drill on-topic check.
+        if (!_drillOffTopic) {
+          const mTopic = _respTopic || (sig && sig.topic) || null;
+          const mSub   = _respSub   || (sig && sig.sub)   || null;
+          if (window.MasteryEngine && currentUser && mTopic && mSub != null) {
+            window.MasteryEngine.onQuestion(sb, currentUser.id, mTopic, mSub, {
+              confidence:     sig ? (sig.confidence || null) : null,
+              weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
+              isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
+              isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
+            });
+          }
         }
       }).catch(err => {
         SignalEngine.discardBuffer();

@@ -8,23 +8,23 @@ window.updateStreak = async function(sb, userId) {
     const pad2 = n => String(n).padStart(2, '0');
     const todayLocalISO = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
 
-    // Pull 120 days of activity. Streak is recomputed from scratch, so we don't
-    // depend on whether prior days had a successful update.
+    // Pull 120 days of activity. Streak is recomputed from scratch each call.
+    // Source = question_records ∪ exam_practice_sessions — same union the
+    // dashboard's Weekly Progress uses, so the two displays never disagree.
     const since = new Date(today); since.setDate(since.getDate() - 120);
-    const { data: qrs, error: qErr } = await sb
-      .from('question_records')
-      .select('created_at')
-      .eq('user_id', userId)
-      .gte('created_at', since.toISOString());
-    if (qErr) console.warn('[streak] question_records fetch error:', qErr.message);
+    const [qrsRes, examsRes] = await Promise.all([
+      sb.from('question_records').select('created_at').eq('user_id', userId).gte('created_at', since.toISOString()),
+      sb.from('exam_practice_sessions').select('created_at').eq('user_id', userId).gte('created_at', since.toISOString()),
+    ]);
+    if (qrsRes.error)   console.warn('[streak] question_records fetch error:', qrsRes.error.message);
+    if (examsRes.error) console.warn('[streak] exam_practice_sessions fetch error:', examsRes.error.message);
 
     // Build the set of local-date strings the user was active. Always include
     // today — caller invokes updateStreak right after a successful interaction,
-    // and the current question_record may not be visible yet to the query.
+    // and the current row may not be visible yet to the query.
     const dateSet = new Set([todayStr]);
-    (qrs || []).forEach(r => {
-      if (r && r.created_at) dateSet.add(new Date(r.created_at).toDateString());
-    });
+    (qrsRes.data   || []).forEach(r => { if (r && r.created_at) dateSet.add(new Date(r.created_at).toDateString()); });
+    (examsRes.data || []).forEach(r => { if (r && r.created_at) dateSet.add(new Date(r.created_at).toDateString()); });
 
     // Walk backward from today: consecutive days = current streak.
     let current = 0;
