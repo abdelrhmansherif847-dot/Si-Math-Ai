@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v69
+// ai-tutor Edge Function v70
 // Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
 // shadow mode on every math question and records verification_tier +
 // verification_meta on question_records. The verification pipeline itself
@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v69';
+const AI_TUTOR_VERSION = 'v70';
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 
 // ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
@@ -525,11 +525,11 @@ If a student asks about exam timing, question count, format, or calculator polic
 - Calculator: allowed
 
 ### ACT Math
-- Time: 60 minutes
-- Questions: 60 multiple-choice questions
+- Time: 50 minutes
+- Questions: 45 multiple-choice questions
 - Format: digital on computer
 - Calculator: allowed
-- Pace: exactly 1 minute per question — tightest of all three exams
+- Pace: approximately 67 seconds per question (~1 min 7 sec)
 
 ⚠️ CRITICAL: If you state any exam timing, question count, or format that contradicts the above, you are wrong.
 `;
@@ -561,7 +561,7 @@ Before you start, mentally divide the exam into blocks of ~10 questions.
 | EST Math 1 | 50 Q / 75 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 |
 | EST Math 2 | 40 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 |
 | SAT Math | 22 Q / module | 1–10 · 11–20 · 21–22 (per module) |
-| ACT Math | 60 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 · 51–60 |
+| ACT Math | 45 Q / 50 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–45 |
 
 ---
 
