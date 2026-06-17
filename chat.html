@@ -2103,9 +2103,14 @@ button{font-family:inherit;cursor:pointer}
         drillOnQuestionAnswered(_respTopic, _respSub);
         // Update mastery_records for this interaction — gated by drill on-topic check.
         if (!_drillOffTopic) {
-          const mTopic = _respTopic || (sig && sig.topic) || null;
-          const mSub   = _respSub   || (sig && sig.sub)   || null;
-          if (window.MasteryEngine && currentUser && mTopic && mSub != null) {
+          const rawMTopic = _respTopic || (sig && sig.topic) || null;
+          const rawMSub   = _respSub   || (sig && sig.sub)   || null;
+          // Normalize via Taxonomy so mastery_records never stores lowercase/Arabic/generic variants.
+          const mTopic = window.Taxonomy && rawMTopic ? window.Taxonomy.normalizeTopic(rawMTopic) : rawMTopic;
+          const mSub   = window.Taxonomy && rawMSub   ? window.Taxonomy.normalizeSubtopic(rawMSub) : rawMSub;
+          // Skip non-academic topics (coaching, study skills, generic "Math", etc.).
+          const mIsAcademic = !window.Taxonomy || window.Taxonomy.isAcademicTopic(mTopic);
+          if (window.MasteryEngine && currentUser && mTopic && mSub != null && mIsAcademic) {
             window.MasteryEngine.onQuestion(sb, currentUser.id, mTopic, mSub, {
               confidence:     sig ? (sig.confidence || null) : null,
               weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
