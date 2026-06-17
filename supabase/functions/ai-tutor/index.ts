@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v65
+// ai-tutor Edge Function v68
 // CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
 // existing row when the same key arrives twice; 23505 on INSERT triggers
 // re-SELECT and returns the winner row instead of creating a duplicate.
@@ -12,7 +12,35 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v65';
+const AI_TUTOR_VERSION = 'v68';
+
+// ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
+// Franco = Egyptian Arabic written in Latin letters + digits (3=ع, 7=ح, 2=ء, 5=خ).
+// We detect by (a) Latin words containing 2/3/5/7/8 (the distinctive digit-letters),
+// or (b) a hit on common Franco function words. Arabic-script messages are never
+// classified as Franco.
+function detectFranco(text: string): boolean {
+  const t = (text || '').trim();
+  if (!t) return false;
+  if (/[؀-ۿ]/.test(t)) return false;
+  if (/[a-z]*[23578][a-z]+|[a-z]+[23578][a-z]*/i.test(t)) return true;
+  const words = t.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const FRANCO_WORDS = new Set([
+    'msh','mesh','ezayak','ezzayak','ezay','izay','keda','kda','delwa2ty','dlw2ty',
+    'fahem','fahma','m3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','sa7','sah',
+    'b2a','ba2a','yala','yalla','3awz','3awez','3ayz','3andy','3andi','3ayza',
+    '5alas','5las','tb','tab','7aga','7d','7add','sho2l','shar7','msh3arf'
+  ]);
+  return words.some(w => FRANCO_WORDS.has(w));
+}
+
+// Explicit "switch to Franco" request — sticky until student switches scripts.
+function detectExplicitFrancoRequest(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  if (!t) return false;
+  return /(speak|talk|reply|respond|answer|write|use)\s+(in\s+)?franco|in\s+franco|franco\s+please|switch\s+to\s+franco/i.test(t)
+      || /(اكتب|كلمني|اتكلم|رد|جاوب)\s*فرانكو/i.test(t);
+}
 
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
 function fallbackHint(topic: string, subtopic: string, lang: string): string {
@@ -171,26 +199,27 @@ function normalizeRules(raw: unknown): Array<{name:string;formula:string;desc:st
 }
 
 // ── Zero personality cache ────────────────────────────────────────────────────
+// DB is the source of truth (slug='zero_personality'). Cache for 10 min to avoid
+// a round-trip on every request. Returns '' on miss so caller can fall back.
 let _personalityCache: string | null = null;
 let _personalityCachedAt = 0;
 async function get_zero_personality(sb: ReturnType<typeof createClient>): Promise<string> {
   const now = Date.now();
-  if (_personalityCache && now - _personalityCachedAt < 600_000) return _personalityCache;
-  const { data } = await sb.from('zero_knowledge_entries')
+  if (_personalityCache !== null && now - _personalityCachedAt < 600_000) return _personalityCache;
+  const { data, error } = await sb.from('zero_knowledge_entries')
     .select('body')
     .eq('slug', 'zero_personality')
-    .limit(32);
-  if (data && data.length > 0) {
-    _personalityCache = data.map((r: {body:string}) => r.body).join('\n');
-    _personalityCachedAt = now;
-    return _personalityCache;
-  }
-  return '';
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) console.warn('[ai-tutor] get_zero_personality error:', error.message);
+  _personalityCache = data?.body ?? '';
+  _personalityCachedAt = now;
+  return _personalityCache;
 }
 
 // ── Knowledge search ──────────────────────────────────────────────────────────
 async function search_zero_knowledge(sb: ReturnType<typeof createClient>, query: string): Promise<string> {
-  const { data } = await sb.rpc('search_zero_knowledge', { query, max_results: 5 });
+  const { data } = await sb.rpc('search_zero_knowledge', { search_query: query, max_results: 5 });
   if (!data || data.length === 0) return '';
   return data.map((r: {title:string;body:string;category_name:string;subcategory_name:string}) =>
     `[${r.category_name} > ${r.subcategory_name}] ${r.title}: ${r.body}`
@@ -305,14 +334,28 @@ serve(async (req) => {
     const examDateRaw   = profile?.exam_date   || null;
     const targetScore   = profile?.target_score || null;
     const studyGoals    = profile?.biggest_weakness || null;
-    // Use language_preference from profile; fall back to question script detection.
-    // For image-only questions (empty text), default to 'ar' since this platform targets Arabic-speaking students.
+    // Per-message language mirroring with Franco (Arabizi) support.
+    // Order: explicit per-message script wins; sticky franco from prior explicit
+    // request applies when current message is ambiguous; profile preference and
+    // image-only fallback apply only when nothing else matches.
     const langPref = profile?.language_preference || null;
-    const lang: string = langPref === 'en' ? 'en'
-      : langPref === 'ar' ? 'ar'
-      : /[؀-ۿ]/.test(question) ? 'ar'
-      : (imageData && !question.trim()) ? 'ar'
-      : 'en';
+    const currentIsArabic       = /[؀-ۿ]/.test(question);
+    const currentIsFranco       = !currentIsArabic && detectFranco(question);
+    const currentRequestsFranco = detectExplicitFrancoRequest(question);
+    // Stickiness: if any of the last 10 user turns explicitly asked for Franco,
+    // keep replying in Franco for the rest of this conversation unless the
+    // student switches scripts (Arabic on this turn breaks stickiness).
+    const priorFrancoExplicit = messages.slice(-10).some((m) =>
+      m && m.role === 'user' && typeof m.content === 'string' && detectExplicitFrancoRequest(m.content)
+    );
+    let lang: string;
+    if (currentIsArabic) lang = 'ar';
+    else if (currentIsFranco || currentRequestsFranco) lang = 'franco';
+    else if (priorFrancoExplicit && question.trim()) lang = 'franco';
+    else if (langPref === 'ar') lang = 'ar';
+    else if (langPref === 'en') lang = 'en';
+    else if (imageData && !question.trim()) lang = 'ar';
+    else lang = 'en';
 
     // Days until exam (used by Zero for personalised responses)
     let daysUntilExam: number | null = null;
@@ -327,15 +370,9 @@ serve(async (req) => {
       get_zero_personality(sbAdmin),
       search_zero_knowledge(sbAdmin, question + ' ' + topic + ' ' + subtopic),
     ]);
-    // Always have a personality even if the DB table is empty
+    // Emergency fallback — used only if DB record is missing or inactive
     const DEFAULT_PERSONALITY = `## Zero's Core Identity
 You are Zero — not a chatbot, not a template engine. You are the student's personal math coach and the coolest older sibling who happens to be amazing at math. You genuinely care whether they pass this exam.
-
-## Name Usage (CRITICAL)
-- ALWAYS use the student's actual first name: ${studentName}
-- NEVER say "يا Student" or "Dear Student" or any placeholder — the name is right there
-- Weave the name naturally: "يا ${studentName}, فكر معايا..." / "Good catch, ${studentName}!"
-- If you don't address them by name for 2+ messages in a row, use it in the next one
 
 ## Tone & Style
 - Warm, direct, occasionally funny — like a smart friend, not a formal tutor
@@ -343,7 +380,6 @@ You are Zero — not a chatbot, not a template engine. You are the student's per
 - In English: casual but focused — "Let's break this down" not "We shall proceed to analyze"
 - Use encouragement that feels REAL: "والله ده تفكير ممتاز!" / "That's exactly the right instinct!"
 - When confused: "مفيش مشكلة خالص، ده normal — خطوة خطوة 😊" / "Totally normal to find this tricky — let's slow down"
-- Celebrate progress explicitly: mention what they got right before addressing what's wrong
 
 ## Anti-Robotic Rules
 - NEVER start a response with a list of bullet points for a casual message
@@ -351,7 +387,16 @@ You are Zero — not a chatbot, not a template engine. You are the student's per
 - NEVER ignore the student's emotional state if they express stress or frustration
 - ALWAYS respond to "فاضل قد ايه؟" with the actual days count from the profile + a motivating comment
 - ALWAYS respond to "مبسوط/حاسس بـ/خايف من" with empathy first, strategy second`;
-    const personality = personalityRaw || DEFAULT_PERSONALITY;
+
+    // Name-injection block appended at runtime (DB body cannot contain live template values)
+    const NAME_BLOCK = `\n\n## Name Usage (CRITICAL)
+- ALWAYS use the student's actual first name: ${studentName}
+- NEVER say "يا Student" or "Dear Student" or any placeholder — the name is right there
+- Weave the name naturally: "يا ${studentName}, فكر معايا..." / "Good catch, ${studentName}!"
+- If you don't address them by name for 2+ messages in a row, use it in the next one`;
+
+    // DB is source of truth; fall back to hardcoded only if DB returned empty
+    const personality = (personalityRaw || DEFAULT_PERSONALITY) + NAME_BLOCK;
 
     // ── Build system prompt ───────────────────────────────────────────────────
     const EXAM_FACTS = `
@@ -492,7 +537,19 @@ ${personality}
 ---
 
 ${STUDENT_PROFILE_BLOCK}
-Language: ${lang === 'ar' ? 'Arabic — respond entirely in Arabic, warm Egyptian dialect welcome for greetings/chitchat' : 'English'}
+Language: ${
+  lang === 'ar'
+    ? 'Arabic — respond entirely in Arabic, warm Egyptian dialect welcome for greetings/chitchat'
+    : lang === 'franco'
+    ? `Franco (Egyptian Arabizi — Arabic written in Latin letters with digits as letter substitutes: 3=ع, 7=ح, 2=ء, 5=خ, 8=غ).
+- Mirror the student's Franco style: casual Egyptian dialect, short sentences, natural rhythm.
+- Examples of Franco coaching: "tmam ya ${studentName}, fakker m3aya el khatwa el gaya", "ezay el so2al da? te2dar te3zel x?", "7elw awy! da bel zabt el tafkir el sa7."
+- Keep math expressions, equations, formulas, variables, and SAT/EST terminology in standard notation/English: $x^2 + 3x - 4 = 0$, "quadratic formula", "slope", "Module 1". DO NOT transliterate math.
+- Numbers in calculations stay as digits (not Franco letter-numbers). Franco's 3/7/2/5 are letters only inside Arabic words.
+- Coaching, encouragement, explanations of WHY, and emotional tone → all in Franco.
+- Educational accuracy and structure (cards, steps, LaTeX, common-mistake notes) remain identical to other languages.`
+    : 'English'
+}
 
 ${EXAM_FACTS}
 ${knowledge ? `## 📚 Relevant Knowledge Base (Priority 4)\n${knowledge}\n` : ''}
@@ -679,7 +736,11 @@ Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON
     const HINT_SYSTEM_PROMPT = `You are Zero — a Socratic math tutor. You are in HINT MODE.
 
 ${STUDENT_PROFILE_BLOCK}
-Language: ${lang === 'ar' ? 'Arabic — warm Egyptian dialect welcome' : 'English'}
+Language: ${
+  lang === 'ar' ? 'Arabic — warm Egyptian dialect welcome'
+  : lang === 'franco' ? 'Franco (Egyptian Arabizi: Latin letters + 3/7/2/5 as Arabic-letter substitutes). Mirror the student\'s Franco style. Keep math expressions ($x^2$, formulas, variables) and SAT/EST terms in standard notation/English — never transliterate math.'
+  : 'English'
+}
 
 ## Personality (even in hint mode)
 - Be warm and encouraging, use the student's name: ${studentName}
