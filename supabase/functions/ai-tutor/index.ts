@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v71
+// ai-tutor Edge Function v72
 // Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
 // shadow mode on every math question and records verification_tier +
 // verification_meta on question_records. The verification pipeline itself
@@ -20,8 +20,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v71';
+const AI_TUTOR_VERSION = 'v72';
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
+const L3_PIPELINE_VERSION = 'l3-shadow-v1';
 
 // ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
 // Franco = Egyptian Arabic written in Latin letters + digits (3=ع, 7=ح, 2=ء, 5=خ).
@@ -421,6 +422,259 @@ function worksheetGuardCheck(
     q_number: String(q_number),
     lang,
   };
+}
+
+// ── L3 Shadow Verification Pipeline (Phase 2A) ───────────────────────────────
+// Level 3 architecture: OCR ambiguity check → 2 parallel solvers (gpt-4o-mini,
+// temperatures 0.1 + 0.3) → judge (gpt-4o-mini, temp 0). OCR disambiguation
+// rerun uses gpt-4o for higher vision accuracy.
+// Runs entirely in background via EdgeRuntime.waitUntil() — zero student latency.
+// Double-gated: VERIFICATION_ENABLED=true AND VERIFICATION_SHADOW_ONLY=true.
+// Never modifies student answer, hint, personality, or KB behavior.
+// All columns written are the Phase 0 nullable columns — no schema change.
+// Pipeline version: l3-shadow-v1
+
+interface OcrAmbiguityResult {
+  confidence: number;
+  flags: string[];
+  rerun_count: number;
+  rerun_changed: boolean;
+  final_text: string;
+}
+interface SolverResult { answer: string; raw_output: string; }
+interface JudgeResult {
+  verdict: 'agrees' | 'disagrees' | 'ocr_uncertain' | 'inconclusive';
+  confidence: number;
+  reasoning: string;
+}
+
+// For image questions: extract the math problem as plain text (pre-solver step).
+// Uses gpt-4o-mini — cheap extraction, not solving.
+async function extractMathTextFromImage(imageData: string, studentText: string): Promise<string> {
+  const prompt = studentText
+    ? `The student sent this image with the message: "${studentText.slice(0, 200)}". Extract the specific math question they are asking about as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.`
+    : 'Extract the math question shown in this image as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', max_tokens: 300, temperature: 0,
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+        ]}],
+      }),
+    });
+    const json = await res.json();
+    return String(json.choices?.[0]?.message?.content || '').trim();
+  } catch { return studentText; }
+}
+
+// Scan extracted text for OCR ambiguity signals; optionally run disambiguation rerun.
+// OCR rerun uses gpt-4o (higher vision accuracy) when confidence < 0.85.
+async function ocrAmbiguityCheck(extractedText: string, imageData: string | null): Promise<OcrAmbiguityResult> {
+  const flags: string[] = [];
+  let confidence = 1.0;
+
+  if (imageData && extractedText) {
+    if (/[–—]/.test(extractedText))                                           flags.push('dash_lookalike');
+    if (/[a-zA-Z]\d/.test(extractedText) && !/\^/.test(extractedText))        flags.push('implicit_exponent');
+    if (/\d\s*\/\s*\d/.test(extractedText) && !/\\frac/.test(extractedText))  flags.push('fraction_ambiguity');
+    // Coarse: operators present but zero minus signs — possible sign loss
+    if (/[+×÷*]/.test(extractedText) && !/-/.test(extractedText) && extractedText.length > 5)
+      flags.push('no_operator_sign');
+
+    const structural = flags.filter(f => f !== 'no_operator_sign').length;
+    const coarse     = flags.includes('no_operator_sign') ? 1 : 0;
+    confidence = Math.max(0, 1.0 - structural * 0.25 - coarse * 0.15);
+  }
+
+  let rerun_count = 0, rerun_changed = false, final_text = extractedText;
+  if (imageData && confidence < 0.85 && extractedText) {
+    try {
+      const rerunRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+        body: JSON.stringify({
+          model: 'gpt-4o', max_tokens: 300, temperature: 0,
+          messages: [{ role: 'user', content: [
+            { type: 'text', text: `Re-extract this math expression from the image very carefully. Pay specific attention to:\n- Negative/minus signs before numbers or expressions (−3, −x)\n- Exponents written as superscripts (x², x³)\n- Fraction bars vs division signs\n- Any dashes that might be minus signs\n\nOriginal extraction: "${extractedText}"\n\nReturn ONLY the corrected mathematical expression.` },
+            { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+          ]}],
+        }),
+      });
+      const rerunJson = await rerunRes.json();
+      const rerunText = String(rerunJson.choices?.[0]?.message?.content || '').trim();
+      rerun_count = 1;
+      if (rerunText && rerunText !== extractedText) { rerun_changed = true; final_text = rerunText; }
+    } catch { /* rerun failure is non-fatal */ }
+  }
+  return { confidence, flags, rerun_count, rerun_changed, final_text };
+}
+
+// Single solver pass. Model: gpt-4o-mini. Returns final extracted answer.
+async function runSolver(questionText: string, temperature: number): Promise<SolverResult> {
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', max_tokens: 400, temperature,
+        messages: [
+          { role: 'system', content: 'You are a precise math solver. Solve the problem step by step, then state the final answer on the last line as "Answer: [value]". No markdown, no commentary.' },
+          { role: 'user', content: questionText.slice(0, 1000) },
+        ],
+      }),
+    });
+    const json = await res.json();
+    const raw_output = String(json.choices?.[0]?.message?.content || '').trim();
+    const match = /answer:\s*(.+)/i.exec(raw_output);
+    const answer = match ? match[1].trim() : (raw_output.split('\n').at(-1) ?? raw_output).trim();
+    return { answer, raw_output };
+  } catch { return { answer: 'solver_error', raw_output: '' }; }
+}
+
+// Judge: compares Zero's answer against two solver answers.
+// Hard rule: OCR confidence < 0.75 locks verdict to 'ocr_uncertain' —
+// solver consensus cannot override OCR uncertainty.
+async function runJudge(
+  questionText: string, zeroAnswer: string,
+  solverA: SolverResult, solverB: SolverResult, ocrConfidence: number,
+): Promise<JudgeResult> {
+  if (ocrConfidence < 0.75) {
+    return {
+      verdict: 'ocr_uncertain', confidence: ocrConfidence,
+      reasoning: `OCR confidence ${ocrConfidence.toFixed(2)} below 0.75 — verdict locked; solver agreement does not override.`,
+    };
+  }
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', max_tokens: 200, temperature: 0,
+        messages: [
+          { role: 'system', content: 'You are a math verification judge. Determine whether the tutor\'s answer matches the solver answers.\nRespond with JSON only: {"verdict":"agrees"|"disagrees"|"inconclusive","confidence":0.0-1.0,"reasoning":"one sentence"}\n- "agrees": both solvers reach the same final value as the tutor (minor formatting differences OK)\n- "disagrees": solvers agree with each other but differ from the tutor\n- "inconclusive": solvers disagree with each other, or comparison is ambiguous' },
+          { role: 'user', content: `Question: ${questionText.slice(0, 500)}\n\nTutor answer (excerpt): ${zeroAnswer.slice(0, 400)}\n\nSolver A: ${solverA.answer.slice(0, 200)}\n\nSolver B: ${solverB.answer.slice(0, 200)}` },
+        ],
+      }),
+    });
+    const json = await res.json();
+    const raw = String(json.choices?.[0]?.message?.content || '{}');
+    const p = JSON.parse(raw.replace(/^```(?:json)?\n?|```$/gm, '').trim());
+    const validVerdicts = ['agrees', 'disagrees', 'inconclusive'];
+    return {
+      verdict: validVerdicts.includes(p.verdict) ? p.verdict as JudgeResult['verdict'] : 'inconclusive',
+      confidence: typeof p.confidence === 'number' ? Math.min(1, Math.max(0, p.confidence)) : 0.5,
+      reasoning: String(p.reasoning || '').slice(0, 300),
+    };
+  } catch { return { verdict: 'inconclusive', confidence: 0.5, reasoning: 'Judge parse failed.' }; }
+}
+
+// SHA-256 prefix (16 hex chars) for answer deduplication
+async function sha256short(text: string): Promise<string> {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  } catch { return 'hash_unavailable'; }
+}
+
+// L3 shadow pipeline orchestrator. Runs after Response() is returned.
+// Writes telemetry to existing question_records row (UPDATE, not INSERT).
+async function runL3ShadowPipeline(opts: {
+  sbAdmin: ReturnType<typeof createClient>;
+  recordId: string; userId: string;
+  questionText: string; imageData: string | null; zeroAnswer: string;
+  detectorMeta: Record<string, unknown>; startTime: number;
+}): Promise<void> {
+  const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, detectorMeta, startTime } = opts;
+
+  // 1. Extract math text (image questions only)
+  const isImageQ = !!imageData;
+  let mathText = questionText;
+  if (isImageQ) {
+    const extracted = await extractMathTextFromImage(imageData!, questionText);
+    if (extracted) mathText = extracted;
+  }
+
+  // 2. OCR ambiguity check (image questions only; text questions get confidence=1.0)
+  const ocr = isImageQ
+    ? await ocrAmbiguityCheck(mathText, imageData)
+    : { confidence: 1.0, flags: [], rerun_count: 0, rerun_changed: false, final_text: mathText };
+  const solveText = ocr.rerun_changed ? ocr.final_text : mathText;
+
+  // 3. Two parallel solver passes
+  const [solverA, solverB] = await Promise.all([
+    runSolver(solveText, 0.1),
+    runSolver(solveText, 0.3),
+  ]);
+
+  // 4. Solver agreement (exact match after normalization)
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '').trim();
+  const solver_agreement = norm(solverA.answer) === norm(solverB.answer) ? 1.0 : 0.0;
+
+  // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
+  const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0);
+
+  const pipeline_latency_ms = Date.now() - startTime;
+  const isExpertTier = detectorMeta.tier === 'expert' || detectorMeta.gpt_tier === 'expert';
+
+  // 6. Merge Phase 1 detector meta + Phase 2A pipeline meta
+  const verificationMeta = {
+    ...detectorMeta,
+    pipeline_version:    L3_PIPELINE_VERSION,
+    ocr_ambiguity_flags: ocr.flags,
+    ocr_rerun_count:     ocr.rerun_count,
+    ocr_rerun_changed:   ocr.rerun_changed,
+    solver_answers:      [solverA.answer.slice(0, 200), solverB.answer.slice(0, 200)],
+    solver_model:        'gpt-4o-mini',
+    solver_temperatures: [0.1, 0.3],
+    judge_model:         'gpt-4o-mini',
+    judge_reasoning:     judge.reasoning,
+    zero_answer_hash:    await sha256short(zeroAnswer),
+    pipeline_latency_ms,
+    expert_trigger:      isExpertTier,
+  };
+
+  // 7. UPDATE question_records — all Phase 0 columns, nullable
+  const { error: updateErr } = await sbAdmin
+    .from('question_records')
+    .update({
+      verification_status:     judge.verdict === 'ocr_uncertain' ? 'ocr_uncertain' : 'pipeline_complete',
+      verification_confidence: judge.confidence,
+      solver_count:            2,
+      solver_agreement,
+      judge_verdict:           judge.verdict,
+      ocr_confidence:          isImageQ ? ocr.confidence : null,
+      verification_path:       'l3_shadow_pipeline',
+      verification_meta:       verificationMeta,
+    })
+    .eq('id', recordId)
+    .eq('user_id', userId);
+
+  if (updateErr) {
+    console.log('[ai-tutor] l3-pipeline-db-error', JSON.stringify({
+      uid: userId.slice(0, 8), record_id: recordId, msg: updateErr.message,
+    }));
+  }
+
+  // 8. Structured telemetry
+  console.log('[ai-tutor] verification-shadow', JSON.stringify({
+    uid:                     userId.slice(0, 8),
+    record_id:               recordId,
+    pipeline_version:        L3_PIPELINE_VERSION,
+    verification_tier:       detectorMeta.tier ?? null,
+    ocr_confidence:          isImageQ ? ocr.confidence : null,
+    ocr_ambiguity_flags:     ocr.flags,
+    ocr_rerun_count:         ocr.rerun_count,
+    ocr_rerun_changed:       ocr.rerun_changed,
+    solver_agreement,
+    judge_verdict:           judge.verdict,
+    verification_confidence: judge.confidence,
+    expert_trigger:          isExpertTier,
+    pipeline_latency_ms,
+  }));
 }
 
 serve(async (req) => {
@@ -1152,9 +1406,11 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
-    // ── Build response ────────────────────────────────────────────────────────
-    return new Response(JSON.stringify({
-      answer:          parsed.answer || '',
+    // ── Build response — returned to student immediately ──────────────────────
+    const zeroAnswer  = parsed.answer || '';
+    const recordId    = newRecord?.id ?? null;
+    const studentResponse = new Response(JSON.stringify({
+      answer:          zeroAnswer,
       hint,
       topic:           finalTopic,
       subtopic:        finalSubtopic,
@@ -1164,18 +1420,47 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       weakness_signal: parsed.weakness_signal === true,
       attention_marker: String(parsed.attention_marker || ''),
       session_id:      resolvedSessionId,
-      record_id:       newRecord?.id ?? null,
+      record_id:       recordId,
       hint_mode:       hintMode,
       is_math:         isMath,
       version:         AI_TUTOR_VERSION,
       idempotency_recovered: idempotencyRecovered,
       degraded:        degraded,
     }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
+
+    // ── L3 Shadow Pipeline (background — never blocks student response) ───────
+    // Double gate: VERIFICATION_ENABLED=true AND VERIFICATION_SHADOW_ONLY=true.
+    // Runs only on math questions that produced a persisted record.
+    const verificationEnabled  = (Deno.env.get('VERIFICATION_ENABLED')   ?? 'false') === 'true';
+    const verificationShadowOnly = (Deno.env.get('VERIFICATION_SHADOW_ONLY') ?? 'true')  !== 'false';
+    if (verificationEnabled && verificationShadowOnly && isMath && recordId) {
+      const pipelineStart = Date.now();
+      const detectorMeta: Record<string, unknown> = {
+        tier: verificationFields.verification_tier as string ?? null,
+        ...((verificationFields.verification_meta as Record<string, unknown>) ?? {}),
+      };
+      const pipelineTask = runL3ShadowPipeline({
+        sbAdmin,
+        recordId,
+        userId:       user.id,
+        questionText: question,
+        imageData,
+        zeroAnswer,
+        detectorMeta,
+        startTime:    pipelineStart,
+      }).catch(err => {
+        console.log('[ai-tutor] l3-pipeline-error', JSON.stringify({
+          uid: user.id.slice(0, 8), record_id: recordId,
+          msg: err instanceof Error ? err.message : String(err),
+        }));
+      });
+      const EdgeRt = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+      if (EdgeRt?.waitUntil) EdgeRt.waitUntil(pipelineTask);
+    }
+
+    return studentResponse;
 
   } catch (err) {
     console.error('ai-tutor error:', err);
