@@ -45,7 +45,7 @@ tutor "Zero" is used by real students. Production incidents have direct
 student impact during exam-prep windows.
 
 - Supabase project: `igvkyxkmjnkzscqgommj`
-- Edge Function: `ai-tutor` (currently v68 / platform version 77)
+- Edge Function: `ai-tutor` (currently v69 / platform version 78)
 - Key tables: `question_records`, `mastery_records`, `weakness_reports`,
   `weakness_signals`, `profiles`, `chat_sessions`
 - Taxonomy authority: `taxonomy.js` (frozen)
