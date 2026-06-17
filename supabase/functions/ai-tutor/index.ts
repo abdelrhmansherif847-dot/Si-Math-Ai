@@ -1,4 +1,12 @@
-// ai-tutor Edge Function v68
+// ai-tutor Edge Function v70
+// Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
+// shadow mode on every math question and records verification_tier +
+// verification_meta on question_records. The verification pipeline itself
+// (solvers/judge/escalator) is NOT activated. Detector is gated by
+// DIFFICULTY_DETECTOR_ENABLED (default true). Pipeline is gated separately
+// by VERIFICATION_ENABLED (default false). Detector failures are swallowed
+// — they never affect answer generation, hints, personality, KB retrieval,
+// or the existing question_records contract.
 // CAI-P1: client_request_id idempotency. Pre-flight SELECT returns the
 // existing row when the same key arrives twice; 23505 on INSERT triggers
 // re-SELECT and returns the winner row instead of creating a duplicate.
@@ -12,7 +20,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v68';
+const AI_TUTOR_VERSION = 'v70';
+const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 
 // ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
 // Franco = Egyptian Arabic written in Latin letters + digits (3=ع, 7=ح, 2=ء, 5=خ).
@@ -227,6 +236,97 @@ async function search_zero_knowledge(sb: ReturnType<typeof createClient>, query:
 }
 
 
+// ── Phase 1 DifficultyDetector ────────────────────────────────────────────────
+// Independent heuristic classifier. No LLM call, no extra latency. Runs in
+// shadow mode: classification is stored on question_records.verification_tier
+// but does NOT influence the response. Goal of Phase 1 is to gather a
+// production difficulty distribution so we can calibrate tier thresholds
+// before activating the verification pipeline in Phase 2.
+type DifficultyTier = 'easy' | 'medium' | 'hard' | 'expert';
+
+interface DetectorFeatures {
+  has_image: boolean;
+  char_length: number;
+  word_count: number;
+  sentence_count: number;
+  equation_count: number;
+  multi_step_count: number;
+  proof_keyword: boolean;
+  expert_topic_keyword: boolean;
+  hard_topic_keyword: boolean;
+  topic_keyword_count: number;
+  word_problem: boolean;
+}
+
+function detectorExtractFeatures(question: string, hasImage: boolean): DetectorFeatures {
+  const raw = (question || '').toString();
+  const q = raw.toLowerCase();
+  const wordCount = q.split(/\s+/).filter(Boolean).length;
+  const sentenceCount = Math.max(1, q.split(/[.!?؟](?:\s|$)/).filter(s => s.trim().length > 0).length);
+  const equationCount = (q.match(/[=≤≥<>]/g) || []).length;
+  const multiStepCount = (q.match(/\b(then|after that|next|finally|first|second|third|step)\b/g) || []).length
+    + (q.match(/(بعد ذلك|ثم|أولاً|ثانياً|ثالثاً|الخطوة)/g) || []).length;
+  const proofKeyword = /\b(prove|show that|demonstrate|derive)\b/.test(q) || /(أثبت|برهن|اشتق)/.test(q);
+  const expertTopicKeyword = /\b(matrix|matrices|eigen\w*|partial derivative|laplace|fourier|differential equation|vector field|parametric)\b/.test(q);
+  const hardTopicKeyword = /\b(derivative|integral|limit|calculus|logarithm|exponential growth|complex number|imaginary unit|trigonometric identity)\b/.test(q);
+  const topicKeywords = [
+    'equation','triangle','circle','probability','percent','ratio','function','derivative',
+    'integral','vector','matrix','polynomial','quadratic','linear','inequality','sequence',
+    'logarithm','exponent','trig','sine','cosine','tangent','statistics','median','mean',
+  ];
+  let topicKeywordCount = 0;
+  for (const k of topicKeywords) if (q.includes(k)) topicKeywordCount++;
+  const wordProblem = /\b(if |how many|what is|find |determine|calculate)\b/.test(q) && wordCount >= 12
+    || /(إذا|كم |ما هو|أوجد|احسب)/.test(q) && wordCount >= 8;
+  return {
+    has_image: hasImage,
+    char_length: raw.length,
+    word_count: wordCount,
+    sentence_count: sentenceCount,
+    equation_count: equationCount,
+    multi_step_count: multiStepCount,
+    proof_keyword: proofKeyword,
+    expert_topic_keyword: expertTopicKeyword,
+    hard_topic_keyword: hardTopicKeyword,
+    topic_keyword_count: topicKeywordCount,
+    word_problem: wordProblem,
+  };
+}
+
+function detectorClassify(f: DetectorFeatures): { tier: DifficultyTier; reasons: string[] } {
+  const reasons: string[] = [];
+  // Expert
+  if (f.proof_keyword)              { reasons.push('proof_keyword');         return { tier: 'expert', reasons }; }
+  if (f.expert_topic_keyword)       { reasons.push('expert_topic_keyword');  return { tier: 'expert', reasons }; }
+  if (f.has_image && f.topic_keyword_count >= 3) { reasons.push('image_and_multi_topic'); return { tier: 'expert', reasons }; }
+  // Hard
+  if (f.hard_topic_keyword)         { reasons.push('hard_topic_keyword');    return { tier: 'hard', reasons }; }
+  if (f.multi_step_count >= 2)      { reasons.push('multi_step');            return { tier: 'hard', reasons }; }
+  if (f.has_image && f.word_problem){ reasons.push('image_word_problem');    return { tier: 'hard', reasons }; }
+  if (f.topic_keyword_count >= 3)   { reasons.push('multi_concept');         return { tier: 'hard', reasons }; }
+  if (f.char_length > 400)          { reasons.push('long_question');         return { tier: 'hard', reasons }; }
+  // Easy
+  if (!f.has_image && f.char_length < 80 && !f.word_problem && f.multi_step_count === 0 && f.topic_keyword_count <= 1) {
+    reasons.push('short_single_concept'); return { tier: 'easy', reasons };
+  }
+  if (!f.has_image && f.equation_count <= 1 && f.char_length < 120 && f.multi_step_count === 0 && !f.word_problem) {
+    reasons.push('simple_single_equation'); return { tier: 'easy', reasons };
+  }
+  // Default
+  reasons.push('default_medium');
+  return { tier: 'medium', reasons };
+}
+
+function detectorGptTier(s: string | null | undefined): DifficultyTier | null {
+  if (!s) return null;
+  const lower = String(s).toLowerCase();
+  if (lower.includes('expert')) return 'expert';
+  if (lower.includes('hard'))   return 'hard';
+  if (lower.includes('easy'))   return 'easy';
+  if (lower.includes('medium')) return 'medium';
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
@@ -425,11 +525,11 @@ If a student asks about exam timing, question count, format, or calculator polic
 - Calculator: allowed
 
 ### ACT Math
-- Time: 60 minutes
-- Questions: 60 multiple-choice questions
+- Time: 50 minutes
+- Questions: 45 multiple-choice questions
 - Format: digital on computer
 - Calculator: allowed
-- Pace: exactly 1 minute per question — tightest of all three exams
+- Pace: approximately 67 seconds per question (~1 min 7 sec)
 
 ⚠️ CRITICAL: If you state any exam timing, question count, or format that contradicts the above, you are wrong.
 `;
@@ -461,7 +561,7 @@ Before you start, mentally divide the exam into blocks of ~10 questions.
 | EST Math 1 | 50 Q / 75 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 |
 | EST Math 2 | 40 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 |
 | SAT Math | 22 Q / module | 1–10 · 11–20 · 21–22 (per module) |
-| ACT Math | 60 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 · 51–60 |
+| ACT Math | 45 Q / 50 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–45 |
 
 ---
 
@@ -853,6 +953,35 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       parsed.answer = hint || fallbackHint(finalTopic, finalSubtopic, lang);
     }
 
+    // ── Phase 1 DifficultyDetector (shadow) ──────────────────────────────────
+    // Runs only on math questions. Writes verification_tier + verification_meta.
+    // Wrapped in try/catch — detector failures must never break the response.
+    let verificationFields: Record<string, unknown> = {};
+    try {
+      const detectorOn = (Deno.env.get('DIFFICULTY_DETECTOR_ENABLED') ?? 'true') !== 'false';
+      if (detectorOn && isMath) {
+        const features = detectorExtractFeatures(question, !!imageData);
+        const { tier, reasons } = detectorClassify(features);
+        const gptTier = detectorGptTier(finalDifficulty);
+        verificationFields = {
+          verification_tier:   tier,
+          verification_status: 'shadow',
+          verification_meta: {
+            detector_version: DIFFICULTY_DETECTOR_VERSION,
+            features,
+            reasons,
+            gpt_difficulty: finalDifficulty || null,
+            gpt_tier: gptTier,
+            agrees_with_gpt: gptTier === tier,
+          },
+        };
+      }
+    } catch (detectorErr) {
+      console.log('[ai-tutor] detector-error', JSON.stringify({
+        uid: user.id.slice(0, 8), msg: String(detectorErr),
+      }));
+    }
+
     // ── Persist question_record (synchronous — record_id returned to client) ──
     // CAI-P1: include client_request_id; on 23505 (unique_violation) the winning
     // row was committed by a concurrent retry — re-SELECT and return it.
@@ -875,6 +1004,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       hint:              hint,
       follow_up_type:    followUpType,
       client_request_id: clientRequestId,
+      ...verificationFields,
     }).select('id').single();
     let newRecord = insertRes.data;
     let idempotencyRecovered = false;

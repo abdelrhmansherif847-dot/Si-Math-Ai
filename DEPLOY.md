@@ -54,29 +54,53 @@ Re-run `scripts/check-migration-parity.sh`. Must exit 0.
 
 ## 4. Deploy Edge Function (`ai-tutor`)
 
-**DO NOT use the inline `mcp__Supabase__deploy_edge_function` MCP for
-`ai-tutor`.** The function exceeds 40 KB and that path has produced
-truncated-stub deploys (production incident, 2026-06-?).
+> ⛔ **FROZEN DEPLOY PATH — READ BEFORE CALLING ANY TOOL**
+>
+> `mcp__Supabase__deploy_edge_function` **MUST NOT be used for `ai-tutor`
+> under any circumstances in any Claude Code session.**
+>
+> Reason: `ai-tutor/index.ts` is ~55 KB. The inline MCP deploy path has
+> produced two truncated-stub incidents (2026-06-17 ×2). In both cases a
+> partial or placeholder file was deployed, the `serve()` handler was absent,
+> and every student request returned 500 for the duration.
+>
+> This prohibition applies even when the intent is to pass the full file
+> content. The risk of truncation, placeholder error, or context-window
+> corruption is not acceptable for a production function with no health check
+> gate in front of it.
+>
+> **The only approved deploy paths are listed below.**
 
-Use one of:
+### Approved path A — Supabase Dashboard copy-paste (no PAT required)
 
-1. **Supabase Dashboard copy-paste (default path)**
-   - Dashboard → Edge Functions → `ai-tutor` → Edit.
-   - Copy the full contents of `supabase/functions/ai-tutor/index.ts` from
-     GitHub raw URL on the commit being deployed.
-   - Paste, Save, Deploy.
-   - Confirm the new platform version number appears in the version list.
+1. Open Supabase Dashboard → Edge Functions → `ai-tutor` → Edit.
+2. Copy the full contents of `supabase/functions/ai-tutor/index.ts` from the
+   GitHub raw URL at the exact commit being deployed (not HEAD, not a diff —
+   the raw file).
+3. Select-all in the editor, paste, Save, Deploy.
+4. Confirm the new platform version number appears in the Versions list and
+   status is ACTIVE.
+5. Run smoke test (§6) before declaring deploy complete.
 
-2. **Supabase CLI with PAT**
-   ```
-   supabase functions deploy ai-tutor --project-ref <ref>
-   ```
+### Approved path B — Supabase CLI with PAT
 
-After deploy, verify:
-```sql
-SELECT version FROM supabase_functions.hooks WHERE function_name = 'ai-tutor';
+```bash
+supabase functions deploy ai-tutor --project-ref igvkyxkmjnkzscqgommj
 ```
-or via Dashboard → Edge Functions → version list.
+
+Requires `SUPABASE_ACCESS_TOKEN` set to a valid personal access token.
+
+### Post-deploy version check
+
+After deploy, confirm the deployed content matches the intended commit:
+
+```bash
+# From get_edge_function MCP result: check the first line of files[0].content
+# Must match: // ai-tutor Edge Function v<N>
+```
+
+Or via Supabase Dashboard → Edge Functions → `ai-tutor` → version list —
+confirm the expected version string in the code header.
 
 ## 5. Deploy client assets
 

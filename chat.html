@@ -1126,6 +1126,13 @@ button{font-family:inherit;cursor:pointer}
         hint:       r.hint        || null,
         concepts:   Array.isArray(r.concepts) ? r.concepts : null,
         rules:      Array.isArray(r.rules)    ? r.rules    : null,
+        // is_math is not persisted on question_records — infer it from the
+        // presence of topic or rules so rehydrated math responses re-render
+        // the Topic/Subtopic/Difficulty/Dragon Advice/Rules/Concepts blocks.
+        is_math:    !!(r.topic || (Array.isArray(r.rules) && r.rules.length)),
+        // weakness_signal IS persisted; carry it through so the Weakness
+        // Analyzer card shows Detected/Not Detected on rehydrate.
+        weakness_signal: typeof r.weakness_signal === 'boolean' ? r.weakness_signal : null,
       };
       addAI(sig, aiResponse, true);
       sessionMessages.push({role:'user', content: r.question || ''});
@@ -1322,26 +1329,20 @@ button{font-family:inherit;cursor:pointer}
         '</div>';
         if (!skipSignals) this.sendSignal({type:'multi-concept', primary:p.sub, secondary:sec.sub});
       }
-      // repeated-topic block
+      // repeated-topic — visible "Repeated Topic Detected" badge removed by
+      // design. The 'repeated' signal still fires to weakness_signals so the
+      // Weakness Report, Focus Mode, and Mastery adaptive systems pick it up.
       var repeatedTopic='';
       if(count>=2){
-        repeatedTopic='<div class="repeated-topic"><span class="rt-ic">🔁</span><div class="rt-body">'+
-          '<div class="rt-t">Repeated Topic Detected</div><div class="rt-s">'+p.sub+' — this raises its weakness priority</div></div>'+
-          '<span class="rt-count">'+count+'</span></div>';
         if (!skipSignals) this.sendSignal({type:'repeated', topic:p.topic, sub:p.sub, count:count});
       }
-      // potential weakness block (low confidence + repeats + confusion risk)
+      // potential weakness — visible "⚠️ Potential Weakness Detected" badge
+      // removed by design. The underlying conditions (conf<=2 or count>=3)
+      // are still captured downstream: the 'topic' signal with the student's
+      // low confidence is sent below, and AI-detected weakness_signal=true
+      // is upgraded to a 'topic' signal at confidence 2 when no local sig
+      // exists (chat.html flow around line 2086).
       var potentialWeak='';
-      if(conf<=2 || count>=3){
-        var reasons=[];
-        if(conf<=2) reasons.push('Low Confidence');
-        if(count>=2) reasons.push('Repeated Questions');
-        reasons.push('Flagged for review');
-        potentialWeak='<div class="potential-weak"><div class="pw-h">⚠️ Potential Weakness Detected</div>'+
-          '<div class="pw-topic">'+p.topic+' → '+p.sub+'</div>'+
-          '<div class="pw-reasons">'+reasons.map(function(r){return '<div class="pw-r"><span class="pwd"></span>'+r+'</div>';}).join('')+'</div>'+
-          '<button class="pw-btn" onclick="location.href=\'weakness.html\'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Analyze This Topic</button></div>';
-      }
       var statusId='st_'+Math.random().toString(36).slice(2,8);
       // fire base signals to Weakness Analyzer (skip during history replay)
       if (!skipSignals) {
@@ -1802,28 +1803,14 @@ button{font-family:inherit;cursor:pointer}
         '</div>'+
       '</div>' : '';
 
-    // Signal preview card — only for math with a local keyword signal
-    const signalBlock = (isMath && hasSig) ?
-      sig.multiConcept+
-      sig.repeatedTopic+
-      sig.potentialWeak+
-      '<div class="signal-preview">'+
-        '<div class="sp-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Weakness Analyzer Update</div>'+
-        '<div class="sp-grid">'+
-          '<div class="sp-cell"><div class="spc-l">Topic</div><div class="spc-v">'+escapeHtml(topic)+' → '+escapeHtml(subtopic)+'</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Confidence</div><div class="spc-v cyan">'+(sig ? sig.confidence : '')+'/5</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Status</div><div class="spc-v '+(sig ? sig.statusColor : '')+'" id="'+(sig ? sig.statusId : '')+'">Awaiting feedback</div></div>'+
-          '<div class="sp-cell"><div class="spc-l">Signal Strength</div><div class="spc-v '+(weaknessColor || (sig ? sig.strengthColor : ''))+'">'+escapeHtml(weaknessLabel || (sig ? sig.strength : ''))+'</div></div>'+
-        '</div>'+
-        ((helpRequest||explanationRequest) ?
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+
-            (helpRequest ? '<span class="meta-tag" style="background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber)">🆘 Help Request</span>' : '')+
-            (explanationRequest ? '<span class="meta-tag" style="background:var(--cyan-bg-soft);border-color:var(--cyan-border-soft);color:var(--cyan)">📖 Explanation Request</span>' : '')+
-          '</div>' : '')+
-        '<div class="sp-sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sent to Weakness Analyzer automatically</div>'+
-      '</div>'+
-      resolutionHtml
-      : resolutionHtml;
+    // Per-message weakness card removed by design. weakness_signal remains an
+    // internal coaching signal that drives the Weakness Report, Focus Mode, and
+    // Mastery via the SignalEngine pipeline (sendSignal calls above are intact).
+    // The student-facing surface is the Did-this-help resolution buttons and
+    // the Weakness Report dashboard — not a per-message diagnostic label.
+    // sig.multiConcept (neutral Primary/Secondary Topic display) is rendered
+    // here on math turns where a local sig exists.
+    const signalBlock = (isMath && hasSig ? sig.multiConcept : '') + resolutionHtml;
 
     const el=document.createElement('div');el.className='msg ai';
     el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span>'+
