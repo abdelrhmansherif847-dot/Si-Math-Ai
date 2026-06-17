@@ -795,8 +795,71 @@ button{font-family:inherit;cursor:pointer}
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
   }
 
-  function drillOnQuestionAnswered() {
+  // ── Drill persistence (Bug #3 fix) ───────────────────────────────────────────
+  // Keyed per-user so multiple accounts on the same device don't collide.
+  // 24h TTL prevents stale drills lingering forever.
+  const DRILL_STATE_KEY    = 'simath_drill_state_';
+  const DRILL_STATE_TTL_MS = 24 * 3600 * 1000;
+  function drillSaveState() {
+    if (!currentUser) return;
+    try {
+      const key = DRILL_STATE_KEY + currentUser.id;
+      if (!drillMode || drillComplete) { localStorage.removeItem(key); return; }
+      localStorage.setItem(key, JSON.stringify({
+        drillTopics, drillTopicIndex, drillQCount, drillTotalQ, ts: Date.now()
+      }));
+    } catch (e) { /* storage unavailable — degrade to memory only */ }
+  }
+  function drillLoadState() {
+    if (!currentUser) return false;
+    try {
+      const raw = localStorage.getItem(DRILL_STATE_KEY + currentUser.id);
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      if (!s || Date.now() - (s.ts || 0) > DRILL_STATE_TTL_MS) {
+        localStorage.removeItem(DRILL_STATE_KEY + currentUser.id);
+        return false;
+      }
+      if (!Array.isArray(s.drillTopics) || s.drillTopics.length === 0) return false;
+      drillTopics     = s.drillTopics;
+      drillTopicIndex = s.drillTopicIndex || 0;
+      drillQCount     = s.drillQCount     || 0;
+      drillTotalQ     = s.drillTotalQ     || 0;
+      drillMode       = true;
+      drillComplete   = false;
+      const cur = drillTopics[drillTopicIndex];
+      if (cur) {
+        seededTopic    = cur.topic;
+        seededSubtopic = cur.subtopic || null;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // ── Bug #2 fix: only questions matching the active drill topic advance progress.
+  function _drillNorm(s) { return (s == null ? '' : String(s)).trim().toLowerCase(); }
+  function drillQuestionMatchesActiveTopic(qTopic, qSubtopic) {
+    const cur = drillTopics[drillTopicIndex];
+    if (!cur) return false;
+    if (_drillNorm(qTopic) !== _drillNorm(cur.topic)) return false;
+    // If drill specifies a subtopic, require subtopic match too. Otherwise any
+    // subtopic under the drill topic counts.
+    if (cur.subtopic && _drillNorm(qSubtopic) !== _drillNorm(cur.subtopic)) return false;
+    return true;
+  }
+
+  function drillOnQuestionAnswered(answeredTopic, answeredSubtopic) {
     if (!drillMode || drillComplete) return;
+    if (!drillQuestionMatchesActiveTopic(answeredTopic, answeredSubtopic)) {
+      const cur = drillTopics[drillTopicIndex];
+      const label = cur && (cur.subtopic ? cur.topic + ' → ' + cur.subtopic : cur.topic);
+      if (label) {
+        drillAppendCard(
+          'That question is off-topic for the active drill. Ask about <b>' + label +
+          '</b> to advance progress.', 'transition');
+      }
+      return;
+    }
     drillQCount  += 1;
     drillTotalQ  += 1;
     if (drillQCount >= DRILL_Q_PER_TOPIC) {
@@ -829,6 +892,7 @@ button{font-family:inherit;cursor:pointer}
     } else {
       drillRenderBar();
     }
+    drillSaveState();
   }
 
   // ── CAI-P1: client_request_id idempotency + sessionStorage recovery ──────────
@@ -941,6 +1005,15 @@ button{font-family:inherit;cursor:pointer}
         const empty = document.getElementById('empty');
         if (empty) empty.insertBefore(chip, empty.firstChild);
       }
+      // Bug #3 fix: hydrate drill from localStorage if no URL-driven drill is active.
+      // URL drill always wins (explicit user intent); otherwise restore in-progress drill
+      // so a page refresh mid-drill doesn't lose state.
+      if (drillMode) {
+        // URL-driven start — persist initial state immediately so reload restores it.
+        drillSaveState();
+      } else if (drillLoadState()) {
+        // Restored from previous session.
+      }
       if (drillMode) {
         drillRenderBar();
         const exitBtn = document.getElementById('drillExitBtn');
@@ -951,6 +1024,7 @@ button{font-family:inherit;cursor:pointer}
             seededSubtopic = null;
             const bar = document.getElementById('drillBar');
             if (bar) bar.style.display = 'none';
+            drillSaveState();
           }
         };
       }
@@ -1991,7 +2065,10 @@ button{font-family:inherit;cursor:pointer}
         SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
         awardChatXP();
         if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
-        drillOnQuestionAnswered();
+        drillOnQuestionAnswered(
+          (response && response.topic)    || (sig && sig.topic) || null,
+          (response && response.subtopic) || (sig && sig.sub)   || null
+        );
         // Update mastery_records for this interaction
         // Use topic/subtopic from AI response first (most accurate), fall back to sig
         const mTopic = (response && response.topic) || (sig && sig.topic) || null;

@@ -1,81 +1,92 @@
+// Streak writer — recomputes from question_records every call.
+// Self-healing: backfills users whose history predates the Phase 2 deployment.
+// Uses browser local date for day boundaries (approved Strategy B).
 window.updateStreak = async function(sb, userId) {
   try {
-    const { data: profile } = await sb
-      .from('profiles')
-      .select('current_streak, best_streak, last_active_date')
-      .eq('id', userId)
-      .single();
-
     const today = new Date();
-    const todayISO = today.toISOString().slice(0, 10);
     const todayStr = today.toDateString();
+    const pad2 = n => String(n).padStart(2, '0');
+    const todayLocalISO = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
 
-    const lastDate = profile?.last_active_date;
+    // Pull 120 days of activity. Streak is recomputed from scratch, so we don't
+    // depend on whether prior days had a successful update.
+    const since = new Date(today); since.setDate(since.getDate() - 120);
+    const { data: qrs, error: qErr } = await sb
+      .from('question_records')
+      .select('created_at')
+      .eq('user_id', userId)
+      .gte('created_at', since.toISOString());
+    if (qErr) console.warn('[streak] question_records fetch error:', qErr.message);
 
-    if (lastDate) {
-      const lastStr = new Date(lastDate + 'T12:00:00').toDateString();
-      if (lastStr === todayStr) {
-        return {
-          current_streak: profile.current_streak ?? 0,
-          best_streak: profile.best_streak ?? 0,
-        };
-      }
+    // Build the set of local-date strings the user was active. Always include
+    // today — caller invokes updateStreak right after a successful interaction,
+    // and the current question_record may not be visible yet to the query.
+    const dateSet = new Set([todayStr]);
+    (qrs || []).forEach(r => {
+      if (r && r.created_at) dateSet.add(new Date(r.created_at).toDateString());
+    });
+
+    // Walk backward from today: consecutive days = current streak.
+    let current = 0;
+    const cursor = new Date(today); cursor.setHours(0, 0, 0, 0);
+    while (dateSet.has(cursor.toDateString())) {
+      current += 1;
+      cursor.setDate(cursor.getDate() - 1);
     }
 
-    let current = profile?.current_streak ?? 0;
-    let best = profile?.best_streak ?? 0;
-
-    if (lastDate) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toDateString();
-      const lastStr = new Date(lastDate + 'T12:00:00').toDateString();
-      if (lastStr === yesterdayStr) {
-        current = current + 1;
-      } else {
-        current = 1;
-      }
-    } else {
-      current = 1;
+    // Best streak across the window — longest consecutive run.
+    const sortedDates = Array.from(dateSet)
+      .map(s => { const d = new Date(s); d.setHours(0, 0, 0, 0); return d.getTime(); })
+      .sort((a, b) => a - b);
+    let best = 0, run = 0, prev = null;
+    const DAY_MS = 86400000;
+    for (const t of sortedDates) {
+      if (prev !== null && (t - prev) === DAY_MS) run += 1;
+      else run = 1;
+      if (run > best) best = run;
+      prev = t;
     }
 
-    if (current > best) best = current;
+    // Preserve historical best_streak if larger (covers older achievements).
+    const { data: profile, error: pErr } = await sb
+      .from('profiles')
+      .select('best_streak')
+      .eq('id', userId)
+      .maybeSingle();
+    if (pErr) console.warn('[streak] profile fetch error:', pErr.message);
+    if (profile && typeof profile.best_streak === 'number' && profile.best_streak > best) {
+      best = profile.best_streak;
+    }
 
-    await sb.from('profiles').update({
+    const { error: uErr } = await sb.from('profiles').update({
       current_streak:   current,
       best_streak:      best,
-      last_active_date: todayISO,
+      last_active_date: todayLocalISO,
     }).eq('id', userId);
+    if (uErr) console.warn('[streak] profile update error:', uErr.message);
 
     const streakAchievements = [];
     if (current >= 7) {
       streakAchievements.push({
-        user_id: userId,
-        achievement_key: 'streak_7',
-        name: '7-Day Streak',
-        description: 'Practiced for 7 days in a row.',
+        user_id: userId, achievement_key: 'streak_7',
+        name: '7-Day Streak', description: 'Practiced for 7 days in a row.',
         earned_at: new Date().toISOString(),
       });
     }
     if (current >= 30) {
       streakAchievements.push({
-        user_id: userId,
-        achievement_key: 'streak_30',
-        name: '30-Day Streak',
-        description: 'Practiced for 30 consecutive days.',
+        user_id: userId, achievement_key: 'streak_30',
+        name: '30-Day Streak', description: 'Practiced for 30 consecutive days.',
         earned_at: new Date().toISOString(),
       });
     }
     if (best >= 14) {
       streakAchievements.push({
-        user_id: userId,
-        achievement_key: 'consistency_champion',
-        name: 'Consistency Champion',
-        description: 'Maintained a streak of 14+ days.',
+        user_id: userId, achievement_key: 'consistency_champion',
+        name: 'Consistency Champion', description: 'Maintained a streak of 14+ days.',
         earned_at: new Date().toISOString(),
       });
     }
-
     for (const ach of streakAchievements) {
       await sb.from('achievements').upsert(ach, {
         onConflict: 'user_id,achievement_key',
