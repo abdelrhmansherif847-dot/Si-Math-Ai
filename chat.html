@@ -1126,6 +1126,13 @@ button{font-family:inherit;cursor:pointer}
         hint:       r.hint        || null,
         concepts:   Array.isArray(r.concepts) ? r.concepts : null,
         rules:      Array.isArray(r.rules)    ? r.rules    : null,
+        // is_math is not persisted on question_records — infer it from the
+        // presence of topic or rules so rehydrated math responses re-render
+        // the Topic/Subtopic/Difficulty/Dragon Advice/Rules/Concepts blocks.
+        is_math:    !!(r.topic || (Array.isArray(r.rules) && r.rules.length)),
+        // weakness_signal IS persisted; carry it through so the Weakness
+        // Analyzer card shows Detected/Not Detected on rehydrate.
+        weakness_signal: typeof r.weakness_signal === 'boolean' ? r.weakness_signal : null,
       };
       addAI(sig, aiResponse, true);
       sessionMessages.push({role:'user', content: r.question || ''});
