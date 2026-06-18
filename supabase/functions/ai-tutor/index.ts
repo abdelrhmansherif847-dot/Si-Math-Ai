@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v72';
+const AI_TUTOR_VERSION = 'v73';
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 const L3_PIPELINE_VERSION = 'l3-shadow-v1';
 
@@ -44,12 +44,54 @@ function detectFranco(text: string): boolean {
   return words.some(w => FRANCO_WORDS.has(w));
 }
 
-// Explicit "switch to Franco" request — sticky until student switches scripts.
+// Explicit "switch to Franco" request — persistent until student explicitly
+// switches to English or Arabic (see detectors below). Persistence is enforced
+// via profile.language_preference = 'franco' so it survives reloads and long
+// conversations beyond the message-window stickiness.
 function detectExplicitFrancoRequest(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t) return false;
-  return /(speak|talk|reply|respond|answer|write|use)\s+(in\s+)?franco|in\s+franco|franco\s+please|switch\s+to\s+franco/i.test(t)
-      || /(اكتب|كلمني|اتكلم|رد|جاوب)\s*فرانكو/i.test(t);
+  // Latin variants: verb + (in) + franco/arabizi, "in franco", "franco please",
+  // "switch to franco", "bel franco", "bel araby franco", "arabizi", "3arabizi",
+  // "3arabi franco". Verb list expanded with "explain".
+  if (/(speak|talk|reply|respond|answer|write|use|explain)\s+(in\s+|with\s+)?(franco|arabizi|3arabizi)/i.test(t)) return true;
+  if (/(in|bel|bil|b)\s+(araby\s+)?(franco|arabizi|3arabizi)/i.test(t)) return true;
+  if (/(franco|arabizi|3arabizi)\s+(please|plz|pls)/i.test(t)) return true;
+  if (/switch\s+to\s+(franco|arabizi|3arabizi)/i.test(t)) return true;
+  if (/\b3arabi\s+franco\b/i.test(t)) return true;
+  if (/\barabizi\b|\b3arabizi\b/i.test(t)) return true;
+  // Arabic-script Franco requests
+  if (/(اكتب(لي)?|كلمني|اتكلم|رد(لي)?|جاوب(ني)?|تكلم|قول(لي)?)\s*(لي\s*)?(فرانكو|الفرانكو)/i.test(t)) return true;
+  if (/بال?فرانكو/i.test(t)) return true;
+  return false;
+}
+
+// Explicit "switch to English" request — flips the persistent preference back.
+function detectExplicitEnglishRequest(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  if (!t) return false;
+  // Do NOT match if franco/arabizi is in the same phrase
+  if (/(franco|arabizi|3arabizi)/i.test(t)) return false;
+  if (/(speak|talk|reply|respond|answer|write|use|explain)\s+(in\s+|with\s+)?english/i.test(t)) return true;
+  if (/\bin\s+english\b/i.test(t)) return true;
+  if (/\benglish\s+(please|plz|pls)\b/i.test(t)) return true;
+  if (/switch\s+to\s+english/i.test(t)) return true;
+  if (/(اكتب(لي)?|كلمني|اتكلم|رد(لي)?|جاوب(ني)?|قول(لي)?)\s*(لي\s*)?(انجلش|انجليزي|إنجليزي|بالإنجليزي|بالانجليزي)/i.test(t)) return true;
+  return false;
+}
+
+// Explicit "switch to Arabic" request — flips the persistent preference back.
+function detectExplicitArabicRequest(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  if (!t) return false;
+  if (/(franco|arabizi|3arabizi)/i.test(t)) return false;
+  if (/(speak|talk|reply|respond|answer|write|use|explain)\s+(in\s+|with\s+)?arabic/i.test(t)) return true;
+  if (/\bin\s+arabic\b/i.test(t)) return true;
+  if (/\barabic\s+(please|plz|pls)\b/i.test(t)) return true;
+  if (/switch\s+to\s+arabic/i.test(t)) return true;
+  // Arabic-script requests for Arabic explicitly
+  if (/(اكتب(لي)?|كلمني|اتكلم|رد(لي)?|جاوب(ني)?|قول(لي)?)\s*(لي\s*)?(عربي|بالعربي|بالعربية|العربية)/i.test(t)) return true;
+  return false;
 }
 
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
@@ -785,27 +827,78 @@ serve(async (req) => {
     const targetScore   = profile?.target_score || null;
     const studyGoals    = profile?.biggest_weakness || null;
     // Per-message language mirroring with Franco (Arabizi) support.
-    // Order: explicit per-message script wins; sticky franco from prior explicit
-    // request applies when current message is ambiguous; profile preference and
-    // image-only fallback apply only when nothing else matches.
+    //
+    // Persistence model (v73): an explicit "talk in Franco/English/Arabic"
+    // request writes profile.language_preference, so the choice survives
+    // page reloads and conversations of any length. The preference is only
+    // changed by another explicit request — math-heavy English-looking
+    // follow-ups can no longer silently revert Franco to English.
+    //
+    // Resolution order:
+    //   1. Explicit Franco/English/Arabic request on THIS turn → set + persist
+    //   2. Current message script is Arabic → 'ar' (no persistence)
+    //   3. Current message is Franco-style → 'franco' (no persistence)
+    //   4. Profile preference ('franco' | 'ar' | 'en')
+    //   5. Image-only with no text → 'ar' (legacy)
+    //   6. Default → 'en'
     const langPref = profile?.language_preference || null;
     const currentIsArabic       = /[؀-ۿ]/.test(question);
     const currentIsFranco       = !currentIsArabic && detectFranco(question);
     const currentRequestsFranco = detectExplicitFrancoRequest(question);
-    // Stickiness: if any of the last 10 user turns explicitly asked for Franco,
-    // keep replying in Franco for the rest of this conversation unless the
-    // student switches scripts (Arabic on this turn breaks stickiness).
-    const priorFrancoExplicit = messages.slice(-10).some((m) =>
-      m && m.role === 'user' && typeof m.content === 'string' && detectExplicitFrancoRequest(m.content)
-    );
+    const currentRequestsEnglish = !currentRequestsFranco && detectExplicitEnglishRequest(question);
+    const currentRequestsArabic  = !currentRequestsFranco && !currentRequestsEnglish && detectExplicitArabicRequest(question);
+
     let lang: string;
-    if (currentIsArabic) lang = 'ar';
-    else if (currentIsFranco || currentRequestsFranco) lang = 'franco';
-    else if (priorFrancoExplicit && question.trim()) lang = 'franco';
-    else if (langPref === 'ar') lang = 'ar';
-    else if (langPref === 'en') lang = 'en';
-    else if (imageData && !question.trim()) lang = 'ar';
-    else lang = 'en';
+    let persistLangPref: string | null = null;
+    if (currentRequestsFranco) {
+      lang = 'franco';
+      if (langPref !== 'franco') persistLangPref = 'franco';
+    } else if (currentRequestsEnglish) {
+      lang = 'en';
+      if (langPref !== 'en') persistLangPref = 'en';
+    } else if (currentRequestsArabic) {
+      lang = 'ar';
+      if (langPref !== 'ar') persistLangPref = 'ar';
+    } else if (currentIsArabic) {
+      lang = 'ar';
+    } else if (currentIsFranco) {
+      lang = 'franco';
+    } else if (langPref === 'franco') {
+      lang = 'franco';
+    } else if (langPref === 'ar') {
+      lang = 'ar';
+    } else if (langPref === 'en') {
+      lang = 'en';
+    } else if (imageData && !question.trim()) {
+      lang = 'ar';
+    } else {
+      lang = 'en';
+    }
+
+    // Persist explicit language choice to profile (background, non-blocking).
+    if (persistLangPref) {
+      const newPref = persistLangPref;
+      const uidForPersist = user.id;
+      const persistTask = supabase
+        .from('profiles')
+        .update({ language_preference: newPref })
+        .eq('id', uidForPersist)
+        .then(({ error }) => {
+          if (error) {
+            console.log('[ai-tutor] lang-pref-persist-error', JSON.stringify({
+              uid: uidForPersist.slice(0, 8), newPref, error: String(error.message || error),
+            }));
+          } else {
+            console.log('[ai-tutor] lang-pref-persisted', JSON.stringify({
+              uid: uidForPersist.slice(0, 8), newPref, prior: langPref,
+            }));
+          }
+        });
+      try {
+        // @ts-ignore — EdgeRuntime is provided by Supabase Deno runtime
+        if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(persistTask);
+      } catch (_) { /* fire-and-forget */ }
+    }
 
     // ── Worksheet Navigation Guard (early-return, 0 tokens) ───────────────────
     // Must run after lang resolution (guard messages are language-aware) and
@@ -1018,17 +1111,26 @@ ${personality}
 ---
 
 ${STUDENT_PROFILE_BLOCK}
+## 🔒 ABSOLUTE LANGUAGE RULE — APPLIES TO ENTIRE RESPONSE
+Active language: **${lang === 'franco' ? 'FRANCO (Egyptian Arabizi)' : lang === 'ar' ? 'ARABIC' : 'ENGLISH'}**.
+You MUST write 100% of your prose in this language. No drift. No mixing. No partial switches.
+Math notation (LaTeX, variables, formulas, exam terms) stays standard regardless of language.
+If you find yourself writing in any other language mid-response, STOP and rewrite the sentence.
+
 Language: ${
   lang === 'ar'
     ? 'Arabic — respond entirely in Arabic, warm Egyptian dialect welcome for greetings/chitchat'
     : lang === 'franco'
     ? `Franco (Egyptian Arabizi — Arabic written in Latin letters with digits as letter substitutes: 3=ع, 7=ح, 2=ء, 5=خ, 8=غ).
+- 🔒 EVERY sentence of prose, every card heading translation, every explanation, every step description, every coaching line — ALL in Franco. No exceptions even for long math walkthroughs.
 - Mirror the student's Franco style: casual Egyptian dialect, short sentences, natural rhythm.
 - Examples of Franco coaching: "tmam ya ${studentName}, fakker m3aya el khatwa el gaya", "ezay el so2al da? te2dar te3zel x?", "7elw awy! da bel zabt el tafkir el sa7."
 - Keep math expressions, equations, formulas, variables, and SAT/EST terminology in standard notation/English: $x^2 + 3x - 4 = 0$, "quadratic formula", "slope", "Module 1". DO NOT transliterate math.
+- Card headings (Understand the Problem, Strategy, Step 1, etc.) — translate the heading text to Franco. Example: "📖 **Efham el so2al**", "🎯 **El estrategy — leh el tare2a di**", "📐 **Khatwa 1 — esm el khatwa**".
 - Numbers in calculations stay as digits (not Franco letter-numbers). Franco's 3/7/2/5 are letters only inside Arabic words.
 - Coaching, encouragement, explanations of WHY, and emotional tone → all in Franco.
-- Educational accuracy and structure (cards, steps, LaTeX, common-mistake notes) remain identical to other languages.`
+- Educational accuracy and structure (cards, steps, LaTeX, common-mistake notes) remain identical to other languages.
+- If a long math explanation makes you drift to English mid-response, STOP and rewrite that sentence in Franco before continuing.`
     : 'English'
 }
 
@@ -1217,9 +1319,13 @@ Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON
     const HINT_SYSTEM_PROMPT = `You are Zero — a Socratic math tutor. You are in HINT MODE.
 
 ${STUDENT_PROFILE_BLOCK}
+## 🔒 ABSOLUTE LANGUAGE RULE
+Active language: **${lang === 'franco' ? 'FRANCO (Egyptian Arabizi)' : lang === 'ar' ? 'ARABIC' : 'ENGLISH'}**.
+Write 100% of prose in this language. Math notation stays standard. No drift.
+
 Language: ${
   lang === 'ar' ? 'Arabic — warm Egyptian dialect welcome'
-  : lang === 'franco' ? 'Franco (Egyptian Arabizi: Latin letters + 3/7/2/5 as Arabic-letter substitutes). Mirror the student\'s Franco style. Keep math expressions ($x^2$, formulas, variables) and SAT/EST terms in standard notation/English — never transliterate math.'
+  : lang === 'franco' ? 'Franco (Egyptian Arabizi: Latin letters + 3/7/2/5 as Arabic-letter substitutes). 🔒 EVERY sentence in Franco — observation, hint, guiding question, all of it. Mirror the student\'s Franco style. Keep math expressions ($x^2$, formulas, variables) and SAT/EST terms in standard notation/English — never transliterate math.'
   : 'English'
 }
 
@@ -1270,9 +1376,20 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         ]
       : question;
 
+    // Per-turn language anchor — injected as a system message immediately before
+    // the user turn so the model cannot drift to English mid-response on long
+    // math explanations. Tested as the most reliable way to lock Franco/Arabic.
+    const langAnchor =
+      lang === 'franco'
+        ? '🔒 LANGUAGE LOCK: This entire response must be written in Franco (Egyptian Arabizi — Latin letters + 3/7/2/5 as Arabic-letter substitutes). Every sentence of prose, every card heading, every explanation — all in Franco. Math notation ($x^2$, formulas, variable names, exam terms) stays standard. Do not switch to English mid-response.'
+        : lang === 'ar'
+        ? '🔒 LANGUAGE LOCK: This entire response must be written in Arabic (Egyptian dialect welcome). Every sentence of prose in Arabic. Math notation stays standard. Do not switch to English mid-response.'
+        : '🔒 LANGUAGE LOCK: This entire response must be written in English.';
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.slice(-10),
+      { role: 'system', content: langAnchor },
       { role: 'user', content: userContent },
     ];
 
