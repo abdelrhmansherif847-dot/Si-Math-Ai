@@ -413,6 +413,19 @@ button{font-family:inherit;cursor:pointer}
 .trend-chip.dn  {color:var(--red);border-color:var(--red-border)}
 .trend-chip.eq  {color:var(--text-300);border-color:rgba(255,255,255,.12)}
 .trend-chip svg{width:11px;height:11px}
+
+/* ── Plan gating (Free users) ── */
+body.plan-free [data-pro-only]{display:none!important}
+body.plan-free .trend-chip{display:none!important}
+.pro-upsell{background:linear-gradient(135deg,rgba(168,85,247,.1),var(--bg-card));border:1px solid rgba(168,85,247,.3);border-radius:var(--r-lg);padding:24px;margin:24px 0;display:none;text-align:center}
+body.plan-free .pro-upsell{display:block}
+.pro-upsell .pu-ico{font-size:32px;margin-bottom:10px}
+.pro-upsell .pu-title{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;margin-bottom:8px}
+.pro-upsell .pu-body{font-size:14px;color:var(--text-300);max-width:520px;margin:0 auto 18px;line-height:1.6}
+.pro-upsell .pu-list{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:18px}
+.pro-upsell .pu-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.28);font-family:var(--font-mono);font-size:11px;color:#c8a8f7}
+.pro-upsell .pu-cta{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:var(--r-md);background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:var(--font-display);font-weight:700;font-size:14px;text-decoration:none;transition:transform .2s,box-shadow .2s}
+.pro-upsell .pu-cta:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(168,85,247,.35)}
 /* Recency block */
 .rec-block{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px;color:var(--text-300);align-items:center}
 .rec-block .rk{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500)}
@@ -578,9 +591,24 @@ button{font-family:inherit;cursor:pointer}
     </div>
   </section>
 
+  <!-- Pro upgrade banner — shows only for Free users in place of locked deep analytics -->
+  <div class="pro-upsell">
+    <div class="pu-ico">⭐</div>
+    <div class="pu-title">Get the full picture with Pro</div>
+    <div class="pu-body">You're seeing your top 3 weaknesses. Pro unlocks the deep analysis — what's driving each weakness, how it's trending, every subtopic broken down, and personalized recommendations from Zero.</div>
+    <div class="pu-list">
+      <span class="pu-chip">📈 Trend history</span>
+      <span class="pu-chip">🔍 Why it's a weakness</span>
+      <span class="pu-chip">📊 Topic breakdown</span>
+      <span class="pu-chip">🎯 Mastery progress</span>
+      <span class="pu-chip">🤖 AI recommendations</span>
+    </div>
+    <a href="manual-payment.html" class="pu-cta">Upgrade to Pro →</a>
+  </div>
+
   <!-- SECTION: WHY THIS IS A WEAKNESS -->
-  <div class="sec-label">Why This Is A Weakness</div>
-  <section class="card">
+  <div class="sec-label" data-pro-only>Why This Is A Weakness</div>
+  <section class="card" data-pro-only>
     <div class="card-head">
       <div class="card-ico">🔍</div>
       <div><div class="card-title"><span class="skel skel-row" style="width:160px;display:inline-block"></span></div><div class="card-sub">The evidence behind this ranking</div></div>
@@ -598,8 +626,8 @@ button{font-family:inherit;cursor:pointer}
   </section>
 
   <!-- SECTION: ANALYSIS SOURCES -->
-  <div class="sec-label">Analysis Sources</div>
-  <section class="card">
+  <div class="sec-label" data-pro-only>Analysis Sources</div>
+  <section class="card" data-pro-only>
     <div class="card-head">
       <div class="card-ico">🛰️</div>
       <div><div class="card-title">Where This Analysis Comes From</div><div class="card-sub">Si combines signals from all your learning activities</div></div>
@@ -616,8 +644,8 @@ button{font-family:inherit;cursor:pointer}
   </section>
 
   <!-- SECTION: SIGNAL BREAKDOWN -->
-  <div class="sec-label">Signal Breakdown</div>
-  <section class="card">
+  <div class="sec-label" data-pro-only>Signal Breakdown</div>
+  <section class="card" data-pro-only>
     <div class="signal-cols">
       <div class="sig-col chat">
         <div class="sc-h"><span class="sc-ic">🤖</span>AI Chat Signals</div>
@@ -639,8 +667,8 @@ button{font-family:inherit;cursor:pointer}
   </section>
 
   <!-- SECTION 2 -->
-  <div class="sec-label">Topic Breakdown</div>
-  <section class="card">
+  <div class="sec-label" data-pro-only>Topic Breakdown</div>
+  <section class="card" data-pro-only>
     <div class="card-head">
       <div class="card-ico">📊</div>
       <div><div class="card-title">Performance by Topic</div><div class="card-sub">Accuracy % when quiz data exists · Mastery Score % otherwise</div></div>
@@ -687,8 +715,8 @@ button{font-family:inherit;cursor:pointer}
   </section>
 
   <!-- PREDICTED + AI REC -->
-  <div class="sec-label">Estimated Score Impact</div>
-  <div class="sw-grid">
+  <div class="sec-label" data-pro-only>Estimated Score Impact</div>
+  <div class="sw-grid" data-pro-only>
     <section class="predict">
       <div class="pi">🚀</div>
       <div class="pl">Potential Gain</div>
@@ -706,8 +734,8 @@ button{font-family:inherit;cursor:pointer}
   </div>
 
   <!-- SECTION 5 -->
-  <div class="sec-label">Mastery Progress</div>
-  <section class="card">
+  <div class="sec-label" data-pro-only>Mastery Progress</div>
+  <section class="card" data-pro-only>
     <div class="card-head">
       <div class="card-ico">📈</div>
       <div><div class="card-title">Mastery Over Time</div><div class="card-sub">How your mastery of each weakness is improving</div></div>
@@ -733,8 +761,8 @@ button{font-family:inherit;cursor:pointer}
   </section>
 
   <!-- SECTION 6 -->
-  <div class="sec-label">Recommended Next Step</div>
-  <section class="card">
+  <div class="sec-label" data-pro-only>Recommended Next Step</div>
+  <section class="card" data-pro-only>
     <div class="card-head">
       <div class="card-ico">🎯</div>
       <div><div class="card-title">Recommended Focus Topic</div><div class="card-sub">Start here for the biggest impact</div></div>
@@ -1019,7 +1047,13 @@ async function init(){
   currentUser=user;
   if(!(await deviceGuard(sb,user.id)))return;
 
-  const {data:prof}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();
+  try{await sb.rpc('enforce_my_subscription_expiry');}catch(_){}
+
+  const {data:prof}=await sb.from('profiles').select('is_admin, plan_code, is_founder').eq('id',user.id).single();
+  // Plan gating: Free users see Top 3 weaknesses but lose deep analytics, trends, subtopic breakdown, advanced recs
+  window._isPro = !!(prof && (prof.is_founder || (prof.plan_code && prof.plan_code !== 'FREE')));
+  if (!window._isPro) document.body.classList.add('plan-free');
+
   if(prof?.is_admin){
     const adminLink=document.createElement('a');
     adminLink.className='nav-item';adminLink.href='admin.html';
@@ -1442,7 +1476,9 @@ function renderStats(reports,mastery,signals){
 function renderRankTable(reports,mastery){
   const rt=document.querySelector('.rank-table');if(!rt)return;
   if(!reports.length){rt.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-400)">No ranked data yet.</div>';return;}
-  const top5=reports.slice(0,5);
+  // Free users see top 3, Pro users see top 5
+  const limit = window._isPro ? 5 : 3;
+  const top5=reports.slice(0,limit);
   rt.innerHTML=top5.map((r,i)=>{
     const p=getPri(r);
     const mPct=masteryPct(r,mastery);

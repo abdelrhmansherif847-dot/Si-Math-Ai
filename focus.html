@@ -991,19 +991,30 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     var allDone = dayTasks.length > 0 && dayTasks.every(function(t){ return t.status==='DONE'; });
     var isToday = d === currentDay;
     var isUpcoming = d > currentDay;
-    var cardCls = 'day-card' + (isToday?' active open':'') + (allDone?' done-all':'');
-    var badgeCls = allDone ? 'done' : isToday ? 'today' : 'locked';
-    var badgeTxt = allDone ? '&#10003; Done' : isToday ? 'Today' : 'Upcoming';
+    // Free users: lock Day 2 (Accuracy) and Day 3 (Pressure)
+    var isProLocked = !window._isPro && d > 1;
+    var cardCls = 'day-card' + (isToday?' active open':'') + (allDone?' done-all':'') + (isProLocked?' pro-locked':'');
+    var badgeCls = isProLocked ? 'locked' : allDone ? 'done' : isToday ? 'today' : 'locked';
+    var badgeTxt = isProLocked ? '🔒 Pro' : allDone ? '&#10003; Done' : isToday ? 'Today' : 'Upcoming';
     html += '<div class="' + cardCls + '">';
     html += '<div class="day-card-head">';
     html += '<div class="dc-num">' + d + '</div>';
     html += '<div class="dc-meta">';
-    html += '<div class="dc-title">' + escHtml(DAY_NAMES[d]) + '</div>';
+    html += '<div class="dc-title">' + escHtml(DAY_NAMES[d]) + (isProLocked?' <span style="font-size:11px;color:#a855f7;font-weight:600;margin-left:6px">PRO</span>':'') + '</div>';
     html += '<div class="dc-sub">' + escHtml(DAY_DESCS[d]) + '</div>';
     html += '</div>';
     html += '<div class="dc-right"><span class="dc-badge ' + badgeCls + '">' + badgeTxt + '</span><span class="dc-chev">&#9660;</span></div>';
     html += '</div>';
     html += '<div class="day-body">';
+    if (isProLocked) {
+      html += '<div style="padding:24px 18px;text-align:center;background:linear-gradient(135deg,rgba(168,85,247,.08),transparent);border-radius:12px;margin:10px">';
+      html += '<div style="font-size:28px;margin-bottom:8px">🔒</div>';
+      html += '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:15px;margin-bottom:6px">' + escHtml(DAY_NAMES[d]) + ' is a Pro feature</div>';
+      html += '<div style="font-size:13px;color:var(--text-400);max-width:380px;margin:0 auto 14px">Unlock the full 3-day study plan with timed drills, harder problems, and pressure practice.</div>';
+      html += '<a href="manual-payment.html" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:var(--font-display);font-weight:700;font-size:13px;text-decoration:none">Upgrade to Pro →</a>';
+      html += '</div></div></div>';
+      return;
+    }
     dayTasks.forEach(function(t) {
       var st = t.status || 'NOT_STARTED';
       var chkCls = 'day-check' + (st==='IN_PROGRESS'?' inprogress':st==='DONE'?' done':'');
@@ -1202,6 +1213,8 @@ async function loadData() {
   if (!user) { window.location.href = 'login.html'; return; }
   if (!(await deviceGuard(sb, user.id))) return;
 
+  try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+
   const params     = new URLSearchParams(window.location.search);
   const urlTopic   = params.get('topic') || '';
   const urlSub     = params.get('subtopic') || '';
@@ -1214,6 +1227,9 @@ async function loadData() {
   ]);
 
   const profile    = profRes.data  || null;
+  // Plan gating: Free users get Day 1 (Foundation) only; Pro unlocks Day 2 (Accuracy) and Day 3 (Pressure)
+  window._isPro = !!(profile && (profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
+  if (!window._isPro) document.body.classList.add('plan-free');
   if (profile?.is_admin) {
     const adminLink = document.createElement('a');
     adminLink.className = 'nav-item';

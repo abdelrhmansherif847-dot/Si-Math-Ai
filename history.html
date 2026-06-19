@@ -314,9 +314,12 @@ try {
 // Avatar
 let profile = null;
 try {
-  const { data: p } = await sb.from('profiles').select('full_name, is_admin').eq('id', user.id).single();
+  try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+  const { data: p } = await sb.from('profiles').select('full_name, is_admin, plan_code, is_founder').eq('id', user.id).single();
   profile = p;
 } catch(e) { console.warn('[history] profile fetch error:', e.message); }
+// Plan gating: Free users see last 10 sessions; Pro users see full history
+const isPro = !!(profile && (profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
 const initial = (profile?.full_name || user.email || '?')[0].toUpperCase();
 document.getElementById('avatarEl').textContent = initial;
 if (profile?.is_admin) {
@@ -356,11 +359,13 @@ function esc(s) {
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 async function fetchAll() {
+  const _chatLimit = isPro ? 500 : 10;
   const [chatRes, examRes, masteryRes] = await Promise.all([
     sb.from('chat_sessions')
       .select('id,title,created_at,last_message_at')
       .eq('user_id', user.id)
-      .order('last_message_at', { ascending: false }),
+      .order('last_message_at', { ascending: false })
+      .limit(_chatLimit),
     sb.from('exam_practice_sessions')
       .select('id,exam_type,score,correct_answers,wrong_answers,duration_minutes,created_at')
       .eq('user_id', user.id)
@@ -486,7 +491,17 @@ function renderTab(tab, data) {
   if (tab === 'chat') {
     html += '<div class="sec-label">AI Chat Sessions</div>';
     if (!sessions.length) html += emptyState('No chat sessions yet', 'Start a conversation with Si Math AI to see your history here.');
-    else sessions.forEach(s => { html += chatCard(s, qCountMap, false); });
+    else {
+      sessions.forEach(s => { html += chatCard(s, qCountMap, false); });
+      if (!isPro && sessions.length >= 10) {
+        html += '<div style="margin-top:18px;padding:18px;border-radius:14px;background:linear-gradient(135deg,rgba(168,85,247,.1),transparent);border:1px solid rgba(168,85,247,.28);text-align:center">'
+          + '<div style="font-size:24px;margin-bottom:6px">📚</div>'
+          + '<div style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:15px;margin-bottom:4px">Showing your last 10 chats</div>'
+          + '<div style="font-size:13px;color:var(--text-400);margin-bottom:12px">Upgrade to Pro for unlimited chat history.</div>'
+          + '<a href="manual-payment.html" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:var(--font-display);font-weight:700;font-size:13px;text-decoration:none">Upgrade to Pro →</a>'
+          + '</div>';
+      }
+    }
     area.innerHTML = html; return;
   }
 

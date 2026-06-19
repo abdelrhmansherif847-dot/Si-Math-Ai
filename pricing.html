@@ -416,29 +416,32 @@ function buildPlanFeatures(plan) {
   const features = [];
   if (code === 'FREE') {
     features.push({ ok: true,  text: limit + ' AI messages per day' });
-    features.push({ ok: true,  text: 'Full Weakness Analyzer' });
-    features.push({ ok: true,  text: 'Focus Practice sessions' });
-    features.push({ ok: true,  text: 'Mock Exam timer & results' });
-    features.push({ ok: true,  text: 'History & progress tracking' });
-    features.push({ ok: true,  text: 'XP & Achievement system' });
+    features.push({ ok: true,  text: 'Top 3 weaknesses (basic view)' });
+    features.push({ ok: true,  text: 'Focus Practice — Day 1 (Foundation)' });
+    features.push({ ok: true,  text: '1 mock exam per week' });
+    features.push({ ok: true,  text: 'Last 10 chat sessions' });
+    features.push({ ok: true,  text: 'XP, streaks & achievements' });
     features.push({ ok: true,  text: devices + ' active devices' });
-    features.push({ ok: false, text: 'Credit-based AI access (unlimited/day)' });
-    features.push({ ok: false, text: 'Priority AI responses' });
-    features.push({ ok: false, text: 'Priority support' });
+    features.push({ ok: false, text: 'Deep weakness analytics & trends' });
+    features.push({ ok: false, text: 'Full 3-day study plan' });
+    features.push({ ok: false, text: 'Unlimited mock exams' });
+    features.push({ ok: false, text: 'Unlimited chat history' });
   } else {
     features.push({ ok: true,  text: credits.toLocaleString() + ' credits / ' + (code.endsWith('_ANNUAL') ? 'year' : code.endsWith('_QUARTERLY') ? '3 months' : 'month') });
-    features.push({ ok: true,  text: 'Unlimited daily AI messages (credit-based)' });
-    features.push({ ok: true,  text: 'Priority AI responses' });
+    features.push({ ok: true,  text: 'Unlimited daily AI messages' });
+    features.push({ ok: true,  text: 'Full Weakness Analyzer (all topics, trends, deep analysis)' });
+    features.push({ ok: true,  text: 'Full 3-day study plan (Foundation + Accuracy + Pressure)' });
+    features.push({ ok: true,  text: 'Unlimited mock exams + full review' });
+    features.push({ ok: true,  text: 'Unlimited chat history' });
+    features.push({ ok: true,  text: 'AI-powered recommendations on every weakness' });
     features.push({ ok: true,  text: devices + ' active devices' });
-    features.push({ ok: true,  text: 'Full Weakness Analyzer' });
-    features.push({ ok: true,  text: 'Focus Practice & Mock Exam' });
-    features.push({ ok: true,  text: 'History & progress tracking' });
-    features.push({ ok: true,  text: 'Priority support' });
     if (plan.is_founder) {
       features.push({ ok: true,  text: 'Permanent Founder badge on your profile' });
       features.push({ ok: true,  text: 'All future price increases locked out' });
+      features.push({ ok: true,  text: 'Direct feedback channel to the team' });
     }
     if (code.endsWith('_ANNUAL')) {
+      features.push({ ok: true,  text: 'Early access to new features (2–4 weeks before Monthly)' });
       features.push({ ok: true,  text: 'Best value — save vs monthly' });
     }
   }

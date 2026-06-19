@@ -768,6 +768,26 @@ function afterSelect() {
       }
     } catch(e) { console.error('[mock-exam] device check error:',e); }
 
+    // Plan gating: Free users — 1 full mock exam per 7 days (PRACTICE mode is always free).
+    try {
+      try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+      const { data: _planProf } = await sb.from('profiles').select('plan_code, is_founder').eq('id', user.id).single();
+      const _isPro = !!(_planProf && (_planProf.is_founder || (_planProf.plan_code && _planProf.plan_code !== 'FREE')));
+      if (!_isPro && s.exam.code !== 'PRACTICE') {
+        const _since = new Date(Date.now() - 7 * 86400000).toISOString();
+        const { count: _examsThisWeek } = await sb.from('exam_practice_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('created_at', _since)
+          .neq('exam_type', 'PRACTICE');
+        if ((_examsThisWeek || 0) >= 1) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Start Exam'; }
+          showExamPaywall('You\'ve already taken your free mock exam this week. Upgrade to Pro for unlimited mock exams + full per-section analytics, or wait until next week.');
+          return;
+        }
+      }
+    } catch(_) {}
+
     s.timerTotal = s.exam.code === 'PRACTICE'
       ? Math.ceil(s.practiceQuestions * 1.5) * 60
       : s.exam.duration * 60;
@@ -784,8 +804,15 @@ function showExamPaywall(msg) {
   if (existing) existing.remove();
   var el = document.createElement('div');
   el.id = 'examPaywall';
-  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;background:#1a1a2e;border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:14px 20px;color:#f87171;font-size:13px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)';
-  el.innerHTML = msg + ' <button onclick="this.parentNode.remove()" style="margin-left:12px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  el.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(2,6,14,.78);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+  el.innerHTML = '<div style="background:#0a1224;border:1px solid rgba(168,85,247,.32);border-radius:18px;padding:28px;max-width:440px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,.5)">'
+    + '<div style="font-size:42px;margin-bottom:12px">🔒</div>'
+    + '<div style="font-family:Manrope,sans-serif;font-weight:800;font-size:20px;color:#fff;margin-bottom:10px">Free Mock Exam Used</div>'
+    + '<div style="color:#a8bcd9;font-size:14px;line-height:1.55;margin-bottom:20px">' + msg + '</div>'
+    + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+    + '<button onclick="document.getElementById(\'examPaywall\').remove()" style="padding:11px 18px;border-radius:11px;background:#0c1428;border:1px solid #26334d;color:#a8bcd9;font-weight:600;cursor:pointer">Maybe later</button>'
+    + '<a href="manual-payment.html" style="display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:11px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:Manrope,sans-serif;font-weight:700;font-size:14px;text-decoration:none">Upgrade to Pro →</a>'
+    + '</div></div>';
   document.body.appendChild(el);
 }
 
