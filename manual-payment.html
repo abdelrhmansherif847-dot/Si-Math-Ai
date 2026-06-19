@@ -218,6 +218,27 @@ button{font-family:inherit;cursor:pointer}
           <div class="plan-note" style="margin-top:10px">~250 EGP/month equivalent</div>
         </div>
       </div>
+
+      <!-- Founder Annual — only shown when slots remain -->
+      <div id="founderOfferBox" style="display:none;margin-top:14px">
+        <div class="plan-card" data-plan="FOUNDER_ANNUAL" data-amount="1499" data-label="Founder Annual" onclick="selectPlan(this)" style="border-color:#f5b942;background:linear-gradient(135deg,rgba(245,185,66,.08),rgba(168,85,247,.05));position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#f5b942,#d97706);color:#fff;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;padding:5px 14px 5px 18px;border-bottom-left-radius:14px;font-weight:700">
+            ONLY <span id="founderSlotsLeft">—</span> SPOTS LEFT
+          </div>
+          <div class="check" style="border-color:#f5b942">✓</div>
+          <div class="plan-badge" style="background:rgba(245,185,66,.15);border:1px solid rgba(245,185,66,.32);color:#f5b942">👑 FOUNDER — FIRST 50 ONLY</div>
+          <div class="plan-name" style="margin-top:6px">Founder Annual</div>
+          <div class="plan-price" style="color:#f5b942">1499 <span>EGP / year</span></div>
+          <div class="plan-features">
+            <div class="plan-feat">Everything in Pro Annual</div>
+            <div class="plan-feat">👑 Permanent Founder badge</div>
+            <div class="plan-feat">📬 Direct feedback channel to the team</div>
+            <div class="plan-feat">🧪 All beta features unlocked</div>
+            <div class="plan-feat">🔒 Renewal price locked at 1499 EGP forever</div>
+          </div>
+          <div class="plan-note" style="margin-top:10px;color:#f5b942"><strong>50% off Pro Annual.</strong> When slots are gone, this offer closes permanently.</div>
+        </div>
+      </div>
     </div>
 
     <!-- STEP 2: Pay -->
@@ -341,6 +362,16 @@ async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) { window.location.href = 'login.html'; return; }
   currentUser = user;
+
+  // Reveal Founder Annual offer if slots remain
+  try {
+    const { data: slots } = await sb.from('system_settings').select('value').eq('key', 'founder_slots_remaining').single();
+    const left = parseInt(slots?.value || '0', 10);
+    if (left > 0) {
+      document.getElementById('founderOfferBox').style.display = 'block';
+      document.getElementById('founderSlotsLeft').textContent = left;
+    }
+  } catch(_) {}
 
   // Check for pre-selected plan from pricing.html
   const params = new URLSearchParams(window.location.search);
