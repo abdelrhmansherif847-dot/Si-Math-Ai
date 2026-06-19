@@ -20,20 +20,66 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v74';
+const AI_TUTOR_VERSION = 'v75';
 
 // ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
-// Must stay in sync with SYSTEM_TOPICS set and isAcademicTopic() in taxonomy.js.
+// Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
+// Deno cannot import the browser script, so this is the necessary duplicate.
 const SYSTEM_TOPICS = new Set([
   'conversation','other','none','chat','general','meta','system',
   'unknown','n/a','na','null','undefined','','coaching','planning',
   'study planning','study coaching','exam strategy','motivation',
-  'confidence','mindset','scheduling','out_of_scope',
+  'confidence','mindset','scheduling','out_of_scope','greeting',
+  'math','mathematics','maths','general math','basic math',
+  'miscellaneous','intro','introduction','review','hint','hints',
 ]);
+const TOPIC_ALIASES: Record<string, string> = {
+  'geometry':'Geometry','algebra':'Algebra','trigonometry':'Trigonometry',
+  'trig':'Trigonometry','statistics':'Statistics','probability':'Probability',
+  'calculus':'Calculus','number theory':'Number Theory','word problems':'Word Problems',
+  'linear equations':'Linear Equations','quadratic equations':'Quadratic Equations',
+  'order of operations':'Order of Operations','complex numbers':'Complex Numbers',
+  'functions':'Functions','inequalities':'Inequalities',
+};
+const SUBTOPIC_MAP: Record<string, string[]> = {
+  'Algebra': ['Linear Equations','Systems of Equations','Quadratic Equations','Polynomials','Inequalities','Absolute Value','Exponents & Radicals','Functions','Sequences & Patterns'],
+  'Geometry': ['Triangles','Circles','Angles & Lines','Coordinate Geometry','Area & Volume','Similar Figures','Transformations','3D Shapes'],
+  'Word Problems': ['Linear Word Problems','Percent Problems','Ratio Problems','Rate & Work Problems','Mixture Problems','Distance & Speed Problems','Statistics Word Problems'],
+  'Statistics': ['Mean, Median, Mode','Standard Deviation','Data Tables','Scatter Plots','Probability','Sampling Methods','Survey Design'],
+  'Trigonometry': ['Sin, Cos, Tan','Unit Circle','Trig Identities','Radian Measure','Inverse Trig','Law of Sines & Cosines'],
+  'Number Theory': ['Integers','Fractions & Decimals','Percentages','Ratios & Proportions','Prime Numbers','Factors & Multiples'],
+  'Calculus': ['Limits','Derivatives','Chain Rule','Product Rule','Integration','Optimization Problems'],
+  'Probability': ['Basic Probability','Compound Events','Conditional Probability','Combinations','Permutations'],
+  'Linear Equations': ['One-Variable Equations','Two-Variable Equations','Slope & Rate of Change','Intercepts','Parallel & Perpendicular Lines'],
+  'Quadratic Equations': ['Factoring','Quadratic Formula','Completing the Square','Vertex Form','Discriminant'],
+  'Complex Numbers': ['Imaginary Numbers','Operations with Complex Numbers','Complex Conjugates','Modulus & Argument'],
+};
 function isAcademicTopic(t: string): boolean {
   const s = (t || '').trim().toLowerCase();
   return s.length >= 2 && !SYSTEM_TOPICS.has(s);
 }
+function normalizeTopicCanonical(s: string): string {
+  if (!s) return '';
+  const t = s.trim();
+  const lower = t.toLowerCase();
+  return TOPIC_ALIASES[lower] || (t.charAt(0).toUpperCase() + t.slice(1));
+}
+function subtopicsForCanonical(topic: string): string[] {
+  return SUBTOPIC_MAP[normalizeTopicCanonical(topic)] || [];
+}
+// Positive allowlist: returns canonical subtopic if it matches a known subtopic
+// for the given topic (case-insensitive), or '' if not.
+function canonicalSubtopic(topic: string, sub: string): string {
+  if (!sub) return '';
+  const list = subtopicsForCanonical(topic);
+  if (list.length === 0) return sub.trim(); // Topic has no curated subtopic list — accept as-is
+  const lower = sub.trim().toLowerCase();
+  return list.find(s => s.toLowerCase() === lower) || '';
+}
+// Pre-built curriculum tree string for the system prompt.
+const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
+  .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
+  .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 const L3_PIPELINE_VERSION = 'l3-shadow-v1';
 
@@ -1399,8 +1445,18 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         ? '🔒 LANGUAGE LOCK: This entire response must be written in Arabic (Egyptian dialect welcome). Every sentence of prose in Arabic. Math notation stays standard. Do not switch to English mid-response.'
         : '🔒 LANGUAGE LOCK: This entire response must be written in English.';
 
+    const curriculumAnchor =
+      '📚 OFFICIAL CURRICULUM (taxonomy enforcement):\n' +
+      'When setting "topic" and "subtopic" in your JSON response for is_math=true turns, ' +
+      'you MUST pick from the canonical tree below. Do NOT invent topic names. ' +
+      'Use the exact spelling shown. If a question spans multiple subtopics, pick the dominant one. ' +
+      'If no subtopic fits, set subtopic="" rather than inventing one.\n\n' +
+      CURRICULUM_TREE_TEXT +
+      '\n\nFor is_math=false turns: topic="General", subtopic="".';
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
+      { role: 'system', content: curriculumAnchor },
       ...messages.slice(-10),
       { role: 'system', content: langAnchor },
       { role: 'user', content: userContent },
@@ -1493,22 +1549,36 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
-    // ── Taxonomy gate: block non-academic topics from reaching the DB ─────────
-    // Enforce that only valid math taxonomy values are persisted.
-    // Non-math turns get topic="General", subtopic="" (never "Conversation" etc).
+    // ── Taxonomy gate (v75): positive allowlist via canonical curriculum tree ─
+    // - Non-math turns: topic="General", subtopic="" (never "Conversation" etc).
+    // - Math turns: normalize topic via TOPIC_ALIASES; if not academic, reject.
+    //   Subtopic must appear in subtopicsForCanonical(topic) — otherwise blank.
+    //   Topics with no curated subtopic list accept the raw subtopic as-is.
     let safeInsertTopic    = finalTopic;
     let safeInsertSubtopic = finalSubtopic;
     if (!isMath) {
       safeInsertTopic    = 'General';
       safeInsertSubtopic = '';
-    } else if (!isAcademicTopic(finalTopic)) {
-      console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
-        uid: user.id.slice(0, 8), topic: finalTopic, subtopic: finalSubtopic,
-      }));
-      safeInsertTopic    = '';
-      safeInsertSubtopic = '';
-    } else if (finalSubtopic && !isAcademicTopic(finalSubtopic)) {
-      safeInsertSubtopic = '';
+    } else {
+      const canonTopic = normalizeTopicCanonical(finalTopic);
+      if (!isAcademicTopic(canonTopic)) {
+        console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
+          uid: user.id.slice(0, 8), reason: 'non-academic',
+          topic: finalTopic, subtopic: finalSubtopic,
+        }));
+        safeInsertTopic    = '';
+        safeInsertSubtopic = '';
+      } else {
+        safeInsertTopic = canonTopic;
+        const canonSub  = canonicalSubtopic(canonTopic, finalSubtopic);
+        if (finalSubtopic && !canonSub) {
+          console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
+            uid: user.id.slice(0, 8), reason: 'unknown-subtopic',
+            topic: canonTopic, subtopic: finalSubtopic,
+          }));
+        }
+        safeInsertSubtopic = canonSub;
+      }
     }
 
     // ── Persist question_record (synchronous — record_id returned to client) ──
