@@ -373,8 +373,8 @@ async function fetchAll() {
 
   const sessions = chatRes.data    || [];
   const exams    = examRes.data    || [];
-  const NON_ACAD = /^(coaching|study planning|study coaching|exam strategy|motivation|confidence|mindset|planning|scheduling|out_of_scope)/i;
-  const mastery  = (masteryRes.data || []).filter(m => !NON_ACAD.test(m.topic || ''));
+  const NON_ACAD = /^(coaching|study planning|study coaching|exam strategy|motivation|confidence|mindset|planning|scheduling|out_of_scope|conversation|general|chat|other|none|meta|system)/i;
+  const mastery  = (masteryRes.data || []).filter(m => !NON_ACAD.test(m.topic || '') && (m.topic||'').trim().length >= 2);
 
   // Count questions per chat session
   const qCountMap = {};

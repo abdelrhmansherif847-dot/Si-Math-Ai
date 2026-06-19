@@ -20,9 +20,135 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v73';
+const AI_TUTOR_VERSION = 'v78';
+
+// ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
+// Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
+// Deno cannot import the browser script, so this is the necessary duplicate.
+const SYSTEM_TOPICS = new Set([
+  'conversation','other','none','chat','general','meta','system',
+  'unknown','n/a','na','null','undefined','','coaching','planning',
+  'study planning','study coaching','exam strategy','motivation',
+  'confidence','mindset','scheduling','out_of_scope','greeting',
+  'math','mathematics','maths','general math','basic math',
+  'miscellaneous','intro','introduction','review','hint','hints',
+]);
+const TOPIC_ALIASES: Record<string, string> = {
+  'geometry':'Geometry','algebra':'Algebra','trigonometry':'Trigonometry',
+  'trig':'Trigonometry','statistics':'Statistics','probability':'Probability',
+  'calculus':'Calculus','number theory':'Number Theory','word problems':'Word Problems',
+  'linear equations':'Linear Equations','quadratic equations':'Quadratic Equations',
+  'order of operations':'Order of Operations','complex numbers':'Complex Numbers',
+  'functions':'Functions','inequalities':'Inequalities',
+};
+const SUBTOPIC_MAP: Record<string, string[]> = {
+  'Algebra': ['Linear Equations','Systems of Equations','Quadratic Equations','Polynomials','Inequalities','Absolute Value','Exponents & Radicals','Functions','Sequences & Patterns'],
+  'Geometry': ['Triangles','Circles','Angles & Lines','Coordinate Geometry','Area & Volume','Similar Figures','Transformations','3D Shapes'],
+  'Word Problems': ['Linear Word Problems','Percent Problems','Ratio Problems','Rate & Work Problems','Mixture Problems','Distance & Speed Problems','Statistics Word Problems'],
+  'Statistics': ['Mean, Median, Mode','Standard Deviation','Data Tables','Scatter Plots','Probability','Sampling Methods','Survey Design'],
+  'Trigonometry': ['Sin, Cos, Tan','Unit Circle','Trig Identities','Radian Measure','Inverse Trig','Law of Sines & Cosines'],
+  'Number Theory': ['Integers','Fractions & Decimals','Percentages','Ratios & Proportions','Prime Numbers','Factors & Multiples'],
+  'Calculus': ['Limits','Derivatives','Chain Rule','Product Rule','Integration','Optimization Problems'],
+  'Probability': ['Basic Probability','Compound Events','Conditional Probability','Combinations','Permutations'],
+  'Linear Equations': ['One-Variable Equations','Two-Variable Equations','Slope & Rate of Change','Intercepts','Parallel & Perpendicular Lines'],
+  'Quadratic Equations': ['Factoring','Quadratic Formula','Completing the Square','Vertex Form','Discriminant'],
+  'Complex Numbers': ['Imaginary Numbers','Operations with Complex Numbers','Complex Conjugates','Modulus & Argument'],
+};
+function isAcademicTopic(t: string): boolean {
+  const s = (t || '').trim().toLowerCase();
+  return s.length >= 2 && !SYSTEM_TOPICS.has(s);
+}
+function normalizeTopicCanonical(s: string): string {
+  if (!s) return '';
+  const t = s.trim();
+  const lower = t.toLowerCase();
+  return TOPIC_ALIASES[lower] || (t.charAt(0).toUpperCase() + t.slice(1));
+}
+function subtopicsForCanonical(topic: string): string[] {
+  return SUBTOPIC_MAP[normalizeTopicCanonical(topic)] || [];
+}
+// Positive allowlist: returns canonical subtopic if it matches a known subtopic
+// for the given topic (case-insensitive), or '' if not.
+function canonicalSubtopic(topic: string, sub: string): string {
+  if (!sub) return '';
+  const list = subtopicsForCanonical(topic);
+  if (list.length === 0) return sub.trim(); // Topic has no curated subtopic list — accept as-is
+  const lower = sub.trim().toLowerCase();
+  return list.find(s => s.toLowerCase() === lower) || '';
+}
+// Pre-built curriculum tree string for the system prompt.
+const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
+  .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
+  .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 const L3_PIPELINE_VERSION = 'l3-shadow-v1';
+
+// ── Tone detection (v78) ─────────────────────────────────────────────────────
+// Sliding 3-turn classifier returning band 0–4 (0=formal, 4=hype).
+// Vocab lists are curated v1 — small on purpose. Expand only with usage data.
+// NEVER cross-pollinate languages: ar vocab matches AR turns, en matches EN, etc.
+const TONE_VOCAB_AR = ['عاش','اشطا','تمام','يلا بينا','يا بطل','يا صاحبي','جامد'];
+const TONE_VOCAB_EN = ["let's go",'lets go','nice catch','nice one','good job','we got this','huge w'];
+const TONE_VOCAB_FR = ['3ash','yalla bina','tmam','gamed','ya sa7by','ya batal'];
+
+// Confusion / frustration markers — when present in CURRENT student turn we
+// cap the tone band at 2 (Adjustment 1). Warmth > hype.
+function detectConfusionOrError(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  return (
+    /مش\s*فاهم|مش\s*عارف|مفهمتش|تايه|مش\s*شغال|غلط|ليه\s*كده|محبطة?|مفيش\s*فايدة/.test(t) ||
+    /\b(i\s+(?:still\s+)?don'?t\s+(?:get|understand)|i'?m\s+(?:still\s+)?(?:lost|confused|stuck)|why\s+(?:isn'?t|is)\s+this\s+wrong|i\s+(?:can'?t|cant)\s+(?:do|figure))\b/.test(t) ||
+    /msh\s*fahem|msh\s*3aref|mosh\s*3aref|lost|tay7|tayh|frustrated/.test(t)
+  );
+}
+
+// Score a single message on its tone vocab. Returns 0–4.
+function scoreToneSingle(text: string, lang: string): number {
+  const t = (text || '').trim();
+  if (!t) return 1;
+  const lower = t.toLowerCase();
+  const vocab = lang === 'ar' ? TONE_VOCAB_AR : lang === 'franco' ? TONE_VOCAB_FR : TONE_VOCAB_EN;
+  const slangHits = vocab.reduce((n, w) => n + (lower.includes(w.toLowerCase()) ? 1 : 0), 0);
+
+  // Hype markers (cross-language but tone-language-agnostic): emoji, repeated chars, all-caps, !!!
+  const emojiHits   = (t.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}🔥😂✨🎯🙌💪]/gu) || []).length;
+  const repeatedCh  = /([a-zا-ي])\1{2,}/i.test(lower);                     // "loool", "بمووووت"
+  const allCapsFrag = /\b[A-Z]{3,}\b/.test(t);                              // "LETS GO"
+  const exclamChain = /!{2,}/.test(t);
+
+  let score = 1; // neutral baseline
+  if (slangHits >= 1)                 score += 1;
+  if (slangHits >= 2 || emojiHits >= 2 || repeatedCh || allCapsFrag || exclamChain) score += 1;
+  if (slangHits >= 2 && (emojiHits >= 2 || repeatedCh || allCapsFrag))               score += 1;
+
+  // Formality dampeners pull us toward 0:
+  const polite = /(please|could you|would you|kindly|أرجوك|من فضلك|لو سمحت)/i.test(t);
+  const longClean = t.length > 80 && !slangHits && !emojiHits && !exclamChain;
+  if (polite || longClean) score = Math.max(0, score - 1);
+  if (polite && longClean) score = 0;
+
+  return Math.max(0, Math.min(4, score));
+}
+
+// Sliding window: average the last 3 student messages (rounded). Defaults to 1.
+function detectTone(
+  currentText: string,
+  priorMessages: Array<{role:string;content:string}>,
+  lang: string,
+): { band: number; capped: boolean } {
+  const userTurns = priorMessages.filter(m => m.role === 'user').slice(-2).map(m => m.content);
+  const window = [...userTurns, currentText].filter(s => typeof s === 'string' && s.trim().length > 0);
+  if (window.length === 0) return { band: 1, capped: false };
+  const scores = window.map(s => scoreToneSingle(s, lang));
+  let band = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  // Cap at 2 on confusion/frustration in CURRENT turn (Adjustment 1).
+  let capped = false;
+  if (detectConfusionOrError(currentText) && band > 2) {
+    band = 2;
+    capped = true;
+  }
+  return { band, capped };
+}
 
 // ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
 // Franco = Egyptian Arabic written in Latin letters + digits (3=ع, 7=ح, 2=ء, 5=خ).
@@ -719,6 +845,33 @@ async function runL3ShadowPipeline(opts: {
   }));
 }
 
+// ── Repeat Question Detection (v76) ──────────────────────────────────────────
+// Case 1: student wants Zero to re-solve the SAME question with a different method.
+// Case 2: student did not understand and wants re-explanation (same approach, deeper).
+// Detection is phrase-based + followUpType (client UI buttons → Case 2).
+
+function detectSolveAgain(text: string): boolean {
+  const t = (text || '').trim().toLowerCase();
+  // Exact "solve again" / "re-solve" / "another method" in English or Arabic
+  return (
+    /\b(solve\s+again|re-?solve|try\s+again|another\s+(method|way|approach|strategy|solution)|different\s+(method|way|approach|strategy)|show\s+me\s+another\s+way|alternative\s+(method|solution|approach))\b/.test(t) ||
+    /أعد\s*الحل|حل\s*تاني|طريق[ةه]\s*تاني[ةه]|بطريق[ةه]\s*مختلف[ةه]|طريق[ةه]\s*أخرى|أسلوب\s*تاني/.test(t)
+  );
+}
+
+function detectReExplain(text: string): boolean {
+  const t = (text || '').trim().toLowerCase();
+  return (
+    /\b(i\s+(?:still\s+)?don'?t\s+(?:understand|get\s+it)|explain\s+(?:it\s+|that\s+|this\s+)?again|re-?explain|i'?m\s+(?:still\s+)?confused|still\s+(?:lost|confused|don'?t\s+get\s+it)|what\s+do\s+you\s+mean|i\s+(?:don'?t|dont)\s+(?:get|follow)\s+(?:it|this|that))\b/.test(t) ||
+    /مش\s*فاهم|مش\s*عارف|مفهمتش|مش\s*واضح|مفيش\s*فايدة|تاني\s*مرة|وضح\s*اكتر|اشرح\s*تاني|مش\s*بفهم|مزلتش\s*مش\s*فاهم|عيد\s*(?:الشرح|تاني|المثال)/.test(t)
+  );
+}
+
+// Normalise question text for exact-repeat comparison (strip whitespace, lowercase).
+function normaliseQ(s: string): string {
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
@@ -747,6 +900,8 @@ serve(async (req) => {
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
     const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
+    // Parent record ID sent by client for repeat/re-explanation detection (v76).
+    const parentRecordId: string | null = (typeof body.parent_record_id === 'string' && body.parent_record_id) ? body.parent_record_id : null;
     // lang resolved after profile fetch so language_preference is respected
 
     // ── CAI-P1 pre-flight: if this client_request_id already produced a row,
@@ -938,6 +1093,193 @@ serve(async (req) => {
       const examDay = new Date(examDateRaw); examDay.setHours(0,0,0,0);
       daysUntilExam = Math.ceil((examDay.getTime() - today.getTime()) / 86_400_000);
     }
+
+    // ── Repeat Question Detection (v76) ──────────────────────────────────────
+    // Classify before the main OpenAI call. Cases 1 & 2 update the EXISTING
+    // question_record rather than inserting a new one, keeping "AI Chat Questions"
+    // metrics clean (unique math questions only).
+    //
+    // Case 1 (solve_again): different-method re-solve.
+    // Case 2 (re_explain) : deeper explanation of same question.
+    // Case 3 (null)       : normal new question — fall through to standard path.
+
+    type RepeatType = 'solve_again' | 're_explain' | null;
+    let repeatType: RepeatType = null;
+
+    if (detectSolveAgain(question)) {
+      repeatType = 'solve_again';
+    } else if (followUpType != null || detectReExplain(question)) {
+      repeatType = 're_explain';
+    }
+
+    // If it looks like a repeat, try to find the parent record.
+    // Priority: explicit parent_record_id from client → most-recent math record in session.
+    let parentRecord: {
+      id: string; question: string; image: string | null; ai_response: string;
+      topic: string; subtopic: string;
+      repeated_question_count: number; re_explanation_count: number;
+    } | null = null;
+
+    if (repeatType !== null && resolvedSessionId) {
+      if (parentRecordId) {
+        const { data: pr } = await sbAdmin.from('question_records')
+          .select('id, question, image, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .eq('id', parentRecordId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        parentRecord = pr ?? null;
+      }
+      if (!parentRecord) {
+        // Fallback: most recent math record in this session
+        const { data: pr } = await sbAdmin.from('question_records')
+          .select('id, question, image, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .eq('user_id', user.id)
+          .eq('session_id', resolvedSessionId)
+          .not('topic', 'eq', 'General')
+          .not('topic', 'eq', '')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        parentRecord = pr ?? null;
+      }
+      // If the current message text is identical to the parent question, that's
+      // also a solve-again even without explicit phrase (student re-sent same text).
+      if (!repeatType && parentRecord && normaliseQ(question) === normaliseQ(parentRecord.question)) {
+        repeatType = 'solve_again';
+      }
+    }
+
+    // If no parent found, degrade gracefully — treat as a new question (Case 3).
+    // Telemetry: question_regenerated fires when we WANTED to retrieve but couldn't.
+    if (repeatType !== null && !parentRecord) {
+      console.log('[ai-tutor] question_regenerated', JSON.stringify({
+        uid: user.id.slice(0, 8), reason: 'no-parent-found',
+        intended_type: repeatType, hasParentId: !!parentRecordId, hasSession: !!resolvedSessionId,
+      }));
+      repeatType = null;
+    }
+
+    // ── REPEAT PATH: Cases 1 & 2 ─────────────────────────────────────────────
+    if (repeatType !== null && parentRecord) {
+      // The original question is FIXED. We use the parent record's question text
+      // (+ image if any) as the literal problem statement. The LLM must NOT invent
+      // a new problem. This is enforced via:
+      //   (a) original problem replayed as a user-role message (not just system)
+      //   (b) explicit lock-down system message that bans inventing
+      //   (c) original image re-attached when present (OCR-derived questions)
+      const parentHasImage = !!(parentRecord.image && parentRecord.image.startsWith('data:image/'));
+      const originalQText  = (parentRecord.question || '').trim();
+
+      const lockdownInstruction =
+        `🔒 PROBLEM LOCK (CRITICAL): The student is referring to a PREVIOUS problem they already asked you. ` +
+        `The exact problem is replayed in the next user message${parentHasImage ? ' (with the original image attached)' : ''}. ` +
+        `You MUST solve/explain THAT EXACT problem. ` +
+        `DO NOT invent a new problem. DO NOT change the numbers. DO NOT swap variables. ` +
+        `DO NOT use a "similar example" — use THIS problem. ` +
+        `If you cannot read the original problem, say so explicitly in one sentence and ask the student to re-share — do NOT fabricate a substitute.`;
+
+      const strategyInstruction = repeatType === 'solve_again'
+        ? `🔁 STRATEGY: Re-solve the SAME problem above using a COMPLETELY DIFFERENT METHOD than your prior answer. ` +
+          `Alternatives: visual/geometric reasoning, number substitution, algebraic identity, working backwards, symmetry. ` +
+          `Open with ONE warm sentence acknowledging the re-solve request, then dive into the different method. ` +
+          `Do NOT repeat the prior method.`
+        : `🔁 STRATEGY: Re-explain the SAME problem above more slowly and simply. ` +
+          `Break it into smaller steps. Use a fresh analogy or concrete numerical example. ` +
+          `Open with ONE warm sentence acknowledging the confusion (use the student's name), then explain step by step. ` +
+          `Same answer as before — just clearer.`;
+
+      const priorAnswerContext = parentRecord.ai_response
+        ? `[Zero's prior answer for reference — do NOT repeat verbatim]: ${parentRecord.ai_response.slice(0, 1500)}`
+        : '[No prior answer recorded — proceed with the problem above.]';
+
+      const repeatLangAnchor =
+        lang === 'franco'
+          ? '🔒 LANGUAGE LOCK: Entire response in Franco (Egyptian Arabizi). Math notation stays standard.'
+          : lang === 'ar'
+          ? '🔒 LANGUAGE LOCK: Entire response in Arabic (Egyptian dialect welcome). Math notation stays standard.'
+          : '🔒 LANGUAGE LOCK: Entire response in English.';
+
+      // Replay the original problem as a user message — this is the strongest
+      // signal to the LLM that this IS the problem to address.
+      const replayUserContent: string | Array<{type:string; text?:string; image_url?:{url:string}}> = parentHasImage
+        ? [
+            { type: 'text', text: `Original problem I asked earlier:\n\n${originalQText || '(see attached image)'}` },
+            { type: 'image_url', image_url: { url: parentRecord.image as string } },
+          ]
+        : `Original problem I asked earlier:\n\n${originalQText || '(no text — original was image-only and the image is no longer available)'}`;
+
+      const studentRepeatRequest = (question || '').trim() ||
+        (repeatType === 'solve_again' ? 'Solve it again using a different method.' : "I don't understand. Explain it again.");
+
+      const repeatMessages: Array<{role:string; content: unknown}> = [
+        { role: 'system', content: `You are Zero 🐉 — a warm, sharp, personality-driven math coach for Egyptian students (SAT/EST/ACT). Student name: ${studentName}.` },
+        { role: 'system', content: lockdownInstruction },
+        { role: 'system', content: strategyInstruction },
+        { role: 'system', content: priorAnswerContext },
+        { role: 'system', content: repeatLangAnchor },
+        { role: 'user',   content: replayUserContent },
+        { role: 'user',   content: studentRepeatRequest },
+      ];
+
+      // Use vision-capable model when parent had an image, otherwise gpt-4o-mini.
+      const repeatOaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+        body: JSON.stringify({
+          model: parentHasImage ? 'gpt-4o' : 'gpt-4o-mini',
+          messages: repeatMessages,
+          max_tokens: 2200,
+          temperature: 0.4,
+        }),
+      });
+      const repeatOaiJson = await repeatOaiRes.json();
+      const repeatAnswer  = repeatOaiJson?.choices?.[0]?.message?.content || '';
+
+      console.log('[ai-tutor] question_retrieved', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        repeat_type: repeatType,
+        parent_id: parentRecord.id,
+        parent_has_image: parentHasImage,
+        parent_q_chars: originalQText.length,
+        topic: parentRecord.topic, subtopic: parentRecord.subtopic,
+      }));
+
+      // UPDATE existing record — increment counter, ensure weakness_signal=true.
+      const repeatUpdateFields = repeatType === 'solve_again'
+        ? { repeated_question: true, repeated_question_count: (parentRecord.repeated_question_count || 0) + 1, weakness_signal: true }
+        : { re_explanation_count: (parentRecord.re_explanation_count || 0) + 1, weakness_signal: true };
+
+      const { error: repeatUpdateErr } = await sbAdmin.from('question_records')
+        .update(repeatUpdateFields)
+        .eq('id', parentRecord.id)
+        .eq('user_id', user.id);
+
+      if (repeatUpdateErr) {
+        console.log('[ai-tutor] repeat-update-failed', JSON.stringify({
+          uid: user.id.slice(0, 8), id: parentRecord.id, msg: repeatUpdateErr.message,
+        }));
+      }
+
+      return new Response(JSON.stringify({
+        answer:          repeatAnswer,
+        hint:            '',
+        topic:           parentRecord.topic,
+        subtopic:        parentRecord.subtopic,
+        difficulty:      '',
+        concepts:        [],
+        rules:           [],
+        weakness_signal: true,
+        attention_marker: '',
+        session_id:      resolvedSessionId,
+        record_id:       parentRecord.id,
+        hint_mode:       false,
+        is_math:         true,
+        is_repeat:       true,
+        repeat_type:     repeatType,
+        version:         AI_TUTOR_VERSION,
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+    // ── END REPEAT PATH — normal Case 3 continues below ──────────────────────
 
     // ── Context retrieval ─────────────────────────────────────────────────────
     const [personalityRaw, knowledge] = await Promise.all([
@@ -1273,7 +1615,7 @@ Determine if this is a math message and set "is_math" accordingly:
 - is_math = true: solving equations, algebra, geometry, percentages, word problems with calculations, graph reading, statistics
 - is_math = true: ANY message that includes an image — if an image is attached it is ALWAYS a math problem; set is_math=true regardless of how short or vague the text is ("حل", "solve", "help", "?", or even empty text)
 - is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation — and ONLY when NO image is attached
-- When is_math = false: set topic="General", subtopic="Conversation", difficulty="", rules=[], concepts=[], weakness_signal=false
+- When is_math = false: set topic="General", subtopic="", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
 
 ## Weakness Signal — WHEN to set weakness_signal=true (CRITICAL)
@@ -1386,8 +1728,58 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         ? '🔒 LANGUAGE LOCK: This entire response must be written in Arabic (Egyptian dialect welcome). Every sentence of prose in Arabic. Math notation stays standard. Do not switch to English mid-response.'
         : '🔒 LANGUAGE LOCK: This entire response must be written in English.';
 
+    const curriculumAnchor =
+      '📚 OFFICIAL CURRICULUM (taxonomy enforcement):\n' +
+      'When setting "topic" and "subtopic" in your JSON response for is_math=true turns, ' +
+      'you MUST pick from the canonical tree below. Do NOT invent topic names. ' +
+      'Use the exact spelling shown. If a question spans multiple subtopics, pick the dominant one. ' +
+      'If no subtopic fits, set subtopic="" rather than inventing one.\n\n' +
+      CURRICULUM_TREE_TEXT +
+      '\n\nFor is_math=false turns: topic="General", subtopic="".';
+
+    // ── Tone anchor (v78) — only injected on the main conversational path. ──
+    // NEVER injected into: hint mode, repeat path (own block above), verification,
+    // mock-exam grading, weakness reports, focus plans, achievements, identity Q&A
+    // (identity rules live inside NORMAL_SYSTEM_PROMPT and override tone).
+    let toneAnchor: string | null = null;
+    if (!hintMode) {
+      const { band, capped } = detectTone(question, messages, lang);
+      const vocabForLang = lang === 'ar' ? TONE_VOCAB_AR : lang === 'franco' ? TONE_VOCAB_FR : TONE_VOCAB_EN;
+      toneAnchor =
+        `🎭 TONE CALIBRATION — band=${band}/4, language=${lang}${capped ? ' (capped at 2: student confused/frustrated)' : ''}\n\n` +
+        `Mirror the student's tone ONLY in:\n` +
+        `  • Opening line (1 short sentence: greeting / acknowledgement)\n` +
+        `  • Closing line (1 short sentence: encouragement / next step)\n` +
+        `  • At most ONE brief inline reaction (e.g. "nice catch", "اشطا")\n\n` +
+        `DO NOT mirror tone in:\n` +
+        `  • The math explanation itself — precise, clean, neutral\n` +
+        `  • Definitions, formulas, rules, step labels\n` +
+        `  • Error corrections — be warm but clear, never playful about a mistake\n\n` +
+        `Band guide (use ${lang}-native vocabulary only — NEVER mix languages):\n` +
+        `  0–1 → Neutral warmth. No slang. At most a single 🎯/✨ in sign-off.\n` +
+        `  2   → ONE casual phrase max. Contractions OK. One emoji max.\n` +
+        `  3   → ONE casual phrase in opener AND ONE in closer (TWO total max). Slang stays in opener/closer ONLY.\n` +
+        `  4   → Match hype energy in opener/closer. Math body still clean.\n\n` +
+        `Curated v1 vocabulary for ${lang} — prefer these, do not invent:\n` +
+        `  ${vocabForLang.join(' · ')}\n\n` +
+        `HARD RULES:\n` +
+        `  1. NEVER use slang more than once per response slot (opener=1, closer=1, inline=1). No stacking.\n` +
+        `     ❌ "yalla bina 🔥 let's gooo bro huge W"   ✅ "اشطا يا بطل 🔥"\n` +
+        `  2. NEVER cross-language pollute. If lang=en, slang is EN-only. If lang=ar, AR-only. If lang=franco, Franco-only.\n` +
+        `  3. NEVER use slang inside an explanation step, formula, definition, or correction.\n` +
+        `  4. If band=0 or band=1, you may skip slang entirely. Do not force it.\n` +
+        `  5. Identity / "who are you" questions are governed by the persona block above — tone does not override.\n\n` +
+        `Goal: feel like the student's smart Egyptian friend who happens to be an elite SAT/ACT/EST tutor — not a meme bot, not a corporate robot.`;
+
+      console.log('[ai-tutor] tone-detected', JSON.stringify({
+        uid: user.id.slice(0, 8), band, capped, lang,
+      }));
+    }
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
+      { role: 'system', content: curriculumAnchor },
+      ...(toneAnchor ? [{ role: 'system', content: toneAnchor }] : []),
       ...messages.slice(-10),
       { role: 'system', content: langAnchor },
       { role: 'user', content: userContent },
@@ -1480,6 +1872,38 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
+    // ── Taxonomy gate (v75): positive allowlist via canonical curriculum tree ─
+    // - Non-math turns: topic="General", subtopic="" (never "Conversation" etc).
+    // - Math turns: normalize topic via TOPIC_ALIASES; if not academic, reject.
+    //   Subtopic must appear in subtopicsForCanonical(topic) — otherwise blank.
+    //   Topics with no curated subtopic list accept the raw subtopic as-is.
+    let safeInsertTopic    = finalTopic;
+    let safeInsertSubtopic = finalSubtopic;
+    if (!isMath) {
+      safeInsertTopic    = 'General';
+      safeInsertSubtopic = '';
+    } else {
+      const canonTopic = normalizeTopicCanonical(finalTopic);
+      if (!isAcademicTopic(canonTopic)) {
+        console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
+          uid: user.id.slice(0, 8), reason: 'non-academic',
+          topic: finalTopic, subtopic: finalSubtopic,
+        }));
+        safeInsertTopic    = '';
+        safeInsertSubtopic = '';
+      } else {
+        safeInsertTopic = canonTopic;
+        const canonSub  = canonicalSubtopic(canonTopic, finalSubtopic);
+        if (finalSubtopic && !canonSub) {
+          console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
+            uid: user.id.slice(0, 8), reason: 'unknown-subtopic',
+            topic: canonTopic, subtopic: finalSubtopic,
+          }));
+        }
+        safeInsertSubtopic = canonSub;
+      }
+    }
+
     // ── Persist question_record (synchronous — record_id returned to client) ──
     // CAI-P1: include client_request_id; on 23505 (unique_violation) the winning
     // row was committed by a concurrent retry — re-SELECT and return it.
@@ -1489,8 +1913,8 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       question:          question,
       image:             imageData,
       ai_response:       String(parsed.answer || ''),
-      topic:             finalTopic,
-      subtopic:          finalSubtopic,
+      topic:             safeInsertTopic,
+      subtopic:          safeInsertSubtopic,
       difficulty:        finalDifficulty,
       concepts:          Array.isArray(parsed.concepts) ? parsed.concepts : [],
       rules:             rules,
@@ -1526,6 +1950,17 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // ── Build response — returned to student immediately ──────────────────────
     const zeroAnswer  = parsed.answer || '';
     const recordId    = newRecord?.id ?? null;
+
+    // Telemetry: question_regenerated fires on every new math record creation,
+    // symmetric to question_retrieved on the repeat path. Lets us measure the
+    // retrieval-vs-fresh ratio in logs.
+    if (isMath && recordId) {
+      console.log('[ai-tutor] question_regenerated', JSON.stringify({
+        uid: user.id.slice(0, 8), record_id: recordId,
+        topic: safeInsertTopic, subtopic: safeInsertSubtopic,
+        had_image: !!imageData, q_chars: question.length,
+      }));
+    }
     const studentResponse = new Response(JSON.stringify({
       answer:          zeroAnswer,
       hint,

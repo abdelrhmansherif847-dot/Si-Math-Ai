@@ -1265,15 +1265,41 @@ async function doSave() {
 
     const sessionId = sess.id;
 
-    // Insert mistakes (only rows with a topic)
-    const validMistakes = s.mistakeRows.filter(r => r.topic?.trim());
+    // Insert mistakes (only rows with a VALID academic topic — taxonomy positive allowlist)
+    // v75: normalize via Taxonomy and reject non-academic topics at the input boundary.
+    const _T = (typeof window !== 'undefined' && window.Taxonomy) || null;
+    const _normTopic = (s) => _T?.normalizeTopic ? _T.normalizeTopic(s) : (s || '').trim();
+    const _normSub   = (s) => _T?.normalizeSubtopic ? _T.normalizeSubtopic(s) : (s || '').trim();
+    const _isAcad    = (s) => _T?.isAcademicTopic ? _T.isAcademicTopic(s) : ((s||'').trim().length >= 2);
+    const _subsFor   = (t) => _T?.subtopicsFor ? _T.subtopicsFor(t) : [];
+    const _canonSub  = (topic, sub) => {
+      if (!sub) return null;
+      const list = _subsFor(topic);
+      if (!list || list.length === 0) return sub; // topic has no curated list — accept
+      const low = sub.toLowerCase();
+      return list.find(x => x.toLowerCase() === low) || null;
+    };
+    const validMistakes = s.mistakeRows
+      .filter(r => r.topic?.trim())
+      .map(r => {
+        const t = _normTopic(r.topic);
+        const subRaw = _normSub(r.subtopic || '');
+        return { ...r, topic: t, subtopic: _canonSub(t, subRaw) || null };
+      })
+      .filter(r => {
+        if (!_isAcad(r.topic)) {
+          console.warn('[mock-exam] taxonomy-reject', { topic: r.topic, subtopic: r.subtopic });
+          return false;
+        }
+        return true;
+      });
     if (validMistakes.length > 0) {
       const { error: mkErr } = await sb.from('exam_mistakes').insert(
         validMistakes.map(r => ({
           user_id:        user.id,
           session_id:     sessionId,
-          topic:          r.topic.trim(),
-          subtopic:       r.subtopic?.trim() || null,
+          topic:          r.topic,
+          subtopic:       r.subtopic || null,
           mistake_count:  r.count || 1,
           mistake_type:   'EXAM_MISTAKE',
           question_id:    r.question_id    || null,

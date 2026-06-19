@@ -1581,11 +1581,15 @@ async function loadDashboard() {
 
   var prof        = (results[0].data) || {};
   var exams       = (results[1].data) || [];
-  var weakReports = (results[2].data) || [];
+  var weakReportsRaw = (results[2].data) || [];
   var achievements= (results[3].data) || [];
   var chatSess    = (results[4].data) || [];
   var monthQs     = (results[5].data) || [];
   var weeklyQrs   = (results[6].data) || [];
+  // Filter out non-academic topics (taxonomy guard — defense in depth)
+  var NON_ACAD_DASH = /^(conversation|general|chat|other|none|meta|system|coaching|planning|study planning|study coaching|exam strategy|motivation|confidence|mindset|scheduling|out_of_scope)/i;
+  function isAcademicDash(t) { var s = (t||'').trim(); return s.length >= 2 && !NON_ACAD_DASH.test(s); }
+  var weakReports = weakReportsRaw.filter(function(r){ return isAcademicDash(r.topic); });
   // Derive per-topic mastery from weakness_reports (single source of truth)
   var masteryRecs = weakReports.map(function(r){ return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: r.last_signal_at }; });
 
