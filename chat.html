@@ -978,6 +978,7 @@ button{font-family:inherit;cursor:pointer}
       if (!user) { window.location.href = 'login.html'; return; }
       currentUser = user;
       if (!(await deviceGuard(sb, user.id))) return;
+      try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
       const { data: profile } = await sb.from('profiles').select('full_name, is_admin, plan_code').eq('id', user.id).single();
       const meta = user.user_metadata || {};
       const fullName = (profile && profile.full_name) || meta.full_name || user.email.split('@')[0];

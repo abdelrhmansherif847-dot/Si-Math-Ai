@@ -450,6 +450,9 @@ async function loadPage() {
   if (authErr || !user) { window.location.href = 'index.html'; return; }
   currentUser = user;
 
+  // Enforce subscription expiry before reading profile/subscription state
+  try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+
   document.getElementById('topAvatar').textContent = (user.email || '?')[0].toUpperCase();
 
   const [

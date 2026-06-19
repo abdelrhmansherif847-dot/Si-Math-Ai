@@ -528,6 +528,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!await deviceGuard(sb, user.id)) return;
     currentUser = user;
 
+    // Enforce subscription expiry before reading profile
+    try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+
     let { data: profile, error } = await sb
       .from('profiles').select('*').eq('id', currentUser.id).single();
 

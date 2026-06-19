@@ -252,6 +252,9 @@ async function loadPage() {
   if (authErr || !user) { window.location.href = 'login.html'; return; }
   if (!await deviceGuard(sb, user.id)) return;
 
+  // Enforce subscription expiry before loading profile
+  try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+
   // Update avatar
   const initials = (user.email || '?')[0].toUpperCase();
   document.getElementById('topAvatar').textContent = initials;

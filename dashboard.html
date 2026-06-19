@@ -1568,6 +1568,9 @@ async function loadDashboard() {
   var now = new Date();
   var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
+  /* Enforce subscription expiry before reading profile */
+  try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
+
   var results = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
