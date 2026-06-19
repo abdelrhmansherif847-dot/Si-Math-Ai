@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v78';
+const AI_TUTOR_VERSION = 'v79';
 
 // ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
 // Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
@@ -81,7 +81,7 @@ const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
   .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
   .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
-const L3_PIPELINE_VERSION = 'l3-shadow-v1';
+const L3_PIPELINE_VERSION = 'l3-shadow-v2';
 
 // ── Tone detection (v78) ─────────────────────────────────────────────────────
 // Sliding 3-turn classifier returning band 0–4 (0=formal, 4=hype).
@@ -682,16 +682,27 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
 }
 
 // Single solver pass. Model: gpt-4o-mini. Returns final extracted answer.
-async function runSolver(questionText: string, temperature: number): Promise<SolverResult> {
+// If imageData provided, solver sees the image directly (vision) — fixes the
+// image-questions-not-verifiable bug where solvers relied only on mini-OCR text.
+// max_tokens bumped 400 → 1200 to stop mid-formula truncation seen in shadow runs.
+async function runSolver(
+  questionText: string, temperature: number, imageData: string | null = null,
+): Promise<SolverResult> {
   try {
+    const userContent: unknown = imageData
+      ? [
+          { type: 'text', text: `Solve this math problem. Extracted text (may be partial): "${questionText.slice(0, 800)}"` },
+          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+        ]
+      : questionText.slice(0, 1500);
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 400, temperature,
+        model: 'gpt-4o-mini', max_tokens: 1200, temperature,
         messages: [
           { role: 'system', content: 'You are a precise math solver. Solve the problem step by step, then state the final answer on the last line as "Answer: [value]". No markdown, no commentary.' },
-          { role: 'user', content: questionText.slice(0, 1000) },
+          { role: 'user', content: userContent },
         ],
       }),
     });
@@ -721,7 +732,7 @@ async function runJudge(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 200, temperature: 0,
+        model: 'gpt-4o-mini', max_tokens: 500, temperature: 0,
         messages: [
           { role: 'system', content: 'You are a math verification judge. Determine whether the tutor\'s answer matches the solver answers.\nRespond with JSON only: {"verdict":"agrees"|"disagrees"|"inconclusive","confidence":0.0-1.0,"reasoning":"one sentence"}\n- "agrees": both solvers reach the same final value as the tutor (minor formatting differences OK)\n- "disagrees": solvers agree with each other but differ from the tutor\n- "inconclusive": solvers disagree with each other, or comparison is ambiguous' },
           { role: 'user', content: `Question: ${questionText.slice(0, 500)}\n\nTutor answer (excerpt): ${zeroAnswer.slice(0, 400)}\n\nSolver A: ${solverA.answer.slice(0, 200)}\n\nSolver B: ${solverB.answer.slice(0, 200)}` },
@@ -772,10 +783,10 @@ async function runL3ShadowPipeline(opts: {
     : { confidence: 1.0, flags: [], rerun_count: 0, rerun_changed: false, final_text: mathText };
   const solveText = ocr.rerun_changed ? ocr.final_text : mathText;
 
-  // 3. Two parallel solver passes
+  // 3. Two parallel solver passes — for image questions, solvers see the image directly.
   const [solverA, solverB] = await Promise.all([
-    runSolver(solveText, 0.1),
-    runSolver(solveText, 0.3),
+    runSolver(solveText, 0.1, isImageQ ? imageData : null),
+    runSolver(solveText, 0.3, isImageQ ? imageData : null),
   ]);
 
   // 4. Solver agreement (exact match after normalization)
@@ -798,6 +809,8 @@ async function runL3ShadowPipeline(opts: {
     solver_answers:      [solverA.answer.slice(0, 200), solverB.answer.slice(0, 200)],
     solver_model:        'gpt-4o-mini',
     solver_temperatures: [0.1, 0.3],
+    solver_max_tokens:   1200,
+    solver_sees_image:   isImageQ,
     judge_model:         'gpt-4o-mini',
     judge_reasoning:     judge.reasoning,
     zero_answer_hash:    await sha256short(zeroAnswer),
