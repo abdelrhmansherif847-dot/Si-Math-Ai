@@ -232,21 +232,28 @@ button{font-family:inherit;cursor:pointer}
           <div class="instr-row">
             <span class="instr-lbl">Send to Number</span>
             <span class="instr-val">
-              <span id="vcNumber">[TO BE SET]</span>
+              <span id="vcNumber">01016358817</span>
               <button class="copy-btn" onclick="copyText(document.getElementById('vcNumber').textContent,this)">Copy</button>
             </span>
           </div>
           <div class="instr-row">
-            <span class="instr-lbl">Account Name</span>
-            <span class="instr-val">Si Math AI</span>
+            <span class="instr-lbl">Account Holder</span>
+            <span class="instr-val" dir="rtl" lang="ar">شريف محمد حسن</span>
           </div>
           <div class="instr-row">
             <span class="instr-lbl">Amount</span>
-            <span class="instr-val" id="vcAmount">199 EGP</span>
+            <span class="instr-val" id="vcAmount">— EGP</span>
           </div>
         </div>
         <div class="instr-note">
-          <strong>Important:</strong> Open Vodafone Cash → Send Money → enter the number above → enter the exact amount shown → take a screenshot of the confirmation screen.
+          <strong>How to pay:</strong>
+          <ol style="margin:8px 0 0 18px;padding:0;line-height:1.7">
+            <li>Open <strong>Vodafone Cash</strong> → Send Money</li>
+            <li>Enter the number <strong>01016358817</strong></li>
+            <li>Enter the <strong>exact amount</strong> shown above</li>
+            <li>Confirm and screenshot the success screen</li>
+            <li>Upload the screenshot below ↓</li>
+          </ol>
         </div>
       </div>
 
@@ -256,21 +263,41 @@ button{font-family:inherit;cursor:pointer}
           <div class="instr-row">
             <span class="instr-lbl">InstaPay Handle</span>
             <span class="instr-val">
-              <span id="ipHandle">[TO BE SET]</span>
+              <span id="ipHandle">abdelrhmansherif800@instapay</span>
               <button class="copy-btn" onclick="copyText(document.getElementById('ipHandle').textContent,this)">Copy</button>
             </span>
           </div>
           <div class="instr-row">
-            <span class="instr-lbl">Account Name</span>
-            <span class="instr-val">Si Math AI</span>
+            <span class="instr-lbl">Account Holder</span>
+            <span class="instr-val">AbdElRhman Sherif Mohamed</span>
           </div>
           <div class="instr-row">
             <span class="instr-lbl">Amount</span>
-            <span class="instr-val" id="ipAmount">199 EGP</span>
+            <span class="instr-val" id="ipAmount">— EGP</span>
           </div>
         </div>
-        <div class="instr-note">
-          <strong>Important:</strong> Open your banking app → InstaPay → Send → search the handle above → enter the exact amount → screenshot the confirmation.
+
+        <!-- Direct InstaPay link (works on mobile to open InstaPay app directly) -->
+        <a href="https://ipn.eg/S/abdelrhmansherif800/instapay/3RT50g" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;border-radius:var(--r-md);background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-family:var(--font-display);font-weight:700;font-size:14.5px;text-decoration:none;margin-top:14px;box-shadow:0 6px 20px rgba(168,85,247,.3);transition:transform .2s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M14 3h7v7M21 3l-9 9M21 14v7H3V3h7"/></svg>
+          Open InstaPay to Pay
+        </a>
+
+        <!-- QR code (drop assets/instapay-qr.png into the repo to enable) -->
+        <div style="margin-top:14px;text-align:center">
+          <img src="assets/instapay-qr.png" alt="InstaPay QR — abdelrhmansherif800@instapay" onerror="this.parentNode.style.display='none'" style="max-width:200px;width:100%;height:auto;border-radius:12px;border:1px solid var(--border-mid);background:#fff;padding:10px"/>
+          <div style="font-size:11.5px;color:var(--text-500);margin-top:6px">Scan with any InstaPay-enabled banking app</div>
+        </div>
+
+        <div class="instr-note" style="margin-top:14px">
+          <strong>How to pay:</strong>
+          <ol style="margin:8px 0 0 18px;padding:0;line-height:1.7">
+            <li>Tap <strong>Open InstaPay to Pay</strong> above (or scan the QR / copy the handle)</li>
+            <li>Enter the <strong>exact amount</strong> shown above</li>
+            <li>Confirm the transfer</li>
+            <li>Screenshot the success screen</li>
+            <li>Upload the screenshot below ↓</li>
+          </ol>
         </div>
       </div>
     </div>
