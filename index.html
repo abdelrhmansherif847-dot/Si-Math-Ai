@@ -686,6 +686,80 @@ section:first-of-type{padding-top:0}
 .why-title{font-family:var(--font-display);font-size:17px;font-weight:700;color:#fff;margin-bottom:var(--space-2)}
 .why-desc{font-size:14px;color:var(--text-300);line-height:1.6}
 
+/* ═══ ALTERNATIVES (Why not X?) ═══ */
+.alt-grid{display:grid;grid-template-columns:1fr;gap:var(--space-4);max-width:920px;margin:0 auto}
+@media(min-width:768px){.alt-grid{grid-template-columns:1fr 1fr;gap:var(--space-5)}}
+.alt-card{
+  background:var(--bg-card);border:1px solid var(--border-soft);
+  border-radius:var(--r-lg);padding:var(--space-6);
+  transition:border-color .25s,transform .25s,box-shadow .25s;
+  display:flex;flex-direction:column;gap:var(--space-3);
+}
+.alt-card:hover{border-color:var(--cyan-border);transform:translateY(-3px);box-shadow:0 14px 36px rgba(0,0,0,.4)}
+.alt-vs{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--font-display);
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-400);
+  font-weight:700;margin-bottom:2px;
+}
+.alt-vs .alt-vs-pill{
+  padding:3px 9px;border-radius:999px;background:rgba(248,113,113,.1);
+  color:#f87171;border:1px solid rgba(248,113,113,.25);font-size:10px;letter-spacing:.08em;
+}
+.alt-name{font-family:var(--font-display);font-size:18px;font-weight:700;color:#fff;line-height:1.3}
+.alt-limit{
+  font-size:13.5px;color:var(--text-300);line-height:1.6;
+  padding:10px 14px;background:rgba(248,113,113,.05);
+  border-left:2px solid rgba(248,113,113,.35);border-radius:4px;
+}
+.alt-answer{
+  font-size:14px;color:var(--text-200);line-height:1.6;
+  padding:12px 14px;background:var(--cyan-bg-soft);
+  border-left:2px solid var(--cyan);border-radius:4px;
+}
+.alt-answer strong{color:#fff;font-weight:600}
+.alt-answer-label{
+  display:block;font-family:var(--font-display);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--cyan);font-weight:700;margin-bottom:4px;
+}
+
+/* ═══ STUDENT JOURNEY ═══ */
+.journey-rail{
+  max-width:1000px;margin:0 auto;
+  display:grid;grid-template-columns:1fr;gap:var(--space-4);
+}
+@media(min-width:960px){
+  .journey-rail{grid-template-columns:repeat(5,1fr);gap:8px;align-items:stretch}
+}
+.journey-step{
+  position:relative;background:var(--bg-card);border:1px solid var(--border-soft);
+  border-radius:var(--r-lg);padding:var(--space-5);
+  display:flex;flex-direction:column;gap:10px;
+  transition:border-color .25s,transform .25s;
+}
+.journey-step:hover{border-color:var(--cyan-border);transform:translateY(-2px)}
+.journey-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--cyan-bg-med);border:1px solid var(--cyan-border);
+  color:var(--cyan);font-family:var(--font-display);font-weight:800;font-size:13px;
+  display:flex;align-items:center;justify-content:center;
+}
+.journey-ico{font-size:24px;line-height:1;margin-top:2px}
+.journey-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:#fff;line-height:1.3}
+.journey-desc{font-size:12.5px;color:var(--text-300);line-height:1.55}
+.journey-step::after{
+  content:'→';position:absolute;right:-14px;top:50%;transform:translateY(-50%);
+  color:var(--cyan);font-size:18px;font-weight:700;display:none;
+  text-shadow:0 0 8px rgba(56,189,248,.4);
+}
+@media(min-width:960px){
+  .journey-step:not(:last-child)::after{display:block}
+}
+.journey-step:last-child{
+  background:linear-gradient(135deg,var(--cyan-bg-med),var(--bg-card));
+  border-color:var(--cyan-border);
+}
+.journey-step:last-child .journey-title{color:var(--cyan-3)}
+
 /* ═══ COMPARISON ═══ */
 .compare-table{
   max-width:920px;margin:0 auto;
@@ -917,7 +991,7 @@ footer{
     <a class="btn-hero" href="signup.html">Start Free — No Card Needed
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
-    <a class="btn-hero-ghost" href="#features">
+    <a class="btn-hero-ghost" href="#how-it-works">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4V4z" fill="currentColor"/></svg>
       See How It Works
     </a>
@@ -1044,11 +1118,14 @@ footer{
           </div>
         </div>
       </div>
-      <div class="f-card"><div class="f-icon">🎯</div><div class="f-title">Focus Practice</div><div class="f-desc">A step-by-step study plan built around your weakest topics.</div><div class="f-tag">Study Engine</div></div>
-      <div class="f-card"><div class="f-icon">🔍</div><div class="f-title">Weakness Analyzer</div><div class="f-desc">Si pinpoints your exact error patterns and ranks what to fix first.</div><div class="f-tag">Diagnostics</div></div>
-      <div class="f-card"><div class="f-icon">📋</div><div class="f-title">Full Mock Exams</div><div class="f-desc">Timed SAT, ACT &amp; EST mocks with detailed breakdowns.</div><div class="f-tag">Timed</div></div>
-      <div class="f-card"><div class="f-icon">🔥</div><div class="f-title">Daily Streaks</div><div class="f-desc">15 min/day compounds. Gamified streaks keep you consistent.</div><div class="f-tag">Habit Engine</div></div>
-      <div class="f-card"><div class="f-icon">📈</div><div class="f-title">College Report</div><div class="f-desc">See which universities your score reaches — and how to reach more.</div><div class="f-tag">AI Report</div></div>
+      <div class="f-card"><div class="f-icon">💬</div><div class="f-title">Zero, Your AI Tutor</div><div class="f-desc">Ask anything, anytime. Zero walks you through every step, explains <em>why</em> wrong answers are wrong, and adapts to how you learn.</div><div class="f-tag">24/7 Tutor</div></div>
+      <div class="f-card"><div class="f-icon">📸</div><div class="f-title">Snap &amp; Solve</div><div class="f-desc">Photo your prep book or worksheet. Zero reads the question and solves it — no retyping.</div><div class="f-tag">Image OCR</div></div>
+      <div class="f-card"><div class="f-icon">🔍</div><div class="f-title">Weakness Analyzer</div><div class="f-desc">Stop guessing what to study. Si shows your exact weak topics — ranked by impact on your score.</div><div class="f-tag">Diagnostics</div></div>
+      <div class="f-card"><div class="f-icon">🎯</div><div class="f-title">Focus Practice</div><div class="f-desc">A personalized drill list, built from your real weak spots — so every minute of study moves the score.</div><div class="f-tag">Study Engine</div></div>
+      <div class="f-card"><div class="f-icon">📋</div><div class="f-title">Full Mock Exams</div><div class="f-desc">Real timing, real format. SAT, ACT, and EST mocks with raw-to-scaled scoring and per-section breakdown.</div><div class="f-tag">Timed</div></div>
+      <div class="f-card"><div class="f-icon">📚</div><div class="f-title">Session History</div><div class="f-desc">Every question you've asked, saved and searchable. Re-open any chat, review any mistake, anytime.</div><div class="f-tag">Memory</div></div>
+      <div class="f-card"><div class="f-icon">📈</div><div class="f-title">Progress Tracking</div><div class="f-desc">Mastery scores per topic, trend lines over time, and a predicted test-day score that updates as you learn.</div><div class="f-tag">Insight</div></div>
+      <div class="f-card"><div class="f-icon">🔥</div><div class="f-title">Daily Streaks</div><div class="f-desc">15 min/day compounds. Gamified streaks keep you consistent — the hardest part of prep.</div><div class="f-tag">Habit Engine</div></div>
     </div>
   </div>
 </section>
@@ -1075,25 +1152,94 @@ footer{
 <section id="why-si">
   <div class="container">
     <div class="section-head">
-      <div class="s-label">The Difference</div>
-      <h2 class="s-title">Built for your exam.<br/>Not just any AI.</h2>
-      <p class="s-sub">A general chatbot can talk math. Si Math AI is engineered for SAT, ACT, and EST prep — end to end.</p>
+      <div class="s-label">Why Si Math AI</div>
+      <h2 class="s-title">Better than the alternatives.<br/>For one reason.</h2>
+      <p class="s-sub">Everything else is general-purpose. Si Math AI is built for one thing: getting you ready for SAT, ACT, and EST.</p>
     </div>
-    <div class="why-grid">
-      <div class="why-card">
-        <div class="why-icon">🎯</div>
-        <div class="why-title">Egyptian exam formats</div>
-        <div class="why-desc">Trained for SAT, ACT, and EST question styles, scoring, and timing — not generic US homework.</div>
+    <div class="alt-grid">
+
+      <div class="alt-card">
+        <div class="alt-vs"><span class="alt-vs-pill">VS</span> ChatGPT</div>
+        <div class="alt-name">A brilliant assistant — for everything.</div>
+        <div class="alt-limit">Solves your question, then forgets it. No exam scoring, no weakness tracking, no mock exams, no plan. Every chat starts from scratch.</div>
+        <div class="alt-answer">
+          <span class="alt-answer-label">Si Math AI gives you</span>
+          <strong>SAT/ACT/EST-specific</strong> solutions, persistent weakness tracking, auto-generated focus practice, and full timed mocks — all in one place.
+        </div>
       </div>
-      <div class="why-card">
-        <div class="why-icon">🧠</div>
-        <div class="why-title">Explains wrong answers</div>
-        <div class="why-desc">Zero analyzes <em>why</em> you got it wrong, not just what the right answer is. Every mistake becomes a lesson.</div>
+
+      <div class="alt-card">
+        <div class="alt-vs"><span class="alt-vs-pill">VS</span> Generic AI Tools</div>
+        <div class="alt-name">Photomath, Symbolab, &amp; co.</div>
+        <div class="alt-limit">Solve one problem at a time. No idea what you're studying for, no memory of your past mistakes, no Arabic / Franco support.</div>
+        <div class="alt-answer">
+          <span class="alt-answer-label">Si Math AI gives you</span>
+          A tutor that <strong>knows you're prepping for the SAT</strong>, remembers every wrong answer, explains in Arabic, English, or Franco, and recommends what to study next.
+        </div>
       </div>
-      <div class="why-card">
-        <div class="why-icon">📈</div>
-        <div class="why-title">Tracks weaknesses across sessions</div>
-        <div class="why-desc">Every session feeds your Weakness Analyzer. Focus Practice generates drills from your real weak spots.</div>
+
+      <div class="alt-card">
+        <div class="alt-vs"><span class="alt-vs-pill">VS</span> Private Tutors</div>
+        <div class="alt-name">Effective — but expensive and slow.</div>
+        <div class="alt-limit">Available a few hours a week. Costs thousands per term. Doesn't track your weak topics between sessions. You wait days to ask the next question.</div>
+        <div class="alt-answer">
+          <span class="alt-answer-label">Si Math AI gives you</span>
+          A tutor that's <strong>online 24/7</strong>, costs a fraction of a private session, never forgets a weak topic, and answers in seconds.
+        </div>
+      </div>
+
+      <div class="alt-card">
+        <div class="alt-vs"><span class="alt-vs-pill">VS</span> Question Banks</div>
+        <div class="alt-name">Khan Academy, Magoosh, prep books.</div>
+        <div class="alt-limit">Thousands of questions and a generic syllabus. No personalized plan. You finish a section having no idea where you actually stand.</div>
+        <div class="alt-answer">
+          <span class="alt-answer-label">Si Math AI gives you</span>
+          A <strong>personalized study plan from your real weak spots</strong>, mock exams with raw→scaled scoring, and a predicted test-day score that updates as you learn.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ STUDENT JOURNEY ═══ -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="section-head">
+      <div class="s-label">How It Works</div>
+      <h2 class="s-title">From your first question<br/>to mastery.</h2>
+      <p class="s-sub">A complete loop you won't find in any other tool. Every question you ask makes the next study session smarter.</p>
+    </div>
+    <div class="journey-rail">
+      <div class="journey-step">
+        <div class="journey-num">1</div>
+        <div class="journey-ico">📝</div>
+        <div class="journey-title">Ask a question</div>
+        <div class="journey-desc">Type it, paste it, or snap a photo of your prep book. Arabic, English, or Franco.</div>
+      </div>
+      <div class="journey-step">
+        <div class="journey-num">2</div>
+        <div class="journey-ico">💡</div>
+        <div class="journey-title">Get the solution</div>
+        <div class="journey-desc">Zero walks you through it step by step — and explains <em>why</em> the wrong answers are wrong.</div>
+      </div>
+      <div class="journey-step">
+        <div class="journey-num">3</div>
+        <div class="journey-ico">🔍</div>
+        <div class="journey-title">Weakness detected</div>
+        <div class="journey-desc">Every mistake quietly feeds the Weakness Analyzer. You see your real weak spots — ranked.</div>
+      </div>
+      <div class="journey-step">
+        <div class="journey-num">4</div>
+        <div class="journey-ico">🎯</div>
+        <div class="journey-title">Focus Practice</div>
+        <div class="journey-desc">Auto-generated drills target exactly the topics you're losing points on — nothing else.</div>
+      </div>
+      <div class="journey-step">
+        <div class="journey-num">5</div>
+        <div class="journey-ico">🏆</div>
+        <div class="journey-title">Mastery</div>
+        <div class="journey-desc">Your predicted score climbs. Weak topics disappear from your dashboard. Test day, you're ready.</div>
       </div>
     </div>
   </div>
