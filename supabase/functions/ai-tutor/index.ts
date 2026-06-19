@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v75';
+const AI_TUTOR_VERSION = 'v77';
 
 // ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
 // Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
@@ -1048,7 +1048,7 @@ serve(async (req) => {
     // If it looks like a repeat, try to find the parent record.
     // Priority: explicit parent_record_id from client → most-recent math record in session.
     let parentRecord: {
-      id: string; question: string; ai_response: string;
+      id: string; question: string; image: string | null; ai_response: string;
       topic: string; subtopic: string;
       repeated_question_count: number; re_explanation_count: number;
     } | null = null;
@@ -1056,7 +1056,7 @@ serve(async (req) => {
     if (repeatType !== null && resolvedSessionId) {
       if (parentRecordId) {
         const { data: pr } = await sbAdmin.from('question_records')
-          .select('id, question, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .select('id, question, image, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
           .eq('id', parentRecordId)
           .eq('user_id', user.id)
           .maybeSingle();
@@ -1065,7 +1065,7 @@ serve(async (req) => {
       if (!parentRecord) {
         // Fallback: most recent math record in this session
         const { data: pr } = await sbAdmin.from('question_records')
-          .select('id, question, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .select('id, question, image, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
           .eq('user_id', user.id)
           .eq('session_id', resolvedSessionId)
           .not('topic', 'eq', 'General')
@@ -1083,21 +1083,47 @@ serve(async (req) => {
     }
 
     // If no parent found, degrade gracefully — treat as a new question (Case 3).
+    // Telemetry: question_regenerated fires when we WANTED to retrieve but couldn't.
     if (repeatType !== null && !parentRecord) {
-      console.log('[ai-tutor] repeat-no-parent', JSON.stringify({
-        uid: user.id.slice(0, 8), repeatType, hasParentId: !!parentRecordId,
+      console.log('[ai-tutor] question_regenerated', JSON.stringify({
+        uid: user.id.slice(0, 8), reason: 'no-parent-found',
+        intended_type: repeatType, hasParentId: !!parentRecordId, hasSession: !!resolvedSessionId,
       }));
       repeatType = null;
     }
 
     // ── REPEAT PATH: Cases 1 & 2 ─────────────────────────────────────────────
     if (repeatType !== null && parentRecord) {
-      // Build a focused OpenAI call with the original question + prior answer as context.
-      const repeatInstruction = repeatType === 'solve_again'
-        ? `🔁 RE-SOLVE INSTRUCTION: The student is asking you to solve this same problem again using a COMPLETELY DIFFERENT METHOD or approach. The prior answer used one method — you must now use an alternative strategy. Possible alternatives: visual/geometric reasoning, number substitution, algebraic identity, working backwards, symmetry argument. Start with ONE warm sentence acknowledging their request, then dive straight into the different method. Do NOT repeat anything from the prior answer.`
-        : `🔁 RE-EXPLAIN INSTRUCTION: The student did not understand. Break the explanation down DIFFERENTLY — go simpler, slower, one step at a time. Use a new analogy or a concrete numerical example they haven't seen yet. Explicitly acknowledge their confusion with warmth before starting the explanation.`;
+      // The original question is FIXED. We use the parent record's question text
+      // (+ image if any) as the literal problem statement. The LLM must NOT invent
+      // a new problem. This is enforced via:
+      //   (a) original problem replayed as a user-role message (not just system)
+      //   (b) explicit lock-down system message that bans inventing
+      //   (c) original image re-attached when present (OCR-derived questions)
+      const parentHasImage = !!(parentRecord.image && parentRecord.image.startsWith('data:image/'));
+      const originalQText  = (parentRecord.question || '').trim();
 
-      const priorContext = `[Prior question the student asked]: ${parentRecord.question}\n[Zero's prior answer]: ${parentRecord.ai_response || '(unavailable)'}`;
+      const lockdownInstruction =
+        `🔒 PROBLEM LOCK (CRITICAL): The student is referring to a PREVIOUS problem they already asked you. ` +
+        `The exact problem is replayed in the next user message${parentHasImage ? ' (with the original image attached)' : ''}. ` +
+        `You MUST solve/explain THAT EXACT problem. ` +
+        `DO NOT invent a new problem. DO NOT change the numbers. DO NOT swap variables. ` +
+        `DO NOT use a "similar example" — use THIS problem. ` +
+        `If you cannot read the original problem, say so explicitly in one sentence and ask the student to re-share — do NOT fabricate a substitute.`;
+
+      const strategyInstruction = repeatType === 'solve_again'
+        ? `🔁 STRATEGY: Re-solve the SAME problem above using a COMPLETELY DIFFERENT METHOD than your prior answer. ` +
+          `Alternatives: visual/geometric reasoning, number substitution, algebraic identity, working backwards, symmetry. ` +
+          `Open with ONE warm sentence acknowledging the re-solve request, then dive into the different method. ` +
+          `Do NOT repeat the prior method.`
+        : `🔁 STRATEGY: Re-explain the SAME problem above more slowly and simply. ` +
+          `Break it into smaller steps. Use a fresh analogy or concrete numerical example. ` +
+          `Open with ONE warm sentence acknowledging the confusion (use the student's name), then explain step by step. ` +
+          `Same answer as before — just clearer.`;
+
+      const priorAnswerContext = parentRecord.ai_response
+        ? `[Zero's prior answer for reference — do NOT repeat verbatim]: ${parentRecord.ai_response.slice(0, 1500)}`
+        : '[No prior answer recorded — proceed with the problem above.]';
 
       const repeatLangAnchor =
         lang === 'franco'
@@ -1106,26 +1132,50 @@ serve(async (req) => {
           ? '🔒 LANGUAGE LOCK: Entire response in Arabic (Egyptian dialect welcome). Math notation stays standard.'
           : '🔒 LANGUAGE LOCK: Entire response in English.';
 
-      const repeatMessages = [
+      // Replay the original problem as a user message — this is the strongest
+      // signal to the LLM that this IS the problem to address.
+      const replayUserContent: string | Array<{type:string; text?:string; image_url?:{url:string}}> = parentHasImage
+        ? [
+            { type: 'text', text: `Original problem I asked earlier:\n\n${originalQText || '(see attached image)'}` },
+            { type: 'image_url', image_url: { url: parentRecord.image as string } },
+          ]
+        : `Original problem I asked earlier:\n\n${originalQText || '(no text — original was image-only and the image is no longer available)'}`;
+
+      const studentRepeatRequest = (question || '').trim() ||
+        (repeatType === 'solve_again' ? 'Solve it again using a different method.' : "I don't understand. Explain it again.");
+
+      const repeatMessages: Array<{role:string; content: unknown}> = [
         { role: 'system', content: `You are Zero 🐉 — a warm, sharp, personality-driven math coach for Egyptian students (SAT/EST/ACT). Student name: ${studentName}.` },
-        { role: 'system', content: repeatInstruction },
-        { role: 'system', content: priorContext },
+        { role: 'system', content: lockdownInstruction },
+        { role: 'system', content: strategyInstruction },
+        { role: 'system', content: priorAnswerContext },
         { role: 'system', content: repeatLangAnchor },
-        { role: 'user',   content: question || (repeatType === 'solve_again' ? 'Solve it again using a different method.' : "I don't understand. Explain again.") },
+        { role: 'user',   content: replayUserContent },
+        { role: 'user',   content: studentRepeatRequest },
       ];
 
+      // Use vision-capable model when parent had an image, otherwise gpt-4o-mini.
       const repeatOaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
         body: JSON.stringify({
-          model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
+          model: parentHasImage ? 'gpt-4o' : 'gpt-4o-mini',
           messages: repeatMessages,
           max_tokens: 2200,
-          temperature: 0.5,
+          temperature: 0.4,
         }),
       });
       const repeatOaiJson = await repeatOaiRes.json();
       const repeatAnswer  = repeatOaiJson?.choices?.[0]?.message?.content || '';
+
+      console.log('[ai-tutor] question_retrieved', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        repeat_type: repeatType,
+        parent_id: parentRecord.id,
+        parent_has_image: parentHasImage,
+        parent_q_chars: originalQText.length,
+        topic: parentRecord.topic, subtopic: parentRecord.subtopic,
+      }));
 
       // UPDATE existing record — increment counter, ensure weakness_signal=true.
       const repeatUpdateFields = repeatType === 'solve_again'
@@ -1142,11 +1192,6 @@ serve(async (req) => {
           uid: user.id.slice(0, 8), id: parentRecord.id, msg: repeatUpdateErr.message,
         }));
       }
-
-      console.log('[ai-tutor] repeat-handled', JSON.stringify({
-        uid: user.id.slice(0, 8), repeatType, parent_id: parentRecord.id,
-        topic: parentRecord.topic, subtopic: parentRecord.subtopic,
-      }));
 
       return new Response(JSON.stringify({
         answer:          repeatAnswer,
@@ -1798,6 +1843,17 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // ── Build response — returned to student immediately ──────────────────────
     const zeroAnswer  = parsed.answer || '';
     const recordId    = newRecord?.id ?? null;
+
+    // Telemetry: question_regenerated fires on every new math record creation,
+    // symmetric to question_retrieved on the repeat path. Lets us measure the
+    // retrieval-vs-fresh ratio in logs.
+    if (isMath && recordId) {
+      console.log('[ai-tutor] question_regenerated', JSON.stringify({
+        uid: user.id.slice(0, 8), record_id: recordId,
+        topic: safeInsertTopic, subtopic: safeInsertSubtopic,
+        had_image: !!imageData, q_chars: question.length,
+      }));
+    }
     const studentResponse = new Response(JSON.stringify({
       answer:          zeroAnswer,
       hint,
