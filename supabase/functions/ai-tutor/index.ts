@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v77';
+const AI_TUTOR_VERSION = 'v78';
 
 // ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
 // Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
@@ -82,6 +82,73 @@ const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
   .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 const L3_PIPELINE_VERSION = 'l3-shadow-v1';
+
+// ── Tone detection (v78) ─────────────────────────────────────────────────────
+// Sliding 3-turn classifier returning band 0–4 (0=formal, 4=hype).
+// Vocab lists are curated v1 — small on purpose. Expand only with usage data.
+// NEVER cross-pollinate languages: ar vocab matches AR turns, en matches EN, etc.
+const TONE_VOCAB_AR = ['عاش','اشطا','تمام','يلا بينا','يا بطل','يا صاحبي','جامد'];
+const TONE_VOCAB_EN = ["let's go",'lets go','nice catch','nice one','good job','we got this','huge w'];
+const TONE_VOCAB_FR = ['3ash','yalla bina','tmam','gamed','ya sa7by','ya batal'];
+
+// Confusion / frustration markers — when present in CURRENT student turn we
+// cap the tone band at 2 (Adjustment 1). Warmth > hype.
+function detectConfusionOrError(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  return (
+    /مش\s*فاهم|مش\s*عارف|مفهمتش|تايه|مش\s*شغال|غلط|ليه\s*كده|محبطة?|مفيش\s*فايدة/.test(t) ||
+    /\b(i\s+(?:still\s+)?don'?t\s+(?:get|understand)|i'?m\s+(?:still\s+)?(?:lost|confused|stuck)|why\s+(?:isn'?t|is)\s+this\s+wrong|i\s+(?:can'?t|cant)\s+(?:do|figure))\b/.test(t) ||
+    /msh\s*fahem|msh\s*3aref|mosh\s*3aref|lost|tay7|tayh|frustrated/.test(t)
+  );
+}
+
+// Score a single message on its tone vocab. Returns 0–4.
+function scoreToneSingle(text: string, lang: string): number {
+  const t = (text || '').trim();
+  if (!t) return 1;
+  const lower = t.toLowerCase();
+  const vocab = lang === 'ar' ? TONE_VOCAB_AR : lang === 'franco' ? TONE_VOCAB_FR : TONE_VOCAB_EN;
+  const slangHits = vocab.reduce((n, w) => n + (lower.includes(w.toLowerCase()) ? 1 : 0), 0);
+
+  // Hype markers (cross-language but tone-language-agnostic): emoji, repeated chars, all-caps, !!!
+  const emojiHits   = (t.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}🔥😂✨🎯🙌💪]/gu) || []).length;
+  const repeatedCh  = /([a-zا-ي])\1{2,}/i.test(lower);                     // "loool", "بمووووت"
+  const allCapsFrag = /\b[A-Z]{3,}\b/.test(t);                              // "LETS GO"
+  const exclamChain = /!{2,}/.test(t);
+
+  let score = 1; // neutral baseline
+  if (slangHits >= 1)                 score += 1;
+  if (slangHits >= 2 || emojiHits >= 2 || repeatedCh || allCapsFrag || exclamChain) score += 1;
+  if (slangHits >= 2 && (emojiHits >= 2 || repeatedCh || allCapsFrag))               score += 1;
+
+  // Formality dampeners pull us toward 0:
+  const polite = /(please|could you|would you|kindly|أرجوك|من فضلك|لو سمحت)/i.test(t);
+  const longClean = t.length > 80 && !slangHits && !emojiHits && !exclamChain;
+  if (polite || longClean) score = Math.max(0, score - 1);
+  if (polite && longClean) score = 0;
+
+  return Math.max(0, Math.min(4, score));
+}
+
+// Sliding window: average the last 3 student messages (rounded). Defaults to 1.
+function detectTone(
+  currentText: string,
+  priorMessages: Array<{role:string;content:string}>,
+  lang: string,
+): { band: number; capped: boolean } {
+  const userTurns = priorMessages.filter(m => m.role === 'user').slice(-2).map(m => m.content);
+  const window = [...userTurns, currentText].filter(s => typeof s === 'string' && s.trim().length > 0);
+  if (window.length === 0) return { band: 1, capped: false };
+  const scores = window.map(s => scoreToneSingle(s, lang));
+  let band = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  // Cap at 2 on confusion/frustration in CURRENT turn (Adjustment 1).
+  let capped = false;
+  if (detectConfusionOrError(currentText) && band > 2) {
+    band = 2;
+    capped = true;
+  }
+  return { band, capped };
+}
 
 // ── Language detection — Arabic / English / Franco (Arabizi) ──────────────────
 // Franco = Egyptian Arabic written in Latin letters + digits (3=ع, 7=ح, 2=ء, 5=خ).
@@ -1670,9 +1737,49 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       CURRICULUM_TREE_TEXT +
       '\n\nFor is_math=false turns: topic="General", subtopic="".';
 
+    // ── Tone anchor (v78) — only injected on the main conversational path. ──
+    // NEVER injected into: hint mode, repeat path (own block above), verification,
+    // mock-exam grading, weakness reports, focus plans, achievements, identity Q&A
+    // (identity rules live inside NORMAL_SYSTEM_PROMPT and override tone).
+    let toneAnchor: string | null = null;
+    if (!hintMode) {
+      const { band, capped } = detectTone(question, messages, lang);
+      const vocabForLang = lang === 'ar' ? TONE_VOCAB_AR : lang === 'franco' ? TONE_VOCAB_FR : TONE_VOCAB_EN;
+      toneAnchor =
+        `🎭 TONE CALIBRATION — band=${band}/4, language=${lang}${capped ? ' (capped at 2: student confused/frustrated)' : ''}\n\n` +
+        `Mirror the student's tone ONLY in:\n` +
+        `  • Opening line (1 short sentence: greeting / acknowledgement)\n` +
+        `  • Closing line (1 short sentence: encouragement / next step)\n` +
+        `  • At most ONE brief inline reaction (e.g. "nice catch", "اشطا")\n\n` +
+        `DO NOT mirror tone in:\n` +
+        `  • The math explanation itself — precise, clean, neutral\n` +
+        `  • Definitions, formulas, rules, step labels\n` +
+        `  • Error corrections — be warm but clear, never playful about a mistake\n\n` +
+        `Band guide (use ${lang}-native vocabulary only — NEVER mix languages):\n` +
+        `  0–1 → Neutral warmth. No slang. At most a single 🎯/✨ in sign-off.\n` +
+        `  2   → ONE casual phrase max. Contractions OK. One emoji max.\n` +
+        `  3   → ONE casual phrase in opener AND ONE in closer (TWO total max). Slang stays in opener/closer ONLY.\n` +
+        `  4   → Match hype energy in opener/closer. Math body still clean.\n\n` +
+        `Curated v1 vocabulary for ${lang} — prefer these, do not invent:\n` +
+        `  ${vocabForLang.join(' · ')}\n\n` +
+        `HARD RULES:\n` +
+        `  1. NEVER use slang more than once per response slot (opener=1, closer=1, inline=1). No stacking.\n` +
+        `     ❌ "yalla bina 🔥 let's gooo bro huge W"   ✅ "اشطا يا بطل 🔥"\n` +
+        `  2. NEVER cross-language pollute. If lang=en, slang is EN-only. If lang=ar, AR-only. If lang=franco, Franco-only.\n` +
+        `  3. NEVER use slang inside an explanation step, formula, definition, or correction.\n` +
+        `  4. If band=0 or band=1, you may skip slang entirely. Do not force it.\n` +
+        `  5. Identity / "who are you" questions are governed by the persona block above — tone does not override.\n\n` +
+        `Goal: feel like the student's smart Egyptian friend who happens to be an elite SAT/ACT/EST tutor — not a meme bot, not a corporate robot.`;
+
+      console.log('[ai-tutor] tone-detected', JSON.stringify({
+        uid: user.id.slice(0, 8), band, capped, lang,
+      }));
+    }
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'system', content: curriculumAnchor },
+      ...(toneAnchor ? [{ role: 'system', content: toneAnchor }] : []),
       ...messages.slice(-10),
       { role: 'system', content: langAnchor },
       { role: 'user', content: userContent },
