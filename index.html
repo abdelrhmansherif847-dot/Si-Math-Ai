@@ -686,6 +686,131 @@ section:first-of-type{padding-top:0}
 .why-title{font-family:var(--font-display);font-size:17px;font-weight:700;color:#fff;margin-bottom:var(--space-2)}
 .why-desc{font-size:14px;color:var(--text-300);line-height:1.6}
 
+/* ═══ INTERACTIVE WALKTHROUGH ═══ */
+.wt-stage{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:var(--space-4)}
+.wt-screen{
+  position:relative;background:var(--bg-card);
+  border:1px solid var(--cyan-border-soft);border-radius:var(--r-lg);overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 32px rgba(56,189,248,.06),inset 0 1px 0 rgba(255,255,255,.04);
+}
+.wt-screen::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(56,189,248,.4),transparent);z-index:5;
+}
+.wt-bar{
+  display:flex;align-items:center;gap:6px;padding:11px 14px;
+  border-bottom:1px solid var(--border-soft);background:rgba(255,255,255,.02);
+  font-family:var(--font-mono);font-size:11px;color:var(--text-400);
+}
+.wt-bar .bar-dot{width:9px;height:9px;border-radius:50%}
+.wt-bar-label{margin-left:auto;display:flex;align-items:center;gap:8px}
+.wt-bar-label .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
+.wt-scenes{position:relative;min-height:420px;background:var(--bg-elev-1)}
+@media(min-width:768px){.wt-scenes{min-height:460px}}
+.wt-scene{
+  position:absolute;inset:0;padding:16px;display:flex;flex-direction:column;gap:10px;
+  opacity:0;pointer-events:none;transform:translateY(8px);
+  transition:opacity .5s ease,transform .5s ease;overflow-y:auto;
+}
+@media(min-width:768px){.wt-scene{padding:20px;gap:12px}}
+.wt-scene.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+
+.wt-msg{display:flex;gap:9px;align-items:flex-start;animation:wtRise .45s ease both}
+.wt-msg.user{flex-direction:row-reverse}
+.wt-av{
+  width:30px;height:30px;flex-shrink:0;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden;
+}
+.wt-av.ai{background:var(--bg-elev-2);border:1px solid var(--cyan-border);color:var(--cyan)}
+.wt-av.user{background:linear-gradient(135deg,#1e3a5f,#0f2040);border:1px solid var(--border-mid)}
+.wt-bubble{
+  max-width:80%;padding:10px 13px;border-radius:13px;
+  font-size:13.5px;line-height:1.55;word-wrap:break-word;
+}
+.wt-bubble.ai{background:var(--bg-elev-2);border:1px solid var(--cyan-border-soft);color:var(--text-200);border-bottom-left-radius:4px}
+.wt-bubble.user{background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#06121f;border-bottom-right-radius:4px;font-weight:500}
+.wt-bubble strong{color:#fff;font-weight:600}
+
+.wt-typing{display:flex;gap:4px;padding:4px 0}
+.wt-typing span{width:6px;height:6px;border-radius:50%;background:var(--cyan);opacity:.5;animation:wtDot 1.4s infinite}
+.wt-typing span:nth-child(2){animation-delay:.2s}
+.wt-typing span:nth-child(3){animation-delay:.4s}
+@keyframes wtDot{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+.wt-imgbubble{
+  max-width:80%;padding:8px;border-radius:13px;
+  background:var(--bg-elev-2);border:1px solid var(--cyan-border-soft);
+  border-bottom-right-radius:4px;
+}
+.wt-imgbubble .wt-imgframe{
+  background:#fff;border-radius:7px;padding:18px 14px;
+  font-family:'Times New Roman',serif;font-size:15px;color:#000;text-align:center;line-height:1.7;
+}
+.wt-imgbubble .wt-prob-num{font-family:var(--font-mono);font-size:10px;color:#555;text-align:left;margin-bottom:6px}
+.wt-imgbubble .wt-prob-q{font-size:15px}
+.wt-imgbubble .wt-prob-eq{font-size:17px;font-weight:600;margin-top:6px}
+
+.wt-stepbox{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text-200);animation:wtRise .5s ease both}
+.wt-stepbox .wt-step-l{font-family:var(--font-mono);font-size:10px;color:var(--cyan);letter-spacing:.1em;margin-bottom:4px}
+.wt-stepbox .wt-step-eq{font-family:'JetBrains Mono',monospace;color:#fff;font-size:14px}
+.wt-stepbox.final{border-color:var(--cyan-border);background:linear-gradient(135deg,var(--cyan-bg-med),var(--bg-card))}
+.wt-stepbox.final .wt-step-eq{color:var(--cyan-3);font-weight:700}
+
+.wt-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:12px;padding:14px;animation:wtRise .5s ease both}
+.wt-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.wt-card-ico{width:32px;height:32px;border-radius:9px;background:var(--cyan-bg-med);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-size:16px}
+.wt-card-t{font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff}
+.wt-card-s{font-size:11.5px;color:var(--text-400);margin-top:1px}
+
+.wt-rank{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;background:var(--bg-elev-2);margin-bottom:6px;animation:wtRise .4s ease both}
+.wt-rank:last-child{margin-bottom:0}
+.wt-rank-n{width:22px;height:22px;border-radius:50%;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:#f87171;font-family:var(--font-display);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wt-rank-name{flex:1;font-size:13px;font-weight:600;color:#fff}
+.wt-rank-pct{font-family:var(--font-mono);font-size:12px;color:var(--text-300)}
+.wt-rank-pct.critical{color:#f87171}
+
+.wt-drill{display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--border-soft);margin-bottom:6px;animation:wtRise .4s ease both}
+.wt-drill:last-child{margin-bottom:0}
+.wt-drill-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--cyan);flex-shrink:0}
+.wt-drill-name{flex:1;font-size:12.5px;color:var(--text-200)}
+.wt-drill-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-400)}
+.wt-drill.done .wt-drill-dot{background:var(--cyan);border-color:var(--cyan);position:relative}
+.wt-drill.done .wt-drill-dot::after{content:'✓';position:absolute;inset:0;color:#06121f;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+.wt-mastery{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.wt-mastery-l{font-size:12px;color:var(--text-400)}
+.wt-mastery-v{font-family:var(--font-display);font-weight:800;color:var(--cyan);font-size:18px}
+.wt-bar-track{height:8px;border-radius:4px;background:var(--bg-elev-2);overflow:hidden;margin-bottom:10px}
+.wt-bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan-2),var(--cyan));border-radius:4px;animation:wtFill 1.6s ease forwards}
+@keyframes wtFill{from{width:0%}to{width:var(--w,82%)}}
+
+.wt-score-jump{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,.1),var(--bg-card));border:1px solid rgba(34,197,94,.25);font-size:13px}
+.wt-score-jump .arrow{color:#22c55e;font-weight:800}
+.wt-score-jump strong{color:#fff;font-weight:700}
+
+.wt-uploading{display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:13px;background:var(--bg-elev-2);border:1px solid var(--cyan-border-soft);color:var(--text-300);font-size:12.5px;font-family:var(--font-mono);max-width:80%;border-bottom-right-radius:4px}
+.wt-uploading::before{content:'';width:14px;height:14px;border:2px solid var(--cyan);border-top-color:transparent;border-radius:50%;animation:wtSpin 1s linear infinite;flex-shrink:0}
+@keyframes wtSpin{to{transform:rotate(360deg)}}
+
+@keyframes wtRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.wt-controls{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.wt-btn{
+  width:36px;height:36px;border-radius:10px;border:1px solid var(--border-mid);
+  background:var(--bg-card);color:var(--text-300);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.wt-btn:hover{border-color:var(--cyan-border);color:var(--cyan);background:var(--bg-card-hi)}
+.wt-btn svg{width:14px;height:14px}
+.wt-dots{display:flex;gap:6px;padding:0 8px}
+.wt-dot{width:8px;height:8px;border-radius:50%;background:var(--border-mid);cursor:pointer;transition:all .25s;border:none;padding:0}
+.wt-dot.active{background:var(--cyan);width:24px;border-radius:4px;box-shadow:0 0 8px rgba(56,189,248,.5)}
+.wt-dot:hover:not(.active){background:var(--text-500)}
+.wt-scene-label{
+  text-align:center;font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--cyan);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+
 /* ═══ ALTERNATIVES (Why not X?) ═══ */
 .alt-grid{display:grid;grid-template-columns:1fr;gap:var(--space-4);max-width:920px;margin:0 auto}
 @media(min-width:768px){.alt-grid{grid-template-columns:1fr 1fr;gap:var(--space-5)}}
@@ -1087,6 +1212,211 @@ footer{
   </div>
 </section>
 
+<!-- ═══ INTERACTIVE WALKTHROUGH ═══ -->
+<section id="walkthrough">
+  <div class="container">
+    <div class="section-head">
+      <div class="s-label">Live Demo</div>
+      <h2 class="s-title">See the full loop in action.</h2>
+      <p class="s-sub">A real Si Math AI workflow — question to mastery — in 30 seconds. No video, just the actual product.</p>
+    </div>
+
+    <div class="wt-stage">
+      <div class="wt-screen">
+        <div class="wt-bar">
+          <span class="bar-dot" style="background:#ff5f57"></span>
+          <span class="bar-dot" style="background:#ffbd2e"></span>
+          <span class="bar-dot" style="background:#28c840"></span>
+          <span class="wt-bar-label"><span class="live-dot"></span>Si Math AI · Live</span>
+        </div>
+
+        <div class="wt-scenes" id="wtScenes">
+
+          <!-- SCENE 1: Student asks -->
+          <div class="wt-scene active" data-scene="1">
+            <div class="wt-msg ai">
+              <div class="wt-av ai">Z</div>
+              <div class="wt-bubble ai">Hey! 👋 What are we working on today?</div>
+            </div>
+            <div class="wt-msg user">
+              <div class="wt-av user">🧑</div>
+              <div class="wt-bubble user">i can't figure this one out, can you solve it?</div>
+            </div>
+          </div>
+
+          <!-- SCENE 2: Image uploaded -->
+          <div class="wt-scene" data-scene="2">
+            <div class="wt-msg user">
+              <div class="wt-av user">🧑</div>
+              <div class="wt-imgbubble">
+                <div class="wt-imgframe">
+                  <div class="wt-prob-num">Problem 12 · SAT Math · Practice Set 4</div>
+                  <div class="wt-prob-q">If &nbsp;<em>2(x + 3) = 4x − 10</em>,<br/>what is the value of <em>x</em>?</div>
+                </div>
+              </div>
+            </div>
+            <div class="wt-msg ai">
+              <div class="wt-av ai">Z</div>
+              <div class="wt-typing"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+
+          <!-- SCENE 3: Zero's step-by-step -->
+          <div class="wt-scene" data-scene="3">
+            <div class="wt-msg ai">
+              <div class="wt-av ai">Z</div>
+              <div class="wt-bubble ai">
+                Linear equation — let's isolate <strong>x</strong> step by step.
+              </div>
+            </div>
+            <div class="wt-stepbox" style="animation-delay:.15s">
+              <div class="wt-step-l">STEP 1 · Expand</div>
+              <div class="wt-step-eq">2x + 6 = 4x − 10</div>
+            </div>
+            <div class="wt-stepbox" style="animation-delay:.3s">
+              <div class="wt-step-l">STEP 2 · Move x terms together</div>
+              <div class="wt-step-eq">6 + 10 = 4x − 2x</div>
+            </div>
+            <div class="wt-stepbox" style="animation-delay:.45s">
+              <div class="wt-step-l">STEP 3 · Simplify</div>
+              <div class="wt-step-eq">16 = 2x</div>
+            </div>
+            <div class="wt-stepbox final" style="animation-delay:.6s">
+              <div class="wt-step-l">ANSWER</div>
+              <div class="wt-step-eq">x = 8</div>
+            </div>
+          </div>
+
+          <!-- SCENE 4: Weakness Analyzer -->
+          <div class="wt-scene" data-scene="4">
+            <div class="wt-card">
+              <div class="wt-card-head">
+                <div class="wt-card-ico">🔍</div>
+                <div>
+                  <div class="wt-card-t">Weakness Analyzer</div>
+                  <div class="wt-card-s">Updated just now · 1 new signal</div>
+                </div>
+              </div>
+              <div class="wt-rank" style="animation-delay:.1s">
+                <div class="wt-rank-n">1</div>
+                <div class="wt-rank-name">Linear Equations</div>
+                <div class="wt-rank-pct critical">42%</div>
+              </div>
+              <div class="wt-rank" style="animation-delay:.2s">
+                <div class="wt-rank-n">2</div>
+                <div class="wt-rank-name">Word Problems</div>
+                <div class="wt-rank-pct">58%</div>
+              </div>
+              <div class="wt-rank" style="animation-delay:.3s">
+                <div class="wt-rank-n">3</div>
+                <div class="wt-rank-name">Quadratics</div>
+                <div class="wt-rank-pct">63%</div>
+              </div>
+            </div>
+            <div class="wt-msg ai" style="animation-delay:.5s">
+              <div class="wt-av ai">Z</div>
+              <div class="wt-bubble ai">
+                I noticed you've slipped on <strong>Linear Equations</strong> twice this week. Let's drill it.
+              </div>
+            </div>
+          </div>
+
+          <!-- SCENE 5: Focus Practice generated -->
+          <div class="wt-scene" data-scene="5">
+            <div class="wt-card">
+              <div class="wt-card-head">
+                <div class="wt-card-ico">🎯</div>
+                <div>
+                  <div class="wt-card-t">Focus Practice · Linear Equations</div>
+                  <div class="wt-card-s">3 drills · ~12 min</div>
+                </div>
+              </div>
+              <div class="wt-drill done" style="animation-delay:.1s">
+                <div class="wt-drill-dot"></div>
+                <div class="wt-drill-name">Solve for x · single variable</div>
+                <div class="wt-drill-meta">5 · 5</div>
+              </div>
+              <div class="wt-drill done" style="animation-delay:.25s">
+                <div class="wt-drill-dot"></div>
+                <div class="wt-drill-name">Equations with parentheses</div>
+                <div class="wt-drill-meta">4 · 5</div>
+              </div>
+              <div class="wt-drill" style="animation-delay:.4s">
+                <div class="wt-drill-dot"></div>
+                <div class="wt-drill-name">Equations with variables on both sides</div>
+                <div class="wt-drill-meta">in progress</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCENE 6: Mastery updates -->
+          <div class="wt-scene" data-scene="6">
+            <div class="wt-card">
+              <div class="wt-card-head">
+                <div class="wt-card-ico">📈</div>
+                <div>
+                  <div class="wt-card-t">Linear Equations · Mastery</div>
+                  <div class="wt-card-s">Updated after Focus Practice</div>
+                </div>
+              </div>
+              <div class="wt-mastery">
+                <span class="wt-mastery-l">Current mastery</span>
+                <span class="wt-mastery-v">82%</span>
+              </div>
+              <div class="wt-bar-track">
+                <div class="wt-bar-fill" style="--w:82%"></div>
+              </div>
+              <div class="wt-score-jump" style="animation-delay:.4s">
+                <span class="arrow">↑</span>
+                <div>
+                  <strong>Predicted SAT Math: 720</strong>
+                  <div style="font-size:11.5px;color:var(--text-400);margin-top:1px">+40 since you started</div>
+                </div>
+              </div>
+            </div>
+            <div class="wt-msg ai" style="animation-delay:.7s">
+              <div class="wt-av ai">Z</div>
+              <div class="wt-bubble ai">
+                Nice — Linear Equations just jumped from <strong>42% → 82%</strong>. Ready for the next weak spot?
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="wt-scene-label" id="wtSceneLabel">Step 1 · Ask a question</div>
+
+      <div class="wt-controls">
+        <button class="wt-btn" id="wtPrev" aria-label="Previous step">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M10 4 6 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="wt-dots" id="wtDots">
+          <button class="wt-dot active" data-i="1" aria-label="Step 1"></button>
+          <button class="wt-dot" data-i="2" aria-label="Step 2"></button>
+          <button class="wt-dot" data-i="3" aria-label="Step 3"></button>
+          <button class="wt-dot" data-i="4" aria-label="Step 4"></button>
+          <button class="wt-dot" data-i="5" aria-label="Step 5"></button>
+          <button class="wt-dot" data-i="6" aria-label="Step 6"></button>
+        </div>
+        <button class="wt-btn" id="wtPlay" aria-label="Pause">
+          <svg id="wtPauseIco" viewBox="0 0 16 16" fill="none"><path d="M6 3v10M10 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg id="wtPlayIco" viewBox="0 0 16 16" fill="none" style="display:none"><path d="M5 3l8 5-8 5V3z" fill="currentColor"/></svg>
+        </button>
+        <button class="wt-btn" id="wtNext" aria-label="Next step">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div style="text-align:center;margin-top:var(--space-4)">
+        <a class="btn-hero" href="signup.html" style="display:inline-flex">Try It Yourself — Free
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ═══ FEATURES ═══ -->
 <section>
   <div class="container">
@@ -1483,41 +1813,8 @@ footer{
   </div>
 </section>
 
-<!-- ═══ TESTIMONIALS ═══ -->
-<section id="students">
-  <div class="container">
-    <div class="section-head">
-      <div class="s-label">Students</div>
-      <h2 class="s-title">Real scores. Real students.</h2>
-    </div>
-    <div class="testi-grid">
-      <div class="testi">
-        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
-        <p class="testi-quote">"620 to 800 in SAT Math in 10 weeks. Si explained concepts that took me 2 years to struggle with."</p>
-        <div class="testi-foot">
-          <div class="testi-av">👩</div>
-          <div><div class="testi-name">Layla Hassan</div><div class="testi-meta">SAT Math · Grade 11</div><div class="score-pill">620 → 800 🏆</div></div>
-        </div>
-      </div>
-      <div class="testi">
-        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
-        <p class="testi-quote">"The AI explains things five different ways until I get it. No human tutor does that at 2am."</p>
-        <div class="testi-foot">
-          <div class="testi-av">👦</div>
-          <div><div class="testi-name">Marcus Chen</div><div class="testi-meta">ACT Math · Grade 12</div><div class="score-pill">28 → 36 🏆</div></div>
-        </div>
-      </div>
-      <div class="testi">
-        <div class="testi-stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
-        <p class="testi-quote">"Used Si for 6 weeks before my EST. Highest math score in my school."</p>
-        <div class="testi-foot">
-          <div class="testi-av">👧</div>
-          <div><div class="testi-name">Aisha Yilmaz</div><div class="testi-meta">EST Math · Grade 11</div><div class="score-pill">Top of school 🏆</div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Testimonials section removed — fake content violates the truthfulness rule.
+     When real students agree to be quoted, restore an honest version here. -->
 
 <!-- ═══ CTA ═══ -->
 <div class="cta-wrap" id="pricing">
@@ -1641,6 +1938,80 @@ st.addEventListener('click',()=>{
       if (start)  { start.textContent  = 'Open App →';  start.href  = 'dashboard.html'; }
     }
   } catch(_) {}
+})();
+</script>
+
+<script>
+(function(){
+  var TOTAL = 6;
+  var LABELS = [
+    'Step 1 · Ask a question',
+    'Step 2 · Upload a photo',
+    'Step 3 · Zero solves it',
+    'Step 4 · Weakness detected',
+    'Step 5 · Focus Practice',
+    'Step 6 · Mastery updated'
+  ];
+  var cur = 1, timer = null, playing = true;
+  var scenes = document.querySelectorAll('.wt-scene');
+  var dots = document.querySelectorAll('.wt-dot');
+  var label = document.getElementById('wtSceneLabel');
+  var playBtn = document.getElementById('wtPlay');
+  var pauseIco = document.getElementById('wtPauseIco');
+  var playIco = document.getElementById('wtPlayIco');
+
+  if (!scenes.length) return;
+
+  function goTo(n) {
+    scenes[cur-1].classList.remove('active');
+    dots[cur-1].classList.remove('active');
+    cur = ((n - 1 + TOTAL) % TOTAL) + 1;
+    scenes[cur-1].classList.add('active');
+    dots[cur-1].classList.add('active');
+    if (label) label.textContent = LABELS[cur-1];
+  }
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(function() {
+      goTo(cur === TOTAL ? 1 : cur + 1);
+    }, 3500);
+  }
+
+  function pause() {
+    playing = false;
+    clearInterval(timer);
+    if (pauseIco) pauseIco.style.display = 'none';
+    if (playIco) playIco.style.display = '';
+  }
+
+  function play() {
+    playing = true;
+    startTimer();
+    if (pauseIco) pauseIco.style.display = '';
+    if (playIco) playIco.style.display = 'none';
+  }
+
+  var prevBtn = document.getElementById('wtPrev');
+  var nextBtn = document.getElementById('wtNext');
+  if (prevBtn) prevBtn.addEventListener('click', function(){ goTo(cur - 1); if (playing) startTimer(); });
+  if (nextBtn) nextBtn.addEventListener('click', function(){ goTo(cur + 1); if (playing) startTimer(); });
+  if (playBtn) playBtn.addEventListener('click', function(){ playing ? pause() : play(); });
+
+  dots.forEach(function(d) {
+    d.addEventListener('click', function() {
+      goTo(parseInt(d.dataset.i));
+      if (playing) startTimer();
+    });
+  });
+
+  var wtScenes = document.getElementById('wtScenes');
+  if (wtScenes) {
+    wtScenes.addEventListener('mouseenter', function(){ if (playing) clearInterval(timer); });
+    wtScenes.addEventListener('mouseleave', function(){ if (playing) startTimer(); });
+  }
+
+  if (playing) startTimer();
 })();
 </script>
 
