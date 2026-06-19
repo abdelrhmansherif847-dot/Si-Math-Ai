@@ -976,9 +976,9 @@ document.addEventListener('DOMContentLoaded', () => {
       txHtml = `<div class="tx-head">Credit History</div><div class="tx-list">${rows}</div>`;
     }
 
-    // Upgrade button
+    // Upgrade button — links to manual payment page
     const upgradeHtml = !isPaidPlan(planCode)
-      ? `<a href="pricing.html" class="upgrade" style="display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none">
+      ? `<a href="manual-payment.html" class="upgrade" style="display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="m12 2 2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>
            Upgrade Plan
          </a>` : '';

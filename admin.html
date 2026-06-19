@@ -272,15 +272,38 @@ select.search-input{cursor:pointer}
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('pending')">Pending Payments</button>
+    <button class="tab active" onclick="switchTab('payments')">Payment Requests</button>
+    <button class="tab" onclick="switchTab('pending')">Legacy Queue</button>
     <button class="tab" onclick="switchTab('users')">Users</button>
     <button class="tab" onclick="switchTab('founders')">Founders</button>
     <button class="tab" onclick="switchTab('settings')">System Settings</button>
     <button class="tab" onclick="switchTab('feedback')">Feedback</button>
   </div>
 
-  <!-- TAB: PENDING -->
-  <div id="tab-pending">
+  <!-- TAB: PAYMENT REQUESTS (new manual payment flow) -->
+  <div id="tab-payments">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico amber">💳</div>
+        <div>
+          <div class="card-title">Manual Payment Requests</div>
+          <div class="card-sub">Students who paid via Vodafone Cash / InstaPay and uploaded their proof</div>
+        </div>
+      </div>
+      <div class="search-row" style="margin-bottom:14px">
+        <select class="search-input" id="prStatusFilter" style="flex:0 0 auto;min-width:140px" onchange="loadPaymentRequests()">
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="">All</option>
+        </select>
+      </div>
+      <div id="paymentRequestsList"><div class="empty"><div class="ico">⏳</div><p>Loading…</p></div></div>
+    </div>
+  </div>
+
+  <!-- TAB: PENDING (legacy upgrade_requested flow) -->
+  <div id="tab-pending" style="display:none">
     <!-- Upgrade requests from students -->
     <div class="card" style="margin-bottom:18px">
       <div class="card-head">
@@ -486,8 +509,7 @@ async function init() {
   document.getElementById('pageLoader').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   loadStats();
-  loadPending();
-  loadUpgradeRequests();
+  loadPaymentRequests();
 }
 
 // Sidebar
@@ -497,10 +519,12 @@ document.getElementById('hambBtn').addEventListener('click', () => { sidebar.cla
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 
 // Tabs
-const TABS = ['pending','users','founders','settings','feedback'];
+const TABS = ['payments','pending','users','founders','settings','feedback'];
 function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
+  if (name === 'payments') loadPaymentRequests();
+  if (name === 'pending') { loadUpgradeRequests(); loadPending(); }
   if (name === 'users') { if (allUsers.length === 0) loadUsers(); loadSuspiciousAccounts(); }
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
@@ -520,7 +544,7 @@ function toast(msg, type = 'blue') {
 async function loadStats() {
   const [usersRes, pendingRes, activeRes, settingsRes] = await Promise.all([
     sb.from('profiles').select('id', { count: 'exact', head: true }),
-    sb.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+    sb.from('payment_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     sb.from('profiles').select('id', { count: 'exact', head: true }).neq('plan_code', 'FREE'),
     sb.from('system_settings').select('key, value').in('key', ['founder_slots_remaining', 'founder_slots_total'])
   ]);
@@ -995,6 +1019,102 @@ function toggleFbDetail(rowId) {
   row.style.display = isHidden ? '' : 'none';
   const btn = row.previousElementSibling?.querySelector('button');
   if (btn) btn.textContent = isHidden ? 'Hide' : 'View';
+}
+
+// ── Payment Requests (Manual Payment V1) ──────────────────────────────────────
+async function loadPaymentRequests() {
+  const statusFilter = document.getElementById('prStatusFilter')?.value;
+  let query = sb.from('payment_requests')
+    .select('id, user_id, plan_code, plan_label, amount_egp, method, reference_note, screenshot_url, status, rejection_reason, created_at, reviewed_at, profiles(full_name, email)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (statusFilter) query = query.eq('status', statusFilter);
+
+  const { data, error } = await query;
+  const el = document.getElementById('paymentRequestsList');
+  if (error || !data || data.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="ico">✅</div><p>No payment requests' + (statusFilter ? ' with status "' + statusFilter + '"' : '') + '.</p></div>';
+    return;
+  }
+
+  const methodLabel = { vodafone_cash: '📱 Vodafone Cash', instapay: '🏦 InstaPay' };
+  el.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Date</th><th>Student</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${data.map(r => `
+      <tr>
+        <td class="mono">${fmtDate(r.created_at)}</td>
+        <td>
+          <div class="bold">${esc(r.profiles?.full_name || '—')}</div>
+          <div style="font-size:11.5px;color:var(--text-500)">${esc(r.profiles?.email || r.user_id)}</div>
+        </td>
+        <td><span class="chip blue">${esc(r.plan_label || r.plan_code)}</span></td>
+        <td class="bold">${r.amount_egp ? Number(r.amount_egp).toLocaleString() + ' EGP' : '—'}</td>
+        <td style="font-size:13px">${esc(methodLabel[r.method] || r.method)}</td>
+        <td><span class="chip ${r.status === 'pending' ? 'amber' : r.status === 'approved' ? 'green' : 'red'}">${r.status}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${r.screenshot_url ? `<a href="${esc(r.screenshot_url)}" target="_blank" class="btn btn-ghost btn-sm">📸 View</a>` : ''}
+            <button class="btn btn-sm" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.28);color:var(--cyan)" onclick="viewPaymentDetail('${r.id}')">Details</button>
+            ${r.status === 'pending' ? `
+              <button class="btn btn-green btn-sm" onclick="approvePaymentRequest('${r.id}')">✅ Approve</button>
+              <button class="btn btn-red btn-sm" onclick="rejectPaymentRequest('${r.id}')">✕ Reject</button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('')}</tbody>
+  </table></div>`;
+}
+
+let _prDetailCache = {};
+async function viewPaymentDetail(id) {
+  const { data } = await sb.from('payment_requests')
+    .select('*, profiles(full_name, email, plan_code)')
+    .eq('id', id).single();
+  if (!data) { toast('Could not load request', 'red'); return; }
+  _prDetailCache[id] = data;
+  const body = document.getElementById('approveModalBody');
+  document.querySelector('#approveModal .modal-head h3').textContent = 'Payment Request Detail';
+  body.innerHTML = `
+    <div class="modal-row"><span class="modal-lbl">Student</span><span class="modal-val">${esc(data.profiles?.full_name || '—')}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Email</span><span class="modal-val">${esc(data.profiles?.email || '—')}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Current Plan</span><span class="modal-val"><span class="chip ${planChip(data.profiles?.plan_code)}">${esc(data.profiles?.plan_code || 'FREE')}</span></span></div>
+    <div class="modal-sep"></div>
+    <div class="modal-row"><span class="modal-lbl">Requested Plan</span><span class="modal-val"><span class="chip blue">${esc(data.plan_label || data.plan_code)}</span></span></div>
+    <div class="modal-row"><span class="modal-lbl">Amount</span><span class="modal-val bold">${Number(data.amount_egp).toLocaleString()} EGP</span></div>
+    <div class="modal-row"><span class="modal-lbl">Method</span><span class="modal-val">${esc(data.method === 'vodafone_cash' ? '📱 Vodafone Cash' : '🏦 InstaPay')}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Reference</span><span class="modal-val mono" style="font-size:12px;text-align:right;max-width:280px;word-break:break-word">${esc(data.reference_note || '—')}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Submitted</span><span class="modal-val mono">${fmtDate(data.created_at)}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Status</span><span class="modal-val"><span class="chip ${data.status === 'pending' ? 'amber' : data.status === 'approved' ? 'green' : 'red'}">${data.status}</span></span></div>
+    ${data.rejection_reason ? `<div class="modal-row"><span class="modal-lbl">Rejection Reason</span><span class="modal-val" style="color:var(--red)">${esc(data.rejection_reason)}</span></div>` : ''}
+    ${data.screenshot_url ? `<div class="modal-sep"></div><div style="text-align:center;margin-bottom:14px"><a href="${esc(data.screenshot_url)}" target="_blank"><img src="${esc(data.screenshot_url)}" style="max-width:100%;max-height:260px;border-radius:12px;border:1px solid var(--border-mid)" onerror="this.style.display='none'" alt="Payment screenshot"/></a><div style="margin-top:8px;font-size:12px;color:var(--text-500)"><a href="${esc(data.screenshot_url)}" target="_blank" style="color:var(--cyan)">Open full image ↗</a></div></div>` : ''}
+    ${data.status === 'pending' ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+      <button class="btn btn-green" onclick="approvePaymentRequest('${data.id}');closeApproveModal()">✅ Approve & Activate</button>
+      <button class="btn btn-red" onclick="rejectPaymentRequest('${data.id}');closeApproveModal()">✕ Reject</button>
+    </div>` : ''}
+  `;
+  document.getElementById('approveModal').classList.add('show');
+}
+
+async function approvePaymentRequest(requestId) {
+  if (!confirm('Approve this payment and activate the student\'s plan?')) return;
+  const { data, error } = await sb.rpc('approve_payment_request', { request_id: requestId });
+  if (error) { toast('Error: ' + error.message, 'red'); return; }
+  const result = typeof data === 'string' ? JSON.parse(data) : data;
+  toast(`✅ Plan activated! ${result.credits_granted ? result.credits_granted.toLocaleString() + ' credits granted.' : ''}`, 'green');
+  loadPaymentRequests();
+  loadStats();
+}
+
+async function rejectPaymentRequest(requestId) {
+  const reason = prompt('Rejection reason (shown to student):') || 'Payment could not be verified';
+  const { error } = await sb.rpc('reject_payment_request', { request_id: requestId, reason });
+  if (error) { toast('Error: ' + error.message, 'red'); return; }
+  toast('Request rejected', 'red');
+  loadPaymentRequests();
+  loadStats();
 }
 
 // Helpers

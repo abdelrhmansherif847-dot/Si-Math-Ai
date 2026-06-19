@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Pay for Plan – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-card:#0c1428;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --nav-h:58px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden;scroll-behavior:smooth}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.1),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(168,85,247,.07),transparent 70%);bottom:-80px;left:-100px}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:var(--nav-h);display:flex;align-items:center;gap:12px;padding:0 18px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0e1830,#0c1428);border:1px solid var(--cyan-border);color:var(--cyan);font-family:var(--font-display);font-weight:800;font-size:15px;box-shadow:0 0 16px rgba(56,189,248,.22)}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.back-btn{margin-left:auto;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);background:var(--bg-card);border:1px solid var(--border-mid);color:var(--text-300);font-size:13px;font-weight:500;transition:border-color .2s}
+.back-btn:hover{border-color:var(--cyan);color:#fff}
+
+/* MAIN */
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + 28px) 18px 60px;max-width:740px;margin:0 auto}
+
+/* PAGE HEADER */
+.page-hd{margin-bottom:32px;text-align:center}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--purple);margin-bottom:12px}
+.page-hd h1{font-family:var(--font-display);font-weight:800;font-size:clamp(24px,6vw,32px);color:#fff;letter-spacing:-.02em;margin-bottom:10px}
+.page-hd p{color:var(--text-400);font-size:14.5px;max-width:480px;margin:0 auto}
+
+/* PLAN SELECTOR */
+.plan-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
+@media(max-width:480px){.plan-cards{grid-template-columns:1fr}}
+.plan-card{border:2px solid var(--border-mid);border-radius:var(--r-lg);padding:20px;cursor:pointer;transition:all .2s;position:relative;background:var(--bg-card)}
+.plan-card:hover{border-color:var(--purple);background:var(--purple-soft)}
+.plan-card.selected{border-color:var(--purple);background:var(--purple-soft);box-shadow:0 0 24px rgba(168,85,247,.15)}
+.plan-card .check{position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s}
+.plan-card.selected .check{background:var(--purple);border-color:var(--purple);color:#fff}
+.plan-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;margin-bottom:10px}
+.plan-badge.monthly{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan)}
+.plan-badge.annual{background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber)}
+.plan-name{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;margin-bottom:4px}
+.plan-price{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--purple);margin-bottom:2px}
+.plan-price span{font-size:14px;color:var(--text-400);font-weight:500}
+.plan-note{font-size:12.5px;color:var(--text-500);margin-top:6px}
+.plan-features{margin-top:12px;display:flex;flex-direction:column;gap:5px}
+.plan-feat{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-300)}
+.plan-feat::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+.best-value{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber);font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;margin-left:8px;vertical-align:middle}
+
+/* CARD */
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:22px;margin-bottom:18px}
+.card-title{font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff;margin-bottom:16px;display:flex;align-items:center;gap:9px}
+.card-title .num{width:26px;height:26px;border-radius:50%;background:var(--purple-soft);border:1px solid var(--purple-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--purple);flex-shrink:0}
+
+/* METHOD TABS */
+.method-tabs{display:flex;gap:8px;margin-bottom:18px}
+.method-tab{flex:1;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--border-mid);background:var(--bg-elev-1);color:var(--text-400);font-weight:600;font-size:14px;text-align:center;cursor:pointer;transition:all .2s}
+.method-tab:hover{border-color:var(--cyan);color:var(--text-200)}
+.method-tab.active{background:var(--cyan-bg-soft);border-color:var(--cyan);color:#fff}
+.method-tab .ico{font-size:20px;display:block;margin-bottom:4px}
+
+/* PAYMENT INSTRUCTIONS */
+.pay-instructions{display:none}
+.pay-instructions.show{display:block}
+.instr-box{background:var(--bg-elev-1);border:1px solid var(--border-mid);border-radius:var(--r-md);padding:16px}
+.instr-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-soft)}
+.instr-row:last-child{border-bottom:none}
+.instr-lbl{font-size:12.5px;color:var(--text-400)}
+.instr-val{font-family:var(--font-mono);font-size:13.5px;color:#fff;font-weight:700;display:flex;align-items:center;gap:8px}
+.copy-btn{padding:4px 10px;border-radius:7px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .2s;white-space:nowrap}
+.copy-btn:hover{background:var(--cyan-border)}
+.copy-btn.copied{background:var(--green-soft);border-color:var(--green-border);color:var(--green)}
+.instr-note{margin-top:12px;padding:10px 13px;border-radius:var(--r-sm);background:rgba(245,185,66,.08);border:1px solid var(--amber-border);color:var(--amber);font-size:12.5px;line-height:1.5}
+.instr-note strong{color:#fff}
+
+/* FORM */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;color:var(--text-400);margin-bottom:6px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;padding:11px 14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-200);font-size:14px;font-family:var(--font-body);outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--cyan)}
+.field input::placeholder,.field textarea::placeholder{color:var(--text-500)}
+.field textarea{resize:vertical;min-height:80px}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border-mid);border-radius:var(--r-md);padding:28px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg-elev-1)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--cyan);background:var(--cyan-bg-soft)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-ico{font-size:32px;margin-bottom:8px}
+.upload-title{font-weight:600;color:var(--text-200);margin-bottom:4px;font-size:14px}
+.upload-sub{font-size:12.5px;color:var(--text-500)}
+.upload-preview{display:none;margin-top:14px;position:relative}
+.upload-preview img{max-width:100%;max-height:200px;border-radius:var(--r-md);border:1px solid var(--border-mid);display:block;margin:0 auto}
+.upload-preview .remove-img{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.upload-preview.show{display:block}
+
+/* SUBMIT */
+.submit-btn{width:100%;padding:15px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--purple),#7c3aed);color:#fff;font-family:var(--font-display);font-weight:700;font-size:16px;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(168,85,247,.4)}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.submit-btn .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none}
+.submit-btn.loading .spin{display:block}
+.submit-btn.loading .btn-txt{display:none}
+
+/* ALERT */
+.alert{padding:12px 15px;border-radius:var(--r-md);font-size:13.5px;margin-bottom:16px;display:none}
+.alert.show{display:block}
+.alert.error{background:var(--red-soft);border:1px solid var(--red-border);color:#ef4f5f}
+.alert.success{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
+.alert.info{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan)}
+
+/* SUCCESS STATE */
+#successState{display:none;text-align:center;padding:48px 20px}
+#successState .suc-ico{font-size:56px;margin-bottom:16px}
+#successState h2{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;margin-bottom:10px}
+#successState p{color:var(--text-400);font-size:14.5px;max-width:380px;margin:0 auto 24px}
+.btn-back-dash{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:var(--r-md);background:var(--cyan);color:#031020;font-family:var(--font-display);font-weight:700;font-size:14.5px;border:none;cursor:pointer;transition:all .2s}
+.btn-back-dash:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(56,189,248,.3)}
+
+/* EXISTING REQUEST BANNER */
+.existing-banner{background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:var(--r-md);padding:14px 16px;margin-bottom:20px;display:none}
+.existing-banner.show{display:block}
+.existing-banner strong{color:var(--amber)}
+
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reveal{animation:rise .5s ease both}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <a class="brand" href="dashboard.html">
+    <span class="logo-mark">Si</span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <a class="back-btn" href="pricing.html">
+    ← Back to Pricing
+  </a>
+</header>
+
+<main class="main">
+
+  <!-- SUCCESS STATE -->
+  <div id="successState">
+    <div class="suc-ico">🎉</div>
+    <h2>Payment Request Submitted!</h2>
+    <p>Your payment proof has been sent for review. We'll activate your plan within a few hours once we verify your transfer.</p>
+    <a class="btn-back-dash" href="dashboard.html">Go to Dashboard</a>
+  </div>
+
+  <!-- FORM STATE -->
+  <div id="formState">
+    <div class="page-hd reveal">
+      <div class="eyebrow">Manual Payment</div>
+      <h1>Complete Your Upgrade</h1>
+      <p>Pay via Vodafone Cash or InstaPay and upload your payment screenshot. Your plan activates after we verify it.</p>
+    </div>
+
+    <!-- Existing request banner -->
+    <div class="existing-banner" id="existingBanner">
+      <strong>⏳ You have a pending payment request.</strong><br>
+      <span id="existingBannerMsg">Your previous submission is under review. You can submit a new one if you sent another transfer.</span>
+    </div>
+
+    <!-- STEP 1: Select plan -->
+    <div class="card reveal" style="animation-delay:.05s">
+      <div class="card-title"><span class="num">1</span> Select Your Plan</div>
+      <div class="plan-cards" id="planCards">
+        <div class="plan-card selected" data-plan="PRO_MONTHLY" data-amount="199" data-label="Pro Monthly" onclick="selectPlan(this)">
+          <div class="check">✓</div>
+          <div class="plan-badge monthly">MONTHLY</div>
+          <div class="plan-name">Pro Monthly</div>
+          <div class="plan-price">199 <span>EGP / month</span></div>
+          <div class="plan-features">
+            <div class="plan-feat">500 AI credits / month</div>
+            <div class="plan-feat">Unlimited image questions</div>
+            <div class="plan-feat">Full weakness analysis</div>
+            <div class="plan-feat">Priority support</div>
+          </div>
+        </div>
+        <div class="plan-card" data-plan="PRO_ANNUAL" data-amount="1499" data-label="Pro Annual" onclick="selectPlan(this)">
+          <div class="check">✓</div>
+          <div class="plan-badge annual">ANNUAL <span class="best-value">Best Value</span></div>
+          <div class="plan-name">Pro Annual</div>
+          <div class="plan-price">1499 <span>EGP / year</span></div>
+          <div class="plan-features">
+            <div class="plan-feat">750 AI credits / month</div>
+            <div class="plan-feat">Unlimited image questions</div>
+            <div class="plan-feat">Full weakness analysis</div>
+            <div class="plan-feat">Priority support</div>
+          </div>
+          <div class="plan-note" style="margin-top:10px">Save ~37% vs monthly</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Pay -->
+    <div class="card reveal" style="animation-delay:.1s">
+      <div class="card-title"><span class="num">2</span> Send Your Payment</div>
+      <div class="method-tabs">
+        <button class="method-tab active" onclick="selectMethod('vodafone_cash',this)">
+          <span class="ico">📱</span>Vodafone Cash
+        </button>
+        <button class="method-tab" onclick="selectMethod('instapay',this)">
+          <span class="ico">🏦</span>InstaPay
+        </button>
+      </div>
+
+      <!-- Vodafone Cash instructions -->
+      <div class="pay-instructions show" id="instr_vodafone_cash">
+        <div class="instr-box">
+          <div class="instr-row">
+            <span class="instr-lbl">Send to Number</span>
+            <span class="instr-val">
+              <span id="vcNumber">[TO BE SET]</span>
+              <button class="copy-btn" onclick="copyText(document.getElementById('vcNumber').textContent,this)">Copy</button>
+            </span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-lbl">Account Name</span>
+            <span class="instr-val">Si Math AI</span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-lbl">Amount</span>
+            <span class="instr-val" id="vcAmount">199 EGP</span>
+          </div>
+        </div>
+        <div class="instr-note">
+          <strong>Important:</strong> Open Vodafone Cash → Send Money → enter the number above → enter the exact amount shown → take a screenshot of the confirmation screen.
+        </div>
+      </div>
+
+      <!-- InstaPay instructions -->
+      <div class="pay-instructions" id="instr_instapay">
+        <div class="instr-box">
+          <div class="instr-row">
+            <span class="instr-lbl">InstaPay Handle</span>
+            <span class="instr-val">
+              <span id="ipHandle">[TO BE SET]</span>
+              <button class="copy-btn" onclick="copyText(document.getElementById('ipHandle').textContent,this)">Copy</button>
+            </span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-lbl">Account Name</span>
+            <span class="instr-val">Si Math AI</span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-lbl">Amount</span>
+            <span class="instr-val" id="ipAmount">199 EGP</span>
+          </div>
+        </div>
+        <div class="instr-note">
+          <strong>Important:</strong> Open your banking app → InstaPay → Send → search the handle above → enter the exact amount → screenshot the confirmation.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Upload proof -->
+    <div class="card reveal" style="animation-delay:.15s">
+      <div class="card-title"><span class="num">3</span> Upload Payment Screenshot</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="screenshotFile" accept="image/*" onchange="onFileSelected(this)"/>
+        <div class="upload-ico">📸</div>
+        <div class="upload-title">Tap to select your screenshot</div>
+        <div class="upload-sub">JPG, PNG, WEBP or HEIC · Max 10 MB</div>
+        <div class="upload-preview" id="uploadPreview">
+          <img id="previewImg" src="" alt="Payment screenshot"/>
+          <div class="remove-img" onclick="removeImg(event)">✕</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Reference -->
+    <div class="card reveal" style="animation-delay:.2s">
+      <div class="card-title"><span class="num">4</span> Your Details</div>
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="senderName" placeholder="e.g. Ahmed Mohamed" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label>Sender Phone / Account (optional)</label>
+        <input type="text" id="senderRef" placeholder="e.g. 01012345678 or your InstaPay handle"/>
+      </div>
+      <div class="field">
+        <label>Any notes for the admin (optional)</label>
+        <textarea id="senderNote" placeholder="e.g. Sent from my Banque Misr account"></textarea>
+      </div>
+    </div>
+
+    <div class="alert" id="formAlert"></div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitRequest()">
+      <div class="spin"></div>
+      <span class="btn-txt">🚀 Submit Payment Request</span>
+    </button>
+
+    <p style="text-align:center;margin-top:14px;font-size:12.5px;color:var(--text-500)">
+      Your plan activates within a few hours after we verify your transfer.
+    </p>
+  </div>
+
+</main>
+
+<script>
+const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let selectedPlan  = { code: 'PRO_MONTHLY', amount: 199, label: 'Pro Monthly' };
+let selectedMethod = 'vodafone_cash';
+let uploadedFile   = null;
+let currentUser    = null;
+
+async function init() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+
+  // Check for pre-selected plan from pricing.html
+  const params = new URLSearchParams(window.location.search);
+  const planParam = params.get('plan');
+  if (planParam) {
+    const card = document.querySelector(`.plan-card[data-plan="${planParam}"]`);
+    if (card) selectPlan(card);
+  }
+
+  // Check for existing pending request
+  const { data: existing } = await sb.from('payment_requests')
+    .select('id, status, plan_label, created_at')
+    .eq('user_id', user.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    const banner = document.getElementById('existingBanner');
+    const msg = document.getElementById('existingBannerMsg');
+    banner.classList.add('show');
+    msg.textContent = `You submitted a ${existing.plan_label} request on ${new Date(existing.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}. It's still under review. You can submit another if you've sent a new transfer.`;
+  }
+}
+
+function selectPlan(card) {
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedPlan = {
+    code:   card.dataset.plan,
+    amount: parseInt(card.dataset.amount),
+    label:  card.dataset.label
+  };
+  // Update amount shown in payment instructions
+  document.getElementById('vcAmount').textContent = selectedPlan.amount + ' EGP';
+  document.getElementById('ipAmount').textContent  = selectedPlan.amount + ' EGP';
+}
+
+function selectMethod(method, btn) {
+  selectedMethod = method;
+  document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.pay-instructions').forEach(el => el.classList.remove('show'));
+  document.getElementById('instr_' + method).classList.add('show');
+}
+
+function onFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showAlert('Image must be under 10 MB.', 'error'); input.value = ''; return; }
+  uploadedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('uploadPreview').classList.add('show');
+    document.querySelector('.upload-ico').style.display = 'none';
+    document.querySelector('.upload-title').style.display = 'none';
+    document.querySelector('.upload-sub').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImg(e) {
+  e.stopPropagation();
+  uploadedFile = null;
+  document.getElementById('screenshotFile').value = '';
+  document.getElementById('uploadPreview').classList.remove('show');
+  document.querySelector('.upload-ico').style.display = '';
+  document.querySelector('.upload-title').style.display = '';
+  document.querySelector('.upload-sub').style.display = '';
+}
+
+function copyText(text, btn) {
+  if (!text || text === '[TO BE SET]') return;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('formAlert');
+  el.textContent = msg;
+  el.className = 'alert show ' + type;
+}
+
+function hideAlert() {
+  document.getElementById('formAlert').className = 'alert';
+}
+
+async function submitRequest() {
+  hideAlert();
+
+  if (!uploadedFile) { showAlert('Please upload your payment screenshot.', 'error'); return; }
+
+  const senderName = document.getElementById('senderName').value.trim();
+  if (!senderName) { showAlert('Please enter your name.', 'error'); return; }
+
+  const senderRef  = document.getElementById('senderRef').value.trim();
+  const senderNote = document.getElementById('senderNote').value.trim();
+  const referenceNote = [
+    'From: ' + senderName,
+    senderRef ? 'Sender: ' + senderRef : '',
+    senderNote ? 'Note: ' + senderNote : ''
+  ].filter(Boolean).join(' | ');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+
+  try {
+    // Upload screenshot to storage
+    const ext  = uploadedFile.name.split('.').pop() || 'jpg';
+    const path = `${currentUser.id}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await sb.storage.from('payment-proofs').upload(path, uploadedFile, {
+      contentType: uploadedFile.type,
+      upsert: false
+    });
+    if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message);
+
+    // Get signed URL to store reference
+    const { data: urlData } = await sb.storage.from('payment-proofs').createSignedUrl(path, 60 * 60 * 24 * 365);
+    const screenshotUrl = urlData?.signedUrl || path;
+
+    // Insert payment request
+    const { error: insertErr } = await sb.from('payment_requests').insert({
+      user_id:        currentUser.id,
+      plan_code:      selectedPlan.code,
+      plan_label:     selectedPlan.label,
+      amount_egp:     selectedPlan.amount,
+      method:         selectedMethod,
+      reference_note: referenceNote,
+      screenshot_url: screenshotUrl
+    });
+    if (insertErr) throw new Error('Submit failed: ' + insertErr.message);
+
+    // Mark upgrade_requested on profile so admin sees it in the upgrade requests list
+    await sb.from('profiles').update({
+      upgrade_requested: true,
+      upgrade_note: `[MANUAL PAYMENT: ${selectedPlan.code}] ${referenceNote}`
+    }).eq('id', currentUser.id);
+
+    // Show success
+    document.getElementById('formState').style.display = 'none';
+    document.getElementById('successState').style.display = 'block';
+
+  } catch(err) {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    showAlert(err.message || 'Something went wrong. Please try again.', 'error');
+  }
+}
+
+// Drag-and-drop on upload zone
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('screenshotFile').files = dt.files;
+    onFileSelected(document.getElementById('screenshotFile'));
+  }
+});
+
+init();
+</script>
+</body>
+</html>

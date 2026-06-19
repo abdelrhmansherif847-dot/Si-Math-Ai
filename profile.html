@@ -283,9 +283,17 @@ async function loadPage() {
   const xpPct = nextRank ? Math.min(100, (xpInRange / rangeSize) * 100) : 100;
   const xpToNext = nextRank ? nextRank.min - xp : 0;
 
-  const planBadge = profile.plan === 'pro'
-    ? `<span class="h-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">⭐ Pro</span>`
-    : `<span class="h-badge" style="background:var(--cyan-bg-soft);color:var(--cyan);border:1px solid var(--cyan-border-soft)">🆓 Free</span>`;
+  const PLAN_NAMES = { FREE:'Free Plan', PRO_MONTHLY:'Pro Monthly', PRO_QUARTERLY:'Pro Quarterly', PRO_ANNUAL:'Pro Annual', FOUNDER:'Founder' };
+  const planCode = (profile.plan_code || profile.plan || 'FREE').toUpperCase().replace('PRO','PRO');
+  let planBadge;
+  if (profile.is_founder || planCode === 'FOUNDER') {
+    planBadge = `<span class="h-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">👑 Founder</span>`;
+  } else if (planCode.startsWith('PRO')) {
+    const planExpiry = profile.subscription_expires_at ? ' · Expires ' + new Date(profile.subscription_expires_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    planBadge = `<span class="h-badge" style="background:rgba(168,85,247,.15);color:#a855f7;border:1px solid rgba(168,85,247,.3)">⭐ ${PLAN_NAMES[planCode] || 'Pro'}${planExpiry}</span>`;
+  } else {
+    planBadge = `<span class="h-badge" style="background:var(--cyan-bg-soft);color:var(--cyan);border:1px solid var(--cyan-border-soft)">🆓 Free Plan</span>`;
+  }
 
   let html = `
   <div class="profile-hero">

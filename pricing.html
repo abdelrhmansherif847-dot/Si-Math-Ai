@@ -319,14 +319,8 @@ function cycleLabel(code) {
 }
 
 function openModal(planCode, planName) {
-  selectedPlanCode = planCode;
-  document.getElementById('modalPlanChip').textContent = planName;
-  document.getElementById('upgradeForm').style.display = 'flex';
-  document.getElementById('upgradeSuccess').style.display = 'none';
-  document.getElementById('upgradeNote').value = '';
-  document.getElementById('submitUpgradeBtn').disabled = false;
-  document.getElementById('submitUpgradeBtn').textContent = 'Send Request';
-  document.getElementById('upgradeModal').classList.add('open');
+  // Redirect to manual payment page with plan pre-selected
+  window.location.href = 'manual-payment.html?plan=' + encodeURIComponent(planCode);
 }
 function closeModal() {
   document.getElementById('upgradeModal').classList.remove('open');
