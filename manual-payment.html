@@ -187,57 +187,30 @@ button{font-family:inherit;cursor:pointer}
       <span id="existingBannerMsg">Your previous submission is under review. You can submit a new one if you sent another transfer.</span>
     </div>
 
-    <!-- STEP 1: Select plan -->
+    <!-- STEP 1: Select plan or pack -->
     <div class="card reveal" style="animation-delay:.05s">
-      <div class="card-title"><span class="num">1</span> Select Your Plan</div>
-      <div class="plan-cards" id="planCards">
-        <div class="plan-card selected" data-plan="PRO_MONTHLY" data-amount="349" data-label="Pro Monthly" onclick="selectPlan(this)">
-          <div class="check">✓</div>
-          <div class="plan-badge monthly">MONTHLY</div>
-          <div class="plan-name">Pro Monthly</div>
-          <div class="plan-price">349 <span>EGP / month</span></div>
-          <div class="plan-features">
-            <div class="plan-feat">Unlimited AI messages</div>
-            <div class="plan-feat">Full weakness analysis + trends</div>
-            <div class="plan-feat">Full 3-day study plan</div>
-            <div class="plan-feat">Unlimited mock exams</div>
-            <div class="plan-feat">Unlimited chat history</div>
-          </div>
-        </div>
-        <div class="plan-card" data-plan="PRO_ANNUAL" data-amount="2999" data-label="Pro Annual" onclick="selectPlan(this)">
-          <div class="check">✓</div>
-          <div class="plan-badge annual">ANNUAL <span class="best-value">Best Value</span></div>
-          <div class="plan-name">Pro Annual</div>
-          <div class="plan-price">2999 <span>EGP / year</span></div>
-          <div class="plan-features">
-            <div class="plan-feat">Everything in Pro Monthly</div>
-            <div class="plan-feat">Early access to new features</div>
-            <div class="plan-feat">Annual Member badge</div>
-            <div class="plan-feat">Save 28% vs monthly</div>
-          </div>
-          <div class="plan-note" style="margin-top:10px">~250 EGP/month equivalent</div>
-        </div>
+      <div class="card-title"><span class="num">1</span> Choose What to Buy</div>
+
+      <!-- Kind toggle -->
+      <div class="method-tabs" style="margin-bottom:18px">
+        <button class="method-tab active" data-kind="subscription" onclick="selectKind('subscription',this)">
+          <span class="ico">📅</span>Subscription
+        </button>
+        <button class="method-tab" data-kind="pack" onclick="selectKind('pack',this)">
+          <span class="ico">🎁</span>Credit Pack
+        </button>
       </div>
 
-      <!-- Founder Annual — only shown when slots remain -->
-      <div id="founderOfferBox" style="display:none;margin-top:14px">
-        <div class="plan-card" data-plan="FOUNDER_ANNUAL" data-amount="1499" data-label="Founder Annual" onclick="selectPlan(this)" style="border-color:#f5b942;background:linear-gradient(135deg,rgba(245,185,66,.08),rgba(168,85,247,.05));position:relative;overflow:hidden">
-          <div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#f5b942,#d97706);color:#fff;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;padding:5px 14px 5px 18px;border-bottom-left-radius:14px;font-weight:700">
-            ONLY <span id="founderSlotsLeft">—</span> SPOTS LEFT
-          </div>
-          <div class="check" style="border-color:#f5b942">✓</div>
-          <div class="plan-badge" style="background:rgba(245,185,66,.15);border:1px solid rgba(245,185,66,.32);color:#f5b942">👑 FOUNDER — FIRST 50 ONLY</div>
-          <div class="plan-name" style="margin-top:6px">Founder Annual</div>
-          <div class="plan-price" style="color:#f5b942">1499 <span>EGP / year</span></div>
-          <div class="plan-features">
-            <div class="plan-feat">Everything in Pro Annual</div>
-            <div class="plan-feat">👑 Permanent Founder badge</div>
-            <div class="plan-feat">📬 Direct feedback channel to the team</div>
-            <div class="plan-feat">🧪 All beta features unlocked</div>
-            <div class="plan-feat">🔒 Renewal price locked at 1499 EGP forever</div>
-          </div>
-          <div class="plan-note" style="margin-top:10px;color:#f5b942"><strong>50% off Pro Annual.</strong> When slots are gone, this offer closes permanently.</div>
-        </div>
+      <!-- Subscriptions (loaded from pricing_settings) -->
+      <div id="subscriptionsSection" class="plan-cards"></div>
+
+      <!-- Credit packs (loaded from credit_packs) — hidden by default -->
+      <div id="packsSection" class="plan-cards" style="display:none"></div>
+
+      <!-- Loading indicator -->
+      <div id="loadingPlans" style="text-align:center;padding:24px;color:var(--text-400);font-size:14px">
+        <div class="spin" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border-mid);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;margin-right:10px;vertical-align:middle"></div>
+        Loading plans…
       </div>
     </div>
 
@@ -353,32 +326,168 @@ const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-let selectedPlan  = { code: 'PRO_MONTHLY', amount: 199, label: 'Pro Monthly' };
+let selectedPlan   = null; // populated after dynamic load
 let selectedMethod = 'vodafone_cash';
+let selectedKind   = 'subscription';
 let uploadedFile   = null;
 let currentUser    = null;
+let founderSlotsLeft = 0;
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Subscription benefit lists — keep in sync with pricing.html planFeatures() (truthful claims only)
+function featuresFor(plan) {
+  const credits = plan.credits_granted;
+  const code = plan.plan_code;
+  if (code === 'PRO_MONTHLY') {
+    return ['Unlimited AI messages', 'Full weakness analysis + trends', 'Full 3-day study plan', 'Unlimited mock exams', 'Unlimited chat history'];
+  }
+  if (code === 'PRO_QUARTERLY') {
+    return ['Everything in Pro Monthly', '3 months at a lower monthly cost', credits.toLocaleString() + ' credits / 3 months'];
+  }
+  if (code === 'PRO_ANNUAL') {
+    return ['Everything in Pro Monthly', 'Early access to new features', 'Annual Member badge', 'Save 28% vs monthly'];
+  }
+  if (code === 'FOUNDER_ANNUAL') {
+    return ['Everything in Pro Annual', '👑 Permanent Founder badge', '📬 Direct feedback channel to the team', '🧪 All beta features unlocked', '🔒 Renewal locked at 1499 EGP forever'];
+  }
+  return ['Unlimited AI messages', credits.toLocaleString() + ' credits'];
+}
+
+function cycleLabel(billing_cycle) {
+  return billing_cycle === 'monthly' ? 'MONTHLY'
+       : billing_cycle === 'quarterly' ? 'QUARTERLY'
+       : billing_cycle === 'annual' ? 'ANNUAL'
+       : (billing_cycle || '').toUpperCase();
+}
+function pricePer(billing_cycle) {
+  return billing_cycle === 'monthly' ? 'EGP / month'
+       : billing_cycle === 'quarterly' ? 'EGP / 3 months'
+       : billing_cycle === 'annual' ? 'EGP / year'
+       : 'EGP';
+}
+
+function renderPlanCard(plan, opts) {
+  opts = opts || {};
+  const code = plan.plan_code;
+  const isFounder = code === 'FOUNDER_ANNUAL';
+  const isAnnual  = code === 'PRO_ANNUAL';
+  const badgeText = isFounder
+    ? '👑 FOUNDER — FIRST 50 ONLY'
+    : cycleLabel(plan.billing_cycle) + (isAnnual ? ' <span class="best-value">Best Value</span>' : '');
+  const badgeCls = isFounder ? '' : (plan.billing_cycle === 'annual' ? 'annual' : 'monthly');
+  const cardStyle = isFounder
+    ? 'border-color:#f5b942;background:linear-gradient(135deg,rgba(245,185,66,.08),rgba(168,85,247,.05));position:relative;overflow:hidden'
+    : '';
+  const badgeStyle = isFounder
+    ? 'background:rgba(245,185,66,.15);border:1px solid rgba(245,185,66,.32);color:#f5b942'
+    : '';
+  const priceColor = isFounder ? 'color:#f5b942' : '';
+  const features = featuresFor(plan);
+  const slotsBanner = isFounder
+    ? `<div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#f5b942,#d97706);color:#fff;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;padding:5px 14px 5px 18px;border-bottom-left-radius:14px;font-weight:700">ONLY ${founderSlotsLeft} SPOTS LEFT</div>`
+    : '';
+  const note = isFounder
+    ? `<div class="plan-note" style="margin-top:10px;color:#f5b942"><strong>50% off Pro Annual.</strong> When slots are gone, this offer closes permanently.</div>`
+    : isAnnual ? `<div class="plan-note" style="margin-top:10px">~250 EGP/month equivalent</div>` : '';
+
+  return `<div class="plan-card${opts.selected ? ' selected' : ''}" data-plan="${esc(code)}" data-amount="${plan.price_egp}" data-label="${esc(plan.display_name)}" data-kind="subscription" onclick="selectPlan(this)" style="${cardStyle}">
+    ${slotsBanner}
+    <div class="check">✓</div>
+    <div class="plan-badge ${badgeCls}" style="${badgeStyle}">${badgeText}</div>
+    <div class="plan-name">${esc(plan.display_name)}</div>
+    <div class="plan-price" style="${priceColor}">${Math.round(plan.price_egp)} <span>${pricePer(plan.billing_cycle)}</span></div>
+    <div class="plan-features">${features.map(f => `<div class="plan-feat">${f}</div>`).join('')}</div>
+    ${note}
+  </div>`;
+}
+
+function renderPackCard(pack, opts) {
+  opts = opts || {};
+  // Map credit_packs row → plan_definitions plan_code
+  const code = pack._planCode;
+  const isBest = pack.name === 'Value Pack' || pack.is_best_value;
+  const note = isBest ? '<div class="plan-note" style="margin-top:10px;color:var(--cyan)">⭐ Best value per credit</div>' : '';
+  const features = [
+    pack.credits.toLocaleString() + ' credits',
+    'One-time purchase — never expires',
+    'Use when your monthly credits run out',
+    'Stack with any subscription'
+  ];
+  return `<div class="plan-card${opts.selected ? ' selected' : ''}" data-plan="${esc(code)}" data-amount="${pack.price_egp}" data-label="${esc(pack.name)}" data-kind="pack" onclick="selectPlan(this)" style="${isBest ? 'border-color:var(--cyan-border);background:linear-gradient(160deg,rgba(56,189,248,.06),var(--bg-card))' : ''}">
+    <div class="check">✓</div>
+    <div class="plan-badge monthly">${isBest ? 'BEST VALUE' : 'CREDIT PACK'}</div>
+    <div class="plan-name">${esc(pack.name)}</div>
+    <div class="plan-price">${Math.round(pack.price_egp)} <span>EGP</span></div>
+    <div class="plan-features">${features.map(f => `<div class="plan-feat">${f}</div>`).join('')}</div>
+    ${note}
+  </div>`;
+}
+
+function selectKind(kind, btn) {
+  selectedKind = kind;
+  document.querySelectorAll('.method-tab[data-kind]').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('subscriptionsSection').style.display = kind === 'subscription' ? '' : 'none';
+  document.getElementById('packsSection').style.display = kind === 'pack' ? '' : 'none';
+  // Auto-select first visible card of the new kind
+  const visibleCards = document.querySelectorAll((kind === 'subscription' ? '#subscriptionsSection' : '#packsSection') + ' .plan-card');
+  if (visibleCards.length) selectPlan(visibleCards[0]);
+}
 
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) { window.location.href = 'login.html'; return; }
   currentUser = user;
 
-  // Reveal Founder Annual offer if slots remain
+  // Load founder slots
   try {
     const { data: slots } = await sb.from('system_settings').select('value').eq('key', 'founder_slots_remaining').single();
-    const left = parseInt(slots?.value || '0', 10);
-    if (left > 0) {
-      document.getElementById('founderOfferBox').style.display = 'block';
-      document.getElementById('founderSlotsLeft').textContent = left;
-    }
+    founderSlotsLeft = parseInt(slots?.value || '0', 10);
   } catch(_) {}
 
-  // Check for pre-selected plan from pricing.html
+  // Load active subscriptions and packs from DB — single source of truth (shared with pricing.html)
+  const [plansRes, packsRes] = await Promise.all([
+    sb.from('pricing_settings').select('plan_code, display_name, billing_cycle, price_egp, credits_granted, device_limit, is_founder, sort_order').eq('active', true).order('sort_order'),
+    sb.from('credit_packs').select('id, name, price_egp, credits, sort_order, active').eq('active', true).order('sort_order')
+  ]);
+
+  const allPlans = (plansRes.data || []).filter(p => p.plan_code !== 'FREE');
+  // Hide Founder Annual if no slots remain
+  const visiblePlans = allPlans.filter(p => p.plan_code !== 'FOUNDER_ANNUAL' || founderSlotsLeft > 0);
+  // Map credit packs to PACK_* plan codes (matching plan_definitions)
+  const packCodeMap = { 'Starter Pack': 'PACK_STARTER', 'Value Pack': 'PACK_VALUE', 'Power Pack': 'PACK_POWER' };
+  const packs = (packsRes.data || []).map(p => ({ ...p, _planCode: packCodeMap[p.name] || ('PACK_' + p.name.toUpperCase().replace(/\s+/g, '_')) }));
+
+  // Decide pre-selection from URL
   const params = new URLSearchParams(window.location.search);
   const planParam = params.get('plan');
-  if (planParam) {
-    const card = document.querySelector(`.plan-card[data-plan="${planParam}"]`);
-    if (card) selectPlan(card);
+  const packParam = params.get('pack');
+  let initialKind = 'subscription';
+  let initialPlanCode = planParam || (visiblePlans[0]?.plan_code);
+  if (packParam) {
+    initialKind = 'pack';
+    initialPlanCode = packParam;
+  }
+
+  // Render subscriptions
+  const subsEl = document.getElementById('subscriptionsSection');
+  subsEl.innerHTML = visiblePlans.map(p => renderPlanCard(p, { selected: initialKind === 'subscription' && p.plan_code === initialPlanCode })).join('');
+
+  // Render packs
+  const packsEl = document.getElementById('packsSection');
+  packsEl.innerHTML = packs.map(p => renderPackCard(p, { selected: initialKind === 'pack' && p._planCode === initialPlanCode })).join('');
+
+  document.getElementById('loadingPlans').style.display = 'none';
+
+  // Activate the right tab
+  if (initialKind === 'pack') {
+    const tab = document.querySelector('.method-tab[data-kind="pack"]');
+    if (tab) selectKind('pack', tab);
+  } else {
+    // Make sure something is selected
+    const sel = document.querySelector('#subscriptionsSection .plan-card.selected') || document.querySelector('#subscriptionsSection .plan-card');
+    if (sel) selectPlan(sel);
   }
 
   // Check for existing pending request
@@ -404,7 +513,8 @@ function selectPlan(card) {
   selectedPlan = {
     code:   card.dataset.plan,
     amount: parseInt(card.dataset.amount),
-    label:  card.dataset.label
+    label:  card.dataset.label,
+    kind:   card.dataset.kind || 'subscription'
   };
   // Update amount shown in payment instructions
   document.getElementById('vcAmount').textContent = selectedPlan.amount + ' EGP';
