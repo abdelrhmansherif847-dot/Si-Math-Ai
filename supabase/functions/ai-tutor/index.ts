@@ -20,7 +20,20 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v73';
+const AI_TUTOR_VERSION = 'v74';
+
+// ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
+// Must stay in sync with SYSTEM_TOPICS set and isAcademicTopic() in taxonomy.js.
+const SYSTEM_TOPICS = new Set([
+  'conversation','other','none','chat','general','meta','system',
+  'unknown','n/a','na','null','undefined','','coaching','planning',
+  'study planning','study coaching','exam strategy','motivation',
+  'confidence','mindset','scheduling','out_of_scope',
+]);
+function isAcademicTopic(t: string): boolean {
+  const s = (t || '').trim().toLowerCase();
+  return s.length >= 2 && !SYSTEM_TOPICS.has(s);
+}
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 const L3_PIPELINE_VERSION = 'l3-shadow-v1';
 
@@ -1273,7 +1286,7 @@ Determine if this is a math message and set "is_math" accordingly:
 - is_math = true: solving equations, algebra, geometry, percentages, word problems with calculations, graph reading, statistics
 - is_math = true: ANY message that includes an image — if an image is attached it is ALWAYS a math problem; set is_math=true regardless of how short or vague the text is ("حل", "solve", "help", "?", or even empty text)
 - is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation — and ONLY when NO image is attached
-- When is_math = false: set topic="General", subtopic="Conversation", difficulty="", rules=[], concepts=[], weakness_signal=false
+- When is_math = false: set topic="General", subtopic="", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
 
 ## Weakness Signal — WHEN to set weakness_signal=true (CRITICAL)
@@ -1480,6 +1493,24 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
+    // ── Taxonomy gate: block non-academic topics from reaching the DB ─────────
+    // Enforce that only valid math taxonomy values are persisted.
+    // Non-math turns get topic="General", subtopic="" (never "Conversation" etc).
+    let safeInsertTopic    = finalTopic;
+    let safeInsertSubtopic = finalSubtopic;
+    if (!isMath) {
+      safeInsertTopic    = 'General';
+      safeInsertSubtopic = '';
+    } else if (!isAcademicTopic(finalTopic)) {
+      console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
+        uid: user.id.slice(0, 8), topic: finalTopic, subtopic: finalSubtopic,
+      }));
+      safeInsertTopic    = '';
+      safeInsertSubtopic = '';
+    } else if (finalSubtopic && !isAcademicTopic(finalSubtopic)) {
+      safeInsertSubtopic = '';
+    }
+
     // ── Persist question_record (synchronous — record_id returned to client) ──
     // CAI-P1: include client_request_id; on 23505 (unique_violation) the winning
     // row was committed by a concurrent retry — re-SELECT and return it.
@@ -1489,8 +1520,8 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       question:          question,
       image:             imageData,
       ai_response:       String(parsed.answer || ''),
-      topic:             finalTopic,
-      subtopic:          finalSubtopic,
+      topic:             safeInsertTopic,
+      subtopic:          safeInsertSubtopic,
       difficulty:        finalDifficulty,
       concepts:          Array.isArray(parsed.concepts) ? parsed.concepts : [],
       rules:             rules,

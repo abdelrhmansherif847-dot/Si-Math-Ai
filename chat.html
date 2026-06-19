@@ -722,8 +722,10 @@ button{font-family:inherit;cursor:pointer}
 
   // Topic pre-seed from ?topic= / ?subtopic= URL params (Spaced Repetition Queue)
   const _urlParams    = new URLSearchParams(window.location.search);
-  let seededTopic     = _urlParams.get('topic')    || null;
-  let seededSubtopic  = _urlParams.get('subtopic') || null;
+  const _NON_ACAD_CHAT = /^(conversation|general|chat|other|none|meta|system|coaching|planning|study planning|study coaching|exam strategy|motivation|confidence|mindset|scheduling|out_of_scope)/i;
+  function _isAcademicChat(t) { var s = (t||'').trim(); return s.length >= 2 && !_NON_ACAD_CHAT.test(s); }
+  let seededTopic     = _isAcademicChat(_urlParams.get('topic')) ? _urlParams.get('topic') : null;
+  let seededSubtopic  = _isAcademicChat(_urlParams.get('subtopic')) ? _urlParams.get('subtopic') : null;
 
   // ── Drill Mode state (Phase 3B) ─────────────────────────────────────────────
   // ?drill=true&topics=<JSON array of {topic,subtopic}>
@@ -742,8 +744,8 @@ button{font-family:inherit;cursor:pointer}
       const parsed = raw ? JSON.parse(raw) : null;
       if (Array.isArray(parsed) && parsed.length > 0) {
         drillTopics = parsed
-          .filter(t => t && typeof t.topic === 'string' && t.topic.length > 0)
-          .map(t => ({ topic: t.topic, subtopic: (t.subtopic || '') }));
+          .filter(t => t && typeof t.topic === 'string' && _isAcademicChat(t.topic))
+          .map(t => ({ topic: t.topic, subtopic: (_isAcademicChat(t.subtopic) ? t.subtopic : '') }));
         if (drillTopics.length > 0) {
           drillMode      = true;
           seededTopic    = drillTopics[0].topic;

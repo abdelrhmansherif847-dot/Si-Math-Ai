@@ -429,17 +429,20 @@ async function deviceGuard(sb, userId) {
     var masteryRecs  = results[5].data  || [];
     var qRecs        = results[6].data  || [];
     var qCount       = results[6].count || qRecs.length || 0;
-    var qTopics      = new Set(qRecs.map(function(q){ return q.topic; }).filter(Boolean)).size;
+    // Filter non-academic topics (taxonomy guard)
+    var NON_ACAD_PROG = /^(conversation|general|chat|other|none|meta|system|coaching|planning|study planning|study coaching|exam strategy|motivation|confidence|mindset|scheduling|out_of_scope)/i;
+    function isAcademicProg(t) { var s = (t||'').trim(); return s.length >= 2 && !NON_ACAD_PROG.test(s); }
+    var qTopics      = new Set(qRecs.map(function(q){ return q.topic; }).filter(function(t){ return isAcademicProg(t); })).size;
     var achieves     = results[2].data  || [];
     var chatSess     = results[3].data  || [];
     var exams        = results[4].data  || [];
     // mastRecs: prefer mastery_records (MasteryEngine delta-based) for mastery scores.
     // Fall back to weakness_reports if mastery_records is empty.
-    var mastRecs = masteryRecs.length > 0 ? masteryRecs.map(function(r){
+    var mastRecs = (masteryRecs.length > 0 ? masteryRecs.map(function(r){
       return { topic: r.topic, subtopic: r.subtopic, mastery_score: r.mastery_score, last_updated: null, questions_seen: r.questions_seen || 0 };
     }) : weakReps.map(function(r){
       return { topic: r.topic, mastery_score: r.mastery_score, last_updated: r.last_updated, questions_seen: r.total_signals || 0 };
-    });
+    })).filter(function(r){ return isAcademicProg(r.topic); });
 
     var xp        = profile.xp || 0;
     var rank      = getRank(xp);
