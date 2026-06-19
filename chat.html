@@ -1168,6 +1168,9 @@ button{font-family:inherit;cursor:pointer}
       follow_up_type: capturedFollowUpType,
       hint_mode: hintModeActive,
       client_request_id: pendingRequestId,
+      // v76: always send last known record_id so server can link repeats/re-explanations
+      // to the original question_record without creating a duplicate row.
+      parent_record_id: window.__lastQRecId || null,
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -2065,14 +2068,28 @@ button{font-family:inherit;cursor:pointer}
         const _drillActive   = (typeof drillMode !== 'undefined') && drillMode && !drillComplete;
         const _drillOffTopic = _drillActive && !drillQuestionMatchesActiveTopic(_respTopic, _respSub);
 
+        // v76: is_repeat=true means the server updated an existing record instead of
+        // creating a new one. record_id in the response is the ORIGINAL question's ID.
+        const _isRepeat = !!(response && response.is_repeat);
+
         if (_drillOffTopic) {
           // Discard buffered per-message signals; do not emit post-response signals.
           SignalEngine.discardBuffer();
         } else {
+          // For repeats, always fire a weakness signal — repeated confusion is strong evidence.
+          if (_isRepeat && _respTopic && _respSub) {
+            const _rType = response.repeat_type;
+            SignalEngine.sendSignal({
+              type: _rType === 'solve_again' ? 'repeated' : 'explanation_repeated',
+              topic: _respTopic, sub: _respSub,
+              count: _rType === 'solve_again' ? 2 : undefined,
+            });
+            SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
+          }
           // Pipeline unification: when the AI flags a weakness on a topic the local
           // keyword map missed (sig is null), record it in weakness_signals so the
           // Weakness Analyzer sees AI-detected weaknesses too.
-          if (response && response.weakness_signal === true && !sig && _respTopic && _respSub) {
+          else if (response && response.weakness_signal === true && !sig && _respTopic && _respSub) {
             SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
           }
           // Image / short-text math questions: local keyword classifier can't see
@@ -2084,14 +2101,22 @@ button{font-family:inherit;cursor:pointer}
               SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: sentConf});
             }
           }
-          window.__lastQRecId = (response && response.record_id) || null;
-          SignalEngine.flushBuffer(window.__lastQRecId, currentSessionId);
+          // For repeats: keep __lastQRecId pointing at the ORIGINAL record (which the
+          // server returned as record_id). Do not overwrite with null or a new id.
+          if (!_isRepeat) {
+            window.__lastQRecId = (response && response.record_id) || null;
+          }
+          // flushBuffer always uses the correct parent record_id (either newly created
+          // or the original returned by the server for repeats).
+          SignalEngine.flushBuffer((response && response.record_id) || window.__lastQRecId, currentSessionId);
         }
         awardChatXP();
         if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
         drillOnQuestionAnswered(_respTopic, _respSub);
-        // Update mastery_records for this interaction — gated by drill on-topic check.
-        if (!_drillOffTopic) {
+        // Update mastery_records — skip for re-explanations (Case 2) since the student
+        // hasn't demonstrated new understanding; update for solve-again (Case 1) with
+        // isRepeat=true so MasteryEngine can weight it appropriately.
+        if (!_drillOffTopic && (!_isRepeat || response.repeat_type === 'solve_again')) {
           const rawMTopic = _respTopic || (sig && sig.topic) || null;
           const rawMSub   = _respSub   || (sig && sig.sub)   || null;
           // Normalize via Taxonomy so mastery_records never stores lowercase/Arabic/generic variants.
@@ -2104,7 +2129,7 @@ button{font-family:inherit;cursor:pointer}
               confidence:     sig ? (sig.confidence || null) : null,
               weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
               isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
-              isRepeat:       (SignalEngine.topicCounts[mSub] || 0) >= 2
+              isRepeat:       _isRepeat || (SignalEngine.topicCounts[mSub] || 0) >= 2
             });
           }
         }

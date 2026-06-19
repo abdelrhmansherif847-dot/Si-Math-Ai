@@ -778,6 +778,33 @@ async function runL3ShadowPipeline(opts: {
   }));
 }
 
+// ── Repeat Question Detection (v76) ──────────────────────────────────────────
+// Case 1: student wants Zero to re-solve the SAME question with a different method.
+// Case 2: student did not understand and wants re-explanation (same approach, deeper).
+// Detection is phrase-based + followUpType (client UI buttons → Case 2).
+
+function detectSolveAgain(text: string): boolean {
+  const t = (text || '').trim().toLowerCase();
+  // Exact "solve again" / "re-solve" / "another method" in English or Arabic
+  return (
+    /\b(solve\s+again|re-?solve|try\s+again|another\s+(method|way|approach|strategy|solution)|different\s+(method|way|approach|strategy)|show\s+me\s+another\s+way|alternative\s+(method|solution|approach))\b/.test(t) ||
+    /أعد\s*الحل|حل\s*تاني|طريق[ةه]\s*تاني[ةه]|بطريق[ةه]\s*مختلف[ةه]|طريق[ةه]\s*أخرى|أسلوب\s*تاني/.test(t)
+  );
+}
+
+function detectReExplain(text: string): boolean {
+  const t = (text || '').trim().toLowerCase();
+  return (
+    /\b(i\s+(?:still\s+)?don'?t\s+(?:understand|get\s+it)|explain\s+(?:it\s+|that\s+|this\s+)?again|re-?explain|i'?m\s+(?:still\s+)?confused|still\s+(?:lost|confused|don'?t\s+get\s+it)|what\s+do\s+you\s+mean|i\s+(?:don'?t|dont)\s+(?:get|follow)\s+(?:it|this|that))\b/.test(t) ||
+    /مش\s*فاهم|مش\s*عارف|مفهمتش|مش\s*واضح|مفيش\s*فايدة|تاني\s*مرة|وضح\s*اكتر|اشرح\s*تاني|مش\s*بفهم|مزلتش\s*مش\s*فاهم|عيد\s*(?:الشرح|تاني|المثال)/.test(t)
+  );
+}
+
+// Normalise question text for exact-repeat comparison (strip whitespace, lowercase).
+function normaliseQ(s: string): string {
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
@@ -806,6 +833,8 @@ serve(async (req) => {
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
     const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
+    // Parent record ID sent by client for repeat/re-explanation detection (v76).
+    const parentRecordId: string | null = (typeof body.parent_record_id === 'string' && body.parent_record_id) ? body.parent_record_id : null;
     // lang resolved after profile fetch so language_preference is respected
 
     // ── CAI-P1 pre-flight: if this client_request_id already produced a row,
@@ -997,6 +1026,148 @@ serve(async (req) => {
       const examDay = new Date(examDateRaw); examDay.setHours(0,0,0,0);
       daysUntilExam = Math.ceil((examDay.getTime() - today.getTime()) / 86_400_000);
     }
+
+    // ── Repeat Question Detection (v76) ──────────────────────────────────────
+    // Classify before the main OpenAI call. Cases 1 & 2 update the EXISTING
+    // question_record rather than inserting a new one, keeping "AI Chat Questions"
+    // metrics clean (unique math questions only).
+    //
+    // Case 1 (solve_again): different-method re-solve.
+    // Case 2 (re_explain) : deeper explanation of same question.
+    // Case 3 (null)       : normal new question — fall through to standard path.
+
+    type RepeatType = 'solve_again' | 're_explain' | null;
+    let repeatType: RepeatType = null;
+
+    if (detectSolveAgain(question)) {
+      repeatType = 'solve_again';
+    } else if (followUpType != null || detectReExplain(question)) {
+      repeatType = 're_explain';
+    }
+
+    // If it looks like a repeat, try to find the parent record.
+    // Priority: explicit parent_record_id from client → most-recent math record in session.
+    let parentRecord: {
+      id: string; question: string; ai_response: string;
+      topic: string; subtopic: string;
+      repeated_question_count: number; re_explanation_count: number;
+    } | null = null;
+
+    if (repeatType !== null && resolvedSessionId) {
+      if (parentRecordId) {
+        const { data: pr } = await sbAdmin.from('question_records')
+          .select('id, question, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .eq('id', parentRecordId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        parentRecord = pr ?? null;
+      }
+      if (!parentRecord) {
+        // Fallback: most recent math record in this session
+        const { data: pr } = await sbAdmin.from('question_records')
+          .select('id, question, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .eq('user_id', user.id)
+          .eq('session_id', resolvedSessionId)
+          .not('topic', 'eq', 'General')
+          .not('topic', 'eq', '')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        parentRecord = pr ?? null;
+      }
+      // If the current message text is identical to the parent question, that's
+      // also a solve-again even without explicit phrase (student re-sent same text).
+      if (!repeatType && parentRecord && normaliseQ(question) === normaliseQ(parentRecord.question)) {
+        repeatType = 'solve_again';
+      }
+    }
+
+    // If no parent found, degrade gracefully — treat as a new question (Case 3).
+    if (repeatType !== null && !parentRecord) {
+      console.log('[ai-tutor] repeat-no-parent', JSON.stringify({
+        uid: user.id.slice(0, 8), repeatType, hasParentId: !!parentRecordId,
+      }));
+      repeatType = null;
+    }
+
+    // ── REPEAT PATH: Cases 1 & 2 ─────────────────────────────────────────────
+    if (repeatType !== null && parentRecord) {
+      // Build a focused OpenAI call with the original question + prior answer as context.
+      const repeatInstruction = repeatType === 'solve_again'
+        ? `🔁 RE-SOLVE INSTRUCTION: The student is asking you to solve this same problem again using a COMPLETELY DIFFERENT METHOD or approach. The prior answer used one method — you must now use an alternative strategy. Possible alternatives: visual/geometric reasoning, number substitution, algebraic identity, working backwards, symmetry argument. Start with ONE warm sentence acknowledging their request, then dive straight into the different method. Do NOT repeat anything from the prior answer.`
+        : `🔁 RE-EXPLAIN INSTRUCTION: The student did not understand. Break the explanation down DIFFERENTLY — go simpler, slower, one step at a time. Use a new analogy or a concrete numerical example they haven't seen yet. Explicitly acknowledge their confusion with warmth before starting the explanation.`;
+
+      const priorContext = `[Prior question the student asked]: ${parentRecord.question}\n[Zero's prior answer]: ${parentRecord.ai_response || '(unavailable)'}`;
+
+      const repeatLangAnchor =
+        lang === 'franco'
+          ? '🔒 LANGUAGE LOCK: Entire response in Franco (Egyptian Arabizi). Math notation stays standard.'
+          : lang === 'ar'
+          ? '🔒 LANGUAGE LOCK: Entire response in Arabic (Egyptian dialect welcome). Math notation stays standard.'
+          : '🔒 LANGUAGE LOCK: Entire response in English.';
+
+      const repeatMessages = [
+        { role: 'system', content: `You are Zero 🐉 — a warm, sharp, personality-driven math coach for Egyptian students (SAT/EST/ACT). Student name: ${studentName}.` },
+        { role: 'system', content: repeatInstruction },
+        { role: 'system', content: priorContext },
+        { role: 'system', content: repeatLangAnchor },
+        { role: 'user',   content: question || (repeatType === 'solve_again' ? 'Solve it again using a different method.' : "I don't understand. Explain again.") },
+      ];
+
+      const repeatOaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+        body: JSON.stringify({
+          model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
+          messages: repeatMessages,
+          max_tokens: 2200,
+          temperature: 0.5,
+        }),
+      });
+      const repeatOaiJson = await repeatOaiRes.json();
+      const repeatAnswer  = repeatOaiJson?.choices?.[0]?.message?.content || '';
+
+      // UPDATE existing record — increment counter, ensure weakness_signal=true.
+      const repeatUpdateFields = repeatType === 'solve_again'
+        ? { repeated_question: true, repeated_question_count: (parentRecord.repeated_question_count || 0) + 1, weakness_signal: true }
+        : { re_explanation_count: (parentRecord.re_explanation_count || 0) + 1, weakness_signal: true };
+
+      const { error: repeatUpdateErr } = await sbAdmin.from('question_records')
+        .update(repeatUpdateFields)
+        .eq('id', parentRecord.id)
+        .eq('user_id', user.id);
+
+      if (repeatUpdateErr) {
+        console.log('[ai-tutor] repeat-update-failed', JSON.stringify({
+          uid: user.id.slice(0, 8), id: parentRecord.id, msg: repeatUpdateErr.message,
+        }));
+      }
+
+      console.log('[ai-tutor] repeat-handled', JSON.stringify({
+        uid: user.id.slice(0, 8), repeatType, parent_id: parentRecord.id,
+        topic: parentRecord.topic, subtopic: parentRecord.subtopic,
+      }));
+
+      return new Response(JSON.stringify({
+        answer:          repeatAnswer,
+        hint:            '',
+        topic:           parentRecord.topic,
+        subtopic:        parentRecord.subtopic,
+        difficulty:      '',
+        concepts:        [],
+        rules:           [],
+        weakness_signal: true,
+        attention_marker: '',
+        session_id:      resolvedSessionId,
+        record_id:       parentRecord.id,
+        hint_mode:       false,
+        is_math:         true,
+        is_repeat:       true,
+        repeat_type:     repeatType,
+        version:         AI_TUTOR_VERSION,
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+    // ── END REPEAT PATH — normal Case 3 continues below ──────────────────────
 
     // ── Context retrieval ─────────────────────────────────────────────────────
     const [personalityRaw, knowledge] = await Promise.all([
