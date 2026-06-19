@@ -1051,7 +1051,8 @@ async function init(){
 
   const {data:prof}=await sb.from('profiles').select('is_admin, plan_code, is_founder').eq('id',user.id).single();
   // Plan gating: Free users see Top 3 weaknesses but lose deep analytics, trends, subtopic breakdown, advanced recs
-  window._isPro = !!(prof && (prof.is_founder || (prof.plan_code && prof.plan_code !== 'FREE')));
+  // Admin bypass: admins always see Pro view
+  window._isPro = !!(prof && (prof.is_admin || prof.is_founder || (prof.plan_code && prof.plan_code !== 'FREE')));
   if (!window._isPro) document.body.classList.add('plan-free');
 
   if(prof?.is_admin){

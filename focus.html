@@ -1228,7 +1228,8 @@ async function loadData() {
 
   const profile    = profRes.data  || null;
   // Plan gating: Free users get Day 1 (Foundation) only; Pro unlocks Day 2 (Accuracy) and Day 3 (Pressure)
-  window._isPro = !!(profile && (profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
+  // Admin bypass: admins always get full access
+  window._isPro = !!(profile && (profile.is_admin || profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
   if (!window._isPro) document.body.classList.add('plan-free');
   if (profile?.is_admin) {
     const adminLink = document.createElement('a');

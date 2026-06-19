@@ -318,8 +318,8 @@ try {
   const { data: p } = await sb.from('profiles').select('full_name, is_admin, plan_code, is_founder').eq('id', user.id).single();
   profile = p;
 } catch(e) { console.warn('[history] profile fetch error:', e.message); }
-// Plan gating: Free users see last 10 sessions; Pro users see full history
-const isPro = !!(profile && (profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
+// Plan gating: Free users see last 10 sessions; Pro / Founder / Admin see full history
+const isPro = !!(profile && (profile.is_admin || profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
 const initial = (profile?.full_name || user.email || '?')[0].toUpperCase();
 document.getElementById('avatarEl').textContent = initial;
 if (profile?.is_admin) {
