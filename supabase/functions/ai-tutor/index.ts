@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v78';
+const AI_TUTOR_VERSION = 'v79';
 
 // ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
 // Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
@@ -81,7 +81,74 @@ const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
   .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
   .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
-const L3_PIPELINE_VERSION = 'l3-shadow-v1';
+const L3_PIPELINE_VERSION = 'l3-shadow-v2';
+
+// ── Tone detection (v78) ─────────────────────────────────────────────────────
+// Sliding 3-turn classifier returning band 0–4 (0=formal, 4=hype).
+// Vocab lists are curated v1 — small on purpose. Expand only with usage data.
+// NEVER cross-pollinate languages: ar vocab matches AR turns, en matches EN, etc.
+const TONE_VOCAB_AR = ['عاش','اشطا','تمام','يلا بينا','يا بطل','يا صاحبي','جامد'];
+const TONE_VOCAB_EN = ["let's go",'lets go','nice catch','nice one','good job','we got this','huge w'];
+const TONE_VOCAB_FR = ['3ash','yalla bina','tmam','gamed','ya sa7by','ya batal'];
+
+// Confusion / frustration markers — when present in CURRENT student turn we
+// cap the tone band at 2 (Adjustment 1). Warmth > hype.
+function detectConfusionOrError(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  return (
+    /مش\s*فاهم|مش\s*عارف|مفهمتش|تايه|مش\s*شغال|غلط|ليه\s*كده|محبطة?|مفيش\s*فايدة/.test(t) ||
+    /\b(i\s+(?:still\s+)?don'?t\s+(?:get|understand)|i'?m\s+(?:still\s+)?(?:lost|confused|stuck)|why\s+(?:isn'?t|is)\s+this\s+wrong|i\s+(?:can'?t|cant)\s+(?:do|figure))\b/.test(t) ||
+    /msh\s*fahem|msh\s*3aref|mosh\s*3aref|lost|tay7|tayh|frustrated/.test(t)
+  );
+}
+
+// Score a single message on its tone vocab. Returns 0–4.
+function scoreToneSingle(text: string, lang: string): number {
+  const t = (text || '').trim();
+  if (!t) return 1;
+  const lower = t.toLowerCase();
+  const vocab = lang === 'ar' ? TONE_VOCAB_AR : lang === 'franco' ? TONE_VOCAB_FR : TONE_VOCAB_EN;
+  const slangHits = vocab.reduce((n, w) => n + (lower.includes(w.toLowerCase()) ? 1 : 0), 0);
+
+  // Hype markers (cross-language but tone-language-agnostic): emoji, repeated chars, all-caps, !!!
+  const emojiHits   = (t.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}🔥😂✨🎯🙌💪]/gu) || []).length;
+  const repeatedCh  = /([a-zا-ي])\1{2,}/i.test(lower);                     // "loool", "بمووووت"
+  const allCapsFrag = /\b[A-Z]{3,}\b/.test(t);                              // "LETS GO"
+  const exclamChain = /!{2,}/.test(t);
+
+  let score = 1; // neutral baseline
+  if (slangHits >= 1)                 score += 1;
+  if (slangHits >= 2 || emojiHits >= 2 || repeatedCh || allCapsFrag || exclamChain) score += 1;
+  if (slangHits >= 2 && (emojiHits >= 2 || repeatedCh || allCapsFrag))               score += 1;
+
+  // Formality dampeners pull us toward 0:
+  const polite = /(please|could you|would you|kindly|أرجوك|من فضلك|لو سمحت)/i.test(t);
+  const longClean = t.length > 80 && !slangHits && !emojiHits && !exclamChain;
+  if (polite || longClean) score = Math.max(0, score - 1);
+  if (polite && longClean) score = 0;
+
+  return Math.max(0, Math.min(4, score));
+}
+
+// Sliding window: average the last 3 student messages (rounded). Defaults to 1.
+function detectTone(
+  currentText: string,
+  priorMessages: Array<{role:string;content:string}>,
+  lang: string,
+): { band: number; capped: boolean } {
+  const userTurns = priorMessages.filter(m => m.role === 'user').slice(-2).map(m => m.content);
+  const window = [...userTurns, currentText].filter(s => typeof s === 'string' && s.trim().length > 0);
+  if (window.length === 0) return { band: 1, capped: false };
+  const scores = window.map(s => scoreToneSingle(s, lang));
+  let band = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  // Cap at 2 on confusion/frustration in CURRENT turn (Adjustment 1).
+  let capped = false;
+  if (detectConfusionOrError(currentText) && band > 2) {
+    band = 2;
+    capped = true;
+  }
+  return { band, capped };
+}
 
 // ── Tone detection (v78) ─────────────────────────────────────────────────────
 // Sliding 3-turn classifier returning band 0–4 (0=formal, 4=hype).
@@ -682,16 +749,27 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
 }
 
 // Single solver pass. Model: gpt-4o-mini. Returns final extracted answer.
-async function runSolver(questionText: string, temperature: number): Promise<SolverResult> {
+// If imageData provided, solver sees the image directly (vision) — fixes the
+// image-questions-not-verifiable bug where solvers relied only on mini-OCR text.
+// max_tokens bumped 400 → 1200 to stop mid-formula truncation seen in shadow runs.
+async function runSolver(
+  questionText: string, temperature: number, imageData: string | null = null,
+): Promise<SolverResult> {
   try {
+    const userContent: unknown = imageData
+      ? [
+          { type: 'text', text: `Solve this math problem. Extracted text (may be partial): "${questionText.slice(0, 800)}"` },
+          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+        ]
+      : questionText.slice(0, 1500);
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 400, temperature,
+        model: 'gpt-4o-mini', max_tokens: 1200, temperature,
         messages: [
           { role: 'system', content: 'You are a precise math solver. Solve the problem step by step, then state the final answer on the last line as "Answer: [value]". No markdown, no commentary.' },
-          { role: 'user', content: questionText.slice(0, 1000) },
+          { role: 'user', content: userContent },
         ],
       }),
     });
@@ -721,7 +799,7 @@ async function runJudge(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 200, temperature: 0,
+        model: 'gpt-4o-mini', max_tokens: 500, temperature: 0,
         messages: [
           { role: 'system', content: 'You are a math verification judge. Determine whether the tutor\'s answer matches the solver answers.\nRespond with JSON only: {"verdict":"agrees"|"disagrees"|"inconclusive","confidence":0.0-1.0,"reasoning":"one sentence"}\n- "agrees": both solvers reach the same final value as the tutor (minor formatting differences OK)\n- "disagrees": solvers agree with each other but differ from the tutor\n- "inconclusive": solvers disagree with each other, or comparison is ambiguous' },
           { role: 'user', content: `Question: ${questionText.slice(0, 500)}\n\nTutor answer (excerpt): ${zeroAnswer.slice(0, 400)}\n\nSolver A: ${solverA.answer.slice(0, 200)}\n\nSolver B: ${solverB.answer.slice(0, 200)}` },
@@ -772,10 +850,10 @@ async function runL3ShadowPipeline(opts: {
     : { confidence: 1.0, flags: [], rerun_count: 0, rerun_changed: false, final_text: mathText };
   const solveText = ocr.rerun_changed ? ocr.final_text : mathText;
 
-  // 3. Two parallel solver passes
+  // 3. Two parallel solver passes — for image questions, solvers see the image directly.
   const [solverA, solverB] = await Promise.all([
-    runSolver(solveText, 0.1),
-    runSolver(solveText, 0.3),
+    runSolver(solveText, 0.1, isImageQ ? imageData : null),
+    runSolver(solveText, 0.3, isImageQ ? imageData : null),
   ]);
 
   // 4. Solver agreement (exact match after normalization)
@@ -798,6 +876,8 @@ async function runL3ShadowPipeline(opts: {
     solver_answers:      [solverA.answer.slice(0, 200), solverB.answer.slice(0, 200)],
     solver_model:        'gpt-4o-mini',
     solver_temperatures: [0.1, 0.3],
+    solver_max_tokens:   1200,
+    solver_sees_image:   isImageQ,
     judge_model:         'gpt-4o-mini',
     judge_reasoning:     judge.reasoning,
     zero_answer_hash:    await sha256short(zeroAnswer),

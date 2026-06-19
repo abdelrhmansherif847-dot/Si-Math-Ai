@@ -274,7 +274,7 @@ button{font-family:inherit;cursor:pointer}
             <span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
             <span>Remember me</span>
           </label>
-          <a class="forgot" href="#">Forgot password?</a>
+          <a class="forgot" href="#" id="forgotLink">Forgot password?</a>
         </div>
 
         <button type="submit" class="btn btn-primary">
@@ -299,6 +299,32 @@ button{font-family:inherit;cursor:pointer}
         Create Account
         <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
+    </div>
+
+    <!-- FORGOT PASSWORD PANEL (hidden until link clicked) -->
+    <div id="forgotPanel" style="display:none">
+      <div class="welcome" style="margin-bottom:var(--space-5)">
+        <div class="eyebrow">🔑 Reset Password</div>
+        <h1 style="font-size:clamp(22px,6vw,28px)">Forgot your password?</h1>
+        <p style="color:var(--text-400);font-size:14px;margin-top:8px">Enter your email and we'll send you a reset link.</p>
+      </div>
+      <div class="card" style="padding:var(--space-5)">
+        <div class="field">
+          <label for="forgotEmail">Email address</label>
+          <div class="input-wrap">
+            <span class="lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></span>
+            <input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="email"/>
+          </div>
+        </div>
+        <div id="forgotMsg" style="font-size:13.5px;margin-top:10px;display:none"></div>
+        <button class="btn btn-primary" id="forgotSubmit" style="width:100%;margin-top:16px">
+          Send Reset Link
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <a href="#" id="backToLogin" style="font-size:13.5px;color:var(--cyan);font-weight:600">← Back to login</a>
+      </div>
     </div>
 
     <!-- DEVICE LIMIT WALL (hidden until limit exceeded) -->
@@ -491,6 +517,65 @@ button{font-family:inherit;cursor:pointer}
   });
 
   async function logout(){await supabaseClient.auth.signOut();window.location.href='login.html';}
+
+  // ── Forgot Password ──────────────────────────────────────────────────────────
+  var cardZone = document.querySelector('.card-zone');
+  var bottomEl = document.querySelector('.bottom');
+  var forgotPanel = document.getElementById('forgotPanel');
+
+  function showForgot() {
+    cardZone.style.display = 'none';
+    if (bottomEl) bottomEl.style.display = 'none';
+    forgotPanel.style.display = '';
+    document.getElementById('forgotMsg').style.display = 'none';
+    document.getElementById('forgotEmail').value = '';
+  }
+  function showLogin() {
+    forgotPanel.style.display = 'none';
+    cardZone.style.display = '';
+    if (bottomEl) bottomEl.style.display = '';
+  }
+
+  document.getElementById('forgotLink').addEventListener('click', function(e) {
+    e.preventDefault();
+    // Pre-fill email from login form if already typed
+    var loginEmail = document.getElementById('email').value.trim();
+    showForgot();
+    if (loginEmail) document.getElementById('forgotEmail').value = loginEmail;
+  });
+  document.getElementById('backToLogin').addEventListener('click', function(e) {
+    e.preventDefault();
+    showLogin();
+  });
+
+  document.getElementById('forgotSubmit').addEventListener('click', async function() {
+    var email = document.getElementById('forgotEmail').value.trim();
+    var msgEl = document.getElementById('forgotMsg');
+    if (!email) {
+      msgEl.textContent = 'Please enter your email address.';
+      msgEl.style.color = 'var(--red, #f87171)';
+      msgEl.style.display = 'block';
+      return;
+    }
+    this.disabled = true;
+    this.style.opacity = '0.7';
+    msgEl.style.display = 'none';
+    var { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://www.si-math-ai.com/reset-password.html',
+    });
+    this.disabled = false;
+    this.style.opacity = '1';
+    if (error) {
+      msgEl.textContent = error.message || 'Failed to send reset email. Please try again.';
+      msgEl.style.color = 'var(--red, #f87171)';
+    } else {
+      msgEl.innerHTML = '✅ Reset link sent! Check your inbox (and spam folder).';
+      msgEl.style.color = 'var(--green, #4ade80)';
+      this.textContent = 'Email sent';
+      this.disabled = true;
+    }
+    msgEl.style.display = 'block';
+  });
 </script>
 </body>
 </html>
