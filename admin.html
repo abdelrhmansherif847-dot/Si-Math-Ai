@@ -250,7 +250,7 @@ select.search-input{cursor:pointer}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
     Admin Dashboard
   </a>
-  <a class="nav-item" href="ai-monitor.html" style="color:#ef4f5f">
+  <a class="nav-item" data-role-min="super_admin" href="ai-monitor.html" style="color:#ef4f5f">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 2-2 3 3"/></svg>
     AI Monitor
   </a>
@@ -263,15 +263,15 @@ select.search-input{cursor:pointer}
 <main class="main" id="mainContent" style="display:none">
 
   <section class="page-hd">
-    <div class="eyebrow"><span class="live-dot"></span> Owner Panel</div>
-    <h1>Admin Dashboard</h1>
-    <p>Manage users, subscriptions, payments, and system settings.</p>
+    <div class="eyebrow" id="pageEyebrow"><span class="live-dot"></span> Admin Panel</div>
+    <h1 id="pageTitle">Admin Dashboard</h1>
+    <p id="pageSubtitle">Manage users, subscriptions, payments, and system settings.</p>
     <div style="margin-top:10px"><span class="chip blue" id="roleChip">—</span></div>
   </section>
 
   <div id="roleMigrationBanner" style="display:none;margin-bottom:18px;padding:12px 16px;border-radius:14px;background:rgba(245,185,66,.10);border:1px solid var(--amber-border);color:var(--amber);font-size:13px">⚠️ Pending role migration — <code>profiles.role</code> column not detected. Role Management is disabled until the migration runs.</div>
 
-  <div class="stats-grid">
+  <div class="stats-grid" data-role-min="super_admin">
     <div class="stat-card"><div class="lbl">Total Users</div><div class="val" id="statUsers">—</div><div class="sub">registered accounts</div></div>
     <div class="stat-card amber"><div class="lbl">Pending Payments</div><div class="val" id="statPending">—</div><div class="sub">awaiting approval</div></div>
     <div class="stat-card green"><div class="lbl">Active Subscribers</div><div class="val" id="statActive">—</div><div class="sub">paid plans</div></div>
@@ -280,8 +280,8 @@ select.search-input{cursor:pointer}
 
   <!-- ============== OVERVIEW SECTIONS ============== -->
 
-  <!-- (7) ADMIN ALERTS -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (7) ADMIN ALERTS — super_admin+ -->
+  <section class="card" data-role-min="super_admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico red">🚨</div>
       <div><div class="card-title">Admin Alerts</div><div class="card-sub">Real-time platform health signals</div></div>
@@ -289,8 +289,8 @@ select.search-input{cursor:pointer}
     <div id="adminAlerts"><div class="empty"><p>Loading…</p></div></div>
   </section>
 
-  <!-- (1) STUDENT ACTIVITY -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (1) STUDENT ACTIVITY — admin+ -->
+  <section class="card" data-role-min="admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico">📈</div>
       <div><div class="card-title">Student Activity</div><div class="card-sub">Engagement signals from question_records</div></div>
@@ -310,8 +310,8 @@ select.search-input{cursor:pointer}
     </div>
   </section>
 
-  <!-- (2) REVENUE & PAYMENTS -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (2) REVENUE & PAYMENTS — super_admin+ (view-only for super_admin) -->
+  <section class="card" data-role-min="super_admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico amber">💵</div>
       <div><div class="card-title">Revenue &amp; Payments</div><div class="card-sub">Realized and pending revenue from payments table</div></div>
@@ -335,8 +335,8 @@ select.search-input{cursor:pointer}
     </div>
   </section>
 
-  <!-- (3) PLANS & CONVERSION -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (3) PLANS & CONVERSION — super_admin+ -->
+  <section class="card" data-role-min="super_admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico">📊</div>
       <div><div class="card-title">Plans &amp; Conversion</div><div class="card-sub">Free → paid distribution</div></div>
@@ -353,8 +353,8 @@ select.search-input{cursor:pointer}
     </div>
   </section>
 
-  <!-- (4) SUBSCRIPTION GROWTH -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (4) SUBSCRIPTION GROWTH — super_admin+ -->
+  <section class="card" data-role-min="super_admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico green">📈</div>
       <div><div class="card-title">Subscription Growth</div><div class="card-sub">New subscribers and churn</div></div>
@@ -367,8 +367,8 @@ select.search-input{cursor:pointer}
     </div>
   </section>
 
-  <!-- (5) WEAKNESS ANALYZER -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (5) WEAKNESS ANALYZER — admin+ -->
+  <section class="card" data-role-min="admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico">🧠</div>
       <div><div class="card-title">Weakness Analyzer</div><div class="card-sub">Aggregated student weakness signals</div></div>
@@ -400,8 +400,8 @@ select.search-input{cursor:pointer}
     </div>
   </section>
 
-  <!-- (6) PLATFORM HEALTH -->
-  <section class="card" style="margin-bottom:18px">
+  <!-- (6) PLATFORM HEALTH — super_admin+ -->
+  <section class="card" data-role-min="super_admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico amber">⚙️</div>
       <div><div class="card-title">Platform Health</div><div class="card-sub">Edge function performance and incidents</div></div>
@@ -451,11 +451,11 @@ select.search-input{cursor:pointer}
   <!-- ============== END OVERVIEW SECTIONS ============== -->
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('payments')">Payment Requests</button>
-    <button class="tab" onclick="switchTab('pending')">Legacy Queue</button>
-    <button class="tab" onclick="switchTab('users')">Users</button>
-    <button class="tab" onclick="switchTab('founders')">Founders</button>
-    <button class="tab" onclick="switchTab('settings')">System Settings</button>
+    <button class="tab active" data-role-min="admin" onclick="switchTab('payments')">Payment Requests</button>
+    <button class="tab" data-role-min="super_admin" onclick="switchTab('pending')">Legacy Queue</button>
+    <button class="tab" data-role-min="admin" onclick="switchTab('users')">Users</button>
+    <button class="tab" data-role-min="super_admin" onclick="switchTab('founders')">Founders</button>
+    <button class="tab" data-role-min="owner" onclick="switchTab('settings')">System Settings</button>
   </div>
 
   <!-- TAB: PAYMENT REQUESTS (new manual payment flow) -->
@@ -689,11 +689,68 @@ async function init() {
     if (b) b.style.display = 'block';
   }
 
+  applyRoleTitle(role);
+  applyRoleVisibility(role);
+  ensureValidStartingTab(role);
+
   document.getElementById('pageLoader').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   await loadStats();
   loadPaymentRequests();
   loadDashboardSections();
+}
+
+// ── Role-aware UI ───────────────────────────────────────────────────────────
+const ROLE_LEVEL = { user:0, admin:1, super_admin:2, owner:3 };
+
+function applyRoleTitle(role) {
+  const titles = {
+    owner:       { eyebrow: 'Owner Panel',       title: 'Owner Dashboard',        sub: 'Full platform control — users, payments, AI monitoring, roles, audit.' },
+    super_admin: { eyebrow: 'Super Admin Panel', title: 'Super Admin Dashboard',  sub: 'Platform operations — users, payments (view), monitoring.' },
+    admin:       { eyebrow: 'Admin Panel',       title: 'Admin Dashboard',        sub: 'Day-to-day operations — students, payment review, weakness signals.' },
+  };
+  const t = titles[role] || titles.admin;
+  const eb = document.getElementById('pageEyebrow');
+  if (eb) eb.innerHTML = `<span class="live-dot"></span> ${t.eyebrow}`;
+  const h = document.getElementById('pageTitle');
+  if (h) h.textContent = t.title;
+  const p = document.getElementById('pageSubtitle');
+  if (p) p.textContent = t.sub;
+  document.title = t.title + ' · Si Math AI';
+}
+
+function applyRoleVisibility(role) {
+  const lvl = ROLE_LEVEL[role] ?? 0;
+  document.querySelectorAll('[data-role-min]').forEach(el => {
+    const need = ROLE_LEVEL[el.dataset.roleMin] ?? 99;
+    if (lvl < need) el.style.display = 'none';
+  });
+  // Super-admin = view-only on Revenue & Payments approve/reject in Payment Requests tab.
+  // We mark the loadPaymentRequests render to call applyPaymentActionLock() afterward.
+  document.body.dataset.role = role;
+}
+
+function applyPaymentActionLock() {
+  if (currentUserRole !== 'super_admin') return;
+  document.querySelectorAll('#paymentRequestsList button.btn-green, #paymentRequestsList button.btn-red').forEach(b => {
+    b.disabled = true; b.style.opacity = '0.4'; b.title = 'View-only for Super Admin';
+  });
+}
+
+function ensureValidStartingTab(role) {
+  const lvl = ROLE_LEVEL[role] ?? 0;
+  const order = [
+    { name: 'payments', need: 1 },
+    { name: 'users',    need: 1 },
+    { name: 'pending',  need: 2 },
+    { name: 'founders', need: 2 },
+    { name: 'settings', need: 3 },
+  ];
+  const first = order.find(t => lvl >= t.need);
+  if (first && first.name !== 'payments') {
+    // delay until DOM hydrate
+    setTimeout(() => switchTab(first.name), 0);
+  }
 }
 
 // Sidebar
@@ -1142,6 +1199,7 @@ async function loadPaymentRequests() {
       </tr>
     `).join('')}</tbody>
   </table></div>`;
+  applyPaymentActionLock();
 }
 
 let _prDetailCache = {};
@@ -1177,6 +1235,7 @@ async function viewPaymentDetail(id) {
 const _processingRequests = new Set();
 
 async function approvePaymentRequest(requestId) {
+  if (currentUserRole === 'super_admin') { toast('Super Admin role is view-only on payments.', 'amber'); return; }
   if (_processingRequests.has(requestId)) { toast('Already processing this request…', 'amber'); return; }
   if (!confirm('Approve this payment and activate the student\'s plan?')) return;
   _processingRequests.add(requestId);
@@ -1198,6 +1257,7 @@ async function approvePaymentRequest(requestId) {
 }
 
 async function rejectPaymentRequest(requestId) {
+  if (currentUserRole === 'super_admin') { toast('Super Admin role is view-only on payments.', 'amber'); return; }
   if (_processingRequests.has(requestId)) { toast('Already processing this request…', 'amber'); return; }
   const reason = prompt('Rejection reason (shown to student):') || 'Payment could not be verified';
   _processingRequests.add(requestId);

@@ -604,13 +604,37 @@ function tierChip(t) {
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) { window.location.href = 'index.html'; return; }
-  const { data: profile } = await sb.from('profiles').select('is_admin,full_name,email').eq('id', user.id).single();
-  if (!profile || !profile.is_admin) {
+  let profile = null;
+  try {
+    const r = await sb.from('profiles').select('is_admin,full_name,email,role').eq('id', user.id).single();
+    profile = r.data;
+  } catch(e) {}
+  if (!profile) {
+    const r2 = await sb.from('profiles').select('is_admin,full_name,email').eq('id', user.id).single();
+    profile = r2.data;
+  }
+  const role = (profile && profile.role) || (profile && profile.is_admin ? 'admin' : 'user');
+  const allowed = role === 'owner' || role === 'super_admin';
+  if (!profile || !allowed) {
     document.getElementById('pageLoader').style.display = 'none';
-    const ad = document.getElementById('accessDenied'); ad.style.display = 'flex';
-    setTimeout(() => { window.location.href = 'dashboard.html'; }, 2500);
+    const ad = document.getElementById('accessDenied');
+    if (ad) {
+      ad.style.display = 'flex';
+      // Show a clearer message for plain admins (they're authenticated but not authorized)
+      const msg = ad.querySelector('p, .msg, [data-msg]');
+      if (msg && role === 'admin') msg.textContent = 'AI Monitor is restricted to Super Admin and Owner roles. Redirecting…';
+    }
+    setTimeout(() => { window.location.href = role === 'admin' ? 'admin.html' : 'dashboard.html'; }, 2500);
     return;
   }
+  // Header — title swap based on role
+  const hdr = document.querySelector('.page-hd h1');
+  if (hdr) hdr.textContent = role === 'owner' ? 'AI Monitoring · Owner' : 'AI Monitoring · Super Admin';
+  document.title = (role === 'owner' ? 'Owner' : 'Super Admin') + ' · AI Monitor · Si Math AI';
+  // Role badge in eyebrow
+  const eb = document.querySelector('.page-hd .eyebrow');
+  if (eb) eb.innerHTML = `<span class="live-dot"></span> ${role === 'owner' ? 'Owner' : 'Super Admin'} — Live`;
+
   const av = document.getElementById('topAvatar');
   av.textContent = (profile.full_name || profile.email || 'A').charAt(0).toUpperCase();
   av.style.visibility = 'visible';
