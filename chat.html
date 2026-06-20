@@ -1192,6 +1192,22 @@ button{font-family:inherit;cursor:pointer}
 
     // 4) Translate every error class into a clear user-facing message
     if (error) {
+      // ── DIAGNOSTIC (temporary, v80 incident) ───────────────────────────
+      // Surface the real underlying error supabase-js is hiding behind
+      // the generic "Failed to send request to edge function" message.
+      try {
+        console.error('[ai-tutor invoke error] message =', error.message);
+        console.error('[ai-tutor invoke error] name    =', error.name);
+        console.error('[ai-tutor invoke error] status  =', error.status);
+        console.error('[ai-tutor invoke error] context =', error.context);
+        console.error('[ai-tutor invoke error] cause   =', error.cause);
+        console.error('[ai-tutor invoke error] stack   =', error.stack);
+        try { console.error('[ai-tutor invoke error] JSON =', JSON.stringify(error, Object.getOwnPropertyNames(error))); } catch(_) {}
+        if (error.context && typeof error.context.text === 'function') {
+          error.context.clone().text().then(t => console.error('[ai-tutor invoke error] body =', t)).catch(()=>{});
+        }
+      } catch (_) {}
+      // ───────────────────────────────────────────────────────────────────
       const status = error.context && error.context.status;
       if (status === 401 || status === 403) throw new Error('Your session expired. Please sign in again.');
       if (status === 429)                   throw new Error('You\u2019ve hit today\u2019s limit. Please try again later or upgrade your plan.');
