@@ -47,6 +47,7 @@ button{font-family:inherit;cursor:pointer}
 /* SIDEBAR */
 .sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 16px) 14px 20px;display:flex;flex-direction:column;gap:4px;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1);overflow-y:auto}
 .sidebar.open{transform:translateX(0)}
+@media(min-width:1024px){.sidebar{transform:translateX(0)}}
 .side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
 .nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s ease}
 .nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
@@ -61,8 +62,8 @@ button{font-family:inherit;cursor:pointer}
 .overlay.show{opacity:1;visibility:visible}
 
 /* MAIN */
-.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 18px) 18px 60px;max-width:1240px;margin:0 auto}
-@media(min-width:768px){.main{max-width:none;margin:0;padding-left:calc(var(--side-w) + max(18px, (100vw - var(--side-w) - 1320px) / 2));padding-right:max(18px, (100vw - var(--side-w) - 1320px) / 2)}}
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 18px) 18px 60px;max-width:1320px;margin:0 auto}
+@media(min-width:1024px){.main{max-width:none;margin:0;padding-left:calc(var(--side-w) + max(18px, (100vw - var(--side-w) - 1320px) / 2));padding-right:max(18px, (100vw - var(--side-w) - 1320px) / 2)}}
 
 /* PAGE HEADER */
 .page-hd{margin-bottom:24px;animation:rise .5s ease both}
@@ -151,6 +152,22 @@ table.recent tbody tr:last-child{border-bottom:none}
 table.recent tbody tr:hover{background:var(--bg-elev-1)}
 table.recent td{padding:11px 14px;font-size:13px;color:var(--text-300);vertical-align:middle;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 table.recent td.mono{font-family:var(--font-mono);font-size:11px}
+
+/* FEEDBACK CARDS */
+.fb-cards{display:flex;flex-direction:column;gap:14px}
+.fb-card{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:14px;padding:14px 16px;animation:rise .4s ease both}
+.fb-card-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-soft)}
+.fb-time{font-size:11px;color:var(--text-400)}
+.fb-user{font-size:13px;color:var(--text-200);font-weight:600;margin-right:6px}
+.fb-card-body{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:900px){.fb-card-body{grid-template-columns:1fr 1fr}}
+.fb-col h4{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:8px}
+.fb-text{font-size:13.5px;line-height:1.55;color:var(--text-200);white-space:pre-wrap;word-break:break-word;background:rgba(2,6,14,.4);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;max-height:520px;overflow:auto}
+.fb-empty{font-size:12.5px;color:var(--text-500);font-style:italic;padding:8px 0}
+.fb-toggle{margin-top:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--cyan);background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.32);border-radius:8px;cursor:pointer;transition:background .15s}
+.fb-toggle:hover{background:rgba(56,189,248,.16)}
+.fb-img-wrap{margin-top:10px}
+.fb-img-wrap img{max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border-soft);display:block}
 
 /* CHIPS */
 .chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:10.5px;white-space:nowrap;font-weight:600}
@@ -1095,21 +1112,74 @@ async function loadFeedback() {
   ]);
   const pMap = Object.fromEntries((pRes.data||[]).map(p => [p.id, p]));
   const qMap = Object.fromEntries((qRes.data||[]).map(q => [q.id, q]));
-  const truncate = (s, n) => { s = String(s||''); return s.length > n ? s.slice(0, n) + '…' : s; };
-  const renderImageCell = (img) => {
-    if (!img) return '<span style="color:var(--text-500)">—</span>';
-    const src = img.startsWith('data:') || img.startsWith('http') ? img : `data:image/jpeg;base64,${img}`;
-    return `<a href="${esc(src)}" target="_blank" rel="noopener" title="Open full image"><img src="${esc(src)}" alt="question image" style="max-width:96px;max-height:64px;border-radius:6px;border:1px solid var(--border-soft);display:block"/></a>`;
+
+  // Each feedback renders as a card. Question, Image, and Zero Response are
+  // shown side-by-side (stacked on narrow viewports). Long Question / Response
+  // text collapses to a preview with an Expand button.
+  const PREVIEW_CHARS = 600;
+  const renderImage = (img) => {
+    if (!img) return '';
+    const src = (img.startsWith('data:') || img.startsWith('http')) ? img : `data:image/jpeg;base64,${img}`;
+    return `<div class="fb-img-wrap"><a href="${esc(src)}" target="_blank" rel="noopener" title="Open full image"><img src="${esc(src)}" alt="question image" loading="lazy"/></a></div>`;
   };
-  document.getElementById('fbRecentBody').innerHTML = rows.length
-    ? `<table class="recent feedback-recent"><thead><tr><th>Time</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th style="min-width:220px">Student Question</th><th>Image</th><th style="min-width:240px">Zero Response</th></tr></thead><tbody>${rows.map(r => {
-        const p = pMap[r.user_id];
-        const q = qMap[r.record_id] || {};
-        const qText = q.question ? `<div title="${esc(q.question)}" style="max-width:260px;color:var(--text-300);font-size:12.5px;line-height:1.4">${esc(truncate(q.question, 180))}</div>` : '<span style="color:var(--text-500)">—</span>';
-        const aText = q.ai_response ? `<div title="${esc(q.ai_response)}" style="max-width:280px;color:var(--text-300);font-size:12.5px;line-height:1.4">${esc(truncate(q.ai_response, 220))}</div>` : '<span style="color:var(--text-500)">—</span>';
-        return `<tr style="vertical-align:top"><td class="mono">${fmtTime(r.created_at)}</td><td>${esc(p?.full_name||p?.email||(r.user_id||'').slice(0,8)||'—')}</td><td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍':'👎'}</span></td><td>${esc(FB_ERR_LABELS[r.error_type]||r.error_type||'—')}</td><td>${esc(r.topic||'—')}</td><td>${qText}</td><td>${renderImageCell(q.image)}</td><td>${aText}</td></tr>`;
-      }).join('')}</tbody></table>`
+  const renderExpandable = (full, kind) => {
+    if (!full) return `<div class="fb-empty">— no ${kind} captured —</div>`;
+    const safe = esc(full);
+    if (full.length <= PREVIEW_CHARS) return `<div class="fb-text">${safe}</div>`;
+    const preview = esc(full.slice(0, PREVIEW_CHARS)) + '…';
+    return `<div class="fb-text" data-full="${safe}" data-preview="${preview}" data-state="collapsed">${preview}</div>`
+      + `<button type="button" class="fb-toggle" data-kind="${kind}" aria-expanded="false">Show full ${kind}</button>`;
+  };
+
+  const cards = rows.map(r => {
+    const p = pMap[r.user_id];
+    const q = qMap[r.record_id] || {};
+    const who = esc(p?.full_name || p?.email || (r.user_id||'').slice(0, 8) || 'unknown');
+    const fbChip = r.feedback_type === 'helpful'
+      ? `<span class="chip green">👍 Helpful</span>`
+      : `<span class="chip red">👎 Incorrect</span>`;
+    return `<article class="fb-card">
+      <header class="fb-card-head">
+        <span class="mono fb-time">${fmtTime(r.created_at)}</span>
+        <span class="fb-user">${who}</span>
+        ${fbChip}
+        <span class="chip">${esc(FB_ERR_LABELS[r.error_type] || r.error_type || '—')}</span>
+        <span class="chip blue">${esc(r.topic || '—')}</span>
+      </header>
+      <div class="fb-card-body">
+        <section class="fb-col fb-question">
+          <h4>Student Question</h4>
+          ${renderExpandable(q.question, 'question')}
+          ${renderImage(q.image)}
+        </section>
+        <section class="fb-col fb-response">
+          <h4>Zero Response</h4>
+          ${renderExpandable(q.ai_response, 'response')}
+        </section>
+      </div>
+    </article>`;
+  }).join('');
+
+  const container = document.getElementById('fbRecentBody');
+  container.innerHTML = rows.length
+    ? `<div class="fb-cards">${cards}</div>`
     : '<div style="color:var(--text-500);padding:10px">No feedback yet.</div>';
+
+  // Expand/collapse handlers
+  container.querySelectorAll('.fb-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = btn.previousElementSibling;
+      const expanded = text.dataset.state === 'expanded';
+      // dataset values are stored as plain text (esc() output unescaped by
+      // the browser when read via .dataset). Use textContent so any HTML
+      // inside the original feedback can't execute as markup.
+      text.textContent = expanded ? text.dataset.preview : text.dataset.full;
+      text.dataset.state = expanded ? 'collapsed' : 'expanded';
+      const kind = btn.dataset.kind || 'response';
+      btn.textContent = expanded ? `Show full ${kind}` : `Show less`;
+      btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    });
+  });
 }
 
 // ── AI Alerts ───────────────────────────────────────────────────────────────

@@ -161,20 +161,20 @@
       '.nav-collapse-btn:hover{background:rgba(56,189,248,.16);border-color:rgba(56,189,248,.6);color:#fff}',
       '.nav-collapse-btn svg{width:16px;height:16px;transition:transform .28s ease}',
       'body.sidebar-collapsed .nav-collapse-btn svg{transform:rotate(180deg)}',
-      '@media(min-width:768px){.nav-collapse-btn{display:flex}}',
+      '@media(min-width:1024px){.nav-collapse-btn{display:flex}}',
 
       /* Smooth collapse animation. .sidebar already has a transform transition
          on most pages; we add a matching transition to .main padding so the
          content slides into place when the sidebar is hidden. */
-      '@media(min-width:768px){.main{transition:padding-left .32s cubic-bezier(.5,.1,.25,1),padding-right .32s cubic-bezier(.5,.1,.25,1)}}',
-      '@media(min-width:768px){.sidebar{transition:transform .32s cubic-bezier(.5,.1,.25,1)}}',
+      '@media(min-width:1024px){.main{transition:padding-left .32s cubic-bezier(.5,.1,.25,1),padding-right .32s cubic-bezier(.5,.1,.25,1)}}',
+      '@media(min-width:1024px){.sidebar{transition:transform .32s cubic-bezier(.5,.1,.25,1)}}',
 
       /* Collapsed state: hide the sidebar and let .main fill the viewport,
          capped at 1320px content width and centered. The !important is
          needed to win over the per-page .main padding-left rules. */
-      '@media(min-width:768px){body.sidebar-collapsed .sidebar{transform:translateX(-100%)!important}}',
-      '@media(min-width:768px){body.sidebar-collapsed .main{padding-left:max(18px,(100vw - 1320px)/2)!important;padding-right:max(18px,(100vw - 1320px)/2)!important;max-width:none!important;margin:0!important}}',
-      '@media(min-width:768px){body.sidebar-collapsed .topbar{padding-left:18px!important}}'
+      '@media(min-width:1024px){body.sidebar-collapsed .sidebar{transform:translateX(-100%)!important}}',
+      '@media(min-width:1024px){body.sidebar-collapsed .main{padding-left:max(18px,(100vw - 1320px)/2)!important;padding-right:max(18px,(100vw - 1320px)/2)!important;max-width:none!important;margin:0!important}}',
+      '@media(min-width:1024px){body.sidebar-collapsed .topbar{padding-left:18px!important}}'
     ].join('');
 
     var st = document.createElement('style');
