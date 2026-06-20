@@ -139,9 +139,91 @@
     }
   }
 
+  // ── Global theme + collapsible sidebar ────────────────────────────────────
+  // Runs on every page that includes nav.js (all 13). Handles:
+  //   1. Dark site background as a safety net. Most pages already set bg on
+  //      <body>, but a stray white html element shows through on tall layouts.
+  //      Setting it via JS also covers the three frozen pages where we can't
+  //      edit CSS directly.
+  //   2. Collapse toggle. The button lives top-left, in a single fixed
+  //      position so it stays visible whether the sidebar is open or hidden.
+  //      State persists in localStorage and applies before paint to avoid
+  //      a flash of the wrong layout.
+  var STORAGE_KEY = 'siteSidebarCollapsed';
+
+  function injectGlobalStyles() {
+    if (document.getElementById('nav-js-globals')) return;
+    var css = [
+      'html{background:#050a14}',
+
+      /* Toggle button — desktop only. Mobile keeps the existing hamburger. */
+      '.nav-collapse-btn{position:fixed;top:calc(var(--nav-h, 56px) + env(safe-area-inset-top, 0) + 10px);left:10px;z-index:80;width:34px;height:34px;display:none;align-items:center;justify-content:center;border-radius:9px;background:rgba(10,18,36,.85);border:1px solid rgba(56,189,248,.32);color:#cbd5e1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .15s,border-color .15s,color .15s}',
+      '.nav-collapse-btn:hover{background:rgba(56,189,248,.16);border-color:rgba(56,189,248,.6);color:#fff}',
+      '.nav-collapse-btn svg{width:16px;height:16px;transition:transform .28s ease}',
+      'body.sidebar-collapsed .nav-collapse-btn svg{transform:rotate(180deg)}',
+      '@media(min-width:768px){.nav-collapse-btn{display:flex}}',
+
+      /* Smooth collapse animation. .sidebar already has a transform transition
+         on most pages; we add a matching transition to .main padding so the
+         content slides into place when the sidebar is hidden. */
+      '@media(min-width:768px){.main{transition:padding-left .32s cubic-bezier(.5,.1,.25,1),padding-right .32s cubic-bezier(.5,.1,.25,1)}}',
+      '@media(min-width:768px){.sidebar{transition:transform .32s cubic-bezier(.5,.1,.25,1)}}',
+
+      /* Collapsed state: hide the sidebar and let .main fill the viewport,
+         capped at 1320px content width and centered. The !important is
+         needed to win over the per-page .main padding-left rules. */
+      '@media(min-width:768px){body.sidebar-collapsed .sidebar{transform:translateX(-100%)!important}}',
+      '@media(min-width:768px){body.sidebar-collapsed .main{padding-left:max(18px,(100vw - 1320px)/2)!important;padding-right:max(18px,(100vw - 1320px)/2)!important;max-width:none!important;margin:0!important}}',
+      '@media(min-width:768px){body.sidebar-collapsed .topbar{padding-left:18px!important}}'
+    ].join('');
+
+    var st = document.createElement('style');
+    st.id = 'nav-js-globals';
+    st.textContent = css;
+    // Insert as the LAST stylesheet in <head> so it overrides per-page rules
+    // for the collapsed state. Per-page rules still win for the expanded
+    // state (no body class) because they're more specific.
+    document.head.appendChild(st);
+  }
+
+  function ensureCollapseButton() {
+    if (document.querySelector('.nav-collapse-btn')) return;
+    if (!document.querySelector('.sidebar')) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'nav-collapse-btn';
+    btn.setAttribute('aria-label', 'Toggle sidebar');
+    btn.title = 'Toggle sidebar';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+    btn.addEventListener('click', function () {
+      var collapsed = document.body.classList.toggle('sidebar-collapsed');
+      try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch (e) {}
+    });
+    document.body.appendChild(btn);
+  }
+
+  // Apply the stored collapse class as early as possible — before
+  // DOMContentLoaded fires — so the layout doesn't flash from expanded to
+  // collapsed on page load. Called immediately at script-parse time.
+  (function applyCollapseEarly() {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === '1') {
+        var apply = function () { document.body && document.body.classList.add('sidebar-collapsed'); };
+        if (document.body) apply();
+        else document.addEventListener('DOMContentLoaded', apply, { once: true });
+      }
+    } catch (e) {}
+  })();
+
+  function initGlobals() {
+    injectGlobalStyles();
+    ensureCollapseButton();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () { initGlobals(); init(); });
   } else {
+    initGlobals();
     init();
   }
 })();
