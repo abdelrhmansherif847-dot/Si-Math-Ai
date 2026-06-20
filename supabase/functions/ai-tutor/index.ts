@@ -489,10 +489,16 @@ function detectorClassify(f: DetectorFeatures): { tier: DifficultyTier; reasons:
 function detectorGptTier(s: string | null | undefined): DifficultyTier | null {
   if (!s) return null;
   const lower = String(s).toLowerCase();
+  // Expert checks first — must precede 'hard' / 'صعب' because 'صعب جدا' contains 'صعب'.
   if (lower.includes('expert')) return 'expert';
+  if (lower.includes('خبير'))   return 'expert';
+  if (lower.includes('صعب جدا') || lower.includes('صعب جداً')) return 'expert';
   if (lower.includes('hard'))   return 'hard';
+  if (lower.includes('صعب'))   return 'hard';
   if (lower.includes('easy'))   return 'easy';
+  if (lower.includes('سهل'))   return 'easy';
   if (lower.includes('medium')) return 'medium';
+  if (lower.includes('متوسط'))  return 'medium';
   return null;
 }
 
