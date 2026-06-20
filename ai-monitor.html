@@ -648,6 +648,8 @@ async function loadAll() {
       loadRecentFailures(since),
       loadFeedback(),
       loadAlerts(since),
+      loadConfidenceDist(since),
+      loadShadowStatus(),
     ]);
   } catch(e) {
     console.error('[ai-monitor] loadAll error', e);
@@ -1144,6 +1146,56 @@ async function loadAlerts(since) {
 
   const colorMap = { red: { bg:'rgba(239,79,95,.10)', bd:'rgba(239,79,95,.32)', fg:'#ef4f5f', ico:'🔴' }, amber: { bg:'rgba(245,185,66,.10)', bd:'rgba(245,185,66,.32)', fg:'#f5b942', ico:'🟡' }, green: { bg:'rgba(74,222,128,.08)', bd:'rgba(74,222,128,.24)', fg:'#4ade80', ico:'🟢' } };
   document.getElementById('aiAlerts').innerHTML = alerts.map(a => { const c = colorMap[a.kind]; return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};font-size:13.5px"><span>${c.ico}</span><span>${esc(a.msg)}</span></div>`; }).join('');
+}
+
+// B4: Detector Confidence Distribution
+async function loadConfidenceDist(since) {
+  try {
+    let q = sb.from('question_records').select('verification_confidence').not('verification_confidence','is',null);
+    if (since) q = q.gte('created_at', since);
+    const { data } = await q.limit(20000);
+    const rows = data || [];
+    const buckets = [0,0,0,0]; // 0-0.5, 0.5-0.7, 0.7-0.85, 0.85-1
+    rows.forEach(r => {
+      const c = Number(r.verification_confidence);
+      if (isNaN(c)) return;
+      if (c < 0.5) buckets[0]++;
+      else if (c < 0.7) buckets[1]++;
+      else if (c < 0.85) buckets[2]++;
+      else buckets[3]++;
+    });
+    const total = buckets.reduce((a,b)=>a+b,0) || 1;
+    const cont = document.getElementById('dConfBars');
+    if (!cont) return;
+    const barRows = cont.querySelectorAll('.bar-row');
+    buckets.forEach((v, i) => {
+      const pct = v/total*100;
+      const r = barRows[i]; if (!r) return;
+      r.querySelector('.bar-fill').style.width = pct.toFixed(1) + '%';
+      r.querySelector('.bar-pct').textContent = pct.toFixed(1) + '%';
+      r.querySelector('.bar-count').textContent = v;
+    });
+  } catch(e) { console.error('loadConfidenceDist', e); }
+}
+
+// B5: Shadow Mode Status badge
+async function loadShadowStatus() {
+  const el = document.getElementById('sShadowStatus');
+  if (!el) return;
+  try {
+    const { data } = await sb.from('system_settings').select('key, value').eq('key', 'difficulty_detector_v2_enabled').maybeSingle();
+    const v = data?.value;
+    if (!data || v === 'false' || v === false) {
+      el.className = 'chip amber';
+      el.textContent = '🌓 Shadow disabled';
+    } else {
+      el.className = 'chip green';
+      el.textContent = '✅ Shadow enabled';
+    }
+  } catch(e) {
+    el.className = 'chip gray';
+    el.textContent = '—';
+  }
 }
 
 init();
