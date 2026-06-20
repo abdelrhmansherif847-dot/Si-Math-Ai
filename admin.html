@@ -266,7 +266,10 @@ select.search-input{cursor:pointer}
     <div class="eyebrow"><span class="live-dot"></span> Owner Panel</div>
     <h1>Admin Dashboard</h1>
     <p>Manage users, subscriptions, payments, and system settings.</p>
+    <div style="margin-top:10px"><span class="chip blue" id="roleChip">—</span></div>
   </section>
+
+  <div id="roleMigrationBanner" style="display:none;margin-bottom:18px;padding:12px 16px;border-radius:14px;background:rgba(245,185,66,.10);border:1px solid var(--amber-border);color:var(--amber);font-size:13px">⚠️ Pending role migration — <code>profiles.role</code> column not detected. Role Management is disabled until the migration runs.</div>
 
   <div class="stats-grid">
     <div class="stat-card"><div class="lbl">Total Users</div><div class="val" id="statUsers">—</div><div class="sub">registered accounts</div></div>
@@ -275,13 +278,184 @@ select.search-input{cursor:pointer}
     <div class="stat-card red"><div class="lbl">Founder Slots Left</div><div class="val" id="statFounder">—</div><div class="sub" id="statFounderSub">of — total</div></div>
   </div>
 
+  <!-- ============== OVERVIEW SECTIONS ============== -->
+
+  <!-- (7) ADMIN ALERTS -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico red">🚨</div>
+      <div><div class="card-title">Admin Alerts</div><div class="card-sub">Real-time platform health signals</div></div>
+    </div>
+    <div id="adminAlerts"><div class="empty"><p>Loading…</p></div></div>
+  </section>
+
+  <!-- (1) STUDENT ACTIVITY -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico">📈</div>
+      <div><div class="card-title">Student Activity</div><div class="card-sub">Engagement signals from question_records</div></div>
+    </div>
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card"><div class="lbl">Active Today</div><div class="val" id="actActiveToday">—</div><div class="sub">unique users</div></div>
+      <div class="stat-card"><div class="lbl">Active 7d</div><div class="val" id="actActive7d">—</div><div class="sub">unique users</div></div>
+      <div class="stat-card amber"><div class="lbl">Questions Today</div><div class="val" id="actQToday">—</div><div class="sub">total submitted</div></div>
+      <div class="stat-card"><div class="lbl">Sessions Today</div><div class="val" id="actSessToday">—</div><div class="sub">chat sessions</div></div>
+    </div>
+    <div class="stats-grid" style="grid-template-columns:1fr">
+      <div class="stat-card"><div class="lbl">Avg Q / Active User Today</div><div class="val" id="actAvgQ">—</div><div class="sub">questions per active user</div></div>
+    </div>
+    <div style="margin-top:18px">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">30-day question volume</div>
+      <div id="actSpark" style="display:flex;gap:3px;align-items:flex-end;height:60px"></div>
+    </div>
+  </section>
+
+  <!-- (2) REVENUE & PAYMENTS -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico amber">💵</div>
+      <div><div class="card-title">Revenue &amp; Payments</div><div class="card-sub">Realized and pending revenue from payments table</div></div>
+    </div>
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card green"><div class="lbl">Total Revenue</div><div class="val" id="revTotal">—</div><div class="sub">all-time approved</div></div>
+      <div class="stat-card"><div class="lbl">This Month</div><div class="val" id="revMonth">—</div><div class="sub">approved this month</div></div>
+      <div class="stat-card amber"><div class="lbl">Pending</div><div class="val" id="revPending">—</div><div class="sub">awaiting approval</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card green"><div class="lbl">Approved Count</div><div class="val" id="revApproved">—</div><div class="sub">payments</div></div>
+      <div class="stat-card red"><div class="lbl">Rejected Count</div><div class="val" id="revRejected">—</div><div class="sub">payments</div></div>
+      <div class="stat-card"><div class="lbl">Avg Payment</div><div class="val" id="revAvg">—</div><div class="sub">approved EGP</div></div>
+    </div>
+    <div style="margin-top:18px">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Recent Payments (last 10)</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>User</th><th>Amount</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody id="recentPaymentsBody"><tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- (3) PLANS & CONVERSION -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico">📊</div>
+      <div><div class="card-title">Plans &amp; Conversion</div><div class="card-sub">Free → paid distribution</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="lbl">Free Users</div><div class="val" id="planFree">—</div><div class="sub">on FREE plan</div></div>
+      <div class="stat-card green"><div class="lbl">Paid Users</div><div class="val" id="planPaid">—</div><div class="sub">paying subscribers</div></div>
+      <div class="stat-card amber"><div class="lbl">Conversion</div><div class="val" id="planConv">—</div><div class="sub">paid / total</div></div>
+    </div>
+    <div style="margin-top:18px">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Plan mix</div>
+      <div id="planMix" style="display:flex;height:24px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.04)"></div>
+      <div id="planMixLegend" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--text-400)"></div>
+    </div>
+  </section>
+
+  <!-- (4) SUBSCRIPTION GROWTH -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico green">📈</div>
+      <div><div class="card-title">Subscription Growth</div><div class="card-sub">New subscribers and churn</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="lbl">New This Month</div><div class="val" id="growNewMonth">—</div><div class="sub">paid signups</div></div>
+      <div class="stat-card"><div class="lbl">New 30d</div><div class="val" id="growNew30d">—</div><div class="sub">rolling window</div></div>
+      <div class="stat-card amber"><div class="lbl">MoM Growth</div><div class="val" id="growMonthly">—</div><div class="sub">vs prior month</div></div>
+      <div class="stat-card red"><div class="lbl">Churned</div><div class="val" id="growChurned">—</div><div class="sub">expired paid plans</div></div>
+    </div>
+  </section>
+
+  <!-- (5) WEAKNESS ANALYZER -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico">🧠</div>
+      <div><div class="card-title">Weakness Analyzer</div><div class="card-sub">Aggregated student weakness signals</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="lbl">Reports</div><div class="val" id="wReports">—</div><div class="sub">weakness_reports</div></div>
+      <div class="stat-card"><div class="lbl">Plans</div><div class="val" id="wPlans">—</div><div class="sub">focus_plans</div></div>
+      <div class="stat-card amber"><div class="lbl">Signals</div><div class="val" id="wSignals">—</div><div class="sub">weakness_signals</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-top:18px">
+      <div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Top 10 Topics</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Topic</th><th>Signals</th></tr></thead>
+          <tbody id="wTopTopicsBody"><tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-500)">Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Top 10 Subtopics</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Subtopic</th><th>Signals</th></tr></thead>
+          <tbody id="wTopSubtopicsBody"><tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-500)">Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Top 10 Mistake Types</div>
+        <div id="wTopMistakesBody"><div class="empty"><p>Loading…</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- (6) PLATFORM HEALTH -->
+  <section class="card" style="margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico amber">⚙️</div>
+      <div><div class="card-title">Platform Health</div><div class="card-sub">Edge function performance and incidents</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card red"><div class="lbl">Errors (24h)</div><div class="val" id="phErrs">—</div><div class="sub">edge logs not wired</div></div>
+      <div class="stat-card"><div class="lbl">Failed Verifications</div><div class="val" id="phFailed">—</div><div class="sub">edge logs not wired</div></div>
+      <div class="stat-card"><div class="lbl">Avg Latency</div><div class="val" id="phAvgRt">—</div><div class="sub">L3 ms</div></div>
+      <div class="stat-card amber"><div class="lbl">P95 Latency</div><div class="val" id="phP95Rt">—</div><div class="sub">L3 ms</div></div>
+    </div>
+    <div style="margin-top:18px">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Recent Incidents</div>
+      <div class="empty"><p>Edge logs API not wired</p></div>
+    </div>
+  </section>
+
+  <!-- (8) ROLE MANAGEMENT (owner only) -->
+  <section class="card" id="roleMgmtPanel" style="display:none;margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico red">🛡️</div>
+      <div><div class="card-title">Role Management</div><div class="card-sub">Owner-only — grant or revoke admin roles via change_user_role RPC</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card red"><div class="lbl">Owners</div><div class="val" id="roleOwners">—</div><div class="sub">role=owner</div></div>
+      <div class="stat-card amber"><div class="lbl">Super Admins</div><div class="val" id="roleSuperAdmins">—</div><div class="sub">role=super_admin</div></div>
+      <div class="stat-card"><div class="lbl">Admins</div><div class="val" id="roleAdmins">—</div><div class="sub">role=admin</div></div>
+      <div class="stat-card"><div class="lbl">Users</div><div class="val" id="roleUsers">—</div><div class="sub">role=user</div></div>
+    </div>
+    <div class="search-row" style="margin-top:18px">
+      <input type="text" class="search-input" id="roleSearchInput" placeholder="Search by email (press Enter)…"/>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Actions</th></tr></thead>
+        <tbody id="roleMgmtBody"><tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-500)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div style="margin-top:24px">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Role Audit Log (last 20)</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>When</th><th>Actor</th><th>Target</th><th>Change</th><th>Reason</th></tr></thead>
+        <tbody id="roleAuditBody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-500)">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- ============== END OVERVIEW SECTIONS ============== -->
+
   <div class="tabs">
     <button class="tab active" onclick="switchTab('payments')">Payment Requests</button>
     <button class="tab" onclick="switchTab('pending')">Legacy Queue</button>
     <button class="tab" onclick="switchTab('users')">Users</button>
     <button class="tab" onclick="switchTab('founders')">Founders</button>
     <button class="tab" onclick="switchTab('settings')">System Settings</button>
-    <button class="tab" onclick="switchTab('feedback')">Feedback</button>
   </div>
 
   <!-- TAB: PAYMENT REQUESTS (new manual payment flow) -->
@@ -393,34 +567,6 @@ select.search-input{cursor:pointer}
     </div>
   </div>
 
-  <!-- TAB: FEEDBACK -->
-  <div id="tab-feedback" style="display:none">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
-      <div class="stat-card green"><div class="lbl">👍 Helpful</div><div class="val" id="fbStatHelpful">—</div><div class="sub">total positive</div></div>
-      <div class="stat-card red"><div class="lbl">👎 Incorrect Reports</div><div class="val" id="fbStatIncorrect">—</div><div class="sub">error reports</div></div>
-    </div>
-    <div class="card" style="margin-bottom:18px">
-      <div class="card-head">
-        <div class="card-ico red">🔢</div>
-        <div><div class="card-title">Most Common Error Types</div><div class="card-sub">Breakdown of incorrect answer reports by error category</div></div>
-      </div>
-      <div id="fbErrorTypes"><div class="empty"><div class="ico">📊</div><p>Loading…</p></div></div>
-    </div>
-    <div class="card" style="margin-bottom:18px">
-      <div class="card-head">
-        <div class="card-ico amber">📚</div>
-        <div><div class="card-title">Most Reported Topics</div><div class="card-sub">Topics with the most incorrect answer reports</div></div>
-      </div>
-      <div id="fbTopics"><div class="empty"><div class="ico">📊</div><p>Loading…</p></div></div>
-    </div>
-    <div class="card">
-      <div class="card-head">
-        <div class="card-ico">📋</div>
-        <div><div class="card-title">Recent Feedback</div><div class="card-sub">Latest 50 feedback entries</div></div>
-      </div>
-      <div id="fbRecent"><div class="empty"><div class="ico">📋</div><p>Loading…</p></div></div>
-    </div>
-  </div>
 
 </main>
 
@@ -488,15 +634,32 @@ const EDGE_URL = `${SUPA_URL}/functions/v1/admin-actions`;
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let currentUser = null;
+let currentUserRole = 'user';
 let allUsers = [];
+let _roleColumnExists = true;
 
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) { window.location.href = 'index.html'; return; }
 
-  const { data: profile } = await sb.from('profiles').select('is_admin, full_name, email').eq('id', user.id).single();
+  // Try to read role too — fall back gracefully if column missing
+  let profile = null;
+  try {
+    const r = await sb.from('profiles').select('is_admin, full_name, email, role').eq('id', user.id).single();
+    profile = r.data;
+    if (r.error && /role/i.test(r.error.message || '')) { _roleColumnExists = false; }
+  } catch(e) { _roleColumnExists = false; }
+  if (!profile) {
+    const r2 = await sb.from('profiles').select('is_admin, full_name, email').eq('id', user.id).single();
+    profile = r2.data;
+    _roleColumnExists = false;
+  }
 
-  if (!profile || !profile.is_admin) {
+  const role = (profile && profile.role) || (profile && profile.is_admin ? 'admin' : 'user');
+  currentUserRole = role;
+
+  const isAdminish = profile && (profile.is_admin || ['admin','super_admin','owner'].includes(role));
+  if (!profile || !isAdminish) {
     document.getElementById('pageLoader').style.display = 'none';
     const ad = document.getElementById('accessDenied');
     ad.style.display = 'flex';
@@ -510,10 +673,27 @@ async function init() {
   av.textContent = initials;
   av.style.visibility = 'visible';
 
+  // Role chip
+  const chip = document.getElementById('roleChip');
+  if (chip) {
+    chip.textContent = role;
+    chip.className = 'chip ' + (role === 'owner' ? 'red' : role === 'super_admin' ? 'amber' : role === 'admin' ? 'blue' : 'gray');
+  }
+
+  if (role === 'owner') {
+    const panel = document.getElementById('roleMgmtPanel');
+    if (panel) panel.style.display = '';
+  }
+  if (!_roleColumnExists) {
+    const b = document.getElementById('roleMigrationBanner');
+    if (b) b.style.display = 'block';
+  }
+
   document.getElementById('pageLoader').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
-  loadStats();
+  await loadStats();
   loadPaymentRequests();
+  loadDashboardSections();
 }
 
 // Sidebar
@@ -523,7 +703,7 @@ document.getElementById('hambBtn').addEventListener('click', () => { sidebar.cla
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 
 // Tabs
-const TABS = ['payments','pending','users','founders','settings','feedback'];
+const TABS = ['payments','pending','users','founders','settings'];
 function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
@@ -532,7 +712,6 @@ function switchTab(name) {
   if (name === 'users') { if (allUsers.length === 0) loadUsers(); loadSuspiciousAccounts(); }
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
-  if (name === 'feedback') loadFeedback();
 }
 
 // Toast
@@ -916,114 +1095,7 @@ async function saveSetting(key) {
   if (key === 'founder_slots_remaining') document.getElementById('statFounder').textContent = val;
 }
 
-// Feedback tab
-const FB_ERR_LABELS = { wrong_answer:'Wrong Final Answer', wrong_explanation:'Wrong Explanation', wrong_steps:'Wrong Math Steps', formatting_issue:'Formatting Issue', other:'Other' };
-
-async function loadFeedback() {
-  const [helpfulRes, incorrectRes, rowsRes] = await Promise.all([
-    sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'helpful'),
-    sb.from('response_feedback').select('id', { count: 'exact', head: true }).eq('feedback_type', 'incorrect'),
-    sb.from('response_feedback')
-      .select('id, created_at, feedback_type, error_type, topic, subtopic, user_id, session_id, record_id')
-      .order('created_at', { ascending: false })
-      .limit(50)
-  ]);
-  document.getElementById('fbStatHelpful').textContent   = helpfulRes.count   ?? '—';
-  document.getElementById('fbStatIncorrect').textContent = incorrectRes.count ?? '—';
-
-  // Fetch question_records and profiles separately to avoid broken FK joins
-  const rawRows = rowsRes.data || [];
-  const recordIds = [...new Set(rawRows.map(r => r.record_id).filter(Boolean))];
-  const userIds   = [...new Set(rawRows.map(r => r.user_id).filter(Boolean))];
-  const [qrRes, profileRes] = await Promise.all([
-    recordIds.length ? sb.from('question_records').select('id, question, ai_response, image, created_at').in('id', recordIds) : Promise.resolve({ data: [] }),
-    userIds.length   ? sb.from('profiles').select('id, full_name, email').in('id', userIds)                                   : Promise.resolve({ data: [] })
-  ]);
-  const qrMap      = Object.fromEntries((qrRes.data      || []).map(r => [r.id, r]));
-  const profileMap = Object.fromEntries((profileRes.data || []).map(r => [r.id, r]));
-  const rows = rawRows.map(r => ({ ...r, _qr: qrMap[r.record_id] || null, _profile: profileMap[r.user_id] || null }));
-
-  // Error type breakdown
-  const { data: errData } = await sb.from('response_feedback')
-    .select('error_type').eq('feedback_type', 'incorrect').not('error_type', 'is', null);
-  const errCounts = {};
-  (errData || []).forEach(r => { errCounts[r.error_type] = (errCounts[r.error_type] || 0) + 1; });
-  const errEl = document.getElementById('fbErrorTypes');
-  const errSorted = Object.entries(errCounts).sort((a,b) => b[1]-a[1]);
-  errEl.innerHTML = errSorted.length === 0
-    ? '<div class="empty"><p>No incorrect reports yet.</p></div>'
-    : `<div class="tbl-wrap"><table><thead><tr><th>Error Type</th><th>Count</th></tr></thead><tbody>${
-        errSorted.map(([k,v]) => `<tr><td>${esc(FB_ERR_LABELS[k]||k)}</td><td class="bold">${v}</td></tr>`).join('')
-      }</tbody></table></div>`;
-
-  // Most reported topics
-  const { data: topicData } = await sb.from('response_feedback')
-    .select('topic').eq('feedback_type', 'incorrect').not('topic', 'is', null);
-  const topicCounts = {};
-  (topicData || []).forEach(r => { topicCounts[r.topic] = (topicCounts[r.topic] || 0) + 1; });
-  const topicEl = document.getElementById('fbTopics');
-  const topicSorted = Object.entries(topicCounts).sort((a,b) => b[1]-a[1]).slice(0, 20);
-  topicEl.innerHTML = topicSorted.length === 0
-    ? '<div class="empty"><p>No topic data yet.</p></div>'
-    : `<div class="tbl-wrap"><table><thead><tr><th>Topic</th><th>Reports</th></tr></thead><tbody>${
-        topicSorted.map(([k,v]) => `<tr><td>${esc(k)}</td><td class="bold">${v}</td></tr>`).join('')
-      }</tbody></table></div>`;
-
-  // Recent feedback — with expandable full context
-  const recentEl = document.getElementById('fbRecent');
-  if (rows.length === 0) { recentEl.innerHTML = '<div class="empty"><p>No feedback yet.</p></div>'; return; }
-
-  let html = `<div class="tbl-wrap"><table>
-    <thead><tr><th>#</th><th>Date</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th>Detail</th></tr></thead>
-    <tbody>`;
-  rows.forEach((r, idx) => {
-    const qr = r._qr;
-    const profile = r._profile;
-    const rowId = 'fbrow-' + r.id.replace(/-/g,'');
-    html += `<tr>
-      <td class="mono" style="color:var(--text-500)">#${idx+1}</td>
-      <td class="mono">${fmtDate(r.created_at)}</td>
-      <td>${esc(profile?.full_name || profile?.email || r.user_id?.slice(0,8) || '—')}</td>
-      <td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍 Helpful':'👎 Incorrect'}</span></td>
-      <td>${r.error_type ? esc(FB_ERR_LABELS[r.error_type]||r.error_type) : '—'}</td>
-      <td>${esc(r.topic||'—')}</td>
-      <td><button class="btn btn-sm" onclick="toggleFbDetail('${rowId}')">View</button></td>
-    </tr>
-    <tr id="${rowId}" style="display:none">
-      <td colspan="7" style="padding:0">
-        <div class="fb-detail-panel">
-          <div class="fb-detail-row"><span class="fb-detail-lbl">Report ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.id)}</span></div>
-          <div class="fb-detail-row"><span class="fb-detail-lbl">User ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.user_id||'—')}</span></div>
-          <div class="fb-detail-row"><span class="fb-detail-lbl">Session ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.session_id||'—')}</span></div>
-          <div class="fb-detail-row"><span class="fb-detail-lbl">Record ID</span><span class="mono" style="font-size:11px;color:var(--text-500)">${esc(r.record_id||'—')}</span></div>
-          ${r.error_type ? `<div class="fb-detail-row"><span class="fb-detail-lbl">Error Type</span><span style="color:#ef4f5f;font-weight:700">${esc(FB_ERR_LABELS[r.error_type]||r.error_type)}</span></div>` : ''}
-          <div class="fb-detail-divider"></div>
-          ${qr ? `
-          <div class="fb-detail-row"><span class="fb-detail-lbl">Question</span></div>
-          <div class="fb-detail-block">${esc(qr.question||'—')}</div>
-          ${qr.image ? `
-          <div class="fb-detail-row" style="margin-top:10px"><span class="fb-detail-lbl">Attached Image</span></div>
-          <div style="padding:0 16px 12px"><img src="${esc(qr.image)}" style="max-width:320px;max-height:220px;border-radius:10px;border:1px solid var(--border-mid);display:block" alt="question image"/></div>
-          ` : ''}
-          <div class="fb-detail-row" style="margin-top:4px"><span class="fb-detail-lbl">Zero Response</span></div>
-          <div class="fb-detail-block" style="max-height:260px;overflow-y:auto">${esc(qr.ai_response||'—')}</div>
-          ` : '<div style="padding:12px 16px;color:var(--text-500);font-size:13px">No linked question record found.</div>'}
-        </div>
-      </td>
-    </tr>`;
-  });
-  html += '</tbody></table></div>';
-  recentEl.innerHTML = html;
-}
-
-function toggleFbDetail(rowId) {
-  const row = document.getElementById(rowId);
-  if (!row) return;
-  const isHidden = row.style.display === 'none';
-  row.style.display = isHidden ? '' : 'none';
-  const btn = row.previousElementSibling?.querySelector('button');
-  if (btn) btn.textContent = isHidden ? 'Hide' : 'View';
-}
+// Feedback tab — REMOVED, migrated to ai-monitor.html
 
 // ── Payment Requests (Manual Payment V1) ──────────────────────────────────────
 async function loadPaymentRequests() {
@@ -1145,6 +1217,334 @@ async function rejectPaymentRequest(requestId) {
 function esc(str) { return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(iso) { if (!iso) return '—'; return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
 function planChip(code) { return { FREE:'gray', BASIC:'blue', STANDARD:'blue', PREMIUM:'green', FOUNDER:'amber' }[code] || 'gray'; }
+
+// ── Dashboard Overview loaders ──────────────────────────────────────────────
+function _isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
+function _todayISO() { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); }
+function _monthStartISO() { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.toISOString(); }
+function _prevMonthStartISO() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); d.setHours(0,0,0,0); return d.toISOString(); }
+function _nowISO() { return new Date().toISOString(); }
+function fmtEGP(n) { if (n === null || n === undefined) return '—'; return Number(n).toLocaleString() + ' EGP'; }
+
+async function loadDashboardSections() {
+  await Promise.all([
+    loadStudentActivity(),
+    loadRevenuePayments(),
+    loadPlansConversion(),
+    loadSubscriptionGrowth(),
+    loadWeaknessOverview(),
+    loadPlatformHealth(),
+    loadAdminAlerts(),
+    (currentUserRole === 'owner' && _roleColumnExists) ? loadRoleManagement() : Promise.resolve(),
+  ]);
+}
+
+// (1) Student Activity
+async function loadStudentActivity() {
+  try {
+    const todayISO = _todayISO();
+    const since7 = _isoDaysAgo(7);
+    const since30 = _isoDaysAgo(30);
+
+    const [qTodayRes, q7Res, q30Res, sessTodayRes] = await Promise.all([
+      sb.from('question_records').select('user_id, created_at').gte('created_at', todayISO).limit(5000),
+      sb.from('question_records').select('user_id').gte('created_at', since7).limit(10000),
+      sb.from('question_records').select('created_at').gte('created_at', since30).limit(20000),
+      sb.from('chat_sessions').select('id', { count:'exact', head:true }).gte('created_at', todayISO),
+    ]);
+    const qToday = qTodayRes.data || [];
+    const activeToday = new Set(qToday.map(r => r.user_id)).size;
+    const active7d = new Set((q7Res.data || []).map(r => r.user_id)).size;
+    document.getElementById('actActiveToday').textContent = activeToday;
+    document.getElementById('actActive7d').textContent = active7d;
+    document.getElementById('actQToday').textContent = qToday.length;
+    document.getElementById('actSessToday').textContent = sessTodayRes.count ?? '—';
+    document.getElementById('actAvgQ').textContent = activeToday > 0 ? (qToday.length / activeToday).toFixed(1) : '—';
+
+    // 30-day sparkline
+    const buckets = new Array(30).fill(0);
+    const start = new Date(); start.setDate(start.getDate()-29); start.setHours(0,0,0,0);
+    (q30Res.data || []).forEach(r => {
+      const d = new Date(r.created_at);
+      const idx = Math.floor((d - start) / 86400000);
+      if (idx >= 0 && idx < 30) buckets[idx]++;
+    });
+    const max = Math.max(1, ...buckets);
+    const spark = document.getElementById('actSpark');
+    spark.innerHTML = buckets.map(v => {
+      const h = Math.max(2, Math.round(v / max * 56));
+      return `<div title="${v}" style="flex:1;height:${h}px;background:var(--cyan);opacity:.7;border-radius:2px"></div>`;
+    }).join('');
+  } catch(e) { console.error('loadStudentActivity', e); }
+}
+
+// (2) Revenue & Payments
+async function loadRevenuePayments() {
+  try {
+    const monthStart = _monthStartISO();
+    const [allApproved, monthApproved, pendingRes, rejectedRes, recentRes] = await Promise.all([
+      sb.from('payments').select('amount_egp').eq('status', 'APPROVED').limit(10000),
+      sb.from('payments').select('amount_egp').eq('status', 'APPROVED').gte('created_at', monthStart).limit(10000),
+      sb.from('payments').select('id', { count:'exact', head:true }).eq('status', 'PENDING'),
+      sb.from('payments').select('id', { count:'exact', head:true }).eq('status', 'REJECTED'),
+      sb.from('payments').select('id, amount_egp, payment_type, status, created_at, user_id, profiles(full_name, email)').order('created_at', { ascending:false }).limit(10),
+    ]);
+    const sum = (arr) => (arr || []).reduce((a,r) => a + Number(r.amount_egp || 0), 0);
+    const total = sum(allApproved.data);
+    const month = sum(monthApproved.data);
+    const count = (allApproved.data || []).length;
+    document.getElementById('revTotal').textContent = fmtEGP(total);
+    document.getElementById('revMonth').textContent = fmtEGP(month);
+    document.getElementById('revPending').textContent = pendingRes.count ?? 0;
+    document.getElementById('revApproved').textContent = count;
+    document.getElementById('revRejected').textContent = rejectedRes.count ?? 0;
+    document.getElementById('revAvg').textContent = count > 0 ? fmtEGP((total / count).toFixed(0)) : '—';
+
+    const tbody = document.getElementById('recentPaymentsBody');
+    const rows = recentRes.data || [];
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-500)">No payments yet.</td></tr>'; return; }
+    const stChip = (s) => s === 'APPROVED' ? 'green' : s === 'PENDING' ? 'amber' : 'red';
+    tbody.innerHTML = rows.map(p => `<tr>
+      <td class="mono">${fmtDate(p.created_at)}</td>
+      <td><div class="bold">${esc(p.profiles?.full_name || '—')}</div><div style="font-size:11px;color:var(--text-500)">${esc(p.profiles?.email || p.user_id)}</div></td>
+      <td class="bold">${p.amount_egp ? fmtEGP(p.amount_egp) : '—'}</td>
+      <td>${esc(p.payment_type || '—')}</td>
+      <td><span class="chip ${stChip(p.status)}">${esc(p.status)}</span></td>
+    </tr>`).join('');
+  } catch(e) { console.error('loadRevenuePayments', e); }
+}
+
+// (3) Plans & Conversion
+async function loadPlansConversion() {
+  try {
+    const { data } = await sb.from('profiles').select('plan_code').limit(50000);
+    const rows = data || [];
+    const counts = {};
+    rows.forEach(r => { const c = r.plan_code || 'FREE'; counts[c] = (counts[c]||0) + 1; });
+    const total = rows.length;
+    const free = counts.FREE || 0;
+    const paid = total - free;
+    document.getElementById('planFree').textContent = free;
+    document.getElementById('planPaid').textContent = paid;
+    document.getElementById('planConv').textContent = total > 0 ? ((paid / total) * 100).toFixed(1) + '%' : '—';
+
+    const order = ['FREE','BASIC','STANDARD','PREMIUM','FOUNDER'];
+    const colors = { FREE:'#536b8c', BASIC:'#38bdf8', STANDARD:'#0ea5e9', PREMIUM:'#22c55e', FOUNDER:'#f5b942' };
+    const mix = document.getElementById('planMix');
+    const legend = document.getElementById('planMixLegend');
+    mix.innerHTML = '';
+    legend.innerHTML = '';
+    order.forEach(p => {
+      const c = counts[p] || 0;
+      const pct = total > 0 ? (c / total * 100) : 0;
+      if (pct > 0) mix.innerHTML += `<div title="${p}: ${c}" style="width:${pct}%;background:${colors[p]}"></div>`;
+      legend.innerHTML += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[p]};margin-right:6px;vertical-align:middle"></span>${p}: ${c} (${pct.toFixed(1)}%)</span>`;
+    });
+  } catch(e) { console.error('loadPlansConversion', e); }
+}
+
+// (4) Subscription Growth
+async function loadSubscriptionGrowth() {
+  try {
+    const monthStart = _monthStartISO();
+    const prevMonthStart = _prevMonthStartISO();
+    const since30 = _isoDaysAgo(30);
+    const now = _nowISO();
+    const [newMonth, new30, prevMonth, churnedRes] = await Promise.all([
+      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').gte('created_at', monthStart),
+      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').gte('created_at', since30),
+      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').gte('created_at', prevMonthStart).lt('created_at', monthStart),
+      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').lt('subscription_expires_at', now),
+    ]);
+    const cm = newMonth.count ?? 0;
+    const pm = prevMonth.count ?? 0;
+    document.getElementById('growNewMonth').textContent = cm;
+    document.getElementById('growNew30d').textContent = new30.count ?? 0;
+    document.getElementById('growMonthly').textContent = pm > 0 ? (((cm - pm) / pm) * 100).toFixed(1) + '%' : '—';
+    document.getElementById('growChurned').textContent = churnedRes.count ?? 0;
+  } catch(e) { console.error('loadSubscriptionGrowth', e); }
+}
+
+// (5) Weakness Analyzer overview
+async function loadWeaknessOverview() {
+  try {
+    const [repRes, planRes, sigRes, sigData] = await Promise.all([
+      sb.from('weakness_reports').select('id', { count:'exact', head:true }),
+      sb.from('focus_plans').select('id', { count:'exact', head:true }),
+      sb.from('weakness_signals').select('id', { count:'exact', head:true }),
+      sb.from('weakness_signals').select('topic, subtopic').limit(20000),
+    ]);
+    document.getElementById('wReports').textContent = repRes.count ?? 0;
+    document.getElementById('wPlans').textContent = planRes.count ?? 0;
+    document.getElementById('wSignals').textContent = sigRes.count ?? 0;
+
+    const topics = {}; const subs = {};
+    (sigData.data || []).forEach(r => {
+      if (r.topic) topics[r.topic] = (topics[r.topic] || 0) + 1;
+      if (r.subtopic) subs[r.subtopic] = (subs[r.subtopic] || 0) + 1;
+    });
+    const renderTable = (id, obj) => {
+      const sorted = Object.entries(obj).sort((a,b) => b[1]-a[1]).slice(0, 10);
+      const el = document.getElementById(id);
+      if (!sorted.length) { el.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-500)">No data.</td></tr>'; return; }
+      el.innerHTML = sorted.map(([k,v]) => `<tr><td>${esc(k)}</td><td class="bold">${v}</td></tr>`).join('');
+    };
+    renderTable('wTopTopicsBody', topics);
+    renderTable('wTopSubtopicsBody', subs);
+    document.getElementById('wTopMistakesBody').innerHTML = '<div class="empty"><p style="font-size:12.5px;color:var(--text-500)">mistake_type column not present on weakness_signals — skipped.</p></div>';
+  } catch(e) { console.error('loadWeaknessOverview', e); }
+}
+
+// (6) Platform Health
+async function loadPlatformHealth() {
+  try {
+    const since = _isoDaysAgo(1);
+    const { data } = await sb.from('question_records').select('verification_meta').gte('created_at', since).limit(5000);
+    const lats = [];
+    (data || []).forEach(r => {
+      const m = r.verification_meta || {};
+      const v = m.l3_latency_ms ?? m.total_latency_ms;
+      if (typeof v === 'number' && v > 0) lats.push(v);
+    });
+    document.getElementById('phErrs').textContent = '—';
+    document.getElementById('phFailed').textContent = '—';
+    if (!lats.length) {
+      document.getElementById('phAvgRt').textContent = '—';
+      document.getElementById('phP95Rt').textContent = '—';
+    } else {
+      const avg = lats.reduce((a,b)=>a+b,0) / lats.length;
+      lats.sort((a,b)=>a-b);
+      const p95 = lats[Math.floor(lats.length * 0.95)];
+      document.getElementById('phAvgRt').textContent = Math.round(avg) + ' ms';
+      document.getElementById('phP95Rt').textContent = Math.round(p95) + ' ms';
+    }
+  } catch(e) { console.error('loadPlatformHealth', e); }
+}
+
+// (7) Admin Alerts
+async function loadAdminAlerts() {
+  const el = document.getElementById('adminAlerts');
+  const banners = [];
+  try {
+    const { count: pendingCount } = await sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','pending');
+    if ((pendingCount ?? 0) > 10) {
+      banners.push({ type:'amber', text:`⚠️ Payment queue backed up: ${pendingCount} pending` });
+    }
+    // Outage check: only during 8am–11pm UTC+2
+    const nowUtc = new Date();
+    const hourCairo = (nowUtc.getUTCHours() + 2) % 24;
+    if (hourCairo >= 8 && hourCairo < 23) {
+      const since30m = new Date(Date.now() - 30*60*1000).toISOString();
+      const { count: recentQ } = await sb.from('question_records').select('id', { count:'exact', head:true }).gte('created_at', since30m);
+      if ((recentQ ?? 0) === 0) {
+        banners.push({ type:'red', text:'🚨 Possible outage — no questions in last 30 minutes' });
+      }
+    }
+  } catch(e) { console.error('loadAdminAlerts', e); }
+  if (!banners.length) banners.push({ type:'green', text:'✅ All systems normal' });
+
+  el.innerHTML = banners.map(b => {
+    const colors = { green:'var(--green-soft);border:1px solid var(--green-border);color:var(--green)',
+                     amber:'var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber)',
+                     red:'var(--red-soft);border:1px solid var(--red-border);color:var(--red)' };
+    return `<div style="padding:11px 14px;border-radius:12px;margin-bottom:8px;background:${colors[b.type]};font-size:13.5px;font-weight:600">${esc(b.text)}</div>`;
+  }).join('');
+}
+
+// (8) Role Management — owner only
+async function loadRoleManagement() {
+  try {
+    const { data } = await sb.from('profiles').select('id, email, full_name, role').limit(50000);
+    const rows = data || [];
+    const counts = { owner:0, super_admin:0, admin:0, user:0 };
+    rows.forEach(r => { const role = r.role || 'user'; if (counts[role] !== undefined) counts[role]++; });
+    document.getElementById('roleOwners').textContent = counts.owner;
+    document.getElementById('roleSuperAdmins').textContent = counts.super_admin;
+    document.getElementById('roleAdmins').textContent = counts.admin;
+    document.getElementById('roleUsers').textContent = counts.user;
+    _renderRoleTable(rows.filter(r => ['admin','super_admin','owner'].includes(r.role || '')));
+    _loadRoleAudit();
+    const inp = document.getElementById('roleSearchInput');
+    if (inp && !inp._wired) {
+      inp._wired = true;
+      inp.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter') return;
+        const q = inp.value.trim();
+        if (!q) { _renderRoleTable(rows.filter(r => ['admin','super_admin','owner'].includes(r.role || ''))); return; }
+        const { data: sr } = await sb.from('profiles').select('id, email, full_name, role').ilike('email', '%' + q + '%').limit(50);
+        _renderRoleTable(sr || []);
+      });
+    }
+  } catch(e) {
+    console.error('loadRoleManagement', e);
+    document.getElementById('roleMgmtBody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--red)">Failed to load — role column may not exist.</td></tr>';
+  }
+}
+
+function _renderRoleTable(rows) {
+  const body = document.getElementById('roleMgmtBody');
+  if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-500)">No matches.</td></tr>'; return; }
+  body.innerHTML = rows.map(u => {
+    const role = u.role || 'user';
+    const isSelf = currentUser && currentUser.id === u.id;
+    const isOwner = role === 'owner';
+    let actions;
+    if (isOwner || isSelf) {
+      actions = `<span class="chip ${isOwner ? 'red' : 'blue'}">${isOwner ? '👑 Owner' : 'You'}</span>`;
+    } else {
+      const btns = [];
+      if (role !== 'admin') btns.push(`<button class="btn btn-sm btn-ghost" onclick="changeRole('${u.id}','admin')">→ Admin</button>`);
+      if (role !== 'super_admin') btns.push(`<button class="btn btn-sm btn-ghost" onclick="changeRole('${u.id}','super_admin')">→ Super Admin</button>`);
+      if (role !== 'user') btns.push(`<button class="btn btn-sm btn-red" onclick="changeRole('${u.id}','user')">→ Demote to User</button>`);
+      actions = `<div style="display:flex;gap:6px;flex-wrap:wrap">${btns.join('')}</div>`;
+    }
+    const chipCls = role === 'owner' ? 'red' : role === 'super_admin' ? 'amber' : role === 'admin' ? 'blue' : 'gray';
+    return `<tr>
+      <td>${esc(u.email || '—')}</td>
+      <td>${esc(u.full_name || '—')}</td>
+      <td><span class="chip ${chipCls}">${esc(role)}</span></td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function changeRole(targetId, newRole) {
+  const reason = prompt('Reason (optional):') || null;
+  const { error } = await sb.rpc('change_user_role', { p_target: targetId, p_new_role: newRole, p_reason: reason });
+  if (error) { toast('Error: ' + error.message, 'red'); return; }
+  toast(`Role changed to ${newRole}`, 'green');
+  loadRoleManagement();
+}
+
+async function _loadRoleAudit() {
+  try {
+    const { data: audit } = await sb.from('role_audit_log').select('*').order('created_at', { ascending:false }).limit(20);
+    const rows = audit || [];
+    const body = document.getElementById('roleAuditBody');
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-500)">No audit entries.</td></tr>'; return; }
+    // Best-effort profile lookup
+    const ids = [...new Set(rows.flatMap(r => [r.actor_id, r.target_id, r.user_id, r.target_user_id]).filter(Boolean))];
+    let pMap = {};
+    if (ids.length) {
+      const { data: ps } = await sb.from('profiles').select('id, email, full_name').in('id', ids);
+      pMap = Object.fromEntries((ps || []).map(p => [p.id, p]));
+    }
+    body.innerHTML = rows.map(r => {
+      const actor = pMap[r.actor_id] || pMap[r.user_id] || {};
+      const target = pMap[r.target_id] || pMap[r.target_user_id] || {};
+      const change = `${r.old_role || r.previous_role || '—'} → ${r.new_role || '—'}`;
+      return `<tr>
+        <td class="mono">${fmtDate(r.created_at)}</td>
+        <td>${esc(actor.email || r.actor_id || '—')}</td>
+        <td>${esc(target.email || r.target_id || '—')}</td>
+        <td>${esc(change)}</td>
+        <td style="font-size:12px;color:var(--text-400)">${esc(r.reason || '—')}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('roleAuditBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-500)">Audit table not accessible.</td></tr>';
+  }
+}
 
 init();
 </script>

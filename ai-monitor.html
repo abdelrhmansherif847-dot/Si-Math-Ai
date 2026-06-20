@@ -307,6 +307,18 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     </div>
   </div>
 
+  <div class="card" style="margin-top:14px">
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Cost breakdown by role</div>
+    <div class="metric-rows">
+      <div class="metric-row"><span class="metric-lbl">Solver (gpt-4o-mini)</span><span class="metric-val" id="bkSolver">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">Judge (gpt-4o)</span><span class="metric-val" id="bkJudge">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">OCR (gpt-4o-mini + 4o rerun)</span><span class="metric-val" id="bkOcr">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">GPT-4o subtotal</span><span class="metric-val cyan" id="bk4o">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">GPT-4o-mini subtotal</span><span class="metric-val cyan" id="bkMini">—</span></div>
+      <div class="metric-row" style="border-top:1px solid var(--border-soft);padding-top:10px;margin-top:6px"><span class="metric-lbl" style="font-weight:700">TOTAL</span><span class="metric-val amber" id="bkTotal" style="font-weight:700">—</span></div>
+    </div>
+  </div>
+
   <!-- ── SECTION: MODEL USAGE ── -->
   <div class="sec-hd">
     <div class="sec-hd-ico cyan">🤖</div>
@@ -418,6 +430,17 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     </div>
   </div>
 
+  <!-- B4: Detector Confidence Distribution -->
+  <div class="card">
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Detector confidence distribution (verification_confidence)</div>
+    <div class="bar-rows" id="dConfBars">
+      <div class="bar-row"><span class="bar-lbl">0–0.5</span><div class="bar-track"><div class="bar-fill expert" style="width:0%"></div></div><span class="bar-pct">—</span><span class="bar-count">—</span></div>
+      <div class="bar-row"><span class="bar-lbl">0.5–0.7</span><div class="bar-track"><div class="bar-fill hard" style="width:0%"></div></div><span class="bar-pct">—</span><span class="bar-count">—</span></div>
+      <div class="bar-row"><span class="bar-lbl">0.7–0.85</span><div class="bar-track"><div class="bar-fill medium" style="width:0%"></div></div><span class="bar-pct">—</span><span class="bar-count">—</span></div>
+      <div class="bar-row"><span class="bar-lbl">0.85–1</span><div class="bar-track"><div class="bar-fill easy" style="width:0%"></div></div><span class="bar-pct">—</span><span class="bar-count">—</span></div>
+    </div>
+  </div>
+
   <!-- v1 vs v2 comparison table -->
   <div class="card">
     <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">v1 vs v2 tier comparison (over default_medium subset)</div>
@@ -432,7 +455,8 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   <!-- ── SECTION: SHADOW MONITORING ── -->
   <div class="sec-hd">
     <div class="sec-hd-ico purple">🕵️</div>
-    <div><div class="sec-hd-title">Shadow Monitoring</div><div class="sec-hd-sub">Detector v2 checkpoint tracker — 50 / 100 / 200 record milestones</div></div>
+    <div style="flex:1"><div class="sec-hd-title">Shadow Monitoring</div><div class="sec-hd-sub">Detector v2 checkpoint tracker — 50 / 100 / 200 record milestones</div></div>
+    <span id="sShadowStatus" class="chip gray" style="margin-left:auto">—</span>
   </div>
 
   <div class="stats-grid-4" style="margin-bottom:14px">
@@ -483,6 +507,55 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
         <tbody id="sEscBody"><tr><td colspan="6" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- ── SECTION: AI QUALITY — RECENT FAILURES ── -->
+  <div class="sec-hd">
+    <div class="sec-hd-ico red">⚠️</div>
+    <div><div class="sec-hd-title">Recent Quality Failures</div><div class="sec-hd-sub">Latest judge-disagree and OCR-uncertain records</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Recent Verification Failures (last 10)</div>
+      <div class="tbl-wrap"><table class="recent"><thead><tr><th>time</th><th>topic</th><th>verdict</th><th>q. preview</th></tr></thead><tbody id="rvfBody"><tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody></table></div>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Recent OCR Issues (last 10)</div>
+      <div class="tbl-wrap"><table class="recent"><thead><tr><th>time</th><th>topic</th><th>ocr conf</th><th>q. preview</th></tr></thead><tbody id="rofBody"><tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION: FEEDBACK (migrated from admin.html) ── -->
+  <div class="sec-hd">
+    <div class="sec-hd-ico amber">💬</div>
+    <div><div class="sec-hd-title">Feedback</div><div class="sec-hd-sub">Student-reported quality issues — migrated from Admin Dashboard</div></div>
+  </div>
+  <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+    <div class="stat-card green"><div class="lbl">👍 Helpful</div><div class="val" id="fbHelpful">—</div><div class="sub">total positive</div></div>
+    <div class="stat-card red"><div class="lbl">👎 Incorrect Reports</div><div class="val" id="fbIncorrect">—</div><div class="sub">error reports</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Most Common Error Types</div>
+      <div id="fbErrorTypesBody"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Most Reported Topics</div>
+      <div id="fbTopicsBody"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Recent Feedback (last 20)</div>
+    <div id="fbRecentBody"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
+  </div>
+
+  <!-- ── SECTION: AI ALERTS ── -->
+  <div class="sec-hd">
+    <div class="sec-hd-ico red">🚨</div>
+    <div><div class="sec-hd-title">AI Alerts</div><div class="sec-hd-sub">Threshold-based warnings on cost, OCR, judge, detector, latency</div></div>
+  </div>
+  <div class="card">
+    <div id="aiAlerts" style="display:flex;flex-direction:column;gap:10px"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
   </div>
 
 </main>
@@ -572,6 +645,9 @@ async function loadAll() {
       loadL3Pipeline(since),
       loadDifficultyMonitor(since),
       loadShadowMonitor(since),
+      loadRecentFailures(since),
+      loadFeedback(),
+      loadAlerts(since),
     ]);
   } catch(e) {
     console.error('[ai-monitor] loadAll error', e);
@@ -650,6 +726,9 @@ async function loadCostUsage(since) {
   const monthCostEst = monthCount > 0 && l3Count > 0 && totalReqs > 0
     ? (estCost / totalReqs) * monthCount : 0;
   document.getElementById('cMonthCost').textContent = monthCostEst > 0 ? fmtUSD(monthCostEst) : '—';
+
+  // Per-role cost breakdown card
+  renderCostBreakdown(l3Res.data || []);
 }
 
 // ── 2. Model Usage ──────────────────────────────────────────────────────────
@@ -919,6 +998,153 @@ async function loadShadowMonitor(since) {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function todayISO() { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); }
 function nDaysAgo(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Cost Breakdown (called from loadCostUsage tail) ─────────────────────────
+function renderCostBreakdown(rows) {
+  // rows = question_records with verification_meta in window
+  const P = PRICE;
+  let solverIn=0, solverOut=0, judgeIn=0, judgeOut=0, ocrMiniIn=0, ocrMiniOut=0, ocrFullIn=0, ocrFullOut=0;
+  for (const r of (rows||[])) {
+    const m = r.verification_meta || {};
+    solverIn  += (m.solver_a_tokens_in  || 0) + (m.solver_b_tokens_in  || 0);
+    solverOut += (m.solver_a_tokens_out || 0) + (m.solver_b_tokens_out || 0);
+    judgeIn   += (m.judge_tokens_in  || 0);
+    judgeOut  += (m.judge_tokens_out || 0);
+    ocrMiniIn += (m.ocr_tokens_in  || 0);
+    ocrMiniOut+= (m.ocr_tokens_out || 0);
+    ocrFullIn += (m.ocr_rerun_tokens_in  || 0);
+    ocrFullOut+= (m.ocr_rerun_tokens_out || 0);
+  }
+  const cSolver = (solverIn*P['gpt-4o-mini'].in + solverOut*P['gpt-4o-mini'].out)/1e6;
+  const cJudge  = (judgeIn*P['gpt-4o'].in     + judgeOut*P['gpt-4o'].out)/1e6;
+  const cOcrMini= (ocrMiniIn*P['gpt-4o-mini'].in + ocrMiniOut*P['gpt-4o-mini'].out)/1e6;
+  const cOcrFull= (ocrFullIn*P['gpt-4o'].in   + ocrFullOut*P['gpt-4o'].out)/1e6;
+  const cOcr    = cOcrMini + cOcrFull;
+  const c4o     = cJudge + cOcrFull;
+  const cMini   = cSolver + cOcrMini;
+  const total   = cSolver + cJudge + cOcr;
+  document.getElementById('bkSolver').textContent = fmtUSD(cSolver);
+  document.getElementById('bkJudge').textContent  = fmtUSD(cJudge);
+  document.getElementById('bkOcr').textContent    = fmtUSD(cOcr);
+  document.getElementById('bk4o').textContent     = fmtUSD(c4o);
+  document.getElementById('bkMini').textContent   = fmtUSD(cMini);
+  document.getElementById('bkTotal').textContent  = fmtUSD(total);
+}
+
+// ── Recent Failures ─────────────────────────────────────────────────────────
+async function loadRecentFailures(since) {
+  let qV = sb.from('question_records')
+    .select('id, created_at, topic, question, judge_verdict, verification_meta, ocr_confidence')
+    .eq('judge_verdict', 'disagree')
+    .order('created_at', { ascending:false })
+    .limit(10);
+  if (since) qV = qV.gte('created_at', since);
+
+  let qO = sb.from('question_records')
+    .select('id, created_at, topic, question, ocr_confidence, verification_meta')
+    .or('ocr_confidence.lt.0.5,verification_meta->>ocr_rerun_used.eq.true')
+    .order('created_at', { ascending:false })
+    .limit(10);
+  if (since) qO = qO.gte('created_at', since);
+
+  const [vRes, oRes] = await Promise.all([qV, qO]);
+  const vBody = document.getElementById('rvfBody');
+  const oBody = document.getElementById('rofBody');
+  vBody.innerHTML = (vRes.data?.length)
+    ? vRes.data.map(r => `<tr><td class="mono">${fmtTime(r.created_at)}</td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.topic||'—')}</td><td><span class="chip red">${esc(r.judge_verdict)}</span></td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,90))}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No verification failures in window ✅</td></tr>';
+  oBody.innerHTML = (oRes.data?.length)
+    ? oRes.data.map(r => `<tr><td class="mono">${fmtTime(r.created_at)}</td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.topic||'—')}</td><td class="mono">${r.ocr_confidence!=null ? Number(r.ocr_confidence).toFixed(2) : '—'}</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,90))}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No OCR issues in window ✅</td></tr>';
+}
+
+// ── Feedback (migrated from admin.html) ─────────────────────────────────────
+const FB_ERR_LABELS = { wrong_answer:'Wrong Final Answer', wrong_explanation:'Wrong Explanation', wrong_steps:'Wrong Math Steps', formatting_issue:'Formatting Issue', other:'Other' };
+async function loadFeedback() {
+  const [helpfulRes, incorrectRes, rowsRes, errData, topicData] = await Promise.all([
+    sb.from('response_feedback').select('id', { count:'exact', head:true }).eq('feedback_type', 'helpful'),
+    sb.from('response_feedback').select('id', { count:'exact', head:true }).eq('feedback_type', 'incorrect'),
+    sb.from('response_feedback').select('id, created_at, feedback_type, error_type, topic, user_id, record_id').order('created_at', { ascending:false }).limit(20),
+    sb.from('response_feedback').select('error_type').eq('feedback_type', 'incorrect').not('error_type', 'is', null),
+    sb.from('response_feedback').select('topic').eq('feedback_type', 'incorrect').not('topic', 'is', null),
+  ]);
+  document.getElementById('fbHelpful').textContent   = helpfulRes.count   ?? '—';
+  document.getElementById('fbIncorrect').textContent = incorrectRes.count ?? '—';
+
+  const errCounts = {}; (errData.data||[]).forEach(r => errCounts[r.error_type] = (errCounts[r.error_type]||0)+1);
+  const errSorted = Object.entries(errCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('fbErrorTypesBody').innerHTML = errSorted.length
+    ? `<table class="recent"><thead><tr><th>Error</th><th>Count</th></tr></thead><tbody>${errSorted.map(([k,v])=>`<tr><td>${esc(FB_ERR_LABELS[k]||k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table>`
+    : '<div style="color:var(--text-500);padding:10px">No incorrect reports yet.</div>';
+
+  const topicCounts = {}; (topicData.data||[]).forEach(r => topicCounts[r.topic] = (topicCounts[r.topic]||0)+1);
+  const topicSorted = Object.entries(topicCounts).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  document.getElementById('fbTopicsBody').innerHTML = topicSorted.length
+    ? `<table class="recent"><thead><tr><th>Topic</th><th>Reports</th></tr></thead><tbody>${topicSorted.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="mono">${v}</td></tr>`).join('')}</tbody></table>`
+    : '<div style="color:var(--text-500);padding:10px">No topic data yet.</div>';
+
+  const rows = rowsRes.data || [];
+  const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+  const { data: pData } = userIds.length ? await sb.from('profiles').select('id, full_name, email').in('id', userIds) : { data: [] };
+  const pMap = Object.fromEntries((pData||[]).map(p => [p.id, p]));
+  document.getElementById('fbRecentBody').innerHTML = rows.length
+    ? `<table class="recent"><thead><tr><th>Time</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th></tr></thead><tbody>${rows.map(r => {
+        const p = pMap[r.user_id];
+        return `<tr><td class="mono">${fmtTime(r.created_at)}</td><td>${esc(p?.full_name||p?.email||(r.user_id||'').slice(0,8)||'—')}</td><td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍':'👎'}</span></td><td>${esc(FB_ERR_LABELS[r.error_type]||r.error_type||'—')}</td><td>${esc(r.topic||'—')}</td></tr>`;
+      }).join('')}</tbody></table>`
+    : '<div style="color:var(--text-500);padding:10px">No feedback yet.</div>';
+}
+
+// ── AI Alerts ───────────────────────────────────────────────────────────────
+async function loadAlerts(since) {
+  const alerts = [];
+  // Pull aggregated window data
+  const t0 = nDaysAgo(7);
+  const today0 = todayISO();
+  const [todayCostRows, weekCostRows, qWin, l3Win] = await Promise.all([
+    sb.from('question_records').select('verification_meta').gte('created_at', today0).limit(2000),
+    sb.from('question_records').select('verification_meta').gte('created_at', t0).limit(10000),
+    sb.from('question_records').select('id', { count:'exact', head:true }).gte('created_at', since || t0),
+    sb.from('question_records').select('judge_verdict, verification_meta, verification_confidence, ocr_confidence').gte('created_at', since || t0).not('judge_verdict','is',null).limit(5000),
+  ]);
+  const sumCost = (rows) => {
+    let total=0;
+    for (const r of (rows||[])) {
+      const m = r.verification_meta || {};
+      const sIn = (m.solver_a_tokens_in||0)+(m.solver_b_tokens_in||0)+(m.ocr_tokens_in||0);
+      const sOut= (m.solver_a_tokens_out||0)+(m.solver_b_tokens_out||0)+(m.ocr_tokens_out||0);
+      const jIn = (m.judge_tokens_in||0)+(m.ocr_rerun_tokens_in||0);
+      const jOut= (m.judge_tokens_out||0)+(m.ocr_rerun_tokens_out||0);
+      total += (sIn*PRICE['gpt-4o-mini'].in + sOut*PRICE['gpt-4o-mini'].out + jIn*PRICE['gpt-4o'].in + jOut*PRICE['gpt-4o'].out)/1e6;
+    }
+    return total;
+  };
+  const tCost = sumCost(todayCostRows.data);
+  const wCost = sumCost(weekCostRows.data);
+  const wDailyAvg = wCost / 7;
+  alerts.push({ kind: tCost > 2*wDailyAvg && wDailyAvg > 0.01 ? 'red' : 'green', msg: `Cost spike: today $${tCost.toFixed(2)} vs 7-day avg $${wDailyAvg.toFixed(2)}/day` });
+
+  const l3 = l3Win.data || [];
+  const ocrFails = l3.filter(r => (r.verification_meta||{}).ocr_rerun_used === true || (r.ocr_confidence!=null && r.ocr_confidence<0.5)).length;
+  const ocrRate = l3.length ? ocrFails/l3.length*100 : 0;
+  alerts.push({ kind: ocrRate > 10 ? 'amber' : 'green', msg: `OCR issue rate: ${ocrRate.toFixed(1)}% (threshold 10%)` });
+
+  const disagrees = l3.filter(r => r.judge_verdict === 'disagree').length;
+  const disagreePct = l3.length ? disagrees/l3.length*100 : 0;
+  alerts.push({ kind: disagreePct > 15 ? 'red' : 'green', msg: `Judge disagreement: ${disagreePct.toFixed(1)}% (threshold 15%)` });
+
+  const confs = l3.map(r => r.verification_confidence).filter(c => typeof c === 'number');
+  const avgConf = confs.length ? confs.reduce((a,b)=>a+b,0)/confs.length : null;
+  alerts.push({ kind: avgConf !== null && avgConf < 0.5 ? 'amber' : 'green', msg: `Avg detector/verification confidence: ${avgConf !== null ? avgConf.toFixed(2) : '—'} (threshold 0.5)` });
+
+  const lats = l3.map(r => (r.verification_meta||{}).total_latency_ms || (r.verification_meta||{}).l3_latency_ms).filter(x => typeof x === 'number').sort((a,b)=>a-b);
+  const p95 = lats.length ? lats[Math.floor(lats.length*0.95)] : null;
+  alerts.push({ kind: p95 !== null && p95 > 8000 ? 'red' : 'green', msg: `L3 latency p95: ${p95!==null ? fmtMs(p95) : '—'} (threshold 8s)` });
+
+  const colorMap = { red: { bg:'rgba(239,79,95,.10)', bd:'rgba(239,79,95,.32)', fg:'#ef4f5f', ico:'🔴' }, amber: { bg:'rgba(245,185,66,.10)', bd:'rgba(245,185,66,.32)', fg:'#f5b942', ico:'🟡' }, green: { bg:'rgba(74,222,128,.08)', bd:'rgba(74,222,128,.24)', fg:'#4ade80', ico:'🟢' } };
+  document.getElementById('aiAlerts').innerHTML = alerts.map(a => { const c = colorMap[a.kind]; return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};font-size:13.5px"><span>${c.ico}</span><span>${esc(a.msg)}</span></div>`; }).join('');
+}
 
 init();
 </script>
