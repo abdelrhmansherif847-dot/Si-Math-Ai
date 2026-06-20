@@ -81,6 +81,7 @@ const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
   .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
   .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
+const DIFFICULTY_DETECTOR_V2_VERSION = 'detector-v2';
 const L3_PIPELINE_VERSION = 'l3-shadow-v3';
 
 // ── Tone detection (v78) ─────────────────────────────────────────────────────
@@ -489,11 +490,72 @@ function detectorClassify(f: DetectorFeatures): { tier: DifficultyTier; reasons:
 function detectorGptTier(s: string | null | undefined): DifficultyTier | null {
   if (!s) return null;
   const lower = String(s).toLowerCase();
+  // Arabic labels (PR1 fix — keep in sync with detectorV2ParseTier)
+  if (lower.includes('خبير') || lower.includes('متقدم جداً') || lower.includes('متقدم جدا')) return 'expert';
+  if (lower.includes('صعب')) return 'hard';
+  if (lower.includes('سهل')) return 'easy';
+  if (lower.includes('متوسط')) return 'medium';
+  // English labels
   if (lower.includes('expert')) return 'expert';
   if (lower.includes('hard'))   return 'hard';
   if (lower.includes('easy'))   return 'easy';
   if (lower.includes('medium')) return 'medium';
   return null;
+}
+
+// ── Detector v2 — LLM shadow classifier ──────────────────────────────────────
+// Fires only when v1 falls back to default_medium (63 % of traffic in shadow
+// data). Runs in EdgeRuntime.waitUntil() so it adds zero latency. Writes
+// v2_tier + v2_reasons into verification_meta alongside the existing v1 fields.
+// Gated by DIFFICULTY_DETECTOR_V2_ENABLED (default true).
+// Shadow only — never overwrites verification_tier.
+
+function detectorV2ParseTier(raw: string): DifficultyTier | null {
+  const s = (raw || '').toLowerCase();
+  if (s.includes('expert') || s.includes('خبير')) return 'expert';
+  if (s.includes('hard')   || s.includes('صعب'))  return 'hard';
+  if (s.includes('medium') || s.includes('متوسط')) return 'medium';
+  if (s.includes('easy')   || s.includes('سهل'))  return 'easy';
+  return null;
+}
+
+async function detectorV2Classify(
+  question: string,
+  hasImage: boolean,
+  topic: string,
+  openaiKey: string,
+): Promise<{ tier: DifficultyTier; raw: string; latency_ms: number } | null> {
+  const t0 = Date.now();
+  const imageNote = hasImage ? ' The question includes an image (treat as at least medium).' : '';
+  const prompt =
+    `You are a math difficulty classifier for Egyptian SAT/EST exam prep.\n` +
+    `Classify this math question into exactly one tier: easy / medium / hard / expert.\n` +
+    `Topic hint: ${topic || 'unknown'}.\n` +
+    `Definitions:\n` +
+    `  easy   — single direct step, no setup, one concept (e.g., evaluate 3x when x=2)\n` +
+    `  medium — 2-3 steps, one concept, routine algebra or geometry\n` +
+    `  hard   — multi-step, >1 concept, or requires strategy\n` +
+    `  expert — proof, advanced calculus/vectors, or complex multi-concept synthesis\n` +
+    `${imageNote}\n` +
+    `Reply with only one word: easy, medium, hard, or expert. No explanation.\n\n` +
+    `Question:\n${String(question).slice(0, 800)}`;
+
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      max_tokens: 10,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!resp.ok) return null;
+  const json = await resp.json();
+  const raw: string = json?.choices?.[0]?.message?.content?.trim() ?? '';
+  const tier = detectorV2ParseTier(raw);
+  if (!tier) return null;
+  return { tier, raw, latency_ms: Date.now() - t0 };
 }
 
 // ── Worksheet Navigation Guard ────────────────────────────────────────────────
@@ -2140,6 +2202,59 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
+
+    // ── Detector v2 Shadow (background — never blocks student response) ─────────
+    // Fires only when v1 fell back to default_medium — the 63 % of traffic with
+    // no real heuristic signal. Uses a single cheap gpt-4o-mini call (~150 tokens)
+    // to produce a proper tier label. Result written to verification_meta.v2_*
+    // for comparison against v1. Does NOT overwrite verification_tier.
+    // Gated by DIFFICULTY_DETECTOR_V2_ENABLED (default true).
+    const detectorV2On = (Deno.env.get('DIFFICULTY_DETECTOR_V2_ENABLED') ?? 'true') !== 'false';
+    const v1IsDefaultMedium = Array.isArray(
+      (verificationFields.verification_meta as Record<string, unknown>)?.reasons
+    ) && (
+      (verificationFields.verification_meta as Record<string, string[]>).reasons
+    ).includes('default_medium');
+    if (detectorV2On && isMath && recordId && v1IsDefaultMedium && OPENAI_KEY) {
+      const EdgeRt2 = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+      const v2Task = (async () => {
+        try {
+          const v2Result = await detectorV2Classify(question, !!imageData, finalTopic, OPENAI_KEY);
+          if (!v2Result) return;
+          // Merge v2 result into existing verification_meta — additive only
+          const { data: existing } = await sbAdmin
+            .from('question_records')
+            .select('verification_meta')
+            .eq('id', recordId)
+            .single();
+          const merged = {
+            ...(existing?.verification_meta ?? {}),
+            v2_version:    DIFFICULTY_DETECTOR_V2_VERSION,
+            v2_tier:       v2Result.tier,
+            v2_raw:        v2Result.raw,
+            v2_latency_ms: v2Result.latency_ms,
+            v2_agrees_with_v1: v2Result.tier === verificationFields.verification_tier,
+            v2_agrees_with_gpt: v2Result.tier === detectorGptTier(finalDifficulty),
+          };
+          await sbAdmin
+            .from('question_records')
+            .update({ verification_meta: merged })
+            .eq('id', recordId);
+          console.log('[ai-tutor] detector-v2', JSON.stringify({
+            uid: user.id.slice(0, 8), record_id: recordId,
+            v1_tier: verificationFields.verification_tier,
+            v2_tier: v2Result.tier,
+            gpt_tier: detectorGptTier(finalDifficulty),
+            latency_ms: v2Result.latency_ms,
+          }));
+        } catch (v2Err) {
+          console.log('[ai-tutor] detector-v2-error', JSON.stringify({
+            uid: user.id.slice(0, 8), msg: String(v2Err),
+          }));
+        }
+      })();
+      if (EdgeRt2?.waitUntil) EdgeRt2.waitUntil(v2Task);
+    }
 
     // ── L3 Shadow Pipeline (background — never blocks student response) ───────
     // Double gate: VERIFICATION_ENABLED=true AND VERIFICATION_SHADOW_ONLY=true.
