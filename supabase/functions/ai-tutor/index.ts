@@ -81,7 +81,7 @@ const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
   .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
   .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
-const L3_PIPELINE_VERSION = 'l3-shadow-v2';
+const L3_PIPELINE_VERSION = 'l3-shadow-v3';
 
 // ── Tone detection (v78) ─────────────────────────────────────────────────────
 // Sliding 3-turn classifier returning band 0–4 (0=formal, 4=hype).
@@ -676,11 +676,29 @@ interface OcrAmbiguityResult {
   rerun_changed: boolean;
   final_text: string;
 }
-interface SolverResult { answer: string; raw_output: string; }
+interface SolverResult {
+  answer: string;        // legacy: equals final_answer (kept for back-compat)
+  final_answer: string;  // extracted final answer only
+  reasoning: string;     // multi-line derivation (everything before "Final Answer:")
+  raw_output: string;    // full unparsed model output
+}
 interface JudgeResult {
   verdict: 'agrees' | 'disagrees' | 'ocr_uncertain' | 'inconclusive';
   confidence: number;
   reasoning: string;
+}
+
+// Normalize a final-answer string for equality comparison. Strips wrapper
+// prefixes ("answer:", "final answer:", "the answer is"), markdown bold,
+// trailing punctuation, and whitespace; case-insensitive.
+function normalizeFinalAnswer(s: string): string {
+  return String(s ?? '')
+    .toLowerCase()
+    .replace(/^\s*(final\s+answer|answer|the\s+answer\s+is)\s*[:=]\s*/i, '')
+    .replace(/[*_`]/g, '')
+    .replace(/[.\s]+$/g, '')
+    .replace(/\s+/g, '')
+    .trim();
 }
 
 // For image questions: extract the math problem as plain text (pre-solver step).
@@ -748,10 +766,21 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
   return { confidence, flags, rerun_count, rerun_changed, final_text };
 }
 
-// Single solver pass. Model: gpt-4o-mini. Returns final extracted answer.
+// Single solver pass. Model: gpt-4o-mini. Returns structured reasoning + final_answer.
 // If imageData provided, solver sees the image directly (vision) — fixes the
 // image-questions-not-verifiable bug where solvers relied only on mini-OCR text.
-// max_tokens bumped 400 → 1200 to stop mid-formula truncation seen in shadow runs.
+// v80: enforces "Reasoning:" / "Final Answer:" markers so the judge can evaluate
+// the actual derivation, not just the choice letter.
+const SOLVER_SYSTEM_PROMPT =
+  'You are a precise math solver. You MUST respond in this exact format and nothing else:\n\n' +
+  'Reasoning:\n' +
+  '<step-by-step derivation across multiple lines>\n\n' +
+  'Final Answer: <single value, expression, or option letter>\n\n' +
+  'Rules:\n' +
+  '- The "Reasoning:" block must contain the actual mathematical steps, not a restatement of the problem.\n' +
+  '- "Final Answer:" must appear exactly once, on its own line, at the very end.\n' +
+  '- No markdown formatting, no commentary outside this structure.';
+
 async function runSolver(
   questionText: string, temperature: number, imageData: string | null = null,
 ): Promise<SolverResult> {
@@ -768,22 +797,63 @@ async function runSolver(
       body: JSON.stringify({
         model: 'gpt-4o-mini', max_tokens: 1200, temperature,
         messages: [
-          { role: 'system', content: 'You are a precise math solver. Solve the problem step by step, then state the final answer on the last line as "Answer: [value]". No markdown, no commentary.' },
+          { role: 'system', content: SOLVER_SYSTEM_PROMPT },
           { role: 'user', content: userContent },
         ],
       }),
     });
     const json = await res.json();
     const raw_output = String(json.choices?.[0]?.message?.content || '').trim();
-    const match = /answer:\s*(.+)/i.exec(raw_output);
-    const answer = match ? match[1].trim() : (raw_output.split('\n').at(-1) ?? raw_output).trim();
-    return { answer, raw_output };
-  } catch { return { answer: 'solver_error', raw_output: '' }; }
+
+    // Split into reasoning + final_answer using "Final Answer:" marker (case-insensitive).
+    // Fallback: legacy "Answer:" marker. Last fallback: last non-empty line.
+    let reasoning = '';
+    let final_answer = '';
+    const finalMatch = /^\s*final\s*answer\s*[:=]\s*(.+?)\s*$/im.exec(raw_output);
+    const legacyMatch = !finalMatch && /^\s*answer\s*[:=]\s*(.+?)\s*$/im.exec(raw_output);
+    if (finalMatch) {
+      final_answer = finalMatch[1].trim();
+      reasoning = raw_output.slice(0, finalMatch.index).replace(/^\s*reasoning\s*[:=]\s*/i, '').trim();
+    } else if (legacyMatch) {
+      final_answer = legacyMatch[1].trim();
+      reasoning = raw_output.slice(0, legacyMatch.index).replace(/^\s*reasoning\s*[:=]\s*/i, '').trim();
+    } else {
+      const lines = raw_output.split('\n').map(l => l.trim()).filter(Boolean);
+      final_answer = (lines.at(-1) ?? raw_output).trim();
+      reasoning = lines.slice(0, -1).join('\n').replace(/^\s*reasoning\s*[:=]\s*/i, '').trim();
+    }
+
+    return { answer: final_answer, final_answer, reasoning, raw_output };
+  } catch {
+    return { answer: 'solver_error', final_answer: 'solver_error', reasoning: '', raw_output: '' };
+  }
 }
 
-// Judge: compares Zero's answer against two solver answers.
-// Hard rule: OCR confidence < 0.75 locks verdict to 'ocr_uncertain' —
+// Judge: compares Zero's answer against two solver derivations on three axes:
+//   (1) final-answer agreement
+//   (2) reasoning quality (steps present, not a bare letter / restatement)
+//   (3) logical consistency (reasoning actually supports the stated final answer)
+//
+// v80: model upgraded gpt-4o-mini → gpt-4o. A weaker judge evaluating GPT-4o
+// tutor output produces false disagreements; upgrading just the judge gives the
+// largest verification-quality win per cost dollar.
+//
+// Hard rule retained: OCR confidence < 0.75 locks verdict to 'ocr_uncertain' —
 // solver consensus cannot override OCR uncertainty.
+const JUDGE_SYSTEM_PROMPT =
+  'You are a strict math verification judge. You are given a math question, the tutor\'s explanation, ' +
+  'and two independent solver derivations (each with reasoning and a final answer).\n\n' +
+  'Evaluate on three axes:\n' +
+  '  1. Final-answer agreement — does the tutor\'s final value match what the solvers derived (formatting differences OK)?\n' +
+  '  2. Reasoning quality — do the solver derivations contain real mathematical steps, or just a restated problem / a bare letter?\n' +
+  '  3. Logical consistency — does each solver\'s reasoning actually justify its stated final answer?\n\n' +
+  'Respond with JSON only:\n' +
+  '{"verdict":"agrees"|"disagrees"|"inconclusive","confidence":0.0-1.0,"reasoning":"two short sentences covering the three axes"}\n\n' +
+  '- "agrees": both solvers reach the same final value as the tutor AND at least one solver shows valid reasoning that justifies it.\n' +
+  '- "disagrees": solvers agree with each other on a final value but it differs from the tutor.\n' +
+  '- "inconclusive": solvers disagree with each other, OR neither solver shows real reasoning (e.g. both returned only a letter), OR the reasoning contradicts the stated final answer.\n' +
+  '- confidence reflects evidence strength: high when both solvers show genuine derivations that converge, low when reasoning is missing or shallow even if labels match.';
+
 async function runJudge(
   questionText: string, zeroAnswer: string,
   solverA: SolverResult, solverB: SolverResult, ocrConfidence: number,
@@ -795,14 +865,22 @@ async function runJudge(
     };
   }
   try {
+    const userContent =
+      `Question:\n${questionText.slice(0, 500)}\n\n` +
+      `Tutor explanation (excerpt):\n${zeroAnswer.slice(0, 600)}\n\n` +
+      `Solver A reasoning:\n${(solverA.reasoning || '(none)').slice(0, 700)}\n` +
+      `Solver A final answer: ${solverA.final_answer.slice(0, 120)}\n\n` +
+      `Solver B reasoning:\n${(solverB.reasoning || '(none)').slice(0, 700)}\n` +
+      `Solver B final answer: ${solverB.final_answer.slice(0, 120)}`;
+
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 500, temperature: 0,
+        model: 'gpt-4o', max_tokens: 500, temperature: 0,
         messages: [
-          { role: 'system', content: 'You are a math verification judge. Determine whether the tutor\'s answer matches the solver answers.\nRespond with JSON only: {"verdict":"agrees"|"disagrees"|"inconclusive","confidence":0.0-1.0,"reasoning":"one sentence"}\n- "agrees": both solvers reach the same final value as the tutor (minor formatting differences OK)\n- "disagrees": solvers agree with each other but differ from the tutor\n- "inconclusive": solvers disagree with each other, or comparison is ambiguous' },
-          { role: 'user', content: `Question: ${questionText.slice(0, 500)}\n\nTutor answer (excerpt): ${zeroAnswer.slice(0, 400)}\n\nSolver A: ${solverA.answer.slice(0, 200)}\n\nSolver B: ${solverB.answer.slice(0, 200)}` },
+          { role: 'system', content: JUDGE_SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
         ],
       }),
     });
@@ -813,7 +891,7 @@ async function runJudge(
     return {
       verdict: validVerdicts.includes(p.verdict) ? p.verdict as JudgeResult['verdict'] : 'inconclusive',
       confidence: typeof p.confidence === 'number' ? Math.min(1, Math.max(0, p.confidence)) : 0.5,
-      reasoning: String(p.reasoning || '').slice(0, 300),
+      reasoning: String(p.reasoning || '').slice(0, 500),
     };
   } catch { return { verdict: 'inconclusive', confidence: 0.5, reasoning: 'Judge parse failed.' }; }
 }
@@ -856,9 +934,11 @@ async function runL3ShadowPipeline(opts: {
     runSolver(solveText, 0.3, isImageQ ? imageData : null),
   ]);
 
-  // 4. Solver agreement (exact match after normalization)
-  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '').trim();
-  const solver_agreement = norm(solverA.answer) === norm(solverB.answer) ? 1.0 : 0.0;
+  // 4. Solver agreement — robust normalization (strips "answer:"/"final answer:"/markdown).
+  // Fixes false-disagreement bug where "B" vs "Answer: B" was scored 0.0.
+  const normA = normalizeFinalAnswer(solverA.final_answer);
+  const normB = normalizeFinalAnswer(solverB.final_answer);
+  const solver_agreement = (normA && normA === normB) ? 1.0 : 0.0;
 
   // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
   const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0);
@@ -866,26 +946,57 @@ async function runL3ShadowPipeline(opts: {
   const pipeline_latency_ms = Date.now() - startTime;
   const isExpertTier = detectorMeta.tier === 'expert' || detectorMeta.gpt_tier === 'expert';
 
-  // 6. Merge Phase 1 detector meta + Phase 2A pipeline meta
+  // 6. Quality telemetry — surface solver evidence depth so the dashboard can
+  //    distinguish "two solvers genuinely derived B" from "two solvers spat out 'B'".
+  const LOW_QUALITY_REASONING_THRESHOLD = 50;
+  const solver_answer_lengths    = [solverA.final_answer.length, solverB.final_answer.length];
+  const solver_reasoning_lengths = [solverA.reasoning.length,    solverB.reasoning.length];
+  const judge_reasoning_length   = judge.reasoning.length;
+  const low_quality_solver       =
+    solverA.reasoning.length < LOW_QUALITY_REASONING_THRESHOLD ||
+    solverB.reasoning.length < LOW_QUALITY_REASONING_THRESHOLD;
+
+  // verification_quality_score ∈ [0, 1]:
+  //   0.40 * solver final-answer agreement
+  //   0.30 * reasoning completeness  (both ≥50 chars → 1.0, scales down to 0)
+  //   0.30 * judge confidence
+  const reasoningCompleteness = Math.min(
+    1,
+    (Math.min(solverA.reasoning.length, LOW_QUALITY_REASONING_THRESHOLD) +
+     Math.min(solverB.reasoning.length, LOW_QUALITY_REASONING_THRESHOLD)) /
+      (2 * LOW_QUALITY_REASONING_THRESHOLD),
+  );
+  const verification_quality_score = Number(
+    (0.40 * solver_agreement + 0.30 * reasoningCompleteness + 0.30 * judge.confidence).toFixed(3),
+  );
+
+  // 7. Merge Phase 1 detector meta + Phase 2A pipeline meta
   const verificationMeta = {
     ...detectorMeta,
-    pipeline_version:    L3_PIPELINE_VERSION,
-    ocr_ambiguity_flags: ocr.flags,
-    ocr_rerun_count:     ocr.rerun_count,
-    ocr_rerun_changed:   ocr.rerun_changed,
-    solver_answers:      [solverA.answer.slice(0, 200), solverB.answer.slice(0, 200)],
-    solver_model:        'gpt-4o-mini',
-    solver_temperatures: [0.1, 0.3],
-    solver_max_tokens:   1200,
-    solver_sees_image:   isImageQ,
-    judge_model:         'gpt-4o-mini',
-    judge_reasoning:     judge.reasoning,
-    zero_answer_hash:    await sha256short(zeroAnswer),
+    pipeline_version:            L3_PIPELINE_VERSION,
+    ocr_ambiguity_flags:         ocr.flags,
+    ocr_rerun_count:             ocr.rerun_count,
+    ocr_rerun_changed:           ocr.rerun_changed,
+    solver_answers:              [solverA.final_answer.slice(0, 200), solverB.final_answer.slice(0, 200)],
+    solver_reasonings:           [solverA.reasoning.slice(0, 800),    solverB.reasoning.slice(0, 800)],
+    solver_raw_outputs:          [solverA.raw_output.slice(0, 1200),  solverB.raw_output.slice(0, 1200)],
+    solver_answer_lengths,
+    solver_reasoning_lengths,
+    solver_model:                'gpt-4o-mini',
+    solver_temperatures:         [0.1, 0.3],
+    solver_max_tokens:           1200,
+    solver_sees_image:           isImageQ,
+    judge_model:                 'gpt-4o',
+    judge_reasoning:             judge.reasoning,
+    judge_reasoning_length,
+    low_quality_solver,
+    verification_quality_score,
+    zero_answer_hash:            await sha256short(zeroAnswer),
     pipeline_latency_ms,
-    expert_trigger:      isExpertTier,
+    expert_trigger:              isExpertTier,
   };
 
-  // 7. UPDATE question_records — all Phase 0 columns, nullable
+  // 8. UPDATE question_records — all Phase 0 columns, nullable
   const { error: updateErr } = await sbAdmin
     .from('question_records')
     .update({
@@ -907,20 +1018,26 @@ async function runL3ShadowPipeline(opts: {
     }));
   }
 
-  // 8. Structured telemetry
+  // 9. Structured telemetry
   console.log('[ai-tutor] verification-shadow', JSON.stringify({
-    uid:                     userId.slice(0, 8),
-    record_id:               recordId,
-    pipeline_version:        L3_PIPELINE_VERSION,
-    verification_tier:       detectorMeta.tier ?? null,
-    ocr_confidence:          isImageQ ? ocr.confidence : null,
-    ocr_ambiguity_flags:     ocr.flags,
-    ocr_rerun_count:         ocr.rerun_count,
-    ocr_rerun_changed:       ocr.rerun_changed,
+    uid:                         userId.slice(0, 8),
+    record_id:                   recordId,
+    pipeline_version:            L3_PIPELINE_VERSION,
+    verification_tier:           detectorMeta.tier ?? null,
+    ocr_confidence:              isImageQ ? ocr.confidence : null,
+    ocr_ambiguity_flags:         ocr.flags,
+    ocr_rerun_count:             ocr.rerun_count,
+    ocr_rerun_changed:           ocr.rerun_changed,
     solver_agreement,
-    judge_verdict:           judge.verdict,
-    verification_confidence: judge.confidence,
-    expert_trigger:          isExpertTier,
+    solver_answer_lengths,
+    solver_reasoning_lengths,
+    judge_reasoning_length,
+    low_quality_solver,
+    judge_model:                 'gpt-4o',
+    judge_verdict:               judge.verdict,
+    verification_confidence:     judge.confidence,
+    verification_quality_score,
+    expert_trigger:              isExpertTier,
     pipeline_latency_ms,
   }));
 }
