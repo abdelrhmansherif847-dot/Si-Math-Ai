@@ -8,6 +8,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- KaTeX + shared chat renderer so feedback review shows the same rendered
+     output the student saw in the AI Tutor. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script src="chat-renderer.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -168,6 +174,23 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 .fb-toggle:hover{background:rgba(56,189,248,.16)}
 .fb-img-wrap{margin-top:10px}
 .fb-img-wrap img{max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border-soft);display:block}
+/* Rendered AI Tutor response inside the feedback panel — mirrors chat.html */
+.fb-text.ai-rendered{white-space:normal}
+.fb-text .ai-md{line-height:1.65;color:var(--text-200);font-size:14px}
+.fb-text .ai-md h3{color:#fff;font-family:var(--font-display);font-size:14.5px;font-weight:700;margin:14px 0 6px}
+.fb-text .ai-md h4{color:#fff;font-family:var(--font-display);font-size:13.5px;font-weight:700;margin:12px 0 5px}
+.fb-text .ai-md h5{color:var(--text-100);font-family:var(--font-display);font-size:13px;font-weight:600;margin:10px 0 4px}
+.fb-text .ai-md p{margin:4px 0}
+.fb-text .ai-md ol,.fb-text .ai-md ul{padding-left:20px;margin:6px 0}
+.fb-text .ai-md li{margin:3px 0}
+.fb-text .ai-md code{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 6px;font-family:var(--font-mono);font-size:12.5px;color:#7dd3fc}
+.fb-text .ai-md pre{background:var(--bg-elev-2);border:1px solid var(--border-mid);border-radius:10px;padding:12px 14px;margin:10px 0;overflow-x:auto}
+.fb-text .ai-md pre code{background:none;border:none;padding:0;font-size:12.5px;color:var(--text-200)}
+.fb-text .ai-md strong{color:#fff;font-weight:600}
+.fb-text .ai-md em{color:var(--text-300);font-style:italic}
+.fb-text .ai-md .md-sp{height:6px}
+.fb-text .katex-display{margin:.6em 0;overflow-x:auto;overflow-y:hidden}
+.fb-text .katex{font-size:1.05em;color:var(--text-100)}
 
 /* CHIPS */
 .chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:10.5px;white-space:nowrap;font-weight:600}
@@ -1113,15 +1136,18 @@ async function loadFeedback() {
   const pMap = Object.fromEntries((pRes.data||[]).map(p => [p.id, p]));
   const qMap = Object.fromEntries((qRes.data||[]).map(q => [q.id, q]));
 
-  // Each feedback renders as a card. Question, Image, and Zero Response are
-  // shown side-by-side (stacked on narrow viewports). Long Question / Response
-  // text collapses to a preview with an Expand button.
+  // Each feedback renders as a card. Question (student's raw input) is shown
+  // as plain text; Zero Response is rendered through the shared chat-renderer
+  // so admin/AI-monitor review sees the exact same Markdown + KaTeX output
+  // the student saw in the tutor. Long content collapses to a preview with
+  // an expand toggle.
   const PREVIEW_CHARS = 600;
   const renderImage = (img) => {
     if (!img) return '';
     const src = (img.startsWith('data:') || img.startsWith('http')) ? img : `data:image/jpeg;base64,${img}`;
     return `<div class="fb-img-wrap"><a href="${esc(src)}" target="_blank" rel="noopener" title="Open full image"><img src="${esc(src)}" alt="question image" loading="lazy"/></a></div>`;
   };
+  // Plain-text expand/collapse — used for the student's raw question.
   const renderExpandable = (full, kind) => {
     if (!full) return `<div class="fb-empty">— no ${kind} captured —</div>`;
     const safe = esc(full);
@@ -1129,6 +1155,18 @@ async function loadFeedback() {
     const preview = esc(full.slice(0, PREVIEW_CHARS)) + '…';
     return `<div class="fb-text" data-full="${safe}" data-preview="${preview}" data-state="collapsed">${preview}</div>`
       + `<button type="button" class="fb-toggle" data-kind="${kind}" aria-expanded="false">Show full ${kind}</button>`;
+  };
+  // Rendered-Markdown expand/collapse — used for Zero's response so the
+  // viewer sees the same KaTeX + Markdown output the student saw.
+  const renderExpandableMd = (full) => {
+    if (!full) return `<div class="fb-empty">— no response captured —</div>`;
+    if (full.length <= PREVIEW_CHARS) {
+      return `<div class="fb-text fb-text-md ai-rendered" data-render="md" data-full-md="${esc(full)}">${window.renderMarkdown ? window.renderMarkdown(full) : esc(full)}</div>`;
+    }
+    const previewSrc = full.slice(0, PREVIEW_CHARS) + '…';
+    const previewHtml = window.renderMarkdown ? window.renderMarkdown(previewSrc) : esc(previewSrc);
+    return `<div class="fb-text fb-text-md ai-rendered" data-render="md" data-full-md="${esc(full)}" data-preview-md="${esc(previewSrc)}" data-state="collapsed">${previewHtml}</div>`
+      + `<button type="button" class="fb-toggle" data-kind="response" aria-expanded="false">Show full response</button>`;
   };
 
   const cards = rows.map(r => {
@@ -1154,7 +1192,7 @@ async function loadFeedback() {
         </section>
         <section class="fb-col fb-response">
           <h4>Zero Response</h4>
-          ${renderExpandable(q.ai_response, 'response')}
+          ${renderExpandableMd(q.ai_response)}
         </section>
       </div>
     </article>`;
@@ -1170,16 +1208,28 @@ async function loadFeedback() {
     btn.addEventListener('click', () => {
       const text = btn.previousElementSibling;
       const expanded = text.dataset.state === 'expanded';
-      // dataset values are stored as plain text (esc() output unescaped by
-      // the browser when read via .dataset). Use textContent so any HTML
-      // inside the original feedback can't execute as markup.
-      text.textContent = expanded ? text.dataset.preview : text.dataset.full;
+      if (text.dataset.render === 'md') {
+        // Rendered Markdown — re-run the chat renderer on the appropriate
+        // source, then ask KaTeX to typeset the new content.
+        const src = expanded ? text.dataset.previewMd : text.dataset.fullMd;
+        text.innerHTML = window.renderMarkdown ? window.renderMarkdown(src) : src;
+        if (window.renderMathInEl) window.renderMathInEl(text);
+      } else {
+        // Plain text — textContent so any HTML inside the original feedback
+        // can't execute as markup.
+        text.textContent = expanded ? text.dataset.preview : text.dataset.full;
+      }
       text.dataset.state = expanded ? 'collapsed' : 'expanded';
       const kind = btn.dataset.kind || 'response';
       btn.textContent = expanded ? `Show full ${kind}` : `Show less`;
       btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
     });
   });
+
+  // Run KaTeX typesetting on all newly-rendered Zero Response panels.
+  if (window.renderMathInEl) {
+    container.querySelectorAll('.fb-text-md').forEach(el => window.renderMathInEl(el));
+  }
 }
 
 // ── AI Alerts ───────────────────────────────────────────────────────────────
