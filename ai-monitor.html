@@ -62,7 +62,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* MAIN */
 .main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0) + 18px) 18px 60px;max-width:1240px;margin:0 auto}
-@media(min-width:768px){.main{padding-left:calc(var(--side-w) + 18px)}}
+@media(min-width:768px){.main{max-width:none;margin:0;padding-left:calc(var(--side-w) + max(18px, (100vw - var(--side-w) - 1320px) / 2));padding-right:max(18px, (100vw - var(--side-w) - 1320px) / 2)}}
 
 /* PAGE HEADER */
 .page-hd{margin-bottom:24px;animation:rise .5s ease both}
@@ -243,9 +243,7 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   <div class="side-sec">Account</div>
   <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
   <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.72V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
-  <div class="side-sec">Admin</div>
-  <a class="nav-item admin-active" href="admin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>Admin Dashboard</a>
-  <a class="nav-item active" href="ai-monitor.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>AI Monitor</a>
+  <div id="adminNavSection"></div>
   <div class="side-spacer"></div>
 </aside>
 
@@ -309,13 +307,16 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 
   <div class="card" style="margin-top:14px">
     <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Cost breakdown by role</div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);border-radius:10px;padding:10px 12px;margin-bottom:12px;color:#fbbf24;font-size:12.5px;display:flex;align-items:center;gap:8px">
+      <span>⏳</span><span>Awaiting v82 token tracking — per-role cost capture ships with ai-tutor v82. No values shown until real data is available.</span>
+    </div>
     <div class="metric-rows">
-      <div class="metric-row"><span class="metric-lbl">Solver (gpt-4o-mini)</span><span class="metric-val" id="bkSolver">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">Judge (gpt-4o)</span><span class="metric-val" id="bkJudge">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">OCR (gpt-4o-mini + 4o rerun)</span><span class="metric-val" id="bkOcr">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">GPT-4o subtotal</span><span class="metric-val cyan" id="bk4o">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">GPT-4o-mini subtotal</span><span class="metric-val cyan" id="bkMini">—</span></div>
-      <div class="metric-row" style="border-top:1px solid var(--border-soft);padding-top:10px;margin-top:6px"><span class="metric-lbl" style="font-weight:700">TOTAL</span><span class="metric-val amber" id="bkTotal" style="font-weight:700">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">Solver (gpt-4o-mini)</span><span class="metric-val" id="bkSolver" style="color:var(--text-500)">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">Judge (gpt-4o)</span><span class="metric-val" id="bkJudge" style="color:var(--text-500)">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">OCR (gpt-4o-mini + 4o rerun)</span><span class="metric-val" id="bkOcr" style="color:var(--text-500)">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">GPT-4o subtotal</span><span class="metric-val" id="bk4o" style="color:var(--text-500)">—</span></div>
+      <div class="metric-row"><span class="metric-lbl">GPT-4o-mini subtotal</span><span class="metric-val" id="bkMini" style="color:var(--text-500)">—</span></div>
+      <div class="metric-row" style="border-top:1px solid var(--border-soft);padding-top:10px;margin-top:6px"><span class="metric-lbl" style="font-weight:700">TOTAL</span><span class="metric-val" id="bkTotal" style="color:var(--text-500);font-weight:700">—</span></div>
     </div>
   </div>
 
@@ -1026,37 +1027,12 @@ function todayISO() { const d = new Date(); d.setHours(0,0,0,0); return d.toISOS
 function nDaysAgo(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// ── Cost Breakdown (called from loadCostUsage tail) ─────────────────────────
-function renderCostBreakdown(rows) {
-  // rows = question_records with verification_meta in window
-  const P = PRICE;
-  let solverIn=0, solverOut=0, judgeIn=0, judgeOut=0, ocrMiniIn=0, ocrMiniOut=0, ocrFullIn=0, ocrFullOut=0;
-  for (const r of (rows||[])) {
-    const m = r.verification_meta || {};
-    solverIn  += (m.solver_a_tokens_in  || 0) + (m.solver_b_tokens_in  || 0);
-    solverOut += (m.solver_a_tokens_out || 0) + (m.solver_b_tokens_out || 0);
-    judgeIn   += (m.judge_tokens_in  || 0);
-    judgeOut  += (m.judge_tokens_out || 0);
-    ocrMiniIn += (m.ocr_tokens_in  || 0);
-    ocrMiniOut+= (m.ocr_tokens_out || 0);
-    ocrFullIn += (m.ocr_rerun_tokens_in  || 0);
-    ocrFullOut+= (m.ocr_rerun_tokens_out || 0);
-  }
-  const cSolver = (solverIn*P['gpt-4o-mini'].in + solverOut*P['gpt-4o-mini'].out)/1e6;
-  const cJudge  = (judgeIn*P['gpt-4o'].in     + judgeOut*P['gpt-4o'].out)/1e6;
-  const cOcrMini= (ocrMiniIn*P['gpt-4o-mini'].in + ocrMiniOut*P['gpt-4o-mini'].out)/1e6;
-  const cOcrFull= (ocrFullIn*P['gpt-4o'].in   + ocrFullOut*P['gpt-4o'].out)/1e6;
-  const cOcr    = cOcrMini + cOcrFull;
-  const c4o     = cJudge + cOcrFull;
-  const cMini   = cSolver + cOcrMini;
-  const total   = cSolver + cJudge + cOcr;
-  document.getElementById('bkSolver').textContent = fmtUSD(cSolver);
-  document.getElementById('bkJudge').textContent  = fmtUSD(cJudge);
-  document.getElementById('bkOcr').textContent    = fmtUSD(cOcr);
-  document.getElementById('bk4o').textContent     = fmtUSD(c4o);
-  document.getElementById('bkMini').textContent   = fmtUSD(cMini);
-  document.getElementById('bkTotal').textContent  = fmtUSD(total);
-}
+// ── Cost Breakdown ─────────────────────────────────────────────────────────
+// Per-role token capture ships with ai-tutor v82. Until then the breakdown
+// would only reflect the subset of fields currently emitted, which the user
+// rule "no fake values" forbids. Card stays in the DOM (notice banner shows
+// "Awaiting v82 token tracking"); values remain "—" until v82 is live.
+function renderCostBreakdown(_rows) { /* intentionally no-op until v82 */ }
 
 // ── Recent Failures ─────────────────────────────────────────────────────────
 async function loadRecentFailures(since) {
@@ -1111,13 +1087,27 @@ async function loadFeedback() {
     : '<div style="color:var(--text-500);padding:10px">No topic data yet.</div>';
 
   const rows = rowsRes.data || [];
-  const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
-  const { data: pData } = userIds.length ? await sb.from('profiles').select('id, full_name, email').in('id', userIds) : { data: [] };
-  const pMap = Object.fromEntries((pData||[]).map(p => [p.id, p]));
+  const userIds   = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+  const recordIds = [...new Set(rows.map(r => r.record_id).filter(Boolean))];
+  const [pRes, qRes] = await Promise.all([
+    userIds.length   ? sb.from('profiles').select('id, full_name, email').in('id', userIds) : Promise.resolve({ data: [] }),
+    recordIds.length ? sb.from('question_records').select('id, question, ai_response, image').in('id', recordIds) : Promise.resolve({ data: [] }),
+  ]);
+  const pMap = Object.fromEntries((pRes.data||[]).map(p => [p.id, p]));
+  const qMap = Object.fromEntries((qRes.data||[]).map(q => [q.id, q]));
+  const truncate = (s, n) => { s = String(s||''); return s.length > n ? s.slice(0, n) + '…' : s; };
+  const renderImageCell = (img) => {
+    if (!img) return '<span style="color:var(--text-500)">—</span>';
+    const src = img.startsWith('data:') || img.startsWith('http') ? img : `data:image/jpeg;base64,${img}`;
+    return `<a href="${esc(src)}" target="_blank" rel="noopener" title="Open full image"><img src="${esc(src)}" alt="question image" style="max-width:96px;max-height:64px;border-radius:6px;border:1px solid var(--border-soft);display:block"/></a>`;
+  };
   document.getElementById('fbRecentBody').innerHTML = rows.length
-    ? `<table class="recent"><thead><tr><th>Time</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th></tr></thead><tbody>${rows.map(r => {
+    ? `<table class="recent feedback-recent"><thead><tr><th>Time</th><th>User</th><th>Type</th><th>Error</th><th>Topic</th><th style="min-width:220px">Student Question</th><th>Image</th><th style="min-width:240px">Zero Response</th></tr></thead><tbody>${rows.map(r => {
         const p = pMap[r.user_id];
-        return `<tr><td class="mono">${fmtTime(r.created_at)}</td><td>${esc(p?.full_name||p?.email||(r.user_id||'').slice(0,8)||'—')}</td><td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍':'👎'}</span></td><td>${esc(FB_ERR_LABELS[r.error_type]||r.error_type||'—')}</td><td>${esc(r.topic||'—')}</td></tr>`;
+        const q = qMap[r.record_id] || {};
+        const qText = q.question ? `<div title="${esc(q.question)}" style="max-width:260px;color:var(--text-300);font-size:12.5px;line-height:1.4">${esc(truncate(q.question, 180))}</div>` : '<span style="color:var(--text-500)">—</span>';
+        const aText = q.ai_response ? `<div title="${esc(q.ai_response)}" style="max-width:280px;color:var(--text-300);font-size:12.5px;line-height:1.4">${esc(truncate(q.ai_response, 220))}</div>` : '<span style="color:var(--text-500)">—</span>';
+        return `<tr style="vertical-align:top"><td class="mono">${fmtTime(r.created_at)}</td><td>${esc(p?.full_name||p?.email||(r.user_id||'').slice(0,8)||'—')}</td><td><span class="chip ${r.feedback_type==='helpful'?'green':'red'}">${r.feedback_type==='helpful'?'👍':'👎'}</span></td><td>${esc(FB_ERR_LABELS[r.error_type]||r.error_type||'—')}</td><td>${esc(r.topic||'—')}</td><td>${qText}</td><td>${renderImageCell(q.image)}</td><td>${aText}</td></tr>`;
       }).join('')}</tbody></table>`
     : '<div style="color:var(--text-500);padding:10px">No feedback yet.</div>';
 }
@@ -1224,5 +1214,6 @@ async function loadShadowStatus() {
 
 init();
 </script>
+<script src="nav.js" defer></script>
 </body>
 </html>
