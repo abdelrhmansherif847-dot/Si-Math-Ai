@@ -1188,8 +1188,23 @@ button{font-family:inherit;cursor:pointer}
     } else if (imageData && typeof imageData === 'string' && imageData.startsWith('data:application/pdf')) {
       payload.pdf = imageData;
     }
-    // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT)
-    const { data, error } = await sb.functions.invoke('ai-tutor', { body: payload });
+    // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT).
+    //    One automatic retry on transport-only failures (no HTTP status) —
+    //    these are cold-start / CORS-preflight 503s that surface as
+    //    FunctionsFetchError "Failed to send request to edge function".
+    //    Short messages like "franco" / "اتكلم فرانكو" used to hit this race
+    //    most often because users retried quickly.
+    let data, error;
+    {
+      const r1 = await sb.functions.invoke('ai-tutor', { body: payload });
+      data = r1.data; error = r1.error;
+      const transportFail = error && !(error.context && error.context.status);
+      if (transportFail) {
+        await new Promise(res => setTimeout(res, 350));
+        const r2 = await sb.functions.invoke('ai-tutor', { body: payload });
+        data = r2.data; error = r2.error;
+      }
+    }
 
     // 4) Translate every error class into a clear user-facing message
     if (error) {

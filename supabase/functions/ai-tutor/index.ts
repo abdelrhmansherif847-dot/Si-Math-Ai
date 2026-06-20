@@ -1269,6 +1269,18 @@ serve(async (req) => {
       lang = 'en';
     }
 
+    // Structured language-resolution log — emits on EVERY turn so we can see
+    // detection inputs/outputs for any reported "Franco didn't switch" case.
+    console.log('[ai-tutor] lang-resolve', JSON.stringify({
+      uid: user.id.slice(0, 8),
+      qLen: question.length,
+      qPreview: question.slice(0, 60),
+      currentIsArabic, currentIsFranco,
+      currentRequestsFranco, currentRequestsEnglish, currentRequestsArabic,
+      priorPref: langPref, resolved: lang,
+      willPersist: persistLangPref,
+    }));
+
     // Persist explicit language choice to profile (background, non-blocking).
     if (persistLangPref) {
       const newPref = persistLangPref;
