@@ -970,6 +970,33 @@ async function runL3ShadowPipeline(opts: {
     (0.40 * solver_agreement + 0.30 * reasoningCompleteness + 0.30 * judge.confidence).toFixed(3),
   );
 
+  // Human-readable summary of WHY the score landed where it did.
+  // Built deterministically from the same inputs so dashboards / admin tools
+  // can show a one-line rationale without parsing the full meta blob.
+  const reasonParts: string[] = [];
+  if (judge.verdict === 'ocr_uncertain') {
+    reasonParts.push('OCR confidence below 0.75 — verdict locked to ocr_uncertain.');
+  } else {
+    reasonParts.push(
+      solver_agreement === 1.0
+        ? 'Both solvers reached the same normalized answer.'
+        : 'Solvers reached different final answers.',
+    );
+    if (reasoningCompleteness >= 1.0) {
+      reasonParts.push('Both produced complete reasoning chains.');
+    } else if (reasoningCompleteness >= 0.5) {
+      reasonParts.push('Reasoning was partial — at least one solver was short.');
+    } else {
+      reasonParts.push('Solver outputs were short; reasoning quality was weak.');
+    }
+    reasonParts.push(
+      judge.confidence >= 0.8 ? 'Judge confidence was high.'
+        : judge.confidence >= 0.5 ? 'Judge confidence was moderate.'
+        : 'Judge confidence was low.',
+    );
+  }
+  const verification_reason = reasonParts.join(' ');
+
   // 7. Merge Phase 1 detector meta + Phase 2A pipeline meta
   const verificationMeta = {
     ...detectorMeta,
@@ -991,6 +1018,7 @@ async function runL3ShadowPipeline(opts: {
     judge_reasoning_length,
     low_quality_solver,
     verification_quality_score,
+    verification_reason,
     zero_answer_hash:            await sha256short(zeroAnswer),
     pipeline_latency_ms,
     expert_trigger:              isExpertTier,
@@ -1037,6 +1065,7 @@ async function runL3ShadowPipeline(opts: {
     judge_verdict:               judge.verdict,
     verification_confidence:     judge.confidence,
     verification_quality_score,
+    verification_reason,
     expert_trigger:              isExpertTier,
     pipeline_latency_ms,
   }));
