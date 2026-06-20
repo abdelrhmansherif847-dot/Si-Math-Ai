@@ -164,11 +164,20 @@ function detectFranco(text: string): boolean {
   const words = t.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   const FRANCO_WORDS = new Set([
     'msh','mesh','ezayak','ezzayak','ezay','izay','keda','kda','delwa2ty','dlw2ty',
-    'fahem','fahma','m3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','sa7','sah',
+    'fahem','fahma','fhmt','feshto','m3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','sa7','sah',
     'b2a','ba2a','yala','yalla','3awz','3awez','3ayz','3andy','3andi','3ayza',
-    '5alas','5las','tb','tab','7aga','7d','7add','sho2l','shar7','msh3arf'
+    '5alas','5las','tb','tab','7aga','7d','7add','sho2l','shar7','msh3arf',
+    'eh','ehh','leh','feen','meen','ana','enta','enti','howa','heya','e7na','entom',
+    'mafhomsh','mafhomesh','tamam','tmam','helw','7elw','kwayes','kwayyes','zaman',
+    'momken','mumken','momkn','law','lw','bas','bs','3lshan','3ashan','ashan',
+    'shokran','shukran','3afwan','tayeb','tayyeb','akeed','akid','sa3a','sa3at',
+    'yom','youm','nahar','el','ya','wa7ed','wa7da','etnen','etnein','talata','tlata',
   ]);
-  return words.some(w => FRANCO_WORDS.has(w));
+  // Auto-detect if ≥2 Franco hits, OR if any Franco word appears in a short message.
+  const hits = words.filter(w => FRANCO_WORDS.has(w)).length;
+  if (hits >= 2) return true;
+  if (hits >= 1 && words.length <= 6) return true;
+  return false;
 }
 
 // Explicit "switch to Franco" request — persistent until student explicitly
@@ -176,20 +185,28 @@ function detectFranco(text: string): boolean {
 // via profile.language_preference = 'franco' so it survives reloads and long
 // conversations beyond the message-window stickiness.
 function detectExplicitFrancoRequest(text: string): boolean {
-  const t = (text || '').toLowerCase();
+  const t = (text || '').toLowerCase().trim();
   if (!t) return false;
+  // Bare keyword in a short message — "franco", "franco.", "فرانكو" by itself
+  // should switch immediately. We bound by length so a long unrelated message
+  // that happens to contain "franco" as a word isn't auto-flipped.
+  if (t.length <= 40 && /(^|[^a-z0-9])(franco|arabizi|3arabizi|franko|frankoo)([^a-z0-9]|$)/i.test(t)) return true;
+  if (t.length <= 40 && /(^|\s)(فرانكو|الفرانكو|فرانكوا)(\s|$|[.!؟?])/i.test(t)) return true;
   // Latin variants: verb + (in) + franco/arabizi, "in franco", "franco please",
   // "switch to franco", "bel franco", "bel araby franco", "arabizi", "3arabizi",
-  // "3arabi franco". Verb list expanded with "explain".
-  if (/(speak|talk|reply|respond|answer|write|use|explain)\s+(in\s+|with\s+)?(franco|arabizi|3arabizi)/i.test(t)) return true;
-  if (/(in|bel|bil|b)\s+(araby\s+)?(franco|arabizi|3arabizi)/i.test(t)) return true;
-  if (/(franco|arabizi|3arabizi)\s+(please|plz|pls)/i.test(t)) return true;
-  if (/switch\s+to\s+(franco|arabizi|3arabizi)/i.test(t)) return true;
-  if (/\b3arabi\s+franco\b/i.test(t)) return true;
-  if (/\barabizi\b|\b3arabizi\b/i.test(t)) return true;
-  // Arabic-script Franco requests
-  if (/(اكتب(لي)?|كلمني|اتكلم|رد(لي)?|جاوب(ني)?|تكلم|قول(لي)?)\s*(لي\s*)?(فرانكو|الفرانكو)/i.test(t)) return true;
-  if (/بال?فرانكو/i.test(t)) return true;
+  // "3arabi franco".
+  if (/(speak|talk|reply|respond|answer|write|use|explain|chat|say|tell|go|continue|stay|keep|change|switch|change to|change in|do)\s+(in\s+|with\s+|to\s+)?(franco|arabizi|3arabizi|franko)/i.test(t)) return true;
+  if (/(in|bel|bil|b|using|by)\s+(araby\s+)?(franco|arabizi|3arabizi|franko)/i.test(t)) return true;
+  if (/(franco|arabizi|3arabizi|franko)\s+(please|plz|pls|now|mode|only)/i.test(t)) return true;
+  if (/(please|plz|pls)\s+(franco|arabizi|3arabizi|franko)/i.test(t)) return true;
+  if (/switch\s+(to\s+)?(franco|arabizi|3arabizi|franko)/i.test(t)) return true;
+  if (/\b3arabi\s+franko?\b/i.test(t)) return true;
+  if (/\barabizi\b|\b3arabizi\b|\bfranko+\b/i.test(t)) return true;
+  // Common Franco self-requests: "kalemny franko", "etkalem franko", "rod franko"
+  if (/(kalemny|kalemni|kallemni|etkallem|etkalem|atkalem|atkallem|rod|rud|jaweb|gaweb|2olly|olly|2olli)\s+(b?el?\s+)?(franco|franko|arabizi)/i.test(t)) return true;
+  // Arabic-script Franco requests (expanded)
+  if (/(اكتب(لي)?|كلمني|كلملي|اتكلم|اتكلملي|تكلم|تكلملي|رد(لي)?|ردلي|جاوب(ني)?|جاوبني|قول(لي)?|قوللي|حول|بدل|غير|خلي)\s*(لي\s*)?(ب?ال?فرانكو|الفرانكو|فرانكو)/i.test(t)) return true;
+  if (/بال?فرانكو|ب?الفرانكو|بفرانكو/i.test(t)) return true;
   return false;
 }
 
@@ -1239,6 +1256,7 @@ serve(async (req) => {
       lang = 'ar';
     } else if (currentIsFranco) {
       lang = 'franco';
+      if (langPref !== 'franco') persistLangPref = 'franco';
     } else if (langPref === 'franco') {
       lang = 'franco';
     } else if (langPref === 'ar') {
