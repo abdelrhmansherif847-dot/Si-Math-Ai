@@ -1098,23 +1098,43 @@ async function viewPaymentDetail(id) {
   document.getElementById('approveModal').classList.add('show');
 }
 
+const _processingRequests = new Set();
+
 async function approvePaymentRequest(requestId) {
+  if (_processingRequests.has(requestId)) { toast('Already processing this request…', 'amber'); return; }
   if (!confirm('Approve this payment and activate the student\'s plan?')) return;
-  const { data, error } = await sb.rpc('approve_payment_request', { request_id: requestId });
-  if (error) { toast('Error: ' + error.message, 'red'); return; }
-  const result = typeof data === 'string' ? JSON.parse(data) : data;
-  toast(`✅ Plan activated! ${result.credits_granted ? result.credits_granted.toLocaleString() + ' credits granted.' : ''}`, 'green');
-  loadPaymentRequests();
-  loadStats();
+  _processingRequests.add(requestId);
+  // Disable all action buttons for this request
+  document.querySelectorAll(`[onclick*="${requestId}"]`).forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+  try {
+    const { data, error } = await sb.rpc('approve_payment_request', { request_id: requestId });
+    if (error) { toast('Error: ' + error.message, 'red'); return; }
+    const result = typeof data === 'string' ? JSON.parse(data) : data;
+    const msg = result.kind === 'pack'
+      ? `✅ ${result.credits_added?.toLocaleString()} credits added!`
+      : `✅ Plan activated! ${result.credits_granted ? result.credits_granted.toLocaleString() + ' credits granted.' : ''}`;
+    toast(msg, 'green');
+    loadPaymentRequests();
+    loadStats();
+  } finally {
+    _processingRequests.delete(requestId);
+  }
 }
 
 async function rejectPaymentRequest(requestId) {
+  if (_processingRequests.has(requestId)) { toast('Already processing this request…', 'amber'); return; }
   const reason = prompt('Rejection reason (shown to student):') || 'Payment could not be verified';
-  const { error } = await sb.rpc('reject_payment_request', { request_id: requestId, reason });
-  if (error) { toast('Error: ' + error.message, 'red'); return; }
-  toast('Request rejected', 'red');
-  loadPaymentRequests();
-  loadStats();
+  _processingRequests.add(requestId);
+  document.querySelectorAll(`[onclick*="${requestId}"]`).forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+  try {
+    const { error } = await sb.rpc('reject_payment_request', { request_id: requestId, reason });
+    if (error) { toast('Error: ' + error.message, 'red'); return; }
+    toast('Request rejected', 'red');
+    loadPaymentRequests();
+    loadStats();
+  } finally {
+    _processingRequests.delete(requestId);
+  }
 }
 
 // Helpers
