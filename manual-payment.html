@@ -604,10 +604,22 @@ function hideAlert() {
 async function submitRequest() {
   hideAlert();
 
+  if (!selectedPlan) { showAlert('Please select a plan or pack.', 'error'); return; }
   if (!uploadedFile) { showAlert('Please upload your payment screenshot.', 'error'); return; }
 
   const senderName = document.getElementById('senderName').value.trim();
   if (!senderName) { showAlert('Please enter your name.', 'error'); return; }
+
+  // Warn if user already has the same active subscription (packs always allowed — they stack)
+  if (selectedPlan.kind === 'subscription') {
+    try {
+      const { data: prof } = await sb.from('profiles').select('plan_code, subscription_expires_at').eq('id', currentUser.id).single();
+      if (prof && prof.plan_code === selectedPlan.code && prof.subscription_expires_at && new Date(prof.subscription_expires_at) > new Date()) {
+        const exp = new Date(prof.subscription_expires_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+        if (!confirm(`You already have an active ${selectedPlan.label} subscription (expires ${exp}). Submit anyway? (Your renewal will extend from your current expiry date.)`)) return;
+      }
+    } catch(_) {}
+  }
 
   const senderRef  = document.getElementById('senderRef').value.trim();
   const senderNote = document.getElementById('senderNote').value.trim();
