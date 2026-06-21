@@ -119,9 +119,10 @@ button{font-family:inherit;cursor:pointer}
 .submit-btn{width:100%;padding:15px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--purple),#7c3aed);color:#fff;font-family:var(--font-display);font-weight:700;font-size:16px;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px}
 .submit-btn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(168,85,247,.4)}
 .submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.submit-btn .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none}
+.submit-btn .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none;flex-shrink:0}
 .submit-btn.loading .spin{display:block}
-.submit-btn.loading .btn-txt{display:none}
+/* Keep the label visible while loading so the phase text reads alongside the spinner */
+.submit-btn.loading{cursor:wait}
 
 /* ALERT */
 .alert{padding:12px 15px;border-radius:var(--r-md);font-size:13.5px;margin-bottom:16px;display:none}
@@ -629,11 +630,22 @@ async function submitRequest() {
     senderNote ? 'Note: ' + senderNote : ''
   ].filter(Boolean).join(' | ');
 
-  const btn = document.getElementById('submitBtn');
+  const btn     = document.getElementById('submitBtn');
+  const btnTxt  = btn.querySelector('.btn-txt');
+  const setPhase = (msg) => {
+    if (btnTxt) btnTxt.textContent = msg;
+    showAlert(msg, 'info');
+  };
   btn.disabled = true;
   btn.classList.add('loading');
 
+  // Approx upload duration so the student knows it may take a moment.
+  // Storage SDK does not expose progress events, so the cue is phase-based.
+  const sizeMB = (uploadedFile.size / (1024 * 1024)).toFixed(1);
+
   try {
+    setPhase(`Uploading screenshot (${sizeMB} MB)…`);
+
     // Upload screenshot to storage
     const ext  = uploadedFile.name.split('.').pop() || 'jpg';
     const path = `${currentUser.id}/${Date.now()}.${ext}`;
@@ -642,6 +654,8 @@ async function submitRequest() {
       upsert: false
     });
     if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message);
+
+    setPhase('Saving payment request…');
 
     // Get signed URL to store reference
     const { data: urlData } = await sb.storage.from('payment-proofs').createSignedUrl(path, 60 * 60 * 24 * 365);
@@ -672,6 +686,7 @@ async function submitRequest() {
   } catch(err) {
     btn.disabled = false;
     btn.classList.remove('loading');
+    if (btnTxt) btnTxt.textContent = '🚀 Submit Payment Request';
     showAlert(err.message || 'Something went wrong. Please try again.', 'error');
   }
 }
