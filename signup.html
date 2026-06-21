@@ -52,6 +52,9 @@ body{
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
+  /* Hidden until fonts load so the card doesn't reflow after font swap
+     (the layout-shift source on mobile/iPad). Capped at 350ms below. */
+  visibility:hidden;
   min-height:100vh;
   min-height:100dvh;
   position:relative;
@@ -327,6 +330,24 @@ button{font-family:inherit;cursor:pointer}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  /* Reveal the page once web fonts are ready so the card doesn't reflow
+     after the font swap (the layout-shift source on mobile/iPad).
+     Capped at 350ms so a slow font fetch never blanks the page. */
+  (function () {
+    var revealed = false;
+    function reveal() {
+      if (revealed) return;
+      revealed = true;
+      document.body.style.visibility = 'visible';
+    }
+    var cap = setTimeout(reveal, 350);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { clearTimeout(cap); reveal(); });
+    } else {
+      clearTimeout(cap);
+      reveal();
+    }
+  })();
   // Show / hide password (both fields)
   document.querySelectorAll('.toggle-pw').forEach(btn=>{
     btn.addEventListener('click',()=>{

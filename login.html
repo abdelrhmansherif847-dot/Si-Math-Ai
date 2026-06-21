@@ -459,13 +459,33 @@ button{font-family:inherit;cursor:pointer}
     } catch(e){window.location.href='onboarding.html';}
   }
 
+  /* Reveal the form once fonts have loaded so font swap doesn't reflow
+     the card after it appears (the main CLS source on mobile/iPad).
+     A hard 350ms cap guarantees we never block on a slow font fetch.
+     The auth check runs in parallel; if a session exists we redirect
+     after reveal — the brief flash is far less disruptive than a long
+     blank screen followed by a sudden appearance + layout shift. */
+  (function () {
+    var revealed = false;
+    function reveal() {
+      if (revealed) return;
+      revealed = true;
+      document.body.style.visibility = 'visible';
+    }
+    var revealCap = setTimeout(reveal, 350);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { clearTimeout(revealCap); reveal(); });
+    } else {
+      clearTimeout(revealCap);
+      reveal();
+    }
+  })();
   (async()=>{
     try{
       var res=await supabaseClient.auth.getUser();
       var user=res.data&&res.data.user;
       if(user){routeAfterAuth(user.id);return;}
     }catch(_){}
-    document.body.style.visibility='visible';
   })();
 
   var pw=document.getElementById('password');
