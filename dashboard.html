@@ -1658,7 +1658,7 @@ async function loadDashboard() {
   var displayName = prof.full_name || (user.email ? user.email.split('@')[0] : '') || 'Student';
   var examType    = prof.exam_type || 'SAT';
   var targetScore = prof.target_score || 0;
-  var scoreMax    = examType === 'ACT' ? 36 : examType === 'EST' ? 900 : 1600;
+  var scoreMax    = examType === 'ACT' ? 36 : 800; // Math section only (SAT/EST): 200–800
 
   /* Update avatar with real name initial — only if it produces a real
      letter/digit. Cache the full display name so the next visit can
