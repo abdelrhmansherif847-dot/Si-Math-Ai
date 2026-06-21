@@ -1360,7 +1360,7 @@ body::before{
       </button>
 
       <button onclick="location.href='chat.html'" class="tutor-cta">
-        <span class="em">🐉</span> Ask Si Math AI
+        <span class="em">🐉</span> Ask Zero
       </button>
     </section>
 
@@ -1370,12 +1370,12 @@ body::before{
   <div class="zero-card reveal" style="transition-delay:.3s">
     <div class="zero-badge">
       <span class="dot"></span>
-      Si · Mentor Insight
+      Zero · Mentor Insight
     </div>
     <div class="zero-header">
-      <div class="zero-avatar" aria-label="Si the AI Math Mentor" role="img">🐉</div>
+      <div class="zero-avatar" aria-label="Zero the AI Math Mentor" role="img">🐉</div>
       <div>
-        <div class="zero-name">Si</div>
+        <div class="zero-name">Zero</div>
         <div class="zero-role">Your AI Math Mentor</div>
       </div>
     </div>
@@ -1387,7 +1387,7 @@ body::before{
         <svg viewBox="0 0 16 16" fill="none" style="width:15px;height:15px"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Open Focus Plan
       </a>
-      <a href="chat.html" class="zero-btn-ghost" id="zeroChatBtn">Ask Si</a>
+      <a href="chat.html" class="zero-btn-ghost" id="zeroChatBtn">Ask Zero</a>
     </div>
   </div>
 
@@ -1973,7 +1973,7 @@ async function loadDashboard() {
       var mastPhrase = (weakness.mastery_score != null) ? ' Your current mastery is <span class="time-hl">' + weakness.mastery_score + '%</span>.' : '';
       var dayPhrase  = daysRemaining > 0 ? ' You have <span class="time-hl">' + daysRemaining + ' days</span> until your exam.' : '';
       zeroEl.innerHTML = sessPhrase + ', <span class="topic-hl">' + wLoc + '</span> is your highest-priority weakness right now.' + mastPhrase + dayPhrase + ' Open your focus plan to start improving now.';
-      if (chatBtn) { chatBtn.href = 'chat.html'; chatBtn.textContent = 'Ask Si About ' + weakness.topic; }
+      if (chatBtn) { chatBtn.href = 'chat.html'; chatBtn.textContent = 'Ask Zero About ' + weakness.topic; }
     } else if (!masteryRecs.length) {
       zeroEl.textContent = 'Welcome! Start practising with the AI Tutor or take a Mock Exam. Your personalised insight will appear here after your first session.';
       if (chatBtn) chatBtn.textContent = 'Start with AI Tutor';

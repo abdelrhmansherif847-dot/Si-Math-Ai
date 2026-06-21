@@ -1230,9 +1230,9 @@ button{font-family:inherit;cursor:pointer}
       const status = error.context && error.context.status;
       if (status === 401 || status === 403) throw new Error('Your session expired. Please sign in again.');
       if (status === 429)                   throw new Error('You\u2019ve hit today\u2019s limit. Please try again later or upgrade your plan.');
-      if (status && status >= 500)          throw new Error('Si is temporarily unavailable. Please try again in a moment.');
+      if (status && status >= 500)          throw new Error('Zero is temporarily unavailable. Please try again in a moment.');
       // Network / generic / OpenAI errors bubbled through the function
-      throw new Error(error.message || 'Could not reach Si. Please check your connection and try again.');
+      throw new Error(error.message || 'Could not reach Zero. Please check your connection and try again.');
     }
     if (!data) throw new Error('Empty response from Si. Please try again.');
 
