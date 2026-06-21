@@ -1103,6 +1103,22 @@ async function loadData(forceRegen){
     allReports=fresh.data||[];
   }
 
+  // Stale-report detection: if mastery_records have been updated more recently
+  // than the newest weakness_report by > 24h, the rankings shown to the student
+  // may no longer reflect their actual standing. Trigger a non-blocking regen
+  // and re-render once it completes. First paint uses current data so the
+  // page is never delayed by this check.
+  if(!forceRegen&&allReports.length>0&&allMastery.length>0&&window.regenerateWeaknessReports){
+    const toMs=v=>v?new Date(v).getTime():0;
+    const reportsMaxAt=Math.max(...allReports.map(r=>toMs(r.last_updated)));
+    const masteryMaxAt=Math.max(...allMastery.map(m=>toMs(m.last_updated)));
+    if(masteryMaxAt>reportsMaxAt+86400000){
+      window.regenerateWeaknessReports(sb,uid)
+        .then(()=>loadData(false))
+        .catch(e=>console.warn('[weakness] stale-regen error:',e.message));
+    }
+  }
+
   if(allReports.length===0&&allSignals.length===0){showEmpty();return;}
 
   const reports=allReports.length>0?allReports:buildFromSignals(allSignals);
@@ -1328,7 +1344,10 @@ async function loadEvidenceBatched(reports, topN){
         return {
           src: 'exam', when,
           body: e ? `Mock exam mistake — ${e.topic || ''}${e.subtopic ? ' → ' + e.subtopic : ''}` : 'Earlier exam signal',
-          link: e && e.session_id ? `mock-exam.html?session=${encodeURIComponent(e.session_id)}` : null,
+          // mock-exam.html does not read ?session=; it would launch a fresh exam.
+          // Route to history.html instead — the past-sessions surface that lists
+          // both chat and exam sessions so the student can locate the exam.
+          link: e ? 'history.html' : null,
           linked: !!e,
         };
       }
