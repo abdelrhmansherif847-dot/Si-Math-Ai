@@ -259,6 +259,19 @@ body::before{
   background-size:200% auto;
 }
 @keyframes nameShimmer{0%,100%{background-position:0% center}50%{background-position:100% center}}
+/* Name skeleton — shown while the profile fetch is in flight (only
+   on first-ever visits; returning users get the cached name painted
+   inline before paint, so they never see this). Reserves the same
+   vertical space as the rendered name to avoid a layout shift. */
+.name-skel{
+  display:inline-block;vertical-align:baseline;
+  width:min(60vw,260px);height:.85em;border-radius:6px;
+  background:linear-gradient(90deg,rgba(56,189,248,.10),rgba(56,189,248,.22),rgba(56,189,248,.10));
+  background-size:200% 100%;
+  animation:nameSkel 1.2s ease-in-out infinite;
+  -webkit-text-fill-color:transparent;
+}
+@keyframes nameSkel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .hero-sub{color:var(--text-400);font-size:15px;margin-bottom:24px;max-width:520px;line-height:1.6;
   /* Reserve space for the longest expected sub line so the hero
      doesn't grow once the async profile data lands. The sub renders
@@ -898,15 +911,21 @@ body::before{
   </div>
 </header>
 <script>
-  /* Paint the cached avatar initial before any async work so the letter
-     is stable from first paint and never disappears between the
-     placeholder ? and the profile fetch. */
+  /* Hydrate the header from cached profile data before any async work.
+     Returning users see their real name immediately — no "A → Full
+     Name" flash. First-time users keep the skeleton until the profile
+     fetch resolves and the cache is populated for next visit. */
   (function () {
     try {
-      var cached = localStorage.getItem('siUserInitial');
-      if (cached && /^[A-Z0-9]$/.test(cached)) {
-        var el = document.getElementById('topAvatar');
-        if (el) el.textContent = cached;
+      var name = localStorage.getItem('siUserName');
+      if (name) {
+        var heroName = document.getElementById('heroName');
+        if (heroName) heroName.textContent = name;
+        var av = document.getElementById('topAvatar');
+        if (av) {
+          var m = name.match(/[A-Za-z0-9]/);
+          if (m) av.textContent = m[0].toUpperCase();
+        }
       }
     } catch (e) {}
   })();
@@ -984,7 +1003,7 @@ body::before{
       <span class="live-dot"></span>
       Student Dashboard
     </div>
-    <h1>Welcome back,<br><span class="name-grad" id="heroName">…</span></h1>
+    <h1>Welcome back,<br><span class="name-grad" id="heroName"><span class="name-skel" aria-label="Loading"></span></span></h1>
     <p class="hero-sub" id="heroSub">Loading your dashboard…</p>
     <div id="heroPlanBadge" style="margin-bottom:16px"></div>
     <div class="hero-actions">
@@ -1587,10 +1606,11 @@ async function loadDashboard() {
   if (!user) { window.location.href = 'login.html'; return; }
   if (!(await deviceGuard(sb, user.id))) return;
 
-  /* Set avatar initial immediately while rest loads. Robust against
-     whitespace / non-alphanumeric leading chars (prevents the avatar
-     from rendering blank). Caches to localStorage so subsequent loads
-     paint the correct letter before any async work. */
+  /* Pick the first alphanumeric initial — robust against leading
+     whitespace or non-letter characters in a profile name. We do NOT
+     paint a temporary email-derived "A" here; the avatar either keeps
+     the cached letter (returning users) or its "?" placeholder until
+     the real name resolves. This avoids a "A → Full Name" flash. */
   var topAvatar = document.getElementById('topAvatar');
   function pickInitial(/* ...candidates */) {
     for (var i = 0; i < arguments.length; i++) {
@@ -1600,8 +1620,6 @@ async function loadDashboard() {
     }
     return '?';
   }
-  var emailInitial = pickInitial(user.email);
-  if (topAvatar && emailInitial !== '?') topAvatar.textContent = emailInitial;
 
   /* ── Parallel queries ── */
   var now = new Date();
@@ -1643,10 +1661,14 @@ async function loadDashboard() {
   var scoreMax    = examType === 'ACT' ? 36 : examType === 'EST' ? 900 : 1600;
 
   /* Update avatar with real name initial — only if it produces a real
-     letter/digit. Never overwrite the email initial with whitespace. */
+     letter/digit. Cache the full display name so the next visit can
+     paint it before any async work and skip the skeleton entirely. */
   var nameInitial = pickInitial(prof.full_name, displayName, user.email);
   if (topAvatar && nameInitial !== '?') topAvatar.textContent = nameInitial;
-  try { localStorage.setItem('siUserInitial', nameInitial); } catch (e) {}
+  try {
+    localStorage.setItem('siUserName', displayName);
+    localStorage.setItem('siUserInitial', nameInitial);
+  } catch (e) {}
 
   /* Reveal admin nav for admin users */
   if (prof.is_admin) { var s = document.getElementById('adminNavSection'); if (s) s.style.display = 'block'; }
