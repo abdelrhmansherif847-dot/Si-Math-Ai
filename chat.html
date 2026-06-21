@@ -2381,9 +2381,13 @@ button{font-family:inherit;cursor:pointer}
   var pendingFollowUpType = null;
 
   // ===== HINT MODE =====
-  var hintModeActive = false;
-  function toggleHintMode() {
-    hintModeActive = !hintModeActive;
+  // Persisted in localStorage so the choice survives refresh, navigation,
+  // and browser restart. Per-request payload (chat.html:1174) is unchanged.
+  var HINT_KEY = 'siHintMode';
+  var hintModeActive = (function () {
+    try { return localStorage.getItem(HINT_KEY) === '1'; } catch (e) { return false; }
+  })();
+  function renderHintMode() {
     var btn = document.getElementById('hintToggleBtn');
     var label = document.getElementById('hintToggleLabel');
     var desc = document.getElementById('hintToggleDesc');
@@ -2391,6 +2395,12 @@ button{font-family:inherit;cursor:pointer}
     if (label) label.textContent = hintModeActive ? 'Hint Mode ON' : 'Hint Mode';
     if (desc) desc.textContent = hintModeActive ? 'Zero will give hints only — no full solutions' : 'Get a hint, not the full solution';
   }
+  function toggleHintMode() {
+    hintModeActive = !hintModeActive;
+    try { localStorage.setItem(HINT_KEY, hintModeActive ? '1' : '0'); } catch (e) {}
+    renderHintMode();
+  }
+  renderHintMode();
 </script>
 <script src="nav.js" defer></script>
 </body>
