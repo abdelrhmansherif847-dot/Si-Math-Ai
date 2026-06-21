@@ -386,9 +386,9 @@ select.search-input{cursor:pointer}
           <tbody id="wTopSubtopicsBody"><tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-500)">Loading…</td></tr></tbody>
         </table></div>
       </div>
-      <div>
+      <div style="display:none">
         <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Top 10 Mistake Types</div>
-        <div id="wTopMistakesBody"><div class="empty"><p>Loading…</p></div></div>
+        <div id="wTopMistakesBody"></div>
       </div>
     </div>
   </section>
@@ -1403,10 +1403,11 @@ async function loadSubscriptionGrowth() {
     const prevMonthStart = _prevMonthStartISO();
     const since30 = _isoDaysAgo(30);
     const now = _nowISO();
+    // New subscriptions = APPROVED SUBSCRIPTION payments (not profile creation date)
     const [newMonth, new30, prevMonth, churnedRes] = await Promise.all([
-      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').gte('created_at', monthStart),
-      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').gte('created_at', since30),
-      sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').gte('created_at', prevMonthStart).lt('created_at', monthStart),
+      sb.from('payments').select('id', { count:'exact', head:true }).eq('status','APPROVED').eq('payment_type','SUBSCRIPTION').gte('created_at', monthStart),
+      sb.from('payments').select('id', { count:'exact', head:true }).eq('status','APPROVED').eq('payment_type','SUBSCRIPTION').gte('created_at', since30),
+      sb.from('payments').select('id', { count:'exact', head:true }).eq('status','APPROVED').eq('payment_type','SUBSCRIPTION').gte('created_at', prevMonthStart).lt('created_at', monthStart),
       sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').lt('subscription_expires_at', now),
     ]);
     const cm = newMonth.count ?? 0;
