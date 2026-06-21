@@ -211,9 +211,12 @@ section:first-of-type{padding-top:0}
 .hero-mascot{
   position:relative;
   width:140px;height:140px;
-  margin:0 auto var(--space-6);
+  /* Top margin pushes Zero away from the fixed nav so the halo's
+     outer ring (inset -24px) and the float animation never visually
+     clip against the nav edge on any viewport. */
+  margin:24px auto var(--space-6);
 }
-@media(min-width:768px){.hero-mascot{width:200px;height:200px;margin-bottom:var(--space-7)}}
+@media(min-width:768px){.hero-mascot{width:200px;height:200px;margin:32px auto var(--space-7)}}
 
 .mascot-halo{
   position:absolute;inset:-10px;border-radius:50%;
@@ -242,7 +245,11 @@ section:first-of-type{padding-top:0}
   cursor:pointer;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* Float DOWN from baseline (was -10px / upward). The previous
+   upward float made Zero's head drift above his container peak and
+   clip against the nav on tight viewports. Floating down keeps the
+   top of the circle pinned and guarantees no top clipping. */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
 
 .hero-pill{
   display:inline-flex;align-items:center;gap:8px;
