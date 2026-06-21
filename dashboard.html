@@ -884,6 +884,20 @@ body::before{
     <a href="profile.html" class="avatar-btn" id="topAvatar" aria-label="Profile">?</a>
   </div>
 </header>
+<script>
+  /* Paint the cached avatar initial before any async work so the letter
+     is stable from first paint and never disappears between the
+     placeholder ? and the profile fetch. */
+  (function () {
+    try {
+      var cached = localStorage.getItem('siUserInitial');
+      if (cached && /^[A-Z0-9]$/.test(cached)) {
+        var el = document.getElementById('topAvatar');
+        if (el) el.textContent = cached;
+      }
+    } catch (e) {}
+  })();
+</script>
 
 <!-- ═══ SIDEBAR ═══ -->
 <aside class="sidebar" id="sidebar">
@@ -1560,9 +1574,21 @@ async function loadDashboard() {
   if (!user) { window.location.href = 'login.html'; return; }
   if (!(await deviceGuard(sb, user.id))) return;
 
-  /* Set avatar initial immediately while rest loads */
+  /* Set avatar initial immediately while rest loads. Robust against
+     whitespace / non-alphanumeric leading chars (prevents the avatar
+     from rendering blank). Caches to localStorage so subsequent loads
+     paint the correct letter before any async work. */
   var topAvatar = document.getElementById('topAvatar');
-  if (topAvatar) topAvatar.textContent = (user.email || '?').slice(0,1).toUpperCase();
+  function pickInitial(/* ...candidates */) {
+    for (var i = 0; i < arguments.length; i++) {
+      var s = (arguments[i] || '').toString().trim();
+      var m = s.match(/[A-Za-z0-9]/);
+      if (m) return m[0].toUpperCase();
+    }
+    return '?';
+  }
+  var emailInitial = pickInitial(user.email);
+  if (topAvatar && emailInitial !== '?') topAvatar.textContent = emailInitial;
 
   /* ── Parallel queries ── */
   var now = new Date();
@@ -1603,8 +1629,11 @@ async function loadDashboard() {
   var targetScore = prof.target_score || 0;
   var scoreMax    = examType === 'ACT' ? 36 : examType === 'EST' ? 900 : 1600;
 
-  /* Update avatar with real name initial */
-  if (topAvatar) topAvatar.textContent = displayName.slice(0,1).toUpperCase();
+  /* Update avatar with real name initial — only if it produces a real
+     letter/digit. Never overwrite the email initial with whitespace. */
+  var nameInitial = pickInitial(prof.full_name, displayName, user.email);
+  if (topAvatar && nameInitial !== '?') topAvatar.textContent = nameInitial;
+  try { localStorage.setItem('siUserInitial', nameInitial); } catch (e) {}
 
   /* Reveal admin nav for admin users */
   if (prof.is_admin) { var s = document.getElementById('adminNavSection'); if (s) s.style.display = 'block'; }
