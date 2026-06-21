@@ -259,8 +259,21 @@ body::before{
   background-size:200% auto;
 }
 @keyframes nameShimmer{0%,100%{background-position:0% center}50%{background-position:100% center}}
-.hero-sub{color:var(--text-400);font-size:15px;margin-bottom:24px;max-width:520px;line-height:1.6}
+.hero-sub{color:var(--text-400);font-size:15px;margin-bottom:24px;max-width:520px;line-height:1.6;
+  /* Reserve space for the longest expected sub line so the hero
+     doesn't grow once the async profile data lands. The sub renders
+     as 1 line on desktop, 2-3 lines on phones (email + exam type +
+     days remaining wrap together). Use the phone worst-case as the
+     floor — a tiny bit of empty space on wider viewports beats a
+     visible jump on mobile. */
+  min-height:calc(1.6em * 3)}
+@media(min-width:768px){.hero-sub{min-height:calc(1.6em * 2)}}
+@media(min-width:1024px){.hero-sub{min-height:1.6em}}
 .hero-sub .hl{color:var(--cyan-3);font-weight:600}
+
+/* Reserve room for the plan badge so the hero doesn't grow once
+   the profile fetch resolves and the badge is injected. */
+#heroPlanBadge{min-height:28px}
 
 .hero-actions{display:flex;flex-wrap:wrap;gap:12px}
 .btn-primary{
