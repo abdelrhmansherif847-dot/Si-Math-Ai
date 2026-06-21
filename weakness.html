@@ -631,7 +631,7 @@ body.plan-free .pro-upsell{display:block}
   <section class="card" data-pro-only>
     <div class="card-head">
       <div class="card-ico">🛰️</div>
-      <div><div class="card-title">Where This Analysis Comes From</div><div class="card-sub">Si combines signals from all your learning activities</div></div>
+      <div><div class="card-title">Where This Analysis Comes From</div><div class="card-sub">Zero combines signals from all your learning activities</div></div>
     </div>
     <div class="sources-row">
       <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">AI Chat Questions</span></div>
@@ -640,7 +640,7 @@ body.plan-free .pro-upsell{display:block}
     </div>
     <div class="mastery-note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
-      <span>The Weakness Analyzer doesn't rely on a single test. It continuously combines every question you ask Si and every mock exam you upload to build an accurate picture of your real weaknesses.</span>
+      <span>The Weakness Analyzer doesn't rely on a single test. It continuously combines every question you ask Zero and every mock exam you upload to build an accurate picture of your real weaknesses.</span>
     </div>
   </section>
 
@@ -1207,11 +1207,11 @@ function showLoading(){
   document.getElementById('updatedAt').textContent='—';
 }
 function showEmpty(){
-  document.querySelector('.stats').innerHTML='<div class="stat d1" style="grid-column:1/-1"><div class="si">📊</div><div class="sl">No Analysis Yet</div><div class="sv" style="font-size:18px">Start chatting with Si to generate your analysis</div><div class="sd"><a href="chat.html" style="color:var(--cyan-3)">Go to AI Tutor →</a></div></div>';
-  const rt=document.querySelector('.rank-table');if(rt)rt.innerHTML=emptyMsg('🏆','No weaknesses ranked yet','Ask Si math questions to start building your profile.');
+  document.querySelector('.stats').innerHTML='<div class="stat d1" style="grid-column:1/-1"><div class="si">📊</div><div class="sl">No Analysis Yet</div><div class="sv" style="font-size:18px">Start chatting with Zero to generate your analysis</div><div class="sd"><a href="chat.html" style="color:var(--cyan-3)">Go to AI Tutor →</a></div></div>';
+  const rt=document.querySelector('.rank-table');if(rt)rt.innerHTML=emptyMsg('🏆','No weaknesses ranked yet','Ask Zero math questions to start building your profile.');
   const cardHeads=document.querySelectorAll('section.card .card-head');
   if(cardHeads[1])cardHeads[1].querySelector('.card-title').textContent='No data yet';
-  const exWhy=document.querySelector('.ex-why p');if(exWhy)exWhy.textContent='No weakness evidence yet. Start solving math problems with Si.';
+  const exWhy=document.querySelector('.ex-why p');if(exWhy)exWhy.textContent='No weakness evidence yet. Start solving math problems with Zero.';
   const eg=document.querySelector('.evidence-grid');if(eg)eg.innerHTML=emptyMsg('📭','No signals','Your evidence will appear here as you practice.');
   const srcVals=document.querySelectorAll('.src-box .src-v');srcVals.forEach(v=>v.textContent='0');
   const chatCol=document.querySelector('.sig-col.chat ul');if(chatCol)chatCol.innerHTML='<li><span class="sd"></span>No chat signals yet</li>';
@@ -1220,7 +1220,7 @@ function showEmpty(){
   const swGrid=document.querySelector('.sw-grid');
   if(swGrid){swGrid.querySelector('.sw-card.strong').innerHTML='<div class="sw-title"><span class="ic">💪</span> Your Strengths</div>'+emptyMsg('💪','No strengths yet','Keep practicing to discover your strong topics.');swGrid.querySelector('.sw-card.weak').innerHTML='<div class="sw-title"><span class="ic">⚠️</span> Needs Work</div>'+emptyMsg('📚','No data yet','Your weaknesses will appear here as you practice.');}
   const big=document.querySelector('.biggest');if(big){big.querySelector('h2').textContent='No data yet';big.querySelector('p').textContent='Start practicing to identify your biggest weakness.';}
-  const airec=document.querySelector('.airec .ai-body p');if(airec)airec.textContent='No recommendation yet. Chat with Si to get started.';
+  const airec=document.querySelector('.airec .ai-body p');if(airec)airec.textContent='No recommendation yet. Chat with Zero to get started.';
   const track=document.querySelector('.track');if(track)track.innerHTML=emptyMsg('📈','No mastery data yet','Your progress will be tracked here as you study.');
   const ptEl=document.querySelector('.priority .pt');if(ptEl)ptEl.textContent='No topic yet';
   const chips=document.querySelector('.chips');if(chips)chips.innerHTML='<span class="chip" style="color:var(--text-500)">No subtopics yet</span>';
@@ -1235,7 +1235,7 @@ function renderPredict(report,mastery,signals){
   const predict=document.querySelector('.predict');if(!predict)return;
   if(!report){
     predict.querySelector('.pbig').innerHTML='<span style="color:var(--text-500);font-size:16px">—</span>';
-    predict.querySelector('.pnote').textContent='Not enough data yet. Keep chatting with Si.';
+    predict.querySelector('.pnote').textContent='Not enough data yet. Keep chatting with Zero.';
     const ib=predict.querySelector('.impact-box');
     if(ib)ib.innerHTML='<div class="ib-l">Estimation Confidence</div><div class="ib-v" style="font-size:16px;color:var(--text-400)">—</div><div class="ib-d">needs more data</div>';
     return;
