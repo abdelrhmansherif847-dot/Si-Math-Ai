@@ -502,6 +502,394 @@ function detectorGptTier(s: string | null | undefined): DifficultyTier | null {
   return null;
 }
 
+// ── Detector v2 (shadow) ──────────────────────────────────────────────────────
+// SAT/EST/ACT-shaped difficulty classifier. Emits a continuous difficulty_score
+// in [1.00, 4.00] anchored on topic/subtopic, adjusted by structural + lexical
+// + trap features, plus a detector_confidence in [0.00, 1.00]. Runs alongside
+// detector v1 in shadow mode under verification_meta.v2.*. v1 continues to
+// drive verification_tier; v2 output is never consumed for routing or display
+// until later phases. All v2 errors are caught at the call site so they cannot
+// affect v1 or the request path.
+
+const DETECTOR_V2_VERSION = 'detector-v2';
+
+interface DetectorV2Features {
+  topic_anchor:            number | null;
+  topic_anchor_hit:        string | null;
+  char_length:             number;
+  word_count:              number;
+  has_image:               boolean;
+  multi_step_count:        number;
+  variable_count:          number;
+  system_of_equations:     boolean;
+  word_problem:            boolean;
+  short_prompt:            boolean;
+  logarithm_term:          boolean;
+  exponential_term:        boolean;
+  trig_identity:           boolean;
+  nested_fraction:         boolean;
+  abs_value_in_eq:         boolean;
+  complex_number:          boolean;
+  conditional_probability: boolean;
+  composite_function:      boolean;
+  inverse_function:        boolean;
+  has_not_except:          boolean;
+  which_is_true:           boolean;
+  how_many_possible:       boolean;
+  greatest_least:          boolean;
+  conditional_chain_count: number;
+  topic_keyword_count:     number;
+  topic_families_hit:      number;
+  synthesis_flag:          boolean;
+  language:                'en' | 'ar' | 'franco';
+}
+
+interface DetectorV2Result {
+  detector_version:    string;
+  difficulty_score:    number;
+  difficulty_tier:     DifficultyTier;
+  detector_confidence: number;
+  synthesis_flag:      boolean;
+  features_fired:      string[];
+  reasons:             string[];
+  language:            'en' | 'ar' | 'franco';
+  topic_anchor_hit:    string | null;
+}
+
+// Topic-anchor base scores, SAT/EST/ACT-shaped. Hard/expert anchors exist
+// directly so genuinely hard topics get hard verdicts without needing every
+// surface feature to align — fixing v1's "default_medium" pathology.
+const TOPIC_ANCHOR_V2: Record<string, { base: number; sub?: Record<string, number> }> = {
+  'Number Theory': {
+    base: 1.5,
+    sub: {
+      'Integers':              1.3,
+      'Fractions & Decimals':  1.5,
+      'Percentages':           1.6,
+      'Ratios & Proportions':  1.7,
+      'Prime Numbers':         1.8,
+      'Factors & Multiples':   1.7,
+    },
+  },
+  'Order of Operations': { base: 1.3 },
+  'Algebra': {
+    base: 2.0,
+    sub: {
+      'Linear Equations':       1.6,
+      'Systems of Equations':   2.3,
+      'Quadratic Equations':    2.5,
+      'Polynomials':            2.8,
+      'Inequalities':           2.0,
+      'Absolute Value':         2.2,
+      'Exponents & Radicals':   2.4,
+      'Functions':              2.6,
+      'Sequences & Patterns':   2.4,
+    },
+  },
+  'Linear Equations': {
+    base: 1.6,
+    sub: {
+      'One-Variable Equations':         1.4,
+      'Two-Variable Equations':         1.8,
+      'Slope & Rate of Change':         1.7,
+      'Intercepts':                     1.7,
+      'Parallel & Perpendicular Lines': 1.9,
+    },
+  },
+  'Quadratic Equations': {
+    base: 2.5,
+    sub: {
+      'Factoring':              2.3,
+      'Quadratic Formula':      2.4,
+      'Completing the Square':  2.8,
+      'Vertex Form':            2.6,
+      'Discriminant':           2.9,
+    },
+  },
+  'Functions':    { base: 2.6 },
+  'Inequalities': { base: 2.0 },
+  'Geometry': {
+    base: 2.1,
+    sub: {
+      'Triangles':           2.0,
+      'Circles':             2.2,
+      'Angles & Lines':      1.9,
+      'Coordinate Geometry': 2.4,
+      'Area & Volume':       2.3,
+      'Similar Figures':     2.3,
+      'Transformations':     2.5,
+      '3D Shapes':           3.0,
+    },
+  },
+  'Word Problems': {
+    base: 2.3,
+    sub: {
+      'Linear Word Problems':       2.0,
+      'Percent Problems':           1.9,
+      'Ratio Problems':             2.0,
+      'Rate & Work Problems':       2.6,
+      'Mixture Problems':           2.7,
+      'Distance & Speed Problems':  2.4,
+      'Statistics Word Problems':   2.5,
+    },
+  },
+  'Statistics': {
+    base: 2.0,
+    sub: {
+      'Mean, Median, Mode':  1.7,
+      'Standard Deviation':  2.5,
+      'Data Tables':         1.9,
+      'Scatter Plots':       2.1,
+      'Probability':         2.3,
+      'Sampling Methods':    2.4,
+      'Survey Design':       2.3,
+    },
+  },
+  'Probability': {
+    base: 2.3,
+    sub: {
+      'Basic Probability':       2.0,
+      'Compound Events':         2.6,
+      'Conditional Probability': 3.4,
+      'Combinations':            2.9,
+      'Permutations':            2.9,
+    },
+  },
+  'Trigonometry': {
+    base: 3.0,
+    sub: {
+      'Sin, Cos, Tan':           2.6,
+      'Unit Circle':             2.9,
+      'Trig Identities':         3.3,
+      'Radian Measure':          2.7,
+      'Inverse Trig':            3.2,
+      'Law of Sines & Cosines':  3.1,
+    },
+  },
+  'Complex Numbers': {
+    base: 3.0,
+    sub: {
+      'Imaginary Numbers':                2.8,
+      'Operations with Complex Numbers':  2.9,
+      'Complex Conjugates':               3.0,
+      'Modulus & Argument':               3.3,
+    },
+  },
+  'Calculus': {
+    base: 3.5,
+    sub: {
+      'Limits':                3.4,
+      'Derivatives':           3.6,
+      'Chain Rule':            3.7,
+      'Product Rule':          3.7,
+      'Integration':           3.8,
+      'Optimization Problems': 3.8,
+    },
+  },
+  'SAT Math': { base: 2.2 },
+};
+
+// Topic-family keywords used for multi-topic synthesis detection.
+const V2_TOPIC_FAMILY_KEYWORDS: Record<string, RegExp> = {
+  algebra:      /\b(equation|polynomial|variable|coefficient|expression|inequality|factor|expand)\b/i,
+  geometry:     /\b(triangle|circle|angle|polygon|perimeter|area|volume|radius|diameter|parallel|perpendicular|coordinate)\b/i,
+  functions:    /\b(function|f\(|g\(|h\(|domain|range|composite|inverse)\b/i,
+  trigonometry: /\b(sin|cos|tan|sec|csc|cot|trig|radian|degree|unit\s+circle)\b/i,
+  statistics:   /\b(mean|median|mode|deviation|distribution|histogram|percentile|sample|scatter)\b/i,
+  probability:  /\b(probability|likelihood|combination|permutation|conditional|outcome|sample\s+space)\b/i,
+  numbertheory: /\b(integer|prime|factor|multiple|divisor|remainder|gcd|lcm|fraction|decimal|percent|ratio)\b/i,
+  calculus:     /\b(limit|derivative|integral|asymptote)\b/i,
+  complexnums:  /\b(imaginary|complex\s+number|conjugate)\b/i,
+};
+
+function detectorV2LookupAnchor(topic: string, subtopic: string): { score: number | null; hit: string | null } {
+  const canonTopic = normalizeTopicCanonical(topic);
+  if (!canonTopic) return { score: null, hit: null };
+  const entry = TOPIC_ANCHOR_V2[canonTopic];
+  if (!entry) return { score: null, hit: null };
+  if (subtopic && entry.sub) {
+    const canonSub = canonicalSubtopic(canonTopic, subtopic) || subtopic;
+    const subScore = entry.sub[canonSub];
+    if (typeof subScore === 'number') {
+      return { score: subScore, hit: `${canonTopic}.${canonSub}` };
+    }
+  }
+  return { score: entry.base, hit: canonTopic };
+}
+
+function detectorV2Language(text: string): 'en' | 'ar' | 'franco' {
+  if (!text) return 'en';
+  if (/[؀-ۿ]/.test(text)) return 'ar';
+  // Franco requires the existing detectFranco signal AND at least one
+  // Franco-specific vocabulary word. Without the second check, SAT-style
+  // algebra ("2x + 3 = 11") matches detectFranco's digit-letter pattern
+  // and gets misclassified, costing detector_confidence unnecessarily.
+  if (detectFranco(text) && /\b(msh|mesh|m3aya|ma3aya|m3ak|ma3ak|sa7|sah|fahem|fahma|ma3lesh|izay|ezay|keda|kda|yala|yalla|3awz|3awez|3ayz|3andy|3andi|7aga|7add|sho2l|shar7|delwa2ty|dlw2ty|b2a|ba2a|5alas|5las)\b/i.test(text)) {
+    return 'franco';
+  }
+  return 'en';
+}
+
+function detectorV2ExtractFeatures(
+  question: string, topic: string, subtopic: string, hasImage: boolean,
+): DetectorV2Features {
+  const raw = (question || '').toString();
+  const q = raw.toLowerCase();
+  const language = detectorV2Language(raw);
+
+  const wordCount = q.split(/\s+/).filter(Boolean).length;
+  const { score: topicAnchor, hit: topicHit } = detectorV2LookupAnchor(topic, subtopic);
+
+  // F2 structural
+  const multiStepCount = (q.match(/\b(then|after that|next|finally|first|second|third|step\s*\d?)\b/g) || []).length
+    + (q.match(/(بعد ذلك|ثم|أولاً|ثانياً|ثالثاً|الخطوة)/g) || []).length;
+  const variableMatches = q.match(/\b[a-z]\b/g) || [];
+  const variableCount = new Set(variableMatches).size;
+  const eqCount = (q.match(/=/g) || []).length;
+  const systemOfEquations = /\bsystem\s+of\b/i.test(q) || (eqCount >= 2 && /[\n;]|\band\b/.test(q));
+  const wordProblem = (/\b(if |how many|what is|find |determine|calculate)\b/.test(q) && wordCount >= 12)
+    || (/(إذا|كم |ما هو|أوجد|احسب)/.test(raw) && wordCount >= 8);
+  const shortPrompt = !hasImage && raw.length < 60 && !wordProblem && multiStepCount === 0;
+
+  // F3 lexical
+  const logarithmTerm = /\b(log\b|logarithm|ln\b)/i.test(q) || /لوغاريتم|لو\s/.test(raw);
+  const exponentialTerm = /\b(e\^|exp\(|exponential)\b/i.test(q) || /\b\d+\^[a-z]\b/.test(q);
+  const trigIdentity = /\b(sin\^2|cos\^2|double\s+angle|trig\s+identity|pythagorean\s+identity)\b/i.test(q);
+  const nestedFraction = /\\frac\s*\{[^{}]*\\frac/.test(raw) || /\([^)]*\/[^)]*\)\s*\//.test(raw);
+  const absValueInEq = /\|[^|]+\|\s*[=<>≤≥]/.test(raw) || /\babsolute\s+value\b.*[=<>]/i.test(q);
+  const complexNumber = /\bcomplex\s+number\b|\bimaginary\b|i\^2|√\s*\(\s*-/.test(q);
+  const conditionalProbability = /\bgiven\s+that\b|\bconditional\s+probability\b/.test(q) || /بشرط أن|الاحتمال الشرطي/.test(raw);
+  const compositeFunction = /\bf\s*\(\s*g\s*\(/i.test(q) || /\bcomposite\s+function\b|\bcomposition\s+of\s+function/.test(q);
+  const inverseFunction = /\bf\^?\s*-?\s*1\s*\(/i.test(q) || /\binverse\s+function\b|\bf\s+inverse\b/.test(q);
+
+  // F4 trap (NOT/EXCEPT must be UPPERCASE — SAT capitalizes these intentionally)
+  const hasNotExcept = /\b(NOT|EXCEPT)\b/.test(raw);
+  const whichIsTrue = /\bwhich\s+of\s+the\s+following\s+(is|are)\s+(true|correct)/i.test(q);
+  const howManyPossible = /\bhow\s+many\s+(possible|distinct|different)\b/i.test(q);
+  const greatestLeast = /\b(greatest|least|maximum|minimum|smallest|largest)\b/i.test(q);
+  const conditionalChainCount = (q.match(/\bif\b/g) || []).length;
+
+  // F1b synthesis
+  let topicKeywordCount = 0;
+  const familiesHit = new Set<string>();
+  for (const [, re] of Object.entries(V2_TOPIC_FAMILY_KEYWORDS)) {
+    const hits = (q.match(re) || []).length;
+    if (hits > 0) {
+      topicKeywordCount += hits;
+      familiesHit.add(re.source);
+    }
+  }
+  const synthesisFlag = familiesHit.size >= 3;
+
+  return {
+    topic_anchor: topicAnchor,
+    topic_anchor_hit: topicHit,
+    char_length: raw.length,
+    word_count: wordCount,
+    has_image: hasImage,
+    multi_step_count: multiStepCount,
+    variable_count: variableCount,
+    system_of_equations: systemOfEquations,
+    word_problem: wordProblem,
+    short_prompt: shortPrompt,
+    logarithm_term: logarithmTerm,
+    exponential_term: exponentialTerm,
+    trig_identity: trigIdentity,
+    nested_fraction: nestedFraction,
+    abs_value_in_eq: absValueInEq,
+    complex_number: complexNumber,
+    conditional_probability: conditionalProbability,
+    composite_function: compositeFunction,
+    inverse_function: inverseFunction,
+    has_not_except: hasNotExcept,
+    which_is_true: whichIsTrue,
+    how_many_possible: howManyPossible,
+    greatest_least: greatestLeast,
+    conditional_chain_count: conditionalChainCount,
+    topic_keyword_count: topicKeywordCount,
+    topic_families_hit: familiesHit.size,
+    synthesis_flag: synthesisFlag,
+    language,
+  };
+}
+
+function detectorV2Score(f: DetectorV2Features): { score: number; reasons: string[]; features_fired: string[] } {
+  const reasons: string[] = [];
+  const features_fired: string[] = [];
+  let s = f.topic_anchor ?? 2.0;
+  if (f.topic_anchor != null && f.topic_anchor_hit) {
+    reasons.push(`topic_anchor=${f.topic_anchor.toFixed(2)} (${f.topic_anchor_hit})`);
+    features_fired.push(`topic_anchor:${f.topic_anchor_hit}`);
+  } else {
+    reasons.push('topic_anchor=null (default 2.00)');
+  }
+  const add = (delta: number, label: string, fired: string) => {
+    s += delta;
+    reasons.push(`${delta >= 0 ? '+' : ''}${delta.toFixed(2)} ${label}`);
+    features_fired.push(fired);
+  };
+  if (f.short_prompt)                          add(-0.4, 'short_prompt', 'short_prompt');
+  if (f.multi_step_count >= 2)                 add(Math.min(0.6, (f.multi_step_count - 1) * 0.3), `multi_step=${f.multi_step_count}`, `multi_step:${f.multi_step_count}`);
+  if (f.variable_count >= 3)                   add(0.3, `variable_count=${f.variable_count}`, `variables:${f.variable_count}`);
+  if (f.system_of_equations)                   add(0.3, 'system_of_equations', 'system_of_equations');
+  if (f.word_problem && f.char_length > 150)   add(0.2, 'long_word_problem', 'long_word_problem');
+  if (f.has_image)                             add(0.3, 'has_image', 'has_image');
+  if (f.has_image && f.word_problem)           add(0.2, 'image_word_problem', 'image_word_problem');
+  if (f.logarithm_term)                        add(0.3, 'logarithm', 'logarithm');
+  if (f.exponential_term)                      add(0.2, 'exponential', 'exponential');
+  if (f.trig_identity)                         add(0.4, 'trig_identity', 'trig_identity');
+  if (f.nested_fraction)                       add(0.2, 'nested_fraction', 'nested_fraction');
+  if (f.abs_value_in_eq)                       add(0.2, 'abs_value_in_eq', 'abs_value_in_eq');
+  if (f.complex_number)                        add(0.2, 'complex_number', 'complex_number');
+  if (f.conditional_probability)               add(0.3, 'conditional_probability', 'conditional_probability');
+  if (f.composite_function)                    add(0.3, 'composite_function', 'composite_function');
+  if (f.inverse_function)                      add(0.2, 'inverse_function', 'inverse_function');
+  if (f.has_not_except)                        add(0.2, 'NOT/EXCEPT', 'not_except');
+  if (f.which_is_true)                         add(0.2, 'which_is_true', 'which_is_true');
+  if (f.how_many_possible)                     add(0.3, 'how_many_possible', 'how_many_possible');
+  if (f.greatest_least)                        add(0.1, 'greatest_least', 'greatest_least');
+  if (f.conditional_chain_count >= 2)          add(Math.min(0.3, (f.conditional_chain_count - 1) * 0.1), `conditional_chain=${f.conditional_chain_count}`, `conditional_chain:${f.conditional_chain_count}`);
+  if (f.synthesis_flag)                        add(0.4, `synthesis (${f.topic_families_hit} families)`, 'synthesis');
+  const clamped = Math.max(1.0, Math.min(4.0, s));
+  return { score: Number(clamped.toFixed(2)), reasons, features_fired };
+}
+
+function detectorV2Confidence(f: DetectorV2Features, featuresFiredCount: number): number {
+  let conf = f.topic_anchor != null ? 0.70 : 0.50;
+  if (featuresFiredCount >= 5)       conf += 0.15;
+  else if (featuresFiredCount >= 3)  conf += 0.05;
+  else if (featuresFiredCount <= 1)  conf -= 0.20;
+  if (f.char_length < 40 && !f.has_image) conf = Math.min(conf, 0.40);
+  if (f.language === 'ar')           conf -= 0.10;
+  else if (f.language === 'franco')  conf -= 0.15;
+  return Number(Math.max(0.0, Math.min(1.0, conf)).toFixed(2));
+}
+
+function detectorV2Tier(score: number): DifficultyTier {
+  if (score < 1.75) return 'easy';
+  if (score < 2.60) return 'medium';
+  if (score < 3.50) return 'hard';
+  return 'expert';
+}
+
+function detectorV2Classify(question: string, topic: string, subtopic: string, hasImage: boolean): DetectorV2Result {
+  const features = detectorV2ExtractFeatures(question, topic, subtopic, hasImage);
+  const { score, reasons, features_fired } = detectorV2Score(features);
+  const tier = detectorV2Tier(score);
+  const confidence = detectorV2Confidence(features, features_fired.length);
+  return {
+    detector_version:    DETECTOR_V2_VERSION,
+    difficulty_score:    score,
+    difficulty_tier:     tier,
+    detector_confidence: confidence,
+    synthesis_flag:      features.synthesis_flag,
+    features_fired,
+    reasons,
+    language:            features.language,
+    topic_anchor_hit:    features.topic_anchor_hit,
+  };
+}
+
 // ── Worksheet Navigation Guard ────────────────────────────────────────────────
 // Prevents Zero from confidently solving or inventing a worksheet question when
 // the student references a question number but provides neither the image nor
@@ -2018,6 +2406,16 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         const features = detectorExtractFeatures(question, !!imageData);
         const { tier, reasons } = detectorClassify(features);
         const gptTier = detectorGptTier(finalDifficulty);
+        // Detector v2 (shadow). Independent try/catch — v2 errors must never
+        // affect v1 output or break the request path.
+        let v2Result: DetectorV2Result | null = null;
+        try {
+          v2Result = detectorV2Classify(question, finalTopic, finalSubtopic, !!imageData);
+        } catch (v2Err) {
+          console.log('[ai-tutor] detector-v2-error', JSON.stringify({
+            uid: user.id.slice(0, 8), msg: String(v2Err),
+          }));
+        }
         verificationFields = {
           verification_tier:   tier,
           verification_status: 'shadow',
@@ -2028,6 +2426,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
             gpt_difficulty: finalDifficulty || null,
             gpt_tier: gptTier,
             agrees_with_gpt: gptTier === tier,
+            ...(v2Result ? { v2: v2Result } : {}),
           },
         };
       }
