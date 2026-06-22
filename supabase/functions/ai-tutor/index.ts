@@ -590,7 +590,7 @@ interface WorksheetGuardResult {
 function worksheetGuardCheck(
   question: string,
   imageData: string | null,
-  messages: Array<{role: string; content: string}>,
+  messages: Array<{role: string; content: unknown}>,
   lang: string,
 ): WorksheetGuardResult | null {
   // Kill switch
@@ -599,6 +599,16 @@ function worksheetGuardCheck(
 
   // Guard never fires when an image is attached — student has provided the worksheet
   if (imageData) return null;
+
+  // Guard never fires when a recent turn already carried an image. Session image
+  // replay (Issue #3) keeps prior worksheets in the window as multimodal content
+  // blocks, so "solve question 4" can resolve against an earlier upload without a
+  // re-upload. Detect an image_url part anywhere in the last 10 turns.
+  const recent = messages.slice(-10);
+  const turnHasImage = (c: unknown): boolean =>
+    Array.isArray(c) && c.some((p) => p && typeof p === 'object' &&
+      (p as { type?: string }).type === 'image_url');
+  if (recent.some((m) => turnHasImage(m?.content))) return null;
 
   const text = question.trim();
   if (!text) return null;
@@ -714,17 +724,19 @@ function normalizeFinalAnswer(s: string): string {
 }
 
 // For image questions: extract the math problem as plain text (pre-solver step).
-// Uses gpt-4o-mini — cheap extraction, not solving.
+// Uses gpt-4o (vision) — gpt-4o-mini dropped digits/strokes (4667 -> 467). The
+// accuracy of this step gates the whole solve, so we pay for the stronger model.
 async function extractMathTextFromImage(imageData: string, studentText: string): Promise<string> {
-  const prompt = studentText
+  const guard = ' Do NOT guess or autocomplete any digit, sign, or symbol — if a character is unclear, transcribe exactly what is visible. Preserve the exact number of digits in every number.';
+  const prompt = (studentText
     ? `The student sent this image with the message: "${studentText.slice(0, 200)}". Extract the specific math question they are asking about as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.`
-    : 'Extract the math question shown in this image as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.';
+    : 'Extract the math question shown in this image as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.') + guard;
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 300, temperature: 0,
+        model: 'gpt-4o', max_tokens: 300, temperature: 0,
         messages: [{ role: 'user', content: [
           { type: 'text', text: prompt },
           { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
@@ -749,10 +761,17 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
     // Coarse: operators present but zero minus signs — possible sign loss
     if (/[+×÷*]/.test(extractedText) && !/-/.test(extractedText) && extractedText.length > 5)
       flags.push('no_operator_sign');
+    // Long numbers (4+ digits) are the most error-prone for OCR digit drops
+    // (4667 -> 467). A bare gpt-4o-mini extraction gave no signal for these;
+    // treat them as coarse risk so the gpt-4o rerun double-checks the digits.
+    if (/\d{4,}/.test(extractedText)) flags.push('long_number');
 
-    const structural = flags.filter(f => f !== 'no_operator_sign').length;
+    const structural = flags.filter(f => f !== 'no_operator_sign' && f !== 'long_number').length;
     const coarse     = flags.includes('no_operator_sign') ? 1 : 0;
-    confidence = Math.max(0, 1.0 - structural * 0.25 - coarse * 0.15);
+    // long_number alone must drop below the 0.85 rerun threshold so the digits
+    // get a second pass; 0.20 weight => 0.80, which triggers the gpt-4o rerun.
+    const longNum    = flags.includes('long_number') ? 1 : 0;
+    confidence = Math.max(0, 1.0 - structural * 0.25 - coarse * 0.15 - longNum * 0.20);
   }
 
   let rerun_count = 0, rerun_changed = false, final_text = extractedText;
