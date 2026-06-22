@@ -934,6 +934,14 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
 
   // Day cards render the CURRENT round only; names/structure unchanged.
   var groups = roundGroups[currentRound] || {1:[],2:[],3:[]};
+  // Ladder-complete = the user's top allowed round (Mastery for Pro, Legend for
+  // Founder) is fully done. Drives the immediate completion state. Because
+  // currentRound is clamped to maxRound, Round 4+ can never satisfy this for Pro.
+  var topRoundReached = (currentRound === maxRound);
+  var currentRoundAllDone = [1,2,3].every(function(d){
+    var ts = groups[d] || []; return ts.length > 0 && ts.every(function(t){ return t.status==='DONE'; });
+  });
+  var ladderComplete = topRoundReached && currentRoundAllDone;
   var todayTasks = groups[currentDay] || [];
   var todayEstMins = todayTasks.reduce(function(s,t){ return s + (t.minutes||0); }, 0);
   var doneTodayCount = todayTasks.filter(function(t){ return t.status==='DONE'; }).length;
@@ -1097,6 +1105,22 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
         + (!window._isPro ? ' <span style="color:#a855f7">Rounds 2&ndash;7 unlock with Pro.</span>' : '')
         + '</div>';
 
+  if (ladderComplete) {
+    // Immediate completion state — no Round 4+ active path for Pro.
+    var doneTier = ROUND_NAMES[maxRound];
+    var accent = window._isFounder ? '#f5b942' : '#a855f7';
+    html += '<div class="sec-label">' + escHtml(doneTier) + ' Complete</div>';
+    html += '<div style="background:linear-gradient(135deg,' + accent + '22,transparent);border:1px solid ' + accent + '55;border-radius:var(--r-lg);padding:28px 22px;text-align:center;margin-bottom:24px">';
+    html += '<div style="font-size:40px;margin-bottom:8px">&#127942;</div>';
+    html += '<div style="font-family:var(--font-display);font-weight:800;color:#fff;font-size:19px;margin-bottom:6px">' + escHtml(doneTier) + ' reached on ' + escHtml(primaryTopic.sub) + '</div>';
+    if (window._isFounder) {
+      html += '<div style="font-size:13.5px;color:var(--text-300);max-width:440px;margin:0 auto">You\'ve topped the Mastery Rounds ladder for this topic. Keep it sharp, or switch to your next weakness below.</div>';
+    } else {
+      html += '<div style="font-size:13.5px;color:var(--text-300);max-width:440px;margin:0 auto 16px">You\'ve completed the full Pro ladder &mdash; Foundation, Advanced, and Mastery &mdash; for this topic. Elite I&ndash;III and Legend rounds unlock with Founder.</div>';
+      html += '<a href="manual-payment.html" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#f5b942,#d99316);color:#1a1205;font-family:var(--font-display);font-weight:800;font-size:13px;text-decoration:none">Unlock Elite &amp; Legend with Founder &rarr;</a>';
+    }
+    html += '</div>';
+  } else {
   html += '<div class="sec-label">Round ' + currentRound + ' &middot; ' + escHtml(ROUND_NAMES[currentRound]) + ' &mdash; 3-Day Plan</div>';
   html += '<div class="day-cards">';
   [1,2,3].forEach(function(d) {
@@ -1144,6 +1168,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     html += '</div></div>';
   });
   html += '</div>';
+  }
 
   // ── ZONE 5: MASTERY PROGRESS ──
   html += '<div class="sec-label">Mastery Progress</div>';
