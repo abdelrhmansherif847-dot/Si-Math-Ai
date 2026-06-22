@@ -1156,7 +1156,17 @@ serve(async (req) => {
     const messages:    Array<{role:string;content:string}> = Array.isArray(body.messages) ? body.messages : [];
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
-    const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
+    // Multi-image support (Issue #2): body.images is an ordered array of data
+    // URLs. Fall back to the single body.image for older clients. imageData
+    // stays as the first image so all existing single-image paths keep working;
+    // imagesData carries the full ordered list for OCR + the vision solve call.
+    const imagesData: string[] = (Array.isArray(body.images) ? body.images : [])
+      .filter((u: unknown): u is string => typeof u === 'string' && u.startsWith('data:image/'))
+      .slice(0, 10);
+    if (imagesData.length === 0 && typeof body.image === 'string' && body.image.startsWith('data:image/')) {
+      imagesData.push(body.image);
+    }
+    const imageData:   string | null = imagesData.length ? imagesData[0] : null;
     // Parent record ID sent by client for repeat/re-explanation detection (v76).
     const parentRecordId: string | null = (typeof body.parent_record_id === 'string' && body.parent_record_id) ? body.parent_record_id : null;
     // lang resolved after profile fetch so language_preference is respected
@@ -1981,10 +1991,14 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // ── OpenAI call ───────────────────────────────────────────────────────────
     // When an image is attached, use GPT-4o vision with multimodal content.
     // The model OCRs and solves the problem in one pass.
-    const userContent: unknown = imageData
+    // Multi-image: attach every uploaded image in order so the model analyzes
+    // the whole set together (Issue #2). Single-image is just length 1.
+    const userContent: unknown = imagesData.length
       ? [
-          { type: 'text', text: question || 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.' },
-          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+          { type: 'text', text: question || (imagesData.length > 1
+            ? `These ${imagesData.length} images contain math problems, in order. Please analyze and solve them. Respond in JSON format as specified.`
+            : 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.') },
+          ...imagesData.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
         ]
       : question;
 
