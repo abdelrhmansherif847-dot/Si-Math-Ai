@@ -889,6 +889,74 @@ async function indexSessionQuestions(
   }
 }
 
+// ── Reference resolution (Issue #4, Phase D) ─────────────────────────────────
+// Maps a textual reference ("question 7", "the first question", "the circle
+// problem", "check my answer for question 5") to a previously indexed question.
+// Reads session_questions (whole session), never the message window.
+interface StoredQuestion {
+  id: string; q_index: number; label: string | null; question_text: string;
+  summary: string | null; source_record_id: string | null; image_index: number;
+}
+
+const ORD_EN: Record<string, number> = {
+  first:1, second:2, third:3, fourth:4, fifth:5, sixth:6, seventh:7, eighth:8, ninth:9, tenth:10,
+};
+const ORD_AR: Record<string, number> = {
+  'الأول':1,'الثاني':2,'الثالث':3,'الرابع':4,'الخامس':5,'السادس':6,'السابع':7,'الثامن':8,'التاسع':9,'العاشر':10,
+};
+const REF_STOP = new Set([
+  'the','a','an','solve','explain','check','my','answer','for','question','please','can','you','do',
+  'this','that','one','about','problem','of','to','it','help','me','give','show','what','is','and',
+]);
+
+async function resolveQuestionReference(
+  sb: SbAdmin, sessionId: string, question: string,
+): Promise<StoredQuestion | null> {
+  const text = (question || '').trim();
+  if (!text || !sessionId) return null;
+  const { data } = await sb.from('session_questions')
+    .select('id,q_index,label,question_text,summary,source_record_id,image_index')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false });
+  const rows = (data || []) as StoredQuestion[];
+  if (!rows.length) return null;
+
+  // Most-recent row matching a numeric target — printed label wins over q_index.
+  const byNumber = (n: number): StoredQuestion | null =>
+    rows.find((r) => (r.label || '').replace(/\D/g, '') === String(n)) ||
+    rows.find((r) => r.q_index === n) || null;
+
+  // 1) Explicit number / ordinal (EN / AR / Franco), or a bare ordinal word.
+  const EN = /\b(?:Q|question|prob(?:lem)?|number|num|#)\s*\.?\s*#?\s*(\d{1,3}|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(text);
+  const AR = /(?:سؤال|السؤال|مسألة|المسألة|رقم|نمرة)\s*(?:رقم\s*)?([٠-٩]{1,3}|\d{1,3}|الأول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر)/.exec(text);
+  const FR = /\b(?:so2al|so2aal|s2al|rakam|ra2m|nemra|nemrit)\s*\.?\s*(\d{1,3})\b/i.exec(text);
+  const ORDW = /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(text);
+  let token = (EN?.[1] || AR?.[1] || FR?.[1] || ORDW?.[1] || '').toLowerCase();
+  if (token) {
+    let n: number | undefined;
+    if (/^\d+$/.test(token)) n = parseInt(token, 10);
+    else if (/[٠-٩]/.test(token)) n = parseInt(token.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))), 10);
+    else if (ORD_EN[token]) n = ORD_EN[token];
+    else if (ORD_AR[token]) n = ORD_AR[token];
+    if (n) { const hit = byNumber(n); if (hit) return hit; }
+  }
+
+  // 2) Semantic match — overlap student keywords with summary / question text.
+  const tokens = text.toLowerCase()
+    .replace(/[^a-z؀-ۿ\s]/g, ' ').split(/\s+/)
+    .filter((w) => w.length > 2 && !REF_STOP.has(w));
+  if (tokens.length) {
+    let best: StoredQuestion | null = null, bestScore = 0;
+    for (const r of rows) {
+      const hay = ((r.summary || '') + ' ' + (r.question_text || '')).toLowerCase();
+      let score = 0; for (const t of tokens) if (hay.includes(t)) score++;
+      if (score > bestScore) { bestScore = score; best = r; }
+    }
+    if (best && bestScore >= 1) return best;
+  }
+  return null;
+}
+
 // Single solver pass. Model: gpt-4o-mini. Returns structured reasoning + final_answer.
 // If imageData provided, solver sees the image directly (vision) — fixes the
 // image-questions-not-verifiable bug where solvers relied only on mini-OCR text.
@@ -1427,10 +1495,40 @@ serve(async (req) => {
       } catch (_) { /* fire-and-forget */ }
     }
 
+    // ── Reference Resolution (Issue #4, Phase D) ──────────────────────────────
+    // When the current turn has no image, try to resolve a reference ("question
+    // 7", "the circle problem", "check my answer for Q5") against the durable
+    // session_questions index. On a hit we inject that question's verbatim text
+    // (and its source image) into the solve, and the worksheet guard stands down.
+    let resolvedRef: StoredQuestion | null = null;
+    let refImages: string[] = [];
+    if (!imageData && resolvedSessionId) {
+      resolvedRef = await resolveQuestionReference(sbAdmin, resolvedSessionId, question);
+      if (resolvedRef?.source_record_id) {
+        const { data: srcRec } = await sbAdmin.from('question_records')
+          .select('image,images').eq('id', resolvedRef.source_record_id).maybeSingle();
+        if (srcRec) {
+          if (Array.isArray(srcRec.images)) {
+            refImages = (srcRec.images as unknown[]).filter(
+              (u): u is string => typeof u === 'string' && u.startsWith('data:image/'));
+          } else if (typeof srcRec.image === 'string' && srcRec.image.startsWith('data:image/')) {
+            refImages = [srcRec.image];
+          }
+        }
+      }
+      if (resolvedRef) {
+        console.log('[ai-tutor] ref-resolved', JSON.stringify({
+          uid: user.id.slice(0, 8), q_index: resolvedRef.q_index,
+          label: resolvedRef.label, has_img: refImages.length > 0,
+        }));
+      }
+    }
+
     // ── Worksheet Navigation Guard (early-return, 0 tokens) ───────────────────
     // Must run after lang resolution (guard messages are language-aware) and
     // before any OpenAI call. Guard turns are not persisted to question_records.
-    const worksheetGuard = worksheetGuardCheck(question, imageData, messages, lang);
+    // Skipped when a reference resolved — we have the real question, no re-upload.
+    const worksheetGuard = resolvedRef ? null : worksheetGuardCheck(question, imageData, messages, lang);
     if (worksheetGuard) {
       console.log('[ai-tutor] worksheet-guard-fired', JSON.stringify({
         uid:    user.id.slice(0, 8),
@@ -2083,16 +2181,30 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // ── OpenAI call ───────────────────────────────────────────────────────────
     // When an image is attached, use GPT-4o vision with multimodal content.
     // The model OCRs and solves the problem in one pass.
-    // Multi-image: attach every uploaded image in order so the model analyzes
-    // the whole set together (Issue #2). Single-image is just length 1.
-    const userContent: unknown = imagesData.length
-      ? [
-          { type: 'text', text: question || (imagesData.length > 1
-            ? `These ${imagesData.length} images contain math problems, in order. Please analyze and solve them. Respond in JSON format as specified.`
-            : 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.') },
-          ...imagesData.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
-        ]
+    // Phase D: when a reference resolved, solve the indexed question. Inject its
+    // verbatim text and attach its source image(s) so the model answers THAT
+    // question — supports "solve question 7" and "check my answer for Q5".
+    const refLabel = resolvedRef ? (resolvedRef.label || String(resolvedRef.q_index)) : '';
+    const solvePrompt = resolvedRef
+      ? `The student is referring to a question from a worksheet they uploaded earlier in this session.\n` +
+        `[Worksheet Question ${refLabel}]: ${resolvedRef.question_text}\n\n` +
+        `Student's message: ${question}\n\n` +
+        `Answer the student's request about THIS specific question. Do NOT ask them to re-upload anything.`
       : question;
+    // Which images go to the solve: this turn's uploads, else the referenced
+    // question's source image(s).
+    const solveImages = imagesData.length ? imagesData : (resolvedRef ? refImages : []);
+
+    // Multi-image: attach every image in order so the model analyzes the whole
+    // set together (Issue #2). Single-image is just length 1.
+    const userContent: unknown = solveImages.length
+      ? [
+          { type: 'text', text: solvePrompt || (solveImages.length > 1
+            ? `These ${solveImages.length} images contain math problems, in order. Please analyze and solve them. Respond in JSON format as specified.`
+            : 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.') },
+          ...solveImages.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
+        ]
+      : solvePrompt;
 
     // Per-turn language anchor — injected as a system message immediately before
     // the user turn so the model cannot drift to English mid-response on long
@@ -2172,7 +2284,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
+        model: solveImages.length ? 'gpt-4o' : 'gpt-4o-mini',
         messages: openaiMessages,
         response_format: { type: 'json_object' },
         max_tokens: 2800,
@@ -2199,7 +2311,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // GPT's explicit is_math flag takes priority over the local keyword classifier.
     // For image questions: always treat as math (this platform is math-only; images are always problems).
     const gptIsMath = typeof parsed.is_math === 'boolean' ? parsed.is_math : undefined;
-    const isMath = imageData
+    const isMath = (imageData || resolvedRef)
       ? true
       : (gptIsMath !== undefined ? gptIsMath : isMathTopic(finalTopic, finalSubtopic));
 
