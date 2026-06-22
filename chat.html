@@ -224,6 +224,23 @@ button{font-family:inherit;cursor:pointer}
 .img-preview .ip-remove{width:30px;height:30px;flex-shrink:0;border-radius:8px;border:1px solid var(--border-mid);background:var(--bg-card);color:var(--text-300);display:flex;align-items:center;justify-content:center;transition:all .2s}
 .img-preview .ip-remove:hover{color:#ef4f5f;border-color:rgba(239,79,95,.4);background:rgba(239,79,95,.1)}
 .img-preview .ip-remove svg{width:14px;height:14px}
+/* Multi-image strip (Issue #2) */
+.img-preview.multi{flex-direction:column;align-items:stretch;gap:8px}
+.ip-strip{display:flex;flex-wrap:wrap;gap:8px}
+.ip-thumb{position:relative;width:48px;height:48px;flex-shrink:0;border-radius:9px;overflow:hidden;border:1px solid var(--cyan-border)}
+.ip-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ip-thumb.pdf{display:flex;align-items:center;justify-content:center;background:var(--bg-card);color:var(--cyan);font-family:var(--font-mono);font-size:10px;font-weight:700}
+.ip-thumb .ip-x{position:absolute;top:1px;right:1px;width:16px;height:16px;border:none;border-radius:5px;background:rgba(8,12,22,.78);color:#fff;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.ip-thumb .ip-x:hover{background:#ef4f5f}
+.ip-foot{display:flex;align-items:center;justify-content:space-between}
+.bubble .q-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.bubble .q-imgs .q-img{margin-bottom:0;max-width:120px}
+/* Multi-question detection card (Issue #4) */
+.detected-card .dc-head{font-weight:700;color:#fff;margin-bottom:7px}
+.detected-card .dc-list{margin:0 0 8px;padding-inline-start:18px;display:flex;flex-direction:column;gap:3px}
+.detected-card .dc-list li{font-size:14px;color:var(--text-100)}
+.detected-card .dc-list li b{color:var(--cyan);font-family:var(--font-mono);margin-inline-end:4px}
+.detected-card .dc-hint{font-size:12.5px;color:var(--text-300);border-top:1px solid var(--border-mid);padding-top:7px}
 
 .input-bar{
   display:flex;align-items:flex-end;gap:9px;
@@ -661,17 +678,16 @@ button{font-family:inherit;cursor:pointer}
         <span class="hint-toggle-desc" id="hintToggleDesc">Get a hint, not the full solution</span>
       </div>
 
-      <div class="img-preview" id="imgPreview" style="display:none">
-        <img id="previewThumb" alt="Question preview"/>
-        <div class="ip-meta">
-          <span class="ip-name" id="previewName">question.jpg</span>
-          <span class="ip-hint">Attached — ready to solve</span>
+      <div class="img-preview multi" id="imgPreview" style="display:none">
+        <div class="ip-strip" id="ipStrip"></div>
+        <div class="ip-foot">
+          <span class="ip-hint" id="ipHint">Attached — ready to solve</span>
+          <button class="ip-remove" id="removeImg" aria-label="Remove all attachments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
-        <button class="ip-remove" id="removeImg" aria-label="Remove image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
 
       <input type="file" id="qImage" accept="image/*" capture="environment" hidden/>
-      <input type="file" id="qGallery" accept="image/*" hidden/>
+      <input type="file" id="qGallery" accept="image/*" multiple hidden/>
       <input type="file" id="qPdf" accept="application/pdf" hidden/>
       <div class="input-bar" style="position:relative">
         <div class="upload-menu" id="uploadMenu">
@@ -1132,7 +1148,12 @@ button{font-family:inherit;cursor:pointer}
     }
     empty.style.display = 'none';
     records.forEach(r => {
-      addUser(r.question, r.image || null, true);
+      // Prefer the multi-image array (Issue #2) when present; fall back to the
+      // single legacy image column. rImgs is the ordered list of image URLs.
+      var rImgs = Array.isArray(r.images) && r.images.length
+        ? r.images.filter(function(u){ return typeof u==='string' && u.indexOf('data:image/')===0; })
+        : (r.image && typeof r.image==='string' && r.image.indexOf('data:image/')===0 ? [r.image] : []);
+      addUser(r.question, rImgs.length ? rImgs : (r.image || null), true);
       const sig = (r.question && isMathMessage(r.question)) ? SignalEngine.analyze(r.question, true) : null;
       if (sig) {
         sig.topic = r.topic || sig.topic;
@@ -1156,7 +1177,17 @@ button{font-family:inherit;cursor:pointer}
         weakness_signal: typeof r.weakness_signal === 'boolean' ? r.weakness_signal : null,
       };
       addAI(sig, aiResponse, true);
-      sessionMessages.push({role:'user', content: r.question || ''});
+      // Replay any uploaded image as a multimodal content block so earlier
+      // worksheets survive in the sliding window. Without this, "go back to
+      // question 1" / "the circle problem" lost the image and the tutor asked
+      // for a re-upload. OpenAI accepts a content array of text + image_url.
+      if (rImgs.length) {
+        sessionMessages.push({ role:'user', content: [{ type:'text', text: r.question || '' }].concat(
+          rImgs.map(function(u){ return { type:'image_url', image_url:{ url:u } }; })
+        )});
+      } else {
+        sessionMessages.push({role:'user', content: r.question || ''});
+      }
       sessionMessages.push({role:'assistant', content: r.ai_response || r.answer || ''});
     });
     scrollDown();
@@ -1200,11 +1231,16 @@ button{font-family:inherit;cursor:pointer}
       payload.topic    = seededTopic;
       payload.subtopic = seededSubtopic || '';
     }
-    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:image/')) {
-      payload.image = imageData;
-    } else if (imageData && typeof imageData === 'string' && imageData.startsWith('data:application/pdf')) {
-      payload.pdf = imageData;
+    // imageData may be an array of data URLs (multi-image, Issue #2), a single
+    // URL string, or null. Normalize to a list, then split images vs PDF.
+    const _atts = Array.isArray(imageData) ? imageData : (imageData ? [imageData] : []);
+    const _imgs = _atts.filter(u => typeof u === 'string' && u.startsWith('data:image/'));
+    const _pdf  = _atts.find(u => typeof u === 'string' && u.startsWith('data:application/pdf'));
+    if (_imgs.length) {
+      payload.images = _imgs;          // full ordered list for multi-image OCR
+      payload.image  = _imgs[0];       // back-compat: first image
     }
+    if (_pdf) payload.pdf = _pdf;
     // 3) Invoke via the Supabase JS SDK (auto-attaches the user JWT).
     //    One automatic retry on transport-only failures (no HTTP status) —
     //    these are cold-start / CORS-preflight 503s that surface as
@@ -1270,10 +1306,30 @@ button{font-family:inherit;cursor:pointer}
   const qImage=document.getElementById('qImage');
   const uploadBtn=document.getElementById('uploadBtn');
   const imgPreview=document.getElementById('imgPreview');
-  const previewThumb=document.getElementById('previewThumb');
-  const previewName=document.getElementById('previewName');
+  const ipStrip=document.getElementById('ipStrip');
+  const ipHint=document.getElementById('ipHint');
   const removeImg=document.getElementById('removeImg');
-  let pendingImg=null;
+  // Issue #2: support 2–10 attachments per message, preserving order.
+  // pendingAtts holds {url, name, pdf} entries; images and one optional PDF.
+  const MAX_ATTACHMENTS=10;
+  let pendingAtts=[];
+  // Render the attachment strip from pendingAtts; hides the bar when empty.
+  function renderAttachments(){
+    if(!pendingAtts.length){ imgPreview.style.display='none'; ipStrip.innerHTML=''; return; }
+    ipStrip.innerHTML = pendingAtts.map(function(a,i){
+      return a.pdf
+        ? '<div class="ip-thumb pdf">PDF<button class="ip-x" data-i="'+i+'" aria-label="Remove">&times;</button></div>'
+        : '<div class="ip-thumb"><img src="'+a.url+'" alt="attachment"/><button class="ip-x" data-i="'+i+'" aria-label="Remove">&times;</button></div>';
+    }).join('');
+    var n=pendingAtts.length;
+    ipHint.textContent = n===1 ? 'Attached — ready to solve' : n+' attached — ready to solve';
+    imgPreview.style.display='flex';
+  }
+  ipStrip.addEventListener('click',function(e){
+    var b=e.target.closest('.ip-x'); if(!b) return;
+    var i=parseInt(b.dataset.i,10);
+    if(!isNaN(i)){ pendingAtts.splice(i,1); renderAttachments(); }
+  });
 
   /* ============================================================
      MATH INTENT GATE
@@ -1630,9 +1686,15 @@ button{font-family:inherit;cursor:pointer}
     qGallery.click();
   });
 
-  // Shared image processing — used by both camera and gallery inputs
+  // Shared image processing — used by both camera and gallery inputs.
+  // Appends to pendingAtts (multi-image, Issue #2) instead of replacing.
   function processImageFile(f, inputEl) {
     if (!f) return;
+    if (pendingAtts.length >= MAX_ATTACHMENTS) {
+      alert('You can attach up to ' + MAX_ATTACHMENTS + ' images per message.');
+      if (inputEl) inputEl.value = '';
+      return;
+    }
     if (f.size > 20 * 1024 * 1024) {
       alert('Image is too large (max 20MB). Please choose a smaller file.');
       if (inputEl) inputEl.value = '';
@@ -1652,33 +1714,37 @@ button{font-family:inherit;cursor:pointer}
     reader.onload = (e) => {
       const img = new Image();
       img.onerror = () => {
-        pendingImg = e.target.result;
-        previewThumb.style.display = 'none';
-        previewName.textContent = f.name;
-        imgPreview.style.display = 'flex';
+        pendingAtts.push({ url: e.target.result, name: f.name, pdf: false });
+        renderAttachments();
       };
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX = 800;
+        // Higher cap + quality preserves digits/symbols for OCR. A worksheet photo
+        // downscaled to 800px/65% lost fine strokes (4667 -> 467). 1600px/0.85 keeps
+        // the payload reasonable while preventing digit/operator loss.
+        const MAX = 1600;
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        pendingImg = canvas.toDataURL('image/jpeg', 0.65);
-        previewThumb.src = pendingImg;
-        previewThumb.style.display = '';
-        previewName.textContent = f.name;
-        imgPreview.style.display = 'flex';
+        pendingAtts.push({ url: canvas.toDataURL('image/jpeg', 0.85), name: f.name, pdf: false });
+        renderAttachments();
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(f);
   }
 
-  qImage.addEventListener('change', () => processImageFile(qImage.files && qImage.files[0], qImage));
-  qGallery.addEventListener('change', () => processImageFile(qGallery.files && qGallery.files[0], qGallery));
-  removeImg.addEventListener('click', () => { qImage.value=''; qGallery.value=''; pendingImg=null; imgPreview.style.display='none'; });
+  // Process every selected file (gallery allows multi-select), then reset input.
+  function processSelection(inputEl) {
+    const files = inputEl && inputEl.files ? Array.from(inputEl.files) : [];
+    files.forEach(f => processImageFile(f, null));
+    if (inputEl) inputEl.value = '';
+  }
+  qImage.addEventListener('change', () => processSelection(qImage));
+  qGallery.addEventListener('change', () => processSelection(qGallery));
+  removeImg.addEventListener('click', () => { qImage.value=''; qGallery.value=''; pendingAtts=[]; renderAttachments(); });
 
   // Confidence selector
   const confHints={1:'1/5 · Not confident',2:'2/5 · A little unsure',3:'3/5 · Somewhat confident',4:'4/5 · Fairly confident',5:'5/5 · Very confident'};
@@ -1702,10 +1768,9 @@ button{font-family:inherit;cursor:pointer}
     const reader = new FileReader();
     reader.onerror = () => { alert('Could not read the PDF. Please try again.'); qPdf.value=''; };
     reader.onload = (e) => {
-      pendingImg = e.target.result; // data:application/pdf;base64,...
-      document.getElementById('previewThumb').style.display='none';
-      document.getElementById('previewName').textContent=f.name;
-      imgPreview.style.display='flex';
+      // PDF is an exclusive single attachment — replaces any pending images.
+      pendingAtts = [{ url: e.target.result, name: f.name, pdf: true }]; // data:application/pdf;base64,...
+      renderAttachments();
     };
     reader.readAsDataURL(f);
   });
@@ -1731,11 +1796,37 @@ button{font-family:inherit;cursor:pointer}
   function addUser(text,img){
     if(empty) empty.style.display='none';
     activateChatMode();
+    // img may be: an array of data URLs (multi-image), a single URL string
+    // (rehydration / legacy), or null. Render only image attachments as thumbs.
+    var urls = Array.isArray(img) ? img : (img ? [img] : []);
+    var imgUrls = urls.filter(function(u){ return typeof u==='string' && u.indexOf('data:image/')===0; });
+    var imgHtml = imgUrls.length
+      ? '<div class="q-imgs">'+imgUrls.map(function(u){ return '<img class="q-img" src="'+u+'" alt="question"/>'; }).join('')+'</div>'
+      : '';
     const el=document.createElement('div');el.className='msg user';
     el.innerHTML='<div class="av">'+escapeHtml(userInitials)+'</div><div class="body"><span class="who">You</span><div class="bubble">'+
-      (img?'<img class="q-img" src="'+img+'" alt="question"/>':'')+
+      imgHtml+
       (text?'<span dir="auto" style="display:block">'+escapeHtml(text)+'</span>':'')+'</div></div>';
     inner.appendChild(el);scrollDown();
+  }
+
+  // Issue #4 Phase B: show the detected-questions card after a multi-question
+  // worksheet upload, so the student sees the index and how to reference it.
+  function renderDetectedQuestions(list){
+    if(!Array.isArray(list) || list.length < 2) return;
+    var items = list.map(function(q){
+      var lbl = q.label ? ('Q'+q.label) : ('Q'+q.index);
+      return '<li dir="auto"><b>'+escapeHtml(lbl)+'</b>'+(q.summary?escapeHtml(q.summary):'')+'</li>';
+    }).join('');
+    var firstRef = list[0].label || list[0].index;
+    var lastRef  = list[list.length-1].label || list[list.length-1].index;
+    var el=document.createElement('div'); el.className='msg ai';
+    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span><div class="bubble detected-card">'+
+      '<div class="dc-head" dir="auto">📋 I detected '+list.length+' questions in this worksheet</div>'+
+      '<ul class="dc-list">'+items+'</ul>'+
+      '<div class="dc-hint" dir="auto">Ask me about any of them — e.g. “solve question '+escapeHtml(String(firstRef))+'”, or “check my answer for question '+escapeHtml(String(lastRef))+'”. No need to upload again.</div>'+
+      '</div></div>';
+    inner.appendChild(el); scrollDown();
   }
 
   function addTyping(){
@@ -2035,7 +2126,7 @@ button{font-family:inherit;cursor:pointer}
 
   function send(){
     const text=input.value.trim();
-    if(!text && !pendingImg) return;
+    if(!text && !pendingAtts.length) return;
     if(isSending) return;
     // Build the text sent to the API — append hint instruction when hint mode is active
     var apiText = (hintModeActive && text)
@@ -2048,10 +2139,11 @@ button{font-family:inherit;cursor:pointer}
     // Meta-signal pass: if topic detection yielded nothing but the message carries
     // a hint/re-explanation phrase, attribute it to the last known active topic.
     if (!sig && apiText) SignalEngine.analyzeMetaRequest(apiText);
-    var imgToSend = pendingImg;
-    addUser(text, pendingImg); // display original text (without hint suffix)
+    var attsToSend = pendingAtts.slice();
+    var urlsToSend = attsToSend.map(function(a){ return a.url; });
+    addUser(text, urlsToSend); // display original text (without hint suffix)
     input.value = ''; input.style.height = 'auto';
-    pendingImg = null; qImage.value = ''; imgPreview.style.display = 'none';
+    pendingAtts = []; qImage.value = ''; qGallery.value=''; renderAttachments();
     addTyping();
     isSending = true;
     sendBtn.disabled = true;
@@ -2100,14 +2192,28 @@ button{font-family:inherit;cursor:pointer}
       // Re-write inflight with credit_log_id so a refresh-during-send can refund
       // the credit if the Edge Function never commits a row.
       writeInflight(pendingRequestId, creditLogId);
-      askAI(apiText, sig, imgToSend).then(response => {
+      askAI(apiText, sig, urlsToSend).then(response => {
         // CAI-P1 success-path ordering: clear inflight → render → clear pendingRequestId.
         // Clearance precedes render so a refresh between steps cannot replay
         // an already-rendered answer via the recovery query.
         clearInflight();
         removeTyping();
         addAI(sig, response);
-        sessionMessages.push({role:'user', content: apiText});
+        // Phase B: surface the detected-questions index for multi-question uploads.
+        if (response && Array.isArray(response.detected_questions)) {
+          renderDetectedQuestions(response.detected_questions);
+        }
+        // Keep the uploaded image(s) in the live window too, so a later "explain
+        // question 2" in the same session resolves without a re-upload (mirrors
+        // the openSession rehydration path). All images replay as image_url blocks.
+        var liveImgs = urlsToSend.filter(function(u){ return typeof u==='string' && u.indexOf('data:image/')===0; });
+        if (liveImgs.length) {
+          sessionMessages.push({ role:'user', content: [{ type:'text', text: apiText }].concat(
+            liveImgs.map(function(u){ return { type:'image_url', image_url:{ url:u } }; })
+          )});
+        } else {
+          sessionMessages.push({role:'user', content: apiText});
+        }
         sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
         const _respTopic = (response && response.topic)    || null;
         const _respSub   = (response && response.subtopic) || null;

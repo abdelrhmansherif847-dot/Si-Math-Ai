@@ -590,7 +590,7 @@ interface WorksheetGuardResult {
 function worksheetGuardCheck(
   question: string,
   imageData: string | null,
-  messages: Array<{role: string; content: string}>,
+  messages: Array<{role: string; content: unknown}>,
   lang: string,
 ): WorksheetGuardResult | null {
   // Kill switch
@@ -599,6 +599,16 @@ function worksheetGuardCheck(
 
   // Guard never fires when an image is attached — student has provided the worksheet
   if (imageData) return null;
+
+  // Guard never fires when a recent turn already carried an image. Session image
+  // replay (Issue #3) keeps prior worksheets in the window as multimodal content
+  // blocks, so "solve question 4" can resolve against an earlier upload without a
+  // re-upload. Detect an image_url part anywhere in the last 10 turns.
+  const recent = messages.slice(-10);
+  const turnHasImage = (c: unknown): boolean =>
+    Array.isArray(c) && c.some((p) => p && typeof p === 'object' &&
+      (p as { type?: string }).type === 'image_url');
+  if (recent.some((m) => turnHasImage(m?.content))) return null;
 
   const text = question.trim();
   if (!text) return null;
@@ -714,17 +724,19 @@ function normalizeFinalAnswer(s: string): string {
 }
 
 // For image questions: extract the math problem as plain text (pre-solver step).
-// Uses gpt-4o-mini — cheap extraction, not solving.
+// Uses gpt-4o (vision) — gpt-4o-mini dropped digits/strokes (4667 -> 467). The
+// accuracy of this step gates the whole solve, so we pay for the stronger model.
 async function extractMathTextFromImage(imageData: string, studentText: string): Promise<string> {
-  const prompt = studentText
+  const guard = ' Do NOT guess or autocomplete any digit, sign, or symbol — if a character is unclear, transcribe exactly what is visible. Preserve the exact number of digits in every number.';
+  const prompt = (studentText
     ? `The student sent this image with the message: "${studentText.slice(0, 200)}". Extract the specific math question they are asking about as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.`
-    : 'Extract the math question shown in this image as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.';
+    : 'Extract the math question shown in this image as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.') + guard;
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', max_tokens: 300, temperature: 0,
+        model: 'gpt-4o', max_tokens: 300, temperature: 0,
         messages: [{ role: 'user', content: [
           { type: 'text', text: prompt },
           { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
@@ -749,10 +761,17 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
     // Coarse: operators present but zero minus signs — possible sign loss
     if (/[+×÷*]/.test(extractedText) && !/-/.test(extractedText) && extractedText.length > 5)
       flags.push('no_operator_sign');
+    // Long numbers (4+ digits) are the most error-prone for OCR digit drops
+    // (4667 -> 467). A bare gpt-4o-mini extraction gave no signal for these;
+    // treat them as coarse risk so the gpt-4o rerun double-checks the digits.
+    if (/\d{4,}/.test(extractedText)) flags.push('long_number');
 
-    const structural = flags.filter(f => f !== 'no_operator_sign').length;
+    const structural = flags.filter(f => f !== 'no_operator_sign' && f !== 'long_number').length;
     const coarse     = flags.includes('no_operator_sign') ? 1 : 0;
-    confidence = Math.max(0, 1.0 - structural * 0.25 - coarse * 0.15);
+    // long_number alone must drop below the 0.85 rerun threshold so the digits
+    // get a second pass; 0.20 weight => 0.80, which triggers the gpt-4o rerun.
+    const longNum    = flags.includes('long_number') ? 1 : 0;
+    confidence = Math.max(0, 1.0 - structural * 0.25 - coarse * 0.15 - longNum * 0.20);
   }
 
   let rerun_count = 0, rerun_changed = false, final_text = extractedText;
@@ -776,6 +795,166 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
     } catch { /* rerun failure is non-fatal */ }
   }
   return { confidence, flags, rerun_count, rerun_changed, final_text };
+}
+
+// ── Multi-question detection / segmentation (Issue #4, Phase B) ───────────────
+// Scans every uploaded image and returns each distinct question as a structured
+// entry so the session can index and later resolve references to it. gpt-4o
+// vision, temperature 0, strict JSON. Order = reading order across images.
+interface DetectedQuestion {
+  index: number;        // 1-based position across the whole worksheet
+  label: string;        // printed label as shown ("7", "Q7", "3(b)") or ""
+  text: string;         // full question text, transcribed verbatim
+  summary: string;      // 2–5 word semantic tag ("circle area", "linear system")
+  image_index: number;  // 0-based index of the source image
+}
+
+async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQuestion[]> {
+  if (!imagesData.length || !OPENAI_KEY) return [];
+  const prompt =
+    `You are analyzing ${imagesData.length} image(s) of a math worksheet. Detect EVERY distinct ` +
+    `question/problem across all images, in natural reading order. For each question return:\n` +
+    `- "label": the printed question number/label EXACTLY as shown (e.g. "7", "Q7", "3(b)"), or "" if unlabeled\n` +
+    `- "text": the COMPLETE question text, preserving all numbers, signs, exponents and notation exactly. ` +
+    `Do NOT guess, autocomplete, or merge separate questions.\n` +
+    `- "summary": a 2-5 word topic tag (e.g. "circle area", "quadratic roots", "linear system")\n` +
+    `- "image_index": 0-based index of the image the question appears in\n` +
+    `Return ONLY JSON: {"questions":[{"label":"","text":"","summary":"","image_index":0}]}. ` +
+    `One question => one entry. None => {"questions":[]}.`;
+  const content = [
+    { type: 'text', text: prompt },
+    ...imagesData.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
+  ];
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o', max_tokens: 1800, temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'user', content }],
+      }),
+    });
+    const json = await res.json();
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content || '{}');
+    const arr: unknown[] = Array.isArray(parsed.questions) ? parsed.questions : [];
+    return arr
+      .map((q, i) => {
+        const o = (q ?? {}) as Record<string, unknown>;
+        return {
+          index: i + 1,
+          label: String(o.label ?? '').slice(0, 24),
+          text: String(o.text ?? '').trim(),
+          summary: String(o.summary ?? '').slice(0, 80),
+          image_index: Number.isInteger(o.image_index) ? (o.image_index as number) : 0,
+        };
+      })
+      .filter((q) => q.text.length > 0)
+      .map((q, i) => ({ ...q, index: i + 1 })); // re-number after filtering empties
+  } catch { return []; }
+}
+
+// ── Session question index (Issue #4, Phase C) ───────────────────────────────
+// Persists detected questions to session_questions so references resolve across
+// the whole session, independent of the message window. Idempotent per record.
+type SbAdmin = ReturnType<typeof createClient>;
+
+async function indexSessionQuestions(
+  sb: SbAdmin,
+  sessionId: string,
+  userId: string,
+  sourceRecordId: string,
+  topic: string,
+  questions: DetectedQuestion[],
+): Promise<void> {
+  if (!questions.length) return;
+  try {
+    // Idempotency: clear any prior rows from this same record before re-inserting
+    // (handles retries / re-processing without creating duplicate index entries).
+    await sb.from('session_questions').delete().eq('source_record_id', sourceRecordId);
+    const rows = questions.map((q) => ({
+      session_id:       sessionId,
+      user_id:          userId,
+      q_index:          q.index,
+      label:            q.label || null,
+      question_text:    q.text,
+      summary:          q.summary || null,
+      topic:            topic || null,
+      source_record_id: sourceRecordId,
+      image_index:      q.image_index,
+    }));
+    await sb.from('session_questions').insert(rows);
+  } catch (e) {
+    console.log('[ai-tutor] sq-index-failed', JSON.stringify({ sid: sessionId.slice(0, 8), msg: String(e) }));
+  }
+}
+
+// ── Reference resolution (Issue #4, Phase D) ─────────────────────────────────
+// Maps a textual reference ("question 7", "the first question", "the circle
+// problem", "check my answer for question 5") to a previously indexed question.
+// Reads session_questions (whole session), never the message window.
+interface StoredQuestion {
+  id: string; q_index: number; label: string | null; question_text: string;
+  summary: string | null; source_record_id: string | null; image_index: number;
+}
+
+const ORD_EN: Record<string, number> = {
+  first:1, second:2, third:3, fourth:4, fifth:5, sixth:6, seventh:7, eighth:8, ninth:9, tenth:10,
+};
+const ORD_AR: Record<string, number> = {
+  'الأول':1,'الثاني':2,'الثالث':3,'الرابع':4,'الخامس':5,'السادس':6,'السابع':7,'الثامن':8,'التاسع':9,'العاشر':10,
+};
+const REF_STOP = new Set([
+  'the','a','an','solve','explain','check','my','answer','for','question','please','can','you','do',
+  'this','that','one','about','problem','of','to','it','help','me','give','show','what','is','and',
+]);
+
+async function resolveQuestionReference(
+  sb: SbAdmin, sessionId: string, question: string,
+): Promise<StoredQuestion | null> {
+  const text = (question || '').trim();
+  if (!text || !sessionId) return null;
+  const { data } = await sb.from('session_questions')
+    .select('id,q_index,label,question_text,summary,source_record_id,image_index')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false });
+  const rows = (data || []) as StoredQuestion[];
+  if (!rows.length) return null;
+
+  // Most-recent row matching a numeric target — printed label wins over q_index.
+  const byNumber = (n: number): StoredQuestion | null =>
+    rows.find((r) => (r.label || '').replace(/\D/g, '') === String(n)) ||
+    rows.find((r) => r.q_index === n) || null;
+
+  // 1) Explicit number / ordinal (EN / AR / Franco), or a bare ordinal word.
+  const EN = /\b(?:Q|question|prob(?:lem)?|number|num|#)\s*\.?\s*#?\s*(\d{1,3}|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(text);
+  const AR = /(?:سؤال|السؤال|مسألة|المسألة|رقم|نمرة)\s*(?:رقم\s*)?([٠-٩]{1,3}|\d{1,3}|الأول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر)/.exec(text);
+  const FR = /\b(?:so2al|so2aal|s2al|rakam|ra2m|nemra|nemrit)\s*\.?\s*(\d{1,3})\b/i.exec(text);
+  const ORDW = /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(text);
+  let token = (EN?.[1] || AR?.[1] || FR?.[1] || ORDW?.[1] || '').toLowerCase();
+  if (token) {
+    let n: number | undefined;
+    if (/^\d+$/.test(token)) n = parseInt(token, 10);
+    else if (/[٠-٩]/.test(token)) n = parseInt(token.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))), 10);
+    else if (ORD_EN[token]) n = ORD_EN[token];
+    else if (ORD_AR[token]) n = ORD_AR[token];
+    if (n) { const hit = byNumber(n); if (hit) return hit; }
+  }
+
+  // 2) Semantic match — overlap student keywords with summary / question text.
+  const tokens = text.toLowerCase()
+    .replace(/[^a-z؀-ۿ\s]/g, ' ').split(/\s+/)
+    .filter((w) => w.length > 2 && !REF_STOP.has(w));
+  if (tokens.length) {
+    let best: StoredQuestion | null = null, bestScore = 0;
+    for (const r of rows) {
+      const hay = ((r.summary || '') + ' ' + (r.question_text || '')).toLowerCase();
+      let score = 0; for (const t of tokens) if (hay.includes(t)) score++;
+      if (score > bestScore) { bestScore = score; best = r; }
+    }
+    if (best && bestScore >= 1) return best;
+  }
+  return null;
 }
 
 // Single solver pass. Model: gpt-4o-mini. Returns structured reasoning + final_answer.
@@ -1137,7 +1316,17 @@ serve(async (req) => {
     const messages:    Array<{role:string;content:string}> = Array.isArray(body.messages) ? body.messages : [];
     const topic:       string  = body.topic || '';
     const subtopic:    string  = body.subtopic || '';
-    const imageData:   string | null = (typeof body.image === 'string' && body.image.startsWith('data:image/')) ? body.image : null;
+    // Multi-image support (Issue #2): body.images is an ordered array of data
+    // URLs. Fall back to the single body.image for older clients. imageData
+    // stays as the first image so all existing single-image paths keep working;
+    // imagesData carries the full ordered list for OCR + the vision solve call.
+    const imagesData: string[] = (Array.isArray(body.images) ? body.images : [])
+      .filter((u: unknown): u is string => typeof u === 'string' && u.startsWith('data:image/'))
+      .slice(0, 10);
+    if (imagesData.length === 0 && typeof body.image === 'string' && body.image.startsWith('data:image/')) {
+      imagesData.push(body.image);
+    }
+    const imageData:   string | null = imagesData.length ? imagesData[0] : null;
     // Parent record ID sent by client for repeat/re-explanation detection (v76).
     const parentRecordId: string | null = (typeof body.parent_record_id === 'string' && body.parent_record_id) ? body.parent_record_id : null;
     // lang resolved after profile fetch so language_preference is respected
@@ -1306,10 +1495,40 @@ serve(async (req) => {
       } catch (_) { /* fire-and-forget */ }
     }
 
+    // ── Reference Resolution (Issue #4, Phase D) ──────────────────────────────
+    // When the current turn has no image, try to resolve a reference ("question
+    // 7", "the circle problem", "check my answer for Q5") against the durable
+    // session_questions index. On a hit we inject that question's verbatim text
+    // (and its source image) into the solve, and the worksheet guard stands down.
+    let resolvedRef: StoredQuestion | null = null;
+    let refImages: string[] = [];
+    if (!imageData && resolvedSessionId) {
+      resolvedRef = await resolveQuestionReference(sbAdmin, resolvedSessionId, question);
+      if (resolvedRef?.source_record_id) {
+        const { data: srcRec } = await sbAdmin.from('question_records')
+          .select('image,images').eq('id', resolvedRef.source_record_id).maybeSingle();
+        if (srcRec) {
+          if (Array.isArray(srcRec.images)) {
+            refImages = (srcRec.images as unknown[]).filter(
+              (u): u is string => typeof u === 'string' && u.startsWith('data:image/'));
+          } else if (typeof srcRec.image === 'string' && srcRec.image.startsWith('data:image/')) {
+            refImages = [srcRec.image];
+          }
+        }
+      }
+      if (resolvedRef) {
+        console.log('[ai-tutor] ref-resolved', JSON.stringify({
+          uid: user.id.slice(0, 8), q_index: resolvedRef.q_index,
+          label: resolvedRef.label, has_img: refImages.length > 0,
+        }));
+      }
+    }
+
     // ── Worksheet Navigation Guard (early-return, 0 tokens) ───────────────────
     // Must run after lang resolution (guard messages are language-aware) and
     // before any OpenAI call. Guard turns are not persisted to question_records.
-    const worksheetGuard = worksheetGuardCheck(question, imageData, messages, lang);
+    // Skipped when a reference resolved — we have the real question, no re-upload.
+    const worksheetGuard = resolvedRef ? null : worksheetGuardCheck(question, imageData, messages, lang);
     if (worksheetGuard) {
       console.log('[ai-tutor] worksheet-guard-fired', JSON.stringify({
         uid:    user.id.slice(0, 8),
@@ -1962,12 +2181,30 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // ── OpenAI call ───────────────────────────────────────────────────────────
     // When an image is attached, use GPT-4o vision with multimodal content.
     // The model OCRs and solves the problem in one pass.
-    const userContent: unknown = imageData
-      ? [
-          { type: 'text', text: question || 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.' },
-          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
-        ]
+    // Phase D: when a reference resolved, solve the indexed question. Inject its
+    // verbatim text and attach its source image(s) so the model answers THAT
+    // question — supports "solve question 7" and "check my answer for Q5".
+    const refLabel = resolvedRef ? (resolvedRef.label || String(resolvedRef.q_index)) : '';
+    const solvePrompt = resolvedRef
+      ? `The student is referring to a question from a worksheet they uploaded earlier in this session.\n` +
+        `[Worksheet Question ${refLabel}]: ${resolvedRef.question_text}\n\n` +
+        `Student's message: ${question}\n\n` +
+        `Answer the student's request about THIS specific question. Do NOT ask them to re-upload anything.`
       : question;
+    // Which images go to the solve: this turn's uploads, else the referenced
+    // question's source image(s).
+    const solveImages = imagesData.length ? imagesData : (resolvedRef ? refImages : []);
+
+    // Multi-image: attach every image in order so the model analyzes the whole
+    // set together (Issue #2). Single-image is just length 1.
+    const userContent: unknown = solveImages.length
+      ? [
+          { type: 'text', text: solvePrompt || (solveImages.length > 1
+            ? `These ${solveImages.length} images contain math problems, in order. Please analyze and solve them. Respond in JSON format as specified.`
+            : 'This image contains a math problem. Please analyze and solve it. Respond in JSON format as specified.') },
+          ...solveImages.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
+        ]
+      : solvePrompt;
 
     // Per-turn language anchor — injected as a system message immediately before
     // the user turn so the model cannot drift to English mid-response on long
@@ -2027,6 +2264,13 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
+    // Phase B: kick off multi-question detection concurrently with the solve so
+    // it adds no extra latency (total ≈ max(solve, detect), not the sum). Only
+    // runs when images are present. Result is surfaced + indexed below.
+    const detectionPromise: Promise<DetectedQuestion[]> = imagesData.length
+      ? detectQuestionsInImages(imagesData)
+      : Promise.resolve([]);
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'system', content: curriculumAnchor },
@@ -2040,7 +2284,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
+        model: solveImages.length ? 'gpt-4o' : 'gpt-4o-mini',
         messages: openaiMessages,
         response_format: { type: 'json_object' },
         max_tokens: 2800,
@@ -2067,7 +2311,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // GPT's explicit is_math flag takes priority over the local keyword classifier.
     // For image questions: always treat as math (this platform is math-only; images are always problems).
     const gptIsMath = typeof parsed.is_math === 'boolean' ? parsed.is_math : undefined;
-    const isMath = imageData
+    const isMath = (imageData || resolvedRef)
       ? true
       : (gptIsMath !== undefined ? gptIsMath : isMathTopic(finalTopic, finalSubtopic));
 
@@ -2163,6 +2407,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       user_id:           user.id,
       question:          question,
       image:             imageData,
+      images:            imagesData.length ? imagesData : null,
       ai_response:       String(parsed.answer || ''),
       topic:             safeInsertTopic,
       subtopic:          safeInsertSubtopic,
@@ -2212,6 +2457,16 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         had_image: !!imageData, q_chars: question.length,
       }));
     }
+    // Phase B: resolve the concurrent detection pass.
+    const detectedQuestions = await detectionPromise;
+    // Phase C: index every detected question for the session so later references
+    // resolve from the DB (whole session) rather than the 10-message window.
+    if (detectedQuestions.length && resolvedSessionId && recordId) {
+      await indexSessionQuestions(
+        sbAdmin, resolvedSessionId, user.id, recordId, finalTopic, detectedQuestions,
+      );
+    }
+
     const studentResponse = new Response(JSON.stringify({
       answer:          zeroAnswer,
       hint,
@@ -2226,6 +2481,11 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       record_id:       recordId,
       hint_mode:       hintMode,
       is_math:         isMath,
+      // Phase B: structured list of every question detected in the upload, so the
+      // client can show "I detected N questions…". Only meaningful when length>1.
+      detected_questions: detectedQuestions.map((q) => ({
+        index: q.index, label: q.label, summary: q.summary,
+      })),
       version:         AI_TUTOR_VERSION,
       idempotency_recovered: idempotencyRecovered,
       degraded:        degraded,
