@@ -380,7 +380,12 @@ button{font-family:inherit;cursor:pointer}
 /* Hint Mode Toggle */
 .hint-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .hint-toggle{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:100px;background:var(--bg-card);border:1px solid var(--border-mid);color:var(--text-400);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-display)}
-.hint-toggle:hover{border-color:rgba(251,191,36,.35);color:#fbbf24}
+/* Gate hover to real pointers. On touch devices :hover sticks after a tap and
+   kept the amber glow visible even after Hint Mode was turned OFF. */
+@media (hover:hover) and (pointer:fine){.hint-toggle:hover{border-color:rgba(251,191,36,.35);color:#fbbf24}}
+.hint-toggle{-webkit-tap-highlight-color:transparent}
+.hint-toggle:focus{outline:none}
+.hint-toggle:focus-visible{outline:2px solid rgba(251,191,36,.6);outline-offset:2px}
 .hint-toggle.active{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.45);color:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.15)}
 .hint-toggle svg{width:14px;height:14px;flex-shrink:0}
 .hint-toggle-desc{font-size:11.5px;color:var(--text-500)}
@@ -2391,7 +2396,12 @@ button{font-family:inherit;cursor:pointer}
     var btn = document.getElementById('hintToggleBtn');
     var label = document.getElementById('hintToggleLabel');
     var desc = document.getElementById('hintToggleDesc');
-    if (btn) btn.classList.toggle('active', hintModeActive);
+    if (btn) {
+      btn.classList.toggle('active', hintModeActive);
+      // Release focus so iOS Safari/Android Chrome don't retain the tapped
+      // state and re-show the glow after the class is removed.
+      try { btn.blur(); } catch (e) {}
+    }
     if (label) label.textContent = hintModeActive ? 'Hint Mode ON' : 'Hint Mode';
     if (desc) desc.textContent = hintModeActive ? 'Zero will give hints only — no full solutions' : 'Get a hint, not the full solution';
   }
