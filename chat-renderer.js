@@ -56,29 +56,33 @@
         out.push(line.replace(/\x00CODE(\d+)\x00/g, function (_, n) { return codeBlocks[+n]; }));
         i++; continue;
       }
+      // dir="auto" on every text block: the browser picks each block's base
+      // direction from its first strong character, so Arabic blocks render RTL
+      // and English blocks LTR, with mixed runs (variables, equations, names)
+      // ordered naturally by the Unicode bidi algorithm. Matches ChatGPT behavior.
       if (/^\d+\. /.test(line)) {
         var items = [];
         while (i < lines.length && /^\d+\. /.test(lines[i])) {
-          items.push('<li>' + inlineFmt(esc(lines[i].replace(/^\d+\. /, ''))) + '</li>');
+          items.push('<li dir="auto">' + inlineFmt(esc(lines[i].replace(/^\d+\. /, ''))) + '</li>');
           i++;
         }
-        out.push('<ol>' + items.join('') + '</ol>');
+        out.push('<ol dir="auto">' + items.join('') + '</ol>');
         continue;
       }
       if (/^[-*] /.test(line)) {
         var bitems = [];
         while (i < lines.length && /^[-*] /.test(lines[i])) {
-          bitems.push('<li>' + inlineFmt(esc(lines[i].replace(/^[-*] /, ''))) + '</li>');
+          bitems.push('<li dir="auto">' + inlineFmt(esc(lines[i].replace(/^[-*] /, ''))) + '</li>');
           i++;
         }
-        out.push('<ul>' + bitems.join('') + '</ul>');
+        out.push('<ul dir="auto">' + bitems.join('') + '</ul>');
         continue;
       }
-      if (/^### /.test(line)) { out.push('<h5>' + inlineFmt(esc(line.slice(4))) + '</h5>'); i++; continue; }
-      if (/^## /.test(line))  { out.push('<h4>' + inlineFmt(esc(line.slice(3))) + '</h4>'); i++; continue; }
-      if (/^# /.test(line))   { out.push('<h3>' + inlineFmt(esc(line.slice(2))) + '</h3>'); i++; continue; }
+      if (/^### /.test(line)) { out.push('<h5 dir="auto">' + inlineFmt(esc(line.slice(4))) + '</h5>'); i++; continue; }
+      if (/^## /.test(line))  { out.push('<h4 dir="auto">' + inlineFmt(esc(line.slice(3))) + '</h4>'); i++; continue; }
+      if (/^# /.test(line))   { out.push('<h3 dir="auto">' + inlineFmt(esc(line.slice(2))) + '</h3>'); i++; continue; }
       if (line.trim() === '') { out.push('<div class="md-sp"></div>'); i++; continue; }
-      out.push('<p>' + inlineFmt(esc(line)) + '</p>');
+      out.push('<p dir="auto">' + inlineFmt(esc(line)) + '</p>');
       i++;
     }
     // Step 3: Restore LaTeX blocks AFTER all HTML processing (they land as raw text in the DOM,
