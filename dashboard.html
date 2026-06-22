@@ -1109,10 +1109,10 @@ body::before{
         <div class="ov-ic">📈</div>
         <span class="ov-badge good" id="ovTopBadge">—</span>
       </div>
-      <div class="ov-label">Strongest Topic</div>
+      <div class="ov-label">Focus Area</div>
       <div class="ov-main" id="ovTopTopicName">—</div>
       <div class="ov-num green" style="margin-top:10px"><span id="cntImprove">0</span>%</div>
-      <div class="ov-sub">Highest mastery score</div>
+      <div class="ov-sub">Lowest mastery — work on this next</div>
     </div>
 
     <!-- Study Streak -->
@@ -1710,20 +1710,32 @@ async function loadDashboard() {
     weakness = {topic: topicList[0].topic, subtopic: null, mastery_score: topicList[0].mastery};
   }
 
-  /* ── Derived: strongest topic ── */
-  var topTopic = topicList.length ? topicList[topicList.length - 1] : null;
+  /* ── Derived: focus topic (priority weakness, not a strength ranking) ──
+   * Strength rankings are confined to weakness.html. This card surfaces the
+   * topic to work on next, sourced from the same `weakness` derivation. */
+  var topTopic = weakness
+    ? { topic: weakness.topic, mastery: Math.round(weakness.mastery_score || 0) }
+    : null;
 
   /* ── Derived: streaks (read from profiles, written by assets/streak.js) ── */
   var currentStreak = prof.current_streak ?? 0;
   var bestStreak    = prof.best_streak    ?? 0;
 
   /* Weekly heatmap activity source — MUST match assets/streak.js so the two
-   * numbers stay consistent. Use question_records (any topic) ∪ exam sessions. */
+   * numbers stay consistent. Day boundaries are pinned to Africa/Cairo (NOT the
+   * device timezone) for the same determinism reason streak.js documents.
+   * Use question_records (any topic) ∪ exam sessions. */
+  var STREAK_TZ = 'Africa/Cairo';
+  function cairoDayKey(d) {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: STREAK_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d);
+  }
   var actSet = new Set();
   weeklyQrs.concat(exams).forEach(function(s) {
-    if (s.created_at) actSet.add(new Date(s.created_at).toDateString());
+    if (s.created_at) actSet.add(cairoDayKey(new Date(s.created_at)));
   });
-  var todayStr = new Date().toDateString();
+  var todayStr = cairoDayKey(new Date());
 
   /* ── Derived: this week M–S ── */
   var today0 = new Date(); today0.setHours(0,0,0,0);
@@ -1733,11 +1745,12 @@ async function loadDashboard() {
   var DAY_LABELS = ['M','T','W','T','F','S','S'];
   var weekData = Array.from({length:7}, function(_,i) {
     var day = new Date(weekMon); day.setDate(weekMon.getDate() + i);
+    var dayKey = cairoDayKey(day);
     return {
       label:    DAY_LABELS[i],
       date:     day,
-      isDone:   actSet.has(day.toDateString()),
-      isToday:  day.toDateString() === todayStr,
+      isDone:   actSet.has(dayKey),
+      isToday:  dayKey === todayStr,
       isFuture: day > today0,
     };
   });

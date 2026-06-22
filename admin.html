@@ -307,7 +307,7 @@ select.search-input{cursor:pointer}
   <section class="card" data-role-min="super_admin" style="margin-bottom:18px">
     <div class="card-head">
       <div class="card-ico amber">💵</div>
-      <div><div class="card-title">Revenue &amp; Payments</div><div class="card-sub">Realized and pending revenue from payments table</div></div>
+      <div><div class="card-title">Revenue &amp; Payments</div><div class="card-sub">Realized and pending revenue from approved payment requests</div></div>
     </div>
     <div class="stats-grid" style="margin-bottom:18px">
       <div class="stat-card green"><div class="lbl">Total Revenue</div><div class="val" id="revTotal">—</div><div class="sub">all-time approved</div></div>
@@ -483,14 +483,6 @@ select.search-input{cursor:pointer}
       </div>
       <div id="upgradeRequestsList"><div class="empty"><div class="ico">⏳</div><p>Loading…</p></div></div>
     </div>
-    <!-- Manual PENDING payments in DB -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-ico amber">⏳</div>
-        <div><div class="card-title">Pending Payment Queue</div><div class="card-sub">Manually created PENDING payment records awaiting approval</div></div>
-      </div>
-      <div id="pendingList"><div class="empty"><div class="ico">⏳</div><p>Loading…</p></div></div>
-    </div>
   </div>
 
   <!-- TAB: USERS -->
@@ -505,10 +497,10 @@ select.search-input{cursor:pointer}
         <select class="search-input" id="planFilter" style="flex:0 0 auto;min-width:130px" onchange="filterUsers()">
           <option value="">All Plans</option>
           <option value="FREE">Free</option>
-          <option value="BASIC">Basic</option>
-          <option value="STANDARD">Standard</option>
-          <option value="PREMIUM">Premium</option>
-          <option value="FOUNDER">Founder</option>
+          <option value="PRO_MONTHLY">Pro Monthly</option>
+          <option value="PRO_QUARTERLY">Pro Quarterly</option>
+          <option value="PRO_ANNUAL">Pro Annual</option>
+          <option value="FOUNDER_ANNUAL">Founder</option>
         </select>
       </div>
       <div class="tbl-wrap">
@@ -758,7 +750,7 @@ function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
   if (name === 'payments') loadPaymentRequests();
-  if (name === 'pending') { loadUpgradeRequests(); loadPending(); }
+  if (name === 'pending') { loadUpgradeRequests(); }
   if (name === 'users') { if (allUsers.length === 0) loadUsers(); loadSuspiciousAccounts(); }
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
@@ -890,7 +882,6 @@ async function confirmApprove() {
   closeApproveModal();
   toast(`Payment approved! ${result.credits_granted ? result.credits_granted.toLocaleString() + ' credits granted.' : ''}`, 'green');
   loadUpgradeRequests();
-  loadPending();
   loadStats();
 }
 
@@ -902,65 +893,6 @@ async function rejectUpgradeRequest(userId) {
   if (error) { toast('Error: ' + error.message, 'red'); return; }
   toast('Request rejected', 'red');
   loadUpgradeRequests();
-}
-
-// Pending payments
-async function loadPending() {
-  const { data, error } = await sb
-    .from('payments')
-    .select('id, user_id, payment_type, reference_id, amount_egp, credits_to_grant, status, created_at, profiles(full_name, email)')
-    .eq('status', 'PENDING')
-    .order('created_at', { ascending: true });
-
-  const el = document.getElementById('pendingList');
-  if (error || !data || data.length === 0) {
-    el.innerHTML = '<div class="empty"><div class="ico">✅</div><p>No pending payments — queue is clear.</p></div>';
-    return;
-  }
-  el.innerHTML = `<div class="tbl-wrap"><table>
-    <thead><tr><th>Date</th><th>User</th><th>Type</th><th>Reference</th><th>Amount</th><th>Credits</th><th>Actions</th></tr></thead>
-    <tbody>${data.map(p => `<tr>
-      <td class="mono">${fmtDate(p.created_at)}</td>
-      <td><div class="bold">${esc(p.profiles?.full_name || '—')}</div><div style="font-size:11.5px;color:var(--text-500)">${esc(p.profiles?.email || p.user_id)}</div></td>
-      <td><span class="chip ${p.payment_type === 'SUBSCRIPTION' ? 'blue' : 'green'}">${p.payment_type}</span></td>
-      <td class="mono">${esc(p.reference_id || '—')}</td>
-      <td class="bold">${p.amount_egp ? Number(p.amount_egp).toLocaleString() + ' EGP' : '—'}</td>
-      <td>${p.credits_to_grant ? p.credits_to_grant.toLocaleString() : '—'}</td>
-      <td><div style="display:flex;gap:6px">
-        <button class="btn btn-green btn-sm" onclick="approvePayment('${p.id}','${p.payment_type}')">Approve</button>
-        <button class="btn btn-red btn-sm" onclick="rejectPayment('${p.id}','${p.user_id}')">Reject</button>
-      </div></td>
-    </tr>`).join('')}</tbody>
-  </table></div>`;
-}
-
-async function approvePayment(paymentId, type) {
-  if (!confirm('Approve this payment and activate?')) return;
-  const action = type === 'SUBSCRIPTION' ? 'activate_subscription' : 'activate_credit_pack';
-  const { data: { session } } = await sb.auth.getSession();
-  const res = await fetch(EDGE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify({ action, payment_id: paymentId })
-  });
-  const result = await res.json();
-  if (!res.ok || result.error) { toast('Error: ' + (result.error || 'unknown'), 'red'); return; }
-  toast('Payment approved', 'green');
-  loadPending(); loadStats();
-}
-
-async function rejectPayment(paymentId, userId) {
-  const reason = prompt('Rejection reason (optional):') || 'Admin rejected';
-  const { data: { session } } = await sb.auth.getSession();
-  const res = await fetch(EDGE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify({ action: 'reject_payment', payment_id: paymentId, reason })
-  });
-  const result = await res.json();
-  if (!res.ok || result.error) { toast('Error: ' + (result.error || 'unknown'), 'red'); return; }
-  toast('Payment rejected', 'red');
-  loadPending(); loadStats();
 }
 
 // Users
@@ -1269,7 +1201,7 @@ async function rejectPaymentRequest(requestId) {
 // Helpers
 function esc(str) { return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(iso) { if (!iso) return '—'; return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
-function planChip(code) { return { FREE:'gray', BASIC:'blue', STANDARD:'blue', PREMIUM:'green', FOUNDER:'amber' }[code] || 'gray'; }
+function planChip(code) { return { FREE:'gray', PRO_MONTHLY:'blue', PRO_QUARTERLY:'blue', PRO_ANNUAL:'green', FOUNDER_ANNUAL:'amber' }[code] || 'gray'; }
 
 // ── Dashboard Overview loaders ──────────────────────────────────────────────
 function _isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
@@ -1331,16 +1263,23 @@ async function loadStudentActivity() {
   } catch(e) { console.error('loadStudentActivity', e); }
 }
 
+// Live subscription plan codes (kind='subscription' in plan_definitions).
+// Everything else approved in payment_requests is a credit pack (kind='pack').
+const SUBSCRIPTION_PLAN_CODES = ['PRO_MONTHLY','PRO_QUARTERLY','PRO_ANNUAL','FOUNDER_ANNUAL'];
+
 // (2) Revenue & Payments
+// Source of truth is payment_requests (the live manual-payment flow written by
+// approve_payment_request). The legacy `payments` table is no longer written to
+// and used uppercase COMPLETED/PENDING statuses, so the old queries returned 0.
 async function loadRevenuePayments() {
   try {
     const monthStart = _monthStartISO();
     const [allApproved, monthApproved, pendingRes, rejectedRes, recentRes] = await Promise.all([
-      sb.from('payments').select('amount_egp').eq('status', 'APPROVED').limit(10000),
-      sb.from('payments').select('amount_egp').eq('status', 'APPROVED').gte('created_at', monthStart).limit(10000),
-      sb.from('payments').select('id', { count:'exact', head:true }).eq('status', 'PENDING'),
-      sb.from('payments').select('id', { count:'exact', head:true }).eq('status', 'REJECTED'),
-      sb.from('payments').select('id, amount_egp, payment_type, status, created_at, user_id, profiles(full_name, email)').order('created_at', { ascending:false }).limit(10),
+      sb.from('payment_requests').select('amount_egp').eq('status', 'approved').limit(10000),
+      sb.from('payment_requests').select('amount_egp').eq('status', 'approved').gte('created_at', monthStart).limit(10000),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status', 'pending'),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status', 'rejected'),
+      sb.from('payment_requests').select('id, amount_egp, plan_code, plan_label, status, created_at, user_id, profiles(full_name, email)').order('created_at', { ascending:false }).limit(10),
     ]);
     const sum = (arr) => (arr || []).reduce((a,r) => a + Number(r.amount_egp || 0), 0);
     const total = sum(allApproved.data);
@@ -1356,12 +1295,12 @@ async function loadRevenuePayments() {
     const tbody = document.getElementById('recentPaymentsBody');
     const rows = recentRes.data || [];
     if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-500)">No payments yet.</td></tr>'; return; }
-    const stChip = (s) => s === 'APPROVED' ? 'green' : s === 'PENDING' ? 'amber' : 'red';
+    const stChip = (s) => s === 'approved' ? 'green' : s === 'pending' ? 'amber' : 'red';
     tbody.innerHTML = rows.map(p => `<tr>
       <td class="mono">${fmtDate(p.created_at)}</td>
       <td><div class="bold">${esc(p.profiles?.full_name || '—')}</div><div style="font-size:11px;color:var(--text-500)">${esc(p.profiles?.email || p.user_id)}</div></td>
       <td class="bold">${p.amount_egp ? fmtEGP(p.amount_egp) : '—'}</td>
-      <td>${esc(p.payment_type || '—')}</td>
+      <td>${esc(p.plan_label || p.plan_code || '—')}</td>
       <td><span class="chip ${stChip(p.status)}">${esc(p.status)}</span></td>
     </tr>`).join('');
   } catch(e) { console.error('loadRevenuePayments', e); }
@@ -1381,8 +1320,9 @@ async function loadPlansConversion() {
     document.getElementById('planPaid').textContent = paid;
     document.getElementById('planConv').textContent = total > 0 ? ((paid / total) * 100).toFixed(1) + '%' : '—';
 
-    const order = ['FREE','BASIC','STANDARD','PREMIUM','FOUNDER'];
-    const colors = { FREE:'#536b8c', BASIC:'#38bdf8', STANDARD:'#0ea5e9', PREMIUM:'#22c55e', FOUNDER:'#f5b942' };
+    const order = ['FREE','PRO_MONTHLY','PRO_QUARTERLY','PRO_ANNUAL','FOUNDER_ANNUAL'];
+    const colors = { FREE:'#536b8c', PRO_MONTHLY:'#38bdf8', PRO_QUARTERLY:'#0ea5e9', PRO_ANNUAL:'#22c55e', FOUNDER_ANNUAL:'#f5b942' };
+    const planLabels = { FREE:'Free', PRO_MONTHLY:'Pro Monthly', PRO_QUARTERLY:'Pro Quarterly', PRO_ANNUAL:'Pro Annual', FOUNDER_ANNUAL:'Founder' };
     const mix = document.getElementById('planMix');
     const legend = document.getElementById('planMixLegend');
     mix.innerHTML = '';
@@ -1390,8 +1330,9 @@ async function loadPlansConversion() {
     order.forEach(p => {
       const c = counts[p] || 0;
       const pct = total > 0 ? (c / total * 100) : 0;
-      if (pct > 0) mix.innerHTML += `<div title="${p}: ${c}" style="width:${pct}%;background:${colors[p]}"></div>`;
-      legend.innerHTML += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[p]};margin-right:6px;vertical-align:middle"></span>${p}: ${c} (${pct.toFixed(1)}%)</span>`;
+      const lbl = planLabels[p] || p;
+      if (pct > 0) mix.innerHTML += `<div title="${lbl}: ${c}" style="width:${pct}%;background:${colors[p]}"></div>`;
+      legend.innerHTML += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[p]};margin-right:6px;vertical-align:middle"></span>${lbl}: ${c} (${pct.toFixed(1)}%)</span>`;
     });
   } catch(e) { console.error('loadPlansConversion', e); }
 }
@@ -1403,11 +1344,12 @@ async function loadSubscriptionGrowth() {
     const prevMonthStart = _prevMonthStartISO();
     const since30 = _isoDaysAgo(30);
     const now = _nowISO();
-    // New subscriptions = APPROVED SUBSCRIPTION payments (not profile creation date)
+    // New subscriptions = approved subscription-plan payment_requests (not profile
+    // creation date). Pack purchases are excluded via the plan_code filter.
     const [newMonth, new30, prevMonth, churnedRes] = await Promise.all([
-      sb.from('payments').select('id', { count:'exact', head:true }).eq('status','APPROVED').eq('payment_type','SUBSCRIPTION').gte('created_at', monthStart),
-      sb.from('payments').select('id', { count:'exact', head:true }).eq('status','APPROVED').eq('payment_type','SUBSCRIPTION').gte('created_at', since30),
-      sb.from('payments').select('id', { count:'exact', head:true }).eq('status','APPROVED').eq('payment_type','SUBSCRIPTION').gte('created_at', prevMonthStart).lt('created_at', monthStart),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', SUBSCRIPTION_PLAN_CODES).gte('created_at', monthStart),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', SUBSCRIPTION_PLAN_CODES).gte('created_at', since30),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', SUBSCRIPTION_PLAN_CODES).gte('created_at', prevMonthStart).lt('created_at', monthStart),
       sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').lt('subscription_expires_at', now),
     ]);
     const cm = newMonth.count ?? 0;
