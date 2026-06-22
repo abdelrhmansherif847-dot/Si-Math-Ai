@@ -417,20 +417,24 @@ function buildPlanFeatures(plan) {
   if (code === 'FREE') {
     features.push({ ok: true,  text: limit + ' AI messages per day' });
     features.push({ ok: true,  text: 'Top 3 weaknesses (basic view)' });
-    features.push({ ok: true,  text: 'Focus Practice — Day 1 (Foundation)' });
+    features.push({ ok: true,  text: 'Mastery Rounds — Round 1 preview (Foundation, Day 1)' });
     features.push({ ok: true,  text: '1 mock exam per week' });
     features.push({ ok: true,  text: 'Last 10 chat sessions' });
     features.push({ ok: true,  text: 'XP, streaks & achievements' });
     features.push({ ok: true,  text: devices + ' active devices' });
     features.push({ ok: false, text: 'Deep weakness analytics & trends' });
-    features.push({ ok: false, text: 'Full 3-day study plan' });
+    features.push({ ok: false, text: 'Mastery Rounds 1–3 (Foundation → Mastery)' });
     features.push({ ok: false, text: 'Unlimited mock exams' });
     features.push({ ok: false, text: 'Unlimited chat history' });
   } else {
     features.push({ ok: true,  text: credits.toLocaleString() + ' credits / ' + (code.endsWith('_ANNUAL') ? 'year' : code.endsWith('_QUARTERLY') ? '3 months' : 'month') });
     features.push({ ok: true,  text: 'Unlimited daily AI messages' });
     features.push({ ok: true,  text: 'Full Weakness Analyzer (all topics, trends, deep analysis)' });
-    features.push({ ok: true,  text: 'Full 3-day study plan (Foundation + Accuracy + Pressure)' });
+    if (plan.is_founder) {
+      features.push({ ok: true,  text: 'All 7 Mastery Rounds — Foundation → Mastery → Elite I–III → Legend' });
+    } else {
+      features.push({ ok: true,  text: 'Mastery Rounds 1–3 (Foundation, Advanced, Mastery)' });
+    }
     features.push({ ok: true,  text: 'Unlimited mock exams + full review' });
     features.push({ ok: true,  text: 'Unlimited chat history' });
     features.push({ ok: true,  text: 'AI-powered recommendations on every weakness' });
@@ -685,13 +689,14 @@ async function loadPage() {
 
   <div class="sec-label">Frequently Asked Questions</div>
   ${[
-    ['What are credits?', 'Credits power the AI Tutor. Each AI Chat message costs 5 credits — so Pro Monthly (3,500 credits) gives you 700 messages per month, and Pro Annual (42,000 credits) gives you 8,400 over the year. Founder members receive 5,000 credits per month (1,000 messages). Weakness Analyzer, Focus Practice, and Mock Exams are always free on every plan. Free plan users get 10 free AI Chat messages per day; credit packs let you keep going after your daily allowance runs out.'],
-    ['Do credits expire?', 'Subscription credits expire when your subscription ends. Credit pack credits never expire — they stay in your account forever.'],
-    ['How does the upgrade process work?', "Since we're in beta, upgrades are handled manually. Submit a request and we'll activate your plan within 24 hours and email you confirmation."],
-    ['What is the Founder plan?', "The Founder plan is limited to the first 50 students. Founders receive 5,000 credits per month — 43% more than the standard Pro Monthly plan — at a lower price, locked in for life. They also receive a permanent Founder badge on their profile and are protected from all future price increases."],
-    ['Can I cancel anytime?', "Yes — contact us and we'll process your cancellation. You keep access until the end of your billing period. Your Founder badge and status remain forever if you're a Founder."],
-    ['What counts as a device?', 'Each unique browser on a different physical device counts as one device. Clearing cookies or using a different browser profile may register as a new device.'],
-    ['Is my data safe?', 'All data is stored in Supabase with row-level security. Your practice data is private, encrypted at rest, and never shared with third parties.'],
+    ["What are Mastery Rounds?", "Mastery Rounds turn each weakness into a structured, escalating climb. Every Focus Plan is organized into rounds, and each round keeps the same 3-day rhythm — Foundation, Accuracy, and Pressure. Pro members progress through the first three rounds: Foundation, Advanced, and Mastery. Founder members continue beyond Mastery into the exclusive Elite I, Elite II, Elite III, and Legend tiers. Your advancement is driven by real work in the AI Tutor and Mock Exams, not just time spent."],
+    ["How does the Focus Plan work?", "Your Focus Plan is generated automatically from your Weakness Analyzer results. It targets your weakest topics, most recent mistakes, and current mastery level, then lays out a personalized 3-day path of learning, accuracy, and timed-pressure tasks. As your mastery improves, the plan refreshes and advances you to the next Mastery Round."],
+    ["How are weaknesses detected?", "Si Math AI reads two sources: your AI Tutor sessions and your Mock Exam performance. Mistakes, hints used, repeated explanations, and mastery trends are combined by the Weakness Analyzer to rank your highest-priority weaknesses — so your Focus Plan always points at what matters most right now."],
+    ["What's included in the Founder Plan?", "Founder is the complete experience. Founders unlock all seven Mastery Rounds — including the Founder-exclusive Elite I, Elite II, Elite III, and Legend tiers beyond Mastery — plus the full Weakness Analyzer, unlimited Mock Exams, and a full annual credit allocation for the AI Tutor. Founders also receive a permanent Founder badge and lifetime Founder pricing, locked in and protected from future price changes."],
+    ["What's included in the Pro Plan?", "Pro is the complete learning system: unlimited AI Tutor access powered by your plan's credit allowance, the complete Weakness Analyzer, unlimited Mock Exams, and Focus Plans with the first three Mastery Rounds — Foundation, Advanced, and Mastery. Pro is available monthly, quarterly, or annually, with a larger credit allowance the longer your plan period."],
+    ["Do my credits expire?", "There are two kinds of credits. Subscription credits come with your plan and are active for your plan period — they refresh with the plan and don't carry past it. Purchased credit packs are separate: they never expire and stay in your account independently of any subscription."],
+    ["Is my progress tracked automatically?", "Yes. Everything connects to your learning profile automatically — AI Tutor sessions, Mock Exams, Weakness Analyzer signals, Focus Plan progress, Mastery Round advancement, mastery growth, streaks, and achievements. There's nothing to log manually."],
+    ["Is my data safe?", "Yes. Your account, study history, performance analytics, and payment records are stored securely on our cloud infrastructure with row-level security, so your data stays private to you and is never sold or shared with third parties."],
   ].map(([q,a]) => `
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">
