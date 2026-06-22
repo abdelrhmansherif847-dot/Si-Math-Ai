@@ -314,6 +314,20 @@ button{font-family:inherit;cursor:pointer}
 .cr-count{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);flex-shrink:0;width:38px;text-align:right}
 
 /* DAY CARDS */
+.round-rail{display:flex;align-items:flex-start;gap:0;margin:4px 2px 6px;overflow-x:auto;padding-bottom:4px}
+.rr-node{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto;min-width:62px;text-align:center}
+.rr-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;font-family:var(--font-display);border:2px solid var(--border-mid);background:var(--bg-elev-1);color:var(--text-500);transition:all .3s}
+.rr-node.done .rr-dot{background:rgba(34,197,94,.15);border-color:var(--green-border);color:var(--green)}
+.rr-node.active .rr-dot{background:rgba(56,189,248,.2);border-color:var(--cyan-border);color:var(--cyan);box-shadow:0 0 10px rgba(56,189,248,.35)}
+.rr-node.locked .rr-dot{background:var(--bg-elev-1);border-color:var(--border-soft);color:var(--text-600)}
+.rr-name{font-size:10px;font-family:var(--font-mono);letter-spacing:.04em;color:var(--text-500);line-height:1.2;white-space:nowrap}
+.rr-node.active .rr-name{color:var(--cyan)}
+.rr-node.done .rr-name{color:var(--text-400)}
+.rr-node.locked .rr-name{color:var(--text-600)}
+.rr-link{flex:1 1 auto;height:2px;min-width:14px;margin-top:13px;background:var(--border-mid)}
+.rr-link.done{background:var(--green-border)}
+.rr-caption{font-size:12px;color:var(--text-400);margin:2px 4px 14px}
+.rr-cap-strong{color:var(--text-200);font-weight:600}
 .day-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
 .day-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);overflow:hidden;transition:border-color .3s;animation:rise .65s ease both}
 .day-card.active{border-color:var(--cyan-border)}
@@ -669,6 +683,41 @@ function getCurrentDay(groups) {
   }
   return 3;
 }
+// ── Mastery Rounds (Phase A: render-layer derivation from existing priority) ──
+// A "round" is a 9-task wave; the inner 3-day Foundation/Accuracy/Pressure
+// structure is preserved. Round + day derive purely from the monotonic
+// priority — no schema, no engine change.
+var ROUND_NAMES = {1:'Foundation',2:'Advanced',3:'Mastery',4:'Elite I',5:'Elite II',6:'Elite III',7:'Legend'};
+var MAX_TIER = 7;
+function roundOf(p){ return Math.ceil((p||1)/9); }
+function dayOfPriority(p){ var off=((p||1)-1)%9; return Math.ceil((off+1)/3); }
+function groupTasksByRoundThenDay(tasks) {
+  var rg = {};
+  tasks.forEach(function(t){
+    var r = t.round || roundOf(t.priority);
+    var d = t.day || dayOfPriority(t.priority);
+    if (!rg[r]) rg[r] = {1:[],2:[],3:[]};
+    rg[r][d].push(t);
+  });
+  return rg;
+}
+// First non-DONE task within rounds the user is allowed to access (<= maxRound).
+// Never returns a round beyond the user's tier, so Round 4+ is never shown as
+// active content to a Pro user even if later waves exist internally.
+function getCurrentRoundDay(roundGroups, maxRound) {
+  var rounds = Object.keys(roundGroups).map(Number)
+    .filter(function(r){ return r <= maxRound; }).sort(function(a,b){ return a-b; });
+  for (var i=0; i<rounds.length; i++) {
+    var r = rounds[i], dayGroups = roundGroups[r];
+    for (var d=1; d<=3; d++) {
+      var ts = dayGroups[d] || [];
+      if (ts.length === 0 || ts.some(function(t){ return (t.status||'NOT_STARTED') !== 'DONE'; }))
+        return { round: r, day: d };
+    }
+  }
+  // Everything allowed is done → park on the highest allowed live round, day 3.
+  return { round: rounds.length ? rounds[rounds.length-1] : 1, day: 3 };
+}
 
 // ===== WEEKLY STATS =====
 function computeWeeklyStats(allRecords, qTarget, profile) {
@@ -845,18 +894,46 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   var qTarget = computeQTarget(m, primaryTopic.topic, examType);
   var weekStats = computeWeeklyStats(allRecords || [], qTarget, profile);
 
-  // merge DB task statuses with generated day plan
-  var taskDefs = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, m, qTarget, dominant);
-  var merged = taskDefs.map(function(def, i) {
-    var dbTask = tasks.find(function(t){ return t.priority === i+1; }) || tasks[i];
-    return Object.assign({}, def, {
-      id: dbTask ? dbTask.id : null,
-      status: dbTask ? (dbTask.status || 'NOT_STARTED') : 'NOT_STARTED',
-      priority: i + 1,
-    });
+  // ── Mastery Rounds render model (Phase A) ──
+  // Render ALL active tasks grouped into rounds (9-task waves), not just the
+  // first 9. Task type/icon is recovered positionally from the generated
+  // template (focus_tasks stores no `type`); title/minutes come from the DB row
+  // so later rounds keep their stored "(Advanced)" titles.
+  var typeTemplate = generateAllDayTasks(primaryTopic.sub, primaryTopic.topic, m, qTarget, dominant);
+  function typeOfPriority(p){ var d = typeTemplate[((p||1)-1)%9]; return (d && d.type) || 'practice'; }
+  var renderTasks = (tasks||[]).map(function(t){
+    return {
+      id: t.id || null,
+      status: t.status || 'NOT_STARTED',
+      title: t.task_title || '',
+      minutes: t.estimated_minutes || 0,
+      type: typeOfPriority(t.priority),
+      priority: t.priority,
+      round: roundOf(t.priority),
+      day: dayOfPriority(t.priority)
+    };
   });
-  var groups = groupTasksByDay(merged);
-  var currentDay = getCurrentDay(groups);
+  // Fallback for brand-new / id-less plans where DB tasks aren't persisted yet:
+  // synthesize Round 1 from the generated template so the page still renders.
+  if (renderTasks.length === 0) {
+    renderTasks = typeTemplate.map(function(def, i){
+      return { id:null, status:'NOT_STARTED', title:def.title, minutes:def.minutes,
+               type:def.type, priority:i+1, round:1, day:dayOfPriority(i+1) };
+    });
+  }
+
+  var maxRound = window._isFounder ? MAX_TIER : window._isPro ? 3 : 1;
+  var roundGroups = groupTasksByRoundThenDay(renderTasks);
+  var cur = getCurrentRoundDay(roundGroups, maxRound);
+  var currentRound = cur.round, currentDay = cur.day;
+
+  // Rail state derivation (lifetime round numbers; archived rounds < lowestActive).
+  var activeP = renderTasks.map(function(t){ return t.priority; });
+  var lowestActiveRound  = roundOf(Math.min.apply(null, activeP));
+  var highestActiveRound = roundOf(Math.max.apply(null, activeP));
+
+  // Day cards render the CURRENT round only; names/structure unchanged.
+  var groups = roundGroups[currentRound] || {1:[],2:[],3:[]};
   var todayTasks = groups[currentDay] || [];
   var todayEstMins = todayTasks.reduce(function(s,t){ return s + (t.minutes||0); }, 0);
   var doneTodayCount = todayTasks.filter(function(t){ return t.status==='DONE'; }).length;
@@ -984,8 +1061,43 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     html += '</div></div>';
   }
 
-  // ── ZONE 4: DAILY CHECKLIST ──
-  html += '<div class="sec-label">3-Day Study Plan</div>';
+  // ── ZONE 4: MASTERY ROUNDS RAIL + DAILY CHECKLIST ──
+  html += '<div class="sec-label">Mastery Rounds</div>';
+  html += '<div class="round-rail">';
+  for (var rt = 1; rt <= MAX_TIER; rt++) {
+    var state, badge;
+    if (rt > maxRound) {
+      state = 'locked';
+      badge = window._isPro ? '👑' : '🔒';            // Pro→Founder gate, Free→Pro gate
+    } else if (rt < lowestActiveRound) {
+      state = 'done'; badge = '&#10003;';             // archived/completed
+    } else if (rt > highestActiveRound) {
+      state = 'locked'; badge = '&#183;';             // allowed but not yet generated
+    } else {
+      var rDays = roundGroups[rt] || {1:[],2:[],3:[]};
+      var rAllDone = [1,2,3].every(function(d){
+        var ts = rDays[d] || []; return ts.length > 0 && ts.every(function(t){ return t.status==='DONE'; });
+      });
+      if (rt === currentRound)      { state = 'active'; badge = '&#9654;'; }
+      else if (rAllDone)            { state = 'done';   badge = '&#10003;'; }
+      else                         { state = 'locked'; badge = '&#183;'; }
+    }
+    if (rt > 1) html += '<div class="rr-link' + (rt <= lowestActiveRound ? ' done' : '') + '"></div>';
+    html += '<div class="rr-node ' + state + '">';
+    html += '<div class="rr-dot">' + badge + '</div>';
+    html += '<div class="rr-name">' + escHtml(ROUND_NAMES[rt]) + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  var tierTopName = ROUND_NAMES[maxRound];
+  var roundsCleared = Math.max(0, currentRound - 1);
+  html += '<div class="rr-caption">Round <span class="rr-cap-strong">' + currentRound + ' · ' + escHtml(ROUND_NAMES[currentRound]) + '</span>'
+        + ' &middot; ' + roundsCleared + ' of ' + maxRound + ' rounds cleared on the way to <span class="rr-cap-strong">' + escHtml(tierTopName) + '</span>.'
+        + (window._isPro && !window._isFounder ? ' <span style="color:#f5b942">Elite &amp; Legend unlock with Founder.</span>' : '')
+        + (!window._isPro ? ' <span style="color:#a855f7">Rounds 2&ndash;7 unlock with Pro.</span>' : '')
+        + '</div>';
+
+  html += '<div class="sec-label">Round ' + currentRound + ' &middot; ' + escHtml(ROUND_NAMES[currentRound]) + ' &mdash; 3-Day Plan</div>';
   html += '<div class="day-cards">';
   [1,2,3].forEach(function(d) {
     var dayTasks = groups[d] || [];
@@ -1220,6 +1332,7 @@ async function loadData() {
   const profile    = profRes.data  || null;
   // Plan gating: Free users get Day 1 (Foundation) only; Pro unlocks Day 2 (Accuracy) and Day 3 (Pressure)
   // Admin bypass: admins always get full access
+  window._isFounder = !!(profile && (profile.is_admin || profile.is_founder));
   window._isPro = !!(profile && (profile.is_admin || profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
   if (!window._isPro) document.body.classList.add('plan-free');
   if (profile?.is_admin) {
