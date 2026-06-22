@@ -2196,6 +2196,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       user_id:           user.id,
       question:          question,
       image:             imageData,
+      images:            imagesData.length ? imagesData : null,
       ai_response:       String(parsed.answer || ''),
       topic:             safeInsertTopic,
       subtopic:          safeInsertSubtopic,
