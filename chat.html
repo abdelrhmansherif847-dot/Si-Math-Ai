@@ -396,9 +396,18 @@ button{font-family:inherit;cursor:pointer}
 .ai-md h4{color:#fff;font-family:var(--font-display);font-size:13.5px;font-weight:700;margin:12px 0 5px}
 .ai-md h5{color:var(--text-100);font-family:var(--font-display);font-size:13px;font-weight:600;margin:10px 0 4px}
 .ai-md p{margin:4px 0}
-.ai-md ol,.ai-md ul{padding-left:20px;margin:6px 0}
+.ai-md ol,.ai-md ul{padding-inline-start:20px;padding-left:0;margin:6px 0}
 .ai-md li{margin:3px 0}
 .ai-md code{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 6px;font-family:var(--font-mono);font-size:12.5px;color:#7dd3fc}
+/* Bidi isolation: keep variables, equations and Latin code as atomic LTR runs
+   so they stay internally correct and are positioned naturally by the
+   surrounding Arabic (RTL) or English (LTR) base direction. */
+.ai-md code{unicode-bidi:isolate}
+.ai-md .katex,.bubble .katex{direction:ltr;unicode-bidi:isolate}
+.ai-md .katex-display,.bubble .katex-display{direction:ltr;unicode-bidi:isolate}
+/* Structured English UI chrome stays LTR regardless of answer direction. */
+.ai-meta{direction:ltr}
+.dragon-advice .da-header{direction:ltr}
 .ai-md pre{background:var(--bg-elev-2);border:1px solid var(--border-mid);border-radius:10px;padding:12px 14px;margin:10px 0;overflow-x:auto}
 .ai-md pre code{background:none;border:none;padding:0;font-size:12.5px;color:var(--text-200)}
 .ai-md strong{color:#fff;font-weight:600}
@@ -1725,7 +1734,7 @@ button{font-family:inherit;cursor:pointer}
     const el=document.createElement('div');el.className='msg user';
     el.innerHTML='<div class="av">'+escapeHtml(userInitials)+'</div><div class="body"><span class="who">You</span><div class="bubble">'+
       (img?'<img class="q-img" src="'+img+'" alt="question"/>':'')+
-      (text?escapeHtml(text):'')+'</div></div>';
+      (text?'<span dir="auto" style="display:block">'+escapeHtml(text)+'</span>':'')+'</div></div>';
     inner.appendChild(el);scrollDown();
   }
 
@@ -1820,7 +1829,7 @@ button{font-family:inherit;cursor:pointer}
     // Optional difficulty meta tag (only when present)
     const diffTag = difficulty ? '<span class="meta-tag"><span class="mi d"></span>Difficulty: <b>'+escapeHtml(difficulty)+'</b></span>' : '';
     // Optional hint block (only when present)
-    const hintBlock = hint ? '<div class="dragon-advice"><div class="da-header"><img class="da-avatar" src="'+DRAGON_MENTOR+'" alt="Wise Zero"/><span class="da-label">Old Dragon Advice</span></div>'+escapeHtml(hint)+'</div>' : '';
+    const hintBlock = hint ? '<div class="dragon-advice"><div class="da-header"><img class="da-avatar" src="'+DRAGON_MENTOR+'" alt="Wise Zero"/><span class="da-label">Old Dragon Advice</span></div><div class="da-body" dir="auto">'+escapeHtml(hint)+'</div></div>' : '';
     // Concepts block (only when we actually have concepts)
     const conceptsBlock = conceptTagsHtml ?
       '<div class="concepts-card">'+
@@ -1831,8 +1840,8 @@ button{font-family:inherit;cursor:pointer}
     // Topic/subtopic meta row — show for any math response that has topic/subtopic (text or image)
     const topicMetaBlock = (isMath && topic && subtopic) ?
       '<div class="ai-meta">'+
-        '<span class="meta-tag"><span class="mi t"></span>Topic: <b>'+escapeHtml(topic)+'</b></span>'+
-        '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b>'+escapeHtml(subtopic)+'</b></span>'+
+        '<span class="meta-tag"><span class="mi t"></span>Topic: <b dir="auto">'+escapeHtml(topic)+'</b></span>'+
+        '<span class="meta-tag"><span class="mi d"></span>Subtopic: <b dir="auto">'+escapeHtml(subtopic)+'</b></span>'+
         diffTag+
         (hasSig && sig && sig.confidence != null ? '<span class="meta-tag"><span class="mi t"></span>Confidence: <b>'+sig.confidence+'/5</b></span>' : '')+
       '</div>' :
