@@ -1,12 +1,32 @@
 // Streak writer — recomputes from question_records every call.
 // Self-healing: backfills users whose history predates the Phase 2 deployment.
-// Uses browser local date for day boundaries (approved Strategy B).
+//
+// Day boundaries are PINNED to Africa/Cairo (the product's audience), NOT the
+// browser's local timezone. Relying on the device timezone made streaks
+// non-deterministic: the same student on a Cairo device vs. a UTC/VPN device
+// computed different day splits, so the stored current_streak flip-flopped
+// between page loads (looked "stuck" / "wouldn't climb"). dashboard.html's
+// heatmap uses the identical Cairo day-key so the two never disagree.
+const STREAK_TZ = 'Africa/Cairo';
+// Canonical day key: 'YYYY-MM-DD' in Cairo local time (en-CA gives ISO order).
+function streakDayKey(d) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: STREAK_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
+}
+// Add N days to a 'YYYY-MM-DD' key without re-introducing timezone drift.
+function streakKeyMinusDays(key, n) {
+  const [y, m, d] = key.split('-').map(Number);
+  const t = Date.UTC(y, m - 1, d) - n * 86400000;
+  const back = new Date(t);
+  const pad2 = x => String(x).padStart(2, '0');
+  return back.getUTCFullYear() + '-' + pad2(back.getUTCMonth() + 1) + '-' + pad2(back.getUTCDate());
+}
 window.updateStreak = async function(sb, userId) {
   try {
     const today = new Date();
-    const todayStr = today.toDateString();
-    const pad2 = n => String(n).padStart(2, '0');
-    const todayLocalISO = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+    const todayStr = streakDayKey(today);
+    const todayLocalISO = todayStr;
 
     // Pull 120 days of activity. Streak is recomputed from scratch each call.
     // Source = question_records ∪ exam_practice_sessions — same union the
@@ -23,20 +43,22 @@ window.updateStreak = async function(sb, userId) {
     // today — caller invokes updateStreak right after a successful interaction,
     // and the current row may not be visible yet to the query.
     const dateSet = new Set([todayStr]);
-    (qrsRes.data   || []).forEach(r => { if (r && r.created_at) dateSet.add(new Date(r.created_at).toDateString()); });
-    (examsRes.data || []).forEach(r => { if (r && r.created_at) dateSet.add(new Date(r.created_at).toDateString()); });
+    (qrsRes.data   || []).forEach(r => { if (r && r.created_at) dateSet.add(streakDayKey(new Date(r.created_at))); });
+    (examsRes.data || []).forEach(r => { if (r && r.created_at) dateSet.add(streakDayKey(new Date(r.created_at))); });
 
     // Walk backward from today: consecutive days = current streak.
     let current = 0;
-    const cursor = new Date(today); cursor.setHours(0, 0, 0, 0);
-    while (dateSet.has(cursor.toDateString())) {
+    let cursorKey = todayStr;
+    while (dateSet.has(cursorKey)) {
       current += 1;
-      cursor.setDate(cursor.getDate() - 1);
+      cursorKey = streakKeyMinusDays(cursorKey, 1);
     }
 
     // Best streak across the window — longest consecutive run.
+    // Map each Cairo day-key to a UTC-midnight epoch so consecutive-day math is
+    // exact (no DST drift): keys are date-only, parsed as UTC.
     const sortedDates = Array.from(dateSet)
-      .map(s => { const d = new Date(s); d.setHours(0, 0, 0, 0); return d.getTime(); })
+      .map(k => { const [y, m, d] = k.split('-').map(Number); return Date.UTC(y, m - 1, d); })
       .sort((a, b) => a - b);
     let best = 0, run = 0, prev = null;
     const DAY_MS = 86400000;
