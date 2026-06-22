@@ -1067,18 +1067,8 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   }
 
   // ── STRENGTHS ──
-  if (strengths.length > 0) {
-    html += '<div class="sec-label">Your Strengths</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:32px">';
-    strengths.slice(0,4).forEach(function(w) {
-      html += '<div style="background:var(--bg-card);border:1px solid var(--green-border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">';
-      html += '<span style="font-size:18px">&#128170;</span>';
-      html += '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text-100)">' + escHtml(w.sub) + '</div><div style="font-size:11px;color:var(--text-400)">' + escHtml(w.topic) + '</div></div>';
-      html += '<span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--green)">' + w.mastery + '%</span>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
+  // Removed: strength rankings are confined to weakness.html ("Your Strengths"
+  // lives there). The Focus Plan surfaces only what to work on next.
 
   document.getElementById('pageContent').innerHTML = html;
 
