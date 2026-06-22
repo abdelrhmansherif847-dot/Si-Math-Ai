@@ -1373,6 +1373,38 @@ async function runL3ShadowPipeline(opts: {
     }));
   }
 
+  // 8b. Durable shadow audit log. Failure here must not affect the main
+  // pipeline, the student response, or the structured telemetry below.
+  // Until the shadow_runs migration is applied, the INSERT returns a
+  // missing-relation error that is logged and ignored.
+  try {
+    const { error: shadowErr } = await sbAdmin.from('shadow_runs').insert({
+      record_id:                  recordId,
+      uid:                        userId,
+      verification_tier:          detectorMeta.tier ?? null,
+      pipeline_version:           L3_PIPELINE_VERSION,
+      solver_a_answer:            solverA.final_answer,
+      solver_a_reasoning:         solverA.reasoning,
+      solver_b_answer:            solverB.final_answer,
+      solver_b_reasoning:         solverB.reasoning,
+      judge_reasoning:            judge.reasoning,
+      judge_verdict:              judge.verdict,
+      final_answer:               zeroAnswer,
+      verification_confidence:    judge.confidence,
+      verification_quality_score,
+    });
+    if (shadowErr) {
+      console.log('[ai-tutor] shadow-audit-error', JSON.stringify({
+        uid: userId.slice(0, 8), record_id: recordId, msg: shadowErr.message,
+      }));
+    }
+  } catch (shadowErr) {
+    console.log('[ai-tutor] shadow-audit-error', JSON.stringify({
+      uid: userId.slice(0, 8), record_id: recordId,
+      msg: shadowErr instanceof Error ? shadowErr.message : String(shadowErr),
+    }));
+  }
+
   // 9. Structured telemetry
   console.log('[ai-tutor] verification-shadow', JSON.stringify({
     uid:                         userId.slice(0, 8),
