@@ -556,7 +556,9 @@ async function deviceGuard(sb, userId) {
 
     // ── Biggest improvement ──
     // improvement_score is computed by regenerate-reports.js from signal decay.
-    // Use it directly from weakness_reports when available; fall back to highest-mastery topic.
+    // This section shows real *improvement* evidence only. It deliberately does
+    // NOT fall back to the highest-mastery topic: strength rankings are confined
+    // to weakness.html so the two pages don't surface conflicting strength claims.
     var improveSection = document.getElementById('improveSection');
     var bestImprove = null;
     if (weakReps.length > 0){
@@ -570,10 +572,6 @@ async function deviceGuard(sb, userId) {
         }
       });
     }
-    // Fallback: highest mastery_score topic with no delta claim
-    var fallbackBest = mastRecs.length > 0
-      ? mastRecs.slice().sort(function(a,b){ return (b.mastery_score||0)-(a.mastery_score||0); })[0]
-      : null;
 
     if (bestImprove && bestImprove.delta > 0){
       var ringPct = Math.min(100, bestImprove.current);
@@ -605,40 +603,12 @@ async function deviceGuard(sb, userId) {
             '</div>' +
           '</div>' +
         '</div>';
-    } else if (fallbackBest && (fallbackBest.mastery_score||0) > 0){
-      var rb = Math.min(100, fallbackBest.mastery_score||0);
-      var circb = 2*Math.PI*30;
-      var offsetb = circb*(1-rb/100);
-      var tcb = tierColor(rb);
-      improveSection.innerHTML =
-        '<div class="improve-card">' +
-          '<div class="improve-inner">' +
-            '<div class="improve-ring">' +
-              '<svg width="80" height="80" viewBox="0 0 80 80">' +
-                '<circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>' +
-                '<circle cx="40" cy="40" r="30" fill="none" stroke="' + tcb + '" stroke-width="7" stroke-linecap="round"' +
-                  ' stroke-dasharray="' + circb.toFixed(1) + '" stroke-dashoffset="' + offsetb.toFixed(1) + '"/>' +
-              '</svg>' +
-              '<div class="improve-ring-label">' +
-                '<div class="improve-ring-pct">' + Math.round(rb) + '%</div>' +
-                '<div class="improve-ring-sub">mastery</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="improve-details">' +
-              '<div class="improve-topic">' + esc(fallbackBest.topic) + '</div>' +
-              '<div class="improve-desc">Your highest-mastery topic so far.' +
-                (rb >= 80 ? ' This topic is fully mastered — great work!' : ' Keep practicing to reach 80% mastery.') +
-              '</div>' +
-              '<div class="improve-disclaimer">Improvement delta not available yet — requires a weakness report for this topic to establish a prior baseline.</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
     } else {
       improveSection.innerHTML =
         '<div class="empty-state">' +
           '<div class="ei">📊</div>' +
           '<div class="et">No improvement data yet</div>' +
-          '<div class="es">Practice topics with the <a href="chat.html" style="color:var(--cyan)">AI Tutor</a> to start tracking mastery.</div>' +
+          '<div class="es">Practice topics with the <a href="chat.html" style="color:var(--cyan)">AI Tutor</a> to start tracking mastery. Your strengths and weaknesses live on the <a href="weakness.html" style="color:var(--cyan)">Weakness Analyzer</a>.</div>' +
         '</div>';
     }
 
