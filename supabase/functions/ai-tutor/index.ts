@@ -854,6 +854,41 @@ async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQu
   } catch { return []; }
 }
 
+// ── Session question index (Issue #4, Phase C) ───────────────────────────────
+// Persists detected questions to session_questions so references resolve across
+// the whole session, independent of the message window. Idempotent per record.
+type SbAdmin = ReturnType<typeof createClient>;
+
+async function indexSessionQuestions(
+  sb: SbAdmin,
+  sessionId: string,
+  userId: string,
+  sourceRecordId: string,
+  topic: string,
+  questions: DetectedQuestion[],
+): Promise<void> {
+  if (!questions.length) return;
+  try {
+    // Idempotency: clear any prior rows from this same record before re-inserting
+    // (handles retries / re-processing without creating duplicate index entries).
+    await sb.from('session_questions').delete().eq('source_record_id', sourceRecordId);
+    const rows = questions.map((q) => ({
+      session_id:       sessionId,
+      user_id:          userId,
+      q_index:          q.index,
+      label:            q.label || null,
+      question_text:    q.text,
+      summary:          q.summary || null,
+      topic:            topic || null,
+      source_record_id: sourceRecordId,
+      image_index:      q.image_index,
+    }));
+    await sb.from('session_questions').insert(rows);
+  } catch (e) {
+    console.log('[ai-tutor] sq-index-failed', JSON.stringify({ sid: sessionId.slice(0, 8), msg: String(e) }));
+  }
+}
+
 // Single solver pass. Model: gpt-4o-mini. Returns structured reasoning + final_answer.
 // If imageData provided, solver sees the image directly (vision) — fixes the
 // image-questions-not-verifiable bug where solvers relied only on mini-OCR text.
@@ -2312,6 +2347,13 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     }
     // Phase B: resolve the concurrent detection pass.
     const detectedQuestions = await detectionPromise;
+    // Phase C: index every detected question for the session so later references
+    // resolve from the DB (whole session) rather than the 10-message window.
+    if (detectedQuestions.length && resolvedSessionId && recordId) {
+      await indexSessionQuestions(
+        sbAdmin, resolvedSessionId, user.id, recordId, finalTopic, detectedQuestions,
+      );
+    }
 
     const studentResponse = new Response(JSON.stringify({
       answer:          zeroAnswer,
