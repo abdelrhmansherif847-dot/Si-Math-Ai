@@ -235,6 +235,12 @@ button{font-family:inherit;cursor:pointer}
 .ip-foot{display:flex;align-items:center;justify-content:space-between}
 .bubble .q-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .bubble .q-imgs .q-img{margin-bottom:0;max-width:120px}
+/* Multi-question detection card (Issue #4) */
+.detected-card .dc-head{font-weight:700;color:#fff;margin-bottom:7px}
+.detected-card .dc-list{margin:0 0 8px;padding-inline-start:18px;display:flex;flex-direction:column;gap:3px}
+.detected-card .dc-list li{font-size:14px;color:var(--text-100)}
+.detected-card .dc-list li b{color:var(--cyan);font-family:var(--font-mono);margin-inline-end:4px}
+.detected-card .dc-hint{font-size:12.5px;color:var(--text-300);border-top:1px solid var(--border-mid);padding-top:7px}
 
 .input-bar{
   display:flex;align-items:flex-end;gap:9px;
@@ -1804,6 +1810,25 @@ button{font-family:inherit;cursor:pointer}
     inner.appendChild(el);scrollDown();
   }
 
+  // Issue #4 Phase B: show the detected-questions card after a multi-question
+  // worksheet upload, so the student sees the index and how to reference it.
+  function renderDetectedQuestions(list){
+    if(!Array.isArray(list) || list.length < 2) return;
+    var items = list.map(function(q){
+      var lbl = q.label ? ('Q'+q.label) : ('Q'+q.index);
+      return '<li dir="auto"><b>'+escapeHtml(lbl)+'</b>'+(q.summary?escapeHtml(q.summary):'')+'</li>';
+    }).join('');
+    var firstRef = list[0].label || list[0].index;
+    var lastRef  = list[list.length-1].label || list[list.length-1].index;
+    var el=document.createElement('div'); el.className='msg ai';
+    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span><div class="bubble detected-card">'+
+      '<div class="dc-head" dir="auto">📋 I detected '+list.length+' questions in this worksheet</div>'+
+      '<ul class="dc-list">'+items+'</ul>'+
+      '<div class="dc-hint" dir="auto">Ask me about any of them — e.g. “solve question '+escapeHtml(String(firstRef))+'”, or “check my answer for question '+escapeHtml(String(lastRef))+'”. No need to upload again.</div>'+
+      '</div></div>';
+    inner.appendChild(el); scrollDown();
+  }
+
   function addTyping(){
     const el=document.createElement('div');el.className='msg ai';el.id='typingMsg';
     el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span><div class="bubble"><div class="typing"><i></i><i></i><i></i></div></div></div>';
@@ -2174,6 +2199,10 @@ button{font-family:inherit;cursor:pointer}
         clearInflight();
         removeTyping();
         addAI(sig, response);
+        // Phase B: surface the detected-questions index for multi-question uploads.
+        if (response && Array.isArray(response.detected_questions)) {
+          renderDetectedQuestions(response.detected_questions);
+        }
         // Keep the uploaded image(s) in the live window too, so a later "explain
         // question 2" in the same session resolves without a re-upload (mirrors
         // the openSession rehydration path). All images replay as image_url blocks.

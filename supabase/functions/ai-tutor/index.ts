@@ -797,6 +797,63 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
   return { confidence, flags, rerun_count, rerun_changed, final_text };
 }
 
+// ── Multi-question detection / segmentation (Issue #4, Phase B) ───────────────
+// Scans every uploaded image and returns each distinct question as a structured
+// entry so the session can index and later resolve references to it. gpt-4o
+// vision, temperature 0, strict JSON. Order = reading order across images.
+interface DetectedQuestion {
+  index: number;        // 1-based position across the whole worksheet
+  label: string;        // printed label as shown ("7", "Q7", "3(b)") or ""
+  text: string;         // full question text, transcribed verbatim
+  summary: string;      // 2–5 word semantic tag ("circle area", "linear system")
+  image_index: number;  // 0-based index of the source image
+}
+
+async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQuestion[]> {
+  if (!imagesData.length || !OPENAI_KEY) return [];
+  const prompt =
+    `You are analyzing ${imagesData.length} image(s) of a math worksheet. Detect EVERY distinct ` +
+    `question/problem across all images, in natural reading order. For each question return:\n` +
+    `- "label": the printed question number/label EXACTLY as shown (e.g. "7", "Q7", "3(b)"), or "" if unlabeled\n` +
+    `- "text": the COMPLETE question text, preserving all numbers, signs, exponents and notation exactly. ` +
+    `Do NOT guess, autocomplete, or merge separate questions.\n` +
+    `- "summary": a 2-5 word topic tag (e.g. "circle area", "quadratic roots", "linear system")\n` +
+    `- "image_index": 0-based index of the image the question appears in\n` +
+    `Return ONLY JSON: {"questions":[{"label":"","text":"","summary":"","image_index":0}]}. ` +
+    `One question => one entry. None => {"questions":[]}.`;
+  const content = [
+    { type: 'text', text: prompt },
+    ...imagesData.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
+  ];
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o', max_tokens: 1800, temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'user', content }],
+      }),
+    });
+    const json = await res.json();
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content || '{}');
+    const arr: unknown[] = Array.isArray(parsed.questions) ? parsed.questions : [];
+    return arr
+      .map((q, i) => {
+        const o = (q ?? {}) as Record<string, unknown>;
+        return {
+          index: i + 1,
+          label: String(o.label ?? '').slice(0, 24),
+          text: String(o.text ?? '').trim(),
+          summary: String(o.summary ?? '').slice(0, 80),
+          image_index: Number.isInteger(o.image_index) ? (o.image_index as number) : 0,
+        };
+      })
+      .filter((q) => q.text.length > 0)
+      .map((q, i) => ({ ...q, index: i + 1 })); // re-number after filtering empties
+  } catch { return []; }
+}
+
 // Single solver pass. Model: gpt-4o-mini. Returns structured reasoning + final_answer.
 // If imageData provided, solver sees the image directly (vision) — fixes the
 // image-questions-not-verifiable bug where solvers relied only on mini-OCR text.
@@ -2060,6 +2117,13 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
+    // Phase B: kick off multi-question detection concurrently with the solve so
+    // it adds no extra latency (total ≈ max(solve, detect), not the sum). Only
+    // runs when images are present. Result is surfaced + indexed below.
+    const detectionPromise: Promise<DetectedQuestion[]> = imagesData.length
+      ? detectQuestionsInImages(imagesData)
+      : Promise.resolve([]);
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'system', content: curriculumAnchor },
@@ -2246,6 +2310,9 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         had_image: !!imageData, q_chars: question.length,
       }));
     }
+    // Phase B: resolve the concurrent detection pass.
+    const detectedQuestions = await detectionPromise;
+
     const studentResponse = new Response(JSON.stringify({
       answer:          zeroAnswer,
       hint,
@@ -2260,6 +2327,11 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       record_id:       recordId,
       hint_mode:       hintMode,
       is_math:         isMath,
+      // Phase B: structured list of every question detected in the upload, so the
+      // client can show "I detected N questions…". Only meaningful when length>1.
+      detected_questions: detectedQuestions.map((q) => ({
+        index: q.index, label: q.label, summary: q.summary,
+      })),
       version:         AI_TUTOR_VERSION,
       idempotency_recovered: idempotencyRecovered,
       degraded:        degraded,
