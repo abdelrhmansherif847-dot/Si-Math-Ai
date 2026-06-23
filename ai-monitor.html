@@ -630,13 +630,11 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <div class="stat-card green"><div class="lbl">Last Success</div><div class="val" id="oaiLastOk" style="font-size:15px">—</div><div class="sub">most recent tutored answer</div></div>
   </div>
 
-  <!-- Error-code availability notice — exact codes are NOT persisted in Phase 1 -->
+  <!-- Provider error-code breakdown — real oai_http_status (Phase 2), with
+       graceful fallback notice for pre-migration rows / empty windows. -->
   <div class="card">
-    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">OpenAI error codes (429 / 401 / 403 / 5xx)</div>
-    <div class="oai-notice">
-      <span class="ico">ⓘ</span>
-      <span>Exact OpenAI error codes are not currently persisted. HTTP status and error reason are only emitted to the Edge Function console log stream (<code>Supabase Dashboard → Edge Functions → ai-tutor → Logs</code>, tag <code>[ai-tutor] oai-no-content</code>). The counts below therefore reflect <strong>total guard activations</strong>, not a per-code breakdown. Persistent error-code tracking (429 / 401 / 403 / 5xx split) is planned for Phase 2.</span>
-    </div>
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">OpenAI provider error codes (429 / 401 / 403 / 5xx)</div>
+    <div id="oaiCodeBreakdown"><div style="text-align:center;color:var(--text-500);padding:16px">Loading…</div></div>
   </div>
 
   <!-- Recent failures — only columns backed by real data are shown -->
@@ -647,6 +645,36 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
         <thead><tr><th>time</th><th>model (inferred)</th><th>lang</th><th>question (preview)</th></tr></thead>
         <tbody id="oaiRecentBody"><tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- ── SECTION: BILLING & USAGE HEALTH ── -->
+  <div class="sec-hd">
+    <div class="sec-hd-ico amber">💳</div>
+    <div style="flex:1"><div class="sec-hd-title">Billing &amp; Usage Health</div><div class="sec-hd-sub">Early warning for OpenAI quota / billing exhaustion</div></div>
+    <span class="oai-status-chip warning" style="margin-left:auto"><span class="dot"></span><span>No live source</span></span>
+  </div>
+  <div class="card">
+    <div class="oai-notice" style="margin-bottom:14px">
+      <span class="ico">ⓘ</span>
+      <span><strong>OpenAI balance, credit status, and quota headroom are not available to this dashboard.</strong> OpenAI does not expose a programmatic account-balance endpoint, and no server-side billing integration is currently wired into this platform. To avoid showing misleading numbers, no balance, burn-rate, or "days-to-exhaustion" value is displayed here. The token-cost figures in the <strong>AI Cost &amp; Usage</strong> section above are an <em>internal estimate</em> from <code>verification_meta</code> tokens — a usage proxy, not an authoritative OpenAI spend or balance figure.</span>
+    </div>
+    <div class="metric-rows">
+      <div class="metric-row"><span class="metric-lbl">Current OpenAI balance / credit</span><span class="metric-val warn">Unavailable — no source</span></div>
+      <div class="metric-row"><span class="metric-lbl">Quota headroom / days to exhaustion</span><span class="metric-val warn">Unavailable — no source</span></div>
+      <div class="metric-row"><span class="metric-lbl">Estimated usage trend (proxy)</span><span class="metric-val cyan">See AI Cost &amp; Usage section</span></div>
+      <div class="metric-row"><span class="metric-lbl">Best available early-warning signal</span><span class="metric-val cyan">OpenAI Health → 429 detection</span></div>
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);font-size:13px;color:var(--text-200);line-height:1.55">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:8px">Operator guidance</div>
+      <ul style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:5px">
+        <li>Set a <strong>usage limit &amp; billing alert</strong> in the OpenAI dashboard (Settings → Limits) — this is the only authoritative early warning.</li>
+        <li>Keep auto-recharge enabled, or monitor the OpenAI balance manually before exam-prep windows.</li>
+        <li>If the <strong>OpenAI Health</strong> panel shows a <code>429</code> spike, treat it as a live quota/billing incident and top up immediately — the empty-answer guard will keep serving safe fallbacks meanwhile.</li>
+      </ul>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-500);line-height:1.5">
+      <strong>Future integration to enable real values:</strong> a scheduled server-side job (Edge Function / cron) that records OpenAI usage from the <code>/v1/usage</code> &amp; <code>/dashboard/billing</code> endpoints into a new <code>openai_billing_snapshots</code> table, which this section would then read. Out of scope for Phase 2 (observability of failures only).
     </div>
   </div>
 
@@ -1415,6 +1443,9 @@ function oaiLangOf(resp) {
   if (resp === OAI_SAFE_MSGS.en) return 'en';
   return '—';
 }
+function oaiCodeNotice(msg) {
+  return `<div class="oai-notice"><span class="ico">ⓘ</span><span>${esc(msg)}</span></div>`;
+}
 
 async function loadOpenAIHealth(since) {
   const banner   = document.getElementById('oaiCriticalBanner');
@@ -1513,6 +1544,43 @@ async function loadOpenAIHealth(since) {
           </tr>`;
         }).join('')
       : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No AI Tutor failures in window ✅</td></tr>';
+
+    // ── Provider error-code breakdown (Phase 2 — real oai_http_status) ──
+    // Surfaces PROVIDER failures (429/401/403/5xx) distinctly from code/quality
+    // defects (which live in Recent Quality Failures + AI Alerts). Degrades
+    // gracefully when the column is absent (pre-migration) or empty.
+    const cbEl = document.getElementById('oaiCodeBreakdown');
+    if (cbEl) {
+      try {
+        let codeQ = sb.from('question_records')
+          .select('oai_http_status, oai_error_code')
+          .not('oai_http_status', 'is', null);
+        if (since) codeQ = codeQ.gte('created_at', since);
+        const codeRes = await codeQ.limit(5000);
+        if (codeRes.error) throw codeRes.error;
+        const crows = codeRes.data || [];
+        if (!crows.length) {
+          cbEl.innerHTML = oaiCodeNotice('No OpenAI provider error codes recorded in this window. Exact codes (429 / 401 / 403 / 5xx) appear here once ai-tutor telemetry (oai_http_status) is deployed and a provider failure occurs.');
+        } else {
+          const byStatus = {};
+          for (const r of crows) {
+            const k = String(r.oai_http_status) + (r.oai_error_code ? ' · ' + r.oai_error_code : '');
+            byStatus[k] = (byStatus[k] || 0) + 1;
+          }
+          const ent = Object.entries(byStatus).sort((a,b) => b[1]-a[1]);
+          cbEl.innerHTML = `<div class="tbl-wrap"><table class="recent"><thead><tr><th>status · code</th><th>count</th><th>failure class</th></tr></thead><tbody>${
+            ent.map(([k,c]) => {
+              const st = parseInt(k, 10);
+              const cls = st===429 ? 'quota / rate limit' : st===401 ? 'auth (invalid key)' : st===403 ? 'permission / model access' : st>=500 ? 'provider outage (5xx)' : 'other';
+              return `<tr><td class="mono">${esc(k)}</td><td class="mono hi">${fmt(c)}</td><td style="color:var(--text-400)">${esc(cls)}</td></tr>`;
+            }).join('')
+          }</tbody></table></div>`;
+        }
+      } catch (_e) {
+        // Column not present yet (pre-migration) — show the honest limitation notice.
+        cbEl.innerHTML = oaiCodeNotice('Exact OpenAI error codes are not yet persisted. HTTP status and reason are currently only in the Edge Function console log stream (Supabase Dashboard → Edge Functions → ai-tutor → Logs, tag [ai-tutor] oai-no-content). Persistent tracking ships with Phase 2 telemetry.');
+      }
+    }
   } catch (e) {
     console.error('[ai-monitor] openai-health error', e);
     if (recentEl) recentEl.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">Failed to load.</td></tr>';
