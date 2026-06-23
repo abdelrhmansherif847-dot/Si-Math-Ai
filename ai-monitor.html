@@ -601,6 +601,58 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <div id="aiAlerts" style="display:flex;flex-direction:column;gap:10px"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
   </div>
 
+  <!-- ── SECTION: QUESTION INSPECTOR (read-only observability) ── -->
+  <style>
+  .qi-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .qi-chip{cursor:pointer;padding:6px 14px;border-radius:100px;border:1px solid var(--border-soft);background:transparent;color:var(--text-400);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+  .qi-chip.active{background:rgba(239,79,95,.12);border-color:rgba(239,79,95,.32);color:#fff}
+  .qi-row{cursor:pointer}
+  .qi-row:hover td{background:rgba(255,255,255,.03)}
+  .qi-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:none}
+  .qi-overlay.open{display:block}
+  .qi-drawer{position:fixed;top:0;right:0;height:100%;width:min(640px,94vw);background:var(--bg-800,#14161c);border-left:1px solid var(--border-soft);box-shadow:-12px 0 40px rgba(0,0,0,.5);z-index:81;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}
+  .qi-drawer.open{transform:translateX(0)}
+  .qi-dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border-soft)}
+  .qi-dbody{overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:18px}
+  .qi-block{border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:14px 16px;background:rgba(255,255,255,.015)}
+  .qi-block-t{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px}
+  .qi-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.qi-cols{grid-template-columns:1fr}}
+  .qi-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500);margin-bottom:4px}
+  .qi-val{font-size:13px;color:var(--text-100);word-break:break-word}
+  .qi-missing{font-style:italic;color:var(--text-500);font-size:12px}
+  .qi-pre{font-family:var(--font-mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text-200);background:rgba(0,0,0,.25);border-radius:8px;padding:10px;max-height:220px;overflow:auto}
+  .qi-pre.collapsed{max-height:96px}
+  .qi-actions{display:flex;gap:10px;margin-top:6px}
+  .qi-mini{cursor:pointer;background:transparent;border:1px solid var(--border-soft);color:var(--text-400);font-size:10.5px;font-family:var(--font-mono);border-radius:6px;padding:3px 9px}
+  .qi-x{cursor:pointer;background:transparent;border:1px solid var(--border-soft);color:var(--text-300);border-radius:8px;width:30px;height:30px;font-size:16px;line-height:1}
+  </style>
+  <div class="sec-hd">
+    <div class="sec-hd-ico" style="background:rgba(239,79,95,.12)">🔍</div>
+    <div><div class="sec-hd-title">Question Inspector</div><div class="sec-hd-sub">Read-only · per-record shadow verification detail</div></div>
+  </div>
+  <div class="card">
+    <div class="qi-toolbar">
+      <button class="qi-chip active" id="qiChipV3" onclick="qiSetScope('v3')">v3 complete</button>
+      <button class="qi-chip" id="qiChipAll" onclick="qiSetScope('all')">All records</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="recent">
+        <thead><tr><th>time</th><th>topic</th><th>verdict</th><th>conf</th><th>quality</th><th>pipeline</th><th>question (preview)</th></tr></thead>
+        <tbody id="qiBody"><tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="qi-overlay" id="qiOverlay" onclick="qiClose()"></div>
+  <aside class="qi-drawer" id="qiDrawer" aria-hidden="true">
+    <div class="qi-dhead">
+      <div id="qiDrawerHead" style="flex:1"></div>
+      <button class="qi-x" onclick="qiClose()" aria-label="Close">×</button>
+    </div>
+    <div class="qi-dbody" id="qiDrawerBody"></div>
+  </aside>
+
 </main>
 
 <script>
@@ -717,6 +769,7 @@ async function loadAll() {
       loadAlerts(since),
       loadConfidenceDist(since),
       loadShadowStatus(),
+      loadQuestionInspector(),
     ]);
   } catch(e) {
     console.error('[ai-monitor] loadAll error', e);
@@ -1333,6 +1386,166 @@ async function loadShadowStatus() {
     el.textContent = '—';
   }
 }
+
+// ── Question Inspector (read-only · ai-monitor only) ─────────────────────────
+// Pure observability over existing question_records / verification_meta. One
+// SELECT, no writes. Drawer reads the in-memory row — no second fetch.
+let qiScope = 'v3';
+let qiRows = [];
+
+function qiSetScope(s) {
+  qiScope = s;
+  document.getElementById('qiChipV3').classList.toggle('active', s === 'v3');
+  document.getElementById('qiChipAll').classList.toggle('active', s === 'all');
+  loadQuestionInspector();
+}
+
+async function loadQuestionInspector() {
+  const body = document.getElementById('qiBody');
+  if (!body) return;
+  try {
+    let q = sb.from('question_records')
+      .select('id, created_at, topic, question, ai_response, judge_verdict, verification_confidence, verification_status, verification_tier, solver_agreement, ocr_confidence, verification_meta')
+      .not('judge_verdict', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (qiScope === 'v3') q = q.eq('verification_meta->>pipeline_version', 'l3-shadow-v3');
+    const { data, error } = await q;
+    if (error) throw error;
+    qiRows = data || [];
+    if (!qiRows.length) {
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">No records for this scope.</td></tr>';
+      return;
+    }
+    body.innerHTML = qiRows.map((r, i) => {
+      const m = r.verification_meta || {};
+      const qual = m.verification_quality_score;
+      return `<tr class="qi-row" onclick="qiOpen(${i})">
+        <td class="mono">${esc(fmtTime(r.created_at))}</td>
+        <td>${esc(r.topic || '—')}</td>
+        <td>${qiVerdictChip(r.judge_verdict)}</td>
+        <td class="mono">${r.verification_confidence != null ? esc(Number(r.verification_confidence).toFixed(2)) : '—'}</td>
+        <td class="mono">${qual != null ? esc(Number(qual).toFixed(2)) : '—'}</td>
+        <td class="mono">${esc(m.pipeline_version || '—')}</td>
+        <td>${esc((r.question || '').slice(0, 60))}${(r.question || '').length > 60 ? '…' : ''}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('[ai-monitor] question-inspector error', e);
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">Failed to load.</td></tr>';
+  }
+}
+
+function qiVerdictChip(v) {
+  if (!v) return '<span class="chip gray">—</span>';
+  const cls = v === 'agree' ? 'green' : v === 'disagree' ? 'red' : v === 'ocr_uncertain' ? 'amber' : 'gray';
+  return `<span class="chip ${cls}">${esc(v)}</span>`;
+}
+
+// Renders a long-text block with collapse/expand + copy (clipboard only).
+let qiPreSeq = 0;
+function qiTextBlock(label, text) {
+  if (text == null || text === '') {
+    return `<div><div class="qi-lbl">${esc(label)}</div><div class="qi-missing">Not captured in this pipeline version</div></div>`;
+  }
+  const id = 'qiPre' + (++qiPreSeq);
+  const long = String(text).length > 240;
+  return `<div>
+    <div class="qi-lbl">${esc(label)}</div>
+    <div class="qi-pre${long ? ' collapsed' : ''}" id="${id}">${esc(text)}</div>
+    <div class="qi-actions">
+      ${long ? `<button class="qi-mini" onclick="qiToggle('${id}',this)">Show more</button>` : ''}
+      <button class="qi-mini" onclick="qiCopy('${id}',this)">Copy</button>
+    </div>
+  </div>`;
+}
+
+function qiToggle(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const collapsed = el.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Show more' : 'Show less';
+}
+
+function qiCopy(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent || '').then(() => {
+    const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = t; }, 1200);
+  }).catch(() => {});
+}
+
+function qiField(label, val) {
+  const shown = (val == null || val === '') ? '<span class="qi-missing">Not captured in this pipeline version</span>' : esc(val);
+  return `<div><div class="qi-lbl">${esc(label)}</div><div class="qi-val">${shown}</div></div>`;
+}
+
+function qiOpen(i) {
+  const r = qiRows[i];
+  if (!r) return;
+  const m = r.verification_meta || {};
+  const sa = Array.isArray(m.solver_answers) ? m.solver_answers : [];
+  const sr = Array.isArray(m.solver_reasonings) ? m.solver_reasonings : [];
+
+  document.getElementById('qiDrawerHead').innerHTML =
+    `<div style="font-size:14px;color:var(--text-100);font-weight:600">${esc(r.topic || 'Question')}</div>
+     <div class="mono" style="font-size:11px;color:var(--text-500);margin-top:4px">${esc(fmtTime(r.created_at))} · ${esc(m.pipeline_version || '—')} · ${qiVerdictChip(r.judge_verdict)}</div>`;
+
+  const hasV2 = m.v2_tier != null || m.v2_raw != null;
+  const v2Block = hasV2
+    ? `<div class="qi-cols">
+         ${qiField('V2 Tier', m.v2_tier)}
+         ${qiField('V2 Version', m.v2_version)}
+         ${qiField('Agrees with V1', m.v2_agrees_with_v1 == null ? null : String(m.v2_agrees_with_v1))}
+         ${qiField('Agrees with GPT', m.v2_agrees_with_gpt == null ? null : String(m.v2_agrees_with_gpt))}
+       </div>
+       ${qiTextBlock('V2 Raw Output', m.v2_raw)}`
+    : `<div class="qi-missing">No Detector V2 output for this record.</div>`;
+
+  document.getElementById('qiDrawerBody').innerHTML = `
+    <div class="qi-block">
+      <div class="qi-block-t">Final Answer (sent to student)</div>
+      ${qiTextBlock('ai_response', r.ai_response)}
+    </div>
+    <div class="qi-block">
+      <div class="qi-block-t">Solver A ‖ Solver B</div>
+      <div class="qi-cols">
+        <div>${qiField('Solver A Answer', sa[0])}${qiTextBlock('Solver A Reasoning', sr[0])}</div>
+        <div>${qiField('Solver B Answer', sa[1])}${qiTextBlock('Solver B Reasoning', sr[1])}</div>
+      </div>
+    </div>
+    <div class="qi-block">
+      <div class="qi-block-t">Judge</div>
+      <div class="qi-cols">
+        ${qiField('Verdict', r.judge_verdict)}
+        ${qiField('Confidence', r.verification_confidence != null ? Number(r.verification_confidence).toFixed(3) : null)}
+      </div>
+      ${qiTextBlock('Judge Reasoning', m.judge_reasoning)}
+    </div>
+    <div class="qi-block">
+      <div class="qi-block-t">Verification</div>
+      <div class="qi-cols">
+        ${qiField('Quality Score', m.verification_quality_score != null ? Number(m.verification_quality_score).toFixed(3) : null)}
+        ${qiField('Pipeline Version', m.pipeline_version)}
+      </div>
+      ${qiTextBlock('Verification Reason', m.verification_reason)}
+    </div>
+    <div class="qi-block">
+      <div class="qi-block-t">Detector V2 ${hasV2 ? '' : '<span style="color:var(--text-500)">(shadow)</span>'}</div>
+      ${v2Block}
+    </div>`;
+
+  document.getElementById('qiOverlay').classList.add('open');
+  const d = document.getElementById('qiDrawer');
+  d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+}
+
+function qiClose() {
+  document.getElementById('qiOverlay').classList.remove('open');
+  const d = document.getElementById('qiDrawer');
+  d.classList.remove('open'); d.setAttribute('aria-hidden', 'true');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') qiClose(); });
 
 init();
 </script>
