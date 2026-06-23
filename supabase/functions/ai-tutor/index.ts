@@ -727,6 +727,45 @@ function normalizeFinalAnswer(s: string): string {
     .trim();
 }
 
+// Harden tutor-answer extraction (Fix #1). Zero's JSON schema only emits
+// `answer` (a full markdown explanation), but malformed / drifted responses
+// have historically left it empty while the value lived under a different key.
+// Try the canonical key first, then safe fallbacks, and report which key won
+// so we can measure schema drift via telemetry.
+function extractTutorAnswer(
+  parsed: Record<string, unknown>,
+): { text: string; sourceKey: 'answer' | 'final_answer' | 'result' | 'none' } {
+  const candidates: Array<['answer' | 'final_answer' | 'result', unknown]> = [
+    ['answer',       parsed.answer],
+    ['final_answer', parsed.final_answer],
+    ['result',       parsed.result],
+  ];
+  for (const [key, val] of candidates) {
+    const s = (val == null ? '' : String(val)).trim();
+    if (s) return { text: s, sourceKey: key };
+  }
+  return { text: '', sourceKey: 'none' };
+}
+
+// Derive a concise tutor FINAL-answer string from the full explanation so the
+// judge sees the tutor's actual result even when the explanation is truncated.
+// Zero embeds the final value at the END of a structured markdown explanation;
+// the judge previously received only the first 600 chars, so a long explanation
+// hid the final value → spurious "tutor did not provide a final answer" verdicts
+// (Example A root cause). Scan, from the bottom up, for an explicit final-answer
+// marker; fall back to the last non-empty line.
+function deriveTutorFinalAnswer(explanation: string): string {
+  const text = String(explanation ?? '').trim();
+  if (!text) return '';
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const markerRe = /(?:final\s+answer|the\s+answer\s+is|answer)\s*[:=]?\s*(.+)$/i;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const m = lines[i].match(markerRe);
+    if (m && m[1].trim()) return m[1].replace(/[*_`$]/g, '').trim().slice(0, 120);
+  }
+  return (lines.at(-1) ?? '').replace(/[*_`$]/g, '').trim().slice(0, 120);
+}
+
 // For image questions: extract the math problem as plain text (pre-solver step).
 // Uses gpt-4o (vision) — gpt-4o-mini dropped digits/strokes (4667 -> 467). The
 // accuracy of this step gates the whole solve, so we pay for the stronger model.
@@ -1052,6 +1091,7 @@ const JUDGE_SYSTEM_PROMPT =
 async function runJudge(
   questionText: string, zeroAnswer: string,
   solverA: SolverResult, solverB: SolverResult, ocrConfidence: number,
+  tutorFinalAnswer?: string,
 ): Promise<JudgeResult> {
   if (ocrConfidence < 0.75) {
     return {
@@ -1060,9 +1100,15 @@ async function runJudge(
     };
   }
   try {
+    // Tutor's final value is surfaced explicitly so a long, truncated
+    // explanation can never hide it from the judge (Example A root cause).
+    const tutorFinalLine = (tutorFinalAnswer || '').trim()
+      ? `Tutor final answer: ${tutorFinalAnswer!.trim().slice(0, 120)}\n\n`
+      : '';
     const userContent =
       `Question:\n${questionText.slice(0, 500)}\n\n` +
       `Tutor explanation (excerpt):\n${zeroAnswer.slice(0, 600)}\n\n` +
+      tutorFinalLine +
       `Solver A reasoning:\n${(solverA.reasoning || '(none)').slice(0, 1500)}\n` +
       `Solver A final answer: ${solverA.final_answer.slice(0, 120)}\n\n` +
       `Solver B reasoning:\n${(solverB.reasoning || '(none)').slice(0, 1500)}\n` +
@@ -1105,9 +1151,10 @@ async function runL3ShadowPipeline(opts: {
   sbAdmin: ReturnType<typeof createClient>;
   recordId: string; userId: string;
   questionText: string; imageData: string | null; zeroAnswer: string;
+  tutorFinalAnswer?: string;
   detectorMeta: Record<string, unknown>; startTime: number;
 }): Promise<void> {
-  const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, detectorMeta, startTime } = opts;
+  const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, tutorFinalAnswer, detectorMeta, startTime } = opts;
 
   // 1. Extract math text (image questions only)
   const isImageQ = !!imageData;
@@ -1136,7 +1183,7 @@ async function runL3ShadowPipeline(opts: {
   const solver_agreement = (normA && normA === normB) ? 1.0 : 0.0;
 
   // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
-  const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0);
+  const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0, tutorFinalAnswer);
 
   const pipeline_latency_ms = Date.now() - startTime;
   const isExpertTier = detectorMeta.tier === 'expert' || detectorMeta.gpt_tier === 'expert';
@@ -2354,6 +2401,24 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       parsed.answer = hint || fallbackHint(finalTopic, finalSubtopic, lang);
     }
 
+    // ── Hardened tutor-answer extraction (Fix #1) ────────────────────────────
+    // Single source of truth for the tutor answer: both `ai_response` (stored,
+    // shown in the Question Inspector) and `zeroAnswer` (fed to the judge)
+    // derive from this, so the two can never evaluate different tutor outputs.
+    // Runs AFTER hint-mode fallback so a populated answer is never missed.
+    const tutorExtract     = extractTutorAnswer(parsed);
+    const tutorAnswerText  = tutorExtract.text;
+    const tutorFinalAnswer = deriveTutorFinalAnswer(tutorAnswerText);
+    if (tutorExtract.sourceKey !== 'answer' || !tutorFinalAnswer) {
+      console.log('[ai-tutor] tutor-answer-extract', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        source_key: tutorExtract.sourceKey,        // 'answer'|'final_answer'|'result'|'none'
+        answer_chars: tutorAnswerText.length,
+        final_answer_found: !!tutorFinalAnswer,
+        degraded,
+      }));
+    }
+
     // ── Phase 1 DifficultyDetector (shadow) ──────────────────────────────────
     // Runs only on math questions. Writes verification_tier + verification_meta.
     // Wrapped in try/catch — detector failures must never break the response.
@@ -2424,7 +2489,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       question:          question,
       image:             imageData,
       images:            imagesData.length ? imagesData : null,
-      ai_response:       String(parsed.answer || ''),
+      ai_response:       tutorAnswerText,
       topic:             safeInsertTopic,
       subtopic:          safeInsertSubtopic,
       difficulty:        finalDifficulty,
@@ -2460,7 +2525,8 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     }
 
     // ── Build response — returned to student immediately ──────────────────────
-    const zeroAnswer  = parsed.answer || '';
+    // zeroAnswer mirrors the stored ai_response exactly (same hardened source).
+    const zeroAnswer  = tutorAnswerText;
     const recordId    = newRecord?.id ?? null;
 
     // Telemetry: question_regenerated fires on every new math record creation,
@@ -2589,6 +2655,7 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         questionText: shadowQuestionText,
         imageData:    shadowImageData,
         zeroAnswer,
+        tutorFinalAnswer,
         detectorMeta,
         startTime:    pipelineStart,
       }).catch(err => {
