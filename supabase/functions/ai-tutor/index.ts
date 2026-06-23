@@ -781,6 +781,18 @@ function extractTutorAnswer(
   return { text: '', sourceKey: 'none' };
 }
 
+// Last-resort, always-non-empty answer when extraction and hint both came up
+// empty (OpenAI returned no usable content, or a valid JSON object with no
+// answer field). Guarantees the response builder can never emit answer="".
+function safeNoAnswerMessage(lang: string): string {
+  const MSGS: Record<string, string> = {
+    en: "I couldn't generate a full answer this time. Please resend your question and I'll take another look.",
+    ar: 'معلش، مقدرتش أطلّع إجابة كاملة المرة دي. ابعت سؤالك تاني وهشوفه من جديد.',
+    franco: "Ma2dartesh atalla3 egaba kamla el marra di. Eb3at so2alak tani w hashoufo mn gedid.",
+  };
+  return MSGS[lang] ?? MSGS['en'];
+}
+
 // Derive a concise tutor FINAL-answer string from the full explanation so the
 // judge sees the tutor's actual result even when the explanation is truncated.
 // Zero embeds the final value at the END of a structured markdown explanation;
@@ -2400,14 +2412,31 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     const oaiData = await oaiRes.json();
     let parsed: Record<string, unknown> = {};
     let degraded = false;
-    try {
-      parsed = JSON.parse(oaiData.choices?.[0]?.message?.content || '{}');
-    } catch (parseErr) {
+    // Do NOT mask a missing completion behind `|| '{}'`: an HTTP error from
+    // OpenAI, a content-filtered/empty completion, or a malformed envelope all
+    // leave `choices[0].message.content` falsy. Substituting '{}' would parse
+    // cleanly and proceed with degraded=false — silently returning answer="".
+    // Detect that case explicitly and mark it degraded so the answer guard fires.
+    const oaiContent = oaiData?.choices?.[0]?.message?.content;
+    if (!oaiRes.ok || !oaiContent) {
       parsed = {};
       degraded = true;
-      console.log('[ai-tutor] parse-failed', JSON.stringify({
-        uid: user.id.slice(0, 8), msg: String(parseErr),
+      console.log('[ai-tutor] oai-no-content', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        ok: oaiRes.ok, status: oaiRes.status,
+        finish_reason: oaiData?.choices?.[0]?.finish_reason ?? null,
+        err: oaiData?.error?.message ?? null,
       }));
+    } else {
+      try {
+        parsed = JSON.parse(oaiContent);
+      } catch (parseErr) {
+        parsed = {};
+        degraded = true;
+        console.log('[ai-tutor] parse-failed', JSON.stringify({
+          uid: user.id.slice(0, 8), msg: String(parseErr),
+        }));
+      }
     }
 
     // ── Post-process rules + difficulty (math-intent classifier) ─────────────
@@ -2449,7 +2478,24 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // derive from this, so the two can never evaluate different tutor outputs.
     // Runs AFTER hint-mode fallback so a populated answer is never missed.
     const tutorExtract     = extractTutorAnswer(parsed);
-    const tutorAnswerText  = tutorExtract.text;
+    let   tutorAnswerText  = tutorExtract.text;
+    // ── Terminal answer guard ────────────────────────────────────────────────
+    // Single chokepoint: tutorAnswerText feeds ai_response, zeroAnswer, and the
+    // response builder. If extraction yielded nothing (OpenAI returned no usable
+    // content, a valid JSON object lacked answer/final_answer/result, or the
+    // answer was whitespace-only), floor it to the hint, then a localized
+    // last-resort message — so answer="" can never reach the response builder.
+    if (!tutorAnswerText) {
+      tutorAnswerText = (hint && hint.trim())
+        ? hint
+        : safeNoAnswerMessage(lang);
+      degraded = true;
+      console.log('[ai-tutor] empty-answer-guard', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        source_key: tutorExtract.sourceKey,
+        used: (hint && hint.trim()) ? 'hint' : 'safe_message',
+      }));
+    }
     const tutorFinalAnswer = deriveTutorFinalAnswer(tutorAnswerText);
     if (tutorExtract.sourceKey !== 'answer' || !tutorFinalAnswer) {
       console.log('[ai-tutor] tutor-answer-extract', JSON.stringify({
