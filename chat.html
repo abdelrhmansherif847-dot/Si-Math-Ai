@@ -1815,7 +1815,7 @@ button{font-family:inherit;cursor:pointer}
   function renderDetectedQuestions(list){
     if(!Array.isArray(list) || list.length < 2) return;
     var items = list.map(function(q){
-      var lbl = q.label ? ('Q'+q.label) : ('Q'+q.index);
+      var lbl = q.label ? q.label : ('Q'+q.index);
       return '<li dir="auto"><b>'+escapeHtml(lbl)+'</b>'+(q.summary?escapeHtml(q.summary):'')+'</li>';
     }).join('');
     var firstRef = list[0].label || list[0].index;
