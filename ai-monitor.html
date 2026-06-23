@@ -239,6 +239,22 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+
+/* OPENAI HEALTH — critical banner + section (Phase 1, additive) */
+#oaiCriticalBanner{display:none;margin-bottom:18px;padding:16px 20px;border-radius:var(--r-lg);background:linear-gradient(135deg,rgba(239,79,95,.18),rgba(239,79,95,.08));border:1px solid var(--red-border);box-shadow:0 0 24px rgba(239,79,95,.18);animation:rise .4s ease both}
+#oaiCriticalBanner.show{display:block}
+#oaiCriticalBanner .ban-top{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff}
+#oaiCriticalBanner .ban-top .ban-ico{font-size:20px;animation:pulse 1.6s infinite}
+#oaiCriticalBanner .ban-sub{margin-top:6px;color:var(--text-200);font-size:13.5px;line-height:1.5}
+#oaiCriticalBanner .ban-meta{margin-top:8px;font-family:var(--font-mono);font-size:11.5px;color:var(--red)}
+.oai-status-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:100px;font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.04em}
+.oai-status-chip .dot{width:8px;height:8px;border-radius:50%}
+.oai-status-chip.critical{background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}.oai-status-chip.critical .dot{background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse 1.6s infinite}
+.oai-status-chip.warning{background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber)}.oai-status-chip.warning .dot{background:var(--amber)}
+.oai-status-chip.healthy{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}.oai-status-chip.healthy .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.oai-notice{background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:var(--r-md);padding:13px 16px;color:#fbbf24;font-size:13px;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
+.oai-notice .ico{flex-shrink:0;font-size:15px;margin-top:1px}
+.oai-notice code{font-family:var(--font-mono);font-size:12px;color:#fcd34d}
 </style>
 </head>
 <body>
@@ -293,6 +309,14 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <main class="main" id="mainContent" style="display:none">
+
+  <!-- OpenAI quota/outage critical banner — shown only when ai-tutor failures
+       are detected in the last 2h (Phase 1, safe-message detection). -->
+  <div id="oaiCriticalBanner" role="alert">
+    <div class="ban-top"><span class="ban-ico">🚨</span><span>AI Tutor is failing to generate responses.</span></div>
+    <div class="ban-sub">OpenAI API calls are returning errors — the empty-answer guard is active and students are receiving a safe fallback instead of a tutored answer. Most likely cause: OpenAI quota, billing, authentication, permission, or provider-side issues. Check your OpenAI billing &amp; usage dashboard immediately.</div>
+    <div class="ban-meta" id="oaiBannerMeta"></div>
+  </div>
 
   <section class="page-hd">
     <div class="eyebrow"><span class="live-dot"></span> Admin — Live</div>
@@ -592,6 +616,40 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <div id="fbRecentBody"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
   </div>
 
+  <!-- ── SECTION: OPENAI HEALTH (Phase 1 — safe-message detection) ── -->
+  <div class="sec-hd">
+    <div class="sec-hd-ico red">🩺</div>
+    <div style="flex:1"><div class="sec-hd-title">OpenAI Health</div><div class="sec-hd-sub">Upstream OpenAI status for ai-tutor — derived from empty-answer guard activations</div></div>
+    <span id="oaiStatusChip" class="oai-status-chip healthy" style="margin-left:auto"><span class="dot"></span><span id="oaiStatusTxt">—</span></span>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card" id="oaiStatusCard"><div class="lbl">OpenAI Status</div><div class="val" id="oaiStatusVal">—</div><div class="sub" id="oaiStatusSub">last 24h</div></div>
+    <div class="stat-card red"><div class="lbl">Guard Activations</div><div class="val" id="oaiFailCount">—</div><div class="sub">fallbacks in period</div></div>
+    <div class="stat-card"><div class="lbl">Last Failure</div><div class="val" id="oaiLastFail" style="font-size:15px">—</div><div class="sub" id="oaiLastFailSub">most recent guard fire</div></div>
+    <div class="stat-card green"><div class="lbl">Last Success</div><div class="val" id="oaiLastOk" style="font-size:15px">—</div><div class="sub">most recent tutored answer</div></div>
+  </div>
+
+  <!-- Error-code availability notice — exact codes are NOT persisted in Phase 1 -->
+  <div class="card">
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">OpenAI error codes (429 / 401 / 403 / 5xx)</div>
+    <div class="oai-notice">
+      <span class="ico">ⓘ</span>
+      <span>Exact OpenAI error codes are not currently persisted. HTTP status and error reason are only emitted to the Edge Function console log stream (<code>Supabase Dashboard → Edge Functions → ai-tutor → Logs</code>, tag <code>[ai-tutor] oai-no-content</code>). The counts below therefore reflect <strong>total guard activations</strong>, not a per-code breakdown. Persistent error-code tracking (429 / 401 / 403 / 5xx split) is planned for Phase 2.</span>
+    </div>
+  </div>
+
+  <!-- Recent failures — only columns backed by real data are shown -->
+  <div class="card">
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Recent AI Tutor Failures (last 20)</div>
+    <div class="tbl-wrap">
+      <table class="recent">
+        <thead><tr><th>time</th><th>model (inferred)</th><th>lang</th><th>question (preview)</th></tr></thead>
+        <tbody id="oaiRecentBody"><tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ── SECTION: AI ALERTS ── -->
   <div class="sec-hd">
     <div class="sec-hd-ico red">🚨</div>
@@ -766,6 +824,7 @@ async function loadAll() {
       loadShadowMonitor(since),
       loadRecentFailures(since),
       loadFeedback(),
+      loadOpenAIHealth(since),
       loadAlerts(since),
       loadConfidenceDist(since),
       loadShadowStatus(),
@@ -1335,6 +1394,129 @@ async function loadAlerts(since) {
 
   const colorMap = { red: { bg:'rgba(239,79,95,.10)', bd:'rgba(239,79,95,.32)', fg:'#ef4f5f', ico:'🔴' }, amber: { bg:'rgba(245,185,66,.10)', bd:'rgba(245,185,66,.32)', fg:'#f5b942', ico:'🟡' }, green: { bg:'rgba(74,222,128,.08)', bd:'rgba(74,222,128,.24)', fg:'#4ade80', ico:'🟢' } };
   document.getElementById('aiAlerts').innerHTML = alerts.map(a => { const c = colorMap[a.kind]; return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};font-size:13.5px"><span>${c.ico}</span><span>${esc(a.msg)}</span></div>`; }).join('');
+}
+
+// ── OpenAI Health (Phase 1 — safe-message detection) ───────────────────────
+// Read-only. The empty-answer guard in ai-tutor writes one of three fixed
+// safeNoAnswerMessage strings whenever the upstream OpenAI call returns no
+// usable content (non-2xx, empty, or unparseable). Matching ai_response against
+// those exact strings is the only currently-persisted signal that the guard
+// fired — exact HTTP status codes are NOT stored (see Phase 2). These MUST stay
+// byte-identical to safeNoAnswerMessage() in ai-tutor/index.ts.
+const OAI_SAFE_MSGS = {
+  en:     "I couldn't generate a full answer this time. Please resend your question and I'll take another look.",
+  ar:     'معلش، مقدرتش أطلّع إجابة كاملة المرة دي. ابعت سؤالك تاني وهشوفه من جديد.',
+  franco: "Ma2dartesh atalla3 egaba kamla el marra di. Eb3at so2alak tani w hashoufo mn gedid.",
+};
+const OAI_SAFE_LIST = Object.values(OAI_SAFE_MSGS);
+function oaiLangOf(resp) {
+  if (resp === OAI_SAFE_MSGS.ar) return 'ar';
+  if (resp === OAI_SAFE_MSGS.franco) return 'franco';
+  if (resp === OAI_SAFE_MSGS.en) return 'en';
+  return '—';
+}
+
+async function loadOpenAIHealth(since) {
+  const banner   = document.getElementById('oaiCriticalBanner');
+  const recentEl = document.getElementById('oaiRecentBody');
+  try {
+    // Supabase .in() needs a quoted, comma-joined list. Build via .in() helper.
+    const twoHrAgo = new Date(Date.now() - 2*3600*1000).toISOString();
+
+    let failCountQ = sb.from('question_records')
+      .select('id', { count:'exact', head:true })
+      .in('ai_response', OAI_SAFE_LIST);
+    if (since) failCountQ = failCountQ.gte('created_at', since);
+
+    const recentQ = sb.from('question_records')
+      .select('created_at, question, image, images, ai_response')
+      .in('ai_response', OAI_SAFE_LIST)
+      .order('created_at', { ascending:false })
+      .limit(20);
+
+    // Recency probes are window-independent (absolute "last" timestamps).
+    const lastFailQ = sb.from('question_records')
+      .select('created_at')
+      .in('ai_response', OAI_SAFE_LIST)
+      .order('created_at', { ascending:false })
+      .limit(1);
+
+    const lastOkQ = sb.from('question_records')
+      .select('created_at')
+      .not('ai_response', 'is', null)
+      .neq('ai_response', '')   // exclude empty-string rows (uncovered pre-guard failures)
+      .not('ai_response', 'in', `(${OAI_SAFE_LIST.map(s => `"${s.replace(/"/g,'""')}"`).join(',')})`)
+      .order('created_at', { ascending:false })
+      .limit(1);
+
+    const recent2hQ = sb.from('question_records')
+      .select('id', { count:'exact', head:true })
+      .in('ai_response', OAI_SAFE_LIST)
+      .gte('created_at', twoHrAgo);
+
+    const recent24hQ = sb.from('question_records')
+      .select('id', { count:'exact', head:true })
+      .in('ai_response', OAI_SAFE_LIST)
+      .gte('created_at', nDaysAgo(1));
+
+    const [failCountRes, recentRes, lastFailRes, lastOkRes, r2hRes, r24hRes] = await Promise.all([
+      failCountQ, recentQ, lastFailQ, lastOkQ, recent2hQ, recent24hQ,
+    ]);
+
+    const failCount = failCountRes.count ?? 0;
+    const count2h   = r2hRes.count ?? 0;
+    const count24h  = r24hRes.count ?? 0;
+    const lastFail  = lastFailRes.data?.[0]?.created_at || null;
+    const lastOk    = lastOkRes.data?.[0]?.created_at || null;
+
+    // Status: critical = failure in last 2h, warning = failure in last 24h
+    // (but not 2h), healthy = none in 24h.
+    let status, statusTxt;
+    if (count2h > 0)       { status = 'critical'; statusTxt = 'Critical'; }
+    else if (count24h > 0) { status = 'warning';  statusTxt = 'Warning'; }
+    else                   { status = 'healthy';  statusTxt = 'Healthy'; }
+
+    const chip = document.getElementById('oaiStatusChip');
+    chip.className = 'oai-status-chip ' + status;
+    document.getElementById('oaiStatusTxt').textContent = statusTxt;
+    document.getElementById('oaiStatusVal').textContent = statusTxt;
+    document.getElementById('oaiStatusSub').textContent =
+      status === 'critical' ? `${count2h} fallback${count2h===1?'':'s'} in last 2h`
+      : status === 'warning' ? `${count24h} in last 24h, none in 2h`
+      : 'no failures in last 24h';
+
+    document.getElementById('oaiFailCount').textContent = fmt(failCount);
+    document.getElementById('oaiLastFail').textContent  = lastFail ? fmtTime(lastFail) : 'None';
+    document.getElementById('oaiLastFailSub').textContent = lastFail ? 'most recent guard fire' : 'no guard fires recorded';
+    document.getElementById('oaiLastOk').textContent    = lastOk ? fmtTime(lastOk) : '—';
+
+    // Critical banner
+    if (count2h > 0) {
+      document.getElementById('oaiBannerMeta').textContent =
+        `${count2h} fallback response${count2h===1?'':'s'} in the last 2 hours · last failure ${fmtTime(lastFail)}`;
+      banner.classList.add('show');
+    } else {
+      banner.classList.remove('show');
+    }
+
+    // Recent failures table — only real-data columns
+    const rows = recentRes.data || [];
+    recentEl.innerHTML = rows.length
+      ? rows.map(r => {
+          const hasImg = (r.image != null && r.image !== '') || (r.images != null);
+          const model = hasImg ? 'gpt-4o' : 'gpt-4o-mini';
+          return `<tr>
+            <td class="mono">${esc(fmtTime(r.created_at))}</td>
+            <td class="mono">${esc(model)}</td>
+            <td><span class="chip gray">${esc(oaiLangOf(r.ai_response))}</span></td>
+            <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,80)) || '<span style="color:var(--text-500)">(no text)</span>'}</td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No AI Tutor failures in window ✅</td></tr>';
+  } catch (e) {
+    console.error('[ai-monitor] openai-health error', e);
+    if (recentEl) recentEl.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">Failed to load.</td></tr>';
+  }
 }
 
 // B4: Detector Confidence Distribution
