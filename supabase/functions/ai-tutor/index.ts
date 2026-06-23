@@ -2412,6 +2412,14 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     const oaiData = await oaiRes.json();
     let parsed: Record<string, unknown> = {};
     let degraded = false;
+    // Phase 2 telemetry (observability only). Non-null ONLY inside the
+    // oai-no-content branch below; persisted to question_records. Does not
+    // affect parsed, degraded, the guard, prompts, models, or any tutoring
+    // behavior. The June 23 outage was an upstream OpenAI 429 — this only makes
+    // the cause visible faster; it is not a fix.
+    let oaiHttpStatus: number | null = null;
+    let oaiErrorCode:  string | null = null;
+    let oaiErrorMsg:   string | null = null;
     // Do NOT mask a missing completion behind `|| '{}'`: an HTTP error from
     // OpenAI, a content-filtered/empty completion, or a malformed envelope all
     // leave `choices[0].message.content` falsy. Substituting '{}' would parse
@@ -2427,6 +2435,9 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         finish_reason: oaiData?.choices?.[0]?.finish_reason ?? null,
         err: oaiData?.error?.message ?? null,
       }));
+      oaiHttpStatus = oaiRes.status;
+      oaiErrorCode  = (oaiData?.error?.code ?? null) as string | null;
+      oaiErrorMsg   = oaiData?.error?.message ?? null;
     } else {
       try {
         parsed = JSON.parse(oaiContent);
@@ -2591,6 +2602,9 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       hint:              hint,
       follow_up_type:    followUpType,
       client_request_id: clientRequestId,
+      oai_http_status:   oaiHttpStatus,   // null on success
+      oai_error_code:    oaiErrorCode,    // null on success
+      oai_error_msg:     oaiErrorMsg,     // null on success
       ...verificationFields,
     }).select('id').single();
     let newRecord = insertRes.data;

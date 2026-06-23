@@ -68,9 +68,11 @@ if [ "$SIZE" -lt 40000 ]; then
   FAILED=1
 fi
 
-# Upper bound is a sanity check — the function should never balloon past 150 KB.
-if [ "$SIZE" -gt 150000 ]; then
-  echo "FAIL: source file is suspiciously large: $SIZE bytes (expected <= 150000)" >&2
+# Upper bound is a sanity check — the function should never balloon past 170 KB.
+# Bumped from 150 KB → 170 KB after v82 (d343553) grew to 154,774 bytes with
+# the empty-answer guard and Example B equivalence helpers.
+if [ "$SIZE" -gt 170000 ]; then
+  echo "FAIL: source file is suspiciously large: $SIZE bytes (expected <= 170000)" >&2
   FAILED=1
 fi
 
