@@ -1172,10 +1172,22 @@ async function runL3ShadowPipeline(opts: {
   if (judge.verdict === 'ocr_uncertain') {
     reasonParts.push('OCR confidence below 0.75 — verdict locked to ocr_uncertain.');
   } else {
+    // Clause 1 — solver-vs-solver string match (the solver_agreement metric).
+    // When the strings differ but the judge ruled them equivalent, say so rather
+    // than asserting "different" — that wording contradicted judge_verdict.
     reasonParts.push(
       solver_agreement === 1.0
-        ? 'Both solvers reached the same normalized answer.'
-        : 'Solvers reached different final answers.',
+        ? 'Solvers A and B produced matching answers.'
+        : judge.verdict === 'agrees'
+          ? 'Solver answers differed in form but were judged equivalent.'
+          : 'Solvers A and B produced different answers.',
+    );
+    // Clause 2 — the judge ruling (solver-vs-tutor). Always states the verdict
+    // verbatim, so verification_reason can never contradict judge_verdict.
+    reasonParts.push(
+      judge.verdict === 'agrees'    ? "The judge confirmed the solution matches the tutor's answer."
+        : judge.verdict === 'disagrees' ? "The judge flagged a mismatch with the tutor's answer."
+        : 'The judge was inconclusive.',
     );
     if (reasoningCompleteness >= 1.0) {
       reasonParts.push('Both produced complete reasoning chains.');
