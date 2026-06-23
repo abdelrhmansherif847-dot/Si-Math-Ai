@@ -160,8 +160,12 @@ function detectFranco(text: string): boolean {
   const t = (text || '').trim();
   if (!t) return false;
   if (/[؀-ۿ]/.test(t)) return false;
-  if (/[a-z]*[23578][a-z]+|[a-z]+[23578][a-z]*/i.test(t)) return true;
   const words = t.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  // Franco special-digit words (3=ع 7=ح 2=ء 5=خ 8=غ) embed a digit among letters,
+  // e.g. "3awz", "m3aya", "msh3arf". English algebra monomials ("2x", "5y", "x2")
+  // also put a digit beside a letter but carry only ONE letter — require ≥2 letters
+  // in the token so equations like "2x + 3 = 11" are never misread as Franco.
+  if (words.some(w => /[a-z][23578]|[23578][a-z]/i.test(w) && /[a-z].*[a-z]/i.test(w))) return true;
   const FRANCO_WORDS = new Set([
     'msh','mesh','ezayak','ezzayak','ezay','izay','keda','kda','delwa2ty','dlw2ty',
     'fahem','fahma','fhmt','feshto','m3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','sa7','sah',
