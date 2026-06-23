@@ -1063,9 +1063,9 @@ async function runJudge(
     const userContent =
       `Question:\n${questionText.slice(0, 500)}\n\n` +
       `Tutor explanation (excerpt):\n${zeroAnswer.slice(0, 600)}\n\n` +
-      `Solver A reasoning:\n${(solverA.reasoning || '(none)').slice(0, 700)}\n` +
+      `Solver A reasoning:\n${(solverA.reasoning || '(none)').slice(0, 1500)}\n` +
       `Solver A final answer: ${solverA.final_answer.slice(0, 120)}\n\n` +
-      `Solver B reasoning:\n${(solverB.reasoning || '(none)').slice(0, 700)}\n` +
+      `Solver B reasoning:\n${(solverB.reasoning || '(none)').slice(0, 1500)}\n` +
       `Solver B final answer: ${solverB.final_answer.slice(0, 120)}`;
 
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1212,7 +1212,7 @@ async function runL3ShadowPipeline(opts: {
     ocr_rerun_count:             ocr.rerun_count,
     ocr_rerun_changed:           ocr.rerun_changed,
     solver_answers:              [solverA.final_answer.slice(0, 200), solverB.final_answer.slice(0, 200)],
-    solver_reasonings:           [solverA.reasoning.slice(0, 800),    solverB.reasoning.slice(0, 800)],
+    solver_reasonings:           [solverA.reasoning.slice(0, 2000),   solverB.reasoning.slice(0, 2000)],
     solver_raw_outputs:          [solverA.raw_output.slice(0, 1200),  solverB.raw_output.slice(0, 1200)],
     solver_answer_lengths,
     solver_reasoning_lengths,
