@@ -727,6 +727,40 @@ function normalizeFinalAnswer(s: string): string {
     .trim();
 }
 
+// Parse a final-answer string to a finite number IFF it is a single clean
+// scalar: integer, decimal, or fraction, with optional currency prefix and
+// thousands separators. Returns null for anything else (expressions, words,
+// MCQ letters, percentages, units) so the caller fails closed to string
+// comparison. Scope is intentionally minimal — see answersEquivalent.
+function parseNumericAnswer(s: string): number | null {
+  let t = normalizeFinalAnswer(s);                 // reuse marker/markdown/space normalizer
+  if (!t) return null;
+  t = t.replace(/[$£€]/g, '')                       // currency prefix ($3 -> 3)
+       .replace(/(\d),(?=\d{3}(\D|$))/g, '$1');     // thousands separators (1,000 -> 1000)
+  let val: number | null = null;
+  const frac = /^[-+]?\d+(?:\.\d+)?\/[-+]?\d+(?:\.\d+)?$/;
+  if (frac.test(t)) {
+    const [n, d] = t.split('/').map(Number);
+    if (d !== 0) val = n / d;                        // fraction -> rational value (9/4 -> 2.25)
+  } else if (/^[-+]?\d+(?:\.\d+)?$/.test(t)) {
+    val = Number(t);                                 // integer / decimal (2.0 -> 2, 0.410 -> 0.41)
+  }
+  return (val !== null && Number.isFinite(val)) ? val : null;
+}
+
+// Equivalence test used by solver_agreement. String path first (unchanged
+// behavior), numeric path second, fail-closed otherwise. Can only ever return
+// true where the old string compare returned true OR the two values are
+// provably equal numbers — never the reverse — so solver_agreement can only
+// move 0->1, never 1->0.
+function answersEquivalent(a: string, b: string): boolean {
+  const na = normalizeFinalAnswer(a), nb = normalizeFinalAnswer(b);
+  if (na && na === nb) return true;                  // EXISTING string match, preserved
+  const va = parseNumericAnswer(a), vb = parseNumericAnswer(b);
+  if (va === null || vb === null) return false;      // non-scalars never equate (fail-closed)
+  return Math.abs(va - vb) <= 1e-9 * Math.max(1, Math.abs(va), Math.abs(vb));
+}
+
 // Harden tutor-answer extraction (Fix #1). Zero's JSON schema only emits
 // `answer` (a full markdown explanation), but malformed / drifted responses
 // have historically left it empty while the value lived under a different key.
@@ -1176,11 +1210,16 @@ async function runL3ShadowPipeline(opts: {
     runSolver(solveText, 0.3, isImageQ ? imageData : null),
   ]);
 
-  // 4. Solver agreement — robust normalization (strips "answer:"/"final answer:"/markdown).
-  // Fixes false-disagreement bug where "B" vs "Answer: B" was scored 0.0.
+  // 4. Solver agreement — robust normalization (strips "answer:"/"final answer:"/markdown)
+  // plus deterministic numeric equivalence (fraction<->decimal, trailing zeros,
+  // thousands separators, currency prefix). Fail-closed: only upgrades 0->1.
   const normA = normalizeFinalAnswer(solverA.final_answer);
   const normB = normalizeFinalAnswer(solverB.final_answer);
-  const solver_agreement = (normA && normA === normB) ? 1.0 : 0.0;
+  const stringMatch = !!(normA && normA === normB);
+  const solver_agreement = answersEquivalent(solverA.final_answer, solverB.final_answer) ? 1.0 : 0.0;
+  // True when agreement was reached only via numeric equivalence, not identical
+  // strings — used to word verification_reason precisely.
+  const agreementViaEquivalence = solver_agreement === 1.0 && !stringMatch;
 
   // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
   const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0, tutorFinalAnswer);
@@ -1219,12 +1258,15 @@ async function runL3ShadowPipeline(opts: {
   if (judge.verdict === 'ocr_uncertain') {
     reasonParts.push('OCR confidence below 0.75 — verdict locked to ocr_uncertain.');
   } else {
-    // Clause 1 — solver-vs-solver string match (the solver_agreement metric).
-    // When the strings differ but the judge ruled them equivalent, say so rather
-    // than asserting "different" — that wording contradicted judge_verdict.
+    // Clause 1 — solver-vs-solver agreement (the solver_agreement metric).
+    // Three cases: identical strings, numerically equivalent (different form),
+    // or different. When strings differ but the judge ruled them equivalent,
+    // say so rather than asserting "different" — that contradicted judge_verdict.
     reasonParts.push(
       solver_agreement === 1.0
-        ? 'Solvers A and B produced matching answers.'
+        ? (agreementViaEquivalence
+            ? 'Solvers A and B produced equivalent answers (different form).'
+            : 'Solvers A and B produced matching answers.')
         : judge.verdict === 'agrees'
           ? 'Solver answers differed in form but were judged equivalent.'
           : 'Solvers A and B produced different answers.',
