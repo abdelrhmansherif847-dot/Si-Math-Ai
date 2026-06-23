@@ -2561,12 +2561,21 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
         tier: verificationFields.verification_tier as string ?? null,
         ...((verificationFields.verification_meta as Record<string, unknown>) ?? {}),
       };
+      // Parity inputs for the shadow pipeline — Solver A/B + Judge must solve the
+      // SAME problem Zero solved. On a reference-resolved turn that is the indexed
+      // question text + its source image, not the bare student phrase. resolvedRef
+      // and a fresh imageData upload are mutually exclusive, so non-resolved turns
+      // collapse to today's exact inputs (question, imageData).
+      const shadowQuestionText = resolvedRef ? resolvedRef.question_text : question;
+      const shadowImageData    = resolvedRef
+        ? (refImages[resolvedRef.image_index] ?? refImages[0] ?? null)
+        : imageData;
       const pipelineTask = runL3ShadowPipeline({
         sbAdmin,
         recordId,
         userId:       user.id,
-        questionText: question,
-        imageData,
+        questionText: shadowQuestionText,
+        imageData:    shadowImageData,
         zeroAnswer,
         detectorMeta,
         startTime:    pipelineStart,
