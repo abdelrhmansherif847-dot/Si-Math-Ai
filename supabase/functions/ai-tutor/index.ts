@@ -727,6 +727,40 @@ function normalizeFinalAnswer(s: string): string {
     .trim();
 }
 
+// Parse a final-answer string to a finite number IFF it is a single clean
+// scalar: integer, decimal, or fraction, with optional currency prefix and
+// thousands separators. Returns null for anything else (expressions, words,
+// MCQ letters, percentages, units) so the caller fails closed to string
+// comparison. Scope is intentionally minimal — see answersEquivalent.
+function parseNumericAnswer(s: string): number | null {
+  let t = normalizeFinalAnswer(s);                 // reuse marker/markdown/space normalizer
+  if (!t) return null;
+  t = t.replace(/[$£€]/g, '')                       // currency prefix ($3 -> 3)
+       .replace(/(\d),(?=\d{3}(\D|$))/g, '$1');     // thousands separators (1,000 -> 1000)
+  let val: number | null = null;
+  const frac = /^[-+]?\d+(?:\.\d+)?\/[-+]?\d+(?:\.\d+)?$/;
+  if (frac.test(t)) {
+    const [n, d] = t.split('/').map(Number);
+    if (d !== 0) val = n / d;                        // fraction -> rational value (9/4 -> 2.25)
+  } else if (/^[-+]?\d+(?:\.\d+)?$/.test(t)) {
+    val = Number(t);                                 // integer / decimal (2.0 -> 2, 0.410 -> 0.41)
+  }
+  return (val !== null && Number.isFinite(val)) ? val : null;
+}
+
+// Equivalence test used by solver_agreement. String path first (unchanged
+// behavior), numeric path second, fail-closed otherwise. Can only ever return
+// true where the old string compare returned true OR the two values are
+// provably equal numbers — never the reverse — so solver_agreement can only
+// move 0->1, never 1->0.
+function answersEquivalent(a: string, b: string): boolean {
+  const na = normalizeFinalAnswer(a), nb = normalizeFinalAnswer(b);
+  if (na && na === nb) return true;                  // EXISTING string match, preserved
+  const va = parseNumericAnswer(a), vb = parseNumericAnswer(b);
+  if (va === null || vb === null) return false;      // non-scalars never equate (fail-closed)
+  return Math.abs(va - vb) <= 1e-9 * Math.max(1, Math.abs(va), Math.abs(vb));
+}
+
 // Harden tutor-answer extraction (Fix #1). Zero's JSON schema only emits
 // `answer` (a full markdown explanation), but malformed / drifted responses
 // have historically left it empty while the value lived under a different key.
@@ -745,6 +779,18 @@ function extractTutorAnswer(
     if (s) return { text: s, sourceKey: key };
   }
   return { text: '', sourceKey: 'none' };
+}
+
+// Last-resort, always-non-empty answer when extraction and hint both came up
+// empty (OpenAI returned no usable content, or a valid JSON object with no
+// answer field). Guarantees the response builder can never emit answer="".
+function safeNoAnswerMessage(lang: string): string {
+  const MSGS: Record<string, string> = {
+    en: "I couldn't generate a full answer this time. Please resend your question and I'll take another look.",
+    ar: 'معلش، مقدرتش أطلّع إجابة كاملة المرة دي. ابعت سؤالك تاني وهشوفه من جديد.',
+    franco: "Ma2dartesh atalla3 egaba kamla el marra di. Eb3at so2alak tani w hashoufo mn gedid.",
+  };
+  return MSGS[lang] ?? MSGS['en'];
 }
 
 // Derive a concise tutor FINAL-answer string from the full explanation so the
@@ -1176,11 +1222,16 @@ async function runL3ShadowPipeline(opts: {
     runSolver(solveText, 0.3, isImageQ ? imageData : null),
   ]);
 
-  // 4. Solver agreement — robust normalization (strips "answer:"/"final answer:"/markdown).
-  // Fixes false-disagreement bug where "B" vs "Answer: B" was scored 0.0.
+  // 4. Solver agreement — robust normalization (strips "answer:"/"final answer:"/markdown)
+  // plus deterministic numeric equivalence (fraction<->decimal, trailing zeros,
+  // thousands separators, currency prefix). Fail-closed: only upgrades 0->1.
   const normA = normalizeFinalAnswer(solverA.final_answer);
   const normB = normalizeFinalAnswer(solverB.final_answer);
-  const solver_agreement = (normA && normA === normB) ? 1.0 : 0.0;
+  const stringMatch = !!(normA && normA === normB);
+  const solver_agreement = answersEquivalent(solverA.final_answer, solverB.final_answer) ? 1.0 : 0.0;
+  // True when agreement was reached only via numeric equivalence, not identical
+  // strings — used to word verification_reason precisely.
+  const agreementViaEquivalence = solver_agreement === 1.0 && !stringMatch;
 
   // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
   const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0, tutorFinalAnswer);
@@ -1219,12 +1270,15 @@ async function runL3ShadowPipeline(opts: {
   if (judge.verdict === 'ocr_uncertain') {
     reasonParts.push('OCR confidence below 0.75 — verdict locked to ocr_uncertain.');
   } else {
-    // Clause 1 — solver-vs-solver string match (the solver_agreement metric).
-    // When the strings differ but the judge ruled them equivalent, say so rather
-    // than asserting "different" — that wording contradicted judge_verdict.
+    // Clause 1 — solver-vs-solver agreement (the solver_agreement metric).
+    // Three cases: identical strings, numerically equivalent (different form),
+    // or different. When strings differ but the judge ruled them equivalent,
+    // say so rather than asserting "different" — that contradicted judge_verdict.
     reasonParts.push(
       solver_agreement === 1.0
-        ? 'Solvers A and B produced matching answers.'
+        ? (agreementViaEquivalence
+            ? 'Solvers A and B produced equivalent answers (different form).'
+            : 'Solvers A and B produced matching answers.')
         : judge.verdict === 'agrees'
           ? 'Solver answers differed in form but were judged equivalent.'
           : 'Solvers A and B produced different answers.',
@@ -1794,7 +1848,7 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({
-        answer:          repeatAnswer,
+        answer:          repeatAnswer || safeNoAnswerMessage(lang),
         hint:            '',
         topic:           parentRecord.topic,
         subtopic:        parentRecord.subtopic,
@@ -2358,14 +2412,31 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     const oaiData = await oaiRes.json();
     let parsed: Record<string, unknown> = {};
     let degraded = false;
-    try {
-      parsed = JSON.parse(oaiData.choices?.[0]?.message?.content || '{}');
-    } catch (parseErr) {
+    // Do NOT mask a missing completion behind `|| '{}'`: an HTTP error from
+    // OpenAI, a content-filtered/empty completion, or a malformed envelope all
+    // leave `choices[0].message.content` falsy. Substituting '{}' would parse
+    // cleanly and proceed with degraded=false — silently returning answer="".
+    // Detect that case explicitly and mark it degraded so the answer guard fires.
+    const oaiContent = oaiData?.choices?.[0]?.message?.content;
+    if (!oaiRes.ok || !oaiContent) {
       parsed = {};
       degraded = true;
-      console.log('[ai-tutor] parse-failed', JSON.stringify({
-        uid: user.id.slice(0, 8), msg: String(parseErr),
+      console.log('[ai-tutor] oai-no-content', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        ok: oaiRes.ok, status: oaiRes.status,
+        finish_reason: oaiData?.choices?.[0]?.finish_reason ?? null,
+        err: oaiData?.error?.message ?? null,
       }));
+    } else {
+      try {
+        parsed = JSON.parse(oaiContent);
+      } catch (parseErr) {
+        parsed = {};
+        degraded = true;
+        console.log('[ai-tutor] parse-failed', JSON.stringify({
+          uid: user.id.slice(0, 8), msg: String(parseErr),
+        }));
+      }
     }
 
     // ── Post-process rules + difficulty (math-intent classifier) ─────────────
@@ -2407,7 +2478,24 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     // derive from this, so the two can never evaluate different tutor outputs.
     // Runs AFTER hint-mode fallback so a populated answer is never missed.
     const tutorExtract     = extractTutorAnswer(parsed);
-    const tutorAnswerText  = tutorExtract.text;
+    let   tutorAnswerText  = tutorExtract.text;
+    // ── Terminal answer guard ────────────────────────────────────────────────
+    // Single chokepoint: tutorAnswerText feeds ai_response, zeroAnswer, and the
+    // response builder. If extraction yielded nothing (OpenAI returned no usable
+    // content, a valid JSON object lacked answer/final_answer/result, or the
+    // answer was whitespace-only), floor it to the hint, then a localized
+    // last-resort message — so answer="" can never reach the response builder.
+    if (!tutorAnswerText) {
+      tutorAnswerText = (hint && hint.trim())
+        ? hint
+        : safeNoAnswerMessage(lang);
+      degraded = true;
+      console.log('[ai-tutor] empty-answer-guard', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        source_key: tutorExtract.sourceKey,
+        used: (hint && hint.trim()) ? 'hint' : 'safe_message',
+      }));
+    }
     const tutorFinalAnswer = deriveTutorFinalAnswer(tutorAnswerText);
     if (tutorExtract.sourceKey !== 'answer' || !tutorFinalAnswer) {
       console.log('[ai-tutor] tutor-answer-extract', JSON.stringify({
