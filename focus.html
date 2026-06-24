@@ -722,7 +722,7 @@ var _d1EmittedRounds = new Set();  // planId:maxP — per-session one-shot sim (
 // (signal_emitted_at / last_round_signal_priority) — the mastery write rides
 // INSIDE the same guarded blocks, so it applies exactly once per task/round.
 // Flip to true only after the validation report is signed off.
-var D2_FOCUS_MASTERY_ENABLED = false;
+var D2_FOCUS_MASTERY_ENABLED = true;
 
 // Live-update every on-screen "current mastery" readout after a focus delta,
 // so a single task completion is visible without a refresh (1-decimal).
