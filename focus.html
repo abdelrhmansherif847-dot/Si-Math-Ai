@@ -438,6 +438,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="taxonomy.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
+<script src="xp-updater.js"></script>
 <script>
 // ===== SUPABASE INIT =====
 const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -740,6 +741,98 @@ function _d2UpdateMasteryUI(newMastery) {
   });
 }
 
+// ── D3 Focus-Practice XP (ALL USERS — FREE + paid) ──
+// Fully independent of mastery (D2): writes ONLY profiles.xp via the atomic,
+// idempotent award_focus_xp RPC (focus_xp_log ledger, PK user_id,event_key).
+// XP hooks deliberately sit OUTSIDE the d1UserEligible() gate, so FREE users
+// earn Focus XP exactly like chat (+5) and mock-exam (+50/+25). D1/D2 are
+// unchanged — their entitlement gate and one-shot guards still apply to them.
+// Flip to true only after the validation report is signed off.
+var D3_FOCUS_XP_ENABLED = true;
+
+var _d3TierNames = { 1:'Foundation', 2:'Advanced', 3:'Mastery', 4:'Elite I', 5:'Elite II', 6:'Elite III', 7:'Legend' };
+var _d3LastRank  = null;   // tracks rank across awards to detect a rank-up
+var _d3ToastTimer = null;
+
+// Visible XP feedback — ported from chat.html's showXpToast for consistency.
+function _d3ShowXpToast(msg) {
+  try {
+    var toast = document.getElementById('xpToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'xpToast';
+      toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#21253a;border:1px solid #6c63ff;color:#e2e8f0;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(_d3ToastTimer);
+    _d3ToastTimer = setTimeout(function () { toast.style.opacity = '0'; }, 3200);
+  } catch (_) {}
+}
+
+// Render a toast from an award result, appending a rank-up suffix when crossed.
+function _d3Feedback(res, baseMsg) {
+  if (!res || !res.awarded || !(res.delta > 0)) return;
+  var msg = '+' + res.delta + ' XP' + (baseMsg ? ' · ' + baseMsg : '');
+  if (res.new_rank && _d3LastRank && res.new_rank !== _d3LastRank) {
+    msg += ' · Rank up: ' + res.new_rank + '!';
+  }
+  if (res.new_rank) _d3LastRank = res.new_rank;
+  _d3ShowXpToast(msg);
+}
+
+// Task XP + day-clear XP. Ungated; runs for every user on transition INTO DONE.
+// planId is passed from the click handler's closure. Idempotency is enforced by
+// the ledger inside the RPC, so reloads / double-clicks / extra tabs never
+// double-award regardless of this DOM-side state.
+async function _d3AwardTaskAndDayXp(btnEl, nextStatus, planId) {
+  if (!D3_FOCUS_XP_ENABLED || !window.XpEngine || nextStatus !== 'DONE' || !btnEl) return;
+  try {
+    var taskId = btnEl.getAttribute('data-task-id') || '';
+    var tier   = parseInt(btnEl.getAttribute('data-round') || '0', 10) || 0;
+    var day    = parseInt(btnEl.getAttribute('data-day')   || '0', 10) || 0;
+    if (!taskId || !tier) return;
+
+    // 1. Per-task XP.
+    var tRes = await window.XpEngine.onFocusTaskXp(sb, planId || null, taskId, tier);
+    _d3Feedback(tRes, _d3TierNames[tier] || 'Task');
+
+    // 2. Day-clear XP — only when all 3 tasks of this (tier,day) are DONE.
+    if (planId && day >= 1 && day <= 3) {
+      var lo = (tier - 1) * 9 + (day - 1) * 3 + 1, hi = lo + 2;
+      var cnt = await sb.from('focus_tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('plan_id', planId).eq('status', 'DONE')
+        .is('archived_at', null)
+        .gte('priority', lo).lte('priority', hi);
+      if (cnt && !cnt.error && cnt.count === 3) {
+        var dRes = await window.XpEngine.onFocusDayXp(sb, planId, tier, day);
+        _d3Feedback(dRes, 'Day ' + day + ' complete');
+      }
+    }
+  } catch (e) {
+    console.warn('[D3] task/day XP threw (tolerated):', (e && e.message) || e);
+  }
+}
+
+// Round-clear XP + Legend completion bonus. Ungated; called from upsertPlan
+// alongside the D1 round-clear signal, using the just-cleared wave's max priority.
+async function _d3AwardRoundXp(planId, maxP) {
+  if (!D3_FOCUS_XP_ENABLED || !window.XpEngine || !planId) return;
+  try {
+    var tier = roundOf(maxP);
+    var rRes = await window.XpEngine.onFocusRoundXp(sb, planId, tier);
+    _d3Feedback(rRes, (_d3TierNames[tier] || ('Round ' + tier)) + ' round clear!');
+    if (tier === 7) {
+      var lRes = await window.XpEngine.onLegendComplete(sb, planId, tier);
+      _d3Feedback(lRes, '🏆 LEGEND COMPLETE!');
+    }
+  } catch (e) {
+    console.warn('[D3] round/legend XP threw (tolerated):', (e && e.message) || e);
+  }
+}
+
 // Live-stage eligibility gate. Entitlement-based: plan_code is the single source
 // of truth (subscription expiry is enforced server-side before the profile loads,
 // so an expired Pro reads as FREE and is excluded). Owner receives no special
@@ -994,6 +1087,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
 
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
       await emitRoundClearSignal(primaryTopic, existing, maxP);   // D1: round just cleared (uses current wave's maxP, before new wave)
+      await _d3AwardRoundXp(existing.id, maxP);                   // D3: round + Legend XP (ungated, all users)
       await sb.from('focus_plans').update({ dominant_signal: dominant || null }).eq('id', existing.id);
       await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
         plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
@@ -1430,6 +1524,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
         await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
         await emitTaskSignalIfEligible(this, next);   // D1: only the clicked button emits (sibling sync above is DOM-only)
+        await _d3AwardTaskAndDayXp(this, next, planId); // D3: Focus XP (ungated, all users)
       }
     });
   });
@@ -1462,6 +1557,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
         await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
         await emitTaskSignalIfEligible(this, next);   // D1: only the clicked button emits (sibling sync above is DOM-only)
+        await _d3AwardTaskAndDayXp(this, next, planId); // D3: Focus XP (ungated, all users)
       }
     });
   });
