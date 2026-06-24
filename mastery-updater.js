@@ -25,8 +25,29 @@
 
   /* ── Constants ── */
   var MASTERY_MIN = 10;
-  var MASTERY_MAX = 95;
+  var MASTERY_MAX = 100;       // D2: ceiling raised 95→100 so the Focus ladder lands on 100.0 at Legend
   var MASTERY_BASELINE = 50;  // starting mastery for new topic
+
+  /* ── D2 Focus-Practice progression (gap-scaled, milestone-floored) ──
+   * mastery_records is the authoritative progression layer. Completing the full
+   * 7-round ladder (Foundation→Legend) closes the remaining gap to exactly 100.0.
+   *
+   *   gap        = 100 − focus_baseline                       (snapshot at plan start)
+   *   delta_task = gap × (tier_mult/ΣTIER) × (day_mult/DAYUNITS)
+   *   floor(r)   = baseline + cum_tier_fraction[r] × gap      (applied on round-clear)
+   *
+   * ΣTIER = 16.8, so cum_tier_fraction[Legend] = 16.8/16.8 = 1.0 → floor = 100.0.
+   */
+  var FOCUS_CEILING   = 100;
+  var FOCUS_TIER_MULT = { 1: 1.0, 2: 1.5, 3: 2.0, 4: 2.6, 5: 2.9, 6: 3.2, 7: 3.6 };
+  var FOCUS_DAY_MULT  = { 1: 1.0, 2: 1.3, 3: 1.6 };  // Foundation / Accuracy / Pressure day
+  var FOCUS_SUM_TIER  = 16.8;   // Σ tier_mult
+  var FOCUS_DAY_UNITS = 11.7;   // 3 × (1.0 + 1.3 + 1.6) — day-weight units per round
+  // Cumulative tier fraction Σ_{k≤r} mult / 16.8. Legend (7) is exactly 1.0.
+  var FOCUS_TIER_CUM  = {
+    1: 1.0 / 16.8,  2: 2.5 / 16.8,  3: 4.5 / 16.8,  4: 7.1 / 16.8,
+    5: 10.0 / 16.8, 6: 13.2 / 16.8, 7: 16.8 / 16.8
+  };
 
   /* ── Time decay ──
    * No decay for the first 7 days after last activity.
@@ -83,14 +104,20 @@
     return 0;
   }
 
+  // 1-decimal precision (D2): keeps single-task Focus increments visible instead
+  // of rounding sub-point deltas away. Applies to all engines that store mastery.
   function clamp(val, min, max) {
-    return Math.max(min, Math.min(max, Math.round(val)));
+    return Math.max(min, Math.min(max, Math.round(val * 10) / 10));
+  }
+  // Focus-ladder clamp: floor MASTERY_MIN, ceiling 100, 1-decimal.
+  function clampFocus(val) {
+    return Math.max(MASTERY_MIN, Math.min(FOCUS_CEILING, Math.round(val * 10) / 10));
   }
 
   /* ── Fetch existing mastery record ── */
   async function fetchRecord(sb, userId, topic, subtopic) {
     var res = await sb.from('mastery_records')
-      .select('id, mastery_score, questions_seen, questions_correct, accuracy, last_updated')
+      .select('id, mastery_score, questions_seen, questions_correct, accuracy, last_updated, focus_baseline, focus_progress')
       .eq('user_id', userId)
       .eq('topic', topic)
       .eq('subtopic', subtopic)
@@ -232,6 +259,140 @@
 
       } catch (err) {
         console.warn('[mastery] onResolution failed:', err.message || err);
+      }
+    },
+
+    /**
+     * D2 — snapshot the focus baseline at plan creation.
+     * Captures the topic's current mastery as focus_baseline and resets
+     * focus_progress to 0, so the whole ladder closes the SAME gap to 100.
+     * Called only when a NEW focus_plans row is created (not on wave appends),
+     * so a fresh plan restarts progression from wherever mastery currently sits.
+     */
+    snapshotFocusBaseline: async function (sb, userId, topic, subtopic) {
+      if (!sb || !userId || !topic || subtopic == null) return;
+      try {
+        var existing = await fetchRecord(sb, userId, topic, subtopic);
+        var now = new Date().toISOString();
+        if (existing) {
+          var base = Number(existing.mastery_score);
+          if (!isFinite(base)) base = MASTERY_BASELINE;
+          var { error } = await sb.from('mastery_records')
+            .update({ focus_baseline: base, focus_progress: 0, last_updated: now })
+            .eq('id', existing.id);
+          if (error) console.warn('[mastery] snapshotFocusBaseline update error:', error.message);
+        } else {
+          var { error: insErr } = await sb.from('mastery_records').insert({
+            user_id: userId, topic: topic, subtopic: subtopic,
+            mastery_score: MASTERY_BASELINE, focus_baseline: MASTERY_BASELINE, focus_progress: 0,
+            questions_seen: 0, questions_correct: 0, accuracy: 0, last_updated: now
+          });
+          if (insErr) console.warn('[mastery] snapshotFocusBaseline insert error:', insErr.message);
+        }
+      } catch (err) {
+        console.warn('[mastery] snapshotFocusBaseline failed:', err.message || err);
+      }
+    },
+
+    /**
+     * D2 — apply one Focus Practice task completion to mastery.
+     * Gap-scaled additive delta. Idempotency is owned by the CALLER (the
+     * focus.html DONE handler's signal_emitted_at / data-emitted one-shot), so
+     * this method assumes it is invoked at most once per task.
+     * Returns the new mastery_score (number) for live UI update, or null.
+     *
+     * opts: { round: 1-7, day: 1-3 }
+     */
+    onFocusTaskComplete: async function (sb, userId, topic, subtopic, opts) {
+      if (!sb || !userId || !topic || subtopic == null) return null;
+      opts = opts || {};
+      var round = Number(opts.round) || 1;
+      var day   = Number(opts.day)   || 1;
+      var tierMult = FOCUS_TIER_MULT[round] || FOCUS_TIER_MULT[7];  // beyond Legend → tier-7 weight
+      var dayMult  = FOCUS_DAY_MULT[day]    || 1.0;
+
+      try {
+        var existing = await fetchRecord(sb, userId, topic, subtopic);
+        var now = new Date().toISOString();
+        var base, baseline, progress;
+        if (existing) {
+          base = Number(existing.mastery_score);
+          if (!isFinite(base)) base = MASTERY_BASELINE;
+          baseline = (existing.focus_baseline == null) ? base : Number(existing.focus_baseline);
+          progress = Number(existing.focus_progress) || 0;
+        } else {
+          base = MASTERY_BASELINE; baseline = MASTERY_BASELINE; progress = 0;
+        }
+
+        var gap   = Math.max(0, FOCUS_CEILING - baseline);
+        var delta = gap * (tierMult / FOCUS_SUM_TIER) * (dayMult / FOCUS_DAY_UNITS);
+        var newMastery  = clampFocus(base + delta);
+        var newProgress = progress + delta;
+
+        if (existing) {
+          var { error } = await sb.from('mastery_records')
+            .update({ mastery_score: newMastery, focus_progress: newProgress, focus_baseline: baseline, last_updated: now })
+            .eq('id', existing.id);
+          if (error) { console.warn('[mastery] onFocusTaskComplete update error:', error.message); return null; }
+        } else {
+          var { error: insErr } = await sb.from('mastery_records').insert({
+            user_id: userId, topic: topic, subtopic: subtopic,
+            mastery_score: newMastery, focus_baseline: baseline, focus_progress: newProgress,
+            questions_seen: 0, questions_correct: 0, accuracy: 0, last_updated: now
+          });
+          if (insErr) { console.warn('[mastery] onFocusTaskComplete insert error:', insErr.message); return null; }
+        }
+
+        maybeAwardMasteryAchievement(sb, userId, newMastery);
+        if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
+        return newMastery;
+      } catch (err) {
+        console.warn('[mastery] onFocusTaskComplete failed:', err.message || err);
+        return null;
+      }
+    },
+
+    /**
+     * D2 — milestone floor applied on round-clear. Guarantees the cumulative
+     * milestone for `round` is reached even if individual task deltas were
+     * missed or chat/exam drifted mastery down. Legend (round 7) floor = 100.0.
+     * Idempotency owned by the caller (last_round_signal_priority HWM).
+     * Returns the new mastery_score, or null.
+     *
+     * opts: { round: 1-7 }
+     */
+    onFocusRoundClear: async function (sb, userId, topic, subtopic, opts) {
+      if (!sb || !userId || !topic || subtopic == null) return null;
+      opts = opts || {};
+      var round = Number(opts.round) || 1;
+      var cum = FOCUS_TIER_CUM[round];
+      if (cum == null) cum = FOCUS_TIER_CUM[7];  // beyond Legend → 1.0
+
+      try {
+        var existing = await fetchRecord(sb, userId, topic, subtopic);
+        if (!existing) return null;  // task path should have created the row first
+        var now = new Date().toISOString();
+        var base = Number(existing.mastery_score);
+        if (!isFinite(base)) base = MASTERY_BASELINE;
+        var baseline = (existing.focus_baseline == null) ? base : Number(existing.focus_baseline);
+        var progress = Number(existing.focus_progress) || 0;
+
+        var gap       = Math.max(0, FOCUS_CEILING - baseline);
+        var milestone = baseline + cum * gap;
+        var newMastery  = clampFocus(Math.max(base, milestone));     // floor, never lowers
+        var newProgress = Math.max(progress, cum * gap);
+
+        var { error } = await sb.from('mastery_records')
+          .update({ mastery_score: newMastery, focus_progress: newProgress, focus_baseline: baseline, last_updated: now })
+          .eq('id', existing.id);
+        if (error) { console.warn('[mastery] onFocusRoundClear update error:', error.message); return null; }
+
+        maybeAwardMasteryAchievement(sb, userId, newMastery);
+        if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
+        return newMastery;
+      } catch (err) {
+        console.warn('[mastery] onFocusRoundClear failed:', err.message || err);
+        return null;
       }
     },
 

@@ -716,6 +716,30 @@ var D1_ROUND_WEIGHT  = -0.50;
 var _d1EmittedTasks  = new Set();  // taskId — per-session one-shot sim (Vector A)
 var _d1EmittedRounds = new Set();  // planId:maxP — per-session one-shot sim (Vector B)
 
+// ── D2 Focus-Practice mastery progression (gap-scaled, milestone-floored) ──
+// Authoritative layer: mastery_records (focus_baseline/focus_progress, M6).
+// Reuses D1's entitlement gate (d1UserEligible) AND D1's one-shot guards
+// (signal_emitted_at / last_round_signal_priority) — the mastery write rides
+// INSIDE the same guarded blocks, so it applies exactly once per task/round.
+// Flip to true only after the validation report is signed off.
+var D2_FOCUS_MASTERY_ENABLED = false;
+
+// Live-update every on-screen "current mastery" readout after a focus delta,
+// so a single task completion is visible without a refresh (1-decimal).
+function _d2UpdateMasteryUI(newMastery) {
+  if (newMastery == null || !isFinite(newMastery)) return;
+  var val = Math.round(newMastery * 10) / 10;
+  var txt = val.toFixed(1) + '%';
+  var col = (typeof masteryColor === 'function') ? masteryColor(val) : '';
+  document.querySelectorAll('.js-mastery-now').forEach(function (el) {
+    el.textContent = txt; if (col) el.style.color = col;
+  });
+  document.querySelectorAll('.js-mastery-fill').forEach(function (el) {
+    el.style.width = Math.min(100, val) + '%';
+    if (col) { el.style.background = col; el.style.boxShadow = '0 0 10px ' + col + '55'; }
+  });
+}
+
 // Live-stage eligibility gate. Entitlement-based: plan_code is the single source
 // of truth (subscription expiry is enforced server-side before the profile loads,
 // so an expired Pro reads as FREE and is excluded). Owner receives no special
@@ -774,6 +798,17 @@ async function emitTaskSignalIfEligible(btnEl, nextStatus) {
     } catch (se) {
       console.warn('[D1] signal_emitted_at stamp threw (tolerated):', (se && se.message) || se);
     }
+    // ── D2: apply mastery for this task (rides the same one-shot claimed above) ──
+    if (D2_FOCUS_MASTERY_ENABLED && window.MasteryEngine && typeof window.MasteryEngine.onFocusTaskComplete === 'function') {
+      try {
+        var d2r = parseInt(btnEl.getAttribute('data-round') || '1', 10) || 1;
+        var d2d = parseInt(btnEl.getAttribute('data-day')   || '1', 10) || 1;
+        var d2m = await window.MasteryEngine.onFocusTaskComplete(sb, window._uid, topic, subtopic, { round: d2r, day: d2d });
+        if (d2m != null) _d2UpdateMasteryUI(d2m);
+      } catch (me) {
+        console.warn('[D2] task mastery apply threw (tolerated):', (me && me.message) || me);
+      }
+    }
     if (typeof window.scheduleReportRegen === 'function') window.scheduleReportRegen(sb, window._uid);
   } catch (e) {
     console.warn('[D1] task emit threw:', (e && e.message) || e);
@@ -824,6 +859,16 @@ async function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
       if (upd && upd.error) console.warn('[D1] last_round_signal_priority update failed (tolerated):', upd.error.message);
     } catch (pe) {
       console.warn('[D1] last_round_signal_priority update threw (tolerated):', (pe && pe.message) || pe);
+    }
+    // ── D2: milestone floor for the round that just cleared (rides the HWM one-shot) ──
+    if (D2_FOCUS_MASTERY_ENABLED && window.MasteryEngine && typeof window.MasteryEngine.onFocusRoundClear === 'function') {
+      try {
+        var d2rr = roundOf(currentWaveMaxP);
+        var d2rm = await window.MasteryEngine.onFocusRoundClear(sb, window._uid, topic, subtopic, { round: d2rr });
+        if (d2rm != null) _d2UpdateMasteryUI(d2rm);
+      } catch (me) {
+        console.warn('[D2] round mastery floor threw (tolerated):', (me && me.message) || me);
+      }
     }
     if (typeof window.scheduleReportRegen === 'function') window.scheduleReportRegen(sb, window._uid);
   } catch (e) {
@@ -1009,6 +1054,13 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
     task_title: t.title, priority: i + 1, estimated_minutes: t.minutes,
     status: 'NOT_STARTED', dominant_signal: dominant || null
   })));
+  // ── D2: snapshot the focus baseline once, at NEW-plan creation only ──
+  // Fixes the gap (100 − baseline) for the whole ladder so Legend lands on 100.0.
+  if (D2_FOCUS_MASTERY_ENABLED && d1UserEligible() && window.MasteryEngine
+      && typeof window.MasteryEngine.snapshotFocusBaseline === 'function') {
+    try { await window.MasteryEngine.snapshotFocusBaseline(sb, user.id, primaryTopic.topic, primaryTopic.sub); }
+    catch (be) { console.warn('[D2] baseline snapshot threw (tolerated):', (be && be.message) || be); }
+  }
   const { data: newTasks } = await sb.from('focus_tasks')
     .select('*').eq('plan_id', plan.id).is('archived_at', null).order('priority');
   return newTasks || [];
@@ -1140,7 +1192,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   html += '<p>' + dragonMsg + '</p>';
   html += '<div class="ai-result">';
   html += '<div class="arr r1"><span>Priority</span><b>#' + (primaryRank||1) + ' Weakness</b></div>';
-  html += '<div class="arr r2"><span>Mastery</span><b>' + m + '%</b></div>';
+  html += '<div class="arr r2"><span>Mastery</span><b class="js-mastery-now">' + (Math.round(m*10)/10).toFixed(1) + '%</b></div>';
   if (timeToImprove) html += '<div class="arr"><span>Est. Improve</span><b>' + timeToImprove.weeks + ' week' + (timeToImprove.weeks!==1?'s':'') + '</b></div>';
   html += '</div></div></div>';
 
@@ -1164,7 +1216,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     var btnTxt = st==='IN_PROGRESS'?'&#9654;':st==='DONE'?'&#10003;':'';
     var titleCls = 'mt-title' + (st==='DONE'?' done':'');
     html += '<div class="mission-task">';
-    html += '<button class="' + btnCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '" data-topic="' + escAttr(String(t.topic||'')) + '" data-subtopic="' + escAttr(String(t.subtopic||'')) + '" data-emitted="' + (t.signal_emitted_at?'1':'') + '">' + btnTxt + '</button>';
+    html += '<button class="' + btnCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '" data-topic="' + escAttr(String(t.topic||'')) + '" data-subtopic="' + escAttr(String(t.subtopic||'')) + '" data-round="' + (t.round||1) + '" data-day="' + (t.day||1) + '" data-emitted="' + (t.signal_emitted_at?'1':'') + '">' + btnTxt + '</button>';
     html += '<div class="mt-body"><div class="' + titleCls + '">' + escHtml(t.title) + '</div>';
     html += '<div class="mt-type">' + escHtml(t.type) + '</div></div>';
     if (t.minutes) html += '<div class="mt-time">' + t.minutes + ' min</div>';
@@ -1188,7 +1240,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   html += '<div class="wt-row"><div class="wr-lbl">Daily Target</div><div class="wr-track"><div class="wr-fill s" style="width:100%"></div></div><div class="wr-val">' + qTarget + ' Qs/day</div></div>';
   html += '</div>';
   html += '<div class="wt-mastery">';
-  html += '<div class="wm-now"><div class="wm-label">Now</div><div class="wm-val" style="color:' + masteryColor(m) + '">' + m + '%</div></div>';
+  html += '<div class="wm-now"><div class="wm-label">Now</div><div class="wm-val js-mastery-now" style="color:' + masteryColor(m) + '">' + (Math.round(m*10)/10).toFixed(1) + '%</div></div>';
   html += '<div class="wm-arrow">&rarr;</div>';
   html += '<div style="flex:1;min-width:0">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
@@ -1312,7 +1364,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       html += '<div class="dt-meta"><div class="dt-title">' + escHtml(t.title) + '</div>';
       html += '<div class="dt-type">' + escHtml(t.type) + '</div></div>';
       if (t.minutes) html += '<div class="dt-time">' + t.minutes + ' min</div>';
-      html += '<button class="' + chkCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '" data-topic="' + escAttr(String(t.topic||'')) + '" data-subtopic="' + escAttr(String(t.subtopic||'')) + '" data-emitted="' + (t.signal_emitted_at?'1':'') + '">' + chkTxt + '</button>';
+      html += '<button class="' + chkCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '" data-topic="' + escAttr(String(t.topic||'')) + '" data-subtopic="' + escAttr(String(t.subtopic||'')) + '" data-round="' + (t.round||1) + '" data-day="' + (t.day||1) + '" data-emitted="' + (t.signal_emitted_at?'1':'') + '">' + chkTxt + '</button>';
       html += '</div>';
     });
     html += '</div></div>';
@@ -1324,13 +1376,13 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   html += '<div class="sec-label">Mastery Progress</div>';
   html += '<div class="mastery-card">';
   html += '<div class="mc-stats">';
-  html += '<div class="mc-stat"><div class="ms-l">Current</div><div class="ms-v" style="color:' + masteryColor(m) + '">' + m + '%</div></div>';
+  html += '<div class="mc-stat"><div class="ms-l">Current</div><div class="ms-v js-mastery-now" style="color:' + masteryColor(m) + '">' + (Math.round(m*10)/10).toFixed(1) + '%</div></div>';
   html += '<div class="mc-stat"><div class="ms-l">Target</div><div class="ms-v" style="color:var(--green)">' + mTarget + '%</div></div>';
   html += '<div class="mc-stat"><div class="ms-l">Daily Qs</div><div class="ms-v" style="color:var(--cyan)">' + qTarget + '</div></div>';
   if (timeToImprove) html += '<div class="mc-stat"><div class="ms-l">Est. Time</div><div class="ms-v" style="color:var(--amber)">' + timeToImprove.weeks + 'w</div></div>';
   html += '</div>';
   html += '<div class="mc-bar-wrap">';
-  html += '<div class="mc-bar-track"><div class="mc-bar-fill" style="width:' + m + '%;background:' + masteryColor(m) + ';box-shadow:0 0 10px ' + masteryColor(m) + '55"></div></div>';
+  html += '<div class="mc-bar-track"><div class="mc-bar-fill js-mastery-fill" style="width:' + m + '%;background:' + masteryColor(m) + ';box-shadow:0 0 10px ' + masteryColor(m) + '55"></div></div>';
   html += '<div class="mc-cps">';
   [25,50,75,90].forEach(function(cp){ html += '<span class="mc-cp' + (m>=cp?' hit':'') + '">' + cp + '%' + (m>=cp?' &#10003;':'') + '</span>'; });
   html += '</div></div>';
@@ -1431,7 +1483,7 @@ var TREND_STR_MAP = {
   stable:    { trend: 'Stable',    trendIcon: '➖' },
 };
 function reportToProfile(report, qData) {
-  const m = report.mastery_score != null ? Math.round(report.mastery_score)
+  const m = report.mastery_score != null ? Math.round(report.mastery_score * 10) / 10
            : (qData && qData.mastery != null ? qData.mastery : 45);
   const sev = SEV_BAND_MAP[(report.severity_band || 'low').toLowerCase()]
            || SEV_BAND_MAP.low;
