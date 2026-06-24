@@ -698,36 +698,41 @@ function getCurrentDay(groups) {
 var ROUND_NAMES = {1:'Foundation',2:'Advanced',3:'Mastery',4:'Elite I',5:'Elite II',6:'Elite III',7:'Legend'};
 var MAX_TIER = 7;
 
-// ── D1 Weakness-signal write-back (Shadow Mode) ──
-// SHADOW MODE: the full emit path runs (guards, topic/subtopic resolution,
-// weight assignment, scheduleReportRegen decision) but every DB write is
-// replaced by a console.log. In shadow mode there are ZERO writes:
-//   - no weakness_signals insert
-//   - no focus_tasks.signal_emitted_at stamp
-//   - no focus_plans.last_round_signal_priority update
-//   - no scheduleReportRegen() invocation
-// One-shot idempotency is simulated in-memory PER SESSION (the Sets below),
-// since the persistent stamp columns are not being written yet. The in-memory
-// guard resets on reload — shadow logs are therefore not deduped across reloads.
-var D1_SHADOW        = true;    // true = log only, never write
-var D1_LIVE_ENABLED  = false;   // gates live inserts (Stage 1+); unused while D1_SHADOW
+// ── D1 Weakness-signal write-back (LIVE — Stage 1) ──
+// LIVE MODE: eligible users (entitlement gate, see d1UserEligible) write real
+// resolution signals on task-clear and round-clear. Persistence:
+//   - weakness_signals insert (source=FOCUS_PRACTICE, signal_type=resolution)
+//   - focus_tasks.signal_emitted_at stamp (Vector A, per-task one-shot)
+//   - focus_plans.last_round_signal_priority update (Vector B, monotonic HWM)
+//   - window.scheduleReportRegen(sb, uid) debounced 5s after each successful insert
+// Ordering is insert → stamp; a stamp failure after a successful insert is
+// tolerated (rare, bounded single duplicate). In-memory Sets add a same-session
+// guard on top of the persistent columns. To revert to shadow logging, set
+// D1_SHADOW=true; to disable entirely, set D1_LIVE_ENABLED=false.
+var D1_SHADOW        = false;   // true = log only, never write
+var D1_LIVE_ENABLED  = true;    // gates live inserts (entitlement-scoped)
 var D1_TASK_WEIGHT   = -0.15;
 var D1_ROUND_WEIGHT  = -0.50;
 var _d1EmittedTasks  = new Set();  // taskId — per-session one-shot sim (Vector A)
 var _d1EmittedRounds = new Set();  // planId:maxP — per-session one-shot sim (Vector B)
 
-// Live-stage eligibility gate. In Shadow Mode nothing writes, so this is unused;
-// it exists so the shadow->live flip is a one-constant change with no call-site edits.
+// Live-stage eligibility gate. Entitlement-based: plan_code is the single source
+// of truth (subscription expiry is enforced server-side before the profile loads,
+// so an expired Pro reads as FREE and is excluded). Owner receives no special
+// handling — eligibility is purely "does this account hold a paid plan code".
+var D1_ELIGIBLE_PLANS = ['FOUNDER_ANNUAL', 'PRO_MONTHLY', 'PRO_QUARTERLY', 'PRO_ANNUAL'];
 function d1UserEligible() {
   if (!D1_LIVE_ENABLED) return false;
-  return !!(window._isFounder || window._isAdmin); // Stage 1; widened in later stages
+  if (!window._uid) return false; // no authenticated user_id → cannot satisfy RLS
+  return D1_ELIGIBLE_PLANS.indexOf(window._planCode) !== -1;
 }
 
 // Task-clear emit. btnEl carries data-task-id / data-topic / data-subtopic /
 // data-emitted. Only fires on a transition INTO 'DONE'.
-function emitTaskSignalIfEligible(btnEl, nextStatus) {
+async function emitTaskSignalIfEligible(btnEl, nextStatus) {
   try {
     if (!btnEl) return;
+    if (!D1_SHADOW && !d1UserEligible()) return; // live: entitlement gate
     if (nextStatus !== 'DONE') {
       if (D1_SHADOW) console.log('[D1-shadow] task-skip   | task=' + (btnEl.getAttribute('data-task-id')||'') + ' reason=not-DONE (next=' + nextStatus + ')');
       return;
@@ -735,7 +740,8 @@ function emitTaskSignalIfEligible(btnEl, nextStatus) {
     var taskId   = btnEl.getAttribute('data-task-id') || '';
     var topic    = btnEl.getAttribute('data-topic') || '';
     var subtopic = btnEl.getAttribute('data-subtopic') || '';
-    var already  = D1_SHADOW ? _d1EmittedTasks.has(taskId) : (btnEl.getAttribute('data-emitted') === '1');
+    if (!taskId) return;
+    var already  = D1_SHADOW ? _d1EmittedTasks.has(taskId) : (btnEl.getAttribute('data-emitted') === '1' || _d1EmittedTasks.has(taskId));
     if (already) {
       if (D1_SHADOW) console.log('[D1-shadow] task-skip   | task=' + taskId + ' reason=already-emitted-this-session');
       return;
@@ -746,24 +752,49 @@ function emitTaskSignalIfEligible(btnEl, nextStatus) {
       console.log('[D1-shadow] regen-call  | scheduleReportRegen WOULD fire (debounced 5s)');
       return;
     }
-    // Live path (Stage 1+) is intentionally NOT implemented in Shadow Mode.
+    // ── Live path ──
+    var ins = await sb.from('weakness_signals').insert({
+      user_id: window._uid,
+      source: 'FOCUS_PRACTICE',
+      signal_type: 'resolution',
+      topic: topic,
+      subtopic: subtopic,
+      weight: D1_TASK_WEIGHT,
+      source_task_id: taskId
+    });
+    if (ins && ins.error) { console.warn('[D1] task insert failed:', ins.error.message); return; }
+    // Insert succeeded → claim the one-shot guard before stamping.
+    _d1EmittedTasks.add(taskId);
+    btnEl.setAttribute('data-emitted', '1');
+    // insert → stamp. A stamp failure after a successful insert is tolerated
+    // (rare, bounded single duplicate across sessions); never block on it.
+    try {
+      var upd = await sb.from('focus_tasks').update({ signal_emitted_at: new Date().toISOString() }).eq('id', taskId);
+      if (upd && upd.error) console.warn('[D1] signal_emitted_at stamp failed (tolerated):', upd.error.message);
+    } catch (se) {
+      console.warn('[D1] signal_emitted_at stamp threw (tolerated):', (se && se.message) || se);
+    }
+    if (typeof window.scheduleReportRegen === 'function') window.scheduleReportRegen(sb, window._uid);
   } catch (e) {
-    console.warn('[D1-shadow] task emit threw:', (e && e.message) || e);
+    console.warn('[D1] task emit threw:', (e && e.message) || e);
   }
 }
 
 // Round-clear emit. Called from upsertPlan when the current wave is fully DONE,
 // before the next wave is inserted. plan = the focus_plans row in scope.
-function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
+async function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
   try {
     if (!plan) return;
+    if (!D1_SHADOW && !d1UserEligible()) return; // live: entitlement gate
     var planId = plan.id || '';
+    if (!planId) return;
     var key = planId + ':' + currentWaveMaxP;
     var topic    = (primaryTopic && primaryTopic.topic) || '';
     var subtopic = (primaryTopic && primaryTopic.sub) || '';
+    var hwm      = (plan.last_round_signal_priority == null ? -1 : plan.last_round_signal_priority);
     var already  = D1_SHADOW
       ? _d1EmittedRounds.has(key)
-      : (currentWaveMaxP <= (plan.last_round_signal_priority == null ? -1 : plan.last_round_signal_priority));
+      : (_d1EmittedRounds.has(key) || currentWaveMaxP <= hwm);
     if (already) {
       if (D1_SHADOW) console.log('[D1-shadow] round-skip  | plan=' + planId + ' waveMaxP=' + currentWaveMaxP + ' reason=already-signalled-this-session');
       return;
@@ -774,9 +805,29 @@ function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
       console.log('[D1-shadow] regen-call  | scheduleReportRegen WOULD fire (debounced 5s)');
       return;
     }
-    // Live path (Stage 1+) is intentionally NOT implemented in Shadow Mode.
+    // ── Live path ──
+    var ins = await sb.from('weakness_signals').insert({
+      user_id: window._uid,
+      source: 'FOCUS_PRACTICE',
+      signal_type: 'resolution',
+      topic: topic,
+      subtopic: subtopic,
+      weight: D1_ROUND_WEIGHT,
+      source_task_id: null   // round-clear is not bound to a single task
+    });
+    if (ins && ins.error) { console.warn('[D1] round insert failed:', ins.error.message); return; }
+    // Insert succeeded → advance the monotonic high-water mark.
+    _d1EmittedRounds.add(key);
+    plan.last_round_signal_priority = currentWaveMaxP; // in-memory: same-session re-render sees it
+    try {
+      var upd = await sb.from('focus_plans').update({ last_round_signal_priority: currentWaveMaxP }).eq('id', planId);
+      if (upd && upd.error) console.warn('[D1] last_round_signal_priority update failed (tolerated):', upd.error.message);
+    } catch (pe) {
+      console.warn('[D1] last_round_signal_priority update threw (tolerated):', (pe && pe.message) || pe);
+    }
+    if (typeof window.scheduleReportRegen === 'function') window.scheduleReportRegen(sb, window._uid);
   } catch (e) {
-    console.warn('[D1-shadow] round emit threw:', (e && e.message) || e);
+    console.warn('[D1] round emit threw:', (e && e.message) || e);
   }
 }
 function roundOf(p){ return Math.ceil((p||1)/9); }
@@ -897,7 +948,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
       }
 
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
-      emitRoundClearSignal(primaryTopic, existing, maxP);   // D1 shadow: round just cleared (uses current wave's maxP, before new wave)
+      await emitRoundClearSignal(primaryTopic, existing, maxP);   // D1: round just cleared (uses current wave's maxP, before new wave)
       await sb.from('focus_plans').update({ dominant_signal: dominant || null }).eq('id', existing.id);
       await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
         plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
@@ -1326,7 +1377,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       if (taskId) {
         await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
-        emitTaskSignalIfEligible(this, next);   // D1 shadow: only the clicked button emits (sibling sync above is DOM-only)
+        await emitTaskSignalIfEligible(this, next);   // D1: only the clicked button emits (sibling sync above is DOM-only)
       }
     });
   });
@@ -1358,7 +1409,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       if (taskId) {
         await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
-        emitTaskSignalIfEligible(this, next);   // D1 shadow: only the clicked button emits (sibling sync above is DOM-only)
+        await emitTaskSignalIfEligible(this, next);   // D1: only the clicked button emits (sibling sync above is DOM-only)
       }
     });
   });
@@ -1461,6 +1512,12 @@ async function loadData() {
   window._isFounder = !!(profile && (profile.is_admin || profile.is_founder));
   window._isPro = !!(profile && (profile.is_admin || profile.is_founder || (profile.plan_code && profile.plan_code !== 'FREE')));
   if (!window._isPro) document.body.classList.add('plan-free');
+  // D1 live-insert context. Entitlement gate keys on plan_code only (subscription
+  // expiry is already enforced by enforce_my_subscription_expiry above), so an
+  // expired Pro reads as FREE here and is correctly excluded. user_id is needed
+  // for the RLS-scoped weakness_signals insert.
+  window._uid      = (user && user.id) || null;
+  window._planCode = (profile && profile.plan_code) || 'FREE';
   if (profile?.is_admin) {
     const adminLink = document.createElement('a');
     adminLink.className = 'nav-item';
