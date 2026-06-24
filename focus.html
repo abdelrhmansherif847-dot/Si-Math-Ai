@@ -535,6 +535,14 @@ function computeTopicProfile(entry) {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+// Attribute-safe escaper (D1): also encodes quotes so free-form topic/subtopic
+// strings cannot break out of a double-quoted HTML attribute. escHtml is left
+// unchanged for its existing element-text/uuid callers.
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function masteryColor(m) {
   if (m < 30) return '#f87171';
   if (m < 50) return 'var(--red)';
@@ -689,6 +697,88 @@ function getCurrentDay(groups) {
 // priority — no schema, no engine change.
 var ROUND_NAMES = {1:'Foundation',2:'Advanced',3:'Mastery',4:'Elite I',5:'Elite II',6:'Elite III',7:'Legend'};
 var MAX_TIER = 7;
+
+// ── D1 Weakness-signal write-back (Shadow Mode) ──
+// SHADOW MODE: the full emit path runs (guards, topic/subtopic resolution,
+// weight assignment, scheduleReportRegen decision) but every DB write is
+// replaced by a console.log. In shadow mode there are ZERO writes:
+//   - no weakness_signals insert
+//   - no focus_tasks.signal_emitted_at stamp
+//   - no focus_plans.last_round_signal_priority update
+//   - no scheduleReportRegen() invocation
+// One-shot idempotency is simulated in-memory PER SESSION (the Sets below),
+// since the persistent stamp columns are not being written yet. The in-memory
+// guard resets on reload — shadow logs are therefore not deduped across reloads.
+var D1_SHADOW        = true;    // true = log only, never write
+var D1_LIVE_ENABLED  = false;   // gates live inserts (Stage 1+); unused while D1_SHADOW
+var D1_TASK_WEIGHT   = -0.15;
+var D1_ROUND_WEIGHT  = -0.50;
+var _d1EmittedTasks  = new Set();  // taskId — per-session one-shot sim (Vector A)
+var _d1EmittedRounds = new Set();  // planId:maxP — per-session one-shot sim (Vector B)
+
+// Live-stage eligibility gate. In Shadow Mode nothing writes, so this is unused;
+// it exists so the shadow->live flip is a one-constant change with no call-site edits.
+function d1UserEligible() {
+  if (!D1_LIVE_ENABLED) return false;
+  return !!(window._isFounder || window._isAdmin); // Stage 1; widened in later stages
+}
+
+// Task-clear emit. btnEl carries data-task-id / data-topic / data-subtopic /
+// data-emitted. Only fires on a transition INTO 'DONE'.
+function emitTaskSignalIfEligible(btnEl, nextStatus) {
+  try {
+    if (!btnEl) return;
+    if (nextStatus !== 'DONE') {
+      if (D1_SHADOW) console.log('[D1-shadow] task-skip   | task=' + (btnEl.getAttribute('data-task-id')||'') + ' reason=not-DONE (next=' + nextStatus + ')');
+      return;
+    }
+    var taskId   = btnEl.getAttribute('data-task-id') || '';
+    var topic    = btnEl.getAttribute('data-topic') || '';
+    var subtopic = btnEl.getAttribute('data-subtopic') || '';
+    var already  = D1_SHADOW ? _d1EmittedTasks.has(taskId) : (btnEl.getAttribute('data-emitted') === '1');
+    if (already) {
+      if (D1_SHADOW) console.log('[D1-shadow] task-skip   | task=' + taskId + ' reason=already-emitted-this-session');
+      return;
+    }
+    if (D1_SHADOW) {
+      console.log('[D1-shadow] task-clear  | task=' + taskId + ' topic="' + topic + '" sub="' + subtopic + '" weight=' + D1_TASK_WEIGHT + ' guard=fresh → WOULD insert resolution + stamp signal_emitted_at');
+      _d1EmittedTasks.add(taskId);
+      console.log('[D1-shadow] regen-call  | scheduleReportRegen WOULD fire (debounced 5s)');
+      return;
+    }
+    // Live path (Stage 1+) is intentionally NOT implemented in Shadow Mode.
+  } catch (e) {
+    console.warn('[D1-shadow] task emit threw:', (e && e.message) || e);
+  }
+}
+
+// Round-clear emit. Called from upsertPlan when the current wave is fully DONE,
+// before the next wave is inserted. plan = the focus_plans row in scope.
+function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
+  try {
+    if (!plan) return;
+    var planId = plan.id || '';
+    var key = planId + ':' + currentWaveMaxP;
+    var topic    = (primaryTopic && primaryTopic.topic) || '';
+    var subtopic = (primaryTopic && primaryTopic.sub) || '';
+    var already  = D1_SHADOW
+      ? _d1EmittedRounds.has(key)
+      : (currentWaveMaxP <= (plan.last_round_signal_priority == null ? -1 : plan.last_round_signal_priority));
+    if (already) {
+      if (D1_SHADOW) console.log('[D1-shadow] round-skip  | plan=' + planId + ' waveMaxP=' + currentWaveMaxP + ' reason=already-signalled-this-session');
+      return;
+    }
+    if (D1_SHADOW) {
+      console.log('[D1-shadow] round-clear | plan=' + planId + ' topic="' + topic + '" sub="' + subtopic + '" weight=' + D1_ROUND_WEIGHT + ' waveMaxP=' + currentWaveMaxP + ' guard=fresh → WOULD insert resolution + set last_round_signal_priority=' + currentWaveMaxP);
+      _d1EmittedRounds.add(key);
+      console.log('[D1-shadow] regen-call  | scheduleReportRegen WOULD fire (debounced 5s)');
+      return;
+    }
+    // Live path (Stage 1+) is intentionally NOT implemented in Shadow Mode.
+  } catch (e) {
+    console.warn('[D1-shadow] round emit threw:', (e && e.message) || e);
+  }
+}
 function roundOf(p){ return Math.ceil((p||1)/9); }
 function dayOfPriority(p){ var off=((p||1)-1)%9; return Math.ceil((off+1)/3); }
 function groupTasksByRoundThenDay(tasks) {
@@ -807,6 +897,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
       }
 
       const maxP = Math.max(...tasks.map(t => t.priority || 0));
+      emitRoundClearSignal(primaryTopic, existing, maxP);   // D1 shadow: round just cleared (uses current wave's maxP, before new wave)
       await sb.from('focus_plans').update({ dominant_signal: dominant || null }).eq('id', existing.id);
       await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
         plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
@@ -910,7 +1001,15 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       type: typeOfPriority(t.priority),
       priority: t.priority,
       round: roundOf(t.priority),
-      day: dayOfPriority(t.priority)
+      day: dayOfPriority(t.priority),
+      // D1: carry signal target + one-shot stamp through to the rendered button
+      // so the checkbox handler can emit without a DB read. Falls back to the
+      // plan's primary topic (every task in a plan shares it). signal_emitted_at
+      // is undefined until M3 lands — renders as empty data-emitted, which is
+      // correct for Shadow Mode (in-memory guard is used instead).
+      topic: t.topic || primaryTopic.topic,
+      subtopic: t.subtopic || primaryTopic.sub,
+      signal_emitted_at: t.signal_emitted_at || null
     };
   });
   // Fallback for brand-new / id-less plans where DB tasks aren't persisted yet:
@@ -1014,7 +1113,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
     var btnTxt = st==='IN_PROGRESS'?'&#9654;':st==='DONE'?'&#10003;':'';
     var titleCls = 'mt-title' + (st==='DONE'?' done':'');
     html += '<div class="mission-task">';
-    html += '<button class="' + btnCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '">' + btnTxt + '</button>';
+    html += '<button class="' + btnCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '" data-topic="' + escAttr(String(t.topic||'')) + '" data-subtopic="' + escAttr(String(t.subtopic||'')) + '" data-emitted="' + (t.signal_emitted_at?'1':'') + '">' + btnTxt + '</button>';
     html += '<div class="mt-body"><div class="' + titleCls + '">' + escHtml(t.title) + '</div>';
     html += '<div class="mt-type">' + escHtml(t.type) + '</div></div>';
     if (t.minutes) html += '<div class="mt-time">' + t.minutes + ' min</div>';
@@ -1162,7 +1261,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       html += '<div class="dt-meta"><div class="dt-title">' + escHtml(t.title) + '</div>';
       html += '<div class="dt-type">' + escHtml(t.type) + '</div></div>';
       if (t.minutes) html += '<div class="dt-time">' + t.minutes + ' min</div>';
-      html += '<button class="' + chkCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '">' + chkTxt + '</button>';
+      html += '<button class="' + chkCls + '" data-task-id="' + escHtml(String(t.id||'')) + '" data-status="' + st + '" data-topic="' + escAttr(String(t.topic||'')) + '" data-subtopic="' + escAttr(String(t.subtopic||'')) + '" data-emitted="' + (t.signal_emitted_at?'1':'') + '">' + chkTxt + '</button>';
       html += '</div>';
     });
     html += '</div></div>';
@@ -1227,6 +1326,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       if (taskId) {
         await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
+        emitTaskSignalIfEligible(this, next);   // D1 shadow: only the clicked button emits (sibling sync above is DOM-only)
       }
     });
   });
@@ -1258,6 +1358,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       if (taskId) {
         await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
+        emitTaskSignalIfEligible(this, next);   // D1 shadow: only the clicked button emits (sibling sync above is DOM-only)
       }
     });
   });
