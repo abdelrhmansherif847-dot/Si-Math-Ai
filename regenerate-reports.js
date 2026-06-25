@@ -368,12 +368,13 @@
       computed.forEach(function (c) {
         var k = (c.topic || '') + '|' + (c.subtopic || '');
         computedKeys.add(k);
-        // Phase 3: stamp canonical taxonomy ids derived from the (canonical)
-        // aggregate topic/subtopic names. Never writes new raw names — values
-        // flow from already-canonical weakness_signals.
-        var _T = (typeof window !== 'undefined' && window.Taxonomy) || null;
-        var _tid = _T ? _T.resolveTopicId(c.topic) : null;
-        var _sid = (_T && _tid) ? _T.resolveSubtopicId(_tid, c.subtopic) : null;
+        // Phase 3: stamp canonical taxonomy ids via the SHARED taxonomy-write
+        // boundary (same helper every other client writer uses). Values flow from
+        // already-canonical weakness_signals; never writes a new raw name.
+        var _TW = (typeof window !== 'undefined' && window.TaxonomyWrite) || null;
+        var _canon = _TW ? _TW.canonical({ topic: c.topic, subtopic: c.subtopic }) : null;
+        var _tid = _canon ? _canon.topic_id : null;
+        var _sid = _canon ? _canon.subtopic_id : null;
         var row = {
           user_id: userId,
           topic: c.topic,
@@ -393,7 +394,7 @@
           topic_id: _tid,
           subtopic_id: _sid,
           problem_type: c.problem_type || null,
-          taxonomy_version: (_T && _T.TAXONOMY_VERSION) || 1
+          taxonomy_version: (_canon && _canon.taxonomy_version) || 1
         };
         if (existMap[k] != null) {
           toUpdate.push(Object.assign({ id: existMap[k] }, row));

@@ -134,14 +134,17 @@
   // canonical names; problem_type is included ONLY when explicitly provided so an
   // UPDATE never clobbers a previously-stored 'word_problem' back to 'concept'.
   function taxonomyCols(topic, subtopic, fields) {
+    // Resolve through the SHARED taxonomy-write boundary (same helper every other
+    // client writer uses) so there is one resolution path, not several.
+    var TW = (typeof window !== 'undefined' && window.TaxonomyWrite) || null;
+    var canon = TW ? TW.canonical({ topic: topic, subtopic: subtopic }) : null;
     var T = (typeof window !== 'undefined' && window.Taxonomy) || null;
-    var topicId = (fields && fields.topic_id) || (T ? T.resolveTopicId(topic) : null) || null;
-    var subId   = (fields && fields.subtopic_id)
-      || (T && topicId ? T.resolveSubtopicId(topicId, subtopic) : null) || null;
+    var topicId = (fields && fields.topic_id)    || (canon && canon.topic_id)    || null;
+    var subId   = (fields && fields.subtopic_id) || (canon && canon.subtopic_id) || null;
     var cols = {
       topic_id:         topicId,
       subtopic_id:      subId,
-      taxonomy_version: (T && T.TAXONOMY_VERSION) || 1,
+      taxonomy_version: (canon && canon.taxonomy_version) || (T && T.TAXONOMY_VERSION) || 1,
     };
     if (fields && fields.problem_type) cols.problem_type = fields.problem_type;
     return cols;
