@@ -18,7 +18,11 @@ CREATE TABLE IF NOT EXISTS public.unmapped_detections (
   context_excerpt   text,
   taxonomy_version  smallint    NOT NULL DEFAULT 1,
   reviewed_at       timestamptz,
-  resolved_alias_id text                   -- canonical id an alias was later mapped to
+  resolved_alias_id text,                  -- canonical id an alias was later mapped to
+  CONSTRAINT unmapped_version_chk      CHECK (taxonomy_version > 0),
+  CONSTRAINT unmapped_hit_count_chk    CHECK (hit_count > 0),
+  CONSTRAINT unmapped_last_source_chk  CHECK (last_source IS NULL OR last_source IN ('chat','mock','focus')),
+  CONSTRAINT unmapped_problem_type_chk CHECK (raw_problem_type IS NULL OR raw_problem_type IN ('concept','word_problem'))
 );
 
 -- Upsert key: one row per distinct (raw_topic, raw_subtopic), case-insensitive.

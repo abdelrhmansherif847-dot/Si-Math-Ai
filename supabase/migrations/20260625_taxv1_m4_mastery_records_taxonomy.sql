@@ -19,6 +19,10 @@ ALTER TABLE public.mastery_records DROP CONSTRAINT IF EXISTS mastery_records_pro
 ALTER TABLE public.mastery_records ADD  CONSTRAINT mastery_records_problem_type_chk
   CHECK (problem_type IS NULL OR problem_type IN ('concept','word_problem'));
 
+ALTER TABLE public.mastery_records DROP CONSTRAINT IF EXISTS mastery_records_taxver_chk;
+ALTER TABLE public.mastery_records ADD  CONSTRAINT mastery_records_taxver_chk
+  CHECK (taxonomy_version > 0);
+
 -- Non-unique helper index only (read path). Unique key swap deferred to M4b/Phase 4.
 CREATE INDEX IF NOT EXISTS ix_mr_taxonomy
   ON public.mastery_records (user_id, topic_id, subtopic_id, problem_type);

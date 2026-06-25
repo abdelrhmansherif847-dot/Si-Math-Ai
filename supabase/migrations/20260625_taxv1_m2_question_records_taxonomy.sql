@@ -13,6 +13,10 @@ ALTER TABLE public.question_records DROP CONSTRAINT IF EXISTS question_records_p
 ALTER TABLE public.question_records ADD  CONSTRAINT question_records_problem_type_chk
   CHECK (problem_type IS NULL OR problem_type IN ('concept','word_problem'));
 
+ALTER TABLE public.question_records DROP CONSTRAINT IF EXISTS question_records_taxver_chk;
+ALTER TABLE public.question_records ADD  CONSTRAINT question_records_taxver_chk
+  CHECK (taxonomy_version > 0);
+
 CREATE INDEX IF NOT EXISTS ix_qr_taxonomy
   ON public.question_records (topic_id, subtopic_id, problem_type);
 

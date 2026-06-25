@@ -11,6 +11,10 @@ ALTER TABLE public.weakness_reports DROP CONSTRAINT IF EXISTS weakness_reports_p
 ALTER TABLE public.weakness_reports ADD  CONSTRAINT weakness_reports_problem_type_chk
   CHECK (problem_type IS NULL OR problem_type IN ('concept','word_problem'));
 
+ALTER TABLE public.weakness_reports DROP CONSTRAINT IF EXISTS weakness_reports_taxver_chk;
+ALTER TABLE public.weakness_reports ADD  CONSTRAINT weakness_reports_taxver_chk
+  CHECK (taxonomy_version > 0);
+
 CREATE INDEX IF NOT EXISTS ix_wr_taxonomy
   ON public.weakness_reports (topic_id, subtopic_id, problem_type);
 
