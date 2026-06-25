@@ -717,6 +717,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="chat-renderer.js"></script>
 <script src="taxonomy.js"></script>
+<script src="taxonomy-write.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="assets/streak.js"></script>
@@ -2275,18 +2276,26 @@ button{font-family:inherit;cursor:pointer}
         if (!_drillOffTopic && (!_isRepeat || response.repeat_type === 'solve_again')) {
           const rawMTopic = _respTopic || (sig && sig.topic) || null;
           const rawMSub   = _respSub   || (sig && sig.sub)   || null;
-          // Normalize via Taxonomy so mastery_records never stores lowercase/Arabic/generic variants.
-          const mTopic = window.Taxonomy && rawMTopic ? window.Taxonomy.normalizeTopic(rawMTopic) : rawMTopic;
-          const mSub   = window.Taxonomy && rawMSub   ? window.Taxonomy.normalizeSubtopic(rawMSub) : rawMSub;
-          // Skip non-academic topics (coaching, study skills, generic "Math", etc.).
-          const mIsAcademic = !window.Taxonomy || window.Taxonomy.isAcademicTopic(mTopic);
-          if (window.MasteryEngine && currentUser && mTopic && mSub != null && mIsAcademic) {
-            window.MasteryEngine.onQuestion(sb, currentUser.id, mTopic, mSub, {
+          // Phase 3: resolve through the single canonical write boundary so
+          // mastery_records only ever stores canonical names/ids — never a
+          // lowercase/Arabic/generic passthrough. Unmapped → skip + log once.
+          const mCanon = window.TaxonomyWrite ? window.TaxonomyWrite.canonical({
+            topic: rawMTopic, subtopic: rawMSub,
+            wordProblem: response && response.problem_type === 'word_problem' ? true
+                       : (response && response.problem_type === 'concept' ? false : undefined)
+          }) : null;
+          if (mCanon && window.MasteryEngine && currentUser) {
+            window.MasteryEngine.onQuestion(sb, currentUser.id, mCanon.topic, mCanon.subtopic, {
               confidence:     sig ? (sig.confidence || null) : null,
               weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
               isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
-              isRepeat:       _isRepeat || (SignalEngine.topicCounts[mSub] || 0) >= 2
+              isRepeat:       _isRepeat || (SignalEngine.topicCounts[mCanon.subtopic] || 0) >= 2,
+              problem_type:   mCanon.problem_type,
+              topic_id:       mCanon.topic_id,
+              subtopic_id:    mCanon.subtopic_id
             });
+          } else if (!mCanon && rawMTopic && window.TaxonomyWrite && currentUser) {
+            window.TaxonomyWrite.logUnmapped(sb, { rawTopic: rawMTopic, rawSubtopic: rawMSub, source: 'chat', userId: currentUser.id });
           }
         }
       }).catch(err => {

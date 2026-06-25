@@ -20,65 +20,21 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v82';
+const AI_TUTOR_VERSION = 'v83';
 
-// ── Taxonomy guard (synced from taxonomy.js — that file remains canonical) ───
-// Must stay in sync with SYSTEM_TOPICS, TOPIC_ALIASES, and SUBTOPIC_MAP in taxonomy.js.
-// Deno cannot import the browser script, so this is the necessary duplicate.
-const SYSTEM_TOPICS = new Set([
-  'conversation','other','none','chat','general','meta','system',
-  'unknown','n/a','na','null','undefined','','coaching','planning',
-  'study planning','study coaching','exam strategy','motivation',
-  'confidence','mindset','scheduling','out_of_scope','greeting',
-  'math','mathematics','maths','general math','basic math',
-  'miscellaneous','intro','introduction','review','hint','hints',
-]);
-const TOPIC_ALIASES: Record<string, string> = {
-  'geometry':'Geometry','algebra':'Algebra','trigonometry':'Trigonometry',
-  'trig':'Trigonometry','statistics':'Statistics','probability':'Probability',
-  'calculus':'Calculus','number theory':'Number Theory','word problems':'Word Problems',
-  'linear equations':'Linear Equations','quadratic equations':'Quadratic Equations',
-  'order of operations':'Order of Operations','complex numbers':'Complex Numbers',
-  'functions':'Functions','inequalities':'Inequalities',
-};
-const SUBTOPIC_MAP: Record<string, string[]> = {
-  'Algebra': ['Linear Equations','Systems of Equations','Quadratic Equations','Polynomials','Inequalities','Absolute Value','Exponents & Radicals','Functions','Sequences & Patterns'],
-  'Geometry': ['Triangles','Circles','Angles & Lines','Coordinate Geometry','Area & Volume','Similar Figures','Transformations','3D Shapes'],
-  'Word Problems': ['Linear Word Problems','Percent Problems','Ratio Problems','Rate & Work Problems','Mixture Problems','Distance & Speed Problems','Statistics Word Problems'],
-  'Statistics': ['Mean, Median, Mode','Standard Deviation','Data Tables','Scatter Plots','Probability','Sampling Methods','Survey Design'],
-  'Trigonometry': ['Sin, Cos, Tan','Unit Circle','Trig Identities','Radian Measure','Inverse Trig','Law of Sines & Cosines'],
-  'Number Theory': ['Integers','Fractions & Decimals','Percentages','Ratios & Proportions','Prime Numbers','Factors & Multiples'],
-  'Calculus': ['Limits','Derivatives','Chain Rule','Product Rule','Integration','Optimization Problems'],
-  'Probability': ['Basic Probability','Compound Events','Conditional Probability','Combinations','Permutations'],
-  'Linear Equations': ['One-Variable Equations','Two-Variable Equations','Slope & Rate of Change','Intercepts','Parallel & Perpendicular Lines'],
-  'Quadratic Equations': ['Factoring','Quadratic Formula','Completing the Square','Vertex Form','Discriminant'],
-  'Complex Numbers': ['Imaginary Numbers','Operations with Complex Numbers','Complex Conjugates','Modulus & Argument'],
-};
-function isAcademicTopic(t: string): boolean {
-  const s = (t || '').trim().toLowerCase();
-  return s.length >= 2 && !SYSTEM_TOPICS.has(s);
-}
-function normalizeTopicCanonical(s: string): string {
-  if (!s) return '';
-  const t = s.trim();
-  const lower = t.toLowerCase();
-  return TOPIC_ALIASES[lower] || (t.charAt(0).toUpperCase() + t.slice(1));
-}
-function subtopicsForCanonical(topic: string): string[] {
-  return SUBTOPIC_MAP[normalizeTopicCanonical(topic)] || [];
-}
-// Positive allowlist: returns canonical subtopic if it matches a known subtopic
-// for the given topic (case-insensitive), or '' if not.
-function canonicalSubtopic(topic: string, sub: string): string {
-  if (!sub) return '';
-  const list = subtopicsForCanonical(topic);
-  if (list.length === 0) return sub.trim(); // Topic has no curated subtopic list — accept as-is
-  const lower = sub.trim().toLowerCase();
-  return list.find(s => s.toLowerCase() === lower) || '';
-}
-// Pre-built curriculum tree string for the system prompt.
-const CURRICULUM_TREE_TEXT = Object.keys(SUBTOPIC_MAP)
-  .map(t => `  - ${t}: ${SUBTOPIC_MAP[t].join(', ')}`)
+// ── Taxonomy (single source of truth) ────────────────────────────────────────
+// Imported from the generated _shared copy of taxonomy.core.js — byte-identical
+// to the root authored file and drift-guarded by scripts/validate-taxonomy.mjs.
+// The UMD module attaches globalThis.Taxonomy under Deno. NO inline duplicate.
+import '../_shared/taxonomy.core.js';
+// deno-lint-ignore no-explicit-any
+const Taxonomy: any = (globalThis as any).Taxonomy;
+
+// Pre-built curriculum tree for the system prompt, derived from the canonical
+// taxonomy (topic display name → its lesson display names).
+const CURRICULUM_TREE_TEXT = (Taxonomy.TOPICS as Array<{ id: string; displayName: string }>)
+  .map((t) => '  - ' + t.displayName + ': ' +
+    Taxonomy.subtopicIdsForTopic(t.id).map((id: string) => Taxonomy.displayName(id)).join(', '))
   .join('\n');
 const DIFFICULTY_DETECTOR_VERSION = 'detector-v1';
 const DIFFICULTY_DETECTOR_V2_VERSION = 'detector-v2';
@@ -961,6 +917,10 @@ async function indexSessionQuestions(
     // Idempotency: clear any prior rows from this same record before re-inserting
     // (handles retries / re-processing without creating duplicate index entries).
     await sb.from('session_questions').delete().eq('source_record_id', sourceRecordId);
+    // Phase 3: normalize the indexed topic to a canonical display name (or null);
+    // never store a passthrough/raw topic on session_questions.
+    const _sqTopicId = topic ? Taxonomy.resolveTopicId(topic) : null;
+    const _sqTopic   = _sqTopicId ? Taxonomy.displayName(_sqTopicId) : null;
     const rows = questions.map((q) => ({
       session_id:       sessionId,
       user_id:          userId,
@@ -968,7 +928,7 @@ async function indexSessionQuestions(
       label:            q.label || null,
       question_text:    q.text,
       summary:          q.summary || null,
-      topic:            topic || null,
+      topic:            _sqTopic,
       source_record_id: sourceRecordId,
       image_index:      q.image_index,
     }));
@@ -2547,35 +2507,47 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       }));
     }
 
-    // ── Taxonomy gate (v75): positive allowlist via canonical curriculum tree ─
-    // - Non-math turns: topic="General", subtopic="" (never "Conversation" etc).
-    // - Math turns: normalize topic via TOPIC_ALIASES; if not academic, reject.
-    //   Subtopic must appear in subtopicsForCanonical(topic) — otherwise blank.
-    //   Topics with no curated subtopic list accept the raw subtopic as-is.
-    let safeInsertTopic    = finalTopic;
-    let safeInsertSubtopic = finalSubtopic;
+    // ── Taxonomy gate (Phase 3): canonical resolver, reject-on-unmapped ───────
+    // - Non-math turns: topic="General", subtopic="" (sentinel; never academic).
+    // - Math turns: Taxonomy.resolve → canonical ids + display names + problem_type.
+    //   Unmapped (unknown topic, or unknown subtopic of a known topic) → REJECT:
+    //   blank names, null ids, and log once to unmapped_detections via the single
+    //   shared RPC. No passthrough name is ever stored.
+    let safeInsertTopic    = '';
+    let safeInsertSubtopic = '';
+    let safeTopicId: string | null = null;
+    let safeSubtopicId: string | null = null;
+    let safeProblemType: string | null = null;
+    const taxVer: number = Taxonomy.TAXONOMY_VERSION;
     if (!isMath) {
       safeInsertTopic    = 'General';
       safeInsertSubtopic = '';
     } else {
-      const canonTopic = normalizeTopicCanonical(finalTopic);
-      if (!isAcademicTopic(canonTopic)) {
+      let wordProblem: boolean | undefined;
+      try { wordProblem = detectorExtractFeatures(question, !!imageData).word_problem; } catch { /* tolerate */ }
+      const resolved = Taxonomy.resolve({ topic: finalTopic, subtopic: finalSubtopic, wordProblem });
+      if (!resolved) {
         console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
-          uid: user.id.slice(0, 8), reason: 'non-academic',
+          uid: user.id.slice(0, 8), reason: 'unmapped',
           topic: finalTopic, subtopic: finalSubtopic,
         }));
-        safeInsertTopic    = '';
-        safeInsertSubtopic = '';
+        try {
+          await sbAdmin.rpc('log_unmapped_detection', {
+            p_raw_topic:        finalTopic || null,
+            p_raw_subtopic:     finalSubtopic || null,
+            p_raw_problem_type: null,
+            p_source:           'chat',
+            p_user_id:          user.id,
+            p_context:          (question || '').slice(0, 500),
+            p_taxonomy_version: taxVer,
+          });
+        } catch (e) { console.log('[ai-tutor] unmapped-log-failed', String(e)); }
       } else {
-        safeInsertTopic = canonTopic;
-        const canonSub  = canonicalSubtopic(canonTopic, finalSubtopic);
-        if (finalSubtopic && !canonSub) {
-          console.log('[ai-tutor] taxonomy-reject', JSON.stringify({
-            uid: user.id.slice(0, 8), reason: 'unknown-subtopic',
-            topic: canonTopic, subtopic: finalSubtopic,
-          }));
-        }
-        safeInsertSubtopic = canonSub;
+        safeInsertTopic    = resolved.topicName;
+        safeInsertSubtopic = resolved.subtopicName || '';
+        safeTopicId        = resolved.topicId;
+        safeSubtopicId     = resolved.subtopicId || null;
+        safeProblemType    = resolved.problemType;
       }
     }
 
@@ -2591,6 +2563,10 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       ai_response:       tutorAnswerText,
       topic:             safeInsertTopic,
       subtopic:          safeInsertSubtopic,
+      topic_id:          safeTopicId,
+      subtopic_id:       safeSubtopicId,
+      problem_type:      safeProblemType,
+      taxonomy_version:  taxVer,
       difficulty:        finalDifficulty,
       concepts:          Array.isArray(parsed.concepts) ? parsed.concepts : [],
       rules:             rules,
@@ -2654,8 +2630,13 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
     const studentResponse = new Response(JSON.stringify({
       answer:          zeroAnswer,
       hint,
-      topic:           finalTopic,
-      subtopic:        finalSubtopic,
+      // Phase 3: return CANONICAL taxonomy only — never the raw detected names.
+      topic:           safeInsertTopic,
+      subtopic:        safeInsertSubtopic,
+      topic_id:        safeTopicId,
+      subtopic_id:     safeSubtopicId,
+      problem_type:    safeProblemType,
+      taxonomy_version: taxVer,
       difficulty:      finalDifficulty,
       concepts:        Array.isArray(parsed.concepts) ? parsed.concepts : [],
       rules,

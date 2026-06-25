@@ -126,6 +126,27 @@
   }
 
   /* ── Write mastery record (update or insert) ── */
+  // Phase 3: derive the canonical taxonomy columns from the (already canonical)
+  // topic/subtopic display names. Mastery KEY stays (topic, subtopic) until
+  // Phase 4 — these columns are stamped additively so rows progressively gain
+  // their canonical ids + problem_type on every write. Never writes raw names.
+  // Returns { topic_id, subtopic_id, taxonomy_version } always, derived from the
+  // canonical names; problem_type is included ONLY when explicitly provided so an
+  // UPDATE never clobbers a previously-stored 'word_problem' back to 'concept'.
+  function taxonomyCols(topic, subtopic, fields) {
+    var T = (typeof window !== 'undefined' && window.Taxonomy) || null;
+    var topicId = (fields && fields.topic_id) || (T ? T.resolveTopicId(topic) : null) || null;
+    var subId   = (fields && fields.subtopic_id)
+      || (T && topicId ? T.resolveSubtopicId(topicId, subtopic) : null) || null;
+    var cols = {
+      topic_id:         topicId,
+      subtopic_id:      subId,
+      taxonomy_version: (T && T.TAXONOMY_VERSION) || 1,
+    };
+    if (fields && fields.problem_type) cols.problem_type = fields.problem_type;
+    return cols;
+  }
+
   async function writeRecord(sb, userId, topic, subtopic, fields) {
     var existing = fields._existing;
     var now = new Date().toISOString();
@@ -134,30 +155,34 @@
     var correct  = ((existing ? existing.questions_correct : 0) || 0) + (fields.addCorrect ? 1 : 0);
     var accuracy = seen > 0 ? Math.round((correct / seen) * 100 * 10) / 10 : 0;  // 1dp %
 
-    var row = {
-      user_id:           userId,
-      topic:             topic,
-      subtopic:          subtopic,
-      mastery_score:     fields.mastery,
-      questions_seen:    seen,
-      questions_correct: correct,
-      accuracy:          accuracy,
-      last_updated:      now
-    };
+    var tcol = taxonomyCols(topic, subtopic, fields);
 
     if (existing) {
+      // Stamp ids/version always; only touch problem_type when explicitly given.
       var { error } = await sb.from('mastery_records')
-        .update({
-          mastery_score:     row.mastery_score,
-          questions_seen:    row.questions_seen,
-          questions_correct: row.questions_correct,
-          accuracy:          row.accuracy,
-          last_updated:      row.last_updated
-        })
+        .update(Object.assign({
+          mastery_score:     fields.mastery,
+          questions_seen:    seen,
+          questions_correct: correct,
+          accuracy:          accuracy,
+          last_updated:      now
+        }, tcol))
         .eq('id', existing.id);
       if (error) console.warn('[mastery] update error:', error.message);
     } else {
-      var { error: insErr } = await sb.from('mastery_records').insert(row);
+      // New row: default problem_type to 'concept' unless caller specified one.
+      var insertRow = Object.assign({
+        user_id:           userId,
+        topic:             topic,
+        subtopic:          subtopic,
+        mastery_score:     fields.mastery,
+        questions_seen:    seen,
+        questions_correct: correct,
+        accuracy:          accuracy,
+        last_updated:      now,
+        problem_type:      'concept'
+      }, tcol);
+      var { error: insErr } = await sb.from('mastery_records').insert(insertRow);
       if (insErr) console.warn('[mastery] insert error:', insErr.message);
     }
   }
@@ -212,10 +237,13 @@
                      && opts.weaknessSignal !== true;
 
         await writeRecord(sb, userId, topic, subtopic, {
-          _existing:   existing,
-          mastery:     newMastery,
-          addAttempt:  true,
-          addCorrect:  isCorrect
+          _existing:    existing,
+          mastery:      newMastery,
+          addAttempt:   true,
+          addCorrect:   isCorrect,
+          problem_type: opts.problem_type,   // forward chat word-problem distinction
+          topic_id:     opts.topic_id,
+          subtopic_id:  opts.subtopic_id
         });
 
         maybeAwardMasteryAchievement(sb, userId, newMastery);
@@ -282,11 +310,11 @@
             .eq('id', existing.id);
           if (error) console.warn('[mastery] snapshotFocusBaseline update error:', error.message);
         } else {
-          var { error: insErr } = await sb.from('mastery_records').insert({
+          var { error: insErr } = await sb.from('mastery_records').insert(Object.assign({
             user_id: userId, topic: topic, subtopic: subtopic,
             mastery_score: MASTERY_BASELINE, focus_baseline: MASTERY_BASELINE, focus_progress: 0,
             questions_seen: 0, questions_correct: 0, accuracy: 0, last_updated: now
-          });
+          }, taxonomyCols(topic, subtopic, {})));
           if (insErr) console.warn('[mastery] snapshotFocusBaseline insert error:', insErr.message);
         }
       } catch (err) {
@@ -335,11 +363,11 @@
             .eq('id', existing.id);
           if (error) { console.warn('[mastery] onFocusTaskComplete update error:', error.message); return null; }
         } else {
-          var { error: insErr } = await sb.from('mastery_records').insert({
+          var { error: insErr } = await sb.from('mastery_records').insert(Object.assign({
             user_id: userId, topic: topic, subtopic: subtopic,
             mastery_score: newMastery, focus_baseline: baseline, focus_progress: newProgress,
             questions_seen: 0, questions_correct: 0, accuracy: 0, last_updated: now
-          });
+          }, taxonomyCols(topic, subtopic, { problem_type: opts.problem_type })));
           if (insErr) { console.warn('[mastery] onFocusTaskComplete insert error:', insErr.message); return null; }
         }
 
@@ -424,10 +452,13 @@
         var newMastery = clamp(base + delta, MASTERY_MIN, MASTERY_MAX);
 
         await writeRecord(sb, userId, topic, subtopic, {
-          _existing:  existing,
-          mastery:    newMastery,
-          addAttempt: true,
-          addCorrect: false
+          _existing:    existing,
+          mastery:      newMastery,
+          addAttempt:   true,
+          addCorrect:   false,
+          problem_type: opts.problem_type,   // forward mock word-problem distinction
+          topic_id:     opts.topic_id,
+          subtopic_id:  opts.subtopic_id
         });
 
         if (window.scheduleReportRegen) window.scheduleReportRegen(sb, userId);
