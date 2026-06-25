@@ -29,22 +29,41 @@ window.updateStreak = async function(sb, userId) {
     const todayLocalISO = todayStr;
 
     // Pull 120 days of activity. Streak is recomputed from scratch each call.
-    // Source = question_records ∪ exam_practice_sessions — same union the
-    // dashboard's Weekly Progress uses, so the two displays never disagree.
+    // Source = question_records ∪ exam_practice_sessions ∪ Focus Practice
+    // completions — the same union the dashboard's Weekly Progress uses, so the
+    // displays never disagree. Focus Practice was previously invisible to the
+    // streak (it writes neither question_records nor exam sessions), which made
+    // streaks stall for students practising only via Focus Practice.
     const since = new Date(today); since.setDate(since.getDate() - 120);
-    const [qrsRes, examsRes] = await Promise.all([
+    const [qrsRes, examsRes, plansRes] = await Promise.all([
       sb.from('question_records').select('created_at').eq('user_id', userId).gte('created_at', since.toISOString()),
       sb.from('exam_practice_sessions').select('created_at').eq('user_id', userId).gte('created_at', since.toISOString()),
+      sb.from('focus_plans').select('id').eq('user_id', userId),
     ]);
     if (qrsRes.error)   console.warn('[streak] question_records fetch error:', qrsRes.error.message);
     if (examsRes.error) console.warn('[streak] exam_practice_sessions fetch error:', examsRes.error.message);
+    if (plansRes.error) console.warn('[streak] focus_plans fetch error:', plansRes.error.message);
+
+    // focus_tasks has no user_id column — resolve the user's plan ids first,
+    // then their DONE tasks in the window via focus_tasks.completed_at.
+    let focusRes = { data: [] };
+    const planIds = (plansRes.data || []).map(p => p.id).filter(Boolean);
+    if (planIds.length) {
+      focusRes = await sb.from('focus_tasks')
+        .select('completed_at')
+        .in('plan_id', planIds)
+        .eq('status', 'DONE')
+        .gte('completed_at', since.toISOString());
+      if (focusRes.error) console.warn('[streak] focus_tasks fetch error:', focusRes.error.message);
+    }
 
     // Build the set of local-date strings the user was active. Always include
     // today — caller invokes updateStreak right after a successful interaction,
     // and the current row may not be visible yet to the query.
     const dateSet = new Set([todayStr]);
-    (qrsRes.data   || []).forEach(r => { if (r && r.created_at) dateSet.add(streakDayKey(new Date(r.created_at))); });
-    (examsRes.data || []).forEach(r => { if (r && r.created_at) dateSet.add(streakDayKey(new Date(r.created_at))); });
+    (qrsRes.data   || []).forEach(r => { if (r && r.created_at)   dateSet.add(streakDayKey(new Date(r.created_at))); });
+    (examsRes.data || []).forEach(r => { if (r && r.created_at)   dateSet.add(streakDayKey(new Date(r.created_at))); });
+    (focusRes.data || []).forEach(r => { if (r && r.completed_at) dateSet.add(streakDayKey(new Date(r.completed_at))); });
 
     // Walk backward from today: consecutive days = current streak.
     let current = 0;

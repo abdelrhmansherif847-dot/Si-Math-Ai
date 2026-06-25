@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/streak.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════
    DESIGN TOKENS — Si Math AI (unchanged brand)
@@ -1070,7 +1071,7 @@ body::before{
     </div>
 
     <!-- Focus Plan with progress ring -->
-    <div class="ov reveal" onclick="location.href='focus.html'" tabindex="0" role="button" aria-label="View focus plan" style="transition-delay:.06s">
+    <div class="ov reveal" id="focusOvCard" onclick="location.href='focus.html'" tabindex="0" role="button" aria-label="View focus plan" style="transition-delay:.06s">
       <div class="ov-head">
         <div class="ov-ic">🎯</div>
         <span class="ov-badge" id="ovFocusBadge">0%</span>
@@ -1628,6 +1629,11 @@ async function loadDashboard() {
   /* Enforce subscription expiry before reading profile */
   try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
 
+  /* Recompute the streak on every dashboard load so it self-heals daily and
+     reflects Focus Practice activity (item 1). Runs before the profile read
+     below so prof.current_streak/best_streak reflect the fresh values. */
+  try { if (window.updateStreak) await window.updateStreak(sb, user.id); } catch(_) {}
+
   var results = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
@@ -2002,13 +2008,24 @@ async function loadDashboard() {
     var focusPct = 0, doneCount = 0, totalCount = 0;
     if (activePlan) {
       setText('focusPlanTitle', activePlan.title || activePlan.biggest_weakness_topic || 'Active Plan');
-      var tasksRes = await sb.from('focus_tasks').select('id,status').eq('plan_id', activePlan.id);
+      var tasksRes = await sb.from('focus_tasks').select('status,topic,subtopic').eq('plan_id', activePlan.id).is('archived_at', null);
       var tasks = tasksRes.data || [];
       totalCount = tasks.length;
-      doneCount  = tasks.filter(function(t){ return t.status === 'done' || t.status === 'completed'; }).length;
+      // focus_tasks.status is uppercase 'DONE' — the old lowercase compare made
+      // this always 0 (ring stuck at 0%). Item 4 fix.
+      doneCount  = tasks.filter(function(t){ return t.status === 'DONE'; }).length;
       focusPct   = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
       setText('focusTaskCount', totalCount > 0 ? doneCount + ' of ' + totalCount + ' tasks done' : 'Plan active');
       setText('fpPlanStatus', totalCount > 0 ? doneCount + '/' + totalCount + ' tasks' : 'Open Plan');
+      // Deep-link the card to THIS active plan's topic/subtopic so clicking it
+      // opens the exact plan, not the default #1 weakness (item 3). The plan's
+      // primary topic/subtopic lives on its tasks (focus_plans has no subtopic).
+      var fpTask = tasks[0] || {};
+      var fpTopic = fpTask.topic || activePlan.biggest_weakness_topic || '';
+      var fpSub   = fpTask.subtopic || '';
+      var fpUrl   = 'focus.html' + (fpTopic ? ('?topic=' + encodeURIComponent(fpTopic) + (fpSub ? '&subtopic=' + encodeURIComponent(fpSub) : '')) : '');
+      var fpCard  = document.getElementById('focusOvCard');
+      if (fpCard) fpCard.onclick = function(){ location.href = fpUrl; };
     } else {
       setText('focusPlanTitle', 'No active plan');
       setText('focusTaskCount', 'Create one in Focus Practice');

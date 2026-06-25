@@ -439,6 +439,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="xp-updater.js"></script>
+<script src="assets/streak.js"></script>
 <script>
 // ===== SUPABASE INIT =====
 const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -831,6 +832,27 @@ async function _d3AwardRoundXp(planId, maxP) {
   } catch (e) {
     console.warn('[D3] round/legend XP threw (tolerated):', (e && e.message) || e);
   }
+}
+
+// ── Item 1 & 2: after a task toggle, keep the top "Today's Mission" counter in
+// sync with the missions below, and record Focus Practice activity for the
+// streak. Both run for every user, independent of the D1/D2 entitlement gate.
+function _refreshTodayProgress() {
+  try {
+    var wrap = document.querySelector('.mission-tasks');
+    if (!wrap) return;
+    var done = wrap.querySelectorAll('.mt-check.done').length;
+    document.querySelectorAll('.js-today-done').forEach(function (el) { el.textContent = done; });
+  } catch (_) {}
+}
+async function _afterTaskToggle(nextStatus) {
+  _refreshTodayProgress();                       // item 2: live 1/3 sync
+  // item 1: Focus Practice now counts toward the daily streak.
+  try {
+    if (nextStatus === 'DONE' && window.updateStreak && window._uid) {
+      await window.updateStreak(sb, window._uid);
+    }
+  } catch (_) {}
 }
 
 // Live-stage eligibility gate. Entitlement-based: plan_code is the single source
@@ -1258,7 +1280,20 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   var DAY_NAMES = {1:'Foundation Day',2:'Accuracy Day',3:'Pressure Day'};
   var DAY_DESCS = {1:'Learn concepts & solve easy questions',2:'Build accuracy with medium questions',3:'Timed drills & pressure practice'};
 
-  var otherWeak = weaknesses.filter(function(w){ return w !== primaryTopic; }).slice(0,3);
+  // Switcher candidates = Top-5 weaknesses (excluding the primary) UNION any
+  // topic with an ACTIVE focus_plan — so a student who started a plan keeps
+  // access to it until Legend even after it leaves the Top-5 (item 5).
+  var otherWeak = weaknesses.filter(function(w){ return w !== primaryTopic; }).slice(0,5);
+  (window._activePlanProfiles || []).forEach(function(pp){
+    if (!pp || pp === primaryTopic) return;
+    if (pp.topic && primaryTopic && pp.topic.toLowerCase() === primaryTopic.topic.toLowerCase()
+        && (pp.sub||'').toLowerCase() === (primaryTopic.sub||'').toLowerCase()) return;
+    var dup = otherWeak.some(function(w){
+      return w.topic.toLowerCase() === pp.topic.toLowerCase()
+          && (w.sub||'').toLowerCase() === (pp.sub||'').toLowerCase();
+    });
+    if (!dup) otherWeak.push(pp);
+  });
   // Signal-aware CTA difficulty. exam_confused → hard (pressure); hint_used → medium
   // (procedural); explanation_repeated → easy (conceptual); others → mastery-gated.
   var chatDiff = dominant === 'exam_confused'       ? 'hard'
@@ -1319,7 +1354,7 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
   html += '</div>';
 
   html += '<div class="mission-footer">';
-  html += '<div class="mission-est">Estimated: <b>' + todayEstMins + ' min</b> &middot; ' + doneTodayCount + '/' + todayTasks.length + ' done</div>';
+  html += '<div class="mission-est">Estimated: <b>' + todayEstMins + ' min</b> &middot; <span class="js-today-done">' + doneTodayCount + '</span>/' + todayTasks.length + ' done</div>';
   html += '<a href="' + chatUrl(primaryTopic.topic, primaryTopic.sub, chatDiff) + '" class="mission-cta">';
   html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg> Start Session &rarr;';
   html += '</a></div></div>';
@@ -1521,10 +1556,13 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
       var dc = document.querySelector('.day-check[data-task-id="' + (taskId||'').replace(/"/g,'&quot;') + '"]');
       if (dc) { dc.setAttribute('data-status',next); dc.className='day-check'+(next==='IN_PROGRESS'?' inprogress':next==='DONE'?' done':''); dc.textContent=next==='IN_PROGRESS'?'▶':next==='DONE'?'✓':''; }
       if (taskId) {
-        await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+        var _upd = { status: next };
+        if (next === 'DONE') _upd.completed_at = new Date().toISOString();
+        await sb.from('focus_tasks').update(_upd).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
         await emitTaskSignalIfEligible(this, next);   // D1: only the clicked button emits (sibling sync above is DOM-only)
         await _d3AwardTaskAndDayXp(this, next, planId); // D3: Focus XP (ungated, all users)
+        await _afterTaskToggle(next);                   // items 1 & 2: live counter + streak
       }
     });
   });
@@ -1554,10 +1592,13 @@ function renderPage(primaryTopic, weaknesses, strengths, recentlyMastered, maste
         if (lbl) { if (next==='DONE') lbl.classList.add('done'); else lbl.classList.remove('done'); }
       }
       if (taskId) {
-        await sb.from('focus_tasks').update({ status: next }).eq('id', taskId);
+        var _upd = { status: next };
+        if (next === 'DONE') _upd.completed_at = new Date().toISOString();
+        await sb.from('focus_tasks').update(_upd).eq('id', taskId);
         if (planId) await sb.from('focus_plans').update({ last_referenced_at: new Date().toISOString() }).eq('id', planId);
         await emitTaskSignalIfEligible(this, next);   // D1: only the clicked button emits (sibling sync above is DOM-only)
         await _d3AwardTaskAndDayXp(this, next, planId); // D3: Focus XP (ungated, all users)
+        await _afterTaskToggle(next);                   // items 1 & 2: live counter + streak
       }
     });
   });
@@ -1801,6 +1842,50 @@ async function loadData() {
     const k = (top.topic||'').toLowerCase()+'::'+(top.subtopic||top.topic||'').toLowerCase();
     weaknesses = [reportToProfile(top, qProfileMap[k] || null)];
   }
+
+  // ── Item 5: build switcher entries for every ACTIVE focus_plan so started
+  // plans stay reachable even if their topic dropped out of the Top-5. The
+  // plan's primary topic/subtopic lives on its tasks (focus_plans has none).
+  window._activePlanProfiles = [];
+  try {
+    const apRes = await sb.from('focus_plans')
+      .select('id, biggest_weakness_topic')
+      .eq('user_id', user.id).eq('status', 'ACTIVE');
+    const apPlans = apRes.data || [];
+    if (apPlans.length) {
+      const apTaskRes = await sb.from('focus_tasks')
+        .select('plan_id, topic, subtopic')
+        .in('plan_id', apPlans.map(p => p.id))
+        .is('archived_at', null);
+      const byPlan = {};
+      (apTaskRes.data || []).forEach(t => { if (t && !byPlan[t.plan_id]) byPlan[t.plan_id] = t; });
+      const seen = new Set();
+      apPlans.forEach(p => {
+        const t = byPlan[p.id] || {};
+        const topic = t.topic || p.biggest_weakness_topic || '';
+        const sub   = t.subtopic || '';
+        if (!topic) return;
+        const key = topic.toLowerCase() + '::' + (sub || topic).toLowerCase();
+        if (seen.has(key)) return; seen.add(key);
+        const existing = weaknesses.find(w =>
+          w.topic.toLowerCase() === topic.toLowerCase() &&
+          (w.sub || '').toLowerCase() === (sub || '').toLowerCase());
+        if (existing) { window._activePlanProfiles.push(existing); return; }
+        const rMatch = reportRankMap[key];
+        if (rMatch) {
+          window._activePlanProfiles.push(reportToProfile(rMatch, qProfileMap[key] || null));
+        } else {
+          const qm = qProfileMap[key];
+          window._activePlanProfiles.push({
+            topic: topic, sub: sub || topic,
+            mastery: Math.round((qm && qm.mastery) || 50),
+            priority: 'Active', priorityClass: 'med',
+            bullets: [], mastered: false, strength: false
+          });
+        }
+      });
+    }
+  } catch (e) { console.warn('[item5] active-plan switcher build failed (tolerated):', (e && e.message) || e); }
 
   let primaryTopic = weaknesses[0];
   if (urlTopic || urlSub) {
