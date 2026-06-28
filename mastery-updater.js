@@ -141,11 +141,15 @@
     var T = (typeof window !== 'undefined' && window.Taxonomy) || null;
     var topicId = (fields && fields.topic_id)    || (canon && canon.topic_id)    || null;
     var subId   = (fields && fields.subtopic_id) || (canon && canon.subtopic_id) || null;
+    // No-clobber: only include id columns when they actually resolve, so an
+    // UPDATE never overwrites a previously-stamped id with null (e.g. if the
+    // canonical boundary is momentarily unavailable). taxonomy_version is always
+    // safe to set (NOT NULL DEFAULT 1). problem_type only when explicitly given.
     var cols = {
-      topic_id:         topicId,
-      subtopic_id:      subId,
       taxonomy_version: (canon && canon.taxonomy_version) || (T && T.TAXONOMY_VERSION) || 1,
     };
+    if (topicId) cols.topic_id = topicId;
+    if (subId)   cols.subtopic_id = subId;
     if (fields && fields.problem_type) cols.problem_type = fields.problem_type;
     return cols;
   }
