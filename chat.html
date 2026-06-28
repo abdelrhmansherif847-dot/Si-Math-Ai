@@ -1546,21 +1546,21 @@ button{font-family:inherit;cursor:pointer}
       (window.__SI_SIGNALS = window.__SI_SIGNALS || []).push(sig);
       if (!currentUser) return;
       var row = { user_id: currentUser.id, source: 'AI_CHAT' };
+      var sTopic, sSub;
       if (sig.type === 'topic') {
-        row.topic = this.normalizeTopic(sig.topic); row.subtopic = this.normalizeSubtopic(sig.sub);
+        sTopic = sig.topic; sSub = sig.sub;
         row.signal_type = 'topic';
         // weight 0.2..1.0 — lower confidence = higher weakness weight
         row.weight = sig.confidence ? Math.max(0.2, (6 - sig.confidence) / 5) : 0.5;
       } else if (sig.type === 'multi_concept' || sig.type === 'multi-concept') {
-        row.topic = this.normalizeTopic(sig.primary || sig.topic); row.subtopic = this.normalizeSubtopic(sig.primary || sig.sub);
+        sTopic = sig.primary || sig.topic; sSub = sig.primary || sig.sub;
         row.signal_type = 'multi_concept'; row.weight = 0.3;
       } else if (sig.type === 'repeated') {
-        // topic column is NOT NULL — null here made every repeated-signal insert fail
-        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        sTopic = sig.topic || 'General'; sSub = sig.sub;
         row.signal_type = 'repeated';
         row.weight = Math.min((sig.count || 1) * 0.4, 2.0);
       } else if (sig.type === 'resolution') {
-        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        sTopic = sig.topic || 'General'; sSub = sig.sub;
         row.signal_type = 'resolution';
         // negative weight = strength, positive = weakness.
         // solved → strength; partial → mild weakness; confused → strong escalation
@@ -1568,14 +1568,25 @@ button{font-family:inherit;cursor:pointer}
                    : (sig.resolution === 'partial') ? 0.3
                    : 2.0;
       } else if (sig.type === 'hint_used') {
-        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        sTopic = sig.topic || 'General'; sSub = sig.sub;
         row.signal_type = 'hint_used'; row.weight = 0.4;
       } else if (sig.type === 'explanation_repeated') {
-        row.topic = this.normalizeTopic(sig.topic || 'General'); row.subtopic = this.normalizeSubtopic(sig.sub);
+        sTopic = sig.topic || 'General'; sSub = sig.sub;
         row.signal_type = 'explanation_repeated'; row.weight = 0.6;
       } else {
         return; // unknown type — skip
       }
+      // Phase 3: resolve through the SHARED taxonomy-write boundary. Never write a
+      // passthrough/Arabic/'General' name into weakness_signals. Unmapped → log
+      // once via the single RPC and SKIP (no non-canonical signal is stored).
+      var canon = window.TaxonomyWrite ? window.TaxonomyWrite.canonical({ topic: sTopic, subtopic: sSub }) : null;
+      if (!canon) {
+        if (sTopic && window.TaxonomyWrite) window.TaxonomyWrite.logUnmapped(sb, { rawTopic: sTopic, rawSubtopic: sSub, source: 'chat', userId: currentUser.id });
+        return;
+      }
+      row.topic = canon.topic; row.subtopic = canon.subtopic;
+      row.topic_id = canon.topic_id; row.subtopic_id = canon.subtopic_id;
+      row.problem_type = canon.problem_type; row.taxonomy_version = canon.taxonomy_version;
       if (this._buffer) {
         // Buffered path: signal will be batch-inserted by flushBuffer() after
         // askAI() resolves, so source_question_id is known at insert time.
