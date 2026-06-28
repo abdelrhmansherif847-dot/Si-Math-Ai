@@ -68,6 +68,13 @@
     info = info || {};
     var T = tax();
     var ver = (T && T.TAXONOMY_VERSION) || 1;
+    // Never log known system / non-academic topics (e.g. 'General', 'Coaching').
+    // They are intentionally non-academic — not alias-curation candidates — so
+    // logging them would pollute unmapped_detections and add a per-turn DB write
+    // on non-math turns. Only academic-but-unmapped detections are worth logging.
+    if (T && typeof T.isAcademicTopic === 'function' && !T.isAcademicTopic(info.rawTopic)) {
+      return Promise.resolve();
+    }
     try {
       var p = sb.rpc('log_unmapped_detection', {
         p_raw_topic:        info.rawTopic != null ? String(info.rawTopic) : null,
