@@ -1,4 +1,3 @@
-/* AUTO-GENERATED from taxonomy.core.js by scripts/sync-taxonomy.mjs — DO NOT EDIT. */
 /**
  * taxonomy.core.js — SINGLE AUTHORED SOURCE OF TRUTH for the Si Math AI taxonomy.
  *

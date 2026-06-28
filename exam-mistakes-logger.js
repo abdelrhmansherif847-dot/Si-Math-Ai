@@ -46,7 +46,11 @@
     var sessionsByKey = {};
     for (var i = 0; i < priorMistakes.length; i++) {
       var m = priorMistakes[i];
-      var k = (m.topic || '') + '|' + (m.subtopic || '');
+      // Canonicalize prior mistakes so keys match the current canonical signals.
+      // Unmapped priors simply do not contribute to the compound weight.
+      var pc = canonOf(m);
+      if (!pc) continue;
+      var k = pc.topic + '|' + (pc.subtopic || '');
       if (!sessionsByKey[k]) sessionsByKey[k] = new Set();
       sessionsByKey[k].add(m.session_id);
     }
@@ -56,35 +60,19 @@
     return map;
   }
 
-  /* ── Topic name normalizer ──
-   * Delegates to window.Taxonomy (taxonomy.js) when available.
-   * Inline fallback preserves behaviour during rollout if taxonomy.js
-   * has not yet loaded.
+  /* ── Canonical resolver (Phase 3) ──
+   * Routes every mock-exam mistake through the single taxonomy write boundary.
+   * Returns the canonical write fields, or null when the detection cannot be
+   * mapped (caller logs it via TaxonomyWrite.logUnmapped and SKIPS the write —
+   * no passthrough names are ever stored).
    */
-  function normalizeTopic(s) {
-    if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeTopic(s);
-    if (!s) return s;
-    // Guard: this path is unreachable under correct load order — surface loudly.
-    if (typeof console !== 'undefined' && console.error) {
-      console.error('[SI-DIAG] Taxonomy unavailable at normalizeTopic — split-key risk', { topic: s });
-    }
-    if (typeof window !== 'undefined') {
-      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
-    }
-    var t = s.trim();
-    return t.charAt(0).toUpperCase() + t.slice(1);
-  }
-  function normalizeSubtopic(s) {
-    if (typeof window !== 'undefined' && window.Taxonomy) return window.Taxonomy.normalizeSubtopic(s);
-    if (!s) return s;
-    // Guard: this path is unreachable under correct load order — surface loudly.
-    if (typeof console !== 'undefined' && console.error) {
-      console.error('[SI-DIAG] Taxonomy unavailable at normalizeSubtopic — split-key risk', { subtopic: s });
-    }
-    if (typeof window !== 'undefined') {
-      window.__siTaxonomyMissCount = (window.__siTaxonomyMissCount || 0) + 1;
-    }
-    return s.replace(/\s*\([^)]+\)\s*$/, '').trim();
+  function canonOf(m) {
+    if (typeof window === 'undefined' || !window.TaxonomyWrite) return null;
+    return window.TaxonomyWrite.canonical({
+      topic: (m && m.topic) || '',
+      subtopic: (m && m.subtopic) || '',
+      wordProblem: m ? m.word_problem : undefined,
+    });
   }
 
   /* ── Main pipeline ── */
@@ -102,9 +90,21 @@
 
         for (var i = 0; i < mistakes.length; i++) {
           var m = mistakes[i];
-          var topic    = normalizeTopic((m.topic || '').trim());
-          var subtopic = normalizeSubtopic((m.subtopic || '').trim()); // keep as '' not null — weakness_signals.subtopic is NOT NULL
-          if (!topic) continue;
+          // Phase 3: resolve to canonical taxonomy. Unmapped → log once via the
+          // shared path and SKIP (never store a passthrough/raw name).
+          var canon = canonOf(m);
+          if (!canon) {
+            if (window.TaxonomyWrite) window.TaxonomyWrite.logUnmapped(sb, {
+              rawTopic: m.topic, rawSubtopic: m.subtopic, source: 'mock', userId: userId,
+            });
+            continue;
+          }
+          var topic    = canon.topic;
+          var subtopic = canon.subtopic; // '' not null — weakness_signals.subtopic is NOT NULL
+          var taxCols  = {
+            topic_id: canon.topic_id, subtopic_id: canon.subtopic_id,
+            problem_type: canon.problem_type, taxonomy_version: canon.taxonomy_version,
+          };
 
           var count  = Math.max(1, m.count || 1);
           var key    = topic + '|' + (subtopic || '');
@@ -116,7 +116,7 @@
           var qId = m.question_id || null;
 
           // Primary exam-mistake signal
-          signalsToInsert.push({
+          signalsToInsert.push(Object.assign({
             user_id:              userId,
             topic:                topic,
             subtopic:             subtopic,
@@ -126,11 +126,11 @@
             created_at:           now,
             source_session_id:    sessionId,
             source_question_id:   qId,
-          });
+          }, taxCols));
 
           // Repeated signal if seen in prior sessions
           if (priorCount > 0) {
-            signalsToInsert.push({
+            signalsToInsert.push(Object.assign({
               user_id:            userId,
               topic:              topic,
               subtopic:           subtopic,
@@ -140,14 +140,14 @@
               created_at:         now,
               source_session_id:  sessionId,
               source_question_id: qId,
-            });
+            }, taxCols));
           }
 
           // exam_confused: persistent exam failure across ≥2 prior sessions —
           // escalation marker that the student has been repeatedly examined and
           // continues to struggle. Supplements (does not replace) the topic signal.
           if (priorCount >= 2) {
-            signalsToInsert.push({
+            signalsToInsert.push(Object.assign({
               user_id:            userId,
               topic:              topic,
               subtopic:           subtopic,
@@ -157,7 +157,7 @@
               created_at:         now,
               source_session_id:  sessionId,
               source_question_id: qId,
-            });
+            }, taxCols));
           }
         }
 
@@ -172,9 +172,10 @@
           var seen = {};
           for (var j = 0; j < mistakes.length; j++) {
             var mk = mistakes[j];
-            var t  = normalizeTopic((mk.topic || '').trim());
-            var st = normalizeSubtopic((mk.subtopic || '').trim()); // keep as '' not null
-            if (!t) continue;
+            var ck = canonOf(mk);
+            if (!ck) continue; // unmapped already logged in the signal loop above
+            var t  = ck.topic;
+            var st = ck.subtopic; // '' not null
             var ukey = t + '|' + (st || '');
             if (seen[ukey]) continue;
             seen[ukey] = true;
@@ -183,7 +184,10 @@
             var pCount  = priorMap[t + '|' + (st || '')] || 0;
             await window.MasteryEngine.onExamMistake(sb, userId, t, st, {
               mistakeCount:      c,
-              priorSessionCount: pCount
+              priorSessionCount: pCount,
+              problem_type:      ck.problem_type,
+              topic_id:          ck.topic_id,
+              subtopic_id:       ck.subtopic_id
             });
           }
         }

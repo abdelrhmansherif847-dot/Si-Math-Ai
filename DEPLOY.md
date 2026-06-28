@@ -71,7 +71,26 @@ Re-run `scripts/check-migration-parity.sh`. Must exit 0.
 >
 > **The only approved deploy paths are listed below.**
 
-### Approved path A — Supabase Dashboard copy-paste (no PAT required)
+> ⛔ **MULTI-FILE BUNDLE (v83+): copy-paste Path A is DISALLOWED.**
+>
+> As of v83, `index.ts` begins with `import '../_shared/taxonomy.core.js'`
+> (the single-source taxonomy). The function is no longer a single file — it
+> is a bundle of `index.ts` + `_shared/taxonomy.core.js`. The Dashboard
+> copy-paste path ships ONLY `index.ts`; the import would resolve to nothing,
+> the function would fail at cold start, and every student request would 500 —
+> exactly the outage class this section guards against.
+>
+> **For any version that imports from `_shared/`, deploy via Path B (CLI) ONLY.**
+> The CLI bundles the entire `supabase/functions/ai-tutor/` directory tree
+> (including `_shared`). Do NOT use Path A for v83+.
+>
+> Post-deploy, VERIFY the bundle is multi-file: `get_edge_function` (or the
+> Dashboard file list) must show BOTH `index.ts` AND `_shared/taxonomy.core.js`.
+
+### Approved path A — Supabase Dashboard copy-paste (PRE-v83 single-file only)
+
+> ⛔ Do NOT use for v83+ (multi-file bundle — see warning above). Kept only for
+> historical single-file versions.
 
 1. Open Supabase Dashboard → Edge Functions → `ai-tutor` → Edit.
 2. Copy the full contents of `supabase/functions/ai-tutor/index.ts` from the
@@ -82,7 +101,7 @@ Re-run `scripts/check-migration-parity.sh`. Must exit 0.
    status is ACTIVE.
 5. Run smoke test (§6) before declaring deploy complete.
 
-### Approved path B — Supabase CLI with PAT
+### Approved path B — Supabase CLI with PAT (REQUIRED for v83+ multi-file bundle)
 
 ```bash
 supabase functions deploy ai-tutor --project-ref igvkyxkmjnkzscqgommj

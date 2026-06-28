@@ -368,6 +368,13 @@
       computed.forEach(function (c) {
         var k = (c.topic || '') + '|' + (c.subtopic || '');
         computedKeys.add(k);
+        // Phase 3: stamp canonical taxonomy ids via the SHARED taxonomy-write
+        // boundary (same helper every other client writer uses). Values flow from
+        // already-canonical weakness_signals; never writes a new raw name.
+        var _TW = (typeof window !== 'undefined' && window.TaxonomyWrite) || null;
+        var _canon = _TW ? _TW.canonical({ topic: c.topic, subtopic: c.subtopic }) : null;
+        var _tid = _canon ? _canon.topic_id : null;
+        var _sid = _canon ? _canon.subtopic_id : null;
         var row = {
           user_id: userId,
           topic: c.topic,
@@ -383,7 +390,11 @@
           recent7_count: c.recent7_count,
           recent14_count: c.recent14_count,
           last_signal_at: c.last_signal_at,
-          last_updated: now
+          last_updated: now,
+          topic_id: _tid,
+          subtopic_id: _sid,
+          problem_type: c.problem_type || null,
+          taxonomy_version: (_canon && _canon.taxonomy_version) || 1
         };
         if (existMap[k] != null) {
           toUpdate.push(Object.assign({ id: existMap[k] }, row));
@@ -412,7 +423,8 @@
       // Rollout-safe: if a phase-added column doesn't exist on the deployed DB yet,
       // strip the optional field and retry once. Keeps the analyzer working during
       // staged rollouts where code lands before the migration.
-      var OPTIONAL_COLS = ['severity_band', 'trend', 'recent7_count', 'recent14_count', 'last_signal_at'];
+      var OPTIONAL_COLS = ['severity_band', 'trend', 'recent7_count', 'recent14_count', 'last_signal_at',
+                           'topic_id', 'subtopic_id', 'problem_type', 'taxonomy_version'];
       function stripOptional(row) {
         var clean = Object.assign({}, row);
         OPTIONAL_COLS.forEach(function (k) { delete clean[k]; });

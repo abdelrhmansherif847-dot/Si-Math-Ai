@@ -436,6 +436,7 @@ button{font-family:inherit;cursor:pointer}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="taxonomy.js"></script>
+<script src="taxonomy-write.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="xp-updater.js"></script>
@@ -834,6 +835,15 @@ async function _d3AwardRoundXp(planId, maxP) {
   }
 }
 
+// ── Phase 3: canonical taxonomy columns for every Focus write (single write
+// boundary via TaxonomyWrite). Returns {} when unmapped — callers keep their
+// existing display topic/subtopic but ids stay null rather than guessed.
+function _focusTaxoCols(topic, sub) {
+  var c = (window.TaxonomyWrite) ? window.TaxonomyWrite.canonical({ topic: topic, subtopic: sub }) : null;
+  return c ? { topic_id: c.topic_id, subtopic_id: c.subtopic_id,
+               problem_type: c.problem_type, taxonomy_version: c.taxonomy_version } : {};
+}
+
 // ── Item 1 & 2: after a task toggle, keep the top "Today's Mission" counter in
 // sync with the missions below, and record Focus Practice activity for the
 // streak. Both run for every user, independent of the D1/D2 entitlement gate.
@@ -892,7 +902,7 @@ async function emitTaskSignalIfEligible(btnEl, nextStatus) {
       return;
     }
     // ── Live path ──
-    var ins = await sb.from('weakness_signals').insert({
+    var ins = await sb.from('weakness_signals').insert(Object.assign({
       user_id: window._uid,
       source: 'FOCUS_PRACTICE',
       signal_type: 'resolution',
@@ -900,7 +910,7 @@ async function emitTaskSignalIfEligible(btnEl, nextStatus) {
       subtopic: subtopic,
       weight: D1_TASK_WEIGHT,
       source_task_id: taskId
-    });
+    }, _focusTaxoCols(topic, subtopic)));
     if (ins && ins.error) { console.warn('[D1] task insert failed:', ins.error.message); return; }
     // Insert succeeded → claim the one-shot guard before stamping.
     _d1EmittedTasks.add(taskId);
@@ -956,7 +966,7 @@ async function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
       return;
     }
     // ── Live path ──
-    var ins = await sb.from('weakness_signals').insert({
+    var ins = await sb.from('weakness_signals').insert(Object.assign({
       user_id: window._uid,
       source: 'FOCUS_PRACTICE',
       signal_type: 'resolution',
@@ -964,7 +974,7 @@ async function emitRoundClearSignal(primaryTopic, plan, currentWaveMaxP) {
       subtopic: subtopic,
       weight: D1_ROUND_WEIGHT,
       source_task_id: null   // round-clear is not bound to a single task
-    });
+    }, _focusTaxoCols(topic, subtopic)));
     if (ins && ins.error) { console.warn('[D1] round insert failed:', ins.error.message); return; }
     // Insert succeeded → advance the monotonic high-water mark.
     _d1EmittedRounds.add(key);
@@ -1113,6 +1123,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
       await sb.from('focus_plans').update({ dominant_signal: dominant || null }).eq('id', existing.id);
       await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
         plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
+        ..._focusTaxoCols(primaryTopic.topic, primaryTopic.sub),
         task_title: t.title, priority: maxP + i + 1, estimated_minutes: t.minutes,
         status: 'NOT_STARTED', dominant_signal: dominant || null
       })));
@@ -1128,6 +1139,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
       if (harder.length > 0 && tasks.length < TASK_CAP) {
         await sb.from('focus_tasks').insert(harder.map((t, i) => ({
           plan_id: existing.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
+          ..._focusTaxoCols(primaryTopic.topic, primaryTopic.sub),
           task_title: t.title + ' (Advanced)', priority: maxP + i + 1, estimated_minutes: t.minutes,
           status: 'NOT_STARTED', dominant_signal: dominant || null
         })));
@@ -1167,6 +1179,7 @@ async function upsertPlan(user, primaryTopic, newTaskDefs, dominant) {
   if (!plan) return newTaskDefs.map((t, i) => ({ ...t, task_title: t.title, estimated_minutes: t.minutes, id: null, status: 'NOT_STARTED', priority: i + 1 }));
   await sb.from('focus_tasks').insert(newTaskDefs.map((t, i) => ({
     plan_id: plan.id, topic: primaryTopic.topic, subtopic: primaryTopic.sub,
+    ..._focusTaxoCols(primaryTopic.topic, primaryTopic.sub),
     task_title: t.title, priority: i + 1, estimated_minutes: t.minutes,
     status: 'NOT_STARTED', dominant_signal: dominant || null
   })));

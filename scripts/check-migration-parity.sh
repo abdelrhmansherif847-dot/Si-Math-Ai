@@ -30,6 +30,15 @@ COUPLINGS=(
   "weakness_signals:source_question_id:source_question_id:*.js"
   "question_records:client_request_id:client_request_id:*.html"
   "question_records:client_request_id:client_request_id:supabase/functions/ai-tutor/index.ts"
+  # Phase 3 (taxv1) ID-backed write columns. topic_id is the sentinel — its
+  # presence implies its migration (which adds all 4 of topic_id/subtopic_id/
+  # problem_type/taxonomy_version together) has been applied. Re-arms the guard
+  # for the new schema-coupled writes before edge v83 / client assets ship.
+  "question_records:topic_id:topic_id:supabase/functions/ai-tutor/index.ts"
+  "weakness_signals:topic_id:topic_id:*.js"
+  "weakness_reports:topic_id:topic_id:*.js"
+  "mastery_records:topic_id:topic_id:*.js"
+  "focus_tasks:topic_id:topic_id:*.html"
 )
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

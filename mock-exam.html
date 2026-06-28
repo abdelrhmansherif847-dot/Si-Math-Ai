@@ -376,6 +376,7 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 </main>
 
 <script src="taxonomy.js"></script>
+<script src="taxonomy-write.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="exam-mistakes-logger.js"></script>
@@ -1307,16 +1308,19 @@ async function doSave() {
       const low = sub.toLowerCase();
       return list.find(x => x.toLowerCase() === low) || null;
     };
+    // Phase 3: resolve every mistake through the SHARED taxonomy-write boundary
+    // so exam_mistakes stores ONLY canonical names. Unmapped → log once via the
+    // single RPC and drop the row (never store a passthrough/Arabic/raw name).
     const validMistakes = s.mistakeRows
       .filter(r => r.topic?.trim())
       .map(r => {
-        const t = _normTopic(r.topic);
-        const subRaw = _normSub(r.subtopic || '');
-        return { ...r, topic: t, subtopic: _canonSub(t, subRaw) || null };
+        const canon = window.TaxonomyWrite ? window.TaxonomyWrite.canonical({ topic: r.topic, subtopic: r.subtopic || '' }) : null;
+        return canon ? { ...r, topic: canon.topic, subtopic: canon.subtopic || null } : { ...r, _unmapped: true };
       })
       .filter(r => {
-        if (!_isAcad(r.topic)) {
+        if (r._unmapped) {
           console.warn('[mock-exam] taxonomy-reject', { topic: r.topic, subtopic: r.subtopic });
+          if (window.TaxonomyWrite) window.TaxonomyWrite.logUnmapped(sb, { rawTopic: r.topic, rawSubtopic: r.subtopic, source: 'mock', userId: user.id });
           return false;
         }
         return true;
