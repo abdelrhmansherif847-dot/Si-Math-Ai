@@ -2531,25 +2531,28 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
           uid: user.id.slice(0, 8), reason: 'unmapped',
           topic: finalTopic, subtopic: finalSubtopic,
         }));
-        // Fire-and-forget: never block the student's turn on the unmapped log.
-        // Registered with EdgeRuntime.waitUntil so it still completes after the
-        // response is sent (Supabase/Deno background task), with a graceful
-        // fallback if waitUntil is unavailable.
-        const _unmappedLog = sbAdmin.rpc('log_unmapped_detection', {
-          p_raw_topic:        finalTopic || null,
-          p_raw_subtopic:     finalSubtopic || null,
-          p_raw_problem_type: null,
-          p_source:           'chat',
-          p_user_id:          user.id,
-          p_context:          (question || '').slice(0, 500),
-          p_taxonomy_version: taxVer,
-        }).then((r: { error?: { message?: string } } | null) => {
-          if (r && r.error) console.log('[ai-tutor] unmapped-log-failed', r.error.message);
-        }).catch((e: unknown) => console.log('[ai-tutor] unmapped-log-failed', String(e)));
-        try {
-          (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
-            .EdgeRuntime?.waitUntil?.(_unmappedLog);
-        } catch { /* tolerate */ }
+        // Only log academic-but-unmapped detections (parity with the client gate
+        // in taxonomy-write.js): system / non-academic topics are intentionally
+        // rejected, not alias-curation candidates, so they must not pollute
+        // unmapped_detections. Fire-and-forget; never blocks the student's turn;
+        // registered with EdgeRuntime.waitUntil so it completes after the response.
+        if (Taxonomy.isAcademicTopic(finalTopic)) {
+          const _unmappedLog = sbAdmin.rpc('log_unmapped_detection', {
+            p_raw_topic:        finalTopic || null,
+            p_raw_subtopic:     finalSubtopic || null,
+            p_raw_problem_type: null,
+            p_source:           'chat',
+            p_user_id:          user.id,
+            p_context:          (question || '').slice(0, 500),
+            p_taxonomy_version: taxVer,
+          }).then((r: { error?: { message?: string } } | null) => {
+            if (r && r.error) console.log('[ai-tutor] unmapped-log-failed', r.error.message);
+          }).catch((e: unknown) => console.log('[ai-tutor] unmapped-log-failed', String(e)));
+          try {
+            (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
+              .EdgeRuntime?.waitUntil?.(_unmappedLog);
+          } catch { /* tolerate */ }
+        }
       } else {
         safeInsertTopic    = resolved.topicName;
         safeInsertSubtopic = resolved.subtopicName || '';

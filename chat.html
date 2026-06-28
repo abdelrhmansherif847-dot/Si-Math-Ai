@@ -2245,7 +2245,10 @@ button{font-family:inherit;cursor:pointer}
           SignalEngine.discardBuffer();
         } else {
           // For repeats, always fire a weakness signal — repeated confusion is strong evidence.
-          if (_isRepeat && _respTopic && _respSub) {
+          // Guard on topic only: with canonical responses, topic-level detections now
+          // return subtopic='' — requiring _respSub here would silently drop their repeat
+          // signals. sendSignal tolerates a blank subtopic (writes '' via the boundary).
+          if (_isRepeat && _respTopic) {
             const _rType = response.repeat_type;
             SignalEngine.sendSignal({
               type: _rType === 'solve_again' ? 'repeated' : 'explanation_repeated',
