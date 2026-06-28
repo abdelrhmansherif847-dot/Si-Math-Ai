@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v72
+// ai-tutor Edge Function v83
 // Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
 // shadow mode on every math question and records verification_tier +
 // verification_meta on question_records. The verification pipeline itself
