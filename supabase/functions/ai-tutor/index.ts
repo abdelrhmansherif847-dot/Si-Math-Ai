@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v83
+// ai-tutor Edge Function v84
 // Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
 // shadow mode on every math question and records verification_tier +
 // verification_meta on question_records. The verification pipeline itself
@@ -20,7 +20,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v83';
+const AI_TUTOR_VERSION = 'v84';
 
 // ── Taxonomy (single source of truth) ────────────────────────────────────────
 // Imported from the generated _shared copy of taxonomy.core.js — byte-identical
