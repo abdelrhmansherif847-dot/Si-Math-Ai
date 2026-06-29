@@ -230,6 +230,48 @@
     'unit rates': 'PR_005', 'unit rate': 'PR_005', 'rates': 'PR_005',
     'work and time': 'PR_006', 'work & time': 'PR_006', 'work': 'PR_006',
     'rate & work problems': 'PR_006',
+    // ── Phase 4 legacy-curation aliases (approved 2026-06-29) ──
+    // Map educationally-equivalent legacy subtopic names onto existing canonical
+    // lessons. The cross-topic guard still applies (an alias only resolves when
+    // the row's topic matches the lesson's topic). IDs unchanged.
+    // Percentages (PR_003)
+    'weight and percentages': 'PR_003', 'discounts': 'PR_003',
+    'discount calculation': 'PR_003', 'percentage of total': 'PR_003',
+    'حساب النسبة المئوية': 'PR_003',
+    // Probability (PR_001)
+    'general probability planning': 'PR_001', 'independent events': 'PR_001',
+    'احتمالات شرطية': 'PR_001',
+    // Permutations & Combinations (PR_002)
+    'permutations with repetition': 'PR_002',
+    // Range & Interval (STA_003)
+    'interquartile range': 'STA_003',
+    // Solid Geometry (GEO_007)
+    'surface area': 'GEO_007', 'المساحة السطحية': 'GEO_007',
+    // Linear Equations & Functions (ALG_006)
+    'slope & rate of change': 'ALG_006', 'rate of change': 'ALG_006',
+    'solving linear equations': 'ALG_006', 'linear': 'ALG_006', 'age problems': 'ALG_006',
+    // Quadratic Equations & Functions (ALG_010)
+    'axis of symmetry': 'ALG_010', 'vertex form': 'ALG_010',
+    // Inequalities (ALG_008)
+    'linear inequalities': 'ALG_008',
+    // Triangles (GEO_002)
+    'triangle area': 'GEO_002', 'نظرية فيثاغورس': 'GEO_002',
+    // Circle & Equation of the Circle (GEO_006)
+    'circles and arcs': 'GEO_006', 'area of circles and sectors': 'GEO_006',
+    // Coordinate Geometry (GEO_008)
+    'distance between points': 'GEO_008',
+    // Polynomials (ALG_004)
+    'cubic functions': 'ALG_004',
+    // Radicals (ALG_003)
+    'radicals and simplification': 'ALG_003',
+    // Exponential Functions (ALG_011)
+    'equivalent forms': 'ALG_011',
+    // Functions (FUN_001)
+    'modeling with functions': 'FUN_001',
+    // Polygons (GEO_003)
+    'area of a rectangle': 'GEO_003',
+    // Trigonometry (GEO_005)
+    'sin': 'GEO_005',
   };
 
   /* ── Word-problem detection hints (metadata only) ── */
