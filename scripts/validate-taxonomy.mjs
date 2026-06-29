@@ -66,7 +66,29 @@ const cases = [
   [{ topic: 'Algebra', subtopic: 'Exponents' }, 'ALGEBRA', 'ALG_002'],
   [{ topic: 'percentage calculation', subtopic: 'percentages' }, 'PROBABILITY_RATIOS', 'PR_003'],
   [{ topic: 'المثلثات', subtopic: 'trig' }, 'GEOMETRY', 'GEO_005'],
+  /* Phase 4 legacy-curation aliases */
+  [{ topic: 'Percentage Calculation', subtopic: 'Weight and Percentages' }, 'PROBABILITY_RATIOS', 'PR_003'],
+  [{ topic: 'Probability', subtopic: 'General Probability Planning' }, 'PROBABILITY_RATIOS', 'PR_001'],
+  [{ topic: 'Probability', subtopic: 'Independent Events' }, 'PROBABILITY_RATIOS', 'PR_001'],
+  [{ topic: 'Statistics', subtopic: 'Interquartile Range' }, 'STATISTICS', 'STA_003'],
+  [{ topic: 'Geometry', subtopic: 'Surface Area' }, 'GEOMETRY', 'GEO_007'],
+  [{ topic: 'Algebra', subtopic: 'Slope & Rate of Change' }, 'ALGEBRA', 'ALG_006'],
+  [{ topic: 'Algebra', subtopic: 'Age Problems' }, 'ALGEBRA', 'ALG_006'],
+  [{ topic: 'Algebra', subtopic: 'Axis of Symmetry' }, 'ALGEBRA', 'ALG_010'],
+  [{ topic: 'Geometry', subtopic: 'نظرية فيثاغورس' }, 'GEOMETRY', 'GEO_002'],
 ];
+/* Phase 4 cross-topic guard must still hold: an alias only resolves under its own topic. */
+if (T.resolveSubtopicId('STATISTICS', 'independent events') === null) ok('cross-topic: independent events rejected under Statistics');
+else fail('cross-topic guard failed: independent events resolved under Statistics');
+/* Word Problems override targets must all be valid canonical ids. */
+const { WORD_PROBLEM_OVERRIDE } = require(resolve(root, 'scripts', 'phase4-wordproblems-override.js'));
+let badOverride = 0;
+for (const [k, v] of Object.entries(WORD_PROBLEM_OVERRIDE)) {
+  if (!T._topicById[v.topicId]) { fail(`WP override "${k}" → unknown topic ${v.topicId}`); badOverride++; }
+  if (v.subtopicId && (!T._subtopicById[v.subtopicId] || T._subtopicById[v.subtopicId].topicId !== v.topicId)) { fail(`WP override "${k}" → bad subtopic ${v.subtopicId}`); badOverride++; }
+  if (v.problemType !== 'word_problem') { fail(`WP override "${k}" → problemType must be word_problem`); badOverride++; }
+}
+if (!badOverride) ok(`all ${Object.keys(WORD_PROBLEM_OVERRIDE).length} Word-Problems override targets valid`);
 for (const [input, eTopic, eSub] of cases) {
   const r = T.resolve(input);
   if (r && r.topicId === eTopic && r.subtopicId === eSub) ok(`resolve ${JSON.stringify(input)} → ${eTopic}/${eSub}`);
