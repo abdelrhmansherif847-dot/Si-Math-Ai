@@ -97,8 +97,12 @@
       var k = (s.topic || '') + '|' + (s.subtopic || '');
       if (!map[k]) {
         map[k] = {
-          topic: s.topic || null,
-          subtopic: s.subtopic || null,
+          // weakness_reports.topic / .subtopic are NOT NULL. Phase 3 writes
+          // weakness_signals.subtopic='' (empty) for topic-level/blank detections;
+          // `|| null` turned '' into null and violated the constraint. Coalesce to
+          // '' to match the grouping key (line above) and the NOT NULL columns.
+          topic: s.topic || '',
+          subtopic: s.subtopic || '',
           signals: [],
           totalDecayed: 0,
           recent7Raw: 0,
