@@ -287,7 +287,166 @@ source. `problem_type` bridges stay valid.
 
 ---
 
-## 5. Open questions
+## 5. Layer classification
+
+Purpose: a **permanent rule** so future contributors do not reflexively model every
+new idea as a graph. There are exactly three kinds of thing in the KDG.
+
+- **Graph Layer** — authored nodes **+ edges** with dependency / affordance
+  semantics; diagnosis and recovery *traverse* them. Expensive to curate → reserved.
+- **Derived Layer** — a small fixed vocabulary whose connection to Knowledge is
+  **computed from graph knowledge** (not authored, not observed). No authored edges,
+  no independent traversal. (This is the "derived bridge" of §1.)
+- **Metadata** — a **canonical property of a concrete item**. No edges, no
+  traversal. May be an authored enum or a value calibrated from data. Used for
+  filtering / stratifying.
+
+Two different senses of "derived" must not be conflated:
+
+- **Structural** derivation — computed from the *Knowledge graph* (e.g. capability
+  from lesson structural type). → **Derived Layer**.
+- **Statistical** derivation — calibrated from *observed responses* (e.g. item
+  difficulty). → stays **Metadata**.
+
+Representation capability is the first; Difficulty is the second.
+
+### Classification of the five axes
+
+| Axis | Class | Graph? | Derived? | Metadata? | Why |
+|---|---|---|---|---|---|
+| **Knowledge** | Graph Layer | ✔ | — | node attrs | Transferable knowledge with authored prerequisites; Root Cause walks the prereq chain to the true gap. |
+| **Reasoning** | Graph Layer | ✔ | — | — | Transferable sub-skills / error mechanisms that compose and link to Knowledge; the mechanism *is* the diagnosis, reached by traversal. |
+| **Representation** | Derived Layer | ✘ (fixed vocab) | ✔ structural | vocab enumerable | Not learned knowledge; a small type set whose **capability** edges are computed from lesson structural tags and whose **affinity** is learned. |
+| **Assessment** | Metadata | ✘ | ✘ | ✔ | Response-channel property; no dependencies, no affordance, no traversal. |
+| **Difficulty** | Metadata (calibrated) | ✘ | statistical only | ✔ | Emergent from the other axes; its authoritative value is a per-item calibration — a property, not a graph. |
+
+### The KDG admission gate
+
+A dimension earns **nodes and edges** only if it passes **all three** tests:
+
+1. **Transferable knowledge** — is it something the student *learns* that recurs
+   across items? (Format, difficulty, exam board are not learned.)
+2. **Real dependencies** — do its nodes carry prerequisite / compositional /
+   affordance edges (to each other or to Knowledge)?
+3. **Diagnosis by traversal** — does answering *"why is the student weak / what
+   unlocks what"* require **walking** those edges?
+
+Decision rule:
+
+- All three ✔ → **Graph Layer**.
+- Fails (1) or (3), **but** its structure is computed from the Knowledge graph →
+  **Derived Layer**.
+- Otherwise → **Metadata** (authored enum or calibrated value).
+
+**Trap to avoid:** *"it improves diagnosis"* is necessary-ish but **not sufficient**
+for a graph. Metadata improves diagnosis too — Difficulty and Assessment sharpen it
+by **stratification** (group-by), not traversal. The decisive test is
+**traversal vs stratification**. "It would look nice as a graph" is not a criterion.
+
+Worked checks (how the gate classifies real and hypothetical dimensions):
+
+| Candidate dimension | (1) Knowledge | (2) Dependencies | (3) Traversal | → Class |
+|---|---|---|---|---|
+| Misconception ("drops ±") | ✔ | ✔ (implicates lessons) | ✔ | **Graph** (part of Reasoning) |
+| Representation | ✘ | computed | ✘ | **Derived** |
+| Difficulty | ✘ | ✘ | ✘ (stratify) | **Metadata** |
+| Assessment format | ✘ | ✘ | ✘ (stratify) | **Metadata** |
+| Exam board (SAT/ACT/EST) | ✘ | ✘ | ✘ | **Metadata** (weights) |
+| Language / locale (EN/AR) | ✘ | ✘ | ✘ | **Metadata** |
+
+---
+
+## 6. Representation capability — expert-defined vs rule-derived vs hybrid
+
+§2.1 fixed that capability is a **hard gate**; this section decides *how it is
+produced*. All three approaches feed the same downstream contract: a boolean
+capable / not-capable per (lesson, representation), with learned affinity layered
+on top.
+
+### Option 1 — Expert-defined
+A human curates validity per lesson (an allowlist of representations) — roughly
+O(lessons × reps) decisions.
+
+- **Maintainability:** low at scale — every new lesson needs manual review of each
+  representation; silent drift as the curriculum grows; each cell is at least
+  auditable.
+- **Scalability:** poor — grows with curriculum × representation count.
+- **Correctness:** highest *initially* — an expert catches subtle valid cases a rule
+  misses (Complex Numbers → Graph via the Argand plane; Sequences → Graph as
+  discrete points).
+- **Future AI learning:** weak *substrate* to run on, but **excellent labels** — the
+  hand table is ideal ground-truth training data.
+- **Cold-start:** excellent — zero data required; correct on day one.
+
+### Option 2 — Rule-derived
+Tag each lesson with structural-type flags (procedural, symbolic/functional,
+geometric, data/distribution, combinatorial); capability = f(tags, representation
+requirements) — roughly O(lessons) tags.
+
+- **Maintainability:** excellent — a new lesson declares a few flags; rules are
+  central and few.
+- **Scalability:** excellent — new lessons *and* new representations fall out of the
+  rules; no pairwise explosion.
+- **Correctness:** good but **coarse** — captures the common case, systematically
+  misses edge cases where the structural-type taxonomy is too blunt (false negatives
+  on Argand-plane-style validity; occasional false positives).
+- **Future AI learning:** good substrate — tags + rules are a clean, inspectable
+  prior a learner can refine (adjust a tag, add a rule exception).
+- **Cold-start:** excellent — works once the ~33 lessons are tagged (a bounded,
+  one-time cost).
+
+### Option 3 — Hybrid (rule baseline + expert exceptions + learned refinement)
+Rules produce the default; a **small** expert-curated exception table corrects known
+misses; a learned signal later *proposes* (never silently flips) capability changes
+and continuously tunes **affinity**.
+
+- **Maintainability:** good — rules cover most lessons cheaply; only the small
+  exception set is hand-maintained; clear precedence layering.
+- **Scalability:** excellent — inherits rule scalability; the exception list stays
+  small when the rules are decent.
+- **Correctness:** highest achievable — rule coverage + expert exceptions catch the
+  edge cases and converge toward ground truth; expresses "capable-but-rare" (via
+  affinity) distinctly from "invalid" (via capability).
+- **Future AI learning:** best substrate — an explicit prior (rules), explicit human
+  corrections (overrides), and a learning hook, each inspectable; the exception table
+  doubles as a labeled dataset.
+- **Cold-start:** excellent — rules + a handful of seed overrides are correct on day
+  one.
+
+### Comparison
+
+| Criterion | Expert-defined | Rule-derived | Hybrid |
+|---|---|---|---|
+| Maintainability | Low | High | High |
+| Scalability | Poor | Excellent | Excellent |
+| Correctness | High (static) | Coarse | **Highest (converges)** |
+| AI-learning substrate | Weak (good labels) | Good | **Best** |
+| Cold-start | Excellent | Excellent | Excellent |
+
+### Recommendation — Hybrid
+
+Rule-derived baseline from lesson structural tags **+** a small expert-curated
+exception table, with a learning hook that:
+
+- tunes **affinity** (soft, continuous) automatically, but
+- only **proposes** **capability** (hard, boolean) changes into a human review
+  queue — never auto-flips them.
+
+Precedence: **expert override > rule > learned proposal.** Rationale: capability is a
+*correctness* claim ("this artifact can exist"), so a noisy learned signal must not
+silently overturn a human or rule assertion. Instead, learned anomalies (students
+succeeding at a representation the rule marked incapable) *surface candidates* for
+expert review. This mirrors the platform's existing curation loop, where
+`unmapped_detection` logs feed human taxonomy-alias curation rather than
+auto-mutating the taxonomy.
+
+Net: rule scalability, expert correctness where it counts, the best substrate for
+future learning, and strong cold-start — the only option that is not weak on any
+criterion.
+
+---
+
+## 7. Open questions
 
 1. **Capability authority** — are structural-type tags author-curated, or partly
    inferred from the taxonomy topic? Who signs off on a lesson's affordances?
