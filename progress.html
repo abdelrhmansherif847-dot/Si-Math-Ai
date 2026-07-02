@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="taxonomy.js"></script>
+<script src="taxonomy-compat.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -642,7 +644,7 @@ async function deviceGuard(sb, userId) {
       var amPct = Math.round((am.mastery_score/70)*100);
       milestones.push({
         icon: '🎯',
-        title: 'Master ' + am.topic,
+        title: 'Master ' + (window.Taxonomy.compat.displayTopic(am)||am.topic),
         sub: 'Currently at ' + Math.round(am.mastery_score) + '% — need 70% to reach mastery',
         pct: Math.min(99, amPct),
         barColor: tierColor(am.mastery_score),
@@ -722,7 +724,7 @@ async function deviceGuard(sb, userId) {
         var t = tier(score);
         var tc2 = tierColor(score);
         return '<div class="topic-tile ' + t + '">' +
-          '<div class="tt-name">' + esc(m.topic||'Unknown') + '</div>' +
+          '<div class="tt-name">' + esc(window.Taxonomy.compat.displayTopic(m)||'Unknown') + '</div>' +
           '<div class="tt-bar-wrap"><div class="tt-bar-fill" style="width:' + score + '%;background:' + tc2 + '"></div></div>' +
           '<div class="tt-score">' + score + '%</div>' +
           '<span class="tt-badge">' + tierLabel(score) + '</span>' +
@@ -753,7 +755,7 @@ async function deviceGuard(sb, userId) {
     });
     mastRecs.forEach(function(m){
       if ((m.mastery_score||0) >= 70 && m.last_updated){
-        events.push({ date: new Date(m.last_updated), icon:'🎓', title: esc(m.topic||'Topic') + ' Mastered', sub: relDate(m.last_updated) + ' · ' + Math.round(m.mastery_score) + '% mastery', type:'mastery' });
+        events.push({ date: new Date(m.last_updated), icon:'🎓', title: esc(window.Taxonomy.compat.displayTopic(m)||'Topic') + ' Mastered', sub: relDate(m.last_updated) + ' · ' + Math.round(m.mastery_score) + '% mastery', type:'mastery' });
       }
     });
     exams.forEach(function(e){
