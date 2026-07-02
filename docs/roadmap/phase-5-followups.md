@@ -28,3 +28,46 @@ after Phase 5 unification is complete.
 - **Prerequisites:** historical `*_id` backfills complete; legacy `weakness_reports`
   rows migrated. Only then redesign aggregation / ranking / stale-row detection to
   key on canonical IDs.
+
+## FU-3 — Canonical weakness aggregation
+- **File:** `weakness.html`.
+- **Current:** client-side `weakness_score`, `priority_rank`, `biggest_weakness`,
+  evidence buckets, and `renderBars` grouping all key off raw `topic|subtopic`
+  (L1145, L1188–1192, L1303–1305, L1361, L1597–1600). `isAcademicRow` (L1094)
+  already prefers `Taxonomy.isAcademicTopic`; `NON_ACADEMIC_RE` is a fallback.
+- **Why deferred:** grouping by IDs merges legacy-variant rows → changes bars,
+  weakness score, ranking, and the chosen "biggest weakness" (weakness/analytics
+  behavior change). Depends on the historical `*_id` backfill.
+
+## FU-4 — Dashboard canonical aggregation
+- **File:** `dashboard.html` (corrected from M0 "Group D").
+- **Current:** `topicMap` aggregation, weakness/`topTopic` selection, and
+  related-subtopic filtering key off raw topic names (L1659, L1699–1723, L1815,
+  L1957–1962); local `isAcademicDash` guard; `chat.html?topic=<raw>` link.
+- **Why deferred:** same class as FU-3 — aggregation/ranking behavior change,
+  backfill-dependent. Display-label canonicalization is entangled with grouping,
+  so defer as a unit.
+
+## FU-5 — History taxonomy cleanup
+- **File:** `history.html`.
+- **Current:** raw-name display (L461, L470) and a local `NON_ACAD` regex guard
+  (L382) that does not delegate to `Taxonomy.isAcademicTopic`.
+- **Why deferred:** bundle the display migration with the guard consolidation
+  (FU-7); keep M2/M3 scope clean.
+
+## FU-6 — Admin analytics canonicalization
+- **File:** `admin.html`.
+- **Current:** admin question-distribution counts keyed by raw topic/subtopic
+  (L1379–1380).
+- **Why deferred:** admin-internal analytics aggregation by raw names; low
+  priority; canonical grouping depends on the backfill.
+
+## FU-7 — Duplicated academic-guard consolidation
+- **Files:** `progress.html` (`isAcademicProg`/`NON_ACAD_PROG`), `weakness.html`
+  (`isAcademicRow`/`NON_ACADEMIC_RE`), `dashboard.html` (`isAcademicDash`),
+  `history.html` (`NON_ACAD`).
+- **Issue:** ≥4 local reimplementations of the academic-topic filter, divergent
+  from canonical `Taxonomy.isAcademicTopic` / `SYSTEM_TOPICS`.
+- **Why deferred:** consolidating changes filtering behavior (non-curriculum
+  topics excluded). Umbrella item — **subsumes FU-1** (the progress.html instance);
+  evaluate all guards together post-unification.
