@@ -59,13 +59,19 @@ Tag each lesson with a few structural flags, and derive capability by rule:
 |---|---|---|
 | Procedural / arithmetic (`ALG_001` Order of Ops) | Word, Real-life, Simple Equation | Graph, Diagram |
 | Functional / relational (`ALG_010` Quadratics, `ALG_006` Linear) | Graph, Table, Std/Simple Eq, Word, Real-life | — |
-| Data / distribution (`STA_004` Stem-and-Leaf, `STA_002` MMM) | Table, Diagram (the plot), Word, Real-life | Standard Equation |
+| Data / distribution (`STA_004` Stem-and-Leaf, `STA_002` MMM, `STA_001` Scatter) | Table, Diagram (the plot), Graph, Word, Real-life | Standard/Simple Equation |
 | Geometric (`GEO_002` Triangles, `GEO_007` Solids) | Diagram, Std Equation (formulas), Word, Real-life | (Table marginal) |
-| Combinatorial (`PR_002` Perms) | Word, Real-life, Table | Graph |
+| Combinatorial (`PR_002` Perms, `PR_001` Probability) | Word, Real-life, Table, Standard Equation (nPr/nCr) | Graph, Diagram |
 
 This costs **O(lessons)** structural tags (~33 lessons × a handful of flags), not
 **O(lessons × reps)** hand-curated cells, and a new lesson only declares its flags.
 Capability hard-excludes nonsense structurally; affinity ranks what remains.
+
+The module (`kdg-representation.js`) encodes this table as `RULE_AFFORDS`
+(structural type → afford set) + `LESSON_STRUCTURAL_TYPE` (lesson → type), with
+`EXPERT_CAPABILITY_OVERRIDES` for edge cases the rules miss — e.g. `ALG_005`
+Complex Numbers is PROCEDURAL yet Graph-capable via the Argand plane. These afford
+sets are the **initial baseline**, pending capability-authority sign-off (§7.1).
 
 **Verdict:** Adopt Capability (derived, hard) **+** Affinity (learned, soft).
 Reject universal membership.

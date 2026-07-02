@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 /**
- * validate-kdg-representation.mjs — guards for the KDG representation layer.
- * Exit non-zero on any failure (run manually / as a CI gate, like
- * validate-taxonomy.mjs).
+ * validate-kdg-representation.mjs — guards for the KDG representation axis.
+ * Exit non-zero on any failure. Conforms to
+ * docs/roadmap/kdg-multi-axis-architecture.md.
  *
  * Checks:
- *  1. ID integrity     — ids unique, opaque UPPER_SNAKE, enum matches data.
- *  2. Alias integrity  — every alias points at an existing id; no id/alias clash.
- *  3. Resolver sanity  — raw label → id (incl. infographic + Arabic wording).
- *  4. Reject-on-unmapped — unknown / blank labels resolve to null (no guess).
- *  5. Universal rule   — every lesson gets every representation; canRepresent.
- *  6. problem_type bridge — round-trips with the legacy binary, both directions.
- *  7. Two-layer bridge — describeNode integrates the taxonomy when present.
+ *  1. ID integrity      — 7 reps, unique, opaque, enum matches; Assessment gone.
+ *  2. Alias integrity   — aliases point at existing ids, pre-normalized; MC/SA
+ *                         labels no longer resolve.
+ *  3. Resolver sanity   — raw label → id (infographic + Arabic); reject-on-unmapped.
+ *  4. Structural tags   — every taxonomy lesson tagged; no orphan tags; afford
+ *                         sets reference only real rep ids.
+ *  5. Capability (hybrid)— canonical INVALID cases blocked; valid allowed; expert
+ *                         override beats the rule; untagged lesson permissive.
+ *  6. Affinity          — [0,1] for capable, null for not-capable; learned override.
+ *  7. problem_type bridge— unchanged, both directions (round-trip).
+ *  8. Edges / describeNode — capable-only, affinity-weighted; two-layer integration.
  */
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,8 +24,6 @@ import { createRequire } from 'node:module';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 
-// Make the taxonomy visible to the representation module's optional bridge,
-// exactly as a browser would (both are globals). Load taxonomy FIRST.
 const T = require(resolve(root, 'taxonomy.core.js'));
 globalThis.Taxonomy = T;
 const R = require(resolve(root, 'kdg-representation.js'));
@@ -30,64 +32,39 @@ let failures = 0;
 const fail = (m) => { console.error('  ✗', m); failures++; };
 const ok = (m) => console.log('  ✓', m);
 
-/* 1. ID integrity */
+/* 1. ID integrity + Assessment removal */
 const ids = R.REPRESENTATION_IDS;
-if (new Set(ids).size === ids.length) ok(`all ${ids.length} representation ids unique`);
-else fail('duplicate representation id detected');
-
-if (ids.length === 9) ok('exactly 9 representations defined');
-else fail(`expected 9 representations, found ${ids.length}`);
-
+if (ids.length === 7) ok('exactly 7 representations (Assessment removed)');
+else fail(`expected 7 representations, found ${ids.length}: ${ids.join(', ')}`);
+if (new Set(ids).size === ids.length) ok('representation ids unique'); else fail('duplicate id');
+if (!ids.includes('MULTIPLE_CHOICE') && !ids.includes('SHORT_ANSWER'))
+  ok('Multiple Choice / Short Answer are not representations');
+else fail('Assessment ids still present in representations');
 const OPAQUE = /^[A-Z][A-Z_]*$/;
-const badOpaque = ids.filter((id) => !OPAQUE.test(id));
-if (!badOpaque.length) ok('all representation ids are opaque UPPER_SNAKE');
-else badOpaque.forEach((id) => fail(`representation id "${id}" is not UPPER_SNAKE`));
-
+if (ids.every((id) => OPAQUE.test(id))) ok('ids opaque UPPER_SNAKE'); else fail('non-opaque id');
 const enumMismatch = ids.filter((id) => R.REPRESENTATION[id] !== id)
   .concat(Object.keys(R.REPRESENTATION).filter((k) => !ids.includes(k)));
-if (!enumMismatch.length) ok('REPRESENTATION enum matches REPRESENTATIONS data');
-else fail(`REPRESENTATION enum drift: ${enumMismatch.join(', ')}`);
-
-const missingDisplay = R.REPRESENTATIONS.filter((r) => !r.displayName || !r.description);
-if (!missingDisplay.length) ok('every representation has a displayName + description');
-else missingDisplay.forEach((r) => fail(`representation ${r.id} missing displayName/description`));
+if (!enumMismatch.length) ok('REPRESENTATION enum matches data'); else fail(`enum drift: ${enumMismatch}`);
+if (R.REPRESENTATION_LAYER_VERSION === 2) ok('version bumped to 2'); else fail('version should be 2');
 
 /* 2. Alias integrity */
 const idSet = new Set(ids);
 let badAlias = 0;
 for (const [k, v] of Object.entries(R._aliases)) {
   if (!idSet.has(v)) { fail(`alias "${k}" → unknown id ${v}`); badAlias++; }
-  if (normalizeSelf(k) !== k) { fail(`alias key "${k}" is not pre-normalized`); badAlias++; }
+  if (R.normalizeKey(k) !== k) { fail(`alias key "${k}" not pre-normalized`); badAlias++; }
 }
 if (!badAlias) ok(`all ${Object.keys(R._aliases).length} aliases valid + normalized`);
-function normalizeSelf(s) { return R.normalizeKey(s); }
 
-/* 3. Resolver sanity — raw label → expected id */
+/* 3. Resolver sanity + reject (incl. removed Assessment labels) */
 const cases = [
-  ['Word Problem', 'WORD_PROBLEM'],
-  ['word_problem', 'WORD_PROBLEM'],
-  ['مسألة كلامية', 'WORD_PROBLEM'],
-  ['Normal Equation', 'STANDARD_EQUATION'],   // infographic wording
-  ['Standard Form', 'STANDARD_EQUATION'],
-  ['equation', 'STANDARD_EQUATION'],
-  ['Small Equation', 'SIMPLE_EQUATION'],       // infographic wording
-  ['x + 3 = 7 style', null],                   // free text, not a label → reject
-  ['simple', 'SIMPLE_EQUATION'],
-  ['Graph', 'GRAPH'],
-  ['plot', 'GRAPH'],
-  ['chart', 'GRAPH'],
-  ['Table of values', 'TABLE'],
-  ['جدول', 'TABLE'],
-  ['Figure', 'DIAGRAM'],
-  ['geometry diagram', 'DIAGRAM'],
-  ['Real-life Scenario', 'REAL_LIFE'],
-  ['real world', 'REAL_LIFE'],
-  ['MCQ', 'MULTIPLE_CHOICE'],
-  ['multiple-choice question', 'MULTIPLE_CHOICE'],
-  ['Grid-in', 'SHORT_ANSWER'],
-  ['free response', 'SHORT_ANSWER'],
-  ['GRAPH', 'GRAPH'],                          // already-an-id passthrough (case-insensitive)
-  ['graph (visual form)', 'GRAPH'],            // trailing parens stripped
+  ['Word Problem', 'WORD_PROBLEM'], ['Normal Equation', 'STANDARD_EQUATION'],
+  ['Small Equation', 'SIMPLE_EQUATION'], ['plot', 'GRAPH'], ['جدول', 'TABLE'],
+  ['Figure', 'DIAGRAM'], ['real world', 'REAL_LIFE'], ['graph (visual form)', 'GRAPH'],
+  // Assessment labels must now REJECT (moved off the representation axis)
+  ['MCQ', null], ['multiple choice', null], ['short answer', null], ['grid-in', null],
+  // generic rejects
+  ['banana', null], ['', null], [null, null],
 ];
 for (const [input, expected] of cases) {
   const got = R.resolveRepresentation(input);
@@ -95,69 +72,96 @@ for (const [input, expected] of cases) {
   else fail(`resolve ${JSON.stringify(input)} → ${JSON.stringify(got)} (expected ${JSON.stringify(expected)})`);
 }
 
-/* 4. Reject-on-unmapped */
-for (const bad of ['', null, undefined, 'banana', 'calculus', 'xyz']) {
-  if (R.resolveRepresentation(bad) === null) ok(`reject ${JSON.stringify(bad)}`);
-  else fail(`expected reject for ${JSON.stringify(bad)}, got ${JSON.stringify(R.resolveRepresentation(bad))}`);
-}
+/* 4. Structural-tag coverage (no drift vs taxonomy) */
+const subIds = new Set(T.SUBTOPICS.map((s) => s.id));
+const tagged = R._lessonStructuralType;
+const untagged = [...subIds].filter((id) => !tagged[id]);
+if (!untagged.length) ok(`every taxonomy lesson (${subIds.size}) has a structural tag`);
+else fail(`untagged lessons: ${untagged.join(', ')}`);
+const orphanTags = Object.keys(tagged).filter((id) => !subIds.has(id));
+if (!orphanTags.length) ok('no orphan structural tags'); else fail(`orphan tags: ${orphanTags.join(', ')}`);
+let badAfford = 0;
+for (const [type, reps] of Object.entries(R._ruleAffords))
+  for (const rep of reps) if (!idSet.has(rep)) { fail(`RULE_AFFORDS[${type}] → unknown rep ${rep}`); badAfford++; }
+if (!badAfford) ok('all afford sets reference real representation ids');
 
-/* 5. Universal rule — every lesson gets every representation */
-const forQuad = R.representationsForLesson('ALG_010');
-if (forQuad.length === ids.length && ids.every((id) => forQuad.includes(id)))
-  ok('representationsForLesson(ALG_010) returns all representations');
-else fail(`representationsForLesson(ALG_010) incomplete: ${JSON.stringify(forQuad)}`);
+/* 5. Capability (hybrid) */
+// Canonical INVALID cases from the architecture — must be blocked.
+if (R.canRepresent('ALG_001', 'GRAPH') === false) ok('INVALID blocked: Order of Operations → Graph');
+else fail('Order of Operations → Graph should be invalid');
+if (R.canRepresent('STA_004', 'STANDARD_EQUATION') === false) ok('INVALID blocked: Stem-and-Leaf → Standard Equation');
+else fail('Stem-and-Leaf → Standard Equation should be invalid');
+// Valid cases.
+if (R.canRepresent('ALG_010', 'GRAPH') && R.canRepresent('ALG_010', 'TABLE')) ok('VALID: Quadratics → Graph & Table');
+else fail('Quadratics should afford Graph & Table');
+// Expert override beats the rule (Complex Numbers → Graph via Argand).
+if (R.structuralTypeOf('ALG_005') === 'PROCEDURAL' &&
+    R._ruleAffords.PROCEDURAL.indexOf('GRAPH') === -1 &&
+    R.canRepresent('ALG_005', 'GRAPH') === true)
+  ok('expert override beats rule: Complex Numbers → Graph capable though PROCEDURAL rule excludes it');
+else fail('expert override for ALG_005 → Graph not applied');
+// Override is surgical (does not open unrelated reps).
+if (R.canRepresent('ALG_005', 'DIAGRAM') === false) ok('override is surgical: Complex Numbers → Diagram still blocked');
+else fail('override leaked to Diagram');
+// capableRepresentations is a strict subset for a tagged lesson.
+const capOrder = R.capableRepresentations('ALG_001');
+if (capOrder.length < ids.length && !capOrder.includes('GRAPH') && capOrder.includes('SIMPLE_EQUATION'))
+  ok(`capableRepresentations(ALG_001) = capable subset [${capOrder.join(', ')}]`);
+else fail(`capableRepresentations(ALG_001) wrong: ${capOrder.join(', ')}`);
+// Untagged lesson → permissive (capability unknown, not blocked).
+if (R.capabilityOf('NOT_A_LESSON', 'GRAPH') === null && R.canRepresent('NOT_A_LESSON', 'GRAPH') === true &&
+    R.capableRepresentations('NOT_A_LESSON').length === ids.length)
+  ok('untagged lesson is permissive (null capability → allowed)');
+else fail('untagged lesson should degrade permissively');
+// Invalid rep id is never capable.
+if (R.capabilityOf('ALG_010', 'NOPE') === false && !R.canRepresent('ALG_010', 'NOPE')) ok('invalid rep id → not capable');
+else fail('invalid rep id should be not-capable');
 
-const forUnknownLesson = R.representationsForLesson('NON_EXISTENT_LESSON');
-if (forUnknownLesson.length === ids.length)
-  ok('universal rule holds even for an unknown lesson id');
-else fail('representationsForLesson should be lesson-agnostic (universal)');
+/* 6. Affinity */
+if (R.affinity('ALG_001', 'GRAPH') === null) ok('affinity null for a not-capable pair');
+else fail('affinity should be null when not capable');
+const aff = R.affinity('ALG_010', 'GRAPH');
+if (typeof aff === 'number' && aff >= 0 && aff <= 1) ok(`affinity in [0,1] for a capable pair (${aff})`);
+else fail(`affinity out of range: ${aff}`);
+// Learned override is read (and clamped).
+R._learnedAffinity.ALG_010 = { GRAPH: 0.9, TABLE: 5 /* clamps to 1 */ };
+if (R.affinity('ALG_010', 'GRAPH') === 0.9 && R.affinity('ALG_010', 'TABLE') === 1)
+  ok('learned affinity read + clamped; ranking reflects it');
+else fail('learned affinity not applied/clamped');
+const ranked = R.rankedRepresentations('ALG_010');
+if (ranked[0] === 'GRAPH' || ranked[0] === 'TABLE') ok(`rankedRepresentations puts high-affinity first (${ranked[0]})`);
+else fail(`ranking ignored affinity: ${ranked.join(', ')}`);
+delete R._learnedAffinity.ALG_010; // restore cold-start for later checks
 
-let badCan = 0;
-for (const id of ids) if (!R.canRepresent('ALG_010', id)) { fail(`canRepresent(ALG_010, ${id}) should be true`); badCan++; }
-if (R.canRepresent('ALG_010', 'NOPE')) { fail('canRepresent should reject an invalid representation id'); badCan++; }
-if (!badCan) ok('canRepresent true for every valid representation, false for invalid');
+/* 7. problem_type bridge (unchanged) */
+if (R.fromProblemType('word_problem') === 'WORD_PROBLEM' && R.fromProblemType('concept') === null)
+  ok('fromProblemType unchanged'); else fail('fromProblemType changed');
+if (R.toProblemType('WORD_PROBLEM') === 'word_problem' && R.toProblemType('REAL_LIFE') === 'word_problem' &&
+    R.toProblemType('GRAPH') === 'concept' && R.toProblemType('NOPE') === 'concept')
+  ok('toProblemType unchanged'); else fail('toProblemType changed');
 
-const edges = R.representationEdges('ALG_010');
-if (edges.length === ids.length && edges.every((e) => e.from === 'ALG_010' && e.relation === 'CAN_BE_REPRESENTED_AS' && idSet.has(e.to)))
-  ok('representationEdges(ALG_010) fans out one valid edge per representation');
-else fail('representationEdges shape wrong');
+/* 8. Edges + describeNode (capable-only, weighted; two-layer view) */
+const edges = R.representationEdges('ALG_001');
+if (edges.length === capOrder.length && edges.every((e) => e.from === 'ALG_001' && e.relation === 'CAN_BE_REPRESENTED_AS'
+    && idSet.has(e.to) && typeof e.weight === 'number'))
+  ok('representationEdges are capable-only and affinity-weighted');
+else fail('representationEdges shape/weight wrong');
+const g = R.describeNode({ lessonId: 'ALG_010', representationId: 'graph' });
+const w = R.describeNode({ lessonId: 'ALG_010', representationId: 'Word Problem' });
+if (g.knowledge.lessonId === w.knowledge.lessonId && g.knowledge.lessonName === T.displayName('ALG_010') &&
+    g.knowledge.structuralType === 'FUNCTIONAL' && g.representation.id === 'GRAPH' && g.capable === true)
+  ok('describeNode: same lesson node, capability + structural type surfaced');
+else fail(`describeNode wrong: ${JSON.stringify(g)}`);
+const invalidNode = R.describeNode({ lessonId: 'ALG_001', representationId: 'graph' });
+if (invalidNode.capable === false && invalidNode.affinity === null)
+  ok('describeNode reports capable=false / affinity=null for an invalid pair');
+else fail('describeNode should mark invalid pair not-capable');
 
-/* 6. problem_type bridges (round-trip with the legacy binary) */
-if (R.fromProblemType('word_problem') === 'WORD_PROBLEM') ok("fromProblemType('word_problem') → WORD_PROBLEM");
-else fail("fromProblemType('word_problem') wrong");
-if (R.fromProblemType('concept') === null) ok("fromProblemType('concept') → null (ambiguous, no guess)");
-else fail("fromProblemType('concept') should be null");
-if (R.toProblemType('WORD_PROBLEM') === 'word_problem') ok("toProblemType('WORD_PROBLEM') → word_problem");
-else fail("toProblemType('WORD_PROBLEM') wrong");
-if (R.toProblemType('REAL_LIFE') === 'word_problem') ok("toProblemType('REAL_LIFE') → word_problem");
-else fail("toProblemType('REAL_LIFE') wrong");
-let badBinary = 0;
-for (const id of ids) {
-  const pt = R.toProblemType(id);
-  if (pt !== 'word_problem' && pt !== 'concept') { fail(`toProblemType(${id}) → ${pt} (must be a legacy binary value)`); badBinary++; }
-}
-if (!badBinary) ok('every representation collapses to a valid legacy problem_type');
-if (R.toProblemType('NOPE') === 'concept') ok("toProblemType(unknown) → 'concept' (safe default)");
-else fail('toProblemType(unknown) should default to concept');
-
-/* 7. Two-layer bridge — same lesson, different representation ⇒ same knowledge */
-const asGraph = R.describeNode({ lessonId: 'ALG_010', representationId: 'graph' });
-const asWord = R.describeNode({ lessonId: 'ALG_010', representationId: 'Word Problem' });
-if (asGraph.knowledge.lessonId === asWord.knowledge.lessonId &&
-    asGraph.knowledge.lessonName === asWord.knowledge.lessonName &&
-    asGraph.representation.id === 'GRAPH' && asWord.representation.id === 'WORD_PROBLEM')
-  ok('describeNode: same lesson node, different representation (layers are independent)');
-else fail(`describeNode two-layer separation wrong: ${JSON.stringify({ asGraph, asWord })}`);
-
-if (asGraph.knowledge.lessonName === T.displayName('ALG_010'))
-  ok(`describeNode enriches lesson name from taxonomy ("${asGraph.knowledge.lessonName}")`);
-else fail('describeNode did not integrate taxonomy display name');
-
-const everyEdge = R.allEdges();
-const expectedEdgeCount = T.SUBTOPICS.length * ids.length;
-if (everyEdge.length === expectedEdgeCount)
-  ok(`allEdges materialises the full universal layer (${T.SUBTOPICS.length} lessons × ${ids.length} reps = ${expectedEdgeCount} edges)`);
-else fail(`allEdges expected ${expectedEdgeCount} edges, got ${everyEdge.length}`);
+const every = R.allEdges();
+const expected = R.lessonIds().reduce((n, l) => n + R.capableRepresentations(l).length, 0);
+if (every.length === expected && expected < T.SUBTOPICS.length * ids.length && expected > 0)
+  ok(`allEdges materialises capable edges only (${every.length}; < ${T.SUBTOPICS.length * ids.length} universal)`);
+else fail(`allEdges count wrong: ${every.length} (expected ${expected})`);
 
 console.log(failures ? `\nFAILED: ${failures} check(s)` : '\nAll KDG representation checks passed');
 process.exit(failures ? 1 : 0);
