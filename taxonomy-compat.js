@@ -9,33 +9,38 @@
  * while some rows still have NULL topic_id/subtopic_id. Every consumer calls
  * Taxonomy.compat.displayForRecord() instead of writing its own fallback.
  *
- * Hard rules (enforced by keeping this the only implementation):
- *   - Display only. Never used for writes.
- *   - Never used for grouping / keys / joins / analytics.
- *   - No business logic — pure "canonical id, else resolve legacy name" → displayName.
+ * Platform-neutral (single module — no duplicated logic):
+ *   - Browser: load after taxonomy.js; attaches window.Taxonomy.compat.
+ *   - Edge/Deno: import after _shared/taxonomy.core.js; attaches globalThis.Taxonomy.compat.
+ *   - Node/bundlers: `require()` / import returns the same API via module.exports.
+ * Taxonomy is resolved lazily from the global, so load order never matters.
  *
- * Load AFTER taxonomy.js in the browser.
+ * Hard rules: display only · never writes · never grouping/keys/joins/analytics ·
+ * no business logic (canonical id, else resolve legacy name → displayName).
  */
 (function (root) {
-  var T = (root && root.Taxonomy) || null;
-  if (!T) return; // taxonomy.js must load first; no-op otherwise.
-
-  // Master switch. Flip to false (or delete the file) to remove the layer.
-  var ENABLED = true;
+  function getT() {
+    return (root && root.Taxonomy)
+        || (typeof globalThis !== 'undefined' && globalThis.Taxonomy)
+        || null;
+  }
+  var ENABLED = true; // flip to false / delete the file to remove the layer.
 
   function displayTopic(rec) {
     if (!rec) return null;
-    if (rec.topic_id) return T.displayName(rec.topic_id);      // canonical: preferred
+    var T = getT(); if (!T) return rec.topic || null;
+    if (rec.topic_id) return T.displayName(rec.topic_id);       // canonical: preferred
     if (!ENABLED) return null;
-    var id = T.resolveTopicId(rec.topic);                       // legacy fallback (display)
+    var id = T.resolveTopicId(rec.topic);                        // legacy fallback (display)
     return id ? T.displayName(id) : (rec.topic || null);
   }
 
   function displaySubtopic(rec) {
     if (!rec) return null;
-    if (rec.subtopic_id) return T.displayName(rec.subtopic_id); // canonical: preferred
+    var T = getT(); if (!T) return rec.subtopic || null;
+    if (rec.subtopic_id) return T.displayName(rec.subtopic_id);  // canonical: preferred
     if (!ENABLED) return null;
-    var tid = rec.topic_id || T.resolveTopicId(rec.topic);      // legacy fallback (display)
+    var tid = rec.topic_id || T.resolveTopicId(rec.topic);       // legacy fallback (display)
     var sid = tid ? T.resolveSubtopicId(tid, rec.subtopic) : null;
     return sid ? T.displayName(sid) : (rec.subtopic || null);
   }
@@ -44,10 +49,14 @@
     return { topic: displayTopic(rec), subtopic: displaySubtopic(rec) };
   }
 
-  T.compat = {
+  var api = {
     ENABLED: ENABLED,
     displayForRecord: displayForRecord,
     displayTopic: displayTopic,
     displaySubtopic: displaySubtopic,
   };
+
+  var T0 = getT();
+  if (T0) T0.compat = api;                                        // browser + Edge/Deno
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; // Node / bundlers
 })(typeof globalThis !== 'undefined' ? globalThis : this);
