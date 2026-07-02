@@ -717,6 +717,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="chat-renderer.js"></script>
 <script src="taxonomy.js"></script>
+<script src="taxonomy-compat.js"></script>
 <script src="taxonomy-write.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
@@ -1436,8 +1437,8 @@ button{font-family:inherit;cursor:pointer}
       var multiConcept='';
       if(sec){
         multiConcept='<div class="multi-concept">'+
-          '<div class="mc-box primary"><div class="mc-l">Primary Topic</div><div class="mc-v">'+p.topic+' → '+p.sub+'</div></div>'+
-          '<div class="mc-box"><div class="mc-l">Secondary Topic</div><div class="mc-v">'+sec.topic+' → '+sec.sub+'</div></div>'+
+          '<div class="mc-box primary"><div class="mc-l">Primary Topic</div><div class="mc-v">'+window.Taxonomy.compat.displayTopic({topic:p.topic,subtopic:p.sub})+' → '+(window.Taxonomy.compat.displaySubtopic({topic:p.topic,subtopic:p.sub})||'')+'</div></div>'+
+          '<div class="mc-box"><div class="mc-l">Secondary Topic</div><div class="mc-v">'+window.Taxonomy.compat.displayTopic({topic:sec.topic,subtopic:sec.sub})+' → '+(window.Taxonomy.compat.displaySubtopic({topic:sec.topic,subtopic:sec.sub})||'')+'</div></div>'+
         '</div>';
         if (!skipSignals) this.sendSignal({type:'multi-concept', primary:p.sub, secondary:sec.sub});
       }
