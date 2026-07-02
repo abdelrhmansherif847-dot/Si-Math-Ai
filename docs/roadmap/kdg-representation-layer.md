@@ -51,10 +51,20 @@ Structural type → afforded representations (initial baseline; architecture §2
 | `GEOMETRIC` | Word, Real-life, Diagram, Standard Equation |
 | `COMBINATORIAL` | Word, Real-life, Table, Standard Equation |
 
-Untagged lesson → capability *unknown* (`null`), treated permissively so a new
-lesson never hard-breaks a consumer before it is tagged. Example expert override:
-`ALG_005` Complex Numbers is `PROCEDURAL` (rule excludes Graph) but Graph-capable
-via the Argand plane.
+Untagged lesson → capability *unknown* (`null`). How `null` is resolved is an
+explicit architectural policy, **not** an implementation default — see architecture
+§7 (tri-state, per-consumer: production consumers fail-closed, consumption
+consumers ungated, authoring surfaces the unknown). `canRepresent`'s current
+permissive collapse is pending alignment to that policy (blocker #2). Example
+expert override: `ALG_005` Complex Numbers is `PROCEDURAL` (rule excludes Graph)
+but Graph-capable via the Argand plane.
+
+> **`LESSON_STRUCTURAL_TYPE` is temporary implementation metadata, not part of the
+> permanent taxonomy.** It stands in for lesson metadata that belongs in the
+> Knowledge layer; the long-term goal is to derive capability from the Knowledge
+> layer, after which this map is **deleted**. The durable part is `RULE_AFFORDS`
+> (the capability *rule*); the temporary part is the per-lesson *classification*.
+> Migration path: architecture §6 ("Structural Type — a temporary bridge").
 
 ---
 
@@ -170,10 +180,23 @@ Node / Deno: `const R = require('./kdg-representation.js');` (set
 
 ---
 
+## Merge blockers (pending — from the critical review)
+
+1. **Test the safety invariant** — assert that learned affinity can never make an
+   invalid representation valid or appear in any capable set. The invariant holds by
+   construction today (capability is computed independently of, and prior to,
+   affinity) but is untested.
+2. **Resolve the capability policy in code** — implement the tri-state /
+   per-consumer policy decided in architecture §7 (keep `capabilityOf` tri-state;
+   give production consumers a strict `null` → false reading). This retires the
+   silent fail-open default.
+
+---
+
 ## Follow-ups (each separately approved)
 
 1. **Capability-authority sign-off** — ratify the structural-type tags + afford
-   sets + expert overrides (architecture §7.1) before wiring into consumers.
+   sets + expert overrides (architecture §8.1) before wiring into consumers.
 2. **Learned-affinity wiring** — populate `LEARNED_AFFINITY` from real performance
    data; add the review queue that promotes/demotes *capability* candidates.
 3. **Assessment vocabulary** — the sibling axis for MC / Short Answer / Grid-in

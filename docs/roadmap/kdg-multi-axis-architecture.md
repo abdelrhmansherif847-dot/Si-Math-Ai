@@ -71,7 +71,7 @@ The module (`kdg-representation.js`) encodes this table as `RULE_AFFORDS`
 (structural type → afford set) + `LESSON_STRUCTURAL_TYPE` (lesson → type), with
 `EXPERT_CAPABILITY_OVERRIDES` for edge cases the rules miss — e.g. `ALG_005`
 Complex Numbers is PROCEDURAL yet Graph-capable via the Argand plane. These afford
-sets are the **initial baseline**, pending capability-authority sign-off (§7.1).
+sets are the **initial baseline**, pending capability-authority sign-off (§8.1).
 
 **Verdict:** Adopt Capability (derived, hard) **+** Affinity (learned, soft).
 Reject universal membership.
@@ -450,9 +450,118 @@ Net: rule scalability, expert correctness where it counts, the best substrate fo
 future learning, and strong cold-start — the only option that is not weak on any
 criterion.
 
+### Structural Type — a temporary bridge, not a second taxonomy
+
+`LESSON_STRUCTURAL_TYPE` (lesson → structural type) is **implementation metadata,
+not part of the permanent taxonomy.** It exists only because `taxonomy.core.js` is
+frozen and cannot yet carry per-lesson metadata beyond id + display name. Stated
+explicitly:
+
+- **It is not part of the permanent taxonomy.** It is a private classification
+  inside the representation module — not a topic/subtopic hierarchy, and not a
+  source of truth consumers are meant to depend on.
+- **It is temporary implementation metadata**, standing in for lesson metadata that
+  belongs in the Knowledge layer.
+- **The long-term goal is for capability to be derived from the Knowledge layer
+  itself** — from authored lesson attributes (or `topicId`), not a hand-maintained
+  side map.
+- **Once the Knowledge layer is rich enough, `LESSON_STRUCTURAL_TYPE` disappears
+  completely.** It is expected to be *deleted*, not maintained in perpetuity.
+
+Separate the durable from the temporary:
+
+- **Durable:** `RULE_AFFORDS` (structural type → afforded representations) — the
+  capability *rule*, O(types), the real logic. This stays.
+- **Temporary:** `LESSON_STRUCTURAL_TYPE` (lesson → type) — the per-lesson
+  *classification*, O(lessons), the migration target. This goes.
+
+**Should Structural Type become a property of the Knowledge Graph itself?** Yes.
+It answers "what kind of mathematical object is this lesson?" — intrinsic to the
+lesson, independent of any representation. Its correct home is Knowledge-node
+metadata; it sits in the representation module today only as a bridge. Migration
+path (staged, additive, each reversible — no big-bang):
+
+1. **Now (bridge).** `LESSON_STRUCTURAL_TYPE` in the representation module, marked
+   temporary, coverage-guarded by `validate-kdg-representation.mjs`.
+2. **Knowledge gains structural metadata.** When the taxonomy is unfrozen (a
+   separate approved change), add an optional `structuralType` (or finer flags:
+   `isFunction`, `isGeometric`, `isData`, `isCountable`) to each SUBTOPIC —
+   additive, regenerated to the three copies by the existing sync, drift-guarded.
+   The module reads it instead of the local map.
+3. **Derivation shrinks the hand-set.** Derive type where `topicId` implies it
+   cleanly (`STATISTICS→DATA`, `FUNCTIONS→FUNCTIONAL`, `GEOMETRY→GEOMETRIC`); author
+   per-lesson type only for the genuinely mixed topics (`ALGEBRA`,
+   `PROBABILITY_RATIOS`) and exceptions (`GEO_008`). ~33 → ~10–15 authored entries.
+4. **Richer Knowledge subsumes it.** Once lessons carry the metadata the KDG
+   infographic §8 envisions (skills, affordances), capability is derived from those
+   authored affordances directly and `structuralType` as an intermediate concept is
+   dropped.
+5. **End state.** The module keeps only the representation vocabulary + resolver +
+   the capability *rule* + affinity; the per-lesson input comes entirely from
+   Knowledge. `LESSON_STRUCTURAL_TYPE` is deleted.
+
+**Why this is low-risk:** consumers always call `capabilityOf(lessonId, repId)`.
+Whether that reads the local map (today), taxonomy metadata (stages 2–3), or derived
+affordances (stage 4) is an internal detail — the read interface never changes, so
+the migration is invisible to every consumer.
+
 ---
 
-## 7. Open questions
+## 7. Capability resolution policy (unknown-capability handling)
+
+`capabilityOf(lessonId, repId)` is tri-valued: `true` (capable), `false` (invalid),
+`null` (**unknown** — the lesson is untagged). What a consumer does with `null` must
+be an explicit architectural policy, not a silent implementation default (this
+resolves review blocker #2). Three candidate policies:
+
+- **Fail-open** — `null` → allowed. Never blocks on unknown.
+- **Fail-closed** — `null` → blocked. Allows only known-capable.
+- **Explicit Unknown (tri-state)** — never collapse `null` globally; propagate it
+  and let each consumer decide.
+
+**The decisive asymmetry: the cost of an error flips with the consumer's
+*direction*.**
+
+- A consumer that **reads an existing artifact** (a real question already in front
+  of the student): a false *block* is catastrophic (refusing to act on a real
+  question); a false *allow* is harmless — the artifact demonstrably exists, and its
+  existence *is* proof of capability.
+- A consumer that **produces a new artifact** (generates or selects a
+  representation): a false *allow* is catastrophic (emits nonsense — "Stem-and-Leaf
+  as a Standard Equation"); a false *block* is harmless (skips one representation).
+
+No single global boolean is safe for both directions:
+
+| Consumer | Direction | Fail-open | Fail-closed | Tri-state (recommended collapse) |
+|---|---|---|---|---|
+| **AI Chat** | reads existing | safe | ✘ refuses real questions | **ungated** — act on the real question; log a `false` |
+| **Truth Engine** | reads existing | safe | ✘ withholds verification | **ungated** — verify regardless; log `false` as a signal |
+| **Focus Practice** | selects | ✘ assigns nonsense practice | ✘ empty set on untagged → breaks | **safe subset** — on `null`, fall back to near-universal reps (Word / Real-life) |
+| **Question Generation** | produces | ✘ generates invalid items | safe | **fail-closed** — `null` → do not generate |
+| **Future authoring** | authors | ✘ hides the gap | ✘ hides valid options | **surface `null`** for human resolution |
+
+**Recommendation — Explicit Unknown (tri-state), with documented per-consumer
+collapse.** Keep `capabilityOf` tri-valued as the honest primitive; do **not**
+globally collapse `null`. The architecture mandates:
+
+- **Production consumers (Question Generation; Focus Practice selection): collapse
+  `null` → not-capable (fail-closed).** Never produce or select an unproven
+  representation.
+- **Consumption consumers (AI Chat; Truth Engine): do not gate on capability at
+  all.** They act on the representation that empirically exists; `false`/`null` is
+  at most a logged anomaly signal, never a block. **Corollary: capability gates the
+  *production* of representations, not the *consumption* of existing ones.**
+- **Authoring: surface `null`** for resolution; never silently collapse it.
+
+This retires the hidden global fail-open default: the tri-state is explicit and
+each collapse is a documented rule. Implementation follow-through (blocker #2):
+keep `capabilityOf` tri-state; give production consumers a strict reading
+(`null` → false) via a `strict` option or a dedicated `isCapable`, and document
+that AI Chat / Truth Engine bypass the gate.
+
+---
+
+## 8. Open questions
 
 1. **Capability authority** — are structural-type tags author-curated, or partly
    inferred from the taxonomy topic? Who signs off on a lesson's affordances?
