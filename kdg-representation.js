@@ -2,59 +2,52 @@
  * kdg-representation.js — the REPRESENTATION axis of the Knowledge Dependency
  * Graph (KDG). Single authored source of truth for how a lesson can be presented.
  *
- * Conforms to docs/roadmap/kdg-multi-axis-architecture.md (the approved
- * architecture is the source of truth; this module implements it).
+ * Conforms to docs/roadmap/kdg-multi-axis-architecture.md. THE ARCHITECTURE IS THE
+ * SOURCE OF TRUTH: every behavioural decision here is described there. Section refs
+ * (§n) point at that document. If code and architecture disagree, the code is wrong.
+ *
+ * Conformance guarantees (enforced by scripts/validate-kdg-representation.mjs):
+ *   1. No behaviour that is not described by the architecture.
+ *   2. No hidden defaults — every default is intentional and documented below.
+ *   3. Capability is DETERMINISTIC — it never reads learned affinity, user data,
+ *      analytics, or model predictions. Learning influences RANKING only, never
+ *      VALIDITY (§6, §7).
+ *   4. Stable public API — capability is reached only through capabilityOf() /
+ *      isCapable() / capableRepresentations(). Consumers never see whether it came
+ *      from RULE_AFFORDS, the structural-type bridge, or (future) Knowledge metadata.
+ *   5. Temporary code is unmistakable — see the LESSON_STRUCTURAL_TYPE banner.
+ *   6. (Validator) tests architectural invariants, not implementation values.
  *
  * ── TWO INDEPENDENT LAYERS ─────────────────────────────────────────────────
  *   KNOWLEDGE      (taxonomy.core.js): WHAT the student is learning — lessons.
  *   REPRESENTATION (this file):        HOW that lesson may be presented.
- * Changing the representation of a question never changes the underlying lesson
- * node: "Quadratics as a graph" and "Quadratics as a word problem" are the SAME
- * lesson (ALG_010) in two representations.
+ * Changing the representation never changes the underlying lesson node.
  *
- * ── CAPABILITY + AFFINITY (NOT universal membership) ───────────────────────
- * A lesson is NOT representable in every form. "Order of Operations as a Graph"
- * and "Stem-and-Leaf as a Standard Equation" are not merely uncommon — they are
- * INVALID. The axis therefore carries two distinct relations (architecture §2.1):
+ * ── CAPABILITY + AFFINITY (§2.1, §6, §7) ───────────────────────────────────
+ *   • CAPABILITY (hard gate): is a representation VALID for a lesson? Hybrid —
+ *       rule baseline (structural-type → afford set) + expert overrides,
+ *       precedence expert > rule. Tri-valued: true | false | null (unknown).
+ *   • AFFINITY (soft rank, [0,1]): among KNOWN-CAPABLE representations, how
+ *       natural / common? Learned; cold-start uniform. Affinity can never change
+ *       capability (§7).
  *
- *   • CAPABILITY (hard gate, boolean): is a representation VALID for a lesson?
- *       Produced HYBRID (architecture §6):
- *         rule baseline  — derived from the lesson's structural-type tag, then
- *         expert override — a small curated exception table (human-authoritative),
- *       with precedence  expert override > rule.
- *   • AFFINITY (soft rank, [0,1]): among CAPABLE representations, how natural /
- *       common / effective? LEARNED from performance data; here it is a cold-start
- *       default with an injection hook (LEARNED_AFFINITY). Learning tunes affinity
- *       continuously; it never silently flips capability (that goes to review).
+ * ── UNKNOWN-CAPABILITY POLICY (§7) ─────────────────────────────────────────
+ * capabilityOf() stays TRI-STATE; `null` is never globally collapsed here. Each
+ * consumer applies the collapse the architecture assigns it:
+ *   • Production (Question Generation; Focus Practice selection): strict — use
+ *     isCapable() / capableRepresentations() (null → not capable, fail-closed).
+ *   • Consumption (AI Chat; Truth Engine): do NOT gate on capability; act on the
+ *     representation that exists; a `false` is at most a logged anomaly.
+ *   • Authoring: read capabilityOf() and branch on `null` (surface the unknown).
  *
- * ── THE SEVEN REPRESENTATIONS ──────────────────────────────────────────────
- *   Word Problem · Standard Equation · Simple Equation · Graph · Table ·
- *   Diagram/Figure · Real-life Scenario.
- * Multiple Choice / Short Answer / Grid-in are NOT representations — they encode
- * the RESPONSE channel, an orthogonal axis. They move to a separate ASSESSMENT
- * vocabulary (future, item metadata — architecture §2.2). They are intentionally
- * absent here.
+ * ── SEVEN REPRESENTATIONS ──────────────────────────────────────────────────
+ * Word Problem · Standard Equation · Simple Equation · Graph · Table ·
+ * Diagram/Figure · Real-life Scenario. Multiple Choice / Short Answer / Grid-in
+ * are RESPONSE formats (a separate Assessment axis, §2.2) — not representations.
  *
- * ── REASONING LAYER (prepared, NOT implemented) ────────────────────────────
- * A future deep graph layer (sub-skills + error mechanisms) sits between
- * Knowledge and the surface axes (architecture §5). It is deliberately not built
- * here. describeNode() returns a `knowledge` block that a Reasoning block will
- * later sit beside; nothing in this module needs to change to add it.
+ * ── problem_type BRIDGE (unchanged) — REASONING LAYER (prepared, not built, §5) ─
  *
- * ── problem_type BRIDGE (unchanged) ────────────────────────────────────────
- * The legacy binary problem_type ∈ { concept, word_problem } is bridged both
- * ways (fromProblemType / toProblemType) so consumers adopt the richer vocabulary
- * with no schema change. No database column is introduced.
- *
- * ── DEPENDENCIES ───────────────────────────────────────────────────────────
- * No hard dependency on the taxonomy. Capability is computed from an internal
- * structural-type tag map keyed by taxonomy subtopic ids (soft, string-level
- * coupling). Enrichment helpers (describeNode, lessonIds, allEdges) OPTIONALLY
- * read a global `Taxonomy` and degrade gracefully when it is absent.
- *
- * Environment-agnostic UMD: attaches window.KDGRepresentation in the browser,
- * exports via module.exports in Node / Deno. The Edge Function does NOT import
- * this file (integration is a separate, gated task — architecture §4).
+ * Environment-agnostic UMD. The Edge Function does NOT import this file (§4).
  */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
@@ -66,53 +59,32 @@
 
   /* ════════════════════════════════════════════════════════════════════════
    * SECTION 1 — VERSION
-   * Bumped to 2: Assessment removed (9→7 representations) and the universal
-   * membership model replaced by capability + affinity. A representation id may
-   * be persisted, so ids remain permanent; only the set and semantics changed.
    * ════════════════════════════════════════════════════════════════════════ */
   var REPRESENTATION_LAYER_VERSION = 2;
 
   /* ════════════════════════════════════════════════════════════════════════
-   * SECTION 2 — CANONICAL REPRESENTATIONS (id → displayName)
-   * IDs are PERMANENT, OPAQUE UPPER_SNAKE constants. `legacyProblemType` records
-   * how each maps onto the binary problem_type field (see the bridges).
+   * SECTION 2 — CANONICAL REPRESENTATIONS (§2, §2.2)
+   * IDs are PERMANENT, OPAQUE UPPER_SNAKE. `legacyProblemType` records how each
+   * maps onto the binary problem_type field (bridge, §7-code).
    * ════════════════════════════════════════════════════════════════════════ */
   var REPRESENTATIONS = [
-    {
-      id: 'WORD_PROBLEM', displayName: 'Word Problem', legacyProblemType: 'word_problem',
-      description: 'The concept stated as a text problem the student must translate into math.',
-    },
-    {
-      id: 'STANDARD_EQUATION', displayName: 'Standard Equation', legacyProblemType: 'concept',
-      description: 'The symbolic form, e.g. ax + by = c or ax² + bx + c = 0.',
-    },
-    {
-      id: 'SIMPLE_EQUATION', displayName: 'Simple Equation', legacyProblemType: 'concept',
-      description: 'A stripped-down symbolic form, e.g. x + 3 = 7.',
-    },
-    {
-      id: 'GRAPH', displayName: 'Graph', legacyProblemType: 'concept',
-      description: 'The concept shown visually on axes, e.g. the parabola of y = x².',
-    },
-    {
-      id: 'TABLE', displayName: 'Table', legacyProblemType: 'concept',
-      description: 'A table of values / data form of the concept.',
-    },
-    {
-      id: 'DIAGRAM', displayName: 'Diagram / Figure', legacyProblemType: 'concept',
-      description: 'A geometric figure, drawing, or labelled diagram.',
-    },
-    {
-      id: 'REAL_LIFE', displayName: 'Real-life Scenario', legacyProblemType: 'word_problem',
-      description: 'The concept embedded in a real-world / applied situation.',
-    },
-    // NOTE: Multiple Choice / Short Answer / Grid-in intentionally removed — they
-    // are RESPONSE formats (an Assessment axis, item metadata), not content
-    // representations. See architecture §2.2. A separate Assessment vocabulary
-    // will own them; do not re-add them here.
+    { id: 'WORD_PROBLEM', displayName: 'Word Problem', legacyProblemType: 'word_problem',
+      description: 'The concept stated as a text problem the student must translate into math.' },
+    { id: 'STANDARD_EQUATION', displayName: 'Standard Equation', legacyProblemType: 'concept',
+      description: 'The symbolic form, e.g. ax + by = c or ax² + bx + c = 0.' },
+    { id: 'SIMPLE_EQUATION', displayName: 'Simple Equation', legacyProblemType: 'concept',
+      description: 'A stripped-down symbolic form, e.g. x + 3 = 7.' },
+    { id: 'GRAPH', displayName: 'Graph', legacyProblemType: 'concept',
+      description: 'The concept shown visually on axes, e.g. the parabola of y = x².' },
+    { id: 'TABLE', displayName: 'Table', legacyProblemType: 'concept',
+      description: 'A table of values / data form of the concept.' },
+    { id: 'DIAGRAM', displayName: 'Diagram / Figure', legacyProblemType: 'concept',
+      description: 'A geometric figure, drawing, or labelled diagram.' },
+    { id: 'REAL_LIFE', displayName: 'Real-life Scenario', legacyProblemType: 'word_problem',
+      description: 'The concept embedded in a real-world / applied situation.' },
+    // Multiple Choice / Short Answer / Grid-in intentionally absent — Assessment axis (§2.2).
   ];
 
-  /* Enum-style id constants for callers: KDGRepresentation.REPRESENTATION.GRAPH. */
   var REPRESENTATION = {};
   var REPRESENTATION_IDS = [];
   var REP_BY_ID = {};
@@ -124,8 +96,6 @@
 
   /* ════════════════════════════════════════════════════════════════════════
    * SECTION 3 — ALIAS MAPPING (normalized raw label → representation id)
-   * Keys are normalizeKey()'d. Seeded from the KDG infographic vocabulary
-   * ("Normal Equation", "Small Equation"), common AI wording, and Arabic.
    * ════════════════════════════════════════════════════════════════════════ */
   var REPRESENTATION_ALIASES = {
     // Word Problem
@@ -185,14 +155,10 @@
     return typeof id === 'string' && Object.prototype.hasOwnProperty.call(REP_BY_ID, id);
   }
 
-  /* resolveRepresentation(raw) → permanent representation id | null (reject).
-   * Accepts a canonical id (case-insensitive), a known alias, or a canonical
-   * display name. Unmapped → null (never a guess). Removed Assessment labels
-   * (MCQ, short answer, grid-in) now correctly resolve to null. */
   function resolveRepresentation(raw) {
     if (raw == null) return null;
     var asId = String(raw).trim().toUpperCase();
-    if (isRepresentationId(asId)) return asId;                 // raw was already an id
+    if (isRepresentationId(asId)) return asId;
     var key = normalizeKey(raw);
     if (!key) return null;
     if (REPRESENTATION_ALIASES[key]) return REPRESENTATION_ALIASES[key];
@@ -200,34 +166,24 @@
   }
 
   function isRepresentation(raw) { return resolveRepresentation(raw) !== null; }
-
   function displayName(id) { return REP_BY_ID[id] ? REP_BY_ID[id].displayName : null; }
-
   function describe(id) {
     var r = REP_BY_ID[id];
-    if (!r) return null;
-    return { id: r.id, displayName: r.displayName, description: r.description };
+    return r ? { id: r.id, displayName: r.displayName, description: r.description } : null;
   }
-
   function representationIds() { return REPRESENTATION_IDS.slice(); }
 
   /* ════════════════════════════════════════════════════════════════════════
-   * SECTION 5 — CAPABILITY (hybrid: rule baseline + expert overrides)
-   *
-   * Structural types classify a lesson by which representations it AFFORDS. This
-   * is the O(lessons) tagging that replaces an O(lessons × reps) matrix. The
-   * afford sets below are the INITIAL BASELINE and mirror the matrix in
-   * architecture §2.1 — pending capability-authority sign-off (open question §7.1).
+   * SECTION 5 — CAPABILITY RULE (durable) + STRUCTURAL-TYPE BRIDGE (temporary)
    * ════════════════════════════════════════════════════════════════════════ */
-  var STRUCTURAL_TYPE = {
-    PROCEDURAL: 'PROCEDURAL',       // arithmetic / symbolic manipulation
-    FUNCTIONAL: 'FUNCTIONAL',       // functions / relations (graphable)
-    DATA: 'DATA',                   // data / distribution displays
-    GEOMETRIC: 'GEOMETRIC',         // figures / spatial
-    COMBINATORIAL: 'COMBINATORIAL', // counting / probability
-  };
 
-  /* structuralType → the representations it affords by RULE (the baseline). */
+  /* DURABLE (§6): the capability rule — structural type → afforded representations.
+   * O(types). This is the real logic and survives the Knowledge-layer migration.
+   * Afford sets are the architecture's §2.1 baseline (pending sign-off, §8.1). */
+  var STRUCTURAL_TYPE = {
+    PROCEDURAL: 'PROCEDURAL', FUNCTIONAL: 'FUNCTIONAL', DATA: 'DATA',
+    GEOMETRIC: 'GEOMETRIC', COMBINATORIAL: 'COMBINATORIAL',
+  };
   var RULE_AFFORDS = {
     PROCEDURAL:    ['WORD_PROBLEM', 'REAL_LIFE', 'SIMPLE_EQUATION'],
     FUNCTIONAL:    ['WORD_PROBLEM', 'REAL_LIFE', 'SIMPLE_EQUATION', 'STANDARD_EQUATION', 'GRAPH', 'TABLE'],
@@ -236,8 +192,21 @@
     COMBINATORIAL: ['WORD_PROBLEM', 'REAL_LIFE', 'TABLE', 'STANDARD_EQUATION'],
   };
 
-  /* lesson (taxonomy subtopic id) → structural type. Keep in sync with the
-   * taxonomy SUBTOPICS (validate-kdg-representation.mjs guards coverage/orphans). */
+  /* ┌──────────────────────────────────────────────────────────────────────┐
+   * │ ⚠️  TEMPORARY BRIDGE — NOT PERMANENT ARCHITECTURE — WILL BE DELETED  ⚠️ │
+   * └──────────────────────────────────────────────────────────────────────┘
+   * LESSON_STRUCTURAL_TYPE (lesson → type) is a STAND-IN for lesson metadata that
+   * belongs in the KNOWLEDGE layer (taxonomy). It exists ONLY because
+   * taxonomy.core.js is frozen and cannot yet carry per-lesson structural metadata.
+   *
+   *   • It is NOT part of the permanent taxonomy.
+   *   • It is temporary implementation metadata.
+   *   • The long-term goal is to DERIVE capability from the Knowledge layer.
+   *   • Once Knowledge is rich enough this map is DELETED (migration: architecture §6).
+   *
+   * Do NOT treat it as a durable classification, and do NOT let consumers reach it:
+   * capability is exposed ONLY through capabilityOf() (criterion 4), so this can be
+   * replaced by Knowledge-layer reads without any consumer change. */
   var LESSON_STRUCTURAL_TYPE = {
     // Algebra
     ALG_001: 'PROCEDURAL',  ALG_002: 'PROCEDURAL',  ALG_003: 'PROCEDURAL',
@@ -258,67 +227,78 @@
     PR_004: 'FUNCTIONAL',    PR_005: 'FUNCTIONAL',    PR_006: 'PROCEDURAL',
   };
 
-  /* Expert capability overrides (human-authoritative) — precedence over the rule.
-   * Each entry maps a representation id to an explicit true/false, correcting a
-   * known rule miss. Kept deliberately small; grows only via curation.
-   *   ALG_005 Complex Numbers → Graph: VALID via the Argand plane, though the
-   *   PROCEDURAL rule would exclude it (architecture §6 canonical example). */
+  /* Expert overrides (human-authoritative, §6) — precedence over the rule. Small,
+   * grows only by curation. ALG_005 Complex Numbers → Graph is VALID via the Argand
+   * plane though the PROCEDURAL rule excludes it. Migrates WITH structural type. */
   var EXPERT_CAPABILITY_OVERRIDES = {
     ALG_005: { GRAPH: true },
   };
 
-  /* structuralTypeOf(lessonId) → type | null (untagged). */
-  function structuralTypeOf(lessonId) { return LESSON_STRUCTURAL_TYPE[lessonId] || null; }
-
   /* capabilityOf(lessonId, repId) → true | false | null.
-   *   false = invalid representation id, OR explicitly not-capable (rule/override);
-   *   true  = capable; null = lesson untagged (capability unknown). */
+   *   true  = capable (expert override, else the structural-type rule);
+   *   false = an invalid representation id, OR explicitly not-capable;
+   *   null  = the lesson has no structural tag → capability UNKNOWN (never a
+   *           silent allow/deny — the caller applies the §7 policy for its role).
+   *
+   * DETERMINISTIC (criterion 3): a pure function of (lessonId, repId) over
+   * architecture-approved inputs ONLY — EXPERT_CAPABILITY_OVERRIDES and RULE_AFFORDS.
+   * It MUST NOT read LEARNED_AFFINITY, user data, analytics, or model predictions.
+   * Learning influences ranking (affinity), never validity. */
   function capabilityOf(lessonId, repId) {
-    if (!isRepresentationId(repId)) return false;
+    if (!isRepresentationId(repId)) return false;       // not a representation → not capable
     var ov = EXPERT_CAPABILITY_OVERRIDES[lessonId];
     if (ov && Object.prototype.hasOwnProperty.call(ov, repId)) return ov[repId] === true;
     var type = LESSON_STRUCTURAL_TYPE[lessonId];
-    if (!type) return null;                                    // unknown lesson
+    if (!type) return null;                             // untagged lesson → unknown
     return (RULE_AFFORDS[type] || []).indexOf(repId) !== -1;
   }
 
-  /* canRepresent(lessonId, representationId) → boolean.
-   * The hard gate. Blocks only EXPLICITLY not-capable pairs; an untagged lesson
-   * stays permissive (null → allowed) so a newly added lesson never hard-breaks
-   * a consumer before it is tagged. */
-  function canRepresent(lessonId, representationId) {
-    return capabilityOf(lessonId, representationId) !== false;
-  }
+  /* isCapable(lessonId, repId) → boolean. The STRICT (§7 production) reading:
+   * true only when known-capable; `null` (unknown) collapses to false (fail-closed).
+   * Consumption consumers (AI Chat, Truth Engine) must NOT use this — they act on the
+   * representation that exists and do not gate on capability. */
+  function isCapable(lessonId, repId) { return capabilityOf(lessonId, repId) === true; }
 
-  /* capableRepresentations(lessonId) → the representation ids valid for a lesson.
-   * Replaces the old universal representationsForLesson(): a tagged lesson returns
-   * its capable subset; an untagged lesson returns all (permissive degradation). */
+  /* capableRepresentations(lessonId) → the KNOWN-CAPABLE representation ids (strict).
+   * An untagged lesson yields [] (fail-closed) — NOT all reps. There is deliberately
+   * no fail-open fallback here; a consumer that wants one (e.g. Focus Practice's safe
+   * subset, §7) implements it itself. */
   function capableRepresentations(lessonId) {
-    return REPRESENTATION_IDS.filter(function (id) { return canRepresent(lessonId, id); });
+    return REPRESENTATION_IDS.filter(function (id) { return isCapable(lessonId, id); });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-   * SECTION 6 — AFFINITY (soft rank over CAPABLE representations)
-   * Learned from data; here a cold-start default with an injection hook. Learning
-   * writes LEARNED_AFFINITY and tunes affinity only — it never flips capability.
+   * SECTION 6 — AFFINITY (soft rank over KNOWN-CAPABLE reps; learned)
    * ════════════════════════════════════════════════════════════════════════ */
-  var DEFAULT_AFFINITY = 0.5;         // cold-start: uniform over capable reps
-  var LEARNED_AFFINITY = {};          // lessonId → { repId: weight[0,1] } (injected later)
 
-  /* affinity(lessonId, repId) → number in [0,1] | null (null when not capable). */
+  /* Cold-start affinity: UNIFORM over capable representations (§7; the only open
+   * sub-question, §8.2, is whether to later SEED from infographic weights — the
+   * cold-start POLICY of uniform is decided). The constant's exact value is
+   * immaterial: uniform ⇒ ranking falls back to canonical order. It is an
+   * intentional "capable but no learned signal yet" marker, not a value the code
+   * merely "needs" (criterion 2). */
+  var COLD_START_AFFINITY = 0.5;
+
+  /* LEARNED_AFFINITY: lessonId → { repId: weight[0,1] }. Populated by the learning
+   * system later. Read ONLY by affinity() — never by capability (criterion 3). */
+  var LEARNED_AFFINITY = {};
+
+  /* affinity(lessonId, repId) → number in [0,1] | null.
+   * Defined ONLY for KNOWN-CAPABLE pairs; null when capability is false OR unknown
+   * (affinity ranks the capable set, so an un-proven pair has no affinity). */
   function affinity(lessonId, repId) {
-    if (!isRepresentationId(repId)) return null;
-    if (capabilityOf(lessonId, repId) === false) return null;  // no affinity for invalid pairs
+    if (capabilityOf(lessonId, repId) !== true) return null;
     var l = LEARNED_AFFINITY[lessonId];
     if (l && typeof l[repId] === 'number') {
       var v = l[repId];
-      return v < 0 ? 0 : (v > 1 ? 1 : v);
+      return v < 0 ? 0 : (v > 1 ? 1 : v);            // clamp learned to [0,1]
     }
-    return DEFAULT_AFFINITY;
+    return COLD_START_AFFINITY;
   }
 
   /* rankedRepresentations(lessonId) → capable ids, most-natural first (affinity
-   * desc, canonical order as a stable tie-break). Cold-start ⇒ canonical order. */
+   * desc; canonical order as a stable tie-break). Bounded by capability — learned
+   * affinity can reorder but can NEVER introduce a non-capable rep (criterion 3). */
   function rankedRepresentations(lessonId) {
     return capableRepresentations(lessonId).sort(function (a, b) {
       var d = affinity(lessonId, b) - affinity(lessonId, a);
@@ -327,8 +307,8 @@
     });
   }
 
-  /* representationEdges(lessonId) — KDG edges into the representation axis, one
-   * per CAPABLE representation, weighted by affinity. */
+  /* representationEdges(lessonId) — KDG edges into the representation axis, one per
+   * KNOWN-CAPABLE representation, weighted by affinity. */
   function representationEdges(lessonId) {
     return capableRepresentations(lessonId).map(function (repId) {
       return { from: lessonId, to: repId, relation: 'CAN_BE_REPRESENTED_AS', weight: affinity(lessonId, repId) };
@@ -345,6 +325,8 @@
   }
   function toProblemType(representationId) {
     var r = REP_BY_ID[representationId];
+    // Known rep → its legacyProblemType. Non-rep input → 'concept' is the intentional
+    // legacy default (the binary's "not a word problem" bucket), not a stray fallback.
     return (r && r.legacyProblemType) || 'concept';
   }
 
@@ -362,10 +344,10 @@
     return T.SUBTOPICS.map(function (s) { return s.id; });
   }
 
-  /* describeNode({ lessonId, representationId }) — a combined view of a question
-   * node: KNOWLEDGE (lesson + structural type) beside its REPRESENTATION, with the
-   * capability verdict and affinity. A future Reasoning block sits beside
-   * `knowledge` without changing this shape. */
+  /* describeNode({ lessonId, representationId }) — a combined two-layer view: the
+   * KNOWLEDGE (lesson) beside its REPRESENTATION, with the capability verdict and
+   * affinity. Deliberately exposes NO structural type (criterion 4 — the capability
+   * source is internal). A future Reasoning block (§5) sits beside `knowledge`. */
   function describeNode(input) {
     input = input || {};
     var repId = resolveRepresentation(input.representationId);
@@ -373,13 +355,9 @@
     var lessonName = (T && input.lessonId && typeof T.displayName === 'function')
       ? T.displayName(input.lessonId) : null;
     return {
-      knowledge: {
-        lessonId: input.lessonId || null,
-        lessonName: lessonName,
-        structuralType: input.lessonId ? structuralTypeOf(input.lessonId) : null,
-      },
+      knowledge: { lessonId: input.lessonId || null, lessonName: lessonName },
       representation: repId ? describe(repId) : null,
-      capable: (input.lessonId && repId) ? capabilityOf(input.lessonId, repId) : null,
+      capable: (input.lessonId && repId) ? capabilityOf(input.lessonId, repId) : null,  // tri-state
       affinity: (input.lessonId && repId) ? affinity(input.lessonId, repId) : null,
       problemType: repId ? toProblemType(repId) : null,
       version: REPRESENTATION_LAYER_VERSION,
@@ -397,14 +375,12 @@
   }
 
   return {
-    /* ── Version ── */
+    /* ═══ STABLE PUBLIC API (survives the structural-type → Knowledge migration) ═══ */
     REPRESENTATION_LAYER_VERSION: REPRESENTATION_LAYER_VERSION,
-    /* ── Canonical data ── */
     REPRESENTATIONS: REPRESENTATIONS,
     REPRESENTATION: REPRESENTATION,
     REPRESENTATION_IDS: REPRESENTATION_IDS,
-    STRUCTURAL_TYPE: STRUCTURAL_TYPE,
-    /* ── Resolver / display ── */
+    // resolver / display
     resolveRepresentation: resolveRepresentation,
     isRepresentation: isRepresentation,
     isRepresentationId: isRepresentationId,
@@ -412,27 +388,30 @@
     describe: describe,
     normalizeKey: normalizeKey,
     representationIds: representationIds,
-    /* ── Capability (hybrid: rule + expert override) ── */
-    structuralTypeOf: structuralTypeOf,
-    capabilityOf: capabilityOf,
-    canRepresent: canRepresent,
+    // capability — the ONLY way to reach validity; source is internal (criterion 4)
+    capabilityOf: capabilityOf,          // tri-state primitive
+    isCapable: isCapable,                // strict (§7 production reading)
     capableRepresentations: capableRepresentations,
-    /* ── Affinity (learned; cold-start default) ── */
+    // affinity (ranking only; never validity)
     affinity: affinity,
     rankedRepresentations: rankedRepresentations,
     representationEdges: representationEdges,
-    /* ── Legacy problem_type bridges (unchanged) ── */
+    // legacy problem_type bridge (unchanged)
     fromProblemType: fromProblemType,
     toProblemType: toProblemType,
-    /* ── Optional knowledge-layer bridge ── */
+    // optional knowledge-layer bridge
     lessonIds: lessonIds,
     describeNode: describeNode,
     allEdges: allEdges,
-    /* ── Introspection (tests only — do not mutate at runtime) ── */
+
+    /* ═══ INTERNAL — validation/tests only. NOT stable public API. ═══
+     * The capability SOURCE (rules, structural-type bridge) is intentionally not a
+     * public capability surface (criterion 4) and the bridge is temporary
+     * (criterion 5). Do not depend on or mutate these at runtime. */
     _aliases: REPRESENTATION_ALIASES,
     _repById: REP_BY_ID,
-    _ruleAffords: RULE_AFFORDS,
-    _lessonStructuralType: LESSON_STRUCTURAL_TYPE,
+    _ruleAffords: RULE_AFFORDS,                     // durable rule
+    _lessonStructuralType: LESSON_STRUCTURAL_TYPE,  // TEMPORARY bridge (see banner)
     _expertOverrides: EXPERT_CAPABILITY_OVERRIDES,
     _learnedAffinity: LEARNED_AFFINITY,
   };

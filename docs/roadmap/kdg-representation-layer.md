@@ -1,6 +1,6 @@
 # KDG Representation Layer — module reference
 
-**Status:** Implemented, **un-merged** — pending review before merge
+**Status:** Implemented, conformance-complete (six merge criteria), **un-merged** — pending final review
 **Module:** `kdg-representation.js` · **Validator:** `scripts/validate-kdg-representation.mjs`
 **Architecture (source of truth):** `kdg-multi-axis-architecture.md`
 
@@ -51,13 +51,13 @@ Structural type → afforded representations (initial baseline; architecture §2
 | `GEOMETRIC` | Word, Real-life, Diagram, Standard Equation |
 | `COMBINATORIAL` | Word, Real-life, Table, Standard Equation |
 
-Untagged lesson → capability *unknown* (`null`). How `null` is resolved is an
-explicit architectural policy, **not** an implementation default — see architecture
-§7 (tri-state, per-consumer: production consumers fail-closed, consumption
-consumers ungated, authoring surfaces the unknown). `canRepresent`'s current
-permissive collapse is pending alignment to that policy (blocker #2). Example
-expert override: `ALG_005` Complex Numbers is `PROCEDURAL` (rule excludes Graph)
-but Graph-capable via the Argand plane.
+Untagged lesson → capability *unknown* (`null`). `null` is **never** collapsed
+globally — there is no fail-open default. `capabilityOf` stays tri-state and each
+consumer applies the §7 policy for its role: production consumers use the strict
+`isCapable` / `capableRepresentations` (unknown ⇒ not capable, fail-closed);
+consumption consumers (AI Chat, Truth Engine) do not gate on capability at all;
+authoring branches on `null`. Example expert override: `ALG_005` Complex Numbers is
+`PROCEDURAL` (rule excludes Graph) but Graph-capable via the Argand plane.
 
 > **`LESSON_STRUCTURAL_TYPE` is temporary implementation metadata, not part of the
 > permanent taxonomy.** It stands in for lesson metadata that belongs in the
@@ -121,16 +121,14 @@ future, separately-approved migration.
 REPRESENTATION_LAYER_VERSION            // 2
 REPRESENTATIONS                         // 7 × { id, displayName, description, legacyProblemType }
 REPRESENTATION / REPRESENTATION_IDS     // enum + id list
-STRUCTURAL_TYPE                         // { PROCEDURAL, FUNCTIONAL, DATA, GEOMETRIC, COMBINATORIAL }
 
 resolveRepresentation(raw) -> id | null // normalise a raw label (alias / id / display name / Arabic)
 isRepresentation / isRepresentationId / displayName / describe / normalizeKey / representationIds
 
-// capability (hybrid: rule baseline + expert override)
-structuralTypeOf(lessonId) -> type | null
-capabilityOf(lessonId, repId) -> true | false | null     // null = untagged lesson (unknown)
-canRepresent(lessonId, repId) -> bool                    // false only when explicitly not-capable
-capableRepresentations(lessonId) -> [ids]                // capable subset (all if untagged)
+// capability — reached ONLY through these (source is internal; §7, criterion 4)
+capabilityOf(lessonId, repId) -> true | false | null     // tri-state primitive; null = unknown (untagged)
+isCapable(lessonId, repId) -> bool                       // strict: capabilityOf === true (production reading)
+capableRepresentations(lessonId) -> [ids]                // strict known-capable set (untagged ⇒ [], fail-closed)
 
 // affinity (learned; cold-start default, never flips capability)
 affinity(lessonId, repId) -> number[0,1] | null          // null when not capable
@@ -144,7 +142,7 @@ toProblemType(representationId) -> 'word_problem' | 'concept'
 // optional knowledge-layer bridge
 lessonIds() -> [taxonomy subtopic ids]                   // [] if Taxonomy absent
 describeNode({ lessonId, representationId })
-    -> { knowledge:{ lessonId, lessonName, structuralType }, representation, capable, affinity, problemType, version }
+    -> { knowledge:{ lessonId, lessonName }, representation, capable, affinity, problemType, version }
 allEdges() -> [ capable, affinity-weighted edges ]       // [] if Taxonomy absent
 ```
 
@@ -159,7 +157,7 @@ the taxonomy resolver's strict, no-passthrough contract.
 |---|---|
 | **AI Chat** | Classify the current question's representation (`resolveRepresentation`) so hints match the format the student is stuck on. |
 | **Root Cause Analyzer** | Separate a concept gap from a *representation/translation* gap on the same lesson; `capabilityOf` distinguishes an *invalid* pairing from a real gap. |
-| **Focus Practice** | Vary representation along a recovery path via `rankedRepresentations` (natural → stretch); `canRepresent` guarantees valid practice. |
+| **Focus Practice** | Vary representation along a recovery path via `rankedRepresentations` (natural → stretch); `capableRepresentations` (strict) guarantees valid practice. |
 | **Truth Engine** | Tag verified answers with their representation without changing the lesson id. |
 | **Mock Exams / Question Generation** | Request "lesson X in representation Y" from one lesson node; capability hard-blocks invalid combos. |
 | **Taxonomy Intelligence** | Reason about a concept independently from its presentation format. |
@@ -180,16 +178,25 @@ Node / Deno: `const R = require('./kdg-representation.js');` (set
 
 ---
 
-## Merge blockers (pending — from the critical review)
+## Merge criteria (all satisfied)
 
-1. **Test the safety invariant** — assert that learned affinity can never make an
-   invalid representation valid or appear in any capable set. The invariant holds by
-   construction today (capability is computed independently of, and prior to,
-   affinity) but is untested.
-2. **Resolve the capability policy in code** — implement the tri-state /
-   per-consumer policy decided in architecture §7 (keep `capabilityOf` tri-state;
-   give production consumers a strict `null` → false reading). This retires the
-   silent fail-open default.
+The two review blockers are resolved, and the implementation meets all six merge
+acceptance criteria; the invariant validator guards each:
+
+1. **Architecture is the source of truth** — every behaviour maps to a documented
+   decision (§ refs in the module header).
+2. **No hidden defaults** — cold-start affinity (uniform), unknown capability
+   (`null`), and the strict production reading are each intentional and documented.
+3. **Deterministic capability** — `capabilityOf` reads only architecture-approved
+   rules + overrides; learned affinity can never change validity (validator asserts
+   it against adversarial injection).
+4. **Stable public API** — capability is reached only via `capabilityOf` /
+   `isCapable` / `capableRepresentations`; the structural-type source is not public
+   and not in `describeNode`.
+5. **Temporary code is obvious** — `LESSON_STRUCTURAL_TYPE` carries a delete-on-
+   migration banner; the durable rule (`RULE_AFFORDS`) is separated from it.
+6. **Validator tests invariants, not values** — passes if the implementation
+   changes but still conforms; fails if the architecture is violated.
 
 ---
 
