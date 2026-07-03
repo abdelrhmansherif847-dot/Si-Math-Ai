@@ -13,6 +13,20 @@ The **philosophy is right and the architecture is wrong-sized.** "Truth from evi
 
 ---
 
+## 0.5 Settled decisions (resolved with the author, 2026-07-03)
+
+Two foundational choices are no longer open. They constrain everything downstream.
+
+**A — Product intent: calibration first, accuracy second (sequenced).**
+Year 0–1 optimizes for **calibration and selective reliability**, *not* for beating frontier models. The success metric is: *does a "verified" label actually mean ≥ X% correct on the benchmark?* — reliability curves + abstention rate, **not** leaderboard position vs GPT/Claude/Gemini. Accuracy-supremacy work (multi-provider ensembling tuned to win *per lesson*, a learned Cost Engine that trades compute for accuracy) is **explicitly deferred** until the deterministic + cross-provider layers exist and the benchmark can measure per-lesson wins. Consequence: **do not run the blind GPT/Claude/Gemini bake-off until Year 1+**; it measures the wrong thing during the calibration phase.
+
+**B — Execution mode: hybrid (inline deterministic + async heavy).**
+- **Inline lane (can gate publish):** deterministic checks only — random-point equivalence, numeric substitute-back, stats recompute — plus *at most one* fast independent solver. Must fit sub-second. Two actionable outcomes: **verified** (check passed → publish with marker) or **not-yet** (publish as *corroborated/unverified* and hand off to the async lane). **Abstain-at-inline is reserved for input-integrity failures** (corrupted OCR / incomplete question), not "solvers unsure."
+- **Async lane (can post-correct):** CAS, cross-provider solvers, judge/deep search. This **is** today's L3 shadow pipeline, promoted from write-only to *able to post-correct* — so it slots in without touching `ai-tutor`'s answer path.
+- **New product surface this creates:** a correction contract + UX for *"we double-checked — the answer is actually X"* on an already-shown answer. Scope this deliberately; it's the one genuinely new user-facing thing the hybrid model introduces.
+
+---
+
 ## 1. What you already have (so the roadmap connects to reality)
 
 Before critiquing, the honest starting line — because the RFC talks as if from zero, and you are not:
