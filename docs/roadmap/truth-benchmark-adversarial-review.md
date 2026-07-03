@@ -1,8 +1,13 @@
 # Truth Benchmark Dataset — Adversarial Review
 
-**Status:** Adversarial architecture review — **no implementation.** No code, no
-database, no AI Tutor changes. Reviews `truth-benchmark-dataset.md` (the proposal)
-before it is frozen.
+**Status:** **FROZEN — authoritative document for the (closed) Benchmark
+Architecture phase (2026-07-03).** This review — and its Resolution Matrix in
+particular — **supersedes `truth-benchmark-dataset.md` wherever the two disagree**,
+and is the reference the implementation phase starts from. Revisit only when
+**Benchmark R0** begins. No further architecture work.
+
+Adversarial architecture review — no implementation (no code, database, or AI Tutor
+changes). Reviews `truth-benchmark-dataset.md` (the proposal).
 
 **Mandate:** Break it. This document does **not** defend the proposal. Where it
 records a resolution, that is the *output* of the attack (what would have to change),

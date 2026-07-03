@@ -1,8 +1,13 @@
 # Truth Benchmark Dataset — Research & Architecture Proposal
 
-**Status:** Research + architecture proposal — **no implementation.** No code, no
-database, no migrations, no AI Tutor changes. This document is a design artifact
-only.
+**Status:** **FROZEN — Benchmark Architecture phase closed (2026-07-03).** Preserved
+for historical context. **This proposal is _not_ the implementation specification.**
+Where it conflicts with the Adversarial Review's Resolution Matrix
+(`truth-benchmark-adversarial-review.md`), **the Resolution Matrix governs.** Revisit
+only when **Benchmark R0** begins. No further architecture work.
+
+Research + architecture proposal — no implementation (no code, database, migrations,
+or AI Tutor changes); a design artifact only.
 
 **Phase:** New, standalone. Opens the *evaluation* track. It does **not** reopen,
 modify, or depend on the Truth Engine (Adaptive Verification) architecture, which
