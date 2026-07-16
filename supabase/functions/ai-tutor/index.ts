@@ -1,4 +1,14 @@
-// ai-tutor Edge Function v84
+// ai-tutor Edge Function v85
+// v85 (Bug #2 — conversational continuity): step/part-targeted follow-ups
+// ("I don't understand Step 2", "why did you divide by 3?", "ليه قسمت على 3؟")
+// are detected (detectStepFollowUp) and answered as a targeted explanation of
+// the referenced step — never a full re-solve. The repeat path now receives
+// the same 10-message conversation window the main path already sends, the
+// prior answer is replayed at 8000 chars (was 1500) for step-targeted turns,
+// and an explicit "question N" reference selects the correct parent record.
+// Response envelope gains additive repeat_scope ('step'|'full'). Counters,
+// weakness signals, solver/L3 pipeline, OCR, taxonomy, and all other paths
+// are unchanged.
 // Phase 1 of Adaptive Verification: independent DifficultyDetector runs in
 // shadow mode on every math question and records verification_tier +
 // verification_meta on question_records. The verification pipeline itself
@@ -20,7 +30,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v84';
+const AI_TUTOR_VERSION = 'v85';
 
 // ── Taxonomy (single source of truth) ────────────────────────────────────────
 // Imported from the generated _shared copy of taxonomy.core.js — byte-identical
@@ -1361,6 +1371,37 @@ function detectReExplain(text: string): boolean {
   );
 }
 
+// Bug #2 (v85): step/part-targeted follow-up detection. True when the student
+// is asking about ONE specific step/operation of the prior explanation
+// ("I don't understand Step 2", "why did you divide by 3?", "منين جت x²؟",
+// "leh 2asamt 3ala 3?") rather than asking for a full re-explanation.
+// Conservative on purpose: short messages only — long texts are almost always
+// NEW problems (word problems can legitimately contain the word "step").
+function detectStepFollowUp(text: string): boolean {
+  const raw = (text || '').trim();
+  if (!raw || raw.length > 200) return false;
+  const t = raw.toLowerCase();
+  return (
+    // EN — explicit step / part reference
+    /\bstep\s*(?:#\s*)?\d{1,2}\b/.test(t) ||
+    /\b(?:first|second|third|last|final)\s+step\b/.test(t) ||
+    /\b(?:this|that)\s+(?:step|part|line)\b/.test(t) ||
+    // EN — asking about a specific operation the tutor performed
+    /\bwhy\s+did\s+you\b/.test(t) ||
+    /\bhow\s+did\s+you\s+(?:get|find|arrive|know|solve|simplify)\b/.test(t) ||
+    /\bwhere\s+did\s+(?:the\s+|that\s+)?\S{1,24}\s+come\s+from\b/.test(t) ||
+    /\bwhy\s+(?:do\s+we\s+|did\s+we\s+)?(?:divide|multiply|subtract|add|substitute|square|factor|cancel|flip|move)\b/.test(t) ||
+    // AR (Egyptian)
+    /(?:ال)?خطو[ةه]\s*(?:رقم\s*)?[٠-٩\d]{1,2}/.test(raw) ||
+    /الخطو[ةه]\s*(?:دي|الأولى|التاني[ةه]|الثالث[ةه]|الأخير[ةه])|الجزء\s*(?:ده|دا)|السطر\s*(?:ده|دا)/.test(raw) ||
+    /ليه\s*(?:قسمت|ضربت|طرحت|جمعت|عوضت|نقلت|شلت|رفعت)|منين\s*(?:جت|جبت|طلعت|أجت)|[إا]زاي\s*(?:جبت|طلعت|وصلت|حسبت)/.test(raw) ||
+    // Franco
+    /\b(?:leh|leih|lih)\s+(?:2asamt|asamt|darabt|tara7t|gama3t|3awadt|na2alt)\b/.test(t) ||
+    /\bezz?ay\s+(?:gebt|tale3t|wasalt|7asabt)\b|\bm[ne]nen\s+(?:get|gat|geet)\b/.test(t) ||
+    /\bel\s+step\b|\bel\s+khatwa\b/.test(t)
+  );
+}
+
 // Normalise question text for exact-repeat comparison (strip whitespace, lowercase).
 function normaliseQ(s: string): string {
   return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1652,11 +1693,16 @@ serve(async (req) => {
 
     type RepeatType = 'solve_again' | 're_explain' | null;
     let repeatType: RepeatType = null;
+    // Bug #2 (v85): true when the follow-up targets ONE step/part of the prior
+    // explanation — switches the re_explain strategy from "re-explain everything"
+    // to "explain exactly that step". Never a new question_records row either way.
+    let stepFollowUp = false;
 
     if (detectSolveAgain(question)) {
       repeatType = 'solve_again';
-    } else if (followUpType != null || detectReExplain(question)) {
+    } else if (followUpType != null || detectReExplain(question) || detectStepFollowUp(question)) {
       repeatType = 're_explain';
+      stepFollowUp = detectStepFollowUp(question);
     }
 
     // If it looks like a repeat, try to find the parent record.
@@ -1668,7 +1714,24 @@ serve(async (req) => {
     } | null = null;
 
     if (repeatType !== null && resolvedSessionId) {
-      if (parentRecordId) {
+      // Bug #2 (v85): an explicit "question N" in the follow-up ("explain step 2
+      // of question 3") identifies WHICH question is under discussion. Prefer the
+      // resolved session_questions hit over the client's generic last-record id —
+      // but ONLY for explicit numeric references: the resolver's semantic
+      // fallback (score >= 1) is too loose to override the default parent.
+      const explicitQuestionRef =
+        /\b(?:Q|question|prob(?:lem)?|number|num|#)\s*\.?\s*#?\s*\d{1,3}\b/i.test(question) ||
+        /(?:سؤال|السؤال|مسألة|المسألة|رقم|نمرة)\s*(?:رقم\s*)?[٠-٩\d]{1,3}/.test(question) ||
+        /\b(?:so2al|so2aal|s2al|rakam|ra2m|nemra|nemrit)\s*\.?\s*\d{1,3}\b/i.test(question);
+      if (explicitQuestionRef && resolvedRef?.source_record_id) {
+        const { data: pr } = await sbAdmin.from('question_records')
+          .select('id, question, image, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
+          .eq('id', resolvedRef.source_record_id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        parentRecord = pr ?? null;
+      }
+      if (!parentRecord && parentRecordId) {
         const { data: pr } = await sbAdmin.from('question_records')
           .select('id, question, image, ai_response, topic, subtopic, repeated_question_count, re_explanation_count')
           .eq('id', parentRecordId)
@@ -1730,13 +1793,28 @@ serve(async (req) => {
           `Alternatives: visual/geometric reasoning, number substitution, algebraic identity, working backwards, symmetry. ` +
           `Open with ONE warm sentence acknowledging the re-solve request, then dive into the different method. ` +
           `Do NOT repeat the prior method.`
+        : stepFollowUp
+        ? `🎯 STRATEGY (STEP-SPECIFIC FOLLOW-UP — NOT A RE-SOLVE): The student is asking about ONE specific ` +
+          `step/part/operation of your prior answer. Their exact words are in the last user message. ` +
+          `1. Locate the exact step or operation they mean — your prior answer is replayed above and the recent ` +
+          `conversation is included; quote the step's line so they see you're both looking at the same thing. ` +
+          `2. Explain ONLY that step: what was done, why it is legal/needed, and where each number or term came from. ` +
+          `A tiny concrete example of just that operation is welcome. ` +
+          `3. Do NOT restate the full solution. Do NOT re-solve from the beginning. Do NOT renumber or change the original steps. ` +
+          `4. Keep the same final answer and notation as the prior answer, and end by checking that this specific part is clear now. ` +
+          `Continue the conversation naturally — this is a discussion, not a fresh solution.`
         : `🔁 STRATEGY: Re-explain the SAME problem above more slowly and simply. ` +
           `Break it into smaller steps. Use a fresh analogy or concrete numerical example. ` +
           `Open with ONE warm sentence acknowledging the confusion (use the student's name), then explain step by step. ` +
           `Same answer as before — just clearer.`;
 
+      // Bug #2 (v85): step-targeted turns need the WHOLE prior answer visible —
+      // the student is pointing INTO it, and the 1500-char cap often cut off the
+      // very step being asked about. 8000 chars covers a full max-length answer.
       const priorAnswerContext = parentRecord.ai_response
-        ? `[Zero's prior answer for reference — do NOT repeat verbatim]: ${parentRecord.ai_response.slice(0, 1500)}`
+        ? (stepFollowUp
+            ? `[Zero's prior answer — the student's follow-up refers to a specific step INSIDE this text]: ${parentRecord.ai_response.slice(0, 8000)}`
+            : `[Zero's prior answer for reference — do NOT repeat verbatim]: ${parentRecord.ai_response.slice(0, 1500)}`)
         : '[No prior answer recorded — proceed with the problem above.]';
 
       const repeatLangAnchor =
@@ -1758,12 +1836,32 @@ serve(async (req) => {
       const studentRepeatRequest = (question || '').trim() ||
         (repeatType === 'solve_again' ? 'Solve it again using a different method.' : "I don't understand. Explain it again.");
 
+      // Bug #2 (v85): conversational memory. The repeat path previously sent NO
+      // conversation history, so multi-turn follow-ups lost the context the main
+      // path already has (see openaiMessages below). Replay the same 10-message
+      // sliding window, text-only: the parent image is re-attached explicitly in
+      // replayUserContent, and history images would bloat the payload.
+      const historyWindow: Array<{role: string; content: string}> = [];
+      for (const m of (messages as Array<{role?: unknown; content?: unknown}>).slice(-10)) {
+        const role = m?.role === 'assistant' ? 'assistant' : 'user';
+        let text = '';
+        if (typeof m?.content === 'string') text = m.content;
+        else if (Array.isArray(m?.content)) {
+          text = (m.content as Array<{text?: unknown}>)
+            .map((b) => (typeof b?.text === 'string' ? b.text : ''))
+            .filter(Boolean).join('\n');
+        }
+        text = text.trim();
+        if (text) historyWindow.push({ role, content: text.slice(0, 1200) });
+      }
+
       const repeatMessages: Array<{role:string; content: unknown}> = [
         { role: 'system', content: `You are Zero 🐉 — a warm, sharp, personality-driven math coach for Egyptian students (SAT/EST/ACT). Student name: ${studentName}.` },
         { role: 'system', content: lockdownInstruction },
         { role: 'system', content: strategyInstruction },
         { role: 'system', content: priorAnswerContext },
         { role: 'system', content: repeatLangAnchor },
+        ...historyWindow,
         { role: 'user',   content: replayUserContent },
         { role: 'user',   content: studentRepeatRequest },
       ];
@@ -1785,6 +1883,8 @@ serve(async (req) => {
       console.log('[ai-tutor] question_retrieved', JSON.stringify({
         uid: user.id.slice(0, 8),
         repeat_type: repeatType,
+        step_follow_up: stepFollowUp,
+        history_turns: historyWindow.length,
         parent_id: parentRecord.id,
         parent_has_image: parentHasImage,
         parent_q_chars: originalQText.length,
@@ -1823,6 +1923,7 @@ serve(async (req) => {
         is_math:         true,
         is_repeat:       true,
         repeat_type:     repeatType,
+        repeat_scope:    stepFollowUp ? 'step' : 'full',
         version:         AI_TUTOR_VERSION,
       }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
