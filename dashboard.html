@@ -1767,7 +1767,7 @@ async function loadDashboard() {
   var totalXP = (prof.xp != null) ? prof.xp : monthQCount;
 
   /* ── Derived: plan study settings (graceful if columns missing) ── */
-  var sessPerWeek = prof.sessions_per_week || prof.weekly_sessions || null;
+  var sessPerWeek = prof.study_sessions_per_week || prof.sessions_per_week || prof.weekly_sessions || null;
   var sessLen     = prof.session_duration_minutes || prof.session_length || null;
 
   /* ── POPULATE: hero ── */
