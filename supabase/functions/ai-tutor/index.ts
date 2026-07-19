@@ -155,6 +155,14 @@ function detectFranco(text: string): boolean {
     '3andy','3andi','b2a','ba2a','5alas','5las','7aga','7add','sho2l','shar7',
     'momken','mumken','momkn','3lshan','3ashan','ashan','yalla','yala',
     'leh','feen','enta','enti','entom','e7na','shokran','shukran','3afwan',
+    // D2-C conservative recall recovery: ONLY digit-bearing Arabizi tokens whose
+    // special digit (2=ء 3=ع 7=ح) is a consonant substitute — structurally
+    // impossible as an English / scientific / mathematical / programming word.
+    // No acknowledgements added. Each token justified in the Bug #3 D2-C report.
+    '7el','7ell','n7el',            // "solve" / "we solve" (7=ح)
+    '2olly','2oly',                 // "tell me"            (2=ء)
+    'so2al','so2aal',               // "question"          (2=ء)
+    '3andak','3andek',              // "you have"          (3=ع) — completes 3andy/3andi
   ]);
   // WEAK: Franco-leaning but softer; only counts toward the ≥2-signal rule.
   // English-colliding / name-like tokens (el, ya, ana, eh, ehh, tab, law, bas,
