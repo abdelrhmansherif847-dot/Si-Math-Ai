@@ -1,4 +1,12 @@
-// ai-tutor Edge Function v85
+// ai-tutor Edge Function v86
+// v86 (Bug #3 — Franco only on request): the language resolver no longer treats
+// heuristic Franco *detection* as a Franco *preference*. detectFranco() is
+// significantly stricter (interior special-digit counts only as a contributing
+// signal; English / math / scientific / OCR Latin text no longer false-triggers),
+// and a heuristic Franco match applies to the CURRENT TURN ONLY — it is never
+// persisted to profiles.language_preference. Explicit "talk in Franco" still
+// persists. Prompt locks (langAnchor/repeat/hint/persona) unchanged. No schema
+// or data change.
 // v85 (Bug #2 — conversational continuity): step/part-targeted follow-ups
 // ("I don't understand Step 2", "why did you divide by 3?", "ليه قسمت على 3؟")
 // are detected (detectStepFollowUp) and answered as a targeted explanation of
@@ -30,7 +38,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v85';
+const AI_TUTOR_VERSION = 'v86';
 
 // ── Taxonomy (single source of truth) ────────────────────────────────────────
 // Imported from the generated _shared copy of taxonomy.core.js — byte-identical
@@ -127,26 +135,45 @@ function detectFranco(text: string): boolean {
   if (!t) return false;
   if (/[؀-ۿ]/.test(t)) return false;
   const words = t.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  // Franco special-digit words (3=ع 7=ح 2=ء 5=خ 8=غ) embed a digit among letters,
-  // e.g. "3awz", "m3aya", "msh3arf". English algebra monomials ("2x", "5y", "x2")
-  // also put a digit beside a letter but carry only ONE letter — require ≥2 letters
-  // in the token so equations like "2x + 3 = 11" are never misread as Franco.
-  if (words.some(w => /[a-z][23578]|[23578][a-z]/i.test(w) && /[a-z].*[a-z]/i.test(w))) return true;
-  const FRANCO_WORDS = new Set([
-    'msh','mesh','ezayak','ezzayak','ezay','izay','keda','kda','delwa2ty','dlw2ty',
-    'fahem','fahma','fhmt','feshto','m3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','sa7','sah',
-    'b2a','ba2a','yala','yalla','3awz','3awez','3ayz','3andy','3andi','3ayza',
-    '5alas','5las','tb','tab','7aga','7d','7add','sho2l','shar7','msh3arf',
-    'eh','ehh','leh','feen','meen','ana','enta','enti','howa','heya','e7na','entom',
-    'mafhomsh','mafhomesh','tamam','tmam','helw','7elw','kwayes','kwayyes','zaman',
-    'momken','mumken','momkn','law','lw','bas','bs','3lshan','3ashan','ashan',
-    'shokran','shukran','3afwan','tayeb','tayyeb','akeed','akid','sa3a','sa3at',
-    'yom','youm','nahar','el','ya','wa7ed','wa7da','etnen','etnein','talata','tlata',
+  // v86 (Bug #3): Franco is detected only from strong, corroborating signals so
+  // English / mathematics / scientific notation / OCR Latin text never
+  // false-trigger. Two accept rules: (a) one unambiguous Franco word in a short
+  // message, or (b) at least two independent Franco signals, one of which is a
+  // real Franco word. A digit token alone is never sufficient.
+  //
+  // digitHits: INTERIOR special-digit tokens (3=ع 7=ح 2=ء 5=خ 8=غ used as a
+  // consonant BETWEEN letters, e.g. m3aya, a7el, msh3arf). Interior-only excludes
+  // edge-digit English/science (co2, gr8, mp3, 3rd, b4). It is only a CONTRIBUTING
+  // signal, so h2o / log2x (one interior digit, no Franco word) stay NOT-Franco.
+  const digitHits = words.filter(w => /[a-z][23578][a-z]/.test(w)).length;
+
+  // STRONG: unambiguous Egyptian Arabizi tokens (no English/Latin collision).
+  const STRONG = new Set([
+    'msh','mesh','ezay','izay','ezayak','ezzayak','keda','kda','delwa2ty','dlw2ty',
+    'fahem','fahma','fhmt','feshto','mafhomsh','mafhomesh','msh3arf',
+    'm3aya','ma3aya','m3ak','ma3ak','ma3lesh','ma3lish','3awz','3awez','3ayz','3ayza',
+    '3andy','3andi','b2a','ba2a','5alas','5las','7aga','7add','sho2l','shar7',
+    'momken','mumken','momkn','3lshan','3ashan','ashan','yalla','yala',
+    'leh','feen','enta','enti','entom','e7na','shokran','shukran','3afwan',
   ]);
-  // Auto-detect if ≥2 Franco hits, OR if any Franco word appears in a short message.
-  const hits = words.filter(w => FRANCO_WORDS.has(w)).length;
-  if (hits >= 2) return true;
-  if (hits >= 1 && words.length <= 6) return true;
+  // WEAK: Franco-leaning but softer; only counts toward the ≥2-signal rule.
+  // English-colliding / name-like tokens (el, ya, ana, eh, ehh, tab, law, bas,
+  // bs, tb, sah) were REMOVED — they caused the false positives this fix targets.
+  const WEAK = new Set([
+    'tamam','tmam','helw','7elw','kwayes','kwayyes','tayeb','tayyeb','akeed','akid',
+    'sa7','zaman','sa3a','sa3at','yom','youm','nahar','wa7ed','wa7da','etnen','etnein',
+    'talata','tlata','howa','heya','meen','7d','lw',
+  ]);
+
+  const strongHits = words.filter(w => STRONG.has(w)).length;
+  const weakHits   = words.filter(w => WEAK.has(w)).length;
+  const wordHits   = strongHits + weakHits;
+
+  // (a) one unambiguous Franco word in a short message.
+  if (strongHits >= 1 && words.length <= 6) return true;
+  // (b) two independent Franco signals, at least one a real Franco word
+  //     (pure digit-token strings like "log2x log5y" can never qualify).
+  if (wordHits >= 1 && (wordHits + digitHits) >= 2) return true;
   return false;
 }
 
@@ -1563,7 +1590,10 @@ serve(async (req) => {
       lang = 'ar';
     } else if (currentIsFranco) {
       lang = 'franco';
-      if (langPref !== 'franco') persistLangPref = 'franco';
+      // v86 (Bug #3): heuristic Franco applies to THIS TURN ONLY and is never
+      // persisted. Only the explicit-request branches above may write
+      // language_preference, so a single false detection can never affect
+      // future conversations.
     } else if (langPref === 'franco') {
       lang = 'franco';
     } else if (langPref === 'ar') {
