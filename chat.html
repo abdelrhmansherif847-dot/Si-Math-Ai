@@ -2671,6 +2671,7 @@ button{font-family:inherit;cursor:pointer}
     imgEl.src = srcs[index];
     resetView();
     var multi = srcs.length > 1;
+    imgEl.alt = multi ? 'Image ' + (index + 1) + ' of ' + srcs.length : 'Image preview';
     countEl.textContent = multi ? (index + 1) + ' / ' + srcs.length : '';
     prevBtn.style.display = multi ? '' : 'none';
     nextBtn.style.display = multi ? '' : 'none';
@@ -2746,8 +2747,28 @@ button{font-family:inherit;cursor:pointer}
   // target as the stage even for taps that land on the image.
 
   // ---- Keyboard (desktop) ------------------------------------------------
+  // Visible, focusable controls inside the dialog (nav arrows are hidden for
+  // single-image groups, so compute this live rather than caching).
+  function focusables() {
+    return Array.prototype.filter.call(
+      viewer.querySelectorAll('.iv-btn'),
+      function (btn) { return btn.getClientRects().length > 0; }
+    );
+  }
+
   document.addEventListener('keydown', function (e) {
     if (!isOpen()) return;
+    // Focus trap: keep Tab / Shift+Tab cycling within the modal (Esc is the exit,
+    // so this is a compliant containment, not a keyboard trap).
+    if (e.key === 'Tab') {
+      var f = focusables();
+      if (!f.length) { e.preventDefault(); return; }
+      var first = f[0], last = f[f.length - 1], a = document.activeElement;
+      if (!viewer.contains(a)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+      return;
+    }
     switch (e.key) {
       case 'Escape':     close(); break;
       case 'ArrowLeft':  navigate(-1); break;
@@ -2757,6 +2778,12 @@ button{font-family:inherit;cursor:pointer}
       default: return;
     }
     e.preventDefault();
+  });
+
+  // iOS Safari fires non-standard gesture events for pinch and would zoom the
+  // whole page; suppress them while open so pinch zooms the image, not Safari.
+  ['gesturestart', 'gesturechange'].forEach(function (t) {
+    viewer.addEventListener(t, function (e) { if (isOpen()) e.preventDefault(); }, { passive: false });
   });
 
   // ---- Wheel zoom (desktop) ----------------------------------------------
