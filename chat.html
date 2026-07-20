@@ -525,6 +525,49 @@ button{font-family:inherit;cursor:pointer}
 .dragon-advice .da-header{display:flex;align-items:center;gap:7px;margin-bottom:5px}
 .dragon-advice .da-avatar{width:22px;height:22px;object-fit:contain;flex-shrink:0}
 .dragon-advice .da-label{font-weight:700;color:#a78bfa;font-size:13px}
+
+/* ============ Image Preview Viewer (Feature #1) ============
+   Full-screen zoom / pan / swipe preview shared by sent chat
+   images (.q-img) and pre-send attachment thumbs (.ip-thumb img). */
+.bubble .q-img,.ip-thumb img{cursor:zoom-in}
+.img-viewer{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;
+  background:rgba(2,6,14,.94);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:contain}
+.img-viewer.open{display:flex;animation:ivFade .2s ease both}
+@keyframes ivFade{from{opacity:0}to{opacity:1}}
+.iv-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.iv-img{max-width:92vw;max-height:86vh;transform-origin:center center;will-change:transform;
+  -webkit-user-drag:none;touch-action:none;-webkit-touch-callout:none}
+.iv-img.smooth{transition:transform .18s ease}
+.iv-btn{position:absolute;z-index:2;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,.18);background:rgba(12,18,30,.72);color:#e9eef5;
+  border-radius:999px;cursor:pointer;line-height:1;font-family:var(--font-display,inherit);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .15s,transform .15s}
+.iv-btn:hover{background:rgba(56,189,248,.28)}
+.iv-btn:active{transform:scale(.94)}
+.iv-close{top:calc(env(safe-area-inset-top,0px) + 14px);right:calc(env(safe-area-inset-right,0px) + 14px);
+  width:42px;height:42px;font-size:26px}
+.iv-nav{top:50%;transform:translateY(-50%);width:46px;height:46px;font-size:30px;padding-bottom:3px}
+.iv-nav:active{transform:translateY(-50%) scale(.94)}
+.iv-prev{left:calc(env(safe-area-inset-left,0px) + 12px)}
+.iv-next{right:calc(env(safe-area-inset-right,0px) + 12px)}
+.iv-toolbar{position:absolute;z-index:2;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  display:flex;align-items:center;gap:14px;padding:7px 10px;border-radius:999px;
+  background:rgba(12,18,30,.72);border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.iv-toolbar .iv-btn{position:static;width:38px;height:38px;font-size:22px}
+.iv-count{min-width:46px;text-align:center;color:#cbd5e1;font-size:13px;font-weight:600;
+  font-family:var(--font-mono,monospace);letter-spacing:.5px}
+@media (max-width:640px){
+  .iv-nav{width:40px;height:40px;font-size:26px}
+  .iv-img{max-width:96vw;max-height:82vh}
+}
+@media (prefers-reduced-motion:reduce){
+  .img-viewer.open{animation:none}
+  .iv-img.smooth{transition:none}
+  .iv-btn{transition:none}
+}
 </style>
 </head>
 <body>
@@ -2533,6 +2576,297 @@ button{font-family:inherit;cursor:pointer}
     renderHintMode();
   }
   renderHintMode();
+</script>
+<script>
+/* ============================================================
+   IMAGE PREVIEW VIEWER (Feature #1)
+   Full-screen zoom / pan / swipe preview for chat images.
+   Entry points: sent chat images (img.q-img) and pre-send
+   attachment thumbnails (.ip-thumb img). Group-aware Prev/Next.
+   Pure overlay — never mutates chat state, sessionMessages,
+   pendingAtts, the messages DOM, or scroll position.
+   Dependency-free. No backend / DB changes.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var MIN_SCALE = 1, MAX_SCALE = 5;
+  var ZOOM_STEP = 1.4;        // +/- button and wheel zoom factor
+  var DBL_ZOOM = 2.5;         // double-tap / double-click target zoom
+  var SWIPE_THRESHOLD = 45;   // px of horizontal travel to change image
+  var DOUBLE_TAP_MS = 300, TAP_MOVE_TOL = 12;
+
+  // ---- Build the overlay once --------------------------------------------
+  var viewer = document.createElement('div');
+  viewer.className = 'img-viewer';
+  viewer.id = 'imgViewer';
+  viewer.setAttribute('role', 'dialog');
+  viewer.setAttribute('aria-modal', 'true');
+  viewer.setAttribute('aria-label', 'Image preview');
+  viewer.setAttribute('aria-hidden', 'true');
+  viewer.innerHTML =
+    '<button class="iv-btn iv-close" type="button" aria-label="Close preview" title="Close (Esc)">&times;</button>' +
+    '<button class="iv-btn iv-nav iv-prev" type="button" aria-label="Previous image" title="Previous (←)">&#8249;</button>' +
+    '<button class="iv-btn iv-nav iv-next" type="button" aria-label="Next image" title="Next (→)">&#8250;</button>' +
+    '<div class="iv-stage"><img class="iv-img" alt="Preview" draggable="false"/></div>' +
+    '<div class="iv-toolbar">' +
+      '<button class="iv-btn iv-zoom-out" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button>' +
+      '<span class="iv-count" aria-live="polite"></span>' +
+      '<button class="iv-btn iv-zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>' +
+    '</div>';
+  function mount() {
+    if (document.body) document.body.appendChild(viewer);
+    else document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(viewer); });
+  }
+  mount();
+
+  var stage    = viewer.querySelector('.iv-stage');
+  var imgEl    = viewer.querySelector('.iv-img');
+  var countEl  = viewer.querySelector('.iv-count');
+  var prevBtn  = viewer.querySelector('.iv-prev');
+  var nextBtn  = viewer.querySelector('.iv-next');
+
+  // ---- State -------------------------------------------------------------
+  var srcs = [];            // ordered image URLs in the active group
+  var index = 0;
+  var scale = 1, tx = 0, ty = 0;
+  var lastTrigger = null;   // element to restore focus to on close
+
+  function isOpen() { return viewer.classList.contains('open'); }
+
+  function applyTransform() {
+    imgEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+    imgEl.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+  }
+
+  // Keep the image centred: cap pan so it can't be dragged past its own edges.
+  // Transform is `translate() scale()`, so translate is in screen px.
+  function clampPan() {
+    var vpW = viewer.clientWidth, vpH = viewer.clientHeight;
+    var baseW = imgEl.offsetWidth, baseH = imgEl.offsetHeight;
+    var maxX = Math.max(0, (baseW * scale - vpW) / 2);
+    var maxY = Math.max(0, (baseH * scale - vpH) / 2);
+    if (tx >  maxX) tx =  maxX;
+    if (tx < -maxX) tx = -maxX;
+    if (ty >  maxY) ty =  maxY;
+    if (ty < -maxY) ty = -maxY;
+  }
+
+  function resetView() { scale = 1; tx = 0; ty = 0; applyTransform(); }
+
+  function setZoom(next, smooth) {
+    next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, next));
+    if (next === scale) return;
+    scale = next;
+    if (scale === 1) { tx = 0; ty = 0; }
+    clampPan();
+    imgEl.classList.toggle('smooth', !!smooth);
+    applyTransform();
+  }
+
+  function show(i) {
+    if (!srcs.length) return;
+    index = (i % srcs.length + srcs.length) % srcs.length;
+    imgEl.classList.add('smooth');
+    imgEl.src = srcs[index];
+    resetView();
+    var multi = srcs.length > 1;
+    imgEl.alt = multi ? 'Image ' + (index + 1) + ' of ' + srcs.length : 'Image preview';
+    countEl.textContent = multi ? (index + 1) + ' / ' + srcs.length : '';
+    prevBtn.style.display = multi ? '' : 'none';
+    nextBtn.style.display = multi ? '' : 'none';
+  }
+
+  function navigate(dir) { if (srcs.length > 1) show(index + dir); }
+
+  function open(list, startIndex, trigger) {
+    srcs = list.slice();
+    lastTrigger = trigger || null;
+    viewer.classList.add('open');
+    viewer.setAttribute('aria-hidden', 'false');
+    show(startIndex);
+    try { viewer.querySelector('.iv-close').focus({ preventScroll: true }); } catch (e) {}
+  }
+
+  function close() {
+    if (!isOpen()) return;
+    viewer.classList.remove('open');
+    viewer.setAttribute('aria-hidden', 'true');
+    srcs = [];
+    resetView();
+    imgEl.removeAttribute('src');
+    if (lastTrigger) {
+      // Restore focus to the thumbnail (standard modal a11y). preventScroll is
+      // essential: focusing must not nudge the chat's scroll position.
+      try {
+        if (!lastTrigger.hasAttribute('tabindex')) lastTrigger.setAttribute('tabindex', '-1');
+        lastTrigger.focus({ preventScroll: true });
+      } catch (e) {}
+      lastTrigger = null;
+    }
+  }
+
+  // ---- Open triggers: delegated so live + rehydrated images both work ----
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.ip-x')) return;   // attachment remove button — ignore
+    var img = null, group = null;
+    var q = e.target.closest('img.q-img');
+    if (q) {
+      img = q;
+      var wrap = q.closest('.q-imgs') || q.parentNode;
+      group = Array.prototype.slice.call(wrap.querySelectorAll('img.q-img'));
+    } else {
+      var thumb = e.target.closest('.ip-thumb');
+      if (thumb && !thumb.classList.contains('pdf')) {
+        img = thumb.querySelector('img');
+        if (img) {
+          var strip = thumb.closest('.ip-strip') || document.getElementById('ipStrip');
+          group = strip
+            ? Array.prototype.slice.call(strip.querySelectorAll('.ip-thumb:not(.pdf) img'))
+            : [img];
+        }
+      }
+    }
+    if (!img || !group || !group.length) return;
+    e.preventDefault();
+    var list = group.map(function (x) { return x.src; });
+    var start = group.indexOf(img);
+    if (start < 0) start = 0;
+    open(list, start, img);
+  });
+
+  // ---- Buttons -----------------------------------------------------------
+  viewer.querySelector('.iv-close').addEventListener('click', function (e) { e.stopPropagation(); close(); });
+  prevBtn.addEventListener('click', function (e) { e.stopPropagation(); navigate(-1); });
+  nextBtn.addEventListener('click', function (e) { e.stopPropagation(); navigate(1); });
+  viewer.querySelector('.iv-zoom-in').addEventListener('click', function (e) { e.stopPropagation(); setZoom(scale * ZOOM_STEP, true); });
+  viewer.querySelector('.iv-zoom-out').addEventListener('click', function (e) { e.stopPropagation(); setZoom(scale / ZOOM_STEP, true); });
+  // Backdrop tap-to-close is handled in the pointer logic below (endPointer),
+  // keyed off the pointerdown target. A click-based handler is unreliable here:
+  // while a pointer is captured on the stage, the browser reports the click
+  // target as the stage even for taps that land on the image.
+
+  // ---- Keyboard (desktop) ------------------------------------------------
+  // Visible, focusable controls inside the dialog (nav arrows are hidden for
+  // single-image groups, so compute this live rather than caching).
+  function focusables() {
+    return Array.prototype.filter.call(
+      viewer.querySelectorAll('.iv-btn'),
+      function (btn) { return btn.getClientRects().length > 0; }
+    );
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (!isOpen()) return;
+    // Focus trap: keep Tab / Shift+Tab cycling within the modal (Esc is the exit,
+    // so this is a compliant containment, not a keyboard trap).
+    if (e.key === 'Tab') {
+      var f = focusables();
+      if (!f.length) { e.preventDefault(); return; }
+      var first = f[0], last = f[f.length - 1], a = document.activeElement;
+      if (!viewer.contains(a)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+      return;
+    }
+    switch (e.key) {
+      case 'Escape':     close(); break;
+      case 'ArrowLeft':  navigate(-1); break;
+      case 'ArrowRight': navigate(1); break;
+      case '+': case '=': setZoom(scale * ZOOM_STEP, true); break;
+      case '-': case '_': setZoom(scale / ZOOM_STEP, true); break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  // iOS Safari fires non-standard gesture events for pinch and would zoom the
+  // whole page; suppress them while open so pinch zooms the image, not Safari.
+  ['gesturestart', 'gesturechange'].forEach(function (t) {
+    viewer.addEventListener(t, function (e) { if (isOpen()) e.preventDefault(); }, { passive: false });
+  });
+
+  // ---- Wheel zoom (desktop) ----------------------------------------------
+  stage.addEventListener('wheel', function (e) {
+    if (!isOpen()) return;
+    e.preventDefault();
+    setZoom(scale * (e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), true);
+  }, { passive: false });
+
+  // ---- Pointer gestures: pan / pinch-zoom / swipe / double-tap -----------
+  var pointers = new Map();
+  var startDist = 0, startScale = 1;
+  var panX = 0, panY = 0, startTx = 0, startTy = 0;
+  var swipeStartX = 0, moved = 0, startedAtScale1 = true;
+  var lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+  var downTarget = null, wasPinch = false;
+
+  function ptList() { return Array.from(pointers.values()); }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  stage.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.iv-btn')) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    imgEl.classList.remove('smooth');
+    if (pointers.size === 1) {
+      downTarget = e.target;                // stage backdrop vs the image itself
+      wasPinch = false;
+      panX = e.clientX; panY = e.clientY; startTx = tx; startTy = ty;
+      swipeStartX = e.clientX; moved = 0; startedAtScale1 = (scale === 1);
+    } else if (pointers.size === 2) {
+      wasPinch = true;
+      var p = ptList(); startDist = dist(p[0], p[1]); startScale = scale;
+    }
+  });
+
+  stage.addEventListener('pointermove', function (e) {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      var p = ptList(), d = dist(p[0], p[1]);
+      if (startDist > 0) setZoom(startScale * (d / startDist), false);
+      e.preventDefault();
+      return;
+    }
+    var dx = e.clientX - panX, dy = e.clientY - panY;
+    moved = Math.max(moved, Math.abs(e.clientX - swipeStartX) + Math.abs(dy));
+    if (scale > 1) { tx = startTx + dx; ty = startTy + dy; clampPan(); applyTransform(); e.preventDefault(); }
+  });
+
+  function endPointer(e) {
+    if (!pointers.has(e.pointerId)) return;
+    var wasLast = pointers.size === 1;
+    var upX = e.clientX, upY = e.clientY;
+    pointers.delete(e.pointerId);
+    try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (!wasLast) {
+      // A pinch finger lifted; re-baseline the remaining pointer for panning.
+      if (pointers.size === 1) { var r = ptList()[0]; panX = r.x; panY = r.y; startTx = tx; startTy = ty; }
+      return;
+    }
+    // Last pointer up: classify the gesture.
+    if (!wasPinch && moved < TAP_MOVE_TOL) {
+      // A tap. On the backdrop it closes; on the image it toggles zoom (double-tap).
+      if (downTarget !== imgEl) { close(); return; }
+      var now = Date.now();
+      if (now - lastTapTime < DOUBLE_TAP_MS && Math.abs(upX - lastTapX) < 40 && Math.abs(upY - lastTapY) < 40) {
+        setZoom(scale > 1 ? 1 : DBL_ZOOM, true); lastTapTime = 0;
+      } else { lastTapTime = now; lastTapX = upX; lastTapY = upY; }
+      return;
+    }
+    // A drag at 1× is a horizontal swipe → previous/next.
+    if (!wasPinch && startedAtScale1 && scale === 1) {
+      var swipe = upX - swipeStartX;
+      if (Math.abs(swipe) > SWIPE_THRESHOLD) navigate(swipe < 0 ? 1 : -1);
+    }
+  }
+  stage.addEventListener('pointerup', endPointer);
+  stage.addEventListener('pointercancel', endPointer);
+
+  // Re-clamp if the viewport changes while zoomed.
+  window.addEventListener('resize', function () { if (isOpen()) { clampPan(); applyTransform(); } });
+})();
 </script>
 <script src="nav.js" defer></script>
 </body>
