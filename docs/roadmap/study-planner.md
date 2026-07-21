@@ -11,16 +11,21 @@ approval-gated (schema migration, chat wiring, server enforcement).
 
 The Study Plan is a **personalized planning engine**, not a generic AI-generated
 schedule. It converts the student's real learning history across the whole Si
-Math platform into a clear, prioritized, continuously-updated roadmap that tells
-the student exactly **what to study next, why, and in what order**.
+Math platform into a clear, prioritized, continuously-updated plan that tells the
+student exactly **what to study next, why, and in what order**.
 
-Two hard product invariants drive the design:
+Three hard product invariants drive the design:
 
-1. **Never generic.** Every task, goal, and roadmap week is derived from the
-   student's own data (weakness, focus, mocks, tutor history, progress).
-2. **Focus Practice owns lesson content and order.** The planner only decides
-   *which* Focus plan and *which remaining lessons* come next — it never invents
-   a lesson sequence.
+1. **The primary deliverable is a 7-day execution plan.** Organized by day
+   (Sunday, Monday, …), never by clock time — each day is a concrete checklist
+   of exactly what to complete. Available study hours are used *internally* to
+   size each day; they are never surfaced as "7:00 PM"-style slots. The
+   long-term roadmap still exists but as a **secondary** section.
+2. **Never generic.** Every task and goal is derived from the student's own data
+   (weakness, focus, mocks, tutor history, progress).
+3. **Focus Practice owns unit content and order.** The planner only decides
+   *which* Focus plan and *which remaining units* come next, spreading them one
+   per study day — it never invents a lesson sequence.
 
 ---
 
@@ -115,17 +120,26 @@ the UI surfaces as the "why".
 
 ### Output — `StudyPlan`
 
+- **`week` (PRIMARY)** — the 7-day execution plan:
+  - `week.days[]` — 7 entries, each `{ day: 'Sunday'…, date, weekdayIndex,
+    isStudyDay, tasks[], estimatedMinutes }`. Study days carry an ordered
+    checklist: an **anchor** (the next Focus unit, e.g. `"Circle → Round 1"`, or
+    the single weekly mock) followed by rotating, data-derived support tasks
+    (`Solve N Practice Questions`, `Review previous mistakes`, `AI Tutor Review`,
+    `Timed Practice`) capped by `hoursPerDay`. Non-study days are `Rest day`.
+  - `week.goals[]` — measurable outcomes summary (finish plan, mastery target,
+    one mock). `week.regeneratesOn` — the end-of-week re-evaluation date.
+- `today` — convenience pointer to `week.days[0]` (may be a rest day).
 - `priorities[]` — ranked, high-impact first, each linked to its Focus plan +
   `remainingLessons` (in Focus's own order) + `progressPct`.
-- `today` — concrete tasks that fit `hoursPerDay` (next Focus lesson → targeted
-  practice → review recent mistakes; diagnostic step if the student is new).
-- `week` — measurable goals (finish plan, reach mastery target, one mock).
-- `roadmap[]` — one high-impact topic per week to the exam date (or a default
-  4-week horizon), distinct topics, consolidation weeks past the known set.
+- **`roadmap[]` (SECONDARY)** — one high-impact topic per week to the exam date
+  (or a default 4-week horizon), distinct topics, consolidation weeks past the
+  known set.
 - `rationale[]`, `examCountdown`, `availability`, `meta` (credit cost + source
   counts + watched triggers).
 
-See `node scripts/validate-study-planner.mjs --demo` for a full sample.
+Run `node scripts/validate-study-planner.mjs --demo` for a full sample — it
+prints the day-by-day plan (Sunday → Saturday) and the JSON envelope.
 
 ---
 
@@ -191,15 +205,18 @@ Triggers (RFC "Dynamic Updates"):
 
 | Trigger code | Fires when |
 |---|---|
+| `week_elapsed` | a full week has passed since the plan was generated — the primary weekly cadence; Zero re-reads the latest data and builds a fresh 7-day plan |
 | `mock_completed` | a new `exam_practice_sessions` row appears |
 | `focus_completed` | more `focus_tasks` reach `DONE` |
 | `weakness_updated` | `weakness_reports` regenerated (newer `last_updated`) |
 | `new_major_weakness` | a new topic enters `high`/`critical` severity |
 | `significant_improvement` | best mastery jumps ≥ 15 points |
 
-When `shouldRegenerate` is true the interface can prompt "Your plan is out of
-date — regenerate? (20 credits)" or, for premium tiers, auto-refresh. Regenerate
-is a **new** paid generation; a passive "your plan may be stale" banner is free.
+`planSignature(state)` records `generatedAt`, so the week-boundary check is a
+cheap timestamp comparison. When `shouldRegenerate` is true the interface can
+prompt "Your plan is out of date — regenerate? (20 credits)" or, for premium
+tiers, auto-refresh at week's end. Regenerate is a **new** paid generation; a
+passive "your plan may be stale" banner is free.
 
 ---
 

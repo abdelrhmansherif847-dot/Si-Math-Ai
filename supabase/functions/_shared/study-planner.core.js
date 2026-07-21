@@ -64,6 +64,13 @@
   var MAX_HORIZON_WEEKS = 12;
   var MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+  /** The primary deliverable is a 7-day, day-by-day execution plan. */
+  var DAYS_IN_WEEK = 7;
+  var WEEK_MS = 7 * MS_PER_DAY;
+  /** At the end of each week Zero re-evaluates and regenerates the plan. */
+  var WEEKLY_REGEN_DAYS = 7;
+  var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
   /** Severity → base impact weight. Mirrors analyzer severity bands
    *  (mastery <30 critical, <50 high, <70 medium, >=70 low). */
   var SEVERITY_WEIGHT = { critical: 100, high: 70, medium: 40, low: 15 };
@@ -474,78 +481,226 @@
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     3. TODAY — a concrete daily task list that fits the student's hours
-     ════════════════════════════════════════════════════════════════════════ */
+     3. WEEKLY EXECUTION PLAN (7 days) — the PRIMARY deliverable
+     ════════════════════════════════════════════════════════════════════════
+     Organized by DAY (Sunday, Monday, …), never by clock time — students keep
+     different schedules, so a day assignment is enough. Available study hours
+     are used INTERNALLY to size and cap each day's workload; they are never
+     surfaced as "7:00 PM"-style slots.
 
-  function buildToday(state, priorities) {
-    var budget = state.student.availability.hoursPerDay * 60;
-    var used = 0;
+     Each study day gets a concrete checklist, e.g.:
+         Sunday   → Circle → Round 1 · Solve 15 Practice Questions · Review previous mistakes
+         Monday   → Circle → Round 2 · AI Tutor Review
+         Tuesday  → Circle → Round 3 · Timed Practice
+
+     Days outside availability.studyDays are rest days with no assigned work.
+     Focus Practice still OWNS unit order — the planner only walks the remaining
+     units in sequence and spreads them one-per-study-day, highest impact first.
+     The window rolls forward from `state.now`; at its end Zero re-evaluates the
+     latest data and regenerates a completely new week (see detectRegeneration-
+     Triggers → `week_elapsed`). */
+
+  function buildWeek(state, priorities) {
+    var startMs = state.now;                         // rolling 7-day window from today
+    var avail = state.student.availability;
+    var budget = avail.hoursPerDay * 60;
+    var studyDaySet = {};
+    avail.studyDays.forEach(function (d) { studyDaySet[d] = true; });
+
+    // Ordered backlog of day "anchors": the remaining Focus units in their own
+    // sequence, across priorities (top priority's units first). One anchor is
+    // consumed per non-mock study day; units are never dropped or re-ordered.
+    var anchors = buildAnchorBacklog(priorities);
+
+    // Count study days in this window to place a single weekly mock sensibly.
+    var studyDayCount = 0;
+    for (var d = 0; d < DAYS_IN_WEEK; d++) {
+      if (studyDaySet[new Date(startMs + d * MS_PER_DAY).getUTCDay()]) studyDayCount++;
+    }
+    var mockOrdinal = mockDayOrdinal(studyDayCount);
+
+    var days = [];
+    var anchorIdx = 0;
+    var studyOrdinal = 0;
+    for (var i = 0; i < DAYS_IN_WEEK; i++) {
+      var dayMs = startMs + i * MS_PER_DAY;
+      var wd = new Date(dayMs).getUTCDay();
+      var isStudy = !!studyDaySet[wd];
+      var day = {
+        day: WEEKDAY_NAMES[wd],
+        date: isoDate(dayMs),
+        weekdayIndex: wd,
+        isStudyDay: isStudy,
+        tasks: [],
+        estimatedMinutes: 0,
+      };
+      if (isStudy) {
+        var isMockDay = studyOrdinal === mockOrdinal;
+        // A dedicated mock day does not consume a Focus anchor (keeps the unit
+        // sequence intact); other study days pull the next anchor.
+        var anchor = isMockDay ? null : (anchors[anchorIdx] || null);
+        if (anchor) anchorIdx++;
+        day.tasks = buildDayTasks(state, priorities, anchor, {
+          ordinal: studyOrdinal, isMockDay: isMockDay,
+          isFirstStudyDay: studyOrdinal === 0, budget: budget,
+        });
+        day.estimatedMinutes = day.tasks.reduce(function (s, t) { return s + t.estimatedMinutes; }, 0);
+        studyOrdinal++;
+      } else {
+        day.note = 'Rest day';
+      }
+      days.push(day);
+    }
+
+    return {
+      weekNumber: 1,
+      startDate: isoDate(startMs),
+      endDate: isoDate(startMs + (DAYS_IN_WEEK - 1) * MS_PER_DAY),
+      regeneratesOn: isoDate(startMs + WEEK_MS),     // end-of-week re-evaluation
+      studyDaysPerWeek: studyDayCount,
+      focusTopics: priorities.slice(0, 2).map(function (p) { return p.label; }),
+      days: days,
+      goals: buildWeekGoals(state, priorities),      // measurable summary
+    };
+  }
+
+  /** Which study-day ordinal (0-based) hosts the single weekly mock. Returns
+   *  -1 when there are too few study days to spare one for a full mock. */
+  function mockDayOrdinal(studyDayCount) {
+    if (studyDayCount < 2) return -1;
+    if (studyDayCount === 2) return 1;
+    return Math.min(studyDayCount - 2, 3);
+  }
+
+  /** Flatten priorities into an ordered list of per-day anchors, preserving
+   *  Focus Practice's unit order (never re-sequenced). */
+  function buildAnchorBacklog(priorities) {
+    var anchors = [];
+    priorities.forEach(function (p) {
+      if (p.hasFocusPlan && p.remainingLessons.length) {
+        p.remainingLessons.forEach(function (lesson) {
+          anchors.push({ type: 'focus_lesson', priority: p, lesson: lesson });
+        });
+      } else if (!p.hasFocusPlan) {
+        anchors.push({ type: 'focus_start', priority: p });
+      }
+    });
+    return anchors;
+  }
+
+  /** Build one study day's concrete checklist: an anchor (the next Focus unit
+   *  or the weekly mock) followed by rotating, data-derived support activities
+   *  capped by the daily time budget. No clock times are ever assigned. */
+  function buildDayTasks(state, priorities, anchor, ctx) {
     var tasks = [];
+    var used = 0;
     var top = priorities[0] || null;
 
-    function push(t) {
-      if (used + t.estimatedMinutes > budget && tasks.length > 0) return false;
+    function add(t, guaranteed) {
+      if (!guaranteed && tasks.length > 0 && used + t.estimatedMinutes > ctx.budget) return false;
       tasks.push(t);
       used += t.estimatedMinutes;
       return true;
     }
 
-    if (top) {
-      if (top.hasFocusPlan && top.remainingLessons.length) {
-        var lesson = top.remainingLessons[0];
-        push({
-          type: 'focus_lesson',
-          label: 'Complete Focus Practice: ' + top.focusPlanTitle + ' — ' + lesson.title,
-          detail: 'Your highest-impact next step for ' + top.label + '.',
-          estimatedMinutes: lesson.estimatedMinutes,
-          ref: { kind: 'focus_lesson', planId: top.focusPlanId, lessonId: lesson.id, topic: top.topic, subtopic: top.subtopic },
-        });
-      } else if (!top.hasFocusPlan) {
-        push({
-          type: 'focus_start',
-          label: 'Start a Focus Practice plan for ' + top.label,
-          detail: 'No active Focus plan covers your top weakness yet — start one so Zero can sequence the lessons.',
-          estimatedMinutes: 25,
-          ref: { kind: 'focus_start', topic: top.topic, subtopic: top.subtopic },
-        });
-      }
-
-      // Targeted practice on the top concept.
-      var qMinutes = clamp(Math.floor((budget - used) * 0.5), 10, 30);
-      var qCount = clamp(Math.round(qMinutes / 2), 5, 20);
-      push({
-        type: 'practice',
-        label: 'Solve ' + qCount + ' practice questions on ' + top.label,
-        detail: 'Reinforce today\'s lesson with focused reps.',
-        estimatedMinutes: qMinutes,
-        ref: { kind: 'practice', topic: top.topic, subtopic: top.subtopic, count: qCount },
-      });
-    }
-
-    // Review yesterday's mistakes when there is recent evidence to review.
-    if (hasRecentMistakes(state)) {
-      push({
-        type: 'review',
-        label: 'Review yesterday\'s mistakes',
-        detail: 'Re-work the questions you missed most recently before moving on.',
-        estimatedMinutes: clamp(budget - used, 5, 20),
-        ref: { kind: 'review' },
-      });
-    }
-
-    // If nothing was scheduled (brand-new student), give a real first step.
-    if (!tasks.length) {
-      tasks.push({
-        type: 'diagnostic',
-        label: 'Take a short diagnostic mock to seed your plan',
-        detail: 'Zero needs a little data to personalize your plan — a quick mock unlocks tailored priorities.',
-        estimatedMinutes: Math.min(budget, 30),
+    // ── Anchor ──────────────────────────────────────────────────────────────
+    if (ctx.isMockDay) {
+      add({
+        type: 'mock', label: 'Complete a Mock Practice',
+        detail: 'Your weekly checkpoint — take it under real timing, then log mistakes.',
+        estimatedMinutes: Math.min(60, Math.max(30, ctx.budget)),
         ref: { kind: 'mock' },
-      });
-      used = tasks[0].estimatedMinutes;
+      }, true);
+    } else if (anchor && anchor.type === 'focus_lesson') {
+      var p = anchor.priority, lesson = anchor.lesson;
+      add({
+        type: 'focus_lesson',
+        label: p.focusPlanTitle + ' → ' + lesson.title,        // e.g. "Circle → Round 1"
+        detail: 'Highest-impact next unit for ' + p.label + '.',
+        estimatedMinutes: lesson.estimatedMinutes,
+        ref: { kind: 'focus_lesson', planId: p.focusPlanId, lessonId: lesson.id, topic: p.topic, subtopic: p.subtopic },
+      }, true);
+    } else if (anchor && anchor.type === 'focus_start') {
+      add({
+        type: 'focus_start', label: 'Start Focus Practice: ' + anchor.priority.label,
+        detail: 'No active Focus plan covers this yet — start one so Zero can sequence its units.',
+        estimatedMinutes: 25,
+        ref: { kind: 'focus_start', topic: anchor.priority.topic, subtopic: anchor.priority.subtopic },
+      }, true);
+    } else if (!priorities.length && ctx.isFirstStudyDay) {
+      // Brand-new student: seed the plan with a diagnostic on the first day.
+      add({
+        type: 'diagnostic', label: 'Take a short diagnostic mock',
+        detail: 'Zero needs a little data to personalize your plan — this unlocks tailored priorities.',
+        estimatedMinutes: Math.min(ctx.budget, 30), ref: { kind: 'mock' },
+      }, true);
+      return tasks;
+    } else {
+      // Backlog exhausted (or no priorities): consolidation on the top concept.
+      add({
+        type: 'consolidation',
+        label: top ? 'Mixed review: ' + top.label : 'Mixed review of core topics',
+        detail: 'Consolidate what you have covered so far.',
+        estimatedMinutes: 20,
+        ref: top ? { kind: 'review', topic: top.topic, subtopic: top.subtopic } : { kind: 'review' },
+      }, true);
     }
 
-    return { date: isoDate(state.now), estimatedMinutes: Math.round(used), tasks: tasks };
+    // ── Rotating support activities (data-derived), capped by budget ─────────
+    var focusRef = (anchor && anchor.priority) ? anchor.priority : top;
+    var theme = ctx.ordinal % 3;
+    if (theme === 0) {
+      addPractice(add, focusRef, remaining(ctx.budget, used));
+      if (hasRecentMistakes(state)) {
+        add({ type: 'review', label: 'Review previous mistakes',
+          detail: 'Re-work the questions you missed most recently.',
+          estimatedMinutes: 15, ref: { kind: 'review' } });
+      }
+    } else if (theme === 1) {
+      if (state.tutor.topics.length) {
+        var confused = mostConfusedLabel(state);
+        add({ type: 'ai_tutor_review', label: 'AI Tutor Review',
+          detail: 'Revisit with Zero the topics you asked about most' + (confused ? ' (e.g. ' + confused + ')' : '') + '.',
+          estimatedMinutes: 15, ref: { kind: 'ai_tutor_review' } });
+      } else {
+        addPractice(add, focusRef, remaining(ctx.budget, used));
+      }
+    } else {
+      add({ type: 'timed_practice', label: 'Timed Practice',
+        detail: 'Solve under exam timing to build pace' + (focusRef ? ' on ' + focusRef.label : '') + '.',
+        estimatedMinutes: 20,
+        ref: focusRef ? { kind: 'timed_practice', topic: focusRef.topic, subtopic: focusRef.subtopic } : { kind: 'timed_practice' } });
+    }
+
+    // Guarantee at least one support task when only the anchor is present and
+    // there is room, so no study day is a lone checkbox.
+    if (tasks.length === 1 && remaining(ctx.budget, used) >= 10) {
+      addPractice(add, focusRef, remaining(ctx.budget, used));
+    }
+
+    return tasks;
+  }
+
+  function remaining(budget, used) { return Math.max(0, budget - used); }
+
+  function addPractice(add, focusRef, minutesLeft) {
+    var minutes = clamp(minutesLeft > 0 ? minutesLeft : 30, 10, 30);
+    var count = clamp(Math.round(minutes / 2), 5, 20);
+    add({
+      type: 'practice', label: 'Solve ' + count + ' Practice Questions',
+      detail: focusRef ? 'Focused reps on ' + focusRef.label + '.' : 'Focused practice reps.',
+      estimatedMinutes: minutes,
+      ref: focusRef ? { kind: 'practice', topic: focusRef.topic, subtopic: focusRef.subtopic, count: count } : { kind: 'practice', count: count },
+    });
+  }
+
+  function mostConfusedLabel(state) {
+    var best = null, bestScore = -1;
+    state.tutor.topics.forEach(function (x) {
+      var s = x.explanationRepeats * 2 + x.deepExplains * 2 + x.askCount;
+      if (s > bestScore) { bestScore = s; best = x; }
+    });
+    return best ? conceptLabel(best.topic, best.subtopic) : null;
   }
 
   function hasRecentMistakes(state) {
@@ -554,29 +709,23 @@
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     4. WEEK — this week's measurable goals
+     4. WEEKLY GOALS — measurable outcomes summary (accompanies the day plan)
      ════════════════════════════════════════════════════════════════════════ */
 
-  function buildWeek(state, priorities) {
+  function buildWeekGoals(state, priorities) {
     var top = priorities.slice(0, 2);
     var goals = [];
-    var focusTopics = [];
-
     top.forEach(function (p) {
-      focusTopics.push(p.label);
       if (p.hasFocusPlan && p.remainingLessons.length) {
         goals.push({
-          label: 'Finish ' + p.focusPlanTitle + ' (' + p.remainingLessons.length + ' lessons left)',
-          metric: 'focus_lessons_completed',
-          target: p.remainingLessons.length,
+          label: 'Finish ' + p.focusPlanTitle + ' (' + p.remainingLessons.length + ' units left)',
+          metric: 'focus_lessons_completed', target: p.remainingLessons.length,
           ref: { topic: p.topic, subtopic: p.subtopic, planId: p.focusPlanId },
         });
       } else if (!p.hasFocusPlan) {
         goals.push({
           label: 'Begin focused practice on ' + p.label,
-          metric: 'focus_started',
-          target: 1,
-          ref: { topic: p.topic, subtopic: p.subtopic },
+          metric: 'focus_started', target: 1, ref: { topic: p.topic, subtopic: p.subtopic },
         });
       }
       if (isNum(p.masteryScore)) {
@@ -584,26 +733,13 @@
         if (target > p.masteryScore) {
           goals.push({
             label: 'Reach ' + target + '% mastery in ' + p.label,
-            metric: 'mastery_score',
-            target: target,
-            ref: { topic: p.topic, subtopic: p.subtopic },
+            metric: 'mastery_score', target: target, ref: { topic: p.topic, subtopic: p.subtopic },
           });
         }
       }
     });
-
-    // Always include a mock checkpoint — the RFC's Week-1 example does.
-    goals.push({
-      label: 'Complete one Mock Practice', metric: 'mocks_completed', target: 1, ref: { kind: 'mock' },
-    });
-
-    return {
-      weekNumber: 1,
-      startDate: isoDate(state.now),
-      endDate: isoDate(state.now + 6 * MS_PER_DAY),
-      focusTopics: focusTopics,
-      goals: goals,
-    };
+    goals.push({ label: 'Complete one Mock Practice', metric: 'mocks_completed', target: 1, ref: { kind: 'mock' } });
+    return goals;
   }
 
   /* ════════════════════════════════════════════════════════════════════════
@@ -688,7 +824,8 @@
     } else {
       r.push('Not enough learning data yet — start with a diagnostic mock so Zero can personalize your priorities.');
     }
-    r.push('Lessons follow your Focus Practice sequence exactly; Zero only chooses which plan and which remaining lessons come next.');
+    r.push('Your week is a day-by-day checklist (no fixed clock times) sized to your available hours; at week\'s end Zero re-reads your latest data and builds a fresh week.');
+    r.push('Units follow your Focus Practice sequence exactly; Zero only chooses which plan and which remaining units come next.');
     return r;
   }
 
@@ -701,6 +838,7 @@
     var state = normalizeState(rawState);
     var priorities = prioritize(state);
     var days = examDaysRemaining(state);
+    var week = buildWeek(state, priorities);   // PRIMARY deliverable (7-day plan)
 
     return {
       version: PLANNER_VERSION,
@@ -713,12 +851,18 @@
       },
       availability: state.student.availability,
       priorities: priorities,
-      today: buildToday(state, priorities),
-      week: buildWeek(state, priorities),
+      // PRIMARY: the 7-day, day-by-day execution plan.
+      week: week,
+      // Convenience pointer to today's entry inside `week.days` (may be a rest
+      // day). The canonical schedule is always `week.days`.
+      today: week.days[0],
+      // SECONDARY: the long-term week-by-week roadmap to the exam.
       roadmap: buildRoadmap(state, priorities),
       rationale: buildRationale(state, priorities),
       meta: {
+        primary: 'week',
         creditCost: STUDY_PLAN_CREDIT_COST,
+        weeklyRegenDays: WEEKLY_REGEN_DAYS,
         sources: {
           weakness: state.weakness.length,
           focusPlans: state.focus.length,
@@ -726,8 +870,8 @@
           tutorTopics: state.tutor.topics.length,
         },
         triggersWatched: [
-          'mock_completed', 'weakness_updated', 'focus_completed',
-          'new_major_weakness', 'significant_improvement',
+          'week_elapsed', 'mock_completed', 'weakness_updated',
+          'focus_completed', 'new_major_weakness', 'significant_improvement',
         ],
       },
     };
@@ -759,6 +903,7 @@
       p.lessons.forEach(function (l) { if (l.status === 'DONE') focusDone++; });
     });
     return {
+      generatedAt: state.now,        // when this signature (and its plan) was made
       mockCount: state.mocks.length,
       focusDoneCount: focusDone,
       criticalTopics: criticalTopics,
@@ -778,6 +923,11 @@
     var cur = planSignature(currentState);
     var prev = prevSignature || {};
 
+    // Primary cadence: a full week has elapsed since the plan was generated, so
+    // Zero re-evaluates the latest data and builds a completely new week.
+    if (isNum(prev.generatedAt) && (cur.generatedAt - prev.generatedAt) >= WEEK_MS) {
+      reasons.push({ code: 'week_elapsed', message: 'A new week has started — time for a fresh weekly plan.' });
+    }
     if (isNum(prev.mockCount) && cur.mockCount > prev.mockCount) {
       reasons.push({ code: 'mock_completed', message: 'A new mock exam was completed.' });
     }
