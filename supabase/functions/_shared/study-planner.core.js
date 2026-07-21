@@ -85,6 +85,35 @@
   var MASTERY_GOAL_CEIL = 85;
   var MASTERY_WEEKLY_GAIN = 12;
 
+  /** Exam-importance weighting — a CORE differentiator. A topic's priority is
+   *  not just "how weak am I" but "how much will improving this move my score",
+   *  which depends on how heavily the real exam weights the topic. Importance is
+   *  a 0..1 weight (1 = appears very frequently / high score leverage) turned
+   *  into a multiplier on impact, so a high-frequency weak topic (Linear
+   *  Functions) outranks a rare one (Complex Numbers) at equal weakness.
+   *
+   *  The AUTHORITATIVE source should be a config/taxonomy-backed table the
+   *  caller passes as `state.examImportance` (per exam type). The map below is
+   *  only a sensible STARTER heuristic (SAT-math domain frequency) used as a
+   *  fallback; unknown topics resolve to NEUTRAL so they are never penalized by
+   *  our ignorance. Keyed by normalized topic name. */
+  var IMPORTANCE_NEUTRAL = 0.5;
+  var IMPORTANCE_MULT_MIN = 0.7;   // multiplier at importance 0
+  var IMPORTANCE_MULT_SPAN = 0.6;  // → multiplier at importance 1 is 1.3
+  var DEFAULT_EXAM_IMPORTANCE = {
+    'linear functions': 0.95, 'linear equations': 0.95, 'systems of equations': 0.85,
+    'quadratics': 0.85, 'quadratic functions': 0.85, 'nonlinear functions': 0.8,
+    'functions': 0.8, 'exponents': 0.7, 'exponential functions': 0.65,
+    'ratios': 0.7, 'rates': 0.7, 'proportions': 0.7, 'percentages': 0.7,
+    'statistics': 0.65, 'data analysis': 0.65, 'probability': 0.5,
+    'geometry': 0.55, 'triangles': 0.55, 'circle': 0.5, 'circles': 0.5,
+    'trigonometry': 0.4, 'complex numbers': 0.25,
+  };
+
+  /** Remaining Focus Practice work is one priority factor (capped) AND drives
+   *  proportional day allocation. This cap keeps it a nudge, not a dominator. */
+  var FOCUS_BACKLOG_CAP = 12;
+
   /* ════════════════════════════════════════════════════════════════════════
      SMALL PURE HELPERS
      ════════════════════════════════════════════════════════════════════════ */
@@ -94,6 +123,7 @@
   function arr(x) { return Array.isArray(x) ? x : []; }
   function str(x) { return typeof x === 'string' ? x : ''; }
   function round1(n) { return Math.round(n * 10) / 10; }
+  function round2(n) { return Math.round(n * 100) / 100; }
 
   /** Stable composite key for a (topic, subtopic) pair. */
   function conceptKey(topic, subtopic) {
@@ -158,17 +188,46 @@
         rank: str(s.rank) || null,
         currentStreak: isNum(s.currentStreak) ? s.currentStreak : 0,
         availability: {
+          // Study hours are used INTERNALLY to balance the week; per the UX
+          // rule they are NOT shown to the student, and no minute estimate is
+          // exposed on tasks or days. hoursPerDay/studyDays are echoed as the
+          // inputs the plan was built against (a renderer may hide them).
           hoursPerDay: hoursPerDay,
           studyDays: studyDays.slice().sort(function (a, b) { return a - b; }),
-          weeklyMinutes: Math.round(hoursPerDay * 60 * studyDays.length),
         },
       },
+      // Caller-supplied exam-importance overrides (0..1) by topic or topic||sub.
+      examImportance: normalizeImportanceMap(raw.examImportance),
       weakness: normalizeWeakness(raw.weakness),
       focus: normalizeFocus(raw.focus),
       mocks: normalizeMocks(raw.mocks),
       tutor: normalizeTutor(raw.tutor),
       progress: normalizeProgress(raw.progress, s),
     };
+  }
+
+  /** Lowercase the keys of a caller-supplied importance map for stable lookup. */
+  function normalizeImportanceMap(m) {
+    var out = {};
+    if (m && typeof m === 'object') {
+      Object.keys(m).forEach(function (k) {
+        var v = m[k];
+        if (isNum(v)) out[str(k).trim().toLowerCase()] = clamp(v, 0, 1);
+      });
+    }
+    return out;
+  }
+
+  /** Resolve a concept's exam-importance weight (0..1): caller override by
+   *  concept key → by topic → starter default table → NEUTRAL. */
+  function importanceFor(state, topic, subtopic) {
+    var over = state.examImportance || {};
+    var k = conceptKey(topic, subtopic);
+    if (isNum(over[k])) return over[k];
+    var t = str(topic).trim().toLowerCase();
+    if (isNum(over[t])) return over[t];
+    if (isNum(DEFAULT_EXAM_IMPORTANCE[t])) return DEFAULT_EXAM_IMPORTANCE[t];
+    return IMPORTANCE_NEUTRAL;
   }
 
   function normalizeWeakness(list) {
@@ -366,7 +425,22 @@
       var recency = clamp(c.recent7 * 3, 0, 15);
       if (c.recent7 >= 3) reasons.push('Active weakness this week');
 
-      var impact = (base + gap + trendAdj + confusion + mock + recency) * proximity.multiplierFor(sev);
+      // Remaining Focus Practice work — barely-started topics need more room
+      // (also drives proportional day allocation in the weekly plan, §3).
+      var focusRemaining = remainingFocusCount(state, c.topic, c.subtopic);
+      var focusBacklog = clamp(focusRemaining * 2, 0, FOCUS_BACKLOG_CAP);
+      if (focusRemaining >= 3) reasons.push(focusRemaining + ' Focus units still to complete');
+
+      // Exam importance — how heavily the REAL exam weights this topic. This is
+      // the score-impact multiplier that makes the plan answer "what maximizes
+      // my score this week" rather than merely "what am I weakest at".
+      var importance = importanceFor(state, c.topic, c.subtopic);
+      var importanceMult = IMPORTANCE_MULT_MIN + IMPORTANCE_MULT_SPAN * importance;
+      if (importance >= 0.75) reasons.push('High exam frequency — strong score leverage');
+      else if (importance <= 0.35) reasons.push('Lower exam frequency');
+
+      var impact = (base + gap + trendAdj + confusion + mock + recency + focusBacklog)
+        * proximity.multiplierFor(sev) * importanceMult;
 
       return {
         key: c.key, topic: c.topic, subtopic: c.subtopic,
@@ -375,6 +449,8 @@
         severity: sev || 'medium',
         severityRank: SEVERITY_RANK[sev || 'medium'],
         trend: c.trend,
+        examImportance: round2(importance),   // 0..1 weight used in ranking
+        focusRemaining: focusRemaining,
         impactScore: round1(impact),
         reasons: reasons,
         _mastery: isNum(c.masteryScore) ? c.masteryScore : 999,
@@ -433,6 +509,14 @@
       priority.hasFocusPlan = false;
     }
     return priority;
+  }
+
+  /** Count a concept's not-yet-DONE Focus units (0 if it has no plan). Drives
+   *  both the priority focus-backlog term and proportional day allocation. */
+  function remainingFocusCount(state, topic, subtopic) {
+    var plan = findFocusPlan(state.focus, topic, subtopic);
+    if (!plan) return 0;
+    return plan.lessons.filter(function (l) { return l.status !== 'DONE'; }).length;
   }
 
   /** Match a Focus Plan to a concept: exact (topic+subtopic) first, then topic. */
@@ -532,7 +616,6 @@
         weekdayIndex: wd,
         isStudyDay: isStudy,
         tasks: [],
-        estimatedMinutes: 0,
       };
       if (isStudy) {
         var isMockDay = studyOrdinal === mockOrdinal;
@@ -544,7 +627,6 @@
           ordinal: studyOrdinal, isMockDay: isMockDay,
           isFirstStudyDay: studyOrdinal === 0, budget: budget,
         });
-        day.estimatedMinutes = day.tasks.reduce(function (s, t) { return s + t.estimatedMinutes; }, 0);
         studyOrdinal++;
       } else {
         day.note = 'Rest day';
@@ -593,57 +675,48 @@
    *  capped by the daily time budget. No clock times are ever assigned. */
   function buildDayTasks(state, priorities, anchor, ctx) {
     var tasks = [];
-    var used = 0;
+    var used = 0;                       // INTERNAL minute accounting — never output
     var top = priorities[0] || null;
 
-    function add(t, guaranteed) {
-      if (!guaranteed && tasks.length > 0 && used + t.estimatedMinutes > ctx.budget) return false;
-      tasks.push(t);
-      used += t.estimatedMinutes;
+    // add(task, mins, guaranteed): `mins` balances the day internally; it is
+    // NEVER written onto the task, so no duration is exposed to the student.
+    function add(task, mins, guaranteed) {
+      if (!guaranteed && tasks.length > 0 && used + mins > ctx.budget) return false;
+      tasks.push(task);
+      used += mins;
       return true;
     }
 
     // ── Anchor ──────────────────────────────────────────────────────────────
     if (ctx.isMockDay) {
-      add({
-        type: 'mock', label: 'Complete a Mock Practice',
+      add({ type: 'mock', label: 'Complete a Mock Practice',
         detail: 'Your weekly checkpoint — take it under real timing, then log mistakes.',
-        estimatedMinutes: Math.min(60, Math.max(30, ctx.budget)),
-        ref: { kind: 'mock' },
-      }, true);
+        ref: { kind: 'mock' } }, Math.min(60, Math.max(30, ctx.budget)), true);
     } else if (anchor && anchor.type === 'focus_lesson') {
       var p = anchor.priority, lesson = anchor.lesson;
-      add({
-        type: 'focus_lesson',
+      add({ type: 'focus_lesson',
         label: p.focusPlanTitle + ' → ' + lesson.title,        // e.g. "Circle → Round 1"
         detail: 'Highest-impact next unit for ' + p.label + '.',
-        estimatedMinutes: lesson.estimatedMinutes,
-        ref: { kind: 'focus_lesson', planId: p.focusPlanId, lessonId: lesson.id, topic: p.topic, subtopic: p.subtopic },
-      }, true);
+        ref: { kind: 'focus_lesson', planId: p.focusPlanId, lessonId: lesson.id, topic: p.topic, subtopic: p.subtopic } },
+        lesson.estimatedMinutes, true);
     } else if (anchor && anchor.type === 'focus_start') {
-      add({
-        type: 'focus_start', label: 'Start Focus Practice: ' + anchor.priority.label,
+      add({ type: 'focus_start', label: 'Start Focus Practice: ' + anchor.priority.label,
         detail: 'No active Focus plan covers this yet — start one so Zero can sequence its units.',
-        estimatedMinutes: 25,
-        ref: { kind: 'focus_start', topic: anchor.priority.topic, subtopic: anchor.priority.subtopic },
-      }, true);
+        ref: { kind: 'focus_start', topic: anchor.priority.topic, subtopic: anchor.priority.subtopic } },
+        25, true);
     } else if (!priorities.length && ctx.isFirstStudyDay) {
       // Brand-new student: seed the plan with a diagnostic on the first day.
-      add({
-        type: 'diagnostic', label: 'Take a short diagnostic mock',
+      add({ type: 'diagnostic', label: 'Take a short diagnostic mock',
         detail: 'Zero needs a little data to personalize your plan — this unlocks tailored priorities.',
-        estimatedMinutes: Math.min(ctx.budget, 30), ref: { kind: 'mock' },
-      }, true);
+        ref: { kind: 'mock' } }, Math.min(ctx.budget, 30), true);
       return tasks;
     } else {
       // Backlog exhausted (or no priorities): consolidation on the top concept.
-      add({
-        type: 'consolidation',
+      add({ type: 'consolidation',
         label: top ? 'Mixed review: ' + top.label : 'Mixed review of core topics',
         detail: 'Consolidate what you have covered so far.',
-        estimatedMinutes: 20,
-        ref: top ? { kind: 'review', topic: top.topic, subtopic: top.subtopic } : { kind: 'review' },
-      }, true);
+        ref: top ? { kind: 'review', topic: top.topic, subtopic: top.subtopic } : { kind: 'review' } },
+        20, true);
     }
 
     // ── Rotating support activities (data-derived), capped by budget ─────────
@@ -654,22 +727,21 @@
       if (hasRecentMistakes(state)) {
         add({ type: 'review', label: 'Review previous mistakes',
           detail: 'Re-work the questions you missed most recently.',
-          estimatedMinutes: 15, ref: { kind: 'review' } });
+          ref: { kind: 'review' } }, 15);
       }
     } else if (theme === 1) {
       if (state.tutor.topics.length) {
         var confused = mostConfusedLabel(state);
         add({ type: 'ai_tutor_review', label: 'AI Tutor Review',
           detail: 'Revisit with Zero the topics you asked about most' + (confused ? ' (e.g. ' + confused + ')' : '') + '.',
-          estimatedMinutes: 15, ref: { kind: 'ai_tutor_review' } });
+          ref: { kind: 'ai_tutor_review' } }, 15);
       } else {
         addPractice(add, focusRef, remaining(ctx.budget, used));
       }
     } else {
       add({ type: 'timed_practice', label: 'Timed Practice',
         detail: 'Solve under exam timing to build pace' + (focusRef ? ' on ' + focusRef.label : '') + '.',
-        estimatedMinutes: 20,
-        ref: focusRef ? { kind: 'timed_practice', topic: focusRef.topic, subtopic: focusRef.subtopic } : { kind: 'timed_practice' } });
+        ref: focusRef ? { kind: 'timed_practice', topic: focusRef.topic, subtopic: focusRef.subtopic } : { kind: 'timed_practice' } }, 20);
     }
 
     // Guarantee at least one support task when only the anchor is present and
@@ -686,12 +758,10 @@
   function addPractice(add, focusRef, minutesLeft) {
     var minutes = clamp(minutesLeft > 0 ? minutesLeft : 30, 10, 30);
     var count = clamp(Math.round(minutes / 2), 5, 20);
-    add({
-      type: 'practice', label: 'Solve ' + count + ' Practice Questions',
+    add({ type: 'practice', label: 'Solve ' + count + ' Practice Questions',
       detail: focusRef ? 'Focused reps on ' + focusRef.label + '.' : 'Focused practice reps.',
-      estimatedMinutes: minutes,
-      ref: focusRef ? { kind: 'practice', topic: focusRef.topic, subtopic: focusRef.subtopic, count: count } : { kind: 'practice', count: count },
-    });
+      ref: focusRef ? { kind: 'practice', topic: focusRef.topic, subtopic: focusRef.subtopic, count: count } : { kind: 'practice', count: count } },
+      minutes);
   }
 
   function mostConfusedLabel(state) {
@@ -839,6 +909,13 @@
     var priorities = prioritize(state);
     var days = examDaysRemaining(state);
     var week = buildWeek(state, priorities);   // PRIMARY deliverable (7-day plan)
+
+    // The engine reads Focus units' estimatedMinutes INTERNALLY (above) to
+    // balance each day; strip it from the exposed `remainingLessons` so no
+    // duration reaches the student (UX rule: show what to do, not how long).
+    priorities.forEach(function (p) {
+      (p.remainingLessons || []).forEach(function (l) { delete l.estimatedMinutes; });
+    });
 
     return {
       version: PLANNER_VERSION,

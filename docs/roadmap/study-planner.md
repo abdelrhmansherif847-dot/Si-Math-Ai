@@ -14,18 +14,25 @@ schedule. It converts the student's real learning history across the whole Si
 Math platform into a clear, prioritized, continuously-updated plan that tells the
 student exactly **what to study next, why, and in what order**.
 
-Three hard product invariants drive the design:
+Four hard product invariants drive the design:
 
 1. **The primary deliverable is a 7-day execution plan.** Organized by day
    (Sunday, Monday, …), never by clock time — each day is a concrete checklist
-   of exactly what to complete. Available study hours are used *internally* to
-   size each day; they are never surfaced as "7:00 PM"-style slots. The
-   long-term roadmap still exists but as a **secondary** section.
-2. **Never generic.** Every task and goal is derived from the student's own data
-   (weakness, focus, mocks, tutor history, progress).
-3. **Focus Practice owns unit content and order.** The planner only decides
+   of exactly what to complete. Study hours and unit estimates are used *only
+   internally* to balance the week; **no duration is ever shown** (no minutes on
+   tasks/days, no "7:00 PM" slots). The student sees *what* to do, not *how
+   long*. The long-term roadmap still exists but as a **secondary** section.
+2. **Maximize score, not just fix weakness.** Ranking combines weakness
+   severity, mastery, recent performance, remaining Focus work, mock mistakes,
+   and tutor confusion **with an Exam-Importance weight** — how heavily the real
+   SAT/EST/ACT leans on each topic. So a high-frequency weak topic (Linear
+   Functions) outranks a rare one (Complex Numbers) at equal weakness. This is a
+   core differentiator vs. a generic AI schedule.
+3. **Never generic.** Every task and goal is derived from the student's own data.
+4. **Focus Practice owns unit content and order.** The planner only decides
    *which* Focus plan and *which remaining units* come next, spreading them one
-   per study day — it never invents a lesson sequence.
+   per study day — day counts scale with each plan's remaining work — and it
+   never invents a lesson sequence.
 
 ---
 
@@ -70,11 +77,12 @@ into the shape below. Field mapping to the live schema:
 | RFC source | Live table(s) | Normalized into |
 |---|---|---|
 | 1. Weakness Analyzer | `weakness_reports` (SSOT) | `state.weakness[]` — `masteryScore`, `severityBand`, `trend`, `recent7`, `priorityRank`, `totalSignals`, `lastUpdatedAt` |
-| 2. Focus Practice | `focus_plans` + `focus_tasks` | `state.focus[]` — `{ id, title, status, dominantSignal, lessons:[{ id, title, order, status, estimatedMinutes }] }` (lessons in `order`) |
+| 2. Focus Practice | `focus_plans` + `focus_tasks` | `state.focus[]` — `{ id, title, status, dominantSignal, lessons:[{ id, title, order, status, estimatedMinutes }] }` (lessons in `order`; `estimatedMinutes` is **internal only** — used to balance days, never output) |
 | 3. Mock Exams | `exam_practice_sessions` (+ mistakes) | `state.mocks[]` — `completedAt`, `score`, `avgSecondsPerQuestion`, `hadTimePressure`, `weakLessons:[{ topic, subtopic, missCount }]` |
 | 4. AI Tutor History | `question_records` (aggregated) | `state.tutor.topics[]` — `askCount`, `explanationRepeats`, `deepExplains`, `lastAskedAt` |
 | 5. Student Progress | `profiles` (`xp`, `rank_name`, `current_streak`) | `state.progress` / `state.student` |
-| 6. Student Availability | `profiles.exam_date`, availability prefs | `state.student.availability` — `hoursPerDay`, `studyDays[]` |
+| 6. Student Availability | `profiles.exam_date`, availability prefs | `state.student.availability` — `hoursPerDay`, `studyDays[]` (internal) |
+| 7. Exam Importance | config/taxonomy-backed frequency table (per exam type) | `state.examImportance` — map `topic`→`0..1`. Engine ships a tunable **starter** table (`DEFAULT_EXAM_IMPORTANCE`); caller overrides win; unknown topics resolve to `0.5` (neutral) |
 
 `normalizeState()` inside the engine is defensive: any missing field is coerced
 to a safe default, so a brand-new student with almost no history still gets a
@@ -105,33 +113,44 @@ Every candidate `(topic, subtopic)` is merged across all sources and scored:
 
 ```
 impact = ( severityBase                       // critical 100 / high 70 / medium 40 / low 15
-         + masteryGap  = (100 − mastery)·0.5  // more to gain when mastery is low
-         + trendAdj    = declining +15 · improving −10
-         + confusion   = min(30, repeats·8 + deepExplains·5 + asks·1)   // RFC: repeated confusion ↑ priority
-         + mockMisses  = min(30, missCount·10)                          // RFC: repeated mistakes ↑ priority
-         + recency     = min(15, recent7·3) )
+         + masteryGap    = (100 − mastery)·0.5 // more to gain when mastery is low
+         + trendAdj      = declining +15 · improving −10
+         + confusion     = min(30, repeats·8 + deepExplains·5 + asks·1)  // repeated confusion ↑ priority
+         + mockMisses    = min(30, missCount·10)                         // repeated mistakes ↑ priority
+         + recency       = min(15, recent7·3)
+         + focusBacklog  = min(12, remainingUnits·2) )                   // barely-started work ↑ priority
          × examProximityMultiplier(severity)   // near exam → concentrate on critical/high (triage)
+         × importanceMult = 0.7 + 0.6·examImportance   // 0.7 (rare) … 1.3 (high-frequency)
 ```
+
+The **importance multiplier** is the score-leverage differentiator: at equal
+weakness, a topic the real exam weights heavily is ranked materially higher.
+`focusBacklog` folds in remaining Focus work, and the same remaining-units count
+drives **proportional day allocation** in the weekly plan (a plan with 5 unfinished
+rounds occupies ~5 study days; one with a single round occupies one).
 
 Ordering is deterministic: `impact DESC, mastery ASC, key ASC` (mirrors the
 analyzer's frozen tiebreaker). Each priority carries a human-readable `reasons[]`
-list ("You asked Zero to re-explain this 5×", "Missed in mock exams (3×)") that
-the UI surfaces as the "why".
+list ("High exam frequency — strong score leverage", "You asked Zero to re-explain
+this 5×", "Missed in mock exams (3×)") that the UI surfaces as the "why", plus the
+resolved `examImportance` (0..1) and `focusRemaining` count.
 
 ### Output — `StudyPlan`
 
 - **`week` (PRIMARY)** — the 7-day execution plan:
   - `week.days[]` — 7 entries, each `{ day: 'Sunday'…, date, weekdayIndex,
-    isStudyDay, tasks[], estimatedMinutes }`. Study days carry an ordered
-    checklist: an **anchor** (the next Focus unit, e.g. `"Circle → Round 1"`, or
-    the single weekly mock) followed by rotating, data-derived support tasks
-    (`Solve N Practice Questions`, `Review previous mistakes`, `AI Tutor Review`,
-    `Timed Practice`) capped by `hoursPerDay`. Non-study days are `Rest day`.
+    isStudyDay, tasks[] }` — **no minute/duration field**. Study days carry an
+    ordered checklist: an **anchor** (the next Focus unit, e.g. `"Circle →
+    Round 1"`, or the single weekly mock) followed by rotating, data-derived
+    support tasks (`Solve N Practice Questions`, `Review previous mistakes`,
+    `AI Tutor Review`, `Timed Practice`). Days are sized to `hoursPerDay`
+    *internally*; non-study days are `Rest day`. Tasks carry no `estimatedMinutes`.
   - `week.goals[]` — measurable outcomes summary (finish plan, mastery target,
     one mock). `week.regeneratesOn` — the end-of-week re-evaluation date.
 - `today` — convenience pointer to `week.days[0]` (may be a rest day).
 - `priorities[]` — ranked, high-impact first, each linked to its Focus plan +
-  `remainingLessons` (in Focus's own order) + `progressPct`.
+  `remainingLessons` (in Focus's own order, no durations) + `progressPct` +
+  `examImportance` + `focusRemaining`.
 - **`roadmap[]` (SECONDARY)** — one high-impact topic per week to the exam date
   (or a default 4-week horizon), distinct topics, consolidation weeks past the
   known set.
