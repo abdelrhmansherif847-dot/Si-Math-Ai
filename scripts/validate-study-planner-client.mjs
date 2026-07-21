@@ -64,11 +64,12 @@ function fixtures() {
       { id: 'l2', plan_id: 'fp-lin', topic: 'Linear Functions', subtopic: 'Slope', task_title: 'Round 2', priority: 1, estimated_minutes: 20, status: 'IN_PROGRESS' },
       { id: 'l3', plan_id: 'fp-lin', topic: 'Linear Functions', subtopic: 'Slope', task_title: 'Round 3', priority: 2, estimated_minutes: 25, status: 'NOT_STARTED' },
     ],
-    exam_practice_sessions: [{ id: 'm1', score: 1180, correct: 30, wrong: 14, omitted: 0, total_questions: 44, created_at: '2026-07-17T00:00:00Z' }],
+    // Real column names (verified against live schema 2026-07-21).
+    exam_practice_sessions: [{ id: 'm1', score: 1180, correct_answers: 30, wrong_answers: 14, omitted_answers: 2, total_questions: 44, created_at: '2026-07-17T00:00:00Z', ended_at: '2026-07-17T01:00:00Z' }],
     exam_mistakes: [
-      { topic: 'Linear Functions', subtopic: 'Slope', session_id: 'm1' },
-      { topic: 'Linear Functions', subtopic: 'Slope', session_id: 'm1' },
-      { topic: 'Circle', subtopic: 'Arc Length', session_id: 'm1' },
+      { topic: 'Linear Functions', subtopic: 'Slope', session_id: 'm1', mistake_count: 1 },
+      { topic: 'Linear Functions', subtopic: 'Slope', session_id: 'm1', mistake_count: 1 },
+      { topic: 'Circle', subtopic: 'Arc Length', session_id: 'm1', mistake_count: 1 },
     ],
     weakness_signals: [
       { topic: 'Linear Functions', subtopic: 'Slope', signal_type: 'explanation_repeated' },
@@ -98,7 +99,8 @@ const AVAIL = { hoursPerDay: 2, studyDays: [0, 1, 2, 3, 4] };
     assert(st.focus.length === 1 && st.focus[0].lessons.length === 2, 'focus_plans + focus_tasks → focus[] with units');
     assert(st.focus[0].lessons[0].title === 'Round 2' && st.focus[0].lessons[0].order === 1 && st.focus[0].lessons[0].status === 'IN_PROGRESS', 'task_title/priority/status mapped, ordered');
 
-    assert(st.mocks.length === 1 && st.mocks[0].totalQuestions === 44, 'exam_practice_sessions → mocks[]');
+    assert(st.mocks.length === 1 && st.mocks[0].totalQuestions === 44 && st.mocks[0].correct === 30, 'exam_practice_sessions → mocks[] (correct_answers/total_questions mapped)');
+    assert(st.mocks[0].completedAt === '2026-07-17T01:00:00Z' && st.mocks[0].hadTimePressure === true, 'ended_at → completedAt; omitted_answers → time pressure');
     const wl = st.mocks[0].weakLessons;
     const lin = wl.find((w) => w.topic === 'Linear Functions');
     assert(lin && lin.missCount === 2, 'exam_mistakes aggregated per concept (Linear ×2)');

@@ -113,28 +113,36 @@
   }
 
   async function loadMocks(sb, userId, sinceISO) {
+    // Column names verified against the live schema (2026-07-21):
+    // exam_practice_sessions → correct_answers/wrong_answers/omitted_answers,
+    // total_questions, score, created_at/ended_at; exam_mistakes → topic,
+    // subtopic, session_id, mistake_count.
     var sessions = await rows(
       sb.from('exam_practice_sessions').select('*').eq('user_id', userId).gte('created_at', sinceISO),
       'exam_practice_sessions');
     var mistakes = await rows(
-      sb.from('exam_mistakes').select('topic, subtopic, session_id').eq('user_id', userId),
+      sb.from('exam_mistakes').select('topic, subtopic, session_id, mistake_count').eq('user_id', userId).gte('created_at', sinceISO),
       'exam_mistakes');
-    // weakLessons per session, aggregated by concept.
+    // weakLessons per session, aggregated by concept (summing mistake_count).
     var bySession = {};
     mistakes.forEach(function (m) {
       var s = str(m.session_id); if (!s) return;
       var k = keyOf(m.topic, m.subtopic);
-      (bySession[s] = bySession[s] || {})[k] = bySession[s][k] || { topic: str(m.topic), subtopic: str(m.subtopic), missCount: 0 };
-      bySession[s][k].missCount++;
+      var slot = (bySession[s] = bySession[s] || {});
+      slot[k] = slot[k] || { topic: str(m.topic), subtopic: str(m.subtopic), missCount: 0 };
+      slot[k].missCount += (num(m.mistake_count, 1) || 1);
     });
     return sessions.map(function (s) {
-      var wl = bySession[str(s.id)] ? Object.keys(bySession[str(s.id)]).map(function (k) { return bySession[str(s.id)][k]; }) : [];
-      var total = num(s.total_questions) != null ? num(s.total_questions) : (num(s.correct, 0) + num(s.wrong, 0) + num(s.omitted, 0)) || null;
+      var byK = bySession[str(s.id)];
+      var wl = byK ? Object.keys(byK).map(function (k) { return byK[k]; }) : [];
       return {
-        id: str(s.id), completedAt: s.completed_at || s.created_at || null,
-        score: num(s.score), totalQuestions: total, correct: num(s.correct),
-        avgSecondsPerQuestion: num(s.avg_seconds_per_question),
-        hadTimePressure: s.had_time_pressure === true || num(s.omitted, 0) > 0,
+        id: str(s.id),
+        completedAt: s.ended_at || s.created_at || null,
+        score: num(s.score),
+        totalQuestions: num(s.total_questions),
+        correct: num(s.correct_answers),
+        avgSecondsPerQuestion: null,                 // not stored; engine tolerates
+        hadTimePressure: num(s.omitted_answers, 0) > 0,
         weakLessons: wl,
       };
     });
