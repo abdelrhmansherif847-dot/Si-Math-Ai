@@ -17,21 +17,34 @@ Applied & verified against the security advisor on 2026-07-21
 | SEC-04 | `plan_definitions` exposed | Enable RLS (public read / admin write) | `20260721_secB04_plan_definitions_rls.sql` | ✅ |
 | SEC-05 | mutable `search_path` (11 of 12) | `SET search_path = public` | `20260721_secB05_function_search_path.sql` | ✅ |
 | AUTHZ-01a | definer fns anon/PUBLIC-executable | Least-privilege EXECUTE grants | `20260721_secB_authz01a_function_execute_grants.sql` | ✅ |
-| AUTHZ-01b | `consume_credits` owner guard + grants + search_path | CREATE OR REPLACE + grant lockdown | `20260721_secB_authz01b_consume_credits_owner_guard.sql` | 🔒 |
+| AUTHZ-01b | `consume_credits` owner guard + grants + search_path | CREATE OR REPLACE + grant lockdown | `20260721_secB_authz01b_consume_credits_owner_guard.sql` | ✅ |
 | AUTH-01 | leaked-password protection off | **Dashboard toggle (below)** | _n/a — not SQL_ | ⏳ |
 
-**Advisor delta (2026-07-21):** `rls_disabled_in_public` **6 → 0** (all ERRORs
-cleared); `anon_security_definer_function_executable` **19 → 1**;
-`function_search_path_mutable` **12 → 1**. The three remaining `1`s are all
-`consume_credits`, which is held in AUTHZ-01b (🔒). The residual
-`authenticated_security_definer_function_executable` warnings are by design
-(see AUTHZ-01 below). `auth_leaked_password_protection` remains until AUTH-01
-is toggled.
+**Advisor delta (2026-07-21, final):** `rls_disabled_in_public` **6 → 0** (all
+ERRORs cleared); `anon_security_definer_function_executable` **19 → 0** (fully
+cleared); `function_search_path_mutable` **12 → 0** (fully cleared). Residual:
+15 `authenticated_security_definer_function_executable` (by design — see
+AUTHZ-01), 7 `rls_enabled_no_policy` INFO (2 = SEC-01 secure-in-place; 5
+pre-existing/out-of-scope, default-deny), and `auth_leaked_password_protection`
+until AUTH-01 is toggled.
 
-> ⚠️ **Residual risk until AUTHZ-01b is applied:** `consume_credits` is still
-> `anon`/PUBLIC-executable and lacks the owner guard, so a caller can charge
-> **another user's** credit balance. AUTHZ-01b closes this. Prioritise its
-> review — it is the last open exposure in Phase B.
+### AUTHZ-01b review evidence (before apply)
+
+`consume_credits` touches live credit balances, so it was reviewed
+independently before applying:
+
+- **Body integrity:** `md5(deployed_body)` = `md5(migration_body)` =
+  `b8ddc1a5063663fd0ab99e593dae94db`; `md5(body − guard)` = `md5(prior live
+  body)` = `ad3ecb85…d8a28f`. The guard block is the *only* change; no
+  credit/accounting logic altered. Verified again in-transaction via an MD5
+  self-guard that would have rolled the apply back on any byte drift.
+- **Behavioral battery** (rolled-back tx, synthetic users): paid consume,
+  repeat, insufficient, cross-user block (`forbidden_user_mismatch` with victim
+  balance untouched), refund round-trip, FREE daily-limit path, admin bypass,
+  and service_role-acts-for-any-user — all passed.
+- **Guard semantics:** end user (JWT) may spend only their own credits;
+  `service_role` (auth.uid() NULL) may act for any user. `chat.html` always
+  passes `currentUser.id` (= `auth.uid()`), so no client flow is blocked.
 
 ---
 
