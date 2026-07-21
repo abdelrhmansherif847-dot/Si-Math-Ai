@@ -1,9 +1,9 @@
 # Zero Personalized Study Planner — Architecture
 
-**Status:** Phase 1 (engine) + Phase 2/3 (adapter, persistence, chat wiring)
-delivered. The feature is code-complete and end-to-end on the branch; it goes
-live once the one remaining migration (`study_plans` + `STUDY_PLAN` credit cost)
-is approved and applied. Phase 4 (server-side generation) stays deferred.
+**Status:** LIVE (Phases 1–3). Engine + adapter + persistence + chat wiring are
+delivered, and the `study_plans` / `STUDY_PLAN` migration is applied and verified
+in production (`igvkyxkmjnkzscqgommj`, 2026-07-21). Phase 4 (server-side
+generation) stays deferred.
 **Owner surfaces:** `supabase/functions/_shared/study-planner.core.js` (engine,
 authored) · `study-planner.js` (generated browser copy) ·
 `study-planner-client.js` (platform adapter) · `chat.html` (interface).
@@ -215,13 +215,12 @@ avoid accidental 20-credit charges, loose phrases like "how should I study" do
 
 ---
 
-## 7. Persistence & schema (PROPOSED — approval-gated)
+## 7. Persistence & schema (APPLIED)
 
-Proposed DDL lives in `docs/roadmap/study-planner.schema.sql`. It is **not** a
-migration yet and has **not** been applied — per `CLAUDE.md` §3 every migration
-needs individual approval before `apply_migration`. On approval it moves to
-`supabase/migrations/` and is applied **before** any code that reads it ships
-(DEPLOY.md migration-first rule).
+The migration `supabase/migrations/20260721_study_planner_persistence.sql` was
+individually approved (CLAUDE.md §3) and applied to production on 2026-07-21,
+then verified (DEPLOY.md §3: table, RLS policy, partial index, credit-cost row,
+and column all confirmed present).
 
 It adds, additively (no existing column/table altered):
 
@@ -267,13 +266,14 @@ passive "your plan may be stale" banner is free.
 | **1 — DONE** | Pure engine `study-planner.core.js` + `scripts/validate-study-planner.mjs` + this doc + proposed schema | No |
 | **2 — DONE** | `gatherStudentState` + persistence adapter (`study-planner-client.js`) + generated browser copy (`study-planner.js`) + adapter tests (`validate-study-planner-client.mjs`) | No (reads/writes only) |
 | **3 — DONE** | `chat.html` intent gate + credit gate + gather → engine → persist + native plan rendering | `chat.html` is **not** frozen; change is additive and does not touch the signal pipeline (snapshot §6) |
-| **2b — PENDING APPROVAL** | Apply the `study_plans` table + `STUDY_PLAN` credit-cost migration (`docs/roadmap/study-planner.schema.sql`) | Migration approval (§3). Until applied, the feature degrades gracefully: `consume_credits` returns `feature_not_found` → chat shows "not enabled yet"; nothing is charged or persisted. |
+| **2b — DONE** | Applied + verified the `study_plans` table + `STUDY_PLAN` credit-cost migration (`supabase/migrations/20260721_study_planner_persistence.sql`) | Approved individually (§3), applied 2026-07-21 |
 | **4** | Move engine into the `ai-tutor` bundle (`import '../_shared/study-planner.core.js'`) for server-side generation + credit enforcement | Edge Function deploy is **CLI-only** (DEPLOY.md §4) — never the inline MCP path |
 | **5** | Future extensions (§11) | — |
 
-Phases 1–3 touch zero frozen files and require zero production deploy. The
-feature is code-complete end-to-end on the branch and goes live the moment the
-Phase 2b migration is approved and applied (migration-first per DEPLOY.md §2).
+Phases 1–3 touch zero frozen files. The migration was applied migration-first
+(DEPLOY.md §2) — because the client degrades gracefully when the credit-cost row
+is absent, the client assets and schema could land in either order without a
+student-facing 500.
 
 ---
 
@@ -282,8 +282,9 @@ Phase 2b migration is approved and applied (migration-first per DEPLOY.md §2).
 - **No frozen files modified** — `regenerate-reports.js`, `taxonomy.js`,
   `exam-mistakes-logger.js`, `mock-exam.html`, `weakness.html`, `focus.html`
   are untouched. The engine is a new, additive `_shared` module.
-- **No migration created or applied** — schema is a *proposal* under `docs/`;
-  it is not in `supabase/migrations/` and `apply_migration` was not called.
+- **Migration applied only with individual approval (§3)** — the schema change
+  was presented, explicitly approved, applied, verified, and recorded in
+  `supabase/migrations/`.
 - **No `ai-tutor` deploy** — Phase 4 explicitly routes through the CLI path only.
 - **Feature branch** — all work on `claude/zero-study-planner-rfc-0ghtli`.
 - **Analyzer boundary preserved** — the planner is a pure **consumer** of
