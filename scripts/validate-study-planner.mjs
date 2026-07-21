@@ -25,9 +25,11 @@
  *  12. Triggers       — week_elapsed / new mock / focus done / new weakness /
  *                       improvement fire; unchanged state does not.
  */
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { BANNER } from './sync-study-planner.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -38,6 +40,15 @@ const fail = (m) => { console.error('  ✗', m); failures++; };
 const ok = (m) => console.log('  ✓', m);
 const assert = (cond, m) => (cond ? ok(m) : fail(m));
 const codes = (res) => res.reasons.map((r) => r.code);
+
+/* ── 0. Browser-copy drift guard ──────────────────────────────────────────── */
+{
+  const src = readFileSync(resolve(root, 'supabase/functions/_shared/study-planner.core.js'), 'utf8');
+  let copy;
+  try { copy = readFileSync(resolve(root, 'study-planner.js'), 'utf8'); }
+  catch { copy = null; }
+  assert(copy === BANNER + src, 'study-planner.js (browser copy) in sync with engine (run scripts/sync-study-planner.mjs)');
+}
 
 /* Fixed clock so every run is deterministic. 2026-07-19 is a SUNDAY, so the
  * rolling 7-day window opens on Sunday. */
