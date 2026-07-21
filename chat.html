@@ -2237,7 +2237,13 @@ button{font-family:inherit;cursor:pointer}
     }).join('');
     var priHtml = pri ? '<div class="sp-sec"><div class="sp-h">Why this order</div><ol class="sp-pri">'+pri+'</ol></div>' : '';
     var foot = wk.regeneratesOn ? ('Refreshes around '+esc(wk.regeneratesOn)+'. Say “regenerate my study plan” to rebuild ('+STUDY_PLAN_COST+' credits).') : '';
-    var creditNote = meta.justGenerated ? '<div class="sp-credit">'+STUDY_PLAN_COST+' credits used</div>' : '';
+    var creditNote = '';
+    if (meta.justGenerated) {
+      // Show the ACTUAL charge (consume_credits may charge 0 when the request
+      // is covered by the plan's daily free allowance), never a hardcoded 20.
+      var used = (typeof meta.credits === 'number') ? meta.credits : STUDY_PLAN_COST;
+      creditNote = '<div class="sp-credit">'+(used > 0 ? used + ' credits used' : 'No credits used — covered by your daily free plans')+'</div>';
+    }
     var body='<div class="sp-card"><div class="sp-top"><div class="sp-title">📅 Your Study Plan</div>'
       +(sub?'<div class="sp-sub">'+esc(sub)+'</div>':'')+creditNote+'</div>'
       +'<div class="sp-week">'+daysHtml+'</div>'+goalsHtml+priHtml
@@ -2306,7 +2312,7 @@ button{font-family:inherit;cursor:pointer}
       var sig   = window.StudyPlanner.planSignature(state);
       var saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, STUDY_PLAN_COST);
       removeTyping();
-      renderStudyPlan(plan, { saved: saved && saved.persisted, justGenerated: true });
+      renderStudyPlan(plan, { saved: saved && saved.persisted, justGenerated: true, credits: cr.credits_used });
     } catch(e){
       removeTyping();
       // Refund the credit if generation failed after charging.
