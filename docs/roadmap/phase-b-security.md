@@ -18,7 +18,7 @@ Applied & verified against the security advisor on 2026-07-21
 | SEC-05 | mutable `search_path` (11 of 12) | `SET search_path = public` | `20260721_secB05_function_search_path.sql` | ✅ |
 | AUTHZ-01a | definer fns anon/PUBLIC-executable | Least-privilege EXECUTE grants | `20260721_secB_authz01a_function_execute_grants.sql` | ✅ |
 | AUTHZ-01b | `consume_credits` owner guard + grants + search_path | CREATE OR REPLACE + grant lockdown | `20260721_secB_authz01b_consume_credits_owner_guard.sql` | ✅ |
-| AUTH-01 | leaked-password protection off | **Dashboard toggle (below)** | _n/a — not SQL_ | ⏳ |
+| AUTH-01 | leaked-password protection off | **Blocked — needs Pro plan** (below) | _n/a — not SQL_ | ⛔ |
 
 **Advisor delta (2026-07-21, final):** `rls_disabled_in_public` **6 → 0** (all
 ERRORs cleared); `anon_security_definer_function_executable` **19 → 0** (fully
@@ -111,27 +111,36 @@ check. That is the intended dual model.
 
 ---
 
-## AUTH-01 — Leaked password protection (manual — not SQL/MCP)
+## AUTH-01 — Leaked password protection (BLOCKED: requires Pro plan)
 
-This is a **GoTrue auth setting**, not a database object, so it cannot be set
-via a migration or the Supabase MCP tools. Enable it one of two ways:
+**Investigated 2026-07-21.** This cannot be enabled on the current plan.
 
-**Dashboard:** Authentication → **Sign In / Providers** → Password settings →
-enable **"Leaked password protection"** (checks new passwords against the
-HaveIBeenPwned k-anonymity API). Save.
+- Supabase docs: *"Leaked password protection is available on the Pro Plan and
+  above."* The org `yqmkfwkdoslxmxzsykao` is on the **Free** plan
+  (`get_organization` → `"plan":"free"`), so the toggle is gated.
+- The dashboard's **Authentication → Attack Protection → "Prevent use of leaked
+  passwords"** shows **"Configure in email provider"** because the setting
+  lives on the Email auth-provider page
+  (`/dashboard/project/_/auth/providers?provider=Email`). That wording is a
+  redirect to where the control lives — it is **NOT** a request to configure a
+  custom email/SMTP service. This project already uses the Email provider
+  (100% of identities are `provider=email`, 19/19).
+- Therefore this is a **plan gate**, not a misconfiguration or a missing email
+  provider. The `auth_leaked_password_protection` advisor WARN **cannot be
+  cleared while on Free**.
 
-**Management API** (if a `SUPABASE_ACCESS_TOKEN` PAT is available):
+**To enable natively:** upgrade org → **Pro**, then Authentication → Sign In /
+Providers → **Email** → enable "Prevent use of leaked passwords". No SMTP setup
+needed. (Pro also removes Free-tier inactivity pausing + adds daily backups.)
 
-```bash
-curl -X PATCH \
-  "https://api.supabase.com/v1/projects/igvkyxkmjnkzscqgommj/config/auth" \
-  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"password_hibp_enabled": true}'
-```
+**Free-plan mitigations (recommended regardless):**
+1. Set a strong password policy (min length + required character classes) on the
+   same Email provider page — available on Free.
+2. Optional: DIY client-side HIBP k-anonymity check in `signup.html` /
+   `reset-password.html` (send only the 5-char SHA-1 prefix to the HIBP range
+   API). Not server-enforced, but covers the common case.
 
-Verify: re-run the security advisor — `auth_leaked_password_protection` clears.
-Ref: <https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection>
+Ref: <https://supabase.com/docs/guides/auth/password-security>
 
 ---
 
