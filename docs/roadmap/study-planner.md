@@ -205,13 +205,21 @@ avoid accidental 20-credit charges, loose phrases like "how should I study" do
 
 ## 6. Credits
 
-- Creating or regenerating a plan costs **20 credits** (RFC). Single source of
-  truth: `StudyPlanner.STUDY_PLAN_CREDIT_COST`.
+- Creating or regenerating a plan costs **exactly 20 credits** for every tier
+  (RFC). Single source of truth: `StudyPlanner.STUDY_PLAN_CREDIT_COST`.
 - Enforced through the existing `consume_credits(p_feature => 'STUDY_PLAN')`
   RPC — the same atomic, `SECURITY DEFINER`, expiry-aware path the chat message
-  gate uses. Requires one new `credit_costs` row (see §7).
+  gate uses.
+- **Always-paid (migration `20260721_study_plan_always_charge.sql`, applied):**
+  `credit_costs.always_charge = true` for `STUDY_PLAN` makes `consume_credits`
+  bypass the daily-free allowance, so a FREE user under the 15/day cap is charged
+  20 (or `insufficient_credits`) rather than getting the plan free. Verified:
+  FREE + PRO both charge 20; `AI_CHAT_MESSAGE` and other features are unchanged.
+  Admins remain free via the existing admin short-circuit. This resolves the
+  readiness-report **R1** finding.
 - Follow-up questions about an existing plan are **not** charged here; they are
-  ordinary `AI_CHAT_MESSAGE` turns.
+  ordinary `AI_CHAT_MESSAGE` turns. The chat renders the **actual** `credits_used`
+  returned by `consume_credits`, not a hardcoded constant.
 
 ---
 

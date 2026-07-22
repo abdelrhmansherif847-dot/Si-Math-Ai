@@ -1,12 +1,16 @@
 -- ============================================================================
--- PROPOSED MIGRATION — STUDY_PLAN is always a paid feature (20 credits)
+-- STUDY_PLAN is always a paid feature (20 credits).
 -- ============================================================================
--- ⛔ STATUS: PROPOSED — NOT APPLIED. Awaiting individual approval (CLAUDE.md §3).
+-- Approved individually (CLAUDE.md §3) and applied to project igvkyxkmjnkzscqgommj
+-- on 2026-07-21. Rebased on the LIVE consume_credits definition; syntax-validated
+-- on a renamed copy in a rolled-back transaction, then regression-tested after
+-- apply (STUDY_PLAN charges 20 for FREE + PRO; FREE without credits →
+-- insufficient_credits; AI_CHAT_MESSAGE still free under the FREE daily cap).
 --
 -- Goal: a Study Plan must cost EXACTLY 20 credits for every user, regardless of
--- subscription tier or remaining daily free allowance. Today consume_credits
--- treats all features uniformly under a plan's daily_limit, so a FREE user under
--- their 15/day cap gets a Study Plan for 0 credits (it consumes a daily slot).
+-- subscription tier or remaining daily free allowance. Previously consume_credits
+-- treated all features uniformly under a plan's daily_limit, so a FREE user under
+-- their 15/day cap got a Study Plan for 0 credits (it consumed a daily slot).
 --
 -- Fix (data-driven, minimal, non-destructive):
 --   1. Add credit_costs.always_charge (boolean, default false). Future features
@@ -26,9 +30,6 @@
 --   • Every other feature (AI_CHAT_MESSAGE, …) → UNCHANGED: FREE users still get
 --     the daily free allowance; paid plans still deduct the per-feature cost.
 --
--- On approval: move to supabase/migrations/<date>_study_plan_always_charge.sql,
--- apply, then regression-test (STUDY_PLAN charges 20 across tiers; AI_CHAT_MESSAGE
--- still free under the FREE daily cap) before declaring done.
 -- Target project: igvkyxkmjnkzscqgommj
 -- ============================================================================
 
