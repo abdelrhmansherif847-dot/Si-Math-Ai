@@ -765,6 +765,10 @@ button{font-family:inherit;cursor:pointer}
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="assets/streak.js"></script>
+<!-- Study Planner (Phase 2): pure engine + platform adapter. window.StudyPlanner
+     is generated from supabase/functions/_shared/study-planner.core.js. -->
+<script src="study-planner.js"></script>
+<script src="study-planner-client.js"></script>
 <script>
   // ===== SUPABASE INIT =====
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -2163,10 +2167,168 @@ button{font-family:inherit;cursor:pointer}
     });
   }
 
+  /* ============================================================
+     STUDY PLANNER (Phase 2) — intent gate + generation flow.
+     Zero recognizes "create a study plan" and runs the independent
+     Study Planner Engine (window.StudyPlanner) over the student's real
+     data (window.StudyPlannerClient) instead of the LLM path. Generation
+     costs 20 credits (STUDY_PLAN via consume_credits); viewing the current
+     plan is free. This path never touches the weakness-signal pipeline.
+     ============================================================ */
+  var STUDY_PLAN_COST = (window.StudyPlanner && window.StudyPlanner.STUDY_PLAN_CREDIT_COST) || 20;
+
+  function studyPlanIntent(text){
+    var t = (text||'').toLowerCase();
+    // View the current plan (free)
+    if (/\b(show|view|see|open|display|what'?s|where'?s)\b[\s\S]{0,24}\b(my |the |current )?(study )?plan\b/.test(t)
+        || /\bmy (current )?study plan\b/.test(t)) return 'view';
+    // Generate / regenerate (charged) — English
+    if (/\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(study )?plan\b/.test(t)
+        || /\b(study plan|study schedule)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
+        || /^\s*(study plan|study schedule)\s*[.!]?\s*$/.test(t)) return 'generate';
+    // Generate — Arabic
+    if (/(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز)\S*[\s\S]{0,24}(خط[ةه])/.test(t)
+        || /خط[ةه]\s*(مذاكرة|مذاكره|دراسة|دراسه|استذكار)/.test(t)) return 'generate';
+    return null;
+  }
+
+  function ensureSpStyles(){
+    if (document.getElementById('sp-styles')) return;
+    var s=document.createElement('style'); s.id='sp-styles';
+    s.textContent='.sp-card{font-size:14px;line-height:1.5}.sp-top{margin-bottom:6px}.sp-title{font-weight:700;font-size:16px}'
+      +'.sp-sub{opacity:.75;font-size:13px;margin-top:2px}.sp-credit{display:inline-block;margin-top:6px;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(34,195,230,.14);color:var(--cyan,#22c3e6)}'
+      +'.sp-week{display:flex;flex-direction:column;gap:8px;margin:12px 0}.sp-day{border-left:3px solid var(--cyan,#22c3e6);padding:3px 0 3px 10px}'
+      +'.sp-rest{border-left-color:rgba(150,150,150,.35);opacity:.65}.sp-dname{font-weight:600;margin-bottom:2px}.sp-rest-l{font-size:12px;opacity:.7}'
+      +'.sp-tasks{margin:0;padding-left:18px}.sp-tasks li{margin:2px 0}.sp-task.sp-mock{font-weight:600}'
+      +'.sp-sec{margin-top:12px}.sp-h{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;opacity:.65;margin-bottom:4px}'
+      +'.sp-goals,.sp-pri{margin:0;padding-left:18px}.sp-goals li,.sp-pri li{margin:2px 0}.sp-why{opacity:.75}'
+      +'.sp-foot{margin-top:12px;font-size:12px;opacity:.7;border-top:1px solid rgba(150,150,150,.2);padding-top:8px}';
+    document.head.appendChild(s);
+  }
+
+  function addStudyPlanNotice(html){
+    if (empty) empty.style.display='none';
+    activateChatMode();
+    var el=document.createElement('div'); el.className='msg ai';
+    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span><div class="bubble"><div dir="auto">'+html+'</div></div></div>';
+    inner.appendChild(el); scrollDown();
+  }
+
+  function renderStudyPlan(plan, meta){
+    meta = meta || {}; ensureSpStyles();
+    if (empty) empty.style.display='none';
+    activateChatMode();
+    var esc = escapeHtml, p = plan || {}, wk = p.week || {}, days = wk.days || [];
+    var sub = '';
+    if (p.examCountdown && typeof p.examCountdown.daysRemaining === 'number') {
+      var dr = p.examCountdown.daysRemaining;
+      sub = ((p.student && p.student.examType) ? esc(p.student.examType) : 'Exam') + ' in ' + dr + ' day' + (dr===1?'':'s');
+    }
+    var daysHtml = days.map(function(d){
+      if (!d.isStudyDay) return '<div class="sp-day sp-rest"><div class="sp-dname">'+esc(d.day)+'</div><div class="sp-rest-l">Rest day</div></div>';
+      var tasks = (d.tasks||[]).map(function(t){ return '<li class="sp-task sp-'+esc(t.type||'')+'">'+esc(t.label||'')+'</li>'; }).join('');
+      return '<div class="sp-day"><div class="sp-dname">'+esc(d.day)+'</div><ul class="sp-tasks">'+tasks+'</ul></div>';
+    }).join('');
+    var goals = (wk.goals||[]).map(function(g){ return '<li>'+esc(g.label||'')+'</li>'; }).join('');
+    var goalsHtml = goals ? '<div class="sp-sec"><div class="sp-h">This week’s goals</div><ul class="sp-goals">'+goals+'</ul></div>' : '';
+    var pri = (p.priorities||[]).slice(0,3).map(function(x){
+      var why = (x.reasons&&x.reasons.length) ? esc(x.reasons[0]) : '';
+      return '<li><b>'+esc(x.label||'')+'</b>'+(why?' — <span class="sp-why">'+why+'</span>':'')+'</li>';
+    }).join('');
+    var priHtml = pri ? '<div class="sp-sec"><div class="sp-h">Why this order</div><ol class="sp-pri">'+pri+'</ol></div>' : '';
+    var foot = wk.regeneratesOn ? ('Refreshes around '+esc(wk.regeneratesOn)+'. Say “regenerate my study plan” to rebuild ('+STUDY_PLAN_COST+' credits).') : '';
+    var creditNote = '';
+    if (meta.justGenerated) {
+      // Show the ACTUAL charge (consume_credits may charge 0 when the request
+      // is covered by the plan's daily free allowance), never a hardcoded 20.
+      var used = (typeof meta.credits === 'number') ? meta.credits : STUDY_PLAN_COST;
+      creditNote = '<div class="sp-credit">'+(used > 0 ? used + ' credits used' : 'No credits used — covered by your daily free plans')+'</div>';
+    }
+    var body='<div class="sp-card"><div class="sp-top"><div class="sp-title">📅 Your Study Plan</div>'
+      +(sub?'<div class="sp-sub">'+esc(sub)+'</div>':'')+creditNote+'</div>'
+      +'<div class="sp-week">'+daysHtml+'</div>'+goalsHtml+priHtml
+      +(foot?'<div class="sp-foot">'+foot+'</div>':'')+'</div>';
+    var el=document.createElement('div'); el.className='msg ai';
+    el.innerHTML='<div class="av"><img src="'+PROF+'" alt="Zero"/></div><div class="body"><span class="who">Zero</span><div class="bubble">'+body+'</div></div>';
+    inner.appendChild(el); scrollDown();
+  }
+
+  async function getStudyAvailability(uid){
+    var def = { hoursPerDay: 2, studyDays: [0,1,2,3,4] }; // ~2h/day, Sun–Thu
+    try {
+      var r = await sb.from('profiles').select('study_availability').eq('id', uid).single();
+      var a = r && !r.error && r.data ? r.data.study_availability : null;
+      if (a) return { hoursPerDay: a.hoursPerDay || a.hours_per_day || def.hoursPerDay, studyDays: a.studyDays || a.study_days || def.studyDays };
+    } catch(_){}
+    return def;
+  }
+
+  function handleStudyPlanIntent(intent, text){
+    if (empty) empty.style.display='none';
+    activateChatMode();
+    addUser(text, []);
+    input.value=''; input.style.height='auto';
+    if (!window.StudyPlanner || !window.StudyPlannerClient) { addStudyPlanNotice('Study Planner is still loading — please try again in a moment.'); return; }
+    var uid = currentUser ? currentUser.id : null;
+    if (!uid) { addStudyPlanNotice('Please sign in to use the Study Planner.'); return; }
+    if (intent === 'view') { viewStudyPlan(uid); return; }
+    generateStudyPlan(uid);
+  }
+
+  async function viewStudyPlan(uid){
+    addTyping();
+    try {
+      var latest = await window.StudyPlannerClient.getLatestStudyPlan(sb, uid);
+      removeTyping();
+      if (latest && latest.plan_json) renderStudyPlan(latest.plan_json, { saved:true, generatedAt: latest.generated_at });
+      else addStudyPlanNotice('You don’t have a study plan yet. Say <b>“create a study plan”</b> to generate one ('+STUDY_PLAN_COST+' credits).');
+    } catch(e){ removeTyping(); addStudyPlanNotice('Could not load your study plan. Please try again.'); }
+  }
+
+  async function generateStudyPlan(uid){
+    isSending = true; sendBtn.disabled = true; addTyping();
+    var creditLogId = null;
+    try {
+      // 1) Credit gate — 20 credits (STUDY_PLAN), same RPC as chat messages.
+      var creditRes = await sb.rpc('consume_credits', {
+        p_user_id: uid, p_feature: 'STUDY_PLAN', p_model_name: 'study-planner',
+        p_prompt_tok: 0, p_comp_tok: 0, p_cost_usd: 0, p_session_id: currentSessionId || null
+      });
+      var cr = creditRes && creditRes.data;
+      if ((creditRes && creditRes.error) || !cr) { removeTyping(); addStudyPlanNotice('Could not verify your credits. Please try again.'); return; }
+      if (!cr.ok) {
+        removeTyping();
+        if (cr.reason === 'feature_not_found') addStudyPlanNotice('The Study Planner isn’t enabled on your account yet. Please check back soon.');
+        else if (cr.reason === 'insufficient_credits') showCreditError('A Study Plan costs '+STUDY_PLAN_COST+' credits (balance: '+(cr.balance||0)+'). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade</a>.');
+        else if (cr.reason === 'daily_limit_reached') showCreditError('You’ve hit today’s free limit. <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Get more credits</a> to generate a Study Plan.');
+        else addStudyPlanNotice('Could not start the Study Planner: '+escapeHtml(cr.reason||'unknown'));
+        return;
+      }
+      creditLogId = cr.log_id || null;
+      // 2) Gather real data → 3) run the pure engine → 4) persist.
+      var availability = await getStudyAvailability(uid);
+      var state = await window.StudyPlannerClient.gatherStudentState(sb, uid, { now: Date.now(), availability: availability });
+      var plan  = window.StudyPlanner.buildStudyPlan(state);
+      var sig   = window.StudyPlanner.planSignature(state);
+      var saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, STUDY_PLAN_COST);
+      removeTyping();
+      renderStudyPlan(plan, { saved: saved && saved.persisted, justGenerated: true, credits: cr.credits_used });
+    } catch(e){
+      removeTyping();
+      // Refund the credit if generation failed after charging.
+      if (creditLogId) { try { await sb.rpc('refund_ai_credit', { p_log_id: creditLogId }); } catch(_){} }
+      addStudyPlanNotice('Something went wrong generating your plan and your credits were refunded. Please try again.');
+      try { console.error('[study-planner] generate failed', e); } catch(_){}
+    } finally { isSending = false; sendBtn.disabled = false; }
+  }
+
   function send(){
     const text=input.value.trim();
     if(!text && !pendingAtts.length) return;
     if(isSending) return;
+    // Study Planner intent gate — runs the planner instead of the LLM path.
+    var _spIntent = (text && !pendingAtts.length) ? studyPlanIntent(text) : null;
+    if (_spIntent) { handleStudyPlanIntent(_spIntent, text); return; }
     // Build the text sent to the API — append hint instruction when hint mode is active
     var apiText = (hintModeActive && text)
       ? text + '\n\n[Hint mode: please give me only a hint — do not reveal the full solution or steps]'
