@@ -54,9 +54,14 @@
 
   /** Credit cost to create or regenerate a plan (RFC "Credits" section).
    *  Follow-up questions about an existing plan are NOT charged here — they
-   *  stay in normal chat pricing. The 20-credit charge is enforced by the
-   *  caller via consume_credits(p_feature='STUDY_PLAN'); this constant is the
-   *  single source of truth the caller and UI copy read from. */
+   *  stay in normal chat pricing.
+   *
+   *  FALLBACK DEFAULT ONLY — not the authoritative source. The authoritative
+   *  cost lives in the database (public.credit_costs, feature_name='STUDY_PLAN')
+   *  and is resolved on the client through the centralized credit config
+   *  (credit-config.js / CreditConfig, op 'study_plan'). The charge itself is
+   *  enforced server-side by consume_credits. This constant is used only as a
+   *  last resort when the live config cannot be loaded. */
   var STUDY_PLAN_CREDIT_COST = 20;
 
   /** Default planning horizon when no exam date is known (weeks). */

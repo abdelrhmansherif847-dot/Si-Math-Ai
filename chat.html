@@ -2179,10 +2179,20 @@ button{font-family:inherit;cursor:pointer}
      Zero recognizes "create a study plan" and runs the independent
      Study Planner Engine (window.StudyPlanner) over the student's real
      data (window.StudyPlannerClient) instead of the LLM path. Generation
-     costs 20 credits (STUDY_PLAN via consume_credits); viewing the current
-     plan is free. This path never touches the weakness-signal pipeline.
+     is charged as the study_plan operation via CreditConfig (cost from
+     public.credit_costs); viewing the current plan is free. This path never
+     touches the weakness-signal pipeline.
      ============================================================ */
-  var STUDY_PLAN_COST = (window.StudyPlanner && window.StudyPlanner.STUDY_PLAN_CREDIT_COST) || 20;
+  // Displayed Study Planner cost — sourced from the centralized credit config
+  // (credit-config.js → public.credit_costs, op 'study_plan'). The StudyPlanner
+  // engine constant (20) is only a final fallback if the live config cannot be
+  // loaded. The AUTHORITATIVE charge is server-side in consume_credits; this
+  // drives UI copy only.
+  function studyPlanCost(){
+    var c = window.CreditConfig && CreditConfig.cost('study_plan');
+    if (typeof c === 'number' && c >= 0) return c;
+    return (window.StudyPlanner && window.StudyPlanner.STUDY_PLAN_CREDIT_COST) || 20;
+  }
 
   function studyPlanIntent(text){
     var t = (text||'').toLowerCase();
@@ -2243,12 +2253,12 @@ button{font-family:inherit;cursor:pointer}
       return '<li><b>'+esc(x.label||'')+'</b>'+(why?' — <span class="sp-why">'+why+'</span>':'')+'</li>';
     }).join('');
     var priHtml = pri ? '<div class="sp-sec"><div class="sp-h">Why this order</div><ol class="sp-pri">'+pri+'</ol></div>' : '';
-    var foot = wk.regeneratesOn ? ('Refreshes around '+esc(wk.regeneratesOn)+'. Say “regenerate my study plan” to rebuild ('+STUDY_PLAN_COST+' credits).') : '';
+    var foot = wk.regeneratesOn ? ('Refreshes around '+esc(wk.regeneratesOn)+'. Say “regenerate my study plan” to rebuild ('+studyPlanCost()+' credits).') : '';
     var creditNote = '';
     if (meta.justGenerated) {
       // Show the ACTUAL charge (consume_credits may charge 0 when the request
       // is covered by the plan's daily free allowance), never a hardcoded 20.
-      var used = (typeof meta.credits === 'number') ? meta.credits : STUDY_PLAN_COST;
+      var used = (typeof meta.credits === 'number') ? meta.credits : studyPlanCost();
       creditNote = '<div class="sp-credit">'+(used > 0 ? used + ' credits used' : 'No credits used — covered by your daily free plans')+'</div>';
     }
     var body='<div class="sp-card"><div class="sp-top"><div class="sp-title">📅 Your Study Plan</div>'
@@ -2288,7 +2298,7 @@ button{font-family:inherit;cursor:pointer}
       var latest = await window.StudyPlannerClient.getLatestStudyPlan(sb, uid);
       removeTyping();
       if (latest && latest.plan_json) renderStudyPlan(latest.plan_json, { saved:true, generatedAt: latest.generated_at });
-      else addStudyPlanNotice('You don’t have a study plan yet. Say <b>“create a study plan”</b> to generate one ('+STUDY_PLAN_COST+' credits).');
+      else addStudyPlanNotice('You don’t have a study plan yet. Say <b>“create a study plan”</b> to generate one ('+studyPlanCost()+' credits).');
     } catch(e){ removeTyping(); addStudyPlanNotice('Could not load your study plan. Please try again.'); }
   }
 
@@ -2296,17 +2306,20 @@ button{font-family:inherit;cursor:pointer}
     isSending = true; sendBtn.disabled = true; addTyping();
     var creditLogId = null;
     try {
-      // 1) Credit gate — 20 credits (STUDY_PLAN), same RPC as chat messages.
-      var creditRes = await sb.rpc('consume_credits', {
-        p_user_id: uid, p_feature: 'STUDY_PLAN', p_model_name: 'study-planner',
-        p_prompt_tok: 0, p_comp_tok: 0, p_cost_usd: 0, p_session_id: currentSessionId || null
+      // 1) Credit gate — the study_plan operation resolved from the centralized
+      //    credit config (credit-config.js → public.credit_costs), the same path
+      //    every other AI operation uses. No hardcoded feature name or cost here.
+      var cr = await CreditConfig.charge(sb, {
+        userId: uid, op: 'study_plan', model: 'study-planner',
+        sessionId: currentSessionId || null
       });
-      var cr = creditRes && creditRes.data;
-      if ((creditRes && creditRes.error) || !cr) { removeTyping(); addStudyPlanNotice('Could not verify your credits. Please try again.'); return; }
+      if (!cr || cr.reason === 'rpc_error' || cr.reason === 'no_client' || cr.reason === 'no_result') {
+        removeTyping(); addStudyPlanNotice('Could not verify your credits. Please try again.'); return;
+      }
       if (!cr.ok) {
         removeTyping();
         if (cr.reason === 'feature_not_found') addStudyPlanNotice('The Study Planner isn’t enabled on your account yet. Please check back soon.');
-        else if (cr.reason === 'insufficient_credits') showCreditError('A Study Plan costs '+STUDY_PLAN_COST+' credits (balance: '+(cr.balance||0)+'). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade</a>.');
+        else if (cr.reason === 'insufficient_credits') showCreditError('A Study Plan costs '+studyPlanCost()+' credits (balance: '+(cr.balance||0)+'). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade</a>.');
         else if (cr.reason === 'daily_limit_reached') showCreditError('You’ve hit today’s free limit. <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Get more credits</a> to generate a Study Plan.');
         else addStudyPlanNotice('Could not start the Study Planner: '+escapeHtml(cr.reason||'unknown'));
         return;
@@ -2317,7 +2330,7 @@ button{font-family:inherit;cursor:pointer}
       var state = await window.StudyPlannerClient.gatherStudentState(sb, uid, { now: Date.now(), availability: availability });
       var plan  = window.StudyPlanner.buildStudyPlan(state);
       var sig   = window.StudyPlanner.planSignature(state);
-      var saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, STUDY_PLAN_COST);
+      var saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, studyPlanCost());
       removeTyping();
       renderStudyPlan(plan, { saved: saved && saved.persisted, justGenerated: true, credits: cr.credits_used });
     } catch(e){
