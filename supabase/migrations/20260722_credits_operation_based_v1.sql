@@ -1,7 +1,10 @@
 -- ===========================================================================
 -- Operation-based Zero AI credits — cost catalogue + pack repricing (RFC)
 -- ===========================================================================
--- STATUS: PENDING OWNER APPROVAL. Do NOT apply until reviewed (CLAUDE.md §3).
+-- STATUS: APPLIED to project igvkyxkmjnkzscqgommj on 2026-07-22 (owner-approved,
+-- CLAUDE.md §3). Ledger version 20260722053728 / credits_operation_based_v1.
+-- Verified after apply: all 10 operations active at RFC costs; packs repriced to
+-- 199/349/649 in credit_packs + plan_definitions; legacy FOCUS_PLAN deactivated.
 -- Target project: igvkyxkmjnkzscqgommj
 --
 -- Idempotent & convergent: safe to run more than once. No destructive DROPs;
@@ -31,12 +34,12 @@
 --   focus_session      → FOCUS_SESSION      15   (always_charge)
 --   weakness_analysis  → WEAKNESS_ANALYSIS  20   (always_charge)
 --
--- Schema assumption (live schema was not introspected — DB access withheld):
---   public.credit_costs exposes (feature_name, credit_cost, active,
---   always_charge) plus a defaulted PK / created_at. If your credit_costs has
---   additional NOT NULL columns without defaults, add them to the INSERT below
---   before applying. AI_CHAT_MESSAGE (5) is intentionally left active as the
---   back-compat fallback the client uses until this migration is live.
+-- Schema (confirmed before apply): public.credit_costs = (id uuid default,
+--   feature_name text NOT NULL, display_name text NULL, credit_cost int NOT NULL,
+--   active bool NOT NULL, created_at timestamptz default, always_charge bool
+--   NOT NULL). The INSERT below supplies every required column. AI_CHAT_MESSAGE
+--   (5) is intentionally left active as the back-compat fallback the client used
+--   before this migration went live.
 -- ===========================================================================
 
 -- 1. CREDIT COSTS -----------------------------------------------------------
