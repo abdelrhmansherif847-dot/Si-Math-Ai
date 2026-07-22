@@ -553,61 +553,67 @@ select.search-input{cursor:pointer}
     </div>
   </div>
 
-  <!-- TAB: CREDITS MANAGEMENT (owner) — RFC operation-based credits -->
+  <!-- TAB: CREDITS MANAGEMENT (owner) — full billing control center (RFC) -->
   <div id="tab-credits" style="display:none">
-    <!-- KPIs -->
-    <div class="stats-grid" style="margin-bottom:18px">
-      <div class="stat-card"><div class="lbl">Credits in Circulation</div><div class="val" id="cmCirculation">—</div><div class="sub">unspent balances</div></div>
-      <div class="stat-card amber"><div class="lbl">Credits Consumed</div><div class="val" id="cmConsumed">—</div><div class="sub">all-time AI usage</div></div>
-      <div class="stat-card green"><div class="lbl">Credits Sold</div><div class="val" id="cmSold">—</div><div class="sub">via approved packs</div></div>
-      <div class="stat-card green"><div class="lbl">Credit Revenue</div><div class="val" id="cmRevenue">—</div><div class="sub">approved pack sales (EGP)</div></div>
+    <style>
+      .cm-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+      .cm-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+      .cm-search{flex:1 1 220px;min-width:180px}
+      .cm-filters{display:flex;flex-wrap:wrap;gap:6px}
+      .cm-chip{padding:6px 12px;border-radius:100px;border:1px solid var(--border-soft);background:var(--bg-card);color:var(--text-300);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+      .cm-chip:hover{border-color:var(--cyan-border-soft);color:var(--text-100)}
+      .cm-chip.active{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:#fff}
+      .cm-editbar{display:none;align-items:center;gap:10px;margin-left:auto;padding:6px 10px;border-radius:12px;background:rgba(245,185,66,.10);border:1px solid var(--amber-border)}
+      .cm-editbar.show{display:flex}
+      .cm-editbar .cnt{font-size:12.5px;color:var(--amber);font-weight:700;white-space:nowrap}
+      .cm-grp{margin-bottom:16px}
+      .cm-grp-h{display:flex;align-items:baseline;gap:8px;margin:0 2px 8px}
+      .cm-grp-h .t{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text-100)}
+      .cm-grp-h .n{font-family:var(--font-mono);font-size:11px;color:var(--text-500)}
+      tr.cm-dirty{background:rgba(245,185,66,.09)!important}
+      tr.cm-dirty td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+      .cm-id{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)}
+      .cm-delta{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;margin-top:3px;min-height:12px}
+      .cm-cost{max-width:80px;padding:6px 8px}
+      .cm-muted{color:var(--text-500)}
+    </style>
+
+    <!-- Summary cards -->
+    <div class="cm-summary">
+      <div class="stat-card"><div class="lbl">Total Operations</div><div class="val" id="cmTotalOps">—</div><div class="sub">in credit_costs</div></div>
+      <div class="stat-card green"><div class="lbl">Active</div><div class="val" id="cmActiveOps">—</div><div class="sub">chargeable</div></div>
+      <div class="stat-card"><div class="lbl">Inactive</div><div class="val" id="cmInactiveOps">—</div><div class="sub">disabled</div></div>
+      <div class="stat-card amber"><div class="lbl">Credits Consumed</div><div class="val" id="cmConsumed">—</div><div class="sub">all-time</div></div>
+      <div class="stat-card"><div class="lbl">Credits Sold</div><div class="val" id="cmSold">—</div><div class="sub">approved purchases</div></div>
+      <div class="stat-card green"><div class="lbl">Total Revenue</div><div class="val" id="cmRevenue">—</div><div class="sub">EGP, approved</div></div>
+      <div class="stat-card"><div class="lbl">Subscription Rev.</div><div class="val" id="cmSubRev">—</div><div class="sub">EGP</div></div>
+      <div class="stat-card"><div class="lbl">Credit Pack Rev.</div><div class="val" id="cmPackRev">—</div><div class="sub">EGP</div></div>
     </div>
 
-    <!-- Operation cost catalogue -->
-    <div class="card" style="margin-bottom:18px">
-      <div class="card-head">
-        <div class="card-ico">⚡</div>
-        <div><div class="card-title">Operation Costs</div><div class="card-sub">Per-operation credit cost — the single source of truth (public.credit_costs). Changing a value here updates every page.</div></div>
-      </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Operation</th><th>Credits</th><th>Active</th><th>Always&nbsp;charge</th><th>Action</th></tr></thead>
-          <tbody id="creditCostsBody"><tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-500)">Loading…</td></tr></tbody>
-        </table>
+    <!-- Toolbar: search + page filters + staged-edit actions -->
+    <div class="cm-toolbar">
+      <input type="text" class="search-input cm-search" id="cmSearch" placeholder="Search by name, operation ID, or page…" oninput="cmRenderOps()"/>
+      <div class="cm-filters" id="cmFilters"></div>
+      <div class="cm-editbar" id="cmEditbar">
+        <span class="cnt" id="cmPendingCount">0 unsaved</span>
+        <button class="btn btn-green btn-sm" onclick="cmSaveAll()">Save All Changes</button>
+        <button class="btn btn-ghost btn-sm" onclick="cmCancelAll()">Cancel</button>
       </div>
     </div>
 
-    <!-- Subscription plans -->
-    <div class="card" style="margin-bottom:18px">
+    <!-- Operations, grouped by feature/page — data-driven from credit_costs -->
+    <div id="cmOps"><div class="empty"><div class="ico">⏳</div><p>Loading operations…</p></div></div>
+
+    <!-- Reference: plans & packs (read-only) that feed the revenue figures -->
+    <div class="card" style="margin-top:8px">
       <div class="card-head">
         <div class="card-ico">📦</div>
-        <div><div class="card-title">Subscription Plans</div><div class="card-sub">Price &amp; included credits per plan (public.pricing_settings)</div></div>
+        <div><div class="card-title">Plans &amp; Packs (reference)</div><div class="card-sub">Subscription &amp; credit-pack pricing behind the revenue figures above</div></div>
       </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Plan</th><th>Price (EGP)</th><th>Credits</th><th>Active</th><th>Action</th></tr></thead>
-          <tbody id="creditPlansBody"><tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-500)">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Credit packs -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-ico">🎟️</div>
-        <div><div class="card-title">Extra Credit Packs</div><div class="card-sub">One-time top-ups — credit_packs and plan_definitions are kept in lockstep</div></div>
-      </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Pack</th><th>Price (EGP)</th><th>Credits</th><th>Active</th><th>Action</th></tr></thead>
-          <tbody id="creditPacksBody"><tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-500)">Loading…</td></tr></tbody>
-        </table>
-      </div>
-      <div style="margin-top:12px;font-size:12px;color:var(--text-500);line-height:1.55">
-        Edits write through the <code>admin-actions</code> Edge Function (same path as System Settings). If a Save returns
-        “action not available yet”, its server handler still needs to be added — see
-        <code>docs/roadmap/credits-operation-based.md</code>.
-      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Plan / Pack</th><th>Type</th><th>Price (EGP)</th><th>Credits</th></tr></thead>
+        <tbody id="cmPlansPacks"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-500)">Loading…</td></tr></tbody>
+      </table></div>
     </div>
   </div>
 
@@ -1137,163 +1143,218 @@ async function saveSetting(key) {
   if (key === 'founder_slots_remaining') document.getElementById('statFounder').textContent = val;
 }
 
-// ── Credits Management (Owner) — RFC operation-based credits ───────────────────
-// Displays the live cost catalogue, plans, packs and KPIs. Edits route through
-// the admin-actions Edge Function (see docs/roadmap/credits-operation-based.md);
-// they degrade gracefully with a clear toast if a handler is not deployed yet.
-function loadCreditsMgmt() {
-  loadCreditMetrics();
-  loadCreditCosts();
-  loadCreditPlans();
-  loadCreditPacks();
+// ── Credits Management (Owner) — full billing control center (RFC) ────────────
+// 100% data-driven from admin_credits_overview() (operations + per-op analytics
+// + summary). New credit_costs rows appear automatically; the feature/page group
+// is derived from the feature_name prefix, so no code change is needed for future
+// operations. Edits are staged client-side and persisted via admin_set_credit_cost().
+var cmState = { ops: [], byFeature: {}, pending: {}, filter: 'all', search: '' };
+
+// Feature/page grouping — prefix-driven so new operations self-classify.
+var CM_GROUPS = [
+  { key: 'chat',     label: 'Zero Chat',        test: function (f) { return /^CHAT_/.test(f) || f === 'AI_CHAT_MESSAGE'; } },
+  { key: 'study',    label: 'Study Planner',    test: function (f) { return /^STUDY_/.test(f); } },
+  { key: 'mock',     label: 'Mock Exams',       test: function (f) { return /^MOCK_/.test(f); } },
+  { key: 'focus',    label: 'Focus Practice',   test: function (f) { return /^FOCUS_/.test(f); } },
+  { key: 'weakness', label: 'Weakness Analyzer',test: function (f) { return /^WEAKNESS_/.test(f); } },
+  { key: 'future',   label: 'Future Operations',test: function () { return true; } }
+];
+function cmGroupOf(feature) {
+  for (var i = 0; i < CM_GROUPS.length; i++) if (CM_GROUPS[i].test(feature)) return CM_GROUPS[i];
+  return CM_GROUPS[CM_GROUPS.length - 1];
+}
+function cmHumanize(f) {
+  return String(f || '').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+}
+function cmName(op) { return op.display_name || cmHumanize(op.feature_name); }
+function cmNum(n) { return (n == null) ? '—' : Number(n).toLocaleString(); }
+function cmEgp(n) { return (n == null) ? '—' : Number(n).toLocaleString() + ' EGP'; }
+function cmDate(iso) {
+  if (!iso) return 'never';
+  var d = new Date(iso); if (isNaN(d)) return '—';
+  var days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return days + 'd ago';
+  return d.toISOString().slice(0, 10);
 }
 
-// PostgREST aggregate SUM with graceful fallback (returns null if unavailable).
-async function cmAggSum(table, col, filters) {
-  try {
-    let q = sb.from(table).select(col + '.sum()');
-    if (filters) filters.forEach(f => { q = q.eq(f[0], f[1]); });
-    const { data, error } = await q;
-    if (error || !data || !data.length) return null;
-    const row = data[0];
-    const v = (row.sum !== undefined) ? row.sum : row[Object.keys(row)[0]];
-    return (v == null) ? null : Number(v);
-  } catch (_) { return null; }
+async function loadCreditsMgmt() {
+  var res;
+  try { res = await sb.rpc('admin_credits_overview'); } catch (e) { res = { error: e }; }
+  var data = res && res.data;
+  if ((res && res.error) || !data || !data.ok) {
+    document.getElementById('cmOps').innerHTML =
+      '<div class="empty"><div class="ico">⚠️</div><p>Could not load the Credits overview' +
+      ((data && data.reason) ? ' (' + esc(String(data.reason)) + ')' : '') +
+      '. The admin_credits_overview() RPC may not be deployed yet.</p></div>';
+    return;
+  }
+  cmState.ops = data.operations || [];
+  cmState.byFeature = {};
+  cmState.ops.forEach(function (o) { cmState.byFeature[o.feature_name] = o; });
+  cmState.pending = {};
+  cmRenderSummary(data.summary || {});
+  cmRenderFilters();
+  cmRenderOps();
+  cmUpdateEditbar();
+  loadPlansPacksRef();
 }
 
-let _cmPackCreditsCache = null;
-async function cmPackCreditsMap() {
-  if (_cmPackCreditsCache) return _cmPackCreditsCache;
-  const map = {};
-  try {
-    const { data } = await sb.from('plan_definitions').select('plan_code, credits_granted').eq('kind', 'pack');
-    (data || []).forEach(p => { map[p.plan_code] = p.credits_granted || 0; });
-  } catch (_) {}
-  _cmPackCreditsCache = map;
-  return map;
+function cmRenderSummary(s) {
+  document.getElementById('cmTotalOps').textContent    = cmNum(s.total_operations);
+  document.getElementById('cmActiveOps').textContent   = cmNum(s.active_operations);
+  document.getElementById('cmInactiveOps').textContent = cmNum(s.inactive_operations);
+  document.getElementById('cmConsumed').textContent    = cmNum(s.total_credits_consumed);
+  document.getElementById('cmSold').textContent        = cmNum(s.total_credits_sold);
+  document.getElementById('cmRevenue').textContent     = cmEgp(s.total_revenue);
+  document.getElementById('cmSubRev').textContent      = cmEgp(s.subscription_revenue);
+  document.getElementById('cmPackRev').textContent     = cmEgp(s.pack_revenue);
 }
 
-async function loadCreditMetrics() {
-  const fmt = n => (n == null ? '—' : Number(n).toLocaleString());
-  // Circulation + consumed via aggregate (fallback to — if aggregates disabled).
-  cmAggSum('profiles', 'credits_balance').then(v => { document.getElementById('cmCirculation').textContent = fmt(v); });
-  cmAggSum('ai_usage_logs', 'credits_used').then(v => { document.getElementById('cmConsumed').textContent = fmt(v); });
-  // Sold + revenue from approved pack purchases (bounded fetch, known columns).
+function cmRenderFilters() {
+  var counts = { all: cmState.ops.length };
+  cmState.ops.forEach(function (o) { var g = cmGroupOf(o.feature_name).key; counts[g] = (counts[g] || 0) + 1; });
+  var chips = [{ key: 'all', label: 'All Operations' }].concat(
+    CM_GROUPS.filter(function (g) { return counts[g.key]; }).map(function (g) { return { key: g.key, label: g.label }; }));
+  document.getElementById('cmFilters').innerHTML = chips.map(function (c) {
+    return '<span class="cm-chip' + (cmState.filter === c.key ? ' active' : '') + '" onclick="cmSetFilter(\'' + c.key + '\')">' +
+      esc(c.label) + ' <span class="cm-muted">' + (counts[c.key] || 0) + '</span></span>';
+  }).join('');
+}
+function cmSetFilter(k) { cmState.filter = k; cmRenderFilters(); cmRenderOps(); }
+
+function cmRenderOps() {
+  var searchEl = document.getElementById('cmSearch');
+  cmState.search = searchEl ? searchEl.value : '';
+  var q = (cmState.search || '').trim().toLowerCase();
+  var visible = cmState.ops.filter(function (o) {
+    var g = cmGroupOf(o.feature_name);
+    if (cmState.filter !== 'all' && g.key !== cmState.filter) return false;
+    if (!q) return true;
+    return (cmName(o).toLowerCase().indexOf(q) >= 0) ||
+           (o.feature_name.toLowerCase().indexOf(q) >= 0) ||
+           (g.label.toLowerCase().indexOf(q) >= 0);
+  });
+  var el = document.getElementById('cmOps');
+  if (!visible.length) { el.innerHTML = '<div class="empty"><div class="ico">🔍</div><p>No operations match your search or filter.</p></div>'; return; }
+  var html = '';
+  CM_GROUPS.forEach(function (g) {
+    var rows = visible.filter(function (o) { return cmGroupOf(o.feature_name).key === g.key; });
+    if (!rows.length) return;
+    html += '<div class="cm-grp"><div class="cm-grp-h"><span class="t">' + esc(g.label) + '</span><span class="n">' +
+      rows.length + ' operation' + (rows.length === 1 ? '' : 's') + '</span></div>' +
+      '<div class="card" style="padding:0"><div class="tbl-wrap"><table><thead><tr>' +
+      '<th>Operation</th><th>Page</th><th>Cost</th><th>Always</th><th>Active</th><th>Uses</th><th>Consumed</th><th>Revenue</th><th>Last&nbsp;used</th>' +
+      '</tr></thead><tbody>' + rows.map(cmRowHtml).join('') + '</tbody></table></div></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function cmRowHtml(op) {
+  var f = esc(op.feature_name);
+  var p = cmState.pending[op.feature_name];
+  var cost = p ? p.credit_cost : op.credit_cost;
+  var active = p ? p.active : op.active;
+  var always = p ? p.always_charge : op.always_charge;
+  var g = cmGroupOf(op.feature_name);
+  return '<tr id="cmrow_' + f + '"' + (p ? ' class="cm-dirty"' : '') + '>' +
+    '<td><div class="bold">' + esc(cmName(op)) + '</div><div class="cm-id">' + f + '</div></td>' +
+    '<td><span class="chip">' + esc(g.label) + '</span></td>' +
+    '<td><input type="number" min="0" step="1" class="search-input cm-cost" id="cmcost_' + f + '" value="' + (Number(cost) || 0) + '" oninput="cmOnEdit(\'' + f + '\')"/>' +
+      '<div class="cm-delta" id="cmdelta_' + f + '">' + (p ? cmDeltaText(op, p) : '') + '</div></td>' +
+    '<td><input type="checkbox" id="cmalways_' + f + '"' + (always ? ' checked' : '') + ' onchange="cmOnEdit(\'' + f + '\')"/></td>' +
+    '<td><input type="checkbox" id="cmactive_' + f + '"' + (active ? ' checked' : '') + ' onchange="cmOnEdit(\'' + f + '\')"/></td>' +
+    '<td class="mono">' + cmNum(op.usage_count) + '</td>' +
+    '<td class="mono">' + cmNum(op.credits_consumed) + '</td>' +
+    '<td class="cm-muted" title="Credits are sold up front via packs/subscriptions; consumption operations do not generate direct revenue.">—</td>' +
+    '<td class="cm-muted">' + cmDate(op.last_used) + '</td>' +
+  '</tr>';
+}
+
+function cmDeltaText(op, p) {
+  var parts = [];
+  if (p.credit_cost !== op.credit_cost) parts.push(op.credit_cost + '→' + p.credit_cost + ' cr');
+  if (p.active !== op.active) parts.push(p.active ? '+active' : '−active');
+  if (p.always_charge !== op.always_charge) parts.push(p.always_charge ? '+always' : '−always');
+  return parts.join('   ');
+}
+
+function cmOnEdit(feature) {
+  var op = cmState.byFeature[feature]; if (!op) return;
+  var costEl = document.getElementById('cmcost_' + feature);
+  var cost = Number(costEl ? costEl.value : NaN);
+  var activeEl = document.getElementById('cmactive_' + feature);
+  var alwaysEl = document.getElementById('cmalways_' + feature);
+  var active = !!(activeEl && activeEl.checked);
+  var always = !!(alwaysEl && alwaysEl.checked);
+  var dirty = (Number.isFinite(cost) && cost !== op.credit_cost) || active !== op.active || always !== op.always_charge;
+  var row = document.getElementById('cmrow_' + feature);
+  var delta = document.getElementById('cmdelta_' + feature);
+  if (dirty) {
+    cmState.pending[feature] = { credit_cost: cost, active: active, always_charge: always };
+    if (row) row.classList.add('cm-dirty');
+    if (delta) delta.textContent = cmDeltaText(op, cmState.pending[feature]);
+  } else {
+    delete cmState.pending[feature];
+    if (row) row.classList.remove('cm-dirty');
+    if (delta) delta.textContent = '';
+  }
+  cmUpdateEditbar();
+}
+
+function cmUpdateEditbar() {
+  var n = Object.keys(cmState.pending).length;
+  document.getElementById('cmPendingCount').textContent = n + ' unsaved change' + (n === 1 ? '' : 's');
+  document.getElementById('cmEditbar').classList.toggle('show', n > 0);
+}
+
+async function cmSaveAll() {
+  var feats = Object.keys(cmState.pending);
+  if (!feats.length) return;
+  for (var i = 0; i < feats.length; i++) {
+    var c = cmState.pending[feats[i]].credit_cost;
+    if (!Number.isFinite(c) || c < 0) { toast('“' + cmName(cmState.byFeature[feats[i]]) + '” has an invalid cost', 'red'); return; }
+  }
+  var okCount = 0, failCount = 0;
+  for (var j = 0; j < feats.length; j++) {
+    var fn = feats[j], pend = cmState.pending[fn], r;
+    try {
+      r = await sb.rpc('admin_set_credit_cost', {
+        p_feature: fn, p_credit_cost: pend.credit_cost, p_active: pend.active, p_always_charge: pend.always_charge
+      });
+    } catch (e) { r = { error: e }; }
+    if (r && !r.error && r.data && r.data.ok) okCount++; else failCount++;
+  }
+  if (okCount) toast(okCount + ' operation' + (okCount === 1 ? '' : 's') + ' updated successfully', 'green');
+  if (failCount) toast(failCount + ' update' + (failCount === 1 ? '' : 's') + ' failed', 'red');
+  loadCreditsMgmt();
+}
+
+function cmCancelAll() {
+  cmState.pending = {};
+  cmRenderOps();
+  cmUpdateEditbar();
+  toast('Pending changes discarded', 'blue');
+}
+
+async function loadPlansPacksRef() {
+  var el = document.getElementById('cmPlansPacks');
   try {
-    const [{ data }, packs] = await Promise.all([
-      sb.from('payment_requests').select('plan_code, amount_egp').eq('status', 'approved').limit(5000),
-      cmPackCreditsMap()
+    var r = await Promise.all([
+      sb.from('pricing_settings').select('display_name, plan_code, price_egp, credits_granted, active').eq('active', true).order('sort_order'),
+      sb.from('credit_packs').select('name, price_egp, credits, active').eq('active', true).order('sort_order')
     ]);
-    let revenue = 0, sold = 0;
-    (data || []).forEach(r => {
-      if ((r.plan_code || '').indexOf('PACK_') === 0) {
-        revenue += Number(r.amount_egp || 0);
-        sold += packs[r.plan_code] || 0;
-      }
-    });
-    document.getElementById('cmRevenue').textContent = revenue.toLocaleString();
-    document.getElementById('cmSold').textContent = sold.toLocaleString();
-  } catch (_) {
-    document.getElementById('cmRevenue').textContent = '—';
-    document.getElementById('cmSold').textContent = '—';
+    var plans = (r[0] && r[0].data) || [], packs = (r[1] && r[1].data) || [];
+    var rows = plans.map(function (p) {
+      return '<tr><td class="bold">' + esc(p.display_name || p.plan_code) + '</td><td><span class="chip">Subscription</span></td><td class="mono">' + cmNum(p.price_egp) + '</td><td class="mono">' + cmNum(p.credits_granted) + '</td></tr>';
+    }).concat(packs.map(function (p) {
+      return '<tr><td class="bold">' + esc(p.name) + '</td><td><span class="chip">Pack</span></td><td class="mono">' + cmNum(p.price_egp) + '</td><td class="mono">' + cmNum(p.credits) + '</td></tr>';
+    }));
+    el.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-500)">None.</td></tr>';
+  } catch (e) {
+    el.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-500)">Could not load plans/packs.</td></tr>';
   }
-}
-
-async function loadCreditCosts() {
-  const el = document.getElementById('creditCostsBody');
-  const { data, error } = await sb.from('credit_costs')
-    .select('feature_name, credit_cost, active, always_charge').order('feature_name');
-  if (error || !data) { el.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Could not load credit_costs.</td></tr>`; return; }
-  el.innerHTML = data.map(c => {
-    const f = esc(c.feature_name);
-    return `<tr>
-      <td class="mono">${f}</td>
-      <td><input type="number" min="0" step="1" class="search-input" style="max-width:90px;padding:6px 9px" id="cc_cost_${f}" value="${Number(c.credit_cost) || 0}"/></td>
-      <td><input type="checkbox" id="cc_active_${f}" ${c.active ? 'checked' : ''}/></td>
-      <td><input type="checkbox" id="cc_always_${f}" ${c.always_charge ? 'checked' : ''}/></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="saveCreditCost('${f}')">Save</button></td>
-    </tr>`;
-  }).join('');
-}
-
-async function saveCreditCost(feature) {
-  const cost = Number(document.getElementById('cc_cost_' + feature)?.value);
-  const active = document.getElementById('cc_active_' + feature)?.checked;
-  const always = document.getElementById('cc_always_' + feature)?.checked;
-  if (!Number.isFinite(cost) || cost < 0) { toast('Enter a valid credit cost', 'red'); return; }
-  const ok = await creditsEdgeAction({ action: 'update_credit_cost', feature_name: feature, credit_cost: cost, active: !!active, always_charge: !!always }, `"${feature}" updated`);
-  if (ok) loadCreditMetrics();
-}
-
-async function loadCreditPlans() {
-  const el = document.getElementById('creditPlansBody');
-  const { data, error } = await sb.from('pricing_settings')
-    .select('plan_code, display_name, price_egp, credits_granted, active').order('sort_order');
-  if (error || !data) { el.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Could not load pricing_settings.</td></tr>`; return; }
-  el.innerHTML = data.map(p => {
-    const code = esc(p.plan_code);
-    return `<tr>
-      <td><div class="bold">${esc(p.display_name || p.plan_code)}</div><div class="mono" style="font-size:11px;color:var(--text-500)">${code}</div></td>
-      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pl_price_${code}" value="${Number(p.price_egp) || 0}"/></td>
-      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pl_credits_${code}" value="${Number(p.credits_granted) || 0}"/></td>
-      <td><input type="checkbox" id="pl_active_${code}" ${p.active ? 'checked' : ''}/></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="savePricingPlan('${code}')">Save</button></td>
-    </tr>`;
-  }).join('');
-}
-
-async function savePricingPlan(code) {
-  const price = Number(document.getElementById('pl_price_' + code)?.value);
-  const credits = Number(document.getElementById('pl_credits_' + code)?.value);
-  const active = document.getElementById('pl_active_' + code)?.checked;
-  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(credits) || credits < 0) { toast('Enter valid numbers', 'red'); return; }
-  await creditsEdgeAction({ action: 'update_pricing_plan', plan_code: code, price_egp: price, credits_granted: credits, active: !!active }, `"${code}" updated`);
-}
-
-async function loadCreditPacks() {
-  const el = document.getElementById('creditPacksBody');
-  const { data, error } = await sb.from('credit_packs')
-    .select('id, name, price_egp, credits, active').order('sort_order');
-  if (error || !data) { el.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Could not load credit_packs.</td></tr>`; return; }
-  el.innerHTML = data.map(p => {
-    const id = esc(p.id);
-    return `<tr>
-      <td class="bold" data-name="${esc(p.name)}">${esc(p.name)}</td>
-      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pk_price_${id}" value="${Number(p.price_egp) || 0}"/></td>
-      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pk_credits_${id}" value="${Number(p.credits) || 0}"/></td>
-      <td><input type="checkbox" id="pk_active_${id}" ${p.active ? 'checked' : ''}/></td>
-      <td><button class="btn btn-ghost btn-sm" data-name="${esc(p.name)}" onclick="saveCreditPack('${id}', this.dataset.name)">Save</button></td>
-    </tr>`;
-  }).join('');
-}
-
-async function saveCreditPack(id, name) {
-  const price = Number(document.getElementById('pk_price_' + id)?.value);
-  const credits = Number(document.getElementById('pk_credits_' + id)?.value);
-  const active = document.getElementById('pk_active_' + id)?.checked;
-  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(credits) || credits < 0) { toast('Enter valid numbers', 'red'); return; }
-  const ok = await creditsEdgeAction({ action: 'update_credit_pack', pack_id: id, pack_name: name, price_egp: price, credits: credits, active: !!active }, `"${name}" updated`);
-  if (ok) { _cmPackCreditsCache = null; loadCreditMetrics(); }
-}
-
-// Shared privileged-write path (mirrors saveSetting). Returns true on success.
-async function creditsEdgeAction(payload, okMsg) {
-  let res, result;
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    res = await fetch(EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify(payload)
-    });
-    result = await res.json().catch(() => ({}));
-  } catch (_) { toast('Network error while saving', 'red'); return false; }
-  if (!res.ok || (result && result.error)) {
-    toast('Save failed: ' + ((result && result.error) || ('action "' + payload.action + '" not available yet')), 'red');
-    return false;
-  }
-  toast(okMsg || 'Saved', 'green');
-  return true;
 }
 
 // Feedback tab — REMOVED, migrated to ai-monitor.html
