@@ -769,11 +769,18 @@ button{font-family:inherit;cursor:pointer}
      is generated from supabase/functions/_shared/study-planner.core.js. -->
 <script src="study-planner.js"></script>
 <script src="study-planner-client.js"></script>
+<!-- Centralized credit configuration (RFC operation-based credits). Resolves
+     per-operation costs from public.credit_costs; pages never hardcode costs. -->
+<script src="credit-config.js"></script>
 <script>
   // ===== SUPABASE INIT =====
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Kick off the centralized credit-cost catalogue load early so per-operation
+  // charging (chat_text / chat_image / chat_followup) resolves from config.
+  try { if (window.CreditConfig) CreditConfig.load(sb); } catch (_) {}
 
   async function deviceGuard(sb, userId) {
     var{data:_ap}=await sb.from('profiles').select('is_admin').eq('id',userId).single();
@@ -2354,18 +2361,21 @@ button{font-family:inherit;cursor:pointer}
     if (!pendingRequestId) pendingRequestId = caiUuid();
     writeInflight(pendingRequestId, null);
 
-    // Credit gate: consume_credits RPC pre-authorises the message before hitting the edge fn.
-    // Tokens are not known yet — pass 0; the edge function handles actual token logging.
-    sb.rpc('consume_credits', {
-      p_user_id:    currentUser ? currentUser.id : null,
-      p_feature:    'AI_CHAT_MESSAGE',
-      p_model_name: 'claude-3-5-haiku',
-      p_prompt_tok:  0,
-      p_comp_tok:    0,
-      p_cost_usd:    0,
-      p_session_id:  currentSessionId || null
-    }).then(({ data: creditResult, error: creditError }) => {
-      if (creditError || !creditResult) {
+    // Credit gate: resolve the operation from the centralized credit config
+    // (credit-config.js → public.credit_costs) and pre-authorise via
+    // consume_credits before hitting the edge fn. Image/PDF upload → chat_image;
+    // an explicit "explain again / simpler" follow-up → chat_followup; otherwise
+    // chat_text. Costs are never hardcoded here. Tokens are unknown now (0); the
+    // edge function logs actual token usage.
+    var _creditOp = (attsToSend && attsToSend.length) ? 'chat_image'
+                  : (pendingFollowUpType ? 'chat_followup' : 'chat_text');
+    CreditConfig.charge(sb, {
+      userId:    currentUser ? currentUser.id : null,
+      op:        _creditOp,
+      model:     'claude-3-5-haiku',
+      sessionId: currentSessionId || null
+    }).then((creditResult) => {
+      if (!creditResult || creditResult.reason === 'rpc_error' || creditResult.reason === 'no_client' || creditResult.reason === 'no_result') {
         SignalEngine.discardBuffer();
         removeTyping();
         showError('Could not verify your credits. Please refresh and try again.');
@@ -2378,7 +2388,7 @@ button{font-family:inherit;cursor:pointer}
         removeTyping();
         clearInflight(); pendingRequestId = null;
         if (creditResult.reason === 'daily_limit_reached') {
-          showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (starts at 69 EGP, never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
+          showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
         } else if (creditResult.reason === 'insufficient_credits') {
           showCreditError('Not enough credits remaining (balance: ' + (creditResult.balance || 0) + '). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> to top up, or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade your plan</a> for a new monthly allowance.');
         } else {

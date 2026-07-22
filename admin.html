@@ -449,6 +449,7 @@ select.search-input{cursor:pointer}
     <button class="tab" data-role-min="admin" onclick="switchTab('users')">Users</button>
     <button class="tab" data-role-min="super_admin" onclick="switchTab('founders')">Founders</button>
     <button class="tab" data-role-min="owner" onclick="switchTab('settings')">System Settings</button>
+    <button class="tab" data-role-min="owner" onclick="switchTab('credits')">Credits</button>
   </div>
 
   <!-- TAB: PAYMENT REQUESTS (new manual payment flow) -->
@@ -549,6 +550,64 @@ select.search-input{cursor:pointer}
         <div><div class="card-title">System Settings</div><div class="card-sub">Global configuration values</div></div>
       </div>
       <div id="settingsList"><div class="empty"><div class="ico">⚙️</div><p>Loading…</p></div></div>
+    </div>
+  </div>
+
+  <!-- TAB: CREDITS MANAGEMENT (owner) — RFC operation-based credits -->
+  <div id="tab-credits" style="display:none">
+    <!-- KPIs -->
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card"><div class="lbl">Credits in Circulation</div><div class="val" id="cmCirculation">—</div><div class="sub">unspent balances</div></div>
+      <div class="stat-card amber"><div class="lbl">Credits Consumed</div><div class="val" id="cmConsumed">—</div><div class="sub">all-time AI usage</div></div>
+      <div class="stat-card green"><div class="lbl">Credits Sold</div><div class="val" id="cmSold">—</div><div class="sub">via approved packs</div></div>
+      <div class="stat-card green"><div class="lbl">Credit Revenue</div><div class="val" id="cmRevenue">—</div><div class="sub">approved pack sales (EGP)</div></div>
+    </div>
+
+    <!-- Operation cost catalogue -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico">⚡</div>
+        <div><div class="card-title">Operation Costs</div><div class="card-sub">Per-operation credit cost — the single source of truth (public.credit_costs). Changing a value here updates every page.</div></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Operation</th><th>Credits</th><th>Active</th><th>Always&nbsp;charge</th><th>Action</th></tr></thead>
+          <tbody id="creditCostsBody"><tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-500)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Subscription plans -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico">📦</div>
+        <div><div class="card-title">Subscription Plans</div><div class="card-sub">Price &amp; included credits per plan (public.pricing_settings)</div></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Plan</th><th>Price (EGP)</th><th>Credits</th><th>Active</th><th>Action</th></tr></thead>
+          <tbody id="creditPlansBody"><tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-500)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Credit packs -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">🎟️</div>
+        <div><div class="card-title">Extra Credit Packs</div><div class="card-sub">One-time top-ups — credit_packs and plan_definitions are kept in lockstep</div></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Pack</th><th>Price (EGP)</th><th>Credits</th><th>Active</th><th>Action</th></tr></thead>
+          <tbody id="creditPacksBody"><tr><td colspan="5" style="text-align:center;padding:36px;color:var(--text-500)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-500);line-height:1.55">
+        Edits write through the <code>admin-actions</code> Edge Function (same path as System Settings). If a Save returns
+        “action not available yet”, its server handler still needs to be added — see
+        <code>docs/roadmap/credits-operation-based.md</code>.
+      </div>
     </div>
   </div>
 
@@ -745,7 +804,7 @@ document.getElementById('hambBtn').addEventListener('click', () => { sidebar.cla
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 
 // Tabs
-const TABS = ['payments','pending','users','founders','settings'];
+const TABS = ['payments','pending','users','founders','settings','credits'];
 function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
@@ -754,6 +813,7 @@ function switchTab(name) {
   if (name === 'users') { if (allUsers.length === 0) loadUsers(); loadSuspiciousAccounts(); }
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
+  if (name === 'credits') loadCreditsMgmt();
 }
 
 // Toast
@@ -1075,6 +1135,165 @@ async function saveSetting(key) {
   if (!res.ok || result.error) { toast('Error: ' + (result.error || 'unknown'), 'red'); return; }
   toast(`"${key}" updated`, 'green');
   if (key === 'founder_slots_remaining') document.getElementById('statFounder').textContent = val;
+}
+
+// ── Credits Management (Owner) — RFC operation-based credits ───────────────────
+// Displays the live cost catalogue, plans, packs and KPIs. Edits route through
+// the admin-actions Edge Function (see docs/roadmap/credits-operation-based.md);
+// they degrade gracefully with a clear toast if a handler is not deployed yet.
+function loadCreditsMgmt() {
+  loadCreditMetrics();
+  loadCreditCosts();
+  loadCreditPlans();
+  loadCreditPacks();
+}
+
+// PostgREST aggregate SUM with graceful fallback (returns null if unavailable).
+async function cmAggSum(table, col, filters) {
+  try {
+    let q = sb.from(table).select(col + '.sum()');
+    if (filters) filters.forEach(f => { q = q.eq(f[0], f[1]); });
+    const { data, error } = await q;
+    if (error || !data || !data.length) return null;
+    const row = data[0];
+    const v = (row.sum !== undefined) ? row.sum : row[Object.keys(row)[0]];
+    return (v == null) ? null : Number(v);
+  } catch (_) { return null; }
+}
+
+let _cmPackCreditsCache = null;
+async function cmPackCreditsMap() {
+  if (_cmPackCreditsCache) return _cmPackCreditsCache;
+  const map = {};
+  try {
+    const { data } = await sb.from('plan_definitions').select('plan_code, credits_granted').eq('kind', 'pack');
+    (data || []).forEach(p => { map[p.plan_code] = p.credits_granted || 0; });
+  } catch (_) {}
+  _cmPackCreditsCache = map;
+  return map;
+}
+
+async function loadCreditMetrics() {
+  const fmt = n => (n == null ? '—' : Number(n).toLocaleString());
+  // Circulation + consumed via aggregate (fallback to — if aggregates disabled).
+  cmAggSum('profiles', 'credits_balance').then(v => { document.getElementById('cmCirculation').textContent = fmt(v); });
+  cmAggSum('ai_usage_logs', 'credits_used').then(v => { document.getElementById('cmConsumed').textContent = fmt(v); });
+  // Sold + revenue from approved pack purchases (bounded fetch, known columns).
+  try {
+    const [{ data }, packs] = await Promise.all([
+      sb.from('payment_requests').select('plan_code, amount_egp').eq('status', 'approved').limit(5000),
+      cmPackCreditsMap()
+    ]);
+    let revenue = 0, sold = 0;
+    (data || []).forEach(r => {
+      if ((r.plan_code || '').indexOf('PACK_') === 0) {
+        revenue += Number(r.amount_egp || 0);
+        sold += packs[r.plan_code] || 0;
+      }
+    });
+    document.getElementById('cmRevenue').textContent = revenue.toLocaleString();
+    document.getElementById('cmSold').textContent = sold.toLocaleString();
+  } catch (_) {
+    document.getElementById('cmRevenue').textContent = '—';
+    document.getElementById('cmSold').textContent = '—';
+  }
+}
+
+async function loadCreditCosts() {
+  const el = document.getElementById('creditCostsBody');
+  const { data, error } = await sb.from('credit_costs')
+    .select('feature_name, credit_cost, active, always_charge').order('feature_name');
+  if (error || !data) { el.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Could not load credit_costs.</td></tr>`; return; }
+  el.innerHTML = data.map(c => {
+    const f = esc(c.feature_name);
+    return `<tr>
+      <td class="mono">${f}</td>
+      <td><input type="number" min="0" step="1" class="search-input" style="max-width:90px;padding:6px 9px" id="cc_cost_${f}" value="${Number(c.credit_cost) || 0}"/></td>
+      <td><input type="checkbox" id="cc_active_${f}" ${c.active ? 'checked' : ''}/></td>
+      <td><input type="checkbox" id="cc_always_${f}" ${c.always_charge ? 'checked' : ''}/></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="saveCreditCost('${f}')">Save</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveCreditCost(feature) {
+  const cost = Number(document.getElementById('cc_cost_' + feature)?.value);
+  const active = document.getElementById('cc_active_' + feature)?.checked;
+  const always = document.getElementById('cc_always_' + feature)?.checked;
+  if (!Number.isFinite(cost) || cost < 0) { toast('Enter a valid credit cost', 'red'); return; }
+  const ok = await creditsEdgeAction({ action: 'update_credit_cost', feature_name: feature, credit_cost: cost, active: !!active, always_charge: !!always }, `"${feature}" updated`);
+  if (ok) loadCreditMetrics();
+}
+
+async function loadCreditPlans() {
+  const el = document.getElementById('creditPlansBody');
+  const { data, error } = await sb.from('pricing_settings')
+    .select('plan_code, display_name, price_egp, credits_granted, active').order('sort_order');
+  if (error || !data) { el.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Could not load pricing_settings.</td></tr>`; return; }
+  el.innerHTML = data.map(p => {
+    const code = esc(p.plan_code);
+    return `<tr>
+      <td><div class="bold">${esc(p.display_name || p.plan_code)}</div><div class="mono" style="font-size:11px;color:var(--text-500)">${code}</div></td>
+      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pl_price_${code}" value="${Number(p.price_egp) || 0}"/></td>
+      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pl_credits_${code}" value="${Number(p.credits_granted) || 0}"/></td>
+      <td><input type="checkbox" id="pl_active_${code}" ${p.active ? 'checked' : ''}/></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="savePricingPlan('${code}')">Save</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function savePricingPlan(code) {
+  const price = Number(document.getElementById('pl_price_' + code)?.value);
+  const credits = Number(document.getElementById('pl_credits_' + code)?.value);
+  const active = document.getElementById('pl_active_' + code)?.checked;
+  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(credits) || credits < 0) { toast('Enter valid numbers', 'red'); return; }
+  await creditsEdgeAction({ action: 'update_pricing_plan', plan_code: code, price_egp: price, credits_granted: credits, active: !!active }, `"${code}" updated`);
+}
+
+async function loadCreditPacks() {
+  const el = document.getElementById('creditPacksBody');
+  const { data, error } = await sb.from('credit_packs')
+    .select('id, name, price_egp, credits, active').order('sort_order');
+  if (error || !data) { el.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-500)">Could not load credit_packs.</td></tr>`; return; }
+  el.innerHTML = data.map(p => {
+    const id = esc(p.id);
+    return `<tr>
+      <td class="bold" data-name="${esc(p.name)}">${esc(p.name)}</td>
+      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pk_price_${id}" value="${Number(p.price_egp) || 0}"/></td>
+      <td><input type="number" min="0" step="1" class="search-input" style="max-width:110px;padding:6px 9px" id="pk_credits_${id}" value="${Number(p.credits) || 0}"/></td>
+      <td><input type="checkbox" id="pk_active_${id}" ${p.active ? 'checked' : ''}/></td>
+      <td><button class="btn btn-ghost btn-sm" data-name="${esc(p.name)}" onclick="saveCreditPack('${id}', this.dataset.name)">Save</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveCreditPack(id, name) {
+  const price = Number(document.getElementById('pk_price_' + id)?.value);
+  const credits = Number(document.getElementById('pk_credits_' + id)?.value);
+  const active = document.getElementById('pk_active_' + id)?.checked;
+  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(credits) || credits < 0) { toast('Enter valid numbers', 'red'); return; }
+  const ok = await creditsEdgeAction({ action: 'update_credit_pack', pack_id: id, pack_name: name, price_egp: price, credits: credits, active: !!active }, `"${name}" updated`);
+  if (ok) { _cmPackCreditsCache = null; loadCreditMetrics(); }
+}
+
+// Shared privileged-write path (mirrors saveSetting). Returns true on success.
+async function creditsEdgeAction(payload, okMsg) {
+  let res, result;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload)
+    });
+    result = await res.json().catch(() => ({}));
+  } catch (_) { toast('Network error while saving', 'red'); return false; }
+  if (!res.ok || (result && result.error)) {
+    toast('Save failed: ' + ((result && result.error) || ('action "' + payload.action + '" not available yet')), 'red');
+    return false;
+  }
+  toast(okMsg || 'Saved', 'green');
+  return true;
 }
 
 // Feedback tab — REMOVED, migrated to ai-monitor.html
