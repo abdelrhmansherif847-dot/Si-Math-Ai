@@ -2196,16 +2196,26 @@ button{font-family:inherit;cursor:pointer}
 
   function studyPlanIntent(text){
     var t = (text||'').toLowerCase();
-    // View the current plan (free)
-    if (/\b(show|view|see|open|display|what'?s|where'?s)\b[\s\S]{0,24}\b(my |the |current )?(study )?plan\b/.test(t)
-        || /\bmy (current )?study plan\b/.test(t)) return 'view';
-    // Generate / regenerate (charged) — English
-    if (/\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(study )?plan\b/.test(t)
-        || /\b(study plan|study schedule)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
-        || /^\s*(study plan|study schedule)\s*[.!]?\s*$/.test(t)) return 'generate';
-    // Generate — Arabic
+    // Plan noun accepted everywhere: plan / plans / plane (common typo for
+    // "planner") / planner / planning, optionally prefixed "study ", plus the
+    // synonym "study schedule". The earlier /\bplan\b/ missed "Study Planner"
+    // (the official name) and the "study plane" typo, so those requests fell
+    // through to the generic LLM path instead of the personalized engine.
+
+    // 1) Explicit VIEW (free) — a view verb beside a plan noun, checked first so
+    //    "I want to see my study plan" stays a free view, not a paid generation.
+    if (/\b(show|view|see|open|display|check|what'?s|where'?s)\b[\s\S]{0,24}\b(my |the |current )?(?:(?:study\s+)?plan(?:ner|ning|s|e)?|study\s+schedule)\b/.test(t)) return 'view';
+    // 2) GENERATE (charged 20). Strong build verbs accept the bare noun; softer
+    //    verbs (want/need/…) require the word "study" to avoid false charges.
+    if (/\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(?:(?:study\s+)?plan(?:ner|ning|s|e)?|study\s+schedule)\b/.test(t)
+        || /\b(want|need|give|prepare|design|set ?up|make me|i'?d like|can you (?:make|create|build|generate|do))\b[\s\S]{0,24}\bstudy\s+(?:plan(?:ner|ning|s|e)?|schedule)\b/.test(t)
+        || /\bstudy\s+(?:plan(?:ner|ning|s|e)?|schedule)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
+        || /^\s*study\s+(?:plan(?:ner|ning|s|e)?|schedule)\s*[.!?]?\s*$/.test(t)) return 'generate';
+    // 3) Generate — Arabic
     if (/(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز)\S*[\s\S]{0,24}(خط[ةه])/.test(t)
         || /خط[ةه]\s*(مذاكرة|مذاكره|دراسة|دراسه|استذكار)/.test(t)) return 'generate';
+    // 4) Bare "my study plan(ner)" with no verb → view the existing one (free).
+    if (/\bmy (current )?study\s+plan(?:ner|ning|s|e)?\b/.test(t)) return 'view';
     return null;
   }
 
