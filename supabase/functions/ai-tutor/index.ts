@@ -1,4 +1,20 @@
-// ai-tutor Edge Function v86
+// ai-tutor Edge Function v87
+// v87 (Domain scope guardrail): Zero is now explicitly scoped to mathematics
+// (SAT / EST / ACT / American Diploma) AND to the learning-coach conversations
+// that surround it — exam anxiety, confidence, motivation, study habits, time
+// management, burnout, goal setting. Those are IN scope and must be answered
+// with empathy, not filtered. Genuinely unrelated domains (politics, religion,
+// medical, legal, programming, non-math science, history, geography,
+// entertainment, unrelated personal opinions) are OUT of scope: the model
+// classifies each turn via a new `scope` JSON field and the server replaces the
+// body of an out_of_scope turn with a warm, language-aware redirect, so an
+// off-domain answer cannot reach the student even if the model drafts one.
+// Fail-open by design — a missing/unknown scope, any image upload, and any
+// resolved worksheet reference are treated as in-scope, so the guard can never
+// refuse a real math question. hint_mode is NOT an exemption (it is
+// client-supplied); the hint prompt classifies scope too. Out-of-scope turns
+// are not persisted to question_records and emit no weakness signals. Response
+// envelope gains additive `scope` + `scope_guard`. No schema or data change.
 // v86 (Bug #3 — Franco only on request): the language resolver no longer treats
 // heuristic Franco *detection* as a Franco *preference*. detectFranco() is
 // significantly stricter (interior special-digit counts only as a contributing
@@ -38,7 +54,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v86';
+const AI_TUTOR_VERSION = 'v87';
 
 // ── Taxonomy (single source of truth) ────────────────────────────────────────
 // Imported from the generated _shared copy of taxonomy.core.js — byte-identical
@@ -790,6 +806,60 @@ function safeNoAnswerMessage(lang: string): string {
     en: "I couldn't generate a full answer this time. Please resend your question and I'll take another look.",
     ar: 'معلش، مقدرتش أطلّع إجابة كاملة المرة دي. ابعت سؤالك تاني وهشوفه من جديد.',
     franco: "Ma2dartesh atalla3 egaba kamla el marra di. Eb3at so2alak tani w hashoufo mn gedid.",
+  };
+  return MSGS[lang] ?? MSGS['en'];
+}
+
+// ── Domain scope guardrail (v87) ─────────────────────────────────────────────
+// Zero specialises in mathematics (SAT / EST / ACT / American Diploma) and in
+// coaching the student THROUGH that mathematics — anxiety, confidence,
+// motivation, study habits, burnout, goal setting. Coaching is IN scope: it is
+// the difference between a tutor and a lookup table, and the student list of
+// "I'm afraid I won't get an 800" / "I failed my last mock" cases must be
+// answered warmly, never filtered.
+//
+// Only genuinely unrelated domains are refused, and the refusal is a redirect,
+// not a wall: name the specialisation, keep the warmth, offer a math next step.
+type ScopeLabel = 'math' | 'coaching' | 'out_of_scope';
+
+function parseScopeLabel(raw: unknown): ScopeLabel | null {
+  const s = String(raw ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (s === 'math' || s === 'mathematics')     return 'math';
+  if (s === 'coaching' || s === 'coach')       return 'coaching';
+  if (s === 'out_of_scope' || s === 'offtopic' || s === 'off_topic') return 'out_of_scope';
+  return null;
+}
+
+// Resolve the effective scope for a turn. FAIL-OPEN on every axis: the cost of
+// wrongly refusing a real student mid-revision is far higher than the cost of
+// answering one stray off-domain question.
+//   • image attached      → in scope (an upload is always a math problem here)
+//   • worksheet ref       → in scope (we already know which question they mean)
+//   • scope missing/junk  → in scope (never refuse on a parse failure)
+//
+// hint_mode is deliberately NOT an exemption. It arrives on the request body,
+// so exempting it would let a crafted `{"hint_mode":true}` payload walk the
+// guard. HINT_SYSTEM_PROMPT classifies scope too, so hint turns are covered by
+// the same check.
+function resolveScope(
+  rawScope: unknown,
+  opts: { hasImage: boolean; hasRef: boolean },
+): { scope: ScopeLabel; blocked: boolean } {
+  if (opts.hasImage || opts.hasRef) return { scope: 'math', blocked: false };
+  const label = parseScopeLabel(rawScope);
+  if (label === null) return { scope: 'math', blocked: false };
+  return { scope: label, blocked: label === 'out_of_scope' };
+}
+
+// Canonical redirect body for an out-of-scope turn. The server substitutes this
+// for whatever the model drafted, so off-domain content cannot leak even if the
+// model answered the question and merely labelled it out_of_scope.
+function scopeRedirectMessage(lang: string, studentName: string): string {
+  const name = String(studentName || '').trim();
+  const MSGS: Record<string, string> = {
+    en: `${name ? name + ', ' : ''}that one's outside what I do 🐉 — I'm Zero, and I specialise in mathematics: SAT, EST, ACT and American Diploma math, plus everything around getting you through it (nerves before an exam, study plans, staying motivated).\n\nAsk me a math question, send a photo of a problem, or tell me what's stressing you about the exam — I'm all yours for that.`,
+    ar: `${name ? 'يا ' + name + '، ' : ''}الموضوع ده بره تخصصي 🐉 — أنا Zero، متخصص في الرياضيات: SAT و EST و ACT ورياضيات الدبلومة الأمريكية، وكمان كل اللي حواليها (التوتر قبل الامتحان، خطة المذاكرة، الحماس لما بيقل).\n\nاسألني في أي مسألة رياضيات، أو ابعتلي صورة السؤال، أو قوللي إيه اللي مقلقك في الامتحان — ده شغلي بالظبط.`,
+    franco: `${name ? 'ya ' + name + ', ' : ''}el mawdou3 da barra takhasosi 🐉 — ana Zero, motakhases fel math: SAT w EST w ACT w math el diploma el amrikeya, w kaman kol elli 7awaleha (el tawattor 2abl el emti7an, khettet el mozakra, el 7amas lamma bey2el).\n\nEs2alni fi ay mas2ala math, aw eb3atli sourat el so2al, aw 2olli eh elli me2ala2ak fel emti7an — da shoghli bel zabt.`,
   };
   return MSGS[lang] ?? MSGS['en'];
 }
@@ -2131,6 +2201,54 @@ The math answer is the FINAL layer, wrapped inside the four above. A correct ans
 
 ---
 
+## 🎯 DOMAIN SCOPE — what Zero is for (set "scope" on EVERY response)
+
+You are a specialist, not a general assistant. Classify every turn into exactly one "scope" value.
+
+**scope = "math"** — mathematics in any form:
+- Mathematics generally, and specifically SAT Math, EST Math, ACT Math, American Diploma mathematics
+- Solving, explaining, checking, or practising any math problem; formulas, concepts, notation, graphs, calculator technique
+- Exam-format questions about the MATH sections (timing per question, question types, scoring of the math section)
+
+**scope = "coaching"** — the student's mathematics learning journey. This is IN SCOPE and you MUST answer it warmly and concretely. You are a learning coach, not a filter:
+- Exam anxiety, stress before SAT/EST/ACT, fear of failing, panic the night before
+- Confidence ("I don't feel confident in algebra"), discouragement after a poor mock score
+- Motivation, losing motivation, burnout, procrastination
+- Study habits, study plans, how to revise this week, time management, productivity for studying math
+- Goal setting, target scores, "I'm afraid I won't get an 800", test-taking mindset, encouragement
+- Greetings, small talk that opens a study session, "how are you", identity questions about Zero
+
+These are NOT off-topic. A student who says "I failed my last mock exam" or "I'm stressed about tomorrow's math exam" gets empathy first, then one concrete action — never a redirect.
+
+**scope = "out_of_scope"** — genuinely unrelated to mathematics or to studying it:
+- Politics, elections, public figures' opinions
+- Religion and religious rulings
+- Medical advice, diagnoses, medication, mental-health treatment (see the safety note below)
+- Legal advice
+- Programming, coding, software, IT help
+- General science unrelated to math (chemistry reactions, biology, physics with no math content asked)
+- History, geography, current events
+- Entertainment: films, music, sport, games, celebrities
+- Personal opinions unrelated to learning mathematics
+- Homework in other school subjects (Arabic, English literature, etc.)
+
+**How to decide when it is borderline:**
+- If the message connects to the student's math study — even loosely, even emotionally — choose "coaching", not "out_of_scope".
+- A physics/chemistry/finance/statistics problem that is really a MATH problem (an equation to solve, a rate, a percentage, a graph) is "math". Answer the math.
+- If a message mixes a math question with something off-domain, answer the MATH part and simply ignore the rest. Do NOT mark the whole turn out_of_scope.
+- When genuinely unsure, choose "math" or "coaching". Never refuse a student who might be asking something legitimate.
+
+**What to write when scope = "out_of_scope":**
+Stay warm — you are redirecting a student you like, not enforcing a rule. In 2-3 short sentences:
+1. Say plainly that this is outside what you do
+2. Name what you DO specialise in — mathematics for SAT/EST/ACT/American Diploma, and the studying around it
+3. Offer a concrete way back in ("send me a problem", "tell me what's worrying you about the exam")
+Never lecture, never moralise, never say "I am an AI language model". Do NOT answer the off-domain question, not even partially, not even "briefly".
+
+**Safety note (overrides the above):** if a student expresses self-harm intent or is in crisis, do NOT issue a scope redirect. Respond with care, encourage them to talk to someone they trust or a local professional, and set scope="coaching".
+
+---
+
 ## 🐉 ZERO PERSONALITY (Priority 1 — MUST APPLY TO EVERY RESPONSE)
 ${personality}
 
@@ -2304,6 +2422,10 @@ Determine if this is a math message and set "is_math" accordingly:
 - When is_math = false: set topic="General", subtopic="", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
 
+**is_math vs scope — they answer different questions. Set BOTH:**
+- is_math asks "does this turn contain math to record?" → scope="math" turns are is_math=true; scope="coaching" and scope="out_of_scope" turns are is_math=false.
+- scope asks "is this turn something Zero handles at all?" → see the DOMAIN SCOPE section above. Coaching is handled; out_of_scope is redirected.
+
 ## Weakness Signal — WHEN to set weakness_signal=true (CRITICAL)
 Default is false. Set to **true** when ANY of these are true:
 - Student's message expresses confusion: "مش فاهم", "مش عارف", "I don't get it", "confused", "stuck"
@@ -2331,6 +2453,7 @@ If a response is just "Question → Answer" with no personality, no coaching, no
 ## Response Format
 Respond with valid JSON ONLY. No markdown fences. No extra text outside the JSON.
 {
+  "scope": "math|coaching|out_of_scope",
   "is_math": true,
   "answer": "structured markdown explanation with LaTeX math",
   "hint": "one Socratic hint (1-2 sentences, no solution, ends with a guiding question)",
@@ -2378,8 +2501,16 @@ Language: ${
 ## Math Formatting
 Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
 
+## 🎯 DOMAIN SCOPE — set "scope" on every response
+You are a mathematics specialist (SAT / EST / ACT / American Diploma math).
+- "math" — the student is asking about a math problem or concept. This is the normal hint-mode case.
+- "coaching" — nerves, confidence, motivation, study habits, time management, burnout, goal setting, encouragement. IN SCOPE: drop the hint format and answer as a warm coach.
+- "out_of_scope" — politics, religion, medical, legal, programming, non-math science, history, geography, entertainment, opinions unrelated to studying math. Do NOT answer it; just set the label.
+When unsure, choose "math" or "coaching" — never refuse a student who might be asking something legitimate.
+
 ## Response Format
 {
+  "scope": "math|coaching|out_of_scope",
   "is_math": true,
   "answer": "ONE observation + ONE hint (with LaTeX if needed) + ONE guiding question. MAXIMUM 5 sentences. NO complete solution.",
   "hint": "",
@@ -2547,6 +2678,48 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
           uid: user.id.slice(0, 8), msg: String(parseErr),
         }));
       }
+    }
+
+    // ── Domain scope guard (v87) ─────────────────────────────────────────────
+    // Runs immediately after the parse, before any post-processing, taxonomy
+    // resolution, detector, or persistence. An out-of-scope turn must leave no
+    // trace: no question_records row, no weakness signal, no mastery movement,
+    // no taxonomy entry — it was never a math question.
+    //
+    // The model's drafted answer is DISCARDED and replaced with the canonical
+    // redirect. Classifying a turn out_of_scope and then answering it anyway is
+    // the failure mode this guard exists to make impossible.
+    const scopeDecision = resolveScope(parsed.scope, {
+      hasImage: !!imageData,
+      hasRef:   !!resolvedRef,
+    });
+    if (scopeDecision.blocked) {
+      console.log('[ai-tutor] scope-guard-fired', JSON.stringify({
+        uid:        user.id.slice(0, 8),
+        guard:      'domain_scope',
+        raw_scope:  String(parsed.scope ?? ''),
+        lang,
+        q_chars:    question.length,
+        had_answer: !!String(parsed.answer || '').trim(),
+      }));
+      return new Response(JSON.stringify({
+        answer:          scopeRedirectMessage(lang, studentName),
+        hint:            '',
+        topic:           'General',
+        subtopic:        'Out of Scope',
+        difficulty:      '',
+        concepts:        [],
+        rules:           [],
+        weakness_signal: false,
+        attention_marker: '',
+        session_id:      resolvedSessionId,
+        record_id:       null,
+        hint_mode:       hintMode,
+        is_math:         false,
+        scope:           'out_of_scope',
+        scope_guard:     true,
+        version:         AI_TUTOR_VERSION,
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
 
     // ── Post-process rules + difficulty (math-intent classifier) ─────────────
@@ -2796,6 +2969,10 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
       record_id:       recordId,
       hint_mode:       hintMode,
       is_math:         isMath,
+      // v87: observability for the domain guardrail. 'math' | 'coaching' — an
+      // out_of_scope turn never reaches this builder (it early-returns above).
+      scope:           scopeDecision.scope,
+      scope_guard:     false,
       // Phase B: structured list of every question detected in the upload, so the
       // client can show "I detected N questions…". Only meaningful when length>1.
       detected_questions: detectedQuestions.map((q) => ({

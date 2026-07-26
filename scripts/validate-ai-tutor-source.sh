@@ -68,11 +68,14 @@ if [ "$SIZE" -lt 40000 ]; then
   FAILED=1
 fi
 
-# Upper bound is a sanity check — the function should never balloon past 170 KB.
+# Upper bound is a sanity check — the function should never balloon past 190 KB.
 # Bumped from 150 KB → 170 KB after v82 (d343553) grew to 154,774 bytes with
 # the empty-answer guard and Example B equivalence helpers.
-if [ "$SIZE" -gt 170000 ]; then
-  echo "FAIL: source file is suspiciously large: $SIZE bytes (expected <= 170000)" >&2
+# Bumped from 170 KB → 190 KB after v87 grew to ~176 KB with the domain scope
+# guardrail (DOMAIN SCOPE prompt section, resolveScope/scopeRedirectMessage
+# helpers, and the hint-mode scope block).
+if [ "$SIZE" -gt 190000 ]; then
+  echo "FAIL: source file is suspiciously large: $SIZE bytes (expected <= 190000)" >&2
   FAILED=1
 fi
 
