@@ -23,3 +23,13 @@ jobs:
       # the suites are dependency-free by design (there is no package.json).
       - name: Run test suites and repo validators
         run: node tests/run-all.mjs
+
+      # SEC-07 supply chain. The offline half of this lives in
+      # repo-integrity.test.mjs (no tag may be unpinned or unhashed); this half
+      # needs the network, because it re-downloads each package from the npm
+      # registry, checks the tarball against the registry's own published
+      # integrity, recomputes SHA-384, and fails if a committed hash has
+      # drifted. That catches a hash edited by hand, a pin bumped without
+      # regenerating, and a package republished under the same version.
+      - name: Verify CDN pins and SRI hashes
+        run: ./scripts/pin-cdn-sri.sh --check

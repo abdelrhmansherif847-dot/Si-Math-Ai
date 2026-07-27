@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/streak.js"></script>
 <script src="assets/exam-days.js"></script>
 <style>
@@ -1992,7 +1992,13 @@ async function loadDashboard() {
   var weakBanner = document.getElementById('weakestBannerText');
   if (weakBanner) {
     if (weakness) {
-      var loc = weakness.subtopic ? weakness.topic + ' &rarr; ' + weakness.subtopic : weakness.topic;
+      // esc() on both parts: weakness_reports is writable by its owner (RLS is
+      // `user_id = auth.uid()` for ALL commands), so topic/subtopic are not
+      // trusted taxonomy values — a student can put markup there. The &rarr;
+      // separator stays a literal entity, which is why this is not textContent.
+      var loc = weakness.subtopic
+        ? esc(weakness.topic) + ' &rarr; ' + esc(weakness.subtopic)
+        : esc(weakness.topic);
       weakBanner.innerHTML = 'Biggest Weakness: <b>' + loc + '</b>';
     } else {
       weakBanner.textContent = 'No weakness data yet — keep practising';

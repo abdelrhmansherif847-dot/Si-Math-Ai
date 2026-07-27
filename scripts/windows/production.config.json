@@ -1,0 +1,40 @@
+{
+  "_comment": [
+    "Si Math AI production deployment configuration.",
+    "",
+    "THIS FILE CONTAINS NO SECRETS AND MUST NEVER CONTAIN ANY.",
+    "Everything here is already public: the Supabase project ref appears in every",
+    "client bundle, and the domain is the site itself.",
+    "",
+    "Secrets are read from environment variables at run time, never from disk:",
+    "  SUPABASE_ACCESS_TOKEN  - required to deploy (Supabase personal access token)",
+    "  SUPABASE_DB_URL        - optional, enables database-layer verification",
+    "  SUPABASE_TEST_JWT      - optional, enables authenticated smoke tests",
+    "  SUPABASE_ANON_KEY      - optional, required alongside SUPABASE_TEST_JWT",
+    "",
+    "Any value below can be overridden by an environment variable of the same",
+    "name in SCREAMING_SNAKE_CASE (SUPABASE_PROJECT_REF, PRODUCTION_DOMAIN,",
+    "EXPECTED_VERSION, ALLOWED_ORIGINS, DEPLOY_BRANCH, EDGE_FUNCTION_NAME)."
+  ],
+
+  "ProjectRef": "igvkyxkmjnkzscqgommj",
+
+  "ProductionDomain": "",
+
+  "EdgeFunctionName": "ai-tutor",
+
+  "ExpectedVersion": "v89",
+
+  "AllowedOrigins": [],
+
+  "DeployBranch": "claude/enterprise-security-hardening-xdhqfi",
+
+  "FrozenFiles": [
+    "regenerate-reports.js",
+    "taxonomy.js",
+    "exam-mistakes-logger.js",
+    "mock-exam.html",
+    "weakness.html",
+    "focus.html"
+  ]
+}

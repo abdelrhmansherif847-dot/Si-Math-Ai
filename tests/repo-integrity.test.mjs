@@ -59,4 +59,33 @@ const fixes = [
 ];
 for (const [label, fn] of fixes) { let ok = false; try { ok = fn(); } catch {} t.ok(label, ok); }
 
+// ── SEC-07: CDN supply chain ───────────────────────────────────────────────
+// Offline counterpart to scripts/pin-cdn-sri.sh --check. That script proves
+// the committed hashes match the real packages but needs network; this proves
+// no page can regress to a floating or unhashed CDN reference, and runs
+// everywhere.
+t.section('CDN pinning (SEC-07)');
+
+const pages = readdirSync(REPO).filter(f => f.endsWith('.html'));
+
+const unhashed = [];
+const floating = [];
+for (const p of pages) {
+  const html = read(p);
+  for (const tag of html.match(/<(script|link)[^>]*(src|href)="https:\/\/cdn\.jsdelivr\.net[^"]*"[^>]*>/g) || []) {
+    if (!tag.includes('integrity='))   unhashed.push(`${p}: ${tag.slice(0, 70)}`);
+    if (!tag.includes('crossorigin='))  unhashed.push(`${p}: missing crossorigin — SRI will not be enforced`);
+  }
+  // A live tag (not a comment) pointing at an unpinned major range.
+  for (const tag of html.match(/<script[^>]*src="[^"]*supabase-js@\d+["/][^"]*"[^>]*>/g) || []) floating.push(`${p}: ${tag.slice(0, 70)}`);
+  if (/<script[^>]*supabase-js\/\+esm/.test(html)) floating.push(`${p}: unpinned +esm import`);
+}
+
+t.is('every jsdelivr tag carries integrity + crossorigin', unhashed, []);
+t.is('no page loads a floating supabase-js range', floating, []);
+t.ok('supabase-js is pinned to an exact version somewhere',
+  pages.some(p => /supabase-js@\d+\.\d+\.\d+\//.test(read(p))));
+t.ok('no page pins the CDN-generated supabase.min.js (no stable hash exists)',
+  !pages.some(p => read(p).includes('umd/supabase.min.js')));
+
 t.done();

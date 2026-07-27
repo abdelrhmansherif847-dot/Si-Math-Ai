@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -244,7 +244,10 @@ function relTime(ts) {
 function showAlert(type, msg) {
   const div = document.createElement('div');
   div.className = `alert-box alert-${type}`;
-  div.innerHTML = `<span>${type === 'danger' ? '⚠️' : type === 'warn' ? '⚡' : 'ℹ️'}</span><span>${msg}</span>`;
+  // escHtml(msg): every caller today passes a literal, so this changes no
+  // output — it just stops this from becoming an XSS sink the first time
+  // someone passes an error string or a device name through it.
+  div.innerHTML = `<span>${type === 'danger' ? '⚠️' : type === 'warn' ? '⚡' : 'ℹ️'}</span><span>${escHtml(msg)}</span>`;
   document.getElementById('alerts').appendChild(div);
 }
 

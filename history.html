@@ -267,8 +267,17 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </main>
 
+<!-- SEC-07: was `import { createClient } from '.../@supabase/supabase-js/+esm'`.
+     Two problems with that line. It carried no version at all, so it floated to
+     the latest release of ANY major — a future v3 would have landed here
+     unannounced. And Subresource Integrity cannot be applied to an ESM import
+     specifier, so there was no way to pin the bytes. Switching to the same
+     pinned, hash-verified UMD build every other page uses fixes both. The
+     classic script executes before this module (modules are deferred), so
+     `supabase` is defined by the time the destructure below runs. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+const { createClient } = supabase;
 
 const sb = createClient(
   'https://igvkyxkmjnkzscqgommj.supabase.co',
