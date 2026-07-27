@@ -109,6 +109,54 @@ supabase functions deploy ai-tutor --project-ref igvkyxkmjnkzscqgommj
 
 Requires `SUPABASE_ACCESS_TOKEN` set to a valid personal access token.
 
+### 4.1 Required env vars (v88+)
+
+v88 added CORS origin enforcement. It is **opt-in**: with `ALLOWED_ORIGINS`
+unset the function accepts every origin exactly as v87 did, and logs
+
+```
+[ai-tutor] WARNING: ALLOWED_ORIGINS unset — CORS origin enforcement is DISABLED
+```
+
+on cold start. That default is deliberate — a fail-closed default would mean
+deploying v88 without the secret takes the tutor down for every student, which
+is the outage class this runbook exists to prevent. It also means **the
+hardening does nothing until you set the variable.**
+
+Set it once, before or after the v88 deploy:
+
+```bash
+supabase secrets set \
+  ALLOWED_ORIGINS="https://<prod-domain>,https://www.<prod-domain>" \
+  --project-ref igvkyxkmjnkzscqgommj
+```
+
+Include every origin that legitimately calls the function — apex, `www`, and
+any custom domain. Vercel preview domains are **not** matched by a pattern;
+add them explicitly if previews must call production.
+
+Verify after setting:
+
+```bash
+# Allowed origin → 200 with the origin echoed back
+curl -si -X POST "https://igvkyxkmjnkzscqgommj.supabase.co/functions/v1/ai-tutor" \
+  -H "Origin: https://<prod-domain>" -H "Authorization: Bearer <test-jwt>" \
+  -H "Content-Type: application/json" -d '{"question":"2+2"}' \
+  | grep -i access-control-allow-origin
+# Expect: access-control-allow-origin: https://<prod-domain>
+
+# Foreign origin → 403, and no ACAO header at all
+curl -si -X POST "https://igvkyxkmjnkzscqgommj.supabase.co/functions/v1/ai-tutor" \
+  -H "Origin: https://evil.example" -H "Authorization: Bearer <test-jwt>" \
+  -H "Content-Type: application/json" -d '{"question":"2+2"}' | head -1
+# Expect: HTTP/2 403
+```
+
+If students start seeing failures right after setting this, the list is
+missing an origin — check the Edge Function logs for `blocked-origin` entries,
+which record the exact rejected value. Unsetting the variable restores the
+permissive behaviour immediately.
+
 ### Post-deploy version check
 
 After deploy, confirm the deployed content matches the intended commit:

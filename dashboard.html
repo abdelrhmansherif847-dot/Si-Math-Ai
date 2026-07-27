@@ -1992,7 +1992,13 @@ async function loadDashboard() {
   var weakBanner = document.getElementById('weakestBannerText');
   if (weakBanner) {
     if (weakness) {
-      var loc = weakness.subtopic ? weakness.topic + ' &rarr; ' + weakness.subtopic : weakness.topic;
+      // esc() on both parts: weakness_reports is writable by its owner (RLS is
+      // `user_id = auth.uid()` for ALL commands), so topic/subtopic are not
+      // trusted taxonomy values — a student can put markup there. The &rarr;
+      // separator stays a literal entity, which is why this is not textContent.
+      var loc = weakness.subtopic
+        ? esc(weakness.topic) + ' &rarr; ' + esc(weakness.subtopic)
+        : esc(weakness.topic);
       weakBanner.innerHTML = 'Biggest Weakness: <b>' + loc + '</b>';
     } else {
       weakBanner.textContent = 'No weakness data yet — keep practising';
