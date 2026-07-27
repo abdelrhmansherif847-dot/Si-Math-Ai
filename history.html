@@ -331,10 +331,18 @@ if (profile?.is_admin) {
 function relDate(dateStr) {
   if (!dateStr) return '';
   const d   = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
   const now = new Date();
-  const diffDay = Math.floor((now - d) / 86400000);
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (d >= todayStart)  return 'Today';
+  // Calendar days, not elapsed 24h periods. The old version divided the raw
+  // millisecond gap by 86400000, which measures something different from the
+  // labels it feeds: a session at 23:00 yesterday viewed at 08:00 today is 9
+  // hours old, so it floored to 0 and rendered the nonsensical "0 days ago",
+  // while a session from 23:00 two days back rendered as "Yesterday". Both
+  // operands are now snapped to local midnight, so the difference is a true
+  // calendar-day count. Math.round absorbs DST days (23h/25h).
+  const startOf = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDay = Math.round((startOf(now) - startOf(d)) / 86400000);
+  if (diffDay <= 0)     return 'Today';      // <=0 also covers clock skew
   if (diffDay === 1)    return 'Yesterday';
   if (diffDay < 7)      return diffDay + ' days ago';
   if (diffDay < 14)     return '1 week ago';
