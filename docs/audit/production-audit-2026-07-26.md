@@ -269,6 +269,167 @@ additive `scope` and `scope_guard` fields.
 "should not be answered" categories, ten malformed-label fail-open cases, label
 normalisation, and redirect-message quality in all three languages.
 
+---
+
+## 4a. Zero personality — regression check
+
+Requested check: the guardrail must control **what** Zero talks about, never
+**how** Zero talks.
+
+### The personality layer is untouched
+
+The full diff of `supabase/functions/ai-tutor/index.ts` removes exactly **two
+lines** — the two version strings:
+
+```
+-// ai-tutor Edge Function v86
+-const AI_TUTOR_VERSION = 'v86';
+```
+
+Everything else is an addition. `${personality}` still sits at Priority 1 of
+`NORMAL_SYSTEM_PROMPT`, loaded from `zero_knowledge_entries` slug
+`zero_personality`. The SELF-CHECK line, the eight-point Final Personality
+Checklist, the Coaching Persona section, the Identity Q&A block, the
+name-usage rules, the language locks and the v78 tone anchor are all
+byte-identical. Nothing was replaced or reordered.
+
+### Greetings and coaching still reach the model
+
+Greetings, small talk and every coaching case classify as `coaching`, which is
+**not blocked**. Those turns flow through the unchanged `NORMAL_SYSTEM_PROMPT`
+with the full personality at Priority 1 and the tone anchor applied, exactly as
+before. The DOMAIN SCOPE section explicitly lists greetings and identity
+questions under `coaching` so they cannot drift into a redirect.
+
+### One real regression found — and fixed
+
+The first version of the redirect was a **single hardcoded string per
+language**. Because the server discards the model's text on an out-of-scope
+turn, that string *is* Zero for that turn — and it bypassed the personality
+layer: same sentence every time, no catchphrase, no variation. The
+`zero_personality` entry explicitly asks Zero to vary his phrasing.
+
+Rewritten to the personality entry's own spec: **three variants per language**
+(English / Arabic / Franco), selected by a djb2 hash of the student's message,
+so a student who wanders off-topic twice does not get the identical sentence
+back. Each variant carries the 🐉 anchor, the student's first name, an emoji,
+warm older-sibling phrasing, Egyptian dialect in the Arabic set, and a concrete
+way back into math. None contains a phrase the personality entry bans
+("Certainly!", "Of course!", "Great question!", "as an AI language model").
+The `Student` fallback placeholder is never spoken aloud.
+
+64 assertions cover this, including dialect markers, emoji presence, variant
+distinctness, and absence of stiff MSA refusal phrasing in Arabic.
+
+---
+
+## 4b. Server-side override — persistence audit
+
+Requested check: on `out_of_scope`, confirm the model's generated response is
+discarded and never persisted anywhere.
+
+### Where an AI response can be stored — full schema sweep
+
+An `information_schema` sweep of every column in `public` matching
+`response|answer|content|message|body|transcript|completion|output|reply|text`,
+plus every table matching `log|telemetry|analytic|monitor|audit|event`, returns
+exactly **one** column that stores a model-generated answer:
+
+> `question_records.ai_response`
+
+Nothing else in the schema holds AI response text. `ai_usage_logs` stores token
+counts and cost only. `response_feedback` stores a `record_id` and a feedback
+label. `unmapped_detections.context_excerpt` is written only via
+`log_unmapped_detection`, downstream of the guard.
+
+### Every write path, relative to the guard
+
+The guard early-returns at line 2683, immediately after the JSON parse. Every
+write that could carry response text happens **after** it:
+
+| Write | Line | Relative to guard | Carries AI text? |
+|---|---|---|---|
+| `question_records` insert | 2880 | after — never reached | **yes** (`ai_response`) |
+| `log_unmapped_detection` | 2852 | after — never reached | no |
+| `session_questions` insert | 2948 | after — never reached | no (image path only) |
+| `verification_meta` update | 3023 | after — never reached | no |
+| `chat_sessions` insert/update | 1596/1612 | before | no (session metadata only) |
+| `profiles.language_preference` | 1705 | before | no |
+
+The three earlier early-returns (idempotency recovery, worksheet guard, repeat
+path) all precede the guard and none of them can carry an out-of-scope draft:
+the repeat path only runs when a parent `question_records` row already matched,
+i.e. the student is following up on a math question they already asked.
+
+### Downstream surfaces
+
+- **Chat history** — reconstructed from `question_records` (`openSession()`
+  selects by `session_id`). No row means the turn never appears in history.
+- **AI Monitor** — `ai-monitor.html` reads only `profiles`,
+  `question_records`, `response_feedback`, `system_settings`. All downstream of
+  `question_records`; invisible without a row.
+- **`weakness_signals`** — written client-side from the SignalEngine buffer,
+  gated on `is_math`/topic. The guard returns `is_math:false`,
+  `weakness_signal:false`, `topic:'General'`, so no signal is emitted.
+- **Mastery / taxonomy** — `TaxonomyWrite.canonical({topic:'General'})`
+  resolves to `null`, so the mastery write is skipped, and `logUnmapped`
+  short-circuits on non-academic topics, so `unmapped_detections` is not
+  touched either. Verified directly against `taxonomy.js`.
+- **Client-side storage** — `chat.html` writes only drill state, an inflight
+  request id and a refund queue to local/session storage. No response text is
+  cached.
+- **Logs** — `[ai-tutor] scope-guard-fired` records the raw scope label,
+  language, question length and a `had_answer` **boolean**. The drafted text is
+  never logged. `parse-failed` (which can echo a JSON fragment) cannot co-occur
+  with a fired guard: a turn can only be classified out-of-scope if its JSON
+  parsed successfully.
+
+### Conclusion
+
+The model's drafted answer for an out-of-scope turn exists only as a local
+variable and is discarded when the handler returns. The only text that leaves
+the function is `scopeRedirectMessage(...)`, and because no row is written,
+nothing is persisted at all — not the redirect either. This matches the
+existing worksheet-guard behaviour.
+
+---
+
+## 4c. Deployment status — BLOCKED, not deployed
+
+The Edge Function has **not** been deployed. `DEPLOY.md` §4 requires Path B
+(Supabase CLI) for any version importing `_shared/`, and this environment has
+neither the `supabase` CLI nor `SUPABASE_ACCESS_TOKEN`. The MCP deploy path is
+prohibited and was not used.
+
+Deploy, then verify:
+
+```bash
+supabase functions deploy ai-tutor --project-ref igvkyxkmjnkzscqgommj
+
+SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj \
+SUPABASE_ANON_KEY=... SUPABASE_TEST_JWT=... \
+SUPABASE_DB_URL=postgres://... \
+  ./scripts/verify-scope-guardrail.sh
+```
+
+`scripts/verify-scope-guardrail.sh` runs all seven requested scenarios against
+the deployed function and asserts both halves of the contract:
+
+| # | Scenario | Asserted |
+|---|---|---|
+| 1 | Math question | `scope_guard=false`, `is_math=true`, `version=v87` |
+| 2 | "I'm afraid I won't get 800" | `scope_guard=false`, substantive reply, emoji tone, no banned bot phrase |
+| 3 | Programming | `scope_guard=true`, `record_id=null`, redirect keeps 🐉 |
+| 4 | Politics | same |
+| 5 | History | same |
+| 6 | Image worksheet | `scope_guard=false`, `is_math=true` |
+| 7 | Follow-up in the same session | `scope_guard=false`, non-trivial answer |
+
+It also proves the negative when `SUPABASE_DB_URL` is supplied: zero
+`question_records` rows for the blocked turns, zero rows with
+`subtopic='Out of Scope'`, and zero out-of-scope `weakness_signals`. Exit 1
+means the guardrail is not verified.
+
 Type-check is clean: `tsc --noEmit` reports only the 10 pre-existing
 `Deno`/remote-import errors that `tsc` cannot resolve by design.
 `scripts/validate-ai-tutor-source.sh` passes.
@@ -307,6 +468,8 @@ pass unchanged.
 | `dashboard.html` | No phantom-activity hint; heatmap shares the streak's day set (item 1) |
 | `supabase/functions/ai-tutor/index.ts` | Domain scope guardrail, v86 → v87 (item 4) |
 | `scripts/validate-ai-tutor-source.sh` | Size ceiling 170 → 190 KB, reason recorded |
+| `scripts/verify-scope-guardrail.sh` | New — post-deploy verification of the seven scenarios |
 | `docs/audit/patches/weakness-sources-and-mock-count.patch` | Items 2 & 3, **unapplied** — `weakness.html` is frozen |
 
-No frozen file was modified. No migration was created.
+No frozen file was modified. No migration was created. The Edge Function is not
+deployed.

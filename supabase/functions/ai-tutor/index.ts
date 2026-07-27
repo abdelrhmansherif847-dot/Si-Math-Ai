@@ -854,14 +854,45 @@ function resolveScope(
 // Canonical redirect body for an out-of-scope turn. The server substitutes this
 // for whatever the model drafted, so off-domain content cannot leak even if the
 // model answered the question and merely labelled it out_of_scope.
-function scopeRedirectMessage(lang: string, studentName: string): string {
+//
+// PERSONALITY CONTRACT: the guard controls WHAT Zero talks about, never HOW he
+// talks. Because the model's text is discarded here, these strings ARE Zero for
+// this turn, so they are written to the same spec as the zero_personality entry:
+// warm older-sibling voice, Egyptian dialect in Arabic, the 🐉 anchor, the
+// student's name, an emoji, encouragement, and a concrete way back into math.
+// None of the banned bot phrases ("Certainly!", "Of course!", "Great question!",
+// "as an AI language model") appear, and nothing here lectures or moralises.
+//
+// Three variants per language, selected by a hash of the student's message, so
+// a student who wanders off-topic twice does not get the identical sentence
+// back — the personality entry explicitly asks Zero to vary his phrasing.
+const SCOPE_REDIRECTS: Record<string, Array<(n: string) => string>> = {
+  en: [
+    (n) => `${n ? n + ', ' : ''}that one's not my world 🐉 — math is. SAT, EST, ACT, American Diploma: that's where I'm actually useful to you.\n\nSend me a problem, snap a photo of a question, or tell me what's worrying you about the exam. I'm here for that. 💪`,
+    (n) => `Ha, I'll leave that one to someone else 🐉 — I'm your math coach${n ? ', ' + n : ''}, and that's the thing I'm genuinely good at: SAT / EST / ACT / American Diploma math.\n\nWhat are you working on right now? Throw a question at me and let's get into it. 🎯`,
+    (n) => `${n ? n + ', ' : ''}outside my lane, honestly 🐉 — but math I can do all day: SAT, EST, ACT, American Diploma.\n\nGot a problem you're stuck on, or something about the exam that's stressing you? That's exactly what I'm here for. 📐`,
+  ],
+  ar: [
+    (n) => `${n ? 'يا ' + n + '، ' : ''}ده مش مجالي 🐉 — أنا بتاع رياضيات: SAT و EST و ACT ورياضيات الدبلومة الأمريكية. دي الحاجة اللي فعلاً هفيدك فيها.\n\nابعتلي مسألة، أو صوّر السؤال وابعته، أو قوللي إيه اللي مقلقك في الامتحان. أنا معاك في ده. 💪`,
+    (n) => `دي هسيبها لحد تاني 🐉 — أنا الكوتش بتاع الرياضيات${n ? ' يا ' + n : ''}، وده اللي شاطر فيه بجد: SAT و EST و ACT والدبلومة الأمريكية.\n\nبتذاكر إيه دلوقتي؟ هات سؤال ويلا بينا. 🎯`,
+    (n) => `${n ? 'يا ' + n + '، ' : ''}بصراحة ده بره تخصصي 🐉 — بس الرياضيات؟ دي أنا فيها طول اليوم: SAT و EST و ACT والدبلومة الأمريكية.\n\nواقف في مسألة؟ أو حاجة في الامتحان مضايقاك؟ أنا هنا بالظبط عشان كده. 📐`,
+  ],
+  franco: [
+    (n) => `${n ? 'ya ' + n + ', ' : ''}da mesh magali 🐉 — ana beta3 math: SAT w EST w ACT w math el diploma el amrikeya. di el 7aga elli fe3lan haffedak feeha.\n\nEb3atli mas2ala, aw sawwar el so2al w eb3ato, aw 2olli eh elli me2ala2ak fel emti7an. ana ma3ak fi da. 💪`,
+    (n) => `di hasebha le 7ad tani 🐉 — ana el coach beta3 el math${n ? ' ya ' + n : ''}, w da elli shater fih bagad: SAT w EST w ACT w el diploma el amrikeya.\n\nBet2zaker eh delwa2ti? hat so2al w yalla bina. 🎯`,
+    (n) => `${n ? 'ya ' + n + ', ' : ''}besara7a da barra takhasosi 🐉 — bas el math? di ana feeha tool el yom: SAT w EST w ACT w el diploma el amrikeya.\n\nWa2ef fi mas2ala? aw 7aga fel emti7an mdaya2ak? ana hena bel zabt 3ashan keda. 📐`,
+  ],
+};
+
+function scopeRedirectMessage(lang: string, studentName: string, seed: string): string {
   const name = String(studentName || '').trim();
-  const MSGS: Record<string, string> = {
-    en: `${name ? name + ', ' : ''}that one's outside what I do 🐉 — I'm Zero, and I specialise in mathematics: SAT, EST, ACT and American Diploma math, plus everything around getting you through it (nerves before an exam, study plans, staying motivated).\n\nAsk me a math question, send a photo of a problem, or tell me what's stressing you about the exam — I'm all yours for that.`,
-    ar: `${name ? 'يا ' + name + '، ' : ''}الموضوع ده بره تخصصي 🐉 — أنا Zero، متخصص في الرياضيات: SAT و EST و ACT ورياضيات الدبلومة الأمريكية، وكمان كل اللي حواليها (التوتر قبل الامتحان، خطة المذاكرة، الحماس لما بيقل).\n\nاسألني في أي مسألة رياضيات، أو ابعتلي صورة السؤال، أو قوللي إيه اللي مقلقك في الامتحان — ده شغلي بالظبط.`,
-    franco: `${name ? 'ya ' + name + ', ' : ''}el mawdou3 da barra takhasosi 🐉 — ana Zero, motakhases fel math: SAT w EST w ACT w math el diploma el amrikeya, w kaman kol elli 7awaleha (el tawattor 2abl el emti7an, khettet el mozakra, el 7amas lamma bey2el).\n\nEs2alni fi ay mas2ala math, aw eb3atli sourat el so2al, aw 2olli eh elli me2ala2ak fel emti7an — da shoghli bel zabt.`,
-  };
-  return MSGS[lang] ?? MSGS['en'];
+  const variants = SCOPE_REDIRECTS[lang] ?? SCOPE_REDIRECTS['en'];
+  // Cheap deterministic spread over the variants (djb2). Same message → same
+  // reply (stable and testable); different messages → different phrasing.
+  let h = 5381;
+  const s = String(seed || '');
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return variants[h % variants.length](name === 'Student' ? '' : name);
 }
 
 // Derive a concise tutor FINAL-answer string from the full explanation so the
@@ -2703,7 +2734,7 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         had_answer: !!String(parsed.answer || '').trim(),
       }));
       return new Response(JSON.stringify({
-        answer:          scopeRedirectMessage(lang, studentName),
+        answer:          scopeRedirectMessage(lang, studentName, question),
         hint:            '',
         topic:           'General',
         subtopic:        'Out of Scope',
