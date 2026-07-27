@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22.6+ is required: the Edge Function suites read TypeScript
+      # directly and rely on built-in type stripping, which keeps the repo free
+      # of a build step and a tsc dependency.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Runs tests/*.test.mjs and scripts/validate-*.mjs. No install step —
+      # the suites are dependency-free by design (there is no package.json).
+      - name: Run test suites and repo validators
+        run: node tests/run-all.mjs
