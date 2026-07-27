@@ -1120,10 +1120,28 @@ retrieval source, including RAG over student-supplied documents.
 | `DEPLOY.md` | §4.1 `ALLOWED_ORIGINS` |
 | `SECURITY.md` | **New.** This report |
 
-**Frozen files: unchanged.** `regenerate-reports.js`, `taxonomy.js`,
-`exam-mistakes-logger.js`, `mock-exam.html`, `weakness.html` and `focus.html`
-were audited under the security-fix unfreeze granted for this work. **No fix
-was required in any of them** — `weakness.html` escapes topic labels correctly
-via `esc()`/`escTopicLabel()` and its remaining interpolations are numeric or
-drawn from closed sets; `mock-exam.html`'s only concatenated `innerHTML` is a
-static string. The unfreeze went unused.
+### Frozen files
+
+All six were audited under the security-fix unfreeze granted for this work.
+
+**No XSS or logic fix was required in any of them.** `weakness.html` escapes
+topic labels correctly via `esc()`/`escTopicLabel()` and its remaining
+interpolations are numeric or drawn from closed sets; `mock-exam.html`'s only
+concatenated `innerHTML` is a static string.
+
+**Three were nonetheless modified, by SEC-07.** The CDN pinning pass rewrote
+one `<script>` tag in each of `mock-exam.html`, `weakness.html` and
+`focus.html` — the unpinned `@supabase/supabase-js@2` reference became the
+pinned, hash-verified `@2.110.8/dist/umd/supabase.js`. Nothing else in those
+files changed; the diff is a single line each.
+
+That is a security fix and therefore inside the granted unfreeze, but it is
+worth stating plainly rather than leaving the earlier "unchanged" claim
+standing: a bulk rewrite across all 19 pages touched frozen files as a side
+effect, and the deployment pipeline's frozen-file gate is what surfaced it.
+Deploying these three requires `-AllowFrozenChanges` (see §8b), which is the
+gate working as intended — an explicit acknowledgement rather than a silent
+pass.
+
+`regenerate-reports.js`, `taxonomy.js` and `exam-mistakes-logger.js` are
+unchanged.

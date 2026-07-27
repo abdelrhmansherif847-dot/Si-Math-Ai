@@ -1,4 +1,20 @@
-// ai-tutor Edge Function v88
+// ai-tutor Edge Function v89
+// v89 (SEC-04 — knowledge base treated as untrusted input): get_zero_personality()
+// and search_zero_knowledge() read rows that are spliced into the system prompt
+// for EVERY student, so whoever can write those rows authors Zero's
+// instructions platform-wide. The database fix (admin-only writes) is the
+// primary control; this is the second, independent gate. Retrieved content is
+// now: stripped of twelve prompt-injection construct families (role markers,
+// "ignore previous instructions", <|im_start|>, [INST], prompt-exfiltration
+// requests); length-capped (12k personality, 2k per entry, 8k total); wrapped
+// in a REFERENCE_DATA fence that content cannot close or forge; and introduced
+// to the model with an explicit statement that fenced text carries no
+// authority. Optional ZERO_PERSONALITY_SHA256 pins the personality row — a row
+// that does not hash as expected is refused in favour of the built-in
+// DEFAULT_PERSONALITY, so tampering fails safe. Also owner-scoped the
+// reference-image lookup, which fed question_records images into the vision
+// call with no user_id filter. No schema change; no change to answer
+// generation, hints, taxonomy, or the question_records contract.
 // v88 (Security hardening — admission control): the handler now gates every
 // request before a single OpenAI token is spent or a row is written. Added, in
 // order of evaluation: method allow-list (POST only); CORS origin ALLOW-LIST
@@ -75,7 +91,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v88';
+const AI_TUTOR_VERSION = 'v89';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
