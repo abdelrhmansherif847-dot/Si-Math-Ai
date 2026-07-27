@@ -19,13 +19,16 @@
 
   "ProjectRef": "igvkyxkmjnkzscqgommj",
 
-  "ProductionDomain": "",
+  "ProductionDomain": "simathai.com",
 
   "EdgeFunctionName": "ai-tutor",
 
   "ExpectedVersion": "v89",
 
-  "AllowedOrigins": [],
+  "AllowedOrigins": [
+    "https://simathai.com",
+    "https://www.simathai.com"
+  ],
 
   "DeployBranch": "main",
 
