@@ -762,6 +762,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="taxonomy.js"></script>
 <script src="taxonomy-compat.js"></script>
 <script src="taxonomy-write.js"></script>
+<script src="assets/ranks.js"></script>
 <script src="regenerate-reports.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="assets/streak.js"></script>
@@ -2589,14 +2590,10 @@ button{font-family:inherit;cursor:pointer}
     });
   }
 
-  const RANK_THRESHOLDS = [
-    { name: 'Elite Scholar', min: 2500 }, { name: 'Master', min: 1500 },
-    { name: 'Expert', min: 1000 }, { name: 'Scholar', min: 600 },
-    { name: 'Solver', min: 300 }, { name: 'Learner', min: 100 }, { name: 'Beginner', min: 0 }
-  ];
+  // Rank ladder lives in assets/ranks.js (single client source of truth).
+  // Thin alias so the call sites below are unchanged.
   function getRankName(xp) {
-    for (const r of RANK_THRESHOLDS) if (xp >= r.min) return r.name;
-    return 'Beginner';
+    return window.SiRanks ? window.SiRanks.nameForXp(xp) : 'Beginner';
   }
 
   async function awardChatXP(bonusXP) {

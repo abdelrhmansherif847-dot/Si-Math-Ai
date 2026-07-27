@@ -12,6 +12,7 @@
 <script src="taxonomy-compat.js"></script>
 <script src="assets/streak.js"></script>
 <script src="assets/exam-days.js"></script>
+<script src="assets/ranks.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -341,17 +342,9 @@ var SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 var sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 // ── XP rank definitions (mirrors profile.html) ──
-var RANKS = [
-  { name: 'Beginner',      min: 0,    color: '#7a90b2', icon: '🌱' },
-  { name: 'Learner',       min: 100,  color: '#60a5fa', icon: '📘' },
-  { name: 'Solver',        min: 300,  color: '#a78bfa', icon: '🔧' },
-  { name: 'Scholar',       min: 600,  color: '#4ade80', icon: '🎓' },
-  { name: 'Expert',        min: 1000, color: '#f59e0b', icon: '⭐' },
-  { name: 'Master',        min: 1500, color: '#f97316', icon: '🏆' },
-  { name: 'Elite Scholar', min: 2500, color: '#f59e0b', icon: '👑' },
-];
-function getRank(xp){ var r=RANKS[0]; for(var i=0;i<RANKS.length;i++){ if(xp>=RANKS[i].min) r=RANKS[i]; } return r; }
-function getNextRank(xp){ for(var i=0;i<RANKS.length;i++){ if(xp<RANKS[i].min) return RANKS[i]; } return null; }
+// Rank ladder lives in assets/ranks.js (single client source of truth).
+function getRank(xp){ return window.SiRanks.forXp(xp); }
+function getNextRank(xp){ return window.SiRanks.nextForXp(xp); }
 
 // ── Sidebar toggle ──
 var sidebar  = document.getElementById('sidebar');

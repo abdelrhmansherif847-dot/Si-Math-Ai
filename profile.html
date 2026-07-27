@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/ranks.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -186,15 +187,7 @@ document.getElementById('hamb').addEventListener('click', () => { sidebar.classL
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
-const RANKS = [
-  { name: 'Beginner',      min: 0,    color: '#7a90b2', bg: 'rgba(122,144,178,.15)', icon: '🌱' },
-  { name: 'Learner',       min: 100,  color: '#60a5fa', bg: 'rgba(96,165,250,.15)',  icon: '📘' },
-  { name: 'Solver',        min: 300,  color: '#a78bfa', bg: 'rgba(167,139,250,.15)', icon: '🔧' },
-  { name: 'Scholar',       min: 600,  color: '#4ade80', bg: 'rgba(74,222,128,.15)',  icon: '🎓' },
-  { name: 'Expert',        min: 1000, color: '#f59e0b', bg: 'rgba(245,158,11,.15)',  icon: '⭐' },
-  { name: 'Master',        min: 1500, color: '#f97316', bg: 'rgba(249,115,22,.15)',  icon: '🏆' },
-  { name: 'Elite Scholar', min: 2500, color: '#f59e0b', bg: 'rgba(245,158,11,.2)',   icon: '👑' },
-];
+// Rank ladder lives in assets/ranks.js (single client source of truth).
 
 const ALL_ACHIEVEMENTS = [
   { key: 'first_question',       icon: '💬', name: 'First Question',       desc: 'Asked your first question to the AI Tutor.' },
@@ -206,16 +199,9 @@ const ALL_ACHIEVEMENTS = [
   { key: 'consistency_champion', icon: '🏅', name: 'Consistency Champion', desc: 'Maintained a streak of 14+ days.' },
 ];
 
-function getRankInfo(xp) {
-  let rank = RANKS[0];
-  for (const r of RANKS) { if (xp >= r.min) rank = r; }
-  return rank;
-}
+function getRankInfo(xp) { return window.SiRanks.forXp(xp); }
 
-function getNextRank(xp) {
-  for (const r of RANKS) { if (xp < r.min) return r; }
-  return null;
-}
+function getNextRank(xp) { return window.SiRanks.nextForXp(xp); }
 
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

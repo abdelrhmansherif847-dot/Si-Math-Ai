@@ -11,32 +11,41 @@ import { read } from './_source.mjs';
 const t = suite('constants-drift');
 
 // ── Rank thresholds ────────────────────────────────────────────────────────
+// Canonical: assets/ranks.js. chat.html, progress.html and profile.html now
+// consume it. mock-exam.html still carries its own table because that file is
+// FROZEN, and public.rank_for_xp() is authoritative for server-side writes —
+// both are guarded here so a future edit to any of them fails loudly.
+function normalise(pairs) {
+  return pairs.sort((a, b) => a.min - b.min).map(r => `${r.min}:${r.name}`).join(' | ');
+}
 function ranksFromJs(file, re) {
   const m = read(file).match(re);
   if (!m) return null;
-  return [...m[0].matchAll(/name:\s*'([^']+)'[^}]*?min:\s*(\d+)|min:\s*(\d+)[^}]*?name:\s*'([^']+)'/g)]
-    .map(x => ({ name: x[1] ?? x[4], min: +(x[2] ?? x[3]) }))
-    .sort((a, b) => a.min - b.min)
-    .map(r => `${r.min}:${r.name}`).join(' | ');
+  return normalise([...m[0].matchAll(/name:\s*'([^']+)'[^}]*?min:\s*(\d+)|min:\s*(\d+)[^}]*?name:\s*'([^']+)'/g)]
+    .map(x => ({ name: x[1] ?? x[4], min: +(x[2] ?? x[3]) })));
 }
-const tables = {
-  'chat.html':      ranksFromJs('chat.html',      /const RANK_THRESHOLDS = \[[\s\S]*?\];/),
-  'mock-exam.html': ranksFromJs('mock-exam.html', /const RANK_THRESHOLDS = \[[\s\S]*?\];/),
-  'progress.html':  ranksFromJs('progress.html',  /var RANKS = \[[\s\S]*?\];/),
-  'profile.html':   ranksFromJs('profile.html',   /(?:const|var) RANKS\s*=\s*\[[\s\S]*?\];/),
+const canonical = ranksFromJs('assets/ranks.js', /var RANKS = \[[\s\S]*?\];/);
+const guarded = {
+  'mock-exam.html (frozen copy)': ranksFromJs('mock-exam.html', /const RANK_THRESHOLDS = \[[\s\S]*?\];/),
 };
 const sqlSrc = read('supabase/migrations/20260624_focus_xp.sql');
-tables['rank_for_xp (SQL)'] = [...sqlSrc.matchAll(/WHEN p_xp >=\s*(\d+) THEN '([^']+)'/g)]
-  .map(m => ({ min: +m[1], name: m[2] }))
-  .concat([{ min: 0, name: 'Beginner' }])
-  .sort((a, b) => a.min - b.min).map(r => `${r.min}:${r.name}`).join(' | ');
+guarded['rank_for_xp (SQL)'] = normalise(
+  [...sqlSrc.matchAll(/WHEN p_xp >=\s*(\d+) THEN '([^']+)'/g)]
+    .map(m => ({ min: +m[1], name: m[2] }))
+    .concat([{ min: 0, name: 'Beginner' }]));
 
-t.section('Rank thresholds agree across every implementation');
-const CANONICAL = '0:Beginner | 100:Learner | 300:Solver | 600:Scholar | 1000:Expert | 1500:Master | 2500:Elite Scholar';
-for (const [where, val] of Object.entries(tables)) {
+t.section('Rank thresholds agree with assets/ranks.js');
+const EXPECTED = '0:Beginner | 100:Learner | 300:Solver | 600:Scholar | 1000:Expert | 1500:Master | 2500:Elite Scholar';
+t.ok('canonical table extracted from assets/ranks.js', canonical !== null);
+t.is('canonical table is the expected ladder', canonical, EXPECTED);
+for (const [where, val] of Object.entries(guarded)) {
   t.ok(`${where} extracted`, val !== null);
-  t.is(`${where} matches canonical`, val, CANONICAL);
+  t.is(`${where} matches assets/ranks.js`, val, canonical);
 }
+
+t.section('Consolidated pages hold no second copy');
+for (const f of ['chat.html', 'progress.html', 'profile.html'])
+  t.ok(`${f} declares no rank table of its own`, !/RANK_THRESHOLDS = \[|RANKS = \[/.test(read(f)));
 
 // ── Generated-copy drift ───────────────────────────────────────────────────
 t.section('Generated copies are byte-identical to their source');

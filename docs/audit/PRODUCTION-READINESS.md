@@ -12,7 +12,7 @@ Detailed root-cause write-ups for every fix are in
 
 | | |
 |---|---|
-| **Code readiness** | **~95%** |
+| **Code readiness** | **~97%** |
 | **Deployed readiness** | **~60%** |
 | **Recommendation** | **Do not release yet — one blocking step remains** |
 
@@ -21,8 +21,8 @@ The two numbers differ for one reason only: the `ai-tutor` Edge Function
 and the deployment cannot be performed from this environment. Everything else
 is release-ready.
 
-The ~5% of code readiness that is not complete is technical debt listed in §5,
-none of which is student-facing or blocking.
+The ~3% of code readiness that is not complete is technical debt listed in §5
+and §5b, none of which is student-facing or blocking.
 
 ---
 
@@ -40,7 +40,7 @@ every other surface that displays the same fact.
 | **Focus Practice** | `focus_plans` / `focus_tasks`, XP via `award_focus_xp` | Consistent. Counts toward the streak. XP is atomic. |
 | **Mock Exams** | `exam_practice_sessions` (row written only on submit) | Consistent. Abandoned attempts never persist; deletes drop out naturally. |
 | **Credits** | `public.credit_costs` (DB) | Consistent. `credit-config.js` reads the DB; the static table is a documented pre-load fallback. Charges are server-side in `consume_credits`. |
-| **XP** | `profiles.xp` | Consistent **and now race-free on all three write paths**: chat (CAS), mock exam (CAS), focus (atomic RPC). Rank thresholds verified identical across all five implementations plus the SQL `rank_for_xp`. |
+| **XP** | `profiles.xp` | Consistent **and now race-free on all three write paths**: chat (CAS), mock exam (CAS), focus (atomic RPC). Rank ladder consolidated into `assets/ranks.js`; the frozen `mock-exam.html` copy and the SQL `rank_for_xp` are held in line by a drift test. |
 | **Streak** | `assets/streak.js` → `profiles.current_streak` | Consistent. Recomputed on both Dashboard and Progress. Cairo-pinned. |
 | **Progress** | `profiles` + `weakness_reports` + `mastery_records` | Consistent with Dashboard after the streak and countdown fixes. |
 | **Chat History** | `question_records` (by `session_id`) | Consistent. Out-of-scope turns write no row, so they cannot appear. |
@@ -88,8 +88,12 @@ at 722 — 72% of the way there.** Now counted server-side with
 
 ### Audited, no defect found
 - **Dead / unreachable code** — none remaining (the two found earlier are gone).
-- **Duplicate constants** — rank thresholds identical across 5 implementations
-  + SQL; credit costs have documented DB precedence.
+- **`deviceGuard()`** — all 8 copies verified logically identical; no drift.
+- **HTML-escape helpers** — the two that omit `"` are used only in text
+  contexts, never inside an attribute, so there is no XSS exposure.
+- **Duplicate constants** — rank thresholds were identical across all 5
+  implementations; three have since been consolidated (§5). Credit costs have
+  documented DB precedence.
 - **Duplicate implementations** — `taxonomy` and `study-planner` copies are
   generated and gated; verified byte-identical modulo their banners.
 - **Race conditions** — all XP paths now atomic; credit mutations are
@@ -111,22 +115,43 @@ at 722 — 72% of the way there.** Now counted server-side with
 
 ---
 
-## 5. Remaining technical debt
+## 5. Duplication pass — consolidated and remaining
 
-- **Four rank-threshold copies + one SQL function.** Verified identical today,
-  but nothing enforces it. A drift gate like the taxonomy one would remove the
-  class.
-- **`credit-config.js` static fallback duplicates DB values.** Documented and
-  correctly deprioritised, but it is a second place holding prices.
-- **`STUDY_PLAN_CREDIT_COST = 20`** lives in the planner engine as a last-resort
-  fallback; the DB is authoritative and `studyPlanCost()` prefers it.
-- **No automated test runner in-repo.** The 178 assertions written during this
-  audit live in the session scratchpad, not in `scripts/`. They should be
-  promoted to committed test files so CI can run them.
-- **No CI workflow.** `.github/workflows` does not exist; the validators are
-  run manually.
+A dedicated pass was made for duplicated business logic. Behaviour was not
+changed anywhere; every consolidation is covered by an equivalence test.
 
----
+### Consolidated
+
+| Duplicate | Before | After |
+|---|---|---|
+| **Rank ladder** | 4 hand-authored JS tables + SQL | `assets/ranks.js` is the single client source. `chat.html`, `progress.html`, `profile.html` consume it. Equivalence asserted against the removed implementations across every boundary value (`tests/ranks.test.mjs`). |
+| **Exam countdown** | 4 divergent implementations | `assets/exam-days.js` (done in Phase 2). |
+| **Streak** | recomputed only on the dashboard | `assets/streak.js`, consumed by dashboard and progress (Phase 2). |
+| **Heatmap day-set** | rebuilt independently | Reuses the set `updateStreak()` returns (Phase 2). |
+
+### Remaining, with reasons
+
+| Duplicate | Copies | Why it remains |
+|---|---|---|
+| **Rank table in `mock-exam.html`** | 1 | **Frozen file.** Guarded by `tests/constants-drift.test.mjs`, which fails if it diverges from `assets/ranks.js`. Fold in when the freeze lifts. |
+| **`rank_for_xp()` in SQL** | 1 | Intentional — it is authoritative for server-side writes and cannot import a browser module. Guarded by the same drift test. |
+| **`deviceGuard()`** | 8 pages | Verified **logically identical** across all eight (normalised comparison — the differing hashes were indentation and comments only), so there is no drift today. Consolidating requires editing `weakness.html` and `focus.html`, which are **frozen**. |
+| **XP compare-and-set block** | 2 | `chat.html` and `mock-exam.html`. The latter is **frozen**. The two also differ deliberately on failure — chat `return`s, mock-exam `break`s so the exam save still completes — so a shared helper would need a parameter for that. Both covered by `tests/xp-concurrency.test.mjs`. |
+| **HTML-escape helpers** | ~14 | Deliberately **not** consolidated. They escape different character sets, and each is correct for its own call sites: the two that omit `"` are used only in text contexts, never inside an attribute (verified). Unifying them would change output in fourteen files for no behavioural gain, days before a release. |
+| **`STUDY_PLAN_CREDIT_COST`** | 1 + DB | A last-resort fallback; `studyPlanCost()` already prefers the DB value. |
+| **`credit-config.js` static costs** | 1 + DB | Documented pre-load fallback; the DB is authoritative once loaded. |
+
+## 5b. Remaining technical debt
+
+- **No `package.json`.** The test suites are deliberately dependency-free, but
+  there is no dependency manifest or lockfile for the repo as a whole.
+- **`progress.html` distinct-topic count** reads at most 1000 `question_records`
+  rows. The count itself is server-side and correct; only "topics studied"
+  could undercount above 1000 rows. A correct fix needs a `DISTINCT` RPC, i.e.
+  a migration requiring separate approval.
+- **`validate-study-planner.mjs` still imports from the sync script.** The
+  write is now guarded, so it is safe, but the coupling is fragile enough that
+  it produced a silent gate failure once already.
 
 ## 6. Blocked by deployment
 
