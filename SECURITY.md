@@ -1100,7 +1100,7 @@ retrieval source, including RAG over student-supplied documents.
 | `supabase/migrations/20260727_profiles_column_privilege_hardening.sql` | **Applied.** SEC-01 |
 | `supabase/migrations/20260727_sec04_knowledge_base_write_lockdown.sql` | **Ready — NOT applied.** SEC-04 |
 | `supabase/migrations-pending/20260727_sec08_rpc_grant_hygiene.sql` | Staged. SEC-08 |
-| `supabase/migrations/README.md` | **New.** Why `db push` cannot work here |
+| `docs/supabase-migrations.md` | **New.** Why `db push` cannot work here |
 | `supabase/functions/ai-tutor/index.ts` | v87 → v89: admission control, SEC-02, SEC-04 defence |
 | `vercel.json` | SEC-03 headers + CSP |
 | `manual-payment.html` | SEC-05 upload validation |

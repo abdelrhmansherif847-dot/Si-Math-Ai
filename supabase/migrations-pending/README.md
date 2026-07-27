@@ -24,6 +24,6 @@ rather than applied.
 2. Move it into `supabase/migrations/` (drop nothing, keep the date prefix so it
    matches the sibling files).
 3. Apply it by the route this project actually uses — Dashboard SQL Editor or
-   `supabase db execute` — see `supabase/migrations/README.md` for why
+   `supabase db execute` — see `docs/supabase-migrations.md` for why
    `supabase db push` does not work on this project.
 4. Verify with `scripts/verify-security-sql.sql`.

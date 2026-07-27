@@ -107,7 +107,7 @@ Useful switches: `-SkipTests`, `-SkipMigrations`, `-MigrationsOnly`,
 project and never has: local migration files are 8-digit date prefixes while the
 remote history table holds 14-digit timestamps, so the two sets are disjoint and
 the CLI reports *"Remote migration versions not found in local migrations
-directory"*. See `supabase/migrations/README.md` for the full explanation and
+directory"*. See `docs/supabase-migrations.md` for the full explanation and
 the reconciliation route.
 
 `-MigrationMode Auto` (the default) detects that condition and asserts the

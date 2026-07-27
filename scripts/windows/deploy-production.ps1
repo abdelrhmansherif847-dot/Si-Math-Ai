@@ -47,7 +47,7 @@
       Auto    (default) Try `supabase db push`. If the CLI reports that the
               local and remote migration histories do not correspond - which is
               the permanent state of this project, see
-              supabase/migrations/README.md - fall back to verifying the schema
+              docs/supabase-migrations.md - fall back to verifying the schema
               directly with scripts/verify-security-sql.sql.
       Push    Require the CLI path. Fails if the histories diverge. Use this
               after a `supabase db pull` reconciliation has made push viable.
@@ -268,7 +268,7 @@ try {
         # timestamps written by Dashboard/SQL application. The two sets are
         # disjoint by construction, so `supabase db push` has never worked here
         # and fails with "Remote migration versions not found in local
-        # migrations directory". See supabase/migrations/README.md.
+        # migrations directory". See docs/supabase-migrations.md.
         #
         # Rather than pretend otherwise, the step detects that condition and
         # asserts the thing that actually protects students: that the required
@@ -299,7 +299,7 @@ try {
 
             if ($MigrationMode -eq 'Push' -and $historyDiverged) {
                 Add-Result $results 'FAIL' 'migration history diverged' `
-                    '-MigrationMode Push was requested but local and remote histories do not correspond (see supabase/migrations/README.md)'
+                    '-MigrationMode Push was requested but local and remote histories do not correspond (see docs/supabase-migrations.md)'
                 [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
                 exit (Get-ExitCode Failure)
             }
@@ -309,7 +309,7 @@ try {
                     Add-Result $results 'WARN' 'migration history diverged (known)' `
                         'local files are date-prefixed, remote history is timestamped - db push is not usable here'
                     Write-Detail 'Falling back to direct schema verification, which asserts more than push would.'
-                    Write-Detail 'Background and the reconciliation route: supabase/migrations/README.md'
+                    Write-Detail 'Background and the reconciliation route: docs/supabase-migrations.md'
                 }
 
                 if ($DryRun) {
