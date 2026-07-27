@@ -2604,14 +2604,41 @@ button{font-family:inherit;cursor:pointer}
     const bonus = (typeof bonusXP === 'number' && bonusXP > 0) ? bonusXP : 0;
     const base  = bonus > 0 ? 0 : 5;  // pure bonus call (drill complete) skips per-question +5
     try {
-      const { data: profile } = await sb.from('profiles')
-        .select('xp, rank_name')
-        .eq('id', currentUser.id)
-        .single();
-      const currentXP = profile?.xp || 0;
-      const newXP = currentXP + base + bonus;
-      const newRank = getRankName(newXP);
-      await sb.from('profiles').update({ xp: newXP, rank_name: newRank }).eq('id', currentUser.id);
+      // Compare-and-set on profiles.xp.
+      //
+      // This is a read-modify-write, and two awards are routinely in flight at
+      // once: answering the LAST question of a drill runs awardChatXP() and
+      // then drillOnQuestionAnswered(), which calls awardChatXP(DRILL_BONUS_XP)
+      // — both in the same tick, neither awaited. Both used to read the same
+      // xp, and whichever write landed second silently discarded the other
+      // award, so EVERY drill completion lost either the +5 or the +30.
+      //
+      // The update is now filtered on the xp value we read. A stale write
+      // matches zero rows instead of clobbering, and we re-read and retry.
+      // xp is NOT NULL DEFAULT 0, so the filter never has to match a null.
+      const delta = base + bonus;
+      let currentXP = 0, newXP = null;
+      for (let attempt = 0; attempt < 5 && newXP === null; attempt++) {
+        const { data: profile, error: readErr } = await sb.from('profiles')
+          .select('xp')
+          .eq('id', currentUser.id)
+          .single();
+        if (readErr) { console.warn('[xp] profile read failed:', readErr.message); return; }
+        currentXP = profile?.xp || 0;
+        const candidate = currentXP + delta;
+        const { data: won, error: casErr } = await sb.from('profiles')
+          .update({ xp: candidate, rank_name: getRankName(candidate) })
+          .eq('id', currentUser.id)
+          .eq('xp', currentXP)
+          .select('xp');
+        if (casErr) { console.warn('[xp] profile update failed:', casErr.message); return; }
+        if (won && won.length) newXP = candidate;   // won the race
+        // else: a concurrent award landed first — loop re-reads and retries.
+      }
+      if (newXP === null) {
+        console.warn('[xp] award abandoned after 5 contended attempts');
+        return;
+      }
       if (bonus > 0) {
         showXpToast('+' + bonus + ' XP · Drill Complete! 🎯');
         return;
