@@ -661,9 +661,86 @@ supply its day-set — the same condition under which the local rebuild is used.
   `upgrade_requested_at`, `current_period_end`), which parses correctly. The
   DATE-column trap was confined to `exam_date`.
 
-## Frozen-file work still outstanding
+---
 
-| File | Issue | Status |
-|---|---|---|
-| `weakness.html` | Mock Exam count + signal source attribution | Patch staged, **unapplied** |
-| `mock-exam.html` | XP read-modify-write (multi-tab only) | Documented, no patch yet |
+# Phase 3 — approved frozen-file fixes (freeze temporarily lifted, now restored)
+
+The owner lifted the freeze for the specific verified fixes only. Two files
+qualified. The other four frozen files — `regenerate-reports.js`,
+`taxonomy.js`, `exam-mistakes-logger.js`, `focus.html` — had **no verified
+defect**, were not unfrozen, and are byte-identical to `main` (verified).
+
+`focus.html` holds a fourth exam-countdown variant, but `daysUntilExam` there is
+assigned and never read. Dead code, no user impact, so it did not qualify as a
+verified issue and was left alone.
+
+**Both files below are frozen again as of commit `7126657`.**
+
+## P3-1. `weakness.html` — Mock Exam count and source attribution
+
+**Root cause.** `renderSources()` had two hardcoded boxes and bucketed by
+`source !== 'AI_CHAT'`, so the box labelled "Mock Exams" counted non-chat
+weakness *signals* rather than mock exams. It never queried
+`exam_practice_sessions`. With 634 AI_CHAT / 111 FOCUS_PRACTICE / 10 MOCK_EXAM
+live, Focus Practice was being shown to students as mock exams. NULL-source
+signals were counted in neither box, while `renderSignalCols` counted the same
+NULL signal as chat — two answers on one page.
+
+**Why necessary.** Every student with data saw a wrong number: 117 against 12
+completed exams; 1 having completed none; 0 having completed 1. The section
+also could not represent Focus Practice, Study Planner or Manual Practice.
+
+**Sections changed** — 6 functions changed, 1 added, 40 untouched:
+`renderSources` (rewritten), `sourceLabel` (added), `loadData` (count query),
+`renderAll` (argument), `renderSignalCols` (NULL handling + per-row source tag),
+`loadEvidenceBatched` (real source names), `evidenceRowsHTML` (`srcClass`,
+`esc`), plus CSS `.ev-src` 42px → 86px so the real names do not clip and the
+column header no longer claims "Exam Practice" for non-exam sources.
+
+**Regression tests.** Inline scripts parse clean. `renderSources` replayed
+against the three real production users: 117 → 12, 1 → 0 (box correctly
+hidden), 0 → 1. NULL sources surface as "Unknown Source"; an exam with zero
+signals still shows; an unknown future source renders under its own name.
+
+**Proof nothing else changed.** All 47 top-level functions hashed before and
+after — 40 byte-identical. The 7 flagged were diffed individually; `renderWhy`
+proved identical (its hash boundary had absorbed an adjacent new comment),
+leaving exactly the 6 intended plus 1 addition.
+
+## P3-2. `mock-exam.html` — XP lost update
+
+**Root cause.** The XP award was a read-modify-write on `profiles.xp`. Any XP
+write landing between the SELECT and the UPDATE — `chat.html` awards +5 per
+question — was silently overwritten.
+
+**Why necessary.** A student with chat open in a second tab loses one of the two
+awards. The same defect class was already fixed in `chat.html`; leaving it here
+kept a known lost-update path in production.
+
+**Sections changed** — 1 function changed, 38 untouched: `doSave`, where the
+SELECT/UPDATE pair became a compare-and-set loop filtered on the `xp` that was
+read. `newRank` is still defined for the success screen; on total failure it
+falls back to the rank for the last `xp` actually read, and the exam save still
+completes exactly as before.
+
+**Regression tests.** The CAS block was extracted from `mock-exam.html` and
+raced against the real `chat.html` CAS block over one shared row:
+200 + 50 + 5 = 255, both awards land. Uncontended saves unchanged (100 → 125,
+first exam 0 → 50). A failed read now aborts without writing.
+
+**Proof nothing else changed.** All 39 top-level functions hashed before and
+after — 38 byte-identical, `doSave` the only change. Grading, idempotency
+recovery, mistake logging, achievements and the success screen are untouched.
+
+## Freeze status
+
+| File | Status |
+|---|---|
+| `weakness.html` | **Re-frozen** — fixed under approval, `7126657` |
+| `mock-exam.html` | **Re-frozen** — fixed under approval, `7126657` |
+| `regenerate-reports.js` | Frozen, never unfrozen, unchanged |
+| `taxonomy.js` | Frozen, never unfrozen, unchanged |
+| `exam-mistakes-logger.js` | Frozen, never unfrozen, unchanged |
+| `focus.html` | Frozen, never unfrozen, unchanged |
+
+No further changes to any of these without an explicit new unfreeze.
