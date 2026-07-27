@@ -42,8 +42,12 @@ for (const f of suites) {
 
 if (validators.length) {
   console.log('\n── repo validators ──');
+  // validate-ai-tutor-source is discovered here like every other validator now
+  // that it is Node. It used to be invoked separately via `bash`, which was the
+  // suite's only non-Node dependency and failed outright on Windows — spawnSync
+  // returned status null with no stdout or stderr, so the gate reported a bare
+  // FAIL with no reason. See scripts/validate-ai-tutor-source.mjs.
   for (const f of validators) run(f.replace('.mjs', ''), process.execPath, [resolve(REPO, 'scripts', f)]);
-  run('validate-ai-tutor-source', 'bash', [resolve(REPO, 'scripts/validate-ai-tutor-source.sh')]);
 }
 
 const failed = results.filter(r => !r.ok);
