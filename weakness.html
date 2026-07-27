@@ -461,9 +461,13 @@ body.plan-free .pro-upsell{display:block}
 .wc-toggle svg{transition:transform .2s}
 .ev-list{display:flex;flex-direction:column;gap:8px}
 .ev-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.025);font-size:12.5px}
-.ev-row .ev-src{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500);width:42px;flex-shrink:0}
+/* Width was 42px, sized for the old "chat"/"exam" stubs. Real source names
+   ("Focus Practice", "Study Planner") need room or they clip. */
+.ev-row .ev-src{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500);width:86px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev-row .ev-src.chat{color:var(--cyan-3)}
 .ev-row .ev-src.exam{color:var(--amber)}
+.ev-row .ev-src.other{color:var(--text-300)}
+.sig-col .sig-src{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-500);margin-right:4px}
 .ev-row .ev-when{color:var(--text-400);font-size:11.5px;width:80px;flex-shrink:0}
 .ev-row .ev-body{flex:1;min-width:0;color:var(--text-200);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev-row .ev-open{color:var(--cyan-3);text-decoration:none;font-size:11.5px;font-weight:600;flex-shrink:0}
@@ -633,8 +637,12 @@ body.plan-free .pro-upsell{display:block}
       <div class="card-ico">🛰️</div>
       <div><div class="card-title">Where This Analysis Comes From</div><div class="card-sub">Zero combines signals from all your learning activities</div></div>
     </div>
+    <!-- Boxes are rendered by renderSources() — one per source actually present
+         in the student's data (AI Tutor / Mock Exam / Focus Practice / Study
+         Planner / Manual Practice / any future source). The two below are
+         loading placeholders only. -->
     <div class="sources-row">
-      <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">AI Chat Questions</span></div>
+      <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">AI Tutor</span></div>
       <span class="src-plus">+</span>
       <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">Mock Exams</span></div>
     </div>
@@ -656,8 +664,11 @@ body.plan-free .pro-upsell{display:block}
           <li><span class="sd"></span><span class="skel skel-row" style="width:140px;display:inline-block"></span></li>
         </ul>
       </div>
+      <!-- Everything that is not the AI Tutor lands in this column, so its
+           header must not claim to be exams only — each row is tagged with the
+           source it actually came from. -->
       <div class="sig-col exam">
-        <div class="sc-h"><span class="sc-ic">📝</span>Exam Practice Signals</div>
+        <div class="sc-h"><span class="sc-ic">📝</span>Practice &amp; Exam Signals</div>
         <ul>
           <li><span class="sd"></span><span class="skel skel-row" style="width:180px;display:inline-block"></span></li>
           <li><span class="sd"></span><span class="skel skel-row" style="width:160px;display:inline-block"></span></li>
@@ -855,7 +866,7 @@ const SB_URL='https://igvkyxkmjnkzscqgommj.supabase.co';
 const SB_KEY='sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
-let currentUser=null, allReports=[], allMastery=[], allSignals=[], currentModalReport=null;
+let currentUser=null, allReports=[], allMastery=[], allSignals=[], currentModalReport=null, mockExamCount=0;
 // Phase 8 — evidence map keyed by 'topic|subtopic' → up to 3 enriched evidence rows.
 // Populated by loadEvidenceBatched() after weakness_reports load. Expanding a card
 // reads from this map; no per-card queries.
@@ -1082,11 +1093,22 @@ async function loadData(forceRegen){
     catch(e){console.warn('[weakness] regen error:',e.message);}
   }
 
-  const [rr,mr,sr]=await Promise.all([
+  const [rr,mr,sr,er]=await Promise.all([
     sb.from('weakness_reports').select('*').eq('user_id',uid).order('priority_rank',{ascending:true}),
     sb.from('mastery_records').select('*').eq('user_id',uid),
-    sb.from('weakness_signals').select('*').eq('user_id',uid)
+    sb.from('weakness_signals').select('*').eq('user_id',uid),
+    // Completed mock exams — the authoritative count for the Mock Exams source
+    // box. exam_practice_sessions receives a row ONLY on submit (mock-exam.html
+    // inserts after grading), so abandoned/in-progress attempts never appear and
+    // deleted rows drop out on their own. head+exact counts server-side, so the
+    // displayed number always equals the table and never hits the 1000-row cap.
+    // The ended_at filter keeps this "completed only" even if a future change
+    // starts writing a row at exam start.
+    sb.from('exam_practice_sessions').select('id',{count:'exact',head:true})
+      .eq('user_id',uid).not('ended_at','is',null)
   ]);
+  if(er&&er.error)console.warn('[weakness] mock exam count error:',er.error.message);
+  mockExamCount=(er&&typeof er.count==='number')?er.count:0;
   // Use Taxonomy.isAcademicTopic when available (taxonomy.js covers all known non-academic
   // strings: coaching, study skills, generic "Math", Arabic planning terms, etc.).
   // The regex below is a safety net for when taxonomy.js hasn't loaded yet.
@@ -1335,7 +1357,7 @@ async function loadEvidenceBatched(reports, topN){
       if (s.source === 'AI_CHAT') {
         const q = s.source_question_id ? qrMap.get(s.source_question_id) : null;
         return {
-          src: 'chat', when,
+          src: 'AI Tutor', srcClass: 'chat', when,
           body: q && q.question ? q.question : 'Earlier chat signal',
           link: q && q.session_id ? `chat.html?session=${encodeURIComponent(q.session_id)}` : null,
           linked: !!q,
@@ -1343,7 +1365,7 @@ async function loadEvidenceBatched(reports, topN){
       } else if (s.source === 'MOCK_EXAM') {
         const e = s.source_question_id ? emMap.get(s.source_question_id) : null;
         return {
-          src: 'exam', when,
+          src: 'Mock Exam', srcClass: 'exam', when,
           body: e ? `Mock exam mistake — ${e.topic || ''}${e.subtopic ? ' → ' + e.subtopic : ''}` : 'Earlier exam signal',
           // mock-exam.html does not read ?session=; it would launch a fresh exam.
           // Route to history.html instead — the past-sessions surface that lists
@@ -1352,7 +1374,23 @@ async function loadEvidenceBatched(reports, topN){
           linked: !!e,
         };
       }
-      return { src: (s.source||'').toLowerCase(), when, body: 'Earlier signal', link: null, linked: false };
+      // Every other source (Focus Practice today; Study Planner / Manual
+      // Practice / future engines later) gets its real name and a description
+      // of what the signal was — previously they all rendered as a bare
+      // "Earlier signal" with a raw lowercase source key beside it.
+      const label=sourceLabel(s.source);
+      const where=s.subtopic||s.topic||'this topic';
+      const what=s.signal_type==='resolution'
+        ? ((s.weight||0)<0?`Understood — ${where}`:`Still struggling — ${where}`)
+        : s.signal_type==='repeated'      ? `Repeated question — ${where}`
+        : s.signal_type==='multi_concept' ? `Multi-concept difficulty — ${where}`
+        : `Low confidence — ${where}`;
+      return {
+        src: label, srcClass: 'other', when,
+        body: `${label} — ${what}`,
+        link: s.source==='FOCUS_PRACTICE' ? 'focus.html' : null,
+        linked: !!s.source,
+      };
     });
     evidenceMap.set(k, rows);
   }
@@ -1364,10 +1402,12 @@ function evidenceRowsHTML(r){
     return '<div class="ev-empty">No linked evidence available yet — older signals may not be linked to their source question.</div>';
   }
   return `<div class="ev-list">${rows.map(row => {
-    const srcClass = row.src === 'chat' ? 'chat' : row.src === 'exam' ? 'exam' : '';
+    const srcClass = row.srcClass || '';
     const open = row.link ? `<a class="ev-open" href="${esc(row.link)}">Open →</a>` : '';
+    // esc(): row.src is a display label derived from a DB value — escape it like
+    // every other interpolated field on this page.
     return `<div class="ev-row${row.linked ? '' : ' muted'}">
-      <span class="ev-src ${srcClass}">${row.src}</span>
+      <span class="ev-src ${srcClass}">${esc(row.src)}</span>
       <span class="ev-when">${esc(row.when)}</span>
       <span class="ev-body" title="${esc(row.body)}">${esc(row.body)}</span>
       ${open}
@@ -1444,7 +1484,7 @@ function renderAll(reports,mastery,signals){
   renderStats(reports,mastery,signals);
   renderRankTable(reports,mastery);
   renderWhy(reports[0],signals);
-  renderSources(signals);
+  renderSources(signals,mockExamCount);
   renderPredict(reports[0],mastery,signals);
   renderSignalCols(reports[0],signals);
   renderBars(mastery,reports);
@@ -1563,22 +1603,83 @@ function renderWhy(report,signals){
   }
 }
 
-/* ── sources ── */
-function renderSources(signals){
-  const chatSigs=signals.filter(s=>s.source==='AI_CHAT').length;
-  const examSigs=signals.filter(s=>s.source&&s.source!=='AI_CHAT').length;
-  const boxes=document.querySelectorAll('.src-box .src-v');
-  if(boxes[0])boxes[0].textContent=chatSigs;
-  if(boxes[1])boxes[1].textContent=examSigs;
+/* ── sources ──
+ * "Where This Analysis Comes From" must show each weakness signal under its
+ * ACTUAL source. The previous implementation had two hardcoded boxes and
+ * bucketed by `source !== 'AI_CHAT'`, so every non-chat source was displayed as
+ * "Mock Exams" — Focus Practice signals (the large majority of non-chat rows)
+ * were reported to students as mock exams, and signals with a NULL source were
+ * counted in neither box. Boxes are now generated from the sources actually
+ * present, so a new source added later shows up under its own name instead of
+ * being silently absorbed into an existing bucket.
+ */
+const SOURCE_LABELS={
+  AI_CHAT:'AI Tutor',
+  MOCK_EXAM:'Mock Exam',
+  FOCUS_PRACTICE:'Focus Practice',
+  STUDY_PLANNER:'Study Planner',
+  MANUAL_PRACTICE:'Manual Practice',
+};
+/* Forward-compatible: an unrecognised source renders under a readable version
+ * of its own key (FUTURE_ENGINE → "Future Engine") rather than being folded
+ * into another source's count. */
+function sourceLabel(src){
+  const key=(src||'').toString().trim().toUpperCase();
+  if(!key)return'Unknown Source';
+  if(SOURCE_LABELS[key])return SOURCE_LABELS[key];
+  return key.toLowerCase().split(/[_\s]+/).filter(Boolean)
+    .map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+}
+/* mockExamCount is the number of COMPLETED mock exams from
+ * exam_practice_sessions — not a signal count. A student who sat 3 mock exams
+ * sees 3, whatever number of weakness signals those exams produced. */
+function renderSources(signals,mockExamCount){
+  const row=document.querySelector('.sources-row');
+  if(!row)return;
+  const counts=new Map();
+  (signals||[]).forEach(s=>{
+    const key=(s&&s.source?String(s.source).trim().toUpperCase():'')||'UNKNOWN';
+    counts.set(key,(counts.get(key)||0)+1);
+  });
+  // Mock Exam is reported as completed exams, from the exam table. Show the box
+  // whenever the student has sat an exam, even if it produced no signals (a
+  // clean exam is still a source this analysis drew on).
+  const entries=[];
+  const seen=new Set();
+  const ORDER=['AI_CHAT','MOCK_EXAM','FOCUS_PRACTICE','STUDY_PLANNER','MANUAL_PRACTICE'];
+  ORDER.forEach(key=>{
+    seen.add(key);
+    if(key==='MOCK_EXAM'){
+      const n=Number(mockExamCount)||0;
+      if(n>0)entries.push({label:SOURCE_LABELS[key],value:n});
+      return;
+    }
+    const n=counts.get(key)||0;
+    if(n>0)entries.push({label:SOURCE_LABELS[key],value:n});
+  });
+  // Any source not in ORDER (future engines, legacy values, NULL) — never drop it.
+  Array.from(counts.keys()).filter(k=>!seen.has(k)).sort().forEach(k=>{
+    entries.push({label:sourceLabel(k==='UNKNOWN'?'':k),value:counts.get(k)});
+  });
+  if(!entries.length){
+    row.innerHTML='<div class="src-box"><span class="src-v">0</span><span class="src-l">No Sources Yet</span></div>';
+    return;
+  }
+  row.innerHTML=entries.map(e=>
+    `<div class="src-box"><span class="src-v">${e.value}</span><span class="src-l">${esc(e.label)}</span></div>`
+  ).join('<span class="src-plus">+</span>');
 }
 
 /* ── signal columns ── */
 function renderSignalCols(report,signals){
   const cols=document.querySelector('.signal-cols');if(!cols)return;
   const topicSigs=report?signals.filter(s=>s.topic===report.topic||(report.subtopic&&s.subtopic===report.subtopic)):signals.slice(0,6);
-  const chatSigs=topicSigs.filter(s=>!s.source||s.source==='AI_CHAT').slice(0,4);
-  const examSigs=topicSigs.filter(s=>s.source&&s.source!=='AI_CHAT').slice(0,4);
-  const mkLi=s=>`<li><span class="sd"></span>${s.signal_type==='repeated'?'Repeated question on '+(s.subtopic||s.topic||'this topic'):s.signal_type==='resolution'?(s.weight<0?'Understood concept: '+(s.subtopic||s.topic||''):'Still struggling: '+(s.subtopic||s.topic||'')):s.signal_type==='multi_concept'?'Multi-concept difficulty on '+(s.topic||s.subtopic||''):'Low confidence on '+(s.subtopic||s.topic||'this topic')}</li>`;
+  // Only true AI_CHAT rows belong in the chat column. Treating a NULL source as
+  // chat here (while renderSources counted it as neither) meant the same signal
+  // was attributed differently in two places on one page.
+  const chatSigs=topicSigs.filter(s=>s.source==='AI_CHAT').slice(0,4);
+  const examSigs=topicSigs.filter(s=>s.source!=='AI_CHAT').slice(0,4);
+  const mkLi=s=>`<li><span class="sd"></span>${s.source&&s.source!=='AI_CHAT'?'<span class="sig-src">'+esc(sourceLabel(s.source))+'</span> ':''}${s.signal_type==='repeated'?'Repeated question on '+(s.subtopic||s.topic||'this topic'):s.signal_type==='resolution'?(s.weight<0?'Understood concept: '+(s.subtopic||s.topic||''):'Still struggling: '+(s.subtopic||s.topic||'')):s.signal_type==='multi_concept'?'Multi-concept difficulty on '+(s.topic||s.subtopic||''):'Low confidence on '+(s.subtopic||s.topic||'this topic')}</li>`;
   const chatCol=cols.querySelector('.sig-col.chat ul');
   const examCol=cols.querySelector('.sig-col.exam ul');
   if(chatCol)chatCol.innerHTML=chatSigs.length?chatSigs.map(mkLi).join(''):'<li><span class="sd"></span>No signals yet</li>';

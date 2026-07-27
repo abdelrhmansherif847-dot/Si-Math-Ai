@@ -10,6 +10,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="taxonomy.js"></script>
 <script src="taxonomy-compat.js"></script>
+<script src="assets/streak.js"></script>
+<script src="assets/exam-days.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -426,6 +428,15 @@ async function deviceGuard(sb, userId) {
        users see the correct plan state on this page. */
     try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
 
+    /* Recompute the streak before reading the profile, exactly as
+       dashboard.html does. This page renders current_streak/best_streak
+       straight from profiles, and the recompute previously ran ONLY on the
+       dashboard — so a student who broke their streak and opened Progress
+       without passing through the dashboard kept seeing the last stored
+       value. Dashboard said 0, Progress said 5, for the same student at the
+       same moment. No activityToday hint: viewing a page is not practising. */
+    try { if (window.updateStreak) await window.updateStreak(sb, user.id); } catch(_) {}
+
     // Avatar initial
     var avatarEl = document.getElementById('avatarEl');
 
@@ -437,28 +448,29 @@ async function deviceGuard(sb, userId) {
       sb.from('weakness_reports').select('topic,subtopic,mastery_score,priority_rank,last_updated,total_signals').eq('user_id', user.id).order('priority_rank', {ascending:true}),
       // 2 achievements: achievement_key, earned_at (canonical timestamp; legacy unlocked_at retained on table but not used by writers)
       sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}),
-      // 3 chat_sessions: created_at (for streak calculation — mirrors dashboard.html)
-      sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(500),
-      // 4 exam_practice_sessions: score, created_at, exam_type, correct_answers
+      // 3 exam_practice_sessions: score, created_at, exam_type, correct_answers
       sb.from('exam_practice_sessions').select('score,created_at,exam_type,correct_answers').eq('user_id', user.id).order('created_at', {ascending:false}).limit(200),
-      // 5 mastery_records: true mastery scores from MasteryEngine (delta-based)
+      // 4 mastery_records: true mastery scores from MasteryEngine (delta-based)
       sb.from('mastery_records').select('topic,subtopic,mastery_score,questions_seen,questions_correct').eq('user_id', user.id),
-      // 6 question_records: count + distinct topics for "Questions Solved" snap card
+      // 5 question_records: count + distinct topics for "Questions Solved" snap card
       sb.from('question_records').select('topic', { count: 'exact' }).eq('user_id', user.id),
+      // NOTE: a chat_sessions fetch (500 rows, labelled "for streak calculation")
+      // used to sit at index 3. Its result was assigned and never read — the
+      // streak moved to the profiles columns long ago and the query was left
+      // behind. Removed: it cost a 500-row round trip on every page load.
     ]);
 
     var profile      = results[0].data  || {};
     var weakReps     = results[1].data  || [];
-    var masteryRecs  = results[5].data  || [];
-    var qRecs        = results[6].data  || [];
-    var qCount       = results[6].count || qRecs.length || 0;
+    var masteryRecs  = results[4].data  || [];
+    var qRecs        = results[5].data  || [];
+    var qCount       = results[5].count || qRecs.length || 0;
     // Filter non-academic topics (taxonomy guard)
     var NON_ACAD_PROG = /^(conversation|general|chat|other|none|meta|system|coaching|planning|study planning|study coaching|exam strategy|motivation|confidence|mindset|scheduling|out_of_scope)/i;
     function isAcademicProg(t) { var s = (t||'').trim(); return s.length >= 2 && !NON_ACAD_PROG.test(s); }
     var qTopics      = new Set(qRecs.map(function(q){ return q.topic; }).filter(function(t){ return isAcademicProg(t); })).size;
     var achieves     = results[2].data  || [];
-    var chatSess     = results[3].data  || [];
-    var exams        = results[4].data  || [];
+    var exams        = results[3].data  || [];
     // mastRecs: prefer mastery_records (MasteryEngine delta-based) for mastery scores.
     // Fall back to weakness_reports if mastery_records is empty.
     var mastRecs = (masteryRecs.length > 0 ? masteryRecs.map(function(r){
@@ -506,8 +518,16 @@ async function deviceGuard(sb, userId) {
     var subParts = ['Rank: <span class="hl">' + rank.icon + ' ' + rank.name + '</span>'];
     if (profile.exam_type) subParts.push('Preparing for <span class="hl">' + esc(profile.exam_type) + '</span>');
     if (profile.exam_date){
-      var daysLeft = Math.ceil((new Date(profile.exam_date) - Date.now()) / 86400000);
-      if (daysLeft > 0) subParts.push('<span class="hl">' + daysLeft + ' days</span> to exam');
+      /* assets/exam-days.js — single source of truth. The old formula measured
+         from Date.now() to a UTC-midnight instant, so the answer changed with
+         the time of day: the same student could read "1 day" in the afternoon
+         and "2 days" just after midnight, for an unchanged exam date. */
+      var daysLeft = window.examDaysRemaining ? window.examDaysRemaining(profile.exam_date) : null;
+      if (daysLeft != null && daysLeft > 0) {
+        subParts.push('<span class="hl">' + daysLeft + (daysLeft === 1 ? ' day' : ' days') + '</span> to exam');
+      } else if (daysLeft === 0) {
+        subParts.push('<span class="hl">Exam is today</span>');
+      }
     }
     heroSub.innerHTML = subParts.join(' &middot; ');
 

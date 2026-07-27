@@ -1361,15 +1361,35 @@ async function doSave() {
 
     // XP award
     const xpGain = isFirst ? 50 : 25;
-    const { data: profile } = await sb
-      .from('profiles')
-      .select('xp, rank_name')
-      .eq('id', user.id)
-      .single();
-    const currentXP = profile?.xp || 0;
-    const newXP = currentXP + xpGain;
-    const newRank = getRankName(newXP);
-    await sb.from('profiles').update({ xp: newXP, rank_name: newRank }).eq('id', user.id);
+    // Compare-and-set on profiles.xp. The previous read-modify-write could lose
+    // this award when another XP write landed between the SELECT and the UPDATE
+    // — e.g. the student has chat open in a second tab, which awards XP per
+    // question. Filtering the UPDATE on the xp we read makes a stale write match
+    // zero rows instead of clobbering; we then re-read and retry.
+    // profiles.xp is integer NOT NULL DEFAULT 0, so the filter never matches null.
+    let currentXP = 0, newXP = null;
+    for (let attempt = 0; attempt < 5 && newXP === null; attempt++) {
+      const { data: profile, error: readErr } = await sb
+        .from('profiles')
+        .select('xp')
+        .eq('id', user.id)
+        .single();
+      if (readErr) { console.warn('[xp] profile read failed:', readErr.message); break; }
+      currentXP = profile?.xp || 0;
+      const candidate = currentXP + xpGain;
+      const { data: won, error: casErr } = await sb.from('profiles')
+        .update({ xp: candidate, rank_name: getRankName(candidate) })
+        .eq('id', user.id)
+        .eq('xp', currentXP)
+        .select('xp');
+      if (casErr) { console.warn('[xp] profile update failed:', casErr.message); break; }
+      if (won && won.length) newXP = candidate;   // won the race
+      // else: a concurrent award landed first — loop re-reads and retries.
+    }
+    // Unchanged on the success path. If every attempt failed, fall back to the
+    // rank for the last xp we actually read rather than inventing one — the exam
+    // save itself must still complete, exactly as before.
+    const newRank = getRankName(newXP != null ? newXP : currentXP);
 
     // First exam achievement
     if (isFirst) {
