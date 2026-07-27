@@ -1,0 +1,49 @@
+# Line-ending policy: LF everywhere, in the repository AND in the working tree.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# Git for Windows ships with core.autocrlf=true, which rewrites LF to CRLF on
+# checkout. That silently breaks four gates in this repository, and it breaks
+# them on the developer's machine only - CI on Linux stays green, so the
+# failure looks like a merge problem when it is not:
+#
+#   constants-drift          compares a generated file against BANNER + source,
+#   validate-taxonomy        where BANNER is a JS literal ending in '\n'. A
+#   validate-study-planner   CRLF working tree makes every byte-identical
+#                            comparison fail even though the content is right.
+#
+#   validate-ai-tutor-source is a bash script. With CRLF endings the shebang
+#                            line and `set -o pipefail` fail outright:
+#                            "$'\r': command not found".
+#
+# Those four are exactly the drift/parity gates that keep the generated copies
+# (taxonomy.js, _shared/taxonomy.core.js, study-planner.js) honest, so losing
+# them loses the guarantee that the Edge Function ships the same taxonomy the
+# browser uses. The fix is to make LF normative rather than to loosen the
+# comparisons - the files are byte-compared on purpose.
+#
+# `text=auto eol=lf` means: detect text files, store them with LF, and check
+# them out with LF on every platform including Windows. PowerShell 7, Node and
+# Git Bash all read LF correctly, and there are no .bat/.cmd files here (those
+# would genuinely require CRLF).
+#
+# AFTER PULLING THIS FILE for the first time on Windows, refresh the working
+# tree once so existing CRLF files are rewritten:
+#
+#   git add --renormalize .
+#   git checkout -- .
+
+* text=auto eol=lf
+
+# Binary assets - never touch these.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
