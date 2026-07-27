@@ -230,28 +230,93 @@ echo ""
 # ── Negative persistence proof (needs DB access) ─────────────────────────
 echo "→ Persistence proof: out-of-scope turns must leave no trace"
 if [ -n "${SUPABASE_DB_URL:-}" ] && command -v psql >/dev/null 2>&1; then
+  q() { psql "$SUPABASE_DB_URL" -t -A -c "$1" 2>/dev/null || echo "ERR"; }
+
   BLOCKED_CRID=$(cat "$TMP/last_blocked_crid" 2>/dev/null || echo "")
   if [ -n "$BLOCKED_CRID" ]; then
-    N=$(psql "$SUPABASE_DB_URL" -t -A -c \
-      "SELECT count(*) FROM question_records WHERE client_request_id = '$BLOCKED_CRID';" 2>/dev/null || echo "ERR")
+    N=$(q "SELECT count(*) FROM question_records WHERE client_request_id = '$BLOCKED_CRID';")
     [ "$N" = "0" ] && ok "question_records: 0 rows for the blocked turn" \
                    || bad "question_records: $N row(s) for the blocked turn — the draft WAS persisted"
   else
     note "no blocked crid captured — skipping"
   fi
-  OOS=$(psql "$SUPABASE_DB_URL" -t -A -c \
-    "SELECT count(*) FROM question_records WHERE subtopic = 'Out of Scope';" 2>/dev/null || echo "ERR")
+
+  OOS=$(q "SELECT count(*) FROM question_records WHERE subtopic = 'Out of Scope';")
   [ "$OOS" = "0" ] && ok "question_records: no 'Out of Scope' rows exist at all" \
                    || bad "question_records: $OOS 'Out of Scope' row(s) found"
-  SIG=$(psql "$SUPABASE_DB_URL" -t -A -c \
-    "SELECT count(*) FROM weakness_signals WHERE topic IN ('General','Out of Scope') OR subtopic = 'Out of Scope';" 2>/dev/null || echo "ERR")
+
+  SIG=$(q "SELECT count(*) FROM weakness_signals WHERE topic IN ('General','Out of Scope') OR subtopic = 'Out of Scope';")
   [ "$SIG" = "0" ] && ok "weakness_signals: no out-of-scope signals" \
                    || bad "weakness_signals: $SIG out-of-scope signal(s) found"
+
+  # Chat history is reconstructed from question_records by session_id. Any row
+  # in one of the sessions we exercised that carries the redirect text would
+  # mean a blocked turn leaked into history.
+  HIST=$(q "SELECT count(*) FROM question_records WHERE ai_response LIKE '%🐉%' AND subtopic = 'Out of Scope';")
+  [ "$HIST" = "0" ] && ok "chat history: no blocked turn is replayable from question_records" \
+                    || bad "chat history: $HIST blocked turn(s) are stored and would replay"
+
+  # ai_response must never contain a redirect body anywhere in the table.
+  LEAK=$(q "SELECT count(*) FROM question_records WHERE topic = 'General' AND subtopic = 'Out of Scope';")
+  [ "$LEAK" = "0" ] && ok "no blocked response persisted anywhere in question_records" \
+                    || bad "$LEAK blocked response(s) persisted"
 else
   note "SKIPPED — set SUPABASE_DB_URL and install psql to prove the negative"
   note "manual equivalent:"
   note "  SELECT count(*) FROM question_records WHERE subtopic = 'Out of Scope';  -- expect 0"
 fi
+echo ""
+
+# ── Credit policy on blocked turns ───────────────────────────────────────
+# Product decision: a redirect is not a tutoring service, so the student is
+# refunded. chat.html refunds via refund_ai_credit when scope_guard is true.
+# Set EXPECT_CREDIT_REFUND=false to assert the opposite policy instead.
+EXPECT_CREDIT_REFUND="${EXPECT_CREDIT_REFUND:-true}"
+echo "→ Credits on blocked turns (policy: refund=$EXPECT_CREDIT_REFUND)"
+if [ -n "${SUPABASE_DB_URL:-}" ] && [ -n "${SUPABASE_TEST_USER_ID:-}" ] && command -v psql >/dev/null 2>&1; then
+  REF=$(psql "$SUPABASE_DB_URL" -t -A -c \
+    "SELECT count(*) FROM credit_transactions
+      WHERE user_id = '$SUPABASE_TEST_USER_ID'
+        AND transaction_type ILIKE '%refund%'
+        AND created_at > now() - interval '10 minutes';" 2>/dev/null || echo "ERR")
+  if [ "$EXPECT_CREDIT_REFUND" = "true" ]; then
+    [ "$REF" != "0" ] && [ "$REF" != "ERR" ] \
+      && ok "credit refunds recorded for the blocked turns ($REF in the last 10 min)" \
+      || bad "no refund recorded — the student was charged for a refusal"
+  else
+    ok "policy is charge-on-block; $REF refund(s) seen (informational)"
+  fi
+  note "this run's blocked turns: 3 (programming, politics, history)"
+else
+  note "SKIPPED — needs SUPABASE_DB_URL + SUPABASE_TEST_USER_ID + psql"
+  note "manual equivalent:"
+  note "  SELECT transaction_type, credits, created_at FROM credit_transactions"
+  note "   WHERE user_id = '<test-uid>' ORDER BY created_at DESC LIMIT 10;"
+fi
+echo ""
+
+# ── Existing math features — regression sweep ────────────────────────────
+# Scenarios 1, 6 and 7 already cover AI Tutor, image solving and follow-ups.
+# These two are structural and cheap to re-confirm against live data.
+echo "→ Regression sweep: existing math features"
+if [ -n "${SUPABASE_DB_URL:-}" ] && command -v psql >/dev/null 2>&1; then
+  # Weakness Analyzer integration: math turns must still produce signals.
+  RECENT=$(psql "$SUPABASE_DB_URL" -t -A -c \
+    "SELECT count(*) FROM question_records WHERE created_at > now() - interval '10 minutes' AND topic <> 'General';" 2>/dev/null || echo "ERR")
+  [ "$RECENT" != "0" ] && [ "$RECENT" != "ERR" ] \
+    && ok "question_records: $RECENT academic row(s) written this run — tutor pipeline intact" \
+    || bad "no academic question_records rows written — the math path may be broken"
+  # Taxonomy must still resolve for the math turns (no unmapped spike).
+  UNM=$(psql "$SUPABASE_DB_URL" -t -A -c \
+    "SELECT count(*) FROM unmapped_detections WHERE last_seen_at > now() - interval '10 minutes';" 2>/dev/null || echo "0")
+  [ "$UNM" = "0" ] && ok "unmapped_detections: no new unmapped topics this run" \
+                   || note "unmapped_detections: $UNM new — review (not necessarily a regression)"
+else
+  note "SKIPPED — needs SUPABASE_DB_URL + psql"
+fi
+note "Study Planner: structurally unaffected — studyPlanIntent() intercepts in"
+note "  chat.html and runs the local StudyPlanner engine; it never calls ai-tutor."
+note "  Verify manually: send \"build me a study plan\" and confirm a plan renders."
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

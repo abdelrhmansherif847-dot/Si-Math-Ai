@@ -394,12 +394,24 @@ existing worksheet-guard behaviour.
 
 ---
 
-## 4c. Deployment status — BLOCKED, not deployed
+## 4c. Deployment status — BLOCKED, not deployed, NOT VERIFIED
 
-The Edge Function has **not** been deployed. `DEPLOY.md` §4 requires Path B
-(Supabase CLI) for any version importing `_shared/`, and this environment has
-neither the `supabase` CLI nor `SUPABASE_ACCESS_TOKEN`. The MCP deploy path is
-prohibited and was not used.
+The Edge Function has **not** been deployed, and the seven production
+scenarios have **not** been run. Nothing in this document should be read as
+production verification of item 4.
+
+Evidence the guardrail is not live:
+
+- The `ai-tutor` function was last deployed **2026-07-19 14:35 UTC**
+  (platform version 114). The v87 commits are dated **2026-07-26 / 27** —
+  eight days later.
+- The branch `claude/production-audit-verification-3j1chx` is not merged;
+  `origin/main` is still at `be10c26`.
+
+`DEPLOY.md` §4 requires Path B (Supabase CLI) for any version importing
+`_shared/`, and this environment has neither the `supabase` CLI nor
+`SUPABASE_ACCESS_TOKEN`, nor a test JWT to run the verifier against. The
+prohibited MCP deploy path was not used.
 
 Deploy, then verify:
 
@@ -429,6 +441,65 @@ It also proves the negative when `SUPABASE_DB_URL` is supplied: zero
 `question_records` rows for the blocked turns, zero rows with
 `subtopic='Out of Scope'`, and zero out-of-scope `weakness_signals`. Exit 1
 means the guardrail is not verified.
+
+---
+
+## 4d. Credits on blocked requests — changed to refund
+
+**Finding.** A blocked turn cost the student **5 credits** (`AI_CHAT_MESSAGE`,
+from `credit_costs`) and was **not** refunded. `chat.html` pre-authorises via
+`CreditConfig.charge()` → `consume_credits` *before* calling the function, and
+the only refund path is the `.catch()` on AI failure. The guard returns HTTP
+200, so that path never fired and the student paid for a refusal. On the free
+tier two stray off-topic questions burned 10 credits.
+
+**Decision (approved):** refund blocked turns. A redirect is not a tutoring
+service.
+
+**Implementation** — `chat.html`, in the `askAI()` success handler:
+
+```js
+if (response && response.scope_guard === true) {
+  SignalEngine.discardBuffer();
+  if (creditLogId) { sb.rpc('refund_ai_credit', { p_log_id: creditLogId }) … }
+  …
+  return;   // .finally() clears inflight + re-enables the composer
+}
+```
+
+It reuses the existing `refund_ai_credit` RPC and the `enqueueRefund` retry
+queue, so a transient refund failure is retried on the next page load rather
+than lost — identical to the AI-failure path. The early return also discards
+the signal buffer and skips the detected-questions, mastery and taxonomy
+blocks, which is belt-and-braces: the server already returns `is_math:false`
+and `topic:'General'`, so none of them would have emitted anything.
+
+Note this leaves a pre-existing inconsistency untouched: `worksheet_guard` also
+returns 200 without a refund, and it fires *before* any OpenAI call, so it
+charges 5 credits for zero AI cost. Out of scope for this audit — flagging it
+as a candidate for the same treatment.
+
+The verifier asserts the policy via `EXPECT_CREDIT_REFUND` (default `true`).
+
+---
+
+## 4e. Regression risk for existing math features
+
+These are **structural guarantees read from the code**, not production
+observations. Scenarios 1, 6 and 7 of the verifier confirm the first three
+against the live function once deployed.
+
+| Feature | Why the guard cannot regress it |
+|---|---|
+| **AI Tutor (math)** | The guard fails open on every axis. A math turn is labelled `math`; a missing or malformed label is also treated as in scope. |
+| **Follow-up / re-explain** | The repeat path early-returns at line 2018, **before** the guard at 2683. It only runs when a parent `question_records` row already matched, so a follow-up is structurally unreachable by the guard. |
+| **Image solving** | `hasImage` is an unconditional in-scope bypass, evaluated before the label is even read. An uploaded worksheet cannot be refused. |
+| **Study Planner** | **Never calls `ai-tutor`.** `studyPlanIntent(text)` intercepts in `chat.html:send()` and routes to the local `window.StudyPlanner.buildStudyPlan()` engine — a deterministic, non-LLM path. The guard is not in its call graph. |
+| **Weakness Analyzer** | Reads `weakness_signals` / `weakness_reports`. Blocked turns write neither, so no new rows appear and no existing row changes. `regenerate-reports.js` is untouched. |
+
+The one behaviour that does change for in-scope turns is the additive `scope`
+and `scope_guard` fields on the response envelope. No client reads them except
+the new refund branch, and unknown fields are ignored elsewhere.
 
 Type-check is clean: `tsc --noEmit` reports only the 10 pre-existing
 `Deno`/remote-import errors that `tsc` cannot resolve by design.
@@ -467,6 +538,7 @@ pass unchanged.
 | `assets/streak.js` | Streak recompute correctness (item 1) |
 | `dashboard.html` | No phantom-activity hint; heatmap shares the streak's day set (item 1) |
 | `supabase/functions/ai-tutor/index.ts` | Domain scope guardrail, v86 → v87 (item 4) |
+| `chat.html` | Refund the credit on a blocked (out-of-scope) turn (item 4d) |
 | `scripts/validate-ai-tutor-source.sh` | Size ceiling 170 → 190 KB, reason recorded |
 | `scripts/verify-scope-guardrail.sh` | New — post-deploy verification of the seven scenarios |
 | `docs/audit/patches/weakness-sources-and-mock-count.patch` | Items 2 & 3, **unapplied** — `weakness.html` is frozen |

@@ -2433,6 +2433,30 @@ button{font-family:inherit;cursor:pointer}
         clearInflight();
         removeTyping();
         addAI(sig, response);
+        // v87 domain guardrail: an out-of-scope turn is a redirect, not a
+        // tutoring service, so the student is not charged for it. The server
+        // returns 200 (the OpenAI call did happen), which means the failure
+        // refund below never fires — refund explicitly here instead. Reuses the
+        // same RPC + retry queue as the failure path, so a refund that fails
+        // transiently is retried on the next load rather than lost.
+        // No question_records row is written for these turns either, so nothing
+        // downstream (history, signals, mastery, AI Monitor) sees them.
+        if (response && response.scope_guard === true) {
+          SignalEngine.discardBuffer();
+          if (creditLogId) {
+            sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
+              .then(({ data: rd, error: rerr }) => {
+                if (rerr || !rd || !rd.ok) { enqueueRefund(creditLogId); return; }
+                if (rd.refunded > 0) console.info('Credit refunded (out-of-scope turn):', rd.refunded);
+              })
+              .catch(e => { console.warn('Refund RPC failed:', e); enqueueRefund(creditLogId); });
+          }
+          // Keep the redirect in the live conversation window so Zero has the
+          // context if the student replies. Nothing is persisted server-side.
+          sessionMessages.push({role:'user', content: apiText});
+          sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
+          return;   // .finally() below clears inflight + re-enables the composer
+        }
         // Phase B: surface the detected-questions index for multi-question uploads.
         if (response && Array.isArray(response.detected_questions)) {
           renderDetectedQuestions(response.detected_questions);
