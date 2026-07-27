@@ -545,3 +545,125 @@ pass unchanged.
 
 No frozen file was modified. No migration was created. The Edge Function is not
 deployed.
+
+---
+
+# Phase 2 — continued audit of non-frozen production issues
+
+Merged to `main` as `024d2ae`; Phase 2 work continues on the feature branch.
+Every issue below was reproduced before a fix was written, and each fix has a
+regression test that fails against the old code.
+
+## P2-1. Progress page showed a stale streak
+
+`progress.html` rendered `current_streak` / `best_streak` straight from
+`profiles` and never recomputed them — `assets/streak.js` was not even loaded.
+The recompute ran only on the dashboard and at the three activity call sites.
+
+Once a student broke their streak, `profiles` kept the last written value until
+something recomputed it. A student who missed two days and opened Progress
+without passing through the Dashboard saw the old non-zero streak while the
+Dashboard showed 0 — two pages disagreeing about the same number, for the same
+student, at the same moment.
+
+**Fixed:** load `assets/streak.js`, call `updateStreak` before the profile read,
+mirroring dashboard.html. No `activityToday` hint — viewing a page is not
+practising.
+
+## P2-2. Dead 500-row query on every Progress load
+
+`results[3]` fetched up to 500 `chat_sessions` rows, commented "for streak
+calculation". The result was assigned to `chatSess` and never read again — the
+streak had moved to the profiles columns and the query was left behind.
+
+**Fixed:** removed and the `Promise.all` indices renumbered. Verified by
+extracting the array and asserting all 7 `results[N]` usages still resolve to
+their intended table.
+
+## P2-3. Exam countdown was off by one, every day
+
+The countdown was implemented **four times** (dashboard, progress, focus,
+ai-tutor) and all four disagreed.
+
+`exam_date` is a Postgres DATE, so it arrives as `'YYYY-MM-DD'`, and
+`new Date('YYYY-MM-DD')` parses that as **UTC midnight** — not local midnight.
+Every client copy subtracted that UTC instant from a local midnight (or from
+`Date.now()`) and rounded up with `Math.ceil`, turning the leftover UTC offset
+into a whole extra day.
+
+In Cairo (UTC+2/+3) `dashboard.html` was off by exactly **+1 every day**: a
+student whose exam was TODAY was shown "1 day left" while Zero, which
+normalises both operands, correctly said 0. `progress.html` had a second
+variant that measured from `Date.now()`, so its answer **drifted with the time
+of day** — "1 day" in the afternoon, "2 days" just after midnight, for an
+unchanged exam date.
+
+**Fixed:** new `assets/exam-days.js` is the single source of truth. It never
+parses the date as an instant; both sides reduce to a calendar day key, which
+is exact, DST-proof and device-timezone independent. Pinned to Africa/Cairo,
+matching `assets/streak.js`. 17 assertions, including a direct assertion that
+the old formula returns 1 on exam day where the helper returns 0.
+
+`focus.html` holds a fourth variant, but it is **dead code** — `daysUntilExam`
+is assigned and never read — so there is no user impact and no patch is needed.
+
+## P2-4. Every drill completion silently lost an XP award
+
+`awardChatXP()` is a read-modify-write on `profiles.xp`. In the `askAI` success
+handler, `chat.html` calls `awardChatXP()` and then `drillOnQuestionAnswered()`,
+neither awaited; on the last question of a drill the latter synchronously calls
+`awardChatXP(DRILL_BONUS_XP)`. Both start in the same tick, both read the same
+pre-award `xp`, and whichever UPDATE lands second overwrites the first.
+
+This was not an occasional race — it happened on **every** drill completion,
+losing either the +5 per-question award or the +30 drill bonus.
+
+**Fixed:** the UPDATE is filtered on the `xp` that was read, so a stale write
+matches zero rows instead of clobbering; on a miss the loop re-reads and retries
+(max 5). Read/write errors now abort rather than falling through and writing a
+value derived from a failed read. Verified by racing the CAS block — extracted
+from `chat.html` itself — against a mock client with real PostgREST filter
+semantics: the drill pair now sums to 135 where the old code gave 130.
+
+`mock-exam.html` has the same read-modify-write but is **frozen**, and has no
+concurrent award path, so impact is limited to multi-tab use.
+
+## P2-5. History rendered "0 days ago" and mislabelled dates
+
+`relDate()` computed `Math.floor((now - d) / 86400000)` — elapsed 24-hour
+periods — but every label it feeds is a calendar-day concept. Viewed at 08:00:
+a session from 23:00 yesterday was 9 hours old, floored to 0, and rendered the
+nonsensical **"0 days ago"**; a session from 23:00 two days back rendered as
+"Yesterday"; everything older was undercounted by one for most of the day.
+
+**Fixed:** both operands snap to local midnight before subtracting, so the
+result is a true calendar-day count; `Math.round` absorbs DST. `diffDay <= 0`
+collapses to "Today", which also handles clock skew. Invalid dates return `''`
+instead of "NaN days ago". 14 assertions against a pinned `now`.
+
+## P2-6. Redundant query on every dashboard load
+
+`updateStreak()` already returns the full activity day-set, but the dashboard
+still issued a 14-day `question_records` query to rebuild the same set for its
+heatmap fallback.
+
+**Fixed:** the query is now issued only when the streak recompute could not
+supply its day-set — the same condition under which the local rebuild is used.
+
+## Audited, no defect found
+
+- **Rank thresholds.** All five implementations (`chat.html`,
+  `mock-exam.html`, `progress.html`, `profile.html`, and the SQL
+  `rank_for_xp`) agree exactly: 0/100/300/600/1000/1500/2500 with identical
+  names. Verified by extracting and diffing all five tables.
+- **Timestamp parsing elsewhere.** Every other `new Date(...)` on a DB value
+  operates on a `timestamptz` (`created_at`, `subscription_expires_at`,
+  `upgrade_requested_at`, `current_period_end`), which parses correctly. The
+  DATE-column trap was confined to `exam_date`.
+
+## Frozen-file work still outstanding
+
+| File | Issue | Status |
+|---|---|---|
+| `weakness.html` | Mock Exam count + signal source attribution | Patch staged, **unapplied** |
+| `mock-exam.html` | XP read-modify-write (multi-tab only) | Documented, no patch yet |

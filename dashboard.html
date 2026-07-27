@@ -1640,6 +1640,10 @@ async function loadDashboard() {
      absent from the next recompute. */
   var streakRes = null;
   try { if (window.updateStreak) streakRes = await window.updateStreak(sb, user.id); } catch(_) {}
+  /* Whether the heatmap has to be rebuilt locally — true only when the streak
+     recompute could not supply its day-set. Decided here so the now-redundant
+     14-day query below can be skipped entirely on the normal path. */
+  var needHeatmapFallback = !(streakRes && Array.isArray(streakRes.active_days) && !streakRes.skipped);
 
   var results = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
@@ -1648,9 +1652,13 @@ async function loadDashboard() {
     sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}).limit(6),
     sb.from('chat_sessions').select('created_at').eq('user_id', user.id).order('created_at', {ascending:false}).limit(400),
     sb.from('question_records').select('created_at,topic').eq('user_id', user.id).gte('created_at', monthStart).not('topic','in','("General","")'),
-    // Activity source for weekly heatmap — matches what assets/streak.js uses so the two
-    // numbers can never disagree. question_records (any topic) ∪ exam_practice_sessions.
-    sb.from('question_records').select('created_at').eq('user_id', user.id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()),
+    // Weekly-heatmap fallback ONLY. updateStreak() already returned the full
+    // activity day-set above, so in the normal case this query is pure waste —
+    // it is issued only when streak.js failed to load or bailed out, which is
+    // also the only case the local rebuild below is used.
+    needHeatmapFallback
+      ? sb.from('question_records').select('created_at').eq('user_id', user.id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString())
+      : Promise.resolve({ data: [] }),
   ]);
 
   var prof        = (results[0].data) || {};
@@ -1760,7 +1768,7 @@ async function loadDashboard() {
     }).format(d);
   }
   var actSet;
-  if (streakRes && Array.isArray(streakRes.active_days) && !streakRes.skipped) {
+  if (!needHeatmapFallback) {
     actSet = new Set(streakRes.active_days);
   } else {
     actSet = new Set();
