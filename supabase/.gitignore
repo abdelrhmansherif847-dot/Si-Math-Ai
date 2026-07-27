@@ -1,0 +1,25 @@
+# Supabase CLI scratch state — never commit.
+#
+# `supabase link`, `db push` and `functions deploy` write cached project state
+# under supabase/.temp/. Two reasons this must be ignored:
+#
+#   1. CREDENTIALS. supabase/.temp/pooler-url contains the pooled Postgres
+#      connection string, password included. Without this rule a routine
+#      `git add -A` commits a live database credential.
+#
+#   2. It broke the deploy pipeline. deploy-production.ps1 fails a dirty
+#      working tree, on purpose — if the artefact being deployed is not the
+#      artefact in version control, a rollback has nothing to return to. But
+#      the Supabase CLI creates .temp/ as a side effect of `supabase link` in
+#      step 5, so the very act of running the pipeline made the tree dirty and
+#      failed the next run. Generated scratch is not uncommitted work.
+#
+# Matches the layout `supabase init` generates.
+
+.temp
+.branches
+
+# Local dev stack artefacts (not used here, ignored for safety).
+.env
+.env.local
+.env.*.local

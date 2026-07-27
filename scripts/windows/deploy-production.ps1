@@ -149,8 +149,26 @@ try {
         if ($status.Trim()) {
             # A dirty tree means the artefact being deployed is not the artefact
             # in version control, so a later rollback has nothing to return to.
+            $entries = @($status -split "`r?`n" | Where-Object { $_.Trim() })
+            $untrackedOnly = @($entries | Where-Object { $_ -notmatch '^\?\?' }).Count -eq 0
+
             Add-Result $results 'FAIL' 'working tree is dirty' 'commit or stash before deploying - a deploy must be reproducible from a commit'
-            foreach ($line in ($status -split "`r?`n" | Select-Object -First 10)) { Write-Detail $line }
+            foreach ($line in ($entries | Select-Object -First 10)) { Write-Detail $line }
+
+            if ($untrackedOnly) {
+                # Everything dirty is untracked, which usually means a tool wrote
+                # scratch into the repo rather than that someone has real work in
+                # progress. Say so, because "commit or stash" is the wrong advice
+                # for a generated file - committing it is worse than the failure.
+                # This exact case bit us once already: `supabase link` in step 5
+                # creates supabase/.temp/, whose pooler-url holds the database
+                # password, so the fix was an ignore rule, not a commit.
+                Write-Warn 'All of the above are UNTRACKED files.'
+                Write-Detail 'If a tool generated them, add them to .gitignore rather than committing —'
+                Write-Detail 'CLI scratch can contain credentials (supabase/.temp/pooler-url holds the DB password).'
+                Write-Detail 'Only commit them if they are genuinely part of the deployable artefact.'
+            }
+
             [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
             exit (Get-ExitCode Failure)
         }
