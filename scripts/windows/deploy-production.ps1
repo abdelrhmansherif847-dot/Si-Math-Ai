@@ -41,6 +41,23 @@
 .PARAMETER MigrationsOnly
     Apply and verify migrations, then stop before deploying code.
 
+.PARAMETER MigrationMode
+    How to satisfy the "schema is current" requirement.
+
+      Auto    (default) Try `supabase db push`. If the CLI reports that the
+              local and remote migration histories do not correspond - which is
+              the permanent state of this project, see
+              supabase/migrations/README.md - fall back to verifying the schema
+              directly with scripts/verify-security-sql.sql.
+      Push    Require the CLI path. Fails if the histories diverge. Use this
+              after a `supabase db pull` reconciliation has made push viable.
+      Verify  Skip push entirely and assert the schema directly.
+
+    Verify is not a weaker check than Push. Push compares filenames against a
+    history table; Verify reads information_schema and pg_policies and asserts
+    the controls are actually in force. The latter is what caught the silent
+    column-REVOKE no-op behind SEC-01.
+
 .PARAMETER AllowFrozenChanges
     Permit deploying with frozen files modified (CLAUDE.md section 2).
 
@@ -66,6 +83,8 @@ param(
     [switch]$SkipTests,
     [switch]$SkipMigrations,
     [switch]$MigrationsOnly,
+    [ValidateSet('Auto','Push','Verify')]
+    [string]$MigrationMode = 'Auto',
     [switch]$AllowFrozenChanges,
     [switch]$AutoApprove,
     [switch]$DryRun
@@ -226,7 +245,26 @@ try {
         Add-Result $results 'PASS' 'source version' $srcVersion
 
         # ── 5. Migrations ───────────────────────────────────────────────────
+        # This project's local migration files are 8-digit date prefixes
+        # (20260614_...) while the remote history table holds 14-digit
+        # timestamps written by Dashboard/SQL application. The two sets are
+        # disjoint by construction, so `supabase db push` has never worked here
+        # and fails with "Remote migration versions not found in local
+        # migrations directory". See supabase/migrations/README.md.
+        #
+        # Rather than pretend otherwise, the step detects that condition and
+        # asserts the thing that actually protects students: that the required
+        # schema is in force, read directly out of information_schema and
+        # pg_policies. That is a STRONGER claim than "the filenames line up" -
+        # it is what caught the silent column-REVOKE no-op behind SEC-01 - and
+        # it is what DEPLOY.md section 3 mandates before dependent code ships.
+        #
+        # It is not a bypass: if the schema check cannot run, the step reports
+        # SKIP and the deployment result becomes INCONCLUSIVE, which blocks the
+        # release just as a failure would.
         Write-Step 'Database migrations'
+        $migrationsVerified = $false
+
         if ($SkipMigrations) {
             Add-Result $results 'SKIP' 'migrations' '-SkipMigrations specified'
         } else {
@@ -238,71 +276,87 @@ try {
             }
             Add-Result $results 'PASS' 'supabase link' $cfg.ProjectRef
 
-            # Preview first. `db push --dry-run` lists what would be applied, so
-            # the operator approves a concrete list rather than a blank cheque.
             $dry = Invoke-Native -FilePath 'supabase' -Arguments @('db','push','--dry-run','--linked') -AllowFailure
-            if ($dry.ExitCode -ne 0) {
-                Add-Result $results 'FAIL' 'migration dry-run' "exit $($dry.ExitCode)"
+            $historyDiverged = $dry.Output -match 'Remote migration versions not found in local migrations directory'
+
+            if ($MigrationMode -eq 'Push' -and $historyDiverged) {
+                Add-Result $results 'FAIL' 'migration history diverged' `
+                    '-MigrationMode Push was requested but local and remote histories do not correspond (see supabase/migrations/README.md)'
                 [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
                 exit (Get-ExitCode Failure)
             }
 
-            $pending = @($dry.Output -split "`r?`n" | Where-Object { $_ -match '^\s*\d{14}|\.sql\s*$' })
-            if (-not $pending.Count -and $dry.Output -match 'up to date|no migrations|nothing to') {
-                Add-Result $results 'PASS' 'migrations already current' 'nothing to apply'
-            } elseif ($DryRun) {
-                Add-Result $results 'SKIP' 'migrations (dry run)' "$($pending.Count) pending; -DryRun makes no change"
-            } else {
-                Write-Warn 'Migrations are irreversible in production (DEPLOY.md section 7: forward-fix only).'
-                foreach ($p in $pending) { Write-Detail $p.Trim() }
-                if (-not (Confirm-Action -Prompt "Apply the migration(s) above to $($cfg.ProjectRef)?" -AutoApprove:$AutoApprove)) {
-                    Add-Result $results 'SKIP' 'migrations' 'operator declined'
-                    [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
-                    exit (Get-ExitCode Aborted)
+            if ($historyDiverged -or $MigrationMode -eq 'Verify') {
+                if ($historyDiverged) {
+                    Add-Result $results 'WARN' 'migration history diverged (known)' `
+                        'local files are date-prefixed, remote history is timestamped - db push is not usable here'
+                    Write-Detail 'Falling back to direct schema verification, which asserts more than push would.'
+                    Write-Detail 'Background and the reconciliation route: supabase/migrations/README.md'
                 }
-                $push = Invoke-Native -FilePath 'supabase' -Arguments @('db','push','--linked') -AllowFailure
-                if ($push.ExitCode -eq 0) { Add-Result $results 'PASS' 'migrations applied' "$($pending.Count) migration(s)" }
-                else {
-                    Add-Result $results 'FAIL' 'migration apply' "exit $($push.ExitCode) - schema may be partially applied; inspect before retrying"
-                    [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
-                    exit (Get-ExitCode Failure)
-                }
-            }
 
-            # ── 6. Verify the schema actually landed ────────────────────────
-            # DEPLOY.md section 3: confirm before shipping dependent code.
-            Write-Step 'Verify migrations landed'
-            $list = Invoke-Native -FilePath 'supabase' -Arguments @('migration','list','--linked') -AllowFailure -Quiet
-            if ($list.ExitCode -eq 0) {
-                $stillPending = @($list.Output -split "`r?`n" |
-                    Where-Object { $_ -match '^\s*\d{14}\s*\|\s*$' -or $_ -match '\|\s*$' -and $_ -match '\d{14}' })
                 if ($DryRun) {
-                    Add-Result $results 'SKIP' 'schema parity' '-DryRun'
-                } elseif ($stillPending.Count -eq 0) {
-                    Add-Result $results 'PASS' 'schema parity' 'local and remote migration histories agree'
+                    Add-Result $results 'SKIP' 'schema verification' '-DryRun'
+                } elseif (-not $cfg.DbUrl) {
+                    Add-Result $results 'SKIP' 'schema verification' `
+                        'SUPABASE_DB_URL not set - cannot confirm the schema. Set it, or run scripts/verify-security-sql.sql in the SQL Editor.'
+                } elseif (-not (Test-CommandExists 'psql')) {
+                    Add-Result $results 'SKIP' 'schema verification' `
+                        'psql not installed - run scripts/verify-security-sql.sql in the Supabase SQL Editor instead.'
                 } else {
-                    Add-Result $results 'WARN' 'schema parity' "$($stillPending.Count) row(s) look unapplied - review 'supabase migration list --linked'"
-                }
-            } else {
-                Add-Result $results 'SKIP' 'schema parity' 'migration list unavailable'
-            }
-
-            if ($cfg.DbUrl -and (Test-CommandExists 'psql') -and -not $DryRun) {
-                $sqlFile = Join-Path $repoRoot 'scripts/verify-security-sql.sql'
-                if (Test-Path -LiteralPath $sqlFile) {
-                    $sec = Invoke-Native -FilePath 'psql' -Arguments @($cfg.DbUrl,'-X','-q','-f',$sqlFile) -AllowFailure
-                    if ($sec.ExitCode -ne 0) {
-                        Add-Result $results 'WARN' 'security SQL checks' "psql exited $($sec.ExitCode)"
-                    } elseif ($sec.Output -match '(?m)^\s*FAIL') {
-                        Add-Result $results 'FAIL' 'security SQL checks' 'a database-layer control is not in force - see output above'
-                        [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
-                        exit (Get-ExitCode Failure)
+                    $sqlFile = Join-Path $repoRoot 'scripts/verify-security-sql.sql'
+                    if (-not (Test-Path -LiteralPath $sqlFile)) {
+                        Add-Result $results 'SKIP' 'schema verification' 'scripts/verify-security-sql.sql not found'
                     } else {
-                        Add-Result $results 'PASS' 'security SQL checks' 'SEC-01 / SEC-04 / AUTHZ-01 in force'
+                        $sec = Invoke-Native -FilePath 'psql' -Arguments @($cfg.DbUrl,'-X','-q','-f',$sqlFile) -AllowFailure
+                        if ($sec.ExitCode -ne 0) {
+                            Add-Result $results 'FAIL' 'schema verification' "psql exited $($sec.ExitCode) - could not reach the database"
+                            [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
+                            exit (Get-ExitCode Failure)
+                        } elseif ($sec.Output -match '(?m)^\s*FAIL') {
+                            Add-Result $results 'FAIL' 'schema verification' `
+                                'a required database control is NOT in force - see the FAIL rows above'
+                            [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
+                            exit (Get-ExitCode Failure)
+                        } elseif ($sec.Output -match '(?m)^\s*PASS') {
+                            Add-Result $results 'PASS' 'schema verification' 'SEC-01, SEC-04, AUTHZ-01 and the RLS baseline are in force'
+                            $migrationsVerified = $true
+                        } else {
+                            Add-Result $results 'SKIP' 'schema verification' 'query returned no verdict rows'
+                        }
                     }
                 }
-            } else {
-                Add-Result $results 'SKIP' 'security SQL checks' 'needs SUPABASE_DB_URL and psql'
+            }
+            elseif ($dry.ExitCode -ne 0) {
+                Add-Result $results 'FAIL' 'migration dry-run' "exit $($dry.ExitCode)"
+                [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
+                exit (Get-ExitCode Failure)
+            }
+            else {
+                # Histories correspond - the normal CLI path is usable.
+                $pending = @($dry.Output -split "`r?`n" | Where-Object { $_ -match '^\s*\d{14}|\.sql\s*$' })
+                if (-not $pending.Count -and $dry.Output -match 'up to date|no migrations|nothing to') {
+                    Add-Result $results 'PASS' 'migrations already current' 'nothing to apply'
+                    $migrationsVerified = $true
+                } elseif ($DryRun) {
+                    Add-Result $results 'SKIP' 'migrations (dry run)' "$($pending.Count) pending; -DryRun makes no change"
+                } else {
+                    Write-Warn 'Migrations are irreversible in production (DEPLOY.md section 7: forward-fix only).'
+                    foreach ($p in $pending) { Write-Detail $p.Trim() }
+                    if (-not (Confirm-Action -Prompt "Apply the migration(s) above to $($cfg.ProjectRef)?" -AutoApprove:$AutoApprove)) {
+                        Add-Result $results 'SKIP' 'migrations' 'operator declined'
+                        [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
+                        exit (Get-ExitCode Aborted)
+                    }
+                    $push = Invoke-Native -FilePath 'supabase' -Arguments @('db','push','--linked') -AllowFailure
+                    if ($push.ExitCode -eq 0) {
+                        Add-Result $results 'PASS' 'migrations applied' "$($pending.Count) migration(s)"
+                        $migrationsVerified = $true
+                    } else {
+                        Add-Result $results 'FAIL' 'migration apply' "exit $($push.ExitCode) - schema may be partially applied; inspect before retrying"
+                        [void](Write-FinalReport -Results $results -Title 'DEPLOYMENT REPORT')
+                        exit (Get-ExitCode Failure)
+                    }
+                }
             }
         }
 

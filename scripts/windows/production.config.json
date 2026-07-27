@@ -27,7 +27,7 @@
 
   "AllowedOrigins": [],
 
-  "DeployBranch": "claude/enterprise-security-hardening-xdhqfi",
+  "DeployBranch": "main",
 
   "FrozenFiles": [
     "regenerate-reports.js",

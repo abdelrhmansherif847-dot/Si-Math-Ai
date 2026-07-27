@@ -550,7 +550,7 @@ Three defence-in-depth items, none currently exploitable:
    (476 rows) and `mig_b1_map` have RLS on but no policies — they return nothing
    by accident rather than by design.
 
-**Files:** `supabase/migrations/PENDING_20260727_sec08_rpc_grant_hygiene.sql`
+**Files:** `supabase/migrations-pending/20260727_sec08_rpc_grant_hygiene.sql`
 
 > **Correction made during this audit.** An earlier draft of this migration
 > revoked `EXECUTE` on `consume_credits` from `authenticated`. That would have
@@ -1084,7 +1084,7 @@ retrieval source, including RAG over student-supplied documents.
 - [ ] Confirm backup tier; enable PITR
 - [ ] Cloudflare + WAF rules
 - [ ] Turnstile on auth pages
-- [ ] Approve SEC-08 migration
+- [ ] Approve SEC-08 migration (in `supabase/migrations-pending/`)
 - [ ] MFA for admin accounts
 - [ ] `is_admin` write tripwire
 - [ ] XP/streak writes via RPC (SEC-09)
@@ -1099,7 +1099,8 @@ retrieval source, including RAG over student-supplied documents.
 |------|--------|
 | `supabase/migrations/20260727_profiles_column_privilege_hardening.sql` | **Applied.** SEC-01 |
 | `supabase/migrations/20260727_sec04_knowledge_base_write_lockdown.sql` | **Ready — NOT applied.** SEC-04 |
-| `supabase/migrations/PENDING_20260727_sec08_rpc_grant_hygiene.sql` | Staged. SEC-08 |
+| `supabase/migrations-pending/20260727_sec08_rpc_grant_hygiene.sql` | Staged. SEC-08 |
+| `supabase/migrations/README.md` | **New.** Why `db push` cannot work here |
 | `supabase/functions/ai-tutor/index.ts` | v87 → v89: admission control, SEC-02, SEC-04 defence |
 | `vercel.json` | SEC-03 headers + CSP |
 | `manual-payment.html` | SEC-05 upload validation |

@@ -101,7 +101,27 @@ Nine steps, stopping at the first failure:
 9. Hand-off to `verify-production.ps1`
 
 Useful switches: `-SkipTests`, `-SkipMigrations`, `-MigrationsOnly`,
-`-AllowFrozenChanges`.
+`-AllowFrozenChanges`, `-MigrationMode`.
+
+**On step 5 and `-MigrationMode`.** `supabase db push` does not work on this
+project and never has: local migration files are 8-digit date prefixes while the
+remote history table holds 14-digit timestamps, so the two sets are disjoint and
+the CLI reports *"Remote migration versions not found in local migrations
+directory"*. See `supabase/migrations/README.md` for the full explanation and
+the reconciliation route.
+
+`-MigrationMode Auto` (the default) detects that condition and asserts the
+schema directly with `scripts/verify-security-sql.sql` instead. That is not a
+weaker check — push compares filenames against a history table, while
+verification reads `information_schema` and `pg_policies` and confirms the
+controls are actually in force. It is what caught the silent column-`REVOKE`
+no-op behind SEC-01.
+
+It is also not a bypass: if the schema check cannot run (no `SUPABASE_DB_URL`,
+no `psql`) the step reports `SKIP` and the deployment result becomes
+`INCONCLUSIVE`, which blocks the release exactly as a failure would. Use
+`-MigrationMode Push` to require the CLI path once a `supabase db pull`
+reconciliation has made it viable.
 
 ### Verify
 
