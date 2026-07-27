@@ -11,6 +11,7 @@
 <script src="taxonomy.js"></script>
 <script src="taxonomy-compat.js"></script>
 <script src="assets/streak.js"></script>
+<script src="assets/exam-days.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -517,8 +518,16 @@ async function deviceGuard(sb, userId) {
     var subParts = ['Rank: <span class="hl">' + rank.icon + ' ' + rank.name + '</span>'];
     if (profile.exam_type) subParts.push('Preparing for <span class="hl">' + esc(profile.exam_type) + '</span>');
     if (profile.exam_date){
-      var daysLeft = Math.ceil((new Date(profile.exam_date) - Date.now()) / 86400000);
-      if (daysLeft > 0) subParts.push('<span class="hl">' + daysLeft + ' days</span> to exam');
+      /* assets/exam-days.js — single source of truth. The old formula measured
+         from Date.now() to a UTC-midnight instant, so the answer changed with
+         the time of day: the same student could read "1 day" in the afternoon
+         and "2 days" just after midnight, for an unchanged exam date. */
+      var daysLeft = window.examDaysRemaining ? window.examDaysRemaining(profile.exam_date) : null;
+      if (daysLeft != null && daysLeft > 0) {
+        subParts.push('<span class="hl">' + daysLeft + (daysLeft === 1 ? ' day' : ' days') + '</span> to exam');
+      } else if (daysLeft === 0) {
+        subParts.push('<span class="hl">Exam is today</span>');
+      }
     }
     heroSub.innerHTML = subParts.join(' &middot; ');
 

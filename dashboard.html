@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/streak.js"></script>
+<script src="assets/exam-days.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════
    DESIGN TOKENS — Si Math AI (unchanged brand)
@@ -1689,10 +1690,20 @@ async function loadDashboard() {
   var daysRemaining = 0;
   var examDateStr = 'Not set';
   if (prof.exam_date) {
-    var examDate = new Date(prof.exam_date);
-    var today0 = new Date(); today0.setHours(0,0,0,0);
-    daysRemaining = Math.max(0, Math.ceil((examDate - today0) / 86400000));
-    examDateStr = examDate.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
+    /* Countdown comes from assets/exam-days.js — the single source of truth.
+       The old inline formula subtracted a UTC-midnight instant (how JS parses
+       the 'YYYY-MM-DD' DATE column) from a LOCAL midnight, and Math.ceil
+       rounded the leftover UTC offset up to a whole day. In Cairo it read +1
+       every single day, so a student whose exam was TODAY saw "1 day left"
+       while Zero correctly said 0. */
+    daysRemaining = (window.examDaysRemainingClamped
+      ? window.examDaysRemainingClamped(prof.exam_date)
+      : 0) || 0;
+    /* Render the label from the date parts, not from a parsed instant, so the
+       displayed date cannot slip a day in a behind-UTC timezone either. */
+    var _ed = String(prof.exam_date).slice(0,10).split('-');
+    var examDateObj = new Date(+_ed[0], +_ed[1]-1, +_ed[2]);
+    examDateStr = examDateObj.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
   }
 
   /* ── Derived: latest exam score ── */
