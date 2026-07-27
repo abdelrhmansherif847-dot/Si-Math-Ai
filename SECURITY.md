@@ -957,6 +957,48 @@ Ordered by value per unit of effort.
 
 ---
 
+## 8a. Production verification suite
+
+One command runs every layer and prints a single verdict:
+
+```bash
+PROD_ORIGIN="https://<prod-domain>" \
+SUPABASE_PROJECT_REF="igvkyxkmjnkzscqgommj" \
+EXPECTED_VERSION="v89" \
+SUPABASE_DB_URL="postgresql://..." \
+SUPABASE_TEST_JWT="eyJ..." \
+SUPABASE_ANON_KEY="sb_publishable_..." \
+  ./scripts/verify-production-security.sh
+```
+
+| Layer | Verifies | Script |
+|---|---|---|
+| 1 | Repo suites + validators (offline) | `tests/run-all.mjs` |
+| 2 | CDN pins re-verified against the npm registry (SEC-07) | `pin-cdn-sri.sh --check` |
+| 3 | SEC-01 / SEC-04 / AUTHZ-01 privileges, policies, RLS baseline | `verify-security-sql.sql` |
+| 4 | Live CSP + security headers (SEC-03) | `verify-security-headers.sh` |
+| 5 | Live CORS origin enforcement (SEC-03, SEC-11) | `verify-cors.sh` |
+| 6 | Deployed `ai-tutor` version + auth gate + smoke test | `smoke-test-ai-tutor.sh` |
+
+**Exit codes: `0` passed · `1` a layer FAILED · `2` INCONCLUSIVE.**
+
+The distinction between `1` and `2` is deliberate and load-bearing. A layer
+that cannot run — no `psql`, no `PROD_ORIGIN`, an unreachable endpoint — is
+reported as **SKIPPED**, never as a pass and never as a failure. "I could not
+reach it" and "it is broken" are different claims, and a verification report
+that conflates them is worse than no report: one produces a false alarm, the
+other produces false confidence. Each individual script follows the same rule,
+so `verify-cors.sh` against an unreachable host exits 2, not 0.
+
+Layer 3 is the one that catches the SEC-01 class of failure. It reads
+`information_schema.column_privileges` and `pg_policies` directly rather than
+trusting that a migration reported success — which is exactly how the silent
+column-REVOKE no-op was found. If `psql` is unavailable, paste
+`scripts/verify-security-sql.sql` into the Dashboard SQL Editor; every row must
+read `PASS`.
+
+---
+
 ## 9. Production readiness assessment
 
 **Verdict: approved for production release, conditional on items 1–3 of §8.**
@@ -1067,6 +1109,9 @@ retrieval source, including RAG over student-supplied documents.
 | 19 × `*.html` | SEC-07 25 CDN tags pinned with verified SRI |
 | `scripts/pin-cdn-sri.sh` | **New.** SEC-07 registry-based hash verifier |
 | `scripts/verify-cors.sh` | **New.** Live origin verification |
+| `scripts/verify-production-security.sh` | **New.** 6-layer verification orchestrator |
+| `scripts/verify-security-headers.sh` | **New.** Live CSP + header verification |
+| `scripts/verify-security-sql.sql` | **New.** DB-layer control verification |
 | `scripts/validate-ai-tutor-source.sh` | Size bound 190 → 210 KB |
 | `tests/edge-security.test.mjs` | **New.** 76 assertions |
 | `tests/repo-integrity.test.mjs` | SEC-07 offline pin gate |
