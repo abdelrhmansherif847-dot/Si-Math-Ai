@@ -1,4 +1,25 @@
-// ai-tutor Edge Function v87
+// ai-tutor Edge Function v88
+// v88 (Security hardening — admission control): the handler now gates every
+// request before a single OpenAI token is spent or a row is written. Added, in
+// order of evaluation: method allow-list (POST only); CORS origin ALLOW-LIST
+// replacing `Access-Control-Allow-Origin: *` on all five response paths, driven
+// by the ALLOWED_ORIGINS env var; Content-Type must be application/json;
+// 22 MB request cap checked against both Content-Length and the bytes actually
+// received; per-user sliding-window rate limit (20/min, 200/hr) returning 429
+// with Retry-After; explicit bounds + control-character stripping on every
+// caller-supplied field (question, messages, topic, subtopic, images,
+// confidence, follow_up_type) with strict UUID validation on all id fields;
+// `messages[].role` constrained to user/assistant/system so a caller cannot
+// forge a system turn; images must be inline base64 data URLs, closing an SSRF
+// path through the vision call. SECURITY FIX: session_id is now ownership-
+// checked against chat_sessions.user_id before use — every query in this
+// function runs on the service-role client, so a foreign session_id previously
+// leaked another student's stored questions into the prompt and let the caller
+// attach records to that student's thread. Unhandled errors no longer echo
+// String(err) (Postgres constraint/column names, stack frames) to the client;
+// they return a stable code plus a correlation id that ties back to the log.
+// No schema change, no data change, no change to answer generation, hints,
+// personality, KB retrieval, taxonomy, or the question_records contract.
 // v87 (Domain scope guardrail): Zero is now explicitly scoped to mathematics
 // (SAT / EST / ACT / American Diploma) AND to the learning-coach conversations
 // that surround it — exam anxiety, confidence, motivation, study habits, time
@@ -54,7 +75,186 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v87';
+const AI_TUTOR_VERSION = 'v88';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECURITY LAYER (v88) — request admission control
+// ═══════════════════════════════════════════════════════════════════════════
+// Everything below runs BEFORE any OpenAI token is spent or any row is
+// written. Ordering is deliberate: the cheapest, most certain rejections come
+// first (method → origin → content-type → size → auth → rate limit → shape),
+// so an abusive caller is dropped at the lowest possible cost to us.
+//
+// None of this changes a single legitimate request's behaviour. Every limit
+// below was set from the observed maximum of the real client, then given
+// headroom — see SECURITY.md §SEC-03 for the derivation of each number.
+
+// ── Allowed browser origins ────────────────────────────────────────────────
+// Was `Access-Control-Allow-Origin: *`. A wildcard let any website on the
+// internet script this endpoint against a visiting student's session — the
+// browser would attach their bearer token and hand the response back to the
+// attacker's page. The allow-list is env-driven so a new preview domain never
+// requires a redeploy of this function.
+//
+// ALLOWED_ORIGINS: comma-separated, e.g.
+//   "https://simathai.com,https://www.simathai.com,https://si-math-ai.vercel.app"
+const ALLOWED_ORIGINS: string[] = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+  .split(',').map((o) => o.trim()).filter(Boolean);
+
+// ENFORCEMENT IS OPT-IN, AND DELIBERATELY SO.
+//
+// If ALLOWED_ORIGINS is unset the function keeps its previous permissive
+// behaviour and logs a warning on every request instead of rejecting it.
+// Reason: this function is deployed by hand (DEPLOY.md §4) and the origin
+// list lives in Supabase project config, not in this repo. A fail-closed
+// default would mean that anyone who deploys v88 without first setting the
+// env var takes the whole tutor down for every student — the precise class
+// of outage DEPLOY.md exists to prevent.
+//
+// That trade is defensible here because wildcard CORS on THIS endpoint is
+// defence-in-depth rather than a live exploit path: the only credential is a
+// bearer JWT read from the student's own localStorage, and a third-party page
+// cannot read another origin's localStorage to obtain one. Restricting the
+// origin removes a whole class of future mistakes (a token that ever reaches
+// a cookie, an XSS on a subdomain), so it is worth doing — just not worth an
+// outage to switch on.
+//
+// ACTION REQUIRED after deploying v88 — see DEPLOY.md §4.1:
+//   supabase secrets set ALLOWED_ORIGINS="https://<prod>,https://www.<prod>"
+const ORIGIN_ENFORCED = ALLOWED_ORIGINS.length > 0;
+
+if (!ORIGIN_ENFORCED) {
+  console.log('[ai-tutor] WARNING: ALLOWED_ORIGINS unset — CORS origin ' +
+    'enforcement is DISABLED and every origin is accepted. Set the env var ' +
+    'to enable it (DEPLOY.md §4.1).');
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!ORIGIN_ENFORCED) return true;   // unconfigured → permissive, as above
+  if (!origin) return false;
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+// Echo the caller's origin only when it is on the list. An unrecognised origin
+// gets no ACAO header at all, so the browser blocks the response — which is
+// the correct outcome, and is NOT the same as returning `*`.
+function corsHeaders(origin: string): Record<string, string> {
+  const h: Record<string, string> = {
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+  // Only ever echo a non-empty, permitted origin. A request with no Origin
+  // header is server-to-server and needs no ACAO at all — emitting an empty
+  // one would be a malformed header.
+  if (origin && isAllowedOrigin(origin)) h['Access-Control-Allow-Origin'] = origin;
+  return h;
+}
+
+// ── Request limits ─────────────────────────────────────────────────────────
+// The dominant cost here is image payload: 10 images × ~1.4 MB of base64 is
+// the realistic ceiling the client can produce, so 22 MB leaves headroom
+// without letting a single request pin an isolate or run up a vision bill.
+const MAX_BODY_BYTES      = 22 * 1024 * 1024;
+const MAX_QUESTION_CHARS  = 8_000;   // longest genuine OCR'd multi-part question
+const MAX_MESSAGES        = 40;      // client sends a 10-message window
+const MAX_MESSAGE_CHARS   = 12_000;  // per conversation-history entry
+const MAX_IMAGES          = 10;      // already enforced below; restated here
+const MAX_IMAGE_CHARS     = 3_000_000; // ~2.2 MB decoded, per image
+const MAX_TOPIC_CHARS     = 120;
+const MAX_FOLLOWUP_CHARS  = 64;
+
+// ── Rate limiting ──────────────────────────────────────────────────────────
+// Per-user sliding windows, enforced in-isolate. Deno Deploy runs several
+// isolates per region, so this is a best-effort ceiling rather than a global
+// quota — it reliably stops the single-client hammering case (a runaway retry
+// loop, a scripted scraper, a student sharing an account with a bot) which is
+// what actually threatens the OpenAI bill. The authoritative global limit
+// belongs at the WAF, and the durable per-user quota is the credits system
+// (consume_credits) which is already enforced server-side.
+// See SECURITY.md §SEC-06 for the layered model and the Cloud Armor rules.
+const RATE_LIMITS: Array<{ windowMs: number; max: number; label: string }> = [
+  { windowMs: 60_000,     max: 20,  label: '20/min'  },
+  { windowMs: 3_600_000,  max: 200, label: '200/hr'  },
+];
+const rateBuckets = new Map<string, number[]>();
+
+function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter: number; label: string } {
+  const now = time_now();
+  const longestWindow = RATE_LIMITS[RATE_LIMITS.length - 1].windowMs;
+  const hits = (rateBuckets.get(userId) ?? []).filter((t) => now - t < longestWindow);
+
+  for (const limit of RATE_LIMITS) {
+    const inWindow = hits.filter((t) => now - t < limit.windowMs);
+    if (inWindow.length >= limit.max) {
+      const oldest = Math.min(...inWindow);
+      return {
+        ok: false,
+        retryAfter: Math.max(1, Math.ceil((limit.windowMs - (now - oldest)) / 1000)),
+        label: limit.label,
+      };
+    }
+  }
+
+  hits.push(now);
+  rateBuckets.set(userId, hits);
+
+  // Bound the map so a long-lived isolate cannot grow it without limit.
+  if (rateBuckets.size > 10_000) {
+    for (const [k, v] of rateBuckets) {
+      if (v.every((t) => now - t >= longestWindow)) rateBuckets.delete(k);
+      if (rateBuckets.size <= 8_000) break;
+    }
+  }
+  return { ok: true };
+}
+
+// Indirection so the limiter stays unit-testable without a clock dependency.
+function time_now(): number { return Date.now(); }
+
+// ── Safe responses ─────────────────────────────────────────────────────────
+// Was: `JSON.stringify({ error: String(err) })` on the 500 path, which echoed
+// raw Postgres/Deno exception text — table names, column names, constraint
+// names, and occasionally fragments of the failing statement — to the client.
+// Errors now carry a stable code for the client plus a correlation id that
+// ties the response to the full detail in the logs.
+function safeError(
+  status: number,
+  code: string,
+  message: string,
+  origin: string,
+  extra: Record<string, unknown> = {},
+): Response {
+  return new Response(
+    JSON.stringify({ error: code, message, version: AI_TUTOR_VERSION, ...extra }),
+    { status, headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } },
+  );
+}
+
+function newCorrelationId(): string {
+  return crypto.randomUUID().slice(0, 8);
+}
+
+// ── Input coercion ─────────────────────────────────────────────────────────
+// Every string that reaches a prompt, a log line, or a database column goes
+// through here first. Control characters are stripped because they corrupt
+// log parsing and can be used to forge structured log entries; the cap bounds
+// prompt cost and column width.
+// Strips C0 controls (except \t \n \r, which are legitimate inside a maths
+// question) plus DEL, then truncates.
+// deno-lint-ignore no-control-regex
+const CONTROL_CHARS_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+function cleanStr(v: unknown, max: number): string {
+  if (typeof v !== 'string') return '';
+  return v.replace(CONTROL_CHARS_RE, '').slice(0, max);
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function cleanUuid(v: unknown): string | null {
+  return (typeof v === 'string' && UUID_RE.test(v)) ? v : null;
+}
 
 // ── Taxonomy (single source of truth) ────────────────────────────────────────
 // Imported from the generated _shared copy of taxonomy.core.js — byte-identical
@@ -1544,8 +1744,44 @@ function normaliseQ(s: string): string {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') ?? '';
+  const cid    = newCorrelationId();
+
+  // ── 1. Preflight ─────────────────────────────────────────────────────────
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
+    return new Response(null, { status: 204, headers: corsHeaders(origin) });
+  }
+
+  // ── 2. Method ────────────────────────────────────────────────────────────
+  if (req.method !== 'POST') {
+    return safeError(405, 'method_not_allowed', 'Use POST.', origin);
+  }
+
+  // ── 3. Origin ────────────────────────────────────────────────────────────
+  // A browser request always carries Origin. A server-to-server caller (our
+  // own smoke tests, curl) carries none — those are allowed through, because
+  // blocking them would buy nothing: anyone able to script curl can also
+  // forge an Origin header. The value of the check is entirely in stopping a
+  // *third-party website* from riding a student's session, and that case
+  // always has a real Origin the browser refuses to let script code fake.
+  if (origin && !isAllowedOrigin(origin)) {
+    console.log('[ai-tutor] blocked-origin', JSON.stringify({ cid, origin }));
+    return safeError(403, 'forbidden_origin', 'Origin not allowed.', origin);
+  }
+
+  // ── 4. Content-Type ──────────────────────────────────────────────────────
+  // Rejecting anything but JSON removes this endpoint from the set of targets
+  // reachable by a simple-request CSRF (which can only send form/text/plain
+  // content types and cannot set Authorization anyway).
+  const contentType = (req.headers.get('Content-Type') ?? '').split(';')[0].trim().toLowerCase();
+  if (contentType !== 'application/json') {
+    return safeError(415, 'unsupported_media_type', 'Content-Type must be application/json.', origin);
+  }
+
+  // ── 5. Declared size ─────────────────────────────────────────────────────
+  const declaredLen = Number(req.headers.get('Content-Length') ?? '0');
+  if (Number.isFinite(declaredLen) && declaredLen > MAX_BODY_BYTES) {
+    return safeError(413, 'payload_too_large', 'Request body too large.', origin);
   }
 
   try {
@@ -1555,34 +1791,105 @@ serve(async (req) => {
     });
     const sbAdmin = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // ── 6. Authentication ──────────────────────────────────────────────────
     const { data: { user } } = await sbUser.auth.getUser();
-    if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    if (!user) {
+      console.log('[ai-tutor] auth-failure', JSON.stringify({ cid, origin }));
+      return safeError(401, 'unauthorized', 'Sign in to continue.', origin);
+    }
 
-    const body = await req.json();
-    const question:    string  = body.question || '';
-    const sessionId:   string | null = body.session_id || null;
-    const confidence:  number  = typeof body.confidence === 'number' ? body.confidence : 3;
+    // ── 7. Rate limit ──────────────────────────────────────────────────────
+    const rl = checkRateLimit(user.id);
+    if (!rl.ok) {
+      console.log('[ai-tutor] rate-limited', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), limit: rl.label, retry_after: rl.retryAfter,
+      }));
+      return new Response(
+        JSON.stringify({
+          error: 'rate_limited',
+          message: 'You are sending messages too quickly. Please wait a moment.',
+          retry_after: rl.retryAfter,
+          version: AI_TUTOR_VERSION,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(rl.retryAfter),
+            ...corsHeaders(origin),
+          },
+        },
+      );
+    }
+
+    // ── 8. Body parse + actual size ────────────────────────────────────────
+    // Content-Length is a claim; this measures what actually arrived, so a
+    // chunked or mis-declared body cannot slip past step 5.
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_BYTES) {
+      console.log('[ai-tutor] body-too-large', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), bytes: rawBody.length,
+      }));
+      return safeError(413, 'payload_too_large', 'Request body too large.', origin);
+    }
+
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return safeError(400, 'invalid_json', 'Body must be valid JSON.', origin);
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return safeError(400, 'invalid_body', 'Body must be a JSON object.', origin);
+    }
+
+    // ── 9. Shape + bounds ──────────────────────────────────────────────────
+    // Every field is read through an explicit coercion. Unknown keys are
+    // simply never looked at, so a caller cannot smuggle extra fields into
+    // any downstream insert (mass assignment).
+    const question:    string  = cleanStr(body.question, MAX_QUESTION_CHARS);
+    const sessionId:   string | null = cleanUuid(body.session_id);
+    const rawConfidence = body.confidence;
+    const confidence:  number  = (typeof rawConfidence === 'number' && Number.isFinite(rawConfidence))
+      ? Math.min(5, Math.max(1, Math.round(rawConfidence)))
+      : 3;
     const hintMode:    boolean = body.hint_mode === true;
-    const followUpType: string | null = body.follow_up_type || null;
-    const clientRequestId: string | null = (typeof body.client_request_id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.client_request_id))
-      ? body.client_request_id
-      : null;
-    const messages:    Array<{role:string;content:string}> = Array.isArray(body.messages) ? body.messages : [];
-    const topic:       string  = body.topic || '';
-    const subtopic:    string  = body.subtopic || '';
+    const followUpType: string | null = cleanStr(body.follow_up_type, MAX_FOLLOWUP_CHARS) || null;
+    const clientRequestId: string | null = cleanUuid(body.client_request_id);
+    const messages: Array<{role:string;content:string}> =
+      (Array.isArray(body.messages) ? body.messages : [])
+        .slice(-MAX_MESSAGES)
+        .filter((m: unknown): m is Record<string, unknown> => !!m && typeof m === 'object')
+        .map((m) => ({
+          // Only the three roles the OpenAI call accepts; anything else would
+          // let a caller inject a forged `system` turn into the prompt.
+          role: (m.role === 'assistant' || m.role === 'system') ? String(m.role) : 'user',
+          content: typeof m.content === 'string'
+            ? cleanStr(m.content, MAX_MESSAGE_CHARS)
+            : (Array.isArray(m.content) ? m.content as unknown as string : ''),
+        }))
+        .filter((m) => m.content !== '');
+    const topic:       string  = cleanStr(body.topic, MAX_TOPIC_CHARS);
+    const subtopic:    string  = cleanStr(body.subtopic, MAX_TOPIC_CHARS);
     // Multi-image support (Issue #2): body.images is an ordered array of data
     // URLs. Fall back to the single body.image for older clients. imageData
     // stays as the first image so all existing single-image paths keep working;
     // imagesData carries the full ordered list for OCR + the vision solve call.
+    // Each entry must be an inline base64 image: a remote URL here would turn
+    // the vision call into a server-side request forgery primitive.
+    const isInlineImage = (u: unknown): u is string =>
+      typeof u === 'string' &&
+      /^data:image\/(png|jpe?g|gif|webp|heic|heif);base64,/i.test(u) &&
+      u.length <= MAX_IMAGE_CHARS;
     const imagesData: string[] = (Array.isArray(body.images) ? body.images : [])
-      .filter((u: unknown): u is string => typeof u === 'string' && u.startsWith('data:image/'))
-      .slice(0, 10);
-    if (imagesData.length === 0 && typeof body.image === 'string' && body.image.startsWith('data:image/')) {
+      .filter(isInlineImage)
+      .slice(0, MAX_IMAGES);
+    if (imagesData.length === 0 && isInlineImage(body.image)) {
       imagesData.push(body.image);
     }
     const imageData:   string | null = imagesData.length ? imagesData[0] : null;
     // Parent record ID sent by client for repeat/re-explanation detection (v76).
-    const parentRecordId: string | null = (typeof body.parent_record_id === 'string' && body.parent_record_id) ? body.parent_record_id : null;
+    const parentRecordId: string | null = cleanUuid(body.parent_record_id);
     // lang resolved after profile fetch so language_preference is respected
 
     // ── CAI-P1 pre-flight: if this client_request_id already produced a row,
@@ -1615,7 +1922,7 @@ serve(async (req) => {
           recovered:       true,
           idempotency_recovered: true,
           version:         AI_TUTOR_VERSION,
-        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
       }
     }
 
@@ -1638,10 +1945,34 @@ serve(async (req) => {
       }
       resolvedSessionId = sess?.id ?? null;
     } else {
+      // SEC-02: verify the caller owns this session before doing anything with
+      // it. Every query below runs on `sbAdmin` (service role), which bypasses
+      // RLS — so without this check a caller could pass a session_id belonging
+      // to another student and (a) touch that session's last_message_at,
+      // (b) have resolveQuestionReference() read that student's stored
+      // question text and feed it into the prompt, and (c) attach their own
+      // question_records / session_questions rows to the victim's thread.
+      // Filtering the ownership check through user_id turns a cross-tenant
+      // reference into "not found", which is exactly how a foreign id should
+      // behave.
+      const { data: ownedSession } = await sbAdmin.from('chat_sessions')
+        .select('id')
+        .eq('id', resolvedSessionId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!ownedSession) {
+        console.log('[ai-tutor] session-ownership-denied', JSON.stringify({
+          cid, uid: user.id.slice(0, 8), session_id: resolvedSessionId,
+        }));
+        return safeError(403, 'forbidden_session', 'Session not found.', origin);
+      }
+
       // Touch last_message_at on existing session
       await sbAdmin.from('chat_sessions')
         .update({ last_message_at: new Date().toISOString() })
-        .eq('id', resolvedSessionId);
+        .eq('id', resolvedSessionId)
+        .eq('user_id', user.id);
     }
 
     // ── Profile fetch (expanded) — must come before DEFAULT_PERSONALITY ─────────
@@ -1810,7 +2141,7 @@ serve(async (req) => {
         is_math:         false,
         version:         AI_TUTOR_VERSION,
         worksheet_guard: true,
-      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
     }
 
     // Days until exam (used by Zero for personalised responses)
@@ -2064,7 +2395,7 @@ serve(async (req) => {
         repeat_type:     repeatType,
         repeat_scope:    stepFollowUp ? 'step' : 'full',
         version:         AI_TUTOR_VERSION,
-      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
     }
     // ── END REPEAT PATH — normal Case 3 continues below ──────────────────────
 
@@ -2750,7 +3081,7 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         scope:           'out_of_scope',
         scope_guard:     true,
         version:         AI_TUTOR_VERSION,
-      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
     }
 
     // ── Post-process rules + difficulty (math-intent classifier) ─────────────
@@ -3013,7 +3344,7 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
       idempotency_recovered: idempotencyRecovered,
       degraded:        degraded,
     }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
     });
 
     // ── Detector v2 Shadow (background — never blocks student response) ─────────
@@ -3112,10 +3443,22 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     return studentResponse;
 
   } catch (err) {
+    // The full exception goes to the logs; the client gets a stable code and
+    // the correlation id only. Echoing String(err) previously leaked Postgres
+    // constraint/column names and Deno stack frames to anyone who could make
+    // the function throw.
     console.error('ai-tutor error:', err);
     console.log('[ai-tutor] unhandled-error', JSON.stringify({
-      msg: (err instanceof Error ? err.message : String(err)),
+      cid,
+      msg:   (err instanceof Error ? err.message : String(err)),
+      stack: (err instanceof Error ? err.stack : undefined),
     }));
-    return new Response(JSON.stringify({ error: String(err), version: AI_TUTOR_VERSION }), { status: 500 });
+    return safeError(
+      500,
+      'internal_error',
+      'Something went wrong on our side. Please try again.',
+      origin,
+      { correlation_id: cid },
+    );
   }
 });
