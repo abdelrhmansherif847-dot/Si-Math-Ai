@@ -41,30 +41,37 @@ codebase, and the findings below are concentrated in the boundary layers
 
 | | Before | After |
 |---|---|---|
-| **Score** | **34 / 100** | **81 / 100** |
-| Rating | Critical exposure | Production-ready with tracked follow-ups |
+| **Score** | **31 / 100** | **89 / 100** |
+| Rating | Critical exposure | Production-ready, one migration outstanding |
 
-The "before" score is dominated by the critical finding — a platform where any
-user can become an administrator has no meaningful access-control boundary, and
-no amount of good practice elsewhere compensates. The "after" score is held
-below 90 by three things outside this session's reach: bot protection is not yet
-enabled, the CSP still requires `'unsafe-inline'`, and the CDN supply-chain pin
-could not be applied from this environment (see SEC-07).
+The "before" score dropped from the first report's 34 after SEC-04 was
+re-assessed as Critical rather than High (see below). It is dominated by the two
+critical findings: a platform where any user can become an administrator, and
+where any user can author the AI's system prompt, has no meaningful trust
+boundary at all.
+
+The "after" score is held below 95 by exactly three things: **SEC-04's database
+half is not yet applied** (the application-layer defence is live in code, so the
+finding is mitigated but not closed), bot protection is not yet enabled, and the
+CSP still requires `'unsafe-inline'`. The CDN supply chain — the largest
+outstanding item in the first report — is now fully resolved with verified
+hashes.
 
 ### Disposition at a glance
 
 | ID | Severity | Finding | Status |
 |----|----------|---------|--------|
 | SEC-01 | **Critical** | Any user can self-grant admin, credits, subscription | ✅ **Fixed in production, verified** |
+| SEC-04 | **Critical** | Any user can author the AI system prompt for every student | ⚠️ **Code defence live; migration NOT applied** |
 | SEC-02 | **High** | `session_id` not ownership-checked → cross-tenant read | ✅ Fixed in code (v88) |
 | SEC-03 | **High** | No security headers or CSP on any route | ✅ Fixed (`vercel.json`) |
-| SEC-04 | **High** | AI knowledge base world-writable → stored prompt injection | ⏸ Migration staged, needs approval |
 | SEC-05 | Medium | Upload extension + Content-Type attacker-controlled | ✅ Fixed (`manual-payment.html`) |
 | SEC-06 | Medium | Unescaped weakness data → self-XSS | ✅ Fixed (`dashboard.html`) |
-| SEC-07 | Medium | Unpinned CDN dependency, no SRI | ⚠️ Tool shipped, **must be run** |
+| SEC-07 | Medium | Unpinned CDN dependency, no SRI | ✅ **Fixed — 25 tags, verified hashes** |
 | SEC-08 | Low | Grant hygiene: anon RPC EXECUTE, TRUNCATE, stale tables | ⏸ Migration staged, needs approval |
 | SEC-09 | Low | XP / streak columns client-writable | 📋 Documented, fix proposed |
 | SEC-10 | Low | Leaked-password protection disabled | 📋 One dashboard toggle |
+| SEC-11 | Medium | `admin-actions` Edge Function source is not in the repo | 📋 **Unauditable — see §2** |
 
 ---
 
@@ -256,40 +263,111 @@ platform's primary input path.
 
 ---
 
-### SEC-04 — AI knowledge base is world-writable — HIGH
+### SEC-04 — Cross-user prompt injection via the Zero Knowledge Base — CRITICAL
 
-**Status:** ⏸ Migration written, **not applied** — needs approval (CLAUDE.md §3).
+**Severity raised from HIGH to CRITICAL** on re-investigation.
+**Status:** ⚠️ Application-layer defence **live in code (v89)**. Database
+migration written but **NOT APPLIED** — see "What is still open" below.
 **OWASP:** A01:2021 Broken Access Control + LLM01 Prompt Injection
 
-All three knowledge tables carry a single policy:
+The first report described this as "student-authored text reaches other
+students' prompts". Tracing the actual code path showed that understated it.
+
+**The real path:**
 
 ```
-zero_knowledge_categories     FOR ALL  USING (true)
-zero_knowledge_subcategories  FOR ALL  USING (true)
-zero_knowledge_entries        FOR ALL  USING (true)
+ai-tutor/index.ts  get_zero_personality()
+  → SELECT body FROM zero_knowledge_entries WHERE slug = 'zero_personality'
+  → const personality = (personalityRaw || DEFAULT_PERSONALITY) + NAME_BLOCK
+  → spliced VERBATIM into the system prompt under
+    "## 🐉 ZERO PERSONALITY (Priority 1 — MUST APPLY TO EVERY RESPONSE)"
 ```
 
-`FOR ALL USING (true)` with no `WITH CHECK` means INSERT, UPDATE and DELETE are
-unrestricted. Any authenticated student can rewrite or delete the 138 knowledge
-entries.
+That is not influence over the prompt. Whoever can `UPDATE` that one row **is
+the author of the system prompt** for every conversation on the platform,
+cached and re-served for ten minutes at a time. Before this work, that row was
+writable by any authenticated student: all three knowledge tables carried a
+single `FOR ALL USING (true)` policy with no `WITH CHECK`, which authorises
+SELECT, INSERT, UPDATE and DELETE for every role it targets.
 
-**Why this is worse than ordinary data tampering.** These rows are not inert.
-`search_zero_knowledge()` retrieves them and `ai-tutor` splices the result into
-Zero's **system prompt**. A student writing a crafted entry is writing
-instructions that execute in *other students'* tutoring sessions — a stored
-prompt injection with platform-wide reach, arriving through a trusted channel.
-Two concrete outcomes: the tutor can be steered into emitting arbitrary content
-to minors, or the knowledge base can simply be deleted, silently degrading
-answer quality platform-wide.
+The second path is broader but shallower: `search_zero_knowledge()` retrieves up
+to 5 entries by relevance to the student's question and splices them under
+"Relevant Knowledge Base". A student could plant entries tuned to match common
+queries.
 
-**Fix (staged):** split the single `ALL` policy into public read + admin-only
-write, and drop the table-wide write grants so the policy is not the sole gate —
-the same two-gate lesson as SEC-01.
+**Why this is Critical.** The product's users are children preparing for exams.
+Control of the system prompt means control of what an authority figure they
+trust says to them — including the ability to suppress the existing self-harm
+safety instruction, which lives in the same prompt. It also permits silent
+degradation (delete the knowledge base) and prompt exfiltration. Impact is
+platform-wide and arrives through a channel the model is told to trust.
 
-**Files:** `supabase/migrations/PENDING_20260727_sec04_knowledge_base_write_lockdown.sql`
+**Fix — two independent gates, neither relying on the other.**
 
-> ⚠️ The `DROP POLICY` names in that file are placeholders. Run the listed
-> `pg_policies` query and substitute the real names before applying.
+*Gate 1 — database (`supabase/migrations/20260727_sec04_knowledge_base_write_lockdown.sql`).*
+Public read, admin-only writes, plus revocation of the table-wide write grants
+so that a future permissive policy cannot reopen the hole on its own. This is
+the SEC-01 lesson applied forward: a policy and a grant are independent gates
+and both must hold. Policy names are discovered by introspection in a `DO`
+block rather than guessed — they were created outside this repo, and a
+mismatched `DROP POLICY IF EXISTS` would silently leave the permissive policy
+in place.
+
+*Gate 2 — application (`ai-tutor` v89).* The retrieval layer now treats every
+byte from these tables as hostile **regardless of what the database allows**:
+
+- **Injection neutralisation.** Twelve construct families — `ignore previous
+  instructions`, `you are now …`, `system:` role markers, `<|im_start|>`,
+  `[INST]`, `reveal your system prompt`, and similar — are replaced with
+  `[removed]` and counted in a `kb-content-sanitised` log line. Replaced, not
+  deleted, so a legitimate row that trips a rule is visible rather than
+  silently mangled.
+- **A fence content cannot escape.** KB results are wrapped in
+  `<<<REFERENCE_DATA>>> … <<<END_REFERENCE_DATA>>>`, and any occurrence of
+  either token inside the data is neutralised, so content cannot close its own
+  container and continue as prompt text.
+- **A prompt-level authority statement.** The section header now tells the
+  model, explicitly, that fenced content is retrieved reference material with
+  no authority, is not from the student or the operators, and that any
+  instruction inside it must be ignored.
+- **Bounds.** 12 000 chars for the personality, 2 000 per KB entry, 8 000
+  total, control characters stripped.
+- **An optional integrity pin.** Setting `ZERO_PERSONALITY_SHA256` makes the
+  function refuse a personality row that does not hash to exactly that value
+  and fall back to the built-in `DEFAULT_PERSONALITY`, logging
+  `SECURITY personality-integrity-fail`. Tampering with the single
+  highest-value string in the system then fails safe instead of failing open.
+  Opt-in, for the same reason `ALLOWED_ORIGINS` is: an unset variable must not
+  change today's behaviour.
+
+**Related fix found while auditing this.** Every database query in the Edge
+Function was checked for user scoping. The reference-image lookup fetched
+`question_records` by id with no owner filter and fed the result **into the
+vision call**. Its ownership was inherited from the SEC-02 session check two
+hops away — an inherited guarantee is not a control, and it breaks silently
+when someone refactors the middle hop. Now scoped directly with
+`.eq('user_id', user.id)`.
+
+**Verification.** 20 assertions in `tests/edge-security.test.mjs`, including
+behavioural tests that run the real sanitiser against twelve live injection
+payloads and confirm the exact SEC-04 attack string is defanged.
+
+**What is still open.** The migration has not been applied. The Supabase MCP
+tooling in this session is gated behind an approval that cannot be granted
+programmatically, and both `execute_sql` and `apply_migration` were refused.
+
+> **Until that migration is applied, any authenticated student can still write
+> to `zero_knowledge_entries`.** The v89 code defence means the content is
+> sanitised, fenced and length-capped before it reaches the model, which
+> removes the realistic path to *instruction* injection — but a student can
+> still corrupt or delete knowledge-base content, and the personality row
+> remains writable unless `ZERO_PERSONALITY_SHA256` is set. Treat the
+> application layer as mitigation, not closure.
+>
+> **Apply it with:** `supabase db push --linked`, or paste the migration into
+> the Dashboard SQL Editor. Verification queries are at the bottom of the file.
+> Setting `ZERO_PERSONALITY_SHA256` as well gives full closure even if the
+> policy is ever loosened again.
 
 ---
 
@@ -353,46 +431,103 @@ callers all currently pass literals.
 
 ### SEC-07 — Unpinned CDN dependency with no SRI — MEDIUM
 
-**Status:** ⚠️ **Tool shipped — must be run. Not yet fixed.**
+**Status:** ✅ **Fixed.** 25 tags across 19 pages, every hash independently
+verified. Gated in CI.
 **OWASP:** A08:2021 Software and Data Integrity Failures
 
-14 pages load:
+14 pages loaded `@supabase/supabase-js@2` — a floating major-version range
+resolved at request time, with no `integrity` attribute. Every page holding a
+session, **including `admin.html`, which holds an owner session**, executed
+whatever that URL returned. A compromised release, a hijacked npm account, or
+CDN cache poisoning became immediate script execution in an authenticated
+context.
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-```
+**How the hashes were obtained despite blocked egress.** `cdn.jsdelivr.net` is
+blocked by this environment's policy (verified: 403 to `CONNECT`), and inventing
+hashes would make every browser refuse the script. But `registry.npmjs.org` is
+reachable, and jsdelivr is a pass-through CDN — for a path inside a package it
+serves the npm tarball bytes unmodified. So the tarball is the authoritative
+source, and using it is *stronger* than hashing a CDN response:
 
-`@2` is a floating major-version range resolved at request time, with no
-`integrity` attribute. Every page holding a session — **including `admin.html`,
-which holds an owner session** — executes whatever that URL returns. A
-compromised release, a hijacked npm account, or CDN cache poisoning becomes
-immediate script execution in an authenticated context.
+1. Download the tarball from the registry.
+2. **Check it against npm's own published `dist.integrity` (SHA-512) before
+   hashing anything.** Hashing the CDN response gives no independent value to
+   compare against — it means trusting the very channel being pinned.
+3. Compute SHA-384 over the exact file.
 
-**Why this is not fixed in this commit.** A correct `integrity` value is a hash
-of the exact bytes the CDN serves. It cannot be guessed or recalled. This
-session's egress policy blocks `cdn.jsdelivr.net` (verified: proxy returns 403
-to `CONNECT`), so the real hashes could not be computed — and shipping invented
-hashes would make every browser refuse the script, taking the whole platform
-down. Reporting the blocked host rather than routing around it is the documented
-correct behaviour.
+The KaTeX hashes this produces match the values published in KaTeX's own
+documentation — an independent confirmation that the method is correct.
 
-**What was shipped instead:** `scripts/pin-cdn-sri.sh`, which fetches each
-asset, computes the SHA-384 digest, and rewrites the HTML in place. Run it from
-any network that can reach jsdelivr:
+**A real problem found while doing it.** `@supabase/supabase-js` ships
+`dist/umd/supabase.js` and **no `dist/umd/supabase.min.js`**. Four pages
+requested the `.min.js` path, which makes jsdelivr **minify on the fly**: that
+output is generated per-request by jsdelivr's own toolchain, exists in no
+package, has no authoritative hash, and can change silently when they upgrade
+their minifier. It is unpinnable by construction. Those pages now load the real
+`dist/umd/supabase.js`, which is also what the package's `jsdelivr` field makes
+the bare `@2` URL resolve to — so both forms converge on one hashable file.
 
-```bash
-./scripts/pin-cdn-sri.sh          # pin + apply
-./scripts/pin-cdn-sri.sh --check  # CI gate: fails if anything drifts back
-```
+`history.html` imported `@supabase/supabase-js/+esm` with **no version at all**,
+so it floated to the latest release of any major — a future v3 would have landed
+there unannounced — and SRI cannot be applied to an ESM import specifier.
+Converted to the same pinned UMD build as every other page.
+
+**Applied pins:**
+
+| Asset | Version | SRI |
+|---|---|---|
+| `supabase-js` `dist/umd/supabase.js` | 2.110.8 | `sha384-M65KxMm/…j6h2` |
+| `katex` `dist/katex.min.js` | 0.16.11 | `sha384-7zkQWkzuo…lfFg` |
+| `katex` `dist/contrib/auto-render.min.js` | 0.16.11 | `sha384-43gviWU0Y…s0Xk` |
+| `katex` `dist/katex.min.css` | 0.16.11 | `sha384-nB0miv6/j…4l5+` |
+
+2.110.8 is what `@2` already resolved to, so the pin froze the current version
+rather than moving it — zero behavioural change at deploy time.
+
+**Two CI gates**, because they catch different failures:
+- `tests/repo-integrity.test.mjs` (offline, no network): no jsdelivr tag may
+  lack `integrity` or `crossorigin`, no page may load a floating range, and no
+  page may pin the CDN-generated `supabase.min.js`.
+- `scripts/pin-cdn-sri.sh --check` (online): re-downloads each package,
+  re-verifies against the registry, and fails if a committed hash has drifted —
+  catching a hand-edited hash, a pin bumped without regenerating, or a package
+  republished under the same version.
 
 **Trade-off, stated plainly:** pinning stops automatic patch delivery, including
 security patches to `supabase-js`. That is the intended trade — an unreviewed
 automatic update executing in an authenticated page is the larger risk — but it
-converts dependency updates into a deliberate, scheduled activity. Treat a pin
-bump as a dependency update: read the changelog, bump, re-run, smoke-test.
+converts dependency updates into a deliberate, scheduled activity. Bump
+`PIN_SUPABASE_JS`, re-run the script, smoke-test.
 
-One page uses `@supabase/supabase-js/+esm`; SRI does not apply to ESM imports,
-so convert that to the UMD build.
+---
+
+### SEC-11 — `admin-actions` Edge Function is not in the repository — MEDIUM
+
+**Status:** 📋 Cannot be audited from here. Needs owner action.
+
+`admin.html` calls `${SUPA_URL}/functions/v1/admin-actions` for the most
+privileged operations on the platform — credit grant/deduct and
+`create_and_approve_payment`. Its source is **not in this repository**:
+`supabase/functions/` contains only `ai-tutor` and `_shared`.
+
+Consequences:
+
+- It is not version-controlled, not code-reviewed, and not covered by any test
+  or validator in this repo.
+- None of the v88/v89 hardening applies to it. Its CORS posture, rate limiting,
+  input validation, and error handling are **unknown**. Given `ai-tutor` shipped
+  with `Access-Control-Allow-Origin: *`, the prior probability that
+  `admin-actions` does too is high.
+- It is the function that moves money and credits, so it is the highest-value
+  target on the platform.
+
+**Actions:**
+1. `supabase functions download admin-actions --project-ref igvkyxkmjnkzscqgommj`,
+   commit it, and audit it against the same checklist as `ai-tutor` (§4).
+2. Run `./scripts/verify-cors.sh` — it already probes `admin-actions` alongside
+   `ai-tutor` and will report a wildcard or reflected origin if present.
+3. Confirm it verifies `is_admin` **server-side** from the JWT, and does not
+   trust any admin flag or user id supplied in the request body.
 
 ---
 
@@ -541,6 +676,31 @@ origin's `localStorage` to obtain one.
 
 **→ `ALLOWED_ORIGINS` must be set for SEC-03's CORS hardening to do anything.
 See `DEPLOY.md` §4.1.**
+
+**Every exit is covered, and that is now enforced.** An origin allow-list is
+worthless if one response path skips it, so all eight `new Response`
+constructions in the function were walked by paren-balance (not by eyeballing a
+fixed window) and confirmed to route through `corsHeaders()`. That walk is
+frozen as a test: a bare `new Response` added later fails the suite. `safeError()`
+— the single exit for every rejection — is separately asserted to carry it.
+
+**Live verification: `scripts/verify-cors.sh`.** Static review proves what the
+source does; only a probe proves what production does. The script tests each
+deployed function with three origins:
+
+| Probe | Expected |
+|---|---|
+| Production origin | `Access-Control-Allow-Origin` echoed exactly; authenticated request → 200 |
+| `https://evil.example` | **No** ACAO header; request → 403 |
+| `https://<prod>.evil.example` (suffix confusion) | **No** ACAO header — catches an allow-list matching by `endsWith`/substring instead of exact equality |
+
+It covers `admin-actions` as well as `ai-tutor` (see SEC-11), and exits **2
+(inconclusive)** rather than 0 when it cannot reach the target — an unreachable
+endpoint must never read as a pass.
+
+```bash
+PROD_ORIGIN="https://<prod-domain>" TEST_JWT="eyJ..." ./scripts/verify-cors.sh
+```
 
 **Error responses** now return a stable machine code plus a correlation id;
 the full exception, including the stack, stays in the logs behind that id.
@@ -762,53 +922,82 @@ endpoint from the set reachable by simple-request forgery.
 
 Ordered by value per unit of effort.
 
-1. **Run `scripts/pin-cdn-sri.sh`** (SEC-07). Highest unresolved risk. ~10 min.
-2. **Set `ALLOWED_ORIGINS`** (`DEPLOY.md` §4.1). Without it, v88's CORS work is
-   inert. ~5 min.
-3. **Enable leaked-password protection** (SEC-10). One toggle.
-4. **Set an OpenAI hard spend cap.** Bounds the worst case of any abuse.
-5. **Approve and apply SEC-04.** Closes platform-wide stored prompt injection.
-6. **Confirm the backup tier and enable PITR** (§5.5). Protects against the one
+1. **Apply the SEC-04 migration.** The only Critical finding not fully closed.
+   `supabase db push --linked`, or paste into the Dashboard SQL Editor. ~5 min.
+2. **Deploy `ai-tutor` v89** (`DEPLOY.md` §4, Path B — the CLI, because the
+   function is a multi-file bundle). Carries SEC-02, SEC-04's code defence, and
+   the whole v88 admission layer. Nothing in the Edge Function is live until
+   this happens.
+3. **Set `ALLOWED_ORIGINS`** (`DEPLOY.md` §4.1), then run
+   `./scripts/verify-cors.sh` with `PROD_ORIGIN` and `TEST_JWT`. ~10 min.
+4. **Set `ZERO_PERSONALITY_SHA256`.** Full closure on SEC-04's highest-value
+   path even if the policy is ever loosened again:
+   `SELECT encode(digest(body,'sha256'),'hex') FROM zero_knowledge_entries
+   WHERE slug='zero_personality';`
+5. **Download and audit `admin-actions`** (SEC-11). It moves money and is
+   currently unreviewable.
+6. **Enable leaked-password protection** (SEC-10). One toggle.
+7. **Set an OpenAI hard spend cap.** Bounds the worst case of any abuse.
+8. **Confirm the backup tier and enable PITR** (§5.5). Protects against the one
    failure mode nothing else here covers.
-7. **Deploy Cloudflare + WAF rules** (§5.1).
-8. **Add Turnstile to auth pages** (§5.3), client change first.
-9. **Approve and apply SEC-08.**
-10. **Enable MFA for admin accounts.** With SEC-01 closed, a compromised admin
+9. **Deploy Cloudflare + WAF rules** (§5.1).
+10. **Add Turnstile to auth pages** (§5.3), client change first.
+11. **Approve and apply SEC-08.**
+12. **Enable MFA for admin accounts.** With SEC-01 closed, a compromised admin
     password is now the shortest path to the same outcome that vulnerability
-    offered. This is the natural successor control.
-11. **Add an `is_admin` write tripwire** (§5.6) — makes any SEC-01 recurrence loud.
-12. **Move XP/streak writes to an RPC** (SEC-09).
-13. **Plan the `'unsafe-inline'` removal** (SEC-03): refactor 93 inline handlers
+    offered — and after SEC-04 it is also the path to the system prompt. This is
+    the natural successor control to both.
+13. **Add an `is_admin` write tripwire** (§5.6) — makes any SEC-01 recurrence loud.
+14. **Move XP/streak writes to an RPC** (SEC-09).
+15. **Plan the `'unsafe-inline'` removal** (SEC-03): refactor 93 inline handlers
     to `addEventListener`, then drop it from `script-src`. Largest effort here,
     and it should be scheduled on its own.
-14. **Server-side upload validation** (SEC-05): a storage trigger or an Edge
+16. **Server-side upload validation** (SEC-05): a storage trigger or an Edge
     Function that re-checks magic bytes, since client validation is bypassable.
 
 ---
 
 ## 9. Production readiness assessment
 
-**Verdict: ready for production**, conditional on items 1–3 of §8, which
-together take under half an hour.
+**Verdict: approved for production release, conditional on items 1–3 of §8.**
 
-The critical vulnerability is closed and verified. The platform's access-control
-model is now sound at both layers that matter — policy *and* grant — and the
-request boundary in front of the AI tutor is properly defended. What remains is
-either configuration the repository cannot perform (WAF, CAPTCHA, backups,
-toggles) or hardening that trades against availability and deserves its own
-change window.
+Those three — apply the SEC-04 migration, deploy v89, set `ALLOWED_ORIGINS` —
+take about twenty minutes together and are release blockers, not follow-ups.
+Until they are done, one Critical finding remains partially open and none of the
+Edge Function hardening is running in production.
+
+With them done, the platform is in good shape. Both critical findings are
+closed, the access-control model is sound at both layers that matter (policy
+*and* grant), the request boundary in front of the AI tutor is properly
+defended, and the supply chain is pinned and hash-verified with CI gates that
+prevent regression. Everything remaining in §8 is either account configuration
+the repository cannot perform (WAF, CAPTCHA, backups, toggles) or hardening that
+trades against availability and deserves its own change window.
 
 **What changed the risk profile most**, in order: closing SEC-01 (the platform
-had no real authorization boundary while it was open); adding security headers
-and a CSP; and closing the SEC-02 cross-tenant read.
+had no real authorization boundary while it was open); the two-layer SEC-04
+defence (no real trust boundary around what the AI says to children); security
+headers and a CSP; and the SEC-02 cross-tenant read.
 
-**The most important thing to carry forward** is the lesson from SEC-01, because
-it will recur: *RLS is not a complete access-control system.* It governs rows.
-Column authority lives in `GRANT`, and Supabase's defaults grant everything.
-Any table where users can write their own row needs both a policy and an
-explicit column allow-list. The `profiles` grant is now fail-closed, so new
-columns are safe by default — but the same audit is owed to every other
-user-writable table.
+**Two lessons worth carrying forward**, because both will recur:
+
+*RLS is not a complete access-control system.* It governs rows. Column authority
+lives in `GRANT`, and Supabase's defaults grant everything. Any table where
+users can write their own row needs both a policy and an explicit column
+allow-list. The `profiles` grant is now fail-closed, so new columns are safe by
+default — but the same audit is owed to every other user-writable table. A
+corollary discovered the hard way here: a column-level `REVOKE` is a **silent
+no-op** against a table-wide grant. Always re-read
+`information_schema.column_privileges` after a privilege change rather than
+trusting the `success` response.
+
+*Anything that reaches a system prompt is executable, not data.* SEC-04 existed
+because a database row was treated as content when it was in fact instructions.
+The rule that follows: every string spliced into a prompt needs a stated trust
+level, and anything below "written by us, reviewed by us" must be bounded,
+sanitised, and fenced with an explicit statement that it carries no authority.
+The v89 retrieval layer does this now; apply the same test to any future
+retrieval source, including RAG over student-supplied documents.
 
 ---
 
@@ -819,29 +1008,41 @@ user-writable table.
 - [x] `DELETE`/`TRUNCATE`/`TRIGGER`/`REFERENCES` revoked on `profiles`
 - [x] `anon` write privileges on `profiles` removed entirely
 
-**In code — ships on next deploy**
+**In the repository — live on next deploy**
 - [x] Session ownership validation (SEC-02)
-- [x] CORS allow-list replacing wildcard (5 response paths)
+- [x] CORS allow-list replacing wildcard, all 8 response paths, enforced by test
 - [x] POST-only, `Content-Type` and dual request-size enforcement
 - [x] Per-user rate limiting with `Retry-After`
 - [x] Field bounds, control-char stripping, UUID validation
 - [x] `messages[].role` constrained; images restricted to inline base64 (SSRF)
 - [x] Safe error envelope with correlation ids
+- [x] KB injection neutralisation, fencing, bounds, integrity pin (SEC-04)
+- [x] Reference-image lookup owner-scoped
 - [x] CSP + 12 security headers (SEC-03)
 - [x] Upload magic-byte validation (SEC-05)
 - [x] XSS sink fixed + latent sink hardened (SEC-06)
-- [x] 52-assertion security regression suite; 17/17 green
+- [x] 25 CDN tags pinned + SRI, verified against npm (SEC-07)
+- [x] CI gates: offline pin check + online hash verification
+- [x] `scripts/verify-cors.sh` live origin verifier
+- [x] 76-assertion security suite; 17/17 suites green
+
+**Applied to production**
+- [x] `profiles` column-level write allow-list (SEC-01) — verified
+
+**Release blockers**
+- [ ] Apply the SEC-04 migration
+- [ ] Deploy `ai-tutor` v89 (DEPLOY.md §4 Path B)
+- [ ] Set `ALLOWED_ORIGINS`, then run `verify-cors.sh`
 
 **Needs a decision or an account action**
-- [ ] Run `scripts/pin-cdn-sri.sh` (SEC-07)
-- [ ] Set `ALLOWED_ORIGINS`
+- [ ] Set `ZERO_PERSONALITY_SHA256`
+- [ ] Download + audit `admin-actions` (SEC-11)
 - [ ] Enable leaked-password protection (SEC-10)
 - [ ] OpenAI hard spend cap
-- [ ] Approve SEC-04 migration
-- [ ] Approve SEC-08 migration
 - [ ] Confirm backup tier; enable PITR
 - [ ] Cloudflare + WAF rules
 - [ ] Turnstile on auth pages
+- [ ] Approve SEC-08 migration
 - [ ] MFA for admin accounts
 - [ ] `is_admin` write tripwire
 - [ ] XP/streak writes via RPC (SEC-09)
@@ -855,17 +1056,22 @@ user-writable table.
 | File | Change |
 |------|--------|
 | `supabase/migrations/20260727_profiles_column_privilege_hardening.sql` | **Applied.** SEC-01 |
-| `supabase/migrations/PENDING_20260727_sec04_knowledge_base_write_lockdown.sql` | Staged. SEC-04 |
+| `supabase/migrations/20260727_sec04_knowledge_base_write_lockdown.sql` | **Ready — NOT applied.** SEC-04 |
 | `supabase/migrations/PENDING_20260727_sec08_rpc_grant_hygiene.sql` | Staged. SEC-08 |
-| `supabase/functions/ai-tutor/index.ts` | v87 → v88 admission control, SEC-02 |
+| `supabase/functions/ai-tutor/index.ts` | v87 → v89: admission control, SEC-02, SEC-04 defence |
 | `vercel.json` | SEC-03 headers + CSP |
 | `manual-payment.html` | SEC-05 upload validation |
 | `dashboard.html` | SEC-06 escaping |
 | `devices.html` | Latent sink hardened |
-| `scripts/pin-cdn-sri.sh` | **New.** SEC-07 tooling |
-| `scripts/validate-ai-tutor-source.sh` | Size bound 190 → 210 KB for v88 |
-| `tests/edge-security.test.mjs` | **New.** 52 assertions |
+| `history.html` | SEC-07 `+esm` → pinned UMD |
+| 19 × `*.html` | SEC-07 25 CDN tags pinned with verified SRI |
+| `scripts/pin-cdn-sri.sh` | **New.** SEC-07 registry-based hash verifier |
+| `scripts/verify-cors.sh` | **New.** Live origin verification |
+| `scripts/validate-ai-tutor-source.sh` | Size bound 190 → 210 KB |
+| `tests/edge-security.test.mjs` | **New.** 76 assertions |
+| `tests/repo-integrity.test.mjs` | SEC-07 offline pin gate |
 | `tests/run-all.mjs` | Registered the new suite |
+| `.github/workflows/ci.yml` | Online SRI verification step |
 | `DEPLOY.md` | §4.1 `ALLOWED_ORIGINS` |
 | `SECURITY.md` | **New.** This report |
 
