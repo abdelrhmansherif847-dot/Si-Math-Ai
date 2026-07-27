@@ -21,7 +21,18 @@ const TARGET = resolve(root, 'study-planner.js');
 export const BANNER =
   '/* AUTO-GENERATED from supabase/functions/_shared/study-planner.core.js by scripts/sync-study-planner.mjs — DO NOT EDIT. */\n';
 
-const src = readFileSync(SOURCE, 'utf8');
-writeFileSync(TARGET, BANNER + src);
-console.log('wrote', TARGET.replace(root + '/', ''));
-console.log('study-planner sync complete');
+// Only sync when this script is RUN directly.
+//
+// validate-study-planner.mjs imports BANNER from this module. While the write
+// executed at import time, running the VALIDATOR silently regenerated
+// study-planner.js and then asserted it was in sync — a drift guard that could
+// never fail, because it repaired the file before checking it. study-planner.js
+// is shipped to the browser (chat.html loads it), so an engine/browser
+// divergence could have reached production with the gate reporting green.
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  const src = readFileSync(SOURCE, 'utf8');
+  writeFileSync(TARGET, BANNER + src);
+  console.log('wrote', TARGET.replace(root + '/', ''));
+  console.log('study-planner sync complete');
+}

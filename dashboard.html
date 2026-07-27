@@ -1778,21 +1778,34 @@ async function loadDashboard() {
   }
   var todayStr = cairoDayKey(new Date());
 
-  /* ── Derived: this week M–S ── */
-  var today0 = new Date(); today0.setHours(0,0,0,0);
-  var dow = today0.getDay();
-  var mondayOff = dow === 0 ? -6 : 1 - dow;
-  var weekMon = new Date(today0); weekMon.setDate(today0.getDate() + mondayOff);
+  /* ── Derived: this week M–S ──
+   * Derived from the CAIRO day key, not a device-local midnight. The strip used
+   * to be built from local Dates while each cell was labelled with
+   * cairoDayKey(), so on a device far from Cairo (VPN / travel) the two frames
+   * disagreed: the whole strip could shift by a day and "today" could land on
+   * the wrong cell or none. Same device-timezone nondeterminism that
+   * assets/streak.js documents — the fix is to stay in one frame throughout. */
+  var pad2 = function(n){ return String(n).padStart(2, '0'); };
+  var keyToUTC = function(k){ var p = k.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); };
+  var utcToKey = function(t){ var d = new Date(t);
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); };
+  var todayUTC   = keyToUTC(todayStr);
+  var dow        = new Date(todayUTC).getUTCDay();          // 0 = Sunday
+  var mondayOff  = dow === 0 ? -6 : 1 - dow;
+  var weekMonUTC = todayUTC + mondayOff * 86400000;
   var DAY_LABELS = ['M','T','W','T','F','S','S'];
   var weekData = Array.from({length:7}, function(_,i) {
-    var day = new Date(weekMon); day.setDate(weekMon.getDate() + i);
-    var dayKey = cairoDayKey(day);
+    var tUTC   = weekMonUTC + i * 86400000;
+    var dayKey = utcToKey(tUTC);
+    var p      = dayKey.split('-');
     return {
       label:    DAY_LABELS[i],
-      date:     day,
+      // Local-midnight Date for that calendar day, so the tooltip's
+      // toLocaleDateString() renders the intended date in any timezone.
+      date:     new Date(+p[0], +p[1] - 1, +p[2]),
       isDone:   actSet.has(dayKey),
       isToday:  dayKey === todayStr,
-      isFuture: day > today0,
+      isFuture: tUTC > todayUTC,
     };
   });
   var weekActive = weekData.filter(function(d){ return d.isDone; }).length;
