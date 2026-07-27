@@ -262,8 +262,12 @@ async function loadPage() {
   const [profileRes, achRes, qRes, examRes, masteryRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('achievements').select('*').eq('user_id', user.id),
-    sb.from('question_records').select('id').eq('user_id', user.id),
-    sb.from('exam_practice_sessions').select('id').eq('user_id', user.id),
+    // Counted server-side. These used to fetch every row and take .length,
+    // which PostgREST caps at 1000 — the heaviest active student is already at
+    // 722 question_records, so their "Questions Solved" stat would have frozen
+    // at 1000 and never moved again. head:true also stops shipping the rows.
+    sb.from('question_records').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    sb.from('exam_practice_sessions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
     sb.from('mastery_records').select('topic,mastery_score').eq('user_id', user.id),
   ]);
 
@@ -274,8 +278,8 @@ async function loadPage() {
   const nextRank = getNextRank(xp);
   const earned = achRes.data || [];
 
-  const totalQuestions = qRes.data?.length || 0;
-  const totalExams = examRes.data?.length || 0;
+  const totalQuestions = qRes.count || 0;
+  const totalExams = examRes.count || 0;
   const masteryRecords = masteryRes.data || [];
   const topicsStudied = masteryRecords.length;
   const masteredTopics = masteryRecords.filter(m => (m.mastery_score || 0) >= 70).length;
