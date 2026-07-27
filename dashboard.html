@@ -1631,8 +1631,14 @@ async function loadDashboard() {
 
   /* Recompute the streak on every dashboard load so it self-heals daily and
      reflects Focus Practice activity (item 1). Runs before the profile read
-     below so prof.current_streak/best_streak reflect the fresh values. */
-  try { if (window.updateStreak) await window.updateStreak(sb, user.id); } catch(_) {}
+     below so prof.current_streak/best_streak reflect the fresh values.
+     NOTE: no activityToday hint — opening the dashboard is not practising.
+     streak.js used to seed "today is active" unconditionally, so this very call
+     credited a phantom active day on every page view: the streak climbed
+     without practice, then broke a day or two later once that phantom day was
+     absent from the next recompute. */
+  var streakRes = null;
+  try { if (window.updateStreak) streakRes = await window.updateStreak(sb, user.id); } catch(_) {}
 
   var results = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single(),
@@ -1727,20 +1733,30 @@ async function loadDashboard() {
   var currentStreak = prof.current_streak ?? 0;
   var bestStreak    = prof.best_streak    ?? 0;
 
-  /* Weekly heatmap activity source — MUST match assets/streak.js so the two
-   * numbers stay consistent. Day boundaries are pinned to Africa/Cairo (NOT the
-   * device timezone) for the same determinism reason streak.js documents.
-   * Use question_records (any topic) ∪ exam sessions. */
+  /* Weekly heatmap activity source — reuses the day-key set assets/streak.js
+   * just computed, so the heatmap and the streak counter are derived from ONE
+   * computation and cannot disagree. That set is the full union
+   * (question_records ∪ exam sessions ∪ Focus Practice completions); building
+   * it here from question_records ∪ exams alone used to omit Focus Practice,
+   * so a Focus-only day lit the streak but left the heatmap cell dark.
+   * Day boundaries are pinned to Africa/Cairo (NOT the device timezone) for the
+   * same determinism reason streak.js documents. The local rebuild below is the
+   * degraded path for when streak.js failed to load or bailed out. */
   var STREAK_TZ = 'Africa/Cairo';
   function cairoDayKey(d) {
     return new Intl.DateTimeFormat('en-CA', {
       timeZone: STREAK_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(d);
   }
-  var actSet = new Set();
-  weeklyQrs.concat(exams).forEach(function(s) {
-    if (s.created_at) actSet.add(cairoDayKey(new Date(s.created_at)));
-  });
+  var actSet;
+  if (streakRes && Array.isArray(streakRes.active_days) && !streakRes.skipped) {
+    actSet = new Set(streakRes.active_days);
+  } else {
+    actSet = new Set();
+    weeklyQrs.concat(exams).forEach(function(s) {
+      if (s.created_at) actSet.add(cairoDayKey(new Date(s.created_at)));
+    });
+  }
   var todayStr = cairoDayKey(new Date());
 
   /* ── Derived: this week M–S ── */
