@@ -137,6 +137,23 @@ Layer 5 probes **`admin-actions`** as well as `ai-tutor`. That function's source
 is not in this repository (`SECURITY.md` SEC-11), so a live probe is the only
 audit currently available for it.
 
+**Layer 5 probes with OPTIONS, not an unauthenticated POST.** Supabase Edge
+Functions sit behind a platform gateway that verifies the JWT *before* the
+function runs. An unauthenticated POST is rejected by that gateway, which
+answers with its own headers — including `Access-Control-Allow-Origin: *`. The
+function's code never executes, so that wildcard says nothing about the
+function's CORS. An earlier version of this layer probed that way and reported
+"wildcard CORS" against a function whose source cannot emit a wildcard at all.
+Preflight is passed through un-authenticated, reaches `corsHeaders()`, and is
+what a browser actually sends — so it is the correct probe. The authenticated
+POST check still runs when `SUPABASE_TEST_JWT` is available.
+
+**Layer 4 failing usually means the frontend was not redeployed.** `vercel.json`
+is build-time config: nothing in this repo deploys the static site — not CI, not
+`deploy-production.ps1` — so header changes sit in git until a hosting deploy is
+triggered (`DEPLOY.md` §5). The layer says so when CSP is absent rather than
+implying the config is wrong.
+
 ### Roll back
 
 ```powershell

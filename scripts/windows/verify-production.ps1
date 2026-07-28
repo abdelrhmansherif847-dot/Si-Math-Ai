@@ -137,6 +137,7 @@ try {
 
         # ── Layer 4: security headers ───────────────────────────────────────
         Write-Step 'Live security headers and CSP (SEC-03)'
+        $headersUndeployed = $false
         if (-not $siteUrl) {
             Add-Result $results 'SKIP' 'security headers' 'ProductionDomain not configured'
         } else {
@@ -151,7 +152,16 @@ try {
 
                 $csp = Get-HeaderValue $r.Headers 'content-security-policy'
                 if (-not $csp) {
-                    Add-Result $results 'FAIL' "CSP present ($path)" 'no Content-Security-Policy header'
+                    # Almost always this means vercel.json is correct in git but
+                    # the frontend has not been redeployed since. Nothing in this
+                    # repo deploys the static site - not CI, not this pipeline -
+                    # so header changes sit in version control until someone
+                    # triggers a hosting deploy (DEPLOY.md section 5). Say that,
+                    # rather than leaving the operator to re-edit a file that is
+                    # already right.
+                    Add-Result $results 'FAIL' "CSP present ($path)" `
+                        'no Content-Security-Policy header - frontend likely not redeployed since vercel.json changed'
+                    $headersUndeployed = $true
                 } else {
                     $cspIssues = [System.Collections.Generic.List[string]]::new()
                     if ($csp -match "'unsafe-eval'")        { $cspIssues.Add("allows 'unsafe-eval'") }
@@ -182,54 +192,116 @@ try {
                 if ($poweredBy) { Add-Result $results 'WARN' "info disclosure ($path)" "X-Powered-By: $poweredBy" }
             }
             if (-not $anyReachable) { Add-Result $results 'SKIP' 'security headers' "site unreachable: $siteUrl" }
+
+            if ($headersUndeployed) {
+                Write-Warn 'Security headers are configured in vercel.json but absent from production.'
+                Write-Detail 'vercel.json is a build-time config: it takes effect only on a NEW hosting deploy.'
+                Write-Detail 'Nothing in this repo deploys the frontend - not CI, not this pipeline (DEPLOY.md section 5).'
+                Write-Detail 'Redeploy the static site, then re-run:  vercel --prod   (or trigger a deploy in the dashboard)'
+                Write-Detail 'Confirm with: curl -sSI https://<domain> | Select-String -Pattern content-security-policy'
+            }
         }
 
         # ── Layer 5: CORS ───────────────────────────────────────────────────
+        # PROBE WITH OPTIONS, NOT AN UNAUTHENTICATED POST.
+        #
+        # Supabase Edge Functions sit behind a platform gateway that enforces
+        # JWT verification before the function runs. An unauthenticated POST is
+        # rejected by that gateway, which answers with ITS OWN headers -
+        # including `Access-Control-Allow-Origin: *`. The function's code never
+        # executes, so the wildcard says nothing about the function's CORS: it
+        # is the platform's 401, not ours.
+        #
+        # An earlier version of this layer probed with an unauthenticated POST
+        # and duly reported "wildcard CORS" for a function whose source cannot
+        # emit a wildcard at all. That is a false positive of the worst kind -
+        # it points the fix at correct code.
+        #
+        # OPTIONS is the right probe on three counts: the gateway passes
+        # preflight through un-authenticated (which is why every Supabase
+        # function handles OPTIONS itself), it therefore reaches our
+        # corsHeaders(), and it is exactly what a browser sends before a
+        # cross-origin request. The POST checks still run, but only when a JWT
+        # is available, and a wildcard on an unauthenticated POST is reported
+        # as a gateway artefact rather than a failure.
         Write-Step 'Live CORS origin enforcement (SEC-03 / SEC-11)'
-        # admin-actions is included deliberately: its source is not in this
-        # repository (SEC-11), so a live probe is the only audit available.
+
         foreach ($fn in @($cfg.EdgeFunction, 'admin-actions')) {
             $url = "$fnBase/$fn"
-            $hostile  = 'https://evil.example'
+            $hostile   = 'https://evil.example'
             $lookalike = if ($siteUrl) { "$siteUrl.evil.example" } else { 'https://simathai.com.evil.example' }
 
-            $probeHostile = Invoke-HttpProbe -Uri $url -Method 'POST' -Body '{"question":"1+1"}' `
-                -Headers @{ 'Content-Type' = 'application/json'; 'Origin' = $hostile }
-            if (-not $probeHostile.Reachable) {
-                Add-Result $results 'SKIP' "CORS: $fn" "unreachable - $($probeHostile.Error)"
+            $preflight = @{ 'Access-Control-Request-Method' = 'POST'
+                            'Access-Control-Request-Headers' = 'authorization, content-type' }
+
+            $optHostile = Invoke-HttpProbe -Uri $url -Method 'OPTIONS' `
+                -Headers ($preflight + @{ 'Origin' = $hostile })
+            if (-not $optHostile.Reachable) {
+                Add-Result $results 'SKIP' "CORS: $fn" "unreachable - $($optHostile.Error)"
                 continue
             }
 
-            $acao = Get-HeaderValue $probeHostile.Headers 'access-control-allow-origin'
-            if ($acao -eq '*') {
-                Add-Result $results 'FAIL' "CORS: $fn wildcard" 'any site can read this endpoint with a visiting student session'
-            } elseif ($acao -eq $hostile) {
-                Add-Result $results 'FAIL' "CORS: $fn reflects Origin" 'equivalent to a wildcard, and worse with credentials'
+            $acaoHostile = Get-HeaderValue $optHostile.Headers 'access-control-allow-origin'
+            if ($acaoHostile -eq '*') {
+                Add-Result $results 'FAIL' "CORS: $fn wildcard on preflight" `
+                    'any site can read this endpoint with a visiting student session'
+            } elseif ($acaoHostile -eq $hostile) {
+                Add-Result $results 'FAIL' "CORS: $fn reflects Origin" `
+                    'equivalent to a wildcard, and worse with credentials'
             } else {
-                Add-Result $results 'PASS' "CORS: $fn rejects hostile origin" "no ACAO returned"
+                Add-Result $results 'PASS' "CORS: $fn rejects hostile origin" 'preflight returned no ACAO'
             }
 
-            $probeLook = Invoke-HttpProbe -Uri $url -Method 'POST' -Body '{"question":"1+1"}' `
-                -Headers @{ 'Content-Type' = 'application/json'; 'Origin' = $lookalike }
-            $acaoLook = Get-HeaderValue $probeLook.Headers 'access-control-allow-origin'
+            $optLook = Invoke-HttpProbe -Uri $url -Method 'OPTIONS' `
+                -Headers ($preflight + @{ 'Origin' = $lookalike })
+            $acaoLook = Get-HeaderValue $optLook.Headers 'access-control-allow-origin'
             if ($acaoLook -eq $lookalike) {
-                Add-Result $results 'FAIL' "CORS: $fn accepts lookalike" 'allow-list matches by suffix/substring, not exact equality'
+                Add-Result $results 'FAIL' "CORS: $fn accepts lookalike" `
+                    'allow-list matches by suffix/substring, not exact equality'
             } else {
                 Add-Result $results 'PASS' "CORS: $fn rejects lookalike origin" ''
             }
 
             if ($siteUrl) {
-                $probeProd = Invoke-HttpProbe -Uri $url -Method 'POST' -Body '{"question":"1+1"}' `
-                    -Headers @{ 'Content-Type' = 'application/json'; 'Origin' = $siteUrl }
-                $acaoProd = Get-HeaderValue $probeProd.Headers 'access-control-allow-origin'
+                $optProd = Invoke-HttpProbe -Uri $url -Method 'OPTIONS' `
+                    -Headers ($preflight + @{ 'Origin' = $siteUrl })
+                $acaoProd = Get-HeaderValue $optProd.Headers 'access-control-allow-origin'
                 if ($acaoProd -eq $siteUrl) {
                     Add-Result $results 'PASS' "CORS: $fn allows production origin" $siteUrl
                 } elseif (-not $acaoProd) {
                     Add-Result $results 'FAIL' "CORS: $fn blocks production origin" `
-                        "legitimate traffic from $siteUrl will fail - add it to ALLOWED_ORIGINS"
+                        "browser traffic from $siteUrl will fail. ALLOWED_ORIGINS unset, or the function has not cold-started since it was set."
                 } else {
                     Add-Result $results 'WARN' "CORS: $fn production origin" "echoed '$acaoProd', expected '$siteUrl'"
                 }
+            }
+
+            # Unauthenticated POST: informational only. A wildcard here is the
+            # platform's 401, not the function's answer.
+            $postAnon = Invoke-HttpProbe -Uri $url -Method 'POST' -Body '{"question":"1+1"}' `
+                -Headers @{ 'Content-Type' = 'application/json'; 'Origin' = $hostile }
+            $acaoAnon = Get-HeaderValue $postAnon.Headers 'access-control-allow-origin'
+            if ($acaoAnon -eq '*' -and $postAnon.StatusCode -eq 401) {
+                Write-Detail "$fn : unauthenticated POST returned 401 with ACAO '*' - that is the Supabase gateway, not the function. Not a finding."
+            }
+
+            # Authenticated POST DOES reach the function, so it is a real check.
+            if ($cfg.TestJwt -and $cfg.AnonKey) {
+                $postAuth = Invoke-HttpProbe -Uri $url -Method 'POST' -TimeoutSec 90 `
+                    -Body (@{ question = '1+1'; client_request_id = [guid]::NewGuid().ToString() } | ConvertTo-Json -Compress) `
+                    -Headers @{ 'Content-Type' = 'application/json'; 'Origin' = $hostile
+                                'Authorization' = "Bearer $($cfg.TestJwt)"; 'apikey' = $cfg.AnonKey }
+                $acaoAuth = Get-HeaderValue $postAuth.Headers 'access-control-allow-origin'
+                if ($acaoAuth -eq '*') {
+                    Add-Result $results 'FAIL' "CORS: $fn wildcard on authenticated request" `
+                        'the function itself is emitting a wildcard'
+                } elseif ($acaoAuth -eq $hostile) {
+                    Add-Result $results 'FAIL' "CORS: $fn reflects Origin on authenticated request" ''
+                } else {
+                    Add-Result $results 'PASS' "CORS: $fn rejects hostile origin (authenticated)" ''
+                }
+            } else {
+                Add-Result $results 'SKIP' "CORS: $fn authenticated probe" 'needs SUPABASE_TEST_JWT and SUPABASE_ANON_KEY'
             }
         }
 

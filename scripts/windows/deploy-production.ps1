@@ -498,6 +498,15 @@ try {
         Write-Info 'Deployment complete. Watch Edge Function logs for 30 minutes (DEPLOY.md section 8).'
         Write-Detail 'Tags to watch: unhandled-error, session-ownership-denied, blocked-origin, rate-limited'
         Write-Detail 'Roll back with: ./rollback-production.ps1'
+        Write-LogLine ''
+        # Stated explicitly because it is not obvious and it has already caused
+        # confusion: a green deploy here does NOT put vercel.json's security
+        # headers into production. This pipeline ships the Edge Function and the
+        # schema. The static site is a separate deploy (DEPLOY.md section 5),
+        # and header changes live in vercel.json, which is build-time config.
+        Write-Warn 'This pipeline does NOT deploy the frontend.'
+        Write-Detail 'vercel.json (CSP, HSTS, X-Frame-Options, ...) only takes effect on a NEW hosting deploy.'
+        Write-Detail 'If security headers are missing in production, redeploy the static site:  vercel --prod'
     }
     exit $exit
 }
