@@ -36,7 +36,7 @@
 
 .EXAMPLE
     $env:SUPABASE_ACCESS_TOKEN = 'sbp_...'
-    ./setup-production.ps1 -AllowedOrigins 'https://simathai.com','https://www.simathai.com'
+    ./setup-production.ps1 -AllowedOrigins 'https://si-math-ai.com','https://www.si-math-ai.com'
 
 .OUTPUTS
     Exit 0 success | 1 failure | 2 inconclusive | 3 config error | 4 prerequisite | 5 aborted

@@ -191,7 +191,21 @@ try {
                 $poweredBy = Get-HeaderValue $r.Headers 'x-powered-by'
                 if ($poweredBy) { Add-Result $results 'WARN' "info disclosure ($path)" "X-Powered-By: $poweredBy" }
             }
-            if (-not $anyReachable) { Add-Result $results 'SKIP' 'security headers' "site unreachable: $siteUrl" }
+            if (-not $anyReachable) {
+                # FAIL, not SKIP. An unset domain is "cannot verify"; a domain
+                # that is set and does not answer is a CONFIGURATION ERROR, and
+                # conflating the two hid a real one: ProductionDomain was
+                # si-math-ai.com in reality but simathai.com in config (copied
+                # from a placeholder in this repo's own README). Every header
+                # probe went to a site that is not ours, reported "headers
+                # missing", and sent us chasing a deploy that had already
+                # happened. Worse, the same wrong value went into ALLOWED_ORIGINS,
+                # so the CORS check asked the function about the value we had
+                # just configured - a circular test that passed while real
+                # students were being refused.
+                Add-Result $results 'FAIL' 'production domain does not respond' `
+                    "$siteUrl is configured but unreachable - is ProductionDomain correct? Check the domains on your hosting project."
+            }
 
             if ($headersUndeployed) {
                 Write-Warn 'Security headers are configured in vercel.json but absent from production.'
@@ -229,7 +243,7 @@ try {
         foreach ($fn in @($cfg.EdgeFunction, 'admin-actions')) {
             $url = "$fnBase/$fn"
             $hostile   = 'https://evil.example'
-            $lookalike = if ($siteUrl) { "$siteUrl.evil.example" } else { 'https://simathai.com.evil.example' }
+            $lookalike = if ($siteUrl) { "$siteUrl.evil.example" } else { 'https://si-math-ai.com.evil.example' }
 
             $preflight = @{ 'Access-Control-Request-Method' = 'POST'
                             'Access-Control-Request-Headers' = 'authorization, content-type' }

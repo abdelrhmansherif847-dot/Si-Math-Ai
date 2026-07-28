@@ -19,15 +19,16 @@
 
   "ProjectRef": "igvkyxkmjnkzscqgommj",
 
-  "ProductionDomain": "simathai.com",
+  "ProductionDomain": "si-math-ai.com",
 
   "EdgeFunctionName": "ai-tutor",
 
   "ExpectedVersion": "v89",
 
   "AllowedOrigins": [
-    "https://simathai.com",
-    "https://www.simathai.com"
+    "https://si-math-ai.com",
+    "https://www.si-math-ai.com",
+    "https://si-math-ai.vercel.app"
   ],
 
   "DeployBranch": "main",
