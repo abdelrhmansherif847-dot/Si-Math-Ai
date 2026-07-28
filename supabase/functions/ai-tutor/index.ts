@@ -1,4 +1,33 @@
-// ai-tutor Edge Function v89
+// ai-tutor Edge Function v90
+// v90 (AI Economics Phase 3 — AI model-call telemetry): every upstream OpenAI
+// call now records ONE row in public.ai_model_calls describing what capability
+// did the work and what it consumed. Eight call sites are instrumented — tutor
+// main answer, reference resolver, OCR extract, OCR rerun, vision question
+// detection, solver A, solver B, judge, difficulty detector — each tagged with
+// the canonical `service_code` seeded by the Phase 2 AI Service Catalog, plus
+// the provider and model that actually served it.
+//
+// This closes GAP-1/GAP-2/GAP-7 from docs/roadmap/ai-economics.md: before this
+// version the platform had NO cost telemetry at all (ai_usage_logs recorded
+// 0 tokens, 0 cost, and a client-hardcoded model name that named a model this
+// function never calls), and no way to attribute spend to a capability.
+//
+// Contract, and the reason this is safe to ship to a live tutor:
+//   • Usage only, never money. No cost, price, currency or FX value is computed
+//     or stored here — pricing belongs to the Cost Engine (Phase 4). Tokens are
+//     read straight from the provider's own `usage` object.
+//   • Fire-and-forget. Rows accumulate in a request-scoped array and are
+//     flushed in a `finally`, so no student response ever waits on a telemetry
+//     write. Every telemetry path is wrapped: a failure logs one line and is
+//     swallowed. There is no code path where telemetry can throw into tutoring.
+//   • Zero behaviour change. No prompt, model, temperature, token limit,
+//     routing decision, response field, or database write of the existing
+//     contract is altered. Failures are recorded (success=false) rather than
+//     hidden, which is the point of GAP-7.
+//   • Kill switch. AI_MODEL_TELEMETRY_ENABLED=false disables all recording and
+//     flushing without a redeploy.
+//   • PII-free by construction: no prompt or completion text is stored, only
+//     counts, outcome, latency and model identity.
 // v89 (SEC-04 — knowledge base treated as untrusted input): get_zero_personality()
 // and search_zero_knowledge() read rows that are spliced into the system prompt
 // for EVERY student, so whoever can write those rows authors Zero's
@@ -91,7 +120,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v89';
+const AI_TUTOR_VERSION = 'v90';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -250,6 +279,136 @@ function safeError(
 
 function newCorrelationId(): string {
   return crypto.randomUUID().slice(0, 8);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI MODEL-CALL TELEMETRY (v90 — AI Economics Phase 3)
+// ═══════════════════════════════════════════════════════════════════════════
+// One row per upstream provider call, describing WHAT capability did the work
+// (canonical service_code from the Phase 2 AI Service Catalog) and WHAT it
+// consumed (usage in units). Deliberately records no money: pricing is the Cost
+// Engine's job (Phase 4), and a cost stamped here would be an unversioned
+// pricing formula living in the service layer.
+//
+// Nothing in this block may throw into a tutoring path. Every entry point is
+// wrapped; a telemetry failure logs one line and is swallowed.
+//
+// Kill switch: AI_MODEL_TELEMETRY_ENABLED=false stops all recording and
+// flushing with no redeploy. Default is on.
+const MODEL_TELEMETRY_ENABLED =
+  (Deno.env.get('AI_MODEL_TELEMETRY_ENABLED') ?? 'true') !== 'false';
+
+interface ModelCallRow {
+  service_code:      string;
+  stage:             string;
+  provider:          string;
+  model:             string;
+  api_surface:       string;
+  units:             Record<string, number>;
+  prompt_tokens:     number;
+  completion_tokens: number;
+  success:           boolean;
+  http_status:       number | null;
+  error_code:        string | null;
+  latency_ms:        number;
+  meta:              Record<string, unknown> | null;
+}
+
+// Buffer one call. `sink` is request-scoped, so concurrent requests never share
+// state. Never awaits, never throws, never touches the network.
+//
+// Token decomposition: OpenAI's `usage.prompt_tokens` INCLUDES the cached
+// prefix, and `prompt_tokens_details.cached_tokens` is the subset billed at the
+// cheaper cached rate. Units split them so a rate card can price each
+// separately: input_token + cached_input_token === prompt_tokens. The
+// prompt_tokens column keeps the provider's raw figure as a convenience mirror.
+function recordModelCall(
+  sink: ModelCallRow[] | undefined,
+  args: {
+    service_code: string;
+    stage:        string;
+    model:        string;
+    started:      number;
+    res?:         { ok: boolean; status: number } | null;
+    json?:        unknown;
+    err?:         unknown;
+    meta?:        Record<string, unknown>;
+  },
+): void {
+  if (!sink || !MODEL_TELEMETRY_ENABLED) return;
+  try {
+    const j = (args.json ?? null) as
+      { usage?: Record<string, unknown>; error?: { code?: string } } | null;
+    const u = (j?.usage ?? {}) as Record<string, unknown>;
+    const prompt_tokens     = Number(u.prompt_tokens     ?? 0) || 0;
+    const completion_tokens = Number(u.completion_tokens ?? 0) || 0;
+    const cached = Number(
+      (u.prompt_tokens_details as Record<string, unknown> | undefined)?.cached_tokens ?? 0,
+    ) || 0;
+    const uncached = Math.max(0, prompt_tokens - cached);
+
+    const units: Record<string, number> = {};
+    if (uncached)          units.input_token        = uncached;
+    if (cached)            units.cached_input_token = cached;
+    if (completion_tokens) units.output_token       = completion_tokens;
+
+    const ok = !!args.res?.ok && !args.err;
+    sink.push({
+      service_code:      args.service_code,
+      stage:             args.stage,
+      provider:          'openai',
+      model:             args.model,
+      api_surface:       'default',
+      units,
+      prompt_tokens,
+      completion_tokens,
+      success:           ok,
+      http_status:       args.res ? args.res.status : null,
+      error_code:        args.err ? 'fetch_failed'
+                       : ok       ? null
+                       : String(j?.error?.code ?? 'no_content'),
+      latency_ms:        Date.now() - args.started,
+      meta:              args.meta ?? null,
+    });
+  } catch { /* telemetry must never affect tutoring */ }
+}
+
+// Write the buffered rows. Called from a `finally` on the main path and at the
+// end of each background task, always inside a context the student is not
+// waiting on. Drains the sink first, so a double flush cannot duplicate rows.
+async function flushModelCalls(
+  sbAdmin: ReturnType<typeof createClient>,
+  sink: ModelCallRow[],
+  ctx: {
+    requestId:          string;
+    questionRecordId?:  string | null;
+    sessionId?:         string | null;
+    userId?:            string | null;
+    operation?:         string | null;
+  },
+): Promise<void> {
+  if (!MODEL_TELEMETRY_ENABLED || !sink.length) return;
+  const rows = sink.splice(0, sink.length).map((r) => ({
+    ...r,
+    request_id:         ctx.requestId,
+    question_record_id: ctx.questionRecordId ?? null,
+    session_id:         ctx.sessionId ?? null,
+    user_id:            ctx.userId ?? null,
+    operation:          ctx.operation ?? null,
+  }));
+  try {
+    const { error } = await sbAdmin.from('ai_model_calls').insert(rows);
+    if (error) {
+      console.log('[ai-tutor] model-call-telemetry-error', JSON.stringify({
+        req: ctx.requestId.slice(0, 8), rows: rows.length, msg: error.message,
+      }));
+    }
+  } catch (e) {
+    console.log('[ai-tutor] model-call-telemetry-error', JSON.stringify({
+      req: ctx.requestId.slice(0, 8), rows: rows.length,
+      msg: e instanceof Error ? e.message : String(e),
+    }));
+  }
 }
 
 // ── Input coercion ─────────────────────────────────────────────────────────
@@ -910,6 +1069,7 @@ async function detectorV2Classify(
   hasImage: boolean,
   topic: string,
   openaiKey: string,
+  sink?: ModelCallRow[],
 ): Promise<{ tier: DifficultyTier; raw: string; latency_ms: number } | null> {
   const t0 = Date.now();
   const imageNote = hasImage ? ' The question includes an image (treat as at least medium).' : '';
@@ -936,8 +1096,21 @@ async function detectorV2Classify(
       messages: [{ role: 'user', content: prompt }],
     }),
   });
-  if (!resp.ok) return null;
+  if (!resp.ok) {
+    recordModelCall(sink, {
+      service_code: 'difficulty_detector', stage: 'classify',
+      model: 'gpt-4o-mini', started: t0, res: resp,
+      json: await resp.json().catch(() => null),
+      meta: { max_tokens: 10, temperature: 0 },
+    });
+    return null;
+  }
   const json = await resp.json();
+  recordModelCall(sink, {
+    service_code: 'difficulty_detector', stage: 'classify',
+    model: 'gpt-4o-mini', started: t0, res: resp, json,
+    meta: { max_tokens: 10, temperature: 0 },
+  });
   const raw: string = json?.choices?.[0]?.message?.content?.trim() ?? '';
   const tier = detectorV2ParseTier(raw);
   if (!tier) return null;
@@ -1265,11 +1438,15 @@ function deriveTutorFinalAnswer(explanation: string): string {
 // For image questions: extract the math problem as plain text (pre-solver step).
 // Uses gpt-4o (vision) — gpt-4o-mini dropped digits/strokes (4667 -> 467). The
 // accuracy of this step gates the whole solve, so we pay for the stronger model.
-async function extractMathTextFromImage(imageData: string, studentText: string): Promise<string> {
+async function extractMathTextFromImage(
+  imageData: string, studentText: string, sink?: ModelCallRow[],
+): Promise<string> {
   const guard = ' Do NOT guess or autocomplete any digit, sign, or symbol — if a character is unclear, transcribe exactly what is visible. Preserve the exact number of digits in every number.';
   const prompt = (studentText
     ? `The student sent this image with the message: "${studentText.slice(0, 200)}". Extract the specific math question they are asking about as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.`
     : 'Extract the math question shown in this image as plain text. Preserve all numbers, operators, signs (especially negative/minus signs), and mathematical notation exactly. Return ONLY the extracted math question.') + guard;
+  const t0 = Date.now();
+  let recorded = false;   // guards against double-counting one call
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -1283,13 +1460,30 @@ async function extractMathTextFromImage(imageData: string, studentText: string):
       }),
     });
     const json = await res.json();
+    recordModelCall(sink, {
+      service_code: 'ocr', stage: 'extract', model: 'gpt-4o',
+      started: t0, res, json,
+      meta: { max_tokens: 300, temperature: 0, image_count: 1, detail: 'high' },
+    });
+    recorded = true;
     return String(json.choices?.[0]?.message?.content || '').trim();
-  } catch { return studentText; }
+  } catch (e) {
+    if (!recorded) {
+      recordModelCall(sink, {
+        service_code: 'ocr', stage: 'extract', model: 'gpt-4o',
+        started: t0, err: e,
+        meta: { max_tokens: 300, temperature: 0, image_count: 1, detail: 'high' },
+      });
+    }
+    return studentText;
+  }
 }
 
 // Scan extracted text for OCR ambiguity signals; optionally run disambiguation rerun.
 // OCR rerun uses gpt-4o (higher vision accuracy) when confidence < 0.85.
-async function ocrAmbiguityCheck(extractedText: string, imageData: string | null): Promise<OcrAmbiguityResult> {
+async function ocrAmbiguityCheck(
+  extractedText: string, imageData: string | null, sink?: ModelCallRow[],
+): Promise<OcrAmbiguityResult> {
   const flags: string[] = [];
   let confidence = 1.0;
 
@@ -1315,6 +1509,7 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
 
   let rerun_count = 0, rerun_changed = false, final_text = extractedText;
   if (imageData && confidence < 0.85 && extractedText) {
+    const t0 = Date.now();
     try {
       const rerunRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -1328,10 +1523,22 @@ async function ocrAmbiguityCheck(extractedText: string, imageData: string | null
         }),
       });
       const rerunJson = await rerunRes.json();
+      recordModelCall(sink, {
+        service_code: 'ocr', stage: 'rerun', model: 'gpt-4o',
+        started: t0, res: rerunRes, json: rerunJson,
+        meta: { max_tokens: 300, temperature: 0, image_count: 1, ocr_confidence: confidence },
+      });
       const rerunText = String(rerunJson.choices?.[0]?.message?.content || '').trim();
       rerun_count = 1;
       if (rerunText && rerunText !== extractedText) { rerun_changed = true; final_text = rerunText; }
-    } catch { /* rerun failure is non-fatal */ }
+    } catch (e) {
+      recordModelCall(sink, {
+        service_code: 'ocr', stage: 'rerun', model: 'gpt-4o',
+        started: t0, err: e,
+        meta: { max_tokens: 300, temperature: 0, image_count: 1, ocr_confidence: confidence },
+      });
+      /* rerun failure is non-fatal */
+    }
   }
   return { confidence, flags, rerun_count, rerun_changed, final_text };
 }
@@ -1348,7 +1555,9 @@ interface DetectedQuestion {
   image_index: number;  // 0-based index of the source image
 }
 
-async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQuestion[]> {
+async function detectQuestionsInImages(
+  imagesData: string[], sink?: ModelCallRow[],
+): Promise<DetectedQuestion[]> {
   if (!imagesData.length || !OPENAI_KEY) return [];
   const prompt =
     `You are analyzing ${imagesData.length} image(s) of a math worksheet. Detect EVERY distinct ` +
@@ -1364,6 +1573,12 @@ async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQu
     { type: 'text', text: prompt },
     ...imagesData.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
   ];
+  const t0 = Date.now();
+  // The JSON.parse below can throw AFTER the call has already been recorded
+  // (a well-formed HTTP response carrying malformed content). Without this
+  // flag the catch would record the same call a second time as a failure,
+  // double-counting one unit of real spend.
+  let recorded = false;
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -1375,6 +1590,12 @@ async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQu
       }),
     });
     const json = await res.json();
+    recordModelCall(sink, {
+      service_code: 'vision', stage: 'question_detect', model: 'gpt-4o',
+      started: t0, res, json,
+      meta: { max_tokens: 1800, temperature: 0, image_count: imagesData.length },
+    });
+    recorded = true;
     const parsed = JSON.parse(json.choices?.[0]?.message?.content || '{}');
     const arr: unknown[] = Array.isArray(parsed.questions) ? parsed.questions : [];
     return arr
@@ -1390,7 +1611,16 @@ async function detectQuestionsInImages(imagesData: string[]): Promise<DetectedQu
       })
       .filter((q) => q.text.length > 0)
       .map((q, i) => ({ ...q, index: i + 1 })); // re-number after filtering empties
-  } catch { return []; }
+  } catch (e) {
+    if (!recorded) {
+      recordModelCall(sink, {
+        service_code: 'vision', stage: 'question_detect', model: 'gpt-4o',
+        started: t0, err: e,
+        meta: { max_tokens: 1800, temperature: 0, image_count: imagesData.length },
+      });
+    }
+    return [];
+  }
 }
 
 // ── Session question index (Issue #4, Phase C) ───────────────────────────────
@@ -1517,7 +1747,10 @@ const SOLVER_SYSTEM_PROMPT =
 
 async function runSolver(
   questionText: string, temperature: number, imageData: string | null = null,
+  sink?: ModelCallRow[], stage: string = 'solver',
 ): Promise<SolverResult> {
+  const t0 = Date.now();
+  let recorded = false;   // guards against double-counting one call (see detectQuestionsInImages)
   try {
     const userContent: unknown = imageData
       ? [
@@ -1537,6 +1770,12 @@ async function runSolver(
       }),
     });
     const json = await res.json();
+    recordModelCall(sink, {
+      service_code: 'solver', stage, model: 'gpt-4o-mini',
+      started: t0, res, json,
+      meta: { max_tokens: 1200, temperature, sees_image: !!imageData },
+    });
+    recorded = true;
     const raw_output = String(json.choices?.[0]?.message?.content || '').trim();
 
     // Split into reasoning + final_answer using "Final Answer:" marker (case-insensitive).
@@ -1558,7 +1797,14 @@ async function runSolver(
     }
 
     return { answer: final_answer, final_answer, reasoning, raw_output };
-  } catch {
+  } catch (e) {
+    if (!recorded) {
+      recordModelCall(sink, {
+        service_code: 'solver', stage, model: 'gpt-4o-mini',
+        started: t0, err: e,
+        meta: { max_tokens: 1200, temperature, sees_image: !!imageData },
+      });
+    }
     return { answer: 'solver_error', final_answer: 'solver_error', reasoning: '', raw_output: '' };
   }
 }
@@ -1591,14 +1837,17 @@ const JUDGE_SYSTEM_PROMPT =
 async function runJudge(
   questionText: string, zeroAnswer: string,
   solverA: SolverResult, solverB: SolverResult, ocrConfidence: number,
-  tutorFinalAnswer?: string,
+  tutorFinalAnswer?: string, sink?: ModelCallRow[],
 ): Promise<JudgeResult> {
   if (ocrConfidence < 0.75) {
+    // Short-circuit: no model call is made, so there is nothing to record.
     return {
       verdict: 'ocr_uncertain', confidence: ocrConfidence,
       reasoning: `OCR confidence ${ocrConfidence.toFixed(2)} below 0.75 — verdict locked; solver agreement does not override.`,
     };
   }
+  const t0 = Date.now();
+  let recorded = false;   // guards against double-counting one call
   try {
     // Tutor's final value is surfaced explicitly so a long, truncated
     // explanation can never hide it from the judge (Example A root cause).
@@ -1626,6 +1875,12 @@ async function runJudge(
       }),
     });
     const json = await res.json();
+    recordModelCall(sink, {
+      service_code: 'judge', stage: 'verdict', model: 'gpt-4o',
+      started: t0, res, json,
+      meta: { max_tokens: 500, temperature: 0, ocr_confidence: ocrConfidence },
+    });
+    recorded = true;
     const raw = String(json.choices?.[0]?.message?.content || '{}');
     const p = JSON.parse(raw.replace(/^```(?:json)?\n?|```$/gm, '').trim());
     const validVerdicts = ['agrees', 'disagrees', 'inconclusive'];
@@ -1634,7 +1889,16 @@ async function runJudge(
       confidence: typeof p.confidence === 'number' ? Math.min(1, Math.max(0, p.confidence)) : 0.5,
       reasoning: String(p.reasoning || '').slice(0, 500),
     };
-  } catch { return { verdict: 'inconclusive', confidence: 0.5, reasoning: 'Judge parse failed.' }; }
+  } catch (e) {
+    if (!recorded) {
+      recordModelCall(sink, {
+        service_code: 'judge', stage: 'verdict', model: 'gpt-4o',
+        started: t0, err: e,
+        meta: { max_tokens: 500, temperature: 0, ocr_confidence: ocrConfidence },
+      });
+    }
+    return { verdict: 'inconclusive', confidence: 0.5, reasoning: 'Judge parse failed.' };
+  }
 }
 
 // SHA-256 prefix (16 hex chars) for answer deduplication
@@ -1653,27 +1917,35 @@ async function runL3ShadowPipeline(opts: {
   questionText: string; imageData: string | null; zeroAnswer: string;
   tutorFinalAnswer?: string;
   detectorMeta: Record<string, unknown>; startTime: number;
+  requestId?: string; sessionId?: string | null; operation?: string | null;
 }): Promise<void> {
   const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, tutorFinalAnswer, detectorMeta, startTime } = opts;
+
+  // v90: this pipeline runs entirely after the student response, so its four to
+  // five model calls belong to a sink of its own — the main path has already
+  // flushed by the time these fire. Flushed in the `finally` below.
+  const teleSink: ModelCallRow[] = [];
+
+  try {
 
   // 1. Extract math text (image questions only)
   const isImageQ = !!imageData;
   let mathText = questionText;
   if (isImageQ) {
-    const extracted = await extractMathTextFromImage(imageData!, questionText);
+    const extracted = await extractMathTextFromImage(imageData!, questionText, teleSink);
     if (extracted) mathText = extracted;
   }
 
   // 2. OCR ambiguity check (image questions only; text questions get confidence=1.0)
   const ocr = isImageQ
-    ? await ocrAmbiguityCheck(mathText, imageData)
+    ? await ocrAmbiguityCheck(mathText, imageData, teleSink)
     : { confidence: 1.0, flags: [], rerun_count: 0, rerun_changed: false, final_text: mathText };
   const solveText = ocr.rerun_changed ? ocr.final_text : mathText;
 
   // 3. Two parallel solver passes — for image questions, solvers see the image directly.
   const [solverA, solverB] = await Promise.all([
-    runSolver(solveText, 0.1, isImageQ ? imageData : null),
-    runSolver(solveText, 0.3, isImageQ ? imageData : null),
+    runSolver(solveText, 0.1, isImageQ ? imageData : null, teleSink, 'solver_a'),
+    runSolver(solveText, 0.3, isImageQ ? imageData : null, teleSink, 'solver_b'),
   ]);
 
   // 4. Solver agreement — robust normalization (strips "answer:"/"final answer:"/markdown)
@@ -1688,7 +1960,7 @@ async function runL3ShadowPipeline(opts: {
   const agreementViaEquivalence = solver_agreement === 1.0 && !stringMatch;
 
   // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
-  const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0, tutorFinalAnswer);
+  const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0, tutorFinalAnswer, teleSink);
 
   const pipeline_latency_ms = Date.now() - startTime;
   const isExpertTier = detectorMeta.tier === 'expert' || detectorMeta.gpt_tier === 'expert';
@@ -1831,6 +2103,22 @@ async function runL3ShadowPipeline(opts: {
     expert_trigger:              isExpertTier,
     pipeline_latency_ms,
   }));
+
+  } finally {
+    // v90: flush the pipeline's model calls whatever happened above. `finally`
+    // covers the early-return and throw paths, so a pipeline failure still
+    // records the spend it already incurred — money is spent whether or not
+    // the verification completed.
+    if (opts.requestId) {
+      await flushModelCalls(sbAdmin, teleSink, {
+        requestId:        opts.requestId,
+        questionRecordId: recordId,
+        sessionId:        opts.sessionId ?? null,
+        userId,
+        operation:        opts.operation ?? null,
+      });
+    }
+  }
 }
 
 // ── Repeat Question Detection (v76) ──────────────────────────────────────────
@@ -1895,6 +2183,25 @@ serve(async (req) => {
   const origin = req.headers.get('Origin') ?? '';
   const cid    = newCorrelationId();
 
+  // ── v90 model-call telemetry (AI Economics Phase 3) ──────────────────────
+  // Declared out here, before the try, so the `finally` at the end of the
+  // handler flushes on EVERY exit path — the worksheet guard, the scope guard,
+  // the repeat/reference path, the idempotency hit, and the error path
+  // included. Missing one of those would silently under-report real spend.
+  //
+  // requestId is server-generated rather than taken from client_request_id:
+  // ai_model_calls.request_id is NOT NULL and the client field is optional.
+  // The client value, when present, is carried in meta for cross-reference.
+  const requestId = crypto.randomUUID();
+  const teleSink: ModelCallRow[] = [];
+  let teleAdmin: ReturnType<typeof createClient> | null = null;
+  const teleCtx: {
+    questionRecordId: string | null;
+    sessionId:        string | null;
+    userId:           string | null;
+    operation:        string | null;
+  } = { questionRecordId: null, sessionId: null, userId: null, operation: null };
+
   // ── 1. Preflight ─────────────────────────────────────────────────────────
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders(origin) });
@@ -1938,6 +2245,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const sbAdmin = createClient(SUPABASE_URL, SUPABASE_KEY);
+    teleAdmin = sbAdmin;   // v90: the `finally` flush needs a client
 
     // ── 6. Authentication ──────────────────────────────────────────────────
     const { data: { user } } = await sbUser.auth.getUser();
@@ -2004,6 +2312,18 @@ serve(async (req) => {
     const hintMode:    boolean = body.hint_mode === true;
     const followUpType: string | null = cleanStr(body.follow_up_type, MAX_FOLLOWUP_CHARS) || null;
     const clientRequestId: string | null = cleanUuid(body.client_request_id);
+
+    // v90: derive the credit operation so cost can be attributed to what the
+    // student was charged for. DERIVED, not received — this function is never
+    // told which operation the client charged. The rule mirrors chat.html:2395
+    // exactly (image → CHAT_IMAGE, explicit follow-up → CHAT_FOLLOWUP, else
+    // CHAT_TEXT). Recorded as such so the Cost Engine can distinguish a derived
+    // attribution from a measured one; a future phase can have the client send
+    // the operation it actually charged.
+    teleCtx.userId    = user.id;
+    teleCtx.operation = imagesData.length ? 'CHAT_IMAGE'
+                      : followUpType      ? 'CHAT_FOLLOWUP'
+                      : 'CHAT_TEXT';
     const messages: Array<{role:string;content:string}> =
       (Array.isArray(body.messages) ? body.messages : [])
         .slice(-MAX_MESSAGES)
@@ -2122,6 +2442,9 @@ serve(async (req) => {
         .eq('id', resolvedSessionId)
         .eq('user_id', user.id);
     }
+    // v90: set once, after BOTH branches, so a new and an existing session are
+    // recorded identically.
+    teleCtx.sessionId = resolvedSessionId;
 
     // ── Profile fetch (expanded) — must come before DEFAULT_PERSONALITY ─────────
     const { data: profile, error: profileErr } = await sbAdmin
@@ -2494,17 +2817,31 @@ serve(async (req) => {
       ];
 
       // Use vision-capable model when parent had an image, otherwise gpt-4o-mini.
+      const repeatModel = parentHasImage ? 'gpt-4o' : 'gpt-4o-mini';
+      const repeatT0    = Date.now();
       const repeatOaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
         body: JSON.stringify({
-          model: parentHasImage ? 'gpt-4o' : 'gpt-4o-mini',
+          model: repeatModel,
           messages: repeatMessages,
           max_tokens: 2200,
           temperature: 0.4,
         }),
       });
       const repeatOaiJson = await repeatOaiRes.json();
+      recordModelCall(teleSink, {
+        service_code: 'reference_resolver', stage: 'resolve', model: repeatModel,
+        started: repeatT0, res: repeatOaiRes, json: repeatOaiJson,
+        meta: {
+          max_tokens: 2200, temperature: 0.4,
+          repeat_type: repeatType, parent_has_image: parentHasImage,
+          client_request_id: clientRequestId,
+        },
+      });
+      // The repeat path attaches to the PARENT record, so cost lands on the
+      // question it re-explains rather than on a new row.
+      teleCtx.questionRecordId = parentRecord.id;
       const repeatAnswer  = repeatOaiJson?.choices?.[0]?.message?.content || '';
 
       console.log('[ai-tutor] question_retrieved', JSON.stringify({
@@ -3142,7 +3479,7 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     // it adds no extra latency (total ≈ max(solve, detect), not the sum). Only
     // runs when images are present. Result is surfaced + indexed below.
     const detectionPromise: Promise<DetectedQuestion[]> = imagesData.length
-      ? detectQuestionsInImages(imagesData)
+      ? detectQuestionsInImages(imagesData, teleSink)
       : Promise.resolve([]);
 
     const openaiMessages = [
@@ -3154,11 +3491,13 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
       { role: 'user', content: userContent },
     ];
 
+    const tutorModel = solveImages.length ? 'gpt-4o' : 'gpt-4o-mini';
+    const tutorT0    = Date.now();
     const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
       body: JSON.stringify({
-        model: solveImages.length ? 'gpt-4o' : 'gpt-4o-mini',
+        model: tutorModel,
         messages: openaiMessages,
         response_format: { type: 'json_object' },
         max_tokens: 2800,
@@ -3167,6 +3506,15 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     });
 
     const oaiData = await oaiRes.json();
+    recordModelCall(teleSink, {
+      service_code: 'tutor', stage: 'tutor_main', model: tutorModel,
+      started: tutorT0, res: oaiRes, json: oaiData,
+      meta: {
+        max_tokens: 2800, temperature: 0.4,
+        image_count: solveImages.length, hint_mode: hintMode,
+        client_request_id: clientRequestId,
+      },
+    });
     let parsed: Record<string, unknown> = {};
     let degraded = false;
     // Phase 2 telemetry (observability only). Non-null ONLY inside the
@@ -3456,6 +3804,10 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     // zeroAnswer mirrors the stored ai_response exactly (same hardened source).
     const zeroAnswer  = tutorAnswerText;
     const recordId    = newRecord?.id ?? null;
+    // v90: stamp the record on this request's telemetry now that it exists.
+    // The main-path calls happened before the INSERT, so they are attributed
+    // here rather than at emit time.
+    teleCtx.questionRecordId = recordId;
 
     // Telemetry: question_regenerated fires on every new math record creation,
     // symmetric to question_retrieved on the repeat path. Lets us measure the
@@ -3527,8 +3879,10 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     if (detectorV2On && isMath && recordId && v1IsDefaultMedium && OPENAI_KEY) {
       const EdgeRt2 = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
       const v2Task = (async () => {
+        // v90: own sink — this runs after the main path has already flushed.
+        const v2Sink: ModelCallRow[] = [];
         try {
-          const v2Result = await detectorV2Classify(question, !!imageData, finalTopic, OPENAI_KEY);
+          const v2Result = await detectorV2Classify(question, !!imageData, finalTopic, OPENAI_KEY, v2Sink);
           if (!v2Result) return;
           // Merge v2 result into existing verification_meta — additive only
           const { data: existing } = await sbAdmin
@@ -3560,6 +3914,14 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
           console.log('[ai-tutor] detector-v2-error', JSON.stringify({
             uid: user.id.slice(0, 8), msg: String(v2Err),
           }));
+        } finally {
+          // `finally`, not the try body: the detector returns early when the
+          // classification is unusable, and that call still cost money.
+          await flushModelCalls(sbAdmin, v2Sink, {
+            requestId, questionRecordId: recordId,
+            sessionId: resolvedSessionId, userId: user.id,
+            operation: teleCtx.operation,
+          });
         }
       })();
       if (EdgeRt2?.waitUntil) EdgeRt2.waitUntil(v2Task);
@@ -3595,6 +3957,9 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         tutorFinalAnswer,
         detectorMeta,
         startTime:    pipelineStart,
+        requestId,
+        sessionId:    resolvedSessionId,
+        operation:    teleCtx.operation,
       }).catch(err => {
         console.log('[ai-tutor] l3-pipeline-error', JSON.stringify({
           uid: user.id.slice(0, 8), record_id: recordId,
@@ -3625,5 +3990,29 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
       origin,
       { correlation_id: cid },
     );
+  } finally {
+    // ── v90: flush this request's model calls ──────────────────────────────
+    // Runs on every exit path, including the early guards and the error path,
+    // so spend is never under-reported because of where the handler returned.
+    //
+    // Deliberately NOT awaited: awaiting here would hold the student's response
+    // open for the duration of an INSERT. flushModelCalls drains the sink
+    // synchronously before its first await, so the rows are captured even
+    // though the promise is left to settle in the background, and it never
+    // rejects. EdgeRuntime.waitUntil keeps the isolate alive for it where the
+    // runtime provides it — the same pattern the shadow pipeline already uses.
+    if (teleAdmin && teleSink.length) {
+      const flushTask = flushModelCalls(teleAdmin, teleSink, {
+        requestId,
+        questionRecordId: teleCtx.questionRecordId,
+        sessionId:        teleCtx.sessionId,
+        userId:           teleCtx.userId,
+        operation:        teleCtx.operation,
+      });
+      const EdgeRtT = (globalThis as unknown as {
+        EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
+      }).EdgeRuntime;
+      if (EdgeRtT?.waitUntil) EdgeRtT.waitUntil(flushTask);
+    }
   }
 });

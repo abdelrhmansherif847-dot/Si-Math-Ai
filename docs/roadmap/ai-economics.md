@@ -1856,6 +1856,16 @@ confirmed by the Owner (§15 Q9 — decided 2026-07-28).
 
 ### Phase 3 — AI Telemetry ⚠ *the only phase that touches production code*
 
+**Status: prepared 2026-07-28, awaiting implementation-review approval.**
+Nothing applied, nothing deployed. Full review, risk register, deploy order and
+rollback: **`docs/roadmap/phase-3-implementation-review.md`**.
+
+| Artifact | Path |
+|---|---|
+| Migration (not applied) | `supabase/migrations-pending/20260728_aiecon_p3_model_call_telemetry.sql` |
+| Edge Function (not deployed) | `supabase/functions/ai-tutor/index.ts` — v89 → v90 |
+| Verification | `scripts/verify-ai-telemetry.sql` — 15 checks |
+
 - Migration: `ai_model_calls` (usage only — no cost columns, `service_code` +
   `stage` + `provider`/`model`). Additive; no existing table altered.
 - `ai-tutor/index.ts`: add `recordModelCall()` and call it at the eight sites in
@@ -2205,7 +2215,7 @@ The freeze **starts** Phase 2 rather than pausing it. From here the work is:
 | Phase | Nature |
 |---|---|
 | 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) — **✅ complete, applied and verified 2026-07-28** |
-| 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function |
+| 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function — **prepared 2026-07-28, awaiting review approval** |
 | 4 — Cost Engine + Allocation | implementation |
 | 5 — AI Economics analytics | implementation |
 | 6 — Owner Dashboard | implementation |

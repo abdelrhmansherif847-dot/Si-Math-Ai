@@ -105,7 +105,11 @@ if (SIZE < 40_000) {
 // Bumped from 190 KB -> 210 KB after v88 grew to ~194 KB with the security
 // admission-control layer (CORS allow-list, rate limiter, request/field bounds,
 // session-ownership check, safe error envelope).
-if (SIZE > 210_000) {
+// Bumped from 210 KB -> 240 KB after v90 grew to ~223 KB with AI model-call
+// telemetry (AI Economics Phase 3): the recordModelCall/flushModelCalls block
+// and instrumentation at all eight OpenAI call sites. v89 had already reached
+// 206 KB, leaving only 4 KB of headroom under the old bound.
+if (SIZE > 240_000) {
   FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 210000)`) || FAILED;
 }
 
