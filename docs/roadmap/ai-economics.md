@@ -1823,12 +1823,19 @@ Deliverable: this file. No code, no schema, no deploy.
 
 ### Phase 2 — AI Service Catalog *(new in r3)*
 
-**Status: written, awaiting the individual migration approval (CLAUDE.md §3).**
+**Status: ✅ COMPLETE — applied to `igvkyxkmjnkzscqgommj` on 2026-07-28 and
+verified (owner-approved, CLAUDE.md §3).**
 
 | Artifact | Path |
 |---|---|
-| Migration (not applied) | `supabase/migrations-pending/20260728_aiecon_p2_service_catalog.sql` |
-| Verification | `scripts/verify-ai-catalog.sql` — every row must read PASS |
+| Migration (applied) | `supabase/migrations/20260728_aiecon_p2_service_catalog.sql` |
+| Verification | `scripts/verify-ai-catalog.sql` — 14 PASS, 1 WARN (P2-14, see below) |
+
+Live state: 12 services · 1 provider · 9 current bindings. Re-running the seed
+is a proven no-op. The only non-PASS is **P2-14**, which cannot be checked from
+SQL on this project (the PostgREST exposed-schema list is not in the
+authenticator role settings) — confirm by hand in Dashboard → Settings → API →
+Exposed schemas that `ai_catalog` is absent.
 
 - Migration: `ai_catalog` schema — `services`, `providers`, `service_bindings`.
   Not exposed to PostgREST; RLS enabled with no policies; no grants to `anon` or
@@ -1840,10 +1847,12 @@ Deliverable: this file. No code, no schema, no deploy.
   tables until Phase 3. Rollback is a single `DROP SCHEMA ai_catalog CASCADE`
   (true only until Phase 4 adds a foreign key to `service_bindings`).
 
-**Gate:** CLAUDE.md §3 (migration approved individually) — **open**.
-**Exit:** every call site in §5.2 maps to exactly one seeded service and binding
-(`verify-ai-catalog.sql` check P2-09); service list reviewed and confirmed by the
-Owner (§15 Q9 — **decided 2026-07-28**).
+**Gate:** CLAUDE.md §3 (migration approved individually) — **met 2026-07-28**.
+**Exit:** met — every call site in §5.2 maps to exactly one seeded service and
+binding (`verify-ai-catalog.sql` check P2-09 PASS); service list reviewed and
+confirmed by the Owner (§15 Q9 — decided 2026-07-28).
+
+**Phase 3 is unblocked.**
 
 ### Phase 3 — AI Telemetry ⚠ *the only phase that touches production code*
 
@@ -2195,7 +2204,7 @@ The freeze **starts** Phase 2 rather than pausing it. From here the work is:
 
 | Phase | Nature |
 |---|---|
-| 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) — **written 2026-07-28, awaiting migration approval** |
+| 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) — **✅ complete, applied and verified 2026-07-28** |
 | 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function |
 | 4 — Cost Engine + Allocation | implementation |
 | 5 — AI Economics analytics | implementation |

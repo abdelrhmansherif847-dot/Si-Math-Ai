@@ -52,7 +52,7 @@ checks AS (
   -- ── P2-01: the schema exists ─────────────────────────────────────────────
   SELECT
     'P2-01'                                        AS check_id,
-    'ai_catalog schema exists'                     AS check,
+    'ai_catalog schema exists'                     AS "check",
     CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status,
     CASE WHEN COUNT(*) = 1 THEN 'schema present'
          ELSE 'schema ai_catalog is missing — migration not applied' END AS detail
@@ -255,7 +255,7 @@ checks AS (
   ) later
 )
 
-SELECT status, check_id, check, detail
+SELECT status, check_id, "check", detail
 FROM checks
 ORDER BY
   CASE status WHEN 'FAIL' THEN 0 WHEN 'WARN' THEN 1 ELSE 2 END,

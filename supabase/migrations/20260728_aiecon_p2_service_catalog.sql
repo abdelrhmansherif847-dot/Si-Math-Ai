@@ -1,11 +1,23 @@
 -- ===========================================================================
 -- AI Economics · Phase 2 — AI Service Catalog
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
---    To approve: review, move to supabase/migrations/, apply via the Dashboard
---    SQL Editor or `supabase db execute` (see docs/supabase-migrations.md —
---    `supabase db push` does not work on this project), then run
---    scripts/verify-ai-catalog.sql. Every row must read PASS.
+-- STATUS: APPLIED to project igvkyxkmjnkzscqgommj on 2026-07-28 (owner-approved,
+-- CLAUDE.md §3). Migration version `aiecon_p2_service_catalog`.
+--
+-- Verified after apply with scripts/verify-ai-catalog.sql — 14 PASS, 1 WARN:
+--   • P2-09 (the Phase 2 exit criterion) PASS: all 9 (capability, model) pairs
+--     resolve 1:1 against the §5.2 call sites.
+--   • P2-14 WARN by design: this project does not store `pgrst.db_schemas` in
+--     the authenticator role settings, so SQL cannot read the exposed-schema
+--     list. Confirm by hand in Dashboard → Settings → API → Exposed schemas —
+--     `ai_catalog` must be absent.
+-- Idempotence re-tested after apply: re-running the seed left 12 services /
+-- 1 provider / 9 bindings unchanged.
+--
+-- Supabase advisors after apply: three new INFO `rls_enabled_no_policy` notices
+-- for the catalog tables. Expected and intended — RLS with no policies IS the
+-- deny-all posture chosen in §5 below, and the schema is unreachable from the
+-- API. No new WARN or ERROR was introduced.
 --
 -- Target project: igvkyxkmjnkzscqgommj
 -- Architecture:   docs/roadmap/ai-economics.md §6 (frozen at r4, 2026-07-28)
@@ -49,7 +61,10 @@
 --      different optimization paths — independent from the beginning.
 -- ===========================================================================
 
-BEGIN;
+-- TRANSACTION: this script carries no explicit BEGIN/COMMIT because it is
+-- applied through Supabase's migration path, which wraps it in one transaction.
+-- If you apply it by hand in the Dashboard SQL Editor, wrap it yourself:
+--   BEGIN;  <this file>  COMMIT;
 
 -- 1. SCHEMA ------------------------------------------------------------------
 -- Deliberately NOT added to the PostgREST exposed-schema list. The browser must
@@ -274,8 +289,6 @@ DO UPDATE
       note         = EXCLUDED.note;
       -- effective_to is NOT overwritten: closing a binding is an owner action,
       -- and re-running this migration must never reopen a retired binding.
-
-COMMIT;
 
 -- ── Verification ────────────────────────────────────────────────────────────
 --   psql "$SUPABASE_DB_URL" -f scripts/verify-ai-catalog.sql
