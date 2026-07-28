@@ -1823,16 +1823,27 @@ Deliverable: this file. No code, no schema, no deploy.
 
 ### Phase 2 — AI Service Catalog *(new in r3)*
 
-- Migration: `ai_catalog` schema — `services`, `providers`, `service_bindings`.
-  Not exposed to PostgREST.
-- Seed the seven services the platform runs today with their current bindings
-  (§6.3), plus the five registered-ahead services at zero cost.
-- No production code is touched. No Edge Function deploy. Nothing reads these
-  tables until Phase 3.
+**Status: written, awaiting the individual migration approval (CLAUDE.md §3).**
 
-**Gate:** CLAUDE.md §3 (migration approved individually).
-**Exit:** every call site in §5.2 maps to exactly one seeded service and binding;
-service list reviewed and confirmed by the Owner (§15 Q9).
+| Artifact | Path |
+|---|---|
+| Migration (not applied) | `supabase/migrations-pending/20260728_aiecon_p2_service_catalog.sql` |
+| Verification | `scripts/verify-ai-catalog.sql` — every row must read PASS |
+
+- Migration: `ai_catalog` schema — `services`, `providers`, `service_bindings`.
+  Not exposed to PostgREST; RLS enabled with no policies; no grants to `anon` or
+  `authenticated`.
+- Seeds the seven services the platform runs today with their nine current
+  bindings (§6.3), plus the five registered-ahead services at zero cost, and
+  `openai` as the only provider in use.
+- No production code is touched. No Edge Function deploy. Nothing reads these
+  tables until Phase 3. Rollback is a single `DROP SCHEMA ai_catalog CASCADE`
+  (true only until Phase 4 adds a foreign key to `service_bindings`).
+
+**Gate:** CLAUDE.md §3 (migration approved individually) — **open**.
+**Exit:** every call site in §5.2 maps to exactly one seeded service and binding
+(`verify-ai-catalog.sql` check P2-09); service list reviewed and confirmed by the
+Owner (§15 Q9 — **decided 2026-07-28**).
 
 ### Phase 3 — AI Telemetry ⚠ *the only phase that touches production code*
 
@@ -1974,19 +1985,24 @@ it is deliberately out of scope until the measurement layer is proven.
    since provider prices and bindings change a few times a year.
 8. **Phase 3 scheduling** — the Edge Function deploy is the only student-facing
    risk in this plan. Deploy outside an exam-prep window?
-9. **Service list and granularity** *(new in r3)* — the proposed canonical set is
-   `tutor`, `solver`, `judge`, `ocr`, `vision`, `difficulty_detector`,
-   `reference_resolver` (live today) plus `truth_engine`, `sympy`, `python`,
-   `embedding`, `translation` (registered ahead). Two judgement calls worth your
-   confirmation:
-   - Should `tutor` be one service, or split into `tutor_answer` and
-     `tutor_explanation` (deep-explain / follow-ups)? Splitting gives finer cost
-     control; merging keeps the list short. **Recommendation: one `tutor`
-     service, with `stage` distinguishing them** — stage-level cost is already
-     reportable, and services can be split later without losing history.
-   - Is `vision` (multi-question image detection) distinct enough from `ocr`, or
-     should they merge? **Recommendation: keep them separate** — they are
-     independently replaceable, which is the test.
+9. ~~**Service list and granularity**~~ — **DECIDED by the Owner, 2026-07-28.**
+   The canonical set is confirmed as `tutor`, `solver`, `judge`, `ocr`,
+   `vision`, `difficulty_detector`, `reference_resolver` (live today) plus
+   `truth_engine`, `sympy`, `python`, `embedding`, `translation` (registered
+   ahead of implementation).
+   - **`tutor` stays a single canonical service.** Main answer, follow-up, deep
+     explanation, and future tutoring stages are distinguished by `stage`, not
+     by separate services. Owner's rationale: preserve one business capability
+     rather than splitting it prematurely; if future telemetry shows the stages
+     need independent lifecycle management, they can evolve later without
+     breaking historical analytics.
+   - **`vision` stays separate from `ocr`.** Owner's rationale: different
+     capabilities, different business value, different providers, different
+     pricing models, and different optimization paths — independent canonical
+     services from the beginning.
+
+   *This decision closes the Phase 2 gate. Seeded in
+   `supabase/migrations-pending/20260728_aiecon_p2_service_catalog.sql`.*
 10. **Cost targets** *(new in r3)* — do you want to set
     `services.cost_target_usd` now (enabling "over target" flags from day one),
     or wait until real per-service costs are visible?
@@ -2179,7 +2195,7 @@ The freeze **starts** Phase 2 rather than pausing it. From here the work is:
 
 | Phase | Nature |
 |---|---|
-| 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) |
+| 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) — **written 2026-07-28, awaiting migration approval** |
 | 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function |
 | 4 — Cost Engine + Allocation | implementation |
 | 5 — AI Economics analytics | implementation |
