@@ -55,3 +55,4 @@ student impact during exam-prep windows.
 - `DEPLOY.md` — deployment runbook (read §4 before any Edge Function work)
 - `docs/roadmap/adaptive-verification.md` — Adaptive Verification Architecture blueprint
 - `docs/roadmap/phase-0-verification.md` — Phase 0 verification document
+- `docs/roadmap/ai-economics.md` — AI Economics (Owner Dashboard) Phase 1 architecture
