@@ -186,9 +186,9 @@ WITH checks AS (
 SELECT
   CASE status WHEN 'PASS' THEN 'PASS' WHEN 'WARN' THEN 'WARN' ELSE 'FAIL' END AS status,
   finding,
-  check,
+  "check",
   detail
 FROM checks
 ORDER BY
   CASE status WHEN 'FAIL' THEN 0 WHEN 'WARN' THEN 1 ELSE 2 END,
-  finding, check;
+  finding, "check";
