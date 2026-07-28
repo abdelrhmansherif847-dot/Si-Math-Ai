@@ -321,7 +321,7 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   <section class="page-hd">
     <div class="eyebrow"><span class="live-dot"></span> Admin — Live</div>
     <h1>AI Monitoring Dashboard</h1>
-    <p>Cost, usage, L3 pipeline, and Detector v2 shadow performance.</p>
+    <p>Request volume, L3 verification pipeline, difficulty detection, and OpenAI operational health.</p>
   </section>
 
   <!-- FILTER BAR -->
@@ -337,76 +337,96 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     </button>
   </div>
 
-  <!-- ── SECTION: AI COST & USAGE ── -->
+  <style>
+  /* Values that have no real backing data are never printed as numbers.
+     They render in this muted style with an explicit reason. */
+  .unavail{font-style:italic;color:var(--text-500);font-weight:400}
+  .stat-card .val .unavail,.stat-card .val.unavail{font-size:13px;letter-spacing:0}
+  /* Provenance caption — states exactly which column/expression a number
+     came from, so no figure on this page is unattributable. */
+  .prov{font-family:var(--font-mono);font-size:10px;line-height:1.45;color:var(--text-500);margin-top:10px;padding-top:9px;border-top:1px dashed var(--border-soft)}
+  .prov code{color:var(--text-400)}
+  .derived{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber-border);border-radius:5px;padding:1px 5px;margin-inline-start:6px;vertical-align:middle}
+  .measured{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan);border:1px solid var(--cyan-border);border-radius:5px;padding:1px 5px;margin-inline-start:6px;vertical-align:middle}
+  /* Data-integrity banner — surfaces failed cross-card consistency checks. */
+  #integrityBanner{display:none;margin-bottom:16px;border-radius:var(--r-md);padding:13px 16px;background:rgba(239,79,95,.10);border:1px solid rgba(239,79,95,.32);color:#ffb4bc;font-size:13px;line-height:1.55}
+  #integrityBanner.show{display:block}
+  #integrityBanner b{color:#fff}
+  #integrityBanner ul{margin:8px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px}
+  .req-list{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--text-200);line-height:1.5}
+  .req-list code{font-family:var(--font-mono);font-size:11.5px;color:var(--cyan-3)}
+  </style>
+
+  <!-- Cross-card consistency failures surface here rather than silently
+       rendering contradictory numbers. -->
+  <div id="integrityBanner" role="alert"></div>
+
+  <!-- ── SECTION: REQUEST VOLUME & PIPELINE COVERAGE ── -->
+  <!-- Financial figures (spend, cost/question, projections, credits) live
+       exclusively in AI Economics inside the Owner Dashboard and are
+       deliberately absent from AI Monitor. -->
   <div class="sec-hd">
-    <div class="sec-hd-ico amber">💰</div>
-    <div><div class="sec-hd-title">AI Cost &amp; Usage</div><div class="sec-hd-sub">Estimated from verification_meta token fields — proxy for real cost until telemetry v2</div></div>
+    <div class="sec-hd-ico cyan">📈</div>
+    <div><div class="sec-hd-title">Request Volume &amp; Pipeline Coverage</div><div class="sec-hd-sub">Exact counts from <code>question_records</code> — operational only; spend and cost analysis live in AI Economics</div></div>
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card"><div class="lbl">Total Requests</div><div class="val" id="cTotalReq">—</div><div class="sub">math questions to ai-tutor</div></div>
-    <div class="stat-card cyan"><div class="lbl">L3 Prompt Tokens</div><div class="val" id="cPromptTok">—</div><div class="sub">solver + judge inputs</div></div>
-    <div class="stat-card"><div class="lbl">L3 Completion Tokens</div><div class="val" id="cCompTok">—</div><div class="sub">solver + judge outputs</div></div>
-    <div class="stat-card amber"><div class="lbl">Est. OpenAI Cost</div><div class="val" id="cEstCost">—</div><div class="sub">L3 runs only (USD)</div></div>
+    <div class="stat-card"><div class="lbl">Total Requests</div><div class="val" id="cTotalReq">—</div><div class="sub">rows in selected period</div></div>
+    <div class="stat-card green"><div class="lbl">Questions with L3</div><div class="val" id="cL3Count">—</div><div class="sub">verification pipeline ran</div></div>
+    <div class="stat-card"><div class="lbl">Questions without L3</div><div class="val" id="cNoL3Count">—</div><div class="sub">no verification record</div></div>
+    <div class="stat-card cyan"><div class="lbl">L3 Coverage</div><div class="val" id="cL3Rate">—</div><div class="sub">share of requests verified</div></div>
   </div>
 
   <div class="two-col">
     <div class="card">
-      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Per-question cost</div>
-      <div class="metric-rows">
-        <div class="metric-row"><span class="metric-lbl">Avg cost / question (L3)</span><span class="metric-val cyan" id="cAvgCost">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">L3 run rate</span><span class="metric-val" id="cL3Rate">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Questions with L3</span><span class="metric-val" id="cL3Count">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Questions without L3</span><span class="metric-val" id="cNoL3Count">—</span></div>
-      </div>
-    </div>
-    <div class="card">
-      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Daily / Weekly / Monthly</div>
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Volume over time</div>
       <div class="metric-rows">
         <div class="metric-row"><span class="metric-lbl">Today's requests</span><span class="metric-val" id="cToday">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">This week's requests</span><span class="metric-val" id="cWeek">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">This month's requests</span><span class="metric-val" id="cMonth">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Est. monthly cost</span><span class="metric-val amber" id="cMonthCost">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Last 7 days</span><span class="metric-val" id="cWeek">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Last 30 days</span><span class="metric-val" id="cMonth">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Most recent L3 run</span><span class="metric-val cyan" id="cLastL3">—</span></div>
       </div>
+      <div class="prov">Fixed rolling windows — independent of the period selector above.</div>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Token &amp; cost telemetry</div>
+      <div class="oai-notice">
+        <span class="ico">ⓘ</span>
+        <span><strong>No token counts are recorded by ai-tutor.</strong> Every request was checked: <code>verification_meta</code> contains no <code>*_prompt_tokens</code>, <code>*_completion_tokens</code>, or <code>*_tokens_in/out</code> key on any row. Token and cost figures are therefore <strong>not shown at all</strong> rather than rendered as <code>0</code> or <code>$0</code>, which would read as "we spent nothing".</span>
+      </div>
+      <div class="metric-rows" style="margin-top:12px">
+        <div class="metric-row"><span class="metric-lbl">Prompt / completion tokens</span><span class="metric-val unavail">Not recorded by ai-tutor</span></div>
+        <div class="metric-row"><span class="metric-lbl">OpenAI spend &amp; cost analysis</span><span class="metric-val cyan">AI Economics (Owner Dashboard)</span></div>
+      </div>
+      <div class="prov">To light this up, ai-tutor must persist per-call <code>usage.prompt_tokens</code> / <code>usage.completion_tokens</code> — see the requirements list in OpenAI Operational Health.</div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:14px">
-    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Cost breakdown by role</div>
-    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);border-radius:10px;padding:10px 12px;margin-bottom:12px;color:#fbbf24;font-size:12.5px;display:flex;align-items:center;gap:8px">
-      <span>⏳</span><span>Awaiting v82 token tracking — per-role cost capture ships with ai-tutor v82. No values shown until real data is available.</span>
-    </div>
-    <div class="metric-rows">
-      <div class="metric-row"><span class="metric-lbl">Solver (gpt-4o-mini)</span><span class="metric-val" id="bkSolver" style="color:var(--text-500)">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">Judge (gpt-4o)</span><span class="metric-val" id="bkJudge" style="color:var(--text-500)">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">OCR (gpt-4o-mini + 4o rerun)</span><span class="metric-val" id="bkOcr" style="color:var(--text-500)">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">GPT-4o subtotal</span><span class="metric-val" id="bk4o" style="color:var(--text-500)">—</span></div>
-      <div class="metric-row"><span class="metric-lbl">GPT-4o-mini subtotal</span><span class="metric-val" id="bkMini" style="color:var(--text-500)">—</span></div>
-      <div class="metric-row" style="border-top:1px solid var(--border-soft);padding-top:10px;margin-top:6px"><span class="metric-lbl" style="font-weight:700">TOTAL</span><span class="metric-val" id="bkTotal" style="color:var(--text-500);font-weight:700">—</span></div>
-    </div>
-  </div>
-
-  <!-- ── SECTION: MODEL USAGE ── -->
+  <!-- ── SECTION: PIPELINE COMPOSITION ── -->
   <div class="sec-hd">
     <div class="sec-hd-ico cyan">🤖</div>
-    <div><div class="sec-hd-title">Model Usage</div><div class="sec-hd-sub">Calls per model role derived from verification_meta pipeline fields</div></div>
+    <div><div class="sec-hd-title">Pipeline Composition</div><div class="sec-hd-sub">Model invocations — each row marked <span class="measured">measured</span> (counted per record) or <span class="derived">derived</span> (fixed structural multiple of L3 runs)</div></div>
   </div>
 
   <div class="stats-grid-3">
-    <div class="stat-card"><div class="lbl">GPT-4o-mini calls</div><div class="val" id="mMini">—</div><div class="sub">solvers (2× per L3 run)</div></div>
-    <div class="stat-card cyan"><div class="lbl">GPT-4o calls</div><div class="val" id="mFull">—</div><div class="sub">judge + OCR rerun</div></div>
-    <div class="stat-card purple"><div class="lbl">Det-v2 calls</div><div class="val" id="mDetV2">—</div><div class="sub">gpt-4o-mini shadow</div></div>
+    <div class="stat-card"><div class="lbl">L3 runs</div><div class="val" id="mL3Runs">—</div><div class="sub">records with a completed pipeline</div></div>
+    <div class="stat-card cyan"><div class="lbl">Judge invocations</div><div class="val" id="mJudgeTop">—</div><div class="sub">1 per L3 run</div></div>
+    <div class="stat-card purple"><div class="lbl">Detector v2 invocations</div><div class="val" id="mDetV2">—</div><div class="sub">records carrying v2_tier</div></div>
   </div>
 
   <div class="two-col">
     <div class="card">
-      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">L3 role breakdown</div>
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Invocation breakdown</div>
       <div class="metric-rows">
-        <div class="metric-row"><span class="metric-lbl">Solver A calls (gpt-4o-mini)</span><span class="metric-val" id="mSolverA">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Solver B calls (gpt-4o-mini)</span><span class="metric-val" id="mSolverB">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Judge calls (gpt-4o)</span><span class="metric-val" id="mJudge">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">OCR calls (gpt-4o-mini)</span><span class="metric-val" id="mOcr">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">OCR rerun (gpt-4o)</span><span class="metric-val" id="mOcrRerun">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Solver invocations<span class="derived">derived</span></span><span class="metric-val" id="mSolvers">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Judge invocations<span class="derived">derived</span></span><span class="metric-val" id="mJudge">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">OCR extractions<span class="measured">measured</span></span><span class="metric-val" id="mOcr">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">OCR reruns<span class="measured">measured</span></span><span class="metric-val" id="mOcrRerun">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">OCR reruns that changed the text<span class="measured">measured</span></span><span class="metric-val" id="mOcrChanged">—</span></div>
+      </div>
+      <div class="prov">
+        <strong>Derived</strong> rows are exact structural consequences of the pipeline (every L3 run issues 2 solver calls and 1 judge call), not per-call telemetry.<br/>
+        <strong>Measured</strong> rows count real per-record fields: <code>solver_sees_image</code>, <code>ocr_rerun_count</code>, <code>ocr_rerun_changed</code>.
       </div>
     </div>
     <div class="card">
@@ -414,6 +434,7 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <div class="metric-rows" id="mVersionSplit">
         <div class="metric-row"><span class="metric-lbl">Loading…</span><span class="metric-val">—</span></div>
       </div>
+      <div class="prov">From <code>verification_meta.pipeline_version</code>. Fields differ by version — older versions omit quality scores and solver reasoning, which is why some panels below report a smaller denominator than the total L3 run count.</div>
     </div>
   </div>
 
@@ -424,30 +445,45 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card green"><div class="lbl">Total L3 Runs</div><div class="val" id="l3Total">—</div><div class="sub">pipeline_complete records</div></div>
-    <div class="stat-card"><div class="lbl">L3 Run Rate</div><div class="val" id="l3Rate">—</div><div class="sub">of math questions</div></div>
-    <div class="stat-card cyan"><div class="lbl">Solver Agreement</div><div class="val" id="l3Agree">—</div><div class="sub">avg across L3 runs</div></div>
-    <div class="stat-card amber"><div class="lbl">Avg Quality Score</div><div class="val" id="l3QualScore">—</div><div class="sub">verification_quality_score</div></div>
+    <div class="stat-card green"><div class="lbl">Total L3 Runs</div><div class="val" id="l3Total">—</div><div class="sub" id="l3TotalSub">pipeline records</div></div>
+    <div class="stat-card"><div class="lbl">L3 Run Rate</div><div class="val" id="l3Rate">—</div><div class="sub">of all requests in period</div></div>
+    <div class="stat-card cyan"><div class="lbl">Solver ↔ Solver Agreement</div><div class="val" id="l3Agree">—</div><div class="sub">runs where A and B matched</div></div>
+    <div class="stat-card amber"><div class="lbl">Avg Quality Score</div><div class="val" id="l3QualScore">—</div><div class="sub" id="l3QualSub">verification_quality_score</div></div>
   </div>
 
   <div class="two-col">
     <div class="card">
-      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Pipeline metrics</div>
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Judge verdict — solver answer vs tutor answer</div>
       <div class="metric-rows">
-        <div class="metric-row"><span class="metric-lbl">Judge verdict: agree</span><span class="metric-val good" id="l3JudgeAgree">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Judge verdict: disagree</span><span class="metric-val bad" id="l3JudgeDisagree">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Judge verdict: ocr_uncertain</span><span class="metric-val warn" id="l3JudgeOcr">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Low quality solver flag</span><span class="metric-val warn" id="l3LowQual">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Avg verification latency</span><span class="metric-val cyan" id="l3Latency">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">agrees — matches tutor answer</span><span class="metric-val good" id="l3JudgeAgree">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">disagrees — mismatch with tutor</span><span class="metric-val bad" id="l3JudgeDisagree">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">inconclusive — judge could not decide</span><span class="metric-val warn" id="l3Inconclusive">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">ocr_uncertain — image text unreliable</span><span class="metric-val warn" id="l3JudgeOcr">—</span></div>
+        <div class="metric-row" style="border-top:1px solid var(--border-soft);padding-top:10px;margin-top:4px"><span class="metric-lbl">Low-quality solver flag</span><span class="metric-val warn" id="l3LowQual">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Avg pipeline latency</span><span class="metric-val cyan" id="l3Latency">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">p95 pipeline latency</span><span class="metric-val cyan" id="l3LatencyP95">—</span></div>
+      </div>
+      <div class="prov">
+        Verdicts read the <code>judge_verdict</code> column verbatim — the four values it stores are
+        <code>agrees</code>, <code>disagrees</code>, <code>inconclusive</code>, <code>ocr_uncertain</code>.
+        The four rows above are mutually exclusive and sum to the L3 run total.<br/>
+        <strong>This is a different axis from Solver ↔ Solver Agreement above:</strong> the judge compares the
+        solvers' answer against the tutor's answer, not the two solvers against each other. A run can have both
+        solvers agreeing and the judge still disagreeing.
       </div>
     </div>
     <div class="card">
       <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Quality score distribution</div>
       <div class="metric-rows">
         <div class="metric-row"><span class="metric-lbl">High quality (≥ 0.8)</span><span class="metric-val good" id="l3QHigh">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Medium quality (0.5–0.8)</span><span class="metric-val warn" id="l3QMed">—</span></div>
+        <div class="metric-row"><span class="metric-lbl">Medium quality (0.5 – 0.8)</span><span class="metric-val warn" id="l3QMed">—</span></div>
         <div class="metric-row"><span class="metric-lbl">Low quality (&lt; 0.5)</span><span class="metric-val bad" id="l3QLow">—</span></div>
-        <div class="metric-row"><span class="metric-lbl">Inconclusive rate</span><span class="metric-val" id="l3Inconclusive">—</span></div>
+        <div class="metric-row" style="border-top:1px solid var(--border-soft);padding-top:10px;margin-top:4px"><span class="metric-lbl">No score recorded</span><span class="metric-val unavail" id="l3QNone">—</span></div>
+      </div>
+      <div class="prov">
+        Percentages are over records that actually carry <code>verification_quality_score</code>.
+        Older pipeline versions never wrote the field; those records are counted in
+        <strong>No score recorded</strong> and excluded from the three buckets — they are not treated as low quality.
       </div>
     </div>
   </div>
@@ -460,8 +496,8 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 
   <!-- Agreement summary -->
   <div class="stats-grid-4" style="margin-bottom:14px">
-    <div class="stat-card"><div class="lbl">v1 Records</div><div class="val" id="dV1Total">—</div><div class="sub">all detector-v1 runs</div></div>
-    <div class="stat-card purple"><div class="lbl">v2 Records</div><div class="val" id="dV2Total">—</div><div class="sub">default_medium subset</div></div>
+    <div class="stat-card"><div class="lbl">v1 Records</div><div class="val" id="dV1Total">—</div><div class="sub">records with a v1 tier</div></div>
+    <div class="stat-card purple"><div class="lbl">v2 Records</div><div class="val" id="dV2Total">—</div><div class="sub" id="dV2TotalSub">records carrying v2_tier</div></div>
     <div class="stat-card cyan"><div class="lbl">v2 / GPT agree</div><div class="val" id="dV2GptAgree">—</div><div class="sub">v2 matches GPT label</div></div>
     <div class="stat-card amber"><div class="lbl">Default-medium %</div><div class="val" id="dDefaultMed">—</div><div class="sub">v1 fallback rate</div></div>
   </div>
@@ -479,6 +515,13 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <div style="margin-top:16px" class="metric-rows">
         <div class="metric-row"><span class="metric-lbl">v1 / GPT agree rate</span><span class="metric-val cyan" id="dV1GptAgree">—</span></div>
         <div class="metric-row"><span class="metric-lbl">default_medium fraction</span><span class="metric-val warn" id="dV1DefMedPct">—</span></div>
+      </div>
+      <div class="prov" id="dV1GptProv">
+        Agreement is computed once, by comparing the <code>verification_tier</code> column against
+        <code>verification_meta.gpt_tier</code> on records carrying both — the same tier values that drive the
+        distribution bars above, so the bars and this rate can never disagree. The result is cross-checked
+        against the stored <code>agrees_with_gpt</code> flag on every load; any divergence raises the
+        data-integrity banner at the top of the page instead of being silently averaged away.
       </div>
     </div>
     <!-- v2 distribution -->
@@ -510,13 +553,14 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 
   <!-- v1 vs v2 comparison table -->
   <div class="card">
-    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">v1 vs v2 tier comparison (over default_medium subset)</div>
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">v1 vs v2 tier comparison <span id="dCmpScope" style="color:var(--text-500)">(records carrying both tiers)</span></div>
     <div class="tbl-wrap">
       <table class="recent" id="dCmpTable">
         <thead><tr><th>v1 tier</th><th>v2 tier</th><th>count</th><th>% of subset</th><th>interpretation</th></tr></thead>
         <tbody id="dCmpBody"><tr><td colspan="5" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
       </table>
     </div>
+    <div class="prov">Each row pairs the record's real <code>verification_meta.tier</code> with its <code>v2_tier</code>. The v1 side is read per record, never assumed.</div>
   </div>
 
   <!-- ── SECTION: SHADOW MONITORING ── -->
@@ -526,11 +570,18 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <span id="sShadowStatus" class="chip gray" style="margin-left:auto">—</span>
   </div>
 
+  <div id="sNotDeployed" class="card" style="display:none;margin-bottom:14px">
+    <div class="oai-notice">
+      <span class="ico">ⓘ</span>
+      <span><strong>Detector v2 is not deployed.</strong> <span id="sNotDeployedDetail"></span> Nothing is being collected, so the checkpoint tracker below is not "in progress" — it is at zero because the feature has never run in production. The panels stay visible so the milestone targets remain documented.</span>
+    </div>
+  </div>
+
   <div class="stats-grid-4" style="margin-bottom:14px">
-    <div class="stat-card purple"><div class="lbl">v2 Records</div><div class="val" id="sV2Count">—</div><div class="sub" id="sV2Sub">of 50 checkpoint</div></div>
-    <div class="stat-card"><div class="lbl">Without v2</div><div class="val" id="sNoV2Count">—</div><div class="sub">v1-only (non-default_medium)</div></div>
+    <div class="stat-card purple"><div class="lbl">v2 Records</div><div class="val" id="sV2Count">—</div><div class="sub" id="sV2Sub">all-time, unfiltered</div></div>
+    <div class="stat-card"><div class="lbl">default_medium records</div><div class="val" id="sNoV2Count">—</div><div class="sub">v1 fallbacks — the v2 target set</div></div>
     <div class="stat-card amber"><div class="lbl">Next checkpoint</div><div class="val" id="sNextCp">50</div><div class="sub" id="sNextCpSub">records needed</div></div>
-    <div class="stat-card green"><div class="lbl">v2 coverage</div><div class="val" id="sV2Coverage">—</div><div class="sub">of default_medium subset</div></div>
+    <div class="stat-card green"><div class="lbl">v2 coverage</div><div class="val" id="sV2Coverage">—</div><div class="sub">of default_medium records</div></div>
   </div>
 
   <!-- Checkpoint progress bar -->
@@ -616,24 +667,32 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <div id="fbRecentBody"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
   </div>
 
-  <!-- ── SECTION: OPENAI HEALTH (Phase 1 — safe-message detection) ── -->
+  <!-- ── SECTION: OPENAI OPERATIONAL HEALTH ── -->
   <div class="sec-hd">
     <div class="sec-hd-ico red">🩺</div>
-    <div style="flex:1"><div class="sec-hd-title">OpenAI Health</div><div class="sec-hd-sub">Upstream OpenAI status for ai-tutor — derived from empty-answer guard activations</div></div>
+    <div style="flex:1"><div class="sec-hd-title">OpenAI Operational Health</div><div class="sec-hd-sub">Two independent signals: our own request telemetry, and OpenAI's public service status</div></div>
     <span id="oaiStatusChip" class="oai-status-chip healthy" style="margin-left:auto"><span class="dot"></span><span id="oaiStatusTxt">—</span></span>
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card" id="oaiStatusCard"><div class="lbl">OpenAI Status</div><div class="val" id="oaiStatusVal">—</div><div class="sub" id="oaiStatusSub">last 24h</div></div>
-    <div class="stat-card red"><div class="lbl">Guard Activations</div><div class="val" id="oaiFailCount">—</div><div class="sub">fallbacks in period</div></div>
+    <div class="stat-card" id="oaiStatusCard"><div class="lbl">Tutor Delivery Status</div><div class="val" id="oaiStatusVal">—</div><div class="sub" id="oaiStatusSub">last 24h</div></div>
+    <div class="stat-card red"><div class="lbl">Guard Activations</div><div class="val" id="oaiFailCount">—</div><div class="sub" id="oaiFailCountSub">fallbacks in selected period</div></div>
     <div class="stat-card"><div class="lbl">Last Failure</div><div class="val" id="oaiLastFail" style="font-size:15px">—</div><div class="sub" id="oaiLastFailSub">most recent guard fire</div></div>
     <div class="stat-card green"><div class="lbl">Last Success</div><div class="val" id="oaiLastOk" style="font-size:15px">—</div><div class="sub">most recent tutored answer</div></div>
   </div>
 
-  <!-- Provider error-code breakdown — real oai_http_status (Phase 2), with
-       graceful fallback notice for pre-migration rows / empty windows. -->
+  <!-- Live OpenAI service status — public Statuspage feed, no credentials. -->
   <div class="card">
-    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">OpenAI provider error codes (429 / 401 / 403 / 5xx)</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)">OpenAI service status (live, status.openai.com)</div>
+      <span id="oaiFeedChip" class="chip gray">Checking…</span>
+    </div>
+    <div id="oaiFeedBody"><div style="text-align:center;color:var(--text-500);padding:16px">Loading…</div></div>
+  </div>
+
+  <!-- Provider error-code breakdown — real oai_http_status. -->
+  <div class="card">
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">Request failures by provider status code</div>
     <div id="oaiCodeBreakdown"><div style="text-align:center;color:var(--text-500);padding:16px">Loading…</div></div>
   </div>
 
@@ -642,49 +701,45 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Recent AI Tutor Failures (last 20)</div>
     <div class="tbl-wrap">
       <table class="recent">
-        <thead><tr><th>time</th><th>model (inferred)</th><th>lang</th><th>question (preview)</th></tr></thead>
+        <thead><tr><th>time</th><th>status · code</th><th>lang</th><th>question (preview)</th></tr></thead>
         <tbody id="oaiRecentBody"><tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
       </table>
     </div>
+    <div class="prov">The model that served each request is not persisted by ai-tutor, so no model column is shown. The previous version guessed it from whether the question had an image; that guess has been removed.</div>
   </div>
 
-  <!-- ── SECTION: BILLING & USAGE HEALTH ── -->
-  <div class="sec-hd">
-    <div class="sec-hd-ico amber">💳</div>
-    <div style="flex:1"><div class="sec-hd-title">Billing &amp; Usage Health</div><div class="sec-hd-sub">Early warning for OpenAI quota / billing exhaustion</div></div>
-    <span class="oai-status-chip warning" style="margin-left:auto"><span class="dot"></span><span>No live source</span></span>
-  </div>
+  <!-- What is measurable today vs. what needs new infrastructure. -->
   <div class="card">
-    <div class="oai-notice" style="margin-bottom:14px">
-      <span class="ico">ⓘ</span>
-      <span><strong>OpenAI balance, credit status, and quota headroom are not available to this dashboard.</strong> OpenAI does not expose a programmatic account-balance endpoint, and no server-side billing integration is currently wired into this platform. To avoid showing misleading numbers, no balance, burn-rate, or "days-to-exhaustion" value is displayed here. The token-cost figures in the <strong>AI Cost &amp; Usage</strong> section above are an <em>internal estimate</em> from <code>verification_meta</code> tokens — a usage proxy, not an authoritative OpenAI spend or balance figure.</span>
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">Coverage — what this panel can and cannot see</div>
+    <div class="metric-rows" style="margin-bottom:14px">
+      <div class="metric-row"><span class="metric-lbl">Request failures &amp; provider status codes</span><span class="metric-val good">Live — from <code>oai_http_status</code></span></div>
+      <div class="metric-row"><span class="metric-lbl">Service incidents &amp; component status</span><span class="metric-val good">Live — public status feed</span></div>
+      <div class="metric-row"><span class="metric-lbl">End-to-end pipeline latency</span><span class="metric-val good">Live — <code>pipeline_latency_ms</code></span></div>
+      <div class="metric-row"><span class="metric-lbl">Rate-limit headroom (remaining req/tokens)</span><span class="metric-val unavail">Needs ai-tutor change</span></div>
+      <div class="metric-row"><span class="metric-lbl">Token usage per call</span><span class="metric-val unavail">Needs ai-tutor change</span></div>
+      <div class="metric-row"><span class="metric-lbl">Model availability / deprecations</span><span class="metric-val unavail">Needs server-side proxy</span></div>
+      <div class="metric-row"><span class="metric-lbl">Account balance / credit remaining</span><span class="metric-val unavail">No OpenAI endpoint exists</span></div>
     </div>
-    <div class="metric-rows">
-      <div class="metric-row"><span class="metric-lbl">Current OpenAI balance / credit</span><span class="metric-val warn">Unavailable — no source</span></div>
-      <div class="metric-row"><span class="metric-lbl">Quota headroom / days to exhaustion</span><span class="metric-val warn">Unavailable — no source</span></div>
-      <div class="metric-row"><span class="metric-lbl">Estimated usage trend (proxy)</span><span class="metric-val cyan">See AI Cost &amp; Usage section</span></div>
-      <div class="metric-row"><span class="metric-lbl">Best available early-warning signal</span><span class="metric-val cyan">OpenAI Health → 429 detection</span></div>
-    </div>
-    <div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);font-size:13px;color:var(--text-200);line-height:1.55">
-      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:8px">Operator guidance</div>
-      <ul style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:5px">
-        <li>Set a <strong>usage limit &amp; billing alert</strong> in the OpenAI dashboard (Settings → Limits) — this is the only authoritative early warning.</li>
-        <li>Keep auto-recharge enabled, or monitor the OpenAI balance manually before exam-prep windows.</li>
-        <li>If the <strong>OpenAI Health</strong> panel shows a <code>429</code> spike, treat it as a live quota/billing incident and top up immediately — the empty-answer guard will keep serving safe fallbacks meanwhile.</li>
-      </ul>
-    </div>
-    <div style="margin-top:12px;font-size:12px;color:var(--text-500);line-height:1.5">
-      <strong>Future integration to enable real values:</strong> a scheduled server-side job (Edge Function / cron) that records OpenAI usage from the <code>/v1/usage</code> &amp; <code>/dashboard/billing</code> endpoints into a new <code>openai_billing_snapshots</code> table, which this section would then read. Out of scope for Phase 2 (observability of failures only).
+    <div style="padding:12px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);line-height:1.55">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:9px">Requirements to enable the remaining signals</div>
+      <ol class="req-list">
+        <li><strong>Rate-limit headroom &amp; token usage.</strong> ai-tutor must read the <code>x-ratelimit-remaining-requests</code>, <code>x-ratelimit-remaining-tokens</code>, <code>x-ratelimit-reset-*</code> response headers and the <code>usage</code> object off every OpenAI response, and persist them per record. Needs: an ai-tutor code change plus new columns (or <code>verification_meta</code> keys). <em>No new credentials.</em></li>
+        <li><strong>Model availability / deprecation checks.</strong> Requires <code>GET /v1/models</code>, which needs a standard OpenAI API key. It cannot be called from this page — that would expose the key in the browser. Needs: a small server-side Edge Function proxy that holds the key and returns only the model list.</li>
+        <li><strong>Organization-level usage &amp; rate-limit configuration.</strong> Requires an OpenAI <strong>Admin API key</strong> (<code>sk-admin-…</code>) plus the <strong>Organization ID</strong> (<code>org-…</code>) and <strong>Project ID</strong> (<code>proj_…</code>), called server-side against the organization endpoints. Needs: the admin key stored as an Edge Function secret, plus a scheduled job to snapshot results.</li>
+        <li><strong>Account balance / credit remaining.</strong> OpenAI publishes no API for this. The only authoritative early warning is a usage limit and billing alert configured in the OpenAI dashboard. Nothing this dashboard can add will change that — no balance figure will ever be shown here.</li>
+      </ol>
+      <div style="margin-top:11px;font-size:12.5px;color:var(--text-400);line-height:1.5">Spend, burn rate, and cost projections are out of scope for AI Monitor by design — they belong to <strong>AI Economics</strong> in the Owner Dashboard.</div>
     </div>
   </div>
 
   <!-- ── SECTION: AI ALERTS ── -->
   <div class="sec-hd">
     <div class="sec-hd-ico red">🚨</div>
-    <div><div class="sec-hd-title">AI Alerts</div><div class="sec-hd-sub">Threshold-based warnings on cost, OCR, judge, detector, latency</div></div>
+    <div><div class="sec-hd-title">AI Alerts</div><div class="sec-hd-sub">Threshold checks on OCR, judge disagreement, confidence, and latency — all over the selected period</div></div>
   </div>
   <div class="card">
     <div id="aiAlerts" style="display:flex;flex-direction:column;gap:10px"><div style="text-align:center;color:var(--text-500);padding:20px">Loading…</div></div>
+    <div class="prov">An alert turns green only when its metric was actually evaluated against real records. When the underlying field is missing or the window is empty the alert reports <strong>not evaluated</strong> in grey — it never shows a passing threshold it could not check.</div>
   </div>
 
   <!-- ── SECTION: QUESTION INSPECTOR (read-only observability) ── -->
@@ -724,10 +779,11 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     </div>
     <div class="tbl-wrap">
       <table class="recent">
-        <thead><tr><th>time</th><th>topic</th><th>verdict</th><th>conf</th><th>quality</th><th>pipeline</th><th>question (preview)</th></tr></thead>
-        <tbody id="qiBody"><tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
+        <thead><tr><th>time</th><th>topic</th><th>solvers</th><th>judge verdict</th><th>judge conf</th><th>quality</th><th>pipeline</th><th>question (preview)</th></tr></thead>
+        <tbody id="qiBody"><tr><td colspan="8" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
       </table>
     </div>
+    <div class="prov"><strong>solvers</strong> is solver A vs solver B. <strong>judge verdict</strong> is the solvers' answer vs the tutor's answer. They measure different things and routinely differ — a record can show <code>match</code> and <code>disagrees</code> at once without either being wrong.</div>
   </div>
 
   <div class="qi-overlay" id="qiOverlay" onclick="qiClose()"></div>
@@ -746,14 +802,39 @@ const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// OpenAI pricing (per 1M tokens, USD) — update if pricing changes
-const PRICE = {
-  'gpt-4o-mini': { in: 0.15, out: 0.60 },
-  'gpt-4o':      { in: 2.50, out: 10.00 },
+// ── Judge verdict vocabulary ────────────────────────────────────────────────
+// These are the exact strings ai-tutor writes to question_records.judge_verdict.
+// They are plural. Matching the singular forms ('agree'/'disagree') silently
+// classifies every record as "other", which is how this dashboard previously
+// reported 0 disagreements while the table held hundreds.
+const VERDICT = {
+  AGREE:        'agrees',
+  DISAGREE:     'disagrees',
+  INCONCLUSIVE: 'inconclusive',
+  OCR:          'ocr_uncertain',
 };
+const VERDICT_ORDER = [VERDICT.AGREE, VERDICT.DISAGREE, VERDICT.INCONCLUSIVE, VERDICT.OCR];
+
+// ── Data-availability model ─────────────────────────────────────────────────
+// Every metric is a tagged value. Renderers print a number only for state 'ok';
+// every other state prints an explicit reason. This is what stops "no telemetry"
+// from being displayed as a real zero.
+const OK = 'ok', NO_DATA = 'no_data', NO_FIELD = 'no_field', NOT_DEPLOYED = 'not_deployed';
+const UNAVAIL_TEXT = {
+  [NO_DATA]:       'No records in period',
+  [NO_FIELD]:      'Not recorded',
+  [NOT_DEPLOYED]:  'Not deployed',
+};
+const okM   = (value, note) => ({ state: OK, value, note: note || '' });
+const noM   = (state, note) => ({ state, value: null, note: note || '' });
+/** ok when denominator > 0, otherwise the supplied unavailable state. */
+const rateM = (num, den, state, note) =>
+  den > 0 ? okM(num / den * 100, note) : noM(state || NO_DATA, note);
 
 let currentFilter = '7d';
 let loading = false;
+/** Populated by computeStats() — the single source every renderer reads from. */
+let STATS = null;
 
 // ── Date filter helper ──────────────────────────────────────────────────────
 function filterDate(f) {
@@ -771,14 +852,55 @@ function setFilter(f) {
 }
 
 // ── Formatters ──────────────────────────────────────────────────────────────
-function fmt(n) { if (n === null || n === undefined || isNaN(n)) return '—'; return n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n); }
+// Counts render exactly — no 1.2K abbreviation. Operators reconcile these
+// against SQL, so a rounded count is a wrong count.
+function fmt(n) { if (n === null || n === undefined || isNaN(n)) return '—'; return Number(n).toLocaleString('en-GB'); }
 function fmtPct(n) { if (n === null || n === undefined || isNaN(n)) return '—'; return n.toFixed(1)+'%'; }
-function fmtMs(n)  { if (!n || isNaN(n)) return '—'; return n >= 1000 ? (n/1000).toFixed(1)+'s' : Math.round(n)+'ms'; }
-function fmtUSD(n) { if (n === null || n === undefined || isNaN(n)) return '—'; return '$'+n.toFixed(n < 0.01 ? 4 : 2); }
+function fmtMs(n)  { if (n === null || n === undefined || isNaN(n)) return '—'; return n >= 1000 ? (n/1000).toFixed(1)+'s' : Math.round(n)+'ms'; }
 function fmtTime(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function fmtCountPct(count, pct) { return `${fmt(count)} <span style="color:var(--text-500)">(${fmtPct(pct)})</span>`; }
 function tierChip(t) {
   if (!t) return '<span class="chip gray">—</span>';
-  return `<span class="chip ${t}">${t}</span>`;
+  return `<span class="chip ${esc(t)}">${esc(t)}</span>`;
+}
+
+// ── Metric rendering ────────────────────────────────────────────────────────
+// The only path by which a metric reaches the DOM. A non-ok metric can never
+// be printed as a number.
+function put(id, metric, fmtFn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (metric && metric.state === OK) {
+    el.classList.remove('unavail');
+    el.innerHTML = (fmtFn || fmt)(metric.value);
+    el.title = metric.note || '';
+  } else {
+    el.classList.add('unavail');
+    el.textContent = (metric && UNAVAIL_TEXT[metric.state]) || '—';
+    el.title = (metric && metric.note) || '';
+  }
+}
+const putPct   = (id, m) => put(id, m, fmtPct);
+const putMs    = (id, m) => put(id, m, fmtMs);
+const putCount = (id, m) => put(id, m, fmt);
+/** Renders "N (P%)" from a {count, pct} ok-metric. */
+const putCP    = (id, m) => put(id, m, v => fmtCountPct(v.count, v.pct));
+
+// ── Complete fetch ──────────────────────────────────────────────────────────
+// PostgREST caps a response at 1000 rows. Reading a single page and treating
+// its length as a total silently under-counts every window above that size, so
+// every aggregate here pages until the source is exhausted.
+const PAGE_SIZE = 1000;
+async function fetchAllRows(build) {
+  const out = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await build().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const batch = data || [];
+    out.push(...batch);
+    if (batch.length < PAGE_SIZE) return out;
+    if (out.length >= 200000) return out; // hard stop; not reachable at current scale
+  }
 }
 
 // ── Auth & init ─────────────────────────────────────────────────────────────
@@ -835,6 +957,9 @@ document.getElementById('overlay').addEventListener('click', () => {
 });
 
 // ── Main data loader ────────────────────────────────────────────────────────
+// One fetch of the selected window, one computation, one validation pass, then
+// pure rendering. Every card reads the same STATS object, so two panels cannot
+// disagree about the same quantity — they are literally the same number.
 async function loadAll() {
   if (loading) return;
   loading = true;
@@ -844,362 +969,492 @@ async function loadAll() {
   const since = filterDate(currentFilter);
 
   try {
+    const [windowRows, fixedWindows, allTime] = await Promise.all([
+      fetchWindowRows(since),
+      fetchFixedWindowCounts(),
+      fetchAllTimeCounts(),
+    ]);
+
+    STATS = computeStats(windowRows, { since, fixedWindows, allTime });
+    renderIntegrity(validateStats(STATS));
+
+    renderVolume(STATS);
+    renderComposition(STATS);
+    renderL3(STATS);
+    renderDifficulty(STATS);
+    renderConfidenceDist(STATS);
+    renderShadow(STATS);
+    renderAlerts(STATS);
+
     await Promise.all([
-      loadCostUsage(since),
-      loadModelUsage(since),
-      loadL3Pipeline(since),
-      loadDifficultyMonitor(since),
-      loadShadowMonitor(since),
-      loadRecentFailures(since),
+      renderRecentFailures(STATS),
       loadFeedback(),
-      loadOpenAIHealth(since),
-      loadAlerts(since),
-      loadConfidenceDist(since),
-      loadShadowStatus(),
+      loadOpenAIHealth(since, STATS),
+      loadOpenAIStatusFeed(),
       loadQuestionInspector(),
     ]);
   } catch(e) {
     console.error('[ai-monitor] loadAll error', e);
+    renderIntegrity([{
+      label: 'Dashboard load failed',
+      detail: 'The metrics query did not complete, so the figures below may be stale or absent. ' + (e && e.message ? e.message : String(e)),
+    }]);
   } finally {
     loading = false;
     ico.classList.remove('spin');
   }
 }
 
-// ── 1. Cost & Usage ─────────────────────────────────────────────────────────
-async function loadCostUsage(since) {
-  // Total math requests (question_records with verification_tier — proxy for math)
-  let qTotal = sb.from('question_records').select('id', { count:'exact', head:true });
-  let qToday = sb.from('question_records').select('id', { count:'exact', head:true });
-  let qWeek  = sb.from('question_records').select('id', { count:'exact', head:true });
-  let qMonth = sb.from('question_records').select('id', { count:'exact', head:true });
-  if (since) {
-    qTotal = qTotal.gte('created_at', since);
-    qToday = qToday.gte('created_at', todayISO());
-    qWeek  = qWeek.gte('created_at', nDaysAgo(7));
-    qMonth = qMonth.gte('created_at', nDaysAgo(30));
-  } else {
-    qToday = qToday.gte('created_at', todayISO());
-    qWeek  = qWeek.gte('created_at', nDaysAgo(7));
-    qMonth = qMonth.gte('created_at', nDaysAgo(30));
-  }
+// ── Fetches ─────────────────────────────────────────────────────────────────
+/** Every record in the selected window, complete (paged). */
+function fetchWindowRows(since) {
+  return fetchAllRows(() => {
+    let q = sb.from('question_records')
+      .select('id, created_at, judge_verdict, solver_agreement, verification_confidence, ' +
+              'verification_status, verification_tier, ocr_confidence, oai_http_status, ' +
+              'oai_error_code, verification_meta')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false });
+    if (since) q = q.gte('created_at', since);
+    return q;
+  });
+}
 
-  // L3 pipeline records — prompt/completion tokens in verification_meta
-  let qL3 = sb.from('question_records')
-    .select('verification_meta,created_at')
-    .eq('verification_status', 'pipeline_complete');
-  if (since) qL3 = qL3.gte('created_at', since);
-
-  const [totRes, todayRes, weekRes, monthRes, l3Res, totAllRes, monthAllRes] = await Promise.all([
-    qTotal, qToday, qWeek, qMonth, qL3,
-    sb.from('question_records').select('id', {count:'exact',head:true}),
-    sb.from('question_records').select('id', {count:'exact',head:true}).gte('created_at', nDaysAgo(30)),
+/** Fixed rolling windows — deliberately independent of the period selector. */
+async function fetchFixedWindowCounts() {
+  const head = () => sb.from('question_records').select('id', { count:'exact', head:true });
+  const [today, week, month] = await Promise.all([
+    head().gte('created_at', todayISO()),
+    head().gte('created_at', nDaysAgo(7)),
+    head().gte('created_at', nDaysAgo(30)),
   ]);
-
-  const totalReqs = totRes.count ?? 0;
-  document.getElementById('cTotalReq').textContent = fmt(totalReqs);
-  document.getElementById('cToday').textContent = fmt(todayRes.count ?? 0);
-  document.getElementById('cWeek').textContent  = fmt(weekRes.count ?? 0);
-  document.getElementById('cMonth').textContent = fmt(monthRes.count ?? 0);
-  document.getElementById('cL3Count').textContent = fmt(l3Res.data?.length ?? 0);
-  document.getElementById('cNoL3Count').textContent = fmt(Math.max(0, totalReqs - (l3Res.data?.length ?? 0)));
-
-  const l3Rate = totalReqs > 0 ? ((l3Res.data?.length ?? 0) / totalReqs * 100) : 0;
-  document.getElementById('cL3Rate').textContent = fmtPct(l3Rate);
-
-  // Token & cost estimation from verification_meta
-  let promptTok = 0, compTok = 0;
-  for (const row of (l3Res.data || [])) {
-    const m = row.verification_meta || {};
-    promptTok += (m.solver_a_prompt_tokens || 0) + (m.solver_b_prompt_tokens || 0) + (m.judge_prompt_tokens || 0);
-    compTok   += (m.solver_a_completion_tokens || 0) + (m.solver_b_completion_tokens || 0) + (m.judge_completion_tokens || 0);
-  }
-  // Solver tokens → gpt-4o-mini pricing; judge tokens → gpt-4o pricing
-  // Since we don't have per-role token breakdown in v80/v81 meta yet, use blended estimate:
-  // 2 solver calls @ mini + 1 judge call @ 4o; ratio ~2:1 token split
-  const solverFrac = 2/3, judgeFrac = 1/3;
-  const estCost = (promptTok * solverFrac / 1e6 * PRICE['gpt-4o-mini'].in) +
-                  (promptTok * judgeFrac / 1e6 * PRICE['gpt-4o'].in) +
-                  (compTok   * solverFrac / 1e6 * PRICE['gpt-4o-mini'].out) +
-                  (compTok   * judgeFrac  / 1e6 * PRICE['gpt-4o'].out);
-
-  document.getElementById('cPromptTok').textContent = fmt(promptTok) !== '—' ? fmt(promptTok) : '0';
-  document.getElementById('cCompTok').textContent   = fmt(compTok)   !== '—' ? fmt(compTok)   : '0';
-  document.getElementById('cEstCost').textContent   = promptTok > 0 ? fmtUSD(estCost) : '$0';
-
-  const l3Count = l3Res.data?.length || 0;
-  document.getElementById('cAvgCost').textContent = l3Count > 0 ? fmtUSD(estCost / l3Count) : '—';
-
-  // Monthly cost projection based on period rate
-  const monthCount = monthRes.count ?? 0;
-  const monthCostEst = monthCount > 0 && l3Count > 0 && totalReqs > 0
-    ? (estCost / totalReqs) * monthCount : 0;
-  document.getElementById('cMonthCost').textContent = monthCostEst > 0 ? fmtUSD(monthCostEst) : '—';
-
-  // Per-role cost breakdown card
-  renderCostBreakdown(l3Res.data || []);
+  return { today: today.count ?? 0, week: week.count ?? 0, month: month.count ?? 0 };
 }
 
-// ── 2. Model Usage ──────────────────────────────────────────────────────────
-async function loadModelUsage(since) {
-  let q = sb.from('question_records').select('verification_meta,verification_status,created_at');
-  if (since) q = q.gte('created_at', since);
-  const { data } = await q;
-  const rows = data || [];
+/** All-time counters. Shadow checkpoints are absolute milestones, not windowed. */
+async function fetchAllTimeCounts() {
+  const head = () => sb.from('question_records').select('id', { count:'exact', head:true });
+  const [v2, defMed, v1, shadowSetting] = await Promise.all([
+    head().not('verification_meta->v2_tier', 'is', null),
+    head().like('verification_meta->>reasons', '%default_medium%'),
+    head().not('verification_tier', 'is', null),
+    sb.from('system_settings').select('key, value').eq('key', 'difficulty_detector_v2_enabled').maybeSingle(),
+  ]);
+  return {
+    v2Count:     v2.count ?? 0,
+    defMedCount: defMed.count ?? 0,
+    v1Count:     v1.count ?? 0,
+    shadowSettingPresent: !!(shadowSetting && shadowSetting.data),
+    shadowSettingValue:   shadowSetting && shadowSetting.data ? shadowSetting.data.value : null,
+  };
+}
 
-  let solverA=0, solverB=0, judge=0, ocr=0, ocrRerun=0, detV2=0;
+// ── Single source of truth ──────────────────────────────────────────────────
+/**
+ * A record counts as an L3 run when the pipeline stamped a version into
+ * verification_meta. This is broader than verification_status='pipeline_complete',
+ * which excludes runs that terminated as 'ocr_uncertain' — filtering on the
+ * status made the ocr_uncertain verdict permanently unreachable, since those
+ * rows are exactly the ones the status filter dropped.
+ */
+const isL3 = r => !!(r.verification_meta && r.verification_meta.pipeline_version);
+const num  = v => { const n = Number(v); return (v === null || v === undefined || v === '' || isNaN(n)) ? null : n; };
+const bool = v => v === true || v === 'true';
+
+function percentile(sorted, p) {
+  if (!sorted.length) return null;
+  const i = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
+  return sorted[i];
+}
+
+function computeStats(rows, ctx) {
+  const S = { since: ctx.since, total: rows.length, fixed: ctx.fixedWindows, allTime: ctx.allTime };
+
+  const l3 = rows.filter(isL3);
+  S.l3Count = l3.length;
+  S.noL3Count = Math.max(0, rows.length - l3.length);
+  S.l3Rate = rateM(l3.length, rows.length, NO_DATA, 'L3 runs ÷ all requests in period');
+  S.lastL3 = l3.length ? l3.reduce((a, r) => r.created_at > a ? r.created_at : a, l3[0].created_at) : null;
+
+  // ── Judge verdicts — exhaustive over the four stored values ──
+  const verdictCounts = Object.fromEntries(VERDICT_ORDER.map(v => [v, 0]));
+  let verdictOther = 0;
+  for (const r of l3) {
+    const v = r.judge_verdict;
+    if (Object.prototype.hasOwnProperty.call(verdictCounts, v)) verdictCounts[v]++;
+    else verdictOther++;
+  }
+  S.verdictCounts = verdictCounts;
+  S.verdictOther  = verdictOther;
+  S.verdict = Object.fromEntries(VERDICT_ORDER.map(v => [v,
+    l3.length ? okM({ count: verdictCounts[v], pct: verdictCounts[v] / l3.length * 100 }) : noM(NO_DATA)
+  ]));
+
+  // ── Solver ↔ solver agreement (a different axis from the judge verdict) ──
+  const agreeVals = l3.map(r => num(r.solver_agreement)).filter(v => v !== null);
+  S.solverAgreeDen = agreeVals.length;
+  S.solverAgree = agreeVals.length
+    ? okM(agreeVals.reduce((a, b) => a + b, 0) / agreeVals.length * 100,
+          `over ${agreeVals.length} run(s) carrying solver_agreement`)
+    : noM(l3.length ? NO_FIELD : NO_DATA);
+
+  // ── Quality score — records without a score are never counted as low ──
+  const qualVals = l3.map(r => num(r.verification_meta.verification_quality_score)).filter(v => v !== null);
+  S.qualDen  = qualVals.length;
+  S.qualNone = l3.length - qualVals.length;
+  S.qualAvg  = qualVals.length
+    ? okM(qualVals.reduce((a, b) => a + b, 0) / qualVals.length, `over ${qualVals.length} scored run(s)`)
+    : noM(l3.length ? NO_FIELD : NO_DATA);
+  const qHigh = qualVals.filter(q => q >= 0.8).length;
+  const qMed  = qualVals.filter(q => q >= 0.5 && q < 0.8).length;
+  const qLow  = qualVals.filter(q => q < 0.5).length;
+  const qm = c => qualVals.length ? okM({ count: c, pct: c / qualVals.length * 100 }) : noM(l3.length ? NO_FIELD : NO_DATA);
+  S.qHigh = qm(qHigh); S.qMed = qm(qMed); S.qLow = qm(qLow);
+  S.qBuckets = { qHigh, qMed, qLow };
+
+  // ── Latency — the field ai-tutor actually writes is pipeline_latency_ms ──
+  const lats = l3.map(r => num(r.verification_meta.pipeline_latency_ms)).filter(v => v !== null).sort((a, b) => a - b);
+  S.latDen = lats.length;
+  S.latAvg = lats.length ? okM(lats.reduce((a, b) => a + b, 0) / lats.length) : noM(l3.length ? NO_FIELD : NO_DATA);
+  S.latP95 = lats.length ? okM(percentile(lats, 0.95), `p95 over ${lats.length} run(s)`) : noM(l3.length ? NO_FIELD : NO_DATA);
+
+  const lowQ = l3.filter(r => bool(r.verification_meta.low_quality_solver)).length;
+  S.lowQual = l3.length ? okM({ count: lowQ, pct: lowQ / l3.length * 100 }) : noM(NO_DATA);
+
+  // ── Composition. Solver/judge counts are exact structural multiples of an
+  //    L3 run; OCR counts are measured per record. Both are labelled as such. ──
+  S.solverCalls = l3.length ? okM(l3.length * 2) : noM(NO_DATA);
+  S.judgeCalls  = l3.length ? okM(l3.length)     : noM(NO_DATA);
+  const ssiRows = l3.filter(r => r.verification_meta.solver_sees_image !== undefined);
+  const ocrExtract = ssiRows.filter(r => bool(r.verification_meta.solver_sees_image)).length;
+  S.ocrExtract = ssiRows.length ? okM(ocrExtract, `over ${ssiRows.length} run(s) recording solver_sees_image`)
+                                : noM(l3.length ? NO_FIELD : NO_DATA);
+  const rerunRows = l3.filter(r => num(r.verification_meta.ocr_rerun_count) !== null);
+  S.ocrRerun = rerunRows.length
+    ? okM(rerunRows.reduce((a, r) => a + num(r.verification_meta.ocr_rerun_count), 0))
+    : noM(l3.length ? NO_FIELD : NO_DATA);
+  const changedRows = l3.filter(r => r.verification_meta.ocr_rerun_changed !== undefined);
+  S.ocrChanged = changedRows.length
+    ? okM(changedRows.filter(r => bool(r.verification_meta.ocr_rerun_changed)).length)
+    : noM(l3.length ? NO_FIELD : NO_DATA);
+
   const versionMap = {};
+  for (const r of l3) {
+    const pv = r.verification_meta.pipeline_version || 'unknown';
+    versionMap[pv] = (versionMap[pv] || 0) + 1;
+  }
+  S.versionMap = versionMap;
 
-  for (const r of rows) {
+  // ── Detector v1 / v2 ──
+  const TIERS = ['easy','medium','hard','expert'];
+  S.tiers = TIERS;
+  const detRows = rows.filter(r => r.verification_tier);
+  S.v1Count = detRows.length;
+  const v1Dist = Object.fromEntries(TIERS.map(t => [t, 0]));
+  let defMed = 0, gptComparable = 0, gptAgree = 0, flagPresent = 0, flagTrue = 0;
+  for (const r of detRows) {
     const m = r.verification_meta || {};
-    if (r.verification_status === 'pipeline_complete') {
-      solverA++; solverB++; judge++;
-      if (m.ocr_ran) ocr++;
-      if (m.ocr_rerun) ocrRerun++;
-      const pv = m.pipeline_version || 'unknown';
-      versionMap[pv] = (versionMap[pv] || 0) + 1;
-    }
-    if (m.v2_tier) detV2++;
+    if (v1Dist[r.verification_tier] !== undefined) v1Dist[r.verification_tier]++;
+    if (Array.isArray(m.reasons) && m.reasons.includes('default_medium')) defMed++;
+    if (m.gpt_tier) { gptComparable++; if (m.gpt_tier === r.verification_tier) gptAgree++; }
+    if (m.agrees_with_gpt !== undefined) { flagPresent++; if (m.agrees_with_gpt === true) flagTrue++; }
+  }
+  S.v1Dist = v1Dist;
+  S.defMedCount = defMed;
+  S.defMedPct = rateM(defMed, detRows.length, NO_DATA, 'records whose v1 reasons include default_medium');
+  S.gptComparable = gptComparable;
+  S.gptAgreeCount = gptAgree;
+  S.storedFlagPresent = flagPresent;
+  S.storedFlagTrue = flagTrue;
+  S.v1GptAgree = rateM(gptAgree, gptComparable, gptComparable === 0 && detRows.length ? NO_FIELD : NO_DATA,
+                       'verification_tier === verification_meta.gpt_tier');
+
+  const v2Rows = rows.filter(r => (r.verification_meta || {}).v2_tier);
+  S.v2Count = v2Rows.length;
+  const v2Dist = Object.fromEntries(TIERS.map(t => [t, 0]));
+  let v2GptDen = 0, v2GptAgree = 0, v2Lats = [];
+  for (const r of v2Rows) {
+    const m = r.verification_meta;
+    if (v2Dist[m.v2_tier] !== undefined) v2Dist[m.v2_tier]++;
+    if (m.v2_agrees_with_gpt !== undefined) { v2GptDen++; if (m.v2_agrees_with_gpt === true) v2GptAgree++; }
+    const l = num(m.v2_latency_ms); if (l !== null) v2Lats.push(l);
+  }
+  S.v2Dist = v2Dist;
+  // Detector v2 has never written a record. That is "not deployed", not "0%".
+  S.v2Deployed = ctx.allTime.v2Count > 0;
+  const v2State = S.v2Deployed ? NO_DATA : NOT_DEPLOYED;
+  S.v2GptAgree = rateM(v2GptAgree, v2GptDen, v2State);
+  S.v2Latency  = v2Lats.length ? okM(v2Lats.reduce((a, b) => a + b, 0) / v2Lats.length) : noM(v2State);
+  S.v2Pairs = v2Rows.map(r => ({ v1: r.verification_tier || (r.verification_meta.tier || null), v2: r.verification_meta.v2_tier }));
+
+  // ── Confidence distribution ──
+  const confVals = rows.map(r => num(r.verification_confidence)).filter(v => v !== null);
+  S.confDen = confVals.length;
+  S.confBuckets = [
+    confVals.filter(c => c < 0.5).length,
+    confVals.filter(c => c >= 0.5 && c < 0.7).length,
+    confVals.filter(c => c >= 0.7 && c < 0.85).length,
+    confVals.filter(c => c >= 0.85).length,
+  ];
+  S.confAvg = confVals.length ? okM(confVals.reduce((a, b) => a + b, 0) / confVals.length) : noM(NO_DATA);
+
+  // ── OCR issues (for the alert + failures table) ──
+  const ocrConfRows = rows.filter(r => num(r.ocr_confidence) !== null);
+  const ocrBad = ocrConfRows.filter(r => num(r.ocr_confidence) < 0.5).length;
+  const ambig  = l3.filter(r => Array.isArray(r.verification_meta.ocr_ambiguity_flags) && r.verification_meta.ocr_ambiguity_flags.length).length;
+  S.ocrIssueCount = ocrBad + ambig;
+  S.ocrIssueDen   = ocrConfRows.length;
+  S.ocrIssueRate  = rateM(ocrBad, ocrConfRows.length, NO_DATA, 'ocr_confidence < 0.5 over records carrying ocr_confidence');
+
+  // ── Provider status codes ──
+  const codeRows = rows.filter(r => r.oai_http_status !== null && r.oai_http_status !== undefined);
+  S.codeRows = codeRows;
+
+  return S;
+}
+
+// ── Internal consistency ────────────────────────────────────────────────────
+// Assertions that must hold across cards. A violation means two panels would
+// tell the operator different things, so it is surfaced rather than rendered.
+function validateStats(S) {
+  const fails = [];
+  const check = (cond, label, detail) => { if (!cond) fails.push({ label, detail }); };
+
+  const verdictSum = VERDICT_ORDER.reduce((a, v) => a + S.verdictCounts[v], 0) + S.verdictOther;
+  check(verdictSum === S.l3Count, 'Judge verdict counts do not sum to the L3 run total',
+    `verdicts total ${verdictSum} vs ${S.l3Count} L3 runs.`);
+  check(S.verdictOther === 0, 'Unrecognised judge_verdict value present',
+    `${S.verdictOther} record(s) carry a judge_verdict outside {${VERDICT_ORDER.join(', ')}}. The verdict breakdown is incomplete until this dashboard learns the new value.`);
+
+  check(S.qBuckets.qHigh + S.qBuckets.qMed + S.qBuckets.qLow === S.qualDen,
+    'Quality buckets do not sum to the scored-record count',
+    `buckets total ${S.qBuckets.qHigh + S.qBuckets.qMed + S.qBuckets.qLow} vs ${S.qualDen} scored records.`);
+  check(S.qualDen + S.qualNone === S.l3Count, 'Scored + unscored records do not sum to the L3 total',
+    `${S.qualDen} + ${S.qualNone} ≠ ${S.l3Count}.`);
+
+  check(S.l3Count + S.noL3Count === S.total, 'L3 and non-L3 records do not sum to the request total',
+    `${S.l3Count} + ${S.noL3Count} ≠ ${S.total}.`);
+
+  // The v1/GPT rate is computed from tier columns; ai-tutor also stores its own
+  // agrees_with_gpt boolean. They describe the same fact and must match.
+  if (S.gptComparable > 0 && S.storedFlagPresent === S.gptComparable) {
+    check(S.gptAgreeCount === S.storedFlagTrue,
+      'v1/GPT agreement disagrees with the stored agrees_with_gpt flag',
+      `computed ${S.gptAgreeCount} agreements from tier comparison vs ${S.storedFlagTrue} records flagged agrees_with_gpt=true. One of the two is stale.`);
   }
 
-  document.getElementById('mMini').textContent    = fmt(solverA + solverB + ocr);
-  document.getElementById('mFull').textContent    = fmt(judge + ocrRerun);
-  document.getElementById('mDetV2').textContent   = fmt(detV2);
-  document.getElementById('mSolverA').textContent = fmt(solverA);
-  document.getElementById('mSolverB').textContent = fmt(solverB);
-  document.getElementById('mJudge').textContent   = fmt(judge);
-  document.getElementById('mOcr').textContent     = fmt(ocr);
-  document.getElementById('mOcrRerun').textContent= fmt(ocrRerun);
+  const distSum = S.tiers.reduce((a, t) => a + S.v1Dist[t], 0);
+  check(distSum === S.v1Count, 'Detector v1 tier distribution does not sum to the v1 record count',
+    `distribution totals ${distSum} vs ${S.v1Count} records with a tier.`);
 
-  // Version split
+  return fails;
+}
+
+function renderIntegrity(fails) {
+  const el = document.getElementById('integrityBanner');
+  if (!el) return;
+  if (!fails.length) { el.classList.remove('show'); el.innerHTML = ''; return; }
+  el.innerHTML = `<b>⚠️ Data integrity check failed (${fails.length}).</b> Figures below may be internally inconsistent — treat them as unverified until this is resolved.
+    <ul>${fails.map(f => `<li><b>${esc(f.label)}</b> — ${esc(f.detail)}</li>`).join('')}</ul>`;
+  el.classList.add('show');
+}
+
+// ── Renderers ───────────────────────────────────────────────────────────────
+function renderVolume(S) {
+  putCount('cTotalReq', okM(S.total));
+  putCount('cL3Count',  okM(S.l3Count));
+  putCount('cNoL3Count', okM(S.noL3Count));
+  putPct('cL3Rate', S.l3Rate);
+  putCount('cToday', okM(S.fixed.today));
+  putCount('cWeek',  okM(S.fixed.week));
+  putCount('cMonth', okM(S.fixed.month));
+  put('cLastL3', S.lastL3 ? okM(S.lastL3) : noM(NO_DATA), fmtTime);
+}
+
+function renderComposition(S) {
+  putCount('mL3Runs', okM(S.l3Count));
+  putCount('mJudgeTop', S.judgeCalls);
+  putCount('mDetV2', S.v2Deployed ? okM(S.v2Count) : noM(NOT_DEPLOYED, 'No record has ever carried v2_tier.'));
+  putCount('mSolvers', S.solverCalls);
+  putCount('mJudge', S.judgeCalls);
+  putCount('mOcr', S.ocrExtract);
+  putCount('mOcrRerun', S.ocrRerun);
+  putCount('mOcrChanged', S.ocrChanged);
+
   const vEl = document.getElementById('mVersionSplit');
-  const vEntries = Object.entries(versionMap).sort((a,b) => b[1]-a[1]);
-  if (!vEntries.length) { vEl.innerHTML = '<div class="metric-row"><span class="metric-lbl">No L3 data</span><span class="metric-val">—</span></div>'; return; }
-  const total = vEntries.reduce((s,[,c]) => s+c, 0);
-  vEl.innerHTML = vEntries.map(([v,c]) =>
-    `<div class="metric-row"><span class="metric-lbl">${v}</span><span class="metric-val mono">${fmt(c)} <span style="color:var(--text-500)">(${fmtPct(c/total*100)})</span></span></div>`
-  ).join('');
+  const entries = Object.entries(S.versionMap).sort((a, b) => b[1] - a[1]);
+  vEl.innerHTML = entries.length
+    ? entries.map(([v, c]) =>
+        `<div class="metric-row"><span class="metric-lbl">${esc(v)}</span><span class="metric-val mono">${fmtCountPct(c, c / S.l3Count * 100)}</span></div>`).join('')
+    : '<div class="metric-row"><span class="metric-lbl">No L3 runs in period</span><span class="metric-val unavail">No records in period</span></div>';
 }
 
-// ── 3. L3 Pipeline ──────────────────────────────────────────────────────────
-async function loadL3Pipeline(since) {
-  let qAll = sb.from('question_records').select('id', {count:'exact', head:true});
-  let qL3  = sb.from('question_records')
-    .select('verification_meta,judge_verdict,solver_agreement,verification_status,created_at');
-  if (since) { qAll = qAll.gte('created_at', since); qL3 = qL3.gte('created_at', since); }
-  qL3 = qL3.eq('verification_status', 'pipeline_complete');
+function renderL3(S) {
+  putCount('l3Total', okM(S.l3Count));
+  document.getElementById('l3TotalSub').textContent =
+    S.l3Count ? `across ${Object.keys(S.versionMap).length} pipeline version(s)` : 'pipeline records';
+  putPct('l3Rate', S.l3Rate);
+  putPct('l3Agree', S.solverAgree);
+  put('l3QualScore', S.qualAvg, v => v.toFixed(2));
+  document.getElementById('l3QualSub').textContent =
+    S.qualDen ? `over ${fmt(S.qualDen)} of ${fmt(S.l3Count)} runs` : 'verification_quality_score';
 
-  const [allRes, l3Res] = await Promise.all([qAll, qL3]);
-  const rows = l3Res.data || [];
-  const total = rows.length;
-  const allCount = allRes.count ?? 0;
+  putCP('l3JudgeAgree',    S.verdict[VERDICT.AGREE]);
+  putCP('l3JudgeDisagree', S.verdict[VERDICT.DISAGREE]);
+  putCP('l3Inconclusive',  S.verdict[VERDICT.INCONCLUSIVE]);
+  putCP('l3JudgeOcr',      S.verdict[VERDICT.OCR]);
+  putCP('l3LowQual', S.lowQual);
+  putMs('l3Latency', S.latAvg);
+  putMs('l3LatencyP95', S.latP95);
 
-  document.getElementById('l3Total').textContent = fmt(total);
-  document.getElementById('l3Rate').textContent  = allCount > 0 ? fmtPct(total/allCount*100) : '—';
+  putCP('l3QHigh', S.qHigh);
+  putCP('l3QMed',  S.qMed);
+  putCP('l3QLow',  S.qLow);
+  putCount('l3QNone', S.l3Count ? okM(S.qualNone) : noM(NO_DATA));
+}
 
-  if (!total) {
-    ['l3Agree','l3QualScore','l3JudgeAgree','l3JudgeDisagree','l3JudgeOcr','l3LowQual',
-     'l3Latency','l3QHigh','l3QMed','l3QLow','l3Inconclusive'].forEach(id => {
-      document.getElementById(id).textContent = '—';
-    });
+function renderDifficulty(S) {
+  putCount('dV1Total', okM(S.v1Count));
+  putCount('dV2Total', S.v2Deployed ? okM(S.v2Count) : noM(NOT_DEPLOYED));
+  document.getElementById('dV2TotalSub').textContent =
+    S.v2Deployed ? 'records carrying v2_tier' : 'detector v2 has never run';
+  putPct('dDefaultMed', S.defMedPct);
+  putPct('dV1DefMedPct', S.defMedPct);
+  putPct('dV1GptAgree', S.v1GptAgree);
+  putPct('dV2GptAgree', S.v2GptAgree);
+  putPct('dV2GptAgreePct', S.v2GptAgree);
+  putMs('dV2AvgLatency', S.v2Latency);
+
+  renderBars('dV1Bars', S.v1Dist, S.v1Count);
+  renderBars('dV2Bars', S.v2Dist, S.v2Count);
+
+  const body = document.getElementById('dCmpBody');
+  const scope = document.getElementById('dCmpScope');
+  if (!S.v2Count) {
+    scope.textContent = '(no records)';
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-500);padding:20px">${
+      S.v2Deployed ? 'No Detector v2 records in this period.'
+                   : 'Detector v2 is not deployed — no record has ever carried a v2_tier.'}</td></tr>`;
     return;
   }
-
-  let sumAgreement=0, sumQual=0, qualCount=0;
-  let jAgree=0, jDisagree=0, jOcr=0, lowQual=0;
-  let qHigh=0, qMed=0, qLow=0, inconclusive=0;
-  let sumLatency=0, latCount=0;
-
-  for (const r of rows) {
-    const m = r.verification_meta || {};
-    if (r.solver_agreement !== null && r.solver_agreement !== undefined) sumAgreement += Number(r.solver_agreement);
-    const qs = m.verification_quality_score ?? m.quality_score;
-    if (qs !== null && qs !== undefined) { sumQual += Number(qs); qualCount++; }
-    const jv = r.judge_verdict || m.judge_verdict || '';
-    if (jv === 'agree') jAgree++;
-    else if (jv === 'disagree') jDisagree++;
-    else if (jv === 'ocr_uncertain') jOcr++;
-    else inconclusive++;
-    if (m.low_quality_solver) lowQual++;
-    const lat = m.total_latency_ms || m.latency_ms;
-    if (lat) { sumLatency += Number(lat); latCount++; }
-    const q = Number(qs ?? 0);
-    if (q >= 0.8) qHigh++; else if (q >= 0.5) qMed++; else qLow++;
-  }
-
-  document.getElementById('l3Agree').textContent      = fmtPct(sumAgreement / total * 100);
-  document.getElementById('l3QualScore').textContent  = qualCount ? (sumQual/qualCount).toFixed(2) : '—';
-  document.getElementById('l3JudgeAgree').textContent = `${fmt(jAgree)} (${fmtPct(jAgree/total*100)})`;
-  document.getElementById('l3JudgeDisagree').textContent = `${fmt(jDisagree)} (${fmtPct(jDisagree/total*100)})`;
-  document.getElementById('l3JudgeOcr').textContent   = `${fmt(jOcr)} (${fmtPct(jOcr/total*100)})`;
-  document.getElementById('l3LowQual').textContent    = `${fmt(lowQual)} (${fmtPct(lowQual/total*100)})`;
-  document.getElementById('l3Latency').textContent    = latCount ? fmtMs(sumLatency/latCount) : '—';
-  document.getElementById('l3QHigh').textContent      = `${fmt(qHigh)} (${fmtPct(qHigh/total*100)})`;
-  document.getElementById('l3QMed').textContent       = `${fmt(qMed)} (${fmtPct(qMed/total*100)})`;
-  document.getElementById('l3QLow').textContent       = `${fmt(qLow)} (${fmtPct(qLow/total*100)})`;
-  document.getElementById('l3Inconclusive').textContent = fmtPct(inconclusive/total*100);
-}
-
-// ── 4. Difficulty Monitor ───────────────────────────────────────────────────
-async function loadDifficultyMonitor(since) {
-  let q = sb.from('question_records').select('verification_tier,verification_meta,created_at').not('verification_tier','is',null);
-  if (since) q = q.gte('created_at', since);
-  const { data } = await q;
-  const rows = data || [];
-
-  const tiers = ['easy','medium','hard','expert'];
-  const v1Dist = {easy:0, medium:0, hard:0, expert:0};
-  const v2Dist = {easy:0, medium:0, hard:0, expert:0};
-  let v1Total=0, v2Total=0, defMedCount=0;
-  let v1GptAgreeSum=0, v1GptAgreeCount=0;
-  let v2GptAgreeSum=0, v2GptAgreeCount=0;
-  let v2LatSum=0, v2LatCount=0;
-
-  for (const r of rows) {
-    const m = r.verification_meta || {};
-    const t1 = r.verification_tier;
-    if (t1 && tiers.includes(t1)) { v1Dist[t1]++; v1Total++; }
-    if (Array.isArray(m.reasons) && m.reasons.includes('default_medium')) defMedCount++;
-    if (m.agrees_with_gpt !== undefined) { v1GptAgreeSum += m.agrees_with_gpt ? 1 : 0; v1GptAgreeCount++; }
-    if (m.v2_tier && tiers.includes(m.v2_tier)) { v2Dist[m.v2_tier]++; v2Total++; }
-    if (m.v2_agrees_with_gpt !== undefined) { v2GptAgreeSum += m.v2_agrees_with_gpt ? 1 : 0; v2GptAgreeCount++; }
-    if (m.v2_latency_ms) { v2LatSum += Number(m.v2_latency_ms); v2LatCount++; }
-  }
-
-  document.getElementById('dV1Total').textContent   = fmt(v1Total);
-  document.getElementById('dV2Total').textContent   = fmt(v2Total);
-  document.getElementById('dDefaultMed').textContent= v1Total > 0 ? fmtPct(defMedCount/v1Total*100) : '—';
-  document.getElementById('dV1DefMedPct').textContent= v1Total > 0 ? fmtPct(defMedCount/v1Total*100) : '—';
-  document.getElementById('dV2GptAgree').textContent = v2GptAgreeCount > 0 ? fmtPct(v2GptAgreeSum/v2GptAgreeCount*100) : '—';
-  document.getElementById('dV2GptAgreePct').textContent = v2GptAgreeCount > 0 ? fmtPct(v2GptAgreeSum/v2GptAgreeCount*100) : '—';
-  document.getElementById('dV1GptAgree').textContent = v1GptAgreeCount > 0 ? fmtPct(v1GptAgreeSum/v1GptAgreeCount*100) : '—';
-  document.getElementById('dV2AvgLatency').textContent = v2LatCount > 0 ? fmtMs(v2LatSum/v2LatCount) : '—';
-
-  // Render bar charts
-  renderBars('dV1Bars', v1Dist, v1Total);
-  renderBars('dV2Bars', v2Dist, v2Total);
-
-  // Comparison table
-  const cmpTiers = ['easy','medium','hard','expert'];
-  // Over default_medium subset: v1 is always 'medium', v2 varies
+  scope.textContent = `(${fmt(S.v2Count)} records carrying both tiers)`;
   const interp = { easy:'de-escalation', medium:'no change', hard:'escalation', expert:'strong escalation' };
-  if (!v2Total) {
-    document.getElementById('dCmpBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-500);padding:20px">No v2 data yet — deploy v81 first</td></tr>';
-    return;
-  }
-  const rows2 = data.filter(r => r.verification_meta?.v2_tier);
-  const defMedRows = rows2;
   const countMap = {};
-  for (const r of defMedRows) {
-    const k = `medium→${r.verification_meta.v2_tier}`;
+  for (const p of S.v2Pairs) {
+    const k = `${p.v1 || 'unknown'}→${p.v2}`;
     countMap[k] = (countMap[k] || 0) + 1;
   }
-  const cmpEntries = Object.entries(countMap).sort((a,b) => b[1]-a[1]);
-  document.getElementById('dCmpBody').innerHTML = cmpEntries.map(([k,c]) => {
+  body.innerHTML = Object.entries(countMap).sort((a, b) => b[1] - a[1]).map(([k, c]) => {
     const [v1t, v2t] = k.split('→');
-    const pct = fmtPct(c / defMedRows.length * 100);
-    const interpStr = interp[v2t] || '—';
+    const label = v1t === v2t ? 'no change' : (interp[v2t] || '—');
     const color = v2t === 'hard' || v2t === 'expert' ? 'var(--amber)' : v2t === 'easy' ? 'var(--green)' : 'var(--text-300)';
-    return `<tr>
-      <td>${tierChip(v1t)}</td>
-      <td>${tierChip(v2t)}</td>
-      <td class="mono hi">${fmt(c)}</td>
-      <td class="mono">${pct}</td>
-      <td style="color:${color};font-size:12px">${interpStr}</td>
-    </tr>`;
+    return `<tr><td>${tierChip(v1t === 'unknown' ? null : v1t)}</td><td>${tierChip(v2t)}</td>
+      <td class="mono hi">${fmt(c)}</td><td class="mono">${fmtPct(c / S.v2Count * 100)}</td>
+      <td style="color:${color};font-size:12px">${esc(label)}</td></tr>`;
   }).join('');
+}
+
+function renderConfidenceDist(S) {
+  const cont = document.getElementById('dConfBars');
+  if (!cont) return;
+  const barRows = cont.querySelectorAll('.bar-row');
+  const total = S.confDen;
+  S.confBuckets.forEach((v, i) => {
+    const r = barRows[i]; if (!r) return;
+    const pct = total > 0 ? v / total * 100 : 0;
+    r.querySelector('.bar-fill').style.width = pct.toFixed(1) + '%';
+    r.querySelector('.bar-pct').textContent  = total > 0 ? fmtPct(pct) : '—';
+    r.querySelector('.bar-count').textContent = total > 0 ? fmt(v) : '—';
+  });
 }
 
 function renderBars(containerId, dist, total) {
   const container = document.getElementById(containerId);
+  if (!container) return;
   const rows = container.querySelectorAll('.bar-row');
-  const tiers = ['easy','medium','hard','expert'];
-  tiers.forEach((t, i) => {
+  ['easy','medium','hard','expert'].forEach((t, i) => {
     const count = dist[t] || 0;
-    const pct = total > 0 ? count/total*100 : 0;
-    if (rows[i]) {
-      rows[i].querySelector('.bar-fill').style.width = pct.toFixed(1)+'%';
-      rows[i].querySelector('.bar-pct').textContent  = fmtPct(pct);
-      rows[i].querySelector('.bar-count').textContent= fmt(count);
-    }
+    const pct = total > 0 ? count / total * 100 : 0;
+    if (!rows[i]) return;
+    rows[i].querySelector('.bar-fill').style.width = pct.toFixed(1) + '%';
+    rows[i].querySelector('.bar-pct').textContent   = total > 0 ? fmtPct(pct) : '—';
+    rows[i].querySelector('.bar-count').textContent = total > 0 ? fmt(count) : '—';
   });
 }
 
-// ── 5. Shadow Monitor ───────────────────────────────────────────────────────
-async function loadShadowMonitor(since) {
-  // Total v2 records (all time — checkpoint is absolute, not filtered)
-  const { data: allV2Data } = await sb.from('question_records')
-    .select('id,created_at,topic,verification_tier,verification_meta')
+function renderShadow(S) {
+  const A = S.allTime;
+  const deployed = S.v2Deployed;
+
+  const notice = document.getElementById('sNotDeployed');
+  if (notice) {
+    notice.style.display = deployed ? 'none' : 'block';
+    document.getElementById('sNotDeployedDetail').textContent = A.shadowSettingPresent
+      ? `The system_settings flag difficulty_detector_v2_enabled is present (value: ${String(A.shadowSettingValue)}), but no record in question_records has ever carried a v2_tier.`
+      : 'There is no difficulty_detector_v2_enabled row in system_settings, and no record in question_records has ever carried a v2_tier.';
+  }
+
+  putCount('sV2Count', deployed ? okM(A.v2Count) : noM(NOT_DEPLOYED));
+  putCount('sNoV2Count', okM(A.defMedCount));
+  putPct('sV2Coverage', deployed
+    ? rateM(A.v2Count, A.defMedCount, NO_DATA, 'all-time v2 records ÷ all-time default_medium records')
+    : noM(NOT_DEPLOYED));
+
+  const v2 = A.v2Count;
+  const next = v2 < 50 ? 50 : v2 < 100 ? 100 : 200;
+  putCount('sNextCp', okM(next));
+  document.getElementById('sNextCpSub').textContent = deployed
+    ? `${fmt(Math.max(0, next - v2))} more needed`
+    : 'collection has not started';
+  document.getElementById('sV2Sub').textContent = deployed
+    ? (v2 >= 200 ? '🎯 200 reached' : v2 >= 100 ? '✅ 100 reached' : v2 >= 50 ? '✅ 50 reached' : 'all-time, unfiltered')
+    : 'all-time, unfiltered';
+  document.getElementById('sCpLabel').textContent = `${fmt(v2)} / 200`;
+  document.getElementById('sCpBar').style.width = Math.min(100, v2 / 200 * 100).toFixed(1) + '%';
+
+  const chip = document.getElementById('sShadowStatus');
+  if (chip) {
+    if (deployed) { chip.className = 'chip green'; chip.textContent = '✅ Shadow collecting'; }
+    else          { chip.className = 'chip amber'; chip.textContent = '🌑 Not deployed'; }
+  }
+
+  const emptyMsg = deployed ? 'No Detector v2 records yet.' : 'Detector v2 is not deployed — nothing to show.';
+  const rv = document.getElementById('sRecentV2Body');
+  if (rv) rv.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">${esc(emptyMsg)}</td></tr>`;
+  const eb = document.getElementById('sEscBody');
+  if (eb) eb.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-500);padding:20px">${esc(emptyMsg)}</td></tr>`;
+  if (deployed) loadShadowTables().catch(e => console.error('[ai-monitor] shadow-tables', e));
+}
+
+/** Only queried when Detector v2 has actually produced records. */
+async function loadShadowTables() {
+  const { data } = await sb.from('question_records')
+    .select('id,created_at,topic,question,verification_tier,verification_meta')
     .not('verification_meta->v2_tier', 'is', null)
     .order('created_at', { ascending: false })
     .limit(200);
+  const rows = data || [];
+  const cell = (t, max) => `<td style="max-width:${max}px;overflow:hidden;text-overflow:ellipsis">${esc(t)}</td>`;
 
-  const { count: defMedCount } = await sb.from('question_records')
-    .select('id', { count:'exact', head:true })
-    .like('verification_meta->>reasons', '%default_medium%');
-
-  const { count: v1Total } = await sb.from('question_records')
-    .select('id', { count:'exact', head:true })
-    .not('verification_tier', 'is', null);
-
-  const v2Count = allV2Data?.length ?? 0;
-  const noV2Count = Math.max(0, (v1Total ?? 0) - (defMedCount ?? 0));
-
-  document.getElementById('sV2Count').textContent    = fmt(v2Count);
-  document.getElementById('sNoV2Count').textContent  = fmt(noV2Count);
-  document.getElementById('sV2Coverage').textContent = defMedCount > 0 ? fmtPct(v2Count / defMedCount * 100) : '—';
-
-  // Checkpoint tracker
-  const next = v2Count < 50 ? 50 : v2Count < 100 ? 100 : 200;
-  const progress = Math.min(100, v2Count / 200 * 100);
-  document.getElementById('sNextCp').textContent     = fmt(next);
-  document.getElementById('sNextCpSub').textContent  = `${Math.max(0, next - v2Count)} more needed`;
-  document.getElementById('sV2Sub').textContent      = `of ${next} checkpoint`;
-  document.getElementById('sCpLabel').textContent    = `${v2Count} / 200`;
-  document.getElementById('sCpBar').style.width      = progress.toFixed(1)+'%';
-
-  // Checkpoint badge
-  const badge = v2Count >= 200 ? '🎯 200 reached!' : v2Count >= 100 ? '✅ 100 reached' : v2Count >= 50 ? '✅ 50 reached' : '';
-  if (badge) document.getElementById('sV2Sub').textContent = badge;
-
-  // Recent v2 table (latest 20)
-  const recentRows = (allV2Data || []).slice(0, 20);
-  const tbody = document.getElementById('sRecentV2Body');
-  if (!recentRows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">No v2 data yet</td></tr>';
-  } else {
-    tbody.innerHTML = recentRows.map(r => {
+  const rv = document.getElementById('sRecentV2Body');
+  if (rv && rows.length) {
+    rv.innerHTML = rows.slice(0, 20).map(r => {
       const m = r.verification_meta || {};
-      return `<tr>
-        <td class="mono">${fmtTime(r.created_at)}</td>
-        <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis">${r.topic || '—'}</td>
-        <td>${tierChip(r.verification_tier)}</td>
-        <td>${tierChip(m.v2_tier)}</td>
-        <td>${tierChip(m.gpt_tier)}</td>
-        <td class="mono">${m.v2_latency_ms ? fmtMs(m.v2_latency_ms) : '—'}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${(r.question||'').slice(0,80)}</td>
-      </tr>`;
+      return `<tr><td class="mono">${esc(fmtTime(r.created_at))}</td>${cell(r.topic || '—', 100)}
+        <td>${tierChip(r.verification_tier)}</td><td>${tierChip(m.v2_tier)}</td><td>${tierChip(m.gpt_tier)}</td>
+        <td class="mono">${esc(fmtMs(num(m.v2_latency_ms)))}</td>
+        ${cell((r.question || '').slice(0, 80), 200)}</tr>`;
     }).join('');
   }
-
-  // Escalations (hard / expert from v2)
-  const escRows = (allV2Data || [])
-    .filter(r => ['hard','expert'].includes(r.verification_meta?.v2_tier))
-    .slice(0, 10);
-  const escBody = document.getElementById('sEscBody');
-  if (!escRows.length) {
-    escBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-500);padding:20px">No hard/expert escalations yet</td></tr>';
-  } else {
-    escBody.innerHTML = escRows.map(r => {
+  const esc2 = rows.filter(r => ['hard','expert'].includes((r.verification_meta || {}).v2_tier)).slice(0, 10);
+  const eb = document.getElementById('sEscBody');
+  if (eb && esc2.length) {
+    eb.innerHTML = esc2.map(r => {
       const m = r.verification_meta || {};
-      return `<tr>
-        <td class="mono">${fmtTime(r.created_at)}</td>
-        <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis">${r.topic || '—'}</td>
-        <td>${tierChip(m.v2_tier)}</td>
-        <td style="color:var(--text-300)">${m.gpt_difficulty || '—'}</td>
-        <td class="mono">${m.v2_latency_ms ? fmtMs(m.v2_latency_ms) : '—'}</td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${(r.question||'').slice(0,90)}</td>
-      </tr>`;
+      return `<tr><td class="mono">${esc(fmtTime(r.created_at))}</td>${cell(r.topic || '—', 100)}
+        <td>${tierChip(m.v2_tier)}</td><td style="color:var(--text-300)">${esc(m.gpt_difficulty || '—')}</td>
+        <td class="mono">${esc(fmtMs(num(m.v2_latency_ms)))}</td>
+        ${cell((r.question || '').slice(0, 90), 220)}</tr>`;
     }).join('');
   }
 }
@@ -1209,38 +1464,94 @@ function todayISO() { const d = new Date(); d.setHours(0,0,0,0); return d.toISOS
 function nDaysAgo(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// ── Cost Breakdown ─────────────────────────────────────────────────────────
-// Per-role token capture ships with ai-tutor v82. Until then the breakdown
-// would only reflect the subset of fields currently emitted, which the user
-// rule "no fake values" forbids. Card stays in the DOM (notice banner shows
-// "Awaiting v82 token tracking"); values remain "—" until v82 is live.
-function renderCostBreakdown(_rows) { /* intentionally no-op until v82 */ }
-
 // ── Recent Failures ─────────────────────────────────────────────────────────
-async function loadRecentFailures(since) {
+// Row counts here are driven by the same STATS object as the L3 panel, so the
+// "no failures" empty state can only appear when the verdict breakdown above
+// also shows zero disagreements.
+async function renderRecentFailures(S) {
+  const vBody = document.getElementById('rvfBody');
+  const oBody = document.getElementById('rofBody');
+  const since = S.since;
+
+  const expectDisagree = S.verdictCounts[VERDICT.DISAGREE];
+  const cell = (t, max) => `<td style="max-width:${max}px;overflow:hidden;text-overflow:ellipsis">${esc(t)}</td>`;
+
+  // Judge disagreements
   let qV = sb.from('question_records')
-    .select('id, created_at, topic, question, judge_verdict, verification_meta, ocr_confidence')
-    .eq('judge_verdict', 'disagree')
+    .select('id, created_at, topic, question, judge_verdict, solver_agreement, verification_meta')
+    .eq('judge_verdict', VERDICT.DISAGREE)
     .order('created_at', { ascending:false })
     .limit(10);
   if (since) qV = qV.gte('created_at', since);
 
-  let qO = sb.from('question_records')
-    .select('id, created_at, topic, question, ocr_confidence, verification_meta')
-    .or('ocr_confidence.lt.0.5,verification_meta->>ocr_rerun_used.eq.true')
-    .order('created_at', { ascending:false })
-    .limit(10);
-  if (since) qO = qO.gte('created_at', since);
+  // OCR issues — the fields ai-tutor actually writes. There is no
+  // ocr_rerun_used key (the previous build filtered on one, which matched
+  // nothing); reruns are recorded as ocr_rerun_count / ocr_rerun_changed, and
+  // ambiguity as a non-empty ocr_ambiguity_flags array.
+  //
+  // Run as two independent queries rather than one combined .or(): the rerun
+  // predicate needs a JSON path, and keeping it separate means a failure there
+  // cannot take out the plain-column half of the result.
+  const OCR_COLS = 'id, created_at, topic, question, ocr_confidence, judge_verdict, verification_meta';
+  let qO1 = sb.from('question_records').select(OCR_COLS)
+    .or(`ocr_confidence.lt.0.5,judge_verdict.eq.${VERDICT.OCR}`)
+    .order('created_at', { ascending:false }).limit(10);
+  // ->> yields the value as text, so a text comparison against '0' is exact for
+  // the small integers this field holds and needs no numeric cast.
+  let qO2 = sb.from('question_records').select(OCR_COLS)
+    .not('verification_meta->>ocr_rerun_count', 'is', null)
+    .neq('verification_meta->>ocr_rerun_count', '0')
+    .order('created_at', { ascending:false }).limit(10);
+  if (since) { qO1 = qO1.gte('created_at', since); qO2 = qO2.gte('created_at', since); }
 
-  const [vRes, oRes] = await Promise.all([qV, qO]);
-  const vBody = document.getElementById('rvfBody');
-  const oBody = document.getElementById('rofBody');
-  vBody.innerHTML = (vRes.data?.length)
-    ? vRes.data.map(r => `<tr><td class="mono">${fmtTime(r.created_at)}</td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.topic||'—')}</td><td><span class="chip red">${esc(r.judge_verdict)}</span></td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,90))}</td></tr>`).join('')
-    : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No verification failures in window ✅</td></tr>';
-  oBody.innerHTML = (oRes.data?.length)
-    ? oRes.data.map(r => `<tr><td class="mono">${fmtTime(r.created_at)}</td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.topic||'—')}</td><td class="mono">${r.ocr_confidence!=null ? Number(r.ocr_confidence).toFixed(2) : '—'}</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,90))}</td></tr>`).join('')
-    : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No OCR issues in window ✅</td></tr>';
+  const [vRes, oRes1, oRes2] = await Promise.all([qV, qO1, qO2]);
+  // Merge, de-duplicate by id, newest first. If one half errored, the other
+  // still renders; only a total failure surfaces the error state.
+  const seen = new Set();
+  const merged = [...(oRes1.data || []), ...(oRes2.data || [])]
+    .filter(r => !seen.has(r.id) && seen.add(r.id))
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .slice(0, 10);
+  const oRes = { data: merged, error: (oRes1.error && oRes2.error) ? oRes1.error : null };
+
+  if (vRes.error) {
+    vBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--red);padding:18px">Query failed — ${esc(vRes.error.message)}</td></tr>`;
+  } else if (vRes.data.length) {
+    vBody.innerHTML = vRes.data.map(r => {
+      const sa = num(r.solver_agreement);
+      const solverTxt = sa === null ? '—' : (sa >= 1 ? 'solvers matched' : 'solvers differed');
+      return `<tr><td class="mono">${esc(fmtTime(r.created_at))}</td>${cell(r.topic || '—', 110)}
+        <td><span class="chip red">${esc(r.judge_verdict)}</span><div style="font-size:10.5px;color:var(--text-500);margin-top:3px">${esc(solverTxt)}</div></td>
+        ${cell((r.question || '').slice(0, 90), 220)}</tr>`;
+    }).join('');
+  } else {
+    // Distinguish "genuinely none" from "the panel above says otherwise".
+    vBody.innerHTML = expectDisagree > 0
+      ? `<tr><td colspan="4" style="text-align:center;color:var(--amber);padding:18px">${fmt(expectDisagree)} disagreement(s) counted in this period but none returned by the detail query — refresh, or check RLS.</td></tr>`
+      : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No judge disagreements in this period ✅</td></tr>';
+  }
+
+  if (oRes.error) {
+    oBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--red);padding:18px">Query failed — ${esc(oRes.error.message)}</td></tr>`;
+  } else if (oRes.data.length) {
+    oBody.innerHTML = oRes.data.map(r => {
+      const m = r.verification_meta || {};
+      const flags = Array.isArray(m.ocr_ambiguity_flags) ? m.ocr_ambiguity_flags : [];
+      const reruns = num(m.ocr_rerun_count) || 0;
+      const why = [
+        num(r.ocr_confidence) !== null && num(r.ocr_confidence) < 0.5 ? 'low confidence' : null,
+        r.judge_verdict === VERDICT.OCR ? 'judge: ocr_uncertain' : null,
+        reruns > 0 ? `${reruns} rerun${reruns === 1 ? '' : 's'}` : null,
+        flags.length ? `${flags.length} ambiguity flag${flags.length === 1 ? '' : 's'}` : null,
+      ].filter(Boolean).join(' · ');
+      return `<tr><td class="mono">${esc(fmtTime(r.created_at))}</td>${cell(r.topic || '—', 110)}
+        <td class="mono">${r.ocr_confidence != null ? esc(Number(r.ocr_confidence).toFixed(2)) : '—'}
+          <div style="font-size:10.5px;color:var(--text-500);margin-top:3px;font-family:var(--font-body)">${esc(why || '—')}</div></td>
+        ${cell((r.question || '').slice(0, 90), 220)}</tr>`;
+    }).join('');
+  } else {
+    oBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No OCR issues in this period ✅</td></tr>';
+  }
 }
 
 // ── Feedback (migrated from admin.html) ─────────────────────────────────────
@@ -1375,53 +1686,80 @@ async function loadFeedback() {
 }
 
 // ── AI Alerts ───────────────────────────────────────────────────────────────
-async function loadAlerts(since) {
+// Every alert reads STATS — the same numbers the panels above display — so an
+// alert can never contradict the card it summarises. An alert whose metric
+// could not be evaluated renders grey ("not evaluated"), never green: a green
+// badge on an unmeasured threshold is worse than no badge at all.
+function renderAlerts(S) {
   const alerts = [];
-  // Pull aggregated window data
-  const t0 = nDaysAgo(7);
-  const today0 = todayISO();
-  const [todayCostRows, weekCostRows, qWin, l3Win] = await Promise.all([
-    sb.from('question_records').select('verification_meta').gte('created_at', today0).limit(2000),
-    sb.from('question_records').select('verification_meta').gte('created_at', t0).limit(10000),
-    sb.from('question_records').select('id', { count:'exact', head:true }).gte('created_at', since || t0),
-    sb.from('question_records').select('judge_verdict, verification_meta, verification_confidence, ocr_confidence').gte('created_at', since || t0).not('judge_verdict','is',null).limit(5000),
-  ]);
-  const sumCost = (rows) => {
-    let total=0;
-    for (const r of (rows||[])) {
-      const m = r.verification_meta || {};
-      const sIn = (m.solver_a_tokens_in||0)+(m.solver_b_tokens_in||0)+(m.ocr_tokens_in||0);
-      const sOut= (m.solver_a_tokens_out||0)+(m.solver_b_tokens_out||0)+(m.ocr_tokens_out||0);
-      const jIn = (m.judge_tokens_in||0)+(m.ocr_rerun_tokens_in||0);
-      const jOut= (m.judge_tokens_out||0)+(m.ocr_rerun_tokens_out||0);
-      total += (sIn*PRICE['gpt-4o-mini'].in + sOut*PRICE['gpt-4o-mini'].out + jIn*PRICE['gpt-4o'].in + jOut*PRICE['gpt-4o'].out)/1e6;
+
+  /** metric: an okM/noM value. test: (v) => 'red'|'amber'|'green'. */
+  const threshold = (label, metric, test, describe, denom) => {
+    if (!metric || metric.state !== OK) {
+      alerts.push({
+        kind: 'grey', label,
+        msg: 'not evaluated',
+        detail: metric && metric.state === NO_FIELD
+          ? 'The field this threshold reads is not recorded on any record in the period.'
+          : metric && metric.state === NOT_DEPLOYED
+            ? 'The feature this threshold watches is not deployed.'
+            : 'No records in the selected period.',
+      });
+      return;
     }
-    return total;
+    alerts.push({ kind: test(metric.value), label, msg: describe(metric.value), detail: denom || '' });
   };
-  const tCost = sumCost(todayCostRows.data);
-  const wCost = sumCost(weekCostRows.data);
-  const wDailyAvg = wCost / 7;
-  alerts.push({ kind: tCost > 2*wDailyAvg && wDailyAvg > 0.01 ? 'red' : 'green', msg: `Cost spike: today $${tCost.toFixed(2)} vs 7-day avg $${wDailyAvg.toFixed(2)}/day` });
 
-  const l3 = l3Win.data || [];
-  const ocrFails = l3.filter(r => (r.verification_meta||{}).ocr_rerun_used === true || (r.ocr_confidence!=null && r.ocr_confidence<0.5)).length;
-  const ocrRate = l3.length ? ocrFails/l3.length*100 : 0;
-  alerts.push({ kind: ocrRate > 10 ? 'amber' : 'green', msg: `OCR issue rate: ${ocrRate.toFixed(1)}% (threshold 10%)` });
+  threshold('Judge disagreement',
+    S.l3Count ? okM(S.verdictCounts[VERDICT.DISAGREE] / S.l3Count * 100) : noM(NO_DATA),
+    v => v > 15 ? 'red' : 'green',
+    v => `${fmtPct(v)} of L3 runs (threshold 15%)`,
+    `${fmt(S.verdictCounts[VERDICT.DISAGREE])} of ${fmt(S.l3Count)} runs`);
 
-  const disagrees = l3.filter(r => r.judge_verdict === 'disagree').length;
-  const disagreePct = l3.length ? disagrees/l3.length*100 : 0;
-  alerts.push({ kind: disagreePct > 15 ? 'red' : 'green', msg: `Judge disagreement: ${disagreePct.toFixed(1)}% (threshold 15%)` });
+  threshold('OCR issue rate', S.ocrIssueRate,
+    v => v > 10 ? 'amber' : 'green',
+    v => `${fmtPct(v)} of records with an OCR confidence (threshold 10%)`,
+    `${fmt(S.ocrIssueDen)} record(s) carry ocr_confidence`);
 
-  const confs = l3.map(r => r.verification_confidence).filter(c => typeof c === 'number');
-  const avgConf = confs.length ? confs.reduce((a,b)=>a+b,0)/confs.length : null;
-  alerts.push({ kind: avgConf !== null && avgConf < 0.5 ? 'amber' : 'green', msg: `Avg detector/verification confidence: ${avgConf !== null ? avgConf.toFixed(2) : '—'} (threshold 0.5)` });
+  threshold('Verification confidence', S.confAvg,
+    v => v < 0.5 ? 'amber' : 'green',
+    v => `average ${v.toFixed(2)} (threshold 0.50)`,
+    `${fmt(S.confDen)} record(s) carry verification_confidence`);
 
-  const lats = l3.map(r => (r.verification_meta||{}).total_latency_ms || (r.verification_meta||{}).l3_latency_ms).filter(x => typeof x === 'number').sort((a,b)=>a-b);
-  const p95 = lats.length ? lats[Math.floor(lats.length*0.95)] : null;
-  alerts.push({ kind: p95 !== null && p95 > 8000 ? 'red' : 'green', msg: `L3 latency p95: ${p95!==null ? fmtMs(p95) : '—'} (threshold 8s)` });
+  threshold('L3 latency p95', S.latP95,
+    v => v > 8000 ? 'red' : v > 5000 ? 'amber' : 'green',
+    v => `${fmtMs(v)} (threshold 8s)`,
+    `${fmt(S.latDen)} run(s) carry pipeline_latency_ms`);
 
-  const colorMap = { red: { bg:'rgba(239,79,95,.10)', bd:'rgba(239,79,95,.32)', fg:'#ef4f5f', ico:'🔴' }, amber: { bg:'rgba(245,185,66,.10)', bd:'rgba(245,185,66,.32)', fg:'#f5b942', ico:'🟡' }, green: { bg:'rgba(74,222,128,.08)', bd:'rgba(74,222,128,.24)', fg:'#4ade80', ico:'🟢' } };
-  document.getElementById('aiAlerts').innerHTML = alerts.map(a => { const c = colorMap[a.kind]; return `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};font-size:13.5px"><span>${c.ico}</span><span>${esc(a.msg)}</span></div>`; }).join('');
+  threshold('Low-quality solver output',
+    S.lowQual && S.lowQual.state === OK ? okM(S.lowQual.value.pct) : noM(NO_DATA),
+    v => v > 10 ? 'amber' : 'green',
+    v => `${fmtPct(v)} of L3 runs flagged (threshold 10%)`,
+    `${fmt(S.l3Count)} run(s) in period`);
+
+  // Operational liveness: requests arriving with no verification running at all
+  // is a pipeline outage, and it is invisible in every rate-based alert above.
+  if (S.total === 0) {
+    alerts.push({ kind: 'grey', label: 'Pipeline activity', msg: 'not evaluated', detail: 'No requests in the selected period.' });
+  } else if (S.l3Count === 0) {
+    alerts.push({ kind: 'red', label: 'Pipeline activity', msg: `${fmt(S.total)} request(s) but zero L3 runs`, detail: 'The verification pipeline produced no records in this period.' });
+  } else {
+    alerts.push({ kind: 'green', label: 'Pipeline activity', msg: `${fmt(S.l3Count)} L3 run(s) on ${fmt(S.total)} request(s)`, detail: S.lastL3 ? `most recent ${fmtTime(S.lastL3)}` : '' });
+  }
+
+  const colorMap = {
+    red:   { bg:'rgba(239,79,95,.10)',  bd:'rgba(239,79,95,.32)',  fg:'#ef4f5f', ico:'🔴' },
+    amber: { bg:'rgba(245,185,66,.10)', bd:'rgba(245,185,66,.32)', fg:'#f5b942', ico:'🟡' },
+    green: { bg:'rgba(74,222,128,.08)', bd:'rgba(74,222,128,.24)', fg:'#4ade80', ico:'🟢' },
+    grey:  { bg:'rgba(255,255,255,.03)',bd:'var(--border-soft)',   fg:'var(--text-500)', ico:'⚪' },
+  };
+  document.getElementById('aiAlerts').innerHTML = alerts.map(a => {
+    const c = colorMap[a.kind];
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:10px;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};font-size:13.5px">
+      <span>${c.ico}</span>
+      <span><strong>${esc(a.label)}:</strong> ${esc(a.msg)}${a.detail ? `<span style="display:block;font-size:11.5px;opacity:.75;margin-top:2px">${esc(a.detail)}</span>` : ''}</span>
+    </div>`;
+  }).join('');
 }
 
 // ── OpenAI Health (Phase 1 — safe-message detection) ───────────────────────
@@ -1447,7 +1785,26 @@ function oaiCodeNotice(msg) {
   return `<div class="oai-notice"><span class="ico">ⓘ</span><span>${esc(msg)}</span></div>`;
 }
 
-async function loadOpenAIHealth(since) {
+/**
+ * Classifies a provider response. Distinguishes faults that are OpenAI's
+ * (quota, auth, outage) from ones that are ours (a malformed request body) —
+ * lumping a 400 in with 5xx as "other" sends an operator to check OpenAI's
+ * status page for a bug in our own payload.
+ */
+function oaiFailClass(st, code) {
+  if (st === 429) return code === 'insufficient_quota'
+    ? { txt: 'quota exhausted — billing action required', sev: 'red' }
+    : { txt: 'rate limited — throughput', sev: 'amber' };
+  if (st === 401) return { txt: 'auth — invalid or revoked API key', sev: 'red' };
+  if (st === 403) return { txt: 'permission — model or project access', sev: 'red' };
+  if (st >= 500) return { txt: 'provider outage (5xx)', sev: 'red' };
+  if (st >= 400) return { txt: 'request rejected — our payload, not OpenAI', sev: 'amber' };
+  if (st >= 200 && st < 300) return { txt: 'success — no provider error', sev: 'green' };
+  return { txt: 'unclassified', sev: 'grey' };
+}
+const OAI_SEV_COLOR = { red:'var(--red)', amber:'var(--amber)', green:'var(--green)', grey:'var(--text-400)' };
+
+async function loadOpenAIHealth(since, S) {
   const banner   = document.getElementById('oaiCriticalBanner');
   const recentEl = document.getElementById('oaiRecentBody');
   try {
@@ -1460,7 +1817,7 @@ async function loadOpenAIHealth(since) {
     if (since) failCountQ = failCountQ.gte('created_at', since);
 
     const recentQ = sb.from('question_records')
-      .select('created_at, question, image, images, ai_response')
+      .select('created_at, question, ai_response, oai_http_status, oai_error_code')
       .in('ai_response', OAI_SAFE_LIST)
       .order('created_at', { ascending:false })
       .limit(20);
@@ -1517,6 +1874,8 @@ async function loadOpenAIHealth(since) {
       : 'no failures in last 24h';
 
     document.getElementById('oaiFailCount').textContent = fmt(failCount);
+    document.getElementById('oaiFailCountSub').textContent =
+      since ? 'fallbacks in selected period' : 'fallbacks, all time';
     document.getElementById('oaiLastFail').textContent  = lastFail ? fmtTime(lastFail) : 'None';
     document.getElementById('oaiLastFailSub').textContent = lastFail ? 'most recent guard fire' : 'no guard fires recorded';
     document.getElementById('oaiLastOk').textContent    = lastOk ? fmtTime(lastOk) : '—';
@@ -1530,55 +1889,55 @@ async function loadOpenAIHealth(since) {
       banner.classList.remove('show');
     }
 
-    // Recent failures table — only real-data columns
+    // Recent failures table. The model that served a request is not persisted,
+    // so no model column is shown — the previous build guessed it from whether
+    // the question carried an image and printed the guess as data.
     const rows = recentRes.data || [];
     recentEl.innerHTML = rows.length
       ? rows.map(r => {
-          const hasImg = (r.image != null && r.image !== '') || (r.images != null);
-          const model = hasImg ? 'gpt-4o' : 'gpt-4o-mini';
+          const st = r.oai_http_status;
+          let statusCell = '<span class="unavail">not recorded</span>';
+          if (st != null) {
+            const cls = oaiFailClass(Number(st), r.oai_error_code);
+            statusCell = `<span style="color:${OAI_SEV_COLOR[cls.sev]}">${esc(String(st))}${r.oai_error_code ? ' · ' + esc(r.oai_error_code) : ''}</span>`;
+          }
           return `<tr>
             <td class="mono">${esc(fmtTime(r.created_at))}</td>
-            <td class="mono">${esc(model)}</td>
+            <td class="mono">${statusCell}</td>
             <td><span class="chip gray">${esc(oaiLangOf(r.ai_response))}</span></td>
             <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,80)) || '<span style="color:var(--text-500)">(no text)</span>'}</td>
           </tr>`;
         }).join('')
       : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No AI Tutor failures in window ✅</td></tr>';
 
-    // ── Provider error-code breakdown (Phase 2 — real oai_http_status) ──
-    // Surfaces PROVIDER failures (429/401/403/5xx) distinctly from code/quality
-    // defects (which live in Recent Quality Failures + AI Alerts). Degrades
-    // gracefully when the column is absent (pre-migration) or empty.
+    // ── Provider status-code breakdown ──
+    // Reads the rows already fetched for STATS, so this table and the alert
+    // panel are computed from one identical row set.
     const cbEl = document.getElementById('oaiCodeBreakdown');
     if (cbEl) {
-      try {
-        let codeQ = sb.from('question_records')
-          .select('oai_http_status, oai_error_code')
-          .not('oai_http_status', 'is', null);
-        if (since) codeQ = codeQ.gte('created_at', since);
-        const codeRes = await codeQ.limit(5000);
-        if (codeRes.error) throw codeRes.error;
-        const crows = codeRes.data || [];
-        if (!crows.length) {
-          cbEl.innerHTML = oaiCodeNotice('No OpenAI provider error codes recorded in this window. Exact codes (429 / 401 / 403 / 5xx) appear here once ai-tutor telemetry (oai_http_status) is deployed and a provider failure occurs.');
-        } else {
-          const byStatus = {};
-          for (const r of crows) {
-            const k = String(r.oai_http_status) + (r.oai_error_code ? ' · ' + r.oai_error_code : '');
-            byStatus[k] = (byStatus[k] || 0) + 1;
-          }
-          const ent = Object.entries(byStatus).sort((a,b) => b[1]-a[1]);
-          cbEl.innerHTML = `<div class="tbl-wrap"><table class="recent"><thead><tr><th>status · code</th><th>count</th><th>failure class</th></tr></thead><tbody>${
-            ent.map(([k,c]) => {
-              const st = parseInt(k, 10);
-              const cls = st===429 ? 'quota / rate limit' : st===401 ? 'auth (invalid key)' : st===403 ? 'permission / model access' : st>=500 ? 'provider outage (5xx)' : 'other';
-              return `<tr><td class="mono">${esc(k)}</td><td class="mono hi">${fmt(c)}</td><td style="color:var(--text-400)">${esc(cls)}</td></tr>`;
-            }).join('')
-          }</tbody></table></div>`;
+      const crows = (S && S.codeRows) || [];
+      if (!crows.length) {
+        cbEl.innerHTML = oaiCodeNotice('No request in this period recorded an OpenAI status code. ai-tutor writes oai_http_status only when a call fails, so an empty table here means no captured provider failures in the window — not that the column is missing.');
+      } else {
+        const byStatus = {};
+        for (const r of crows) {
+          const k = String(r.oai_http_status) + (r.oai_error_code ? ' · ' + r.oai_error_code : '');
+          if (!byStatus[k]) byStatus[k] = { n: 0, st: Number(r.oai_http_status), code: r.oai_error_code, last: r.created_at };
+          byStatus[k].n++;
+          if (r.created_at > byStatus[k].last) byStatus[k].last = r.created_at;
         }
-      } catch (_e) {
-        // Column not present yet (pre-migration) — show the honest limitation notice.
-        cbEl.innerHTML = oaiCodeNotice('Exact OpenAI error codes are not yet persisted. HTTP status and reason are currently only in the Edge Function console log stream (Supabase Dashboard → Edge Functions → ai-tutor → Logs, tag [ai-tutor] oai-no-content). Persistent tracking ships with Phase 2 telemetry.');
+        const ent = Object.entries(byStatus).sort((a,b) => b[1].n - a[1].n);
+        const denom = crows.length;
+        cbEl.innerHTML = `<div class="tbl-wrap"><table class="recent"><thead><tr><th>status · code</th><th>count</th><th>share</th><th>most recent</th><th>failure class</th></tr></thead><tbody>${
+          ent.map(([k, v]) => {
+            const cls = oaiFailClass(v.st, v.code);
+            return `<tr><td class="mono">${esc(k)}</td><td class="mono hi">${fmt(v.n)}</td>
+              <td class="mono">${fmtPct(v.n / denom * 100)}</td>
+              <td class="mono" style="color:var(--text-400)">${esc(fmtTime(v.last))}</td>
+              <td style="color:${OAI_SEV_COLOR[cls.sev]};font-size:12px">${esc(cls.txt)}</td></tr>`;
+          }).join('')
+        }</tbody></table></div>
+        <div class="prov">Counted over ${fmt(denom)} record(s) carrying <code>oai_http_status</code> in this period. A <code>4xx</code> other than 401/403/429 is a defect in the request we send, not an OpenAI fault, and is labelled as such.</div>`;
       }
     }
   } catch (e) {
@@ -1587,53 +1946,72 @@ async function loadOpenAIHealth(since) {
   }
 }
 
-// B4: Detector Confidence Distribution
-async function loadConfidenceDist(since) {
-  try {
-    let q = sb.from('question_records').select('verification_confidence').not('verification_confidence','is',null);
-    if (since) q = q.gte('created_at', since);
-    const { data } = await q.limit(20000);
-    const rows = data || [];
-    const buckets = [0,0,0,0]; // 0-0.5, 0.5-0.7, 0.7-0.85, 0.85-1
-    rows.forEach(r => {
-      const c = Number(r.verification_confidence);
-      if (isNaN(c)) return;
-      if (c < 0.5) buckets[0]++;
-      else if (c < 0.7) buckets[1]++;
-      else if (c < 0.85) buckets[2]++;
-      else buckets[3]++;
-    });
-    const total = buckets.reduce((a,b)=>a+b,0) || 1;
-    const cont = document.getElementById('dConfBars');
-    if (!cont) return;
-    const barRows = cont.querySelectorAll('.bar-row');
-    buckets.forEach((v, i) => {
-      const pct = v/total*100;
-      const r = barRows[i]; if (!r) return;
-      r.querySelector('.bar-fill').style.width = pct.toFixed(1) + '%';
-      r.querySelector('.bar-pct').textContent = pct.toFixed(1) + '%';
-      r.querySelector('.bar-count').textContent = v;
-    });
-  } catch(e) { console.error('loadConfidenceDist', e); }
-}
+// ── OpenAI live service status ──────────────────────────────────────────────
+// Reads OpenAI's public Statuspage feed. No credentials, no server-side
+// component. The request is made from the operator's browser, so it depends on
+// that browser being able to reach status.openai.com; when it cannot, the panel
+// says the feed is unreachable. It never falls back to assuming "operational",
+// because an unreachable status feed is precisely when an incident is likely.
+const OAI_STATUS_URL = 'https://status.openai.com/api/v2/summary.json';
+const OAI_INDICATOR = {
+  none:     { chip:'green', label:'All systems operational' },
+  minor:    { chip:'amber', label:'Minor service issue' },
+  major:    { chip:'red',   label:'Major service outage' },
+  critical: { chip:'red',   label:'Critical service outage' },
+  maintenance:{ chip:'gray',label:'Under maintenance' },
+};
 
-// B5: Shadow Mode Status badge
-async function loadShadowStatus() {
-  const el = document.getElementById('sShadowStatus');
-  if (!el) return;
+async function loadOpenAIStatusFeed() {
+  const chip = document.getElementById('oaiFeedChip');
+  const body = document.getElementById('oaiFeedBody');
+  if (!chip || !body) return;
+
+  const unreachable = (why) => {
+    chip.className = 'chip gray';
+    chip.textContent = 'Feed unreachable';
+    body.innerHTML = oaiCodeNotice(
+      `OpenAI's public status feed could not be read from this browser (${why}). No assumption is made about OpenAI's health — this panel reports nothing rather than reporting "operational". ` +
+      `The failure telemetry above is independent of this feed and remains accurate.`);
+  };
+
   try {
-    const { data } = await sb.from('system_settings').select('key, value').eq('key', 'difficulty_detector_v2_enabled').maybeSingle();
-    const v = data?.value;
-    if (!data || v === 'false' || v === false) {
-      el.className = 'chip amber';
-      el.textContent = '🌓 Shadow disabled';
-    } else {
-      el.className = 'chip green';
-      el.textContent = '✅ Shadow enabled';
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(OAI_STATUS_URL, { signal: ctrl.signal, mode: 'cors', cache: 'no-store' });
+    clearTimeout(timer);
+    if (!res.ok) return unreachable('HTTP ' + res.status);
+
+    const d = await res.json();
+    // Strict shape check — a redirect or captive-portal page must not be able
+    // to render as a healthy status.
+    if (!d || typeof d !== 'object' || !d.status || typeof d.status.indicator !== 'string' || !Array.isArray(d.components)) {
+      return unreachable('unrecognised response shape');
     }
-  } catch(e) {
-    el.className = 'chip gray';
-    el.textContent = '—';
+
+    const ind = OAI_INDICATOR[d.status.indicator] || { chip:'gray', label: String(d.status.description || d.status.indicator) };
+    chip.className = 'chip ' + ind.chip;
+    chip.textContent = ind.label;
+
+    const incidents = Array.isArray(d.incidents) ? d.incidents : [];
+    const degraded = d.components.filter(c => c && c.status && c.status !== 'operational');
+
+    const incidentHtml = incidents.length
+      ? `<div style="margin-bottom:12px">${incidents.slice(0, 5).map(i => `
+          <div style="padding:10px 12px;border-radius:9px;background:rgba(239,79,95,.08);border:1px solid rgba(239,79,95,.28);margin-bottom:8px">
+            <div style="color:#ffb4bc;font-size:13px;font-weight:600">${esc(i.name || 'Incident')}</div>
+            <div style="font-size:11.5px;color:var(--text-400);margin-top:3px">${esc(i.status || '')}${i.updated_at ? ' · updated ' + esc(fmtTime(i.updated_at)) : ''}</div>
+          </div>`).join('')}</div>`
+      : '';
+
+    const compHtml = degraded.length
+      ? `<div class="metric-rows">${degraded.slice(0, 10).map(c =>
+          `<div class="metric-row"><span class="metric-lbl">${esc(c.name)}</span><span class="metric-val warn">${esc(String(c.status).replace(/_/g, ' '))}</span></div>`).join('')}</div>`
+      : `<div class="metric-rows"><div class="metric-row"><span class="metric-lbl">Degraded components</span><span class="metric-val good">None — all ${fmt(d.components.length)} reported operational</span></div></div>`;
+
+    body.innerHTML = incidentHtml + compHtml +
+      `<div class="prov">Source: <code>status.openai.com/api/v2/summary.json</code>${d.page && d.page.updated_at ? ` · feed updated ${esc(fmtTime(d.page.updated_at))}` : ''}. This reflects OpenAI's platform-wide status, not our account's quota.</div>`;
+  } catch (e) {
+    unreachable(e && e.name === 'AbortError' ? 'timed out' : 'network or CORS blocked');
   }
 }
 
@@ -1673,6 +2051,7 @@ async function loadQuestionInspector() {
       return `<tr class="qi-row" onclick="qiOpen(${i})">
         <td class="mono">${esc(fmtTime(r.created_at))}</td>
         <td>${esc(r.topic || '—')}</td>
+        <td>${qiSolverChip(r.solver_agreement)}</td>
         <td>${qiVerdictChip(r.judge_verdict)}</td>
         <td class="mono">${r.verification_confidence != null ? esc(Number(r.verification_confidence).toFixed(2)) : '—'}</td>
         <td class="mono">${qual != null ? esc(Number(qual).toFixed(2)) : '—'}</td>
@@ -1682,14 +2061,24 @@ async function loadQuestionInspector() {
     }).join('');
   } catch (e) {
     console.error('[ai-monitor] question-inspector error', e);
-    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-500);padding:20px">Failed to load.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-500);padding:20px">Failed to load.</td></tr>';
   }
 }
 
 function qiVerdictChip(v) {
   if (!v) return '<span class="chip gray">—</span>';
-  const cls = v === 'agree' ? 'green' : v === 'disagree' ? 'red' : v === 'ocr_uncertain' ? 'amber' : 'gray';
+  const cls = v === VERDICT.AGREE ? 'green'
+            : v === VERDICT.DISAGREE ? 'red'
+            : v === VERDICT.OCR ? 'amber'
+            : v === VERDICT.INCONCLUSIVE ? 'gray' : 'gray';
   return `<span class="chip ${cls}">${esc(v)}</span>`;
+}
+
+/** Solver-vs-solver agreement — a separate axis from the judge verdict. */
+function qiSolverChip(sa) {
+  const v = num(sa);
+  if (v === null) return '<span class="chip gray">—</span>';
+  return v >= 1 ? '<span class="chip green">match</span>' : '<span class="chip amber">differ</span>';
 }
 
 // Renders a long-text block with collapse/expand + copy (clipboard only).
@@ -1730,6 +2119,101 @@ function qiField(label, val) {
   return `<div><div class="qi-lbl">${esc(label)}</div><div class="qi-val">${shown}</div></div>`;
 }
 
+// ── Evidence-derived findings ───────────────────────────────────────────────
+// The pipeline stores a verification_reason assembled from a small set of fixed
+// sentences, and that string can omit the judge verdict entirely — which is how
+// a record whose judge disagreed ends up reading "Both solvers reached the same
+// normalized answer… Judge confidence was high." with no mention of a mismatch.
+// These findings are recomputed here from the record's own fields, each one
+// citing the field it came from, so the explanation always matches the evidence.
+const MCQ_RE = /^\(?[A-Ea-e]\)?$/;
+
+function qiDeriveFindings(r, m) {
+  const out = [];
+  const add = (cat, sev, detail) => out.push({ cat, sev, detail });
+  const answers = Array.isArray(m.solver_answers) ? m.solver_answers : [];
+  const lens    = Array.isArray(m.solver_reasoning_lengths) ? m.solver_reasoning_lengths : [];
+  const flags   = Array.isArray(m.ocr_ambiguity_flags) ? m.ocr_ambiguity_flags : [];
+  const agree   = num(r.solver_agreement);
+  const conf    = num(r.verification_confidence);
+  const reruns  = num(m.ocr_rerun_count) || 0;
+  const ocrConf = num(r.ocr_confidence);
+  const looksMCQ = answers.length > 0 && answers.every(a => MCQ_RE.test(String(a || '').trim()));
+
+  // Axis 1 — solver vs solver.
+  if (agree === 0) {
+    add('Solver disagreement', 'amber', answers.length >= 2
+      ? `Solver A answered "${answers[0]}", Solver B answered "${answers[1]}". Recorded in solver_answers with solver_agreement = 0.`
+      : 'solver_agreement = 0 — the two solvers did not reach the same answer.');
+  } else if (agree === 1 && answers.length >= 2 && String(answers[0]).trim() !== String(answers[1]).trim()) {
+    add('Formatting issue', 'grey',
+      `Both solvers were judged equivalent but wrote the answer differently ("${answers[0]}" vs "${answers[1]}") — a formatting difference resolved by normalisation, not a disagreement.`);
+  }
+
+  // Axis 2 — solvers vs the tutor's answer (what judge_verdict measures).
+  if (r.judge_verdict === VERDICT.DISAGREE) {
+    const shown = answers.length ? `The solvers' answer was "${answers[0]}".` : '';
+    add(looksMCQ ? 'Multiple-choice option mismatch' : 'Final answer mismatch', 'red',
+      `judge_verdict = "disagrees" — the judge found the tutor's final answer does not match what the solvers derived. ${shown}`.trim());
+  } else if (r.judge_verdict === VERDICT.INCONCLUSIVE) {
+    add('Judge inconclusive', 'amber',
+      'judge_verdict = "inconclusive" — the judge could not establish whether the tutor\'s answer matches the solvers\'. This is not a confirmed error.');
+  } else if (r.judge_verdict === VERDICT.OCR) {
+    add('OCR issue', 'amber',
+      'judge_verdict = "ocr_uncertain" — the judge declined to rule because the text extracted from the image was not reliable enough to compare against.');
+  }
+
+  // OCR evidence, independent of the verdict.
+  const ocrBits = [];
+  if (ocrConf !== null && ocrConf < 0.5) ocrBits.push(`ocr_confidence = ${ocrConf.toFixed(2)}`);
+  if (flags.length) ocrBits.push(`ocr_ambiguity_flags: ${flags.join(', ')}`);
+  if (reruns > 0) ocrBits.push(`${reruns} OCR rerun${reruns === 1 ? '' : 's'}${m.ocr_rerun_changed ? ' which changed the extracted text' : ' which left the text unchanged'}`);
+  if (ocrBits.length && r.judge_verdict !== VERDICT.OCR) {
+    add('OCR issue', 'amber', `Image text extraction was unreliable — ${ocrBits.join('; ')}.`);
+  }
+
+  // Reasoning completeness — a distinct problem from a wrong answer.
+  const minLen = lens.length ? Math.min(...lens) : null;
+  if (m.low_quality_solver === true || (minLen !== null && minLen < 50)) {
+    add('Explanation incomplete', 'amber', minLen !== null
+      ? `Solver reasoning was truncated — shortest chain was ${minLen} characters (solver_reasoning_lengths: ${lens.join(', ')}). The answer may still be correct; the working behind it is not verifiable.`
+      : 'low_quality_solver = true — at least one solver produced a chain too short to verify.');
+  }
+
+  if (conf !== null && conf < 0.5) {
+    add('Low judge confidence', 'grey', `verification_confidence = ${conf.toFixed(2)} — the judge's own certainty in its verdict was low.`);
+  }
+
+  if (!out.length) {
+    add('No issues found', 'green',
+      `Solvers agreed, judge_verdict = "${r.judge_verdict || '—'}", and no OCR or reasoning-quality flag was raised on this record.`);
+  }
+  return out;
+}
+
+const QI_SEV = { red:'var(--red)', amber:'var(--amber)', green:'var(--green)', grey:'var(--text-400)' };
+
+/**
+ * States the two axes explicitly whenever they point different ways, so the
+ * drawer never reads as two panels contradicting each other.
+ */
+function qiAxisNote(r) {
+  const agree = num(r.solver_agreement);
+  const v = r.judge_verdict;
+  if (agree === null || !v) return '';
+  let txt = '';
+  if (agree === 1 && v === VERDICT.DISAGREE) {
+    txt = 'Both solvers reached the same answer, and the judge still flagged a mismatch. These are not in conflict: the solvers were compared with each other, the judge compared them against the tutor\'s answer. The likely reading is that the tutor\'s answer is wrong while the solvers agree with each other.';
+  } else if (agree === 0 && v === VERDICT.AGREE) {
+    txt = 'The solvers disagreed with each other, yet the judge confirmed a match with the tutor. These measure different things: one solver agreed with the tutor and the other did not. Treat the confirmation as weaker than a case where both solvers also agreed.';
+  } else if (agree === 0 && v === VERDICT.DISAGREE) {
+    txt = 'The solvers disagreed with each other and the judge also found a mismatch with the tutor\'s answer — both axes are negative, so this record is the strongest candidate for a genuine error.';
+  } else if (agree === 1 && v === VERDICT.AGREE) {
+    txt = 'Both axes are positive: the solvers agreed with each other and the judge confirmed the tutor\'s answer matches.';
+  } else return '';
+  return `<div style="padding:11px 13px;border-radius:9px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);font-size:12.5px;line-height:1.55;color:var(--text-200)">${esc(txt)}</div>`;
+}
+
 function qiOpen(i) {
   const r = qiRows[i];
   if (!r) return;
@@ -1739,7 +2223,7 @@ function qiOpen(i) {
 
   document.getElementById('qiDrawerHead').innerHTML =
     `<div style="font-size:14px;color:var(--text-100);font-weight:600">${esc(r.topic || 'Question')}</div>
-     <div class="mono" style="font-size:11px;color:var(--text-500);margin-top:4px">${esc(fmtTime(r.created_at))} · ${esc(m.pipeline_version || '—')} · ${qiVerdictChip(r.judge_verdict)}</div>`;
+     <div class="mono" style="font-size:11px;color:var(--text-500);margin-top:4px">${esc(fmtTime(r.created_at))} · ${esc(m.pipeline_version || '—')} · ${qiSolverChip(r.solver_agreement)} ${qiVerdictChip(r.judge_verdict)}</div>`;
 
   const hasV2 = m.v2_tier != null || m.v2_raw != null;
   const v2Block = hasV2
@@ -1752,25 +2236,48 @@ function qiOpen(i) {
        ${qiTextBlock('V2 Raw Output', m.v2_raw)}`
     : `<div class="qi-missing">No Detector V2 output for this record.</div>`;
 
+  const findings = qiDeriveFindings(r, m);
+  const findingsHtml = findings.map(f => `
+    <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border-soft)">
+      <span style="color:${QI_SEV[f.sev]};font-size:15px;line-height:1.2">•</span>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;color:${QI_SEV[f.sev]}">${esc(f.cat)}</div>
+        <div style="font-size:12px;color:var(--text-300);line-height:1.5;margin-top:2px">${esc(f.detail)}</div>
+      </div>
+    </div>`).join('');
+
   document.getElementById('qiDrawerBody').innerHTML = `
+    <div class="qi-block">
+      <div class="qi-block-t">What this record shows</div>
+      ${qiAxisNote(r)}
+      <div style="margin-top:${qiAxisNote(r) ? '12px' : '0'}">${findingsHtml}</div>
+      <div style="font-size:11px;color:var(--text-500);line-height:1.5;margin-top:10px">
+        Derived on this page from the record's own fields — <code>solver_answers</code>, <code>solver_agreement</code>,
+        <code>judge_verdict</code>, <code>ocr_*</code>, <code>solver_reasoning_lengths</code>. Not a stored string.
+      </div>
+    </div>
     <div class="qi-block">
       <div class="qi-block-t">Final Answer (sent to student)</div>
       ${qiTextBlock('ai_response', r.ai_response)}
     </div>
     <div class="qi-block">
-      <div class="qi-block-t">Solver A ‖ Solver B</div>
+      <div class="qi-block-t">Solver A ‖ Solver B <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— compared with each other</span></div>
+      <div style="margin-bottom:10px">${qiField('Solver ↔ solver agreement', num(r.solver_agreement) === null ? null : (num(r.solver_agreement) >= 1 ? 'match — both reached the same normalised answer' : 'differ — the two solvers did not agree'))}</div>
       <div class="qi-cols">
         <div>${qiField('Solver A Answer', sa[0])}${qiTextBlock('Solver A Reasoning', sr[0])}</div>
         <div>${qiField('Solver B Answer', sa[1])}${qiTextBlock('Solver B Reasoning', sr[1])}</div>
       </div>
     </div>
     <div class="qi-block">
-      <div class="qi-block-t">Judge</div>
+      <div class="qi-block-t">Judge <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— solvers' answer vs the tutor's answer</span></div>
       <div class="qi-cols">
         ${qiField('Verdict', r.judge_verdict)}
-        ${qiField('Confidence', r.verification_confidence != null ? Number(r.verification_confidence).toFixed(3) : null)}
+        ${qiField('Judge confidence', r.verification_confidence != null ? Number(r.verification_confidence).toFixed(3) : null)}
       </div>
       ${qiTextBlock('Judge Reasoning', m.judge_reasoning)}
+      <div style="font-size:11px;color:var(--text-500);line-height:1.5;margin-top:8px">
+        This verdict is about the tutor's answer, not about whether the two solvers agreed — that is the block above.
+      </div>
     </div>
     <div class="qi-block">
       <div class="qi-block-t">Verification</div>
@@ -1778,7 +2285,12 @@ function qiOpen(i) {
         ${qiField('Quality Score', m.verification_quality_score != null ? Number(m.verification_quality_score).toFixed(3) : null)}
         ${qiField('Pipeline Version', m.pipeline_version)}
       </div>
-      ${qiTextBlock('Verification Reason', m.verification_reason)}
+      ${qiTextBlock('Stored verification_reason (pipeline template)', m.verification_reason)}
+      <div style="font-size:11px;color:var(--text-500);line-height:1.5;margin-top:8px">
+        Shown verbatim for traceability. It is assembled by ai-tutor from fixed sentence fragments and can omit the
+        judge verdict entirely, so where it differs from <strong>What this record shows</strong> above, the derived
+        findings are the ones computed from this record's actual fields.
+      </div>
     </div>
     <div class="qi-block">
       <div class="qi-block-t">Detector V2 ${hasV2 ? '' : '<span style="color:var(--text-500)">(shadow)</span>'}</div>

@@ -107,66 +107,107 @@ Section will return when Edge Function metrics pipeline ships.
 
 ## ai-monitor.html
 
-All ai-monitor metrics scope to the active date-range filter (Today / 7d / 30d, default 7d). Filter changes re-run all loaders.
+Rewritten 2026-07-28. Architecture: **one fetch → one computation → one validation pass → pure rendering.**
+`loadAll()` pages the entire selected window into memory (`fetchAllRows`, 1000-row pages — a single
+un-paged read silently truncates at PostgREST's cap), hands it to `computeStats()`, and every panel
+renders from that one `STATS` object. Two cards cannot disagree about the same quantity because they
+read the same field.
 
-### Cost & Usage (`loadCostUsage`)
+**Financial metrics were removed from this page.** Spend, cost-per-question, monthly projections and
+the cost-spike alert now belong exclusively to AI Economics in the Owner Dashboard.
+
+### Data-availability model
+
+Every metric is a tagged value `{state, value}` where state is `ok` / `no_data` / `no_field` /
+`not_deployed`. `put()` is the only path to the DOM and prints a number **only** for `ok`; every other
+state prints an explicit reason. This is what prevents absent telemetry from rendering as a real `0`.
+
+### Verdict vocabulary
+
+`question_records.judge_verdict` stores **`agrees` / `disagrees` / `inconclusive` / `ocr_uncertain`**
+(plural). Matching the singular forms classifies every record as "other" — the previous build did this,
+reporting 0 disagreements against 94 real ones and a green "Judge disagreement: 0.0%" alert.
+
+### Request Volume & Pipeline Coverage
 
 | DOM id | Label | Source | Query / formula | Status |
 |---|---|---|---|---|
 | `cTotalReq` | Total requests (window) | `question_records` | `COUNT(*) WHERE created_at >= since` | Accurate |
-| `cToday` | Today's requests | `question_records` | `COUNT(*) WHERE created_at >= today_00:00` | Accurate |
-| `cWeek` | This week's requests | `question_records` | `COUNT(*) WHERE created_at >= now() - 7d` | Accurate |
-| `cMonth` | This month's requests | `question_records` | `COUNT(*) WHERE created_at >= now() - 30d` | Accurate |
-| `cPromptTok` / `cCompTok` | Prompt / completion tokens (window) | `question_records.verification_meta` | sum of `solver_*`, `judge_*`, `ocr_*` token fields | Estimated — only captures tokens for fields ai-tutor currently emits; v82 will add per-role fields. Real but **partial**. |
-| `cEstCost` | Estimated cost (window) | derived | `Σ(tokens × per-model price)` using OpenAI list pricing (gpt-4o-mini in 0.15 / out 0.60; gpt-4o in 2.50 / out 10.00 per 1M) | Estimated — same caveat as tokens, plus list-price model (real billing may differ with discounts) |
-| `cMonthCost` | Est. monthly cost | derived | extrapolation of last-30d cost / 30 × 30 | Estimated |
-| `cL3Count` / `cNoL3Count` / `cL3Rate` | L3 pipeline runs | `question_records` | `verification_status='pipeline_complete'` vs everything else in window | Accurate |
+| `cToday` / `cWeek` / `cMonth` | Fixed rolling windows | `question_records` | head COUNT at 00:00 / −7d / −30d | Accurate — deliberately independent of the period selector |
+| `cL3Count` / `cNoL3Count` / `cL3Rate` | L3 coverage | `question_records` | rows with `verification_meta.pipeline_version` vs the rest | Accurate |
+| `cLastL3` | Most recent L3 run | derived | `MAX(created_at)` over L3 rows | Accurate |
+| Token / cost | — | — | — | **Not displayed.** No `*_prompt_tokens`, `*_completion_tokens` or `*_tokens_in/out` key exists on any row; the panel states this rather than rendering `0` / `$0`. |
 
-### Cost Breakdown by Role (`renderCostBreakdown`) — **AWAITING v82**
+### Pipeline Composition
 
-| DOM id | Status |
-|---|---|
-| `bkSolver`, `bkJudge`, `bkOcr`, `bk4o`, `bkMini`, `bkTotal` | **Not wired** — per-role token capture ships with ai-tutor v82. Card stays in DOM with notice banner "Awaiting v82 token tracking". Values fixed at `—` until v82 deploys. |
+Rows are labelled **measured** (counted per record) or **derived** (exact structural multiple of an L3 run).
 
-### Model Usage (`loadModelUsage`)
+| DOM id | Label | Query / formula | Status |
+|---|---|---|---|
+| `mL3Runs` / `mJudgeTop` / `mJudge` | L3 runs, judge invocations | `COUNT(L3 rows)` — 1 judge call per run | Derived (exact, labelled) |
+| `mSolvers` | Solver invocations | `COUNT(L3 rows) × 2` | Derived (exact, labelled) |
+| `mOcr` | OCR extractions | `COUNT WHERE verification_meta.solver_sees_image = true` | Measured |
+| `mOcrRerun` | OCR reruns | `SUM(verification_meta.ocr_rerun_count)` | Measured |
+| `mOcrChanged` | Reruns that changed text | `COUNT WHERE ocr_rerun_changed = true` | Measured |
+| `mDetV2` | Detector v2 invocations | rows with `v2_tier` | `not_deployed` — no row has ever carried one |
 
-| DOM id | Label | Source | Query / formula | Status |
-|---|---|---|---|---|
-| `mMini` | gpt-4o-mini calls | `question_records.verification_meta` | rows where solver fields present × 2 (one per solver) | Estimated — counts L3 runs as 2 calls each; doesn't measure actual API call count. |
-| `mFull` | gpt-4o calls | `question_records.verification_meta` | rows where `judge_*` fields present + rows where `ocr_rerun_*` fields present | Estimated — same caveat. |
-| `mDetV2` | Detector v2 invocations | `question_records.verification_meta` | rows where `v2_tier` is not null | Accurate (boolean presence) |
+### L3 Pipeline
 
-### L3 Pipeline (`loadL3Pipeline`)
+An L3 run is a row carrying `verification_meta.pipeline_version`. This is broader than
+`verification_status='pipeline_complete'`: runs ending as `ocr_uncertain` carry that value in
+`verification_status`, so filtering on `pipeline_complete` made the `ocr_uncertain` verdict
+**structurally unreachable** — the filter dropped exactly the rows the counter was meant to show.
 
-| DOM id | Label | Source | Query / formula | Status |
-|---|---|---|---|---|
-| `l3Total` | Total L3 runs | `question_records` | `COUNT WHERE verification_status='pipeline_complete'` | Accurate |
-| `l3Rate` | L3 pipeline rate | derived | `l3_total / total_requests × 100` | Accurate |
-| `l3Agree` | Judge agreement rate | `question_records` | `COUNT WHERE judge_verdict='agree' / COUNT WHERE judge_verdict IS NOT NULL × 100` | Accurate |
-| `l3QualScore` | Avg verification confidence | `question_records` | `AVG(verification_confidence) WHERE verification_status='pipeline_complete'` | Accurate |
+| DOM id | Label | Query / formula | Status |
+|---|---|---|---|
+| `l3Total` / `l3Rate` | L3 runs, coverage | `COUNT(L3 rows)`, ÷ window total | Accurate |
+| `l3Agree` | **Solver ↔ solver** agreement | `AVG(solver_agreement) × 100` over rows carrying it | Accurate |
+| `l3JudgeAgree` / `l3JudgeDisagree` / `l3Inconclusive` / `l3JudgeOcr` | **Solvers ↔ tutor** verdict | `COUNT WHERE judge_verdict = <value>` ÷ L3 total | Accurate — mutually exclusive, sums to `l3Total` (asserted) |
+| `l3QualScore` | Avg quality score | `AVG(verification_quality_score)` over **scored** rows | Accurate — denominator shown in sub-label |
+| `l3QHigh` / `l3QMed` / `l3QLow` | Quality buckets | over scored rows only | Accurate |
+| `l3QNone` | No score recorded | L3 rows lacking the field | Accurate — previously bucketed as "low quality" |
+| `l3Latency` / `l3LatencyP95` | Avg / p95 latency | `verification_meta.pipeline_latency_ms` | Accurate — p95 is nearest-rank, matching SQL `percentile_disc` |
 
-### Difficulty Monitor (`loadDifficultyMonitor`)
+> `l3Agree` and the judge verdicts measure **different axes** and routinely differ. 57 production
+> records have both solvers agreeing *and* a `disagrees` verdict. Neither is wrong; the UI now says so.
+
+### Difficulty Monitor
+
+| DOM id | Label | Query / formula | Status |
+|---|---|---|---|
+| `dV1Total` | v1 tier assignments | `COUNT WHERE verification_tier IS NOT NULL` | Accurate |
+| `dV1GptAgree` | v1 / GPT agree rate | `verification_tier = verification_meta.gpt_tier`, over rows where `gpt_tier` is **non-null** | Accurate — cross-checked against the stored `agrees_with_gpt` flag; divergence raises the integrity banner |
+| `dDefaultMed` / `dV1DefMedPct` | v1 fallback rate | `reasons` contains `default_medium` | Accurate |
+| `dV2Total` / `dV2GptAgree` / `dV2AvgLatency` | Detector v2 | rows with `v2_tier` | `not_deployed` |
+| `dCmpBody` | v1 vs v2 comparison | pairs each record's **real** `verification_tier` with its `v2_tier` | Accurate — the v1 side was previously hard-coded to `medium` |
+
+### Detector v2 Shadow Monitor
+
+Detector v2 has never run in production: zero rows carry `v2_tier` and there is no
+`difficulty_detector_v2_enabled` row in `system_settings`. The page states **"Not deployed"** rather
+than showing a progress bar implying collection is under way.
+
+| DOM id | Label | Query / formula | Status |
+|---|---|---|---|
+| `sV2Count` | v2 rows captured | all-time COUNT where `v2_tier` is not null | Accurate (all-time — checkpoints are absolute) |
+| `sNoV2Count` | default_medium records | all-time COUNT — the v2 target set | Accurate — previously an unrelated subtraction labelled "without v2" |
+| `sV2Coverage` | v2 coverage % | `v2Count ÷ defMedCount`, both all-time | Accurate |
+
+### Recent Quality Failures
+
+| DOM id | Label | Query | Status |
+|---|---|---|---|
+| `rvfBody` | Recent judge disagreements | `WHERE judge_verdict = 'disagrees'` (plural) ORDER BY created_at DESC LIMIT 10 | Accurate — also shows the solver axis per row, and flags a mismatch if the count disagrees with the panel above |
+| `rofBody` | Recent OCR issues | union of (`ocr_confidence < 0.5` OR `judge_verdict='ocr_uncertain'`) and (`ocr_rerun_count <> '0'`), de-duplicated | Accurate — the previous `ocr_rerun_used` predicate matched no rows because that key does not exist |
+
+### OpenAI Operational Health
 
 | DOM id | Label | Source | Status |
 |---|---|---|---|
-| `dV1Total` | v1 tier assignments | `question_records.verification_tier` | Accurate |
-| `dV2Total` | v2 tier assignments | `question_records.verification_meta.v2_tier` | Accurate |
-| `dDefaultMed` | % defaulted to MEDIUM | `question_records` | Accurate |
-
-### Detector v2 Shadow Monitor (`loadShadowMonitor`)
-
-| DOM id | Label | Source | Status |
-|---|---|---|---|
-| `sV2Count` | v2 rows captured | `question_records` where `verification_meta->>'v2_tier' IS NOT NULL` | Accurate |
-| `sNoV2Count` | v2 misses | inverse of above in window | Accurate |
-| `sV2Coverage` | v2 coverage % | derived | Accurate |
-
-### Recent Quality Failures (`loadRecentFailures`)
-
-| DOM id | Label | Source | Status |
-|---|---|---|---|
-| `rvfBody` | Recent judge-disagree rows | `question_records WHERE judge_verdict='disagree' ORDER BY created_at DESC LIMIT 20` | Accurate |
-| `rofBody` | Recent OCR issues | `question_records WHERE ocr_confidence < 0.6 ORDER BY created_at DESC LIMIT 20` | Accurate |
+| `oaiStatusVal` / `oaiFailCount` / `oaiLastFail` / `oaiLastOk` | Guard-fire telemetry | `ai_response` matched against the three `safeNoAnswerMessage` strings | Accurate |
+| `oaiFeedBody` | Live OpenAI service status | `status.openai.com/api/v2/summary.json` (public, no credentials) | Accurate when reachable; strict shape check, and reports **"feed unreachable"** rather than assuming operational |
+| `oaiCodeBreakdown` | Failures by provider status | `oai_http_status` / `oai_error_code` from the same rows as `STATS` | Accurate — a `4xx` other than 401/403/429 is labelled a defect in *our* request, not an OpenAI fault |
+| `oaiRecentBody` | Recent failures | real status code per row | Accurate — the "model (inferred)" column was removed; the serving model is not persisted |
 
 ### Feedback (`loadFeedback`)
 
@@ -178,11 +219,36 @@ All ai-monitor metrics scope to the active date-range filter (Today / 7d / 30d, 
 | `fbTopicsBody` | Topic breakdown | `response_feedback GROUP BY topic WHERE feedback_type='incorrect'` | Accurate |
 | `fbRecentBody` | Recent 20 feedback rows with original question, image, and Zero response | `response_feedback` ⋈ `profiles(id, full_name, email)` ⋈ `question_records(id, question, ai_response, image)` on `record_id` | Accurate |
 
-### AI Alerts (`loadAlerts`)
+### AI Alerts (`renderAlerts`)
 
-| DOM id | Label | Source | Status |
-|---|---|---|---|
-| `aiAlerts` | Threshold banners | live window aggregates | Estimated — banners use the same token/cost data as `cEstCost`, so the cost-spike banner inherits the v82 "partial token capture" caveat. All other banners (judge disagreement, OCR low-confidence, latency) compute against real fields. |
+Every alert reads `STATS` — the same numbers the panels above display — so an alert cannot contradict
+the card it summarises. An alert whose metric could not be evaluated renders **grey ("not evaluated")**,
+never green: a green badge on an unmeasured threshold is worse than no badge.
+
+| Alert | Threshold | Source |
+|---|---|---|
+| Judge disagreement | > 15% red | `judge_verdict='disagrees'` ÷ L3 runs |
+| OCR issue rate | > 10% amber | `ocr_confidence < 0.5` ÷ rows carrying `ocr_confidence` |
+| Verification confidence | < 0.50 amber | `AVG(verification_confidence)` |
+| L3 latency p95 | > 8s red, > 5s amber | `pipeline_latency_ms` |
+| Low-quality solver output | > 10% amber | `low_quality_solver` ÷ L3 runs |
+| Pipeline activity | red when requests exist but zero L3 runs | liveness check invisible to every rate-based alert above |
+
+The cost-spike alert was removed with the rest of the financial metrics.
+
+### Internal consistency (`validateStats`)
+
+Assertions run on every load; any violation renders a red banner at the top of the page instead of
+letting two panels disagree silently:
+
+- judge verdict counts sum to the L3 run total, with no unrecognised verdict value
+- quality buckets sum to the scored-record count, and scored + unscored sum to the L3 total
+- L3 + non-L3 rows sum to the window total
+- computed v1/GPT agreement equals the stored `agrees_with_gpt` count
+- the v1 tier distribution sums to the v1 record count
+
+Verified against production on 2026-07-28: all 1167 rows replayed through `computeStats`, 22 metrics
+matched independent SQL, 0 assertion failures.
 
 ---
 
@@ -200,8 +266,18 @@ All ai-monitor metrics scope to the active date-range filter (Today / 7d / 30d, 
 | Metric | Page | Why flagged |
 |---|---|---|
 | `growMonthly`, `growChurned` | admin | Activity proxy, not billing-event-driven |
-| `cPromptTok`, `cCompTok`, `cEstCost`, `cMonthCost` | ai-monitor | Partial token capture (v82 will complete it); list pricing |
-| `mMini`, `mFull` | ai-monitor | Inferred from `verification_meta` field presence, not actual API call counts |
-| `aiAlerts` (cost-spike banner only) | ai-monitor | Inherits `cEstCost` caveat |
-| `bkSolver`–`bkTotal` | ai-monitor | **Not wired** until v82 |
+| `mSolvers`, `mJudge` | ai-monitor | **Derived, not measured** — exact structural multiples of an L3 run (2 solver calls, 1 judge call each), labelled `derived` in the UI. Not per-call telemetry. |
+| Detector v2 metrics | ai-monitor | **Not deployed** — no row has ever carried `v2_tier` |
 | `phErrs`, `phFailed`, `phAvgRt`, `phP95Rt` | admin | **Not wired** — section hidden |
+
+Removed from ai-monitor (moved to AI Economics): `cPromptTok`, `cCompTok`, `cEstCost`, `cMonthCost`,
+`cAvgCost`, `bkSolver`–`bkTotal`, the cost-spike alert, and the Billing & Usage Health section.
+
+## Signals requiring new infrastructure
+
+| Signal | Requirement |
+|---|---|
+| Rate-limit headroom, token usage | ai-tutor must persist the `x-ratelimit-remaining-*` / `x-ratelimit-reset-*` response headers and the `usage` object per call. Code change + new columns. **No new credentials.** |
+| Model availability / deprecations | `GET /v1/models` needs a standard API key; it cannot be called from the browser without exposing it. Requires a server-side Edge Function proxy. |
+| Org-level usage & rate-limit config | OpenAI **Admin API key** (`sk-admin-…`) + **Organization ID** (`org-…`) + **Project ID** (`proj_…`), called server-side, plus a scheduled snapshot job. |
+| Account balance / credit remaining | **No OpenAI API exists.** Only a dashboard usage limit + billing alert can provide this. No balance figure will ever be shown here. |
