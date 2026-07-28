@@ -5,7 +5,7 @@ document.**
 
 | | |
 |---|---|
-| **Status** | Phase 1 — architecture **approved** 2026-07-28; revised same day (r2 Cost Engine, r3 Service Catalog) |
+| **Status** | Phase 1 — architecture **approved** and **FROZEN** at r4, 2026-07-28 (see §18) |
 | **Scope** | New **section inside the Owner Dashboard** (`admin.html`), not a standalone page |
 | **Posture** | Read-only. Consumes analytics. Never writes pricing, credits, or billing |
 | **Date** | 2026-07-28 |
@@ -19,6 +19,7 @@ document.**
 | r1 | Approved architecture: telemetry → Economics, with cost stamped at telemetry write time |
 | **r2** | Introduced the **Cost Engine** as the single source of truth for cost calculation. Telemetry became usage-only (no money); Economics became formula-free |
 | **r3** | Introduced the **AI Service Catalog** as the canonical abstraction above providers. The Cost Engine now reasons about *capabilities* (Solver, Judge, OCR, Truth Engine…) and rolls cost up **Model → Provider → Service**. AI Economics is now provider- and model-independent: no provider or model name appears anywhere in the Economics layer or the dashboard |
+| **r4** | Added the **Cost Allocation Engine** inside the Cost Engine (§8.8) — calls → canonical Question Cost, with deterministic shared-cost and parent/child attribution and a conservation law. Added **§17 Design Invariants** (the rules that may never be violated) and **§18 Architecture Freeze**. **The architecture is frozen as of this revision** |
 
 Because Phase 2 has not been implemented, both refinements cost nothing to adopt.
 
@@ -82,13 +83,15 @@ Document map:
 | §5 | Missing-telemetry register, with evidence |
 | §6 | **AI Service Catalog** — canonical services, providers, bindings |
 | §7 | **AI Telemetry layer** — usage capture (cost-free, service-tagged) |
-| §8 | **Cost Engine layer** — pricing, hierarchy, facts, RPCs, extensibility |
+| §8 | **Cost Engine layer** — pricing, the Model→Provider→Service hierarchy, the **Cost Allocation Engine**, facts, RPCs, extensibility |
 | §9 | **AI Economics layer** — revenue, analytics views, RPC surface |
 | §10 | KPI dictionary for all 12 requested sections (Actual/Derived/Modeled/Blocked) |
 | §11–§12 | Pricing simulator; break-even analysis |
 | §13 | Extensibility contract for future AI systems and providers |
 | §14 | Phased roadmap and deployment order |
 | §15–§16 | Open questions; what this document does not change |
+| **§17** | **Design Invariants** — the rules that may never be violated |
+| **§18** | **Architecture Freeze** — what is frozen, what is not, how to amend |
 
 ---
 
@@ -187,7 +190,7 @@ is `STABLE`.
 | 2 | **Authorization** | Each RPC begins with `IF NOT has_role_at_least('owner') THEN RETURN jsonb_build_object('ok', false, 'reason','forbidden')`. Reuses the existing role helper; financial data never reaches an `admin` or `super_admin`. |
 | 3 | **Surface isolation** | Analytics views live in the `econ` schema, pricing in `cost_engine`, vocabulary in `ai_catalog`; **none is exposed to PostgREST**. The browser can only call owner-gated RPCs in `public`. |
 | 4 | **Client isolation** | The module's JS may reference only `owner_econ_*` and `owner_cost_*` RPCs. It never imports `credit-config.js`, never calls `consume_credits`, `admin_set_credit_cost`, `admin_adjust_credits`, `approve_payment_request`, `reject_payment_request`, or `refund_ai_credit`. |
-| 5 | **CI guard** | `scripts/verify-economics-readonly.sh` greps the `#tab-economics` block and the `econ`/`cost_engine` migrations for write verbs and forbidden RPC names, asserts every `owner_*` read RPC is `STABLE` + owner-gated, asserts **no object in `econ` references `cost_engine.rate_cards`, `rate_components`, `discount_rules`, or `fx_rates`** (§8.9 rule 8), and asserts **no provider or model literal appears in `econ` or in the dashboard tab** (§8.9 rule 10). |
+| 5 | **CI guard** | `scripts/verify-economics-readonly.sh` greps the `#tab-economics` block and the `econ`/`cost_engine` migrations for write verbs and forbidden RPC names, asserts every `owner_*` read RPC is `STABLE` + owner-gated, asserts **no object in `econ` references `cost_engine.rate_cards`, `rate_components`, `discount_rules`, or `fx_rates`** (§8.10 rule 8), and asserts **no provider or model literal appears in `econ` or in the dashboard tab** (§8.10 rule 10). |
 
 ### 3.3 Enforcing the Economics → Cost Engine boundary
 
@@ -551,7 +554,7 @@ Consequences, by design:
 - **The service series is continuous.** `v_cost_by_service` shows one unbroken
   `solver` line across the change — that is the whole point.
 - **Dashboard changes: none.** No provider or model name exists in Economics or
-  the tab (§8.9 rule 10), so nothing needs editing, redeploying, or reviewing.
+  the tab (§8.10 rule 10), so nothing needs editing, redeploying, or reviewing.
 - **Simultaneous providers are supported.** `binding_role='shadow'` or
   `'experiment'` lets two implementations run for the same service; the engine
   reports cost per service *and* per binding, which is how an A/B is evaluated
@@ -653,7 +656,7 @@ Design notes:
 - **No FK from `service_code` to the catalog.** Telemetry is fire-and-forget: a
   new service code emitted before its catalog row exists must still be recorded,
   not rejected. Validation is a soft check surfaced by
-  `owner_cost_health()` (§8.8), never an insert failure.
+  `owner_cost_health()` (§8.9), never an insert failure.
 - **No `cost_usd`, no `pricing_version`** *(r2)*. A cost stamped here would be a
   pricing formula living in the service layer, unversioned and impossible to
   correct. The Cost Engine derives it instead.
@@ -706,10 +709,11 @@ Nothing else in the platform is permitted to multiply a quantity by a price.
 | R4 | Handle **different billing models** — per token, per request, per image, per minute, fixed, future | `billing_units` + `rate_components`, incl. tiered bands (§8.4) |
 | R5 | Apply **FX conversion** | `fx_rates`, per the engine's stated policy; USD and EGP both stored (§8.7) |
 | R6 | Support **discounts, provider-specific and promotional pricing** | `discount_rules`, applied in a fixed, recorded order (§8.6) |
-| R7 | Compute **canonical metrics** (total, per request/question/student/lesson/subject/package/service) | `v_cost_by_*` rollups + one metric API (§8.8) |
+| R7 | Compute **canonical metrics** (total, per request/question/student/lesson/subject/package/service) | `v_cost_by_*` rollups + one metric API (§8.9) |
 | R8 | Produce **immutable cost facts** that downstream systems consume | append-only `cost_facts`, versioned by run (§8.5) |
-| R9 | Report its own **coverage and health** | `v_pricing_coverage`, `owner_cost_health()` (§8.6, §8.8) |
-| **R10** | Roll cost up the **Model → Provider → Service** hierarchy, so business questions are answered by capability | Hierarchical rollups (§8.8) |
+| R9 | Report its own **coverage and health** | `v_pricing_coverage`, `owner_cost_health()` (§8.6, §8.9) |
+| **R10** | Roll cost up the **Model → Provider → Service** hierarchy, so business questions are answered by capability | Hierarchical rollups (§8.9) |
+| **R11** | Aggregate many calls into **one canonical Question Cost**, attributing shared and parent/child costs deterministically | **Cost Allocation Engine** → `question_cost_facts` (§8.8) |
 
 Explicitly **not** the Cost Engine's job: revenue, credits, packages-as-revenue,
 profit, margin, break-even. It knows what things cost and how to slice that cost;
@@ -741,23 +745,35 @@ knowing what the package sold for.
         │     h. snapshot dims (service, provider, model, user, plan, lesson, op…)
         │     i. write fact, or mark 'unpriced' with NULL cost
         ▼
- (3) cost_engine.cost_facts                         [immutable cost fact]
+ (3) cost_engine.cost_facts                         [immutable PER-CALL cost fact]
         │
-        ├─► v_cost_facts_current                    (latest run per call)
-        ├─► SERVICE level    v_cost_by_service              ← what Economics reads
-        ├─► PROVIDER level   v_cost_by_provider, v_cost_by_service_provider
-        ├─► MODEL level      v_cost_by_model,    v_cost_by_service_model
-        └─► BUSINESS dims    v_cost_by_{request, question, student, lesson,
-                                        subject, package, operation, stage, daily}
+        │  cost_engine.allocate(from, to)           ← COST ALLOCATION ENGINE (§8.8)
+        │     j. group calls into work items        (request_id → question_record_id)
+        │     k. split SHARED calls across the work items they produced
+        │     l. link parent/child work items       (follow-ups, re-explanations)
+        │     m. bucket orphans as 'unattributed'   (never dropped)
+        │     n. assert CONSERVATION: Σ work-item cost ≡ Σ call cost
+        ▼
+ (4) cost_engine.question_cost_facts                [immutable PER-QUESTION cost fact]
+        │
+        ├─► call-grain rollups      ← from (3)
+        │     SERVICE   v_cost_by_service                   ← what Economics reads
+        │     PROVIDER  v_cost_by_provider, v_cost_by_service_provider
+        │     MODEL     v_cost_by_model,    v_cost_by_service_model
+        │     STAGE     v_cost_by_stage
+        │
+        └─► work-item rollups       ← from (4)
+              v_cost_by_{question, request, student, lesson, subject,
+                         package, operation, daily}
         │
         ▼
- (4) public.owner_cost_*()  RPCs                    [STABLE · owner-gated]
+ (5) public.owner_cost_*()  RPCs                    [STABLE · owner-gated]
         │
         ▼
- (5) econ.* views + owner_econ_*()                  [revenue, profit, margin]
+ (6) econ.* views + owner_econ_*()                  [revenue, profit, margin]
         │
         ▼
- (6) admin.html #tab-economics                      [service-keyed rendering]
+ (7) admin.html #tab-economics                      [service-keyed rendering]
 ```
 
 **Timing.** Pricing is asynchronous and idempotent. `run_pricing` prices only
@@ -783,10 +799,13 @@ All objects live in the `cost_engine` schema, not exposed to PostgREST.
 | `fx_rates` | table | USD→EGP by date, with source |
 | `cost_runs` | table | One row per pricing execution: version, window, counts, reason |
 | `cost_facts` | table | **Immutable normalized cost record**, one per (call, run) |
+| `allocation_runs` | table | One row per allocation execution: version, window, reason, conservation result (§8.8) |
+| `question_cost_facts` | table | **Immutable canonical Question Cost**, one per (work item, allocation run) (§8.8) |
+| `v_question_cost_current` | view | The current Question Cost fact per work item |
 | `v_cost_facts_current` | view | The current fact per call |
-| `v_cost_by_*` | views | Canonical metric rollups, service-first (§8.8) |
+| `v_cost_by_*` | views | Canonical metric rollups, service-first (§8.9) |
 | `v_pricing_coverage` | view | Unpriced calls, unregistered bindings, missing rate cards, missing FX |
-| `run_pricing()` / `recompute()` | function | The only writers (VOLATILE, service_role) |
+| `run_pricing()` / `recompute()` / `allocate()` | function | The only writers (VOLATILE, service_role) |
 
 Provider and service registries live in `ai_catalog` (§6.3), not here — the
 engine *reads* the catalog, it does not own it.
@@ -944,7 +963,7 @@ Four properties make these facts trustworthy:
    does not rewrite last month's economics.
 4. **Two independent axes.** Capability (`service_code`) and implementation
    (`provider_code`/`model`) are separate columns, so either can be aggregated
-   without the other — and the hierarchy in §8.8 falls out for free.
+   without the other — and the hierarchy in §8.9 falls out for free.
 
 ### 8.6 Pricing algorithm, discounts, and unpriced handling
 
@@ -1027,7 +1046,208 @@ per-call cost and stays out of the engine. It lives in
 `public.platform_cost_entries` and is applied by Economics at the P&L level
 (§9.4).
 
-### 8.8 Canonical metrics — the Service → Provider → Model hierarchy
+### 8.8 Cost Allocation Engine — from calls to Question Cost
+
+The Cost Engine has two internal stages. **Cost Calculation** (§8.4–§8.7) prices
+one upstream call. **Cost Allocation** turns those per-call facts into the unit
+the business actually reasons about: the cost of *one question*.
+
+The Cost Allocation Engine is an **internal component of the Cost Engine** — not
+a separate service, not a dashboard, not addressable from the UI, and not
+something AI Economics can invoke. Its only outputs are immutable facts.
+
+#### 8.8.1 Why it is a distinct stage
+
+A per-question cost is not a `SUM` of per-call costs, and the gap is not
+cosmetic:
+
+| Situation | In this platform today | Why a plain SUM fails |
+|---|---|---|
+| **Fan-out** | 4–6 calls per question (§5.2) | the easy case — grouping by `request_id` is correct |
+| **Shared cost** | `detectQuestionsInImages` (line 1368) analyses one image and yields *several* questions | one call's cost belongs to N questions; the split must be deterministic and lossless |
+| **Parent / child** | follow-ups, re-explanations, `reference_resolver` (line 2497) resolving against an earlier question | a child's cost must not be double-counted into its parent, yet the thread total must remain answerable |
+| **Late background work** | difficulty detector and the L3 shadow pipeline run in `EdgeRuntime.waitUntil()` *after* the response | calls land after the question fact was first computed; allocation must be re-runnable without mutating anything |
+| **Orphans** | calls with no resolvable `question_record_id` (failed insert, session indexing, study-plan generation) | silently dropping them understates total cost |
+| **Partial pricing** | one contributing call is `unpriced` (§8.6) | the question's cost is *incomplete* and must say so rather than under-report |
+
+#### 8.8.2 Responsibilities
+
+| # | Responsibility |
+|---|---|
+| A1 | Aggregate multiple AI calls into a single **Question Cost** |
+| A2 | Attribute **shared costs** consistently across the work items that caused them |
+| A3 | Handle **parent/child AI operations** without double counting |
+| A4 | Allocate cost **across AI services deterministically**, preserving the service mix |
+| A5 | Produce canonical **Question Cost facts** consumed by AI Economics |
+| A6 | Prove **conservation** — allocated cost equals priced cost, exactly, every run |
+
+It performs **no pricing math**. It never multiplies a quantity by a price; it
+only distributes amounts the Cost Calculation stage already computed. That
+separation is what keeps §8.9's rollups reconcilable at both grains.
+
+#### 8.8.3 Work items — the canonical unit
+
+A **work item** is one unit of student-visible work. "Question" is the canonical
+and by far the most common case; the same fact table generalizes so that Mock
+Exams, Study Plans, Focus Sessions, and Weakness Analyses land in the same
+structure when GAP-3 closes (Phase 8), with no schema change.
+
+| `work_item_type` | Identified by | Status |
+|---|---|---|
+| `question` | `question_records.id` | live at Phase 3 |
+| `study_plan` | `study_plans.id` | when metered |
+| `mock_exam` / `focus_session` / `weakness_report` | respective ids | after GAP-3 |
+| `unattributed` | synthetic key (`request_id`, else session+day) | always available — the orphan bucket |
+
+#### 8.8.4 Allocation methods — deterministic by construction
+
+Every allocated amount records the method that produced it:
+
+| Method | When it applies | Rule |
+|---|---|---|
+| `direct` | the call maps to exactly one work item | the whole cost goes to that work item |
+| `shared_equal` | one call produced N work items | split equally; **largest-remainder** distribution so the parts sum to the original exactly; remainder assigned by ascending work-item id |
+| `shared_weighted` | reserved for future signals (e.g. per-question token share) | weights must be declared on the rule and stored on the fact — never inferred at read time |
+| `inherited` | parent/child threads | **no cost moves.** A child's calls stay on the child; the parent's `thread_cost` rolls descendants up separately |
+| `unattributed` | no resolvable work item | full cost to the orphan bucket, reported and never dropped |
+
+**Determinism requirement.** Given the same call facts and the same
+`allocation_version`, the output must be byte-identical: no randomness, no
+dependence on execution or join order, exact `numeric` arithmetic (never float
+accumulation), and a deterministic remainder tie-break. Re-running allocation
+over an untouched window must produce an identical result — this is asserted,
+not assumed (§14, Phase 4 exit).
+
+**Parent/child, stated precisely.** Every work-item fact carries two measures
+that are never added together:
+
+- `total_cost_usd` — cost incurred by *this* work item's own calls (direct +
+  its share of shared calls). This is the default everywhere in Economics.
+- `thread_cost_usd` — `total_cost` plus all descendants, via
+  `parent_work_item_id`. Shown on drill-down, labelled as inclusive.
+
+So a follow-up that cost $0.004 appears as $0.004 of its own, and the original
+question's thread total rises by $0.004 — with the platform-wide sum unchanged.
+
+#### 8.8.5 Conservation law
+
+For any window `W`, over current facts:
+
+```
+Σ question_cost_facts.total_cost_usd   ≡   Σ cost_facts.net_cost_usd
+   (all work items, including the             (all priced calls in W)
+    'unattributed' bucket)
+```
+
+`allocate()` asserts this at the end of every run. **A mismatch fails the run**
+and leaves the previous allocation current — fail-closed, so the dashboard shows
+slightly stale but internally consistent numbers rather than fresh inconsistent
+ones. The result is stored on `allocation_runs` for audit.
+
+This is the property that makes the two rollup grains in §8.9 trustworthy: a
+service-grain total and a question-grain total for the same window are equal by
+construction, not by coincidence.
+
+#### 8.8.6 Schema
+
+```sql
+CREATE TABLE cost_engine.allocation_runs (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  allocation_version  text NOT NULL,        -- bumped when an allocation rule changes
+  window_from         timestamptz NOT NULL,
+  window_to           timestamptz NOT NULL,
+  reason              text NOT NULL,        -- 'scheduled'|'late_calls'|'reallocation'|…
+  started_at          timestamptz NOT NULL DEFAULT now(),
+  finished_at         timestamptz NULL,
+  work_items_written  integer NULL,
+  calls_allocated     integer NULL,
+  conserved           boolean NULL,         -- §8.8.5 assertion result
+  variance_usd        numeric(14,8) NULL    -- must be 0 when conserved
+);
+
+CREATE TABLE cost_engine.question_cost_facts (
+  id                   bigserial PRIMARY KEY,
+  allocation_run_id    uuid NOT NULL REFERENCES cost_engine.allocation_runs(id),
+  is_current           boolean NOT NULL DEFAULT true,
+
+  -- identity ---------------------------------------------------------------
+  work_item_type       text NOT NULL DEFAULT 'question',
+  work_item_id         text NOT NULL,        -- question_records.id, or synthetic
+  parent_work_item_id  text NULL,            -- follow-ups / re-explanations
+  request_id           uuid NULL,
+  occurred_at          timestamptz NOT NULL,
+
+  -- business dimensions, inherited from the contributing cost facts --------
+  user_id              uuid NULL,
+  is_internal          boolean NOT NULL,
+  plan_code            text NULL,
+  topic_id             text NULL,
+  subtopic_id          text NULL,
+  operation            text NULL,
+
+  -- money ------------------------------------------------------------------
+  direct_cost_usd      numeric(14,8) NULL,   -- from calls owned solely by this item
+  shared_cost_usd      numeric(14,8) NULL,   -- this item's share of shared calls
+  total_cost_usd       numeric(14,8) NULL,   -- direct + shared. NULL when unknown
+  total_cost_egp       numeric(14,4) NULL,
+  thread_cost_usd      numeric(14,8) NULL,   -- inclusive of descendants
+
+  -- composition ------------------------------------------------------------
+  service_mix          jsonb NOT NULL,       -- {"solver":0.00021,"judge":0.00043,…}
+  call_count           integer NOT NULL,
+  priced_call_count    integer NOT NULL,
+  unpriced_call_count  integer NOT NULL,
+  cost_completeness    text NOT NULL,        -- 'complete'|'partial'|'unknown'
+
+  -- provenance -------------------------------------------------------------
+  allocation_method    text NOT NULL,        -- dominant method for this item
+  allocation_version   text NOT NULL,
+  computed_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX ON cost_engine.question_cost_facts (work_item_type, work_item_id)
+  WHERE is_current;
+CREATE INDEX ON cost_engine.question_cost_facts (occurred_at DESC) WHERE is_current;
+CREATE INDEX ON cost_engine.question_cost_facts (user_id, occurred_at DESC) WHERE is_current;
+CREATE INDEX ON cost_engine.question_cost_facts (topic_id, occurred_at DESC) WHERE is_current;
+CREATE INDEX ON cost_engine.question_cost_facts (plan_code, occurred_at DESC) WHERE is_current;
+CREATE INDEX ON cost_engine.question_cost_facts (parent_work_item_id) WHERE is_current;
+```
+
+`service_mix` is what lets a lesson, student, or package rollup break down by
+capability without re-joining call facts — the per-question cost carries its own
+service composition.
+
+`cost_completeness` extends the honest-numbers rule to the aggregate:
+
+| Value | Meaning | How Economics renders it |
+|---|---|---|
+| `complete` | every contributing call was priced | normal |
+| `partial` | some contributing calls are `unpriced` | value shown with an explicit "≥" / incomplete marker and a count |
+| `unknown` | no contributing call could be priced | `—`, never `0` |
+
+#### 8.8.7 Immutability and re-allocation
+
+Identical model to Cost Calculation (§8.5): facts are never updated. Late
+background calls, a rate-card correction, or an allocation-rule change produce a
+**new allocation run** whose facts supersede the previous ones (`is_current`
+flips); superseded rows remain for audit. The partial unique index guarantees
+exactly one current fact per work item.
+
+Because allocation is derived from cost facts, a recompute of pricing
+(§8.6) always triggers a re-allocation of the affected window — the two stages
+are versioned independently but advanced together.
+
+#### 8.8.8 What it is not
+
+- **Not a dashboard.** It has no UI, no tab, no owner-facing RPC of its own; its
+  outputs reach the Owner only through `owner_cost_metrics()` and Economics.
+- **Not revenue-aware.** It never sees a package price, a credit, or a payment.
+- **Not a pricing stage.** It redistributes already-priced amounts; it cannot
+  create or destroy cost — §8.8.5 enforces that arithmetically.
+- **Not a mutation of `cost_facts`.** Call-grain facts are read-only inputs.
+
+### 8.9 Canonical metrics — the Service → Provider → Model hierarchy
 
 The engine publishes rollups at three levels of the implementation hierarchy plus
 the business dimensions. Every rollup returns the **same measure set** —
@@ -1052,24 +1272,38 @@ cross-cutting:   v_cost_by_provider  (vendor concentration across all services)
 
 **Canonical metrics**:
 
-| Canonical metric | View | Grain |
-|---|---|---|
-| Total Cost | `v_cost_daily` | day |
-| **Cost per AI Service** | `v_cost_by_service` | `service_code` |
-| Cost per Provider | `v_cost_by_provider` | `provider_code` |
-| Cost per Model | `v_cost_by_model` | `model` |
-| Cost per Request | `v_cost_by_request` | `request_id` |
-| Cost per Question | `v_cost_by_question` | `question_record_id` |
-| Cost per Student | `v_cost_by_student` | `user_id` |
-| Cost per Lesson | `v_cost_by_lesson` | `subtopic_id` |
-| Cost per Subject | `v_cost_by_subject` | `topic_id` |
-| Cost per Package | `v_cost_by_package` | `plan_code` (snapshotted) |
-| *(supporting)* Cost per Stage / Operation | `v_cost_by_stage`, `v_cost_by_operation` | pipeline stage / `feature_name` |
+| Canonical metric | View | Grain | Derived from |
+|---|---|---|---|
+| Total Cost | `v_cost_daily` | day | either — equal by conservation (§8.8.5) |
+| **Cost per AI Service** | `v_cost_by_service` | `service_code` | call facts |
+| Cost per Provider | `v_cost_by_provider` | `provider_code` | call facts |
+| Cost per Model | `v_cost_by_model` | `model` | call facts |
+| *(supporting)* Cost per Stage | `v_cost_by_stage` | pipeline stage | call facts |
+| **Cost per Question** | `v_cost_by_question` | work item | **Question Cost facts** |
+| Cost per Request | `v_cost_by_request` | `request_id` | Question Cost facts |
+| Cost per Student | `v_cost_by_student` | `user_id` | Question Cost facts |
+| Cost per Lesson | `v_cost_by_lesson` | `subtopic_id` | Question Cost facts |
+| Cost per Subject | `v_cost_by_subject` | `topic_id` | Question Cost facts |
+| Cost per Package | `v_cost_by_package` | `plan_code` (snapshotted) | Question Cost facts |
+| *(supporting)* Cost per Operation | `v_cost_by_operation` | `feature_name` | Question Cost facts |
+
+**Which grain feeds which rollup is a deliberate rule, not an implementation
+detail.** Anything keyed on *how the work was served* (service, provider, model,
+stage) reads call facts. Anything keyed on *whose work it was* (question,
+student, lesson, subject, package, operation) reads Question Cost facts, because
+only those carry correctly-attributed shared and parent/child costs. The two
+grains reconcile exactly for any window, by the conservation law in §8.8.5 —
+which is what makes it safe to mix them on one screen.
 
 Each service-level row also carries `display_name`, `category`, and
 `over_target` (against `services.cost_target_usd`, when set) — denormalized from
 the catalog by the engine, so **Economics never needs a catalog grant** and the
 dashboard never needs a service name in its code.
+
+Each work-item rollup additionally carries `service_mix` (the per-capability
+split, from §8.8.6) and `cost_completeness`, so any business dimension can be
+broken down by service and correctly labelled when some contributing calls are
+unpriced.
 
 Public RPC surface — all `SECURITY DEFINER`, `STABLE`, owner-gated,
 `SET search_path = public, cost_engine, ai_catalog`:
@@ -1090,7 +1324,7 @@ Internal, not exposed to PostgREST:
 | `cost_engine.run_pricing(p_from, p_to, p_reason)` | `VOLATILE` | Scheduled job / `service_role` |
 | `cost_engine.recompute(p_from, p_to, p_reason)` | `VOLATILE` | Owner-initiated correction; supersedes facts in a new run |
 
-### 8.9 Extensibility rules
+### 8.10 Extensibility rules
 
 These keep the layering true over time:
 
@@ -1127,6 +1361,15 @@ These keep the layering true over time:
 11. **One measure set.** Every canonical rollup returns the same measures, so a
     new dimension is a new view plus one enum value in `owner_cost_metrics` — the
     dashboard needs no new rendering code.
+12. **Allocation conserves cost exactly.** Allocation may move cost between work
+    items; it may never create or destroy it. Every run asserts §8.8.5 and fails
+    closed on variance.
+13. **Allocation is deterministic.** Same inputs + same `allocation_version` ⇒
+    byte-identical output. No randomness, no order dependence, no float
+    accumulation, deterministic remainder tie-break.
+14. **Allocation never prices.** The Cost Allocation Engine redistributes amounts
+    the pricing stage already computed; a rate lookup inside allocation is a
+    defect.
 
 ---
 
@@ -1174,7 +1417,10 @@ admin.html #tab-economics          ← render only, service-keyed
 | `econ.v_breakeven_inputs` | month | Section 11 inputs |
 
 Every one joins to a **published** cost view. None contains a price, a rate, an
-FX multiplication, a provider, or a model.
+FX multiplication, a provider, or a model — and none re-aggregates raw call
+facts: question, student, lesson, subject, and package figures all come from the
+Cost Allocation Engine's Question Cost facts (§8.8), so shared and parent/child
+costs are attributed once, consistently, everywhere.
 
 All views default to excluding internal accounts (using the engine's snapshotted
 `is_internal` flag); an `include_internal` RPC parameter flips it.
@@ -1608,13 +1854,16 @@ catalog row; p95 response latency unchanged.
 ### Phase 4 — Cost Engine
 
 - Migration: `cost_engine` schema — `billing_units`, `rate_cards`,
-  `rate_components`, `discount_rules`, `fx_rates`, `cost_runs`, `cost_facts` +
-  indexes. Not exposed to PostgREST.
+  `rate_components`, `discount_rules`, `fx_rates`, `cost_runs`, `cost_facts`,
+  `allocation_runs`, `question_cost_facts` + indexes. Not exposed to PostgREST.
 - Seed the current OpenAI rate cards (`gpt-4o`, `gpt-4o-mini`, `effective_from`
   = Phase 3 go-live) and the first FX rate.
 - `run_pricing()` / `recompute()`, scheduling, and the published views:
   `v_cost_facts_current`, the Service → Provider → Model hierarchy, the business
   dimensions, `v_pricing_coverage`.
+- **Cost Allocation Engine** (§8.8): `allocate()`, the work-item resolver, the
+  five allocation methods, `v_question_cost_current`, and the conservation
+  assertion. Allocation runs immediately after each pricing run.
 - Owner-gated read RPCs: `owner_cost_metrics`, `owner_cost_service_breakdown`,
   `owner_cost_facts`, `owner_cost_health`, `owner_cost_rate_cards`,
   `owner_cost_reprice`.
@@ -1626,13 +1875,15 @@ stated `unpriced_reason`; pricing coverage ≥ 99%; binding resolution ≥ 99%
 `registered`; re-running `run_pricing` is a no-op (idempotence proven); a
 deliberate rate-card correction produces a new run that supersedes cleanly and
 leaves prior facts intact; service totals reconcile exactly to provider totals
-and to model totals; no cost math exists outside the engine.
+and to model totals; **allocation conserves cost exactly (variance = 0) and is
+byte-identical on re-run**; a question with a shared parent call and a follow-up
+child allocates without double counting; no cost math exists outside the engine.
 
 ### Phase 5 — AI Economics analytics
 
 - `econ` schema + the views in §9.2, joining published engine views only.
 - `owner_econ_*` RPCs (`STABLE`, owner-gated), including `owner_econ_coverage()`.
-- `scripts/verify-economics-readonly.sh` CI guard, including the §8.9 rule 8
+- `scripts/verify-economics-readonly.sh` CI guard, including the §8.10 rule 8
   boundary check and the rule 10 no-provider/model-literal check.
 
 **Gate:** migration approval. **Exit:** every RPC returns `forbidden` for
@@ -1757,3 +2008,185 @@ No production behaviour was modified, and nothing was deployed. Specifically:
 - Production access during authoring was **read-only introspection only**
   (`information_schema`, `pg_policies`, `pg_proc`, and aggregate `SELECT`s used
   for the evidence in §4 and §5).
+
+---
+
+## 17. Design Invariants
+
+These are the architectural rules that must hold regardless of how the system is
+implemented, extended, or refactored. They are **not** style preferences and
+**not** phase-specific. A violation is an architectural defect, not a bug: the
+correct response is to change the code back, not to document an exception.
+
+Each invariant states what must be true, what mechanism upholds it, and how a
+reviewer or CI job can verify it. Invariants marked *(owner #N)* correspond to
+the numbered list in the owner's r4 request; the rest emerged from the design and
+are listed for completeness.
+
+### A. Layer boundaries
+
+| ID | Invariant | Enforcement | Verification |
+|---|---|---|---|
+| **INV-01** | **Telemetry never computes money.** `ai_model_calls` carries usage in units only — no cost, price, currency, or FX column, and no code path in an AI service multiplies a quantity by a price. *(owner #1)* | Column set of `ai_model_calls` (§7.1); rule 2 of §8.10 | CI: assert no `cost`/`price`/`usd`/`egp` column on `ai_model_calls`; grep Edge Function sources for arithmetic on a rate |
+| **INV-02** | **The Cost Engine is the single source of truth for all AI cost calculations.** No other component may derive a cost from a rate. *(owner #2)* | `cost_engine` schema owns rate cards, FX, discounts, and both fact tables (§8) | CI: no rate-card or FX reference outside `cost_engine`; review checklist |
+| **INV-03** | **Dashboards never implement pricing formulas.** The tab renders values returned by RPCs; it performs no cost arithmetic beyond display formatting. *(owner #4)* | §3.2 layer 4; rule 1 of §8.10 | CI: grep `#tab-economics` for rate/price arithmetic; review |
+| **INV-04** | **Dashboard layers consume analytics only.** The UI's entire data surface is `owner_econ_*` and `owner_cost_*`. *(owner #13)* | §3.2 layers 3–4 | CI: the tab references no other RPC, table, or view |
+| **INV-05** | **No layer reaches past the layer above it.** Economics reads engine outputs, never rate cards, discounts, FX, or raw telemetry. | `econ_reader` grants (§3.3); rule 8 of §8.10 | Privilege check (permission denied) + CI grep |
+| **INV-06** | **Allocation never prices, and pricing never allocates.** The two Cost Engine stages stay separable. | §8.8.2, §8.8.8; rule 14 of §8.10 | Review: no rate lookup inside `allocate()`; no work-item grouping inside `run_pricing()` |
+
+### B. Read-only posture
+
+| ID | Invariant | Enforcement | Verification |
+|---|---|---|---|
+| **INV-07** | **AI Economics is read-only.** Every Economics and cost-read RPC is `STABLE`; PostgreSQL refuses data modification inside them. *(owner #3)* | §3.2 layer 1 | CI: every `owner_econ_*` / `owner_cost_*` function is `STABLE` and owner-gated |
+| **INV-08** | **AI Economics never modifies production state** — not pricing, not credits, not billing, not the catalog, not bindings. *(owner #14)* | §3.1 writer inventory; §3.2 layer 4 | CI: the module references none of the billing/catalog write RPCs |
+| **INV-09** | **Simulation never touches production state.** A scenario writes no cost fact, no binding, no rate card, and has no "Apply" path. | §11 guardrails; `STABLE` volatility | CI + review: simulated results carry `run_id = NULL`, `simulated = true` |
+| **INV-10** | **Financial data is owner-only.** Cost, revenue, and profit are never exposed below role `owner`. | `has_role_at_least('owner')` in every RPC (§3.2 layer 2) | Test: each RPC returns `forbidden` for `admin` and `super_admin` |
+
+### C. Provider independence
+
+| ID | Invariant | Enforcement | Verification |
+|---|---|---|---|
+| **INV-11** | **Services are provider-independent.** A canonical service is a capability; its provider and model are a binding that may change at any time without changing the service's identity. *(owner #5)* | `ai_catalog.services` vs `service_bindings` (§6.2–§6.3) | Review: no service code names a vendor |
+| **INV-12** | **Provider changes never require dashboard changes.** Swapping a provider is two catalog rows plus a rate card. *(owner #12)* | §6.5; rule 4 of §8.10 | Test: rebinding a service in staging changes the rendered dashboard with zero code edits |
+| **INV-13** | **No provider or model literal exists above the Cost Engine.** Not in `econ`, not in an `owner_econ_*` function, not in the dashboard tab. They reach the UI only as data. | Rule 10 of §8.10 | CI: literal grep over `econ` migrations and `#tab-economics` |
+| **INV-14** | **Prices attach to models, not capabilities.** Rate cards are keyed on `(provider, api_surface, model)` so one price serves every service that calls it. | §8.4 | Schema: `rate_cards` has no `service_code` column |
+
+### D. Immutability, provenance, reproducibility
+
+| ID | Invariant | Enforcement | Verification |
+|---|---|---|---|
+| **INV-15** | **Historical costs are immutable.** No fact is ever updated or deleted; corrections are new runs that supersede. *(owner #6)* | `is_current` + partial unique indexes (§8.5, §8.8.7); no `UPDATE` path | CI: no `UPDATE`/`DELETE` on `cost_facts` or `question_cost_facts` anywhere; audit trail present |
+| **INV-16** | **Every cost fact traces back to immutable telemetry.** `cost_facts.call_id` → `ai_model_calls.id`, and every Question Cost fact decomposes into the call facts that produced it. *(owner #10)* | FKs + `allocation_runs` provenance (§8.5, §8.8.6) | Test: any fact can be walked back to its source calls |
+| **INV-17** | **Every financial metric has explicit data provenance.** Each fact records its binding, rate card, discounts, FX rate and date, engine version, and allocation version. *(owner #15)* | Provenance columns (§8.5, §8.8.6) | Test: `owner_cost_facts()` returns provenance for every row |
+| **INV-18** | **Every displayed KPI is reproducible from immutable production data.** Given the same facts and the same versions, the same number results — no hidden state, no client-side derivation, no ad-hoc adjustment. *(owner #9)* | Views + RPCs are pure reads over versioned facts | Test: recompute a rendered KPI from SQL and match exactly |
+| **INV-19** | **Cost attribution is deterministic and reproducible.** No randomness, no execution-order dependence, exact `numeric` arithmetic, deterministic remainder assignment. *(owner #11)* | §8.8.4; rule 13 of §8.10 | Test: re-run allocation over an untouched window; output is byte-identical |
+| **INV-20** | **Allocation conserves cost exactly.** Σ work-item cost ≡ Σ priced call cost for any window; a mismatch fails the run and keeps the previous allocation current. | §8.8.5; rule 12 of §8.10 | Assertion inside `allocate()`, recorded on `allocation_runs.conserved` |
+| **INV-21** | **Attribution is snapshotted at the time of the call** — service, provider, model, plan, internal flag, lesson. Later changes never rewrite past economics. | Snapshot columns (§8.5) | Test: change a student's plan; prior-month package economics is unchanged |
+
+### E. Honest numbers
+
+| ID | Invariant | Enforcement | Verification |
+|---|---|---|---|
+| **INV-22** | **Actual metrics are never mixed with estimates.** Every figure carries a confidence class (Actual / Derived / Modeled / Blocked) and Modeled values are visually distinct. *(owner #7)* | §3.4; `owner_econ_coverage()` | Review: every rendered KPI has a class; modeled backfills live in a separate `cost_run` |
+| **INV-23** | **Unknown values are never displayed as zero.** Unpriced cost is NULL and renders `—` with a reason; `0` means measured-free (`zero_rated`). *(owner #8)* | §8.6 pricing statuses; §3.4 | CI/test: no `COALESCE(cost, 0)` in `econ` or the dashboard |
+| **INV-24** | **Incomplete aggregates are labelled, never silently completed.** A Question Cost with any unpriced contributing call is `partial`; with none priced it is `unknown`. | `cost_completeness` (§8.8.6) | Test: unprice one call; the question renders as incomplete, not lower |
+| **INV-25** | **Internal traffic is excluded by default and never silently included.** Admin/owner accounts are flagged at call time and filtered unless explicitly requested. | `is_internal` snapshot; `p_include_internal` (§9.6) | Test: default responses exclude internal; the toggle is visible when on |
+| **INV-26** | **Catalog or price-book gaps degrade loudly, never silently.** An unregistered binding still prices; a missing rate card yields `unpriced` and a health alert. Neither ever reports `0`. | §6.4, §8.6, `owner_cost_health()` | Test: emit an unknown model; verify unpriced + health surfaces it |
+
+### Applying these invariants
+
+- **In review.** A change that touches any layer is checked against this list
+  before it is checked against the phase plan.
+- **In CI.** `scripts/verify-economics-readonly.sh` mechanizes INV-01, 03, 04,
+  05, 07, 08, 13, 15, and 23. The remainder are covered by targeted tests
+  introduced with their phase.
+- **On conflict.** If an implementation cannot satisfy an invariant, that is a
+  signal to stop and escalate under §18 — not to weaken the invariant in passing.
+
+---
+
+## 18. Architecture Freeze
+
+**As of revision r4 (2026-07-28), this architecture is frozen.**
+
+The design has been reviewed and approved three times — the base architecture,
+the Cost Engine layer, and the Service Catalog abstraction — and now carries an
+explicit invariant set. Further architectural iteration has reached diminishing
+returns; the remaining risk is in implementation, and the remaining value is in
+shipping Phase 2.
+
+### 18.1 What "frozen" covers
+
+| Frozen | Meaning |
+|---|---|
+| **Layer topology** | AI Service Catalog · AI Telemetry · Cost Engine (Calculation + Allocation) · AI Economics · Owner Dashboard, and the boundaries between them (§1) |
+| **Design invariants** | All 26 rules in §17 |
+| **Component responsibilities** | What each layer owns and what it must never do |
+| **Fact model** | Usage facts, per-call cost facts, and Question Cost facts; their immutability, provenance, and versioning semantics |
+| **Public contracts** | The shape of the `owner_econ_*` / `owner_cost_*` surface: owner-gated, `STABLE`, one uniform measure set |
+| **Phase order** | Catalog → Telemetry → Cost Engine → Economics → Dashboard → Simulator → Completeness (§14) |
+
+### 18.2 What remains open to implementation judgement
+
+Freezing the architecture does not freeze the code. The following are expected
+to be decided, tuned, or changed during implementation without amending this
+document:
+
+- Exact column names, types, and precisions; index selection and tuning.
+- View and function bodies; query plans; materialization and rollup strategy.
+- Scheduling cadence, batch sizes, retention windows.
+- Dashboard layout, charting, copy, and interaction design.
+- Seed values: which services, providers, bindings, rate cards, FX rates,
+  discounts, and cost targets exist — **all of these are data by design**.
+- The answers to the ten open questions in §15, which are configuration and
+  policy choices, not architecture.
+
+### 18.3 What is explicitly *not* a reason to amend
+
+The architecture was designed so that ordinary growth costs no design work.
+None of the following is an architectural change:
+
+| Change | How it is absorbed |
+|---|---|
+| A new AI provider | catalog row + binding + rate card (§13.2) |
+| A new model | binding + rate card |
+| A new AI capability (Truth Engine, SymPy, Python, embeddings, translation…) | `services` row + binding + rate card + tagged telemetry (§13.1) |
+| A new billing model (per page, per minute, per document, tiered, hybrid) | `billing_units` + `rate_components` (§8.4) |
+| A discount, promotion, or negotiated rate | `discount_rules` row (§8.6) |
+| A new package, price, or credit operation | existing `plan_definitions` / `credit_costs` paths |
+| A new KPI or dashboard section over existing facts | a view + an enum value (§8.10 rule 11) |
+| A new cost dimension | a rollup view + an enum value |
+
+If a request can be satisfied by inserting a row, the freeze is working as
+intended.
+
+### 18.4 What counts as a fundamental architectural issue
+
+Only these justify reopening the design:
+
+1. **An invariant cannot be upheld** by any reasonable implementation.
+2. **A required business question is unanswerable** within the current topology —
+   not merely inconvenient, but structurally impossible.
+3. **A layer boundary forces a correctness failure** — for example, conservation
+   (INV-20) cannot hold for a legitimate cost shape.
+4. **A performance or cost characteristic makes a layer unviable** at realistic
+   production volume, after the obvious tuning in §18.2 has been tried.
+5. **An external constraint invalidates a premise** — a provider billing model
+   the unit/rate-component model genuinely cannot express, or a platform change
+   that removes a mechanism the design depends on.
+
+Discovering that something is *harder than expected* is not one of these.
+
+### 18.5 Amendment procedure
+
+1. **Stop and document** the issue against the specific invariant or section it
+   breaks — with production evidence, in the style of §5.
+2. **Propose the minimal amendment** that resolves it, and state which
+   invariants it changes, removes, or adds.
+3. **Owner approval** is required before any implementation proceeds on the
+   affected layer.
+4. **Record it** as a new revision (r5…) in the revision-history table at the top
+   of this document, and update §17 in the same change.
+5. **Re-verify** the CI guards and phase exit criteria the amendment touches.
+
+Work that does not touch the frozen surface continues unblocked during any
+amendment discussion.
+
+### 18.6 Effect on the roadmap
+
+The freeze **starts** Phase 2 rather than pausing it. From here the work is:
+
+| Phase | Nature |
+|---|---|
+| 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) |
+| 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function |
+| 4 — Cost Engine + Allocation | implementation |
+| 5 — AI Economics analytics | implementation |
+| 6 — Owner Dashboard | implementation |
+| 7 — Simulator + Break-even | implementation |
+| 8 — Completeness & scale | implementation + the two approvals already identified (CLAUDE.md §2 unfreeze, GAP-5 refund change) |
+
+Nothing above requires further architectural decisions. Phase 2 is ready to
+begin on approval, subject to the open questions in §15 — of which only Q9
+(service list and granularity) gates Phase 2 itself.
