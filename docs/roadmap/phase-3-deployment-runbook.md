@@ -1,17 +1,18 @@
-# RUNBOOK — Deploy `ai-tutor` v90 (AI Economics Phase 3)
+# RUNBOOK — Deploy `ai-tutor` v91 (AI Economics Phase 3 + TDZ hotfix)
 
 **Operator document. Execute top to bottom. Do not skip steps.**
 
 | | |
 |---|---|
-| **Deploying** | `ai-tutor` **v89 → v90** — AI model-call telemetry |
-| **Deploy source** | branch `claude/ai-economics-dashboard-architecture-4uy8r4` · `index.ts` sha256 `6497f0d7…cacbcb` (v90 introduced in `4f91b28`) |
+| **Deploying** | `ai-tutor` **v90 → v91** — Phase 3 telemetry + the v90 TDZ hotfix |
+| **Deploy source** | branch `claude/ai-economics-dashboard-architecture-4uy8r4` · `index.ts` sha256 `0654d4c1…0c5159` (v91) |
 | **Deploy path** | **DEPLOY.md §4 Path B (CLI) ONLY** |
-| **Current live** | code `v89`, platform version **126** |
-| **After deploy** | code `v90`, platform version **127** |
+| **Current live** | code `v90` (**BROKEN — every request 500s**), platform version **127** |
+| **After deploy** | code `v91`, platform version **128** |
 | **Database** | ✅ already applied — no DB work in this window |
 | **Active window** | **45–60 minutes** |
 | **Monitoring after** | 48 h **or** 20 student questions, whichever is later |
+| **Version before → after** | 127 → 128 |
 | **Report template** | `docs/roadmap/phase-3-post-deployment-report.md` (blank, ready to fill) |
 | **Data collection** | `scripts/phase3-postdeploy-report.sql` (R0–R12, one pass) |
 
@@ -49,7 +50,7 @@ sha256sum supabase/functions/ai-tutor/index.ts supabase/functions/_shared/taxono
 ```
 **Expect exactly:**
 ```
-6497f0d72da2c51598518fc0ea04fd1d8e6634ed5b37b58af1dae364e1cacbcb  supabase/functions/ai-tutor/index.ts
+0654d4c14a7bd8f15a4598e8dc3d4a814006fe0f14b8729c584c1ebc0e0c5159  supabase/functions/ai-tutor/index.ts
 de016d1c8ce46da5e9ae2e1a82a798994c1e7c54b59292f19433b3c0e220a3b8  supabase/functions/_shared/taxonomy.core.js
 ```
 **🛑 STOP IF:** either hash differs. The reviewed code is not what you have.
@@ -80,8 +81,8 @@ node tests/run-all.mjs
 ```bash
 ./scripts/validate-ai-tutor-source.sh
 ```
-**Expect:** `validate-ai-tutor-source: PASS (227383 bytes, 4087 lines, version=v90)`
-**🛑 STOP IF:** FAIL, or version is not `v90`.
+**Expect:** `validate-ai-tutor-source: PASS (229318 bytes, 4122 lines, version=v91)`
+**🛑 STOP IF:** FAIL, or version is not `v91`.
 
 ### P3 · Confirm the bundle has two files locally — 10 sec
 ```bash
@@ -124,7 +125,7 @@ _Recorded: ___________
 |---|---|
 | Window outside exam prep | ✔ |
 | P1 tests 18/18 | ✔ |
-| P2 validator PASS, v90 | ✔ |
+| P2 validator PASS, v91 | ✔ |
 | P3 both bundle files present | ✔ |
 | P4 DB structural checks PASS | ✔ |
 | P5, P6 recorded | ✔ |
@@ -147,8 +148,8 @@ supabase functions deploy ai-tutor --project-ref igvkyxkmjnkzscqgommj
 Dashboard → Edge Functions → `ai-tutor`.
 
 **Expect:**
-- Platform version = **127** (was 126)
-- Code header first line = `// ai-tutor Edge Function v90`
+- Platform version = **128** (was 127)
+- Code header first line = `// ai-tutor Edge Function v91`
 
 ### D3 · Confirm the bundle — 1 min
 
@@ -164,8 +165,8 @@ Same screen, file list.
 
 | Check | Required | If wrong |
 |---|---|---|
-| Platform version = 127 | ✔ | Deploy did not land — re-run D1 |
-| Header reads `v90` | ✔ | Wrong source — re-check the P0 hashes, then re-run D1 |
+| Platform version = 128 | ✔ | Deploy did not land — re-run D1 |
+| Header reads `v91` | ✔ | Wrong source — re-check the P0 hashes, then re-run D1 |
 | Bundle lists **two** files | ✔ | **🔴 REDEPLOY IMMEDIATELY via D1.** A one-file bundle 500s at cold start for every student |
 
 **This is the outage class the runbook exists to prevent. Do not proceed past this line until all three are correct.**
@@ -176,7 +177,7 @@ Same screen, file list.
 
 ### V1 · Smoke test — 1 min
 ```bash
-SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj EXPECTED_VERSION=v90 \
+SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj EXPECTED_VERSION=v91 \
   ./scripts/smoke-test-ai-tutor.sh
 ```
 **Expect (no JWT):**
@@ -186,7 +187,12 @@ SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj EXPECTED_VERSION=v90 \
 → Functional smoke: SKIPPED (SUPABASE_TEST_JWT not set)
 smoke-test-ai-tutor: heartbeat OK
 ```
-**Expect (with JWT):** additionally a 200 chat response with `version=v90`.
+**Expect (with JWT):** additionally a 200 chat response with `version=v91`.
+
+> ⚠ **Set `SUPABASE_TEST_JWT` this time.** Layer 1 (heartbeat) stops at the 401
+> auth gate, which is UPSTREAM of the code that broke in v90 — it passed while
+> production was down. Layer 2 executes the handler and is the only smoke gate
+> that would have caught the TDZ regression.
 
 **🔴 ROLLBACK LEVEL 2 IF:** heartbeat returns 500/502/503/000, or version mismatch.
 
@@ -367,11 +373,16 @@ Plus: **8 · Latency** — Dashboard logs, compare `execution_time_ms` for succe
 
 ## 6 · Rollback cards
 
-### 🟠 LEVEL 1 — stop telemetry, keep v90 — **seconds**
+### 🟠 LEVEL 1 — stop telemetry, keep the deployed version — **seconds**
 ```bash
 supabase secrets set AI_MODEL_TELEMETRY_ENABLED=false --project-ref igvkyxkmjnkzscqgommj
 ```
 **Use when:** telemetry misbehaves, tutoring is fine (0-token rows, duplicates, repeated telemetry-lost, verification FAIL).
+
+> ⚠ **This did NOT mitigate the v90 TDZ failure and will not mitigate that
+> class.** The switch gates `recordModelCall`/`flushModelCalls`; a plain
+> assignment in the handler body runs regardless. If tutoring itself is broken,
+> go straight to Level 2.
 **Effect:** recording and flushing stop immediately. Function keeps serving. **Collected rows are preserved for diagnosis.**
 **Verify:** no new rows in `ai_model_calls`; no telemetry log lines.
 **Re-enable:** same command with `=true`.
@@ -404,7 +415,7 @@ DROP TABLE public.ai_model_calls;
 
 At the volume gate, all twelve must hold:
 
-- [ ] **S1** Platform version 127, header v90, bundle = 2 files
+- [ ] **S1** Platform version 128, header v91, bundle = 2 files
 - [ ] **S2** Smoke test passed
 - [ ] **S3** Telemetry rows present, spread across services
 - [ ] **S4** 0 duplicate `call_uid`
@@ -439,7 +450,7 @@ git checkout 20be116 -- supabase/functions/ai-tutor/index.ts && \
   supabase functions deploy ai-tutor --project-ref igvkyxkmjnkzscqgommj
 
 # SMOKE
-SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj EXPECTED_VERSION=v90 ./scripts/smoke-test-ai-tutor.sh
+SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj EXPECTED_VERSION=v91 ./scripts/smoke-test-ai-tutor.sh
 
 # VERIFY
 psql "$SUPABASE_DB_URL" -f scripts/verify-ai-telemetry.sql
@@ -447,10 +458,10 @@ psql "$SUPABASE_DB_URL" -f scripts/verify-ai-telemetry.sql
 
 | Fact | Value |
 |---|---|
-| Deploy source hash | `6497f0d7…cacbcb` (index.ts, v90) |
-| Rollback commit (v89) | `20be116` · hash `388f683b…35d14b` |
+| Deploy source hash | `0654d4c1…0c5159` (index.ts, v91) |
+| Rollback commit (v89, last known-good) | `20be116` · hash `388f683b…35d14b` |
 | Project ref | `igvkyxkmjnkzscqgommj` |
-| Version before → after | 126 → 127 |
+| Version before → after | 127 → 128 |
 | Log lines that must not appear | `model-call-telemetry-error`, `model-call-telemetry-lost` |
 | Expected to emit nothing | `difficulty_detector` — normal |
 | Latency baseline (P5) | 10952 · 8352 · 2774 · 4723 ms |

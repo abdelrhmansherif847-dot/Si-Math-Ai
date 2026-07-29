@@ -1,4 +1,25 @@
-// ai-tutor Edge Function v90
+// ai-tutor Edge Function v91
+// v91 (HOTFIX — temporal dead zone regression introduced by v90): v90 placed
+// the `teleCtx.operation` derivation beside the other telemetry-context
+// assignments, ~28 lines ABOVE the `const imagesData` declaration it reads.
+// `const` bindings hoist but stay uninitialised until their declaration
+// executes, so that read threw
+//     ReferenceError: Cannot access 'imagesData' before initialization
+// on EVERY request, before any tutoring work ran. Every student request failed
+// for the duration of v90 (platform version 127).
+//
+// The fix is a move, not a redesign: the three-line derivation now sits
+// immediately after `const imageData`, where both `imagesData` and
+// `followUpType` are initialised. `teleCtx.userId` and
+// `teleCtx.clientRequestId` stay where they were — both read variables that
+// are already initialised at that point. No telemetry behaviour changes; every
+// Phase 3 guarantee (F1 idempotency, F2 clocks, F3 correlation, F5 guarded
+// finally, F6 provider params) is preserved untouched.
+//
+// Note the kill switch does NOT mitigate this: AI_MODEL_TELEMETRY_ENABLED
+// gates recordModelCall/flushModelCalls, but the failing statement is a plain
+// assignment that runs regardless. Rollback to v89 was the only remedy before
+// this hotfix.
 // v90 (AI Economics Phase 3 — AI model-call telemetry): every upstream OpenAI
 // call now records ONE row in public.ai_model_calls describing what capability
 // did the work and what it consumed. Eight call sites are instrumented — tutor
@@ -137,7 +158,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v90';
+const AI_TUTOR_VERSION = 'v91';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -2372,18 +2393,12 @@ serve(async (req) => {
     const followUpType: string | null = cleanStr(body.follow_up_type, MAX_FOLLOWUP_CHARS) || null;
     const clientRequestId: string | null = cleanUuid(body.client_request_id);
 
-    // v90: derive the credit operation so cost can be attributed to what the
-    // student was charged for. DERIVED, not received — this function is never
-    // told which operation the client charged. The rule mirrors chat.html:2395
-    // exactly (image → CHAT_IMAGE, explicit follow-up → CHAT_FOLLOWUP, else
-    // CHAT_TEXT). Recorded as such so the Cost Engine can distinguish a derived
-    // attribution from a measured one; a future phase can have the client send
-    // the operation it actually charged.
+    // v90: telemetry correlation. `user` and `clientRequestId` are both
+    // initialised above, so these two are safe here.
+    // v91: the `operation` derivation MOVED — it reads `imagesData`, which is
+    // declared ~28 lines below. See the note at its new home.
     teleCtx.userId          = user.id;
     teleCtx.clientRequestId = clientRequestId;   // F3 — stamped on every row at flush
-    teleCtx.operation = imagesData.length ? 'CHAT_IMAGE'
-                      : followUpType      ? 'CHAT_FOLLOWUP'
-                      : 'CHAT_TEXT';
     const messages: Array<{role:string;content:string}> =
       (Array.isArray(body.messages) ? body.messages : [])
         .slice(-MAX_MESSAGES)
@@ -2416,6 +2431,26 @@ serve(async (req) => {
       imagesData.push(body.image);
     }
     const imageData:   string | null = imagesData.length ? imagesData[0] : null;
+
+    // v91 HOTFIX — this block lives HERE, and must not move above the
+    // `const imagesData` declaration directly above it.
+    //
+    // v90 placed it ~28 lines earlier, beside the other teleCtx assignments,
+    // where `imagesData` was still in its temporal dead zone. `const` bindings
+    // are hoisted but uninitialised, so the read threw
+    // `ReferenceError: Cannot access 'imagesData' before initialization` on
+    // EVERY request, before any tutoring work happened. Production returned
+    // errors for every student until v91.
+    //
+    // What it does: derives the credit operation so cost can be attributed to
+    // what the student was charged for. DERIVED, not received — this function
+    // is never told which operation the client charged. The rule mirrors
+    // chat.html:2395 exactly (image → CHAT_IMAGE, explicit follow-up →
+    // CHAT_FOLLOWUP, else CHAT_TEXT).
+    teleCtx.operation = imagesData.length ? 'CHAT_IMAGE'
+                      : followUpType      ? 'CHAT_FOLLOWUP'
+                      : 'CHAT_TEXT';
+
     // Parent record ID sent by client for repeat/re-explanation detection (v76).
     const parentRecordId: string | null = cleanUuid(body.parent_record_id);
     // lang resolved after profile fetch so language_preference is respected
