@@ -13,7 +13,7 @@
 | **Validator ceiling** | ✅ Approved and in the repo (210 KB → 240 KB) |
 | **Deploy path** | **DEPLOY.md §4 Path B (CLI) only** — unchanged, and mandatory |
 | **Window** | Outside exam preparation, to be scheduled |
-| **Status** | ⏸ **Awaiting Go decision** |
+| **Status** | ✅ Approved 2026-07-28. Execution runbook: **`docs/roadmap/phase-3-deployment-runbook.md`** |
 
 ---
 
