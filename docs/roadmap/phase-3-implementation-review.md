@@ -14,6 +14,7 @@
 | **Risk class** | ⚠ **The only phase that touches production request handling** |
 | **Deploy window** | Outside an exam-preparation window (owner decision, §15 Q8) |
 | **Integrity review** | `docs/roadmap/phase-3-telemetry-integrity-review.md` — 7 findings; **F1/F2/F3/F5/F6 implemented 2026-07-28; verdict now unqualified approval (§11.6)** |
+| **Deployment readiness** | `docs/roadmap/phase-3-deployment-readiness.md` — **DB applied; Edge Function deployment awaiting Go** |
 
 ---
 
@@ -44,7 +45,7 @@ the wrong place (INV-01, INV-02).
 
 | Artifact | Path | State |
 |---|---|---|
-| Migration | `supabase/migrations-pending/20260728_aiecon_p3_model_call_telemetry.sql` | **not applied** |
+| Migration | `supabase/migrations/20260728_aiecon_p3_model_call_telemetry.sql` | ✅ **applied 2026-07-28, verified** |
 | Edge Function | `supabase/functions/ai-tutor/index.ts` (v89 → **v90**) | **not deployed** |
 | Verification | `scripts/verify-ai-telemetry.sql` | **20 checks**, ready |
 | Validator bound | `scripts/validate-ai-tutor-source.mjs` | size ceiling 210 KB → 240 KB |

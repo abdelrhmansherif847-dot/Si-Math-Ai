@@ -1856,14 +1856,16 @@ confirmed by the Owner (§15 Q9 — decided 2026-07-28).
 
 ### Phase 3 — AI Telemetry ⚠ *the only phase that touches production code*
 
-**Status: prepared 2026-07-28, awaiting implementation-review approval.**
-Nothing applied, nothing deployed. Full review, risk register, deploy order and
-rollback: **`docs/roadmap/phase-3-implementation-review.md`**.
+**Status: database applied and verified 2026-07-28. Edge Function v90 NOT
+deployed — awaiting the Deployment Readiness Review Go decision.**
+Reviews: **`phase-3-implementation-review.md`** (plan, risks, rollback),
+**`phase-3-telemetry-integrity-review.md`** (7 findings, verdict unqualified),
+**`phase-3-deployment-readiness.md`** (checklist, baselines, Go/No-Go).
 
 | Artifact | Path |
 |---|---|
-| Migration (not applied) | `supabase/migrations-pending/20260728_aiecon_p3_model_call_telemetry.sql` |
-| Edge Function (not deployed) | `supabase/functions/ai-tutor/index.ts` — v89 → v90 |
+| Migration | ✅ applied — `supabase/migrations/20260728_aiecon_p3_model_call_telemetry.sql` |
+| Edge Function (**not deployed**) | `supabase/functions/ai-tutor/index.ts` — v89 → v90 |
 | Verification | `scripts/verify-ai-telemetry.sql` — 15 checks |
 | Integrity review | `docs/roadmap/phase-3-telemetry-integrity-review.md` — 7 findings; F1/F2/F3/F5/F6 closed, verdict unqualified |
 
@@ -2216,7 +2218,7 @@ The freeze **starts** Phase 2 rather than pausing it. From here the work is:
 | Phase | Nature |
 |---|---|
 | 2 — AI Service Catalog | implementation (pure schema + seed, zero production code) — **✅ complete, applied and verified 2026-07-28** |
-| 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function — **prepared 2026-07-28, awaiting review approval** |
+| 3 — AI Telemetry | implementation ⚠ the only phase touching the Edge Function — **DB applied 2026-07-28; v90 deployment awaiting Go** |
 | 4 — Cost Engine + Allocation | implementation |
 | 5 — AI Economics analytics | implementation |
 | 6 — Owner Dashboard | implementation |

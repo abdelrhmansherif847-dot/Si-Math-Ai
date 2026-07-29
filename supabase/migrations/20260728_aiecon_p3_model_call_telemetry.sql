@@ -1,12 +1,22 @@
 -- ===========================================================================
 -- AI Economics · Phase 3 — AI model-call telemetry (usage ledger)
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
---    Phase 3 also requires an Edge Function deploy. APPLY THIS MIGRATION FIRST,
---    THEN DEPLOY v90 — see docs/roadmap/phase-3-implementation-review.md §6.
---    Deploying the function first is safe (telemetry inserts fail, are caught,
---    and log one line per request) but produces avoidable noise and loses the
---    data for that window.
+-- STATUS: APPLIED to project igvkyxkmjnkzscqgommj on 2026-07-28 (owner-approved,
+-- CLAUDE.md §3). Migration version `aiecon_p3_model_call_telemetry`.
+--
+-- ⚠ THE TABLE HAS NO WRITER YET. ai-tutor v90 is NOT deployed — it is held
+--   pending the Deployment Readiness Review
+--   (docs/roadmap/phase-3-deployment-readiness.md). The table is inert until
+--   then, which is the intended and safe intermediate state: applying the
+--   schema first means the first v90 request has somewhere to write.
+--
+-- Verified after apply — 8 structural checks PASS, 1 expected WARN:
+--   • P3-01 table present · P3-02 no client grants · P3-03 RLS enabled
+--   • P3-04 no cost/price/currency column (INV-01)
+--   • P3-05 service_role INSERT=true UPDATE=false DELETE=false (INV-15)
+--   • P3-06 9 indexes · P3-16 call_uid UNIQUE enforced (F1 — retry is safe)
+--   • P3-21 call_uid + started_at + client_request_id all present (F1/F2/F3)
+--   • P3-07 WARN — no rows yet, expected until v90 ships.
 --
 -- Target project: igvkyxkmjnkzscqgommj
 -- Architecture:   docs/roadmap/ai-economics.md §7 (frozen at r4, 2026-07-28)
