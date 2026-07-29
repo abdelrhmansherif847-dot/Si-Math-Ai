@@ -12,6 +12,8 @@
 | **Database** | ✅ already applied — no DB work in this window |
 | **Active window** | **45–60 minutes** |
 | **Monitoring after** | 48 h **or** 20 student questions, whichever is later |
+| **Report template** | `docs/roadmap/phase-3-post-deployment-report.md` (blank, ready to fill) |
+| **Data collection** | `scripts/phase3-postdeploy-report.sql` (R0–R12, one pass) |
 
 > ⛔ **NEVER use `mcp__Supabase__deploy_edge_function` for `ai-tutor`.**
 > Two production outages (2026-06-17). CLI only.

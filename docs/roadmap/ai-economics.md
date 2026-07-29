@@ -1861,7 +1861,8 @@ deployed — awaiting the Deployment Readiness Review Go decision.**
 Reviews: **`phase-3-implementation-review.md`** (plan, risks, rollback),
 **`phase-3-telemetry-integrity-review.md`** (7 findings, verdict unqualified),
 **`phase-3-deployment-readiness.md`** (checklist, baselines, Go/No-Go),
-**`phase-3-deployment-runbook.md`** (the operator runbook for the window).
+**`phase-3-deployment-runbook.md`** (the operator runbook for the window),
+**`phase-3-post-deployment-report.md`** (report template, blank until executed).
 
 | Artifact | Path |
 |---|---|
