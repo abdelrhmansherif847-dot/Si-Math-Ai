@@ -28,6 +28,23 @@
 //     flushing without a redeploy.
 //   • PII-free by construction: no prompt or completion text is stored, only
 //     counts, outcome, latency and model identity.
+//
+// Hardened before first deployment, per the Telemetry Integrity Review
+// (docs/roadmap/phase-3-telemetry-integrity-review.md):
+//   F1 every row carries a call_uid minted when the call is observed, and the
+//      write is ON CONFLICT DO NOTHING against a unique index on it. The write
+//      is therefore idempotent and a failed flush is retried once, safely.
+//      Previously a lost write was permanent, because retrying risked
+//      double-counting real spend.
+//   F2 started_at records when the provider call BEGAN. created_at remains the
+//      write clock; background calls flush seconds later, so pricing on
+//      created_at alone would mis-attribute spend across day boundaries.
+//   F3 client_request_id is stamped on every row, so retry cost analysis covers
+//      background calls and not just the two main-path ones.
+//   F5 the handler's telemetry `finally` is wrapped — a throw from waitUntil
+//      could otherwise have replaced a student's response with a 500.
+//   F6 provider/api_surface are parameters with defaults, so a second provider
+//      is a call-site argument rather than an edit to the emitter (INV-12).
 // v89 (SEC-04 — knowledge base treated as untrusted input): get_zero_personality()
 // and search_zero_knowledge() read rows that are spliced into the system prompt
 // for EVERY student, so whoever can write those rows authors Zero's
@@ -299,6 +316,8 @@ const MODEL_TELEMETRY_ENABLED =
   (Deno.env.get('AI_MODEL_TELEMETRY_ENABLED') ?? 'true') !== 'false';
 
 interface ModelCallRow {
+  call_uid:          string;   // F1 — per-call identity; makes the write idempotent
+  started_at:        string;   // F2 — the economic clock (created_at is the write clock)
   service_code:      string;
   stage:             string;
   provider:          string;
@@ -333,6 +352,12 @@ function recordModelCall(
     json?:        unknown;
     err?:         unknown;
     meta?:        Record<string, unknown>;
+    // F6: the implementation axis is parameterised, not hardcoded. Adding a
+    // second provider is then a call-site argument, never an edit to this
+    // function — which is what INV-12 ("a provider change is a data change")
+    // promises. Defaults keep every existing call site unchanged.
+    provider?:    string;
+    api_surface?: string;
   },
 ): void {
   if (!sink || !MODEL_TELEMETRY_ENABLED) return;
@@ -354,11 +379,13 @@ function recordModelCall(
 
     const ok = !!args.res?.ok && !args.err;
     sink.push({
+      call_uid:          crypto.randomUUID(),
+      started_at:        new Date(args.started).toISOString(),
       service_code:      args.service_code,
       stage:             args.stage,
-      provider:          'openai',
+      provider:          args.provider    ?? 'openai',
       model:             args.model,
-      api_surface:       'default',
+      api_surface:       args.api_surface ?? 'default',
       units,
       prompt_tokens,
       completion_tokens,
@@ -376,11 +403,23 @@ function recordModelCall(
 // Write the buffered rows. Called from a `finally` on the main path and at the
 // end of each background task, always inside a context the student is not
 // waiting on. Drains the sink first, so a double flush cannot duplicate rows.
+//
+// The write is IDEMPOTENT (F1): every row carries a call_uid minted when the
+// call was observed, and the insert is ON CONFLICT DO NOTHING against the
+// unique index on that column. Two consequences, both required for this table
+// to be a financial source of truth:
+//   • A retry is safe. A flush that fails after partially committing can be
+//     re-attempted; Postgres discards the rows that already landed and accepts
+//     only the missing ones. Before F1 a failed write was permanently lost,
+//     because retrying would have risked double-counting real spend.
+//   • A duplicate is impossible at the database level, not merely improbable
+//     because the code never retries.
 async function flushModelCalls(
   sbAdmin: ReturnType<typeof createClient>,
   sink: ModelCallRow[],
   ctx: {
     requestId:          string;
+    clientRequestId?:   string | null;
     questionRecordId?:  string | null;
     sessionId?:         string | null;
     userId?:            string | null;
@@ -391,24 +430,38 @@ async function flushModelCalls(
   const rows = sink.splice(0, sink.length).map((r) => ({
     ...r,
     request_id:         ctx.requestId,
+    client_request_id:  ctx.clientRequestId ?? null,   // F3 — on every row
     question_record_id: ctx.questionRecordId ?? null,
     session_id:         ctx.sessionId ?? null,
     user_id:            ctx.userId ?? null,
     operation:          ctx.operation ?? null,
   }));
-  try {
-    const { error } = await sbAdmin.from('ai_model_calls').insert(rows);
-    if (error) {
+
+  // One retry. Bounded on purpose: this runs off the response path, but an
+  // unbounded loop in a background task is its own hazard. A single retry
+  // covers the transient failure (a dropped connection, a brief pool
+  // exhaustion) that accounts for most loss; anything that fails twice is a
+  // real outage and is reported rather than papered over.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { error } = await sbAdmin
+        .from('ai_model_calls')
+        .upsert(rows, { onConflict: 'call_uid', ignoreDuplicates: true });
+      if (!error) return;
       console.log('[ai-tutor] model-call-telemetry-error', JSON.stringify({
-        req: ctx.requestId.slice(0, 8), rows: rows.length, msg: error.message,
+        req: ctx.requestId.slice(0, 8), rows: rows.length, attempt, msg: error.message,
+      }));
+    } catch (e) {
+      console.log('[ai-tutor] model-call-telemetry-error', JSON.stringify({
+        req: ctx.requestId.slice(0, 8), rows: rows.length, attempt,
+        msg: e instanceof Error ? e.message : String(e),
       }));
     }
-  } catch (e) {
-    console.log('[ai-tutor] model-call-telemetry-error', JSON.stringify({
-      req: ctx.requestId.slice(0, 8), rows: rows.length,
-      msg: e instanceof Error ? e.message : String(e),
-    }));
+    if (attempt === 1) await new Promise((r) => setTimeout(r, 250));
   }
+  console.log('[ai-tutor] model-call-telemetry-lost', JSON.stringify({
+    req: ctx.requestId.slice(0, 8), rows: rows.length,
+  }));
 }
 
 // ── Input coercion ─────────────────────────────────────────────────────────
@@ -1918,6 +1971,7 @@ async function runL3ShadowPipeline(opts: {
   tutorFinalAnswer?: string;
   detectorMeta: Record<string, unknown>; startTime: number;
   requestId?: string; sessionId?: string | null; operation?: string | null;
+  clientRequestId?: string | null;
 }): Promise<void> {
   const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, tutorFinalAnswer, detectorMeta, startTime } = opts;
 
@@ -2112,6 +2166,7 @@ async function runL3ShadowPipeline(opts: {
     if (opts.requestId) {
       await flushModelCalls(sbAdmin, teleSink, {
         requestId:        opts.requestId,
+        clientRequestId:  opts.clientRequestId ?? null,
         questionRecordId: recordId,
         sessionId:        opts.sessionId ?? null,
         userId,
@@ -2196,11 +2251,15 @@ serve(async (req) => {
   const teleSink: ModelCallRow[] = [];
   let teleAdmin: ReturnType<typeof createClient> | null = null;
   const teleCtx: {
+    clientRequestId:  string | null;
     questionRecordId: string | null;
     sessionId:        string | null;
     userId:           string | null;
     operation:        string | null;
-  } = { questionRecordId: null, sessionId: null, userId: null, operation: null };
+  } = {
+    clientRequestId: null, questionRecordId: null,
+    sessionId: null, userId: null, operation: null,
+  };
 
   // ── 1. Preflight ─────────────────────────────────────────────────────────
   if (req.method === 'OPTIONS') {
@@ -2320,7 +2379,8 @@ serve(async (req) => {
     // CHAT_TEXT). Recorded as such so the Cost Engine can distinguish a derived
     // attribution from a measured one; a future phase can have the client send
     // the operation it actually charged.
-    teleCtx.userId    = user.id;
+    teleCtx.userId          = user.id;
+    teleCtx.clientRequestId = clientRequestId;   // F3 — stamped on every row at flush
     teleCtx.operation = imagesData.length ? 'CHAT_IMAGE'
                       : followUpType      ? 'CHAT_FOLLOWUP'
                       : 'CHAT_TEXT';
@@ -2836,7 +2896,6 @@ serve(async (req) => {
         meta: {
           max_tokens: 2200, temperature: 0.4,
           repeat_type: repeatType, parent_has_image: parentHasImage,
-          client_request_id: clientRequestId,
         },
       });
       // The repeat path attaches to the PARENT record, so cost lands on the
@@ -3512,7 +3571,6 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
       meta: {
         max_tokens: 2800, temperature: 0.4,
         image_count: solveImages.length, hint_mode: hintMode,
-        client_request_id: clientRequestId,
       },
     });
     let parsed: Record<string, unknown> = {};
@@ -3918,7 +3976,8 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
           // `finally`, not the try body: the detector returns early when the
           // classification is unusable, and that call still cost money.
           await flushModelCalls(sbAdmin, v2Sink, {
-            requestId, questionRecordId: recordId,
+            requestId, clientRequestId,
+            questionRecordId: recordId,
             sessionId: resolvedSessionId, userId: user.id,
             operation: teleCtx.operation,
           });
@@ -3958,6 +4017,7 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         detectorMeta,
         startTime:    pipelineStart,
         requestId,
+        clientRequestId,
         sessionId:    resolvedSessionId,
         operation:    teleCtx.operation,
       }).catch(err => {
@@ -4001,18 +4061,27 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     // though the promise is left to settle in the background, and it never
     // rejects. EdgeRuntime.waitUntil keeps the isolate alive for it where the
     // runtime provides it — the same pattern the shadow pipeline already uses.
-    if (teleAdmin && teleSink.length) {
-      const flushTask = flushModelCalls(teleAdmin, teleSink, {
-        requestId,
-        questionRecordId: teleCtx.questionRecordId,
-        sessionId:        teleCtx.sessionId,
-        userId:           teleCtx.userId,
-        operation:        teleCtx.operation,
-      });
-      const EdgeRtT = (globalThis as unknown as {
-        EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
-      }).EdgeRuntime;
-      if (EdgeRtT?.waitUntil) EdgeRtT.waitUntil(flushTask);
-    }
+    //
+    // F5: the whole body is wrapped. flushModelCalls cannot throw synchronously
+    // and cannot reject, but EdgeRuntime.waitUntil is runtime-provided — if it
+    // ever threw, the exception would escape `finally` and REPLACE the
+    // student's response with a 500. Telemetry must never be able to do that,
+    // however unlikely the path.
+    try {
+      if (teleAdmin && teleSink.length) {
+        const flushTask = flushModelCalls(teleAdmin, teleSink, {
+          requestId,
+          clientRequestId:  teleCtx.clientRequestId,
+          questionRecordId: teleCtx.questionRecordId,
+          sessionId:        teleCtx.sessionId,
+          userId:           teleCtx.userId,
+          operation:        teleCtx.operation,
+        });
+        const EdgeRtT = (globalThis as unknown as {
+          EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
+        }).EdgeRuntime;
+        if (EdgeRtT?.waitUntil) EdgeRtT.waitUntil(flushTask);
+      }
+    } catch { /* telemetry must never fail a tutoring request */ }
   }
 });

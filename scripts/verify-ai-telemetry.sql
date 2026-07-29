@@ -229,6 +229,89 @@ checks AS (
                           FILTER (WHERE error_code IS NOT NULL), '') END
   FROM public.ai_model_calls
 
+  -- ── P3-16: F1 — the idempotency key exists and is enforced ───────────────
+  -- This constraint is what makes a retried flush safe. Without it the writer
+  -- cannot retry at all, and every failed write is permanently lost.
+  UNION ALL
+  SELECT
+    'P3-16',
+    'call_uid unique constraint enforced (F1)',
+    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END,
+    CASE WHEN COUNT(*) = 1 THEN 'idempotent writes: retry is safe'
+         ELSE 'MISSING — the writer cannot retry without risking duplicates' END
+  FROM pg_constraint c
+  JOIN pg_class t ON t.oid = c.conrelid
+  JOIN pg_namespace n ON n.oid = t.relnamespace
+  WHERE n.nspname = 'public' AND t.relname = 'ai_model_calls'
+    AND c.contype = 'u'
+    AND pg_get_constraintdef(c.oid) ILIKE '%(call_uid)%'
+
+  -- ── P3-17: F1 — no duplicate call ever landed ────────────────────────────
+  -- The constraint makes this impossible; the check proves it empirically and
+  -- would catch a constraint dropped by a later migration.
+  UNION ALL
+  SELECT
+    'P3-17',
+    'no duplicate call_uid in the data (F1)',
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'WARN'
+         WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END,
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'no data yet'
+         WHEN COUNT(*) = 0 THEN 'every recorded call is unique'
+         ELSE COUNT(*) || ' duplicated call_uid(s) — spend counted twice' END
+  FROM (
+    SELECT call_uid FROM public.ai_model_calls GROUP BY call_uid HAVING count(*) > 1
+  ) dupes
+
+  -- ── P3-18: F2 — the economic clock is populated and sane ─────────────────
+  -- started_at must exist on every row and never postdate the write.
+  UNION ALL
+  SELECT
+    'P3-18',
+    'started_at present and precedes created_at (F2)',
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'WARN'
+         WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END,
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'no data yet'
+         WHEN COUNT(*) = 0 THEN 'every row carries an economic timestamp at or before its write time'
+         ELSE COUNT(*) || ' row(s) with a missing or impossible started_at' END
+  FROM public.ai_model_calls
+  WHERE started_at IS NULL OR started_at > created_at
+
+  -- ── P3-19: F2 — how far the two clocks diverge ───────────────────────────
+  -- Informational, and the number that justifies F2 existing: the gap between
+  -- the call starting and the row landing. Large gaps on background calls are
+  -- expected and are exactly why pricing must use started_at.
+  UNION ALL
+  SELECT
+    'P3-19',
+    'write-vs-economic clock skew is visible (F2)',
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'WARN' ELSE 'PASS' END,
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'no data yet'
+         ELSE 'median skew ' || COALESCE(round(percentile_cont(0.5) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (created_at - started_at)))::numeric, 2)::text, 'n/a')
+              || 's, max ' || COALESCE(round(MAX(
+                EXTRACT(EPOCH FROM (created_at - started_at)))::numeric, 2)::text, 'n/a') || 's' END
+  FROM public.ai_model_calls
+  WHERE started_at IS NOT NULL
+
+  -- ── P3-20: F3 — retry analysis is possible across every service ──────────
+  -- When the client sends a client_request_id, every row of that request must
+  -- carry it — not just the two main-path ones, as before the fix.
+  UNION ALL
+  SELECT
+    'P3-20',
+    'client_request_id stamped on all rows of a request (F3)',
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'WARN'
+         WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END,
+    CASE WHEN (SELECT n FROM sample) = 0 THEN 'no data yet'
+         WHEN COUNT(*) = 0 THEN 'no request mixes stamped and unstamped rows'
+         ELSE COUNT(*) || ' request(s) with partial client_request_id coverage' END
+  FROM (
+    SELECT request_id FROM public.ai_model_calls
+    GROUP BY request_id
+    HAVING count(*) FILTER (WHERE client_request_id IS NOT NULL) > 0
+       AND count(*) FILTER (WHERE client_request_id IS NULL)     > 0
+  ) partial
+
   -- ── P3-15: attribution is landing ────────────────────────────────────────
   UNION ALL
   SELECT

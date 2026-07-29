@@ -8,12 +8,25 @@
 |---|---|
 | **Subject** | `ai_model_calls` (migration, not applied) + `ai-tutor` v90 (not deployed) |
 | **Question** | Is this telemetry financially trustworthy as a single source of truth? |
-| **Verdict** | **Qualified yes** — see §10. The design is sound; five cheap changes are needed before it can carry absolute financial totals, and all five are free to make now because nothing has shipped |
+| **Verdict** | **Unqualified approval** — see **§11.6**. The original verdict (§10) was a qualified yes; F1, F2, F3, F5 and F6 were approved and implemented on 2026-07-28, closing every reservation |
 | **Date** | 2026-07-28 |
 | **Method** | Line-by-line review of the emitter, plus read-only measurement against 30 days of production data |
 
-**Six findings**, F1–F6 (§9). None is a design flaw in the frozen architecture;
-all are implementation gaps in the Phase 3 emitter.
+**Seven findings**, F1–F7 (§9). None is a design flaw in the frozen
+architecture; all are implementation gaps in the Phase 3 emitter.
+
+> ### ⚠ Reading order
+>
+> **§1–§10 record the review as first conducted, against the pre-fix
+> implementation.** They are kept intact as the audit trail of what was found
+> and why. **§11 re-reviews the amended artifacts and supersedes them wherever
+> they differ.**
+>
+> The most important divergence: §1 concludes that duplication is prevented
+> because *nothing is ever retried* (mechanism D4), and §2 classifies loss as
+> permanent for that reason. After F1 both statements are obsolete — the write
+> is idempotent at the database level and a failed flush is retried once,
+> safely. Read §11.2 for the current guarantees.
 
 ---
 
@@ -471,3 +484,108 @@ Cost Engine. Without F1 and F2 specifically, it remains trustworthy for
 most, whether a model swap helped — but should not be presented as an **absolute
 financial total** without the caveat that it is a measured floor, not a verified
 sum.
+
+---
+
+## 11. Re-review after F1, F2, F3, F5, F6
+
+> Owner approved F1, F2, F3, F5 and F6 on 2026-07-28 for implementation before
+> first deployment, and adopted F4 as a post-Phase-4 operational control. This
+> section re-runs the review against the amended artifacts. **Still nothing
+> applied, nothing deployed.**
+
+### 11.1 What changed
+
+| Finding | Change | Where |
+|---|---|---|
+| **F1** | `call_uid uuid NOT NULL` + `UNIQUE`, minted in `recordModelCall`; the write became `upsert(… onConflict: 'call_uid', ignoreDuplicates: true)` with **one bounded retry** and a 250 ms backoff | migration + emitter |
+| **F2** | `started_at timestamptz` — the economic clock, set from the call's start instant. `created_at` stays the write clock. Indexed | migration + emitter |
+| **F3** | `client_request_id uuid` stamped at flush on **every** row; the two redundant `meta` copies removed so there is one source of the fact. Partial index added | migration + emitter, all three sinks |
+| **F5** | The handler's telemetry `finally` body wrapped in `try/catch` | emitter |
+| **F6** | `provider` / `api_surface` are optional arguments defaulting to `openai` / `default`; zero hardcoded provider strings remain | emitter |
+
+Scope held: 221 insertions across exactly three unshipped Phase 3 artifacts. No
+Phase 2 object, no frozen file, no applied migration, and no architectural
+element was touched.
+
+### 11.2 The six confirmations
+
+| Property | Status | Evidence |
+|---|---|---|
+| **Idempotent telemetry writes** | ✅ **Satisfied** | Every row carries a `call_uid` minted when the call is observed; a `UNIQUE` constraint enforces it in the database, and the writer uses `ON CONFLICT DO NOTHING`. A duplicate is now *impossible at the storage layer*, not merely improbable because the code declined to retry. Checks P3-16 (constraint exists) and P3-17 (no duplicate in data) |
+| **Retry safety** | ✅ **Satisfied** | A failed flush retries once. Because the retry presents the same `call_uid`s, Postgres discards whatever already committed and accepts only the missing rows — so a partially-committed batch converges rather than double-counting. This is the guarantee that did not exist before F1: previously the only safe policy was never to retry, which made every failed write permanent |
+| **Deterministic attribution** | ✅ **Satisfied** | `service_code`, `stage`, `provider`, `model` are fixed at the call site; `request_id`, `client_request_id`, `question_record_id`, `session_id`, `user_id`, `operation` are stamped from a request-scoped context at flush. No attribution is re-derived at read time, so the same call always attributes identically (INV-19, INV-21) |
+| **Period-accurate financial reporting** | ✅ **Satisfied, with one carry-forward** | `started_at` records when the provider call began, so spend lands in the period it occurred rather than the period it was written. **Carry-forward to Phase 4:** the Cost Engine must set `cost_facts.occurred_at` from `started_at` and window `run_pricing` on `created_at`. Using `created_at` for both would forfeit this fix — recorded in §11.5 |
+| **Measurable completeness** | ✅ **Satisfied** | The independent oracle (§6.2) was proven against 30 days of production before any telemetry exists, reconstructing 1,983 expected calls across 404 questions. Nine checks now measure coverage, uniqueness, clock sanity and retry coverage, reported **per service** so loss cannot hide in the expensive background sink |
+| **Production safety** | ✅ **Satisfied** | Unchanged and now complete: telemetry is never awaited on the response path; `recordModelCall` and `flushModelCalls` cannot throw into tutoring; and F5 closed the last unguarded surface, where a throw from `waitUntil` could have replaced a student's response with a 500 |
+
+### 11.3 Regression hunt on the fixes themselves
+
+A fix that introduces a new weakness is worse than the finding it closes, so
+each change was re-examined:
+
+| Risk considered | Assessment |
+|---|---|
+| The 250 ms retry backoff extends a background task | Only on the failure path, inside `waitUntil`, where the data would otherwise be lost outright. Net positive |
+| `ignoreDuplicates` masks a real insert failure | No — it suppresses only conflict rows. Any other error still surfaces, is logged with its attempt number, and after two attempts logs `model-call-telemetry-lost` |
+| `call_uid` generation failing | `crypto.randomUUID()` sits inside `recordModelCall`'s existing `try/catch`. A failure yields **no row** rather than a malformed one |
+| Retry could double-log a success | Impossible — `ON CONFLICT DO NOTHING` |
+| `started_at` skew or timezone error | Derived from the same `Date.now()` already used for `latency_ms`, serialised as ISO-8601 UTC. P3-18 rejects any row where `started_at > created_at` |
+| Removing the `meta` copies of `client_request_id` loses data | No — the column carries it on every row now, where before only 2 of 9 site types had it |
+| Upsert path untested against the live table | **True, and accepted.** The first production question exercises it; deploy steps 10–11 are exactly that test, and P3-07/P3-08 would report zero rows if the upsert were mis-specified |
+
+Instrumentation coverage re-audited after the changes: **8 call sites, 14 record
+points, 3 flush points, 0 hardcoded provider strings** — unchanged except for the
+intended F6 removal.
+
+### 11.4 Findings status
+
+| # | Finding | Status |
+|---|---|---|
+| F1 | No per-call unique identifier | ✅ **Closed** |
+| F2 | Write clock used as economic clock | ✅ **Closed** |
+| F3 | `client_request_id` on 2 of 9 site types | ✅ **Closed** |
+| F4 | No external reconciliation | 📌 **Open by decision** — owner adopted it as a permanent governance process after Phase 4. Not a code defect; see §11.5 |
+| F5 | Unguarded handler `finally` | ✅ **Closed** |
+| F6 | Hardcoded provider in the emitter | ✅ **Closed** |
+| F7 | Two sinks share the name `teleSink` | 📌 **Open, cosmetic** — not in the approved scope, deliberately left. Correct today: the arrays are in separate function scopes with no closure between them. It is a readability hazard for a future editor, nothing more |
+
+### 11.5 Open items carried into Phase 4
+
+Neither blocks Phase 3 deployment; both must be honoured before any figure from
+this table informs a pricing decision.
+
+1. **F4 — provider-invoice reconciliation.** Monthly comparison of
+   `sum(prompt_tokens + completion_tokens) GROUP BY model` against OpenAI's own
+   billed totals. Self-consistency cannot detect a systematic emitter bug; only
+   an external source can. Owner-approved as a permanent financial governance
+   process.
+2. **The `started_at` contract.** Phase 4's Cost Engine must price on
+   `started_at` and window on `created_at`. Recorded here because F2 delivers
+   period accuracy only if the consumer honours the distinction — a Phase 4
+   implementation that reached for `created_at` out of habit would silently undo
+   it.
+
+### 11.6 Revised verdict
+
+**Unqualified approval.**
+
+The three reservations that made the original verdict conditional are gone. The
+write is idempotent at the database level rather than by convention; a failed
+flush can be retried without risking double-counted spend; and the table now
+carries a true economic timestamp instead of using its write clock as a proxy.
+Completeness was already measurable and is now measured per service, which is
+what the production numbers demand — two thirds of calls, and over 70% of
+expensive-model calls, flush after the student's response.
+
+`public.ai_model_calls` is, in this reviewer's judgement, **financially
+trustworthy enough to serve as the single source of truth for the Cost Engine**,
+subject to the two carry-forwards in §11.5 — one of which the owner has already
+adopted as standing policy.
+
+One honest boundary remains, and it is a property of any first deployment rather
+than a defect: every guarantee above is verified by construction, by static
+audit, and by dry-run against production data. None has yet been observed under
+real traffic. The deploy plan's steps 10–12 are what convert "verified" into
+"observed", and the review recommends treating the first 48 hours of data as
+provisional until `verify-ai-telemetry.sql` returns all-PASS on live rows.

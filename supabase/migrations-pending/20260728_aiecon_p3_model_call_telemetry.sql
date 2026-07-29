@@ -45,10 +45,32 @@
 
 CREATE TABLE IF NOT EXISTS public.ai_model_calls (
   id                 bigserial PRIMARY KEY,
+
+  -- F1 (integrity review): the per-call identity. Minted in recordModelCall the
+  -- moment the call is observed, so the SAME uuid is presented on a retry. With
+  -- the UNIQUE constraint below this makes the write idempotent: a re-attempted
+  -- flush commits only the rows that did not land, and can never double-count.
+  -- Without it, at-most-once rested entirely on "we never retry" and every
+  -- failed write was permanently lost.
+  call_uid           uuid        NOT NULL,
+
+  -- WHEN. Two clocks, deliberately:
+  --   created_at — the WRITE clock (INSERT time). Monotonic with visibility, so
+  --                the Cost Engine's "claim unpriced rows in [from,to)"
+  --                anti-join can never skip a late arrival.
+  --   started_at — F2: the ECONOMIC clock, the instant the provider call began.
+  --                Background calls flush seconds later, so created_at alone
+  --                would mis-attribute spend across day boundaries.
+  -- The Cost Engine prices on started_at and windows on created_at.
   created_at         timestamptz NOT NULL DEFAULT now(),
+  started_at         timestamptz NULL,
 
   -- correlation --------------------------------------------------------------
   request_id         uuid        NOT NULL,
+  -- F3: one student intent, which may span several server attempts. Stamped on
+  -- EVERY row at flush time (it was previously on 2 of 9 site types, inside
+  -- meta), so retry cost analysis covers background calls too.
+  client_request_id  uuid        NULL,
   question_record_id uuid        NULL REFERENCES public.question_records(id) ON DELETE SET NULL,
   session_id         uuid        NULL,
   user_id            uuid        NULL,
@@ -88,13 +110,24 @@ CREATE TABLE IF NOT EXISTS public.ai_model_calls (
   CONSTRAINT ai_model_calls_model_nonempty        CHECK (length(model) > 0),
   CONSTRAINT ai_model_calls_units_is_object       CHECK (jsonb_typeof(units) = 'object'),
   CONSTRAINT ai_model_calls_tokens_nonneg         CHECK (prompt_tokens >= 0 AND completion_tokens >= 0),
-  CONSTRAINT ai_model_calls_latency_nonneg        CHECK (latency_ms IS NULL OR latency_ms >= 0)
+  CONSTRAINT ai_model_calls_latency_nonneg        CHECK (latency_ms IS NULL OR latency_ms >= 0),
+
+  -- F1: the idempotency key. This single constraint is what lets a failed flush
+  -- be retried safely — the retry presents the same call_uids and Postgres
+  -- rejects the ones already committed (the writer uses ON CONFLICT DO NOTHING).
+  CONSTRAINT ai_model_calls_call_uid_key UNIQUE (call_uid)
 );
 
 COMMENT ON TABLE public.ai_model_calls IS
   'AI Economics Phase 3 — one row per upstream AI provider call. Usage only: contains no cost, price, currency or FX value, by design (INV-01). PII-free. Append-only. See docs/roadmap/ai-economics.md §7.';
+COMMENT ON COLUMN public.ai_model_calls.call_uid IS
+  'F1 — per-call identity, minted when the call is observed and re-presented unchanged on a retry. The UNIQUE constraint makes the write idempotent; the writer uses ON CONFLICT DO NOTHING so a retried flush commits only what did not land.';
+COMMENT ON COLUMN public.ai_model_calls.started_at IS
+  'F2 — the ECONOMIC clock: when the provider call began. created_at is the WRITE clock and can be seconds later for background calls. Price on started_at; window on created_at.';
 COMMENT ON COLUMN public.ai_model_calls.request_id IS
-  'One student request = one id. The join spine the Cost Allocation Engine groups on (Phase 4). Server-generated; the client value, when sent, is in meta.client_request_id.';
+  'One server invocation = one id. The join spine the Cost Allocation Engine groups on (Phase 4).';
+COMMENT ON COLUMN public.ai_model_calls.client_request_id IS
+  'F3 — one student intent, which may span several server attempts (a retry reuses it deliberately). Stamped on every row so retry cost analysis covers background calls, not just the two main-path ones.';
 COMMENT ON COLUMN public.ai_model_calls.service_code IS
   'Canonical capability from ai_catalog.services — the stable identity. No FK: an unregistered code is recorded and flagged, never rejected.';
 COMMENT ON COLUMN public.ai_model_calls.stage IS
@@ -111,7 +144,12 @@ COMMENT ON COLUMN public.ai_model_calls.success IS
 -- 2. INDEXES ------------------------------------------------------------------
 
 CREATE INDEX IF NOT EXISTS ai_model_calls_created_idx      ON public.ai_model_calls (created_at DESC);
+-- F2: the Cost Engine prices on the economic clock, so it needs its own index.
+CREATE INDEX IF NOT EXISTS ai_model_calls_started_idx      ON public.ai_model_calls (started_at DESC);
 CREATE INDEX IF NOT EXISTS ai_model_calls_request_idx      ON public.ai_model_calls (request_id);
+-- F3: retry analysis groups server attempts by student intent.
+CREATE INDEX IF NOT EXISTS ai_model_calls_client_req_idx   ON public.ai_model_calls (client_request_id)
+  WHERE client_request_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ai_model_calls_question_idx     ON public.ai_model_calls (question_record_id);
 CREATE INDEX IF NOT EXISTS ai_model_calls_user_created_idx ON public.ai_model_calls (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS ai_model_calls_service_idx      ON public.ai_model_calls (service_code, created_at DESC);
