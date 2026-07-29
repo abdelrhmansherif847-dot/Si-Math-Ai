@@ -1865,6 +1865,7 @@ rollback: **`docs/roadmap/phase-3-implementation-review.md`**.
 | Migration (not applied) | `supabase/migrations-pending/20260728_aiecon_p3_model_call_telemetry.sql` |
 | Edge Function (not deployed) | `supabase/functions/ai-tutor/index.ts` — v89 → v90 |
 | Verification | `scripts/verify-ai-telemetry.sql` — 15 checks |
+| Integrity review | `docs/roadmap/phase-3-telemetry-integrity-review.md` — 7 findings |
 
 - Migration: `ai_model_calls` (usage only — no cost columns, `service_code` +
   `stage` + `provider`/`model`). Additive; no existing table altered.

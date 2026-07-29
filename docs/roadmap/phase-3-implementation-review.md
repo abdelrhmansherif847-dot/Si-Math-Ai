@@ -13,6 +13,7 @@
 | **Depends on** | Phase 2 (`ai_catalog`) — applied and verified 2026-07-28 |
 | **Risk class** | ⚠ **The only phase that touches production request handling** |
 | **Deploy window** | Outside an exam-preparation window (owner decision, §15 Q8) |
+| **Integrity review** | `docs/roadmap/phase-3-telemetry-integrity-review.md` — **7 findings; F1/F2/F3/F5/F6 recommended before deploy** |
 
 ---
 
@@ -309,6 +310,14 @@ The baseline before any edit was also 18/18, so nothing regressed.
 ---
 
 ## 10. What we are asking approval for
+
+> ⚠ **Superseded in part by the Telemetry Integrity Review**
+> (`phase-3-telemetry-integrity-review.md`, 2026-07-28), which recommends five
+> emitter/schema hardening changes — F1 (per-call unique id), F2 (true economic
+> timestamp), F3 (client_request_id on every row), F5 (guard the handler
+> `finally`), F6 (parameterise provider) — **before** this migration is applied.
+> All five touch unshipped artifacts only. Approve those first, or explicitly
+> waive them, before the items below.
 
 1. Apply `20260728_aiecon_p3_model_call_telemetry.sql` (CLAUDE.md §3).
 2. Deploy `ai-tutor` **v90** via DEPLOY.md §4 Path B, in a window you nominate.
