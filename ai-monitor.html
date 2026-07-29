@@ -393,13 +393,25 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Token &amp; cost telemetry</div>
       <div class="oai-notice">
         <span class="ico">ⓘ</span>
-        <span><strong>No token counts are recorded by ai-tutor.</strong> Every request was checked: <code>verification_meta</code> contains no <code>*_prompt_tokens</code>, <code>*_completion_tokens</code>, or <code>*_tokens_in/out</code> key on any row. Token and cost figures are therefore <strong>not shown at all</strong> rather than rendered as <code>0</code> or <code>$0</code>, which would read as "we spent nothing".</span>
+        <span><strong>Token telemetry now exists, but this page cannot read it.</strong> ai-tutor records one row per
+        provider call in <code>public.ai_model_calls</code> (AI Economics Phase 3) with real
+        <code>prompt_tokens</code>, <code>completion_tokens</code>, <code>latency_ms</code>, <code>success</code>,
+        <code>http_status</code> and <code>error_code</code>. That table has RLS enabled with
+        <strong>no SELECT policy and no grant to <code>authenticated</code></strong> — it is service-role only, so
+        every query from this dashboard returns nothing. No token figure is shown here rather than rendering the
+        empty result as <code>0</code>.</span>
       </div>
       <div class="metric-rows" style="margin-top:12px">
-        <div class="metric-row"><span class="metric-lbl">Prompt / completion tokens</span><span class="metric-val unavail">Not recorded by ai-tutor</span></div>
+        <div class="metric-row"><span class="metric-lbl">Prompt / completion tokens</span><span class="metric-val unavail">Recorded, not readable here</span></div>
         <div class="metric-row"><span class="metric-lbl">OpenAI spend &amp; cost analysis</span><span class="metric-val cyan">AI Economics (Owner Dashboard)</span></div>
       </div>
-      <div class="prov">To light this up, ai-tutor must persist per-call <code>usage.prompt_tokens</code> / <code>usage.completion_tokens</code> — see the requirements list in OpenAI Operational Health.</div>
+      <div class="prov">
+        <code>verification_meta</code> itself carries no token keys and never did — the ledger is the new table, not
+        the old blob. To surface the <em>operational</em> half of it here (call success rate, per-model latency,
+        provider errors) requires a SELECT policy on <code>ai_model_calls</code> for owner / super_admin plus a
+        <code>GRANT SELECT</code> to <code>authenticated</code>. That is a migration and needs explicit approval, so
+        it has not been created. Spend stays in AI Economics regardless.
+      </div>
     </div>
   </div>
 
@@ -738,15 +750,19 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <div class="metric-row"><span class="metric-lbl">Request failures &amp; provider status codes</span><span class="metric-val good">Live — from <code>oai_http_status</code></span></div>
       <div class="metric-row"><span class="metric-lbl">Service incidents &amp; component status</span><span class="metric-val good">Live — public status feed</span></div>
       <div class="metric-row"><span class="metric-lbl">End-to-end pipeline latency</span><span class="metric-val good">Live — <code>pipeline_latency_ms</code></span></div>
+      <div class="metric-row"><span class="metric-lbl">Per-call success / status / latency</span><span class="metric-val unavail">Recorded in ai_model_calls — not readable here</span></div>
+      <div class="metric-row"><span class="metric-lbl">Failures returning 5xx before any row is written</span><span class="metric-val unavail">Invisible — needs ai-tutor change</span></div>
       <div class="metric-row"><span class="metric-lbl">Rate-limit headroom (remaining req/tokens)</span><span class="metric-val unavail">Needs ai-tutor change</span></div>
-      <div class="metric-row"><span class="metric-lbl">Token usage per call</span><span class="metric-val unavail">Needs ai-tutor change</span></div>
+      <div class="metric-row"><span class="metric-lbl">Token usage per call</span><span class="metric-val unavail">Recorded in ai_model_calls — not readable here</span></div>
       <div class="metric-row"><span class="metric-lbl">Model availability / deprecations</span><span class="metric-val unavail">Needs server-side proxy</span></div>
       <div class="metric-row"><span class="metric-lbl">Account balance / credit remaining</span><span class="metric-val unavail">No OpenAI endpoint exists</span></div>
     </div>
     <div style="padding:12px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);line-height:1.55">
       <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:9px">Requirements to enable the remaining signals</div>
       <ol class="req-list">
-        <li><strong>Rate-limit headroom &amp; token usage.</strong> ai-tutor must read the <code>x-ratelimit-remaining-requests</code>, <code>x-ratelimit-remaining-tokens</code>, <code>x-ratelimit-reset-*</code> response headers and the <code>usage</code> object off every OpenAI response, and persist them per record. Needs: an ai-tutor code change plus new columns (or <code>verification_meta</code> keys). <em>No new credentials.</em></li>
+        <li><strong>Read the per-call telemetry that already exists.</strong> ai-tutor writes <code>public.ai_model_calls</code> — one row per provider call with <code>success</code>, <code>http_status</code>, <code>error_code</code>, <code>latency_ms</code> and per-model attribution. It is service-role only (RLS on, no SELECT policy, no grant to <code>authenticated</code>), so this page reads nothing from it. Needs: a migration adding a SELECT policy for owner / super_admin and <code>GRANT SELECT</code> to <code>authenticated</code>. <em>No new credentials.</em> This is the single highest-value unlock — it would replace the derived call counts with measured ones and give a provider-failure signal independent of <code>question_records</code>.</li>
+        <li><strong>Failures that never reach the database.</strong> When ai-tutor returns 5xx before its insert, nothing is written anywhere and the request is invisible to this page. Needs: an ai-tutor change so the top-level error handler persists the failure before returning. <em>No new credentials.</em></li>
+        <li><strong>Rate-limit headroom.</strong> ai-tutor must read the <code>x-ratelimit-remaining-requests</code>, <code>x-ratelimit-remaining-tokens</code> and <code>x-ratelimit-reset-*</code> response headers off every OpenAI response and persist them. Needs: an ai-tutor code change. <em>No new credentials.</em></li>
         <li><strong>Model availability / deprecation checks.</strong> Requires <code>GET /v1/models</code>, which needs a standard OpenAI API key. It cannot be called from this page — that would expose the key in the browser. Needs: a small server-side Edge Function proxy that holds the key and returns only the model list.</li>
         <li><strong>Organization-level usage &amp; rate-limit configuration.</strong> Requires an OpenAI <strong>Admin API key</strong> (<code>sk-admin-…</code>) plus the <strong>Organization ID</strong> (<code>org-…</code>) and <strong>Project ID</strong> (<code>proj_…</code>), called server-side against the organization endpoints. Needs: the admin key stored as an Edge Function secret, plus a scheduled job to snapshot results.</li>
         <li><strong>Account balance / credit remaining.</strong> OpenAI publishes no API for this. The only authoritative early warning is a usage limit and billing alert configured in the OpenAI dashboard. Nothing this dashboard can add will change that — no balance figure will ever be shown here.</li>
