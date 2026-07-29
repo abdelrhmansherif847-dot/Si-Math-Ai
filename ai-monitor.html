@@ -335,6 +335,7 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <svg id="refreshIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Refresh
     </button>
+    <span id="autoRefreshState" style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-inline-start:auto">—</span>
   </div>
 
   <style>
@@ -675,10 +676,32 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card" id="oaiStatusCard"><div class="lbl">Tutor Delivery Status</div><div class="val" id="oaiStatusVal">—</div><div class="sub" id="oaiStatusSub">last 24h</div></div>
-    <div class="stat-card red"><div class="lbl">Guard Activations</div><div class="val" id="oaiFailCount">—</div><div class="sub" id="oaiFailCountSub">fallbacks in selected period</div></div>
-    <div class="stat-card"><div class="lbl">Last Failure</div><div class="val" id="oaiLastFail" style="font-size:15px">—</div><div class="sub" id="oaiLastFailSub">most recent guard fire</div></div>
+    <div class="stat-card" id="oaiStatusCard"><div class="lbl">Recorded Failures</div><div class="val" id="oaiStatusVal">—</div><div class="sub" id="oaiStatusSub">last 24h</div></div>
+    <div class="stat-card red"><div class="lbl">Failed Responses</div><div class="val" id="oaiFailCount">—</div><div class="sub" id="oaiFailCountSub">in selected period</div></div>
+    <div class="stat-card"><div class="lbl">Last Failure</div><div class="val" id="oaiLastFail" style="font-size:15px">—</div><div class="sub" id="oaiLastFailSub">most recent recorded failure</div></div>
     <div class="stat-card green"><div class="lbl">Last Success</div><div class="val" id="oaiLastOk" style="font-size:15px">—</div><div class="sub">most recent tutored answer</div></div>
+  </div>
+
+  <!-- Blind spot. This panel reads question_records; a request that fails
+       before ai-tutor inserts a row leaves no trace here at all. -->
+  <div class="card">
+    <div class="oai-notice">
+      <span class="ico">⚠️</span>
+      <span><strong>This panel cannot see every failure.</strong> It detects failures by reading
+      <code>question_records</code>. When ai-tutor returns <strong>HTTP 5xx</strong> — an unhandled error, a bad
+      deploy, a crash before the insert — <strong>no row is written</strong>, so the request is invisible here no
+      matter what the student saw. A quiet panel therefore means <em>"nothing failed in a way that reached the
+      database"</em>, not <em>"nothing failed"</em>. Confirmed case: two <code>POST 500</code> responses on
+      2026-07-29 left zero rows behind.
+      <br/><br/>
+      <strong>Where to look instead, right now:</strong> Supabase Dashboard → Edge Functions → <code>ai-tutor</code>
+      → Logs, and filter on status <code>500</code>.
+      <br/><br/>
+      <strong>To close the gap:</strong> ai-tutor's top-level error handler must insert a <code>question_records</code>
+      row (or write to a dedicated failure table) before returning 5xx, recording the status and error. That is an
+      Edge Function change — it cannot be fixed from this dashboard, which has read-only access to the database and
+      no access to the function log stream.</span>
+    </div>
   </div>
 
   <!-- Live OpenAI service status — public Statuspage feed, no credentials. -->
@@ -701,7 +724,7 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
     <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Recent AI Tutor Failures (last 20)</div>
     <div class="tbl-wrap">
       <table class="recent">
-        <thead><tr><th>time</th><th>status · code</th><th>lang</th><th>question (preview)</th></tr></thead>
+        <thead><tr><th>time</th><th>status · code</th><th>failure shape</th><th>question (preview)</th></tr></thead>
         <tbody id="oaiRecentBody"><tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:20px">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -836,6 +859,48 @@ let loading = false;
 /** Populated by computeStats() — the single source every renderer reads from. */
 let STATS = null;
 
+// ── Auto-refresh ────────────────────────────────────────────────────────────
+// The page header claims "Live". Until now nothing polled, so the figures were
+// frozen at page load and the claim was false — a failure that happened while
+// the tab sat open was never shown. Polling makes the label true; the
+// last-updated stamp next to the Refresh button makes it verifiable.
+const AUTO_REFRESH_MS = 60000;
+let autoRefreshTimer = null;
+let lastLoadedAt = null;
+
+function markLoaded() {
+  lastLoadedAt = new Date();
+  paintRefreshState();
+}
+
+function paintRefreshState() {
+  const el = document.getElementById('autoRefreshState');
+  if (!el) return;
+  if (loading) { el.textContent = 'refreshing…'; return; }
+  if (!lastLoadedAt) { el.textContent = '—'; return; }
+  const hidden = typeof document.hidden === 'boolean' && document.hidden;
+  const stamp = lastLoadedAt.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const age = Math.round((Date.now() - lastLoadedAt.getTime()) / 1000);
+  el.textContent = hidden
+    ? `paused · updated ${stamp}`
+    : `updated ${stamp}${age >= 90 ? ` (${age}s ago)` : ''} · auto every ${AUTO_REFRESH_MS / 1000}s`;
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  // Poll only while the tab is visible — a backgrounded dashboard does not need
+  // to keep querying, and the visibility handler refreshes on return anyway.
+  autoRefreshTimer = setInterval(() => {
+    if (document.hidden) { paintRefreshState(); return; }
+    loadAll();
+  }, AUTO_REFRESH_MS);
+  document.addEventListener('visibilitychange', () => {
+    paintRefreshState();
+    if (!document.hidden) loadAll();
+  });
+  setInterval(paintRefreshState, 5000);
+}
+
 // ── Date filter helper ──────────────────────────────────────────────────────
 function filterDate(f) {
   const now = new Date();
@@ -944,6 +1009,7 @@ async function init() {
   document.getElementById('pageLoader').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   loadAll();
+  startAutoRefresh();
 }
 
 // Sidebar / hamburger
@@ -965,6 +1031,7 @@ async function loadAll() {
   loading = true;
   const ico = document.getElementById('refreshIcon');
   ico.classList.add('spin');
+  paintRefreshState();
 
   const since = filterDate(currentFilter);
 
@@ -1002,6 +1069,7 @@ async function loadAll() {
   } finally {
     loading = false;
     ico.classList.remove('spin');
+    markLoaded();
   }
 }
 
@@ -1811,67 +1879,69 @@ async function loadOpenAIHealth(since, S) {
     // Supabase .in() needs a quoted, comma-joined list. Build via .in() helper.
     const twoHrAgo = new Date(Date.now() - 2*3600*1000).toISOString();
 
-    let failCountQ = sb.from('question_records')
-      .select('id', { count:'exact', head:true })
-      .in('ai_response', OAI_SAFE_LIST);
-    if (since) failCountQ = failCountQ.gte('created_at', since);
-
-    const recentQ = sb.from('question_records')
-      .select('created_at, question, ai_response, oai_http_status, oai_error_code')
-      .in('ai_response', OAI_SAFE_LIST)
-      .order('created_at', { ascending:false })
-      .limit(20);
-
-    // Recency probes are window-independent (absolute "last" timestamps).
-    const lastFailQ = sb.from('question_records')
-      .select('created_at')
-      .in('ai_response', OAI_SAFE_LIST)
-      .order('created_at', { ascending:false })
-      .limit(1);
+    // A delivery failure is recorded in two distinct shapes:
+    //   1. the empty-answer guard fired and stored its safe message, or
+    //   2. ai-tutor stored an empty ai_response (the older, pre-guard path).
+    // Both are real failures a student experienced. The previous build counted
+    // only (1), and explicitly excluded (2) from the success query as well — so
+    // 43 empty-response failures were reported as neither success nor failure
+    // and vanished from the dashboard entirely.
+    const guard = q => q.in('ai_response', OAI_SAFE_LIST);
+    const empty = q => q.eq('ai_response', '');
+    const headCount = (shape, from) => {
+      let q = shape(sb.from('question_records').select('id', { count:'exact', head:true }));
+      return from ? q.gte('created_at', from) : q;
+    };
+    const newest = (shape) => shape(sb.from('question_records').select('created_at, ai_response'))
+      .order('created_at', { ascending:false }).limit(1);
+    const recentRows = (shape) => shape(sb.from('question_records')
+      .select('created_at, question, ai_response, oai_http_status, oai_error_code'))
+      .order('created_at', { ascending:false }).limit(20);
 
     const lastOkQ = sb.from('question_records')
       .select('created_at')
       .not('ai_response', 'is', null)
-      .neq('ai_response', '')   // exclude empty-string rows (uncovered pre-guard failures)
+      .neq('ai_response', '')   // an empty answer is a failure, not a success
       .not('ai_response', 'in', `(${OAI_SAFE_LIST.map(s => `"${s.replace(/"/g,'""')}"`).join(',')})`)
       .order('created_at', { ascending:false })
       .limit(1);
 
-    const recent2hQ = sb.from('question_records')
-      .select('id', { count:'exact', head:true })
-      .in('ai_response', OAI_SAFE_LIST)
-      .gte('created_at', twoHrAgo);
-
-    const recent24hQ = sb.from('question_records')
-      .select('id', { count:'exact', head:true })
-      .in('ai_response', OAI_SAFE_LIST)
-      .gte('created_at', nDaysAgo(1));
-
-    const [failCountRes, recentRes, lastFailRes, lastOkRes, r2hRes, r24hRes] = await Promise.all([
-      failCountQ, recentQ, lastFailQ, lastOkQ, recent2hQ, recent24hQ,
+    const [
+      failG, failE, recentG, recentE, lastG, lastE, lastOkRes,
+      g2h, e2h, g24h, e24h,
+    ] = await Promise.all([
+      headCount(guard, since), headCount(empty, since),
+      recentRows(guard), recentRows(empty),
+      newest(guard), newest(empty), lastOkQ,
+      headCount(guard, twoHrAgo), headCount(empty, twoHrAgo),
+      headCount(guard, nDaysAgo(1)), headCount(empty, nDaysAgo(1)),
     ]);
 
-    const failCount = failCountRes.count ?? 0;
-    const count2h   = r2hRes.count ?? 0;
-    const count24h  = r24hRes.count ?? 0;
-    const lastFail  = lastFailRes.data?.[0]?.created_at || null;
+    const failCount = (failG.count ?? 0) + (failE.count ?? 0);
+    const count2h   = (g2h.count ?? 0) + (e2h.count ?? 0);
+    const count24h  = (g24h.count ?? 0) + (e24h.count ?? 0);
+    const lastFailTimes = [lastG.data?.[0]?.created_at, lastE.data?.[0]?.created_at].filter(Boolean);
+    const lastFail  = lastFailTimes.length ? lastFailTimes.sort().reverse()[0] : null;
     const lastOk    = lastOkRes.data?.[0]?.created_at || null;
+    const recentRes = { data: [...(recentG.data || []), ...(recentE.data || [])]
+      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 20) };
 
-    // Status: critical = failure in last 2h, warning = failure in last 24h
-    // (but not 2h), healthy = none in 24h.
+    // Never "Healthy". This panel measures failures that reached the database;
+    // it is structurally blind to a 5xx that wrote no row, so a quiet window is
+    // "none recorded", not a clean bill of health.
     let status, statusTxt;
-    if (count2h > 0)       { status = 'critical'; statusTxt = 'Critical'; }
-    else if (count24h > 0) { status = 'warning';  statusTxt = 'Warning'; }
-    else                   { status = 'healthy';  statusTxt = 'Healthy'; }
+    if (count2h > 0)       { status = 'critical'; statusTxt = `${count2h} in 2h`; }
+    else if (count24h > 0) { status = 'warning';  statusTxt = `${count24h} in 24h`; }
+    else                   { status = 'healthy';  statusTxt = 'None recorded'; }
 
     const chip = document.getElementById('oaiStatusChip');
     chip.className = 'oai-status-chip ' + status;
     document.getElementById('oaiStatusTxt').textContent = statusTxt;
     document.getElementById('oaiStatusVal').textContent = statusTxt;
     document.getElementById('oaiStatusSub').textContent =
-      status === 'critical' ? `${count2h} fallback${count2h===1?'':'s'} in last 2h`
+      status === 'critical' ? `${count2h} recorded in last 2h`
       : status === 'warning' ? `${count24h} in last 24h, none in 2h`
-      : 'no failures in last 24h';
+      : 'none recorded in last 24h — 5xx failures are not visible here';
 
     document.getElementById('oaiFailCount').textContent = fmt(failCount);
     document.getElementById('oaiFailCountSub').textContent =
@@ -1901,14 +1971,17 @@ async function loadOpenAIHealth(since, S) {
             const cls = oaiFailClass(Number(st), r.oai_error_code);
             statusCell = `<span style="color:${OAI_SEV_COLOR[cls.sev]}">${esc(String(st))}${r.oai_error_code ? ' · ' + esc(r.oai_error_code) : ''}</span>`;
           }
+          const shape = r.ai_response === ''
+            ? '<span class="chip red">empty response</span>'
+            : `<span class="chip amber">guard · ${esc(oaiLangOf(r.ai_response))}</span>`;
           return `<tr>
             <td class="mono">${esc(fmtTime(r.created_at))}</td>
             <td class="mono">${statusCell}</td>
-            <td><span class="chip gray">${esc(oaiLangOf(r.ai_response))}</span></td>
+            <td>${shape}</td>
             <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--text-400)">${esc((r.question||'').slice(0,80)) || '<span style="color:var(--text-500)">(no text)</span>'}</td>
           </tr>`;
         }).join('')
-      : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No AI Tutor failures in window ✅</td></tr>';
+      : '<tr><td colspan="4" style="text-align:center;color:var(--text-500);padding:18px">No failures recorded in this window. Failures that returned 5xx without writing a row would not appear here.</td></tr>';
 
     // ── Provider status-code breakdown ──
     // Reads the rows already fetched for STATS, so this table and the alert
