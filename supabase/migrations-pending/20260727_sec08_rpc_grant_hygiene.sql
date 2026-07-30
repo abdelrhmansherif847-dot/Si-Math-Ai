@@ -2,7 +2,19 @@
 -- SEC-08 (LOW / defence in depth) — RPC and table grant hygiene
 -- ===========================================================================
 -- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
---    Rename off the PENDING_ prefix when approving.
+--
+-- STATE MEASURED 2026-07-30 — nothing in this file has been applied:
+--   • 2 SECURITY DEFINER functions still executable by `anon`
+--     (admin_credits_overview, admin_set_credit_cost) — section (a)
+--   • 70 TRUNCATE grants still held by anon/authenticated — section (b).
+--     This is the largest item here: TRUNCATE ignores RLS entirely.
+--   • weakness_signals_bak_mig_b1_20260702 and mig_b1_map are already
+--     unreadable by authenticated (RLS on, no policy), so section (c) is
+--     defence-in-depth against a policy being added later, not a live fix.
+--
+-- This file is also the tracked home of AI Monitor follow-up F6 — see
+-- docs/roadmap/ai-monitor-followups.md. Do not write a second migration for
+-- the two admin RPCs; section (a) already covers them.
 --
 -- These are hardening items, not live exploits. Each is a case where the only
 -- thing preventing abuse is a check *inside* the function, with no outer gate.
@@ -57,6 +69,11 @@ REVOKE EXECUTE ON FUNCTION public.current_user_role()                  FROM anon
 --   SELECT pg_get_functiondef(oid) LIKE '%forbidden_user_mismatch%'
 --   FROM pg_proc WHERE proname = 'consume_credits';
 --   -- expect: true. If false, apply 20260721_study_plan_always_charge.sql.
+--
+-- ✅ VERIFIED 2026-07-30 against igvkyxkmjnkzscqgommj: returns true. The
+--    dual-authorization guard IS live on the deployed function, so the reasoning
+--    above holds and consume_credits needs no change. This open question is
+--    closed; the rest of this file is still unapplied.
 REVOKE EXECUTE ON FUNCTION public.consume_credits(uuid, text, text, integer, integer, numeric, uuid)
   FROM anon;
 

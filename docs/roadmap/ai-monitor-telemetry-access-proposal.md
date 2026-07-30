@@ -535,6 +535,12 @@ Running the function bodies directly over the live table:
 
 ## 11. Follow-up work this surfaced
 
+**Tracked in `docs/roadmap/ai-monitor-followups.md`**, which carries current status, staged
+migrations and a suggested order. F1 is shipped; F2 and F5 have migrations staged in
+`supabase/migrations-pending/`; F6 turned out to be already covered by the pre-existing
+`20260727_sec08_rpc_grant_hygiene.sql`. The summaries below are the original statement of each
+item and are kept for the record.
+
 **F1 — ✅ Resolved and implemented (2026-07-30).** `ai-monitor.html` admits
 `role === 'owner' || role === 'super_admin'`, but these RPCs require `owner`, so a `super_admin`
 receives HTTP 403. Decision: **keep the backend floor at `owner` and render an explicit
