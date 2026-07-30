@@ -60,11 +60,41 @@ CREATE TABLE IF NOT EXISTS public.ai_tutor_failures (
 
   operation          text,
 
-  -- Derived from which teleCtx fields were populated when the throw happened
-  -- (see design §2). Derived rather than hand-maintained so it cannot drift out
-  -- of sync with the code the way a manually-updated marker would.
+  -- The furthest milestone the request reached before it failed.
+  --
+  -- THESE FOUR VALUES ARE A CONTRACT. They are milestones in the life of a
+  -- tutoring request that any implementation has, phrased as what was achieved:
+  --
+  --   received     the request arrived; nothing further established — we do not
+  --                even know who was asking
+  --   identified   the caller is known
+  --   interpreted  what is being asked is known
+  --   recorded     the interaction is persisted and durable
+  --
+  -- Nothing here names a variable, a table, a framework or a function, so the
+  -- values keep their meaning across refactors — which matters because rows
+  -- outlive implementations. An earlier draft used pre_auth/pre_parse/
+  -- pre_persist/post_persist; those were named after the mechanism that
+  -- computed them and after internal steps, so a handler restructure would have
+  -- left years of stored rows meaning something subtly different.
+  --
+  -- The list is in lifecycle order, so "failed before being recorded" is
+  -- expressible without enumerating the earlier values. A new milestone can be
+  -- inserted later without renaming or re-meaning an existing one: the values
+  -- are names, not positions.
+  --
+  -- HOW it is computed is NOT a contract and is expected to change. Today it
+  -- derives from which teleCtx fields were populated at the throw site — see
+  -- docs/roadmap/ai-tutor-failures-design.md §2.1. If a future version of
+  -- ai-tutor has no teleCtx at all, only the derivation changes; every stored
+  -- row keeps its meaning.
+  --
+  -- Reaching the provider is deliberately NOT a milestone here — it is
+  -- orthogonal to the lifecycle and lives in provider_calls below. Folding it in
+  -- would tie this vocabulary to how many upstream calls an implementation
+  -- happens to make.
   stage_reached      text        NOT NULL
-    CHECK (stage_reached IN ('pre_auth','pre_parse','pre_persist','post_persist')),
+    CHECK (stage_reached IN ('received','identified','interpreted','recorded')),
 
   error_class        text        NOT NULL,
 

@@ -55,18 +55,54 @@ const teleCtx: {
       sessionId: null, userId: null, operation: null };
 ```
 
-**This means "how far did the request get" is already encoded, and needs no new bookkeeping.** It can
-be derived from which fields are populated rather than maintained by hand:
-
-| Derived stage | Condition |
-|---|---|
-| `pre_auth` | `userId` is null |
-| `pre_parse` | `userId` set, `operation` null |
-| `pre_persist` | `operation` set, `questionRecordId` null ← **the invisible class this work is about** |
-| `post_persist` | `questionRecordId` set |
-
-A hand-maintained `stage` marker would be one more thing to keep in sync with the code, and it would
+**This means "how far did the request get" is already encoded, and needs no new bookkeeping.** A
+hand-maintained `stage` marker would be one more thing to keep in sync with the code, and it would
 drift. Deriving it cannot drift, because the fields are already load-bearing for the existing flush.
+
+### 2.1 The vocabulary is a contract; the derivation is not
+
+An earlier draft named the four values `pre_auth` / `pre_parse` / `pre_persist` / `post_persist`.
+Those were named after *the mechanism that computes them* — which `teleCtx` field was still null —
+and after internal steps (`parse`, `persist`). That is the wrong coupling: rename `teleCtx`,
+restructure the handler, or move where the insert happens, and the vocabulary either breaks or
+quietly starts meaning something else, with years of stored rows behind it.
+
+**Two separate things, deliberately:**
+
+**The vocabulary — stable, implementation-independent, and the thing stored.** Each value is a
+milestone in the life of a tutoring request that any implementation has, phrased as *what was
+achieved* rather than what had not happened yet. `stage_reached` records **the furthest milestone
+reached before the failure**.
+
+| Value | Milestone — what was true when it failed |
+|---|---|
+| `received` | The request arrived and was accepted. Nothing further was established — we do not even know who was asking. |
+| `identified` | The caller is known. |
+| `interpreted` | What is being asked is known. |
+| `recorded` | The interaction has been persisted and is durable. |
+
+Nothing there names a variable, a table, a framework or a function. A rewrite in another language
+would still have all four. They are also ordered, so "failed before being recorded" is expressible
+without enumerating the earlier values, and a new milestone can be inserted later without renaming
+or re-meaning any existing one — the values are names, not positions.
+
+**The derivation — implementation-specific, expected to change, and not a contract.** For the current
+handler:
+
+| Milestone | Current condition |
+|---|---|
+| `received` | `teleCtx.userId` is null |
+| `identified` | `userId` set, `operation` null |
+| `interpreted` | `operation` set, `questionRecordId` null ← **the invisible class this work is about** |
+| `recorded` | `questionRecordId` set |
+
+This table may be rewritten whenever the handler changes. The one above it may not. If a future
+version has no `teleCtx` at all, only the derivation is rewritten and every stored row keeps its
+meaning.
+
+Note that "did we reach the provider" is deliberately **not** a milestone: it is orthogonal to the
+lifecycle and already captured by the `provider_calls` column. Folding it in would make the stage
+vocabulary depend on how many upstream calls a given implementation happens to make.
 
 `teleSink.length` additionally gives the number of provider calls recorded for the request, so
 "did we reach OpenAI at all" is known rather than inferred.
@@ -225,8 +261,9 @@ Deleting the notice on the strength of this table would recreate the original de
    indefinitely given the volume is tiny? Note the §5 decision makes this easier: since nothing
    depends on `error_message`, a retention policy could redact just that column on an older window
    while keeping the counts, rather than deleting whole rows.
-3. **`stage_reached` values.** Are the four in §2 the right vocabulary, or is `pre_persist` worth
-   splitting further?
+3. ~~**`stage_reached` values.**~~ **Resolved 2026-07-30** — `received` / `identified` /
+   `interpreted` / `recorded`, as milestones rather than checkpoints, with the derivation held
+   separate and explicitly non-contractual. See §2.1.
 4. **Should a 5xx added elsewhere later be caught?** Today there is exactly one 5xx path. A CI grep
    asserting that stays true would keep this table honest; without it, a future `safeError(503, …)`
    would silently bypass the recording.
