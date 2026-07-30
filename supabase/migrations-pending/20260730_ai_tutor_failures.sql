@@ -68,8 +68,22 @@ CREATE TABLE IF NOT EXISTS public.ai_tutor_failures (
 
   error_class        text        NOT NULL,
 
-  -- Truncated by the writer to 500 chars. The stack trace is deliberately NOT
-  -- stored — it stays in the Edge Function logs, findable by correlation_id.
+  -- OPTIONAL DIAGNOSTIC METADATA — nothing may depend on it (owner decision,
+  -- 2026-07-30). The primary operational signals are error_class and
+  -- stage_reached; those two identify a regression like v90 on their own. This
+  -- column only shortens the diagnosis.
+  --
+  -- Consequences of that, deliberately:
+  --   • nullable, and legitimately NULL — a panel that breaks or misleads when
+  --     it is absent is a defect in the panel
+  --   • truncated by the writer to 500 chars
+  --   • NOT returned by the operational RPC, so the contract cannot come to
+  --     depend on it
+  --   • the stack trace is never stored; it stays in the Edge Function logs,
+  --     findable by correlation_id
+  --   • it could later be dropped, redacted, or left permanently NULL without
+  --     any panel changing
+  --
   -- Precedent for the caution is in index.ts's own catch: echoing String(err)
   -- previously leaked Postgres constraint and column names, and column values
   -- can be student data.

@@ -124,24 +124,39 @@ holding it open to record that fact would make a bad experience worse.
 
 ---
 
-## 5. `error_message` — the one judgement call
+## 5. `error_message` — resolved: optional diagnostic metadata, never depended upon
 
-The existing catch already logs `err.message` and `err.stack` to the console. Persisting them is a
-different exposure: console logs age out, table rows do not.
+**Decided 2026-07-30 (owner): stay conservative.** `error_message` is optional metadata. The primary
+operational signals are `error_class` and `stage_reached`, and **no dashboard panel may depend on the
+message being present, populated, or well-formed.**
 
-There is direct precedent for caution in this exact function. The catch carries the comment:
+The reasoning that led there. The existing catch already logs `err.message` and `err.stack` to the
+console, but persisting them is a different exposure — console logs age out, table rows do not. There
+is direct precedent for caution in this exact function; the catch carries the comment:
 
 > *Echoing `String(err)` previously leaked Postgres constraint/column names and Deno stack frames to
 > anyone who could make the function throw.*
 
-That was about the **client response**, and was fixed. Storing server-side for owner-only reading is
-a weaker concern, but the same class: a Postgres error can embed column values, and column values
-can be student data.
+That was about the **client response** and was fixed. Storing server-side for owner-only reading is a
+weaker concern but the same class: a Postgres error can embed column values, and column values can be
+student data.
 
-**Proposal:** store `error_class` always; store `error_message` **truncated to 500 characters**; do
-**not** store the stack trace — it stays in the logs, where the correlation id can find it. If even
-the message is judged too risky, `error_class` plus `stage_reached` still identifies a regression
-like v90 unambiguously, so the message is an accelerant rather than a requirement.
+**What this means concretely:**
+
+| | |
+|---|---|
+| Stored | Yes — nullable, truncated to 500 chars by the writer |
+| Stack trace | **Never stored.** Stays in Edge Function logs, findable by `correlation_id` |
+| Returned by the operational RPC | **No** — see §6 |
+| May a panel depend on it | **No.** A panel that breaks or misleads when it is `NULL` is a defect |
+
+This is the same store-vs-expose split already agreed for `user_id`: keeping a value for ad-hoc
+investigation is a different decision from putting it on an operational surface, and they should be
+made separately.
+
+`error_class` plus `stage_reached` identifies a regression like v90 unambiguously on their own — the
+message only shortens the diagnosis. Treating it as an accelerant rather than a dependency means the
+column could later be dropped, redacted, or left permanently `NULL` without any panel changing.
 
 ---
 
@@ -151,11 +166,34 @@ An owner-gated `SECURITY DEFINER` RPC, consistent with `ai_monitor_call_health` 
 `REVOKE EXECUTE … FROM PUBLIC, anon`, guard raising `42501`, fixed typed return, and the table itself
 service-role with **no RLS policy and no client grant** — the same shape as `ai_model_calls`.
 
-**`user_id` is stored but not returned.** Storing it is operationally necessary: it is the difference
-between *"one student is hitting a bad input"* and *"everyone is down"*, which is the first question
-during an incident. Returning it is not — the RPC can return a **distinct-user count** per failure
-group, which answers that question without putting identifiers on a platform-health surface. Store
-and expose are separate decisions, and this is the case where they should differ.
+**Two columns are stored but not returned: `user_id` and `error_message`.**
+
+`user_id` — storing it is operationally necessary: it is the difference between *"one student is
+hitting a bad input"* and *"everyone is down"*, which is the first question during an incident.
+Returning it is not. The RPC returns a **distinct-user count** per failure group, which answers that
+question without putting identifiers on a platform-health surface.
+
+`error_message` — excluded per §5, so the operational contract cannot come to depend on it.
+
+Proposed return, for review — the operational signals only:
+
+```
+ai_monitor_tutor_failures(p_since timestamptz DEFAULT NULL)
+  RETURNS TABLE (
+    error_class     text,
+    stage_reached   text,
+    operation       text,
+    failures        bigint,
+    distinct_users  bigint,   -- count, never the ids
+    first_seen      timestamptz,
+    last_seen       timestamptz
+  )
+```
+
+Grouped rather than row-level, matching the aggregate posture of the two applied RPCs. Finding an
+individual failure from a student's `correlation_id` is a distinct need with a distinct shape, and if
+it is wanted it should be its own reviewed function rather than a widening of this one — the same
+conclusion F2 reached about per-row grain.
 
 ---
 
@@ -181,10 +219,12 @@ Deleting the notice on the strength of this table would recreate the original de
 
 ## 8. Open questions
 
-1. **`error_message` at all?** §5 proposes truncated-to-500 with no stack. The conservative
-   alternative is `error_class` only.
+1. ~~**`error_message` at all?**~~ **Resolved 2026-07-30** — stored, truncated, no stack trace,
+   excluded from the operational RPC, and no panel may depend on it. See §5.
 2. **Retention.** These are operational rows, not historical facts. A TTL — 90 days? — or keep
-   indefinitely given the volume is tiny?
+   indefinitely given the volume is tiny? Note the §5 decision makes this easier: since nothing
+   depends on `error_message`, a retention policy could redact just that column on an older window
+   while keeping the counts, rather than deleting whole rows.
 3. **`stage_reached` values.** Are the four in §2 the right vocabulary, or is `pre_persist` worth
    splitting further?
 4. **Should a 5xx added elsewhere later be caught?** Today there is exactly one 5xx path. A CI grep
