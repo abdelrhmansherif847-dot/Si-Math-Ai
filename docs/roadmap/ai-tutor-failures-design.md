@@ -1,8 +1,19 @@
 # `ai_tutor_failures` — design
 
-**Status:** design for review. **Nothing applied. `ai-tutor` is untouched.** A migration is staged
-at `supabase/migrations-pending/20260730_ai_tutor_failures.sql`; the Edge Function change is
-specified here but deliberately not written, because it needs its own approval and a CLI deploy.
+**Status: DESIGN APPROVED by the owner, 2026-07-30. Deliberately NOT applied.**
+
+Approval of the design is not authorization to apply it — the migration stays staged at
+`supabase/migrations-pending/20260730_ai_tutor_failures.sql` until a separate, explicit go-ahead
+(CLAUDE.md §3). `ai-tutor` is untouched; the Edge Function change is specified in §4 but not written,
+and is a separate approval requiring a CLI deploy (DEPLOY.md §4).
+
+| Decision | Settled |
+|---|---|
+| Dedicated table, never merged into `ai_model_calls` | ✅ §3 |
+| `error_message` optional metadata, nothing may depend on it | ✅ §5 |
+| `user_id` stored, not returned by the operational RPC | ✅ §6 |
+| `stage_reached` vocabulary is a contract; derivation is not | ✅ §2.1 |
+| Retention policy | ⏸️ open, **does not block** — §8 |
 
 Follows `docs/roadmap/ai-tutor-failure-observability.md`. Agreed going in: a dedicated table rather
 than overloading `ai_model_calls`, and the dashboard's blind-spot notice narrowed rather than removed.

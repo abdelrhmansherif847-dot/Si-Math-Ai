@@ -1,7 +1,24 @@
 -- ===========================================================================
 -- ai_tutor_failures — record 5xx failures that reach the handler
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
+-- ✅ DESIGN APPROVED by the owner, 2026-07-30.
+-- ⛔ NOT APPLIED — and approval of the design is NOT authorization to apply it.
+--    The owner asked for this to stay staged. Applying it needs a separate,
+--    explicit go-ahead (CLAUDE.md §3).
+--
+--    Settled during review, so do not reopen without cause:
+--      • dedicated table, never merged into ai_model_calls — different events,
+--        and merging would distort telemetry validated on 2026-07-30
+--      • error_message is optional metadata; nothing may depend on it
+--      • user_id is stored but never returned by the operational RPC
+--      • the stage_reached vocabulary is a contract; its derivation is not
+--
+--    Open but NOT blocking: retention policy. Because nothing depends on
+--    error_message, a policy can redact just that column over an older window
+--    rather than deleting rows, so it can be added on top later.
+--
+--    The Edge Function change that writes this table is a SEPARATE approval and
+--    has not been written. It requires a CLI deploy (DEPLOY.md §4).
 --
 -- Design: docs/roadmap/ai-tutor-failures-design.md
 -- Context: docs/roadmap/ai-tutor-failure-observability.md
