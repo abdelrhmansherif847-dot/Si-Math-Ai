@@ -1,117 +1,57 @@
 -- ===========================================================================
--- SEC-08 (LOW / defence in depth) — RPC and table grant hygiene
+-- SEC-08 (c) — backup / migration tables left in the live schema
 -- ===========================================================================
 -- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
 --
--- STATE MEASURED 2026-07-30 — nothing in this file has been applied:
---   • 2 SECURITY DEFINER functions still executable by `anon`
---     (admin_credits_overview, admin_set_credit_cost) — section (a)
---   • 70 TRUNCATE grants still held by anon/authenticated — section (b).
---     This is the largest item here: TRUNCATE ignores RLS entirely.
---   • weakness_signals_bak_mig_b1_20260702 and mig_b1_map are already
---     unreadable by authenticated (RLS on, no policy), so section (c) is
---     defence-in-depth against a policy being added later, not a live fix.
+-- This file originally held sections (a), (b) and (c). **Sections (a) and (b)
+-- were approved and applied on 2026-07-30**, and are recorded as:
 --
--- This file is also the tracked home of AI Monitor follow-up F6 — see
--- docs/roadmap/ai-monitor-followups.md. Do not write a second migration for
--- the two admin RPCs; section (a) already covers them.
+--   supabase/migrations/20260730_sec08b_revoke_truncate_grants.sql
+--     TRUNCATE / TRIGGER / REFERENCES revoked from anon + authenticated on
+--     every table in public. 210 grants removed (70 per privilege class).
+--     TRUNCATE is not subject to RLS, so this was the largest item in the file.
 --
--- These are hardening items, not live exploits. Each is a case where the only
--- thing preventing abuse is a check *inside* the function, with no outer gate.
--- That is one refactor away from being a real finding, and costs nothing to
--- close now.
+--   supabase/migrations/20260730_sec08a_rpc_grant_hygiene.sql
+--     anon EXECUTE revoked on 12 privileged RPCs. Supabase's
+--     `anon_security_definer_function_executable` advisor finding went from
+--     2 WARN to none.
 --
--- ── (a) Admin RPCs are callable by `anon` ──────────────────────────────────
--- Supabase's advisor flags admin_credits_overview() and admin_set_credit_cost()
--- as executable by the anon role. Both are safe today because each begins with
+-- Each of those files carries the dependency review that was completed before
+-- it was applied, and the measured before/after state. Only section (c) below
+-- remains, and it was deliberately left out of that approval rather than
+-- silently bundled in.
 --
---     SELECT is_admin INTO v_is_admin FROM profiles WHERE id = auth.uid();
---     IF NOT COALESCE(v_is_admin, false) THEN ... forbidden
+-- One question this file asked has since been answered:
+--   Q: does the deployed consume_credits() carry its dual-authorization guard?
+--      (the repo file being present does not prove it was applied)
+--   A: ✅ VERIFIED 2026-07-30 — pg_get_functiondef(...) LIKE
+--      '%forbidden_user_mismatch%' returns true. The guard is live, so
+--      consume_credits needs no change beyond the anon revoke already applied.
 --
--- and auth.uid() is NULL for anon, so COALESCE(NULL,false) rejects. The risk
--- is entirely about the future: an unauthenticated caller should not be able
--- to reach a SECURITY DEFINER function that reads billing data at all, and the
--- internal guard should be the second line of defence rather than the only one.
-REVOKE EXECUTE ON FUNCTION public.admin_credits_overview()        FROM anon;
-REVOKE EXECUTE ON FUNCTION public.admin_set_credit_cost(text, integer, boolean, boolean) FROM anon;
-
--- Same reasoning for every other privileged or user-scoped RPC: none of them
--- has a meaning for an unauthenticated caller.
-REVOKE EXECUTE ON FUNCTION public.approve_payment_request(uuid, text)  FROM anon;
-REVOKE EXECUTE ON FUNCTION public.reject_payment_request(uuid, text)   FROM anon;
-REVOKE EXECUTE ON FUNCTION public.change_user_role(uuid, public.user_role, text) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.delete_my_account()                  FROM anon;
-REVOKE EXECUTE ON FUNCTION public.enforce_my_subscription_expiry()     FROM anon;
-REVOKE EXECUTE ON FUNCTION public.refund_ai_credit(uuid)               FROM anon;
-REVOKE EXECUTE ON FUNCTION public.auth_is_admin()                      FROM anon;
-REVOKE EXECUTE ON FUNCTION public.has_role_at_least(public.user_role)  FROM anon;
-REVOKE EXECUTE ON FUNCTION public.current_user_role()                  FROM anon;
-
--- consume_credits() is deliberately NOT revoked from `authenticated`.
--- credit-config.js charge() calls it straight from the browser, so revoking it
--- would break charging for every paid operation on the platform.
---
--- It takes p_user_id as a parameter rather than deriving it from auth.uid(),
--- which looks like a cross-tenant credit-drain primitive — but the current
--- definition (20260721_study_plan_always_charge.sql, "Dual-authorization guard
--- Phase B · AUTHZ-01") already closes it:
---
---     IF auth.uid() IS NOT NULL AND p_user_id IS DISTINCT FROM auth.uid()
---     THEN RETURN jsonb_build_object('ok', false, 'reason',
---                                    'forbidden_user_mismatch');
---
--- A browser caller (auth.uid() present) may spend only their own credits; the
--- Edge Functions run as service_role (auth.uid() IS NULL) and may act for any
--- user. That is the correct shape and needs no change.
---
--- CONFIRM the deployed function actually carries the guard — the repo file
--- being present does not prove it was applied:
---   SELECT pg_get_functiondef(oid) LIKE '%forbidden_user_mismatch%'
---   FROM pg_proc WHERE proname = 'consume_credits';
---   -- expect: true. If false, apply 20260721_study_plan_always_charge.sql.
---
--- ✅ VERIFIED 2026-07-30 against igvkyxkmjnkzscqgommj: returns true. The
---    dual-authorization guard IS live on the deployed function, so the reasoning
---    above holds and consume_credits needs no change. This open question is
---    closed; the rest of this file is still unapplied.
-REVOKE EXECUTE ON FUNCTION public.consume_credits(uuid, text, text, integer, integer, numeric, uuid)
-  FROM anon;
-
--- ── (b) TRUNCATE on user data tables ───────────────────────────────────────
--- anon and authenticated hold TRUNCATE on essentially every table, from
--- Supabase's default `GRANT ALL`. TRUNCATE is NOT subject to RLS — a row-level
--- policy cannot stop it. It is unreachable through PostgREST today (the REST
--- API never emits TRUNCATE), so this is latent rather than live, but a single
--- SQL-executing RPC added later would turn it into instant total data loss.
-DO $$
-DECLARE r record;
-BEGIN
-  FOR r IN
-    SELECT format('%I.%I', schemaname, tablename) AS t
-    FROM   pg_tables WHERE schemaname = 'public'
-  LOOP
-    EXECUTE format('REVOKE TRUNCATE, TRIGGER, REFERENCES ON %s FROM anon, authenticated', r.t);
-  END LOOP;
-END $$;
-
 -- ── (c) Backup table left in the live schema ───────────────────────────────
 -- weakness_signals_bak_mig_b1_20260702 (476 rows) is a pre-migration snapshot
--- that is still exposed through the API with RLS enabled but NO policies. It
--- currently returns nothing to clients, which is the correct outcome by
--- accident rather than by design. Move it out of the API's reach.
+-- still exposed through the API with RLS enabled but NO policies. It returns
+-- nothing to clients today, which is the correct outcome by accident rather
+-- than by design: add one permissive policy later and it starts serving data.
+--
+-- MEASURED 2026-07-30: has_table_privilege('authenticated', …, 'SELECT') is
+-- already false for both tables below, because RLS-with-no-policy blocks the
+-- read regardless of the grant. So this section is **defence in depth against a
+-- future policy being added**, not a fix for a live exposure — which is why it
+-- was not urgent enough to bundle into the security approval above.
+--
+-- The stronger alternative, if these tables are genuinely finished with: move
+-- them out of the API's reach entirely (`ALTER TABLE … SET SCHEMA private`) or
+-- drop them. Revoking grants leaves them discoverable in the public schema.
+-- Worth deciding which, rather than applying the weaker form by default.
 REVOKE ALL ON public.weakness_signals_bak_mig_b1_20260702 FROM anon, authenticated;
-
--- Same for the migration mapping table.
-REVOKE ALL ON public.mig_b1_map FROM anon, authenticated;
+REVOKE ALL ON public.mig_b1_map                            FROM anon, authenticated;
 
 -- ===========================================================================
--- Post-apply verification:
---   SELECT p.proname, r.rolname
---   FROM   pg_proc p
---   JOIN   pg_namespace n ON n.oid = p.pronamespace
---   CROSS  JOIN LATERAL (VALUES ('anon'),('authenticated')) AS r(rolname)
---   WHERE  n.nspname = 'public'
---     AND  has_function_privilege(r.rolname, p.oid, 'EXECUTE')
---     AND  p.proname LIKE 'admin%';
---   -- expect: no anon rows
+-- Post-apply verification
+--   SELECT grantee, privilege_type FROM information_schema.role_table_grants
+--    WHERE table_schema='public'
+--      AND table_name IN ('weakness_signals_bak_mig_b1_20260702','mig_b1_map')
+--      AND grantee IN ('anon','authenticated');
+--   -- expect: no rows
 -- ===========================================================================

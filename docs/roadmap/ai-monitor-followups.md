@@ -3,8 +3,12 @@
 Opened from `docs/roadmap/ai-monitor-telemetry-access-proposal.md` §11 after the owner-gated
 call-telemetry RPCs were applied (2026-07-30). F1 is closed and shipped.
 
-**Nothing in this document has been applied to the database.** Two migrations are staged in
-`supabase/migrations-pending/` awaiting individual owner approval per CLAUDE.md §3.
+Security hardening and feature work are being run as **two separate phases**. Phase 1 (hardening) is
+under way; phase 2 (features) is paused until it completes.
+
+**Applied to the database:** sec08 sections (a) and (b), on 2026-07-30 — see F6.
+**Not applied:** F2 and F5 are staged in `supabase/migrations-pending/`, as is sec08 section (c),
+each awaiting individual owner approval per CLAUDE.md §3.
 
 | | Item | State | Needs |
 |---|---|---|---|
@@ -13,7 +17,7 @@ call-telemetry RPCs were applied (2026-07-30). F1 is closed and shipped.
 | **F3** | Partial index on failures | ⏸️ **Deferred by decision** | Nothing — revisit at a stated threshold |
 | **F4** | Token sensitivity (Appendix A) | 🔓 **No longer blocking** | Owner's policy call, at leisure |
 | **F5** | `ai_usage_logs` governance | 📝 **Migration staged** | **Governance decision**, then approval |
-| **F6** | `anon:EXECUTE` hardening | 📝 **Already staged (sec08)** | Owner approval — do not rewrite |
+| **F6** | `anon:EXECUTE` hardening | ✅ **Applied 2026-07-30** | — (sec08 (c) still pending) |
 
 ---
 
@@ -110,45 +114,60 @@ the stated invariant while leaving a working path for owner-facing cost tooling.
 
 ---
 
-## F6 — `anon:EXECUTE` hardening — already staged, do not rewrite
+## F6 — `anon:EXECUTE` hardening — ✅ applied 2026-07-30
 
-**Already covered by:** `supabase/migrations-pending/20260727_sec08_rpc_grant_hygiene.sql`
+Turned out to be already written as `20260727_sec08_rpc_grant_hygiene.sql`, which predated this
+list and was **broader** than the F6 note. Rather than duplicate it, its state was measured and it
+was approved and applied in the two phases the owner sequenced. Recorded as:
 
-That file predates this follow-up list and is **broader** than the F6 note. It covers the two admin
-RPCs *and* twelve other privileged RPCs, TRUNCATE grants, and two leftover migration tables. Writing
-a second migration for the two functions would duplicate approved-and-waiting work.
-
-**Measured 2026-07-30 — none of it is applied:**
-
-| sec08 section | State |
+| Applied file | Effect (measured) |
 |---|---|
-| (a) SECURITY DEFINER functions `anon` can execute | **2 remaining** — `admin_credits_overview`, `admin_set_credit_cost` |
-| (b) TRUNCATE grants held by `anon` / `authenticated` | **70 remaining** |
-| (c) `weakness_signals_bak_…`, `mig_b1_map` readable | Already unreadable (RLS on, no policy) — so (c) is defence-in-depth |
+| `20260730_sec08b_revoke_truncate_grants.sql` | TRUNCATE / TRIGGER / REFERENCES revoked from `anon` + `authenticated` on all 35 public tables — **210 grants removed**. SELECT (78) and write (219) grants untouched. |
+| `20260730_sec08a_rpc_grant_hygiene.sql` | `anon` EXECUTE revoked on 12 privileged RPCs. **SECURITY DEFINER functions executable by `anon`: 2 → 0.** Supabase advisor `anon_security_definer_function_executable`: 2 WARN → none. |
 
-**Section (b) is the significant one, and it is not an AI Monitor concern** — 70 tables still grant
-TRUNCATE to `anon`/`authenticated`, and **TRUNCATE ignores RLS entirely**. It is unreachable through
-PostgREST today, so latent rather than live, but it is the largest single item in that file and
-worth prioritising above anything in this list.
+Section (b) was the larger item and was not an AI Monitor concern at all: **TRUNCATE is not subject
+to RLS**, so no policy could have stopped it. It was unreachable through PostgREST, so latent rather
+than live — but one SQL-executing RPC away from total data loss.
 
-**One open question in sec08 is now closed.** The file asked whether the deployed `consume_credits`
-carries its dual-authorization guard, since the repo file being present does not prove it was
-applied. Verified 2026-07-30: `pg_get_functiondef(...) LIKE '%forbidden_user_mismatch%'` returns
-**true**. The guard is live, the reasoning in that file holds, and `consume_credits` needs no change.
-Recorded in the file itself.
+**Two findings from the dependency review worth keeping:**
 
-**Also worth knowing:** five other functions are `anon`-executable but are **`SECURITY INVOKER`** —
-`rank_for_xp`, `set_updated_at`, `sync_device_last_seen`, `sync_subscription_status`,
-`user_role_level`. They run with the caller's privileges, so RLS applies and they cannot escalate.
-Three appear to be trigger functions, which do not need a caller EXECUTE grant to fire. Low-value
-hygiene, deliberately left alone to keep sec08's blast radius small.
+1. **The revoke mechanism could have been a silent no-op.** `REVOKE ... FROM anon` does nothing if
+   the grant is held by `PUBLIC`. Checked `aclexplode(proacl)` first: `PUBLIC` held EXECUTE on none
+   of the twelve, so the revokes were real. Had it held them, the migration would have appeared to
+   succeed while changing nothing.
+2. **Revoking could have broken RLS.** `has_role_at_least`, `current_user_role` and `auth_is_admin`
+   are called from inside **28 RLS policies**, and a policy expression is evaluated with the querying
+   role's privileges — so revoking EXECUTE from a role that evaluates such a policy breaks every
+   query on that table. All 28 apply to `{authenticated}` only; not one to `{public}`/`{anon}`. Safe,
+   but only because it was checked.
+
+Also measured: only 2 of the 12 revokes changed anything — the pair the advisor flagged. The other
+ten were already satisfied and are kept for idempotence.
+
+**Still pending: sec08 section (c)** — `weakness_signals_bak_mig_b1_20260702` and `mig_b1_map`.
+Deliberately excluded from the approval rather than bundled in. Both are **already unreadable** by
+`authenticated` (RLS on, no policy), so it is defence-in-depth against a future policy, not a live
+fix. The file now notes a stronger alternative worth deciding between: revoking grants leaves the
+tables discoverable in `public`, whereas `SET SCHEMA private` or dropping them removes them from the
+API surface entirely.
+
+**Five functions remain `anon`-executable and are correctly left alone** — `rank_for_xp`,
+`set_updated_at`, `sync_device_last_seen`, `sync_subscription_status`, `user_role_level`. All are
+`SECURITY INVOKER`, so they run with the caller's privileges and RLS applies; they cannot escalate.
 
 ---
 
-## Suggested order
+## Order — where we are
 
-1. **sec08 section (b)** — 70 TRUNCATE grants. Largest latent risk, unrelated to AI Monitor.
-2. **F6 / sec08 section (a)** — two admin RPCs. Small, safe, closes the advisor warning.
-3. **F2** — approve, apply, then wire the UI. Delivers the visible improvement.
-4. **F4 → F5** — decide the token-sensitivity reading, then apply the narrowing it implies.
-5. **F3** — nothing, until the threshold above.
+Security hardening and feature work are being kept as two separate phases.
+
+**Phase 1 — security hardening (in progress)**
+1. ✅ sec08 (b) — TRUNCATE / TRIGGER / REFERENCES grants. Applied 2026-07-30.
+2. ✅ sec08 (a) — `anon` EXECUTE on privileged RPCs. Applied 2026-07-30.
+3. ⏳ sec08 (c) — leftover backup tables. Needs a decision between revoking grants and removing the
+   tables from the API surface; not a live exposure either way.
+
+**Phase 2 — feature work (paused until phase 1 completes)**
+4. F2 — approve, apply, then wire the UI. The next functional enhancement.
+5. F4 → F5 — settle the INV-10 interpretation, then apply the narrowing it implies.
+6. F3 — nothing until the ~500k-row threshold.
