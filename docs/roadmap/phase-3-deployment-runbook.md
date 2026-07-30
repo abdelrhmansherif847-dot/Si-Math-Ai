@@ -176,25 +176,59 @@ Same screen, file list.
 ## 3 · Immediate verification (T+5) — 20 min
 
 ### V1 · Smoke test — 1 min
+
+> **Changed 2026-07-30.** The credentials below are now **required**. Running
+> without them no longer produces a pass — see the exit codes.
+
 ```bash
 SUPABASE_PROJECT_REF=igvkyxkmjnkzscqgommj EXPECTED_VERSION=v91 \
+SUPABASE_TEST_JWT="$SUPABASE_TEST_JWT" SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
   ./scripts/smoke-test-ai-tutor.sh
 ```
-**Expect (no JWT):**
+
+**Expect:**
 ```
 → Heartbeat: POST https://igvkyxkmjnkzscqgommj.functions.supabase.co/ai-tutor (no auth)
   PASS: serve() handler is running, auth gate engaged (HTTP 401)
-→ Functional smoke: SKIPPED (SUPABASE_TEST_JWT not set)
-smoke-test-ai-tutor: heartbeat OK
+→ Functional smoke: POST … (auth, crid=…)
+  PASS: version field = v91
+  PASS: answer non-empty (… chars)
+  PASS: is_math=true
+→ Hint mode smoke (crid=…)
+  PASS: hint_mode=true echoed; answer length …
+smoke-test-ai-tutor: ALL CHECKS PASSED (version v91)
 ```
-**Expect (with JWT):** additionally a 200 chat response with `version=v91`.
+`FUNCTIONAL CHECKS PASSED` instead of `ALL CHECKS PASSED` means the run was
+fine but `SUPABASE_DB_URL`/`psql` were absent, so the `question_records` write
+was not confirmed. Still exit 0.
 
-> ⚠ **Set `SUPABASE_TEST_JWT` this time.** Layer 1 (heartbeat) stops at the 401
-> auth gate, which is UPSTREAM of the code that broke in v90 — it passed while
-> production was down. Layer 2 executes the handler and is the only smoke gate
-> that would have caught the TDZ regression.
+**Exit codes — 2 is not a pass:**
 
-**🔴 ROLLBACK LEVEL 2 IF:** heartbeat returns 500/502/503/000, or version mismatch.
+| Code | Meaning | Action |
+|---|---|---|
+| 0 | Handler exercised end-to-end, checks passed | Proceed |
+| 1 | A check failed | **Roll back** |
+| 2 | Could not determine — missing credential/tool, unreachable, or heartbeat-only | **Do not record a healthy deploy.** Fix and re-run |
+
+> ⚠ **`SUPABASE_TEST_JWT` and `SUPABASE_ANON_KEY` are mandatory.** Layer 1
+> (heartbeat) stops at the 401 auth gate, which is UPSTREAM of the code that
+> broke in v90 — it passed while production was down. Layer 2 executes the
+> handler and is the only smoke gate that would have caught the TDZ regression.
+>
+> Until 2026-07-30 a missing JWT skipped Layer 2, printed `heartbeat OK` and
+> **exited 0** — which is how v90 shipped. It now exits 2 with no pass line.
+> `deploy-ai-tutor.sh` additionally requires both values *before* deploying, so
+> a missing credential stops the run while production is still untouched rather
+> than leaving a deployed-but-unverified function behind.
+>
+> For a standalone liveness probe, `SMOKE_ALLOW_HEARTBEAT_ONLY=1` runs Layer 1
+> alone — it still exits 2, because a run that never executed the handler
+> cannot return a healthy verdict.
+
+**🔴 ROLLBACK LEVEL 2 IF:** heartbeat returns 500/502/503 (exit 1), or version
+mismatch. An exit 2 is *unverified*, not failed — diagnose before rolling back;
+`HTTP 000` means the endpoint was unreachable from your host, not that it is
+broken.
 
 ### V2 · Seeded exercise — 12 min
 

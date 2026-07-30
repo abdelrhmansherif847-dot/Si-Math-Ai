@@ -1,6 +1,7 @@
 # Closing the 5xx observability gap — design discussion
 
-**Status:** design discussion. **No code written, no migration staged, nothing deployed.**
+**Status:** design discussion. **Step 1 is now implemented** (see below); steps 2–4 remain design
+only — no migration staged, ai-tutor untouched, nothing deployed.
 Prepared 2026-07-30 against `igvkyxkmjnkzscqgommj`.
 
 The gap: when `ai-tutor` returns 5xx before writing to `question_records` or `ai_model_calls`,
@@ -141,6 +142,13 @@ Better telemetry tells you an outage happened. That test stops it shipping. I wo
 above both telemetry layers on value, and it costs no new code — only a secret and a gate that fails
 closed when the secret is absent, rather than skipping.
 
+> **✅ RESOLVED 2026-07-30.** Everything above describes the state as found; the fail-open gate is
+> closed. A missing credential now exits 2 with no pass line, `deploy-ai-tutor.sh` demands both
+> values before it deploys, and two further fail-open paths in the same script were closed —
+> unreachable now exits 2 (unverified) rather than 1 (broken), and skipping the `question_records`
+> check no longer prints `ALL CHECKS PASSED`. All four exit paths were exercised against a local
+> stub. Findings 1–3 remain design only.
+
 This does not replace the failure table: telemetry still matters for failures that are nobody's
 regression. But if the goal is "fewer minutes of students seeing 500s", the cheapest large win is a
 test that already exists.
@@ -149,8 +157,13 @@ test that already exists.
 
 ## Proposed order
 
-1. **Ungate the smoke test's Layer 2** — make a missing `SUPABASE_TEST_JWT` fail the gate instead of
-   skipping it. No new code. Prevention rather than reporting.
+1. ✅ **DONE 2026-07-30 — the smoke test no longer reports success without executing the handler.**
+   A missing `SUPABASE_TEST_JWT`/`SUPABASE_ANON_KEY` now exits 2 with no pass line, instead of
+   printing `heartbeat OK` and exiting 0. `deploy-ai-tutor.sh` requires both *before* deploying, so
+   a missing credential stops the run while production is untouched, and forwards them explicitly
+   rather than relying on shell inheritance. Two further fail-open paths in the same script were
+   closed: an unreachable endpoint now exits 2 (unverified) rather than 1 (broken), and a run that
+   skipped the `question_records` write check no longer claims `ALL CHECKS PASSED`.
 2. **`ai_tutor_failures` table + write from the existing catch** — reuses the proven `teleAdmin` /
    `finally` path. Migration + ai-tutor change.
 3. **Narrow the dashboard notice** and read the new table. Small UI change, after 2 is deployed and

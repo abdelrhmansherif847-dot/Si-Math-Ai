@@ -34,6 +34,18 @@ set -euo pipefail
 : "${SUPABASE_PROJECT_REF:?SUPABASE_PROJECT_REF is required}"
 : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN is required}"
 
+# ── Smoke-test credentials are required BEFORE the deploy, not after ───────
+# Step 3 runs the functional smoke test, which needs these. Checking them here
+# rather than letting step 3 fail means a missing credential stops the run
+# while production is still untouched, instead of leaving a deployed function
+# nobody has verified.
+#
+# v90 shipped because the smoke test's Layer 2 was skipped for want of
+# SUPABASE_TEST_JWT and the script still exited 0. Layer 1 stops at the 401
+# auth gate, upstream of the fault, so it passed while every request 500'd.
+: "${SUPABASE_TEST_JWT:?SUPABASE_TEST_JWT is required — step 3 must execute the handler, not just heartbeat it. Set it, or deploy manually and accept that the deploy is unverified.}"
+: "${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY is required for the functional smoke test (Supabase needs it on the JWT path).}"
+
 SRC="supabase/functions/ai-tutor/index.ts"
 
 echo "═══════════════════════════════════════════════════════════════"
@@ -66,9 +78,19 @@ $SUPA functions deploy ai-tutor --project-ref "$SUPABASE_PROJECT_REF"
 echo ""
 
 # ── Step 3: post-deploy smoke test ──────────────────────────────────────
+# The credentials are checked at the TOP of this script, before the deploy, so
+# a missing JWT stops the run before anything ships rather than leaving a
+# deployed-but-unverified function behind. They are forwarded explicitly here
+# rather than relied on by inheritance: this step previously passed only
+# PROJECT_REF and EXPECTED_VERSION, so Layer 2 ran or skipped depending on
+# whether the operator happened to have the JWT exported — and when it
+# skipped, the smoke test still exited 0.
 echo "▶ Step 3/3 — smoke test (expected version: $EXPECTED_VERSION)"
 SUPABASE_PROJECT_REF="$SUPABASE_PROJECT_REF" \
 EXPECTED_VERSION="$EXPECTED_VERSION" \
+SUPABASE_TEST_JWT="$SUPABASE_TEST_JWT" \
+SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+${SUPABASE_DB_URL:+SUPABASE_DB_URL="$SUPABASE_DB_URL"} \
   ./scripts/smoke-test-ai-tutor.sh
 echo ""
 
