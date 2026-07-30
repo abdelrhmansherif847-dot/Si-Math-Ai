@@ -3,17 +3,21 @@
 Opened from `docs/roadmap/ai-monitor-telemetry-access-proposal.md` §11 after the owner-gated
 call-telemetry RPCs were applied (2026-07-30). F1 is closed and shipped.
 
-Security hardening and feature work are being run as **two separate phases**. Phase 1 (hardening) is
-under way; phase 2 (features) is paused until it completes.
+Security hardening and feature work were run as **two separate phases**. The hardening that mattered
+is applied (sec08 (a) and (b)); the one hardening item left, sec08 (c), is **not a live exposure** and
+was moved to last in the order by agreement, after the policy decisions.
+
+Each remaining item is reviewed independently. Nothing is bundled.
 
 **Applied to the database:** sec08 sections (a) and (b), on 2026-07-30 — see F6.
-**Not applied:** F2 and F5 are staged in `supabase/migrations-pending/`, as is sec08 section (c),
-each awaiting individual owner approval per CLAUDE.md §3.
+**Not applied:** F5 and sec08 section (c) are staged in `supabase/migrations-pending/` awaiting
+individual owner approval per CLAUDE.md §3. F2 is also staged but **deferred** — it is not waiting on
+approval, it is waiting on data.
 
 | | Item | State | Needs |
 |---|---|---|---|
 | **F1** | `owner` floor vs page gate | ✅ **Shipped** | — |
-| **F2** | Per-request model attribution | 📝 **Migration staged** | Owner approval, then UI wiring |
+| **F2** | Per-request model attribution | ⏸️ **Deferred 2026-07-30** | Real data first — see triggers |
 | **F3** | Partial index on failures | ⏸️ **Deferred by decision** | Nothing — revisit at a stated threshold |
 | **F4** | Token sensitivity (Appendix A) | 🔓 **No longer blocking** | Owner's policy call, at leisure |
 | **F5** | `ai_usage_logs` governance | 📝 **Migration staged** | **Governance decision**, then approval |
@@ -21,26 +25,57 @@ each awaiting individual owner approval per CLAUDE.md §3.
 
 ---
 
-## F2 — Per-request provider-call attribution
+## F2 — Per-request provider-call attribution — ⏸️ deferred 2026-07-30
 
-**Staged:** `supabase/migrations-pending/20260730_f2_ai_monitor_request_calls.sql`
+**Staged but deferred:** `supabase/migrations-pending/20260730_f2_ai_monitor_request_calls.sql`.
+Not awaiting approval — awaiting representative data.
 
-Adds `ai_monitor_request_calls(uuid[])`, owner-gated, same pattern as the two applied RPCs.
+### Why it was deferred
 
-Why it is worth doing: the audit deleted a "model (inferred)" column that guessed the serving
-model from whether the question had an image. `ai_model_calls` now records the truth. Measured
-2026-07-30 — **5 tutor calls, 5 distinct question records, 0 with a NULL record id, and models
-spanning both `gpt-4o` and `gpt-4o-mini`.** The model genuinely varies per request, so the deleted
-column was guessing at something real; this replaces the guess with the fact.
+The review asked whether the per-request grain was justified, whether `question_record_id` was the
+right surface, and whether the 100-ID cap and typed contract were sufficient. Those turned out to be
+the wrong questions to decide first, because of what the data says:
 
-**This is the one item that needs its own review rather than an amendment**, because it widens the
-grain from aggregate to per-row. The migration header argues the case: bounded by an explicit id
-list the caller already holds, a hard 100-id cap enforced in-function, a fixed typed column set
-with no tokens and no user identifiers, and the same 403 refusal semantics.
+| Measure (2026-07-30) | Value |
+|---|---|
+| Delivery failures in `question_records` | **64**, newest **2026-07-18 13:07** |
+| Oldest row in `ai_model_calls` | **2026-07-29 11:15** |
+| Delivery failures with *any* ledger row | **0** |
+| Failed provider calls in the ledger | **0** |
 
-UI wiring is deliberately **not** written yet. Shipping a client that calls a non-existent function
-would fire a failing RPC on every 60-second refresh; the graceful `NO_FIELD` handling exists, but
-there is no reason to lean on it. Wire after apply.
+The ledger began **11 days after** the most recent delivery failure. The function would therefore
+return an empty set for every row the failures panel currently shows, and applying it could not be
+verified end-to-end. That is the same condition that produced the `model (inferred)` guess this work
+exists to replace — a plausible-looking value with nothing behind it.
+
+### The alternative shape, and why it is not a substitute
+
+A server-owned `LIMIT`-bounded feed of recent failed calls was considered. It has the cleaner
+contract: no `uuid[]` parameter, no client-controlled row set, no cap needed as a guard, and a
+strictly smaller input surface.
+
+**It solves a different problem.** Delivery failure and failed provider call are different sets, and
+neither contains the other:
+
+- a provider call that fails and is retried successfully → ledger failure, **no** delivery failure
+- a tutor returning valid JSON with no answer field → delivery failure, **no** ledger failure
+
+Only `question_records` knows about delivery failures, so a ledger-driven feed would **silently change
+what the panel means** rather than enrich it. The aggregate ledger view already exists as the
+"Failed provider calls" panel. So A and B populate different panels; B cannot restore the model
+column on delivery failures however clean its contract is.
+
+### Triggers to revisit
+
+Both are already visible on the dashboard, so noticing them needs no new tooling:
+
+1. **A delivery failure occurs with ledger coverage** — settles whether the per-request function has
+   real join targets, and therefore whether its cap is load-bearing rather than defensive.
+2. **The first failed provider call appears** — the "Failed provider calls" panel goes from
+   "none recorded" to a populated table, settling whether the server-owned feed deserves its own panel.
+
+At that point, design against the real rows and re-open the A-vs-B choice. The staged file is a
+starting point, not a decision.
 
 ---
 
@@ -167,7 +202,11 @@ Security hardening and feature work are being kept as two separate phases.
 3. ⏳ sec08 (c) — leftover backup tables. Needs a decision between revoking grants and removing the
    tables from the API surface; not a live exposure either way.
 
-**Phase 2 — feature work (paused until phase 1 completes)**
-4. F2 — approve, apply, then wire the UI. The next functional enhancement.
-5. F4 → F5 — settle the INV-10 interpretation, then apply the narrowing it implies.
+**Phase 2 — feature work**
+4. ⏸️ F2 — deferred until one of its two data triggers fires. Not blocked on approval.
+5. F4 → F5 — settle the INV-10 interpretation, then decide the narrowing it implies. **Now the next
+   item on the list**, since F2 stepped back.
 6. F3 — nothing until the ~500k-row threshold.
+7. sec08 (c) — reviewed separately, last.
+
+Nothing in phase 2 is in flight. All three staged migrations remain unapplied.

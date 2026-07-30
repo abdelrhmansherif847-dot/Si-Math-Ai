@@ -1,9 +1,48 @@
 -- ===========================================================================
 -- AI Monitor F2 — per-request provider-call attribution
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
---    To approve: move to supabase/migrations/ and apply per
---    docs/supabase-migrations.md, then wire the UI (see "UI" below).
+-- ⛔ NOT APPLIED — and DEFERRED as of 2026-07-30, not merely awaiting approval.
+--
+--    Do not apply this on the strength of the design argument below. The design
+--    review reached a different conclusion than "is this contract sound?":
+--    THERE IS NO REPRESENTATIVE DATA TO VALIDATE IT AGAINST.
+--
+--    Measured 2026-07-30:
+--      • 64 delivery failures in question_records, newest 2026-07-18 13:07
+--      • oldest row in ai_model_calls        2026-07-29 11:15
+--      • delivery failures with ANY ledger row ................. 0
+--      • failed provider calls in the ledger ................... 0
+--
+--    The ledger began 11 days after the most recent delivery failure, so this
+--    function would return an empty set for every row the failures panel
+--    currently shows. Applying it could not be verified end-to-end — which is
+--    the exact condition that produced the "model (inferred)" guess this work
+--    exists to replace.
+--
+--    An alternative shape was also considered and rejected as a substitute: a
+--    server-owned LIMIT-bounded feed of recent failed calls, which needs no
+--    uuid[] parameter and no cap. It has the cleaner contract, but it does NOT
+--    solve this problem. Delivery failure (student received a fallback) and
+--    failed provider call (an OpenAI call returned non-2xx) are different sets,
+--    neither containing the other: a retried call fails then succeeds → ledger
+--    failure, no delivery failure; a tutor returning valid JSON with no answer
+--    field → delivery failure, no ledger failure. Only question_records knows
+--    about delivery failures, so a ledger-driven feed would silently change what
+--    the panel means rather than enrich it. The aggregate ledger view already
+--    exists as the "Failed provider calls" panel.
+--
+--    REVISIT when either trigger fires — both are already visible on the
+--    dashboard, so this needs no new tooling to notice:
+--      (1) a delivery failure occurs WITH ledger coverage — settles whether this
+--          function has real join targets; or
+--      (2) the first failed provider call appears — settles whether the
+--          server-owned feed deserves its own panel.
+--    Then design against the real rows rather than the hypothesis, and re-open
+--    the A-vs-B choice; the staged shape below is a starting point, not a
+--    decision.
+--
+--    To approve after a trigger fires: move to supabase/migrations/ and apply
+--    per docs/supabase-migrations.md, then wire the UI (see "UI" below).
 --
 -- Proposal: docs/roadmap/ai-monitor-telemetry-access-proposal.md (F2, §11)
 -- Follows:  20260730_ai_monitor_call_telemetry_rpcs.sql — same pattern, same
