@@ -15,6 +15,9 @@ and is a separate approval requiring a CLI deploy (DEPLOY.md §4).
 | `stage_reached` vocabulary is a contract; derivation is not | ✅ §2.1 |
 | Retention policy | ⏸️ open, **does not block** — §8 |
 
+**Edge Function implementation — acceptance criteria set, §4a.** Approval of that change is gated on
+demonstrating five fail-safe properties, two of which constrain how the code is written (§4a.1).
+
 Follows `docs/roadmap/ai-tutor-failure-observability.md`. Agreed going in: a dedicated table rather
 than overloading `ai_model_calls`, and the dashboard's blind-spot notice narrowed rather than removed.
 
@@ -168,6 +171,60 @@ Reasons:
 
 **The write must never await before the response returns.** The student is already receiving a 500;
 holding it open to record that fact would make a bad experience worse.
+
+---
+
+## 4a. Acceptance criteria for the Edge Function change
+
+Set by the owner, 2026-07-30, as the bar for approving the implementation separately from the
+schema. The write must be provably fail-safe: **it runs on the error path of a live tutoring
+request, so it must be incapable of making a bad request worse.**
+
+| # | Property | How it will be evidenced |
+|---|---|---|
+| 1 | Fully non-blocking | Row built synchronously, insert never awaited, handed to `EdgeRuntime.waitUntil`. Same shape as `flushModelCalls`, which already does this on this path. |
+| 2 | Every exception swallowed | Code review **plus** a negative test: point the write at a non-existent table and assert the request still returns its normal 500. |
+| 3 | Cannot change the HTTP response | Response byte-compared with and without the write, including the `correlation_id` body field. |
+| 4 | No meaningful added latency | Measured, not asserted — error-path timing before and after, reported as a distribution rather than a single run. |
+| 5 | Cannot cascade into a failed tutoring request | Follows from 2 and 3, plus §4a.2 below. |
+
+### 4a.1 Two constraints these properties impose on the code
+
+Worth stating before implementation, because they are easy to violate accidentally and both are
+invisible in a diff that otherwise looks correct.
+
+**The write must sit *inside* the existing `try { … } catch { }` within the `finally`, not
+alongside it.** A `finally` block that throws **replaces the pending return value with the
+exception** — so a synchronous throw in new code placed next to that guard, rather than within it,
+would convert a clean `500 + correlation_id` into an entirely different failure. The existing guard
+already prevents this; the new code has to be under it. Property 3 depends on this placement, not
+just on intent.
+
+**The promise handed to `waitUntil` must never reject.** The surrounding `catch` only covers
+synchronous throws and the act of *starting* the promise — a rejection that settles later escapes it
+as an unhandled rejection. `flushModelCalls` is documented as never rejecting for exactly this
+reason. The failure write needs the same property: it must handle its own errors internally rather
+than relying on the outer guard, which cannot see it. Property 2 is not satisfied by the outer
+`catch` alone.
+
+### 4a.2 One property is stronger than asked for
+
+**The write executes only on the error path.** A successful tutoring request never reaches this
+code, so property 5 is not merely satisfied for successful requests — those requests are
+*untouched*, with zero added work of any kind.
+
+The residual risk is therefore narrower than "could this break tutoring": it is *"could this make an
+already-failing request fail differently"*. That is what the negative test in property 2 targets,
+and it is why that test — deliberately breaking the write and proving the response is unchanged — is
+the strongest single piece of evidence available. Code inspection can show the guards are present;
+only the test shows they hold.
+
+### 4a.3 What this does not cover
+
+Not a property of the write, but worth stating so it is not assumed away: if the *database* is what
+is failing, the failure record is lost too. The row cannot be written by the same outage it is
+trying to describe. That is a known limit of in-function recording, already noted in
+`ai-tutor-failure-observability.md` §3, and no amount of care in this code changes it.
 
 ---
 
