@@ -1,9 +1,15 @@
 # AI Monitor → `ai_model_calls`: access architecture proposal
 
-**Status:** proposal for review. **No migration has been created. No policy, grant, view,
-function, or role has been added. The security model is unchanged.**
+**Status: ACCEPTED AND APPLIED, 2026-07-30.** Option 3 (§5.3) was approved with the
+authorization floor resolved as **`owner`** (Q2). Migration
+`supabase/migrations/20260730_ai_monitor_call_telemetry_rpcs.sql` is applied to project
+`igvkyxkmjnkzscqgommj`; see §10 for the verified post-apply state.
 
-Prepared 2026-07-29 against project `igvkyxkmjnkzscqgommj` (PostgreSQL 17.6).
+**`public.ai_model_calls` itself is unchanged** — still RLS-enabled with zero policies and no
+grant to `anon` or `authenticated`. All client access goes through the two functions.
+
+Prepared 2026-07-29, applied 2026-07-30, against project `igvkyxkmjnkzscqgommj`
+(PostgreSQL 17.6).
 
 ---
 
@@ -107,13 +113,20 @@ records a supporting argument about token sensitivity that is *not* required for
 
 **Volume — small, and not the deciding factor.**
 
-| Measure | Value |
+| Measure | Value (re-measured 2026-07-30) |
 |---|---|
-| Rows in `ai_model_calls` today | 9 (writer went live 2026-07-29) |
-| Calls per tutor request | 3.00 (solver_a, solver_b, judge) |
+| Rows in `ai_model_calls` | 16 (writer went live 2026-07-29) |
+| Calls per tutor request | **4.00** |
+| Distinct services recorded | **6** — `difficulty_detector`, `judge`, `ocr`, `solver`, `tutor`, `vision` |
 | `question_records` all-time | 1,172 |
 | Recent traffic | 405 requests / 30 days |
-| Projected steady state | **~1,200 calls/month, ~15k/year** |
+| Projected steady state | **~1,600 calls/month, ~20k/year** |
+
+The first measurement of this table (2026-07-29, 9 rows) suggested 3.00 calls per request and
+only the solver/judge path. With more traffic the real figure is 4.00 across six services — the
+ledger covers the tutor call, OCR, vision and the difficulty detector too, not just L3. The
+projection above is revised accordingly; the conclusion is unaffected, because it was never
+close to a threshold.
 
 At this size every option below performs identically. Performance arguments should not decide
 this; a design that only pays off at 10⁷ rows is premature. Revisit if calls/month exceeds
@@ -451,6 +464,106 @@ those columns.
 `admin_set_credit_cost` grants as separate work? Not a live vulnerability — the `auth.uid()` gate
 prevents anonymous access today — but it is a missing layer of the intended two, and the same
 class of gap the new function must avoid.
+
+---
+
+## 10. Post-apply verification (2026-07-30)
+
+Migration `20260730_ai_monitor_call_telemetry_rpcs.sql` applied. Every property the proposal
+committed to was checked against the live database, not assumed.
+
+### 10.1 Function properties
+
+| Check | `ai_monitor_call_health` | `ai_monitor_call_failures` |
+|---|---|---|
+| `SECURITY DEFINER` | ✅ | ✅ |
+| `STABLE` | ✅ | ✅ |
+| `search_path` | `search_path=public` ✅ | `search_path=public` ✅ |
+| Owner | `postgres` ✅ | `postgres` ✅ |
+| `anon` can EXECUTE | **false** ✅ | **false** ✅ |
+| `authenticated` can EXECUTE | true ✅ | true ✅ |
+
+The `anon` result is the one that matters most: `REVOKE ALL … FROM PUBLIC` worked, so PostgREST
+does not publish these to unauthenticated callers. Both intended layers are present here — the
+privilege revoke *and* the in-body gate.
+
+### 10.2 P1 — declared return types, verified from the catalog
+
+`ai_monitor_call_health` returns exactly `service_code, stage, provider, model, calls,
+successes, failures, latency_avg_ms, latency_p50_ms, latency_p95_ms`.
+`ai_monitor_call_failures` returns exactly `http_status, error_code, service_code, model,
+failures, last_seen`.
+
+**No token column, no user identifier, and no row-level record in either signature.**
+
+### 10.3 P3 — `forbidden` is distinguishable, end to end
+
+Calling `ai_monitor_call_health(NULL)` without an owner JWT:
+
+```
+ERROR: 42501: forbidden: ai_monitor_call_health requires role owner
+CONTEXT: PL/pgSQL function ai_monitor_call_health(timestamp with time zone) line 4 at RAISE
+```
+
+SQLSTATE `42501` is `insufficient_privilege`, which PostgREST maps to **HTTP 403**. An
+unauthorised caller gets a 403, not an empty array — which is the property the whole
+availability-state model in `ai-monitor.html` depends on.
+
+### 10.4 Aggregation correctness and invariants
+
+Running the function bodies directly over the live table:
+
+- 8 groups across 6 services; totals reconcile with the raw table (16 calls = 16 raw rows).
+- **`successes + failures = calls` holds** (16 = 16 + 0). `success IS TRUE` and
+  `success IS NOT TRUE` partition the rows, so a NULL `success` cannot fall between the two
+  counters.
+- No failed calls recorded yet, so `ai_monitor_call_failures` currently returns zero rows. That
+  is a true empty result, and the dashboard must render it as "no failures recorded" rather than
+  as an absence of telemetry.
+
+### 10.5 The base table is unchanged
+
+| Check | Result |
+|---|---|
+| Policies on `ai_model_calls` | **0** |
+| `authenticated` can `SELECT` the table | **false** |
+| `anon` can `SELECT` the table | **false** |
+
+`rls_enabled_no_policy` remains its correct steady state.
+
+---
+
+## 11. Follow-up work this surfaced
+
+**F1 — `owner` floor vs the AI Monitor page gate. Needs a decision before the UI is wired.**
+`ai-monitor.html` admits `role === 'owner' || role === 'super_admin'`, but these RPCs require
+`owner`. A `super_admin` viewing the page will receive **HTTP 403** from both functions. That
+must render as an explicit *"requires owner"* state on the affected panels — never as an empty
+panel, a zero, or a silent failure, which would reintroduce exactly the class of defect the
+dashboard audit removed. Two options: render the explicit state (recommended, and it is what P3
+exists to make possible), or narrow the page itself to `owner`. **Not yet implemented — no UI
+change has been made.**
+
+**F2 — the serving model is now recorded, per request.** The ledger includes a `tutor` service
+with one call per request (4 of 4), carrying `model` and `question_record_id`. The
+"model (inferred)" column removed from the OpenAI Health failures table during the audit — which
+guessed `gpt-4o` from the presence of an image — can now be restored with real per-request data.
+It needs a per-question grain the current aggregate contract does not expose, so it would be a
+third function or an added parameter. Worth doing; out of scope for this migration.
+
+**F3 — partial index on failures.** `ai_monitor_call_failures` scans, since there is no index on
+`success`. Free at 16 rows and irrelevant at the projected ~20k/year. Add
+`CREATE INDEX … ON ai_model_calls (started_at DESC) WHERE success IS NOT TRUE` only if the
+failures panel becomes slow — adding it now would be the same premature optimisation the rollup
+option was rejected for.
+
+**F4 — Appendix A** (token sensitivity) and **F5 — Appendix B** (`ai_usage_logs` governance)
+remain open policy questions. Neither affects the applied migration.
+
+**F6 — `anon:EXECUTE` hardening** on `admin_credits_overview` and `admin_set_credit_cost`. Not a
+live vulnerability; the missing privilege layer is worth closing on those two functions to match
+what this migration does.
+
 
 ---
 
