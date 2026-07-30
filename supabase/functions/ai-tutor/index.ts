@@ -158,7 +158,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v91';
+const AI_TUTOR_VERSION = 'v92';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -482,6 +482,172 @@ async function flushModelCalls(
   }
   console.log('[ai-tutor] model-call-telemetry-lost', JSON.stringify({
     req: ctx.requestId.slice(0, 8), rows: rows.length,
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UNHANDLED-FAILURE TELEMETRY  (ai_tutor_failures)
+// ═══════════════════════════════════════════════════════════════════════════
+// Design: docs/roadmap/ai-tutor-failures-design.md (frozen 2026-07-30).
+//
+// WHY: a 5xx thrown before the question_records insert persists nothing
+// anywhere — no question_records row, and no ai_model_calls row if it threw
+// before any provider call. AI Monitor then honestly reports "None recorded"
+// while students saw errors. Two POST 500s on 2026-07-29 left zero rows.
+//
+// NOT COVERED (design §3 — the dashboard must keep saying so): cold-start and
+// bundle failures where serve() never runs, worker kill, OOM, timeout, a throw
+// before sbAdmin exists, and a database outage — this row cannot be written by
+// the same outage it describes. Those stay in the Edge Function logs.
+//
+// SAFETY CONTRACT (design §4a) — every line below is written to these:
+//   1. Runs ONLY on the error path; a successful request is untouched.
+//   2. Non-blocking: row built synchronously, insert never awaited.
+//   3. Never throws and NEVER REJECTS. A caller's try/catch sees only
+//      synchronous throws and the act of starting a promise — a later
+//      rejection escapes as an unhandled rejection. Handled internally here,
+//      exactly as flushModelCalls does.
+//   4. Cannot change the HTTP response — see the call site's placement note.
+//   5. Cannot cascade. Follows from 3 and 4.
+
+/** Max characters persisted from an error message. Design §5. */
+const FAILURE_MSG_MAX = 500;
+
+interface TutorFailureRow {
+  correlation_id:     string;
+  request_id:         string;
+  client_request_id:  string | null;
+  question_record_id: string | null;
+  session_id:         string | null;
+  user_id:            string | null;
+  operation:          string | null;
+  stage_reached:      string;
+  error_class:        string;
+  error_message:      string | null;
+  provider_calls:     number;
+}
+
+/**
+ * The furthest lifecycle milestone the request reached before it failed.
+ *
+ * The four returned values are a CONTRACT (design §2.1) and must not be
+ * renamed: rows outlive implementations. This mapping is NOT a contract — it
+ * reads whichever fields happen to record progress today, and may be rewritten
+ * whenever the handler changes. If a future version has no teleCtx at all, only
+ * this function changes and every stored row keeps its meaning.
+ *
+ * Pure and total: no I/O, no throwing, defined for every input including null.
+ */
+function deriveStageReached(ctx: {
+  userId?: string | null;
+  operation?: string | null;
+  questionRecordId?: string | null;
+} | null | undefined): 'received' | 'identified' | 'interpreted' | 'recorded' {
+  if (!ctx)                    return 'received';
+  if (ctx.questionRecordId)    return 'recorded';     // persisted and durable
+  if (ctx.operation)           return 'interpreted';  // we know what was asked
+  if (ctx.userId)              return 'identified';   // we know who asked
+  return 'received';                                  // nothing established
+}
+
+/**
+ * Builds the row synchronously. Separated from the write so the response path
+ * does no I/O and so it is unit-testable without a database.
+ *
+ * Total: never throws, for any input. `err` is `unknown` and may be anything a
+ * throw site can produce — a string, null, an object with a throwing getter.
+ */
+function buildTutorFailureRow(args: {
+  err: unknown;
+  cid: string;
+  requestId: string;
+  providerCalls: number;
+  ctx: {
+    clientRequestId?: string | null;
+    questionRecordId?: string | null;
+    sessionId?: string | null;
+    userId?: string | null;
+    operation?: string | null;
+  } | null | undefined;
+}): TutorFailureRow {
+  const { err, cid, requestId, providerCalls, ctx } = args;
+
+  // Reading .name/.message off an arbitrary thrown value can itself throw (a
+  // getter that throws, a Proxy). This must not be the thing that breaks the
+  // error path, so both reads are defensive.
+  let errorClass = 'UnknownError';
+  let errorMessage: string | null = null;
+  try {
+    if (err instanceof Error) {
+      errorClass   = typeof err.name === 'string' && err.name ? err.name : 'Error';
+      errorMessage = typeof err.message === 'string' ? err.message : null;
+    } else if (typeof err === 'string') {
+      errorClass   = 'ThrownString';
+      errorMessage = err;
+    } else if (err && typeof err === 'object') {
+      errorClass   = 'ThrownObject';
+      errorMessage = null;   // never JSON.stringify an unknown throw: may cycle or leak
+    } else {
+      errorClass   = 'ThrownPrimitive';
+      errorMessage = null;
+    }
+  } catch { /* keep the defaults; a bad throw value must not break recording */ }
+
+  // Design §5: optional metadata. Truncated, control characters stripped, and
+  // NO stack trace — that stays in the logs, findable by correlation_id.
+  if (errorMessage) {
+    try { errorMessage = cleanStr(errorMessage, FAILURE_MSG_MAX) || null; }
+    catch { errorMessage = null; }
+  }
+
+  return {
+    correlation_id:     cid,
+    request_id:         requestId,
+    client_request_id:  ctx?.clientRequestId  ?? null,
+    question_record_id: ctx?.questionRecordId ?? null,   // null ⇒ the invisible class
+    session_id:         ctx?.sessionId        ?? null,
+    user_id:            ctx?.userId           ?? null,   // stored, never returned by the RPC
+    operation:          ctx?.operation        ?? null,
+    stage_reached:      deriveStageReached(ctx),
+    error_class:        cleanStr(errorClass, 100) || 'UnknownError',
+    error_message:      errorMessage,
+    provider_calls:     Number.isFinite(providerCalls) ? providerCalls : 0,
+  };
+}
+
+/**
+ * Writes one failure row. NEVER REJECTS — property 3.
+ *
+ * One retry, matching flushModelCalls: bounded on purpose, because an unbounded
+ * loop in a background task is its own hazard. A single retry covers the
+ * transient case; anything failing twice is a real outage and is logged rather
+ * than papered over.
+ */
+async function recordTutorFailure(
+  sbAdmin: ReturnType<typeof createClient>,
+  row: TutorFailureRow,
+): Promise<void> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { error } = await sbAdmin.from('ai_tutor_failures').insert(row);
+      if (!error) return;
+      console.log('[ai-tutor] failure-telemetry-error', JSON.stringify({
+        cid: row.correlation_id, attempt, msg: error.message,
+      }));
+    } catch (e) {
+      console.log('[ai-tutor] failure-telemetry-error', JSON.stringify({
+        cid: row.correlation_id, attempt,
+        msg: e instanceof Error ? e.message : String(e),
+      }));
+    }
+    if (attempt === 1) {
+      // Guarded: a thrown timer would reject this promise, which property 3
+      // forbids.
+      try { await new Promise((r) => setTimeout(r, 250)); } catch { /* ignore */ }
+    }
+  }
+  console.log('[ai-tutor] failure-telemetry-lost', JSON.stringify({
+    cid: row.correlation_id, stage: row.stage_reached, cls: row.error_class,
   }));
 }
 
@@ -2271,6 +2437,10 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const teleSink: ModelCallRow[] = [];
   let teleAdmin: ReturnType<typeof createClient> | null = null;
+  // Set by the top-level catch, consumed by the guarded block in `finally`.
+  // Stays null on every successful request, which is what keeps the failure
+  // write strictly on the error path.
+  let failureRow: TutorFailureRow | null = null;
   const teleCtx: {
     clientRequestId:  string | null;
     questionRecordId: string | null;
@@ -4078,6 +4248,21 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
       msg:   (err instanceof Error ? err.message : String(err)),
       stack: (err instanceof Error ? err.stack : undefined),
     }));
+
+    // ── Failure telemetry: build only, never write here ───────────────────
+    // Synchronous and I/O-free, so it adds no latency to the response path.
+    // The write happens in `finally`, inside the block already guarded there.
+    //
+    // Wrapped even though buildTutorFailureRow is total: a throw at this point
+    // would abandon the `return` below and change the student's response, which
+    // is precisely what property 3 forbids. The cost of the wrapper is nothing;
+    // the cost of being wrong about totality is the response.
+    try {
+      failureRow = buildTutorFailureRow({
+        err, cid, requestId, providerCalls: teleSink.length, ctx: teleCtx,
+      });
+    } catch { failureRow = null; /* recording is optional; the response is not */ }
+
     return safeError(
       500,
       'internal_error',
@@ -4103,6 +4288,10 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     // student's response with a 500. Telemetry must never be able to do that,
     // however unlikely the path.
     try {
+      const EdgeRtT = (globalThis as unknown as {
+        EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
+      }).EdgeRuntime;
+
       if (teleAdmin && teleSink.length) {
         const flushTask = flushModelCalls(teleAdmin, teleSink, {
           requestId,
@@ -4112,10 +4301,36 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
           userId:           teleCtx.userId,
           operation:        teleCtx.operation,
         });
-        const EdgeRtT = (globalThis as unknown as {
-          EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
-        }).EdgeRuntime;
         if (EdgeRtT?.waitUntil) EdgeRtT.waitUntil(flushTask);
+      }
+
+      // ── Unhandled-failure telemetry ─────────────────────────────────────
+      // INSIDE this try, deliberately — not alongside it. A `finally` that
+      // throws REPLACES the pending return value with the exception, so a
+      // synchronous throw out here would turn the student's clean
+      // 500 + correlation_id into a different failure entirely. Placement is
+      // load-bearing, not stylistic.
+      //
+      // failureRow is non-null only on the error path, so a successful request
+      // does no work here at all.
+      //
+      // recordTutorFailure never rejects by construction; if it ever did, the
+      // rejection would settle after this block and escape as an unhandled
+      // rejection, which this `catch` cannot see. The .catch() is belt to that
+      // braces — cheap, and the failure mode it guards is invisible in review.
+      if (failureRow && teleAdmin) {
+        const failureTask = recordTutorFailure(teleAdmin, failureRow)
+          .catch(() => { /* unreachable by construction; see property 3 */ });
+        if (EdgeRtT?.waitUntil) EdgeRtT.waitUntil(failureTask);
+      } else if (failureRow && !teleAdmin) {
+        // Threw before the admin client existed (between the try at the top of
+        // the handler and createClient). Nothing can be written, so say so in
+        // the logs rather than losing the event silently.
+        console.log('[ai-tutor] failure-telemetry-skipped', JSON.stringify({
+          cid: failureRow.correlation_id,
+          stage: failureRow.stage_reached,
+          reason: 'no_admin_client',
+        }));
       }
     } catch { /* telemetry must never fail a tutoring request */ }
   }
