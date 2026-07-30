@@ -535,14 +535,18 @@ Running the function bodies directly over the live table:
 
 ## 11. Follow-up work this surfaced
 
-**F1 — `owner` floor vs the AI Monitor page gate. Needs a decision before the UI is wired.**
-`ai-monitor.html` admits `role === 'owner' || role === 'super_admin'`, but these RPCs require
-`owner`. A `super_admin` viewing the page will receive **HTTP 403** from both functions. That
-must render as an explicit *"requires owner"* state on the affected panels — never as an empty
-panel, a zero, or a silent failure, which would reintroduce exactly the class of defect the
-dashboard audit removed. Two options: render the explicit state (recommended, and it is what P3
-exists to make possible), or narrow the page itself to `owner`. **Not yet implemented — no UI
-change has been made.**
+**F1 — ✅ Resolved and implemented (2026-07-30).** `ai-monitor.html` admits
+`role === 'owner' || role === 'super_admin'`, but these RPCs require `owner`, so a `super_admin`
+receives HTTP 403. Decision: **keep the backend floor at `owner` and render an explicit
+"Owner role required" state** — do not broaden backend authorization, and do not return empty data.
+
+Implemented as a new `no_access` availability state in the dashboard's existing model, so it
+travels the same single rendering path as every other unavailable metric. The state is decided by
+the database, not inferred from `profiles.role`: the client attempts the call and reads SQLSTATE
+`42501` / HTTP 403 from the response, so it cannot drift if the backend floor changes. The notice
+names the caller's actual role and states plainly that the panel is empty *because you may not see
+it*, not because no calls were made. A missing-function error is reported separately, so a
+deployment problem is never mis-labelled as a permission problem.
 
 **F2 — the serving model is now recorded, per request.** The ledger includes a `tutor` service
 with one call per request (4 of 4), carrying `model` and `question_record_id`. The

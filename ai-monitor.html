@@ -393,24 +393,23 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:14px">Token &amp; cost telemetry</div>
       <div class="oai-notice">
         <span class="ico">ⓘ</span>
-        <span><strong>Token telemetry now exists, but this page cannot read it.</strong> ai-tutor records one row per
-        provider call in <code>public.ai_model_calls</code> (AI Economics Phase 3) with real
-        <code>prompt_tokens</code>, <code>completion_tokens</code>, <code>latency_ms</code>, <code>success</code>,
-        <code>http_status</code> and <code>error_code</code>. That table has RLS enabled with
-        <strong>no SELECT policy and no grant to <code>authenticated</code></strong> — it is service-role only, so
-        every query from this dashboard returns nothing. No token figure is shown here rather than rendering the
-        empty result as <code>0</code>.</span>
+        <span><strong>Tokens are recorded, and deliberately not shown here.</strong> ai-tutor writes one row per
+        provider call to <code>public.ai_model_calls</code> (AI Economics Phase 3) with real
+        <code>prompt_tokens</code> and <code>completion_tokens</code>. The two RPCs this page reads —
+        <code>ai_monitor_call_health</code> and <code>ai_monitor_call_failures</code> — return a fixed
+        operational column set that <strong>does not include either token column</strong>, so no token figure can
+        reach this page even for an owner. That is a design choice, not a limitation: no panel here needs them.</span>
       </div>
       <div class="metric-rows" style="margin-top:12px">
-        <div class="metric-row"><span class="metric-lbl">Prompt / completion tokens</span><span class="metric-val unavail">Recorded, not readable here</span></div>
+        <div class="metric-row"><span class="metric-lbl">Prompt / completion tokens</span><span class="metric-val unavail">Recorded, outside this page's contract</span></div>
+        <div class="metric-row"><span class="metric-lbl">Operational per-call telemetry</span><span class="metric-val good">Live — see Pipeline Composition</span></div>
         <div class="metric-row"><span class="metric-lbl">OpenAI spend &amp; cost analysis</span><span class="metric-val cyan">AI Economics (Owner Dashboard)</span></div>
       </div>
       <div class="prov">
-        <code>verification_meta</code> itself carries no token keys and never did — the ledger is the new table, not
-        the old blob. To surface the <em>operational</em> half of it here (call success rate, per-model latency,
-        provider errors) requires a SELECT policy on <code>ai_model_calls</code> for owner / super_admin plus a
-        <code>GRANT SELECT</code> to <code>authenticated</code>. That is a migration and needs explicit approval, so
-        it has not been created. Spend stays in AI Economics regardless.
+        <code>verification_meta</code> itself carries no token keys and never did — the ledger is the separate
+        table, not the old blob. <code>ai_model_calls</code> remains service-role with no RLS policy and no grant
+        to <code>authenticated</code>; the owner-gated RPCs are the only read path, and they aggregate. Spend and
+        cost analysis stay in AI Economics regardless.
       </div>
     </div>
   </div>
@@ -439,7 +438,10 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       </div>
       <div class="prov">
         <strong>Derived</strong> rows are exact structural consequences of the pipeline (every L3 run issues 2 solver calls and 1 judge call), not per-call telemetry.<br/>
-        <strong>Measured</strong> rows count real per-record fields: <code>solver_sees_image</code>, <code>ocr_rerun_count</code>, <code>ocr_rerun_changed</code>.
+        <strong>Measured</strong> rows count real per-record fields: <code>solver_sees_image</code>, <code>ocr_rerun_count</code>, <code>ocr_rerun_changed</code>.<br/>
+        The <strong>Measured provider calls</strong> panel below counts actual provider calls from
+        <code>ai_model_calls</code> and supersedes the derived rows wherever it is readable. The
+        derived rows stay because they remain correct, and because that panel is owner-only.
       </div>
     </div>
     <div class="card">
@@ -449,6 +451,22 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       </div>
       <div class="prov">From <code>verification_meta.pipeline_version</code>. Fields differ by version — older versions omit quality scores and solver reasoning, which is why some panels below report a smaller denominator than the total L3 run count.</div>
     </div>
+  </div>
+
+  <!-- Measured per-call telemetry from ai_model_calls, via the owner-only RPCs.
+       Supersedes the derived counts above wherever it is readable. -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)">Measured provider calls <span class="measured">measured</span></div>
+      <span id="callTelChip" class="chip gray">—</span>
+    </div>
+    <div class="stats-grid-4" style="margin-bottom:14px">
+      <div class="stat-card"><div class="lbl">Provider calls</div><div class="val" id="callTotal">—</div><div class="sub">rows in ai_model_calls</div></div>
+      <div class="stat-card green"><div class="lbl">Success rate</div><div class="val" id="callSuccessRate">—</div><div class="sub">successes ÷ calls</div></div>
+      <div class="stat-card red"><div class="lbl">Failed calls</div><div class="val" id="callFailuresN">—</div><div class="sub">success is not true</div></div>
+      <div class="stat-card cyan"><div class="lbl">Services covered</div><div class="val" id="callServices">—</div><div class="sub">distinct service_code values</div></div>
+    </div>
+    <div id="callTelBody"><div style="text-align:center;color:var(--text-500);padding:16px">Loading…</div></div>
   </div>
 
   <!-- ── SECTION: L3 PIPELINE ── -->
@@ -727,8 +745,19 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 
   <!-- Provider error-code breakdown — real oai_http_status. -->
   <div class="card">
-    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">Request failures by provider status code</div>
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:12px">Request failures by provider status code <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— from <code>question_records</code></span></div>
     <div id="oaiCodeBreakdown"><div style="text-align:center;color:var(--text-500);padding:16px">Loading…</div></div>
+  </div>
+
+  <!-- Per-call failure breakdown from ai_model_calls. Independent of
+       question_records: it records the provider call itself, so it can show a
+       failed call on a request that never produced a question record. -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)">Failed provider calls <span class="measured">measured</span> <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— from <code>ai_model_calls</code></span></div>
+      <span id="callFailChip" class="chip gray">—</span>
+    </div>
+    <div id="callFailBody"><div style="text-align:center;color:var(--text-500);padding:16px">Loading…</div></div>
   </div>
 
   <!-- Recent failures — only columns backed by real data are shown -->
@@ -750,18 +779,19 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
       <div class="metric-row"><span class="metric-lbl">Request failures &amp; provider status codes</span><span class="metric-val good">Live — from <code>oai_http_status</code></span></div>
       <div class="metric-row"><span class="metric-lbl">Service incidents &amp; component status</span><span class="metric-val good">Live — public status feed</span></div>
       <div class="metric-row"><span class="metric-lbl">End-to-end pipeline latency</span><span class="metric-val good">Live — <code>pipeline_latency_ms</code></span></div>
-      <div class="metric-row"><span class="metric-lbl">Per-call success / status / latency</span><span class="metric-val unavail">Recorded in ai_model_calls — not readable here</span></div>
+      <div class="metric-row"><span class="metric-lbl">Per-call success / status / latency</span><span class="metric-val good">Live — <code>ai_model_calls</code> (owner only)</span></div>
+      <div class="metric-row"><span class="metric-lbl">Per-model call attribution</span><span class="metric-val good">Live — <code>ai_model_calls</code> (owner only)</span></div>
       <div class="metric-row"><span class="metric-lbl">Failures returning 5xx before any row is written</span><span class="metric-val unavail">Invisible — needs ai-tutor change</span></div>
       <div class="metric-row"><span class="metric-lbl">Rate-limit headroom (remaining req/tokens)</span><span class="metric-val unavail">Needs ai-tutor change</span></div>
-      <div class="metric-row"><span class="metric-lbl">Token usage per call</span><span class="metric-val unavail">Recorded in ai_model_calls — not readable here</span></div>
+      <div class="metric-row"><span class="metric-lbl">Token usage per call</span><span class="metric-val unavail">Recorded, deliberately not exposed here</span></div>
       <div class="metric-row"><span class="metric-lbl">Model availability / deprecations</span><span class="metric-val unavail">Needs server-side proxy</span></div>
       <div class="metric-row"><span class="metric-lbl">Account balance / credit remaining</span><span class="metric-val unavail">No OpenAI endpoint exists</span></div>
     </div>
     <div style="padding:12px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);line-height:1.55">
       <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:9px">Requirements to enable the remaining signals</div>
       <ol class="req-list">
-        <li><strong>Read the per-call telemetry that already exists.</strong> ai-tutor writes <code>public.ai_model_calls</code> — one row per provider call with <code>success</code>, <code>http_status</code>, <code>error_code</code>, <code>latency_ms</code> and per-model attribution. It is service-role only (RLS on, no SELECT policy, no grant to <code>authenticated</code>), so this page reads nothing from it. Needs: a migration adding a SELECT policy for owner / super_admin and <code>GRANT SELECT</code> to <code>authenticated</code>. <em>No new credentials.</em> This is the single highest-value unlock — it would replace the derived call counts with measured ones and give a provider-failure signal independent of <code>question_records</code>.</li>
-        <li><strong>Failures that never reach the database.</strong> When ai-tutor returns 5xx before its insert, nothing is written anywhere and the request is invisible to this page. Needs: an ai-tutor change so the top-level error handler persists the failure before returning. <em>No new credentials.</em></li>
+        <li><strong>✅ Done (2026-07-30) — per-call telemetry.</strong> <code>public.ai_model_calls</code> is now read through two owner-gated <code>SECURITY DEFINER</code> RPCs, giving measured call counts, per-model attribution, per-stage latency, and a provider-failure signal independent of <code>question_records</code>. The table itself stays service-role with no policy; the RPCs return a fixed operational column set and are refused with HTTP 403 below role <code>owner</code>.</li>
+        <li><strong>Failures that never reach the database.</strong> When ai-tutor returns 5xx before its insert, nothing is written to <code>question_records</code> <em>or</em> <code>ai_model_calls</code>, so no read path can surface it — the RPCs above do not close this gap. Needs: an ai-tutor change so the top-level error handler persists the failure before returning. <em>No new credentials.</em> This is now the highest-value remaining unlock.</li>
         <li><strong>Rate-limit headroom.</strong> ai-tutor must read the <code>x-ratelimit-remaining-requests</code>, <code>x-ratelimit-remaining-tokens</code> and <code>x-ratelimit-reset-*</code> response headers off every OpenAI response and persist them. Needs: an ai-tutor code change. <em>No new credentials.</em></li>
         <li><strong>Model availability / deprecation checks.</strong> Requires <code>GET /v1/models</code>, which needs a standard OpenAI API key. It cannot be called from this page — that would expose the key in the browser. Needs: a small server-side Edge Function proxy that holds the key and returns only the model list.</li>
         <li><strong>Organization-level usage &amp; rate-limit configuration.</strong> Requires an OpenAI <strong>Admin API key</strong> (<code>sk-admin-…</code>) plus the <strong>Organization ID</strong> (<code>org-…</code>) and <strong>Project ID</strong> (<code>proj_…</code>), called server-side against the organization endpoints. Needs: the admin key stored as an Edge Function secret, plus a scheduled job to snapshot results.</li>
@@ -858,11 +888,16 @@ const VERDICT_ORDER = [VERDICT.AGREE, VERDICT.DISAGREE, VERDICT.INCONCLUSIVE, VE
 // Every metric is a tagged value. Renderers print a number only for state 'ok';
 // every other state prints an explicit reason. This is what stops "no telemetry"
 // from being displayed as a real zero.
-const OK = 'ok', NO_DATA = 'no_data', NO_FIELD = 'no_field', NOT_DEPLOYED = 'not_deployed';
+const OK = 'ok', NO_DATA = 'no_data', NO_FIELD = 'no_field', NOT_DEPLOYED = 'not_deployed',
+      NO_ACCESS = 'no_access';
 const UNAVAIL_TEXT = {
   [NO_DATA]:       'No records in period',
   [NO_FIELD]:      'Not recorded',
   [NOT_DEPLOYED]:  'Not deployed',
+  // The call-telemetry RPCs are owner-only by design. A super_admin reaching
+  // them gets HTTP 403, and that must read as "you may not see this" — never
+  // as an empty panel, which would be indistinguishable from "nothing happened".
+  [NO_ACCESS]:     'Owner role required',
 };
 const okM   = (value, note) => ({ state: OK, value, note: note || '' });
 const noM   = (state, note) => ({ state, value: null, note: note || '' });
@@ -874,6 +909,8 @@ let currentFilter = '7d';
 let loading = false;
 /** Populated by computeStats() — the single source every renderer reads from. */
 let STATS = null;
+/** Set in init(). Used only to word the "Owner role required" state precisely. */
+let currentRole = null;
 
 // ── Auto-refresh ────────────────────────────────────────────────────────────
 // The page header claims "Live". Until now nothing polled, so the figures were
@@ -998,6 +1035,7 @@ async function init() {
     profile = r2.data;
   }
   const role = (profile && profile.role) || (profile && profile.is_admin ? 'admin' : 'user');
+  currentRole = role;
   const allowed = role === 'owner' || role === 'super_admin';
   if (!profile || !allowed) {
     document.getElementById('pageLoader').style.display = 'none';
@@ -1052,17 +1090,19 @@ async function loadAll() {
   const since = filterDate(currentFilter);
 
   try {
-    const [windowRows, fixedWindows, allTime] = await Promise.all([
+    const [windowRows, fixedWindows, allTime, callTel] = await Promise.all([
       fetchWindowRows(since),
       fetchFixedWindowCounts(),
       fetchAllTimeCounts(),
+      fetchCallTelemetry(since),
     ]);
 
-    STATS = computeStats(windowRows, { since, fixedWindows, allTime });
+    STATS = computeStats(windowRows, { since, fixedWindows, allTime, callTel });
     renderIntegrity(validateStats(STATS));
 
     renderVolume(STATS);
     renderComposition(STATS);
+    renderCallTelemetry(STATS);
     renderL3(STATS);
     renderDifficulty(STATS);
     renderConfidenceDist(STATS);
@@ -1113,6 +1153,44 @@ async function fetchFixedWindowCounts() {
     head().gte('created_at', nDaysAgo(30)),
   ]);
   return { today: today.count ?? 0, week: week.count ?? 0, month: month.count ?? 0 };
+}
+
+// ── Measured provider-call telemetry ────────────────────────────────────────
+// Reads public.ai_monitor_call_health / _call_failures, the owner-only RPCs
+// added 2026-07-30. These are the only path to ai_model_calls: the table itself
+// is service-role with no policy, so there is nothing to fall back to.
+//
+// Authorization is decided by the database, not by the role in `profiles`. We
+// attempt the call and read the answer: SQLSTATE 42501 (PostgREST → HTTP 403)
+// means the caller is not an owner. Inferring it client-side from `currentRole`
+// would be a guess about someone else's authorization, and would go stale the
+// moment the backend floor changes.
+const RPC_FORBIDDEN = '42501';
+function isForbidden(err) {
+  if (!err) return false;
+  return err.code === RPC_FORBIDDEN
+      || err.status === 403
+      || /\bforbidden\b/i.test(err.message || '');
+}
+
+async function fetchCallTelemetry(since) {
+  const arg = { p_since: since || null };
+  const [h, f] = await Promise.all([
+    sb.rpc('ai_monitor_call_health',   arg),
+    sb.rpc('ai_monitor_call_failures', arg),
+  ]);
+
+  if (isForbidden(h.error) || isForbidden(f.error)) {
+    return { state: NO_ACCESS, health: [], failures: [] };
+  }
+  // A missing function (not yet migrated) is a different condition from a
+  // refused one, and must not be reported as an access problem.
+  if (h.error || f.error) {
+    const e = h.error || f.error;
+    console.error('[ai-monitor] call-telemetry rpc error', e);
+    return { state: NO_FIELD, health: [], failures: [], error: e.message || String(e) };
+  }
+  return { state: OK, health: h.data || [], failures: f.data || [] };
 }
 
 /** All-time counters. Shadow checkpoints are absolute milestones, not windowed. */
@@ -1290,9 +1368,37 @@ function computeStats(rows, ctx) {
   S.ocrIssueDen   = ocrConfRows.length;
   S.ocrIssueRate  = rateM(ocrBad, ocrConfRows.length, NO_DATA, 'ocr_confidence < 0.5 over records carrying ocr_confidence');
 
-  // ── Provider status codes ──
+  // ── Provider status codes (from question_records) ──
   const codeRows = rows.filter(r => r.oai_http_status !== null && r.oai_http_status !== undefined);
   S.codeRows = codeRows;
+
+  // ── Measured provider calls (from ai_model_calls, via the owner-only RPCs) ──
+  const ct = ctx.callTel || { state: NO_FIELD, health: [], failures: [] };
+  S.callTelState = ct.state;
+  S.callTelError = ct.error || null;
+  S.callHealth   = ct.health;
+  S.callFailures = ct.failures;
+  if (ct.state === OK) {
+    const tot = ct.health.reduce((a, r) => a + Number(r.calls || 0), 0);
+    const suc = ct.health.reduce((a, r) => a + Number(r.successes || 0), 0);
+    const fai = ct.health.reduce((a, r) => a + Number(r.failures || 0), 0);
+    S.callTotal      = okM(tot);
+    S.callSuccesses  = okM(suc);
+    S.callFailuresN  = okM(fai);
+    S.callSuccessRate = rateM(suc, tot, NO_DATA, 'successes ÷ calls, measured per provider call');
+    // Deliberately NOT reporting calls-per-request. The obvious formula —
+    // measured calls ÷ requests in the window — is wrong: ai-tutor only began
+    // writing ai_model_calls on 2026-07-29, while question_records goes back to
+    // 2026-06-01, so any window spanning that boundary divides a partial
+    // numerator by a complete denominator and understates the ratio by orders of
+    // magnitude (16 / 1167 = 0.01 for the all-time window). A correct denominator
+    // needs a distinct-request count the aggregate contract does not return, so
+    // the figure is omitted rather than approximated.
+    S.callServices = okM(new Set(ct.health.map(r => r.service_code)).size);
+  } else {
+    S.callTotal = S.callSuccesses = S.callFailuresN = noM(ct.state);
+    S.callSuccessRate = S.callServices = noM(ct.state);
+  }
 
   return S;
 }
@@ -1371,6 +1477,128 @@ function renderComposition(S) {
     ? entries.map(([v, c]) =>
         `<div class="metric-row"><span class="metric-lbl">${esc(v)}</span><span class="metric-val mono">${fmtCountPct(c, c / S.l3Count * 100)}</span></div>`).join('')
     : '<div class="metric-row"><span class="metric-lbl">No L3 runs in period</span><span class="metric-val unavail">No records in period</span></div>';
+}
+
+// ── Measured provider calls ─────────────────────────────────────────────────
+/**
+ * Renders a paragraph explaining why a call-telemetry panel is empty. The
+ * NO_ACCESS wording names the caller's actual role, because "Owner role
+ * required" is far more actionable when it also says what you currently are.
+ */
+function callTelNotice(S) {
+  if (S.callTelState === NO_ACCESS) {
+    const who = currentRole === 'super_admin' ? 'Super Admin'
+              : currentRole ? currentRole.replace(/_/g, ' ') : 'your role';
+    return `<div class="oai-notice"><span class="ico">🔒</span><span>
+      <strong>Owner role required.</strong> Per-call provider telemetry is read through
+      <code>ai_monitor_call_health</code> and <code>ai_monitor_call_failures</code>, which are
+      restricted to role <strong>owner</strong>. You are signed in as <strong>${esc(who)}</strong>,
+      so the database refused these two queries with HTTP 403.
+      <br/><br/>
+      This panel is empty because you may not see it — <em>not</em> because no calls were made.
+      Every other panel on this page is unaffected and reads normally. The derived invocation
+      counts above remain accurate; only the measured breakdown is withheld.</span></div>`;
+  }
+  if (S.callTelState === NO_FIELD) {
+    return `<div class="oai-notice"><span class="ico">ⓘ</span><span>
+      <strong>Call telemetry is unavailable.</strong> The query did not fail on permissions — it
+      failed to run. Most likely the RPCs are not present on this database.
+      ${S.callTelError ? `<br/><br/><code>${esc(S.callTelError)}</code>` : ''}</span></div>`;
+  }
+  return `<div class="oai-notice"><span class="ico">ⓘ</span><span>No provider calls recorded in
+    this period. ai-tutor began writing <code>ai_model_calls</code> on 2026-07-29, so windows
+    ending before that date are legitimately empty.</span></div>`;
+}
+
+function renderCallTelemetry(S) {
+  const ok = S.callTelState === OK;
+
+  putCount('callTotal', S.callTotal);
+  putPct('callSuccessRate', S.callSuccessRate);
+  putCount('callFailuresN', S.callFailuresN);
+  putCount('callServices', S.callServices);
+
+  const chip = document.getElementById('callTelChip');
+  if (chip) {
+    if (!ok) { chip.className = 'chip ' + (S.callTelState === NO_ACCESS ? 'amber' : 'gray');
+               chip.textContent = UNAVAIL_TEXT[S.callTelState] || '—'; }
+    else     { chip.className = 'chip green'; chip.textContent = `${fmt(S.callHealth.length)} service/model group(s)`; }
+  }
+
+  // Per-service / per-model breakdown — the measured replacement for the
+  // derived solver/judge counts.
+  const body = document.getElementById('callTelBody');
+  if (body) {
+    if (!ok || !S.callHealth.length) {
+      body.innerHTML = callTelNotice(S);
+    } else {
+      body.innerHTML = `<div class="tbl-wrap"><table class="recent">
+        <thead><tr><th>service</th><th>stage</th><th>model</th><th>calls</th><th>ok</th><th>failed</th><th>avg</th><th>p50</th><th>p95</th></tr></thead>
+        <tbody>${S.callHealth.map(r => {
+          const failed = Number(r.failures || 0);
+          return `<tr>
+            <td>${esc(r.service_code || '—')}</td>
+            <td style="color:var(--text-400)">${esc(r.stage || '—')}</td>
+            <td class="mono">${esc(r.model || '—')}</td>
+            <td class="mono hi">${fmt(Number(r.calls || 0))}</td>
+            <td class="mono" style="color:var(--green)">${fmt(Number(r.successes || 0))}</td>
+            <td class="mono" style="color:${failed ? 'var(--red)' : 'var(--text-500)'}">${fmt(failed)}</td>
+            <td class="mono">${esc(fmtMs(num(r.latency_avg_ms)))}</td>
+            <td class="mono">${esc(fmtMs(num(r.latency_p50_ms)))}</td>
+            <td class="mono">${esc(fmtMs(num(r.latency_p95_ms)))}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+        <div class="prov">
+          One row per <code>service_code</code> · <code>stage</code> · <code>provider</code> ·
+          <code>model</code>. <strong>ok + failed = calls</strong> by construction, so the columns
+          always reconcile. <strong>Latency covers successful calls only</strong> — a failed call's
+          latency is a timeout or error round-trip, which would make p95 meaningless as a
+          responsiveness figure. p95 is nearest-rank, matching how the L3 pipeline latency above is
+          computed.
+        </div>`;
+    }
+  }
+
+  // Failure breakdown, in the OpenAI Health section.
+  const fchip = document.getElementById('callFailChip');
+  if (fchip) {
+    if (!ok) { fchip.className = 'chip ' + (S.callTelState === NO_ACCESS ? 'amber' : 'gray');
+               fchip.textContent = UNAVAIL_TEXT[S.callTelState] || '—'; }
+    else if (!S.callFailures.length) { fchip.className = 'chip green'; fchip.textContent = 'none recorded'; }
+    else { fchip.className = 'chip red'; fchip.textContent = `${fmt(S.callFailures.length)} group(s)`; }
+  }
+  const fbody = document.getElementById('callFailBody');
+  if (fbody) {
+    if (!ok) {
+      fbody.innerHTML = callTelNotice(S);
+    } else if (!S.callFailures.length) {
+      fbody.innerHTML = `<div class="oai-notice"><span class="ico">✅</span><span>
+        <strong>No failed provider calls in this period.</strong> This is a measured zero — the
+        telemetry was read successfully and contained no failures — not an absence of data.
+        ${S.callTotal.state === OK ? `All ${fmt(S.callTotal.value)} recorded call(s) succeeded.` : ''}
+        <br/><br/>Note this still cannot see a request that failed before ai-tutor wrote anything;
+        see the blind-spot notice above.</span></div>`;
+    } else {
+      fbody.innerHTML = `<div class="tbl-wrap"><table class="recent">
+        <thead><tr><th>status</th><th>error code</th><th>service</th><th>model</th><th>failures</th><th>most recent</th><th>failure class</th></tr></thead>
+        <tbody>${S.callFailures.map(r => {
+          const st = r.http_status == null ? null : Number(r.http_status);
+          const cls = st === null ? { txt:'no status recorded', sev:'grey' } : oaiFailClass(st, r.error_code);
+          return `<tr>
+            <td class="mono">${st === null ? '<span class="unavail">—</span>' : esc(String(st))}</td>
+            <td class="mono">${esc(r.error_code || '—')}</td>
+            <td>${esc(r.service_code || '—')}</td>
+            <td class="mono">${esc(r.model || '—')}</td>
+            <td class="mono hi">${fmt(Number(r.failures || 0))}</td>
+            <td class="mono" style="color:var(--text-400)">${esc(fmtTime(r.last_seen))}</td>
+            <td style="color:${OAI_SEV_COLOR[cls.sev]};font-size:12px">${esc(cls.txt)}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+        <div class="prov">Recorded against the provider call itself, so this sees failures on calls
+        that never produced a <code>question_records</code> row — a strictly wider view than the
+        status-code table above.</div>`;
+    }
+  }
 }
 
 function renderL3(S) {
