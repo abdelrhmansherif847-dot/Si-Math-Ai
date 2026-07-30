@@ -1,10 +1,14 @@
 -- ===========================================================================
 -- ai_tutor_failures — record 5xx failures that reach the handler
 -- ===========================================================================
--- ✅ DESIGN APPROVED by the owner, 2026-07-30.
+-- ✅ DESIGN FROZEN AND APPROVED by the owner, 2026-07-30.
 -- ⛔ NOT APPLIED — and approval of the design is NOT authorization to apply it.
 --    The owner asked for this to stay staged. Applying it needs a separate,
 --    explicit go-ahead (CLAUDE.md §3).
+--
+--    Frozen against re-litigation, not against new evidence: if implementation
+--    turns up a fact that makes one of the decisions below wrong, raise it as a
+--    finding rather than working around it. The bar is a fact, not a preference.
 --
 --    Settled during review, so do not reopen without cause:
 --      • dedicated table, never merged into ai_model_calls — different events,

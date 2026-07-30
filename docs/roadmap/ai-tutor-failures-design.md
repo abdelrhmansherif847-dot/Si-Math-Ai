@@ -1,6 +1,18 @@
 # `ai_tutor_failures` — design
 
-**Status: DESIGN APPROVED by the owner, 2026-07-30. Deliberately NOT applied.**
+**Status: DESIGN FROZEN, 2026-07-30. Approved, deliberately NOT applied.**
+
+The design phase is closed. The next review begins only when there is an implementation PR, and it
+is **evidence-driven against §4a** — not a reopening of the architecture below.
+
+**What "frozen" means here, precisely.** It is frozen against *re-litigation*: reopening a settled
+decision on preference, on a fresh reading of the same facts, or because the implementation would be
+easier the other way. It is **not** frozen against *new evidence*. Every significant decision in this
+document changed at least once when measurement contradicted an earlier position — the token-sensitivity
+argument stopped being load-bearing, the `stage_reached` vocabulary was rebuilt, F2 was deferred
+outright when the data showed nothing to join to. If implementation turns up a fact that makes one of
+these decisions wrong, that is a finding and should be raised, not worked around. The bar is a fact,
+not an opinion.
 
 Approval of the design is not authorization to apply it — the migration stays staged at
 `supabase/migrations-pending/20260730_ai_tutor_failures.sql` until a separate, explicit go-ahead
