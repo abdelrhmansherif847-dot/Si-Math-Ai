@@ -16,12 +16,16 @@ now records the real thing: one row per provider call with `success`, `http_stat
 numbers with measured ones and give a failure signal that does not depend on
 `question_records`. The table is service-role only, so the question is how to expose it.
 
-**Two questions, not one: which columns may be exposed, and by what mechanism.** §3 takes the
-column question first, since it is a policy call rather than a technical one — and concludes that
-it can be left open, because the recommendation in §7 holds either way. The mechanism question
-turns on failure mode rather than on strength: all five options below correctly restrict access
-to authorised roles, and they differ in what happens when the table gains a column, when an
-unauthorised caller asks, and when someone refactors the gate.
+**The recommendation rests on the properties of the interface, not on a judgement about how
+sensitive the data is.** All five options in §5 correctly restrict access to authorised roles;
+none of them is insecure. They differ in what happens *when something changes* — when the table
+gains a column, when an unauthorised caller asks, when someone refactors the gate, when a second
+consumer appears. §3 states those five properties and is the load-bearing argument.
+
+A separate question — whether token counts are protected financial data under INV-10 — was
+considered and is recorded in **Appendix A**. It is a policy interpretation, the current schema
+does not make it obvious, and **the conclusion does not depend on it**. It is a supporting
+argument, not a prerequisite.
 
 ---
 
@@ -44,83 +48,58 @@ So the union of columns any panel needs is exactly nine: `service_code`, `stage`
 `request_id`, `client_request_id`, `question_record_id`, `session_id`, `user_id`, `operation`,
 `api_surface`, `units`, `prompt_tokens`, `completion_tokens`, `meta`.
 
-**9 of 23 columns needed. The 14 withheld include both token columns and every user
-identifier** — which is the whole of §3.
+**9 of 23 columns needed.** The 14 withheld are withheld because **nothing needs them** — a
+minimal surface, not a policy judgement. That happens to include both token columns and every
+user identifier, which is why Appendix A exists; but the reason to omit them here is simply that
+no panel reads them, and adding one later is a single reviewed change to the contract (property
+**P1**).
 
 ---
 
-## 3. Are token counts protected financial data?
+## 3. The architectural case: five properties of the interface
 
-This is the one question in the document that is a **policy call, not a technical finding**.
-It is stated here as an open decision with the evidence on both sides, because an earlier draft
-asserted it as settled and that overstated the case.
+This is the load-bearing argument, and it is deliberately independent of any question about
+whether token counts are sensitive. Every property below would matter identically if tokens were
+ruled perfectly acceptable for a `super_admin` to read.
 
-AI Monitor is reachable by **`super_admin`** as well as `owner` (`ai-monitor.html` gates on
-`role === 'owner' || role === 'super_admin'`). The relevant frozen invariants:
+The question is not "which mechanism is secure?" — all of the options in §5 correctly restrict
+access to authorised roles. The question is **what each interface does when something changes**:
+when the table gains a column, when an unauthorised caller asks, when someone refactors the
+gate, when a second consumer appears. Those are properties of the API surface, not of its
+strength.
 
-- **INV-10** — *Financial data is owner-only. Cost, revenue, and profit are never exposed
-  below role `owner`.*
-- **INV-01** — *Telemetry never computes money.* `ai_model_calls` deliberately carries usage
-  in units only — no cost, price, currency, or FX column.
-- **INV-05** — *No layer reaches past the layer above it.* Economics itself reads engine
-  outputs, **never raw telemetry**.
-- **INV-04** — *Dashboard layers consume analytics only* — the UI's data surface is RPCs.
+**P1 — Explicit return type.** The interface declares exactly what it returns. Consumers cannot
+receive a column the contract does not name, so the exposed surface is a reviewed artefact rather
+than a consequence of the table's current shape.
 
-### 3.1 The case that tokens are protected
+**P2 — Fails closed as the schema evolves.** A column added to `ai_model_calls` tomorrow does
+not reach any client until someone edits the contract. This is the single most durable
+property in the list: it converts "what does the dashboard see?" from a question you must
+re-answer after every migration into an invariant you can read off the signature. Phase 3's own
+migration header anticipates the table growing.
 
-1. **Spend reconstruction is arithmetically trivial.** `prompt_tokens` and `completion_tokens`
-   joined to `model`, multiplied by published OpenAI list prices, yields tutor-path spend.
-   `units` even decomposes input into cached and uncached (`input_token` +
-   `cached_input_token` = `prompt_tokens`), which makes the reconstruction *more* accurate than
-   a naive estimate, because cached input is the cheaper tier and is billed separately.
-2. **INV-10 says "exposed", which is an information word,** not a presentation word. On a
-   secrecy reading, a figure you can compute in one multiplication has been exposed.
-3. **Derived disclosure normally counts** in access review. Releasing hours and an hourly rate
-   discloses salary.
+**P3 — Explicit `forbidden` semantics.** An unauthorised caller gets a distinguishable error,
+not an empty result. This matters more here than it would in most systems, because the AI
+Monitor work immediately preceding this proposal was largely about eliminating exactly this
+conflation — the dashboard now models data availability as an explicit state so that "no data"
+and "cannot see" never render the same way. An interface that returns `[]` to both a
+non-admin and a genuinely quiet window pushes that ambiguity back down into the data layer,
+where the client has no way to tell them apart.
 
-### 3.2 The case against — which is stronger than the earlier draft allowed
+**P4 — Centralised authorization.** The role check sits at one entry point, as a guard clause
+that raises, matching the convention the 23 existing `SECURITY DEFINER` functions already
+follow. Authorization that lives in one place is auditable in one place; authorization
+distributed across predicates in view bodies is not weaker in principle but is one more surface
+to keep correct, and a predicate is easier to lose in a refactor than a guard clause.
 
-1. **INV-01's own framing says usage is not money.** The table was deliberately designed to
-   carry "usage in units only". Arguing that units *are* money-adjacent runs against the
-   stated intent of the invariant being cited, and that tension should be resolved by the
-   architecture owner rather than assumed.
-2. **This codebase already exposes a cost column to a weaker role.** `public.ai_usage_logs`
-   has `estimated_cost_usd`, `prompt_tokens`, `completion_tokens` and `total_tokens`, with
-   policy `admin_select_ai_usage_logs` — `(user_id = auth.uid()) OR auth_is_admin()` — and a
-   `SELECT` grant to `authenticated`. That is **any `is_admin` user**, a broader set than
-   `super_admin`, reading a column literally named cost. Either that table is legacy which
-   INV-10 now forbids and should be remediated, or admin-tier roles *are* trusted with AI cost
-   — in which case withholding tokens from `super_admin` is stricter than the project's own
-   practice. See §4 for the measured state.
-3. **Scope is narrow.** Tokens reconstruct **tutor-path COGS only** — not revenue, not margin,
-   not profit, not total company spend. INV-10 covers all three; this is a slice of the first.
-4. **It sharpens precision rather than creating capability.** A `super_admin` can already bound
-   spend from visible question volume × the known pipeline shape (2 solvers + 1 judge) ×
-   public prices. Tokens move a rough estimate to a close one. Real, but a difference of
-   degree.
+**P5 — Consistency with the existing dashboard architecture.** `public` currently has 23
+`SECURITY DEFINER` functions and **zero views**. The frozen architecture's own **INV-04** says
+dashboard layers consume analytics — RPCs — rather than tables. Choosing the RPC means one idiom
+for this job across the codebase; choosing anything else means two.
 
-### 3.3 Why the recommendation holds either way
-
-**This question does not need to be resolved before approving §7,** which is the most useful
-thing to say about it:
-
-- **§2 shows no panel needs tokens.** The nine columns the dashboard actually wants do not
-  include them. Excluding tokens costs zero functionality, so the strict choice is free.
-- **The other three arguments for the RPC are independent of §3** — it fails closed as the
-  table gains columns, it can distinguish *forbidden* from *no data*, and it matches INV-04
-  and the 23 existing functions.
-- If §3.1 is accepted, direct RLS is disqualified on exposure **and** on fail-open behaviour.
-  If §3.2 prevails, direct RLS is disqualified on fail-open behaviour alone. **One row of the
-  §6 table changes; the recommendation does not.**
-
-So: treat §3.1 as a *sufficient* reason to project a fixed column set, never a *necessary*
-one. The design should exclude tokens because nothing needs them and excluding them is free —
-not because the invariant has been definitively interpreted here.
-
-A second, milder point, independent of the above: `user_id` and `session_id` make the table
-per-student attributable. AI Monitor is a platform-health surface with no per-student view, so
-it has no reason to receive identifiers, and omitting them keeps the surface clear of an
-access-review question later.
+**Only the RPC options (§5.3, §5.4a) satisfy all five.** That is the whole recommendation. §5
+evaluates each candidate against these properties plus performance and maintenance; Appendix A
+records a supporting argument about token sensitivity that is *not* required for the conclusion.
 
 ---
 
@@ -154,28 +133,6 @@ is free at 15k rows; a partial index `WHERE success = false` is the fix if it ev
   `SECURITY DEFINER`.
 - PostgreSQL **17.6**, so `CREATE VIEW … WITH (security_invoker = true)` is available —
   which, as §5.2 shows, changes the view analysis materially.
-
-**The existing cost surface (`ai_usage_logs`), measured 2026-07-29.**
-
-| Measure | Value |
-|---|---|
-| Rows | 1,138 (2026-06-09 → 2026-07-29) |
-| `SUM(prompt_tokens)` / `SUM(completion_tokens)` / `SUM(total_tokens)` | **0 / 0 / 0** |
-| `SUM(estimated_cost_usd)` | **$0.0000** — zero on all 1,138 rows |
-| Read policy | `(user_id = auth.uid()) OR auth_is_admin()` |
-| Client grant | `SELECT` to `authenticated` |
-
-This is the "0 tokens and 0 cost for every AI call" state the Phase 3 migration header
-describes, now confirmed empirically. Two things follow:
-
-1. **No information is disclosed there today.** The columns are a hollow shell, so §3 is not
-   already moot in practice.
-2. **The schema-level precedent nonetheless runs against a strict §3 reading.** A column named
-   `estimated_cost_usd` is readable by every `is_admin` user. `ai_usage_logs` predates the
-   AI Economics architecture freeze (first row 2026-06-09; architecture frozen 2026-07-28), so
-   INV-10 is the newer rule and this is plausibly legacy. **Worth an explicit decision either
-   way** — if INV-10 is meant strictly, this table is a live exception to it that will start
-   disclosing real figures the moment anything backfills those columns.
 
 **Live linter findings that bear on this.**
 
@@ -232,13 +189,16 @@ catalog grants that are invisible from the application code depending on them.
 3 calls per request that is roughly triple the `question_records` volume the dashboard already
 pages through, to compute five aggregates. All five collapse to a handful of numbers server-side.
 
-**Maintenance — fails open. This is the decisive flaw, and it is independent of §3.** With a
-table-level grant, **every column added to `ai_model_calls` in future becomes visible
+**Maintenance — fails open. This is the decisive flaw, and it is a violation of P1 and P2.**
+With a table-level grant, **every column added to `ai_model_calls` in future becomes visible
 automatically**, the moment it is added, with no review step and no code change to notice.
 Phase 3's own header anticipates the table growing. A future prompt-excerpt or `meta`-adjacent
 column would be exposed by default rather than by decision.
 
-**Suitability — not recommended,** on the fail-open property alone even if §3 is set aside.
+**Suitability — not recommended.** Fails P1, P2 and P3 (and P5 in part). This holds regardless of
+how Appendix A is resolved: even if every column in the table were considered freely shareable
+with a `super_admin` today, the interface would still expose tomorrow's columns without anyone
+deciding to.
 
 ### 5.2 A secure SQL view
 
@@ -288,9 +248,10 @@ at this volume, though the client can always ask for all-time.
 appear automatically. A genuine advantage over option 1 and the reason this option is a real
 contender.
 
-**Suitability — viable second choice.** Correct on exposure and fail-closed; set below option 3
-on distributed authorization, empty-vs-forbidden semantics, and divergence from the existing RPC
-pattern — all architectural, none of them a security defect.
+**Suitability — viable second choice.** Satisfies P1 and P2; set below option 3 because it misses
+**P3** (empty and forbidden are indistinguishable), **P4** (authorization distributed into a view
+predicate) and **P5** (a second idiom alongside 23 functions). All three are architectural
+properties, none of them a security defect.
 
 ### 5.3 `SECURITY DEFINER` RPC
 
@@ -298,20 +259,25 @@ A `STABLE SECURITY DEFINER` function per query shape (or one returning a composi
 `postgres`, `SET search_path = public`, gated on `has_role_at_least`, with `EXECUTE` revoked
 from `public` and `anon` and granted to `authenticated`.
 
-**Security — strongest, on every axis that matters here.**
-- The gate is an explicit first statement that **raises**, so a refused call is distinguishable
-  from an empty window — no silent-empty ambiguity.
-- The return type is a declared `TABLE(...)`. Token columns are not merely unselected, they are
-  **unreturnable**; a future base-table column cannot reach the client without editing the
-  signature. Fails closed, structurally.
-- The window is a **parameter**, so the function — not the client — decides the shape and bounds
-  of what can be asked for.
-- Matches the house pattern exactly (23 such functions, same `search_path` discipline, same
-  `has_role_at_least` gate), and matches **INV-04**: dashboards consume RPCs, not tables.
-- **Mandatory:** `REVOKE EXECUTE ON FUNCTION … FROM PUBLIC, anon;`. Without it PostgREST
-  publishes the RPC to unauthenticated callers — the exact state the linter flags on two
-  existing functions (§4). The internal gate must also be present; the two together are the
-  point, and the existing pair has only one.
+**Interface properties — satisfies all five of §3.**
+- **P1** — the return type is a declared `TABLE(...)`. A column the signature does not name is
+  not merely unselected, it is **unreturnable**.
+- **P2** — consequently a future base-table column cannot reach the client without an edit to
+  the signature. Fails closed, structurally rather than by convention.
+- **P3** — the gate is a first statement that **raises**, so a refused call is distinguishable
+  from an empty window.
+- **P4** — that gate is the single entry point, in the same guard-clause form the 23 existing
+  functions use.
+- **P5** — same `SECURITY DEFINER` / `search_path` discipline, same `has_role_at_least` gate, and
+  it satisfies **INV-04**: dashboards consume RPCs, not tables.
+
+Additionally the window is a **parameter**, so the function rather than the client bounds what
+can be asked for.
+
+**One non-negotiable in the implementation.** `REVOKE EXECUTE ON FUNCTION … FROM PUBLIC, anon;`
+must be in the same migration. Without it PostgREST publishes the RPC to unauthenticated callers
+— the state the linter flags on two existing functions (§4). The in-body gate must be present
+*as well*: the two layers together are the design, and the existing pair has only the second.
 
 **Performance — best.** Five aggregates computed in-database, one round trip per panel, payload
 in bytes. `STABLE` lets the planner cache within a statement. Uses the existing
@@ -319,9 +285,10 @@ in bytes. `STABLE` lets the planner cache within a statement. Uses the existing
 
 **Maintenance — explicit, slightly more ceremony.** One function is one reviewed contract; a
 change to what the dashboard sees is a visible signature change. Cost: adding a metric means a
-migration rather than a client-side edit. At the rate this dashboard changes, that is a feature.
+migration rather than a client-side edit. At the rate this dashboard changes, that is a feature —
+it is P2 expressed as a workflow.
 
-**Suitability — best fit. Recommended.**
+**Suitability — recommended.** The only option in `public` satisfying P1–P5.
 
 ### 5.4 Other architectures considered
 
@@ -365,10 +332,12 @@ The table compares them on exposure surface, failure mode, and fit — not on wh
 | Moving parts added | 1 policy | 1 view | **1 function** | schema + role + config | table + cron |
 | Verdict | not recommended | viable | **recommend** | later | premature |
 
-Rows that survive rejecting §3 entirely: *restricts columns* becomes a non-issue, but
-**new base column exposed automatically**, **refusal distinguishable from empty**, **window
-bounded server-side** and **payload** are all unchanged — and they still separate option 3
-from option 1.
+Mapping to §3: *restricts columns* is **P1**, *new base column exposed automatically* is **P2**,
+*refusal distinguishable from empty* is **P3**, *authorization located at entry point* is **P4**,
+and *matches house style / INV-04* is **P5**.
+
+If Appendix A is resolved in favour of tokens being freely readable, only the **P1 row** softens
+— and P2, P3, P4 and P5 are untouched. The RPC still wins on four of five.
 
 ---
 
@@ -377,13 +346,16 @@ from option 1.
 **Option 3 — a `STABLE SECURITY DEFINER` RPC in `public`, gated on
 `has_role_at_least('super_admin')`, with `EXECUTE` revoked from `PUBLIC` and `anon`.**
 
-It is the only option that simultaneously fails closed as the table evolves, can distinguish
-"forbidden" from "no data", bounds the query window server-side, keeps authorization at a single
-entry point, and matches both the codebase's established pattern and the frozen architecture's
-own rule that dashboards consume RPCs.
+**It is the only option in `public` that satisfies all five properties in §3** — explicit return
+type (P1), fails closed as the schema evolves (P2), explicit `forbidden` semantics (P3),
+centralised authorization (P4), and consistency with the existing RPC-based dashboard
+architecture (P5). It additionally bounds the query window server-side and returns bytes rather
+than rows.
 
-**This recommendation does not depend on §3.** If token counts are ruled non-financial, the
-reasoning above is unchanged — see §3.3.
+**The recommendation stands on those interface properties alone.** It does not rest on any
+judgement about token sensitivity: assume tokens are perfectly acceptable for a `super_admin` to
+read and every one of P1–P5 still holds, and still separates this option from the alternatives.
+Appendix A is supporting material, deliberately not a premise.
 
 Proposed contract, for review — **not created**:
 
@@ -449,27 +421,124 @@ this proposal puts a currency figure in AI Monitor.
 
 ## 9. For the review
 
-**Q1 — the §3 policy call.** Are `prompt_tokens` / `completion_tokens` protected financial data
-under INV-10, on the grounds that they permit spend reconstruction against public list prices?
+### Blocking — needed before a migration is written
 
-- If **yes**: §7 proceeds as written, and `ai_usage_logs` (§4) is a live exception to INV-10
-  needing separate remediation before anything backfills its zeroed cost column.
-- If **no**: §7 still proceeds as written — see §3.3. The RPC keeps tokens out anyway, because
-  no panel needs them (§2) and excluding them is free. Only one row of the §6 table changes.
+**Q1 — approve the architecture.** Adopt option 3 (§7) on the strength of properties P1–P5,
+independent of Appendix A?
 
-Either way the recommendation stands, so **this question does not block approval.** It does
-determine whether `ai_usage_logs` needs follow-up work, which is the more consequential half.
+**Q2 — the role floor.** Is `super_admin` right for an operational RPC, or should it be `owner`?
+This is the one open question that changes the migration itself.
 
-**Q2 —** is `super_admin` the right floor for the operational RPC, or should it be `owner`?
+**Q3 — one function or two?** Two is proposed: Q1/Q2/Q5 and Q4 have different natural grains, and
+only Q4 would benefit from a partial index on `success`.
 
-**Q3 —** two functions or one? Two is proposed because Q1/Q2/Q5 and Q4 have different natural
-grains, and only Q4 would benefit from a partial index on `success`.
+**Q4 — the column set.** Confirm the nine columns in §2 are the right surface. Tokens are omitted
+because nothing reads them; if a panel is wanted that does, say so now and it becomes a
+ten-column contract rather than a later amendment.
 
-**Q4 —** track the `admin_credits_overview` / `admin_set_credit_cost` `anon:EXECUTE` grants as
-separate hardening? Not a live vulnerability — the `auth.uid()` gate prevents anonymous access
-today — but it is a missing layer of the intended two, and the same class of gap the new
-function must avoid.
+### Non-blocking — track separately
 
-**Q5 —** is `ai_usage_logs` legacy that should be narrowed or retired now that `ai_model_calls`
-is the telemetry ledger? It currently carries 1,138 rows of zeros behind an `is_admin` read
-policy, so it discloses nothing today but would begin to if populated.
+**Q5 — Appendix A.** Are token counts protected financial data under INV-10? A policy
+interpretation that the current schema does not settle. **It does not gate Q1.** Its real
+consequence is Q6.
+
+**Q6 — Appendix B: `ai_usage_logs`.** Legacy to retire, surface to narrow, or intentional
+exception to record? It carries 1,138 rows of zeros behind an `is_admin` read policy, so it
+discloses nothing today but would begin to on backfill. Worth resolving before anything populates
+those columns.
+
+**Q7 — `anon:EXECUTE` hardening.** Track the `admin_credits_overview` /
+`admin_set_credit_cost` grants as separate work? Not a live vulnerability — the `auth.uid()` gate
+prevents anonymous access today — but it is a missing layer of the intended two, and the same
+class of gap the new function must avoid.
+
+---
+
+## Appendix A — Token sensitivity: a supporting argument, not a prerequisite
+
+**Status: optional. Nothing in §3, §5, §6 or §7 depends on how this is resolved.** It is recorded
+because it was raised during review and because it has a bearing on Appendix B, not because the
+recommendation needs it. An earlier draft of this proposal made it the load-bearing argument;
+that was wrong, and the correction is the reason §3 now exists.
+
+### A.1 The question
+
+AI Monitor is reachable by **`super_admin`** as well as `owner` (`ai-monitor.html` gates on
+`role === 'owner' || role === 'super_admin'`). Do `prompt_tokens` and `completion_tokens` count
+as protected financial data under **INV-10** (*financial data is owner-only; cost, revenue and
+profit are never exposed below role `owner`*), on the grounds that they permit spend
+reconstruction?
+
+### A.2 The case that they are protected
+
+1. **Spend reconstruction is arithmetically trivial.** Tokens joined to `model`, multiplied by
+   published OpenAI list prices, yields tutor-path spend. `units` even decomposes input into
+   cached and uncached (`input_token` + `cached_input_token` = `prompt_tokens`), which makes the
+   reconstruction *more* accurate than a naive estimate, since cached input is billed at a
+   different rate.
+2. **INV-10 says "exposed", which is an information word.** On a secrecy reading, a figure
+   obtainable in one multiplication has been exposed.
+3. **Derived disclosure normally counts** in access review — releasing hours and an hourly rate
+   discloses salary.
+
+### A.3 The case that they are not
+
+1. **INV-01's own framing says usage is not money.** The table was deliberately designed to carry
+   "usage in units only". Arguing that units *are* money-adjacent runs against the stated intent
+   of the invariant being cited.
+2. **The codebase already exposes a cost column to a weaker role** — see Appendix B. Withholding
+   tokens from `super_admin` would be stricter than the project's own current practice.
+3. **Scope is narrow.** Tokens reconstruct tutor-path COGS only — not revenue, not margin, not
+   profit. INV-10 covers all three; this is a slice of the first.
+4. **It sharpens precision rather than creating capability.** A `super_admin` can already bound
+   spend from visible question volume × the known pipeline shape (2 solvers + 1 judge) × public
+   prices. Tokens move a rough estimate to a close one — a difference of degree.
+
+### A.4 Why it does not matter for this decision
+
+The proposed contract excludes tokens either way, and the reason is **§2, not INV-10**: no panel
+needs them. Nine of 23 columns are required and tokens are not among them, so the minimal surface
+is free — it costs no functionality to omit them.
+
+If tokens are later judged acceptable *and* a panel is found that genuinely wants them, adding
+them is one reviewed signature change to the RPC. That is precisely property **P1**: the exposed
+set is a decision, made once, visible in the contract — not a side effect of the table's shape.
+
+A separate and milder point, independent of the financial question: `user_id` and `session_id`
+make the table per-student attributable. AI Monitor is a platform-health surface with no
+per-student view, so it has no reason to receive identifiers, and omitting them keeps the surface
+clear of an access-review question later.
+
+---
+
+## Appendix B — `ai_usage_logs`: a separate policy question
+
+**Out of scope for this proposal.** It is recorded here because it surfaced while checking
+Appendix A, and it should be resolved independently of the AI Monitor access mechanism. Nothing
+in §7 depends on it.
+
+Measured 2026-07-29:
+
+| Measure | Value |
+|---|---|
+| Rows | 1,138 (2026-06-09 → 2026-07-29) |
+| `SUM(prompt_tokens)` / `SUM(completion_tokens)` / `SUM(total_tokens)` | **0 / 0 / 0** |
+| `SUM(estimated_cost_usd)` | **$0.0000** — zero on all 1,138 rows |
+| Read policy | `admin_select_ai_usage_logs` — `(user_id = auth.uid()) OR auth_is_admin()` |
+| Client grant | `SELECT` to `authenticated` |
+
+So a column literally named `estimated_cost_usd`, plus token columns, is readable by **every
+`is_admin` user** — a broader set than `super_admin`. This is the "0 tokens and 0 cost for every
+AI call" state the Phase 3 migration header describes, now confirmed empirically.
+
+Two observations:
+
+1. **Nothing is disclosed today.** The columns are a hollow shell. There is no live exposure.
+2. **It will begin disclosing the moment anything populates them.** If INV-10 is intended
+   strictly, this is a standing exception to it that activates silently on backfill.
+
+`ai_usage_logs` predates the AI Economics architecture freeze (first row 2026-06-09; frozen
+2026-07-28), so INV-10 is the newer rule and this is plausibly legacy superseded by
+`ai_model_calls`. Whether it is legacy to retire, a surface to narrow, or an intentional
+exception to record is a policy decision for the architecture owner — and it wants deciding
+before anything backfills those columns, not after.
