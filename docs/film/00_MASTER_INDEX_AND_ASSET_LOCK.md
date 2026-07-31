@@ -19,6 +19,7 @@
 | `05_Animation_Package_Per_Shot.md` | Ready-to-run generation cards: refs, prompts, models, params, continuity per shot |
 | `06_VO_Recording_Log.md` | Stage 0: casting decision, audition evidence, per-line duration budget, record log |
 | `07_VO_Booth_Script.md` | The printable booth script — what goes into the room on session day |
+| `08_Approval_Gates.md` | The two gates every plate passes before it is LOCKED, plus the approval ledger |
 | `../../scripts/film/vo-lines.json` | Machine-readable twin of the 19 lines — params, targets, job IDs |
 
 ---
@@ -33,6 +34,9 @@
 6. **THE SILENCE BEAT.** Every exhibit's B-cut — the grey table, gold light spilling over them, nothing igniting above them — is never skipped. It is the film's argument.
 7. **THE SENTENCE.** Every choice is tested against: *"This looks like a Disney or Pixar short film that just happens to be about education."* If a choice moves the film toward "a really good AI advertisement," it is the wrong choice.
 8. **DERIVE, DON'T DESCRIBE.** Every new frame is generated from locked references (Master Frame + character designs), never from text alone. Text-only generation is how drift happens.
+9. **NEVER TRUST THE REQUESTED MODEL NAME.** The name you send is not the model that runs. After *every* generation, read the job's recorded `model` and confirm it. Stills must record `nano_banana_2` (request `nano_banana_pro` — see the ID shift below). A mismatch means the plate is void: discard it, do not "use it anyway," do not reason about whether it looks fine. This was proven by failure, and it cost three generations.
+10. **TWO GATES.** A completed job is not an approved plate. Every plate passes **Gate 1 — Technical** (model, resolution, references, aspect ratio, settings) and **Gate 2 — Creative** (character identity, camera composition, courtroom geography, lighting continuity, emotional impact, storytelling purpose). **Only after both is a plate LOCKED.** Gate 1 is machine-checkable and is the operator's job. Gate 2 is the owner's eye and cannot be delegated, inferred, or assumed from a clean Gate 1. Checklists in `08`.
+11. **LOCKED REFERENCES ONLY.** Never attach a `PENDING OWNER APPROVAL` asset to a production generation. A pending asset is an unvalidated design; making it the parent of a plate propagates it into the film through the back door. **No still becomes a parent reference for future generations until the owner has approved it visually.**
 
 ---
 
