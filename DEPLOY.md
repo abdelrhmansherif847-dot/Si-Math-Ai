@@ -197,10 +197,11 @@ After deploy, on production:
    - HTTP 200, non-empty `answer`.
    - Response JSON includes `idempotency_recovered: false`, `degraded: false`,
      and a `version` equal to `AI_TUTOR_VERSION` in
-     `supabase/functions/ai-tutor/index.ts` — **`'v92'` for the next deploy**.
-     (This line read `'v65'` until 2026-07-31, 27 versions stale; a smoke test
-     that expects the wrong version either fails a good deploy or gets waved
-     through. Re-read the constant rather than trusting this sentence.)
+     `supabase/functions/ai-tutor/index.ts` — **`'v94'` for the next deploy**.
+     (This line read `'v65'` until 2026-07-31, 27 versions stale, then `'v92'`
+     while v93 was already committed; a smoke test that expects the wrong
+     version either fails a good deploy or gets waved through. Re-read the
+     constant rather than trusting this sentence.)
    - Edge Function logs include no `[ai-tutor] unhandled-error` tags.
 3. Confirm a new `question_records` row exists with a non-null
    `client_request_id`.

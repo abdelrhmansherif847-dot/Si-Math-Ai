@@ -1,4 +1,31 @@
-// ai-tutor Edge Function v93
+// ai-tutor Edge Function v94
+// v94 (Zero Block Strategy — official methodology text): the exam-strategy
+// block in the system prompt is brought in line with the official Zero Block
+// Strategy document. Prompt text only — no control flow, no new branch, no
+// schema or response-contract change.
+//
+// What was missing from the shipped text, and why each matters:
+//   • The 90-Second Rule. The strategy told students to mark-and-skip but
+//     never said WHEN. "Solvable but slow" and "hard or confusing" are
+//     after-the-fact labels; the 90-second gate is the only part a student can
+//     actually act on mid-question, and it was absent entirely.
+//   • "Maximize Score Per Minute" — the stated objective of the whole method.
+//     WHY THIS WORKS listed the benefits without ever naming the principle
+//     they follow from.
+//   • The negative guard. The block said when to TEACH the strategy and never
+//     when not to, so an ordinary "explain this quadratic" turn could get the
+//     full block plan bolted onto it. Now explicit: ordinary math explanations
+//     do not get the strategy unless the student asked about strategy or time.
+//   • The Golden Rule and the one-line Official Zero Principle, which are what
+//     a student actually remembers on exam day.
+//   • Flexibility rule stated as its own section, and the SAT row now says the
+//     method runs independently inside EACH module.
+//
+// Step numbering shifted 3 -> 4 steps inside a block (the 90-second rule is
+// now Step 2), so PHASE 3's returns were renumbered to match: First Return
+// takes Step 3 (medium), Second Return takes Step 4 (hard). Same two returns
+// as before, same order.
+//
 // v91 (HOTFIX — temporal dead zone regression introduced by v90): v90 placed
 // the `teleCtx.operation` derivation beside the other telemetry-context
 // assignments, ~28 lines ABOVE the `const imagesData` declaration it reads.
@@ -158,7 +185,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v93';
+const AI_TUTOR_VERSION = 'v94';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -3249,7 +3276,19 @@ If a student asks about exam timing, question count, format, or calculator polic
     const examStrategyForType = `
 ## Zero Exam Strategy — Block Method (UNIVERSAL CORE METHODOLOGY)
 
-This is Zero's universal testing strategy. It applies to EVERY exam — EST, SAT, ACT, or any other. Teach it whenever the student asks about exam strategy, time management, score improvement, or how to approach their exam.
+This is Zero's official, permanent testing methodology. It applies to EVERY exam — EST, SAT, ACT, or any other.
+
+### 🧭 CORE PRINCIPLE — MAXIMIZE SCORE PER MINUTE
+
+The objective is NOT to solve the exam strictly from Question 1 to the final question.
+The objective is to **maximize Score Per Minute**. Students earn points by answering the questions they CAN solve correctly — not by spending excessive time on one difficult problem. Always teach efficiency over numerical order.
+
+### 🚦 WHEN TO USE THIS
+
+Use this as the PRIMARY reference — before any other personalized advice — whenever the student asks about:
+exam strategy · time management · improving their score · how to approach an exam · how to solve questions during an exam · what to do when stuck · how to finish the exam on time · test-taking technique · exam planning · improving exam performance.
+
+⛔ **Do NOT introduce this strategy during ordinary math explanations.** If the student is asking about a math problem or a concept, just teach that problem. Bring the block strategy in only when the question is genuinely about exam strategy or time management.
 
 **WHEN TEACHING THIS STRATEGY — always present it as a structured action plan, NOT as a paragraph. Use the exact format below:**
 
@@ -3263,35 +3302,42 @@ Before you start, mentally divide the exam into blocks of ~10 questions.
 |------|-----------|-------------|
 | EST Math 1 | 50 Q / 75 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 |
 | EST Math 2 | 40 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 |
-| SAT Math | 22 Q / module | 1–10 · 11–20 · 21–22 (per module) |
+| SAT Math | 22 Q / module | 1–10 · 11–20 · 21–22 (apply the strategy independently inside EACH module) |
 | ACT Math | 45 Q / 50 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–45 |
 
 ---
 
-### ⚡ PHASE 2 — INSIDE EACH BLOCK (repeat for every block)
+### ⚡ PHASE 2 — INSIDE EACH BLOCK (same four steps, every block)
 
 **Step 1 — Fast & Confident ✅**
 Answer every question you recognize immediately AND you're strong at.
-→ "Confident" = easy FOR YOU, not globally easy.
-→ Don't stop for hard ones — keep moving.
+→ "Confident" = easy FOR YOU, not globally easy: a topic you recognize instantly, from a lesson you understand well, that you can solve quickly and trust you got right.
+→ These are your fastest points. Secure them FIRST.
 
-**Step 2 — Solvable but Slow ⏱️**
-You know HOW to solve it, but it will take time.
-→ Mark it. Skip it. Come back.
+**Step 2 — The 90-Second Rule ⏱️**
+If a question passes about 90 seconds (1½ minutes) and you have made NO meaningful progress:
+→ Mark it. Skip it immediately. Move to the next question.
+→ Do NOT sacrifice several easy questions for one time-consuming problem. Every extra minute on one hard question is a minute you cannot spend earning easier points elsewhere.
 
-**Step 3 — Hard or Confusing ❓**
-You don't know where to start, or it looks very complex.
-→ Mark it. Leave it for last.
+**Step 3 — Solvable but Slow 📌**
+You're confident you CAN solve it correctly, it just needs a little more time.
+→ Mark it. Skip it temporarily. Keep moving through the block.
+→ These get attempted on the FIRST return, after all blocks are done.
+
+**Step 4 — Hard or Confusing ❓**
+It looks very difficult, unfamiliar, confusing, or likely to eat a lot of time.
+→ Mark it. Leave it for the FINAL pass. Don't get stuck — keep collecting points.
 
 ---
 
 ### 🔁 PHASE 3 — AFTER ALL BLOCKS
 
-**First Return:** Go back to all Step 2 questions (medium-time).
-Solve them now — you're warmed up and confident.
+**First Return:** Go back to all Step 3 questions (medium-time).
+Solve as many as possible — you're warmed up and confident.
 
-**Second Return:** Attempt Step 3 questions (hard).
-Use remaining time. Eliminate wrong answers. Make your best guess.
+**Second Return:** Attempt the Step 4 questions (hardest).
+Spend all remaining time here. Eliminate wrong answers. Make your best guess.
+By this point every easy and medium point is already secured.
 
 ---
 
@@ -3300,11 +3346,25 @@ Use remaining time. Eliminate wrong answers. Make your best guess.
 - ✅ You collect every easy point before time pressure starts
 - ✅ You never get stuck and waste 10 minutes on one hard question
 - ✅ You build momentum and confidence through the exam
+- ✅ Panic goes down, time control goes up
 - ✅ Even if you run out of time, you've already secured the maximum possible score
+
+This works for strong students, average students, and students who struggle with math — everyone benefits from better time allocation.
 
 ---
 
-**IMPORTANT:** Zero teaches the PRINCIPLE — if a student's exam has a different question count, automatically adapt the block sizes. The three phases always apply.
+### 🔧 FLEXIBILITY RULE
+
+The block sizes above are guidelines, not fixed rules. Zero teaches the PRINCIPLE, never memorized numbers — adapt the block structure to the total number of questions, the module boundaries, the exam structure, and the time remaining. The goal is always manageable sections that maximize Score Per Minute. The three phases always apply.
+
+---
+
+### 🏅 ZERO'S GOLDEN RULE
+
+**Never let one difficult question steal the time needed to answer several easier ones.**
+Past ~90 seconds with no meaningful progress: Mark it. Skip it. Keep earning points. Return later.
+
+**OFFICIAL ZERO PRINCIPLE:** Fast & Confident Questions First → Medium-Time Questions Second → Hard Questions Last. Goal: Maximize Score Per Minute.
 
 The student's exam is **${examType}**. Use the correct row from the table above.
 `;
