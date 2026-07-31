@@ -6,28 +6,37 @@
   "rule": "Picture is cut to the read, never the reverse. All 19 lines are recorded before any dialogue shot is animated.",
 
   "runtime_target_sec": 76.0,
-  "total_speech_target_sec": 48.1,
-  "total_silence_sec": 27.9,
-
-  "model": {
-    "id": "seed_audio",
-    "provider": "ByteDance Seed Audio 1.0",
-    "format": "wav",
-    "sample_rate": 48000,
-    "cost_credits_per_line": 0.3
-  },
+  "total_speech_target_sec": 47.41,
+  "total_silence_sec": 28.59,
 
   "casting": {
-    "status": "PENDING_OWNER_DECISION",
+    "status": "DECIDED — HUMAN VO",
+    "decided_on": "2026-07-31",
+    "route": "Human VO — one actor, both roles, alternating lines, single session, same room, same mic. The kit's preferred Stage 0 route and the fullest form of its ranked option 1 ('one actor with real range').",
     "kit_reference": "docs/film/01_Production_Script.md — 'VOICE CASTING', including the ⚠️ REVISIT block",
-    "kit_ranked_options": [
-      "1. One actor with real range — same timbre played young and old (kit's recommendation)",
-      "2. Two actors, matched timbre — cast the young voice to the elder's placement",
-      "3. Same voice, no differentiation — originally chosen, now risks 'dubbed by his grandfather'"
-    ],
-    "tts_mapping": "Option 1 == one voice_id for both roles, differentiated only by speech_rate/pitch_rate. Option 2 == two voice_ids. This mirrors the Costume-Swap Law in audio: one Zero, two life stages.",
-    "judge_voice_id": null,
-    "lawyer_voice_id": null
+    "booth_script": "docs/film/07_VO_Booth_Script.md",
+    "actor": null,
+    "session_date": null
+  },
+
+  "delivery_spec": {
+    "container": "wav",
+    "sample_rate": 48000,
+    "bit_depth": 24,
+    "channels": "mono",
+    "one_file_per_line": true,
+    "takes_per_line_min": 3,
+    "room_tone_sec": 30,
+    "note": "One file per line — each becomes the audio_references input to that line's seedance_2_0 shot. A single continuous session file cannot be used directly; it must be split per line first."
+  },
+
+  "tts_fallback": {
+    "status": "NOT IN USE — superseded by the human VO decision",
+    "purpose": "Retained only for emergency pickups if a line is unusable and the actor is unavailable.",
+    "model": { "id": "seed_audio", "format": "wav", "sample_rate": 48000, "cost_credits_per_line": 0.3 },
+    "JZ_params": { "speech_rate": -20, "pitch_rate": 0, "loudness_rate": 0 },
+    "LZ_params": { "speech_rate": 15, "pitch_rate": 3, "loudness_rate": 0 },
+    "audition_evidence": "docs/film/06_VO_Recording_Log.md §2"
   },
 
   "roles": {
@@ -36,32 +45,33 @@
       "brief": "55–70, deep chest resonance, no vocal fry. Morgan Freeman's tempo × a tenured professor's precision.",
       "tempo": "0.7× — slow, full stops, ~2.5s per sentence",
       "placement": "Low, chest, settled",
+      "booth_direction": "You already know how this ends. You're speaking so the room hears it.",
       "never": "Loud. Angry. Selling.",
-      "wpm": 135,
-      "params": { "speech_rate": -20, "pitch_rate": 0, "loudness_rate": 0 }
+      "wpm": 135
     },
     "LZ": {
       "character": "LAWYER ZERO",
       "brief": "25–32, bright, forward placement, crisp consonants, momentum.",
       "tempo": "1.2× — fast, rhythmic, momentum-driven",
       "placement": "Forward, brighter, crisper consonants",
+      "booth_direction": "You're not asking questions. You're setting a trap, and you're enjoying it.",
       "never": "Smug. Sarcastic. Mocking the other side.",
-      "wpm": 165,
-      "params": { "speech_rate": 15, "pitch_rate": 3, "loudness_rate": 0 }
+      "wpm": 165
     }
   },
 
   "notes": [
-    "Per-line target_sec = words / wpm × 60, using the act wpm the kit specifies. Summed per act these reproduce the kit's own table exactly (6.0 / 22.5 / 15.6 / 4.0 = 48.1s), so the targets are the kit's budget decomposed, not a new invention.",
+    "Per-line target_sec = words / wpm × 60, using the act wpm the kit specifies. These are the kit's own budget decomposed per line, not new numbers.",
+    "OWNER AMENDMENT 2026-07-31: L2 moved from the kit's Act I 130 wpm to Lawyer Zero's own 165 wpm (3.23s → 2.55s). Act I speech is now 5.32s rather than 6.0s and total speech 47.41s rather than 48.1s, so the silence budget grows by 0.68s.",
     "OVERRUN RULE (kit): if the read comes back long, take it out of the beats in Act II — never out of Act III. The verdict's pauses are the film.",
-    "L2 carries the kit's Act I wpm of 130 even though the speaker is Lawyer Zero; see the two flagged discrepancies in docs/film/06_VO_Recording_Log.md.",
+    "OPEN: Shot 4 allots L2 one second against a 2.55s line, and Act II has no slack to absorb the overhang. Either Shot 4 extends and Act II compresses, or L2 overlaps the Shot 4 → Shot 5 cut. See 06 §4.",
     "L10 'The defence rests.' — music cuts to absolute silence on the final word. Protect in the mix.",
     "L15/L16 must share an identical cadence; L17 lands a half-step softer."
   ],
 
   "lines": [
     { "id": "L1",  "speaker": "JZ", "text": "This court is now in session.", "words": 6, "wpm": 130, "target_sec": 2.77, "shot": "2",   "delivery": "Stated, not announced. He is confirming what the room already knows.", "job_id": null },
-    { "id": "L2",  "speaker": "LZ", "text": "Then let me ask a few questions.", "words": 7, "wpm": 130, "target_sec": 3.23, "shot": "4",   "delivery": "Light. Almost pleasant. The trap is already built.", "job_id": null },
+    { "id": "L2",  "speaker": "LZ", "text": "Then let me ask a few questions.", "words": 7, "wpm": 165, "target_sec": 2.55, "shot": "4",   "delivery": "Light. Almost pleasant. The trap is already built.", "job_id": null },
     { "id": "L3",  "speaker": "LZ", "text": "Who knows exactly where the student went wrong?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "5",  "delivery": "The first strike. Direct, to the grey table. Stress 'where'.", "job_id": null },
     { "id": "L4",  "speaker": "LZ", "text": "Who knows why — instead of only saying 'wrong'?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "6",  "delivery": "Faster. The italicised word carries the sentence. Stress 'why'.", "job_id": null },
     { "id": "L5",  "speaker": "LZ", "text": "A concept gap. A calculation slip. Carelessness. Or time?", "words": 9, "wpm": 165, "target_sec": 3.27, "shot": "7",  "delivery": "Four beats, metronome-even. He counts them on his claws.", "job_id": null },

@@ -1,7 +1,9 @@
 # SI MATH AI — "THE AI COURT"
 # VO RECORDING LOG — Stage 0
 
-**Status: CASTING PENDING OWNER DECISION. No production lines recorded yet.**
+**Status: CASTING DECIDED — HUMAN VO (owner, 2026-07-31). Awaiting the session.**
+
+**Booth script: `07_VO_Booth_Script.md`** — that is the document that goes into the room.
 
 Stage 0 of the pipeline (`03`, Part 4) is *"Voice, before anything."* Nothing dialogue-bound
 animates until all 19 lines exist, because **picture is cut to the read, never the reverse.**
@@ -33,13 +35,28 @@ being tempo and placement. It is also the only option that makes the Shot 17 / S
 in the ear as well as the eye — the audience should half-recognise the voice before the picture
 confirms it.
 
+### ✅ DECISION — 2026-07-31, owner: **HUMAN VO**
+
+One actor performs both roles, alternating lines, single session, same room, same mic — Stage 0's
+preferred route in `03` Part 4, and the fullest form of the kit's ranked option 1. TTS is retired to
+emergency-pickup duty only.
+
+This is the highest-ceiling choice and the only one that can actually deliver "one actor with real
+range," which no preset voice can. It also removes the constraint that killed several audition
+candidates below: a human is not bounded by a `speech_rate` ceiling.
+
+**Open:** actor not yet cast, session not yet dated. Everything else for Stage 0 is prepared.
+
 **Character briefs (locked, from `01`):**
 - **Judge Zero** — 55–70, deep chest resonance, no vocal fry. Morgan Freeman's tempo × a tenured professor's precision. Never loud, angry, or selling.
 - **Lawyer Zero** — 25–32, bright, forward placement, crisp consonants, momentum. Never smug, sarcastic, or mocking.
 
 ---
 
-## 2. AUDITIONS — 11 takes, 3.3 credits
+## 2. AUDITIONS — 11 takes, 3.3 credits · *superseded by the human VO decision*
+
+Kept as the record of how the decision was reached, and as the calibration reference if a TTS
+pickup is ever needed. **None of these are film material.**
 
 Two audition lines, each chosen to stress what the role is hardest at:
 - **Judge — L12** *"But this one was built for students."* — the verdict; tests weight and word placement.
@@ -93,13 +110,17 @@ Two things the data does say clearly:
 ## 3. PER-LINE DURATION BUDGET
 
 Targets are `words / wpm × 60`, using the act read speeds `01` specifies (130 / 165 / 135 wpm).
-Summed per act they reproduce the kit's own measured-timing table **exactly** — 6.0 / 22.5 / 15.6 / 4.0
-= **48.1s** against a 76s runtime. These are the kit's budget decomposed per line, not a new invention.
+Summed per act they reproduced the kit's own measured-timing table **exactly** — 6.0 / 22.5 / 15.6 /
+4.0 = **48.1s** against a 76s runtime. These are the kit's budget decomposed per line, not a new
+invention.
+
+**Amended 2026-07-31 (owner):** L2 moves to Lawyer Zero's own 165 wpm — see §4(b). Act I speech is
+now **5.32s** and total speech **47.41s**, so the silence budget grows by 0.68s to 28.59s.
 
 | # | Speaker | Words | wpm | Target | Shot |
 |---|---|---|---|---|---|
 | L1 | JZ | 6 | 130 | 2.77s | 2 |
-| L2 | LZ | 7 | 130 | 3.23s | 4 ⚠ |
+| L2 | LZ | 7 | **165** | **2.55s** | 4 ⚠ |
 | L3 | LZ | 8 | 165 | 2.91s | 5 |
 | L4 | LZ | 8 | 165 | 2.91s | 6 |
 | L5 | LZ | 9 | 165 | 3.27s | 7 |
@@ -127,45 +148,66 @@ out of Act III. The verdict's pauses are the film.
 
 Raised, not silently patched — both need an owner call, and neither blocks recording.
 
-**(a) Shot 4 gives L2 one second; the line needs ~3.2s.**
-Shot 4 runs 0:09–0:10. L2 *"Then let me ask a few questions."* budgets at 3.23s. Act II cannot absorb
-the overhang either: its speech (22.5s) plus its silence (5.5s) equals exactly its 28s length
+**(a) Shot 4 gives L2 one second; the line needs ~2.6s. — STILL OPEN**
+Shot 4 runs 0:09–0:10. L2 *"Then let me ask a few questions."* now budgets at 2.55s. Act II cannot
+absorb the overhang either: its speech (22.5s) plus its silence (5.5s) equals exactly its 28s length
 (0:10–0:38), leaving zero slack. So either Shot 4 extends and Act II compresses, or L2 deliberately
 overlaps the Shot 4 → Shot 5 cut. Overlapping is normal grammar and probably the intent — but it
 should be a decision, since it changes how Shot 5's key frame is timed.
 
-**(b) L2 is budgeted at the Judge's read speed.**
-`01`'s timing table prices Act I's 13 words at 130 wpm ("JZ"), but 7 of those words are Lawyer Zero's.
-At his own Act II speed of 165 wpm, L2 is 2.55s rather than 3.23s — which incidentally eases (a) by
-0.68s. `vo-lines.json` currently carries the kit's stated 130 wpm so the manifest matches the document;
-say the word and it moves to 165.
+Not blocking: it changes the edit, not the read. The actor performs L2 to its 2.55s target either way.
+
+**(b) L2 was budgeted at the Judge's read speed. — ✅ RESOLVED 2026-07-31**
+`01`'s timing table priced Act I's 13 words at 130 wpm ("JZ"), but 7 of those words are Lawyer Zero's.
+**Owner decision: L2 moves to his own 165 wpm**, 3.23s → 2.55s. This matches his character direction
+(1.2× tempo, momentum) and eases (a) by 0.68s. Applied in `vo-lines.json` and §3 above.
+
+*Not a third discrepancy:* L19 is also Lawyer Zero's but stays at Act IV's 135 wpm. That is
+deliberate — it is the only soft line he has, and he slows down for it.
 
 ---
 
-## 5. PRODUCTION SETTINGS (locked once casting is chosen)
+## 5. DELIVERY SPEC & INGEST
+
+### What comes out of the session
 
 ```
-model        seed_audio (ByteDance Seed Audio 1.0)
-format       wav
-sample_rate  48000
-cost         0.3 credits per line → 5.7 credits for all 19
-
-JUDGE ZERO   speech_rate −20  pitch_rate  0  loudness_rate 0   (0.7× tempo, low/chest/settled)
-LAWYER ZERO  speech_rate +15  pitch_rate +3  loudness_rate 0   (1.2× tempo, forward/bright/crisp)
+48 kHz · 24-bit · mono · WAV
+One file per line:  L01_JZ.wav  L02_LZ.wav  …  L19_LZ.wav
+No processing on the way in — no compression, EQ, noise reduction or de-esser
+~0.5s of clean air either side of each line
+Plus 30s of room tone
+Minimum 3 takes per line; more on L14, L17, L19
 ```
 
-Per-voice `speech_rate` will be re-trimmed after casting so each line lands on its §3 target — the
-figures above are the character direction, not the final calibration.
+**One file per line is a hard requirement, not a preference.** Each line becomes the
+`audio_references` input to its own `seedance_2_0` shot; a single continuous session file cannot be
+addressed per shot. Recording continuously is fine — split before delivery.
+
+### Ingest path
+
+1. Upload each approved take (`media_upload` → PUT bytes → `media_confirm` with `type='audio'`).
+2. Record the returned `media_id` in the §6 table and in `scripts/film/vo-lines.json` (`job_id`).
+3. Measure each take's real duration against its §3 target; apply the Act II overrun rule.
+4. That `media_id` is then passed as `medias[].role='audio'` on the shot's `seedance_2_0` call, so
+   mouth, breath and micro-timing are driven by the actual read rather than guessed.
+
+### TTS fallback — retired, not deleted
+
+`seed_audio`, wav 48 kHz, 0.3 credits/line. Judge `speech_rate −20`; Lawyer `speech_rate +15,
+pitch_rate +3`. Held only for an emergency pickup if a line is unusable and the actor is unavailable.
+The §2 auditions are its calibration reference. **Not to be mixed into a human-recorded film without
+an explicit owner decision** — a single synthetic line inside eighteen human ones will be audible.
 
 ---
 
 ## 6. RECORD LOG — 19 LINES
 
-Filled in as each line is recorded. `scripts/film/vo-lines.json` is the machine-readable twin;
+Filled in as each line is ingested. `scripts/film/vo-lines.json` is the machine-readable twin;
 its `job_id` fields are the ones that matter downstream — each becomes the `audio_references`
 input to that shot's `seedance_2_0` call.
 
-| # | Speaker | Line | Job ID | Duration | Status |
+| # | Speaker | Line | Media ID | Duration | Status |
 |---|---|---|---|---|---|
 | L1 | JZ | This court is now in session. | — | — | not recorded |
 | L2 | LZ | Then let me ask a few questions. | — | — | not recorded |

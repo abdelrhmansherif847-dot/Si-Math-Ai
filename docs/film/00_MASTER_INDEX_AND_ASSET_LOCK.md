@@ -17,7 +17,8 @@
 | `03_Directors_Cut_Screenplay_Coverage.md` | The 19 locked lines, per-line cinematography, performance direction, production pipeline |
 | `04_Courtroom_Floor_Plan.html` | Top-down diagram — positions + camera placements for all 19 shots |
 | `05_Animation_Package_Per_Shot.md` | Ready-to-run generation cards: refs, prompts, models, params, continuity per shot |
-| `06_VO_Recording_Log.md` | Stage 0: the casting question, audition evidence, per-line duration budget, record log |
+| `06_VO_Recording_Log.md` | Stage 0: casting decision, audition evidence, per-line duration budget, record log |
+| `07_VO_Booth_Script.md` | The printable booth script — what goes into the room on session day |
 | `../../scripts/film/vo-lines.json` | Machine-readable twin of the 19 lines — params, targets, job IDs |
 
 ---
@@ -91,14 +92,18 @@ Asset IDs are Higgsfield job/media IDs — pass them directly as `medias[].value
 | Two-character pose sheet | job `4b77e84d-0fcb-4342-b80c-f72996096260` |
 | Three-party scale lineup | job `be214566-2084-47cd-987a-ba736eaa73e6` |
 
-### 🎙 VOICE / AUDIO — Stage 0, CASTING PENDING
+### 🎙 VOICE / AUDIO — Stage 0
 
-Full detail in `06_VO_Recording_Log.md`. Nothing dialogue-bound animates until all 19 lines exist.
+Full detail in `06_VO_Recording_Log.md`; booth script in `07`. Nothing dialogue-bound animates until
+all 19 lines exist.
 
 | Item | State |
 |---|---|
-| **Casting decision** | ⏳ **PENDING OWNER** — `01`'s ⚠️ REVISIT block, three ranked options |
-| **The 19 production lines** | ❌ **NOT RECORDED** — blocked on casting |
+| **Casting decision** | ✅ **HUMAN VO** (owner, 2026-07-31) — one actor, both roles, alternating, single session. Resolves `01`'s ⚠️ REVISIT block. |
+| **Actor / session date** | ⏳ not yet set |
+| **The 19 production lines** | ❌ **NOT RECORDED** — awaiting the session |
+| **L2 read speed** | ✅ amended to 165 wpm (owner, 2026-07-31); total speech 48.1s → 47.41s |
+| TTS via `seed_audio` | retired to emergency-pickup only |
 | Judge auditions (L12) | Alistair `666df6f1` · Mark `de2d57cb` · Callum `6c7174b9` · Arthur `a8574fd3` · Onyx `f1af489a` · Gideon `b8e1a152` |
 | Lawyer auditions (L5) | Leo `1c699a07` · Callum `56b9c43e` · Mark `7e802362` · Julian `bfc14c2c` · Onyx `9d1f71d7` |
 
@@ -115,7 +120,7 @@ Semi-realistic dragon attempts: `7f6576ab`, `cc0b7019`, `57317d7c`, `be5d6d36` �
 **Done:** world locked · cast locked (3 parties) · logo integrated · screenplay locked (19 lines) · blocking + coverage locked · Master Frame locked · **Shot 3 in the can** · pipeline researched and specified.
 
 **Next, in order (from `03`, Part 4):**
-1. **Record all 19 VO lines** (one actor both roles preferred; TTS/voice-clone fallback). Nothing dialogue-bound animates before this. — *In progress: auditions run for both roles, per-line duration budget derived, blocked on the casting decision in `06`.*
+1. **Record all 19 VO lines** — ✅ route decided (human VO), booth script and per-line duration budget prepared in `06`/`07`. **Now blocked on casting an actor and booking the session.** Nothing dialogue-bound animates before this.
 2. Generate + approve the three re-used camera stills from the Master Frame: **Cam 2** (bench low angle), **Cam 12/A** (Center Court toward bench), **the B reverse** (grey table).
 3. Per-shot key frames in script order (cards in `05`), one approval at a time.
 4. Dialogue shots via Seedance 2.0 (audio-driven), ambient/motion shots via Kling 3.0 pro.
