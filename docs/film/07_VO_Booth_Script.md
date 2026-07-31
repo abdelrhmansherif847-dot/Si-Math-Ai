@@ -1,9 +1,11 @@
 # SI MATH AI — "THE AI COURT"
-# VO BOOTH SCRIPT — 19 lines, one actor, one session
+# VO BOOTH SCRIPT — F-script (v4.1 TIGHT, LOCKED) · 27 human lines, one actor, one session
 
 **Print this. It is the only document that goes into the room.**
 
-Nineteen lines. Roughly 46 seconds of finished speech. Budget 90 minutes.
+Twenty-seven human lines (18 Judge, 8 Lawyer, 1 merged Zero). Roughly 72 seconds of finished
+speech. Budget two hours. The two Representative lines are **not recorded here** — they are
+synthetic by design, produced separately.
 
 ---
 
@@ -11,193 +13,203 @@ Nineteen lines. Roughly 46 seconds of finished speech. Budget 90 minutes.
 
 **Both characters are the same person.**
 
-Zero is a dragon at two stages of his life. The elder — Judge Zero — presides over the court.
-The young one — Lawyer Zero — argues in front of him. The film's last shot merges them into one
-character, and the audience is meant to realise it about one second before the picture confirms it.
+Zero is a dragon at two stages of his life. The elder — Judge Zero — runs the trial. The young one
+— Lawyer Zero — answers for his client. The film's last movement merges them into one character,
+and the audience should realise it about one second before the picture confirms it.
 
-So the read is not two impressions. It is **one voice at two ages**: same timbre, same person,
-twenty-five years apart. The elder has arrived somewhere; the young one is still moving.
+So the read is **one voice at two ages**: same timbre, twenty-five years apart. The elder has
+arrived; the young one is still moving. Close enough that the merge feels inevitable in hindsight —
+far enough apart that nobody guesses at line two.
 
-Play them close enough that the merge feels inevitable in hindsight — and far enough apart that
-nobody guesses it at line two.
-
----
+**And this time there is a third register:** the film's final line belongs to the *merged* Zero —
+both of them at once. It is recorded three ways (see F29).
 
 ## SESSION RULES
 
-- **One actor performs both roles.** Do not split the session between two people.
-- **Record in script order**, L1 → L19. The roles alternate naturally; that alternation is what makes
-  the two sound like they belong to each other. Do not batch all the Judge lines then all the Lawyer's.
-- **Same mic, same position, same room, one session.** No re-setup between characters.
-- **Minimum three takes per line.** More on L14, L17 and L19.
-- **30 seconds of room tone** at the end — needed for the mix.
+- One actor, all three registers. Record in script order — the alternation makes them belong to
+  each other.
+- Same mic, same position, same room, one session.
+- Minimum three takes per line. More on F13, F22, F23, F28, and every register of F29.
+- 30 seconds of room tone at the end.
 
 ## TECHNICAL
 
 ```
 48 kHz · 24-bit · mono · WAV
-One file per line, named  L01_JZ.wav  L02_LZ.wav  …  L19_LZ.wav
-No processing on the way in — no compression, no EQ, no noise reduction, no de-esser
-Leave ~0.5s of clean air before and after each line (the conform trims it)
+One file per line:  F01_JZ.wav … F28_LZ.wav · F29a/b/c_ZERO.wav
+No processing on the way in. ~0.5s clean air each side.
 ```
 
-A single continuous session file is not usable downstream — every line has to arrive as its own file.
-If it is easier to record continuously, that is fine; just split before delivery.
+## THE TWO VOICES (+1)
 
-## THE TWO VOICES
-
-| | **JUDGE ZERO — in the robe** | **LAWYER ZERO — in the suit** |
+| | **JUDGE ZERO** | **LAWYER ZERO** |
 |---|---|---|
-| **Age** | 55–70 | 25–32 |
-| **Timbre** | Identical to the Lawyer | Identical to the Judge |
-| **Tempo** | Slow. Full stops. ~2.5s a sentence | Fast, rhythmic, momentum-driven |
-| **Placement** | Low, chest, settled | Forward, brighter, crisper consonants |
-| **Energy** | Weighted, conclusive | Alive, probing, enjoying himself |
-| **The direction** | *"You already know how this ends. You're speaking so the room hears it."* | *"You're not asking questions. You're setting a trap, and you're enjoying it."* |
-| **Never** | Loud. Angry. Selling. | Smug. Sarcastic. Mocking the other side. |
+| Age | 55–70 | 25–32 |
+| Tempo | Slow. Full stops. ~2.5s a sentence | Fast, rhythmic, momentum |
+| Placement | Low, chest, settled | Forward, bright, crisp |
+| The direction | *"You have already won. You are being fair about it."* | *"Every entrance changes who owns the room. Dismantle — piece by piece, with delight."* |
+| Never | **Raises his voice. Ever.** Angry. Selling. | Smug. Sarcastic. Mocking the losers. |
 
-Reference for the Judge: **Morgan Freeman's tempo × a tenured professor's precision.** No vocal fry.
+**The Judge's power is absolute confidence.** His silence is louder than shouting — twice in this
+script, his answer to a speaker is no words at all. Morgan Freeman's tempo × a tenured professor's
+precision.
 
-The Lawyer is **delighted, not superior** — he never mocks the other side. From L7 onward the showman
-recedes and the believer shows through. By L10 he is still.
+**ZERO (F29 only):** the merged register — chest of the elder, light of the young. Record elder-
+leaning, young-leaning, and blended; the mix chooses. It must sound like both of them at once.
 
 ---
 
 ## THE LINES
 
-`Target` is the duration the edit is cut to. Treat it as a landing zone, not a metronome —
-but a line that comes in a second long will cost a beat somewhere else in the film.
+### COLD OPEN — the film starts mid-trial
 
-### ACT I — THE SESSION
+**F01 · JUDGE · 3.6s**
+> **"Can you remember every mistake this student made?"**
+>
+> Cold, no preamble — the first sound of the film. Asked of the grey table, and of everyone watching.
 
-**L1 · JUDGE · 2.8s**
+*(F02 — REP: "I can solve the problem." — synthetic, not recorded in this session. It answers
+instantly, brightly, sincerely — and wrong.)*
+
+**F03 · JUDGE · 1.8s**
+> **"That wasn't my question."**
+>
+> Not sharp. **Patient.** Which is worse. Hold the beat after it — the gavel finishes the thought.
+
+**F04 · JUDGE · 2.7s**
 > **"This court is now in session."**
 >
-> Stated, not announced. He is confirming what the room already knows. No gravel, no proclamation.
+> Stated, not announced — the room already knows. Plays over the crane reveal.
 
-**L2 · LAWYER · 1.5s**
-> **"Good. I have questions."**
+### THE EXAMINATION
+
+**F05 · JUDGE · 3.1s**
+> **"Show this court the moment it broke."**
 >
-> Light. Almost pleasant. The trap is already built — he is the only one who knows that.
-> "Good." lands with the half-smile a beat before the rest. He wanted to be asked.
+> Placed, not raised.
 
-### ACT II — THE CROSS-EXAMINATION
-
-*Eight questions, asked across the room to five silent figures who cannot answer any of them.
-The rhythm accelerates through the act. He is building, not attacking.*
-
-**L3 · LAWYER · 2.6s**
-> **"Who saw the exact moment it broke?"**
+**F06 · LAWYER · 1.8s**
+> **"My client can, Your Honour."**
 >
-> The first strike. "Broke" set down like an evidence bag — heavier, not louder.
+> His first line — rising *into* their silence. The momentum shift. Light, certain, unhurried.
 
-**L4 · LAWYER · 2.9s**
-> **"And who knows *why*? Anyone can say 'wrong.'"**
+**F07 · JUDGE · 3.6s**
+> **"And the *why*? Anyone can say 'wrong.'"**
 >
-> Faster than L3. Stress **why**. The second sentence is almost thrown away — confidence, not contempt.
+> The dagger, gently. Second sentence almost thrown away.
 
-**L5 · LAWYER · 3.3s**
-> **"A concept gap. A calculation slip. Carelessness. Or time?"**
+*(F08 — REP: "The correct solution is—" — synthetic; cut off by the Judge's look, not by a word.)*
+
+**F09 · JUDGE · 4.9s**
+> **"Anyone can solve a problem. Very few can build a learner."**
 >
-> Four beats, metronome-even — he is counting them off on his claws. Each lands on a cut.
-> Do not let the last one trail up too far; it is a question, not a shrug.
+> Quiet, almost to himself, while the evidence glows. Not addressed to them — which is why it
+> lands on them.
 
-**L6 · LAWYER · 2.6s**
-> **"The same mistake. Eight times. Who noticed?"**
+**F10 · JUDGE · 2.7s**
+> **"What kind of wrong was it?"**
 >
-> Three fragments — three jabs, counted like exhibits. "Who noticed?" is quiet, and hard to sit across from.
+> Real curiosity entering the authority.
 
-**L7 · LAWYER · 2.9s**
-> **"And who turns that mistake into a plan?"**
+**F11 · LAWYER · 3.3s**
+> **"A concept gap. A calculation slip. Carelessness. Or time."**
 >
-> **The turn of the film.** Warmer. Prosecution becomes advocacy here — the first line he means
-> rather than performs. Everything after this is a believer talking.
+> Four beats, metronome-even, counted on claws while he walks their table. Ends as a statement.
 
-**L8 · LAWYER · 2.6s**
-> **"Who tells the student what comes next?"**
+**F12 · LAWYER · 2.2s**
+> **"Eight times. Six weeks. Nobody noticed."**
 >
-> Quick and confident — but **"the student"** is said gently. The first soft word in the act.
+> Flat. No triumph. "Nobody" lands on the grey table without him looking at it.
 
-**L9 · LAWYER · 4.0s**
-> **"Who walks the whole road with them — first question to target score?"**
+**F13 · JUDGE · 5.8s**
+> **"Students don't fail in one question. They fail one step at a time."**
 >
-> His longest line. Let it breathe after "with them." This is the promise of the whole film; it should
-> sound like scope, not like a feature.
+> **The film's intellectual heart — the slowest line of the examination.** To the whole room.
+> Extra takes here.
 
-**L10 · LAWYER · 1.1s**
+**F14 · JUDGE · 2.7s**
+> **"And what becomes of that mistake?"**
+>
+> The first question that isn't an indictment. Hope, disguised as procedure.
+
+**F15 · LAWYER · 0.9s**
+> **"A plan."**
+>
+> Two words. The turn of the film. Warm — the showman gone, the believer speaking.
+
+**F16 · LAWYER · 1.5s**
+> **"Always the next step."**
+>
+> Soft. Momentum without sale.
+
+**F17 · JUDGE · 2.7s**
+> **"How far does this road go?"**
+>
+> The biggest question, asked smallest.
+
+**F18 · LAWYER · 3.3s**
+> **"First question to target score. The whole road — together."**
+>
+> Micro-pause before "together." That pause is the promise.
+
+**F19 · LAWYER · 1.1s**
 > **"The defence rests."**
 >
-> Quiet. Final. He is done, and he knows he has won. No flourish — he has stopped performing entirely.
-> *The music cuts to absolute silence on the final word. Leave clean air after it.*
+> Quiet. Final. Literally true. *Music dies on the final word — leave clean air.*
 
-### ACT III — THE VERDICT
+### THE VERDICT
 
-*The elder rules. He is fair, and the fairness is what makes it land.*
-
-**L11 · JUDGE · 1.3s**
+**F20 · JUDGE · 1.3s**
 > **"You are intelligent."**
 >
-> Spoken to the ones who lost. Generous, and true — **no irony whatsoever.** If this line sounds
-> like a setup for an insult, the verdict is wrong. He means it.
+> To the ones who lost. Generous, and true. **No irony whatsoever.**
 
-**L12 · JUDGE · 3.1s**
+**F21 · JUDGE · 3.1s**
 > **"But this one was built for students."**
 >
-> The verdict. Slow. Each word placed like a stone. The 'but' does not swing — it settles.
+> The verdict. Each word placed like a stone. (On screen, his eyes have already moved.)
 
-**L13 · JUDGE · 2.7s**
-> **"It does not just solve math."**
+**F22 · JUDGE · 4.9s**
+> **"Solving a question is not the same as teaching a student."**
 >
-> Pride held under the robe. He is not boasting; he is stating.
+> The cold open, answered. Extra takes.
 
-**L14 · JUDGE · 2.2s**
+**F23 · JUDGE · 2.2s**
 > **"It understands how students learn."**
 >
-> **The thesis of the film — the slowest line in it.** Give it more takes than anything else in Act III.
+> The thesis. The slowest read in the film. The most takes in Act III.
 
-**L15 · JUDGE · 2.2s**
-> **"Every mistake tells a story."**
+**F24 · JUDGE · 2.2s** — **"Every mistake tells a story."**
+**F25 · JUDGE · 2.2s** — **"Every step reveals a weakness."**
+**F26 · JUDGE · 2.2s** — **"Every weakness becomes a plan."**
+> The Three Laws. **F24 and F25 identical cadence — record back to back.** F26 a half-step softer;
+> it resolves.
 
-**L16 · JUDGE · 2.2s**
-> **"Every step reveals a weakness."**
+### THE ENDING
 
-**L17 · JUDGE · 2.2s**
-> **"Every weakness becomes a plan."**
->
-> *The Three Laws. Struck into marble.* **L15 and L16 share an identical cadence** — same shape,
-> same weight, same landing. Record them back to back so they match.
-> **L17 is a half-step softer.** It resolves the set; it does not escalate it.
-
-### ACT IV — THE MERGE
-
-*Two lines across fifteen seconds. The ratio is the point.*
-
-**L18 · JUDGE · 2.2s**
+**F27 · JUDGE · 2.2s**
 > **"Students don't need another chatbot."**
 >
-> Spoken while walking down from the bench — the only time in the film he leaves it.
-> Not addressed to anyone. To everyone. Something is ending.
+> Walking down from the bench. Not to anyone. To everyone.
 
-**L19 · LAWYER · 1.8s**
+**F28 · LAWYER · 1.8s**
 > **"They need a mentor."**
 >
-> **The last line of the film, and the only soft one he has.** Close, warm, almost private —
-> the student finishing the teacher's sentence.
+> The only soft line he has. It must sound like it costs him nothing to hand the film back.
+> The most takes of the Lawyer's session.
+
+**F29 · ZERO · 2.2s · record ×3**
+> **"They need Si Math AI."**
 >
-> It must sound like it costs him nothing to hand the film back to the old man. Not triumphant.
-> Not a punchline. Two people who have known each other forever, one of whom is the other.
->
-> Deliberately slower than his other lines — he is not selling any more. Give this the most takes.
+> After the merge, to camera, out of complete silence. **a)** elder-leaning **b)** young-leaning
+> **c)** blended. Calm total confidence — a fact, not a slogan. The audience will sit with this
+> sentence in the dark; give the mix three ways to make it land.
 
 ---
 
 ## AFTER THE SESSION
 
-1. Deliver 19 named WAV files + room tone.
-2. Each is measured against its target above; overruns come out of **the beats in Act II — never
-   out of Act III.** The verdict's pauses are the film.
-3. Each file is uploaded and becomes that shot's `audio_references` input, so the animated mouth,
-   breath and micro-timing are driven by the actual read rather than guessed.
-4. Its ID is logged into `06_VO_Recording_Log.md` and `scripts/film/vo-lines.json`.
-
-Only then does any dialogue shot animate.
+1. Deliver 29 named WAVs (27 lines + F29 ×3) + room tone.
+2. Each measured against target; overruns come out of the beats, never the verdict's pauses.
+3. Each becomes its shot's `audio_references` — lip sync, breath, micro-timing driven by this read.
+4. IDs logged into `vo-lines.json`. Only then does dialogue animate.

@@ -1,4 +1,11 @@
 # SI MATH AI — "THE AI COURT"
+# DIALOGUE PACKAGE — ⚠️ v2-ERA, SUPERSEDED
+
+> **The locked script is now F01–F29 (`14`, v4.1 TIGHT).** This package still reflects the 19-line
+> v2 structure. **Do not direct or generate from this document.** Rebuild to the F-script is queued
+> as the next paper task; performance/eye-line decisions recorded here (the visual verdict, the
+> Three Laws cadence) remain valid and carry into the rebuild.
+
 # DIALOGUE PACKAGE — production-ready, all 19 lines
 
 **Purpose: zero creative ambiguity before animation.** Every line's performance, expression, eye

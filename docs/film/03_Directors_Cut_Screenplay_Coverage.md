@@ -1,5 +1,10 @@
 # SI MATH AI — "THE AI COURT"
 # THE DIRECTOR'S CUT
+
+> ⚠️ **SCRIPT SUPERSEDED:** the locked screenplay is now **F01–F29** in `14` (v4.1 TIGHT — cold
+> open, Judge-led examination, the failed answers, the locked ending). Part 1 below is the v2-era
+> script; Part 2's coverage cards await re-mapping to the F-structure. Camera grammar, performance
+> direction (Part 3) and the pipeline (Part 4) remain in force.
 ### Screenplay · Coverage Plan · Performance Direction · Production Pipeline
 
 **This document sits above the Shot List.** The Shot List says where everyone is. This says who speaks, who listens, where the camera is for every line, and how each actor plays it. Nothing is animated until its line, its coverage card, and its performance note all exist below. They now all do — there are no placeholders in this film.

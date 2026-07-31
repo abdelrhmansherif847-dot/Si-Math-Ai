@@ -1,5 +1,76 @@
 # SI MATH AI — "THE AI COURT"
-# SCRIPT v4.1 — "THE FAILED ANSWER" · v4 FULL ✅ APPROVED AS FOUNDATION (owner, 2026-07-31) · v4.1 POLISH ⏳ PENDING PER-LINE APPROVAL
+# SCRIPT v4.1 TIGHT — "THE FAILED ANSWER" · ✅ **LOCKED** (owner, 2026-07-31)
+
+**The owner's rulings:** v4.1 TIGHT adopted (~1:40 target) — all three iconic lines kept, rounds 4
+and 6 folded into their neighbours. **Ending: mentor stays** — the silent merge is the long pause,
+then the extended eye-contact hold, then the punchline. **The definitive script is the F-table
+below**; everything under it is drafting history.
+
+---
+
+## THE LOCKED SCRIPT — F01–F29
+
+Human VO: **JZ 18 lines · LZ 8 · ZERO 1** (same actor). **REP 2 lines = diegetic synthetic voice**
+(sincere read, faint clean digital sheen in the mix — never robotic).
+
+### COLD OPEN (~0:00–0:11)
+| # | Spk | Line | Target |
+|---|---|---|---|
+| F01 | JZ | "Can you remember every mistake this student made?" | 3.6s |
+| F02 | REP | "I can solve the problem." | 2.0s |
+| F03 | JZ | "That wasn't my question." *(beat)* | 1.8s |
+| — | | **GAVEL** | |
+| F04 | JZ | "This court is now in session." *(over the crane reveal)* | 2.7s |
+
+### THE EXAMINATION
+| # | Spk | Line | Target |
+|---|---|---|---|
+| F05 | JZ | "Show this court the moment it broke." | 3.1s |
+| — | | SILENCE · B1 — first crack | |
+| F06 | LZ | "My client can, Your Honour." *(+ EXHIBIT A, crimson)* | 1.8s |
+| F07 | JZ | "And the *why*? Anyone can say 'wrong.'" | 3.6s |
+| F08 | REP | "The correct solution is—" *(rising, cut by* **THE LOOK**; *sits; never speaks again)* | 1.0s |
+| — | LZ | *(silent)* — `ROOT CAUSE` peeled open; one glance to the bench | |
+| F09 | JZ | **"Anyone can solve a problem. Very few can build a learner."** | 4.9s |
+| F10 | JZ | "What kind of wrong was it?" | 2.7s |
+| — | | SILENCE · B2 — the micro-shift | |
+| F11 | LZ | "A concept gap. A calculation slip. Carelessness. Or time." *(four claws, four icons, the jury-box walk)* | 3.3s |
+| F12 | LZ | "Eight times. Six weeks. Nobody noticed." *(timeline multiplies — no question preceded it; the evidence answers before it is asked)* | 2.2s |
+| F13 | JZ | **"Students don't fail in one question. They fail one step at a time."** *(B3 beneath it — bowed, still)* | 5.8s |
+| F14 | JZ | "And what becomes of that mistake?" | 2.7s |
+| F15 | LZ | **"A plan."** *(the turn; `FOCUS PRACTICE` rebuilds; `NEXT LESSON` rises in the same breath)* | 0.9s |
+| F16 | LZ | "Always the next step." | 1.5s |
+| F17 | JZ | "How far does this road go?" | 2.7s |
+| F18 | LZ | "First question to target score. The whole road — together." | 3.3s |
+| F19 | LZ | "The defence rests." *(music dies on the final word)* | 1.1s |
+
+### THE VERDICT
+| # | Spk | Line | Target |
+|---|---|---|---|
+| F20 | JZ | "You are intelligent." *(held on the Representatives)* | 1.3s |
+| F21 | JZ | "But this one was built for students." *(the eye-move verdict — the slow shift to Lawyer Zero before the line)* | 3.1s |
+| F22 | JZ | **"Solving a question is not the same as teaching a student."** | 4.9s |
+| F23 | JZ | "It understands how students learn." | 2.2s |
+| F24 | JZ | "Every mistake tells a story." | 2.2s |
+| F25 | JZ | "Every step reveals a weakness." | 2.2s |
+| F26 | JZ | "Every weakness becomes a plan." *(gavel on the final word)* | 2.2s |
+
+### THE MERGE + THE ENDING *(locked pacing)*
+| # | Spk | Line | Target |
+|---|---|---|---|
+| F27 | JZ | "Students don't need another chatbot." *(the descent)* | 2.2s |
+| F28 | LZ | **"They need a mentor."** *(the two-shot; the simultaneous smile)* | 1.8s |
+| — | | **THE SILENT MERGE** — the long pause, made of picture (~5s) | |
+| F29 | **ZERO** | **"They need Si Math AI."** → **2.5–3s dead-still eye contact** → fade to black → **LOGO ONLY** → one soft gavel tap | 2.2s |
+
+**Speech 75.0s · runtime target ~1:40–1:45**, tuned in animatic v3 — the script owns the words,
+the edit owns the seconds.
+
+---
+
+*Drafting history below (v4 full + v4.1 polish notes), retained for the record.*
+
+## ~~SCRIPT v4 — "THE FAILED ANSWER" · PROPOSAL~~ *(superseded by the F-table above)*
 
 **v4 Full (~100s) is approved as the foundation.** This revision adds the owner's polish level:
 three owner-authored iconic lines placed into the script · the Representatives humanized · the
