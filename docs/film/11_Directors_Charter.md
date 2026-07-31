@@ -190,12 +190,21 @@ is watched through five lenses:
 | **Cinematography** | Is every cut motivated? Every camera move emotionally justified? Is the geography always crystal clear? |
 | **Emotion** | Which moment gives goosebumps? Which feels weak? Which should become more cinematic? |
 
-**The exit question of every screening — the only one:**
+**THE FIVE QUESTIONS — every take, every screening (owner protocol, 2026-07-31):**
 
-> ***"Where did you stop feeling engaged?"***
+1. **Did I believe the performance?** Forget the technology. Did the character *think*? If not — retake.
+2. **What is the weakest frame?** Not the weakest shot — the frame where the illusion breaks. Find it. Fix it.
+3. **If this were a real actor — would I keep this take,** or ask for another performance? That is the standard.
+4. **Did the emotion increase?** Every cut raises something — tension, curiosity, empathy, authority. Flat = another take.
+5. **What will people remember *tomorrow*?** If only the animation — we failed. If a look, a pause, a sentence, a silence — we are making a film.
 
-Never "did you like it." Engagement drops, with shot numbers, are the work list. A screening that
-finds ten problems is a successful screening.
+**The edit rule:** never optimize a take because it is technically cleaner — only because it is
+emotionally stronger. The audience forgives technical imperfection; it never forgives emotional
+emptiness. Between two takes, the one that makes people *feel* more survives, even if it is less
+perfect. Every render competes against the previous one — on emotion, not quality.
+
+**Verdict language of the room:** ❌ **Retake** · ✅ **Keep** · 🔥 **Hero Take.** Dailies speak in
+take verdicts, not gate numbers — the gates still run, silently, as the floor under the room.
 
 **Temporary assets are instruments, not drafts.** Temp voices, temp captions, temp music, temp
 moves exist to answer one question — *does the movie work?* — and are never protected, polished,
