@@ -20,6 +20,8 @@
 | `06_VO_Recording_Log.md` | Stage 0: casting decision, audition evidence, per-line duration budget, record log |
 | `07_VO_Booth_Script.md` | The printable booth script — what goes into the room on session day |
 | `08_Approval_Gates.md` | The two gates every plate passes before it is LOCKED, plus the approval ledger |
+| `09_Dialogue_Package.md` | All 19 lines: performance, expression, eye line, camera and shot — production-ready |
+| `10_Continuity_Sheet_Spec.md` | Spec for the film's cinematography reference sheet (blocked on approval) |
 | `../../scripts/film/vo-lines.json` | Machine-readable twin of the 19 lines — params, targets, job IDs |
 
 ---
@@ -149,6 +151,48 @@ Camera stills rendered on the wrong model (`nano_banana_flash`, via the ID shift
 4. Dialogue shots via Seedance 2.0 (audio-driven), ambient/motion shots via Kling 3.0 pro.
 5. Act IV last. Shot 17's smile: motion_control from a human performance, or manual animation.
 6. Upscale keeps to 4K → conform → mix (−14 LUFS) → burned subs → deliver 1080×1920.
+
+## PRODUCTION STANDARDS
+
+| Standard | Value | Set |
+|---|---|---|
+| **Still resolution** | **2K — 1536×2752** | Owner, 2026-07-31. Permanent baseline. The 1k Master Frame was a proof-of-concept and is explicitly *not* the standard |
+| Aspect ratio | 9:16 (delivery 1080×1920) | Kit |
+| Stills model | request `nano_banana_pro` → must record `nano_banana_2` | Law 9 |
+
+## QUEUED ACTIONS — blocked on camera-package approval
+
+Do not start these until all four camera plates pass Gate 2.
+
+**Q1 · Bring the Master Frame up to the 2K standard.**
+
+> ⚠️ **Decision needed first: regenerate or upscale? These are not the same thing.**
+>
+> The owner's instruction was "regenerate at the same composition, same blocking, same references,
+> same model, but at 2K." **Image generation is stochastic — a 2K re-run will not return the 1k
+> frame at higher resolution. It returns a different image.** Same prompt, same references, same
+> model, and still: different god rays, different particle placement, different reflections,
+> possibly different figure spacing.
+>
+> That matters more here than anywhere else in the film, because the Master Frame is the parent of
+> everything. If it changes, **Cam 2, Cam 12/A and the Grey Table Reverse were derived from a frame
+> that no longer exists**, and the camera package would have to be re-derived from the new master
+> and re-approved — Gate 2 all over again.
+>
+> | Option | What happens | Drift risk |
+> |---|---|---|
+> | **`upscale_image` to 2K** *(recommended)* | Same frame, same pixels, more of them. Composition is mathematically preserved | **None.** The camera package stays valid |
+> | **Regenerate at 2K** | A new, genuinely 2K-native render. Possibly better detail | **High.** New parent ⇒ re-derive and re-approve all three camera plates |
+>
+> Recommendation: **upscale.** It delivers the stated goal — every locked reference sharing one
+> quality standard — without invalidating three plates that just passed Gate 1. If native-2K detail
+> is worth more than the approvals, regenerate, but then budget for the full re-derivation.
+
+**Q2 · Continuity sheet** — one page, the four camera positions. Spec in `10_Continuity_Sheet_Spec.md`.
+Generated only after all four plates are LOCKED, since it *depicts* them.
+
+**Q3 · No new camera positions** until the four are approved. These four are the visual language;
+every later shot inherits from them. (Owner directive, 2026-07-31)
 
 ## KIT DISCREPANCIES — RAISED, NOT PATCHED
 

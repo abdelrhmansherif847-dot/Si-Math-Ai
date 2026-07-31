@@ -4,11 +4,9 @@
   "script_authority": "docs/film/03_Directors_Cut_Screenplay_Coverage.md — Part 1, LOCKED",
   "timing_authority": "docs/film/01_Production_Script.md — 'Measured timing (per act)' table",
   "rule": "Picture is cut to the read, never the reverse. All 19 lines are recorded before any dialogue shot is animated.",
-
-  "runtime_target_sec": 76.0,
+  "runtime_target_sec": 76,
   "total_speech_target_sec": 47.41,
   "total_silence_sec": 28.59,
-
   "casting": {
     "status": "DECIDED — HUMAN VO",
     "decided_on": "2026-07-31",
@@ -18,7 +16,6 @@
     "actor": null,
     "session_date": null
   },
-
   "delivery_spec": {
     "container": "wav",
     "sample_rate": 48000,
@@ -29,16 +26,27 @@
     "room_tone_sec": 30,
     "note": "One file per line — each becomes the audio_references input to that line's seedance_2_0 shot. A single continuous session file cannot be used directly; it must be split per line first."
   },
-
   "tts_fallback": {
     "status": "NOT IN USE — superseded by the human VO decision",
     "purpose": "Retained only for emergency pickups if a line is unusable and the actor is unavailable.",
-    "model": { "id": "seed_audio", "format": "wav", "sample_rate": 48000, "cost_credits_per_line": 0.3 },
-    "JZ_params": { "speech_rate": -20, "pitch_rate": 0, "loudness_rate": 0 },
-    "LZ_params": { "speech_rate": 15, "pitch_rate": 3, "loudness_rate": 0 },
+    "model": {
+      "id": "seed_audio",
+      "format": "wav",
+      "sample_rate": 48000,
+      "cost_credits_per_line": 0.3
+    },
+    "JZ_params": {
+      "speech_rate": -20,
+      "pitch_rate": 0,
+      "loudness_rate": 0
+    },
+    "LZ_params": {
+      "speech_rate": 15,
+      "pitch_rate": 3,
+      "loudness_rate": 0
+    },
     "audition_evidence": "docs/film/06_VO_Recording_Log.md §2"
   },
-
   "roles": {
     "JZ": {
       "character": "JUDGE ZERO",
@@ -59,35 +67,282 @@
       "wpm": 165
     }
   },
-
   "notes": [
     "Per-line target_sec = words / wpm × 60, using the act wpm the kit specifies. These are the kit's own budget decomposed per line, not new numbers.",
     "OWNER AMENDMENT 2026-07-31: L2 moved from the kit's Act I 130 wpm to Lawyer Zero's own 165 wpm (3.23s → 2.55s). Act I speech is now 5.32s rather than 6.0s and total speech 47.41s rather than 48.1s, so the silence budget grows by 0.68s.",
     "OVERRUN RULE (kit): if the read comes back long, take it out of the beats in Act II — never out of Act III. The verdict's pauses are the film.",
     "OPEN: Shot 4 allots L2 one second against a 2.55s line, and Act II has no slack to absorb the overhang. Either Shot 4 extends and Act II compresses, or L2 overlaps the Shot 4 → Shot 5 cut. See 06 §4.",
     "L10 'The defence rests.' — music cuts to absolute silence on the final word. Protect in the mix.",
-    "L15/L16 must share an identical cadence; L17 lands a half-step softer."
+    "L15/L16 must share an identical cadence; L17 lands a half-step softer.",
+    "Expression names refer to the six labelled panels on the character expression sheets (ac71e214 Judge, a36e371d Lawyer). Those sheets are PENDING — naming a panel on paper is safe, but no shot generates against them until they pass Gate 2 (Law 11)."
   ],
-
   "lines": [
-    { "id": "L1",  "speaker": "JZ", "text": "This court is now in session.", "words": 6, "wpm": 130, "target_sec": 2.77, "shot": "2",   "delivery": "Stated, not announced. He is confirming what the room already knows.", "job_id": null },
-    { "id": "L2",  "speaker": "LZ", "text": "Then let me ask a few questions.", "words": 7, "wpm": 165, "target_sec": 2.55, "shot": "4",   "delivery": "Light. Almost pleasant. The trap is already built.", "job_id": null },
-    { "id": "L3",  "speaker": "LZ", "text": "Who knows exactly where the student went wrong?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "5",  "delivery": "The first strike. Direct, to the grey table. Stress 'where'.", "job_id": null },
-    { "id": "L4",  "speaker": "LZ", "text": "Who knows why — instead of only saying 'wrong'?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "6",  "delivery": "Faster. The italicised word carries the sentence. Stress 'why'.", "job_id": null },
-    { "id": "L5",  "speaker": "LZ", "text": "A concept gap. A calculation slip. Carelessness. Or time?", "words": 9, "wpm": 165, "target_sec": 3.27, "shot": "7",  "delivery": "Four beats, metronome-even. He counts them on his claws.", "job_id": null },
-    { "id": "L6",  "speaker": "LZ", "text": "Who sees the same mistake — for weeks?", "words": 7, "wpm": 165, "target_sec": 2.55, "shot": "8",  "delivery": "The dash is a real pause. 'Weeks' lands like evidence.", "job_id": null },
-    { "id": "L7",  "speaker": "LZ", "text": "Who turns one wrong answer into a plan?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "9",  "delivery": "Warmer. This is where prosecution becomes advocacy.", "job_id": null },
-    { "id": "L8",  "speaker": "LZ", "text": "Who knows what to study next?", "words": 6, "wpm": 165, "target_sec": 2.18, "shot": "10", "delivery": "Quick, confident, already moving. Stress 'next'.", "job_id": null },
-    { "id": "L9",  "speaker": "LZ", "text": "Who walks the whole road — from the first question to the target score?", "words": 13, "wpm": 165, "target_sec": 4.73, "shot": "11", "delivery": "The longest line he has. Let it breathe mid-dash.", "job_id": null },
-    { "id": "L10", "speaker": "LZ", "text": "The defence rests.", "words": 3, "wpm": 165, "target_sec": 1.09, "shot": "12", "delivery": "Quiet. Final. He is done, and he knows he has won.", "job_id": null },
-    { "id": "L11", "speaker": "JZ", "text": "You are intelligent.", "words": 3, "wpm": 135, "target_sec": 1.33, "shot": "13A", "delivery": "To the grey table. Generous, and true. No irony — the ruling is fair, which is what makes it land.", "job_id": null },
-    { "id": "L12", "speaker": "JZ", "text": "But this one was built for students.", "words": 7, "wpm": 135, "target_sec": 3.11, "shot": "13B", "delivery": "The verdict. Slow. Each word placed like a stone.", "job_id": null },
-    { "id": "L13", "speaker": "JZ", "text": "It doesn't just solve math.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "14A", "delivery": "Over the rising constellation. Pride held under the robe.", "job_id": null },
-    { "id": "L14", "speaker": "JZ", "text": "It understands how students learn.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "14B", "delivery": "The thesis. Slowest line in the film.", "job_id": null },
-    { "id": "L15", "speaker": "JZ", "text": "Every mistake tells a story.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "15A", "delivery": "First law. Struck into marble.", "job_id": null },
-    { "id": "L16", "speaker": "JZ", "text": "Every step reveals a weakness.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "15B", "delivery": "Second law. Same cadence exactly as L15.", "job_id": null },
-    { "id": "L17", "speaker": "JZ", "text": "Every weakness becomes a plan.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "15C", "delivery": "Third law. A half-step softer — it resolves, not escalates.", "job_id": null },
-    { "id": "L18", "speaker": "JZ", "text": "Students don't need another chatbot.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "16", "delivery": "Spoken while descending the steps. Not to anyone. To everyone.", "job_id": null },
-    { "id": "L19", "speaker": "LZ", "text": "They need a mentor.", "words": 4, "wpm": 135, "target_sec": 1.78, "shot": "17", "delivery": "The only soft line he has. Close, warm, almost private. The student finishing the teacher's sentence.", "job_id": null }
-  ]
+    {
+      "id": "L1",
+      "speaker": "JZ",
+      "text": "This court is now in session.",
+      "words": 6,
+      "wpm": 130,
+      "target_sec": 2.77,
+      "shot": "2",
+      "delivery": "Stated, not announced. He is confirming what the room already knows.",
+      "job_id": null,
+      "camera": "Cam 2 · 50mm · low · MCU · slow push-in",
+      "expression": "CALM AUTHORITY",
+      "eye_direction": "Tracks left across the room before the line, then settles forward. One blink after the final word, never during."
+    },
+    {
+      "id": "L2",
+      "speaker": "LZ",
+      "text": "Then let me ask a few questions.",
+      "words": 7,
+      "wpm": 165,
+      "target_sec": 2.55,
+      "shot": "4",
+      "delivery": "Light. Almost pleasant. The trap is already built.",
+      "job_id": null,
+      "camera": "Cam 12/A axis · 35mm · eye level · low tracking arc",
+      "expression": "CONFIDENT",
+      "eye_direction": "To the bench first, then across to the grey table on the last word."
+    },
+    {
+      "id": "L3",
+      "speaker": "LZ",
+      "text": "Who knows exactly where the student went wrong?",
+      "words": 8,
+      "wpm": 165,
+      "target_sec": 2.91,
+      "shot": "5",
+      "delivery": "The first strike. Direct, to the grey table. Stress 'where'.",
+      "job_id": null,
+      "camera": "Cam 12/A · 50mm · eye level · medium · slow push",
+      "expression": "THE QUESTION",
+      "eye_direction": "To the grey table, held. Never at the hologram — he watches the jury."
+    },
+    {
+      "id": "L4",
+      "speaker": "LZ",
+      "text": "Who knows why — instead of only saying 'wrong'?",
+      "words": 8,
+      "wpm": 165,
+      "target_sec": 2.91,
+      "shot": "6",
+      "delivery": "Faster. The italicised word carries the sentence. Stress 'why'.",
+      "job_id": null,
+      "camera": "B reverse → Cam 12/A · 35mm · medium-wide · whip-pan",
+      "expression": "THE QUESTION",
+      "eye_direction": "To the grey table. Delivers 'wrong' in audible quotes."
+    },
+    {
+      "id": "L5",
+      "speaker": "LZ",
+      "text": "A concept gap. A calculation slip. Carelessness. Or time?",
+      "words": 9,
+      "wpm": 165,
+      "target_sec": 3.27,
+      "shot": "7",
+      "delivery": "Four beats, metronome-even. He counts them on his claws.",
+      "job_id": null,
+      "camera": "Cam 12/A axis · 35mm · full · 180° orbit",
+      "expression": "THE COUNT",
+      "eye_direction": "Down to his claws on each count, up to the grey table on 'Or time?'"
+    },
+    {
+      "id": "L6",
+      "speaker": "LZ",
+      "text": "Who sees the same mistake — for weeks?",
+      "words": 7,
+      "wpm": 165,
+      "target_sec": 2.55,
+      "shot": "8",
+      "delivery": "The dash is a real pause. 'Weeks' lands like evidence.",
+      "job_id": null,
+      "camera": "Cam 12/A axis · 24mm · rising · fast pull-back",
+      "expression": "THE QUESTION",
+      "eye_direction": "To the grey table, then up as the timeline multiplies past frame edges."
+    },
+    {
+      "id": "L7",
+      "speaker": "LZ",
+      "text": "Who turns one wrong answer into a plan?",
+      "words": 8,
+      "wpm": 165,
+      "target_sec": 2.91,
+      "shot": "9",
+      "delivery": "Warmer. This is where prosecution becomes advocacy.",
+      "job_id": null,
+      "camera": "Cam 12/A · 50mm · eye level · medium · LOCKED",
+      "expression": "SINCERE",
+      "eye_direction": "To the grey table, softened — no longer interrogating them."
+    },
+    {
+      "id": "L8",
+      "speaker": "LZ",
+      "text": "Who knows what to study next?",
+      "words": 6,
+      "wpm": 165,
+      "target_sec": 2.18,
+      "shot": "10",
+      "delivery": "Quick, confident, already moving. Stress 'next'.",
+      "job_id": null,
+      "camera": "Cam 12/A · 50mm · MCU · rise with the card",
+      "expression": "CONFIDENT",
+      "eye_direction": "Up and forward, rising with the card. Past the grey table now."
+    },
+    {
+      "id": "L9",
+      "speaker": "LZ",
+      "text": "Who walks the whole road — from the first question to the target score?",
+      "words": 13,
+      "wpm": 165,
+      "target_sec": 4.73,
+      "shot": "11",
+      "delivery": "The longest line he has. Let it breathe mid-dash.",
+      "job_id": null,
+      "camera": "Cam 12/A axis · 24mm · crane ascending · wide",
+      "expression": "THE PUNCHLINE",
+      "eye_direction": "Along the path toward the bench, then thrown to camera."
+    },
+    {
+      "id": "L10",
+      "speaker": "LZ",
+      "text": "The defence rests.",
+      "words": 3,
+      "wpm": 165,
+      "target_sec": 1.09,
+      "shot": "12",
+      "delivery": "Quiet. Final. He is done, and he knows he has won.",
+      "job_id": null,
+      "camera": "Cam 12/A · 85mm · eye level · MCU · LOCKED",
+      "expression": "CONFIDENT",
+      "eye_direction": "To the bench. Back turned to the grey table."
+    },
+    {
+      "id": "L11",
+      "speaker": "JZ",
+      "text": "You are intelligent.",
+      "words": 3,
+      "wpm": 135,
+      "target_sec": 1.33,
+      "shot": "13A",
+      "delivery": "To the grey table. Generous, and true. No irony — the ruling is fair, which is what makes it land.",
+      "job_id": null,
+      "camera": "Cam 2 · 50mm · low · MCU · locked",
+      "expression": "GLASSES OFF",
+      "eye_direction": "Straight down the lens, to the grey table."
+    },
+    {
+      "id": "L12",
+      "speaker": "JZ",
+      "text": "But this one was built for students.",
+      "words": 7,
+      "wpm": 135,
+      "target_sec": 3.11,
+      "shot": "13B",
+      "delivery": "The verdict. Slow. Each word placed like a stone.",
+      "job_id": null,
+      "camera": "Cam 2 · 85mm · low · CU · few-inch push",
+      "expression": "THE VERDICT",
+      "eye_direction": "Down the lens. Hold one full second on the eyes before the line."
+    },
+    {
+      "id": "L13",
+      "speaker": "JZ",
+      "text": "It doesn't just solve math.",
+      "words": 5,
+      "wpm": 135,
+      "target_sec": 2.22,
+      "shot": "14A",
+      "delivery": "Over the rising constellation. Pride held under the robe.",
+      "job_id": null,
+      "camera": "Orbit A · 24mm · Center Court · wide",
+      "expression": "CALM AUTHORITY",
+      "eye_direction": "Out over the rising constellation."
+    },
+    {
+      "id": "L14",
+      "speaker": "JZ",
+      "text": "It understands how students learn.",
+      "words": 5,
+      "wpm": 135,
+      "target_sec": 2.22,
+      "shot": "14B",
+      "delivery": "The thesis. Slowest line in the film.",
+      "job_id": null,
+      "camera": "Orbit B · 35mm · MCU · orbit decelerating",
+      "expression": "CALM AUTHORITY",
+      "eye_direction": "To camera, seen through the orbiting holograms."
+    },
+    {
+      "id": "L15",
+      "speaker": "JZ",
+      "text": "Every mistake tells a story.",
+      "words": 5,
+      "wpm": 135,
+      "target_sec": 2.22,
+      "shot": "15A",
+      "delivery": "First law. Struck into marble.",
+      "job_id": null,
+      "camera": "Cam 2 · 35mm · full",
+      "expression": "THE VERDICT",
+      "eye_direction": "Down the lens; drops to the floor as the law burns into the marble."
+    },
+    {
+      "id": "L16",
+      "speaker": "JZ",
+      "text": "Every step reveals a weakness.",
+      "words": 5,
+      "wpm": 135,
+      "target_sec": 2.22,
+      "shot": "15B",
+      "delivery": "Second law. Same cadence exactly as L15.",
+      "job_id": null,
+      "camera": "Cam 2 · 50mm · MCU",
+      "expression": "THE VERDICT",
+      "eye_direction": "Down the lens; drops to the floor as the law burns into the marble."
+    },
+    {
+      "id": "L17",
+      "speaker": "JZ",
+      "text": "Every weakness becomes a plan.",
+      "words": 5,
+      "wpm": 135,
+      "target_sec": 2.22,
+      "shot": "15C",
+      "delivery": "Third law. A half-step softer — it resolves, not escalates.",
+      "job_id": null,
+      "camera": "Cam 2 · 85mm · CU",
+      "expression": "THE VERDICT (half-step softer)",
+      "eye_direction": "Down the lens; drops to the floor as the law burns into the marble."
+    },
+    {
+      "id": "L18",
+      "speaker": "JZ",
+      "text": "Students don't need another chatbot.",
+      "words": 5,
+      "wpm": 135,
+      "target_sec": 2.22,
+      "shot": "16",
+      "delivery": "Spoken while descending the steps. Not to anyone. To everyone.",
+      "job_id": null,
+      "camera": "Descent crane · 35mm · descending with him · full, low",
+      "expression": "CALM AUTHORITY",
+      "eye_direction": "Middle distance, down the steps. Not to the Lawyer, not to camera."
+    },
+    {
+      "id": "L19",
+      "speaker": "LZ",
+      "text": "They need a mentor.",
+      "words": 4,
+      "wpm": 135,
+      "target_sec": 1.78,
+      "shot": "17",
+      "delivery": "The only soft line he has. Close, warm, almost private. The student finishing the teacher's sentence.",
+      "job_id": null,
+      "camera": "Merge two-shot · 50mm · eye level · 90° dolly to profile",
+      "expression": "SINCERE",
+      "eye_direction": "To Judge Zero, held. Pure profile two-shot."
+    }
+  ],
+  "dialogue_package": "docs/film/09_Dialogue_Package.md — the human-readable twin of this file"
 }

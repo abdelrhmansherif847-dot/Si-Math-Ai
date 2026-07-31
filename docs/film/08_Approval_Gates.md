@@ -27,13 +27,9 @@ from the completed job. **Do not advance a plate to Gate 2 with any box unticked
 - [ ] **Correct model** — the job's recorded `model` reads `nano_banana_2` for stills.
       Request `nano_banana_pro`; the record must say `nano_banana_2`. If it reads
       `nano_banana_flash`, the wrong model rendered it → **void, discard, re-run.** (Law 9)
-- [ ] **Correct resolution** — matches what was specified for this plate class; `width`/`height`
-      in the record are consistent with it.
-      > ⚠️ **Open — the kit never specifies a still resolution.** The Master Frame is `1k`
-      > (768×1376); the three new camera plates were generated at `2k` (1536×2752) on the reasoning
-      > that key frames feed Seedance and a larger parent is the better input. Higher-resolution
-      > children of a 1k parent is not a drift risk, but it is an unratified choice. **Owner to set
-      > the standard**, then this box becomes checkable rather than a judgement call.
+- [ ] **Correct resolution — `2k`, 1536×2752.** ✅ *Standard set by owner 2026-07-31.* Every
+      production still is 2K. The 1k Master Frame was a proof-of-concept and is not the baseline.
+      Any plate whose record reads `1k` fails this box.
 - [ ] **Correct references** — the job's `input_images` are exactly the intended locked IDs, and
       **nothing marked PENDING is among them.** (Law 11)
 - [ ] **Correct aspect ratio** — `9:16` for anything in the film; reference sheets may differ.
@@ -89,10 +85,13 @@ until all four are LOCKED.**
 
 | Plate | ID | Gate 1 | Gate 2 | State |
 |---|---|---|---|---|
-| **Master Frame** | `0f0b8381` | ✅ pass | ✅ pass | 🔒 **LOCKED** (pre-existing) |
-| **Cam 2** — bench low angle | `e60f6a38` | ✅ pass | ⏳ awaiting owner | pending |
-| **Cam 12/A** — Center Court toward bench | `6130e45b` | ✅ pass | ⏳ awaiting owner | pending |
-| **Grey Table Reverse** | `f450ac37` | ⏳ rendering | ⏳ awaiting owner | pending |
+| **Master Frame** | `0f0b8381` | ⚠️ pass at 1k | ✅ pass | 🔒 LOCKED — **below the 2K standard, see queued action in `00`** |
+| **Cam 2** — bench low angle | `e60f6a38` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
+| **Cam 12/A** — Center Court toward bench | `6130e45b` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
+| **Grey Table Reverse** | `f450ac37` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
+
+All four rendered. Gate 1 closed on all three new plates: recorded model `nano_banana_2`, 2K,
+9:16, locked references only.
 
 ### Reference sheets
 
