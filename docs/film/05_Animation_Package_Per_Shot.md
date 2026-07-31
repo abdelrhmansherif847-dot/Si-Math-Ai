@@ -18,6 +18,13 @@ Ready-to-run cards. Each names its references (Higgsfield IDs from `00`), its st
 
 **Model split:** stills `nano_banana_pro` · non-dialogue motion `kling3_0` mode **pro** · dialogue `seedance_2_0` mode **std**, 1080p, `audio_references` = the recorded line, genre `drama` · finals `upscale_video` 4K. Generate 5s, cut to 3–4s. Decline all presets.
 
+> ⚠️ **Stills — request `nano_banana_pro`; the job will record as `nano_banana_2`.** The tool's model
+> IDs are shifted one tier against what the backend records: requesting `nano_banana_2` silently
+> renders on `nano_banana_flash`. Every locked asset was made by requesting `nano_banana_pro`, so
+> `nano_banana_2` in a job record is the *correct* signature. **Verify it after every still** — a
+> record reading `nano_banana_flash` means the wrong model rendered it; discard and re-run.
+> Full detail and the verifying test in `00` → OPERATIONAL HAZARD.
+
 **The B-cut (used in Shots 5–11, generate ONCE, reuse):**
 - Refs: MASTER + REPS. Still: 35mm, slightly high angle, the five at their table camera-right, warm gold exhibit light spilling across them from off-frame left, NOTHING igniting above them, painterly. Motion (kling pro): near-stillness — unison breathing, one slow head turn toward the off-screen light, gold spill flickering softly. 2s used.
 - **Continuity:** exactly five. No hologram above them, ever.

@@ -92,6 +92,25 @@ Asset IDs are Higgsfield job/media IDs — pass them directly as `medias[].value
 | Two-character pose sheet | job `4b77e84d-0fcb-4342-b80c-f72996096260` |
 | Three-party scale lineup | job `be214566-2084-47cd-987a-ba736eaa73e6` |
 
+### ⏳ PENDING OWNER APPROVAL — the three re-used camera stills (generation order step 3)
+
+All three derived from the Master Frame `0f0b8381` per `02` §5, requested on `nano_banana_pro`
+(records as `nano_banana_2` — see the hazard note), 9:16, 2k, 1536×2752.
+
+| Camera position | ID | Reused in | Refs |
+|---|---|---|---|
+| **Cam 2** — bench low angle, 50mm, glasses ON | job `e60f6a38-bd05-495a-8e69-740e280fbf13` | Shots 2, 13A, 13B, 14B, 15A/B/C | MASTER + JZ |
+| **Cam 12/A** — Center Court toward bench, 50mm eye level, clean plate (no hologram) | job `6130e45b-2c39-4872-afbf-aed369d9d6d3` | Shots 4–12 A-cuts | MASTER + LZ |
+| **B reverse** — grey table, 35mm slightly high, gold spill from off-frame left, nothing above them | job `f450ac37-4c4c-47fa-89e9-acb99dee42aa` | The Silence beat, Shots 5–11 | MASTER + REPS |
+
+Deliberately generated from **locked references only.** The pose sheet and scale lineup were not
+attached, because they are themselves still PENDING — attaching unapproved design to a production
+plate propagates it into the film. Re-derive with them once they are approved, if wanted.
+
+**Not yet verified visually.** The environment's network policy blocks the asset CDN, so these were
+confirmed as completed jobs on the correct model but not inspected frame by frame. They need the
+owner's eye against the `02` §6 continuity checklist before anything is built on them.
+
 ### 🎙 VOICE / AUDIO — Stage 0
 
 Full detail in `06_VO_Recording_Log.md`; booth script in `07`. Nothing dialogue-bound animates until
@@ -111,7 +130,7 @@ Auditions are casting evidence only — **not film material, not locked, never u
 
 ### 🗑 SUPERSEDED — DO NOT USE, DO NOT REFERENCE
 
-Semi-realistic dragon attempts: `7f6576ab`, `cc0b7019`, `57317d7c`, `be5d6d36` · Elder-in-suit concept (wrong casting): `67225483`, `78fbaa62`, `52858951`, `7832def7` · Judge alt: `e4b20885` · Lawyer alt: `7850214a` · Pre-final environments: `46bc7978`, `5f208353`, `403829ad`, `60c03826`, `d5cfd78f`, `a85530f3`, `661e1d4f`, `41ada558`, `26b4f25f`, `b2050555`, `d047a41e` · Old-style two-shots: `6854aae0`, `219d94fd` · Shot 3 alt: `39a96e55` · Reps alt: `8217bd6c`
+Camera stills rendered on the wrong model (`nano_banana_flash`, via the ID shift): `2d7ac26a` (Cam 2, 2k) · `f2e86fc3` (Cam 12/A, 2k) · `4bb0fb73` (Cam 2, 1k) · Semi-realistic dragon attempts: `7f6576ab`, `cc0b7019`, `57317d7c`, `be5d6d36` · Elder-in-suit concept (wrong casting): `67225483`, `78fbaa62`, `52858951`, `7832def7` · Judge alt: `e4b20885` · Lawyer alt: `7850214a` · Pre-final environments: `46bc7978`, `5f208353`, `403829ad`, `60c03826`, `d5cfd78f`, `a85530f3`, `661e1d4f`, `41ada558`, `26b4f25f`, `b2050555`, `d047a41e` · Old-style two-shots: `6854aae0`, `219d94fd` · Shot 3 alt: `39a96e55` · Reps alt: `8217bd6c`
 
 ---
 
@@ -121,7 +140,7 @@ Semi-realistic dragon attempts: `7f6576ab`, `cc0b7019`, `57317d7c`, `be5d6d36` �
 
 **Next, in order (from `03`, Part 4):**
 1. **Record all 19 VO lines** — ✅ route decided (human VO), booth script and per-line duration budget prepared in `06`/`07`. **Now blocked on casting an actor and booking the session.** Nothing dialogue-bound animates before this.
-2. Generate + approve the three re-used camera stills from the Master Frame: **Cam 2** (bench low angle), **Cam 12/A** (Center Court toward bench), **the B reverse** (grey table).
+2. Generate + approve the three re-used camera stills from the Master Frame: **Cam 2** (bench low angle), **Cam 12/A** (Center Court toward bench), **the B reverse** (grey table). — *Generated 2026-07-31, all three PENDING OWNER APPROVAL above. Awaiting a continuity pass against `02` §6.*
 3. Per-shot key frames in script order (cards in `05`), one approval at a time.
 4. Dialogue shots via Seedance 2.0 (audio-driven), ambient/motion shots via Kling 3.0 pro.
 5. Act IV last. Shot 17's smile: motion_control from a human performance, or manual animation.
@@ -136,7 +155,26 @@ rule below only an explicit owner decision may supersede a document.
 |---|---|---|
 | 1 | L2 priced at the Judge's 130 wpm though Lawyer Zero speaks it | ✅ **RESOLVED** — moved to 165 wpm (owner, 2026-07-31) |
 | 2 | Shot 4 allots L2 one second against a 2.55s line, and Act II has zero slack to absorb it (22.5s speech + 5.5s silence = its full 28s) | ⏳ **OPEN** — either Shot 4 extends and Act II compresses, or L2 overlaps the Shot 4 → 5 cut. Affects the edit, not the read. See `06` §4(a) |
-| 3 | `05` specifies stills on `nano_banana_pro`, but the Master Frame `0f0b8381` and all four reference sheets were actually generated on **`nano_banana_2`** | ⏳ **OPEN** — an operator following `05` literally would generate against a different model than the one that produced the locked references. Confirm which is normative before Stage 1 key frames |
+| 3 | `05` specifies stills on `nano_banana_pro`, but the Master Frame and all four reference sheets record as **`nano_banana_2`** | ✅ **RESOLVED — not a real deviation.** The tool's model IDs are shifted one tier against what the backend records (see the hazard note below). `05` is correct as written and the locked assets were made exactly as it specifies |
+
+### ⚠️ OPERATIONAL HAZARD — the model ID shift
+
+Verified by direct test on 2026-07-31, three generations:
+
+| You request | The job records as |
+|---|---|
+| `nano_banana_2` | `nano_banana_flash` |
+| `nano_banana_pro` | **`nano_banana_2`** |
+
+Not a resolution or aspect-ratio effect — reproduced at both 1k and 2k.
+
+**The rule: to match the locked assets, request `nano_banana_pro`. The job will record as
+`nano_banana_2`. That is correct — do not "fix" it.** An operator who reads the job history, sees
+`nano_banana_2` on the Master Frame and requests that ID will silently render on `flash` instead.
+That is precisely how drift enters a locked pipeline, and it cost three wasted generations here.
+
+**Verify after every still:** the job's recorded `model` must read `nano_banana_2`. If it reads
+`nano_banana_flash`, the plate was rendered on the wrong model — discard and re-run.
 
 **Reference sheets — Law compliance verified.** All four `PENDING OWNER APPROVAL` sheets resolve as
 completed jobs and each attaches the locked production designs as inputs (`75f34868` Judge,
