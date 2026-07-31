@@ -169,6 +169,20 @@ After deploy, confirm the deployed content matches the intended commit:
 Or via Supabase Dashboard → Edge Functions → `ai-tutor` → version list —
 confirm the expected version string in the code header.
 
+> **Two version strings must agree, and they have drifted before.** The banner
+> on line 1 is what this check reads; `AI_TUTOR_VERSION` (~line 161) is what
+> the function reports in every response and what
+> `scripts/validate-ai-tutor-source.mjs` prints. v92 was committed with
+> `AI_TUTOR_VERSION` bumped and the banner left at `v91`, which would have made
+> this check report the *previous* version after a successful deploy — the same
+> "verification step disagrees with reality" failure this check exists to
+> catch. Before deploying, confirm both read the same value:
+>
+> ```bash
+> head -1 supabase/functions/ai-tutor/index.ts
+> grep -n "AI_TUTOR_VERSION = " supabase/functions/ai-tutor/index.ts
+> ```
+
 ## 5. Deploy client assets
 
 `chat.html`, `mock-exam.html`, JS files → through the configured hosting
@@ -181,8 +195,12 @@ After deploy, on production:
 1. Sign in as a test account.
 2. Send a chat message with text input. Expect:
    - HTTP 200, non-empty `answer`.
-   - Response JSON includes `version: 'v65'`, `idempotency_recovered: false`,
-     `degraded: false`.
+   - Response JSON includes `idempotency_recovered: false`, `degraded: false`,
+     and a `version` equal to `AI_TUTOR_VERSION` in
+     `supabase/functions/ai-tutor/index.ts` — **`'v92'` for the next deploy**.
+     (This line read `'v65'` until 2026-07-31, 27 versions stale; a smoke test
+     that expects the wrong version either fails a good deploy or gets waved
+     through. Re-read the constant rather than trusting this sentence.)
    - Edge Function logs include no `[ai-tutor] unhandled-error` tags.
 3. Confirm a new `question_records` row exists with a non-null
    `client_request_id`.

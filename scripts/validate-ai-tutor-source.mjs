@@ -110,7 +110,7 @@ if (SIZE < 40_000) {
 // and instrumentation at all eight OpenAI call sites. v89 had already reached
 // 206 KB, leaving only 4 KB of headroom under the old bound.
 if (SIZE > 240_000) {
-  FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 210000)`) || FAILED;
+  FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 240000)`) || FAILED;
 }
 
 // Placeholder / TODO / FIXME markers that should never reach production.

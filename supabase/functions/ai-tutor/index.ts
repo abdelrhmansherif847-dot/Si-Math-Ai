@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v91
+// ai-tutor Edge Function v92
 // v91 (HOTFIX — temporal dead zone regression introduced by v90): v90 placed
 // the `teleCtx.operation` derivation beside the other telemetry-context
 // assignments, ~28 lines ABOVE the `const imagesData` declaration it reads.
