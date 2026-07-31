@@ -105,6 +105,25 @@ before it changes locked coverage.** Not every transition should be a cut.
 Everything else the owner asked for — track, dolly, crane, orbit, motivated push/pull — is already
 specified per shot below; the animatic's Ken Burns flattened it, the generations will not.
 
+### THE STRONGEST WORKFLOW — researched 2026-07-31 (owner directive: quality over convenience)
+
+Catalog-verified against the current model set. Two capabilities are **larger than the kit assumed**,
+and both serve the scene method directly:
+
+| Stage | Model & spec | What changed vs the kit |
+|---|---|---|
+| **Scene masters** (non-dialogue) | `kling3_0` mode **pro** (finals may use mode `4k`), **duration up to 15s**, sound off | Kit assumed 5s takes. 15s = whole-scene performance masters — the scene method's engine |
+| **Dialogue takes** | `seedance_2_0` mode **std**, **duration 4–15s**, up to **4k**, `genre: drama`, `start_image` = approved key frame, **`audio_references` = the recorded line** (real lip sync — mouth, breath, micro-timing driven by the actual read), `image_references` = character masters (identity lock), `video_references` = approved behaviour tests (acting style lock) | Kit specced 1080p/5s and audio only. The full reference stack — audio + identity + behaviour simultaneously — is the "believe the character is actually talking" answer |
+| **A/B alternates** | `wan2_7` (synchronized audio, character-consistent, 2–15s) · `minimax_h3` (2K, full reference suite, 5–15s) | Second and third opinions when a shot fights Seedance |
+| **Performance transfer** | `motion_control` — character still + filmed human performance → 1080p | Confirmed live; Shot 17's named path, available to any beat that fights the models |
+| **Finals** | `upscale_video` → 4K | Unchanged |
+
+**Take sizing:** masters 10–15s; dialogue takes = line + performance air (6–10s); generate long,
+cut short. **Lip sync is not an add-on** — it is what the Seedance stage *is*; the animatic could
+never show it because stills cannot speak. The workflow catalog (UGC/explainer/thumbnail templates)
+was checked and rejected: nothing there fits a bespoke two-character courtroom film, and template
+restyling is drift (Law 2's spirit).
+
 ### The quality ceiling — how "premium series" is actually reached
 
 Human VO driving Seedance's micro-timing · whole-scene masters · this performance layer in every
