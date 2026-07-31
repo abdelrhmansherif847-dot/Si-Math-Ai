@@ -22,6 +22,7 @@
 | `08_Approval_Gates.md` | The two gates every plate passes before it is LOCKED, plus the approval ledger |
 | `09_Dialogue_Package.md` | All 19 lines: performance, expression, eye line, camera and shot — production-ready |
 | `10_Continuity_Sheet_Spec.md` | Spec for the film's cinematography reference sheet (blocked on approval) |
+| `11_Directors_Charter.md` | Laws 13–15, the performance standard, and the Silent Cut audit of all 19 shots |
 | `../../scripts/film/vo-lines.json` | Machine-readable twin of the 19 lines — params, targets, job IDs |
 
 ---
@@ -40,6 +41,13 @@
 10. **TWO GATES.** A completed job is not an approved plate. Every plate passes **Gate 1 — Technical** (model, resolution, references, aspect ratio, settings) and **Gate 2 — Creative** (character identity, camera composition, courtroom geography, lighting continuity, emotional impact, storytelling purpose). **Only after both is a plate LOCKED.** Gate 1 is machine-checkable and is the operator's job. Gate 2 is the owner's eye and cannot be delegated, inferred, or assumed from a clean Gate 1. Checklists in `08`.
 11. **LOCKED REFERENCES ONLY.** Never attach a `PENDING OWNER APPROVAL` asset to a production generation. A pending asset is an unvalidated design; making it the parent of a plate propagates it into the film through the back door. **No still becomes a parent reference for future generations until the owner has approved it visually.**
 12. **UPSCALE APPROVED FRAMES — NEVER REGENERATE THEM.** Once a hero frame passes Gate 2 it is a fixed point, and every plate derived from it depends on it staying that way. To raise its resolution, **`upscale_image`** — same composition, same pixels, more of them. **Regeneration is permitted in exactly two cases: the composition itself is changing, or the frame was rejected at Gate 2.** Re-running a generation "identically" at a new resolution returns a *different image*, orphans every child derived from the original, and voids their approvals. Preserving continuity outranks native resolution. (Owner, 2026-07-31)
+13. **THE DIRECTOR'S QUESTION.** Every decision answers one question: ***"Will this make the final film better?"*** — not "is this technically correct?" **Technical correctness is now a requirement, not the goal.** The goal is emotional storytelling. A choice that is flawless and inert loses to a choice that is imperfect and alive. (Owner, 2026-07-31)
+14. **THE EMOTIONAL TIEBREAK.** When two options are both technically valid, **choose the one that creates the stronger emotional experience.** This film will be remembered for how it makes people feel, not for how perfect its prompts were. Use this to break every tie — it is not a preference, it is the deciding rule.
+15. **THE SILENT CUT TEST.** Strip every line of dialogue from the film. **The audience must still understand the story** — from blocking, lighting, composition, performance and camera alone. Dialogue *strengthens* the story; it never *carries* it. Any shot that fails this test is under-designed, and the fix is visual, never a better line. Standing audit in `11`.
+
+> **Laws 13–15 outrank the rest.** 1–12 keep the film *consistent*; 13–15 decide whether it is
+> *good*. When a consistency law and a director's law appear to conflict, the conflict is almost
+> always a sign the shot is under-designed — solve it visually, do not trade away either one.
 
 ---
 
@@ -145,13 +153,25 @@ Camera stills rendered on the wrong model (`nano_banana_flash`, via the ID shift
 
 **Done:** world locked · cast locked (3 parties) · logo integrated · screenplay locked (19 lines) · blocking + coverage locked · Master Frame locked · **Shot 3 in the can** · pipeline researched and specified.
 
-**Next, in order (from `03`, Part 4):**
-1. **Record all 19 VO lines** — ✅ route decided (human VO), booth script and per-line duration budget prepared in `06`/`07`. **Now blocked on casting an actor and booking the session.** Nothing dialogue-bound animates before this.
-2. Generate + approve the three re-used camera stills from the Master Frame: **Cam 2** (bench low angle), **Cam 12/A** (Center Court toward bench), **the B reverse** (grey table). — *Generated 2026-07-31, all three PENDING OWNER APPROVAL above. Awaiting a continuity pass against `02` §6.*
-3. Per-shot key frames in script order (cards in `05`), one approval at a time.
-4. Dialogue shots via Seedance 2.0 (audio-driven), ambient/motion shots via Kling 3.0 pro.
-5. Act IV last. Shot 17's smile: motion_control from a human performance, or manual animation.
-6. Upscale keeps to 4K → conform → mix (−14 LUFS) → burned subs → deliver 1080×1920.
+## THE PRODUCTION ORDER — owner-set, 2026-07-31
+
+**Nothing jumps ahead of this order.** Each step is a foundation the next one stands on.
+
+| # | Step | State |
+|---|---|---|
+| **1** | **Lock the four plates through Gate 2** | ⏳ **ACTIVE** — all four rendered, Gate 1 clean, awaiting the owner's eye |
+| **2** | Upscale the approved Master Frame to 2K | blocked on 1 · call ready in Q1 |
+| **3** | Generate the Continuity Sheet | blocked on 1 · spec complete in `10` |
+| **4** | Cast and record the final voice actor | ⏳ **runs in parallel** — independent of 1–3, and the longest lead time. Booth script `07`, package `09` |
+| **5** | Build the animatic with temporary timing | blocked on 3 and 4 |
+| **6** | Begin animation | blocked on 5 |
+
+Then, unchanged from `03` Part 4: per-shot key frames in script order · dialogue via Seedance 2.0
+(audio-driven) · ambient motion via Kling 3.0 pro · Act IV last, Shot 17's smile via `motion_control`
+or manual · `upscale_video` to 4K → conform → mix −14 LUFS → burned subs → deliver 1080×1920.
+
+**Step 4 is the one to start now.** It is the only step whose blocker is a human being rather than an
+approval, and it gates everything from step 5 onward.
 
 ## PRODUCTION STANDARDS
 

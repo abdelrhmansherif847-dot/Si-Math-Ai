@@ -190,7 +190,7 @@ stillness is the loudest choice available.*
 |---|---|
 | **Emotional direction** | The verdict. The hammer, gently laid down. Each word placed like a stone; the "but" settles, it does not swing. |
 | **Facial expression** | `THE VERDICT` — grave, resolved, eyes direct. |
-| **Eye direction** | Down the lens. **Hold one full second on the eyes before the line.** |
+| **Eye direction** | Down the lens. **Hold one full second on the eyes before the line.** ⚑ *Proposed change under Law 15 — eyes move to Lawyer Zero on this line, making the verdict readable silently. See `11`, awaiting owner decision; not applied.* |
 | **Camera** | Cam 2 · 85mm · low · CU · push-in of only a few inches |
 | **Notes** | Glasses **OFF from here to the end of the film**. Without them his eyes are fully readable for the first time. One blink **before** this line. |
 
