@@ -614,19 +614,40 @@ select.search-input{cursor:pointer}
       <div id="econCoverage"><div class="empty"><div class="ico">📊</div><p>Loading…</p></div></div>
     </div>
 
-    <div class="card">
+    <!-- SECTION 1 — Financial Overview -->
+    <div class="card" style="margin-bottom:18px">
       <div class="card-head">
-        <div class="card-ico">🧾</div>
+        <div class="card-ico">💰</div>
         <div>
-          <div class="card-title">Milestone 1</div>
-          <div class="card-sub">Shell, owner gate, RPC wiring and Coverage only</div>
+          <div class="card-title">Financial Overview</div>
+          <div class="card-sub">Period headline — revenue, AI cost, gross profit, margin</div>
         </div>
       </div>
-      <div class="ec-note">
-        KPI panels and sections 1–9 are not built yet. This milestone exists to
-        prove the owner gate, the read-only RPC surface and the blocked-state
-        rendering contract before any metric depends on them.
+      <div id="econOverview"><div class="empty"><div class="ico">💰</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 2 — AI Cost Analytics -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico">⚙️</div>
+        <div>
+          <div class="card-title">AI Cost Analytics</div>
+          <div class="card-sub">Cost by canonical service — which capability to optimise</div>
+        </div>
       </div>
+      <div id="econCost"><div class="empty"><div class="ico">⚙️</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 3 — Revenue Analytics -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">📈</div>
+        <div>
+          <div class="card-title">Revenue Analytics</div>
+          <div class="card-sub">Recognised revenue by plan, spread across each plan's period</div>
+        </div>
+      </div>
+      <div id="econRevenue"><div class="empty"><div class="ico">📈</div><p>Loading…</p></div></div>
     </div>
   </div>
 
@@ -922,27 +943,184 @@ function ecBadge(cls) {
   return '<span class="ec-badge ' + esc(c) + '">' + esc(c) + '</span>';
 }
 
-async function loadEconomics() {
-  const host = document.getElementById('econCoverage');
-  host.innerHTML = '<div class="empty"><div class="ico">📊</div><p>Loading…</p></div>';
-
+// Shared RPC caller. Returns {rows, error, denied} — never throws, and never
+// collapses a permission failure into "no data" (INV-26).
+async function ecRpc(name, args) {
   let res;
-  try { res = await sb.rpc('owner_econ_coverage'); }
+  try { res = await sb.rpc(name, args || {}); }
   catch (e) { res = { error: e }; }
-
   if (res.error) {
-    // The owner gate raises SQLSTATE 42501 -> HTTP 403. Say so explicitly:
-    // "not permitted" must never be rendered as "no data" (INV-26).
-    const denied = /permission|denied|forbidden|42501|403/i.test(res.error.message || '');
-    host.innerHTML = '<div class="empty"><div class="ico">' + (denied ? '🔒' : '⚠️') + '</div><p>'
-      + (denied
-          ? 'This panel requires role <b>owner</b>.'
-          : 'Could not load coverage: ' + esc(res.error.message || 'unknown error'))
-      + '</p></div>';
+    const m = res.error.message || '';
+    return { rows: [], error: m, denied: /permission|denied|forbidden|42501|403/i.test(m) };
+  }
+  return { rows: res.data || [], error: null, denied: false };
+}
+
+function ecFail(host, r, icon) {
+  host.innerHTML = '<div class="empty"><div class="ico">' + (r.denied ? '🔒' : '⚠️') + '</div><p>'
+    + (r.denied ? 'This panel requires role <b>owner</b>.'
+                : 'Could not load: ' + esc(r.error || 'unknown error'))
+    + '</p></div>';
+}
+
+// A blocked metric renders its reason, never a number and never a zero
+// (owner rules 2-3). `—` here means "not computable", which is exactly what a
+// block is; the measured-zero exception applies only to the AI Cost split.
+function ecBlocked(reason) {
+  return '<div class="ec-cost"><div class="l primary">'
+    +      '<span class="n">—</span><span class="a" style="font-size:15px;color:var(--red)">blocked</span>'
+    +    '</div></div>'
+    +    '<div class="ec-d ec-blocked-why">' + esc(reason || 'blocked') + '</div>';
+}
+
+function ecEgp(v) {
+  if (v === null || v === undefined) return '—';
+  return 'EGP ' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function ecPct(v) {
+  if (v === null || v === undefined) return '—';
+  return Number(v).toFixed(2) + '%';
+}
+function ecNum(v) {
+  if (v === null || v === undefined) return '—';
+  return Number(v).toLocaleString('en-US');
+}
+
+/* --- SECTION 1: Financial Overview -------------------------------------
+   Every figure is a column of owner_econ_pnl_summary(). The period margin in
+   particular is computed server-side: it cannot be derived from daily margins,
+   and deriving it here would be a financial calculation (INV-03). */
+async function loadEconOverview() {
+  const host = document.getElementById('econOverview');
+  const r = await ecRpc('owner_econ_pnl_summary');
+  if (r.error) return ecFail(host, r);
+
+  const s = r.rows[0];
+  if (!s) { host.innerHTML = '<div class="empty"><div class="ico">💰</div><p>No periods with revenue or cost yet.</p></div>'; return; }
+
+  const money = s.block_reason
+    ? ecBlocked(s.block_reason)
+    : '<div class="ec-cost">'
+      + '<div class="l primary"><span class="n">Gross Profit</span>'
+      +   '<span class="a">' + ecEgp(s.gross_profit_egp) + '</span></div>'
+      + '<div class="l"><span class="n">Gross Margin</span>'
+      +   '<span class="a">' + ecPct(s.gross_margin_pct) + '</span></div>'
+      + '</div>';
+
+  host.innerHTML =
+      '<div class="ec-row"><div class="ec-k">profit &amp; margin</div><div class="ec-v">'
+    +   ecBadge(s.confidence) + money
+    + '</div></div>'
+    + '<div class="ec-row"><div class="ec-k">revenue (recognised)</div><div class="ec-v">'
+    +   '<div class="ec-cost">'
+    +     '<div class="l primary"><span class="n">Net</span><span class="a">' + ecEgp(s.revenue_net_egp) + '</span></div>'
+    +     '<div class="l total"><span class="n">Gross</span><span class="a">' + ecEgp(s.revenue_egp) + '</span></div>'
+    +   '</div></div></div>'
+    + '<div class="ec-row"><div class="ec-k">ai cost</div><div class="ec-v">'
+    +   '<div class="ec-cost">'
+    +     '<div class="l primary"><span class="n">USD</span><span class="a">' + ecUsd(s.cost_usd) + '</span></div>'
+    +     '<div class="l total"><span class="n">EGP</span><span class="a">' + ecEgp(s.cost_egp) + '</span></div>'
+    +   '</div></div></div>'
+    + '<div class="ec-row"><div class="ec-k">period</div><div class="ec-v"><div class="ec-d">'
+    +   esc(String(s.period_from || '—')) + ' → ' + esc(String(s.period_to || '—'))
+    +   ' · ' + ecNum(s.days_total) + ' days'
+    +   ' · ' + ecNum(s.days_with_revenue) + ' with revenue'
+    +   ' · ' + ecNum(s.days_with_cost) + ' with cost'
+    +   ' · <b>' + ecNum(s.days_overlapping) + ' overlapping</b>'
+    + '</div></div></div>';
+}
+
+/* --- SECTION 2: AI Cost Analytics --------------------------------------
+   owner_econ_service_economics() returns cost_share_pct already computed
+   server-side, so no share is calculated here. */
+async function loadEconCost() {
+  const host = document.getElementById('econCost');
+  const r = await ecRpc('owner_econ_service_economics');
+  if (r.error) return ecFail(host, r);
+
+  if (!r.rows.length) {
+    // Not an error and not "no data": business sections exclude internal
+    // traffic (INV-25), and today every cost fact is internal. Say so.
+    host.innerHTML = '<div class="ec-row"><div class="ec-k">by service</div><div class="ec-v">'
+      + ecBadge('blocked')
+      + ecBlocked('no external AI cost in this period — all observed cost is internal '
+                + 'and is excluded from business metrics (INV-25). See Data Coverage above '
+                + 'for the internal figure.')
+      + '</div></div>';
     return;
   }
 
-  const rows = res.data || [];
+  host.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>Service</th><th>Category</th><th style="text-align:right">Cost USD</th>'
+    + '<th style="text-align:right">Share</th><th style="text-align:right">Calls</th>'
+    + '<th style="text-align:right">Budget USD/mo</th><th>Confidence</th>'
+    + '</tr></thead><tbody>'
+    + r.rows.map(x =>
+        '<tr><td><b>' + esc(x.display_name || x.service_code) + '</b></td>'
+      + '<td>' + esc(x.category || '—') + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.cost_usd) + '</td>'
+      + '<td style="text-align:right">' + ecPct(x.cost_share_pct) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.calls) + '</td>'
+      + '<td style="text-align:right">' + (x.monthly_budget_usd === null || x.monthly_budget_usd === undefined
+            ? '<span style="color:var(--text-500)">not set</span>' : ecUsd(x.monthly_budget_usd)) + '</td>'
+      + '<td>' + ecBadge(x.confidence) + '</td></tr>'
+      ).join('')
+    + '</tbody></table></div>';
+}
+
+/* --- SECTION 3: Revenue Analytics --------------------------------------
+   owner_econ_revenue() returns recognised revenue already spread across each
+   plan's period by the engine (§9.3). Nothing is apportioned here. */
+async function loadEconRevenue() {
+  const host = document.getElementById('econRevenue');
+  const r = await ecRpc('owner_econ_revenue');
+  if (r.error) return ecFail(host, r);
+
+  if (!r.rows.length) {
+    host.innerHTML = '<div class="empty"><div class="ico">📈</div><p>No recognised revenue in this period.</p></div>';
+    return;
+  }
+
+  // Most recent first; the RPC already orders ascending by day.
+  const rows = r.rows.slice().reverse().slice(0, 60);
+  host.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>Day</th><th>Plan</th><th>Kind</th>'
+    + '<th style="text-align:right">Recognised</th><th style="text-align:right">Net</th>'
+    + '<th style="text-align:right">Events</th><th style="text-align:right">Payers</th>'
+    + '<th>Confidence</th></tr></thead><tbody>'
+    + rows.map(x =>
+        '<tr><td style="font-family:var(--font-mono);font-size:12px">' + esc(String(x.recognized_on)) + '</td>'
+      + '<td><b>' + esc(x.plan_code || '—') + '</b></td>'
+      + '<td>' + esc(x.plan_kind || '—') + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecEgp(x.recognized_egp) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecEgp(x.recognized_net_egp) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.revenue_events) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.paying_users) + '</td>'
+      + '<td>' + ecBadge(x.confidence) + '</td></tr>'
+      ).join('')
+    + '</tbody></table></div>'
+    + (r.rows.length > 60
+        ? '<div class="ec-note">Showing the 60 most recent of ' + ecNum(r.rows.length)
+          + ' recognised-revenue days.</div>' : '');
+}
+
+// Entry point. Panels load independently: one failing RPC must not blank the
+// others, and the Coverage panel in particular has to survive to explain why.
+function loadEconomics() {
+  loadEconCoverage();
+  loadEconOverview();
+  loadEconCost();
+  loadEconRevenue();
+}
+
+async function loadEconCoverage() {
+  const host = document.getElementById('econCoverage');
+  // The owner gate raises SQLSTATE 42501 -> HTTP 403, surfaced by ecFail as
+  // "requires role owner". "Not permitted" must never render as "no data".
+  const r = await ecRpc('owner_econ_coverage');
+  if (r.error) return ecFail(host, r);
+
+  const rows = r.rows;
   if (!rows.length) {
     host.innerHTML = '<div class="empty"><div class="ico">📊</div><p>No coverage rows returned.</p></div>';
     return;
