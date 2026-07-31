@@ -1,0 +1,83 @@
+{
+  "film": "SI MATH AI — THE AI COURT",
+  "document": "VO line manifest — machine-readable source for the 19-line record",
+  "script_authority": "docs/film/03_Directors_Cut_Screenplay_Coverage.md — Part 1, LOCKED",
+  "timing_authority": "docs/film/01_Production_Script.md — 'Measured timing (per act)' table",
+  "rule": "Picture is cut to the read, never the reverse. All 19 lines are recorded before any dialogue shot is animated.",
+
+  "runtime_target_sec": 76.0,
+  "total_speech_target_sec": 48.1,
+  "total_silence_sec": 27.9,
+
+  "model": {
+    "id": "seed_audio",
+    "provider": "ByteDance Seed Audio 1.0",
+    "format": "wav",
+    "sample_rate": 48000,
+    "cost_credits_per_line": 0.3
+  },
+
+  "casting": {
+    "status": "PENDING_OWNER_DECISION",
+    "kit_reference": "docs/film/01_Production_Script.md — 'VOICE CASTING', including the ⚠️ REVISIT block",
+    "kit_ranked_options": [
+      "1. One actor with real range — same timbre played young and old (kit's recommendation)",
+      "2. Two actors, matched timbre — cast the young voice to the elder's placement",
+      "3. Same voice, no differentiation — originally chosen, now risks 'dubbed by his grandfather'"
+    ],
+    "tts_mapping": "Option 1 == one voice_id for both roles, differentiated only by speech_rate/pitch_rate. Option 2 == two voice_ids. This mirrors the Costume-Swap Law in audio: one Zero, two life stages.",
+    "judge_voice_id": null,
+    "lawyer_voice_id": null
+  },
+
+  "roles": {
+    "JZ": {
+      "character": "JUDGE ZERO",
+      "brief": "55–70, deep chest resonance, no vocal fry. Morgan Freeman's tempo × a tenured professor's precision.",
+      "tempo": "0.7× — slow, full stops, ~2.5s per sentence",
+      "placement": "Low, chest, settled",
+      "never": "Loud. Angry. Selling.",
+      "wpm": 135,
+      "params": { "speech_rate": -20, "pitch_rate": 0, "loudness_rate": 0 }
+    },
+    "LZ": {
+      "character": "LAWYER ZERO",
+      "brief": "25–32, bright, forward placement, crisp consonants, momentum.",
+      "tempo": "1.2× — fast, rhythmic, momentum-driven",
+      "placement": "Forward, brighter, crisper consonants",
+      "never": "Smug. Sarcastic. Mocking the other side.",
+      "wpm": 165,
+      "params": { "speech_rate": 15, "pitch_rate": 3, "loudness_rate": 0 }
+    }
+  },
+
+  "notes": [
+    "Per-line target_sec = words / wpm × 60, using the act wpm the kit specifies. Summed per act these reproduce the kit's own table exactly (6.0 / 22.5 / 15.6 / 4.0 = 48.1s), so the targets are the kit's budget decomposed, not a new invention.",
+    "OVERRUN RULE (kit): if the read comes back long, take it out of the beats in Act II — never out of Act III. The verdict's pauses are the film.",
+    "L2 carries the kit's Act I wpm of 130 even though the speaker is Lawyer Zero; see the two flagged discrepancies in docs/film/06_VO_Recording_Log.md.",
+    "L10 'The defence rests.' — music cuts to absolute silence on the final word. Protect in the mix.",
+    "L15/L16 must share an identical cadence; L17 lands a half-step softer."
+  ],
+
+  "lines": [
+    { "id": "L1",  "speaker": "JZ", "text": "This court is now in session.", "words": 6, "wpm": 130, "target_sec": 2.77, "shot": "2",   "delivery": "Stated, not announced. He is confirming what the room already knows.", "job_id": null },
+    { "id": "L2",  "speaker": "LZ", "text": "Then let me ask a few questions.", "words": 7, "wpm": 130, "target_sec": 3.23, "shot": "4",   "delivery": "Light. Almost pleasant. The trap is already built.", "job_id": null },
+    { "id": "L3",  "speaker": "LZ", "text": "Who knows exactly where the student went wrong?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "5",  "delivery": "The first strike. Direct, to the grey table. Stress 'where'.", "job_id": null },
+    { "id": "L4",  "speaker": "LZ", "text": "Who knows why — instead of only saying 'wrong'?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "6",  "delivery": "Faster. The italicised word carries the sentence. Stress 'why'.", "job_id": null },
+    { "id": "L5",  "speaker": "LZ", "text": "A concept gap. A calculation slip. Carelessness. Or time?", "words": 9, "wpm": 165, "target_sec": 3.27, "shot": "7",  "delivery": "Four beats, metronome-even. He counts them on his claws.", "job_id": null },
+    { "id": "L6",  "speaker": "LZ", "text": "Who sees the same mistake — for weeks?", "words": 7, "wpm": 165, "target_sec": 2.55, "shot": "8",  "delivery": "The dash is a real pause. 'Weeks' lands like evidence.", "job_id": null },
+    { "id": "L7",  "speaker": "LZ", "text": "Who turns one wrong answer into a plan?", "words": 8, "wpm": 165, "target_sec": 2.91, "shot": "9",  "delivery": "Warmer. This is where prosecution becomes advocacy.", "job_id": null },
+    { "id": "L8",  "speaker": "LZ", "text": "Who knows what to study next?", "words": 6, "wpm": 165, "target_sec": 2.18, "shot": "10", "delivery": "Quick, confident, already moving. Stress 'next'.", "job_id": null },
+    { "id": "L9",  "speaker": "LZ", "text": "Who walks the whole road — from the first question to the target score?", "words": 13, "wpm": 165, "target_sec": 4.73, "shot": "11", "delivery": "The longest line he has. Let it breathe mid-dash.", "job_id": null },
+    { "id": "L10", "speaker": "LZ", "text": "The defence rests.", "words": 3, "wpm": 165, "target_sec": 1.09, "shot": "12", "delivery": "Quiet. Final. He is done, and he knows he has won.", "job_id": null },
+    { "id": "L11", "speaker": "JZ", "text": "You are intelligent.", "words": 3, "wpm": 135, "target_sec": 1.33, "shot": "13A", "delivery": "To the grey table. Generous, and true. No irony — the ruling is fair, which is what makes it land.", "job_id": null },
+    { "id": "L12", "speaker": "JZ", "text": "But this one was built for students.", "words": 7, "wpm": 135, "target_sec": 3.11, "shot": "13B", "delivery": "The verdict. Slow. Each word placed like a stone.", "job_id": null },
+    { "id": "L13", "speaker": "JZ", "text": "It doesn't just solve math.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "14A", "delivery": "Over the rising constellation. Pride held under the robe.", "job_id": null },
+    { "id": "L14", "speaker": "JZ", "text": "It understands how students learn.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "14B", "delivery": "The thesis. Slowest line in the film.", "job_id": null },
+    { "id": "L15", "speaker": "JZ", "text": "Every mistake tells a story.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "15A", "delivery": "First law. Struck into marble.", "job_id": null },
+    { "id": "L16", "speaker": "JZ", "text": "Every step reveals a weakness.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "15B", "delivery": "Second law. Same cadence exactly as L15.", "job_id": null },
+    { "id": "L17", "speaker": "JZ", "text": "Every weakness becomes a plan.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "15C", "delivery": "Third law. A half-step softer — it resolves, not escalates.", "job_id": null },
+    { "id": "L18", "speaker": "JZ", "text": "Students don't need another chatbot.", "words": 5, "wpm": 135, "target_sec": 2.22, "shot": "16", "delivery": "Spoken while descending the steps. Not to anyone. To everyone.", "job_id": null },
+    { "id": "L19", "speaker": "LZ", "text": "They need a mentor.", "words": 4, "wpm": 135, "target_sec": 1.78, "shot": "17", "delivery": "The only soft line he has. Close, warm, almost private. The student finishing the teacher's sentence.", "job_id": null }
+  ]
+}
