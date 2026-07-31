@@ -450,6 +450,7 @@ select.search-input{cursor:pointer}
     <button class="tab" data-role-min="super_admin" onclick="switchTab('founders')">Founders</button>
     <button class="tab" data-role-min="owner" onclick="switchTab('settings')">System Settings</button>
     <button class="tab" data-role-min="owner" onclick="switchTab('credits')">Credits</button>
+    <button class="tab" data-role-min="owner" onclick="switchTab('economics')">AI Economics</button>
   </div>
 
   <!-- TAB: PAYMENT REQUESTS (new manual payment flow) -->
@@ -550,6 +551,82 @@ select.search-input{cursor:pointer}
         <div><div class="card-title">System Settings</div><div class="card-sub">Global configuration values</div></div>
       </div>
       <div id="settingsList"><div class="empty"><div class="ico">⚙️</div><p>Loading…</p></div></div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       TAB: AI ECONOMICS (owner) — Phase 6 Milestone 1
+       ===================================================================
+       Render-only. Every value comes from public.owner_econ_coverage();
+       this tab performs NO cost arithmetic (INV-03) and references no view,
+       table or write RPC (INV-04, INV-08). It contains no provider or model
+       name (INV-13) — grep-checkable.
+
+       M1 scope is the shell, the owner gate, the RPC wiring and the Coverage
+       panel. KPI panels and sections 1–9 are deliberately absent.
+       =================================================================== -->
+  <div id="tab-economics" style="display:none">
+    <style>
+      /* Confidence badges. The visual weight is deliberately inverted from
+         intuition: `actual` is quiet, `modeled` is loud. A modeled figure must
+         never render like an actual one (§3.4, INV-22, INV-27). */
+      .ec-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;
+                font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.08em;
+                text-transform:uppercase;white-space:nowrap;border:1px solid}
+      .ec-badge.actual {background:var(--green-soft);border-color:var(--green-border);color:var(--green)}
+      .ec-badge.derived{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan)}
+      .ec-badge.modeled{background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber)}
+      .ec-badge.blocked{background:var(--red-soft);border-color:var(--red-border);color:var(--red)}
+      .ec-badge.available{background:var(--green-soft);border-color:var(--green-border);color:var(--green)}
+
+      .ec-row{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border-soft)}
+      .ec-row:last-child{border-bottom:none}
+      .ec-row .ec-k{font-family:var(--font-mono);font-size:11.5px;color:var(--text-300);
+                    min-width:190px;padding-top:2px}
+      .ec-row .ec-v{flex:1;min-width:0}
+      .ec-row .ec-d{font-size:12.5px;color:var(--text-500);margin-top:5px;line-height:1.5}
+
+      /* The locked AI Cost presentation. External leads and is the only line
+         given headline weight; internal is explanatory metadata; total is a
+         quiet reconciliation line. */
+      .ec-cost{display:grid;gap:2px;margin-top:4px}
+      .ec-cost .l{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+                  padding:7px 0;border-bottom:1px dashed var(--border-soft)}
+      .ec-cost .l:last-child{border-bottom:none}
+      .ec-cost .l .n{font-size:12.5px;color:var(--text-400)}
+      .ec-cost .l .a{font-family:var(--font-mono);font-size:13px;color:var(--text-300)}
+      .ec-cost .l.primary .n{font-size:13px;color:var(--text-100);font-weight:600}
+      .ec-cost .l.primary .a{font-family:var(--font-display);font-weight:800;font-size:26px;color:#fff}
+      .ec-cost .l.meta .n,.ec-cost .l.meta .a{color:var(--text-500)}
+      .ec-cost .l.total .n,.ec-cost .l.total .a{color:var(--text-400);font-size:12px}
+      .ec-note{font-size:12px;color:var(--text-500);margin-top:10px;line-height:1.55}
+      .ec-blocked-why{color:var(--red);font-weight:600}
+    </style>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico">📊</div>
+        <div>
+          <div class="card-title">Data Coverage</div>
+          <div class="card-sub">What is measured, what is blocked, and exactly why</div>
+        </div>
+      </div>
+      <div id="econCoverage"><div class="empty"><div class="ico">📊</div><p>Loading…</p></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">🧾</div>
+        <div>
+          <div class="card-title">Milestone 1</div>
+          <div class="card-sub">Shell, owner gate, RPC wiring and Coverage only</div>
+        </div>
+      </div>
+      <div class="ec-note">
+        KPI panels and sections 1–9 are not built yet. This milestone exists to
+        prove the owner gate, the read-only RPC surface and the blocked-state
+        rendering contract before any metric depends on them.
+      </div>
     </div>
   </div>
 
@@ -810,7 +887,7 @@ document.getElementById('hambBtn').addEventListener('click', () => { sidebar.cla
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 
 // Tabs
-const TABS = ['payments','pending','users','founders','settings','credits'];
+const TABS = ['payments','pending','users','founders','settings','credits','economics'];
 function switchTab(name) {
   TABS.forEach(t => { document.getElementById('tab-'+t).style.display = t === name ? '' : 'none'; });
   document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', TABS[i] === name); });
@@ -820,6 +897,88 @@ function switchTab(name) {
   if (name === 'founders') loadFounders();
   if (name === 'settings') loadSettings();
   if (name === 'credits') loadCreditsMgmt();
+  if (name === 'economics') loadEconomics();
+}
+
+/* ===================================================================
+   AI ECONOMICS — Phase 6 Milestone 1
+   ===================================================================
+   Render-only. The single data source is public.owner_econ_coverage(),
+   which is STABLE, SECURITY DEFINER and owner-gated. This function does
+   no cost arithmetic (INV-03): every number it prints is a column the
+   RPC returned. It never sums, subtracts or derives a figure.
+   =================================================================== */
+
+// Display formatting only — not arithmetic. Renders a MEASURED zero as
+// "$0.00000000", never as "—". A dash means unavailable; this figure is
+// known and equal to zero (locked presentation decision, rule 4).
+function ecUsd(v) {
+  if (v === null || v === undefined) return '—';
+  return '$' + Number(v).toFixed(8);
+}
+
+function ecBadge(cls) {
+  const c = String(cls || 'blocked').toLowerCase();
+  return '<span class="ec-badge ' + esc(c) + '">' + esc(c) + '</span>';
+}
+
+async function loadEconomics() {
+  const host = document.getElementById('econCoverage');
+  host.innerHTML = '<div class="empty"><div class="ico">📊</div><p>Loading…</p></div>';
+
+  let res;
+  try { res = await sb.rpc('owner_econ_coverage'); }
+  catch (e) { res = { error: e }; }
+
+  if (res.error) {
+    // The owner gate raises SQLSTATE 42501 -> HTTP 403. Say so explicitly:
+    // "not permitted" must never be rendered as "no data" (INV-26).
+    const denied = /permission|denied|forbidden|42501|403/i.test(res.error.message || '');
+    host.innerHTML = '<div class="empty"><div class="ico">' + (denied ? '🔒' : '⚠️') + '</div><p>'
+      + (denied
+          ? 'This panel requires role <b>owner</b>.'
+          : 'Could not load coverage: ' + esc(res.error.message || 'unknown error'))
+      + '</p></div>';
+    return;
+  }
+
+  const rows = res.data || [];
+  if (!rows.length) {
+    host.innerHTML = '<div class="empty"><div class="ico">📊</div><p>No coverage rows returned.</p></div>';
+    return;
+  }
+
+  host.innerHTML = rows.map(r => {
+    // The AI Cost row carries the locked three-line presentation. Every
+    // amount below is a column from the RPC — none is computed here.
+    const hasSplit = r.metric === 'ai_cost'
+                  && r.value_total !== null && r.value_total !== undefined;
+
+    let body;
+    if (hasSplit) {
+      body =
+        '<div class="ec-cost">'
+      +   '<div class="l primary"><span class="n">External</span>'
+      +     '<span class="a">' + ecUsd(r.value_external) + '</span></div>'
+      +   '<div class="l meta"><span class="n">Internal '
+      +     '<span style="opacity:.75">(excluded from business metrics)</span></span>'
+      +     '<span class="a">' + ecUsd(r.value_internal) + '</span></div>'
+      +   '<div class="l total"><span class="n">Total Observed</span>'
+      +     '<span class="a">' + ecUsd(r.value_total) + '</span></div>'
+      + '</div>';
+    } else {
+      // A blocked row's detail IS its reason, so it is rendered once, in the
+      // blocked style — never twice, and never silently dropped (rule 3).
+      const blocked = String(r.state).toLowerCase() === 'blocked';
+      body = '<div class="ec-d' + (blocked ? ' ec-blocked-why' : '') + '">'
+           + esc(r.detail || '') + '</div>';
+    }
+
+    return '<div class="ec-row">'
+      +      '<div class="ec-k">' + esc(r.metric) + '</div>'
+      +      '<div class="ec-v">' + ecBadge(r.state) + body + '</div>'
+      +    '</div>';
+  }).join('');
 }
 
 // Toast
