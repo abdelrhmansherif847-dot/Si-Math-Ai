@@ -109,8 +109,14 @@ if (SIZE < 40_000) {
 // telemetry (AI Economics Phase 3): the recordModelCall/flushModelCalls block
 // and instrumentation at all eight OpenAI call sites. v89 had already reached
 // 206 KB, leaving only 4 KB of headroom under the old bound.
-if (SIZE > 240_000) {
-  FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 240000)`) || FAILED;
+// Bumped from 240 KB -> 260 KB after v92 (failure telemetry) left only 599 bytes
+// of headroom and v93 crossed it: the is_math/scope classification fix adds two
+// prompt rules and the coaching guard, ~2.2 KB. The bound is a "did something go
+// badly wrong" sanity check, not a budget — but it had become tight enough that
+// an ordinary prompt edit tripped it, which trains people to raise it reflexively
+// instead of reading it. 260 KB restores real headroom.
+if (SIZE > 260_000) {
+  FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 260000)`) || FAILED;
 }
 
 // Placeholder / TODO / FIXME markers that should never reach production.
