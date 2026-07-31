@@ -22,7 +22,7 @@
 // Both blocks are sliced out of the real source; `slice` throws if a marker
 // stops matching, so a restructure fails loudly rather than passing vacuously.
 import { suite } from './_assert.mjs';
-import { read, slice } from './_source.mjs';
+import { read, slice, importTS } from './_source.mjs';
 
 const t = suite('exam-strategy');
 const SRC = read('supabase/functions/ai-tutor/index.ts');
@@ -103,76 +103,147 @@ t.ok('Golden Rule is present',
   /Never let one difficult question steal the time needed to answer several easier ones/.test(STRAT));
 t.ok('Official Zero Principle ordering is spelled out',
   /Fast & Confident[\s\S]{0,40}First[\s\S]{0,60}Medium-Time[\s\S]{0,40}Second[\s\S]{0,60}Hard[\s\S]{0,40}Last/i.test(STRAT));
-t.ok('flexibility rule — teach the principle, adapt the numbers',
-  /FLEXIBILITY RULE/.test(STRAT) && /guidelines, not fixed rules/.test(STRAT));
+// v95: the flexibility rule is the sentence that licensed 6-question blocks.
+// It must be scoped to unlisted exams BEFORE it grants anything, and it must
+// forbid adapting a listed exam in as many words.
+t.ok('flexibility rule is scoped to unlisted exams in its own heading',
+  /FLEXIBILITY RULE — applies ONLY to an exam not in the table/.test(STRAT));
+t.ok('forbids adapting, rounding, re-splitting or inventing a listed size',
+  /Never adapt, round, re-split, or invent a block size/.test(STRAT));
+t.ok('names the two tempting reasons to deviate and refuses both',
+  /not to fit the time remaining, not to make the sections feel more manageable/.test(STRAT));
+t.ok('separates the principle from the numbers',
+  /The block \*numbers\* are not the principle/.test(STRAT));
+t.ok('the v94 sentence that licensed arbitrary sizes is gone',
+  !/guidelines, not fixed rules/.test(STRAT));
 t.ok('presentation is pinned to a structured action plan, not a paragraph',
   /structured action plan, NOT as a paragraph/.test(STRAT));
 
-// ── 2. The block table is arithmetically sound ────────────────────────────
-// Blocks that skip a question, or cover one twice, would have a student
-// mis-plan the exam. Parse the table and check the ranges tile 1..N exactly.
+
+// ── 2. The block plans, executed ──────────────────────────────────────────
+// The table used to be literal markdown and the model was told to "use the
+// correct row". Both halves failed: exam_type is 'EST', which matches two rows.
+// Now the lists are computed here and handed over finished, so these tests run
+// the real generator rather than reading text.
+
+const gen = slice(SRC, '// ── Zero Block Strategy — block plans (v95)',
+                  '// ── Phase 1 DifficultyDetector', 'block plan generator');
+const { BLOCK_SIZE, ALL_BLOCK_PLANS, blockRanges, blockPlansFor, blockPlanRow,
+        studentBlockDirective } = await importTS(gen,
+  ['BLOCK_SIZE', 'ALL_BLOCK_PLANS', 'blockRanges', 'blockPlansFor', 'blockPlanRow',
+   'studentBlockDirective']);
 
 t.section('Block ranges tile every question exactly once');
-const rows = [...STRAT.matchAll(/^\| ([A-Z][^|]*?) \| (\d+) Q \/ ([^|]+?) \| ([^|]+) \|$/gm)]
-  .map(m => ({ exam: m[1].trim(), total: +m[2], per: m[3].trim(), blocks: m[4] }));
-
-t.is('all four exams are in the table', rows.length, 4);
-
-for (const row of rows) {
-  const ranges = [...row.blocks.matchAll(/(\d+)–(\d+)/g)].map(m => [+m[1], +m[2]]);
-  const contiguous = ranges.every(([lo, hi], i) =>
-    lo <= hi && (i === 0 ? lo === 1 : lo === ranges[i - 1][1] + 1));
-  const covered = ranges.reduce((n, [lo, hi]) => n + (hi - lo + 1), 0);
-
-  t.ok(`${row.exam}: has blocks`, ranges.length > 0);
-  t.ok(`${row.exam}: starts at 1 and each block follows the last`, contiguous);
-  t.is(`${row.exam}: blocks cover all ${row.total} questions`, covered, row.total);
-  t.is(`${row.exam}: last block ends at ${row.total}`, ranges.at(-1)?.[1], row.total);
+t.is('the block size is 10', BLOCK_SIZE, 10);
+for (const p of ALL_BLOCK_PLANS) {
+  const r = blockRanges(p.questions).map(x => x.split('–').map(Number));
+  const contiguous = r.every(([lo, hi], i) =>
+    lo <= hi && (i === 0 ? lo === 1 : lo === r[i - 1][1] + 1));
+  t.ok(`${p.label}: starts at 1, each block follows the last`, contiguous);
+  t.is(`${p.label}: covers all ${p.questions} questions`,
+    r.reduce((n, [lo, hi]) => n + (hi - lo + 1), 0), p.questions);
+  t.is(`${p.label}: last block ends at ${p.questions}`, r.at(-1)[1], p.questions);
+  t.ok(`${p.label}: no block longer than ${BLOCK_SIZE}`,
+    r.every(([lo, hi]) => hi - lo + 1 <= BLOCK_SIZE));
 }
+// The uneven cases are the ones a human would get wrong by hand.
+t.is('22 questions → 1–10 · 11–20 · 21–22', blockRanges(22).join(' · '),
+  '1–10 · 11–20 · 21–22');
+t.is('45 questions → five blocks, last one short', blockRanges(45).join(' · '),
+  '1–10 · 11–20 · 21–30 · 31–40 · 41–45');
+t.is('50 questions → five even blocks', blockRanges(50).join(' · '),
+  '1–10 · 11–20 · 21–30 · 31–40 · 41–50');
 
-// ── 3. The table agrees with EXAM_FACTS ───────────────────────────────────
-// EXAM_FACTS is declared authoritative ("NEVER CONTRADICT THESE") and sits in
-// the same prompt. If these disagree, the prompt contradicts itself and the
-// model picks a side — the exact self-contradiction class that produced v93.
-
-t.section('Question counts match the authoritative EXAM_FACTS');
-const factCount = (heading, re) => {
-  const section = FACTS.slice(FACTS.indexOf(`### ${heading}`));
-  return +(re.exec(section)?.[1] ?? NaN);
+t.section('Plans agree with the authoritative EXAM_FACTS');
+const factNum = (heading, re) => {
+  const sec = FACTS.slice(FACTS.indexOf(`### ${heading}`));
+  return +(re.exec(sec)?.[1] ?? NaN);
 };
-const EXPECTED = {
-  'EST Math 1': factCount('EST Math 1',        /- Questions: (\d+)/),
-  'EST Math 2': factCount('EST Math 2 Level 1', /- Questions: (\d+)/),
-  'ACT Math':   factCount('ACT Math',          /- Questions: (\d+)/),
-  'SAT Math':   factCount('Digital SAT Math',  /- Each module: \d+ minutes, (\d+) questions/),
+const EXPECT = {
+  'EST Math 1': { q: factNum('EST Math 1',         /- Questions: (\d+)/),
+                  m: factNum('EST Math 1',         /- Time: (\d+) minutes/) },
+  'EST Math 2': { q: factNum('EST Math 2 Level 1', /- Questions: (\d+)/),
+                  m: factNum('EST Math 2 Level 1', /- Time: (\d+) minutes/) },
+  'ACT Math':   { q: factNum('ACT Math',           /- Questions: (\d+)/),
+                  m: factNum('ACT Math',           /- Time: (\d+) minutes/) },
+  'SAT Math':   { q: factNum('Digital SAT Math',   /- Each module: \d+ minutes, (\d+) questions/),
+                  m: factNum('Digital SAT Math',   /- Each module: (\d+) minutes/) },
 };
-
-for (const [exam, expected] of Object.entries(EXPECTED)) {
-  const row = rows.find(r => r.exam === exam);
-  t.ok(`${exam}: present in the strategy table`, !!row);
-  t.is(`${exam}: ${expected} questions per EXAM_FACTS`, row?.total, expected);
+for (const [label, exp] of Object.entries(EXPECT)) {
+  const p = ALL_BLOCK_PLANS.find(x => x.label === label);
+  t.ok(`${label}: has a plan`, !!p);
+  t.is(`${label}: ${exp.q} questions per EXAM_FACTS`, p?.questions, exp.q);
+  t.is(`${label}: ${exp.m} minutes per EXAM_FACTS`,   p?.minutes,   exp.m);
 }
-t.ok('SAT row is scoped per module, not per test',
-  rows.find(r => r.exam === 'SAT Math')?.per === 'module');
-t.ok('SAT row says the method runs independently inside each module',
-  /independently inside EACH module/i.test(rows.find(r => r.exam === 'SAT Math')?.blocks ?? ''));
+t.ok('SAT is scoped per module, not per test',
+  ALL_BLOCK_PLANS.find(p => p.label === 'SAT Math')?.per === 'module');
+t.ok('SAT row still says the method runs independently inside each module',
+  /independently inside EACH module/.test(blockPlanRow(ALL_BLOCK_PLANS.find(p => p.label === 'SAT Math'))));
 
-t.section('Timing matches EXAM_FACTS where the table states it');
-for (const [exam, heading] of [['EST Math 1', 'EST Math 1'], ['EST Math 2', 'EST Math 2 Level 1'],
-                               ['ACT Math', 'ACT Math']]) {
-  const row = rows.find(r => r.exam === exam);
-  const expected = factCount(heading, /- Time: (\d+) minutes/);
-  t.is(`${exam}: ${expected} min per EXAM_FACTS`, +(/(\d+) min/.exec(row?.per ?? '')?.[1]), expected);
+// ── 3. The real production exam_type values ───────────────────────────────
+// profiles.exam_type holds 'EST' (11 students), 'ACT' (2), 'SAT' (2) and null
+// (4). Not one of them is 'EST Math 1'. The v94 prompt asked the model to pick
+// "the correct row" for 'EST' when two rows match — this is that bug's guard.
+
+t.section('Every stored exam_type resolves without the model choosing');
+t.is("'SAT' → one plan",  blockPlansFor('SAT').length, 1);
+t.is("'ACT' → one plan",  blockPlansFor('ACT').length, 1);
+t.is("'EST' → BOTH levels, because the value does not say which",
+  blockPlansFor('EST').map(p => p.label).join(','), 'EST Math 1,EST Math 2');
+t.is("'EST Math 1' → just Math 1", blockPlansFor('EST Math 1').map(p => p.label).join(','), 'EST Math 1');
+t.is("'EST Math 2' → just Math 2", blockPlansFor('EST Math 2').map(p => p.label).join(','), 'EST Math 2');
+t.is("'est math 1' (lowercase) → just Math 1",
+  blockPlansFor('est math 1').map(p => p.label).join(','), 'EST Math 1');
+t.is("'Digital SAT' → SAT", blockPlansFor('Digital SAT').map(p => p.label).join(','), 'SAT Math');
+t.is('null → unlisted, model builds them', blockPlansFor(null), null);
+t.is("'' → unlisted",       blockPlansFor(''), null);
+t.is("'IGCSE' → unlisted",  blockPlansFor('IGCSE'), null);
+
+t.section('The directive removes the choice');
+const est1 = studentBlockDirective('EST Math 1');
+t.ok('EST Math 1: states the exact blocks', est1.includes('1–10 · 11–20 · 21–30 · 31–40 · 41–50'));
+t.ok('EST Math 1: forbids any other size', /Do NOT use any other block size/.test(est1));
+t.ok('EST Math 1: never offers a 6-question split', !/\b6\b/.test(est1));
+
+const bareEst = studentBlockDirective('EST');
+t.ok('bare EST: offers both levels', /EST Math 1/.test(bareEst) && /EST Math 2/.test(bareEst));
+t.ok('bare EST: tells Zero to ask when the level is unnamed', /ask before giving a block plan/.test(bareEst));
+t.ok('bare EST: forbids averaging the two', /Do NOT average the two/.test(bareEst));
+t.ok('bare EST: carries both block lists',
+  bareEst.includes('31–40 · 41–50') && bareEst.includes('21–30 · 31–40'));
+
+const sat = studentBlockDirective('SAT');
+t.ok('SAT: per-module framing survives', /per module/.test(sat));
+t.ok('SAT: states 1–10 · 11–20 · 21–22', sat.includes('1–10 · 11–20 · 21–22'));
+
+const unknown = studentBlockDirective('IGCSE');
+t.ok('unlisted exam: this is the one case the model sizes blocks',
+  /ONE case where you build the blocks yourself/.test(unknown));
+t.ok('unlisted exam: still pinned to blocks of 10', /blocks of 10/.test(unknown));
+
+t.section('Deterministic — the same student always gets the same plan');
+for (const ex of ['EST', 'EST Math 1', 'SAT', 'ACT', 'IGCSE', '']) {
+  t.is(`${ex || '(empty)'}: repeated calls are identical`,
+    studentBlockDirective(ex), studentBlockDirective(ex));
 }
+// No listed exam may ever produce a block size other than 10 (last block short).
+const sizes = new Set(ALL_BLOCK_PLANS.flatMap(p =>
+  blockRanges(p.questions).map(r => { const [lo, hi] = r.split('–').map(Number); return hi - lo + 1; })));
+t.ok('every block across every listed exam is 10, or a short final block',
+  [...sizes].every(n => n === 10 || n < 10));
+t.ok('no block is ever 6 for a listed exam',
+  !ALL_BLOCK_PLANS.some(p => blockRanges(p.questions).some(r => {
+    const [lo, hi] = r.split('–').map(Number); return hi - lo + 1 === 6; })));
 
 // ── 4. Still wired into the prompt that students actually get ─────────────
-// Everything above tests a string. None of it matters if the string is never
-// interpolated — the block would be dead code that every assertion still passes.
-
 t.section('The block reaches the model');
 t.ok('interpolated into NORMAL_SYSTEM_PROMPT', /\$\{examStrategyForType\}/.test(SRC));
-t.ok('the student\'s own exam is named in the block',
-  /The student's exam is \*\*\$\{examType\}\*\*/.test(STRAT));
+t.ok("the student's own directive is interpolated, not a static row",
+  /\$\{studentBlockDirective\(examType\)\}/.test(STRAT));
+t.ok('the reference table is rendered from the same plans',
+  /\$\{ALL_BLOCK_PLANS\.map\(blockPlanRow\)\.join/.test(STRAT));
+t.ok('the ambiguous "use the correct row" instruction is gone',
+  !/Use the correct row from the table above/.test(STRAT));
 t.ok('NORMAL_SYSTEM_PROMPT is what non-hint turns use',
   /const systemPrompt = hintMode \? HINT_SYSTEM_PROMPT : NORMAL_SYSTEM_PROMPT;/.test(SRC));
 

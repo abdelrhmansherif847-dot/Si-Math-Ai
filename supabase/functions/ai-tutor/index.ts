@@ -1,4 +1,37 @@
-// ai-tutor Edge Function v94
+// ai-tutor Edge Function v95
+// v95 (Zero Block Strategy — block sizes are computed, not chosen): a student
+// asked the same EST question twice and got 6-question blocks once and the
+// correct 10 the next time. Neither retrieval nor the knowledge base supplied
+// the 6 — six realistic EST queries return no entry containing any block size
+// at all. Both causes were in v94's own prompt:
+//
+//   1. profiles.exam_type stores 'EST', 'SAT', 'ACT' or null — never
+//      'EST Math 1'. The prompt said "The student's exam is EST. Use the
+//      correct row from the table above" against a table holding TWO EST rows
+//      (50 Q and 40 Q). There was no correct row to use, so the model had to
+//      improvise. 11 of 15 profiles with an exam_type carry the bare 'EST'.
+//   2. v94's flexibility rule said the sizes were "guidelines, not fixed
+//      rules ... adapt the block structure", unconditionally. A response that
+//      invented 6-question blocks was obeying that sentence. v93's wording had
+//      been conditional ("if a student's exam has a different question count"),
+//      and the v94 rewrite dropped the condition and promoted the rule to its
+//      own section — widening the licence and raising its salience.
+//
+// At temperature 0.4 those two make the block size a per-call coin flip. This
+// version removes the choice rather than arguing with it: block lists are
+// computed from one map of plans and handed to the model finished, both for the
+// reference table and for the student's own directive, so the two cannot drift.
+// The flexibility rule now applies to exactly one case — an exam not in the
+// table — and says so before it says anything else.
+//
+// A bare 'EST' is treated as what it is: ambiguous. Zero is given both levels
+// and told to use the one the student names, ask when they have not named one,
+// and never average them. Guessing a level would have been the same defect in
+// a quieter form.
+//
+// Prompt and pure helpers only. No control flow, no schema, no response
+// contract change, and no change to temperature — 0.4 is global, and flattening
+// Zero's voice everywhere to fix one section would cost more than it buys.
 // v94 (Zero Block Strategy — official methodology text): the exam-strategy
 // block in the system prompt is brought in line with the official Zero Block
 // Strategy document. Prompt text only — no control flow, no new branch, no
@@ -189,7 +222,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v94';
+const AI_TUTOR_VERSION = 'v95';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -1232,6 +1265,119 @@ async function search_zero_knowledge(sb: ReturnType<typeof createClient>, query:
   return `${KB_FENCE_OPEN}\n${lines.join('\n')}\n${KB_FENCE_CLOSE}`;
 }
 
+
+// ── Zero Block Strategy — block plans (v95) ───────────────────────────────────
+// The block sizes are computed here and handed to the model finished. They used
+// to be a static markdown table plus "use the correct row from the table above",
+// which failed two ways in production:
+//
+//   1. profiles.exam_type is 'EST', 'SAT', 'ACT' or null — never 'EST Math 1'.
+//      So "use the correct row" pointed an EST student at a table with TWO EST
+//      rows (50 Q and 40 Q) and no way to choose. There is no correct row.
+//   2. The v94 flexibility rule said the sizes were "guidelines, not fixed
+//      rules… adapt the block structure", with no condition on when. A model
+//      that invented 6-question blocks was obeying that sentence.
+//
+// Together, at temperature 0.4, the same question could produce 6-question
+// blocks on one call and 10 on the next. Both instructions were the prompt's
+// fault, not the model's. Now the model is not asked to do a lookup or size a
+// block at all for a known exam — it is given the finished list.
+//
+// Question counts and minutes MUST match EXAM_FACTS; tests/exam-strategy pins
+// that, and both the reference table and the student's own plan render from
+// this one map so they cannot drift apart.
+interface BlockPlan {
+  label:    string;
+  questions: number;
+  minutes:   number;
+  per?:      string;   // unit when it is not the whole section, e.g. 'module'
+  note?:     string;
+}
+
+const BLOCK_SIZE = 10;
+
+const EST_MATH_1: BlockPlan = { label: 'EST Math 1', questions: 50, minutes: 75 };
+const EST_MATH_2: BlockPlan = { label: 'EST Math 2', questions: 40, minutes: 60 };
+const SAT_MATH:   BlockPlan = { label: 'SAT Math',   questions: 22, minutes: 35, per: 'module',
+                                note: 'apply the strategy independently inside EACH module' };
+const ACT_MATH:   BlockPlan = { label: 'ACT Math',   questions: 45, minutes: 50 };
+
+// Display order for the reference table.
+const ALL_BLOCK_PLANS: BlockPlan[] = [EST_MATH_1, EST_MATH_2, SAT_MATH, ACT_MATH];
+
+/**
+ * Blocks of BLOCK_SIZE covering 1..questions, last one short if it does not
+ * divide evenly. Computed, never typed, so a block list cannot disagree with
+ * the question count it came from.
+ */
+function blockRanges(questions: number, size: number = BLOCK_SIZE): string[] {
+  const out: string[] = [];
+  for (let lo = 1; lo <= questions; lo += size) {
+    out.push(`${lo}–${Math.min(lo + size - 1, questions)}`);
+  }
+  return out;
+}
+
+/**
+ * The plans that apply to a stored exam_type. Returns:
+ *   - one plan  when the exam is unambiguous (SAT, ACT, or an EST level named)
+ *   - two plans for a bare 'EST', which genuinely does not say which level
+ *   - null      for anything unlisted, which is the ONLY case where the model
+ *               is allowed to size blocks itself
+ */
+function blockPlansFor(rawExamType: string): BlockPlan[] | null {
+  const s = String(rawExamType || '').toUpperCase();
+  if (s.includes('ACT')) return [ACT_MATH];
+  if (s.includes('EST')) {
+    if (/(^|[^0-9])1([^0-9]|$)/.test(s)) return [EST_MATH_1];
+    if (/(^|[^0-9])2([^0-9]|$)/.test(s)) return [EST_MATH_2];
+    return [EST_MATH_1, EST_MATH_2];
+  }
+  if (s.includes('SAT')) return [SAT_MATH];
+  return null;
+}
+
+/** One markdown table row for a plan. */
+function blockPlanRow(p: BlockPlan): string {
+  const qty = p.per ? `${p.questions} Q / ${p.per}` : `${p.questions} Q / ${p.minutes} min`;
+  const blocks = blockRanges(p.questions).join(' · ') + (p.note ? ` (${p.note})` : '');
+  return `| ${p.label} | ${qty} | ${blocks} |`;
+}
+
+/**
+ * The authoritative, per-student instruction. This is what removes the choice
+ * from the model: for a listed exam it states the exact blocks and forbids any
+ * other size. For a bare 'EST' it presents both levels rather than pretending
+ * one row is correct — the ambiguity is real and belongs to the student, so
+ * Zero uses the level they name and asks when they have not named one.
+ */
+function studentBlockDirective(examType: string): string {
+  const plans = blockPlansFor(examType);
+
+  if (!plans) {
+    return `**The student's exam is "${examType}", which is not one of the four above.** `
+      + `This is the ONE case where you build the blocks yourself: use blocks of ${BLOCK_SIZE} `
+      + `questions and let the final block be short. State the block list explicitly before `
+      + `teaching the phases.`;
+  }
+
+  if (plans.length === 1) {
+    const p = plans[0];
+    return `**The student's exam is ${p.label} — ${p.questions} questions`
+      + `${p.per ? ` per ${p.per}` : ` / ${p.minutes} minutes`}.**\n`
+      + `THEIR BLOCKS ARE: ${blockRanges(p.questions).join(' · ')}`
+      + `${p.note ? `\n(${p.note})` : ''}\n`
+      + `Use exactly these blocks. Do NOT use any other block size for this exam.`;
+  }
+
+  // Bare 'EST' — the stored value does not name a level.
+  return `**The student's exam is recorded as "${examType}", which does not say which level.** `
+    + `Use the blocks for the level the student names:\n`
+    + plans.map(p => `- **${p.label}** (${p.questions} questions / ${p.minutes} min): `
+                   + `${blockRanges(p.questions).join(' · ')}`).join('\n')
+    + `\nIf they have not said which level, ask before giving a block plan. `
+    + `Do NOT average the two, and do NOT use any other block size.`;
+}
 
 // ── Phase 1 DifficultyDetector ────────────────────────────────────────────────
 // Independent heuristic classifier. No LLM call, no extra latency. Runs in
@@ -3300,14 +3446,15 @@ exam strategy · time management · improving their score · how to approach an 
 
 ### 🗂️ PHASE 1 — SET UP YOUR BLOCKS
 
-Before you start, mentally divide the exam into blocks of ~10 questions.
+Divide the exam into blocks of ${BLOCK_SIZE} questions.
+
+${studentBlockDirective(examType)}
+
+Reference — the block plan for every exam Zero covers. These are FIXED. Never state a different block size for any exam in this table:
 
 | Exam | Questions | Your Blocks |
 |------|-----------|-------------|
-| EST Math 1 | 50 Q / 75 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–50 |
-| EST Math 2 | 40 Q / 60 min | 1–10 · 11–20 · 21–30 · 31–40 |
-| SAT Math | 22 Q / module | 1–10 · 11–20 · 21–22 (apply the strategy independently inside EACH module) |
-| ACT Math | 45 Q / 50 min | 1–10 · 11–20 · 21–30 · 31–40 · 41–45 |
+${ALL_BLOCK_PLANS.map(blockPlanRow).join('\n')}
 
 ---
 
@@ -3359,9 +3506,13 @@ This works for strong students, average students, and students who struggle with
 
 ---
 
-### 🔧 FLEXIBILITY RULE
+### 🔧 FLEXIBILITY RULE — applies ONLY to an exam not in the table
 
-The block sizes above are guidelines, not fixed rules. Zero teaches the PRINCIPLE, never memorized numbers — adapt the block structure to the total number of questions, the module boundaries, the exam structure, and the time remaining. The goal is always manageable sections that maximize Score Per Minute. The three phases always apply.
+⛔ The four exams in the table have FIXED block plans. For those, use the listed blocks verbatim. Never adapt, round, re-split, or invent a block size — not to fit the time remaining, not to make the sections feel more manageable, not for any reason.
+
+The flexibility below applies to ONE case only: a student whose exam is not in the table at all. Then build blocks of ${BLOCK_SIZE} questions and let the final block be short, and state that block list explicitly.
+
+What Zero always teaches is the PRINCIPLE — the three phases, the 90-Second Rule, and Score Per Minute. Those never change. The block *numbers* are not the principle, and for a listed exam they are not yours to choose.
 
 ---
 
@@ -3372,7 +3523,7 @@ Past ~90 seconds with no meaningful progress: Mark it. Skip it. Keep earning poi
 
 **OFFICIAL ZERO PRINCIPLE:** Fast & Confident Questions First → Medium-Time Questions Second → Hard Questions Last. Goal: Maximize Score Per Minute.
 
-The student's exam is **${examType}**. Use the correct row from the table above.
+Their block plan is stated in PHASE 1 above — use it exactly as given.
 `;
 
     // Normal (non-hint) system prompt
