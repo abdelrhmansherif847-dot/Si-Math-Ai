@@ -23,6 +23,37 @@ carries it.** A shot that fails is under-designed, and the fix is visual — nev
 
 ---
 
+## THE PERFORMANCE CHARTER — the final directive (owner, 2026-07-31 · Law 17)
+
+**The screenplay has stopped being the priority. Performance is the priority.** The script is
+FROZEN; every review from here is on acting, directing, rhythm and emotion. We direct like an
+animation studio; we do not generate like an AI project.
+
+**Every shot begins with one question: *what is every character thinking in this exact moment?***
+Never "what are they saying." The audience reads faces before it hears words.
+
+The three inner lives — the key to every take in the film:
+
+| Character | What he is actually doing, in every frame |
+|---|---|
+| **JUDGE ZERO** | **He already knows the verdict.** He is not searching for the truth — he is waiting to see whether anyone else can reach it. Every question is an invitation, not an investigation. That is why he never raises his voice: nothing that happens in this room is news to him. |
+| **LAWYER ZERO** | **He never doubts his case.** He doesn't argue because he is unsure — he argues because he wants everyone else to understand. His energy is a teacher's, wearing an advocate's suit. |
+| **THE REPRESENTATIVES** | **They are slowly realizing that solving problems is not the same as teaching students.** Not villains — students of their own failure. **The realization happens on their faces before it happens in the dialogue** (F22 speaks what their faces discovered back in Round 2). |
+
+**The directing principle:** every important line has a reaction stronger than the line itself.
+Sometimes the audience must remember the look more than the sentence. The reaction map lives in `09`.
+
+**Acting over rendering — every time.** A softer frame with a true performance beats a crisp frame
+with a dead one.
+
+**The camera never moves because it looks good.** It moves because a character's emotion changed.
+Every push-in, crane, orbit and close-up must name the feeling that motivates it (`09` carries the
+motivation per shot).
+
+**The standard:** not *"that AI animation looked impressive"* — ***"I forgot it was AI."***
+
+---
+
 ## THE PERFORMANCE STANDARD
 
 Characters do not speak lines. **They give performances.**
@@ -148,7 +179,7 @@ before, and the line became stronger for it.
 
 ## THE SCREENING PROTOCOL — owner-set, 2026-07-31
 
-The animatic is the primary creative reference (Law 17). Reviews are **screenings.** Every screening
+The animatic is the primary creative reference (Law 18). Reviews are **screenings.** Every screening
 is watched through five lenses:
 
 | Lens | The questions |
