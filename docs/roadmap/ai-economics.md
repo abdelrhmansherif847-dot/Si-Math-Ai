@@ -1997,6 +1997,27 @@ child allocates without double counting; no cost math exists outside the engine.
 `admin`/`super_admin`; no `econ` object references a rate card, discount rule, FX
 table, provider, or model; guard script green.
 
+### Phase 5 status — ✅ COMPLETE
+
+**Applied to `igvkyxkmjnkzscqgommj` on 2026-07-31 and verified 17/17.**
+
+| Artifact | Path |
+|---|---|
+| Migration (applied) | `supabase/migrations/20260731_aiecon_p5_economics.sql` |
+| Verification | `scripts/verify-economics.sql` — 17 checks (P5-01…P5-16) |
+
+Exit criteria met: every `owner_econ_*` RPC is `STABLE`, `SECURITY DEFINER`
+and owner-gated (7/7); no `econ` object references a rate card, discount rule,
+FX table, provider or model — proven from PostgreSQL's dependency graph, not a
+grep; and every blocked metric states an explicit reason derived from data.
+
+**Production-only finding: every cost-consuming econ view is currently empty.**
+All 76 cost facts are internal, and the econ layer excludes internal traffic by
+default (INV-25, decision 3). So `v_service_economics` returns 0 rows and all
+383 `v_pnl_daily` rows are blocked with `no_cost_in_period` — even though
+$0.2296 of cost exists. Correct under the locked rules, but it means Economics
+reports nothing cost-shaped until student traffic arrives.
+
 ### Phase 6 — Owner Dashboard, sections 1–9
 
 - `#tab-economics` in `admin.html` — owner-gated tab, render-only, **service-first

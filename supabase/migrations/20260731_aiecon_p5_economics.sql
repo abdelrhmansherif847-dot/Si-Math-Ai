@@ -1,8 +1,8 @@
 -- ===========================================================================
 -- AI Economics — Phase 5: the `econ` analytics layer
 -- ===========================================================================
--- STATUS: PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3).
+-- STATUS: APPLIED to igvkyxkmjnkzscqgommj on 2026-07-31 (owner-approved at
+--         commit 94eff7c, CLAUDE.md §3). Verified 17/17.
 --
 -- Architecture: docs/roadmap/ai-economics.md §9 (frozen r4, amended r4.1).
 -- Review:       docs/roadmap/phase-5-implementation-review.md
