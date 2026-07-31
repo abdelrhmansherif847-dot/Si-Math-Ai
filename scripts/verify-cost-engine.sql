@@ -240,16 +240,38 @@ SELECT 'P4-18' AS check,
          || ' excess=' || (wi.t - cf.t) || ' expected shared multiplicity=' || ee.t AS detail
   FROM wi, cf, ee;
 
--- P4-19 — orphans are bucketed, never dropped (§8.8.4).
+-- P4-19 — every call reaches a work item; orphans are bucketed, never dropped
+-- (§8.8.4).
+--
+-- NOT a comparison of request_id sets: a work item records its ORIGINATING
+-- request, and a follow-up resolved against an earlier question contributes
+-- from a different request that therefore never appears on a work-item fact.
+-- The real property is that every current cost fact is represented by the
+-- resolver's own rules:
+--   tagged   -> its question exists as a current work item
+--   untagged -> its request has a work item to share into, or the request
+--               itself exists as an 'unattributed' bucket
 SELECT 'P4-19' AS check,
        CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       count(*)::text || ' request(s) with cost but no work item — must be 0' AS detail
-  FROM (
-    SELECT f.request_id FROM cost_engine.cost_facts f WHERE f.is_current
-     GROUP BY f.request_id
-    EXCEPT
-    SELECT q.request_id FROM cost_engine.question_cost_facts q WHERE q.is_current
-  ) d;
+       count(*)::text || ' cost fact(s) not represented by any work item — must be 0' AS detail
+  FROM cost_engine.cost_facts f
+ WHERE f.is_current
+   AND NOT (
+     CASE
+       WHEN f.question_record_id IS NOT NULL THEN EXISTS (
+         SELECT 1 FROM cost_engine.question_cost_facts q
+          WHERE q.is_current AND q.work_item_type = 'question'
+            AND q.work_item_id = f.question_record_id::text)
+       ELSE EXISTS (
+         SELECT 1 FROM cost_engine.cost_facts f2
+          WHERE f2.is_current AND f2.request_id = f.request_id
+            AND f2.question_record_id IS NOT NULL)
+         OR EXISTS (
+         SELECT 1 FROM cost_engine.question_cost_facts q
+          WHERE q.is_current AND q.work_item_type = 'unattributed'
+            AND q.work_item_id = f.request_id::text)
+     END
+   );
 
 -- P4-20 — a shared call splits losslessly. For every request with a shared
 -- call, the parts must sum to the original amount exactly.

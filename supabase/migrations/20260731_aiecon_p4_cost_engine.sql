@@ -1,8 +1,15 @@
 -- ===========================================================================
 -- AI Economics — Phase 4: Cost Engine
 -- ===========================================================================
--- STATUS: PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-07-31 (owner-approved,
+--         CLAUDE.md §3), with four locked business decisions — review §11.
+--
+-- NOTE ON MIGRATION HISTORY. Production received this file and then
+-- 20260731_aiecon_p4_fix_work_item_spans_requests.sql, which replaced
+-- allocate() after the first production run hit a case the local fixture did
+-- not contain (a work item spanning two requests). That fix is folded into
+-- allocate() BELOW, so a fresh deploy from this file alone is already correct
+-- and the fix migration replays as a harmless CREATE OR REPLACE.
 --
 -- Architecture: docs/roadmap/ai-economics.md §8 (frozen, r4).
 -- Review:       docs/roadmap/phase-4-implementation-review.md
@@ -51,7 +58,9 @@
 --   reads lives outside the schema it drops.
 -- ===========================================================================
 
-BEGIN;
+-- Transaction control is left to the migration runner, matching the Phase 2
+-- and Phase 3 migrations. apply_migration wraps this file in a transaction;
+-- an explicit BEGIN here would nest inside it.
 
 -- ── 1. Schema and hardening ───────────────────────────────────────────────
 -- Same posture as ai_catalog (Phase 2) and ai_model_calls (Phase 3):
@@ -851,7 +860,9 @@ SECURITY DEFINER
 SET search_path = cost_engine, public, ai_catalog
 AS $$
 DECLARE
-  c_alloc_version constant text := 'alloc-1.0.0';
+  -- 1.0.1: a work item is a QUESTION and may span requests (see the fix
+  -- migration 20260731_aiecon_p4_fix_work_item_spans_requests.sql).
+  c_alloc_version constant text := 'alloc-1.0.1';
   v_run_id    uuid;
   v_items     integer := 0;
   v_calls     integer := 0;
@@ -867,25 +878,50 @@ BEGIN
   -- ON COMMIT DROP is not enough: the determinism proof calls allocate()
   -- twice inside ONE transaction, and the second call would collide with the
   -- first call's still-live temp tables.
+  DROP TABLE IF EXISTS _alloc_reqs;
   DROP TABLE IF EXISTS _alloc_scope;
   DROP TABLE IF EXISTS _alloc_items;
   DROP TABLE IF EXISTS _alloc_shared;
   DROP TABLE IF EXISTS _alloc_ranked;
 
+  -- A WORK ITEM CAN SPAN REQUESTS. `reference_resolver` resolves a follow-up
+  -- against an EARLIER question (§8.8.1), so one question_record_id legitimately
+  -- accumulates cost from several request_ids, minutes apart. Scoping by the
+  -- window's requests alone would therefore recompute a work item from only
+  -- part of its calls.
+  --
+  -- So the scope is the TRANSITIVE CLOSURE: start from the requests the window
+  -- touched, pull in every request that shares a work item with them, and
+  -- repeat to a fixed point. UNION (not UNION ALL) terminates the recursion.
+  -- This makes each affected work item whole, which is what the conservation
+  -- assertion below is a statement about.
+  CREATE TEMP TABLE _alloc_reqs ON COMMIT DROP AS
+  WITH RECURSIVE seed AS (
+    SELECT DISTINCT f.request_id
+      FROM cost_engine.cost_facts f
+      JOIN public.ai_model_calls c ON c.id = f.call_id
+     WHERE f.is_current
+       AND c.created_at >= p_from
+       AND c.created_at <  p_to
+  ),
+  closure AS (
+    SELECT s.request_id FROM seed s
+    UNION
+    SELECT f2.request_id
+      FROM closure cl
+      JOIN cost_engine.cost_facts f1
+        ON f1.is_current AND f1.request_id = cl.request_id
+       AND f1.question_record_id IS NOT NULL
+      JOIN cost_engine.cost_facts f2
+        ON f2.is_current AND f2.question_record_id = f1.question_record_id
+  )
+  SELECT DISTINCT request_id FROM closure;
+
   CREATE TEMP TABLE _alloc_scope ON COMMIT DROP AS
-  -- Every current cost fact belonging to a request touched by this window.
-  -- Selecting by REQUEST (not by call) is what makes the recompute whole.
   SELECT f.*
     FROM cost_engine.cost_facts f
    WHERE f.is_current
-     AND f.request_id IN (
-       SELECT f2.request_id
-         FROM cost_engine.cost_facts f2
-         JOIN public.ai_model_calls c2 ON c2.id = f2.call_id
-        WHERE f2.is_current
-          AND c2.created_at >= p_from
-          AND c2.created_at <  p_to
-     );
+     AND f.request_id IN (SELECT request_id FROM _alloc_reqs);
 
   -- Work items per request, and each request's shared (untagged) cost.
   CREATE TEMP TABLE _alloc_items ON COMMIT DROP AS
@@ -931,8 +967,17 @@ BEGIN
 
   -- ── Question work items: direct cost + share of the request's shared cost ─
   WITH direct AS (
+    -- Grouped by question ALONE. A question is the work item; the request that
+    -- happened to carry a given call is not part of its identity. Grouping by
+    -- (question, request) emitted one row per request and collided with the
+    -- one-current-fact-per-work-item unique index the moment a follow-up
+    -- resolved against an earlier question.
     SELECT s.question_record_id::text                        AS work_item_id,
-           s.request_id,
+           -- The ORIGINATING request: earliest call, ties broken by id so the
+           -- pick is deterministic. v_cost_by_request therefore attributes a
+           -- work item to the request that created it, not to every request
+           -- that later touched it.
+           (array_agg(s.request_id ORDER BY s.occurred_at, s.id))[1] AS request_id,
            min(s.occurred_at)                                AS occurred_at,
            round(COALESCE(sum(s.net_cost_usd), 0), 8)        AS direct_usd,
            round(COALESCE(sum(s.net_cost_egp), 0), 4)        AS direct_egp,
@@ -954,7 +999,7 @@ BEGIN
            max(s.price_confidence)                           AS price_confidence
       FROM _alloc_scope s
      WHERE s.question_record_id IS NOT NULL
-     GROUP BY s.question_record_id, s.request_id
+     GROUP BY s.question_record_id
   ),
   direct_mix AS (
     SELECT s.question_record_id::text AS work_item_id,
@@ -968,27 +1013,42 @@ BEGIN
       ) s
      GROUP BY s.question_record_id
   ),
-  split AS (
+  -- Per (request, work item): this item's share of THAT request's shared cost,
+  -- by largest remainder. Unchanged in substance — the split is still a
+  -- property of one request.
+  per_request_share AS (
     SELECT r.work_item_id,
-           r.request_id,
            r.rn,
            r.n_items,
-           COALESCE(sh.shared_usd, 0)     AS shared_total,
-           COALESCE(sh.shared_egp, 0)     AS shared_total_egp,
            COALESCE(sh.shared_calls, 0)   AS shared_calls,
            COALESCE(sh.shared_unpriced,0) AS shared_unpriced,
            sh.shared_conf                 AS shared_conf,
            -- floor to 8dp, then hand out the remaining ulps to the lowest ids
-           trunc(COALESCE(sh.shared_usd, 0) / r.n_items, 8) AS base_usd,
-           round((COALESCE(sh.shared_usd, 0)
-                  - trunc(COALESCE(sh.shared_usd, 0) / r.n_items, 8) * r.n_items)
-                 / 0.00000001)::bigint                      AS extra_ulps,
-           trunc(COALESCE(sh.shared_egp, 0) / r.n_items, 4) AS base_egp,
-           round((COALESCE(sh.shared_egp, 0)
-                  - trunc(COALESCE(sh.shared_egp, 0) / r.n_items, 4) * r.n_items)
-                 / 0.0001)::bigint                          AS extra_ulps_egp
+           trunc(COALESCE(sh.shared_usd, 0) / r.n_items, 8)
+             + CASE WHEN r.rn <= round((COALESCE(sh.shared_usd, 0)
+                       - trunc(COALESCE(sh.shared_usd, 0) / r.n_items, 8) * r.n_items)
+                       / 0.00000001)::bigint
+                    THEN 0.00000001 ELSE 0 END               AS share_usd,
+           trunc(COALESCE(sh.shared_egp, 0) / r.n_items, 4)
+             + CASE WHEN r.rn <= round((COALESCE(sh.shared_egp, 0)
+                       - trunc(COALESCE(sh.shared_egp, 0) / r.n_items, 4) * r.n_items)
+                       / 0.0001)::bigint
+                    THEN 0.0001 ELSE 0 END                   AS share_egp
       FROM _alloc_ranked r
       LEFT JOIN _alloc_shared sh ON sh.request_id = r.request_id
+  ),
+  -- Rolled up to the WORK ITEM. A question touched by two requests receives a
+  -- share from each, so these must be summed rather than joined 1:1.
+  split AS (
+    SELECT p.work_item_id,
+           sum(p.share_usd)       AS share_usd,
+           sum(p.share_egp)       AS share_egp,
+           sum(p.shared_calls)    AS shared_calls,
+           sum(p.shared_unpriced) AS shared_unpriced,
+           max(p.shared_conf)     AS shared_conf,
+           max(p.n_items)         AS n_items
+      FROM per_request_share p
+     GROUP BY p.work_item_id
   )
   INSERT INTO cost_engine.question_cost_facts (
     allocation_run_id, work_item_type, work_item_id, parent_work_item_id,
@@ -1017,22 +1077,17 @@ BEGIN
     d.subtopic_id,
     d.operation,
     CASE WHEN d.costed_count = 0 THEN NULL ELSE d.direct_usd END,
-    CASE WHEN sp.shared_calls = 0 THEN NULL
-         ELSE sp.base_usd + CASE WHEN sp.rn <= sp.extra_ulps THEN 0.00000001 ELSE 0 END
-    END,
+    CASE WHEN COALESCE(sp.shared_calls, 0) = 0 THEN NULL ELSE sp.share_usd END,
     CASE WHEN d.costed_count = 0 AND COALESCE(sp.shared_calls,0) = 0 THEN NULL
-         ELSE round(d.direct_usd
-                    + COALESCE(sp.base_usd + CASE WHEN sp.rn <= sp.extra_ulps THEN 0.00000001 ELSE 0 END, 0), 8)
+         ELSE round(d.direct_usd + COALESCE(sp.share_usd, 0), 8)
     END,
     CASE WHEN d.direct_egp IS NULL THEN NULL
-         ELSE round(d.direct_egp
-                    + COALESCE(sp.base_egp + CASE WHEN sp.rn <= sp.extra_ulps_egp THEN 0.0001 ELSE 0 END, 0), 4)
+         ELSE round(d.direct_egp + COALESCE(sp.share_egp, 0), 4)
     END,
     -- thread_cost = own cost until a parent link exists (G1). Recomputed as a
     -- descendant rollup the moment parent_work_item_id is populated.
     CASE WHEN d.costed_count = 0 AND COALESCE(sp.shared_calls,0) = 0 THEN NULL
-         ELSE round(d.direct_usd
-                    + COALESCE(sp.base_usd + CASE WHEN sp.rn <= sp.extra_ulps THEN 0.00000001 ELSE 0 END, 0), 8)
+         ELSE round(d.direct_usd + COALESCE(sp.share_usd, 0), 8)
     END,
     COALESCE(dm.mix, '{}'::jsonb),
     d.call_count + COALESCE(sp.shared_calls, 0),
@@ -1994,5 +2049,3 @@ COMMENT ON FUNCTION public.owner_cost_metrics(text,date,date,boolean,integer) IS
   '42501 otherwise). p_dimension selects the rollup; capability dimensions '
   'read call facts, business dimensions read Question Cost facts. Internal '
   'traffic is excluded unless p_include_internal is true (INV-25).';
-
-COMMIT;

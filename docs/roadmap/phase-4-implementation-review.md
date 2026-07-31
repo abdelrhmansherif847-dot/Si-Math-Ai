@@ -422,3 +422,85 @@ Now the `unpriced_*` breakdown counts only facts with
 `pricing_status='unpriced'`, and the EGP gap is reported separately as
 `egp_unavailable_facts`. Coverage percentages were never affected (they always
 keyed on `pricing_status`); only the health readout was misleading.
+
+---
+
+## 12. Applied to production — 2026-07-31
+
+**Phase 4 is APPLIED and VERIFIED.** Migration history on
+`igvkyxkmjnkzscqgommj`: `aiecon_p4_cost_engine`, then
+`aiecon_p4_fix_work_item_spans_requests`.
+
+### The production-only defect
+
+The first production allocation run failed. `allocate()` grouped work items by
+`(question_record_id, request_id)`, assuming a question belongs to exactly one
+request. Production disproved it within 76 rows: `reference_resolver` resolved
+a follow-up **against an earlier question, in a different request, 26 seconds
+later** — the exact case architecture §8.8.1 lists. The grouping emitted two
+rows for one work item and hit `qcf_current_item_uidx`.
+
+**It failed closed, exactly as designed:** 0 work-item facts, 0 allocation
+runs, no partial state, pricing untouched. That is the fail-closed contract in
+§8.8.5 doing its job on its first real test.
+
+**Why the harness could not catch it.** Every fixture question belonged to a
+single request. R2 modelled *one request → many questions*; the inverse —
+*one question ← many requests* — was absent, so the resolver's assumption was
+never exercised. The fixture now contains the production case (R8).
+
+**The fix** (`alloc-1.0.0` → `alloc-1.0.1`): a work item is a **question**,
+full stop; scope is the transitive closure of requests sharing a work item;
+the shared split stays per-request but is summed per work item. `request_id`
+on a work-item fact is now the **originating** request, so
+`v_cost_by_request` attributes an item to the request that created it.
+
+`P4-19` was rewritten as a consequence: comparing request_id *sets* was a
+false premise once a work item can span requests. It now proves every cost
+fact is represented by the resolver's own rules, which is the property that
+actually matters.
+
+### Verification results — production
+
+| Check | Result | Detail |
+|---|---|---|
+| P4-01…P4-06 structure & posture | **PASS** | 9/9 tables; no `service_code` on rate_cards; no money column on telemetry; anon/authenticated denied; 6/6 RPCs STABLE+SECURITY DEFINER; 0 executable by anon |
+| P4-07 every row has a fact | **PASS** | 76 telemetry rows, 76 current facts, 0 missing |
+| P4-08 pricing coverage | **PASS** | **100.00%** |
+| P4-09 binding resolution | **PASS** | **100.00%** registered |
+| P4-10…P4-14 fact integrity | **PASS** | every unpriced fact states why; unknown is NULL not 0; every priced fact traces to a rate card; every fact traces to telemetry; exactly one current fact per call |
+| P4-15 hierarchy reconciliation | **PASS** | facts = service = provider = model = **$0.22961425** |
+| P4-16 conservation (all time) | **PASS** | allocated = priced = $0.22961425, **variance 0.00000000** |
+| P4-17 run-level conservation | **PASS** | conserved=true, variance 0 |
+| P4-18 no call double-counted | **PASS** | 76 = 76, excess 0 |
+| P4-19 every call reaches a work item | **PASS** | 0 unrepresented facts |
+| P4-20 shared split lossless | **PASS** | 0 requests with shared cost (none exist yet) |
+| P4-21…P4-23 completeness & thread | **PASS** | no mislabelled aggregates; no `unknown` reporting a number; thread ≥ total everywhere |
+| P4-24 idempotence | **PASS** | re-run wrote **0** new facts |
+| P4-25 determinism | **PASS** | allocation byte-identical on re-run; 2 runs, all conserved |
+| P4-28 immutability | **PASS** | money-column UPDATE and DELETE both refused; 76 facts intact, sum unchanged |
+| P4-29 / P4-30 price confidence | **PASS** | every priced fact carries confidence; no item overclaims `invoice_verified` |
+| P4-31 unverified prices | **WARN** *(by design)* | **76 of 76 priced facts use list prices — 100% of cost is `modeled`, not `actual`** |
+| P4-26 / P4-27 rate-card correction | **not run in production** | Proven locally twice. Running it against production would rewrite all 76 facts and double the table to re-prove identical code. Available on request. |
+
+### First production numbers
+
+**Total AI spend: $0.2296** across 76 calls, 33 work items (27 questions +
+6 orphan buckets), **all `complete`**.
+
+| Service | USD | Calls | Share |
+|---|---|---|---|
+| tutor | 0.13585640 | 33 | 59.2% |
+| solver | 0.04005330 | 18 | 17.4% |
+| judge | 0.02307750 | 9 | 10.0% |
+| vision | 0.01645500 | 5 | 7.2% |
+| ocr | 0.01377500 | 5 | 6.0% |
+| reference_resolver | 0.00027720 | 1 | 0.1% |
+| difficulty_detector | 0.00011985 | 5 | 0.1% |
+
+Average cost per question **$0.00831**; most expensive work item **$0.04027**.
+
+**All 76 facts are internal traffic; 0 external.** So
+`owner_cost_metrics()` with its default `p_include_internal := false` returns
+an empty set — correct behaviour under decision 3, not a fault. Student-
+attributable cost begins accruing when students hit v95 in volume.
