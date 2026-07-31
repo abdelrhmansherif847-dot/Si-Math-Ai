@@ -133,6 +133,20 @@ source of truth; a plate that fails on screen fails, whatever this ledger says.
 | Two-character pose sheet | `4b77e84d` | ✅ pass | ⏳ awaiting owner | pending |
 | Three-party scale lineup | `be214566` | ✅ pass | ⏳ awaiting owner | pending |
 
+### SCENE 1 — THE COLD OPEN · first assembly (dailies)
+
+| Cut | Take | ID | Gate 1 |
+|---|---|---|---|
+| F01 — the question | T1 · Judge asks, push-in | `30ac0ecb` | ✅ seedance_2_0 · 1080p |
+| F02 — the failed answer | T2 · REP light-line speaks, locked | `bdb7a37f` | ✅ |
+| F03 — the correction | T3 · patient look, locked | `e2c76790` | ✅ |
+| F04 — session over the reveal | Shot 3 (in the can) + F04 temp VO | `010057d4` | ✅ |
+| **ASSEMBLY v1** | ~20s · 1080×1920 | **`d9482d1d`** | ✅ · **awaiting the director's screening** |
+
+Temp VO throughout (REP diegetic by design) · no music yet · known missing coverage: the LZ
+listening insert for F02 (needs one new plate: LZ at the defence table, tight — owner-approves on
+sight before it parents a take).
+
 ### Voided at Gate 1 — wrong model
 
 | Plate | ID | Failure |
