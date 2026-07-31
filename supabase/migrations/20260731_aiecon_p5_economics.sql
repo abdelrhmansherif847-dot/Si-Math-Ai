@@ -182,7 +182,15 @@ AS $$
     'blocked');
 $$;
 
--- Translate the engine's price_confidence into a confidence class.
+-- ── 3a. The THREE root class definitions ──────────────────────────────────
+-- No econ view may contain a confidence-class literal. Every class in the
+-- layer originates in exactly one of these three functions, each deriving the
+-- class from a column of the underlying record. A view can therefore never
+-- override, improve, or hardcode its own confidence — it can only inherit and
+-- degrade. verify-economics.sql P5-15 enforces this mechanically by scanning
+-- the stored view definitions for class literals.
+
+-- Cost: from the rate card that priced the call.
 CREATE OR REPLACE FUNCTION econ.cost_confidence(p_price_confidence text)
 RETURNS text
 LANGUAGE sql IMMUTABLE
@@ -193,6 +201,44 @@ AS $$
            ELSE 'blocked'
          END;
 $$;
+
+-- Revenue: from the payment's own settlement status. A settled payment is a
+-- recorded fact; anything unsettled is at best derived. Deriving this from
+-- `status` rather than writing 'actual' in the view means that if the revenue
+-- views ever widen to include pending payments, the class follows the data
+-- automatically instead of overstating it.
+CREATE OR REPLACE FUNCTION econ.revenue_confidence(p_status text)
+RETURNS text
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT CASE p_status
+           WHEN 'approved'  THEN 'actual'
+           WHEN 'completed' THEN 'actual'
+           WHEN 'pending'   THEN 'derived'
+           ELSE 'blocked'
+         END;
+$$;
+
+-- Credit ledger: a posted transaction is a recorded fact; anything else is
+-- not counted.
+CREATE OR REPLACE FUNCTION econ.ledger_confidence(p_transaction_type text)
+RETURNS text
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT CASE
+           WHEN p_transaction_type IN ('GRANT','CONSUME','REFUND','ADMIN_ADJUST')
+             THEN 'actual'
+           ELSE 'blocked'
+         END;
+$$;
+
+-- Is there a source of platform spend (§9.4)? Derived from schema state, so
+-- the moment the table is created every break-even figure stops reporting
+-- 'no_platform_cost_source' — with no code change (rule 4).
+CREATE OR REPLACE FUNCTION econ.platform_cost_available()
+RETURNS boolean
+LANGUAGE sql STABLE
+AS $$ SELECT to_regclass('public.platform_cost_entries') IS NOT NULL; $$;
 
 -- ── 4. The block-reason resolver — owner rules 2, 3 and 4 ─────────────────
 -- Entirely a function of the DATA PRESENT. Nothing about the current gaps is
@@ -263,7 +309,7 @@ CREATE OR REPLACE VIEW econ.v_revenue_events AS
          0::numeric                              AS provider_fee_egp,
          pr.amount_egp                           AS net_amount_egp,
          COALESCE(pr.reviewed_at, pr.created_at) AS recognized_from,
-         'actual'::text                          AS confidence
+         econ.revenue_confidence(pr.status)      AS confidence
     FROM public.payment_requests pr
     LEFT JOIN public.plan_definitions pd ON pd.plan_code = pr.plan_code
    WHERE pr.status = 'approved'
@@ -280,7 +326,7 @@ CREATE OR REPLACE VIEW econ.v_revenue_events AS
          COALESCE(p.provider_fee_egp, 0),
          p.amount_egp - COALESCE(p.provider_fee_egp, 0),
          p.created_at,
-         'actual'
+         econ.revenue_confidence(p.status)
     FROM public.payments p
     LEFT JOIN public.plan_definitions pd2 ON pd2.plan_code = p.metadata->>'plan_code'
    WHERE p.status = 'completed';
@@ -297,14 +343,17 @@ CREATE OR REPLACE VIEW econ.v_revenue_recognized_daily AS
          sum(r.daily_amount_egp)      AS recognized_egp,
          sum(r.daily_net_egp)         AS recognized_net_egp,
          count(DISTINCT r.revenue_event_id) AS revenue_events,
-         count(DISTINCT r.user_id)    AS paying_users,
-         'actual'::text               AS confidence
+         count(DISTINCT r.user_id)          AS paying_users,
+         -- Inherited from the contributing revenue events, worst-first. No
+         -- class literal appears here.
+         econ.worst_confidence(VARIADIC array_agg(r.confidence)) AS confidence
     FROM (
       SELECT e.revenue_event_id, e.user_id, e.plan_code, e.plan_kind,
              e.recognized_from,
              greatest(COALESCE(e.period_days,0), 1)                    AS days,
              e.gross_amount_egp / greatest(COALESCE(e.period_days,0),1) AS daily_amount_egp,
-             e.net_amount_egp   / greatest(COALESCE(e.period_days,0),1) AS daily_net_egp
+             e.net_amount_egp   / greatest(COALESCE(e.period_days,0),1) AS daily_net_egp,
+             e.confidence
         FROM econ.v_revenue_events e
     ) r
     CROSS JOIN LATERAL generate_series(
@@ -323,7 +372,7 @@ CREATE OR REPLACE VIEW econ.v_credit_flow AS
          sum(ct.credits) FILTER (WHERE ct.credits > 0) AS credits_in,
          sum(ct.credits) FILTER (WHERE ct.credits < 0) AS credits_out,
          count(DISTINCT ct.user_id)        AS users,
-         'actual'::text                    AS confidence
+         econ.worst_confidence(VARIADIC array_agg(DISTINCT econ.ledger_confidence(ct.transaction_type))) AS confidence
     FROM public.credit_transactions ct
    GROUP BY ct.created_at::date, ct.transaction_type;
 
@@ -343,7 +392,8 @@ CREATE OR REPLACE VIEW econ.v_pnl_daily AS
   rev AS (
     SELECT recognized_on AS d,
            sum(recognized_egp)     AS revenue_egp,
-           sum(recognized_net_egp) AS revenue_net_egp
+           sum(recognized_net_egp) AS revenue_net_egp,
+           econ.worst_confidence(VARIADIC array_agg(confidence)) AS revenue_confidence
       FROM econ.v_revenue_recognized_daily GROUP BY recognized_on
   ),
   cost AS (
@@ -367,8 +417,9 @@ CREATE OR REPLACE VIEW econ.v_pnl_daily AS
          -- INV-27: revenue is actual, cost is only as good as its rate card,
          -- and a blocked metric is 'blocked'. Never better than the worst.
          CASE WHEN econ.block_reason(rev.revenue_egp, cost.cost_usd, cost.cost_egp) IS NOT NULL
-              THEN 'blocked'
-              ELSE econ.worst_confidence('actual', econ.cost_confidence(cost.price_confidence))
+              THEN econ.worst_confidence(NULL)   -- resolves to 'blocked'
+              ELSE econ.worst_confidence(rev.revenue_confidence,
+                                        econ.cost_confidence(cost.price_confidence))
          END                                                              AS confidence
     FROM days
     LEFT JOIN rev  ON rev.d  = days.d
@@ -400,7 +451,7 @@ CREATE OR REPLACE VIEW econ.v_package_economics AS
   WITH rev AS (
     SELECT plan_code, sum(recognized_egp) AS revenue_egp,
            sum(recognized_net_egp) AS revenue_net_egp,
-           count(DISTINCT paying_users) AS plan_days
+           econ.worst_confidence(VARIADIC array_agg(confidence)) AS revenue_confidence
       FROM econ.v_revenue_recognized_daily GROUP BY plan_code
   ),
   cost AS (
@@ -425,15 +476,17 @@ CREATE OR REPLACE VIEW econ.v_package_economics AS
               THEN round(100.0 * (rev.revenue_net_egp - cost.cost_egp)
                          / NULLIF(rev.revenue_net_egp,0), 2) END     AS margin_pct,
          CASE WHEN econ.block_reason(rev.revenue_egp, cost.cost_usd, cost.cost_egp) IS NOT NULL
-              THEN 'blocked'
-              ELSE econ.worst_confidence('actual', econ.cost_confidence(cost.price_confidence))
+              THEN econ.worst_confidence(NULL)   -- resolves to 'blocked'
+              ELSE econ.worst_confidence(rev.revenue_confidence,
+                                        econ.cost_confidence(cost.price_confidence))
          END                                                          AS confidence
     FROM rev FULL JOIN cost ON cost.plan_code = rev.plan_code;
 
 -- ── 10. Student economics (§9.2) ──────────────────────────────────────────
 CREATE OR REPLACE VIEW econ.v_student_economics AS
   WITH rev AS (
-    SELECT user_id, sum(net_amount_egp) AS revenue_egp
+    SELECT user_id, sum(net_amount_egp) AS revenue_egp,
+           econ.worst_confidence(VARIADIC array_agg(confidence)) AS revenue_confidence
       FROM econ.v_revenue_events GROUP BY user_id
   ),
   cost AS (
@@ -461,8 +514,9 @@ CREATE OR REPLACE VIEW econ.v_student_economics AS
          CASE WHEN econ.block_reason(rev.revenue_egp, cost.cost_usd, cost.cost_egp) IS NULL
               THEN (cost.cost_egp > rev.revenue_egp) END          AS cost_exceeds_revenue,
          CASE WHEN econ.block_reason(rev.revenue_egp, cost.cost_usd, cost.cost_egp) IS NOT NULL
-              THEN 'blocked'
-              ELSE econ.worst_confidence('actual', econ.cost_confidence(cost.price_confidence))
+              THEN econ.worst_confidence(NULL)   -- resolves to 'blocked'
+              ELSE econ.worst_confidence(rev.revenue_confidence,
+                                        econ.cost_confidence(cost.price_confidence))
          END                                                       AS confidence
     FROM rev FULL JOIN cost ON cost.user_id = rev.user_id;
 
@@ -500,7 +554,9 @@ CREATE OR REPLACE VIEW econ.v_breakeven_inputs AS
            sum(revenue_net_egp) AS revenue_egp,
            sum(cost_usd)        AS ai_cost_usd,
            sum(cost_egp)        AS ai_cost_egp,
-           max(confidence)      AS confidence
+           -- lattice, not max(): alphabetically 'modeled' sorts above 'blocked',
+           -- so max() would UPGRADE a blocked month. INV-27 forbids exactly that.
+           econ.worst_confidence(VARIADIC array_agg(confidence)) AS confidence
       FROM econ.v_pnl_daily GROUP BY 1
   )
   SELECT m.month,
@@ -508,12 +564,26 @@ CREATE OR REPLACE VIEW econ.v_breakeven_inputs AS
          m.ai_cost_usd,
          m.ai_cost_egp,
          NULL::numeric AS platform_cost_egp,
+         -- Derived, not pinned. The platform-cost clause tests SCHEMA STATE,
+         -- so creating public.platform_cost_entries clears it by itself. The
+         -- earlier version COALESCEd to a constant, which meant break-even
+         -- could never unblock however complete the data became — a rule 4
+         -- violation hiding inside a fallback.
          COALESCE(
            econ.block_reason(m.revenue_egp, m.ai_cost_usd, m.ai_cost_egp),
-           'no_platform_cost_source'      -- §9.4 has no table yet
+           CASE WHEN NOT econ.platform_cost_available()
+                THEN 'no_platform_cost_source' END
          ) AS block_reason,
          NULL::numeric AS breakeven_questions,
-         'blocked'::text AS confidence
+         -- Confidence follows the block state and then the inputs. Never a
+         -- literal.
+         CASE WHEN COALESCE(
+                     econ.block_reason(m.revenue_egp, m.ai_cost_usd, m.ai_cost_egp),
+                     CASE WHEN NOT econ.platform_cost_available()
+                          THEN 'no_platform_cost_source' END) IS NOT NULL
+              THEN econ.worst_confidence(NULL)     -- resolves to 'blocked'
+              ELSE m.confidence
+         END AS confidence
     FROM m;
 
 -- ── 13. Coverage — what is blocked, and exactly why (rule 3) ──────────────
@@ -549,9 +619,13 @@ CREATE OR REPLACE VIEW econ.v_coverage AS
          'no source table for platform spend (§9.4); net profit and break-even '
          'cannot be computed'
   UNION ALL
+  -- Derived through the same root function every metric uses, so the status
+  -- board can never disagree with the metrics it describes.
   SELECT 'price_confidence',
-         CASE WHEN EXISTS (SELECT 1 FROM cost_engine.v_cost_daily WHERE price_confidence <> 'invoice_verified')
-              THEN 'modeled' ELSE 'actual' END,
+         -- max(), not min(): 'invoice_verified' < 'list_price' alphabetically,
+         -- so min() would report the BEST card and overstate the whole book.
+         econ.cost_confidence(
+           (SELECT max(price_confidence) FROM cost_engine.v_cost_daily)),
          CASE WHEN EXISTS (SELECT 1 FROM cost_engine.v_cost_daily WHERE price_confidence <> 'invoice_verified')
               THEN 'some cost rests on unverified list prices — every derived '
                    'figure is modeled (INV-27)'

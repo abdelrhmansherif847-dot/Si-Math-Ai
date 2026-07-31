@@ -126,6 +126,31 @@ SELECT 'P5-08' AS check,
          || '; P&L rows claiming actual: '
          || (SELECT count(*)::text FROM econ.v_pnl_daily WHERE confidence='actual') AS detail;
 
+-- P5-15 — no econ view assigns its own confidence. Scans the STORED view
+-- definitions (not the migration text) for a confidence-class literal in a
+-- column named `confidence`. Every class in the layer must originate in
+-- econ.cost_confidence / revenue_confidence / ledger_confidence and reach a
+-- view only by inheritance, so a view can degrade a class but never invent or
+-- improve one.
+SELECT 'P5-15' AS check,
+       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
+       COALESCE(string_agg(viewname, ', '),
+                'no econ view hardcodes a confidence class') AS detail
+  FROM pg_views
+ WHERE schemaname = 'econ'
+   AND definition ~ '''(actual|modeled|derived)''::text AS confidence';
+
+-- P5-16 — the three root class functions exist and are the only source of a
+-- class. If one is dropped, every view above it degrades rather than silently
+-- keeping a stale literal.
+SELECT 'P5-16' AS check,
+       CASE WHEN count(*) = 3 THEN 'PASS' ELSE 'FAIL' END AS result,
+       count(*)::text || '/3 root confidence functions present ('
+         || COALESCE(string_agg(p.proname, ', ' ORDER BY p.proname), 'none') || ')' AS detail
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ WHERE n.nspname = 'econ'
+   AND p.proname IN ('cost_confidence','revenue_confidence','ledger_confidence');
+
 \echo ''
 \echo '=== C. Owner rules 1-4 — blocked states ==================================='
 
