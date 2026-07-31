@@ -1,7 +1,8 @@
 -- ===========================================================================
 -- Phase 6 M1 — expose the AI Cost split on the coverage board
 -- ===========================================================================
--- STATUS: PREPARED, NOT APPLIED. Requires owner approval (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-07-31 (owner-approved,
+--         CLAUDE.md §3). Verified additive and backward compatible.
 --
 -- WHY THIS EXISTS (the "new evidence" the M1 scope allows for)
 --   The locked Phase 6 presentation decision (2026-07-31,
