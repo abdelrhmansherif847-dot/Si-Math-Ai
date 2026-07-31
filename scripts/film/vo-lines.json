@@ -74,7 +74,8 @@
     "OPEN: Shot 4 allots L2 one second against a 2.55s line, and Act II has no slack to absorb the overhang. Either Shot 4 extends and Act II compresses, or L2 overlaps the Shot 4 → Shot 5 cut. See 06 §4.",
     "L10 'The defence rests.' — music cuts to absolute silence on the final word. Protect in the mix.",
     "L15/L16 must share an identical cadence; L17 lands a half-step softer.",
-    "Expression names refer to the six labelled panels on the character expression sheets (ac71e214 Judge, a36e371d Lawyer). Those sheets are PENDING — naming a panel on paper is safe, but no shot generates against them until they pass Gate 2 (Law 11)."
+    "Expression names refer to the six labelled panels on the character expression sheets (ac71e214 Judge, a36e371d Lawyer). Those sheets are PENDING — naming a panel on paper is safe, but no shot generates against them until they pass Gate 2 (Law 11).",
+    "OWNER AMENDMENT 2026-07-31 (Shot 13A/13B eyeline): L11 held on the Representatives; the gaze shift to Lawyer Zero before L12 is the visual verdict. Supersedes 03's 'straight down the lens'. See docs/film/11_Directors_Charter.md."
   ],
   "lines": [
     {
@@ -229,7 +230,7 @@
       "job_id": null,
       "camera": "Cam 2 · 50mm · low · MCU · locked",
       "expression": "GLASSES OFF",
-      "eye_direction": "Straight down the lens, to the grey table."
+      "eye_direction": "On the General AI Representatives, held for the whole line. (Owner amendment 2026-07-31 — supersedes 03's 'straight down the lens'.)"
     },
     {
       "id": "L12",
@@ -243,7 +244,7 @@
       "job_id": null,
       "camera": "Cam 2 · 85mm · low · CU · few-inch push",
       "expression": "THE VERDICT",
-      "eye_direction": "Down the lens. Hold one full second on the eyes before the line."
+      "eye_direction": "THE VISUAL VERDICT (owner-approved 2026-07-31): in the held second before the line, his eyes leave the Representatives, move slowly to Lawyer Zero, and rest there. The line lands after the look."
     },
     {
       "id": "L13",

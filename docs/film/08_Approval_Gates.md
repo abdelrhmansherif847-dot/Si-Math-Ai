@@ -58,6 +58,10 @@ and creatively wrong — that is the normal case, not the exception.
 - [ ] **Storytelling purpose** — does it still pass The Sentence? *"This looks like a Disney or Pixar
       short film that just happens to be about education."* If it drifts toward "a really good AI
       advertisement," it is wrong even if every other box is ticked. (Law 7)
+- [ ] **Silent Cut** — for any shot carrying a line: does the frame read **without** it? If the
+      meaning only arrives with the dialogue, the shot is under-designed — fix it upstream through
+      the storytelling order (blocking → performance → camera → lighting → music → dialogue), never
+      by leaning on the line. (Law 15, `11`)
 
 ---
 

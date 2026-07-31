@@ -179,7 +179,7 @@ stillness is the loudest choice available.*
 |---|---|
 | **Emotional direction** | Fairness. Generous, and **true**. **No irony whatsoever** — if this sounds like a setup for an insult the verdict is wrong. The ruling being fair is what makes it land. |
 | **Facial expression** | `GLASSES OFF` — eyes fully visible, open and kind. |
-| **Eye direction** | **Straight down the lens**, to the grey table. |
+| **Eye direction** | **On the General AI Representatives, held for the whole line.** He is addressing them, generously. *(Owner amendment 2026-07-31 — supersedes `03`'s "straight down the lens"; see `11`.)* |
 | **Camera** | Cam 2 · 50mm · low · MCU · locked |
 | **Notes** | Business **first**: closes the file, removes the glasses with two hands, sets them down without sound — *then* the line. The glasses removal is the performance of the whole act. Breath visible here (one of only two times). The Representatives **stand** on this line. |
 
@@ -190,7 +190,7 @@ stillness is the loudest choice available.*
 |---|---|
 | **Emotional direction** | The verdict. The hammer, gently laid down. Each word placed like a stone; the "but" settles, it does not swing. |
 | **Facial expression** | `THE VERDICT` — grave, resolved, eyes direct. |
-| **Eye direction** | Down the lens. **Hold one full second on the eyes before the line.** ⚑ *Proposed change under Law 15 — eyes move to Lawyer Zero on this line, making the verdict readable silently. See `11`, awaiting owner decision; not applied.* |
+| **Eye direction** | **THE VISUAL VERDICT** *(owner-approved 2026-07-31)*: in the held second before the line, his eyes leave the Representatives, move **slowly** to Lawyer Zero, and **rest there**. The line lands *after* the look — dialogue confirming what the audience has already understood, not introducing it. |
 | **Camera** | Cam 2 · 85mm · low · CU · push-in of only a few inches |
 | **Notes** | Glasses **OFF from here to the end of the film**. Without them his eyes are fully readable for the first time. One blink **before** this line. |
 

@@ -74,7 +74,7 @@ That still passes Law 15 — typography is image, not dialogue — but it is wor
 they cannot) is visual and survives. The *content* of each exhibit is textual. Acceptable, and it
 means those text elements are load-bearing and must be legible at 1080×1920 in the safe zone.
 
-## ⚠️ THE ONE FAILURE — Shot 13B, the verdict
+## ✅ THE ONE FAILURE — Shot 13B, the verdict — RESOLVED 2026-07-31
 
 **L12 · "But this one was built for students."**
 
@@ -107,8 +107,16 @@ readings of an unspecified eyeline, take the one with the stronger emotional exp
 the same way. And `03`'s Shot 13B card never specifies where he looks — this fills a gap rather than
 overturning a decision.
 
-> **⏳ AWAITING OWNER DECISION.** Not applied. `09` still carries "down the lens" for L12, because
-> changing the film's verdict is not an operator's call — it is the director's.
+> **✅ APPROVED — owner, 2026-07-31. Applied in `09` and `vo-lines.json`.**
+>
+> The locked performance: on L11 his eyes **stay on the General AI Representatives.** Then, in the
+> held second before L12, they move — **slowly** — to Lawyer Zero, and **rest there.** That eye
+> movement is the visual verdict. The line lands after the look, confirming what the audience has
+> already understood rather than introducing it.
+>
+> Recorded consequence, per the conflict rule in `00`: this amendment **supersedes `03`'s "straight
+> down the lens"** on Shots 13A/13B. With this change the Silent Cut audit stands at **19 of 19** —
+> every shot in the film now reads without its line.
 
 ## Second-order note — Shot 14B
 
@@ -120,9 +128,29 @@ passes, weakly. No change recommended. Logged so it is a known softness rather t
 
 ---
 
+## THE STORYTELLING ORDER — owner-set, 2026-07-31
+
+Information reaches the audience through six layers, **in this order of responsibility:**
+
+1. **Blocking** — who is where, facing whom
+2. **Performance** — what the body and face decide
+3. **Camera** — where we stand and why
+4. **Lighting** — what the world says about it
+5. **Music** — what it costs
+6. **Dialogue** — the final layer. Confirmation, never introduction
+
+**If dialogue is carrying information that any layer above it could carry, the scene is redesigned
+until it passes the Silent Cut Test.** The fix is always upstream — the line is never patched to
+cover for an under-designed image.
+
+The verdict is the proof of concept: layer 2 (a gaze shift) now carries what only layer 6 carried
+before, and the line became stronger for it.
+
 ## THE STANDING RULE
 
-**Run the Silent Cut Test on every shot before it animates.** Not once, here, on paper — every time.
-A shot that only works with its line is a shot that has not been directed yet.
+**The Silent Cut Test runs on every important scene before it is considered final.** Not once, here,
+on paper — every time, at key-frame review and again at animation review. A shot that only works
+with its line is a shot that has not been directed yet, and it goes back up the six layers — not to
+the dialogue.
 
 The question at every stage stays the same: **will this make the final film better?**

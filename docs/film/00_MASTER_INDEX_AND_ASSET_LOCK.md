@@ -43,7 +43,7 @@
 12. **UPSCALE APPROVED FRAMES — NEVER REGENERATE THEM.** Once a hero frame passes Gate 2 it is a fixed point, and every plate derived from it depends on it staying that way. To raise its resolution, **`upscale_image`** — same composition, same pixels, more of them. **Regeneration is permitted in exactly two cases: the composition itself is changing, or the frame was rejected at Gate 2.** Re-running a generation "identically" at a new resolution returns a *different image*, orphans every child derived from the original, and voids their approvals. Preserving continuity outranks native resolution. (Owner, 2026-07-31)
 13. **THE DIRECTOR'S QUESTION.** Every decision answers one question: ***"Will this make the final film better?"*** — not "is this technically correct?" **Technical correctness is now a requirement, not the goal.** The goal is emotional storytelling. A choice that is flawless and inert loses to a choice that is imperfect and alive. (Owner, 2026-07-31)
 14. **THE EMOTIONAL TIEBREAK.** When two options are both technically valid, **choose the one that creates the stronger emotional experience.** This film will be remembered for how it makes people feel, not for how perfect its prompts were. Use this to break every tie — it is not a preference, it is the deciding rule.
-15. **THE SILENT CUT TEST.** Strip every line of dialogue from the film. **The audience must still understand the story** — from blocking, lighting, composition, performance and camera alone. Dialogue *strengthens* the story; it never *carries* it. Any shot that fails this test is under-designed, and the fix is visual, never a better line. Standing audit in `11`.
+15. **THE SILENT CUT TEST.** Strip every line of dialogue from the film. **The audience must still understand the story** — from blocking, lighting, composition, performance and camera alone. Dialogue *strengthens* the story; it never *carries* it. Any shot that fails this test is under-designed, and the fix is visual, never a better line. Runs on every important scene before it is considered final. Storytelling order of responsibility: **blocking → performance → camera → lighting → music → dialogue** — dialogue is the final layer. Standing audit and the order in `11`.
 
 > **Laws 13–15 outrank the rest.** 1–12 keep the film *consistent*; 13–15 decide whether it is
 > *good*. When a consistency law and a director's law appear to conflict, the conflict is almost
@@ -210,6 +210,20 @@ Generated only after all four plates are LOCKED, since it *depicts* them.
 
 **Q3 · No new camera positions** until the four are approved. These four are the visual language;
 every later shot inherits from them. (Owner directive, 2026-07-31)
+
+## OWNER AMENDMENTS LOG
+
+Per the conflict rule at the bottom of this file, a newer document supersedes an older one **only**
+through an explicit owner decision recorded here. All 2026-07-31:
+
+| Amendment | Supersedes | Recorded in |
+|---|---|---|
+| L2 read speed → 165 wpm (2.55s) | `01` timing table's 130 wpm | `06` §4(b), `vo-lines.json` |
+| Still resolution standard → 2K (1536×2752) | (gap — kit never specified) | `00` standards, `08` Gate 1 |
+| Approved hero frames are upscaled, never regenerated | (gap) | Law 12, `08` upscale path |
+| Director's Laws 13–15 | — (additive) | Laws, `11` |
+| **Shot 13A/13B eyeline — the visual verdict.** L11 held on the Representatives; the slow gaze shift to Lawyer Zero before L12 *is* the verdict | `03`'s "straight down the lens" on 13A/13B | `09` L11/L12, `11`, `vo-lines.json` |
+| Storytelling order: blocking → performance → camera → lighting → music → dialogue | — (additive) | Law 15, `11` |
 
 ## KIT DISCREPANCIES — RAISED, NOT PATCHED
 
