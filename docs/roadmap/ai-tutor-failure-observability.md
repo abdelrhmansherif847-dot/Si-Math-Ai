@@ -1,8 +1,16 @@
 # Closing the 5xx observability gap — design discussion
 
-**Status:** design discussion. **Step 1 is now implemented** (see below); steps 2–4 remain design
-only — no migration staged, ai-tutor untouched, nothing deployed.
+**Status:** steps 1 and 2 are implemented; steps 3–4 remain design only.
 Prepared 2026-07-30 against `igvkyxkmjnkzscqgommj`.
+
+- **Step 1 — done.** The smoke-test fail-open gate is closed.
+- **Step 2 — half shipped.** `ai_tutor_failures` is **applied in production**
+  (`20260730231948`, plus `20260730_ai_tutor_failures_grant_hardening.sql`). The writer is
+  **written and committed as v92 (`b553cf3`) but NOT deployed** — it needs a CLI deploy per
+  DEPLOY.md §4. Until that deploy happens the table exists and stays empty, which is the
+  intended order: schema first, function second.
+- **Steps 3–4 — design only.** The dashboard still shows the un-narrowed blind-spot notice, and
+  there is no read RPC, so nothing consumes the table yet.
 
 The gap: when `ai-tutor` returns 5xx before writing to `question_records` or `ai_model_calls`,
 nothing is persisted anywhere. AI Monitor can honestly report "None recorded" while students were
@@ -166,6 +174,13 @@ test that already exists.
    skipped the `question_records` write check no longer claims `ALL CHECKS PASSED`.
 2. **`ai_tutor_failures` table + write from the existing catch** — reuses the proven `teleAdmin` /
    `finally` path. Migration + ai-tutor change.
+   - ✅ **Migration applied 2026-07-30.** Post-apply verification found the schema exactly as
+     designed and two privilege deviations, both closed by
+     `20260730_ai_tutor_failures_grant_hardening.sql`: `service_role` had retained UPDATE and
+     DELETE, and `anon`/`authenticated` had retained `rwU` on the owned sequence. Both came from
+     the same cause — schema `public` grants ALL on new tables by default, so the migration's
+     narrow-looking `GRANT` restricted nothing and only the missing `REVOKE` mattered.
+   - ⏳ **ai-tutor v92 written and committed (`b553cf3`), not deployed.** CLI deploy only.
 3. **Narrow the dashboard notice** and read the new table. Small UI change, after 2 is deployed and
    has produced a row.
 4. **External probe for cold-start** — separate discussion; the only route to the class that stays

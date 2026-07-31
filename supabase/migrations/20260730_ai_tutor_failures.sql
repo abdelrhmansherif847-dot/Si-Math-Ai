@@ -2,9 +2,15 @@
 -- ai_tutor_failures — record 5xx failures that reach the handler
 -- ===========================================================================
 -- ✅ DESIGN FROZEN AND APPROVED by the owner, 2026-07-30.
--- ⛔ NOT APPLIED — and approval of the design is NOT authorization to apply it.
---    The owner asked for this to stay staged. Applying it needs a separate,
---    explicit go-ahead (CLAUDE.md §3).
+-- ✅ APPLIED 2026-07-30 under separate owner approval, as migration version
+--    20260730231948 (`ai_tutor_failures`).
+--
+--    Post-apply verification found the columns, types, nullability, defaults,
+--    constraints, indexes and RLS posture exactly as designed — and two
+--    privilege deviations where this file's own comments described what the
+--    statements were meant to do rather than what they did. Corrected in
+--    20260730_ai_tutor_failures_grant_hardening.sql; see the grants section
+--    below, which is annotated rather than rewritten so the record stands.
 --
 --    Frozen against re-litigation, not against new evidence: if implementation
 --    turns up a fact that makes one of the decisions below wrong, raise it as a
@@ -21,8 +27,9 @@
 --    error_message, a policy can redact just that column over an older window
 --    rather than deleting rows, so it can be added on top later.
 --
---    The Edge Function change that writes this table is a SEPARATE approval and
---    has not been written. It requires a CLI deploy (DEPLOY.md §4).
+--    The Edge Function change that writes this table is a SEPARATE approval.
+--    Written and committed as v92 (b553cf3) on 2026-07-30; NOT deployed. It
+--    requires a CLI deploy (DEPLOY.md §4).
 --
 -- Design: docs/roadmap/ai-tutor-failures-design.md
 -- Context: docs/roadmap/ai-tutor-failure-observability.md
@@ -170,6 +177,35 @@ REVOKE ALL ON public.ai_tutor_failures FROM anon, authenticated;
 GRANT INSERT, SELECT ON public.ai_tutor_failures TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.ai_tutor_failures_id_seq TO service_role;
 
+-- ⚠️ CORRECTION, 2026-07-30, after applying. The paragraph at the end of this
+-- block is kept verbatim as the record of what this migration INTENDED. It is
+-- not what it achieved, and the three statements above do less than they read
+-- as doing.
+--
+--   Schema public carries ALTER DEFAULT PRIVILEGES entries (from both
+--   `postgres` and `supabase_admin`, verified in pg_default_acl) granting every
+--   new table arwdDxtm — ALL — and every new sequence rwU, to anon,
+--   authenticated AND service_role. Therefore:
+--
+--     • the REVOKE was load-bearing and did remove anon/authenticated
+--     • the table GRANT was a no-op on top of an existing ALL, so service_role
+--       kept UPDATE and DELETE — the exact opposite of the claim below
+--     • the sequence GRANT was likewise a no-op, and nothing revoked the
+--       sequence from anon/authenticated, so they held rwU on the sequence of a
+--       table they could not otherwise touch
+--
+--   A GRANT naming fewer privileges than the default restricts nothing. In this
+--   schema only a REVOKE narrows anything, and a narrow-looking GRANT is worse
+--   than silence because the next reader believes it. That is what happened
+--   here: the claim below described the GRANT's intent, and post-apply
+--   verification check 2 was the thing that caught it.
+--
+--   Closed by 20260730_ai_tutor_failures_grant_hardening.sql. service_role
+--   TRUNCATE is still held, deliberately — ai_model_calls holds it too, and
+--   revoking it on one table alone would trade an old inconsistency for a new
+--   one. Owner decision: one dedicated follow-up changes both together.
+--
+-- ── ORIGINAL INTENT, as written before apply ──────────────────────────────
 -- No UPDATE, no DELETE, no TRUNCATE for anyone but the table owner: a failure
 -- record is an observation, and observations are not edited. This also matches
 -- the INV-15 posture on ai_model_calls (service_role INSERT=true, UPDATE=false,
@@ -188,6 +224,14 @@ GRANT USAGE, SELECT ON SEQUENCE public.ai_tutor_failures_id_seq TO service_role;
 --   SELECT has_table_privilege('service_role','public.ai_tutor_failures','INSERT'),
 --          has_table_privilege('service_role','public.ai_tutor_failures','UPDATE'),
 --          has_table_privilege('service_role','public.ai_tutor_failures','DELETE');      -- t, f, f
+--   -- ⚠️ t, f, f holds only AFTER 20260730_ai_tutor_failures_grant_hardening.sql.
+--   --    This migration on its own leaves t, t, t — see the CORRECTION above.
+--   --    This check is what caught it; keep running it.
+--
+--   -- 2b. clients hold nothing on the sequence either (added by the follow-up)
+--   SELECT has_sequence_privilege('anon','public.ai_tutor_failures_id_seq','USAGE'),
+--          has_sequence_privilege('authenticated','public.ai_tutor_failures_id_seq','USAGE');
+--   -- f, f  — again only after the follow-up; this migration leaves t, t.
 --
 --   -- 3. the stage vocabulary is enforced
 --   INSERT INTO public.ai_tutor_failures
