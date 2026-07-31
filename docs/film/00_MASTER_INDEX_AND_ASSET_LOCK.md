@@ -39,6 +39,7 @@
 9. **NEVER TRUST THE REQUESTED MODEL NAME.** The name you send is not the model that runs. After *every* generation, read the job's recorded `model` and confirm it. Stills must record `nano_banana_2` (request `nano_banana_pro` — see the ID shift below). A mismatch means the plate is void: discard it, do not "use it anyway," do not reason about whether it looks fine. This was proven by failure, and it cost three generations.
 10. **TWO GATES.** A completed job is not an approved plate. Every plate passes **Gate 1 — Technical** (model, resolution, references, aspect ratio, settings) and **Gate 2 — Creative** (character identity, camera composition, courtroom geography, lighting continuity, emotional impact, storytelling purpose). **Only after both is a plate LOCKED.** Gate 1 is machine-checkable and is the operator's job. Gate 2 is the owner's eye and cannot be delegated, inferred, or assumed from a clean Gate 1. Checklists in `08`.
 11. **LOCKED REFERENCES ONLY.** Never attach a `PENDING OWNER APPROVAL` asset to a production generation. A pending asset is an unvalidated design; making it the parent of a plate propagates it into the film through the back door. **No still becomes a parent reference for future generations until the owner has approved it visually.**
+12. **UPSCALE APPROVED FRAMES — NEVER REGENERATE THEM.** Once a hero frame passes Gate 2 it is a fixed point, and every plate derived from it depends on it staying that way. To raise its resolution, **`upscale_image`** — same composition, same pixels, more of them. **Regeneration is permitted in exactly two cases: the composition itself is changing, or the frame was rejected at Gate 2.** Re-running a generation "identically" at a new resolution returns a *different image*, orphans every child derived from the original, and voids their approvals. Preserving continuity outranks native resolution. (Owner, 2026-07-31)
 
 ---
 
@@ -164,29 +165,25 @@ Camera stills rendered on the wrong model (`nano_banana_flash`, via the ID shift
 
 Do not start these until all four camera plates pass Gate 2.
 
-**Q1 · Bring the Master Frame up to the 2K standard.**
+**Q1 · Bring the Master Frame to the 2K standard — by UPSCALE.** ✅ *Method decided by owner,
+2026-07-31: upscale, never regenerate. Now Law 12.*
 
-> ⚠️ **Decision needed first: regenerate or upscale? These are not the same thing.**
+> **Call:** `upscale_image` · `image_id` `0f0b8381-fa06-427e-8f03-57df41598428` ·
+> `width` 768 · `height` 1376 · `resolution` `2k` · provider `bytedance`
 >
-> The owner's instruction was "regenerate at the same composition, same blocking, same references,
-> same model, but at 2K." **Image generation is stochastic — a 2K re-run will not return the 1k
-> frame at higher resolution. It returns a different image.** Same prompt, same references, same
-> model, and still: different god rays, different particle placement, different reflections,
-> possibly different figure spacing.
+> Preserves composition, character placement, lighting, spatial geography, camera language and —
+> critically — **parent-reference continuity**. Cam 2, Cam 12/A and the Grey Table Reverse remain
+> valid children; their Gate 2 approvals survive.
 >
-> That matters more here than anywhere else in the film, because the Master Frame is the parent of
-> everything. If it changes, **Cam 2, Cam 12/A and the Grey Table Reverse were derived from a frame
-> that no longer exists**, and the camera package would have to be re-derived from the new master
-> and re-approved — Gate 2 all over again.
+> ⚠️ **The result still needs a narrow Gate 2.** An upscale cannot change composition, but it is not
+> artifact-free — upscalers can hallucinate texture, over-sharpen edges, and distort fine features,
+> faces worst of all. So the check is not "is this the right frame?" (already answered) but
+> **"did the upscale damage anything?"** Look at the Judge's face, the emblem's linework, and the
+> painterly brushwork — if it has been smoothed toward photographic, reject it and keep the 1k
+> original, which is a better parent than a degraded 2K one.
 >
-> | Option | What happens | Drift risk |
-> |---|---|---|
-> | **`upscale_image` to 2K** *(recommended)* | Same frame, same pixels, more of them. Composition is mathematically preserved | **None.** The camera package stays valid |
-> | **Regenerate at 2K** | A new, genuinely 2K-native render. Possibly better detail | **High.** New parent ⇒ re-derive and re-approve all three camera plates |
->
-> Recommendation: **upscale.** It delivers the stated goal — every locked reference sharing one
-> quality standard — without invalidating three plates that just passed Gate 1. If native-2K detail
-> is worth more than the approvals, regenerate, but then budget for the full re-derivation.
+> Sequencing: safe to run before or after camera-package approval, since it cannot invalidate the
+> children. Held only because it produces a new asset the owner has not asked to exist yet.
 
 **Q2 · Continuity sheet** — one page, the four camera positions. Spec in `10_Continuity_Sheet_Spec.md`.
 Generated only after all four plates are LOCKED, since it *depicts* them.

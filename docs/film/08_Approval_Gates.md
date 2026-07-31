@@ -61,6 +61,30 @@ and creatively wrong — that is the normal case, not the exception.
 
 ---
 
+## THE UPSCALE PATH — a narrowed Gate 2
+
+An **upscale of an already-approved plate** is the one case where Gate 2 does not restart from
+scratch. Composition, blocking, geography and lighting were approved on the original and an upscale
+cannot change them, so those boxes carry over.
+
+**What does not carry over is artifact damage.** Upscalers hallucinate texture, over-sharpen edges
+and distort fine features — faces worst of all — and a plate can come back higher-resolution and
+*worse*. So an upscaled plate runs a short, specific Gate 2:
+
+- [ ] **Face integrity** — character faces unchanged; no smoothing, no invented detail, no drift in
+      the eyes or linework
+- [ ] **Style preserved** — still painterly and hand-painted. **If it has been pushed toward
+      photographic, reject it.** That is the Style Law failing, and it is the most common upscale
+      failure mode
+- [ ] **Emblem and text** — the Si emblem's linework and any on-screen text still clean
+- [ ] **No new artifacts** — no haloing, no ringing on high-contrast edges, no plastic sheen
+
+**Rejecting an upscale means keeping the original.** A clean 1k parent beats a degraded 2K one —
+resolution is worth less than fidelity, which is the whole reason Law 12 exists.
+
+Regeneration remains available in exactly two cases (Law 12): **the composition is changing**, or
+**the frame was rejected at Gate 2.** Neither is "we would like more pixels."
+
 ## WHY BOTH GATES EXIST
 
 Gate 1 catches the failure that has already happened here: a plate that rendered cleanly, looked
@@ -85,7 +109,7 @@ until all four are LOCKED.**
 
 | Plate | ID | Gate 1 | Gate 2 | State |
 |---|---|---|---|---|
-| **Master Frame** | `0f0b8381` | ⚠️ pass at 1k | ✅ pass | 🔒 LOCKED — **below the 2K standard, see queued action in `00`** |
+| **Master Frame** | `0f0b8381` | ⚠️ pass at 1k | ✅ pass | 🔒 LOCKED — **2K upscale queued** (`00` Q1, Law 12). Stays the valid parent until its upscale passes the narrowed Gate 2 |
 | **Cam 2** — bench low angle | `e60f6a38` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
 | **Cam 12/A** — Center Court toward bench | `6130e45b` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
 | **Grey Table Reverse** | `f450ac37` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
