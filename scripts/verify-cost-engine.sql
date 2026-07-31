@@ -135,6 +135,45 @@ SELECT 'P4-14' AS check,
   FROM (SELECT call_id FROM cost_engine.cost_facts WHERE is_current
          GROUP BY call_id HAVING count(*) > 1) d;
 
+-- P4-29 — provisional prices can never masquerade as verified ones (INV-22).
+-- Every priced fact carries the confidence of the rate card that produced it,
+-- and owner_cost_metrics maps 'list_price' to confidence='modeled'.
+SELECT 'P4-29' AS check,
+       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
+       count(*)::text || ' priced fact(s) with no price_confidence — must be 0' AS detail
+  FROM cost_engine.cost_facts
+ WHERE is_current AND pricing_status <> 'unpriced' AND price_confidence IS NULL;
+
+-- P4-30 — a work item's confidence degrades to its weakest input: one
+-- list-priced contributing call makes the whole item modeled.
+SELECT 'P4-30' AS check,
+       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
+       count(*)::text || ' work item(s) claiming invoice_verified despite a '
+         || 'list-priced contributing call — must be 0' AS detail
+  FROM cost_engine.question_cost_facts q
+ WHERE q.is_current
+   AND q.price_confidence = 'invoice_verified'
+   AND EXISTS (
+     SELECT 1 FROM cost_engine.cost_facts f
+      WHERE f.is_current AND f.price_confidence = 'list_price'
+        AND (f.question_record_id::text = q.work_item_id
+             OR (f.question_record_id IS NULL AND f.request_id = q.request_id))
+   );
+
+-- P4-31 — how much of the current cost book rests on unverified prices.
+-- Informational, but it is the number that decides whether these figures are
+-- ready to be treated as financial truth.
+SELECT 'P4-31' AS check,
+       CASE WHEN count(*) FILTER (WHERE price_confidence = 'list_price') = 0
+            THEN 'PASS' ELSE 'WARN' END AS result,
+       count(*) FILTER (WHERE price_confidence = 'list_price')::text || ' of '
+         || count(*)::text || ' priced facts use UNVERIFIED list prices; '
+         || COALESCE(round(100.0 * sum(net_cost_usd) FILTER (WHERE price_confidence = 'list_price')
+              / NULLIF(sum(net_cost_usd),0), 2)::text, '0')
+         || '% of total cost is modeled, not actual' AS detail
+  FROM cost_engine.cost_facts
+ WHERE is_current AND pricing_status <> 'unpriced';
+
 \echo ''
 \echo '=== C. Hierarchy reconciliation (§8.9) ====================================='
 

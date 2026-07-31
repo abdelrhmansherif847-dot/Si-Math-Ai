@@ -92,11 +92,21 @@ CREATE TABLE IF NOT EXISTS cost_engine.rate_cards (
   effective_to   timestamptz NULL,
   version        text NOT NULL,
   source_note    text NULL,
+  -- Where this price CAME FROM, not just what it is (§3.4, INV-22).
+  --   'list_price'       — read off the vendor's public price page. A number we
+  --                        believe, not one we have reconciled. Confidence class
+  --                        MODELED: it must never render like an Actual figure.
+  --   'invoice_verified' — reconciled against a real provider invoice. ACTUAL.
+  -- This is snapshotted onto every cost fact, so a figure's trustworthiness
+  -- travels with it instead of living only in this table's source_note.
+  price_confidence text NOT NULL DEFAULT 'list_price',
   amortization_basis text NULL,          -- 'calls' | 'units' — for flat_month (§8.7)
   created_at     timestamptz NOT NULL DEFAULT now(),
   UNIQUE (provider_code, model, api_surface, effective_from),
   CONSTRAINT rate_cards_billing_model_chk CHECK (billing_model IN
     ('per_token','per_request','per_image','per_minute','fixed','hybrid')),
+  CONSTRAINT rate_cards_price_confidence_chk CHECK (price_confidence IN
+    ('list_price','invoice_verified')),
   CONSTRAINT rate_cards_window_chk CHECK (effective_to IS NULL OR effective_to > effective_from),
   CONSTRAINT rate_cards_amortization_chk CHECK (
     amortization_basis IS NULL OR amortization_basis IN ('calls','units'))
@@ -213,6 +223,10 @@ CREATE TABLE IF NOT EXISTS cost_engine.cost_facts (
 
   -- provenance (INV-17)
   rate_card_id       uuid NULL REFERENCES cost_engine.rate_cards(id),
+  -- Snapshotted from the rate card that priced this call. A fact carries its
+  -- own trustworthiness so no consumer has to join back to the price book to
+  -- discover that a number came from a list page rather than an invoice.
+  price_confidence   text NULL,
   applied_discounts  uuid[] NULL,
   engine_version     text NOT NULL,
   computed_at        timestamptz NOT NULL DEFAULT now(),
@@ -294,6 +308,10 @@ CREATE TABLE IF NOT EXISTS cost_engine.question_cost_facts (
   priced_call_count    integer NOT NULL,
   unpriced_call_count  integer NOT NULL,
   cost_completeness    text NOT NULL,
+  -- Worst price_confidence among the contributing cost facts. One list-priced
+  -- call makes the whole work item's cost MODELED — confidence degrades to the
+  -- weakest input, exactly as cost_completeness does (INV-22, INV-24).
+  price_confidence     text NULL,
 
   -- provenance
   allocation_method    text NOT NULL,
@@ -416,12 +434,14 @@ BEGIN
   IF v_4o IS NULL THEN
     INSERT INTO cost_engine.rate_cards
       (provider_code, model, api_surface, billing_model, currency,
-       effective_from, effective_to, version, source_note)
+       effective_from, effective_to, version, price_confidence, source_note)
     VALUES
       ('openai','gpt-4o','default','per_token','USD',
-       v_from, NULL, 'openai-list-2026-07',
+       v_from, NULL, 'openai-list-2026-07', 'list_price',
        'OpenAI published list price. UNVERIFIED against an invoice — see the '
-       'OWNER VERIFICATION block in 20260731_aiecon_p4_cost_engine.sql.')
+       'OWNER VERIFICATION block in 20260731_aiecon_p4_cost_engine.sql. '
+       'price_confidence=list_price makes every fact priced from this card '
+       'report confidence=modeled, so it can never render as an Actual figure.')
     RETURNING id INTO v_4o;
 
     INSERT INTO cost_engine.rate_components (rate_card_id, unit_code, unit_price, per_qty) VALUES
@@ -437,12 +457,14 @@ BEGIN
   IF v_4omini IS NULL THEN
     INSERT INTO cost_engine.rate_cards
       (provider_code, model, api_surface, billing_model, currency,
-       effective_from, effective_to, version, source_note)
+       effective_from, effective_to, version, price_confidence, source_note)
     VALUES
       ('openai','gpt-4o-mini','default','per_token','USD',
-       v_from, NULL, 'openai-list-2026-07',
+       v_from, NULL, 'openai-list-2026-07', 'list_price',
        'OpenAI published list price. UNVERIFIED against an invoice — see the '
-       'OWNER VERIFICATION block in 20260731_aiecon_p4_cost_engine.sql.')
+       'OWNER VERIFICATION block in 20260731_aiecon_p4_cost_engine.sql. '
+       'price_confidence=list_price makes every fact priced from this card '
+       'report confidence=modeled, so it can never render as an Actual figure.')
     RETURNING id INTO v_4omini;
 
     INSERT INTO cost_engine.rate_components (rate_card_id, unit_code, unit_price, per_qty) VALUES
@@ -620,6 +642,7 @@ DECLARE
   v_fx       numeric;
   v_fx_date  date;
   v_egp      numeric;
+  v_conf     text;
   v_binding  uuid;
   v_bstatus  text;
   v_priced   integer := 0;
@@ -680,6 +703,7 @@ BEGIN
 
     -- (c) Resolve rate card.
     v_card    := cost_engine.resolve_rate_card(r.provider, r.model, r.api_surface, v_at);
+    v_conf    := NULL;
     v_gross   := NULL; v_zero := false; v_bad := NULL;
     v_disc    := NULL; v_disc_ids := NULL; v_net := NULL;
     v_fx      := NULL; v_fx_date := NULL; v_egp := NULL;
@@ -689,6 +713,9 @@ BEGIN
       v_status := 'unpriced';
       v_reason := 'no_rate_card';
     ELSE
+      SELECT rc.price_confidence INTO v_conf
+        FROM cost_engine.rate_cards rc WHERE rc.id = v_card;
+
       -- (d) Price units.
       SELECT pu.gross_usd, pu.all_zero, pu.bad_unit
         INTO v_gross, v_zero, v_bad
@@ -764,7 +791,7 @@ BEGIN
       topic_id, subtopic_id, operation, success,
       pricing_status, gross_cost_usd, discount_usd, net_cost_usd,
       net_cost_egp, fx_rate, fx_rate_date,
-      rate_card_id, applied_discounts, engine_version, unpriced_reason
+      rate_card_id, price_confidence, applied_discounts, engine_version, unpriced_reason
     ) VALUES (
       v_run_id, r.id, v_at,
       r.service_code, r.service_category, r.stage, v_binding, v_bstatus,
@@ -773,7 +800,7 @@ BEGIN
       r.q_topic_id, r.q_subtopic_id, r.operation, r.success,
       v_status, v_gross, v_disc, v_net,
       v_egp, v_fx, v_fx_date,
-      v_card, v_disc_ids, c_engine_version, v_reason
+      v_card, v_conf, v_disc_ids, c_engine_version, v_reason
     );
   END LOOP;
 
@@ -873,7 +900,8 @@ BEGIN
          round(COALESCE(sum(s.net_cost_usd), 0), 8) AS shared_usd,
          round(COALESCE(sum(s.net_cost_egp), 0), 4) AS shared_egp,
          count(*)                                   AS shared_calls,
-         count(*) FILTER (WHERE s.pricing_status = 'unpriced') AS shared_unpriced
+         count(*) FILTER (WHERE s.pricing_status = 'unpriced') AS shared_unpriced,
+         max(s.price_confidence)                    AS shared_conf
     FROM _alloc_scope s
    WHERE s.question_record_id IS NULL
    GROUP BY s.request_id;
@@ -920,7 +948,10 @@ BEGIN
            min(s.plan_code)                                  AS plan_code,
            min(s.topic_id)                                   AS topic_id,
            min(s.subtopic_id)                                AS subtopic_id,
-           min(s.operation)                                  AS operation
+           min(s.operation)                                  AS operation,
+           -- max() picks the WORST confidence: 'list_price' > 'invoice_verified'
+           -- alphabetically, so one unverified price taints the work item.
+           max(s.price_confidence)                           AS price_confidence
       FROM _alloc_scope s
      WHERE s.question_record_id IS NOT NULL
      GROUP BY s.question_record_id, s.request_id
@@ -946,6 +977,7 @@ BEGIN
            COALESCE(sh.shared_egp, 0)     AS shared_total_egp,
            COALESCE(sh.shared_calls, 0)   AS shared_calls,
            COALESCE(sh.shared_unpriced,0) AS shared_unpriced,
+           sh.shared_conf                 AS shared_conf,
            -- floor to 8dp, then hand out the remaining ulps to the lowest ids
            trunc(COALESCE(sh.shared_usd, 0) / r.n_items, 8) AS base_usd,
            round((COALESCE(sh.shared_usd, 0)
@@ -964,7 +996,8 @@ BEGIN
     subtopic_id, operation,
     direct_cost_usd, shared_cost_usd, total_cost_usd, total_cost_egp,
     thread_cost_usd, service_mix, call_count, priced_call_count,
-    unpriced_call_count, cost_completeness, allocation_method, allocation_version
+    unpriced_call_count, cost_completeness, price_confidence,
+    allocation_method, allocation_version
   )
   SELECT
     v_run_id,
@@ -1010,6 +1043,7 @@ BEGIN
       WHEN d.unpriced_count + COALESCE(sp.shared_unpriced,0) > 0 THEN 'partial'
       ELSE 'complete'
     END,
+    greatest(d.price_confidence, sp.shared_conf),
     CASE WHEN COALESCE(sp.n_items, 1) > 1 AND COALESCE(sp.shared_calls, 0) > 0
          THEN 'shared_equal' ELSE 'direct' END,
     c_alloc_version
@@ -1028,7 +1062,8 @@ BEGIN
     subtopic_id, operation,
     direct_cost_usd, shared_cost_usd, total_cost_usd, total_cost_egp,
     thread_cost_usd, service_mix, call_count, priced_call_count,
-    unpriced_call_count, cost_completeness, allocation_method, allocation_version
+    unpriced_call_count, cost_completeness, price_confidence,
+    allocation_method, allocation_version
   )
   SELECT
     v_run_id, 'unattributed', s.request_id::text, NULL,
@@ -1054,6 +1089,7 @@ BEGIN
       WHEN count(*) FILTER (WHERE s.pricing_status =  'unpriced') > 0 THEN 'partial'
       ELSE 'complete'
     END,
+    max(s.price_confidence),
     'unattributed',
     c_alloc_version
   FROM (
@@ -1372,7 +1408,12 @@ RETURNS TABLE (
   priced_calls    bigint,
   unpriced_calls  bigint,
   coverage_pct    numeric,
-  cost_share_pct  numeric
+  cost_share_pct  numeric,
+  -- Confidence class of the MONEY in this row (§3.4, INV-22). 'actual' only
+  -- when every contributing call was priced from an invoice-verified rate
+  -- card; 'modeled' the moment any list price is involved. A consumer that
+  -- renders 'modeled' identically to 'actual' is violating INV-22.
+  confidence      text
 )
 LANGUAGE plpgsql
 STABLE
@@ -1410,10 +1451,11 @@ BEGIN
              WHEN 'service_model'    THEN f.service_code || ' / ' || f.model
              WHEN 'stage'            THEN f.service_code || ' / ' || f.stage
            END              AS k,
-           f.net_cost_usd   AS c_usd,
-           f.net_cost_egp   AS c_egp,
-           f.request_id     AS c_req,
-           f.pricing_status AS c_status
+           f.net_cost_usd     AS c_usd,
+           f.net_cost_egp     AS c_egp,
+           f.request_id       AS c_req,
+           f.pricing_status   AS c_status,
+           f.price_confidence AS c_conf
       FROM cost_engine.cost_facts f
      WHERE f.is_current
        AND f.occurred_at >= v_from AND f.occurred_at < v_to
@@ -1435,7 +1477,8 @@ BEGIN
            q.total_cost_egp      AS i_egp,
            q.call_count          AS i_calls,
            q.priced_call_count   AS i_priced,
-           q.unpriced_call_count AS i_unpriced
+           q.unpriced_call_count AS i_unpriced,
+           q.price_confidence    AS i_conf
       FROM cost_engine.question_cost_facts q
      WHERE q.is_current
        AND q.occurred_at >= v_from AND q.occurred_at < v_to
@@ -1451,7 +1494,8 @@ BEGIN
            count(DISTINCT cg.c_req)::bigint                             AS u_reqs,
            0::bigint                                                    AS u_items,
            count(*) FILTER (WHERE cg.c_status <> 'unpriced')::bigint     AS u_priced,
-           count(*) FILTER (WHERE cg.c_status =  'unpriced')::bigint     AS u_unpriced
+           count(*) FILTER (WHERE cg.c_status =  'unpriced')::bigint     AS u_unpriced,
+           max(cg.c_conf)                                               AS u_conf
       FROM call_grain cg GROUP BY cg.k
     UNION ALL
     SELECT ig.k,
@@ -1461,7 +1505,8 @@ BEGIN
            0::bigint,
            count(*)::bigint,
            sum(ig.i_priced)::bigint,
-           sum(ig.i_unpriced)::bigint
+           sum(ig.i_unpriced)::bigint,
+           max(ig.i_conf)
       FROM item_grain ig GROUP BY ig.k
   )
   SELECT u.u_key,
@@ -1469,7 +1514,12 @@ BEGIN
               THEN COALESCE(s.display_name, u.u_key) ELSE u.u_key END,
          u.u_usd, u.u_egp, u.u_calls, u.u_reqs, u.u_items, u.u_priced, u.u_unpriced,
          round(100.0 * u.u_priced / NULLIF(u.u_priced + u.u_unpriced, 0), 2),
-         round(100.0 * u.u_usd / NULLIF(sum(u.u_usd) OVER (), 0), 2)
+         round(100.0 * u.u_usd / NULLIF(sum(u.u_usd) OVER (), 0), 2),
+         CASE u.u_conf
+           WHEN 'invoice_verified' THEN 'actual'
+           WHEN 'list_price'       THEN 'modeled'
+           ELSE NULL
+         END
     FROM unioned u
     LEFT JOIN ai_catalog.services s
            ON p_dimension = 'service' AND s.service_code = u.u_key
@@ -1562,6 +1612,7 @@ RETURNS TABLE (
   binding_status  text,
   rate_card_id    uuid,
   rate_card_ver   text,
+  price_confidence text,
   applied_discounts uuid[],
   engine_version  text,
   unpriced_reason text
@@ -1585,6 +1636,7 @@ BEGIN
          f.model, f.operation, f.is_internal, f.pricing_status,
          f.gross_cost_usd, f.discount_usd, f.net_cost_usd, f.net_cost_egp,
          f.fx_rate, f.binding_status, f.rate_card_id, rc.version,
+         f.price_confidence,
          f.applied_discounts, f.engine_version, f.unpriced_reason
     FROM cost_engine.cost_facts f
     LEFT JOIN cost_engine.rate_cards rc ON rc.id = f.rate_card_id
@@ -1670,15 +1722,45 @@ BEGIN
                       WHERE fx.rate_date = date_trunc('month', f.occurred_at)::date)
    GROUP BY date_trunc('month', f.occurred_at)
   UNION ALL
-  SELECT 'service_over_target', v.dimension_key,
-         'cumulative cost ' || v.spend || ' exceeds services.cost_target_usd '
-           || v.cost_target_usd
-    FROM (SELECT dimension_key,
-                 sum(total_cost_usd) AS spend,
-                 max(cost_target_usd) AS cost_target_usd
-            FROM cost_engine.v_cost_by_service
-           GROUP BY dimension_key) v
-   WHERE v.cost_target_usd IS NOT NULL AND v.spend > v.cost_target_usd
+  -- services.cost_target_usd is a target PER unit_of_work (ai_catalog §6.2
+  -- column comment), NOT a period budget. So the comparison is cost-per-unit
+  -- against the target, with the denominator chosen by services.unit_of_work.
+  -- Comparing a cumulative total against a per-unit rate would fire for
+  -- essentially every service the moment a target was set.
+  SELECT 'service_over_target', t.service_code,
+         'cost/' || t.unit_of_work || ' = ' || round(t.unit_cost, 8)
+           || ' exceeds target ' || t.cost_target_usd
+    FROM (
+      SELECT s.service_code, s.unit_of_work, s.cost_target_usd,
+             sum(f.net_cost_usd) / NULLIF(
+               CASE s.unit_of_work
+                 WHEN 'call'     THEN count(*)
+                 WHEN 'question' THEN count(DISTINCT f.question_record_id)
+               END, 0) AS unit_cost
+        FROM ai_catalog.services s
+        JOIN cost_engine.cost_facts f ON f.service_code = s.service_code AND f.is_current
+       WHERE s.cost_target_usd IS NOT NULL
+         AND s.unit_of_work IN ('call','question')
+       GROUP BY s.service_code, s.unit_of_work, s.cost_target_usd
+    ) t
+   WHERE t.unit_cost IS NOT NULL AND t.unit_cost > t.cost_target_usd
+  UNION ALL
+  -- A target the engine cannot evaluate is reported, never silently ignored:
+  -- 'image', 'page' and 'document' have no denominator in Phase 3 telemetry.
+  SELECT 'service_target_not_evaluable', s.service_code,
+         'target set but unit_of_work=' || s.unit_of_work
+           || ' has no denominator in telemetry — target not enforced'
+    FROM ai_catalog.services s
+   WHERE s.cost_target_usd IS NOT NULL
+     AND s.unit_of_work NOT IN ('call','question')
+  UNION ALL
+  -- §3.4 / INV-22: how much of the priced cost rests on unverified prices.
+  SELECT 'price_confidence_' || COALESCE(f.price_confidence, 'none'),
+         count(*)::text,
+         'current priced facts by rate-card price confidence'
+    FROM cost_engine.cost_facts f
+   WHERE f.is_current AND f.pricing_status <> 'unpriced'
+   GROUP BY f.price_confidence
   UNION ALL
   SELECT 'last_pricing_run',
          COALESCE((SELECT to_char(max(started_at), 'YYYY-MM-DD HH24:MI:SS')
@@ -1706,6 +1788,7 @@ RETURNS TABLE (
   billing_model  text,
   currency       text,
   version        text,
+  price_confidence text,
   effective_from timestamptz,
   effective_to   timestamptz,
   unit_code      text,
@@ -1728,7 +1811,8 @@ BEGIN
 
   RETURN QUERY
   SELECT rc.provider_code, rc.model, rc.api_surface, rc.billing_model,
-         rc.currency, rc.version, rc.effective_from, rc.effective_to,
+         rc.currency, rc.version, rc.price_confidence,
+         rc.effective_from, rc.effective_to,
          co.unit_code, co.unit_price, co.per_qty, co.tier_from, co.tier_to,
          rc.source_note
     FROM cost_engine.rate_cards rc

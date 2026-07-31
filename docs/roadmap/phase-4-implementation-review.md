@@ -7,7 +7,7 @@ approval before `apply_migration` (CLAUDE.md §3).
 |---|---|
 | Architecture | `docs/roadmap/ai-economics.md` §8 (frozen, r4) |
 | Migration | `supabase/migrations/20260731_aiecon_p4_cost_engine.sql` |
-| Verification | `scripts/verify-cost-engine.sql` — 28 checks, P4-01…P4-28 |
+| Verification | `scripts/verify-cost-engine.sql` — 31 checks, P4-01…P4-31 |
 | Production code touched | **none** — no Edge Function, no frozen file, no existing table |
 | Target project | `igvkyxkmjnkzscqgommj` |
 
@@ -74,9 +74,12 @@ instances of today**.
 | **A model with no rate card** | **no** | R5 (`gpt-5-turbo`) |
 | **A unit code the rate card cannot price** | **no** | R6 (`audio_second`) |
 
-### Results — 26 of 28 checks PASS
+### Results — 28 of 31 checks PASS
 
-The two failures are the harness proving its own injected faults:
+(Checks P4-29…P4-31 were added in the second review round; see §10.)
+
+The two failures are the harness proving its own injected faults, and P4-31
+WARNs by design for as long as prices remain unverified:
 
 | Check | Harness | Why | Production expectation |
 |---|---|---|---|
@@ -150,6 +153,31 @@ under-specified. None change a layer boundary or an invariant.
 
 These are the only places an external fact enters the system, and neither can
 be established by the engine.
+
+### 6.0 How provisional prices are prevented from becoming "trusted numbers"
+
+Rate cards carry `price_confidence` — `list_price` or `invoice_verified` —
+and it is **snapshotted onto every cost fact and every work-item fact**, so a
+figure's trustworthiness travels with it instead of living only in a
+`source_note` nobody joins to.
+
+| Layer | Behaviour while prices are provisional |
+|---|---|
+| `cost_facts.price_confidence` | `list_price` on every priced fact |
+| `question_cost_facts.price_confidence` | worst confidence among contributing calls — one list-priced call taints the whole work item |
+| `owner_cost_metrics().confidence` | **`modeled`** — never `actual` |
+| `owner_cost_health()` | `price_confidence_list_price = N` |
+| `owner_cost_facts()` | returns `price_confidence` per row |
+| P4-31 | **WARNs** with the share of total cost that is modeled |
+
+Per §3.4 and INV-22 a `modeled` figure must never render in the same visual
+style as an `actual` one — so Phase 6 is obliged to distinguish them, and the
+obligation is carried in the data rather than in a comment.
+
+Verified end to end: flipping **only** the `gpt-4o` card to
+`invoice_verified` and recomputing moves `judge` and `vision` to
+`confidence = actual` while `tutor` and `solver` stay `modeled`, with health
+reporting `invoice_verified = 2, list_price = 10`.
 
 ### 6.1 ⚠ Rate-card prices are UNVERIFIED
 
@@ -238,3 +266,109 @@ Nothing below has been executed.
 
 **Phase 5 (AI Economics analytics) stays blocked** until the exit criteria are
 confirmed against production data.
+
+---
+
+## 10. Second review round — owner questions, 2026-07-31
+
+Four clarifications were requested before approval. Two were answered from
+evidence; two exposed real defects, both now fixed and re-validated.
+
+### Q1 — Why a sequential scan on the claim query?
+
+**It was my harness's fault, not the planner's.** The fixture created
+`ai_model_calls` with only a primary key and omitted all eight Phase 3
+indexes, so no `created_at` index existed to choose. With the real indexes
+present the plan is:
+
+```
+Index Scan using ai_model_calls_created_idx   (bounded by the window)
+  └─ Index Scan using cost_facts_current_call_uidx   (bounded per row)
+```
+
+Per-tick cost tracks **new rows, not table size**. Re-timing the same
+1,000-call window dropped it from 237 ms to **8.8 ms**. There is no scaling
+watch item here, and the earlier caution in §8 of the first review is
+withdrawn.
+
+### Q2 — Is the raw `user_id` necessary for the student dimension?
+
+**Yes, and an opaque identifier would not reduce real risk.** Three reasons:
+
+1. Phase 5 must join cost to revenue per student; an opaque key would need
+   the same mapping to exist anyway, moving the exposure rather than removing it.
+2. Section 8's *abnormal-usage flag* (`cost > revenue`, `> 3σ`) is only
+   actionable if the owner can identify who to act on.
+3. The consumer is the owner, who already holds full `profiles` access. A
+   stable pseudonym is still a stable linkable identifier, so it defends
+   against almost nothing while breaking the join.
+
+It remains the only PII-adjacent value the engine returns, reachable solely
+through the owner gate. Recorded here as a deliberate decision rather than an
+oversight.
+
+### Q3 — How is `cost_target_usd` interpreted? *(defect found and fixed)*
+
+Phase 2 defines it as *"Owner-set optimization target **per `unit_of_work`**"*.
+The original implementation compared it against a **cumulative total** — a
+total measured against a per-unit rate. All targets are NULL today so nothing
+fired, but §15 Q10 directs setting them from measured baselines immediately
+after Phase 4, at which point it would have flagged nearly every service.
+
+Now compared as cost-per-unit with the denominator taken from
+`services.unit_of_work`:
+
+| `unit_of_work` | Denominator | Services in production |
+|---|---|---|
+| `question` | distinct `question_record_id` | tutor, solver, judge, difficulty_detector, reference_resolver, truth_engine |
+| `call` | call count | sympy, python, embedding, translation |
+| `image` / `page` / `document` | **none available in Phase 3 telemetry** | ocr, vision |
+
+An unevaluable target is reported as `service_target_not_evaluable` — never
+compared wrongly, never silently skipped. Verified: a `question` target below
+actual fires, one above it does not, and an `image` target reports as
+unevaluable.
+
+### Q4 — How does the system behave on provisional prices? *(gap found and closed)*
+
+**As originally built, it did not behave well enough.** A fact priced from a
+list page was indistinguishable from one priced from an invoice: same
+`pricing_status='priced'`, same full numbers. The caveat lived only in
+`rate_cards.source_note`, which nothing downstream reads. §3.4 and INV-22
+require that a Modeled figure never render like an Actual one, and the
+implementation had no way to honour that.
+
+Closed by `price_confidence` — see §6.0. Rate cards declare
+`list_price` | `invoice_verified`; it is snapshotted onto every cost fact and
+degrades to the weakest input on every work item; `owner_cost_metrics` returns
+`confidence` = `modeled` | `actual`; health counts both; P4-31 warns with the
+modeled share of total cost.
+
+**Correction propagation**, proven by P4-26 and the verification test:
+
+1. Close the current card at the **start of the affected calls** — not at
+   `now()`. This is the counter-intuitive part: closing at `now()` only
+   changes future pricing, because §8.4 deliberately never rewrites historical
+   prices. My first attempt at this test failed for exactly that reason.
+2. Insert the corrected card with `effective_from` at that boundary.
+3. `SELECT cost_engine.recompute(from, to, 'rate_card_correction');`
+4. Prior facts flip `is_current = false` and are **retained for audit**; new
+   facts are written under a new `cost_run`; allocation re-runs and
+   re-asserts conservation.
+
+Measured: correcting one model's price rewrote 14 current facts, retained 14
+superseded rows, moved the total `0.00428750 → 0.00680750`, and conservation
+held exactly. Flipping only `gpt-4o` to `invoice_verified` moved `judge` and
+`vision` to `confidence = actual` while `tutor` and `solver` stayed `modeled`.
+
+### Defect found while fixing the above
+
+Adding `shared_conf` to the allocation's shared-cost temp table without
+projecting it through the `split` CTE broke `allocate()` outright. It was
+masked for two runs because I was redirecting stderr to `/dev/null` while
+checking results — the pricing stage still succeeded, so the output looked
+plausible. Caught, fixed, and re-validated with errors visible.
+
+**Verification is now 31 checks; 28 pass, P4-08/P4-09 fail by fixture design
+(deliberately unpriceable rows), P4-31 warns by design while prices remain
+unverified.**
