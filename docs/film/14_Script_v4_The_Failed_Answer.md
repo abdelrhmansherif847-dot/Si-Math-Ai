@@ -1,9 +1,32 @@
 # SI MATH AI — "THE AI COURT"
-# SCRIPT v4 — "THE FAILED ANSWER" · ⏳ PROPOSAL, AWAITING PER-LINE OWNER APPROVAL
+# SCRIPT v4.1 — "THE FAILED ANSWER" · v4 FULL ✅ APPROVED AS FOUNDATION (owner, 2026-07-31) · v4.1 POLISH ⏳ PENDING PER-LINE APPROVAL
+
+**v4 Full (~100s) is approved as the foundation.** This revision adds the owner's polish level:
+three owner-authored iconic lines placed into the script · the Representatives humanized · the
+Judge's power deepened into stillness · per-figure reactions · the ending pacing note. Additions
+below are marked **◆ NEW (v4.1)**; everything else carries the v4 approval.
 
 Builds on v3 (approved in structure) with the owner's third-screening notes: **a hook in the first
 three seconds · the Representatives try to answer and fail · Lawyer Zero dominates · the room never
 freezes · unforgettable lines · the ending locked exactly as specified.**
+
+---
+
+## THE POLISH DIRECTIVES (owner, fourth screening)
+
+- **The Representatives are not robots.** They *genuinely believe they are answering correctly.*
+  Sincere, warm-competent, certain — the wrongness lives in WHAT they answer, never in how they
+  sound. Confidence, then realization. No villains, no comedy. **The audience should almost feel
+  sorry for them.** (Voice spec revised: a faint clean digital quality in the mix only; the read
+  itself is sincere. Their two lines are the most honest mistakes in the film.)
+- **The Judge never raises his voice — ever.** His power is absolute confidence. A look stops a
+  speaker mid-sentence (Round 2 is built on exactly this). His silence is louder than shouting.
+  Direction for every JZ take: *he has already won; he is being fair about it.*
+- **Lawyer Zero dismantles, piece by piece.** Every entrance shifts the room's energy; every
+  exhibit is another nail. Elite trial lawyer — delighted, never smug (canon holds).
+- **Per-figure reactions** — the five are identical in design, *individual in failure*: during
+  evidence, one pair exchange a glance, one lowers his head, one leans back, one freezes. The
+  audience watches them realize they are losing, one temperament at a time. (Extends B1/B2/B3.)
 
 **The one design change this requires:** the Representatives speak — twice, briefly, early. This
 amends `03`'s "silent" canon by owner directive. It does not make them villains or comedians: their
@@ -50,6 +73,7 @@ any announcement could.*
 | v4-08 | **REP** | **"The correct solution is—"** | 1.0s | A second figure begins to rise, still confident — |
 | — | — | **THE LOOK.** The Judge does not speak. The figure sits. The audience finishes the sentence themselves: *that was not the question.* | 1.2s | The Reps never speak again. From here, silence is a choice they've been taught. |
 | — | LZ | *(no line)* — he peels the red step open: `ROOT CAUSE`. One look up at the bench: *answered.* | — | The knockout thrown casually. Evidence speaks; he doesn't need to. |
+| ◆ v4-08b | JZ | **◆ NEW (v4.1, owner-authored): "Anyone can solve a problem. Very few can build a learner."** | 4.4s | Quiet, almost to himself, while the `ROOT CAUSE` evidence glows — the capper on the last failure the grey table will ever attempt. Not addressed to them. Which is why it lands on them. |
 
 **Round 3 — his showpiece**
 
@@ -66,6 +90,7 @@ any announcement could.*
 | v4-11 | JZ | **"How long had it been happening?"** | 2.7s | Quieter. He suspects. |
 | — | — | THE SILENCE — B2: one head bows | 0.6s | |
 | v4-12 | LZ | **"Eight times. Six weeks. Nobody noticed."** | 2.2s | Flat, no triumph, timeline multiplying past the frame edges. "Nobody" lands on the grey table without him looking at it. |
+| ◆ v4-12b | JZ | **◆ NEW (v4.1, owner-authored): "Students don't fail in one question. They fail one step at a time."** | 5.8s | To the whole room, slowest line of Act II — the film's intellectual heart spoken over the multiplying timeline. The pattern round earns the aphorism. |
 
 **Round 5 — the turn**
 
@@ -90,9 +115,14 @@ any announcement could.*
 | v4-18 | LZ | **"First question to target score. The whole road — together."** | 3.3s | The luminous path unrolls toward the bench; micro-pause before "together." |
 | v4-19 | LZ | ※ **"The defence rests."** | 1.1s | Literally true now. **Music dies on the final word.** |
 
-## ACT III — THE VERDICT *(unchanged — v4-20…26 = v3-17…23)*
+## ACT III — THE VERDICT *(one proposed upgrade)*
 
-"You are intelligent." · "But this one was built for students." · "It does not just solve math." ·
+"You are intelligent." · "But this one was built for students." · then:
+
+| # | Spk | Line | Target | Note |
+|---|---|---|---|---|
+| ◆ v4-22 | JZ | ~~"It does not just solve math."~~ → **◆ NEW (v4.1, owner-authored): "Solving a question is not the same as teaching a student."** | 4.9s (was 2.7s) | Same beat, same constellation — the owner's phrasing is the sharper blade and pairs with the cold open's failure ("I can solve the problem"). The old line retires. **Recommended.** |
+
 "It understands how students learn." · The Three Laws. *The approved eye-move verdict stands.*
 
 ## ACT IV — THE MERGE + THE ENDING ✅ **LOCKED (owner, 2026-07-31)**
@@ -103,6 +133,21 @@ any announcement could.*
 | v4-28 | LZ | ※ **"They need a mentor."** | 1.8s | The two-shot. The simultaneous smile. |
 | — | — | **THE MERGE** — silent. Two become one. | ~5s | |
 | v4-29 | **ZERO** | **"They need Si Math AI."** | 2.2s | Then — **as specified: hold the silence. No music. No movement. Just eye contact with the audience.** A full held beat. **Fade to black. LOGO ONLY.** One soft gavel tap. Let them sit with it. |
+
+### ◆ THE PUNCHLINE PACING (v4.1 — owner's final note) · one ⚑ ruling needed
+
+The owner's directive: after *"Students don't need another chatbot."* there must be a **longer
+pause**, then Zero looks to camera — *"They need Si Math AI."* — so the punchline is what people
+remember, never rushed. Two faithful readings:
+
+| Reading | The final chain | Effect |
+|---|---|---|
+| **A — Mentor stays** *(recommended)* | "…another chatbot." → *"They need a mentor."* (the smile) → the silent merge **as the long pause made of picture** → the merged Zero, stillness stretched to **2.5–3s of nothing, eye contact building** → *"They need Si Math AI."* | The pause the owner asked for becomes the merge itself + an extended dead-silent hold. The film keeps its hinge line and its two-step: *mentor* → *named mentor*. |
+| **B — Direct pairing** | "…another chatbot." → long pause → *"They need Si Math AI."* — the mentor line **cut**, the merge relocated or silent beneath the pause | Maximum punch, one step shorter — but it deletes the line the owner has protected three times and the meaning the merge resolves. |
+
+**Recommendation: A.** "They need a mentor." is the earned answer; "They need Si Math AI." is its
+name. Cutting the first makes the second an ad line again — the exact thing The Sentence exists to
+prevent. ⚑ Owner rules.
 
 ---
 
@@ -120,15 +165,26 @@ Written into every take, per the `05` performance layer, now with the failure be
 
 ## RUNTIME — honest math
 
-| | v3 full | **v4 full** | v4 tight |
+| | v4 full (approved) | **v4.1 full** | v4.1 tight |
 |---|---|---|---|
-| Spoken lines | 26 | **29** | 24 (fold rounds 4+6) |
-| Speech | ~59s | **~67s** | ~57s |
-| Silences · exhibits · merge · ending hold | ~36s | ~35s | ~30s |
-| **Runtime** | ~95s | **~100s** | ~85s |
+| Spoken lines | 29 | **32** | 27 |
+| Speech | ~67s | **~79s** | ~68s |
+| Silences · exhibits · merge · extended ending hold | ~35s | ~37s | ~31s |
+| **Runtime** | ~100s | **~116s** | ~99s |
 
-**Recommendation: v4 full at ~100s.** The hook buys attention, the failures buy the silence, the
-ending hold spends the attention on the product's name. The tight cut exists if ≤85s matters.
+The three owner-authored lines cost ~12.5s of speech; the extended punchline hold adds ~2s. **v4.1
+full lands near 1:55.** If that reads long: the tight variant keeps all three iconic lines but folds
+rounds 4 and 6 (their evidence migrates into neighbours) and lands back at ~1:40. The iconic lines
+are worth more than the seconds — but the seconds are real, so the choice is the owner's.
+
+## ◆ CINEMATIC DIRECTING TOOLS (v4.1 — added to the coverage kit)
+
+Per the owner: don't animate the dialogue — direct the scene. Added to `05`'s camera language for
+every setup: **rack focus** (Judge sharp → Reps soft as a question lands; focus *is* attention),
+**foreground movement** (particles, a passing hologram, LZ crossing frame in front of the grey
+table), **OTS dialogue coverage** both directions on the exchange rounds, dramatic close-ups
+reserved for firsts (first failure, first evidence, the turn), and the standing rule: **every
+camera move has a dramatic purpose it can name.**
 
 ## ON APPROVAL — the cascade
 

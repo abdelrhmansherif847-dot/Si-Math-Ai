@@ -232,7 +232,10 @@ through an explicit owner decision recorded here. All 2026-07-31:
 | **Script v2 ADOPTED IN FULL** — L2/L3/L4/L6/L7/L8/L9 rewritten, L13 micro; speech 47.41→46.04s | v1 lines everywhere (`03` Part 1 was the lock) | `12` (record), cascade in all docs |
 | Coverage: **OTS past the Representatives** (assigned 6A) + **gavel→emblem match cut** approved; standing directive — hunt more storytelling transitions, present before changing locked coverage | `03` coverage (additive) | `05` camera-as-actor |
 | Gate 2 on the four plates: owner requests a **stills review** before ruling | — | `08` ledger unchanged, plates stay pending |
-| Second-screening directive: Judge leads the trial · real lip sync · stronger animation · more drama · dialogue pass · new ending ("They need Si Math AI." → logo only) · strongest workflow | ⚠️ **structural fork pending owner ruling** — Judge-led examination conflicts with the locked two-Zero engine (see `12` addendum after ruling) | workflow research recorded in `05`; script v3 follows the ruling |
+| Second-screening directive: Judge leads the trial · real lip sync · stronger animation · more drama · dialogue pass · new ending ("They need Si Math AI." → logo only) · strongest workflow | ✅ fork ruled: **Judge leads, structure intact** → `13` (v3) | workflow research in `05` |
+| Third screening: cold-open hook · **the Representatives try and fail** (canon amendment: they speak twice, sincerely, wrong-register) · dominance · ending pacing | v3 → `14` (v4). **v4 Full (~100s) APPROVED AS FOUNDATION** | `14` |
+| Fourth screening (polish): Reps humanized · Judge's power = stillness · per-figure failure reactions · **three owner-authored iconic lines placed** (v4-08b, v4-12b, v4-22 replacement) · rack focus / foreground / OTS added to camera kit · punchline pacing (⚑ mentor-stays vs direct-pairing awaits ruling) | v4 → v4.1, pending per-line approval | `14` (v4.1), `05` |
+| Gate 2 on the four plates | **HELD by owner until the script locks** | `08` ledger, plates pending |
 
 ## KIT DISCREPANCIES — RAISED, NOT PATCHED
 
