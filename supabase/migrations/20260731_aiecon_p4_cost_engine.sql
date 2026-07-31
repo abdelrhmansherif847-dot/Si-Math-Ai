@@ -1795,10 +1795,9 @@ BEGIN
   -- OWNER DECISION (2026-07-31, locked): services.cost_target_usd is a
   -- MONTHLY BUDGET per service, in USD. One row per breached calendar month.
   --
-  -- NOTE: ai_catalog.services.cost_target_usd carries a Phase 2 column comment
-  -- describing it as a target "per unit_of_work". That comment predates this
-  -- decision and is now stale — see the Phase 4 review, §11. The owner's
-  -- decision governs; the comment needs updating in a separate change.
+  -- The column comment on ai_catalog.services.cost_target_usd was corrected to
+  -- match (20260731_aiecon_p4_cost_target_comment.sql), so the documentation
+  -- carried in the database agrees with this implementation.
   --
   -- Internal traffic is INCLUDED here, deliberately. Decision 3 excludes
   -- internal traffic from reported metrics, but a budget measures money

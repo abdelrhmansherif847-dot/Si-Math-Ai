@@ -1908,33 +1908,57 @@ catalog row; p95 response latency unchanged.
 
 ### Phase 4 — Cost Engine
 
-**Status: ⏸ PREPARED, NOT APPLIED — awaiting individual migration approval
-(CLAUDE.md §3).**
-Review: **`docs/roadmap/phase-4-implementation-review.md`**.
+**Status: ✅ COMPLETE — applied to `igvkyxkmjnkzscqgommj` on 2026-07-31 and
+verified against production (owner-approved, CLAUDE.md §3).**
+Review: **`docs/roadmap/phase-4-implementation-review.md`** (§12 carries the
+full production verification results).
 
 | Artifact | Path |
 |---|---|
-| Migration (**not applied**) | `supabase/migrations/20260731_aiecon_p4_cost_engine.sql` |
-| Verification | `scripts/verify-cost-engine.sql` — 28 checks (P4-01…P4-28) |
+| Migration (applied) | `supabase/migrations/20260731_aiecon_p4_cost_engine.sql` |
+| Allocator fix (applied) | `supabase/migrations/20260731_aiecon_p4_fix_work_item_spans_requests.sql` |
+| Metadata fix (applied) | `supabase/migrations/20260731_aiecon_p4_cost_target_comment.sql` |
+| Verification | `scripts/verify-cost-engine.sql` — 31 checks (P4-01…P4-31) |
 
-Validated end-to-end against a local PostgreSQL 16.13 instance carrying the
-production schema shape, the 9 real catalog bindings, and telemetry covering
-every case the engine must handle — including the four production has **zero**
-instances of today (shared multi-question call, follow-up child, missing rate
-card, unpriceable unit). **26 of 28 checks PASS**; the two failures are the
-harness's own deliberately-unpriceable rows and are expected to pass against
-production, where coverage and binding resolution are both 100%.
+**Exit criteria — all met against production:**
 
-Proven in that run: conservation variance **exactly 0**; allocation
-**byte-identical** on re-run; `run_pricing` re-run writes **0** new facts;
-a rate-card correction supersedes cleanly with all prior facts retained; and
-the largest-remainder split of one shared call across three questions sums
-back to the original to the last ulp.
+| Criterion | Result |
+|---|---|
+| Every telemetry row has one current fact or a stated reason | 76/76, 0 missing |
+| Pricing coverage ≥ 99% | **100.00%** |
+| Binding resolution ≥ 99% `registered` | **100.00%** |
+| Re-running `run_pricing` is a no-op | **0** new facts |
+| Service totals reconcile to provider and model totals | all four rollups = **$0.22961425** |
+| **Allocation conserves cost exactly (variance = 0)** | **variance 0.00000000** |
+| **Allocation byte-identical on re-run** | digest unchanged |
+| Rate-card correction supersedes cleanly, priors intact | proven locally (not re-run in production) |
+| Shared parent call + follow-up child, no double counting | proven; the follow-up case was found *in production* |
+| No cost math outside the engine | `rate_cards` has no `service_code`; telemetry has no money column |
 
-Two owner inputs are outstanding and are the only external facts in the
-system: the seeded rate cards are OpenAI **list prices, unverified against an
-invoice**, and **no FX rate is seeded** (EGP stays NULL and reports `no_fx`
-rather than carrying an invented number).
+**First production numbers: $0.2296 total** over 76 calls and 33 work items,
+all `complete`. tutor 59.2%, solver 17.4%, judge 10.0%, vision 7.2%, ocr 6.0%.
+Average **$0.00831 per question**. Verification (solver + judge) accounts for
+**27.4%** of spend — the measurable price of the correctness pipeline.
+
+**The first production allocation run failed and failed closed** — zero
+work-item facts, zero allocation runs, no partial state. `allocate()` assumed
+a question belongs to one request; `reference_resolver` had resolved a
+follow-up against an earlier question in a different request, the case §8.8.1
+lists. Fixed in `alloc-1.0.1`: a work item is a **question**, and scope is the
+transitive closure of requests sharing one.
+
+**Locked business decisions (2026-07-31):** ① OpenAI published prices as
+provisional initial rate cards; ② **USD canonical, EGP presentation-only** from
+a configurable rate; ③ internal traffic excluded by default with an explicit
+include option; ④ `services.cost_target_usd` is a **monthly budget** per
+service.
+
+**One input still outstanding:** the rate cards are OpenAI **list prices,
+unverified against an invoice**, so every figure reports
+`confidence = 'modeled'` and P4-31 WARNs at 100%. No FX rate is seeded, so
+EGP is NULL by design. Both are corrected by data plus a `recompute`.
+
+**Phase 5 is unblocked.**
 
 - Migration: `cost_engine` schema — `billing_units`, `rate_cards`,
   `rate_components`, `discount_rules`, `fx_rates`, `cost_runs`, `cost_facts`,

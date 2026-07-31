@@ -403,12 +403,14 @@ excludes internal traffic from *reported metrics*, but a budget measures money
 actually owed to the provider, and admin calls cost exactly what student calls
 cost. Excluding them would under-report the bill.
 
-> ⚠ **Documentation conflict.** `ai_catalog.services.cost_target_usd` carries a
-> Phase 2 `COMMENT ON COLUMN` reading *"Owner-set optimization target per
-> unit_of_work"*. That comment is now stale and contradicts decision 4. It is
-> metadata only — no behaviour depends on it — but it lives in the applied
-> Phase 2 migration, so correcting it is a separate one-line change awaiting
-> approval rather than something folded in here silently.
+> ✅ **Documentation conflict — resolved 2026-07-31.** The Phase 2
+> `COMMENT ON COLUMN` read *"Owner-set optimization target per unit_of_work"*,
+> which contradicted decision 4. Corrected by
+> `20260731_aiecon_p4_cost_target_comment.sql` (owner-approved,
+> metadata-only). The comment now states the monthly-budget semantic and
+> records that internal traffic is included in the comparison. Verified after
+> applying that nothing else moved: 12 services, 76 current cost facts,
+> $0.22961425 total, allocated = priced, every allocation run still conserved.
 
 ### Decision 2 — one fix it exposed
 
