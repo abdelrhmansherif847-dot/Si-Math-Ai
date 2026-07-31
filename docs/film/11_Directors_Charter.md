@@ -146,6 +146,30 @@ cover for an under-designed image.
 The verdict is the proof of concept: layer 2 (a gaze shift) now carries what only layer 6 carried
 before, and the line became stronger for it.
 
+## THE SCREENING PROTOCOL — owner-set, 2026-07-31
+
+The animatic is the primary creative reference (Law 16). Reviews are **screenings.** Every screening
+is watched through five lenses:
+
+| Lens | The questions |
+|---|---|
+| **Story** | Immediately understandable? Does the emotional arc work? Does the audience stay engaged? |
+| **Pacing** | Any scene too long? Any scene rushed? Any unnecessary pause? |
+| **Performance** | Do the two Zeros feel like real characters? Do the Representatives feel *present*? Are reactions believable? |
+| **Cinematography** | Is every cut motivated? Every camera move emotionally justified? Is the geography always crystal clear? |
+| **Emotion** | Which moment gives goosebumps? Which feels weak? Which should become more cinematic? |
+
+**The exit question of every screening — the only one:**
+
+> ***"Where did you stop feeling engaged?"***
+
+Never "did you like it." Engagement drops, with shot numbers, are the work list. A screening that
+finds ten problems is a successful screening.
+
+**Temporary assets are instruments, not drafts.** Temp voices, temp captions, temp music, temp
+moves exist to answer one question — *does the movie work?* — and are never protected, polished,
+or grieved. The moment a temp asset stops helping the film get judged, it is replaced.
+
 ## THE STANDING RULE
 
 **The Silent Cut Test runs on every important scene before it is considered final.** Not once, here,

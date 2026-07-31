@@ -337,8 +337,16 @@ function showCut(i){
 }
 function tick(ts){ if(!playing)return; if(lastTs) clock+=(ts-lastTs)/1000; lastTs=ts;
   $('tc').textContent=fmt(clock);
-  if(clock-cutStart>=cutDur(CUTS[cur])){ cur++; if(cur>=CUTS.length){ playing=false; $('gate').style.display='flex'; $('play').textContent='▶  AGAIN'; cueHardStop(); return; } cutStart=clock; showCut(cur); }
+  if(clock-cutStart>=cutDur(CUTS[cur])){ cur++; if(cur>=CUTS.length){ endScreen(); return; } cutStart=clock; showCut(cur); }
   raf=requestAnimationFrame(tick); }
+function endScreen(){ playing=false; cueHardStop();
+  $('gate').querySelector('h1').textContent='END OF SCREENING';
+  $('gate').querySelector('p').innerHTML='one question — and it is not “did you like it?”<br><br>'+
+    '<b style="color:var(--gold);font-size:1.35em;letter-spacing:.12em">WHERE DID YOU STOP FEELING ENGAGED?</b><br><br>'+
+    'note the shot numbers (HUD — press H) at every drop.<br>those moments are the work list.<br><br>'+
+    'story · pacing · performance · cinematography · emotion<br>'+
+    'a screening that finds ten problems is a successful screening.';
+  $('play').textContent='▶  SCREEN IT AGAIN'; $('gate').style.display='flex'; }
 function start(){ ac().resume(); $('gate').style.display='none'; cueHardStop(); cur=0; clock=0; cutStart=0; lastTs=0; playing=true; showCut(0); raf=requestAnimationFrame(tick); }
 function togglePause(){ if(!playing&&clock>0&&cur<CUTS.length){ playing=true; lastTs=0; if(audioEl)audioEl.play().catch(()=>{}); ac().resume(); raf=requestAnimationFrame(tick); }
   else if(playing){ playing=false; if(audioEl)audioEl.pause(); AC&&AC.suspend(); } }

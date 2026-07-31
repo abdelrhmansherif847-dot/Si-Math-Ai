@@ -44,6 +44,7 @@
 13. **THE DIRECTOR'S QUESTION.** Every decision answers one question: ***"Will this make the final film better?"*** — not "is this technically correct?" **Technical correctness is now a requirement, not the goal.** The goal is emotional storytelling. A choice that is flawless and inert loses to a choice that is imperfect and alive. (Owner, 2026-07-31)
 14. **THE EMOTIONAL TIEBREAK.** When two options are both technically valid, **choose the one that creates the stronger emotional experience.** This film will be remembered for how it makes people feel, not for how perfect its prompts were. Use this to break every tie — it is not a preference, it is the deciding rule.
 15. **THE SILENT CUT TEST.** Strip every line of dialogue from the film. **The audience must still understand the story** — from blocking, lighting, composition, performance and camera alone. Dialogue *strengthens* the story; it never *carries* it. Any shot that fails this test is under-designed, and the fix is visual, never a better line. Runs on every important scene before it is considered final. Storytelling order of responsibility: **blocking → performance → camera → lighting → music → dialogue** — dialogue is the final layer. Standing audit and the order in `11`.
+16. **THE FILM OUTRANKS THE PAPER.** The animatic — and every cut of the film after it — is the primary creative reference. The documents support the film; the film does not exist to satisfy the documents. **If the film feels wrong and the documentation says it is correct, the documentation is wrong.** Update the documents to match the film, never the reverse. Reviews are screenings, not checklist passes; the only exit question of a screening is *"where did the audience stop feeling engaged?"* — protocol in `11`. (Owner, 2026-07-31)
 
 > **Laws 13–15 outrank the rest.** 1–12 keep the film *consistent*; 13–15 decide whether it is
 > *good*. When a consistency law and a director's law appear to conflict, the conflict is almost
@@ -224,6 +225,7 @@ through an explicit owner decision recorded here. All 2026-07-31:
 | Director's Laws 13–15 | — (additive) | Laws, `11` |
 | **Shot 13A/13B eyeline — the visual verdict.** L11 held on the Representatives; the slow gaze shift to Lawyer Zero before L12 *is* the verdict | `03`'s "straight down the lens" on 13A/13B | `09` L11/L12, `11`, `vo-lines.json` |
 | Storytelling order: blocking → performance → camera → lighting → music → dialogue | — (additive) | Law 15, `11` |
+| The animatic is the primary creative reference; documents follow the film | conflict rule extended above all documents | Law 16, `11` |
 
 ## KIT DISCREPANCIES — RAISED, NOT PATCHED
 
@@ -268,4 +270,4 @@ still need the owner's eye — compliance is not approval.
 - One shot at a time; owner approval before the next. The six questions (in `03`) gate every generation.
 - Respect the model split: **Kling 3.0 `pro`** for non-dialogue motion · **Seedance 2.0 `std` 1080p + audio reference** for every spoken line · `motion_control` for performance-transfer escalations · `upscale_video` for finals. Kling `std` was for tests only.
 - Decline every stylistic preset a tool suggests. Presets restyle; restyling is drift.
-- On any conflict between documents: `00` (this file) > `03` > `02` > `01`. Newer supersedes older only through an explicit owner decision recorded here.
+- On any conflict: **the film outranks every document** (Law 16) — creative truth flows animatic → paper, and the paper is updated to match. Between documents: `00` (this file) > `03` > `02` > `01`. Newer supersedes older only through an explicit owner decision recorded here.
