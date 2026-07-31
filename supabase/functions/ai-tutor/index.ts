@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v92
+// ai-tutor Edge Function v93
 // v91 (HOTFIX — temporal dead zone regression introduced by v90): v90 placed
 // the `teleCtx.operation` derivation beside the other telemetry-context
 // assignments, ~28 lines ABOVE the `const imagesData` declaration it reads.
@@ -158,7 +158,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v92';
+const AI_TUTOR_VERSION = 'v93';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -1011,6 +1011,17 @@ function isMathTopic(topic: string, subtopic: string): boolean {
     'إحصاء', 'مثلث', 'دائرة', 'كسر', 'عدد',
   ];
   return mathPatterns.some(p => t.includes(p));
+}
+
+// ── cleanDifficulty ───────────────────────────────────────────────────────────
+// A model that emits the literal string "null" (or "undefined") means "absent",
+// but the client tests `r.difficulty` for truthiness — and "null" is truthy, so
+// it renders `Difficulty: null` to a student. Observed in production on a
+// 2026-06-01 record. Normalise to absent at every point a difficulty can reach
+// the client; the caller's existing absent-handling then applies unchanged.
+function cleanDifficulty(raw: unknown): string {
+  const s = String(raw ?? '').trim();
+  return /^(null|undefined)$/i.test(s) ? '' : s;
 }
 
 // ── normalizeRules ────────────────────────────────────────────────────────────
@@ -2643,7 +2654,7 @@ serve(async (req) => {
           hint:            existing.hint || '',
           topic:           existing.topic || '',
           subtopic:        existing.subtopic || '',
-          difficulty:      existing.difficulty || '',
+          difficulty:      cleanDifficulty(existing.difficulty),
           concepts:        Array.isArray(existing.concepts) ? existing.concepts : [],
           rules:           Array.isArray(existing.rules) ? existing.rules : [],
           weakness_signal: existing.weakness_signal === true,
@@ -3547,11 +3558,12 @@ Determine if this is a math message and set "is_math" accordingly:
 - is_math = true: solving equations, algebra, geometry, percentages, word problems with calculations, graph reading, statistics
 - is_math = true: ANY message that includes an image — if an image is attached it is ALWAYS a math problem; set is_math=true regardless of how short or vague the text is ("حل", "solve", "help", "?", or even empty text)
 - is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation — and ONLY when NO image is attached
+- is_math = false: questions ABOUT the exam rather than math to work on — how many questions a section has, how long a module lasts, how it is scored, which topics appear, what the format is ("امتحان ال DSAT كام سوال", "how many questions in EST math", "امتحان est 1 math كام دقيقه"). Answer them fully and warmly; scope stays "math". But no problem was worked, so there is nothing to record: is_math=false
 - When is_math = false: set topic="General", subtopic="", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
 
 **is_math vs scope — they answer different questions. Set BOTH:**
-- is_math asks "does this turn contain math to record?" → scope="math" turns are is_math=true; scope="coaching" and scope="out_of_scope" turns are is_math=false.
+- is_math asks "is the student working on a math PROBLEM in this turn?" → scope="math" turns are is_math=true ONLY when a problem is being solved, explained, checked or practised. A scope="math" turn that is purely informational about the exam is is_math=false. scope="coaching" and scope="out_of_scope" turns are ALWAYS is_math=false.
 - scope asks "is this turn something Zero handles at all?" → see the DOMAIN SCOPE section above. Coaching is handled; out_of_scope is redirected.
 
 ## Weakness Signal — WHEN to set weakness_signal=true (CRITICAL)
@@ -3866,9 +3878,19 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     // GPT's explicit is_math flag takes priority over the local keyword classifier.
     // For image questions: always treat as math (this platform is math-only; images are always problems).
     const gptIsMath = typeof parsed.is_math === 'boolean' ? parsed.is_math : undefined;
-    const isMath = (imageData || resolvedRef)
+    const isMathClaimed = (imageData || resolvedRef)
       ? true
       : (gptIsMath !== undefined ? gptIsMath : isMathTopic(finalTopic, finalSubtopic));
+    // The prompt states scope="coaching" ⇒ is_math=false. Enforce it here rather
+    // than trusting the model to keep two fields consistent: a coaching turn that
+    // comes back is_math=true renders the full solution workflow AND is recorded
+    // as math practice, polluting taxonomy, mastery and weakness. Seen in
+    // production — "I am scared about my SAT score" stored as Algebra/Medium.
+    // Cannot fire on image or worksheet-ref turns: resolveScope returns 'math'
+    // for those before the model's label is read, so genuine math is untouched.
+    // Cannot fire on a missing or junk scope either — that also resolves to
+    // 'math' (fail-open), so this adds no new refusal path.
+    const isMath = scopeDecision.scope === 'coaching' ? false : isMathClaimed;
 
     let rules = normalizeRules(parsed.rules);
     if (isMath && rules.length === 0) {
@@ -3879,7 +3901,7 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     if (!isMath) {
       rules = [];
     }
-    const finalDifficulty = isMath ? String(parsed.difficulty || 'Medium') : '';
+    const finalDifficulty = isMath ? (cleanDifficulty(parsed.difficulty) || 'Medium') : '';
 
     // ── Post-process hint ─────────────────────────────────────────────────────
     let hint = String(parsed.hint || '').trim();
