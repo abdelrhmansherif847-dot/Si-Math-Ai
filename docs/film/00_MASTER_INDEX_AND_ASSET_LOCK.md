@@ -127,6 +127,23 @@ Semi-realistic dragon attempts: `7f6576ab`, `cc0b7019`, `57317d7c`, `be5d6d36` �
 5. Act IV last. Shot 17's smile: motion_control from a human performance, or manual animation.
 6. Upscale keeps to 4K → conform → mix (−14 LUFS) → burned subs → deliver 1080×1920.
 
+## KIT DISCREPANCIES — RAISED, NOT PATCHED
+
+Found while working the kit. Recorded here rather than silently corrected, because per the conflict
+rule below only an explicit owner decision may supersede a document.
+
+| # | Discrepancy | State |
+|---|---|---|
+| 1 | L2 priced at the Judge's 130 wpm though Lawyer Zero speaks it | ✅ **RESOLVED** — moved to 165 wpm (owner, 2026-07-31) |
+| 2 | Shot 4 allots L2 one second against a 2.55s line, and Act II has zero slack to absorb it (22.5s speech + 5.5s silence = its full 28s) | ⏳ **OPEN** — either Shot 4 extends and Act II compresses, or L2 overlaps the Shot 4 → 5 cut. Affects the edit, not the read. See `06` §4(a) |
+| 3 | `05` specifies stills on `nano_banana_pro`, but the Master Frame `0f0b8381` and all four reference sheets were actually generated on **`nano_banana_2`** | ⏳ **OPEN** — an operator following `05` literally would generate against a different model than the one that produced the locked references. Confirm which is normative before Stage 1 key frames |
+
+**Reference sheets — Law compliance verified.** All four `PENDING OWNER APPROVAL` sheets resolve as
+completed jobs and each attaches the locked production designs as inputs (`75f34868` Judge,
+`4bc66c17` Lawyer, `2508d506` Reps) with the required enumerate-frozen-features → explicit `Do NOT`
+structure. They extend the locked designs rather than reinterpret them, per Laws 1, 3 and 8. They
+still need the owner's eye — compliance is not approval.
+
 ## RULES OF ENGAGEMENT FOR THE NEXT OPERATOR (Claude Code or human)
 
 - Treat every 🔒 asset as immutable. If a generation contradicts a locked asset, the generation is wrong.
