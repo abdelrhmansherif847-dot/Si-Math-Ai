@@ -113,13 +113,16 @@ until all four are LOCKED.**
 
 | Plate | ID | Gate 1 | Gate 2 | State |
 |---|---|---|---|---|
-| **Master Frame** | `0f0b8381` | ⚠️ pass at 1k | ✅ pass | 🔒 LOCKED — **2K upscale queued** (`00` Q1, Law 12). Stays the valid parent until its upscale passes the narrowed Gate 2 |
-| **Cam 2** — bench low angle | `e60f6a38` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
-| **Cam 12/A** — Center Court toward bench | `6130e45b` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
-| **Grey Table Reverse** | `f450ac37` | ✅ pass · 2k 1536×2752 | ⏳ awaiting owner | pending |
+| **Master Frame** | `0f0b8381` | ⚠️ pass at 1k | ✅ pass | 🔒 **LOCKED** — 2K upscale queued (`00` Q1, Law 12) |
+| **Cam 2** — bench low angle | `e60f6a38` | ✅ pass · 2k | ✅ **pass** | 🔒 **LOCKED** |
+| **Cam 12/A** — Center Court toward bench | `6130e45b` | ✅ pass · 2k | ✅ **pass** | 🔒 **LOCKED** |
+| **Grey Table Reverse** | `f450ac37` | ✅ pass · 2k | ✅ **pass** | 🔒 **LOCKED** |
 
-All four rendered. Gate 1 closed on all three new plates: recorded model `nano_banana_2`, 2K,
-9:16, locked references only.
+**Gate 2 finalized by owner directive, 2026-07-31** (*"Finalize Gate 2"* — the build-the-movie
+order), after the plates appeared before the owner in two animatic screenings and a full-resolution
+stills review with no objection raised. Standing safeguard: any plate may still be **rejected at
+first-motion review** — Law 12's rejection clause then permits re-derivation. The film is the
+source of truth; a plate that fails on screen fails, whatever this ledger says.
 
 ### Reference sheets
 
