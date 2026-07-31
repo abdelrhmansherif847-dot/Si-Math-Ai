@@ -25,9 +25,89 @@ Ready-to-run cards. Each names its references (Higgsfield IDs from `00`), its st
 > record reading `nano_banana_flash` means the wrong model rendered it; discard and re-run.
 > Full detail and the verifying test in `00` → OPERATIONAL HAZARD.
 
-**The B-cut (used in Shots 5–11, generate ONCE, reuse):**
-- Refs: MASTER + REPS. Still: 35mm, slightly high angle, the five at their table camera-right, warm gold exhibit light spilling across them from off-frame left, NOTHING igniting above them, painterly. Motion (kling pro): near-stillness — unison breathing, one slow head turn toward the off-screen light, gold spill flickering softly. 2s used.
-- **Continuity:** exactly five. No hologram above them, ever.
+## THE PERFORMANCE LAYER — owner-directed, 2026-07-31 · read before generating ANY motion
+
+**Law 16: scenes, not stills.** We do not animate pictures. Characters perform whole scenes inside a
+living room, and the edit captures the performance — it does not create it. **Every motion prompt
+below is upgraded by this section.** A frame where any present character reads as frozen is a
+failed frame.
+
+### The scene method
+
+The film is four scenes, not nineteen shots:
+
+| Scene | Shots | The living master |
+|---|---|---|
+| **A · The Session** | 1–4 | The room wakes; Judge presides; Lawyer rises into motion |
+| **B · The Cross-Examination** | 5–12 | One continuous prosecution that accelerates; per-exhibit sub-beats |
+| **C · The Verdict** | 13–15 | Stillness with mass on the Cam-2 axis; the room listens |
+| **D · The Merge** | 16–19 | The geography dissolves; two become one |
+
+Per scene: generate **master performance takes** (longest duration the model allows — characters
+behaving continuously through the scene's blocking) *plus* the per-shot dialogue takes (Seedance,
+audio-driven). The edit then cuts coverage from living material. The per-shot cards below remain
+binding as **coverage specs** — what the edit must be able to cut to — no longer as the unit of
+creation. Every character visibly mid-behaviour BEFORE each cut point: entering breath, settling
+weight, finishing a glance. Cuts land on behaviour, never on a pose.
+
+### Body before voice — every dialogue take
+
+Stage the physical beat in the first moments; the line lands *after* the body has already decided.
+(The approved verdict eye-move is the canonical example.)
+
+- **JUDGE ZERO** — breath you can see; weight settles before words; hands move rarely and mean it
+  (gavel raised with intention, glasses touched, file closed); slow head turns; held eye contact;
+  blinks as punctuation, never mid-line; leans forward exactly twice in the film (L12, L14).
+- **LAWYER ZERO** — never static while asking: walk-and-turn between exhibits, claw pointed at the
+  evidence while the eyes stay on the jury, wings flick on emphasis, tail counterweights every turn,
+  jacket and tie business at the bookends; **reacts while listening** in every shot he doesn't own.
+- **THE ROOM** — always alive (per `01`): particles, energy veins, seal breathing, haze in the
+  shafts. At L10 all ambient motion drops to half speed. In Shot 18 it reverses inward.
+
+### The Representatives — confidence fading, never frozen
+
+Owner note: *"they should never look frozen… show uncertainty as the trial progresses."* Extends
+`03`'s canon (head-turn at Exhibit A, micro-shift at L5, stillness from L10, the stand at 13) into
+a full arc. **The B-cut is no longer generate-once — it is three staged masters:**
+
+- **B1 · rounds 1–2 (L3–L4):** unison breathing, near-stillness — then the first crack: **two heads
+  turn toward each other.** They have never needed to confer before.
+- **B2 · rounds 3–5 (L5–L7):** one leans back a few degrees; the collective micro-shift on the icon
+  storm; one head bows slightly. Posture loosening = certainty loosening.
+- **B3 · rounds 6–7 (L8–L9):** heads bowed a few degrees, absolute stillness, the gold spill at its
+  brightest. Not defeat — the beginning of acceptance.
+- From L10: statue-still (canon) → the 13-insert stand, their one act, unhurried and dignified.
+
+Still per master: 35mm, slightly high, the five at their table camera-right, warm gold exhibit light
+spilling from off-frame left, NOTHING igniting above them, painterly. Motion (kling pro): the stage
+of the arc above. ~2s used per appearance. **Cost note:** 3 kling-pro generations instead of 1 —
+owner-directed spend (screening note: presence).
+- **Continuity:** exactly five. No hologram above them, ever. Reactions believable, never comic,
+  never ashamed, never menacing.
+
+### Camera as actor — additions ⏳ PROPOSED (coverage is locked in `03`; owner approval required)
+
+1. **The OTS past the Representatives** (offered for Shot 5A or 6A): over their grey shoulders,
+   foreground-right and soft, onto warm Lawyer Zero mid-floor, Judge high beyond — the film's
+   argument inside one composition, and the first shot that makes the audience sit *at the losing
+   table.* 180°-legal: camera stays gallery-side, Lawyer stays camera-left.
+2. **Match cut, Shot 1 → Shot 2:** the gavel's gold band (85mm macro circle) cuts to the wall
+   emblem's ring behind the Judge (50mm circle) — same centre, same gold. Edit-only; costs nothing.
+
+Everything else the owner asked for — track, dolly, crane, orbit, motivated push/pull — is already
+specified per shot below; the animatic's Ken Burns flattened it, the generations will not.
+
+### The quality ceiling — how "premium series" is actually reached
+
+Human VO driving Seedance's micro-timing · whole-scene masters · this performance layer in every
+motion prompt · `motion_control` from filmed human performance for Shot 17 (and any beat that fights
+the models) · 2K plates · 4K upscale. **Never** via quality adjectives — Law 2's banned words stand.
+The goal line: *"I forgot I was watching something made with AI."*
+
+---
+
+**The B-cut** (Shots 5–11): see **The Representatives** above — three staged masters B1/B2/B3
+replace the old generate-once card.
 
 ---
 

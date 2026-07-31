@@ -148,7 +148,7 @@ before, and the line became stronger for it.
 
 ## THE SCREENING PROTOCOL — owner-set, 2026-07-31
 
-The animatic is the primary creative reference (Law 16). Reviews are **screenings.** Every screening
+The animatic is the primary creative reference (Law 17). Reviews are **screenings.** Every screening
 is watched through five lenses:
 
 | Lens | The questions |
