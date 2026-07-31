@@ -1,5 +1,9 @@
 # SI MATH AI — "THE AI COURT"
-# SCRIPT v2 — THE TRAILER PASS · ⏳ PROPOSAL, AWAITING OWNER APPROVAL
+# SCRIPT v2 — THE TRAILER PASS · ✅ ADOPTED IN FULL (owner, 2026-07-31)
+
+**Cascade executed same day:** `03` Part 1 · `01` clean read + timing table · `02`/`05` card quotes ·
+`07` booth script · `09` per-line cards · `vo-lines.json` · animatic temp track re-recorded.
+**v2 is now the locked script.** This file remains as the v1→v2 record.
 
 **Formal script revision under `03`'s own rule** ("any wording change after this point is a formal
 script revision"). Nothing below is applied to the locked script, the dialogue package, the booth

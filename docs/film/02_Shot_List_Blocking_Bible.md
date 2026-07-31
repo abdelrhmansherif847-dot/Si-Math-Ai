@@ -133,7 +133,7 @@ COMMUNICATES: what the audience learns that they didn't know one second ago
 - **GENERAL AI:** Soft in the background across the aisle, camera-right, unmoving.
 - **PURPOSE:** Introduce the advocate and his energy against the Judge's stillness.
 - **COMMUNICATES:** This one is going to fight for his side.
-- **[LZ]:** "Then let me ask a few questions."
+- **[LZ]:** "Good. I have questions."
 
 ---
 
@@ -152,7 +152,7 @@ COMMUNICATES: what the audience learns that they didn't know one second ago
 - **GENERAL AI:** Seated, camera-right. One head turns slowly toward the exhibit. Nothing above them.
 - **PURPOSE:** First evidence. Establish the three-beat grammar.
 - **COMMUNICATES:** One side can answer this. The other cannot.
-- **[LZ]:** "Who knows exactly *where* the student went wrong?"
+- **[LZ]:** "Who saw the exact moment it broke?"
 - **Exhibit:** `Step 1 ✓ / Step 2 ✓ / Step 3 ✗` — Step 3 ignites crimson.
 
 ### SHOTS 6–11 — **EXHIBITS B–G** · 0:15–0:36
@@ -160,11 +160,11 @@ Same three-beat grammar, accelerating. Blocking constant: **Judge above, Lawyer 
 
 | Shot | Exhibit | Line | Camera variation |
 |---|---|---|---|
-| 6 | `ROOT CAUSE` | "Who knows *why* — instead of only saying 'wrong'?" | Whip-pan to grey table and back |
+| 6 | `ROOT CAUSE` | "And who knows *why*? Anyone can say 'wrong.'" | Whip-pan to grey table and back |
 | 7 | 4 icons: concept / calculation / careless / time | "A concept gap. A calculation slip. Carelessness. Or time?" | 180° orbit of Center Court; Lawyer walks against it |
-| 8 | `PATTERN — 8× / 6 WEEKS` | "Who sees the same mistake — for *weeks*?" | Fast pull-back; timeline exceeds frame |
-| 9 | `FOCUS PRACTICE` | "Who turns one wrong answer into a plan?" | Locked off — let the transformation carry it |
-| 10 | `NEXT LESSON` | "Who knows what to study *next*?" | Slow rise with the card |
+| 8 | `PATTERN — 8× / 6 WEEKS` | "The same mistake. Eight times. Who noticed?" | Fast pull-back; timeline exceeds frame |
+| 9 | `FOCUS PRACTICE` | "And who turns that mistake into a plan?" | Locked off — let the transformation carry it |
+| 10 | `NEXT LESSON` | "Who tells the student what comes next?" | Slow rise with the card |
 | 11 | `JOURNEY MAP` | "Who walks the whole road — first question to target score?" | Crane up; the path runs the length of the floor |
 
 **Continuity note for Shot 11:** the journey path begins at Lawyer Zero's feet in Center Court and runs *toward the bench*, not off into abstract space. It stays inside the room.
@@ -199,7 +199,7 @@ Same three-beat grammar, accelerating. Blocking constant: **Judge above, Lawyer 
 - **GENERAL AI:** Visible camera-right through the orbiting holograms, lit by a light that isn't theirs.
 - **PURPOSE:** Every capability becomes one system.
 - **COMMUNICATES:** Not a feature list — an ecosystem.
-- **[JZ]:** "It doesn't just solve math." *(beat)* "It understands how students learn."
+- **[JZ]:** "It does not just solve math." *(beat)* "It understands how students learn."
 
 ### SHOT 15 — *The Three Laws* · 0:52–0:57
 - **CAMERA:** Three matched cuts, tightening on Judge Zero each time.

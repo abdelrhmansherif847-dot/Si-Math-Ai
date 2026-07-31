@@ -76,12 +76,12 @@
     <div id="sub"><span class="who"></span><span class="txt"></span></div>
     <div id="title"><div class="t1">SI MATH AI</div><div class="t2">More than an AI. A complete learning journey.</div><div class="t3">SIMATHAI.COM</div></div>
     <div id="fade"></div>
-    <div id="wm">ANIMATIC v1 — TEMP<br>temp VO · temp music · panels pending Gate 2</div>
+    <div id="wm">ANIMATIC v2 — SCRIPT v2 — TEMP<br>temp VO · temp music · panels pending Gate 2</div>
     <div id="hud"></div>
     <div id="tc">00:00</div>
     <div id="gate">
       <h1>THE AI COURT</h1>
-      <p>ANIMATIC v1 · ~1:43 (temp read runs long — the human session cuts to 76s) · sound on<br><br>
+      <p>ANIMATIC v2 · ~1:42 · SCRIPT v2 (temp read runs long — the human session cuts to 76s) · sound on<br><br>
       four production plates · shot 3 in the can<br>
       temp dialogue (seed tts scratch) · temp music (synthesized live)<br>
       every real asset it shows is PENDING GATE 2<br><br>
@@ -90,7 +90,7 @@
     </div>
   </div>
   <div id="side">
-    <h2>THE AI COURT · v1</h2>
+    <h2>THE AI COURT · v2</h2>
     <div><span class="k">shot</span> <span id="sShot">—</span></div>
     <div><span class="k">act</span> <span id="sAct">—</span></div>
     <div><span class="k">cut</span> <span id="sCut">—</span></div>
@@ -116,18 +116,18 @@ const VID3=CDN+'hf_20260731_190450_010057d4-5488-4bc5-aa87-9f1869cc9e6f.mp4';
    PATCHED IN by the build after generation; missing lines fall back to target_sec. */
 const AUDIO={
  L1:{url:CDN+'hf_20260731_222425_dd054f80-e462-449b-b326-72a1587f53ac.mp3',dur:4.26},
- L2:{url:CDN+'hf_20260731_222444_35814cfe-1fc4-4075-bcf5-320e9c3d9108.mp3',dur:1.88},
- L3:{url:CDN+'hf_20260731_222856_bad072d7-a5a3-4be6-894c-c12616cb83b4.mp3',dur:2.35},
- L4:{url:CDN+'hf_20260731_222900_4cd23c4f-8b30-481f-afb1-3d4196852556.mp3',dur:3.40},
+ L2:{url:CDN+'hf_20260731_225416_8eb9540a-7b68-4060-b357-9289b4b7739f.mp3',dur:3.03},
+ L3:{url:CDN+'hf_20260731_225420_b5002b20-dbe1-4a6e-9c71-46b5bbf1118b.mp3',dur:3.03},
+ L4:{url:CDN+'hf_20260731_225519_e619156b-36b6-45df-b308-2935806edeb6.mp3',dur:2.53},
  L5:{url:CDN+'hf_20260731_222508_f05fb7d1-2350-4351-9714-deaf63eda22a.mp3',dur:4.86},
- L6:{url:CDN+'hf_20260731_222908_97463c2b-7484-4521-a970-6edbda17749c.mp3',dur:3.03},
- L7:{url:CDN+'hf_20260731_222524_c5f2ea5a-700e-40dd-b87d-32a1e7f272fa.mp3',dur:2.25},
- L8:{url:CDN+'hf_20260731_223010_a85bbbca-80a0-4a5f-9f4d-06ce2df53f98.mp3',dur:1.91},
- L9:{url:CDN+'hf_20260731_222948_7689e5ba-43fe-4902-99ad-4da5787e6ecc.mp3',dur:5.20},
+ L6:{url:CDN+'hf_20260731_225524_4489f4d0-2278-420c-a70b-26a7927d9455.mp3',dur:3.66},
+ L7:{url:CDN+'hf_20260731_225555_cec4ae10-e847-4671-860f-a20fc2daf35a.mp3',dur:3.06},
+ L8:{url:CDN+'hf_20260731_225600_cf342002-7e18-4c96-ae6c-2453036be7ed.mp3',dur:2.06},
+ L9:{url:CDN+'hf_20260731_225610_8ec28b77-2e19-4ff2-865f-fc495a83c3d7.mp3',dur:3.16},
  L10:{url:CDN+'hf_20260731_223016_68413314-20aa-48e0-bef8-b1a331ba65b3.mp3',dur:1.07},
  L11:{url:CDN+'hf_20260731_223031_3cbb4878-b455-4509-89f8-848ee5b462fa.mp3',dur:2.06},
  L12:{url:CDN+'hf_20260731_223040_11278509-78e0-4d92-bc79-45dda63e2ce8.mp3',dur:4.68},
- L13:{url:CDN+'hf_20260731_223051_5f07e236-c447-4291-8e09-87d44220a6b4.mp3',dur:2.72},
+ L13:{url:CDN+'hf_20260731_225618_4698acf3-c58e-45f1-90e3-8a6106546c33.mp3',dur:2.59},
  L14:{url:CDN+'hf_20260731_223057_8570e32d-fae6-4651-bbf0-15c46b7676ea.mp3',dur:3.47},
  L15:{url:CDN+'hf_20260731_223121_d19112d7-e6ed-4bf4-ad48-59a973cd1350.mp3',dur:2.90},
  L16:{url:CDN+'hf_20260731_223115_6d3395d2-4b64-4858-9a3a-0314c14c4391.mp3',dur:3.45},
@@ -138,18 +138,18 @@ const AUDIO={
 
 const LINES={
  L1:{who:'JUDGE ZERO', t:2.77, txt:'This court is now in session.'},
- L2:{who:'LAWYER ZERO',t:2.55, txt:'Then let me ask a few questions.'},
- L3:{who:'LAWYER ZERO',t:2.91, txt:'Who knows exactly where the student went wrong?'},
- L4:{who:'LAWYER ZERO',t:2.91, txt:"Who knows why — instead of only saying 'wrong'?"},
+ L2:{who:'LAWYER ZERO',t:2.55, txt:'Good. I have questions.'},
+ L3:{who:'LAWYER ZERO',t:2.91, txt:'Who saw the exact moment it broke?'},
+ L4:{who:'LAWYER ZERO',t:2.91, txt:"And who knows why? Anyone can say 'wrong.'"},
  L5:{who:'LAWYER ZERO',t:3.27, txt:'A concept gap. A calculation slip. Carelessness. Or time?'},
- L6:{who:'LAWYER ZERO',t:2.55, txt:'Who sees the same mistake — for weeks?'},
- L7:{who:'LAWYER ZERO',t:2.91, txt:'Who turns one wrong answer into a plan?'},
- L8:{who:'LAWYER ZERO',t:2.18, txt:'Who knows what to study next?'},
- L9:{who:'LAWYER ZERO',t:4.73, txt:'Who walks the whole road — from the first question to the target score?'},
+ L6:{who:'LAWYER ZERO',t:2.55, txt:'The same mistake. Eight times. Who noticed?'},
+ L7:{who:'LAWYER ZERO',t:2.91, txt:'And who turns that mistake into a plan?'},
+ L8:{who:'LAWYER ZERO',t:2.18, txt:'Who tells the student what comes next?'},
+ L9:{who:'LAWYER ZERO',t:4.73, txt:'Who walks the whole road with them — first question to target score?'},
  L10:{who:'LAWYER ZERO',t:1.09,txt:'The defence rests.'},
  L11:{who:'JUDGE ZERO', t:1.33,txt:'You are intelligent.'},
  L12:{who:'JUDGE ZERO', t:3.11,txt:'But this one was built for students.'},
- L13:{who:'JUDGE ZERO', t:2.22,txt:"It doesn't just solve math."},
+ L13:{who:'JUDGE ZERO', t:2.22,txt:"It does not just solve math."},
  L14:{who:'JUDGE ZERO', t:2.22,txt:'It understands how students learn.'},
  L15:{who:'JUDGE ZERO', t:2.22,txt:'Every mistake tells a story.'},
  L16:{who:'JUDGE ZERO', t:2.22,txt:'Every step reveals a weakness.'},

@@ -101,7 +101,7 @@ This gives us three things the single-character version could not have:
 **Recognition beat:** cut so the audience sees Judge Zero's face and Lawyer Zero's face within two seconds of each other. Same eyes, same crest, same snout, sixty years apart. Let them work it out themselves — do not underline it.
 **Camera:** Low tracking arc as he steps out from the table.
 **Animation note:** He has a walk cycle with *swagger* — weight forward, tail counter-balancing, crest-fins up, wings flicking on emphasis. Every beat of his body language says: *I've already won this.* **Judge Zero at 0.7×, Lawyer Zero at 1.2× — the contrast in tempo is the relationship.**
-**[LZ]:** "Then let me ask a few questions."
+**[LZ]:** "Good. I have questions."
 
 ---
 
@@ -116,13 +116,13 @@ This gives us three things the single-character version could not have:
 **Camera:** Push in on Step 3 until red fills frame.
 **Animation:** Lawyer Zero circles the hologram, one claw raised toward it, never looking at it — he's watching the *jury*.
 **On-screen:** `EXHIBIT A — FIRST ERROR: STEP 3`
-**[LZ]:** "Who knows exactly *where* the student went wrong?"
+**[LZ]:** "Who saw the exact moment it broke?"
 
 ### SHOT 6 · 0:15 – 0:19 — **EXHIBIT B: The Reason**
 **Visual:** The red step peels open like a case file. A second layer of light beneath it.
 **Camera:** Whip-pan to the grey bench — five blank figures, nothing above them. Whip back.
 **On-screen:** `EXHIBIT B — ROOT CAUSE`
-**[LZ]:** "Who knows *why* — instead of only saying 'wrong'?"
+**[LZ]:** "And who knows *why*? Anyone can say 'wrong.'"
 
 ### SHOT 7 · 0:19 – 0:23 — **EXHIBIT C: Four Kinds of Wrong**
 **Visual:** Four gold icons snap into a diamond around the core.
@@ -135,25 +135,25 @@ This gives us three things the single-character version could not have:
 **Visual:** The single error multiplies backwards through time — the same mistake glowing at eight points across a six-week timeline.
 **Camera:** Fast pull-back; the timeline extends past frame edges.
 **On-screen:** `EXHIBIT D — REPEATED 8× OVER 6 WEEKS`
-**[LZ]:** "Who sees the same mistake — for *weeks*?"
+**[LZ]:** "The same mistake. Eight times. Who noticed?"
 
 ### SHOT 9 · 0:27 – 0:30 — **EXHIBIT E: The Plan**
 **Visual:** The eight error points collapse inward and re-form as a structured practice set. Chaos becomes architecture.
 **Camera:** Locked off. Let the transformation carry it.
 **On-screen:** `FOCUS PRACTICE — BUILT FROM YOUR MISTAKES`
-**[LZ]:** "Who turns one wrong answer into a plan?"
+**[LZ]:** "And who turns that mistake into a plan?"
 
 ### SHOT 10 · 0:30 – 0:33 — **EXHIBIT F: What's Next**
 **Visual:** One card rises out of the plan and holds alone, centre frame.
 **Camera:** Slow rise with the card.
 **On-screen:** `NEXT LESSON: QUADRATIC FUNCTIONS → FACTORING`
-**[LZ]:** "Who knows what to study *next*?"
+**[LZ]:** "Who tells the student what comes next?"
 
 ### SHOT 11 · 0:33 – 0:36 — **EXHIBIT G: The Road**
 **Visual:** A luminous path unrolls across the marble floor — from a small dim marker at Lawyer Zero's feet to a bright one far in the distance.
 **Camera:** Drone-style ascent following the path.
 **On-screen:** `FIRST QUESTION` ————— `TARGET SCORE`
-**[LZ]:** "Who walks the whole road — from the first question to the target score?"
+**[LZ]:** "Who walks the whole road with them — first question to target score?"
 
 ### SHOT 12 · 0:36 – 0:38 — *The Rest*
 **Visual:** Lawyer Zero stops. Turns his back on the grey bench. Faces Judge Zero. Straightens his tie once.
@@ -180,7 +180,7 @@ This gives us three things the single-character version could not have:
 **Camera:** Fast accelerating orbit. Lawyer Zero stands inside the light, arms loose, watching it.
 **On-screen (each holds ~0.5s, all remain in orbit):**
 `LEARNING HISTORY` · `WEAKNESS ANALYSIS` · `FOCUS PRACTICE` · `MOCK EXAMS` · `OFFICIAL SAT · EST · ACT TIMERS` · `PROGRESS TRACKING` · `XP · STREAKS · BADGES` · `STUDY PLAN` · `HUMAN SUPPORT`
-**[JZ]:** "It doesn't just solve math."
+**[JZ]:** "It does not just solve math."
 *(beat)*
 "It understands how students learn."
 **SFX:** Music re-enters hard — full orchestra and sub together.
@@ -255,21 +255,21 @@ simathAI.com
 
 ```
 [JZ]  This court is now in session.
-[LZ]  Then let me ask a few questions.
+[LZ]  Good. I have questions.
 
-[LZ]  Who knows exactly where the student went wrong?
+[LZ]  Who saw the exact moment it broke?
 [LZ]  Who knows why — instead of only saying "wrong"?
 [LZ]  A concept gap. A calculation slip. Carelessness. Or time?
-[LZ]  Who sees the same mistake — for weeks?
-[LZ]  Who turns one wrong answer into a plan?
-[LZ]  Who knows what to study next?
-[LZ]  Who walks the whole road — from the first question to the target score?
+[LZ]  The same mistake. Eight times. Who noticed?
+[LZ]  And who turns that mistake into a plan?
+[LZ]  Who tells the student what comes next?
+[LZ]  Who walks the whole road with them — first question to target score?
 [LZ]  The defence rests.
 
 [JZ]  You are intelligent.
 [JZ]  But this one was built for students.
 
-[JZ]  It doesn't just solve math.
+[JZ]  It does not just solve math.
 [JZ]  It understands how students learn.
 
 [JZ]  Every mistake tells a story.
@@ -284,15 +284,15 @@ simathAI.com
 
 | Act | Lines | Words | Read speed | Speech |
 |---|---|---|---|---|
-| I — Session opens | 2 | 13 | 130 wpm (JZ) | 6.0s |
-| II — Cross-examination | 8 | 62 | 165 wpm (LZ) | 22.5s |
-| III — Verdict | 7 | 35 | 135 wpm (JZ) | 15.6s |
+| I — Session opens | 2 | 10 | 130 (L1) / 165 (L2) | 4.2s |
+| II — Cross-examination | 8 | 60 | 165 wpm (LZ) | 21.8s |
+| III — Verdict | 7 | 36 | 135 wpm (JZ) | 16.0s |
 | IV — Merge | 2 | 9 | 135 wpm | 4.0s |
-| **Total** | **19** | **119** | — | **48.1s** |
+| **Total** | **19** | **115** | — | **46.0s** |
 
 The merge sequence (Shots 16–18, 0:57–1:12) carries **two spoken lines across fifteen seconds.** That ratio is the point.
 
-Against a 76-second runtime that leaves **27.9 seconds of silence** distributed as: ~4s in Act I (gavel, crane reveal), ~5.5s across Act II (0.7s between exhibits), ~3.5s in Act III (the 1.5s beat after "You are intelligent" plus the three-laws gaps), ~15s in Act IV — the merge is almost entirely wordless.
+Against a 76-second runtime that leaves **30.0 seconds of silence** distributed as: ~4s in Act I (gavel, crane reveal), ~5.5s across Act II (0.7s between exhibits), ~3.5s in Act III (the 1.5s beat after "You are intelligent" plus the three-laws gaps), ~15s in Act IV — the merge is almost entirely wordless.
 
 If the recorded read comes back long, take it out of the **beats in Act II** — never out of Act III. The verdict's pauses are the film.
 
@@ -363,7 +363,7 @@ Shots 1–4 from the hero reel, extended. Add:
 **[JZ]:** "This court is now in session."
 *(pause)*
 "The question before us is not *who is smarter*. It is *who is built for students*."
-**[LZ]** *(standing, buttoning his jacket):* "Then let me ask a few questions, Your Honour."
+**[LZ]** *(standing, buttoning his jacket):* "Good, Your Honour. I have questions."
 
 ---
 

@@ -85,14 +85,22 @@ owner-directed spend (screening note: presence).
 - **Continuity:** exactly five. No hologram above them, ever. Reactions believable, never comic,
   never ashamed, never menacing.
 
-### Camera as actor — additions ⏳ PROPOSED (coverage is locked in `03`; owner approval required)
+### Camera as actor — additions ✅ BOTH APPROVED (owner, 2026-07-31)
 
-1. **The OTS past the Representatives** (offered for Shot 5A or 6A): over their grey shoulders,
-   foreground-right and soft, onto warm Lawyer Zero mid-floor, Judge high beyond — the film's
-   argument inside one composition, and the first shot that makes the audience sit *at the losing
-   table.* 180°-legal: camera stays gallery-side, Lawyer stays camera-left.
-2. **Match cut, Shot 1 → Shot 2:** the gavel's gold band (85mm macro circle) cuts to the wall
-   emblem's ring behind the Judge (50mm circle) — same centre, same gold. Edit-only; costs nothing.
+1. **The OTS past the Representatives — assigned to Shot 6A** (L4, *"And who knows why? Anyone can
+   say 'wrong.'"* — the dagger crossing the aisle into their space). Over their grey shoulders,
+   foreground-right and soft, onto warm Lawyer Zero mid-floor, Judge high beyond. The audience sits
+   at the losing table for one question. 180°-legal: camera stays gallery-side, Lawyer stays
+   camera-left. Owner's condition: **must not confuse the courtroom geography** — check it against
+   `02` §6 at Gate 2. *One new plate to generate after the camera package locks; refs GREY + CAM12
+   + MASTER.* (Assignment to 6A is operator's; movable on owner's word.)
+2. **Match cut, Shot 1 → Shot 2 — approved.** The gavel's gold band (85mm macro circle) cuts to the
+   wall emblem's ring behind the Judge (50mm circle) — same centre, same gold. Edit-only. On the
+   conform checklist.
+
+**Standing directive (owner):** transitions are storytelling, not connections. Keep hunting
+matches of shape, colour, object and motion across the edit — **present each find for approval
+before it changes locked coverage.** Not every transition should be a cut.
 
 Everything else the owner asked for — track, dolly, crane, orbit, motivated push/pull — is already
 specified per shot below; the animatic's Ken Burns flattened it, the generations will not.
@@ -128,7 +136,7 @@ replace the old generate-once card.
 ### SHOT 3 · 0:07–0:09 · MASTER — ✅ IN THE CAN (`010057d4`)
 Use as cut; also the environment reference for every other card.
 
-### SHOT 4 · 0:09–0:10 · L2 "Then let me ask a few questions."
+### SHOT 4 · 0:09–0:10 · L2 "Good. I have questions."
 - **Refs:** MASTER + LZ. **Camera:** 35mm, eye level, medium, low tracking arc left-to-right with him.
 - **Still:** [CHAR-LOCK][WORLD-LOCK] Lawyer Zero standing at the warm-lit defence table camera-left, buttoning his jacket, folder in hand, facing the bench; grey table soft across the aisle right; Judge high in background.
 - **Motion (seedance + L2):** he stands, buttons the jacket on the first word, steps out from the table with forward-weighted swagger, wings flick once, half-smile on the last word; camera arcs with him.
@@ -136,12 +144,12 @@ Use as cut; also the environment reference for every other card.
 
 ## ACT II — each exhibit = A (line) + B (standard card above) + C (exhibit)
 
-### SHOT 5 · L3 "…where the student went wrong?" · EXHIBIT A
+### SHOT 5 · L3 "…the exact moment it broke?" · EXHIBIT A
 - **A still refs:** MASTER + LZ. 50mm eye level medium: LZ in Center Court on the floor emblem, addressing the grey table (frame right), Judge above soft. **Motion (seedance + L3):** he delivers the line to the grey table, one claw raised, slow push.
 - **C still refs:** MASTER. Hologram over the floor emblem: handwritten solution, `Step 1 ✓ / Step 2 ✓ / Step 3 ✗`, third step burning crimson, red spill on marble + reflections. **Motion (kling pro):** push in on Step 3 until red fills frame; energy veins surge; seal pulses.
 - **Continuity:** crimson appears ONLY here and Shot 8's pattern echo. LZ watches the JURY (grey table), not the hologram.
 
-### SHOT 6 · L4 "…why — instead of only saying 'wrong'?"
+### SHOT 6 · L4 "…why? Anyone can say 'wrong.'"
 - **A:** 35mm medium-wide, WHIP-PAN from grey table to LZ (generate the two poles as stills; the whip is an edit/motion-blur transition in conform). Seedance + L4 on the LZ pole.
 - **C:** the red step peels open like a case file revealing `ROOT CAUSE` beneath. Kling pro: peel + settle.
 
@@ -150,19 +158,19 @@ Use as cut; also the environment reference for every other card.
 - **Motion:** seedance + L5; if orbit+walk fights the model, split: seedance MCU for the line, kling pro orbit for the icons, intercut.
 - **Continuity:** cut lands on each beat in conform; icons remain visible through Shot 8.
 
-### SHOT 8 · L6 "…the same mistake — for weeks?"
+### SHOT 8 · L6 "The same mistake. Eight times. Who noticed?"
 - **A/C combined refs:** MASTER + LZ. 24mm, fast pull-back: the single error multiplies across a glowing six-week timeline extending past both frame edges, `REPEATED 8× OVER 6 WEEKS`; LZ small beneath it.
 - **Motion:** kling pro for the pull-back; seedance MCU insert for the line if the wide swallows it.
 
-### SHOT 9 · L7 "Who turns one wrong answer into a plan?"
+### SHOT 9 · L7 "And who turns that mistake into a plan?"
 - **Refs:** MASTER + LZ. 50mm medium, LOCKED camera: the eight error points collapse inward and rebuild as an ordered practice structure (`FOCUS PRACTICE`) over the emblem; LZ still, warmer.
 - **Motion:** kling pro (transformation) + seedance MCU (line). **Continuity:** first static A-cut — mark the tonal turn.
 
-### SHOT 10 · L8 "Who knows what to study next?"
+### SHOT 10 · L8 "Who tells the student what comes next?"
 - **Refs:** MASTER + LZ. 50mm MCU rising with a single card `NEXT LESSON: QUADRATIC FUNCTIONS → FACTORING` lifting from the plan.
 - **Motion:** kling pro rise + seedance line.
 
-### SHOT 11 · L9 "…from the first question to the target score?"
+### SHOT 11 · L9 "…with them — first question to target score?"
 - **Refs:** MASTER + LZ. 24mm crane ascending: luminous path unrolls from LZ's feet across the floor TOWARD THE BENCH, `FIRST QUESTION →→→ TARGET SCORE`.
 - **Motion:** kling pro crane; seedance line as lead-in MCU. **Continuity:** path stays INSIDE the room, aimed at the bench.
 
@@ -175,7 +183,7 @@ Use as cut; also the environment reference for every other card.
 ### SHOT 13A · L11 "You are intelligent." — 50mm low MCU, locked. Business first: file closes, glasses off (two hands, silent), set down — THEN the line to the grey table. Seedance + L11.
 ### 13-insert *(1s, no line)* — 85mm slightly high: the five STAND together, unhurried, dignified. Kling pro. **Their only movement in the film.**
 ### SHOT 13B · L12 "But this one was built for students." — 85mm low CU, few-inch push. Eyes fully readable (glasses OFF from here to end). Hold 1s on the eyes before the line. Seedance + L12.
-### SHOT 14A · L13 "It doesn't just solve math." — 24mm wide, orbit begins: every exhibit re-ignites into one orbiting constellation around Center Court; LZ inside the light. Kling pro + seedance line off-camera (JZ above).
+### SHOT 14A · L13 "It does not just solve math." — 24mm wide, orbit begins: every exhibit re-ignites into one orbiting constellation around Center Court; LZ inside the light. Kling pro + seedance line off-camera (JZ above).
 ### 14-insert *(1s)* — 85mm CU LZ's upturned face inside the light: the advocate becomes a student again. Kling pro.
 ### SHOT 14B · L14 "It understands how students learn." — 35mm MCU, orbit decelerates to rest on JZ seen THROUGH the orbiting holograms. Seedance + L14 (slowest read in the film).
 ### SHOTS 15A/B/C · L15/L16/L17 — three matched cuts on the Camera-2 axis: 35mm full → 50mm MCU → 85mm CU. Each law burns into the floor as spoken (`EVERY MISTAKE TELLS A STORY / EVERY STEP REVEALS A WEAKNESS / EVERY WEAKNESS BECOMES A PLAN`). Seedance per line; gavel lands on L17's last word. **Continuity:** identical cadence 15A/15B, half-step softer 15C; grey table visible in 15A edges.

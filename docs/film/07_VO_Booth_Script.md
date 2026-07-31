@@ -3,7 +3,7 @@
 
 **Print this. It is the only document that goes into the room.**
 
-Nineteen lines. Roughly 47 seconds of finished speech. Budget 90 minutes.
+Nineteen lines. Roughly 46 seconds of finished speech. Budget 90 minutes.
 
 ---
 
@@ -75,26 +75,26 @@ but a line that comes in a second long will cost a beat somewhere else in the fi
 >
 > Stated, not announced. He is confirming what the room already knows. No gravel, no proclamation.
 
-**L2 · LAWYER · 2.6s**
-> **"Then let me ask a few questions."**
+**L2 · LAWYER · 1.5s**
+> **"Good. I have questions."**
 >
 > Light. Almost pleasant. The trap is already built — he is the only one who knows that.
-> His first line in the film; it should sound like someone standing up who enjoys standing up.
+> "Good." lands with the half-smile a beat before the rest. He wanted to be asked.
 
 ### ACT II — THE CROSS-EXAMINATION
 
 *Eight questions, asked across the room to five silent figures who cannot answer any of them.
 The rhythm accelerates through the act. He is building, not attacking.*
 
-**L3 · LAWYER · 2.9s**
-> **"Who knows exactly *where* the student went wrong?"**
+**L3 · LAWYER · 2.6s**
+> **"Who saw the exact moment it broke?"**
 >
-> The first strike. Direct. Stress **where**.
+> The first strike. "Broke" set down like an evidence bag — heavier, not louder.
 
 **L4 · LAWYER · 2.9s**
-> **"Who knows *why* — instead of only saying 'wrong'?"**
+> **"And who knows *why*? Anyone can say 'wrong.'"**
 >
-> Faster than L3. Stress **why**. The dash is real; 'wrong' is said almost dismissively, in quotes.
+> Faster than L3. Stress **why**. The second sentence is almost thrown away — confidence, not contempt.
 
 **L5 · LAWYER · 3.3s**
 > **"A concept gap. A calculation slip. Carelessness. Or time?"**
@@ -103,25 +103,25 @@ The rhythm accelerates through the act. He is building, not attacking.*
 > Do not let the last one trail up too far; it is a question, not a shrug.
 
 **L6 · LAWYER · 2.6s**
-> **"Who sees the same mistake — for *weeks*?"**
+> **"The same mistake. Eight times. Who noticed?"**
 >
-> The dash is a real pause. **Weeks** lands like evidence being set on a table.
+> Three fragments — three jabs, counted like exhibits. "Who noticed?" is quiet, and hard to sit across from.
 
 **L7 · LAWYER · 2.9s**
-> **"Who turns one wrong answer into a plan?"**
+> **"And who turns that mistake into a plan?"**
 >
 > **The turn of the film.** Warmer. Prosecution becomes advocacy here — the first line he means
 > rather than performs. Everything after this is a believer talking.
 
-**L8 · LAWYER · 2.2s**
-> **"Who knows what to study *next*?"**
+**L8 · LAWYER · 2.6s**
+> **"Who tells the student what comes next?"**
 >
-> Quick, confident, already moving. Stress **next**.
+> Quick and confident — but **"the student"** is said gently. The first soft word in the act.
 
-**L9 · LAWYER · 4.7s**
-> **"Who walks the whole road — from the first question to the target score?"**
+**L9 · LAWYER · 4.0s**
+> **"Who walks the whole road with them — first question to target score?"**
 >
-> His longest line. Let it breathe at the dash. This is the promise of the whole film; it should
+> His longest line. Let it breathe after "with them." This is the promise of the whole film; it should
 > sound like scope, not like a feature.
 
 **L10 · LAWYER · 1.1s**
@@ -145,8 +145,8 @@ The rhythm accelerates through the act. He is building, not attacking.*
 >
 > The verdict. Slow. Each word placed like a stone. The 'but' does not swing — it settles.
 
-**L13 · JUDGE · 2.2s**
-> **"It doesn't just solve math."**
+**L13 · JUDGE · 2.7s**
+> **"It does not just solve math."**
 >
 > Pride held under the robe. He is not boasting; he is stating.
 

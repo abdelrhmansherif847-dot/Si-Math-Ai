@@ -229,6 +229,9 @@ through an explicit owner decision recorded here. All 2026-07-31:
 | The animatic is the primary creative reference; documents follow the film | conflict rule extended above all documents | Law 17, `11` |
 | Scenes, not stills — whole-scene performance, the edit selects | `05`'s per-shot generation becomes coverage of scene masters | Law 16, `05` performance layer |
 | First-screening notes: living performance, drama escalation, camera as actor, dialogue trailer pass | — (drives Script v2 + performance layer) | `12`, `05` |
+| **Script v2 ADOPTED IN FULL** — L2/L3/L4/L6/L7/L8/L9 rewritten, L13 micro; speech 47.41→46.04s | v1 lines everywhere (`03` Part 1 was the lock) | `12` (record), cascade in all docs |
+| Coverage: **OTS past the Representatives** (assigned 6A) + **gavel→emblem match cut** approved; standing directive — hunt more storytelling transitions, present before changing locked coverage | `03` coverage (additive) | `05` camera-as-actor |
+| Gate 2 on the four plates: owner requests a **stills review** before ruling | — | `08` ledger unchanged, plates stay pending |
 
 ## KIT DISCREPANCIES — RAISED, NOT PATCHED
 

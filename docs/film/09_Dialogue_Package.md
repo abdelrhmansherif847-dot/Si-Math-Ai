@@ -20,18 +20,18 @@ paper document is safe, but **no shot generates against them until they pass Gat
 | # | Who | Line | Target | WPM | Camera | Shot |
 |---|---|---|---|---|---|---|
 | L1 | JZ | This court is now in session. | 2.77s | 130 | Cam 2 | 2 |
-| L2 | LZ | Then let me ask a few questions. | 2.55s | 165 | Cam 12/A axis — 35mm arc | 4 |
-| L3 | LZ | Who knows exactly *where*… | 2.91s | 165 | Cam 12/A | 5A |
-| L4 | LZ | Who knows *why*… | 2.91s | 165 | B reverse → Cam 12/A (whip) | 6A |
+| L2 | LZ | Good. I have questions. | 1.45s | 165 | Cam 12/A axis — 35mm arc | 4 |
+| L3 | LZ | Who saw the exact moment it broke? | 2.55s | 165 | Cam 12/A | 5A |
+| L4 | LZ | And who knows *why*?… | 2.91s | 165 | B reverse → Cam 12/A (whip) | 6A |
 | L5 | LZ | A concept gap. A calculation slip… | 3.27s | 165 | Cam 12/A axis — 180° orbit | 7A |
-| L6 | LZ | …the same mistake — for *weeks*? | 2.55s | 165 | Cam 12/A axis — 24mm pull-back | 8A |
-| L7 | LZ | Who turns one wrong answer into a plan? | 2.91s | 165 | Cam 12/A — **locked** | 9A |
-| L8 | LZ | Who knows what to study *next*? | 2.18s | 165 | Cam 12/A — rise | 10A |
-| L9 | LZ | Who walks the whole road… | 4.73s | 165 | Cam 12/A axis — 24mm crane | 11A |
+| L6 | LZ | The same mistake. Eight times. Who noticed? | 2.55s | 165 | Cam 12/A axis — 24mm pull-back | 8A |
+| L7 | LZ | And who turns that mistake into a plan? | 2.91s | 165 | Cam 12/A — **locked** | 9A |
+| L8 | LZ | Who tells the student what comes next? | 2.55s | 165 | Cam 12/A — rise | 10A |
+| L9 | LZ | Who walks the whole road… | 4.00s | 165 | Cam 12/A axis — 24mm crane | 11A |
 | L10 | LZ | The defence rests. | 1.09s | 165 | Cam 12/A — 85mm locked | 12 |
 | L11 | JZ | You are intelligent. | 1.33s | 135 | Cam 2 — 50mm locked | 13A |
 | L12 | JZ | But this one was built for students. | 3.11s | 135 | Cam 2 — 85mm | 13B |
-| L13 | JZ | It doesn't just solve math. | 2.22s | 135 | Orbit A — 24mm wide | 14A |
+| L13 | JZ | It does not just solve math. | 2.67s | 135 | Orbit A — 24mm wide | 14A |
 | L14 | JZ | It understands how students learn. | 2.22s | 135 | Orbit B — 35mm MCU | 14B |
 | L15 | JZ | Every mistake tells a story. | 2.22s | 135 | Cam 2 — 35mm full | 15A |
 | L16 | JZ | Every step reveals a weakness. | 2.22s | 135 | Cam 2 — 50mm MCU | 15B |
@@ -59,8 +59,8 @@ of the film's dialogue coverage is already decided.
 | **Camera** | Cam 2 · 50mm · Center Court floor looking up · MCU · slow push-in |
 | **Notes** | Glasses **ON**. Emblem centred above his head — the framing that returns in 13 and 15. First face of the film: brand and character fuse in one image. |
 
-### L2 · LAWYER ZERO · Shot 4 · 2.55s @ 165 wpm
-> **"Then let me ask a few questions."**
+### L2 · LAWYER ZERO · Shot 4 · 1.45s @ 165 wpm
+> **"Good. I have questions."**
 
 | | |
 |---|---|
@@ -77,8 +77,8 @@ of the film's dialogue coverage is already decided.
 *Eight questions to five figures who cannot answer one of them. Every A-cut is followed by the
 Silence beat on the B reverse — never skipped. The rhythm accelerates; he does not.*
 
-### L3 · LAWYER ZERO · Shot 5A · 2.91s @ 165 wpm
-> **"Who knows exactly *where* the student went wrong?"**
+### L3 · LAWYER ZERO · Shot 5A · 2.55s @ 165 wpm
+> **"Who saw the exact moment it broke?"**
 
 | | |
 |---|---|
@@ -86,10 +86,10 @@ Silence beat on the B reverse — never skipped. The rhythm accelerates; he does
 | **Facial expression** | `THE QUESTION` — sharp, focused, cross-examination intensity. |
 | **Eye direction** | **To the grey table**, held. He does **not** look at the hologram — he watches the jury. |
 | **Camera** | Cam 12/A · 50mm · eye level · medium · slow push |
-| **Notes** | Stress **where**. One claw raised toward the exhibit without looking at it. |
+| **Notes** | **'Broke'** set down like an evidence bag — heavier, not louder. One claw raised toward the exhibit without looking at it. |
 
 ### L4 · LAWYER ZERO · Shot 6A · 2.91s @ 165 wpm
-> **"Who knows *why* — instead of only saying 'wrong'?"**
+> **"And who knows *why*? Anyone can say 'wrong.'"**
 
 | | |
 |---|---|
@@ -111,7 +111,7 @@ Silence beat on the B reverse — never skipped. The rhythm accelerates; he does
 | **Notes** | One icon ignites per beat; cut lands on each syllable. Do not let "Or time?" trail upward — it is a question, not a shrug. Tail counterweights the turn. |
 
 ### L6 · LAWYER ZERO · Shot 8A · 2.55s @ 165 wpm
-> **"Who sees the same mistake — for *weeks*?"**
+> **"The same mistake. Eight times. Who noticed?"**
 
 | | |
 |---|---|
@@ -119,10 +119,10 @@ Silence beat on the B reverse — never skipped. The rhythm accelerates; he does
 | **Facial expression** | `THE QUESTION`, softening — the first crack of concern rather than prosecution. |
 | **Eye direction** | To the grey table, then up as the timeline multiplies past the frame edges. |
 | **Camera** | Cam 12/A axis · 24mm · rising · medium going wide — fast pull-back |
-| **Notes** | The dash is a **real pause**. **Weeks** lands like evidence set on a table — the camera shows scale on that exact word. |
+| **Notes** | Three jabs, counted like exhibits; 'Who noticed?' is quiet. The camera shows scale on **'Eight times'** — the pull-back lands on it. |
 
 ### L7 · LAWYER ZERO · Shot 9A · 2.91s @ 165 wpm — ⚑ THE TURN
-> **"Who turns one wrong answer into a plan?"**
+> **"And who turns that mistake into a plan?"**
 
 | | |
 |---|---|
@@ -132,8 +132,8 @@ Silence beat on the B reverse — never skipped. The rhythm accelerates; he does
 | **Camera** | Cam 12/A · 50mm · eye level · medium · **LOCKED** — first static A-cut of the act |
 | **Notes** | Stillness marks the turn; the transformation (chaos → architecture) does the moving. From here the showman recedes and the believer shows through. Errors stop being shameful. |
 
-### L8 · LAWYER ZERO · Shot 10A · 2.18s @ 165 wpm
-> **"Who knows what to study *next*?"**
+### L8 · LAWYER ZERO · Shot 10A · 2.55s @ 165 wpm
+> **"Who tells the student what comes next?"**
 
 | | |
 |---|---|
@@ -141,10 +141,10 @@ Silence beat on the B reverse — never skipped. The rhythm accelerates; he does
 | **Facial expression** | `CONFIDENT`. |
 | **Eye direction** | Up and forward, rising with the card. Not to the grey table — he is past them now. |
 | **Camera** | Cam 12/A · 50mm · rising with the card · MCU |
-| **Notes** | Stress **next**. |
+| **Notes** | **'The student'** said gently — the first soft word in the act. |
 
-### L9 · LAWYER ZERO · Shot 11A · 4.73s @ 165 wpm
-> **"Who walks the whole road — from the first question to the target score?"**
+### L9 · LAWYER ZERO · Shot 11A · 4.00s @ 165 wpm
+> **"Who walks the whole road with them — first question to target score?"**
 
 | | |
 |---|---|
@@ -152,7 +152,7 @@ Silence beat on the B reverse — never skipped. The rhythm accelerates; he does
 | **Facial expression** | `THE PUNCHLINE` — open, charismatic. Thrown to camera, not to the table. |
 | **Eye direction** | Along the luminous path unrolling from his feet **toward the bench**, then to camera. |
 | **Camera** | Cam 12/A axis · 24mm · crane ascending · wide |
-| **Notes** | Let it breathe at the dash. The film's biggest camera move on the film's biggest promise. Path stays **inside** the room, aimed at the bench. |
+| **Notes** | Let it breathe after "with them." The film's biggest camera move on the film's biggest promise. Path stays **inside** the room, aimed at the bench. |
 
 ### L10 · LAWYER ZERO · Shot 12 · 1.09s @ 165 wpm
 > **"The defence rests."**
@@ -194,8 +194,8 @@ stillness is the loudest choice available.*
 | **Camera** | Cam 2 · 85mm · low · CU · push-in of only a few inches |
 | **Notes** | Glasses **OFF from here to the end of the film**. Without them his eyes are fully readable for the first time. One blink **before** this line. |
 
-### L13 · JUDGE ZERO · Shot 14A · 2.22s @ 135 wpm
-> **"It doesn't just solve math."**
+### L13 · JUDGE ZERO · Shot 14A · 2.67s @ 135 wpm
+> **"It does not just solve math."**
 
 | | |
 |---|---|

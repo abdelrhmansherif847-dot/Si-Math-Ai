@@ -120,18 +120,18 @@ now **5.32s** and total speech **47.41s**, so the silence budget grows by 0.68s 
 | # | Speaker | Words | wpm | Target | Shot |
 |---|---|---|---|---|---|
 | L1 | JZ | 6 | 130 | 2.77s | 2 |
-| L2 | LZ | 7 | **165** | **2.55s** | 4 ⚠ |
-| L3 | LZ | 8 | 165 | 2.91s | 5 |
+| L2 | LZ | 4 | **165** | **1.45s** | 4 ⚠ |
+| L3 | LZ | 7 | 165 | 2.55s | 5 |
 | L4 | LZ | 8 | 165 | 2.91s | 6 |
 | L5 | LZ | 9 | 165 | 3.27s | 7 |
 | L6 | LZ | 7 | 165 | 2.55s | 8 |
 | L7 | LZ | 8 | 165 | 2.91s | 9 |
-| L8 | LZ | 6 | 165 | 2.18s | 10 |
-| L9 | LZ | 13 | 165 | 4.73s | 11 |
+| L8 | LZ | 7 | 165 | 2.55s | 10 |
+| L9 | LZ | 11 | 165 | 4.00s | 11 |
 | L10 | LZ | 3 | 165 | 1.09s | 12 |
 | L11 | JZ | 3 | 135 | 1.33s | 13A |
 | L12 | JZ | 7 | 135 | 3.11s | 13B |
-| L13 | JZ | 5 | 135 | 2.22s | 14A |
+| L13 | JZ | 6 | 135 | 2.67s | 14A |
 | L14 | JZ | 5 | 135 | 2.22s | 14B |
 | L15 | JZ | 5 | 135 | 2.22s | 15A |
 | L16 | JZ | 5 | 135 | 2.22s | 15B |
@@ -149,7 +149,7 @@ out of Act III. The verdict's pauses are the film.
 Raised, not silently patched — both need an owner call, and neither blocks recording.
 
 **(a) Shot 4 gives L2 one second; the line needs ~2.6s. — STILL OPEN**
-Shot 4 runs 0:09–0:10. L2 *"Then let me ask a few questions."* now budgets at 2.55s. Act II cannot
+Shot 4 runs 0:09–0:10. L2 *"Good. I have questions."* now budgets at 2.55s. Act II cannot
 absorb the overhang either: its speech (22.5s) plus its silence (5.5s) equals exactly its 28s length
 (0:10–0:38), leaving zero slack. So either Shot 4 extends and Act II compresses, or L2 deliberately
 overlaps the Shot 4 → Shot 5 cut. Overlapping is normal grammar and probably the intent — but it
@@ -217,18 +217,18 @@ input to that shot's `seedance_2_0` call.
 | # | Speaker | Line | Media ID | Duration | Status |
 |---|---|---|---|---|---|
 | L1 | JZ | This court is now in session. | — | — | not recorded |
-| L2 | LZ | Then let me ask a few questions. | — | — | not recorded |
-| L3 | LZ | Who knows exactly *where* the student went wrong? | — | — | not recorded |
-| L4 | LZ | Who knows *why* — instead of only saying 'wrong'? | — | — | not recorded |
+| L2 | LZ | Good. I have questions. | — | — | not recorded |
+| L3 | LZ | Who saw the exact moment it broke? | — | — | not recorded |
+| L4 | LZ | And who knows *why*? Anyone can say 'wrong.' | — | — | not recorded |
 | L5 | LZ | A concept gap. A calculation slip. Carelessness. Or time? | — | — | not recorded |
-| L6 | LZ | Who sees the same mistake — for *weeks*? | — | — | not recorded |
-| L7 | LZ | Who turns one wrong answer into a plan? | — | — | not recorded |
-| L8 | LZ | Who knows what to study *next*? | — | — | not recorded |
-| L9 | LZ | Who walks the whole road — from the first question to the target score? | — | — | not recorded |
+| L6 | LZ | The same mistake. Eight times. Who noticed? | — | — | not recorded |
+| L7 | LZ | And who turns that mistake into a plan? | — | — | not recorded |
+| L8 | LZ | Who tells the student what comes next? | — | — | not recorded |
+| L9 | LZ | Who walks the whole road with them — first question to target score? | — | — | not recorded |
 | L10 | LZ | The defence rests. | — | — | not recorded |
 | L11 | JZ | You are intelligent. | — | — | not recorded |
 | L12 | JZ | But this one was built for students. | — | — | not recorded |
-| L13 | JZ | It doesn't just solve math. | — | — | not recorded |
+| L13 | JZ | It does not just solve math. | — | — | not recorded |
 | L14 | JZ | It understands how students learn. | — | — | not recorded |
 | L15 | JZ | Every mistake tells a story. | — | — | not recorded |
 | L16 | JZ | Every step reveals a weakness. | — | — | not recorded |

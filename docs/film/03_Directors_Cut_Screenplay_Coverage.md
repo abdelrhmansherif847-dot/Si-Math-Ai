@@ -18,18 +18,18 @@ Nineteen lines. Final. English. No placeholders. Any wording change after this p
 | # | Speaker | Line | Delivery |
 |---|---|---|---|
 | L1 | JUDGE ZERO | "This court is now in session." | Stated, not announced. He is confirming what the room already knows. |
-| L2 | LAWYER ZERO | "Then let me ask a few questions." | Light. Almost pleasant. The trap is already built. |
-| L3 | LAWYER ZERO | "Who knows exactly *where* the student went wrong?" | The first strike. Direct, to the grey table. |
-| L4 | LAWYER ZERO | "Who knows *why* — instead of only saying 'wrong'?" | Faster. The italicised word carries the sentence. |
+| L2 | LAWYER ZERO | "Good. I have questions." | Light. Almost pleasant. The trap is already built. |
+| L3 | LAWYER ZERO | "Who saw the exact moment it broke?" | The first strike. Direct, to the grey table. |
+| L4 | LAWYER ZERO | "And who knows *why*? Anyone can say 'wrong.'" | Faster. The italicised word carries the sentence. |
 | L5 | LAWYER ZERO | "A concept gap. A calculation slip. Carelessness. Or time?" | Four beats, metronome-even. He counts them on his claws. |
-| L6 | LAWYER ZERO | "Who sees the same mistake — for *weeks*?" | The dash is a real pause. "Weeks" lands like evidence. |
-| L7 | LAWYER ZERO | "Who turns one wrong answer into a plan?" | Warmer. This is the line where prosecution becomes advocacy. |
-| L8 | LAWYER ZERO | "Who knows what to study *next*?" | Quick, confident, already moving. |
-| L9 | LAWYER ZERO | "Who walks the whole road — from the first question to the target score?" | The longest line he has. Let it breathe mid-dash. |
+| L6 | LAWYER ZERO | "The same mistake. Eight times. Who noticed?" | Three fragments, three jabs, counted like exhibits. "Who noticed?" is quiet. |
+| L7 | LAWYER ZERO | "And who turns that mistake into a plan?" | Warmer. This is the line where prosecution becomes advocacy. |
+| L8 | LAWYER ZERO | "Who tells the student what comes next?" | Quick, confident, already moving. |
+| L9 | LAWYER ZERO | "Who walks the whole road with them — first question to target score?" | The longest line he has. Let it breathe after 'with them' — that pause is the promise. |
 | L10 | LAWYER ZERO | "The defence rests." | Quiet. Final. He is done, and he knows he has won. |
 | L11 | JUDGE ZERO | "You are intelligent." | To the grey table. Generous, and true. No irony — the ruling is fair, which is what makes it land. |
 | L12 | JUDGE ZERO | "But this one was built for students." | The verdict. Slow. Each word placed like a stone. |
-| L13 | JUDGE ZERO | "It doesn't just solve math." | Over the rising constellation. Pride held under the robe. |
+| L13 | JUDGE ZERO | "It does not just solve math." | Over the rising constellation. Pride held under the robe. |
 | L14 | JUDGE ZERO | "It understands how students learn." | The thesis. Slowest line in the film. |
 | L15 | JUDGE ZERO | "Every mistake tells a story." | First law. Struck into marble. |
 | L16 | JUDGE ZERO | "Every step reveals a weakness." | Second law. Same cadence exactly. |
@@ -63,7 +63,7 @@ Camera grammar for the film: **Judge Zero is always framed from below** (authori
 ### SHOT 3 — MASTER *(no line — locked, animated, in the can)*
 The crane reveal. Geography lesson. Warm left, grey right, empty glowing centre.
 
-### SHOT 4 — L2 · "Then let me ask a few questions."
+### SHOT 4 — L2 · "Good. I have questions."
 - **Lens:** 35mm · **height:** eye level · **size:** medium, tracking · **move:** low arc following him out from the defence table (energy entering a still room).
 - **Speaking:** Lawyer Zero. **Listening:** Judge Zero above; the Representatives across the aisle, soft in the background right.
 - **Why this angle:** his introduction is *movement* — the camera physically can't stay still around him, which is the character.
@@ -73,12 +73,12 @@ The crane reveal. Geography lesson. Warm left, grey right, empty glowing centre.
 ## ACT II — THE CROSS-EXAMINATION
 *Each exhibit is three cuts: A (the ask) → B (the Silence at the grey table — never skipped, 0.5s) → C (the exhibit igniting over the floor emblem). The A-cut carries the line and is specified per shot; B is always the same card: 35mm, slightly high, five figures, gold light spilling over them, nothing igniting; C is always over Center Court.*
 
-### SHOT 5 — L3 · "…*where* the student went wrong?"
+### SHOT 5 — L3 · "…the exact moment it broke?"
 - **A-cut:** 50mm · eye level · medium on Lawyer Zero, Center Court, grey table soft in the right of frame · slow push (first question deserves weight).
 - **Listening:** the five, motionless; Judge Zero above, watching over glasses.
 - **Feel:** the game begins. **Changes:** first evidence exists — and one table couldn't answer.
 
-### SHOT 6 — L4 · "…*why* — instead of only saying 'wrong'?"
+### SHOT 6 — L4 · "…*why*? Anyone can say 'wrong.'"
 - **A-cut:** 35mm · eye level · medium-wide · whip-pan FROM the grey table TO him (the camera itself asks "well?").
 - **Feel:** momentum. **Changes:** the pattern of silence is established.
 
@@ -87,21 +87,21 @@ The crane reveal. Geography lesson. Warm left, grey right, empty glowing centre.
 - **Why:** four ideas in one line — the orbit gives each its own background.
 - **Performance:** he counts on his claws; cut lands on each syllable. **Feel:** virtuosity.
 
-### SHOT 8 — L6 · "…the same mistake — for *weeks*?"
+### SHOT 8 — L6 · "The same mistake. Eight times. Who noticed?"
 - **A-cut:** 24mm · rising · medium going wide — fast pull-back as the timeline multiplies past frame edges.
 - **Why:** the line is about scale; the camera *shows* scale on the exact word "weeks."
 - **Feel:** quiet alarm — that's me, thinks every student watching.
 
-### SHOT 9 — L7 · "Who turns one wrong answer into a plan?"
+### SHOT 9 — L7 · "And who turns that mistake into a plan?"
 - **A-cut:** 50mm · eye level · medium · **locked** — first static A-cut of the act; the transformation (chaos → architecture) does the moving.
 - **Why:** stillness marks the emotional turn from prosecution to advocacy.
 - **Feel:** hope enters the film here. **Changes:** errors stop being shameful.
 
-### SHOT 10 — L8 · "Who knows what to study *next*?"
+### SHOT 10 — L8 · "Who tells the student what comes next?"
 - **A-cut:** 50mm · rising with the card · MCU · slow rise (the next step literally lifts).
 - **Feel:** direction. **Changes:** the future has a shape.
 
-### SHOT 11 — L9 · "…from the first question to the target score?"
+### SHOT 11 — L9 · "…with them — first question to target score?"
 - **A-cut:** 24mm · crane ascending · wide · the luminous path unrolls from his feet toward the bench.
 - **Why:** the film's biggest camera move on the film's biggest promise.
 - **Feel:** scope — a journey, not an app. **Changes:** the case is complete.
@@ -125,7 +125,7 @@ The crane reveal. Geography lesson. Warm left, grey right, empty glowing centre.
 - **Performance:** without the glasses his eyes are fully readable for the first time in the film. Hold one full second on them before the line.
 - **Feel:** the hammer, gently laid down. **Changes:** the trial is decided.
 
-### SHOT 14A — L13 · "It doesn't just solve math."
+### SHOT 14A — L13 · "It does not just solve math."
 - **Lens:** 24mm · Center Court · wide · the orbit begins as every exhibit re-ignites into one constellation.
 - **Speaking:** Judge Zero above. **Listening:** Lawyer Zero *inside* the light, arms loose — insert his upturned face (85mm CU, 1s): the advocate becoming a student again.
 - **Feel:** awe. **Changes:** features fuse into a system.
