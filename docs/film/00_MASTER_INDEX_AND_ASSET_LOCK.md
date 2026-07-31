@@ -163,7 +163,7 @@ Camera stills rendered on the wrong model (`nano_banana_flash`, via the ID shift
 | **2** | Upscale the approved Master Frame to 2K | blocked on 1 · call ready in Q1 |
 | **3** | Generate the Continuity Sheet | blocked on 1 · spec complete in `10` |
 | **4** | Cast and record the final voice actor | ⏳ **runs in parallel** — independent of 1–3, and the longest lead time. Booth script `07`, package `09` |
-| **5** | Build the animatic with temporary timing | blocked on 3 and 4 |
+| **5** | Build the animatic with temporary timing | ✅ **v1 built** (`animatic.html`, owner directive 2026-07-31) — full story flow, all 40 cuts, temp VO + temp music. Refined against locked plates + real VO as they land |
 | **6** | Begin animation | blocked on 5 |
 
 Then, unchanged from `03` Part 4: per-shot key frames in script order · dialogue via Seedance 2.0

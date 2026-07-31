@@ -201,6 +201,13 @@ an explicit owner decision** — a single synthetic line inside eighteen human o
 
 ---
 
+## 5b. ANIMATIC SCRATCH TRACK — temp only, 2026-07-31
+
+For the v1 animatic (`animatic.html`), all 19 lines exist as `seed_audio` mp3 scratch takes —
+Alistair (JZ) / Leo (LZ), the two timing-validated audition voices. **These are temporary by
+design and are never final takes:** the §6 production record below stays empty until the human
+session. Their job IDs and URLs live in the animatic file itself, which is their only consumer.
+
 ## 6. RECORD LOG — 19 LINES
 
 Filled in as each line is ingested. `scripts/film/vo-lines.json` is the machine-readable twin;

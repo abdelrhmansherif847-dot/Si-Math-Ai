@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THE AI COURT — Animatic v1</title>
+<style>
+  :root{ --gold:#E8B84B; --navy:#0A1230; --cyan:#7FE3FF; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#05070F;color:#dfe6f5;font-family:Georgia,'Times New Roman',serif;overflow:hidden}
+  #wrap{height:100%;display:flex;align-items:center;justify-content:center;gap:18px;padding:14px}
+  #stage{position:relative;height:min(96vh,calc(96vw*16/9));aspect-ratio:9/16;background:#000;
+         border:1px solid #1c2544;border-radius:6px;overflow:hidden;box-shadow:0 0 60px rgba(20,40,120,.35)}
+  .panel{position:absolute;inset:0;opacity:0}
+  .panel.on{opacity:1}
+  .panel img,.panel video{position:absolute;left:50%;top:50%;width:100%;height:100%;object-fit:cover;
+         transform-origin:center center;translate:-50% -50%}
+  /* treatments */
+  .crimson::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 55%, rgba(220,30,30,.38), rgba(120,0,0,.14) 60%, transparent 85%);mix-blend-mode:screen;pointer-events:none}
+  .dark::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(0,0,5,.72) 78%, rgba(0,0,5,.94));pointer-events:none}
+  .spot::after{content:'';position:absolute;inset:0;background:
+      radial-gradient(ellipse 26% 60% at 34% 58%, transparent 8%, rgba(0,0,4,.9) 60%),
+      radial-gradient(ellipse 26% 60% at 66% 58%, transparent 8%, rgba(0,0,4,.9) 60%),
+      rgba(0,0,4,.55);pointer-events:none}
+  #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:6}
+  /* overlays */
+  #exhibit{position:absolute;left:6%;right:6%;top:30%;text-align:center;z-index:4;opacity:0;transition:opacity .35s;
+           text-shadow:0 0 22px rgba(232,184,75,.9),0 2px 8px #000}
+  #exhibit .big{font-size:clamp(15px,2.6vh,26px);letter-spacing:.14em;color:var(--gold);font-weight:bold;line-height:1.5;white-space:pre-line}
+  #law{position:absolute;left:5%;right:5%;bottom:24%;text-align:center;z-index:4;opacity:0;transition:opacity .5s;
+       font-size:clamp(14px,2.4vh,24px);letter-spacing:.22em;color:var(--gold);font-weight:bold;
+       text-shadow:0 0 26px rgba(232,184,75,.95),0 2px 8px #000}
+  #cap{position:absolute;left:5%;right:5%;top:6%;text-align:center;z-index:4;opacity:0;transition:opacity .35s;
+       font-family:'Courier New',monospace;font-size:clamp(10px,1.5vh,13px);letter-spacing:.08em;color:var(--cyan);
+       text-shadow:0 1px 6px #000}
+  #sub{position:absolute;left:6%;right:6%;bottom:9%;text-align:center;z-index:4;opacity:0;transition:opacity .25s;
+       font-style:italic;font-size:clamp(13px,2.1vh,20px);line-height:1.45;color:#f4f7ff;text-shadow:0 2px 10px #000, 0 0 4px #000}
+  #sub .who{font-style:normal;font-size:.72em;letter-spacing:.2em;color:var(--gold);display:block;margin-bottom:.35em}
+  #title{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         gap:2.2vh;z-index:5;opacity:0;transition:opacity .8s;text-align:center;padding:0 8%}
+  #title .t1{font-size:clamp(26px,5vh,54px);letter-spacing:.3em;color:var(--gold);font-weight:bold;text-shadow:0 0 40px rgba(232,184,75,.5)}
+  #title .t2{font-size:clamp(12px,2vh,18px);letter-spacing:.12em;color:#cfd8ee;font-style:italic}
+  #title .t3{font-size:clamp(10px,1.6vh,14px);letter-spacing:.28em;color:#8a96b8}
+  /* chrome */
+  #hud{position:absolute;left:2.5%;bottom:2.5%;z-index:5;font-family:'Courier New',monospace;font-size:clamp(9px,1.4vh,12px);
+       color:#9fb4e8;background:rgba(4,8,22,.62);padding:.5em .7em;border:1px solid #223059;border-radius:4px;white-space:pre-line}
+  #wm{position:absolute;right:2.5%;top:2%;z-index:5;font-family:'Courier New',monospace;font-size:clamp(8px,1.25vh,11px);
+      letter-spacing:.1em;color:#ffb35c;background:rgba(20,8,2,.55);border:1px solid #4d3013;padding:.4em .6em;border-radius:4px;text-align:right}
+  #tc{position:absolute;right:2.5%;bottom:2.5%;z-index:5;font-family:'Courier New',monospace;font-size:clamp(10px,1.5vh,13px);color:#c6d2f2;
+      background:rgba(4,8,22,.62);padding:.45em .65em;border:1px solid #223059;border-radius:4px}
+  #gate{position:absolute;inset:0;z-index:9;background:rgba(3,5,12,.93);display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:2.4vh;text-align:center;padding:0 9%}
+  #gate h1{font-size:clamp(18px,3vh,30px);letter-spacing:.24em;color:var(--gold)}
+  #gate p{font-size:clamp(11px,1.7vh,14px);color:#aebadd;line-height:1.8;font-family:'Courier New',monospace}
+  #gate button{font-family:inherit;font-size:clamp(14px,2.2vh,20px);letter-spacing:.28em;padding:.8em 2.4em;cursor:pointer;
+        background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:3px}
+  #gate button:hover{background:rgba(232,184,75,.12)}
+  #side{width:230px;max-width:24vw;font-family:'Courier New',monospace;font-size:12px;color:#8fa0c8;line-height:1.85}
+  #side h2{font-size:12px;letter-spacing:.2em;color:var(--gold);margin-bottom:.6em}
+  #side .k{color:#5d6d96}
+  #side button{font-family:inherit;background:none;border:1px solid #33406b;color:#aebadd;border-radius:3px;
+        padding:.35em .8em;margin:.2em .3em .2em 0;cursor:pointer;font-size:11px}
+  #side button:hover{border-color:var(--gold);color:var(--gold)}
+  @media (max-aspect-ratio: 4/5){ #side{display:none} }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <div class="panel" id="pA"><img alt=""></div>
+    <div class="panel" id="pB"><img alt=""></div>
+    <div class="panel" id="pV"><video muted playsinline preload="auto"></video></div>
+    <div id="exhibit"><div class="big"></div></div>
+    <div id="law"></div>
+    <div id="cap"></div>
+    <div id="sub"><span class="who"></span><span class="txt"></span></div>
+    <div id="title"><div class="t1">SI MATH AI</div><div class="t2">More than an AI. A complete learning journey.</div><div class="t3">SIMATHAI.COM</div></div>
+    <div id="fade"></div>
+    <div id="wm">ANIMATIC v1 — TEMP<br>temp VO · temp music · panels pending Gate 2</div>
+    <div id="hud"></div>
+    <div id="tc">00:00</div>
+    <div id="gate">
+      <h1>THE AI COURT</h1>
+      <p>ANIMATIC v1 · ~1:43 (temp read runs long — the human session cuts to 76s) · sound on<br><br>
+      four production plates · shot 3 in the can<br>
+      temp dialogue (seed tts scratch) · temp music (synthesized live)<br>
+      every real asset it shows is PENDING GATE 2<br><br>
+      H — director HUD · SPACE — pause · R — restart</p>
+      <button id="play">▶&nbsp;&nbsp;SCREEN&nbsp;IT</button>
+    </div>
+  </div>
+  <div id="side">
+    <h2>THE AI COURT · v1</h2>
+    <div><span class="k">shot</span> <span id="sShot">—</span></div>
+    <div><span class="k">act</span> <span id="sAct">—</span></div>
+    <div><span class="k">cut</span> <span id="sCut">—</span></div>
+    <div style="margin-top:1em">
+      <button id="bPause">pause</button><button id="bRestart">restart</button><button id="bHud">hud</button>
+    </div>
+    <div style="margin-top:1.2em;color:#5d6d96">picture is cut to the read.<br>silence is part of the dialogue.</div>
+  </div>
+</div>
+
+<script>
+/* ============ ASSETS ============ */
+const CDN='https://d8j0ntlcm91z4.cloudfront.net/user_3GuZ71nsCJK009wcXCbnJdjmPzc/';
+const IMG={
+  MASTER:CDN+'hf_20260731_190244_0f0b8381-fa06-427e-8f03-57df41598428.png',
+  CAM2:  CDN+'hf_20260731_210656_e60f6a38-bd05-495a-8e69-740e280fbf13.png',
+  CAM12: CDN+'hf_20260731_210732_6130e45b-2c39-4872-afbf-aed369d9d6d3.png',
+  GREY:  CDN+'hf_20260731_210748_f450ac37-4c4c-47fa-89e9-acb99dee42aa.png'
+};
+const VID3=CDN+'hf_20260731_190450_010057d4-5488-4bc5-aa87-9f1869cc9e6f.mp4';
+
+/* Temp VO — seed_audio scratch takes. job id → url + measured duration.
+   PATCHED IN by the build after generation; missing lines fall back to target_sec. */
+const AUDIO={
+ L1:{url:CDN+'hf_20260731_222425_dd054f80-e462-449b-b326-72a1587f53ac.mp3',dur:4.26},
+ L2:{url:CDN+'hf_20260731_222444_35814cfe-1fc4-4075-bcf5-320e9c3d9108.mp3',dur:1.88},
+ L3:{url:CDN+'hf_20260731_222856_bad072d7-a5a3-4be6-894c-c12616cb83b4.mp3',dur:2.35},
+ L4:{url:CDN+'hf_20260731_222900_4cd23c4f-8b30-481f-afb1-3d4196852556.mp3',dur:3.40},
+ L5:{url:CDN+'hf_20260731_222508_f05fb7d1-2350-4351-9714-deaf63eda22a.mp3',dur:4.86},
+ L6:{url:CDN+'hf_20260731_222908_97463c2b-7484-4521-a970-6edbda17749c.mp3',dur:3.03},
+ L7:{url:CDN+'hf_20260731_222524_c5f2ea5a-700e-40dd-b87d-32a1e7f272fa.mp3',dur:2.25},
+ L8:{url:CDN+'hf_20260731_223010_a85bbbca-80a0-4a5f-9f4d-06ce2df53f98.mp3',dur:1.91},
+ L9:{url:CDN+'hf_20260731_222948_7689e5ba-43fe-4902-99ad-4da5787e6ecc.mp3',dur:5.20},
+ L10:{url:CDN+'hf_20260731_223016_68413314-20aa-48e0-bef8-b1a331ba65b3.mp3',dur:1.07},
+ L11:{url:CDN+'hf_20260731_223031_3cbb4878-b455-4509-89f8-848ee5b462fa.mp3',dur:2.06},
+ L12:{url:CDN+'hf_20260731_223040_11278509-78e0-4d92-bc79-45dda63e2ce8.mp3',dur:4.68},
+ L13:{url:CDN+'hf_20260731_223051_5f07e236-c447-4291-8e09-87d44220a6b4.mp3',dur:2.72},
+ L14:{url:CDN+'hf_20260731_223057_8570e32d-fae6-4651-bbf0-15c46b7676ea.mp3',dur:3.47},
+ L15:{url:CDN+'hf_20260731_223121_d19112d7-e6ed-4bf4-ad48-59a973cd1350.mp3',dur:2.90},
+ L16:{url:CDN+'hf_20260731_223115_6d3395d2-4b64-4858-9a3a-0314c14c4391.mp3',dur:3.45},
+ L17:{url:CDN+'hf_20260731_223125_e2bf1748-2c49-4fd9-86f6-07f2a2a56e5f.mp3',dur:3.27},
+ L18:{url:CDN+'hf_20260731_223159_15cdfc30-93cb-433c-bf8e-653affb7e703.mp3',dur:3.79},
+ L19:{url:CDN+'hf_20260731_223207_299fa9b5-dbcb-4bc7-bd6b-bcd7049487f2.mp3',dur:1.36}
+};
+
+const LINES={
+ L1:{who:'JUDGE ZERO', t:2.77, txt:'This court is now in session.'},
+ L2:{who:'LAWYER ZERO',t:2.55, txt:'Then let me ask a few questions.'},
+ L3:{who:'LAWYER ZERO',t:2.91, txt:'Who knows exactly where the student went wrong?'},
+ L4:{who:'LAWYER ZERO',t:2.91, txt:"Who knows why — instead of only saying 'wrong'?"},
+ L5:{who:'LAWYER ZERO',t:3.27, txt:'A concept gap. A calculation slip. Carelessness. Or time?'},
+ L6:{who:'LAWYER ZERO',t:2.55, txt:'Who sees the same mistake — for weeks?'},
+ L7:{who:'LAWYER ZERO',t:2.91, txt:'Who turns one wrong answer into a plan?'},
+ L8:{who:'LAWYER ZERO',t:2.18, txt:'Who knows what to study next?'},
+ L9:{who:'LAWYER ZERO',t:4.73, txt:'Who walks the whole road — from the first question to the target score?'},
+ L10:{who:'LAWYER ZERO',t:1.09,txt:'The defence rests.'},
+ L11:{who:'JUDGE ZERO', t:1.33,txt:'You are intelligent.'},
+ L12:{who:'JUDGE ZERO', t:3.11,txt:'But this one was built for students.'},
+ L13:{who:'JUDGE ZERO', t:2.22,txt:"It doesn't just solve math."},
+ L14:{who:'JUDGE ZERO', t:2.22,txt:'It understands how students learn.'},
+ L15:{who:'JUDGE ZERO', t:2.22,txt:'Every mistake tells a story.'},
+ L16:{who:'JUDGE ZERO', t:2.22,txt:'Every step reveals a weakness.'},
+ L17:{who:'JUDGE ZERO', t:2.22,txt:'Every weakness becomes a plan.'},
+ L18:{who:'JUDGE ZERO', t:2.22,txt:"Students don't need another chatbot."},
+ L19:{who:'LAWYER ZERO',t:1.78,txt:'They need a mentor.'}
+};
+
+/* ============ THE CUT LIST ============ */
+/* img | video:true | line | dur (s, or null → line audio + pad) | delay (s before line audio)
+   from/to = transform keyframes | fx = panel class | ex = exhibit text | law = law text
+   cap = director caption | hud = shot card | cue = music cue | sfx | fadeOut (s) */
+const CUTS=[
+ {act:'I', shot:'1', img:'CAM2', dur:3.0, from:'scale(2.7) translate(6%,34%)', to:'scale(2.55) translate(6%,32%)',
+  cap:'the strike — sound before image', hud:'SHOT 1 · 85mm macro · bench · locked', cue:'drone', sfx:'gavel'},
+ {act:'I', shot:'2', img:'CAM2', line:'L1', from:'scale(1.0)', to:'scale(1.12)',
+  hud:'SHOT 2 · 50mm · floor looking up · slow push'},
+ {act:'I', shot:'3', video:true, dur:3.2, cap:'the room — in the can',
+  hud:'SHOT 3 · MASTER · crane reveal · ✅ FINAL FOOTAGE'},
+ {act:'I', shot:'4', img:'CAM12', line:'L2', from:'scale(1.16) translate(4%,2%)', to:'scale(1.12) translate(-4%,0%)',
+  hud:'SHOT 4 · 35mm · eye level · tracking arc', cue:'pulse90'},
+
+ /* ACT II — A (the ask) → B (the Silence) → C (the exhibit) */
+ {act:'II', shot:'5A', img:'CAM12', line:'L3', from:'scale(1.05)', to:'scale(1.14)',
+  hud:'SHOT 5A · 50mm · slow push'},
+ {act:'II', shot:'5B', img:'GREY', dur:0.6, from:'scale(1.02)', to:'scale(1.04)',
+  cap:'THE SILENCE — nothing ignites above them', hud:'SHOT 5B · 35mm high · the film’s argument'},
+ {act:'II', shot:'5C', img:'MASTER', dur:1.5, fx:'crimson', from:'scale(1.3) translate(0,6%)', to:'scale(1.42) translate(0,7%)',
+  ex:'EXHIBIT A — FIRST ERROR\nSTEP 1 ✓ · STEP 2 ✓ · STEP 3 ✗', hud:'SHOT 5C · exhibit over Center Court'},
+
+ {act:'II', shot:'6A', img:'CAM12', line:'L4', wipe:true, from:'scale(1.1) translate(-3%,0)', to:'scale(1.12) translate(0,0)',
+  hud:'SHOT 6A · 35mm · whip-pan in'},
+ {act:'II', shot:'6B', img:'GREY', dur:0.55, from:'scale(1.04)', to:'scale(1.06)', hud:'SHOT 6B · the Silence'},
+ {act:'II', shot:'6C', img:'MASTER', dur:1.1, from:'scale(1.34) translate(0,6%)', to:'scale(1.44) translate(0,7%)',
+  ex:'EXHIBIT B — ROOT CAUSE', hud:'SHOT 6C'},
+
+ {act:'II', shot:'7A', img:'CAM12', line:'L5', from:'scale(1.06) translate(3%,0)', to:'scale(1.06) translate(-3%,0)',
+  hud:'SHOT 7A · 35mm · orbit — he walks against it'},
+ {act:'II', shot:'7B', img:'GREY', dur:0.55, from:'scale(1.03)', to:'scale(1.05)', hud:'SHOT 7B · the Silence'},
+ {act:'II', shot:'7C', img:'MASTER', dur:1.1, from:'scale(1.28)', to:'scale(1.36)',
+  ex:'CONCEPT GAP · CALCULATION SLIP\nCARELESS ERROR · TIME PRESSURE', hud:'SHOT 7C · four icons, four beats'},
+
+ {act:'II', shot:'8A', img:'CAM12', line:'L6', from:'scale(1.28)', to:'scale(1.02)',
+  hud:'SHOT 8A · 24mm · fast pull-back', cue:'pulse110'},
+ {act:'II', shot:'8B', img:'GREY', dur:0.55, from:'scale(1.05)', to:'scale(1.07)', hud:'SHOT 8B · the Silence'},
+ {act:'II', shot:'8C', img:'MASTER', dur:1.1, fx:'crimson', from:'scale(1.2)', to:'scale(1.12)',
+  ex:'EXHIBIT D — REPEATED 8×\nOVER 6 WEEKS', hud:'SHOT 8C · the pattern'},
+
+ {act:'II', shot:'9A', img:'CAM12', line:'L7', from:'scale(1.1)', to:'scale(1.1)',
+  cap:'the turn — prosecution becomes advocacy', hud:'SHOT 9A · 50mm · LOCKED (first still A-cut)'},
+ {act:'II', shot:'9B', img:'GREY', dur:0.55, from:'scale(1.04)', to:'scale(1.06)', hud:'SHOT 9B · the Silence'},
+ {act:'II', shot:'9C', img:'MASTER', dur:1.0, from:'scale(1.26) translate(0,4%)', to:'scale(1.32) translate(0,5%)',
+  ex:'FOCUS PRACTICE\nBUILT FROM YOUR MISTAKES', hud:'SHOT 9C · chaos becomes architecture'},
+
+ {act:'II', shot:'10A', img:'CAM12', line:'L8', from:'scale(1.12) translate(0,2%)', to:'scale(1.16) translate(0,-2%)',
+  hud:'SHOT 10A · 50mm · rising with the card'},
+ {act:'II', shot:'10B', img:'GREY', dur:0.55, from:'scale(1.03)', to:'scale(1.05)', hud:'SHOT 10B · the Silence'},
+ {act:'II', shot:'10C', img:'MASTER', dur:1.0, from:'scale(1.3) translate(0,5%)', to:'scale(1.34) translate(0,2%)',
+  ex:'NEXT LESSON:\nQUADRATIC FUNCTIONS → FACTORING', hud:'SHOT 10C'},
+
+ {act:'II', shot:'11A', img:'CAM12', line:'L9', from:'scale(1.22) translate(0,6%)', to:'scale(1.0) translate(0,-3%)',
+  hud:'SHOT 11A · 24mm · crane ascending'},
+ {act:'II', shot:'11B', img:'GREY', dur:0.55, from:'scale(1.04)', to:'scale(1.06)', hud:'SHOT 11B · the Silence'},
+ {act:'II', shot:'11C', img:'MASTER', dur:1.0, from:'scale(1.16)', to:'scale(1.06)',
+  ex:'FIRST QUESTION ————— TARGET SCORE', hud:'SHOT 11C · the road, aimed at the bench'},
+
+ {act:'II', shot:'12', img:'CAM12', line:'L10', from:'scale(1.5) translate(-2%,-2%)', to:'scale(1.5) translate(-2%,-2%)',
+  cap:'back to the grey table · tie straightened once', hud:'SHOT 12 · 85mm · LOCKED', cueAtLineEnd:'hardStop'},
+ {act:'II', shot:'12·hold', img:'CAM12', dur:1.5, from:'scale(1.5) translate(-2%,-2%)', to:'scale(1.52) translate(-2%,-2%)',
+  cap:'absolute silence — protected', hud:'the 0:38 silence'},
+
+ /* ACT III */
+ {act:'III', shot:'13A', img:'CAM2', line:'L11', delay:1.6, from:'scale(1.3)', to:'scale(1.32)',
+  cap:'file closes · glasses off, two hands — then the line', hud:'SHOT 13A · 50mm low MCU · locked'},
+ {act:'III', shot:'13·insert', img:'GREY', dur:1.3, from:'scale(1.02) translate(0,1%)', to:'scale(1.05) translate(0,-1%)',
+  cap:'THE FIVE STAND — together, unhurried, dignified', hud:'their only movement in the film'},
+ {act:'III', shot:'13B', img:'CAM2', line:'L12', delay:1.4, from:'scale(1.68)', to:'scale(1.74)',
+  cap:'his eyes leave them… move to the Lawyer… and rest. THE VERDICT — before the line', hud:'SHOT 13B · 85mm CU · glasses off to the end'},
+ {act:'III', shot:'14A', img:'MASTER', line:'L13', fx:'', from:'scale(1.12) translate(3%,2%)', to:'scale(1.08) translate(-3%,1%)',
+  cap:'every exhibit re-ignites — one constellation', hud:'SHOT 14A · 24mm · the orbit begins', cue:'swell'},
+ {act:'III', shot:'14·insert', img:'CAM12', dur:1.0, from:'scale(1.9) translate(-4%,-6%)', to:'scale(1.98) translate(-4%,-7%)',
+  cap:'the advocate becomes a student again', hud:'insert · 85mm CU'},
+ {act:'III', shot:'14B', img:'CAM2', line:'L14', from:'scale(1.24)', to:'scale(1.28)',
+  cap:'the thesis — slowest line in the film', hud:'SHOT 14B · 35mm · through the holograms'},
+ {act:'III', shot:'15A', img:'CAM2', line:'L15', law:'EVERY MISTAKE TELLS A STORY', from:'scale(1.0)', to:'scale(1.02)',
+  hud:'SHOT 15A · 35mm full · Cam-2 axis', cue:'lawHit'},
+ {act:'III', shot:'15B', img:'CAM2', line:'L16', law:'EVERY STEP REVEALS A WEAKNESS', from:'scale(1.3)', to:'scale(1.32)',
+  hud:'SHOT 15B · 50mm MCU · same cadence', cue:'lawHit'},
+ {act:'III', shot:'15C', img:'CAM2', line:'L17', law:'EVERY WEAKNESS BECOMES A PLAN', from:'scale(1.66)', to:'scale(1.7)',
+  hud:'SHOT 15C · 85mm CU · half-step softer', cue:'lawHit', sfxAtEnd:'gavel'},
+
+ /* ACT IV */
+ {act:'IV', shot:'16', img:'MASTER', line:'L18', fx:'dark', from:'scale(1.18) translate(0,-4%)', to:'scale(1.14) translate(0,4%)',
+  cap:'he leaves the bench — cane, weight, foot · the room begins to dissolve', hud:'SHOT 16 · 35mm crane descending', cue:'lowString'},
+ {act:'IV', shot:'17', img:'MASTER', line:'L19', delay:1.6, fx:'spot', from:'scale(1.5) translate(0,10%)', to:'scale(1.56) translate(0,10%)',
+  cap:'two shafts of light · they stop — a beat of nothing — then BOTH smile at once  [panel pending — the film’s heart]',
+  hud:'SHOT 17 · 50mm two-shot · profile'},
+ {act:'IV', shot:'18', img:'MASTER', dur:5.0, fx:'dark', from:'scale(1.3) translate(0,8%)', to:'scale(1.48) translate(0,6%)',
+  cap:'THE MERGE — robe and suit dissolve · two silhouettes become one Zero · silence is the design',
+  hud:'SHOT 18 · slow push through the light', cue:'resolve', fadeOut:1.6},
+ {act:'IV', shot:'19', title:true, dur:4.5, hud:'SHOT 19 · title · gold on black', cue:'decay', sfx:'gavelSoft'}
+];
+
+/* ============ MUSIC — synthesized temp score ============ */
+let AC=null, mainGain=null, droneNodes=[], pulseTimer=null, swellNodes=[], stringNodes=[];
+function ac(){ if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); mainGain=AC.createGain(); mainGain.gain.value=.9; mainGain.connect(AC.destination);} return AC; }
+function osc(type,f,g,dest){ const o=ac().createOscillator(), gn=ac().createGain(); o.type=type; o.frequency.value=f; gn.gain.value=0; o.connect(gn); gn.connect(dest||mainGain); o.start(); return {o,g:gn}; }
+function cueDrone(){ const d1=osc('sine',55,.0), d2=osc('sine',110.4,0), d3=osc('sine',164.8,0);
+  [ [d1,.055],[d2,.02],[d3,.008] ].forEach(([n,v])=>n.g.gain.linearRampToValueAtTime(v,ac().currentTime+2.5));
+  droneNodes=[d1,d2,d3]; }
+function beat(){ const t=ac().currentTime, o=ac().createOscillator(), g=ac().createGain();
+  o.type='sine'; o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(44,t+.12);
+  g.gain.setValueAtTime(.16,t); g.gain.exponentialRampToValueAtTime(.001,t+.22); o.connect(g); g.connect(mainGain); o.start(t); o.stop(t+.25); }
+function cuePulse(bpm){ if(pulseTimer)clearInterval(pulseTimer); beat(); pulseTimer=setInterval(beat,60000/bpm); }
+function cueHardStop(){ const t=ac().currentTime;
+  if(pulseTimer){clearInterval(pulseTimer);pulseTimer=null;}
+  [...droneNodes,...swellNodes,...stringNodes].forEach(n=>{try{n.g.gain.cancelScheduledValues(t);n.g.gain.setValueAtTime(n.g.gain.value,t);n.g.gain.linearRampToValueAtTime(0,t+.05);}catch(e){}});
+  droneNodes=[];swellNodes=[];stringNodes=[]; }
+function cueSwell(){ const chord=[110,138.6,164.8,220,277.2];
+  chord.forEach((f,i)=>{ const n=osc('sawtooth',f,0); const flt=ac().createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=900;
+    n.g.disconnect(); n.g.connect(flt); flt.connect(mainGain);
+    n.g.gain.linearRampToValueAtTime(.028-(i*.003), ac().currentTime+2.8); swellNodes.push(n); });
+  const b=osc('sine',55,0); b.g.gain.linearRampToValueAtTime(.05,ac().currentTime+2); swellNodes.push(b); }
+function cueLawHit(){ const t=ac().currentTime, o=ac().createOscillator(), g=ac().createGain();
+  o.type='sine'; o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(38,t+.5);
+  g.gain.setValueAtTime(.22,t); g.gain.exponentialRampToValueAtTime(.001,t+1.6); o.connect(g); g.connect(mainGain); o.start(t); o.stop(t+1.7); }
+function cueLowString(){ cueHardStop(); const n=osc('sawtooth',82.4,0); const flt=ac().createBiquadFilter(); flt.type='lowpass'; flt.frequency.value=420;
+  n.g.disconnect(); n.g.connect(flt); flt.connect(mainGain); n.g.gain.linearRampToValueAtTime(.05,ac().currentTime+3.5);
+  const v=ac().createOscillator(), vg=ac().createGain(); v.frequency.value=4.5; vg.gain.value=1.6; v.connect(vg); vg.connect(n.o.frequency); v.start();
+  stringNodes.push(n); }
+function cueResolve(){ const chord=[110,164.8,220,329.6,440];
+  chord.forEach((f,i)=>{ const n=osc('triangle',f,0); n.g.gain.linearRampToValueAtTime(.05-(i*.007),ac().currentTime+2.2);
+    n.g.gain.setValueAtTime(.05-(i*.007),ac().currentTime+3.4); n.g.gain.linearRampToValueAtTime(0,ac().currentTime+5); swellNodes.push(n); }); }
+function cueDecay(){ [...droneNodes,...swellNodes,...stringNodes].forEach(n=>{try{n.g.gain.linearRampToValueAtTime(0,ac().currentTime+2.5)}catch(e){}}); if(pulseTimer){clearInterval(pulseTimer);pulseTimer=null;} }
+function sfxGavel(soft){ const t=ac().currentTime, buf=ac().createBuffer(1,ac().sampleRate*.25,ac().sampleRate), ch=buf.getChannelData(0);
+  for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/ch.length,3);
+  const s=ac().createBufferSource(); s.buffer=buf; const f=ac().createBiquadFilter(); f.type='bandpass'; f.frequency.value=1300; f.Q.value=1.4;
+  const g=ac().createGain(); g.gain.value=soft?.25:.6; s.connect(f); f.connect(g); g.connect(mainGain); s.start(t);
+  const o=ac().createOscillator(), og=ac().createGain(); o.type='sine'; o.frequency.setValueAtTime(95,t);
+  o.frequency.exponentialRampToValueAtTime(40,t+.18); og.gain.setValueAtTime(soft?.18:.4,t); og.gain.exponentialRampToValueAtTime(.001,t+.4);
+  o.connect(og); og.connect(mainGain); o.start(t); o.stop(t+.45); }
+const CUE={drone:cueDrone,pulse90:()=>cuePulse(90),pulse110:()=>cuePulse(110),hardStop:cueHardStop,swell:cueSwell,lawHit:cueLawHit,lowString:cueLowString,resolve:cueResolve,decay:cueDecay};
+
+/* ============ PLAYER ============ */
+const $=id=>document.getElementById(id);
+const stage=$('stage'), pans=[$('pA'),$('pB')], pV=$('pV');
+let cur=0, cutStart=0, clock=0, playing=false, raf=null, lastTs=0, panFlip=0, audioEl=null, audioTimer=null;
+const players={}; Object.keys(LINES).forEach(k=>{ if(AUDIO[k]){ const a=new Audio(AUDIO[k].url); a.preload='auto'; players[k]=a; } });
+function lineDur(id){ return AUDIO[id]? AUDIO[id].dur : LINES[id].t; }
+function cutDur(c){ if(c.dur!=null&&!c.line) return c.dur;
+  const base=(c.delay||0)+lineDur(c.line)+ (c.shot==='12'?0.25:0.5); return c.dur!=null?Math.max(c.dur,base):base; }
+function fmt(t){ const m=Math.floor(t/60),s=Math.floor(t%60); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+function showCut(i){
+  const c=CUTS[i]; const d=cutDur(c);
+  $('title').style.opacity= c.title?1:0;
+  $('fade').style.transition='none'; $('fade').style.opacity=0;
+  if(c.fadeOut){ setTimeout(()=>{ $('fade').style.transition='opacity '+c.fadeOut+'s linear'; $('fade').style.opacity=1; },(d-c.fadeOut)*1000); }
+  /* panels */
+  pV.classList.remove('on'); pV.querySelector('video').pause();
+  if(c.video){ pans.forEach(p=>p.classList.remove('on')); const v=pV.querySelector('video'); v.src=v.src||VID3; v.currentTime=0; v.play().catch(()=>{}); pV.classList.add('on'); }
+  else if(!c.title){
+    const p=pans[panFlip%2], img=p.querySelector('img');
+    p.className='panel'+(c.fx?' '+c.fx:''); img.src=IMG[c.img];
+    img.style.transition='none'; img.style.transform=c.from||'scale(1)'; void img.offsetWidth;
+    img.style.transition='transform '+d+'s '+(c.wipe?'cubic-bezier(.2,.9,.25,1)':'linear');
+    img.style.transform=c.to||c.from||'scale(1)';
+    p.classList.add('on'); pans[(panFlip+1)%2].classList.remove('on'); panFlip++;
+  } else { pans.forEach(p=>p.classList.remove('on')); }
+  /* overlays */
+  const ex=$('exhibit'); ex.style.opacity=c.ex?1:0; if(c.ex) ex.querySelector('.big').textContent=c.ex;
+  const law=$('law'); law.style.opacity=c.law?1:0; if(c.law) law.textContent=c.law;
+  const cap=$('cap'); cap.style.opacity=c.cap?1:0; if(c.cap) cap.textContent=c.cap;
+  /* dialogue */
+  const sub=$('sub'); sub.style.opacity=0; if(audioTimer){clearTimeout(audioTimer);audioTimer=null;} if(audioEl){audioEl.pause();audioEl=null;}
+  if(c.line){ const go=()=>{ sub.querySelector('.who').textContent=LINES[c.line].who; sub.querySelector('.txt').textContent='“'+LINES[c.line].txt+'”'; sub.style.opacity=1;
+      if(players[c.line]){ audioEl=players[c.line]; audioEl.currentTime=0; audioEl.play().catch(()=>{}); }
+      if(c.cueAtLineEnd) setTimeout(()=>CUE[c.cueAtLineEnd](), lineDur(c.line)*1000); };
+    c.delay? audioTimer=setTimeout(go,c.delay*1000) : go(); }
+  /* music + sfx + hud */
+  if(c.cue) CUE[c.cue]();
+  if(c.sfx) (c.sfx==='gavelSoft'?sfxGavel(true):sfxGavel(false));
+  if(c.sfxAtEnd) setTimeout(()=>sfxGavel(false),(d-0.4)*1000);
+  $('hud').textContent='ACT '+c.act+'\n'+(c.hud||'');
+  $('sShot').textContent=c.shot; $('sAct').textContent=c.act; $('sCut').textContent=(i+1)+' / '+CUTS.length;
+}
+function tick(ts){ if(!playing)return; if(lastTs) clock+=(ts-lastTs)/1000; lastTs=ts;
+  $('tc').textContent=fmt(clock);
+  if(clock-cutStart>=cutDur(CUTS[cur])){ cur++; if(cur>=CUTS.length){ playing=false; $('gate').style.display='flex'; $('play').textContent='▶  AGAIN'; cueHardStop(); return; } cutStart=clock; showCut(cur); }
+  raf=requestAnimationFrame(tick); }
+function start(){ ac().resume(); $('gate').style.display='none'; cueHardStop(); cur=0; clock=0; cutStart=0; lastTs=0; playing=true; showCut(0); raf=requestAnimationFrame(tick); }
+function togglePause(){ if(!playing&&clock>0&&cur<CUTS.length){ playing=true; lastTs=0; if(audioEl)audioEl.play().catch(()=>{}); ac().resume(); raf=requestAnimationFrame(tick); }
+  else if(playing){ playing=false; if(audioEl)audioEl.pause(); AC&&AC.suspend(); } }
+$('play').onclick=start; $('bRestart').onclick=()=>{cueHardStop();start();}; $('bPause').onclick=togglePause;
+$('bHud').onclick=()=>{const h=$('hud');h.style.display=h.style.display==='none'?'block':'none';};
+document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault();togglePause();}
+  if(e.key==='r'||e.key==='R'){cueHardStop();start();} if(e.key==='h'||e.key==='H'){$('bHud').onclick();} });
+Object.values(IMG).forEach(u=>{const i=new Image();i.src=u;});
+</script>
+</body>
+</html>
