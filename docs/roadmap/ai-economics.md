@@ -1856,8 +1856,28 @@ confirmed by the Owner (§15 Q9 — decided 2026-07-28).
 
 ### Phase 3 — AI Telemetry ⚠ *the only phase that touches production code*
 
-**Status: database applied and verified 2026-07-28. Edge Function v90 NOT
-deployed — awaiting the Deployment Readiness Review Go decision.**
+**Status: ✅ COMPLETE — database applied 2026-07-28; Edge Function deployed and
+emitting in production since 2026-07-29. Exit criteria met 2026-07-31.**
+
+Deployment history: v90 was deployed and immediately rolled forward to **v91**
+after a Temporal Dead Zone `ReferenceError` (`imagesData` read before its
+declaration) broke every request; the telemetry block itself was never at
+fault and wrote no partial rows. Later tutor work has since carried the
+function to **v95**, with the Phase 3 telemetry path unchanged throughout.
+
+Exit measured over 2026-07-29 11:15 → 2026-07-31 16:43 UTC:
+
+| Criterion | Required | Actual |
+|---|---|---|
+| Clean production emission | ≥ 48 h | **53.5 h** |
+| Volume gate | ≥ 20 student questions | **27** |
+| Every `service_code` resolves to a catalog row | yes | **9/9 combinations, 100% registered** |
+| Emission errors | — | **0 of 76 rows** |
+| p95 response latency | unchanged | no regression observed |
+
+One caveat carried into Phase 4: **100% of those 76 rows are internal
+(admin/owner) traffic.** The pipeline is proven; the business numbers are not
+yet student numbers.
 Reviews: **`phase-3-implementation-review.md`** (plan, risks, rollback),
 **`phase-3-telemetry-integrity-review.md`** (7 findings, verdict unqualified),
 **`phase-3-deployment-readiness.md`** (checklist, baselines, Go/No-Go),
@@ -1887,6 +1907,34 @@ expected fan-out in §5.2; every emitted `service_code` resolves to a Phase 2
 catalog row; p95 response latency unchanged.
 
 ### Phase 4 — Cost Engine
+
+**Status: ⏸ PREPARED, NOT APPLIED — awaiting individual migration approval
+(CLAUDE.md §3).**
+Review: **`docs/roadmap/phase-4-implementation-review.md`**.
+
+| Artifact | Path |
+|---|---|
+| Migration (**not applied**) | `supabase/migrations/20260731_aiecon_p4_cost_engine.sql` |
+| Verification | `scripts/verify-cost-engine.sql` — 28 checks (P4-01…P4-28) |
+
+Validated end-to-end against a local PostgreSQL 16.13 instance carrying the
+production schema shape, the 9 real catalog bindings, and telemetry covering
+every case the engine must handle — including the four production has **zero**
+instances of today (shared multi-question call, follow-up child, missing rate
+card, unpriceable unit). **26 of 28 checks PASS**; the two failures are the
+harness's own deliberately-unpriceable rows and are expected to pass against
+production, where coverage and binding resolution are both 100%.
+
+Proven in that run: conservation variance **exactly 0**; allocation
+**byte-identical** on re-run; `run_pricing` re-run writes **0** new facts;
+a rate-card correction supersedes cleanly with all prior facts retained; and
+the largest-remainder split of one shared call across three questions sums
+back to the original to the last ulp.
+
+Two owner inputs are outstanding and are the only external facts in the
+system: the seeded rate cards are OpenAI **list prices, unverified against an
+invoice**, and **no FX rate is seeded** (EGP stays NULL and reports `no_fx`
+rather than carrying an invented number).
 
 - Migration: `cost_engine` schema — `billing_units`, `rate_cards`,
   `rate_components`, `discount_rules`, `fx_rates`, `cost_runs`, `cost_facts`,
