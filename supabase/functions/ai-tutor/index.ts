@@ -1337,6 +1337,41 @@ function blockPlansFor(rawExamType: string): BlockPlan[] | null {
   return null;
 }
 
+// An explicit EST level named in the conversation. Anchored to EST or MATH so a
+// bare digit cannot trigger it: "I have 1 math question" must not resolve a
+// level, while "est math1", "EST 2" and "Math - 1" must.
+//
+// (?!\d) stops "MATH 12" from reading as Math 1.
+const EST_LEVEL_1 = /(?:\bEST\s*)?\bMATH\s*-?\s*1(?!\d)|\bEST\s*-?\s*1(?!\d)/;
+const EST_LEVEL_2 = /(?:\bEST\s*)?\bMATH\s*-?\s*2(?!\d)|\bEST\s*-?\s*2(?!\d)/;
+
+/**
+ * The EST level explicitly named in the conversation, or null if none is.
+ *
+ * Scanned newest-first, so a student who moves from Math 1 to Math 2 mid-chat
+ * gets the level they are asking about now.
+ *
+ * A message naming BOTH levels — "should I take Math 1 or Math 2?" — determines
+ * nothing and is skipped rather than resolved arbitrarily. That turn is a
+ * question about the choice, not a statement of it.
+ *
+ * "Level" is deliberately NOT a signal. EXAM_FACTS calls the second exam
+ * "EST Math 2 Level 1", so a /level\s*1/ pattern would resolve the Math 2 exam
+ * to Math 1 — backwards, and on the exact string the platform itself uses.
+ * That string resolves correctly here: MATH is followed by 2, never by 1.
+ */
+function estLevelFromConversation(texts: string[]): BlockPlan | null {
+  for (let i = texts.length - 1; i >= 0; i--) {
+    const s = String(texts[i] || '').toUpperCase();
+    const one = EST_LEVEL_1.test(s);
+    const two = EST_LEVEL_2.test(s);
+    if (one && two) continue;
+    if (one) return EST_MATH_1;
+    if (two) return EST_MATH_2;
+  }
+  return null;
+}
+
 /** One markdown table row for a plan. */
 function blockPlanRow(p: BlockPlan): string {
   const qty = p.per ? `${p.questions} Q / ${p.per}` : `${p.questions} Q / ${p.minutes} min`;
@@ -1351,8 +1386,22 @@ function blockPlanRow(p: BlockPlan): string {
  * one row is correct — the ambiguity is real and belongs to the student, so
  * Zero uses the level they name and asks when they have not named one.
  */
-function studentBlockDirective(examType: string): string {
+function studentBlockDirective(examType: string, conversation: string[] = []): string {
   const plans = blockPlansFor(examType);
+
+  // A bare 'EST' the conversation has already disambiguated. Resolving it here
+  // rather than asking is the difference between Zero answering the question
+  // and Zero interrogating a student who has already said which exam they take.
+  if (plans && plans.length > 1) {
+    const named = estLevelFromConversation(conversation);
+    if (named) {
+      return `**The student's exam is recorded as "${examType}"; this conversation names `
+        + `${named.label}, so use that level.**\n`
+        + `THEIR BLOCKS ARE: ${blockRanges(named.questions).join(' · ')}\n`
+        + `Use exactly these blocks. Do NOT use any other block size, and do NOT ask which `
+        + `level they are taking — the conversation has already established it.`;
+    }
+  }
 
   if (!plans) {
     return `**The student's exam is "${examType}", which is not one of the four above.** `
@@ -1370,13 +1419,15 @@ function studentBlockDirective(examType: string): string {
       + `Use exactly these blocks. Do NOT use any other block size for this exam.`;
   }
 
-  // Bare 'EST' — the stored value does not name a level.
-  return `**The student's exam is recorded as "${examType}", which does not say which level.** `
-    + `Use the blocks for the level the student names:\n`
+  // Bare 'EST' and nothing in the conversation names a level.
+  return `**The student's exam is recorded as "${examType}", which does not say which level, `
+    + `and no explicit level was found in this conversation.**\n`
     + plans.map(p => `- **${p.label}** (${p.questions} questions / ${p.minutes} min): `
                    + `${blockRanges(p.questions).join(' · ')}`).join('\n')
-    + `\nIf they have not said which level, ask before giving a block plan. `
-    + `Do NOT average the two, and do NOT use any other block size.`;
+    + `\nIf the student has indicated a level anywhere in this conversation — including a short `
+    + `reply such as "1" or "2" to a question you asked — use that level's blocks immediately. `
+    + `Otherwise ask which level they are taking, ONCE, and give the block plan as soon as they `
+    + `answer. Never ask twice, never average the two, and never use any other block size.`;
 }
 
 // ── Phase 1 DifficultyDetector ────────────────────────────────────────────────
@@ -3448,7 +3499,7 @@ exam strategy · time management · improving their score · how to approach an 
 
 Divide the exam into blocks of ${BLOCK_SIZE} questions.
 
-${studentBlockDirective(examType)}
+${studentBlockDirective(examType, [...messages.map(m => m.content), question])}
 
 Reference — the block plan for every exam Zero covers. These are FIXED. Never state a different block size for any exam in this table:
 

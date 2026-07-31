@@ -129,9 +129,9 @@ t.ok('presentation is pinned to a structured action plan, not a paragraph',
 const gen = slice(SRC, '// ── Zero Block Strategy — block plans (v95)',
                   '// ── Phase 1 DifficultyDetector', 'block plan generator');
 const { BLOCK_SIZE, ALL_BLOCK_PLANS, blockRanges, blockPlansFor, blockPlanRow,
-        studentBlockDirective } = await importTS(gen,
+        studentBlockDirective, estLevelFromConversation } = await importTS(gen,
   ['BLOCK_SIZE', 'ALL_BLOCK_PLANS', 'blockRanges', 'blockPlansFor', 'blockPlanRow',
-   'studentBlockDirective']);
+   'studentBlockDirective', 'estLevelFromConversation']);
 
 t.section('Block ranges tile every question exactly once');
 t.is('the block size is 10', BLOCK_SIZE, 10);
@@ -205,10 +205,10 @@ t.ok('EST Math 1: states the exact blocks', est1.includes('1–10 · 11–20 · 
 t.ok('EST Math 1: forbids any other size', /Do NOT use any other block size/.test(est1));
 t.ok('EST Math 1: never offers a 6-question split', !/\b6\b/.test(est1));
 
-const bareEst = studentBlockDirective('EST');
+const bareEst = studentBlockDirective('EST', []);
 t.ok('bare EST: offers both levels', /EST Math 1/.test(bareEst) && /EST Math 2/.test(bareEst));
-t.ok('bare EST: tells Zero to ask when the level is unnamed', /ask before giving a block plan/.test(bareEst));
-t.ok('bare EST: forbids averaging the two', /Do NOT average the two/.test(bareEst));
+t.ok('bare EST: tells Zero to ask when the level is unnamed', /ask which level they are taking, ONCE/.test(bareEst));
+t.ok('bare EST: forbids averaging the two', /never average the two/.test(bareEst));
 t.ok('bare EST: carries both block lists',
   bareEst.includes('31–40 · 41–50') && bareEst.includes('21–30 · 31–40'));
 
@@ -221,11 +221,59 @@ t.ok('unlisted exam: this is the one case the model sizes blocks',
   /ONE case where you build the blocks yourself/.test(unknown));
 t.ok('unlisted exam: still pinned to blocks of 10', /blocks of 10/.test(unknown));
 
+// ── 3b. Conversation-aware EST level resolution ───────────────────────────
+// Asking "which level?" when the student already said it is a worse experience
+// than the bug this all started with. The level is resolved from the text, not
+// left to the model, so the same conversation always resolves the same way.
+
+t.section('Explicit level mentions resolve without asking');
+const lvl = (...texts) => estLevelFromConversation(texts)?.label ?? null;
+t.is('"I am taking EST Math 1"',        lvl('I am taking EST Math 1'),        'EST Math 1');
+t.is('"est math2" (no space, lower)',   lvl('est math2'),                     'EST Math 2');
+t.is('"EST 2"',                         lvl('EST 2'),                          'EST Math 2');
+t.is('"Math - 1"',                      lvl('Math - 1'),                       'EST Math 1');
+t.is('mention in an earlier turn',      lvl('I take EST Math 2', 'how do I manage my time?'), 'EST Math 2');
+t.is('newest explicit mention wins',    lvl('EST Math 1 tips', 'actually I switched to EST Math 2'), 'EST Math 2');
+
+t.section('Things that must NOT resolve a level');
+t.is('no mention at all',               lvl('how should I approach my exam?'), null);
+t.is('bare "EST"',                      lvl('I am taking EST'),                null);
+t.is('a message naming BOTH levels',    lvl('should I take Math 1 or Math 2?'), null);
+t.is('a bare digit',                    lvl('1'),                              null);
+t.is('"I have 1 math question"',        lvl('I have 1 math question'),         null);
+t.is('"question 1"',                    lvl('help me with question 1'),        null);
+t.is('"MATH 12" is not Math 1',         lvl('MATH 12'),                        null);
+// EXAM_FACTS calls the second exam "EST Math 2 Level 1". A naive /level 1/
+// pattern would resolve it to Math 1 — backwards, on the platform's own string.
+t.is('"EST Math 2 Level 1" resolves to Math 2, not Math 1',
+  lvl('I am taking EST Math 2 Level 1'), 'EST Math 2');
+t.is('both-levels turn falls back to an older explicit one',
+  lvl('I take EST Math 1', 'is Math 1 or Math 2 harder?'), 'EST Math 1');
+
+t.section('The directive uses the resolved level and stops asking');
+const resolved = studentBlockDirective('EST', ['I am taking EST Math 2']);
+t.ok('names the resolved level',      /this conversation names EST Math 2/.test(resolved));
+t.ok('gives Math 2 blocks',           resolved.includes('1–10 · 11–20 · 21–30 · 31–40'));
+t.ok('does not give Math 1 blocks',   !resolved.includes('41–50'));
+t.ok('explicitly tells Zero not to ask', /do NOT ask which level/.test(resolved));
+t.ok('still forbids other sizes',     /Do NOT use any other block size/.test(resolved));
+// The loop this guards against: Zero asks, student replies "1", Zero asks again.
+t.ok('unresolved case tells Zero to honour a short reply like "1" or "2"',
+  /including a short reply such as "1" or "2" to a question you asked/.test(bareEst));
+t.ok('unresolved case forbids asking twice', /Never ask twice/.test(bareEst));
+// A named level must not change SAT/ACT, whose exam_type is already unambiguous.
+t.is('an EST mention does not disturb an ACT student',
+  studentBlockDirective('ACT', ['I also did EST Math 1 last year']),
+  studentBlockDirective('ACT', []));
+
 t.section('Deterministic — the same student always gets the same plan');
 for (const ex of ['EST', 'EST Math 1', 'SAT', 'ACT', 'IGCSE', '']) {
   t.is(`${ex || '(empty)'}: repeated calls are identical`,
-    studentBlockDirective(ex), studentBlockDirective(ex));
+    studentBlockDirective(ex, []), studentBlockDirective(ex, []));
 }
+t.is('same conversation resolves the same way every time',
+  studentBlockDirective('EST', ['EST Math 1 please']),
+  studentBlockDirective('EST', ['EST Math 1 please']));
 // No listed exam may ever produce a block size other than 10 (last block short).
 const sizes = new Set(ALL_BLOCK_PLANS.flatMap(p =>
   blockRanges(p.questions).map(r => { const [lo, hi] = r.split('–').map(Number); return hi - lo + 1; })));
@@ -239,7 +287,9 @@ t.ok('no block is ever 6 for a listed exam',
 t.section('The block reaches the model');
 t.ok('interpolated into NORMAL_SYSTEM_PROMPT', /\$\{examStrategyForType\}/.test(SRC));
 t.ok("the student's own directive is interpolated, not a static row",
-  /\$\{studentBlockDirective\(examType\)\}/.test(STRAT));
+  /\$\{studentBlockDirective\(examType, \[\.\.\.messages\.map/.test(STRAT));
+t.ok('the directive is fed the prior turns AND the current question',
+  /messages\.map\(m => m\.content\), question\]/.test(STRAT));
 t.ok('the reference table is rendered from the same plans',
   /\$\{ALL_BLOCK_PLANS\.map\(blockPlanRow\)\.join/.test(STRAT));
 t.ok('the ambiguous "use the correct row" instruction is gone',
