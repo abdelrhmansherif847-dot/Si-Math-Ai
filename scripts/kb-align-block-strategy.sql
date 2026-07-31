@@ -1,18 +1,34 @@
 -- scripts/kb-align-block-strategy.sql
 --
 -- Aligns public.zero_knowledge_entries with the v94 Zero Block Strategy and
--- with EXAM_FACTS. Ten entries change. NOT APPLIED — review, then run.
+-- with EXAM_FACTS. Ten entries change.
+--
+-- ✅ APPLIED 2026-07-31 16:05 UTC to igvkyxkmjnkzscqgommj, in one transaction,
+--    with owner approval. All ten rows carry that updated_at. Post-checks:
+--    zero active entries carry pre-Block-Strategy text; zero ACT entries claim
+--    60 questions or 60 minutes anywhere including tags; all six entries that
+--    mention 90 seconds carry the full decision-rule framing; retrieval
+--    returns the corrected text for the English and Arabic queries below.
+--
+--    Kept in the repo as the record of what changed and as the only copy of
+--    the previous values (see the rollback block at the foot). Re-running is
+--    safe — every UPDATE sets absolute values, not deltas.
 --
 -- ⚠️ THIS SCRIPT IS LIVE THE MOMENT IT RUNS. There is no deploy gate in front
 -- of it. search_zero_knowledge() reads these rows at request time, so the
--- currently deployed function (v93) starts serving the new text on the next
--- student message. It does not wait for the v94 Edge Function deploy.
+-- deployed function serves the new text on the next student message. It does
+-- not wait for the v94 Edge Function deploy.
 --
--- Run it BEFORE deploying v94, not after: every edit here removes a statement
--- that contradicts v94's prompt, so applying it early only makes v93 more
--- correct than it is today. Deploying v94 first would leave a window where the
--- prompt teaches the 90-Second Rule while retrieval hands the model a rival
--- 3-Pass method with 60-second thresholds.
+-- It was run BEFORE the v94 deploy, deliberately: every edit removes a
+-- statement that contradicts v94's prompt, so applying it early only makes the
+-- live v93 more correct than it was. Deploying v94 first would have left a
+-- window where the prompt teaches the 90-Second Rule while retrieval hands the
+-- model a rival 3-Pass method with 60-second thresholds.
+--
+-- v94 IS NOT DEPLOYED. The Edge Function still serves v93 (DEPLOY.md §4
+-- Path B, CLI only). v93 + this KB state is coherent: no entry now contradicts
+-- EXAM_FACTS or teaches a rival method, so the interim is strictly better than
+-- where it started.
 --
 --
 -- WHY THESE EDITS
