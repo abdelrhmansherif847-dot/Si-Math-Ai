@@ -2185,6 +2185,7 @@ are listed for completeness.
 | **INV-24** | **Incomplete aggregates are labelled, never silently completed.** A Question Cost with any unpriced contributing call is `partial`; with none priced it is `unknown`. | `cost_completeness` (§8.8.6) | Test: unprice one call; the question renders as incomplete, not lower |
 | **INV-25** | **Internal traffic is excluded by default and never silently included.** Admin/owner accounts are flagged at call time and filtered unless explicitly requested. | `is_internal` snapshot; `p_include_internal` (§9.6) | Test: default responses exclude internal; the toggle is visible when on |
 | **INV-26** | **Catalog or price-book gaps degrade loudly, never silently.** An unregistered binding still prices; a missing rate card yields `unpriced` and a health alert. Neither ever reports `0`. | §6.4, §8.6, `owner_cost_health()` | Test: emit an unknown model; verify unpriced + health surfaces it |
+| **INV-27** | **Confidence propagates monotonically downward and is never upgraded by aggregation.** *(owner-locked 2026-07-31, added after the r4 freeze — see §18.)* Every derived figure — cost, revenue, profit, margin, ROI, break-even, any simulator output — carries a confidence class equal to the **worst** class among its inputs. A metric is `actual` only if **every** contributing cost fact is `invoice_verified`; a single `list_price` input makes the whole aggregate `modeled`, at every level, forever upward. | Ordered lattice `blocked < modeled < derived < actual`; combination is `min()` over inputs. Enforced in the data: `cost_facts.price_confidence` → `question_cost_facts.price_confidence` (worst of contributors) → `owner_cost_metrics().confidence` → every `econ` view and `owner_econ_*` RPC | CI: every `econ` view exposing a money column also exposes a confidence column; test: flip one contributing rate card to `list_price` and assert every downstream metric degrades to `modeled`; assert no aggregate reports a class better than its worst input |
 
 ### Applying these invariants
 
@@ -2202,6 +2203,15 @@ are listed for completeness.
 
 **As of revision r4 (2026-07-28), this architecture is frozen.**
 
+> **Amendment r4.1 — 2026-07-31, owner-locked.** One invariant was added after
+> the freeze: **INV-27, confidence propagation**. It was raised by the owner at
+> the Phase 4 → Phase 5 boundary, on the evidence that Phase 4 shipped with
+> 100% of its cost on unverified list prices. It tightens an existing rule
+> (INV-22) rather than changing any layer boundary, responsibility, fact model,
+> or public contract, so §18.1 is otherwise untouched. Amending the freeze is
+> the escalation path §17 prescribes — "stop and escalate, not weaken the
+> invariant in passing" — used here as intended.
+
 The design has been reviewed and approved three times — the base architecture,
 the Cost Engine layer, and the Service Catalog abstraction — and now carries an
 explicit invariant set. Further architectural iteration has reached diminishing
@@ -2213,7 +2223,7 @@ shipping Phase 2.
 | Frozen | Meaning |
 |---|---|
 | **Layer topology** | AI Service Catalog · AI Telemetry · Cost Engine (Calculation + Allocation) · AI Economics · Owner Dashboard, and the boundaries between them (§1) |
-| **Design invariants** | All 26 rules in §17 |
+| **Design invariants** | All 27 rules in §17 |
 | **Component responsibilities** | What each layer owns and what it must never do |
 | **Fact model** | Usage facts, per-call cost facts, and Question Cost facts; their immutability, provenance, and versioning semantics |
 | **Public contracts** | The shape of the `owner_econ_*` / `owner_cost_*` surface: owner-gated, `STABLE`, one uniform measure set |
