@@ -372,3 +372,53 @@ plausible. Caught, fixed, and re-validated with errors visible.
 **Verification is now 31 checks; 28 pass, P4-08/P4-09 fail by fixture design
 (deliberately unpriceable rows), P4-31 warns by design while prices remain
 unverified.**
+
+---
+
+## 11. Locked business decisions (owner, 2026-07-31)
+
+Approved with four decisions locked. Three matched the implementation as
+built; **decision 4 did not, and the code was changed to match it.**
+
+| # | Decision | Status |
+|---|---|---|
+| 1 | OpenAI's official published prices are the initial production rate cards; provisional, updatable via `recompute` | **As built.** Seeded as `price_confidence='list_price'`, so every figure reports `confidence='modeled'` until verified (§6.0) |
+| 2 | **USD is the canonical accounting currency.** EGP is presentation only, from a configurable rate | **As built**, plus one fix — see below |
+| 3 | Internal/admin/owner traffic excluded by default, with an explicit include option | **As built.** `p_include_internal` defaults to `false` on every RPC that has it (INV-25) |
+| 4 | **`services.cost_target_usd` is a MONTHLY budget per service** | **CHANGED.** Was implemented as a per-`unit_of_work` target |
+
+### Decision 4 — what changed, and a documentation conflict
+
+The previous round corrected `cost_target_usd` from a cumulative total to a
+per-`unit_of_work` target, following the Phase 2 column comment. The owner has
+now defined it as a **monthly budget in USD**, which supersedes that reading.
+
+`owner_cost_health()` now emits `service_over_budget` with one row per
+breached calendar month per service. The `service_target_not_evaluable`
+branch is gone — a monthly budget needs no denominator, so the
+`image`/`page`/`document` limitation no longer applies.
+
+**Internal traffic is included in the budget check, deliberately.** Decision 3
+excludes internal traffic from *reported metrics*, but a budget measures money
+actually owed to the provider, and admin calls cost exactly what student calls
+cost. Excluding them would under-report the bill.
+
+> ⚠ **Documentation conflict.** `ai_catalog.services.cost_target_usd` carries a
+> Phase 2 `COMMENT ON COLUMN` reading *"Owner-set optimization target per
+> unit_of_work"*. That comment is now stale and contradicts decision 4. It is
+> metadata only — no behaviour depends on it — but it lives in the applied
+> Phase 2 migration, so correcting it is a separate one-line change awaiting
+> approval rather than something folded in here silently.
+
+### Decision 2 — one fix it exposed
+
+Making USD canonical and EGP presentation-only means a missing FX rate is a
+**presentation gap, not a pricing failure**. `owner_cost_health()` was
+grouping `unpriced_reason` over all facts carrying one, which swept in fully
+priced facts whose only issue was `no_fx` — reporting a presentation gap as a
+pricing failure.
+
+Now the `unpriced_*` breakdown counts only facts with
+`pricing_status='unpriced'`, and the EGP gap is reported separately as
+`egp_unavailable_facts`. Coverage percentages were never affected (they always
+keyed on `pricing_status`); only the health readout was misleading.

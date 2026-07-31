@@ -1686,12 +1686,27 @@ BEGIN
                               WHERE f.call_id = c.id AND f.is_current)),
          'telemetry rows with no current cost fact'
   UNION ALL
+  -- Only facts that are ACTUALLY unpriced. A priced fact carrying
+  -- unpriced_reason='no_fx' has a valid USD cost and merely lacks an EGP
+  -- presentation figure (OWNER DECISION 2: USD is canonical, EGP is
+  -- presentation only). Counting it here would report a presentation gap as a
+  -- pricing failure and make coverage look broken when it is not.
   SELECT 'unpriced_' || COALESCE(f.unpriced_reason, 'none'),
          count(*)::text,
-         'current facts by unpriced_reason'
+         'current facts by unpriced_reason (pricing failures only)'
     FROM cost_engine.cost_facts f
-   WHERE f.is_current AND f.unpriced_reason IS NOT NULL
+   WHERE f.is_current
+     AND f.pricing_status = 'unpriced'
+     AND f.unpriced_reason IS NOT NULL
    GROUP BY f.unpriced_reason
+  UNION ALL
+  -- Presentation-only gap, reported separately so it is never mistaken for a
+  -- pricing failure. USD is unaffected.
+  SELECT 'egp_unavailable_facts', count(*)::text,
+         'priced facts with valid USD but no EGP (no FX rate for the month)'
+    FROM cost_engine.cost_facts f
+   WHERE f.is_current AND f.pricing_status <> 'unpriced' AND f.net_cost_egp IS NULL
+  HAVING count(*) > 0
   UNION ALL
   SELECT 'binding_' || f.binding_status, count(*)::text, 'current facts by binding status'
     FROM cost_engine.cost_facts f WHERE f.is_current
@@ -1722,37 +1737,33 @@ BEGIN
                       WHERE fx.rate_date = date_trunc('month', f.occurred_at)::date)
    GROUP BY date_trunc('month', f.occurred_at)
   UNION ALL
-  -- services.cost_target_usd is a target PER unit_of_work (ai_catalog §6.2
-  -- column comment), NOT a period budget. So the comparison is cost-per-unit
-  -- against the target, with the denominator chosen by services.unit_of_work.
-  -- Comparing a cumulative total against a per-unit rate would fire for
-  -- essentially every service the moment a target was set.
-  SELECT 'service_over_target', t.service_code,
-         'cost/' || t.unit_of_work || ' = ' || round(t.unit_cost, 8)
-           || ' exceeds target ' || t.cost_target_usd
+  -- OWNER DECISION (2026-07-31, locked): services.cost_target_usd is a
+  -- MONTHLY BUDGET per service, in USD. One row per breached calendar month.
+  --
+  -- NOTE: ai_catalog.services.cost_target_usd carries a Phase 2 column comment
+  -- describing it as a target "per unit_of_work". That comment predates this
+  -- decision and is now stale — see the Phase 4 review, §11. The owner's
+  -- decision governs; the comment needs updating in a separate change.
+  --
+  -- Internal traffic is INCLUDED here, deliberately. Decision 3 excludes
+  -- internal traffic from reported metrics, but a budget measures money
+  -- actually owed to the provider, and admin/owner calls cost exactly as much
+  -- as student calls. Excluding them would under-report the bill.
+  SELECT 'service_over_budget', t.service_code || ' ' || t.month,
+         'spend ' || round(t.spend, 6) || ' USD exceeds monthly budget '
+           || t.cost_target_usd || ' USD (all traffic, internal included)'
     FROM (
-      SELECT s.service_code, s.unit_of_work, s.cost_target_usd,
-             sum(f.net_cost_usd) / NULLIF(
-               CASE s.unit_of_work
-                 WHEN 'call'     THEN count(*)
-                 WHEN 'question' THEN count(DISTINCT f.question_record_id)
-               END, 0) AS unit_cost
+      SELECT s.service_code,
+             to_char(date_trunc('month', f.occurred_at), 'YYYY-MM') AS month,
+             sum(f.net_cost_usd) AS spend,
+             s.cost_target_usd
         FROM ai_catalog.services s
-        JOIN cost_engine.cost_facts f ON f.service_code = s.service_code AND f.is_current
+        JOIN cost_engine.cost_facts f
+          ON f.service_code = s.service_code AND f.is_current
        WHERE s.cost_target_usd IS NOT NULL
-         AND s.unit_of_work IN ('call','question')
-       GROUP BY s.service_code, s.unit_of_work, s.cost_target_usd
+       GROUP BY s.service_code, date_trunc('month', f.occurred_at), s.cost_target_usd
     ) t
-   WHERE t.unit_cost IS NOT NULL AND t.unit_cost > t.cost_target_usd
-  UNION ALL
-  -- A target the engine cannot evaluate is reported, never silently ignored:
-  -- 'image', 'page' and 'document' have no denominator in Phase 3 telemetry.
-  SELECT 'service_target_not_evaluable', s.service_code,
-         'target set but unit_of_work=' || s.unit_of_work
-           || ' has no denominator in telemetry — target not enforced'
-    FROM ai_catalog.services s
-   WHERE s.cost_target_usd IS NOT NULL
-     AND s.unit_of_work NOT IN ('call','question')
+   WHERE t.spend > t.cost_target_usd
   UNION ALL
   -- §3.4 / INV-22: how much of the priced cost rests on unverified prices.
   SELECT 'price_confidence_' || COALESCE(f.price_confidence, 'none'),
