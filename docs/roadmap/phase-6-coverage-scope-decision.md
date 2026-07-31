@@ -1,7 +1,65 @@
 # Design note — coverage board scope (internal vs external cost)
 
-**Status: decision note only. Nothing implemented. Awaiting owner lock before
-Phase 6.**
+**Status: ✅ LOCKED 2026-07-31 — Option A approved with a refinement. This is
+the Phase 6 presentation decision. Nothing implemented yet.**
+
+---
+
+## LOCKED DECISION (owner, 2026-07-31)
+
+Option A is approved: the coverage board reports all observed data, and
+business metrics stay INV-25-compliant. The two surfaces answer different
+questions and are not forced to share a scope.
+
+**Required presentation shape.** External cost is the primary number. The
+total is reported last, not emphasised:
+
+```
+AI Cost
+  External:                                   $X
+  Internal (excluded from business metrics):  $Y
+  Total Observed:                             $Z
+```
+
+**Binding rules for Phase 6:**
+
+1. **External leads.** It is the figure that feeds business metrics and the
+   one the eye should land on first.
+2. **Internal is explanatory metadata, not a business KPI.** It exists to
+   explain why the P&L may report `no_cost_in_period` while telemetry is
+   healthy. It must not be trended, targeted, ranked, share-of-total'd, or
+   styled like a KPI, and it must never appear in an `owner_econ_*` business
+   figure.
+3. **Total Observed is last** and carries no emphasis. It is a reconciliation
+   line, not a headline.
+4. **`External: $0.00` renders as a measured zero, not as `—`.** This is the
+   one place a zero is correct: there genuinely is no external cost, and that
+   is a measurement, not an absence. INV-23 forbids showing *unknown* as zero;
+   it does not forbid showing a measured zero. Rendering it as `—` here would
+   be the dishonest choice, because it would imply the figure is unavailable
+   when it is known and equal to zero.
+
+**Why this ordering matters.** With today's data the panel reads:
+
+```
+AI Cost
+  External:                                   $0.00
+  Internal (excluded from business metrics):  $0.2296
+  Total Observed:                             $0.2296
+```
+
+which states, in three lines and without a footnote, exactly why every P&L row
+is blocked with `no_cost_in_period` while the Cost Engine is working perfectly.
+
+**The architectural clarification this locks in:** a *diagnostic* surface
+reports all observed data; a *business metric* excludes internal traffic
+(INV-25). INV-25 governs metrics and forbids *silent* inclusion — it does not
+forbid a labelled diagnostic total. Both properties hold simultaneously
+because the surfaces are answering different questions.
+
+---
+
+## Original comparison (retained for the record)
 
 ## The observation
 

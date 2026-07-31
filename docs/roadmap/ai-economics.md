@@ -2020,6 +2020,22 @@ reports nothing cost-shaped until student traffic arrives.
 
 ### Phase 6 — Owner Dashboard, sections 1–9
 
+**Presentation decision LOCKED 2026-07-31** —
+`docs/roadmap/phase-6-coverage-scope-decision.md`. The coverage board is a
+*diagnostic* surface and reports all observed data; *business* metrics exclude
+internal traffic (INV-25). The AI Cost panel renders external first, internal
+second as explanatory metadata, total observed last:
+
+```
+AI Cost
+  External:                                   $X
+  Internal (excluded from business metrics):  $Y
+  Total Observed:                             $Z
+```
+
+Internal is never a KPI — not trended, targeted, ranked, or surfaced in any
+`owner_econ_*` figure. `External: $0.00` renders as a measured zero, not `—`.
+
 - `#tab-economics` in `admin.html` — owner-gated tab, render-only, **service-first
   with provider/model as engine-provided drill-down**.
 - Confidence-class badges everywhere; **Blocked** KPIs show `—` + reason from
