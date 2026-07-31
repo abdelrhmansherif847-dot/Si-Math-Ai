@@ -98,7 +98,7 @@ $do$;
 -- carried the wrong numbers in Arabic too ("٦٠ دقيقة" equivalents), which is
 -- what an Arabic-speaking student's query would have matched on.
 UPDATE public.zero_knowledge_entries SET
-  body = $body$ACT Math is 50 minutes long and contains 45 multiple-choice questions — an average of about 67 seconds per question (roughly 1 minute 7 seconds). This is the tightest per-question pace of the three exams, so timing strategy matters more on ACT than anywhere else. That average is a planning figure, not a target for each question: some take 30 seconds, some take longer and are worth it. Zero should remind ACT students to work the section in blocks and to use the 90-Second Rule when progress stalls.$body$,
+  body = $body$ACT Math is 50 minutes long and contains 45 multiple-choice questions — an average of about 67 seconds per question (roughly 1 minute 7 seconds). This is the tightest per-question pace of the three exams, so timing strategy matters more on ACT than anywhere else. That average is a planning figure, not a target for each question: some take 30 seconds, some take longer and are worth it. Zero should remind ACT students to work the section in blocks and to apply the 90-Second Rule — a decision rule, not a per-question time limit. If about 90 seconds pass with no meaningful progress, mark the question and return to it later; if real progress is being made, keep going and finish it.$body$,
   tags = ARRAY['act','act math','50 minutes','45 questions','multiple choice',
                'act format','timing','67 seconds per question','50 دقيقة',
                '45 سؤال','act timing','وقت act','مدة act','عدد اسئلة act',
@@ -136,12 +136,12 @@ WHERE id = '4d316098-7788-4115-82f6-b5b7b20f1e45';
 -- stale pace. Left as separate rows — deduplicating them is a content decision
 -- beyond this alignment.
 UPDATE public.zero_knowledge_entries SET
-  body = $body$The ACT is now taken digitally on a computer. Students should complete ACT practice sessions on a computer screen, not on paper. With 45 questions in 50 minutes — about 67 seconds per question — the pace requires fast, focused digital problem-solving. Zero should remind ACT students to practice pacing strategies specifically for the computer-based format.$body$,
+  body = $body$The ACT is now taken digitally on a computer. Students should complete ACT practice sessions on a computer screen, not on paper. With 45 questions in 50 minutes — about 67 seconds per question on average — the pace requires fast, focused digital problem-solving. That average is not a per-question time limit. Zero should remind ACT students to practice pacing strategies specifically for the computer-based format.$body$,
   updated_at = now()
 WHERE id = 'c3183cd1-8a9e-4f24-b83e-713fd37a8be8';
 
 UPDATE public.zero_knowledge_entries SET
-  body = $body$The ACT is now taken digitally on a computer. Students should complete ACT practice sessions on a computer screen. With 45 questions in 50 minutes — about 67 seconds per question — the pace requires fast, focused digital problem-solving. Zero should remind ACT students to practice pacing strategies specifically for the computer-based format.$body$,
+  body = $body$The ACT is now taken digitally on a computer. Students should complete ACT practice sessions on a computer screen. With 45 questions in 50 minutes — about 67 seconds per question on average — the pace requires fast, focused digital problem-solving. That average is not a per-question time limit. Zero should remind ACT students to practice pacing strategies specifically for the computer-based format.$body$,
   tags = ARRAY['act','act digital','computer practice','act testing environment',
                'pacing','67 seconds per question'],
   updated_at = now()
@@ -149,7 +149,7 @@ WHERE id = '4e427e3b-2e6a-4853-8bff-724a3e237c33';
 
 -- A5. Calculator policy is correct; only its pace justification was stale.
 UPDATE public.zero_knowledge_entries SET
-  body = $body$Calculators are permitted for ACT Math. Given the tight pace — 45 questions in 50 minutes, about 67 seconds each — students cannot waste time on calculator use for simple arithmetic. Zero should advise ACT students to reserve the calculator for complex calculations and solve straightforward problems mentally or with quick written work.$body$,
+  body = $body$Calculators are permitted for ACT Math. Given the tight pace — 45 questions in 50 minutes, about 67 seconds each on average — students cannot waste time on calculator use for simple arithmetic. Zero should advise ACT students to reserve the calculator for complex calculations and solve straightforward problems mentally or with quick written work.$body$,
   updated_at = now()
 WHERE id = '1975b722-d66b-4cc9-bf1e-0a966b9cd8f9';
 
@@ -163,7 +163,7 @@ UPDATE public.zero_knowledge_entries SET
 - EST Math 1: ~1.5 minutes per question (75 min / 50 questions)
 - EST Math 2: ~1.5 minutes per question (60 min / 40 questions)
 - ACT: ~67 seconds per question (50 min / 45 questions)
-These are averages across a section, not a stopwatch for each question. Some questions take 30 seconds; others take longer and are worth it while you are making progress. What costs you points is stalling — a student who spends 4 minutes stuck on one hard question is trading 2-3 easy questions they never reached. When about 90 seconds pass with no meaningful progress, mark it and move on (the 90-Second Rule).
+These are averages across a section, not a stopwatch for each question. Some questions take 30 seconds; others take longer and are worth it while you are making progress. What costs you points is stalling — a student who spends 4 minutes stuck on one hard question is trading 2-3 easy questions they never reached. When about 90 seconds pass with no meaningful progress, mark it and move on (the 90-Second Rule). That is a decision rule, not a per-question time limit: while you are genuinely making progress, keep going.
 
 Synonyms: timing problems, pacing issues, running out of time, not finishing, too slow, time pressure, clock management, question skipping.$body$,
   updated_at = now()
@@ -235,7 +235,7 @@ UPDATE public.zero_knowledge_entries SET
 - Track your time per question and log it
 - Identify which question types slow you down
 - Drill those types specifically until speed improves
-- Practise the 90-Second Rule during drills so skipping becomes automatic on exam day
+- Practise the 90-Second Rule during drills: when about 90 seconds pass with no meaningful progress, mark it and move on — but keep working when you are actually getting somewhere. It is a decision rule, not a per-question time limit, so never drill yourself to abandon questions at 90 seconds
 - Full timed practice sections every week$body$,
   updated_at = now()
 WHERE id = 'd73af2d7-e14c-474a-a149-f74283eda56c';
