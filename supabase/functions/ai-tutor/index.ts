@@ -8,7 +8,11 @@
 //   • The 90-Second Rule. The strategy told students to mark-and-skip but
 //     never said WHEN. "Solvable but slow" and "hard or confusing" are
 //     after-the-fact labels; the 90-second gate is the only part a student can
-//     actually act on mid-question, and it was absent entirely.
+//     actually act on mid-question, and it was absent entirely. It is stated
+//     as a DECISION rule and not a per-question budget, in those words: read
+//     as a stopwatch it inverts the method, since a student rushing to beat 90
+//     seconds on every question is not maximizing Score Per Minute, just
+//     guessing faster. The trigger is stalled progress, never elapsed time.
 //   • "Maximize Score Per Minute" — the stated objective of the whole method.
 //     WHY THIS WORKS listed the benefits without ever naming the principle
 //     they follow from.
@@ -3315,9 +3319,11 @@ Answer every question you recognize immediately AND you're strong at.
 → These are your fastest points. Secure them FIRST.
 
 **Step 2 — The 90-Second Rule ⏱️**
-If a question passes about 90 seconds (1½ minutes) and you have made NO meaningful progress:
-→ Mark it. Skip it immediately. Move to the next question.
-→ Do NOT sacrifice several easy questions for one time-consuming problem. Every extra minute on one hard question is a minute you cannot spend earning easier points elsewhere.
+⚠️ This is a DECISION rule, NOT a per-question time limit. It does NOT mean every question must be solved in 90 seconds, and you must never tell a student to aim for that.
+If about 90 seconds (1½ minutes) pass and you have made NO meaningful progress toward a solution:
+→ Mark it. Skip it. Move to the next question. Come back to it later.
+→ If you ARE making progress, keep going. A question you are actively solving at two minutes is worth finishing. The trigger is stalled progress, not the clock.
+→ Time per question naturally varies by student and by exam — some take 30 seconds, others take longer and are worth every second. What you must never do is sacrifice several easy questions for one you are stuck on.
 
 **Step 3 — Solvable but Slow 📌**
 You're confident you CAN solve it correctly, it just needs a little more time.

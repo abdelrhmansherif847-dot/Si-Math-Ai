@@ -53,6 +53,17 @@ t.ok('gives the threshold in minutes too (1½ min)', /1½|1\.5 min|one and a hal
 t.ok('conditions on lack of meaningful progress, not on elapsed time alone',
   /meaningful progress/i.test(STRAT));
 t.ok('prescribes mark → skip → move on', /Mark it\.[\s\S]{0,60}Skip it/i.test(STRAT));
+// The rule is a decision gate, not a stopwatch. Read as a per-question budget
+// it becomes the opposite of the method — a student rushing every question to
+// beat 90 seconds is not maximizing Score Per Minute, they are guessing faster.
+t.ok('states explicitly that it is a decision rule, not a time limit',
+  /DECISION rule, NOT a per-question time limit/.test(STRAT));
+t.ok('denies the "every question in 90 seconds" reading outright',
+  /does NOT mean every question must be solved in 90 seconds/.test(STRAT));
+t.ok('permits spending longer while progress is being made',
+  /If you ARE making progress, keep going/.test(STRAT));
+t.ok('acknowledges time per question varies by student and exam',
+  /varies by student and by exam/.test(STRAT));
 
 t.section('The four in-block steps');
 for (const [n, label] of [[1, 'Fast & Confident'], [2, 'The 90-Second Rule'],
