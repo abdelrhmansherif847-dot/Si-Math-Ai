@@ -2052,7 +2052,7 @@ RPC referenced anywhere in the tab; **grep proves no provider or model literal i
 the tab**; adding a service or swapping a provider in the catalog changes the
 rendered dashboard with no code edit (verified once, in staging or by review).
 
-#### Phase 6 status — M1 ✅, M2 ✅, M3 ✅, M4.1 ✅ COMPLETE
+#### Phase 6 status — M1 ✅, M2 ✅, M3 ✅, M4.1 ✅, M4.2 ✅ COMPLETE
 
 Phase 6 is being delivered one owner-approved milestone at a time.
 
@@ -2062,8 +2062,8 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | **M2** | Financial Overview (1), AI Cost Analytics (2), Revenue Analytics (3) | ✅ closed 2026-08-01 |
 | **M3** | Credits Analytics (4), Package Profitability (5), Question Cost Analytics (6) | ✅ closed 2026-08-01 |
 | **M4.1** | Lesson Economics (7) | ✅ closed 2026-08-01 |
-| M4.2 | Student Consumption (8) | not started |
-| M4.3 | AI Service & Model Analytics (9) | not started |
+| **M4.2** | Student Consumption (8) | ✅ closed 2026-08-01 |
+| M4.3 | AI Service & Model Analytics (9) | not started — **last remaining section** |
 
 **Applied migrations**
 
@@ -2075,6 +2075,9 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | `20260801114601` | `aiecon_p6_m3_operation_mix` | M3 |
 | `20260801114637` | `aiecon_p6_m3_credit_summary` | M3 |
 | `20260801121050` | `aiecon_p6_m4_lesson_economics` | M4.1 |
+| `20260801124707` | `aiecon_p6_m4_2_student_consumption` | M4.2 |
+| `20260801124835` | `aiecon_p6_m4_2_student_service_mix` | M4.2 |
+| `20260801130230` | `aiecon_p6_m4_2_student_consumption_full_join_fix` | M4.2 (gate fix) |
 
 **M2 release gate.** V1–V8 executed 2026-08-01. V7 failed and uncovered a
 **pre-existing Phase 5 defect**: three `owner_econ_*` RPCs declared `bigint`
@@ -2119,9 +2122,38 @@ raised `42804`.
   joins `taxonomy_subtopics` and exposes the name. Verified byte-identical at
   the gate. The join is `LEFT`, so an unmapped lesson keeps its cost.
 
+**M4.2 release gate — the first gate since M2 to fail, and the lesson is
+architectural.** V4 caught that Section 8's row set was driven by
+`econ.v_student_economics`, which is itself *revenue FULL JOIN cost*. A student
+who consumed credits but had neither revenue nor cost did not exist in it, so a
+panel about consumption was hiding 2 of 9 consumers and 4.2% of consumption.
+
+The generalised rule, now twice-learned (M4.1's `LEFT JOIN`, M4.2's
+`FULL JOIN`): **a panel's population must be the union of every population it
+reports on, never one contributing surface.** Driving a row set off a single
+view silently drops whoever that view omits.
+
+It also marks the limit of the pre-apply type probe, which passed cleanly here:
+a probe verifies **types, not semantics**. Type checking and reconciliation
+checking are separate defences and both are required.
+
+**Locked M4.2 decisions.**
+- **No PII in the economics layer.** Student surfaces expose `user_id` only —
+  never `full_name` or `email`, and neither function body reads `profiles`.
+  Identifying a student belongs in a separate drill-down outside economics.
+- **The statistical usage anomaly ships blocked** with
+  `insufficient_population` until n ≥ 30, evaluated from data so it unblocks
+  with no code change. The deterministic `cost_exceeds_revenue` ships now.
+- **One canonical per-student surface.** `owner_econ_student_economics()` was
+  extended rather than duplicated; `owner_econ_student_service_mix()` is a
+  separate *grain*, not a second definition, and reports no per-student total.
+- **`avg_daily_usage` divides by the shared calendar span**, matching
+  `owner_econ_credit_summary().avg_daily_burn` — not per-student active days.
+
 Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
 `docs/roadmap/phase-6-m3-closeout.md`,
-`docs/roadmap/phase-6-m4-1-closeout.md`.
+`docs/roadmap/phase-6-m4-1-closeout.md`,
+`docs/roadmap/phase-6-m4-2-closeout.md`.
 
 ### Phase 7 — Simulator + Break-even (sections 10–11)
 

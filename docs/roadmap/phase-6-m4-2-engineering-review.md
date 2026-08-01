@@ -1,15 +1,27 @@
 # Phase 6 M4.2 — Student Consumption: Implementation & Engineering Review
 
-**Status: implementation complete, NOTHING APPLIED.** Both migrations are
-prepared and unapplied; no Release Gate has begun. Per the owner's M4 workflow,
-each milestone ends at implementation → engineering review → **stop**.
+**Status: ✅ SUPERSEDED BY APPLICATION.** This was the pre-application review;
+both migrations it reviews were subsequently owner-approved and applied to
+`igvkyxkmjnkzscqgommj` on 2026-08-01 as versions `20260801124707` and
+`20260801124835`. The text below is preserved as written — it describes the
+state *before* they were applied.
+
+**The gate did not pass on the first run.** M4.2-V4 failed: the row set was
+driven by `econ.v_student_economics` alone, so students who consumed credits but
+had neither revenue nor cost were invisible — 2 of 9 consumers, 4.2% of
+consumption. Root-caused and fixed by version `20260801130230`, then re-verified.
+
+Note what that means for §5 below: it lists residual risks, and this defect is
+**not among them**. The review anticipated the *cost* half being unexercised; it
+did not anticipate the *population* being wrong. See
+`phase-6-m4-2-release-report.md` and `phase-6-m4-2-closeout.md`.
 
 Branch `claude/phase6-m4-2-student-consumption`, cut clean from `main` at
 `067d3c8` — the locked Phase 6 baseline.
 
 | Scope | Section 8 — Student Consumption Analytics |
 |---|---|
-| Migrations | 2, both **not applied** |
+| Migrations | 3 applied — `20260801124707`, `20260801124835`, and the V4 fix `20260801130230` |
 | RPCs | 1 **extended** (`owner_econ_student_economics`, 10 → 19 cols), 1 **new** (`owner_econ_student_service_mix`) |
 | New tables | 0 |
 | New views | 0 |
@@ -116,7 +128,14 @@ before apply.**
 
 ## 3. Verified behaviour against production data
 
-| Field | Observed |
+> **Superseded by the gate.** The row counts below were observed *before* the
+> V4 fix and are wrong in one respect: `Students | 7` should be **9**, and total
+> credits **1,908** not 1,828. Two consumers with neither revenue nor cost were
+> missing. Left as recorded so the defect's visibility at review time is
+> honest — this table is exactly what the review saw, and it did not reveal the
+> problem, because a per-student table cannot show an absent student.
+
+| Field | Observed (pre-fix) |
 |---|---|
 | Students | 7, revenue EGP 349–1,499 |
 | `credits_consumed` | 0–1,355 |
@@ -183,7 +202,7 @@ recreates a live function signature**. Everything else is additive.
 
 ---
 
-## 6. Proposed M4.2 Release Gate (for after approval — NOT run)
+## 6. M4.2 Release Gate plan — ✅ EXECUTED 2026-08-01 (V4 failed, was fixed, then passed)
 
 | # | Validation | Method |
 |---|---|---|
@@ -198,8 +217,9 @@ recreates a live function signature**. Everything else is additive.
 
 ---
 
-## Stop point
+## Stop point (historical)
 
-Implementation and this review are complete. **Awaiting owner review before
-applying either migration or beginning the M4.2 Release Gate.** M4.3 not
-started.
+At the time of writing, implementation and this review were complete and
+awaiting owner review. That approval was given, the migrations were applied, and
+the gate passed after one root-caused fix. **M4.2 is closed** — see the
+closeout. M4.3 not started.
