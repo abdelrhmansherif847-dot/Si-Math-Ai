@@ -149,12 +149,27 @@ remove.
 
 | Branch | State |
 |---|---|
-| `main` | verification framework merged; Phase 6 complete and frozen |
-| `claude/phase7-simulator-breakeven` | **still empty** — no code, no migration, no planning |
-| `claude/verification-framework-audit` | **archived** as tag `archive/verification-framework-audit`, branch deleted |
+| `main` | verification framework merged at `8b1d838`; Phase 6 complete and frozen |
+| `claude/phase7-simulator-breakeven` | **still empty** — 0 commits of its own; see the note below |
+| `claude/verification-framework-audit` | **archived by retention on the remote** at `8b1d838`; local branch deleted |
 
-The audit branch is archived rather than deleted outright, so the audit, the
-engineering review and the negative-control reasoning remain reachable.
+**On the archive method.** The intent was a `archive/…` tag with the branch
+deleted. **This git remote rejects tag pushes** — it carries zero tags, and four
+attempts all failed with `the remote end hung up unexpectedly`. The branch was
+therefore archived by *retaining* it on the remote instead, which is exactly how
+every prior milestone branch in this repo was handled after merging
+(`claude/phase6-m4-2-…`, `claude/phase6-m4-3-…` and the rest are all still
+present). The local branch was deleted. The audit, engineering review,
+release report and negative-control reasoning all remain reachable — and are in
+any case on `main`.
+
+**Note on the Phase 7 branch.** `claude/phase7-simulator-breakeven` was cut from
+`main` at `a1e2610`, so it is now **3 commits behind** `main` at `8b1d838`. It
+remains empty in the sense that matters — it carries **no work of its own** —
+but it is no longer level with `main`. It was left untouched deliberately, since
+the standing instruction is that nothing may happen on that branch. Fast-forward
+it to `main` when Phase 7 is authorised, so Phase 7 starts on a base that
+includes the verification framework improvements.
 
 ---
 
