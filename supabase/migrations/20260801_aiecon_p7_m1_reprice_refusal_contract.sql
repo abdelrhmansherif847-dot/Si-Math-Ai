@@ -424,7 +424,14 @@ BEGIN
       ORDER BY (e.value->>'actual')::numeric DESC) FROM jsonb_each(v_by_svc) AS e),'[]'::jsonb));
 END; $fn$;
 
+-- BOTH revokes are required. DROP+CREATE re-applies Supabase's default
+-- privileges, which grant EXECUTE to `anon` DIRECTLY — and REVOKE ... FROM
+-- PUBLIC does not remove a direct role grant. Revoking only from PUBLIC left
+-- owner_cost_reprice executable by anon and failed P4-06 on the first gate
+-- run; shipped as 20260801_..._fix_reprice_anon_revoke and folded in here.
+-- This mirrors the Phase 4 pattern used for every other owner_cost_* function.
 REVOKE ALL ON FUNCTION public.owner_cost_reprice(jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.owner_cost_reprice(jsonb) FROM anon;
 GRANT EXECUTE ON FUNCTION public.owner_cost_reprice(jsonb) TO authenticated;
 
 COMMENT ON FUNCTION public.owner_cost_reprice(jsonb) IS
