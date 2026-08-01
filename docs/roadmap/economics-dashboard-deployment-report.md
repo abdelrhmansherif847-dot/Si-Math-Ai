@@ -238,7 +238,51 @@ was a defect in one of my checks, and each is recorded rather than smoothed over
 
 ---
 
+## 8. Visual QA — performed by the owner, 2026-08-01
+
+The one step this sandbox could not reach was completed by the owner against
+production with a real owner account.
+
+| Check | Result |
+|---|---|
+| Owner dashboard loads | **pass** |
+| Hard refresh, JS console | **no errors** |
+| Economics Sections 1–9 render | **pass** |
+| Populated sections show data | **pass** |
+| Blocked sections show explicit reasons, not blanks | **pass** |
+| Section 9 — AI Service & Model Analytics | **pass** |
+| Engine Health | **pass** |
+
+**Phase 6 is visually accepted. Closed at 100%.**
+
+### Backlog item raised during QA — non-blocking
+
+**Group repeated `service_no_active_binding` rows under one heading** instead of
+repeating the label per service.
+
+Measured, so the item is actionable rather than vague: `owner_cost_health()`
+returns **13 rows, of which 5 are `service_no_active_binding`** —
+`embedding`, `python`, `sympy`, `translation`, `truth_engine`. Every other metric
+appears exactly once. So the panel repeats one label five times, and will repeat
+it once more for each service added to the catalog before it makes a call.
+
+| Property | Assessment |
+|---|---|
+| Severity | **cosmetic** — presentation only |
+| Correctness | the data is right; five services genuinely have no active binding |
+| Scope | **client-side grouping in the Engine Health renderer** |
+| RPC change needed | **no** — `owner_cost_health()` returns `(metric, value, detail)` and grouping by `metric` is display logic, not derivation |
+| INV-03 risk | **none**, provided the client groups and counts *rows* and never recomputes a financial figure |
+
+**Deliberately not implemented.** It is non-blocking, it arrived after Phase 6
+was frozen, and `admin.html` changes are their own approval. Recorded here so it
+is available whenever the dashboard is next opened for work — the natural moment
+is alongside Phase 7's Sections 10–11.
+
+---
+
 ## Stop
 
-Deployment verified. No Phase 7 work; no business logic, database object, RPC,
+Deployment verified and visually accepted by the owner. **Phase 6 complete and
+frozen at 100%.** No Phase 7 work; no business logic, database object, RPC,
 migration or verification script was modified.
