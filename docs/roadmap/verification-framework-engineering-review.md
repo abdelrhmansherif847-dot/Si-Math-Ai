@@ -92,7 +92,11 @@ identical whether the denominator was 383 or 0.
 | `P5-15` | PASS | 0 of **11** econ views |
 | `P5-17` | PASS | 12 RPCs invoked, 0 raised |
 
-**Cost engine — 21 PASS, 4 VACUOUS, 1 WARN** (was reported as 25 PASS, 1 WARN):
+**Cost engine — 20 PASS, 5 VACUOUS, 1 WARN** (was reported as 25 PASS, 1 WARN):
+
+> *Corrected 2026-08-01 during the release gate: this table originally said
+> "21 PASS, 4 VACUOUS" and omitted `P4-30` from the list. The measured result is
+> 20 PASS + 5 VACUOUS + 1 WARN = 26.*
 
 | Check | Verdict | Why |
 |---|---|---|
@@ -100,6 +104,7 @@ identical whether the denominator was 383 or 0.
 | **`P4-11`** | **VACUOUS** | 0 unpriced facts — INV-23 unexercised here |
 | **`P4-20`** | **VACUOUS** | no request has a shared call |
 | **`P4-22`** | **VACUOUS** | no work item is `cost_completeness = unknown` |
+| **`P4-30`** | **VACUOUS** | no work item claims `invoice_verified` |
 | `P4-31` | WARN | unchanged — 76 of 76 facts list-priced |
 
 **Nothing regressed. The count of green checks dropped because five of them
@@ -234,9 +239,9 @@ changed to cause it:
 | Suite | Before | After |
 |---|---|---|
 | Economics | 18 PASS | 17 PASS + 1 VACUOUS |
-| Cost engine | 25 PASS + 1 WARN | 21 PASS + 4 VACUOUS + 1 WARN |
+| Cost engine | 25 PASS + 1 WARN | **20 PASS + 5 VACUOUS + 1 WARN** |
 
-Five checks moved from PASS to VACUOUS. **None of them regressed** — each was
+Six checks moved from PASS to VACUOUS. **None of them regressed** — each was
 already proving nothing, and the output simply now says so. Anyone comparing
 against a historical "25 PASS" line should expect this and should not read it as
 a failure.

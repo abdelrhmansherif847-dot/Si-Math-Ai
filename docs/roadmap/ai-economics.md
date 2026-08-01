@@ -1925,7 +1925,16 @@ full production verification results).
 | Migration (applied) | `supabase/migrations/20260731_aiecon_p4_cost_engine.sql` |
 | Allocator fix (applied) | `supabase/migrations/20260731_aiecon_p4_fix_work_item_spans_requests.sql` |
 | Metadata fix (applied) | `supabase/migrations/20260731_aiecon_p4_cost_target_comment.sql` |
-| Verification | `scripts/verify-cost-engine.sql` — 31 checks (P4-01…P4-31) |
+| Verification | `scripts/verify-cost-engine.sql` — 31 checks (P4-01…P4-31), 26 read-only + 5 write-path |
+
+> **Reading the totals after 2026-08-01.** The read-only suite now reports
+> **20 PASS + 5 VACUOUS + 1 WARN**, not 25 PASS + 1 WARN. `VACUOUS` means a
+> check examined **zero candidate rows** — it is not a failure and nothing
+> regressed. `P4-10`, `P4-11`, `P4-20`, `P4-22` and `P4-30` all assert over
+> populations that are legitimately empty today (no unpriced facts, no
+> shared-cost requests, no `unknown` work items, no `invoice_verified` items).
+> Each returns to PASS automatically once its population is non-empty. See
+> `verification-framework-closeout.md`.
 
 **Exit criteria — all met against production:**
 
@@ -2008,7 +2017,15 @@ table, provider, or model; guard script green.
 
 **Applied to `igvkyxkmjnkzscqgommj` on 2026-07-31 and verified 17/17 at the
 Phase 5 gate.** The suite has since grown to 18 checks — P5-17 was added on
-2026-08-01 during the Phase 6 M2 closeout — and stands at 18/18.
+2026-08-01 during the Phase 6 M2 closeout.
+
+> **Reading the totals after 2026-08-01.** The suite now reports
+> **17 PASS + 1 VACUOUS**, not 18 PASS. `VACUOUS` means a check examined **zero
+> candidate rows** and therefore proved nothing — it is not a failure, and
+> nothing regressed to cause it. `P5-02b` reads `econ.v_service_economics`,
+> which is empty while all telemetry is internal; it printed PASS before and now
+> says so honestly. It returns to PASS automatically once that view has rows.
+> See `verification-framework-closeout.md`.
 
 | Artifact | Path |
 |---|---|
