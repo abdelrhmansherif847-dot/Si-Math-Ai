@@ -126,3 +126,41 @@ No migration written. No object created. No production state changed. `main`
 remains at `ba23a0b`.
 
 Nothing proceeds until you answer the three questions above.
+
+---
+
+## ⚠ Correction — the overlap figure in this document was wrong
+
+**Published above:** *"shared users: 0, shared days: 0 — the windows do not even
+touch."* **That arithmetic was wrong**, and the M4 pre-apply probe caught it by
+measuring what the function actually measures.
+
+The investigation query compared **all** cost users against **external-only**
+users drawn from `credit_transactions`. Two different populations, and a
+transaction date rather than a recognition span. It manufactured a disjointness
+that does not exist under the definition that matters.
+
+**The corrected reading, measured 2026-08-01:**
+
+| | |
+|---|---|
+| cost users | **1** — of which **0 external** (the owner's own account) |
+| revenue users in window (by recognition span) | **7** |
+| shared users, all | **1** — the **owner**, who has both cost and a recognized subscription |
+| **shared users, external** | **0** ← what actually gates profit |
+
+**The conclusion survives; the arithmetic did not.** Profit still cannot be
+computed honestly — and the corrected reading makes the case sharper, not
+weaker: the only thing connecting the cost and revenue populations is the
+owner's own internal testing traffic.
+
+**It also changed the design.** Because profit is a business metric and INV-25
+excludes internal traffic from business metrics, the overlap that gates profit
+must be the **external** one. Gating on the all-users overlap would have
+reported the populations as connected on the strength of internal traffic —
+and would have made `disjoint_cost_and_revenue_populations` unreachable,
+silently contradicting the owner's ruling. The function now measures both and
+returns both in `basis`.
+
+This is the fourth consecutive milestone in which a pre-apply probe caught
+something a written analysis asserted. Recorded in the engineering review.
