@@ -2248,14 +2248,70 @@ Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
 simulated result is ever written to `cost_facts` or `service_bindings`; Net
 Profit stays **Blocked** until fixed costs exist.
 
-#### Phase 7 status — **IN PROGRESS** (M1 ✅ complete · M2 ✅ complete)
+#### Phase 7 status — **IN PROGRESS** (M1 ✅ · M2 ✅ · M3 ⏸ · M4 ✅)
 
 | Milestone | Scope | Status |
 |---|---|---|
 | **M1** | `owner_cost_reprice()` scenario grammar — `service_swap`, refusal contract | ✅ **COMPLETE** — 2 migrations, gate 10/10, closed 2026-08-01 |
 | **M2** | `platform_cost_entries` + Net Profit / Net Margin | ✅ **COMPLETE** — 4 migrations, gate 9/9 |
 | **M3** | `owner_econ_breakeven()` + Section 11 panel | ⏸ **DEFERRED** — blocked on data, see ruling below |
-| **M4** | `owner_econ_simulate()` + Section 10 panel | **next** |
+| **M4** | `owner_econ_simulate()` + Section 10 (cost side) | ✅ **COMPLETE** — 1 migration, gate 15/15, closed 2026-08-01 |
+| **M5** | Revenue-side simulation (credit consumption, allowance exhaustion, package re-pricing) | **next** |
+
+##### M4 — the cost-side simulator, with profit correctly blocked
+
+`public.owner_econ_simulate(jsonb)` — Section 10's business surface. It does
+**not** re-implement provider pricing (§11): the cost side is delegated wholesale
+to `owner_cost_reprice()`, and a cost refusal is propagated with its full payload
+rather than swallowed.
+
+What it returns today:
+
+```
+gpt-4o -> gpt-4o-mini, include_internal
+cost     actual=0.22961425  simulated=0.07730370  delta=-0.15231055  (-66.3332%)
+profit   null  blocked  disjoint_cost_and_revenue_populations
+revenue  null  blocked  revenue_simulation_not_implemented
+```
+
+A real 66% cost reduction, computed by re-pricing 76 actual calls from raw units.
+
+**Applied migration.** `20260801221950` `aiecon_p7_m4_econ_simulate` — one
+migration, **no corrective**. The M1 privilege lesson was applied at write time
+(`REVOKE` from `PUBLIC` *and* `anon`), so `anon` was already denied when the gate
+first ran.
+
+**M4 release gate.** V1–V15 executed 2026-08-01; **15/15 PASS**, preceded by
+**14/14 pre-apply probes**. Economics **17 PASS + 1 VACUOUS** (`P5-04`/`P5-05`
+now covering 16 functions; `P5-17` invoked the new RPC through the suite's own
+generic path); Cost Engine **25 PASS + 5 VACUOUS + 1 WARN** — baseline, no
+regression.
+
+**Locked M4 decisions (owner rulings, 2026-08-01).**
+- **Profit is structurally unable to be computed.** `profit.value` and
+  `profit.margin_pct` are `NULL` on **every** return path — not a runtime guard,
+  the shape of the function. Never computed, estimated or approximated.
+- **The block reason is MEASURED, never hardcoded.** The function measures the
+  cost/revenue overlap in the window and reports the reason that is true. It
+  transitions on its own when real traffic arrives; no edit required.
+- **The gating overlap is the EXTERNAL one**, because profit is a business metric
+  and INV-25 excludes internal traffic. Both numbers are measured and both are
+  returned in `basis`, so neither is hidden.
+- **Deferred knobs refuse, they never silently no-op.** `packages` /
+  `operations` → `revenue_simulation_not_implemented`; `routing` →
+  `unsupported_scenario_key`; non-zero `demand.elasticity` →
+  `elasticity_unsupported`. The M1 precedent, applied consistently.
+- **INV-25 default preserved.** `include_internal` defaults to `false`, so an
+  unqualified call refuses with `no_cost_facts_in_window` — correct, not a
+  defect. A diagnostic run opts in explicitly (the Section 9 precedent).
+
+**Carried forward.** Profit stays blocked **after M5** — M5 implements the
+revenue *simulation*, it does not create the external cost population profit
+needs. Profit unblocks when external traffic is priced, and the function detects
+that itself.
+
+Docs: `phase-7-m4-investigation.md`, `phase-7-m4-engineering-review.md`,
+`phase-7-m4-release-report.md`, `phase-7-m4-closeout.md`.
 
 ##### M3 / M4 rulings (owner, 2026-08-01)
 
@@ -2450,6 +2506,41 @@ the regression was in its *privileges*.** A probe interrogates what the code
 does — it cannot see what the catalog granted. That is the concrete reason the
 post-apply gate is not redundant with a pre-apply probe, and why both are
 required rather than either.
+
+**The permanent process lesson M4 earned.** Also a **standing requirement**:
+
+> **5. A business metric must gate on the EXTERNAL population, not the total
+> population — and the overlap must be MEASURED, never inferred.**
+>
+> M4's first probe run failed on exactly this. The cost and revenue populations
+> *appear* to overlap: `shared_users = 1`. That single shared user is the
+> **owner's own account**, which carries both internal cost telemetry and a real
+> recognized subscription. Gating profit on the total overlap would have declared
+> the two populations economically connected on the strength of internal testing
+> traffic — and would have made `disjoint_cost_and_revenue_populations`
+> **unreachable**, silently contradicting the ruling it was built to honour. The
+> measured *external* overlap is `0`, and that is what gates profit.
+>
+> The second half matters as much as the first. The M4 **investigation** asserted
+> "0 shared users, 0 shared days" from a query that compared *all* cost users
+> against *external-only* credit-transaction users, on transaction dates rather
+> than recognition spans. It reached the right conclusion by the wrong
+> arithmetic. Only the probe — which measures what the function measures —
+> established the true figures.
+
+M4's generalisation, and the counterpart to lessons 1–4: **a number in a design
+document is not evidence. Only a measurement is.** Four consecutive milestones
+have now had a pre-apply probe overturn something a written analysis asserted.
+
+**The lesson chain, cumulative:**
+
+| Learned at | Lesson |
+|---|---|
+| Phase 6 | A green check is only evidence **if it could have gone red**. |
+| Phase 7 M2 | A check that was **never run** is not evidence at all. |
+| Phase 7 M2 | Every new **JOIN** must be checked against the dependency boundaries. |
+| Phase 7 M1 | Every `DROP`+`CREATE` needs **privilege verification after apply**. |
+| Phase 7 M4 | **Gate business metrics on the external population; measure the overlap, never infer it.** |
 
 **Both M2 regressions were closed by correcting the architecture, not the
 checks** — `P5-01` and `P5-04` stand unmodified.
