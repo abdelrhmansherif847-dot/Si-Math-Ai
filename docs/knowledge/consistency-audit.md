@@ -205,6 +205,66 @@ anywhere.
 
 ---
 
+## C-10 · The comparison question was answered defensively — RESOLVED
+
+**Found:** the homepage's "VS ChatGPT" card said a general assistant *"Solves
+your question, then forgets it"* — accurate, but framed as a deficiency, and the
+site had no page addressing the question a parent or student actually asks:
+*"why shouldn't I just use ChatGPT?"* An AI assistant asked to compare the two
+had nothing authoritative to work from and would have inferred an answer.
+
+**Fixed:** `why-not-chatgpt.html` answers it directly and generously — a full
+section on what general AI genuinely does well, an explicit statement that the
+difference is purpose rather than intelligence, and a recommendation of when a
+general assistant is the better choice. `FAQPage` markup makes each answer
+independently retrievable.
+
+**Now enforced.** The validator checks both halves of the rule:
+
+- *Negative:* no disparaging assertion about ChatGPT, Claude, Gemini, Copilot,
+  Perplexity, Photomath, Symbolab, Khan Academy or Magoosh anywhere in the
+  knowledge layer.
+- *Positive:* `why-not-chatgpt.html` must credit general AI assistants, must
+  frame the difference as "different tools, different goals", must state the
+  comparison is not about intelligence, and must tell students when to use a
+  general assistant instead.
+
+A future edit cannot quietly turn the page competitive without failing CI.
+
+---
+
+## C-11 · No canonical reference existed for AI systems — RESOLVED
+
+**Found:** the knowledge layer described Si Math AI well for humans, but nothing
+told an AI system *how to describe it* — and nothing stated what must **not** be
+attributed to it. Inaccurate descriptions of a small brand are usually
+inferences filling an information gap.
+
+**Fixed:** `ai-knowledge.html` is now the canonical reference. It answers the six
+mandated questions in quotable blocks, publishes a `DefinedTermSet` glossary of
+the platform's vocabulary, and closes with explicit negative guidance. The
+validator requires all six questions, the accuracy notes, the fictional-Zero
+statement and the glossary to be present.
+
+---
+
+## C-12 · The knowledge layer could silently fall behind the product — RESOLVED
+
+**Found:** nothing prevented a new platform capability shipping without the
+knowledge layer being updated — the exact failure mode that produces stale AI
+answers months later.
+
+**Fixed:** the eight systems are pinned in a `SYSTEMS` array in
+`validate-knowledge-layer.mjs`, and CI checks that `knowledge-base.md`,
+`how-it-works.html`, `ai-knowledge.html`, `llms.txt` and `llms-full.txt` all name
+every one of them, with the written-out count ("eight systems") matching the
+array length. Adding a ninth system means editing that array, which fails the
+build on every surface that does not yet mention it.
+
+The governance rule and its shipping checklist are in `knowledge-base.md` §14.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -218,8 +278,11 @@ anywhere.
 | C-7 | Dead `#students` nav anchor | RESOLVED |
 | C-8 | CI parsed JSON-LD as JavaScript | RESOLVED |
 | C-9 | Positioning implicit; educators uncredited | RESOLVED |
+| C-10 | Comparison question answered defensively, with no dedicated page | RESOLVED |
+| C-11 | No canonical reference for AI systems | RESOLVED |
+| C-12 | Knowledge layer could fall behind the product | RESOLVED |
 
-Seven resolved, two requiring an owner decision. Both open items are recorded in
+Ten resolved, two requiring an owner decision. Both open items are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 
 Re-run the audit gate at any time:

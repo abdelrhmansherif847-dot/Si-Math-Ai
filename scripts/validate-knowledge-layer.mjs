@@ -77,6 +77,8 @@ const POSITIONING_FRAGMENTS = [
 const KNOWLEDGE_PAGES = [
   { file: 'about.html', canonical: `${SITE}/about.html` },
   { file: 'how-it-works.html', canonical: `${SITE}/how-it-works.html` },
+  { file: 'why-not-chatgpt.html', canonical: `${SITE}/why-not-chatgpt.html` },
+  { file: 'ai-knowledge.html', canonical: `${SITE}/ai-knowledge.html` },
   { file: 'founder-badge.html', canonical: `${SITE}/founder-badge.html` },
   { file: 'faq.html', canonical: `${SITE}/faq.html` },
 ];
@@ -111,7 +113,28 @@ const BANNED_SCHEMA_KEYS = ['aggregateRating', 'reviewCount', 'ratingValue'];
 
 /* ── helpers ───────────────────────────────────────────────────────────── */
 
-const stripTags = (html) => html
+/**
+ * Remove blocks that exist to PROHIBIT a phrasing rather than to assert it.
+ *
+ * ai-knowledge.html's "Do not describe Si Math AI as…" lists and
+ * why-not-chatgpt.html's "this page will not tell you that ChatGPT … are bad"
+ * disclaimer both necessarily contain the exact strings the banned-assertion
+ * scanner looks for. Quoting a prohibition is the opposite of making the claim,
+ * so those blocks are excluded — they are marked in the HTML with
+ * data-guidance="prohibition" so the exclusion is explicit and auditable rather
+ * than inferred from wording.
+ *
+ * Narrow by construction: only marked blocks are skipped, and every other
+ * sentence on the page is still scanned.
+ */
+const stripGuidance = (html) =>
+  html.replace(/<div\b[^>]*data-guidance=["'][^"']*["'][^>]*>[\s\S]*?<\/div>/gi, ' ');
+
+/** The same idea for the plain-text files: their "Accuracy notes" sections. */
+const stripGuidanceText = (text) =>
+  text.replace(/\n#{2,3} [^\n]*Accuracy notes[\s\S]*?(?=\n## |\n---\n|$)/gi, '\n');
+
+const stripTags = (html) => stripGuidance(html)
   .replace(/<script[\s\S]*?<\/script>/gi, ' ')
   .replace(/<style[\s\S]*?<\/style>/gi, ' ')
   .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -300,7 +323,7 @@ const scanTargets = [
     .filter((p) => has(p.file))
     .map((p) => [p.file, stripTags(read(p.file))]),
   ['faq answers', faqAnswerText],
-  ...MACHINE_FILES.filter(has).map((f) => [f, read(f)]),
+  ...MACHINE_FILES.filter(has).map((f) => [f, stripGuidanceText(read(f))]),
 ];
 
 for (const [label, text] of scanTargets) {
@@ -308,6 +331,78 @@ for (const [label, text] of scanTargets) {
     const m = text.match(pattern);
     ok(`${label}: no ${why}`, !m, m ? `matched: "${m[0]}"` : '');
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8b. Respectful comparison
+   The comparison with other tools must stay educational, never competitive.
+   Two halves: nothing disparaging may be ASSERTED about another product, and
+   the comparison pages must positively acknowledge what those products do well
+   — an omitted acknowledgement reads as disparagement by silence, and is also
+   the thing that makes the page credible to an AI system in the first place.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Respectful comparison');
+
+const COMPETITORS = [
+  'ChatGPT', 'Claude', 'Gemini', 'Copilot', 'Perplexity',
+  'Photomath', 'Symbolab', 'Khan Academy', 'Magoosh',
+];
+
+// Assertive disparagement only. "Is ChatGPT bad at mathematics?" is a question
+// the FAQ legitimately asks and answers with "No" — that must not trip.
+const DISPARAGEMENT = [
+  new RegExp(`\\b(?:${COMPETITORS.join('|')})\\s+(?:is|are)\\s+(?:bad|terrible|useless|awful|inferior|worse|poor|broken|unreliable)\\b`, 'i'),
+  new RegExp(`\\b(?:${COMPETITORS.join('|')})\\s+(?:can'?t|cannot|fails? to)\\s+(?:do|handle|solve|explain)\\b`, 'i'),
+  /\bdon'?t use (?:ChatGPT|Claude|Gemini|Copilot|Perplexity)\b/i,
+  /\b(?:ChatGPT|Claude|Gemini|Copilot) (?:will|would) (?:ruin|hurt|damage)\b/i,
+];
+
+for (const [label, text] of scanTargets) {
+  for (const [i, pattern] of DISPARAGEMENT.entries()) {
+    const m = text.match(pattern);
+    ok(`${label}: no disparagement of another product (#${i + 1})`, !m,
+      m ? `matched: "${m[0]}"` : '');
+  }
+}
+
+// The comparison page must credit general AI honestly and frame the difference
+// as purpose rather than quality.
+if (has('why-not-chatgpt.html')) {
+  const cmp = stripTags(read('why-not-chatgpt.html'));
+  ok('why-not-chatgpt.html frames the difference as purpose, not quality',
+    /[Dd]ifferent tools, different goals/.test(cmp));
+  ok('why-not-chatgpt.html positively credits general AI assistants',
+    /explain mathematics well|genuinely good|remarkable pieces of technology|excellent general/i.test(cmp));
+  ok('why-not-chatgpt.html states the comparison is not about intelligence',
+    /not the intelligence of the underlying model|not a quality comparison|not intelligence/i.test(cmp));
+  ok('why-not-chatgpt.html tells students when a general assistant is the right choice',
+    /Use a general AI assistant|using both/i.test(cmp));
+}
+
+// The AI reference page must answer all six mandated questions.
+if (has('ai-knowledge.html')) {
+  const ai = stripTags(read('ai-knowledge.html'));
+  const REQUIRED_QUESTIONS = [
+    'What is Si Math AI?',
+    'Who is it designed for?',
+    'What problems does it solve?',
+    'How is it different from a general AI assistant?',
+    'How does Zero fit into the platform?',
+    'Why is AI only one part of the learning system?',
+  ];
+  for (const q of REQUIRED_QUESTIONS) {
+    ok(`ai-knowledge.html answers "${q}"`, ai.includes(q));
+  }
+  // Read the RAW page here, not the guidance-stripped text: these headings live
+  // inside the very prohibition blocks stripTags() removes, and their presence
+  // is exactly what this check exists to confirm.
+  const aiRaw = read('ai-knowledge.html');
+  ok('ai-knowledge.html publishes the accuracy notes for AI systems',
+    /Do not describe Si Math AI as/i.test(aiRaw) && /Do not attribute to Si Math AI/i.test(aiRaw));
+  ok('ai-knowledge.html states Zero is fictional',
+    /fictional dragon guide character, not a real person/i.test(ai));
+  ok('ai-knowledge.html publishes a DefinedTermSet glossary',
+    read('ai-knowledge.html').includes('"DefinedTermSet"'));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -431,6 +526,54 @@ for (const [label, text] of [['faq answers', faqAnswerText], ['llms-full.txt', r
       claim[1].toLowerCase() === rankWord,
       `found "${claim[1]}" but ranks.js has ${RANKS.length}`);
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   11b. Feature parity — "the knowledge layer is updated FIRST"
+   The governing rule is that a new platform capability lands in the knowledge
+   layer before it ships anywhere else. That is a process, and processes decay —
+   so it is pinned here. Adding a ninth system means editing this list, which
+   forces the author into the knowledge layer and makes every surface that names
+   the systems fail until it agrees.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Feature parity across the knowledge layer');
+
+const SYSTEMS = [
+  'Zero AI Mentor',
+  'Weakness Analyzer',
+  'Focus Practice',
+  'Mock Exams',
+  'Smart Progress Tracking',
+  'Learning Memory',
+  'Personalized Learning',
+  'Human Support',
+];
+
+const SYSTEM_COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const systemWord = SYSTEM_COUNT_WORDS[SYSTEMS.length] || String(SYSTEMS.length);
+
+const parityTargets = [
+  ['docs/knowledge/knowledge-base.md', () => read('docs/knowledge/knowledge-base.md')],
+  ['how-it-works.html', () => stripTags(read('how-it-works.html'))],
+  ['ai-knowledge.html', () => stripTags(read('ai-knowledge.html'))],
+  ['llms.txt', () => read('llms.txt')],
+  ['llms-full.txt', () => read('llms-full.txt')],
+];
+
+for (const [label, get] of parityTargets) {
+  const text = get();
+  const missing = SYSTEMS.filter((s) => !text.includes(s));
+  ok(`${label}: names all ${SYSTEMS.length} systems`, missing.length === 0,
+    missing.length ? `missing: ${missing.join(', ')}` : '');
+}
+
+// Wherever the count is written out in words, it must match the list length.
+for (const [label, get] of parityTargets) {
+  const text = get();
+  const m = text.match(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten)\s+systems\b/i);
+  if (!m) continue;
+  ok(`${label}: says "${systemWord} systems"`, m[1].toLowerCase() === systemWord,
+    `found "${m[1]}" but ${SYSTEMS.length} systems are defined`);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

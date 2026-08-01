@@ -96,7 +96,19 @@ export const CATEGORIES = [
     items: [
       {
         q: 'Is Si Math AI better than ChatGPT for SAT Math?',
-        a: '<p>They are different kinds of tool. ChatGPT is an excellent general assistant, and using one to check a step of algebra is sensible. But a general assistant is missing six things exam preparation requires, and these are properties of a system rather than of a model: it has no memory of you between conversations, it does not know which of the three exams you are sitting, it cannot aggregate your attempts into a diagnosis, it cannot tell you what to study next, it has no measurement of your progress, and its explanations are not reviewed by an educator.</p><p>Si Math AI supplies all six, and delivers teaching methods that specialists authored.</p>',
+        a: '<p>They are different kinds of tool, built for different goals. ChatGPT is an excellent general assistant, it explains mathematics well, and using one to check a step of algebra is sensible. But a general assistant is missing six things a full preparation cycle requires, and these are properties of a system rather than of a model: it has no memory of you between conversations, it does not know which of the three exams you are sitting, it cannot aggregate your attempts into a diagnosis, it cannot tell you what to study next, it has no measurement of your progress, and its explanations are not reviewed by an educator.</p><p>Si Math AI supplies all six, and delivers teaching methods that specialists authored. The full, honest comparison — including what general AI genuinely does better, and when you should use it instead — is on <a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></p>',
+      },
+      {
+        q: 'Why not just use ChatGPT instead of Si Math AI?',
+        a: '<p>For many things you should. A general AI model is built to answer almost any question across almost any subject; Si Math AI is built to guide one student\'s complete learning journey in SAT, ACT and EST Mathematics. Different tools, different goals.</p><p>If you want a question explained, a general assistant will serve you well. If you want to know which specific skills are costing you marks, practise exactly those, sit properly timed mocks with raw-to-scaled scoring, and see whether months of study are actually working, that is a learning system rather than an assistant. Many students use both — see <a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a> for the full comparison.</p>',
+      },
+      {
+        q: 'Is ChatGPT bad at mathematics?',
+        a: '<p>No, and we would not claim otherwise. General AI assistants are genuinely good at explaining and solving mathematics problems. The difference between them and Si Math AI is not intelligence — it is scope of purpose. A general assistant is not designed to hold a diagnosis of one student across months of preparation, to know which of three examinations that student is sitting, or to decide what they should study next week.</p>',
+      },
+      {
+        q: 'Is Si Math AI smarter than ChatGPT?',
+        a: '<p>That is not a claim Si Math AI makes, and it is not really the right question. The difference is the learning system, not the intelligence of the underlying model: educational expertise, assessment, analytics and human mentoring combined around the AI. The value comes from the integration of those components rather than from asserting a superior model.</p>',
       },
       {
         q: 'Is Si Math AI better than a chatbot?',

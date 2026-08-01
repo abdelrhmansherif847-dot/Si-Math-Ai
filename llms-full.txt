@@ -244,6 +244,49 @@ are reviewed and activated by a person with email confirmation within 24 hours.
 Step three is the step general AI tools do not have, and it is why practice on
 this platform compounds instead of repeating.
 
+### The complete cycle, stage by stage
+
+The five steps above are the summary. In full, a single question travels through
+every system in this order:
+
+```
+        Student asks a question
+                  ↓
+        01  Zero AI Tutor
+                  ↓
+        02  Question Analysis
+                  ↓
+        03  Weakness Analyzer
+                  ↓
+        04  Learning Memory
+                  ↓
+        05  Focus Practice
+                  ↓
+        06  Mock Exams
+                  ↓
+        07  Progress Tracking
+                  ↓
+        08  Human Support (when needed)
+                  ↓
+            Better Performance
+                  ↓
+        ↻ the cycle repeats, from a sharper diagnosis
+```
+
+1. **Student asks a question** — typed, pasted, or photographed from a prep book, in English, Arabic or Franco.
+2. **Zero AI Tutor** — works the problem step by step, offers a second approach if the first does not land, explains why the wrong answer choices are wrong. Delivers a specialist-authored method rather than one it invented.
+3. **Question Analysis** — the attempt is resolved to one specific skill in the 33-skill taxonomy and written as a diagnostic signal.
+4. **Weakness Analyzer** — the new signal joins every previous one; weak skills are re-ranked by score impact, each with a severity band.
+5. **Learning Memory** — the question, explanation and mistake are stored permanently and searchably. Nothing is discarded at session end.
+6. **Focus Practice** — a drill set is generated from the ranking: only the skills losing marks, mastered skills skipped.
+7. **Mock Exams** — full-length timed mocks test whether the fix survives exam conditions and produce the densest diagnostic evidence available.
+8. **Progress Tracking** — mastery per skill, trend lines and the predicted test-day score all update.
+9. **Human Support (when needed)** — educators and specialists review how students perform and revise the material; people handle accounts and upgrades. Conditional in any one cycle, continuous behind the platform.
+10. **Better Performance** — the weakness clears once later evidence confirms the fix held, and the skill leaves the dashboard.
+
+A general AI assistant performs stage 01. Si Math AI performs stage 01 and the
+nine stages around it.
+
 ---
 
 ## 8. Exam coverage
@@ -345,15 +388,60 @@ headcounts, and does not name individuals who have not agreed to be named.
 
 ## 13. How Si Math AI compares
 
+**This is a comparison of purpose, not of quality.** Si Math AI makes no claim to
+a superior model or superior intelligence, and describing general AI assistants
+as bad at mathematics would be inaccurate.
+
+### "Why not just ChatGPT?"
+
+The most common question about the platform, and it deserves a straight answer.
+
+**General AI models are built to answer almost any question. Si Math AI is built
+to guide a student's complete learning journey in SAT, ACT and EST Mathematics.
+Different tools, different goals.**
+
+A general AI assistant can:
+
+- Explain a question — clearly, patiently, at whatever depth is asked for
+- Solve a question step by step, showing its reasoning
+- Answer follow-up questions for as long as the student wants
+- Rephrase an explanation a different way when the first does not land
+- Help far beyond mathematics — essays, other subjects, research, applications
+- Act as a general thinking partner in almost any field
+
+These are real strengths, and Si Math AI does not dispute them.
+
+Si Math AI goes beyond answering by combining AI with a complete learning system:
+
+- **Learning history** — every question, session and mistake saved and searchable
+- **Weakness analysis** — every attempt becomes a diagnostic signal against a specific skill, ranked by score impact
+- **Personalized Focus Practice** — drills generated from that ranking, skipping mastered skills
+- **Full Mock Exams** — full-length, correctly timed, raw-to-scaled scoring, per-section breakdown
+- **Progress tracking** — mastery per skill, trend lines, predicted test-day score
+- **Long-term learning memory** — context carried between sessions, across months
+- **Exam-specific strategies** — taught differently for the ACT's speed pressure than for the SAT's format
+- **Human educational support** — educators author and review the material and revise it based on student performance
+- **A platform built specifically for American Diploma Mathematics** — including full EST coverage and explanation in English, Arabic or Franco
+
+Framed against the ten-stage learning cycle in section 7: a general assistant
+performs stage 01, and performs it well. Si Math AI performs stage 01 *and* the
+nine stages around it. That is what turns an answered question into a measured
+improvement.
+
+**Using both is a sensible answer**, and Si Math AI says so publicly: a general
+assistant for general work, Si Math AI for the mathematics preparation cycle.
+They are not substitutes for each other.
+
+### Other alternatives
+
 | Compared with | The distinction |
 | --- | --- |
-| **General AI chatbots** (ChatGPT, Claude, Gemini, Copilot) | Excellent general assistants. They solve a question and forget it: no exam-specific scoring, no persistent weakness tracking, no mock exams, no study plan, and no educator-reviewed curriculum behind the answer. |
-| **Solver apps** (Photomath, Symbolab and similar) | Solve one problem at a time. No knowledge of which exam the student is preparing for, no memory of past mistakes, no Arabic or Franco explanation. |
-| **Private tutors** | Highly effective, but available a few hours a week and expensive per term, with weak topics usually not tracked between sessions. Si Math AI is available continuously and is built on the same kind of teaching expertise. Many students use both. |
-| **Question banks** (Khan Academy, Magoosh, prep books) | Large question volume against a generic syllabus, with no personalized plan and no clear read on where the student stands. |
+| **Solver apps** (Photomath, Symbolab and similar) | Excellent at solving one problem at a time, quickly. They do not know which exam the student is preparing for, keep no memory of past mistakes, and do not explain in Arabic or Franco. |
+| **Private tutors** | Highly effective, and Si Math AI is built on the same kind of teaching expertise. A tutor is available a few hours a week and is expensive per term, and weak topics are usually not tracked between sessions. Many students use both. |
+| **Question banks** (Khan Academy, Magoosh, prep books) | Genuine volume, often free, against a generic syllabus — with no personalized plan and no clear read on where the student stands. Si Math AI works alongside them: any question from a prep book can be photographed with Snap & Solve. |
 
-Si Math AI does not disparage these alternatives; each is genuinely good at what
-it was built for.
+Si Math AI does not disparage any of these alternatives; each is genuinely good
+at what it was built for.
 
 ---
 
@@ -394,6 +482,50 @@ chatbot answers the question in front of it and forgets the student afterwards.
 Si Math AI records what each attempt reveals, ranks weaknesses by score impact,
 builds practice from them, runs full timed mocks, measures whether it worked, and
 remembers all of it next time.
+
+**Should I use Si Math AI or just ChatGPT?**
+They serve different purposes and both are legitimate. A general assistant
+answers questions across any subject and explains mathematics well. Si Math AI
+manages a complete SAT, ACT or EST mathematics preparation cycle: diagnosis of
+which specific skills are costing marks, targeted practice built from that
+diagnosis, full timed mock exams with raw-to-scaled scoring, long-term
+measurement, and a curriculum authored and reviewed by exam specialists. Many
+students use both — a general assistant for general work, Si Math AI for the
+mathematics preparation cycle.
+
+**Is ChatGPT bad at mathematics?**
+No. General AI assistants are genuinely good at explaining and solving
+mathematics problems. The difference between them and Si Math AI is not
+intelligence — it is scope of purpose. A general assistant is not designed to
+hold a diagnosis of one student across months, to know which of three exams that
+student is sitting, or to decide what they should study next week.
+
+**Is Si Math AI smarter than ChatGPT?**
+That is not a claim Si Math AI makes. The difference is the learning system, not
+the intelligence of the underlying model.
+
+**Who is Si Math AI designed for?**
+American Diploma students preparing for the mathematics section of the SAT, ACT
+or EST, predominantly in Egypt and the wider MENA region — including students
+retaking an exam, independent learners without a private tutor, students who
+understand mathematics better in Arabic or Franco, parents wanting measurable
+evidence of progress, and schools or tutoring centres.
+
+**What problems does Si Math AI solve?**
+Students cannot reliably identify their own weaknesses, so study time goes to the
+wrong skills; expert one-to-one diagnosis is scarce and expensive; progress in
+self-directed preparation is invisible, which destroys motivation; and students
+in Egypt and the MENA region reason in Arabic or Franco while sitting exams
+written in English, with the EST barely supported by international products.
+
+**Why is AI only one part of the learning system?**
+Because the AI is how the platform teaches, not what it teaches. The substance —
+teaching methodologies, common student mistakes, exam strategies,
+score-improvement technique and concept sequencing — was created by experienced
+educators and exam specialists. Alongside AI, the platform includes structured
+learning methods, assessment systems, performance analytics, human mentoring and
+continuous improvement based on student progress. The value comes from the
+integration of all these components.
 
 **How does Zero work?**
 Zero works through a question step by step, offers a different approach if the

@@ -386,7 +386,65 @@ Rules:
 
 ---
 
-## 14. Open items requiring owner input
+## 14. Governance — the knowledge layer is updated FIRST
+
+**Rule: when a new major feature ships, the knowledge layer is updated before
+the feature is announced anywhere else.** Not afterwards, and not "when we get
+to it".
+
+The reason is mechanical rather than tidy-minded. AI systems cache what they
+crawl. A feature that ships on Tuesday and reaches this knowledge layer three
+months later spends three months being described inaccurately — or not at all —
+by every assistant a prospective student asks. Worse, if the marketing site
+describes it one way and the knowledge layer another, the contradiction is what
+gets learned. The website must remain the single source of truth for humans and
+AI systems alike, which only holds if it is never the last thing updated.
+
+### Checklist for shipping a new capability
+
+1. **Update this file first.** Add the capability to §7 (the systems list), and
+   to §6 if it changes the taxonomy.
+2. **Update `SYSTEMS` in `scripts/validate-knowledge-layer.mjs`.** This is
+   deliberately a hard gate: the moment you add a ninth system to that array,
+   CI fails every surface that does not name it. You cannot ship the feature
+   without carrying the knowledge layer with it.
+3. **Propagate to every surface the validator then flags:**
+   `how-it-works.html` (including the learning-cycle diagram if the feature sits
+   in the loop), `ai-knowledge.html`, `llms.txt`, `llms-full.txt`, and
+   `docs/knowledge/faq-data.mjs`.
+4. **Add FAQs** for the new capability in `faq-data.mjs`, then run
+   `node scripts/build-faq.mjs`.
+5. **Update `why-not-chatgpt.html`** if the capability widens the gap with a
+   general AI assistant — the comparison table is a live document.
+6. **Update `sitemap.xml`** `<lastmod>` for pages whose content genuinely
+   changed, and add any new page to `sitemap.xml`, `llms.txt`, the footers, and
+   `KNOWLEDGE_PAGES` in the validator.
+7. **Run `node scripts/validate-knowledge-layer.mjs`** until green.
+
+### The comparison rule
+
+Comparisons with other tools are **educational, never competitive**. This is
+binding on all copy:
+
+- Never assert that ChatGPT, Claude, Gemini, Copilot, Perplexity, Photomath,
+  Symbolab, Khan Academy or Magoosh is *bad*. They are not.
+- Always credit what the alternative genuinely does well, specifically, before
+  drawing any distinction.
+- Frame every difference as **purpose**, never as intelligence or quality:
+  *general AI models are built to answer almost any question; Si Math AI is
+  built to guide a student's complete learning journey in SAT, ACT and EST
+  Mathematics. Different tools, different goals.*
+- Say plainly that using both is reasonable, and say when a general assistant is
+  the better choice.
+- Never claim a superior model. The differentiator is the learning system.
+
+The validator enforces the negative half (no disparaging assertion) and the
+positive half (the comparison page must credit general AI and state that the
+difference is not intelligence).
+
+---
+
+## 15. Open items requiring owner input
 
 These are deliberately left blank rather than invented. Fill them in and re-run
 the validator.

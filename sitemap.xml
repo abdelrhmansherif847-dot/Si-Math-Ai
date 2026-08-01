@@ -33,10 +33,26 @@
   </url>
 
   <url>
+    <loc>https://www.si-math-ai.com/why-not-chatgpt.html</loc>
+    <lastmod>2026-08-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
     <loc>https://www.si-math-ai.com/faq.html</loc>
     <lastmod>2026-08-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
+  </url>
+
+  <!-- The canonical reference AI assistants are pointed at, from llms.txt and
+       from every page footer. Indexable and linked like any other page. -->
+  <url>
+    <loc>https://www.si-math-ai.com/ai-knowledge.html</loc>
+    <lastmod>2026-08-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 
   <url>

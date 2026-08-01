@@ -195,6 +195,7 @@ ${jsonForScriptTag(graph)}
   <ul class="k-nav-links">
     <li><a href="about.html">About</a></li>
     <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="why-not-chatgpt.html">vs ChatGPT</a></li>
     <li><a href="founder-badge.html">Founder Badge</a></li>
     <li><a href="faq.html" aria-current="page">FAQ</a></li>
     <li><a href="pricing.html">Pricing</a></li>
@@ -290,10 +291,10 @@ ${groups}
         <h3>Knowledge Center</h3>
         <ul>
           <li><a href="about.html">About Si Math AI</a></li>
-          <li><a href="about.html#mission">Mission &amp; Vision</a></li>
-          <li><a href="about.html#story">Our Story</a></li>
-          <li><a href="about.html#team">Who Built It</a></li>
           <li><a href="how-it-works.html">How It Works</a></li>
+          <li><a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></li>
+          <li><a href="ai-knowledge.html">Reference for AI Systems</a></li>
+          <li><a href="founder-badge.html">Founder Badge</a></li>
           <li><a href="faq.html">FAQ</a></li>
         </ul>
       </div>
@@ -302,7 +303,6 @@ ${groups}
         <ul>
           <li><a href="index.html">Home</a></li>
           <li><a href="pricing.html">Pricing</a></li>
-          <li><a href="founder-badge.html">Founder Badge</a></li>
           <li><a href="signup.html">Start Free</a></li>
           <li><a href="login.html">Log In</a></li>
         </ul>

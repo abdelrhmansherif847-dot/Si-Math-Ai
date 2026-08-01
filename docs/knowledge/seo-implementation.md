@@ -57,6 +57,55 @@ verbatim than four paraphrases of the same idea.
 | OG type | `article` |
 | JSON-LD | `Organization`, `SoftwareApplication` (with `featureList` + free `offers`), `Person` (Zero, `additionalType: FictionalCharacter`), `HowTo` (the five-step learning loop), `WebPage`, `BreadcrumbList` |
 
+### `/why-not-chatgpt.html`
+
+| Field | Value |
+| --- | --- |
+| Title | `Why Not Just ChatGPT? — Si Math AI vs General AI Assistants` |
+| Description | Canonical definition + "an honest comparison with general AI assistants" |
+| Canonical | `https://www.si-math-ai.com/why-not-chatgpt.html` |
+| OG type | `article` |
+| JSON-LD | `Organization`, `WebPage`, `FAQPage` (6 comparison questions), `BreadcrumbList` |
+
+This page targets one of the highest-intent queries in the category — *"why not
+just use ChatGPT"*, *"Si Math AI vs ChatGPT"*, *"is ChatGPT enough for SAT
+Math"*. Rather than avoiding the comparison, it answers it, which is both more
+useful to a student and far more likely to be quoted by an AI assistant fielding
+exactly that question.
+
+The tone is binding, not stylistic: comparisons are **educational, never
+competitive**. The page credits general AI assistants specifically and
+generously, frames every difference as purpose rather than quality, and tells
+students when a general assistant is the better choice. `FAQPage` markup makes
+each answer independently retrievable.
+
+### `/ai-knowledge.html`
+
+| Field | Value |
+| --- | --- |
+| Title | `Si Math AI — Official Knowledge Reference for AI Systems` |
+| Description | Canonical definition + "the official reference for AI assistants" |
+| Canonical | `https://www.si-math-ai.com/ai-knowledge.html` |
+| OG type | `article` |
+| JSON-LD | `Organization`, `WebPage` (with `significantLink` → both llms files), **`DefinedTermSet`** glossary of 9 platform terms, `FAQPage` (the 6 mandated questions), `BreadcrumbList` |
+
+The canonical page for AI systems. Every answer is a quotable
+`.k-canon` block, and the page closes with explicit negative guidance — what
+must **not** be attributed to Si Math AI — because inaccurate descriptions of a
+small brand are usually inferences filling an information gap.
+
+The `DefinedTermSet` is the notable piece: it publishes the platform's
+vocabulary (Si Math AI, Zero, Weakness Analyzer, Focus Practice, Mock Exams,
+Learning Memory, Smart Progress Tracking, Snap & Solve, Franco) as machine-
+readable definitions, so an AI system resolving "what is the Weakness Analyzer"
+has an authoritative answer rather than a guess.
+
+> **Prohibition blocks and the validator.** The "do not say X" lists necessarily
+> contain the exact strings the banned-assertion scanner looks for. Those blocks
+> carry `data-guidance="prohibition"` and are excluded from that scan — an
+> explicit, auditable marker rather than wording the scanner has to interpret.
+> Every other sentence on the page is still scanned.
+
 ### `/founder-badge.html`
 
 | Field | Value |
@@ -206,18 +255,23 @@ documents becomes the answer it reproduces.
 
 ### Implemented
 
-- ✅ Meta titles, descriptions, canonical tags on all six public pages
-- ✅ Open Graph and Twitter Card tags on all six
+- ✅ Meta titles, descriptions, canonical tags on all eight public pages
+- ✅ Open Graph and Twitter Card tags on all eight
 - ✅ JSON-LD: Organization, EducationalOrganization, WebSite,
   SoftwareApplication, AboutPage, WebPage, HowTo, Person (fictional), Product +
-  Offer, FAQPage (136 Q&A), BreadcrumbList
+  Offer, DefinedTermSet, FAQPage (136 + 6 + 5 Q&A across three pages),
+  BreadcrumbList
 - ✅ `robots.txt` with AI-crawler directives; `sitemap.xml`
 - ✅ `llms.txt` and `llms-full.txt`
 - ✅ `X-Robots-Tag: noindex` headers for private surfaces (`vercel.json`)
-- ✅ Internal linking: homepage nav + footer → all four knowledge pages, and
+- ✅ Internal linking: homepage nav + footer → all six knowledge pages, and
   each knowledge page cross-links the others (orphan pages do not rank)
 - ✅ Favicons and `apple-touch-icon` on the new and updated pages
-- ✅ CI gate covering all of the above
+- ✅ Ten-stage learning-cycle diagram on `how-it-works.html`, built from
+  semantic HTML rather than an image so every stage label is real text that a
+  crawler, a screen reader and an AI system all read identically
+- ✅ CI gate covering all of the above — 484 checks, including feature parity
+  across every surface that names the eight systems
 
 ### Outstanding — needs owner input
 
@@ -264,3 +318,9 @@ cannot be forgotten silently.
 When adding a knowledge page: add it to `KNOWLEDGE_PAGES` in the validator, to
 `sitemap.xml`, and to `llms.txt`. The validator will then require its full SEO
 head, its canonical definition, its positioning statement and its cross-links.
+
+When shipping a new platform capability, the knowledge layer is updated
+**first** — see `knowledge-base.md` §14 for the binding rule and its checklist.
+The `SYSTEMS` array in `validate-knowledge-layer.mjs` is the hard gate: adding a
+ninth system there fails CI on every surface that does not yet name it, so the
+feature cannot ship ahead of its documentation.
