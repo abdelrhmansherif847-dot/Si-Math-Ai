@@ -244,13 +244,23 @@ A correction is **one atomic operation** inside a single owner-gated
 
 1. Read the current row for `(period_month, category)`; if none, this is
    revision 1.
-2. Insert the new row: `revision_number = old + 1`, `supersedes_id = old.id`,
-   `created_by = auth.uid()`.
-3. Update the old row: `is_current = false`, `superseded_at = now()`,
+2. **Supersede the old row first**: `is_current = false`, `superseded_at = now()`,
    `superseded_by = auth.uid()`.
+3. **Then insert** the new row: `revision_number = old + 1`,
+   `supersedes_id = old.id`, `created_by = auth.uid()`.
 
-Steps 2–3 are in one transaction. The partial unique index makes a half-completed
-correction impossible: two current rows for the same key cannot exist.
+> **⚠ Corrected 2026-08-01 by the pre-apply probe.** This section originally
+> specified the reverse order — insert, then supersede — and **it cannot
+> execute**. `pce_one_current` is a *partial* unique index, which PostgreSQL
+> enforces immediately and which **cannot be made `DEFERRABLE`**. Inserting
+> first leaves two rows with `is_current = true` for one key for an instant and
+> raises `23505`, so every correction would fail. The probe reproduced this
+> exactly. Both this document and the M2a RPC were corrected.
+
+Steps 2–3 share one transaction, so a failed insert rolls the supersede back
+with it — the table can never hold a superseded row with no replacement. The
+partial unique index makes a half-completed correction impossible: two current
+rows for the same key cannot exist, even transiently.
 
 **Note:** no column in this project currently defaults to `auth.uid()`. Here
 `created_by` is set **explicitly by the RPC**, not by a column default — the RPC
