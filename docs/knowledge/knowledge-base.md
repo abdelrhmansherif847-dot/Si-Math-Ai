@@ -11,7 +11,109 @@ contradicts this file, update this file first, then propagate.
 `tests/run-all.mjs`). The validator fails the build when a knowledge page drops
 the canonical definition, the three pillars, or uses banned reductive framing.
 
-Last reviewed: 2026-08-01 · Taxonomy version: 1
+Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0**
+
+---
+
+## 0. STATUS: the documentation is frozen (2026-08-01)
+
+**The knowledge layer is complete and closed to additions.** 22 public pages, a
+knowledge graph of 22 concepts, and a 2,030-check CI gate. Nothing further is to
+be written unless the product changes.
+
+From here the website evolves **because the platform evolves** — never the other
+way around. Documentation that grows on its own restates what already exists,
+dilutes the pages that matter, and gives AI systems more surface to retrieve
+inconsistently from.
+
+### The only two reasons to touch this layer again
+
+**1 · A feature shipped.** Follow the pipeline. Nothing skips it:
+
+```
+Knowledge Graph → Documentation → Website → Implementation
+    → Real Student Usage → Outcome Evidence
+```
+
+The graph comes first because a concept that reaches it last has already been
+described three different ways by the time anyone reconciles them. See §14.
+
+**2 · Real data arrived.** This is the addition that is always welcome, and the
+one the whole layer was built to make possible. See the runbook below.
+
+### The question that gates every feature
+
+Before building anything, ask:
+
+> **"Will this genuinely help students learn better?"**
+
+If yes, build it. If no, do not — however impressive the technology is. This is
+what keeps Si Math AI an education platform rather than a feature list, and it
+applies to documentation as much as to code.
+
+### And the philosophy, which does not change as the platform grows
+
+> **Educational expertise is the foundation.**
+> **Human experience is the guidance.**
+> **Artificial Intelligence is the engine.**
+
+The goal was never to build another AI chatbot. It is to build the best learning
+platform for SAT, ACT and EST Mathematics. Everything built should reinforce
+that, and anything that does not is a distraction wearing a feature's clothes.
+
+---
+
+## 0a. Runbook — publishing real evidence when it exists
+
+Three placeholders are deliberately empty and CI-enforced to stay that way.
+Each has a defined path to being filled. **Filling them is the highest-value
+work available to this layer, and it is unblocked only by real students.**
+
+### Student and parent stories → `trust.html`
+
+Currently: an empty section explaining that this site once published fabricated
+testimonials and removed them.
+
+To publish, each story must meet the standard in §13d — a named, identifiable
+person with **written permission**, their own words, the actual journey
+*including what did not work*, no unverifiable score claim, the collection
+method disclosed (including any compensation), and no cherry-picking.
+
+Then relax `FABRICATED_PROOF` in `validate-knowledge-layer.mjs` **deliberately**,
+not by deleting the check: the pattern that a real figure trips should be
+replaced by an assertion that the figure matches a recorded source.
+
+### Outcome evidence → `evidence.html`
+
+Currently: `EVIDENCE_TYPES` is `mechanism | research | record`, and the
+validator **fails the build** if an `outcome`-typed item appears. That rejection
+is on purpose — it makes publishing outcome evidence a considered decision with
+data behind it rather than a word that drifted into a data file.
+
+When real, consented, methodologically sound data exists:
+
+1. Add `'outcome'` to `EVIDENCE_TYPES` in `validate-knowledge-layer.mjs`.
+2. Add the evidence items to `CAPABILITIES` in `evidence-data.mjs`, each stating
+   sample size, collection method and limitations.
+3. Update the "no outcome evidence" statement on `evidence.html` — the validator
+   currently *requires* that statement, so this is a two-sided change.
+4. `node scripts/build-evidence.mjs && node scripts/validate-knowledge-layer.mjs`
+
+**Do not skip step 2's limitations.** Evidence published without its limits is
+the thing this entire layer exists to avoid.
+
+### Platform statistics
+
+Same rule as everything else: publish a number only with a stated source and
+method. `FABRICATED_PROOF` catches user counts, star ratings, average score
+gains and "trusted by N" precisely because those are the numbers most often
+asserted without one.
+
+### The founder note → `why-we-built-si-math-ai.html`
+
+Reserved for the founder's own words. Nobody else writes it. When it is written,
+replace the reserved block; the validator requires the section to stay marked
+reserved until then.
 
 ---
 

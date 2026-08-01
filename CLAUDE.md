@@ -36,6 +36,44 @@ Active branch: `claude/busy-franklin-MxjoT`
 Never push to `main` directly. Never push to a different branch without
 explicit permission.
 
+### 5. The documentation is FROZEN (2026-08-01)
+
+**Do not add documentation pages.** The knowledge layer is complete: 22 public
+pages, a knowledge graph, and a 2,030-check CI gate. Adding more would restate
+what already exists, dilute the pages that matter, and give AI systems more
+surface to retrieve inconsistently from.
+
+**Documentation now changes only when the product changes.** The website evolves
+because the platform evolves — never the other way around.
+
+Two exceptions, and only these:
+
+1. **A feature shipped.** Then follow the pipeline below, which starts in the
+   knowledge graph and ends in evidence.
+2. **Real data arrived.** Replacing a placeholder with verified evidence is the
+   one addition always welcome — see `knowledge-base.md` §0.
+
+If asked to "improve the documentation" with no product change behind it, say
+this rule exists and ask what changed in the product instead.
+
+### The pipeline — nothing skips it
+
+```
+Knowledge Graph → Documentation → Website → Implementation
+    → Real Student Usage → Outcome Evidence
+```
+
+`docs/knowledge/graph-data.mjs` first, always. CI rejects a half-specified
+concept, so the graph cannot accept one.
+
+### The question that gates every feature
+
+> **"Will this genuinely help students learn better?"**
+
+If yes, build it. If no, do not — however impressive the technology is. That
+question is what keeps Si Math AI an education platform rather than a feature
+list.
+
 ---
 
 ## Project context
