@@ -1,7 +1,16 @@
 # Phase 6 M4.3 — AI Service & Model Analytics: Implementation & Engineering Review
 
-**Status: implementation complete, NOTHING APPLIED.** The migration is prepared
-and unapplied; no Release Gate has begun.
+> **Superseded 2026-08-01.** The migration described here was applied as
+> `20260801135335` and the Release Gate passed. This document is retained as the
+> pre-apply record; for post-apply state see
+> [`phase-6-m4-3-release-report.md`](./phase-6-m4-3-release-report.md).
+> Every claim below was re-verified by the gate and held. Two were sharpened
+> rather than corrected: §7's "2 generic INV-03 hits" and §3's "2 `owner_econ_*`
+> references" both refer to the **whole M4.3 addition** — inside
+> `loadEconServices()` itself the counts are 0 and 0.
+
+**Status at time of writing: implementation complete, NOTHING APPLIED.** The
+migration was prepared and unapplied; no Release Gate had begun.
 
 Branch `claude/phase6-m4-3-service-model-analytics`, cut clean from `main` at
 `e6abc2b`.

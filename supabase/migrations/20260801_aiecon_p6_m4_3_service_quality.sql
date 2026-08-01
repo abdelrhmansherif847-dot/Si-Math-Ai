@@ -1,9 +1,12 @@
 -- ===========================================================================
 -- Phase 6 M4.3 — service → provider → model quality metrics for Section 9
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Owner instruction for M4.3: end at
---         implementation + engineering review; no apply, no Release Gate.
+-- STATUS: ✅ APPLIED 2026-08-01 as version 20260801135335, on individual owner
+--         approval (CLAUDE.md §3). M4.3 Release Gate V1-V8 all PASS; Economics
+--         suite 18/18; Cost Engine 25 PASS + 1 WARN (P4-31, pre-existing).
+--         Post-apply: cost reconciles to $0.22961425 at all three levels,
+--         service shares total exactly 100.00%, columns 1-8 bit-identical to
+--         the pre-migration signature. See phase-6-m4-3-release-report.md.
 --
 -- WHY A DROP + RECREATE (owner-approved, 2026-08-01)
 --   Section 9 needs tokens, latency and success/failure at service → provider →
