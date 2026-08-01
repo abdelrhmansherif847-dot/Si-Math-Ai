@@ -1,10 +1,15 @@
 -- ===========================================================================
 -- Phase 7 M2a — public.platform_cost_entries: immutable owner-entered fixed cost
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Owner instruction for M2: implement,
---         probe, engineering review, then STOP. No migration is applied before
---         the owner approves the review.
+-- STATUS: ⚠ APPLIED 2026-08-01 as version 20260801182954, on owner approval of
+--         the M2 engineering review. The M2 Release Gate then FAILED at V4:
+--         owner_econ_set_platform_cost raised 42702 (ambiguous column) because
+--         RETURNS TABLE output names are PL/pgSQL variables and the body's
+--         column references were unqualified.
+--
+--         THE FIX BELOW IS PREPARED AND NOT YET APPLIED — it requires a
+--         follow-up migration and owner approval. This file shows the corrected
+--         body; production still carries the broken version until then.
 --
 -- DESIGN OF RECORD: docs/roadmap/phase-7-m2-design-document.md
 -- Owner decisions closed 2026-08-01 (D1–D6) are encoded here; where this file
@@ -290,9 +295,18 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  SELECT * INTO v_old
-    FROM public.platform_cost_entries
-   WHERE period_month = p_period_month AND category = v_cat AND is_current;
+  -- EVERY column reference is qualified with the alias `e`. In PL/pgSQL the
+  -- RETURNS TABLE output names (id, period_month, category, amount, currency,
+  -- revision_number, superseded_id) are VARIABLES in scope, so an unqualified
+  -- `WHERE period_month = ...` is ambiguous and raises 42702 at execution.
+  --
+  -- Found by the M2 Release Gate on 2026-08-01, AFTER apply: the pre-apply
+  -- probe exercised the table, trigger, constraints, view, resolver and both
+  -- net-profit RPCs, but never called THIS function, so its body never ran.
+  -- 42702, like 42804, is raised only at execution.
+  SELECT e.* INTO v_old
+    FROM public.platform_cost_entries e
+   WHERE e.period_month = p_period_month AND e.category = v_cat AND e.is_current;
 
   -- A correction must state why (owner decision D3). Enforced here as well as
   -- by CHECK, so the caller gets a clear error rather than a constraint name.
@@ -317,9 +331,9 @@ BEGIN
   -- INSERT fails the supersede is rolled back with it. The table can never be
   -- left with a superseded row and no replacement.
   IF v_old.id IS NOT NULL THEN
-    UPDATE public.platform_cost_entries
+    UPDATE public.platform_cost_entries e
        SET is_current = false, superseded_at = now(), superseded_by = v_actor
-     WHERE platform_cost_entries.id = v_old.id;
+     WHERE e.id = v_old.id;
   END IF;
 
   INSERT INTO public.platform_cost_entries

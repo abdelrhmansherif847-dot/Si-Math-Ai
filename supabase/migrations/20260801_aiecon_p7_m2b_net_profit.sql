@@ -1,9 +1,12 @@
 -- ===========================================================================
 -- Phase 7 M2b — Net Profit & Net Margin (monthly)
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Applied only after the owner approves
---         the M2 engineering review. Depends on M2a.
+-- STATUS: ✅ APPLIED 2026-08-01 as version 20260801183045, on owner approval of
+--         the M2 engineering review. Verified after applying: all three net
+--         profit surfaces callable, v_breakeven_inputs columns 1-8 unchanged in
+--         name, type and order, and all 14 months correctly blocked (no FX).
+--         econ.block_reason(), v_pnl_daily, owner_econ_pnl and
+--         owner_econ_pnl_summary confirmed untouched by this migration.
 --
 -- DESIGN OF RECORD: docs/roadmap/phase-7-m2-design-document.md §10–§12
 --
