@@ -1,14 +1,16 @@
 -- ===========================================================================
 -- Phase 6 M3 — period credit summary for the Credits Analytics headline
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Owner-approved 2026-08-01 as one additional
---         owner RPC for M3 (CLAUDE.md §3 still requires individual approval to
---         apply). Owner instruction: stop after the engineering review; do not
---         apply, do not begin the Release Gate.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801114637, owner-approved via the M3 Release Gate (CLAUDE.md §3).
+--         Applied together with 20260801_aiecon_p6_m3_operation_mix.sql
+--         (version 20260801114601).
 --
---         Applied together with 20260801_aiecon_p6_m3_operation_mix.sql. Two
---         files rather than one so each RPC's rationale stays self-contained;
---         both are unapplied and land in the same gate.
+--         Verified after applying: every total reconciles with its source —
+--         sold 220,500, granted 94,500, consumed 1,908, net 92,607, liability
+--         236,142. avg_credits_per_user = 272.57 (not 272), confirming the
+--         integer-division cast holds. Both cost-derived figures blocked with
+--         explicit reasons while credit metrics stay 'actual'.
 --
 -- WHY THIS EXISTS
 --   Section 4's KPIs — Credits Sold, Granted, Consumed, Remaining liability,

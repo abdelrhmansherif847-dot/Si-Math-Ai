@@ -1,10 +1,12 @@
 -- ===========================================================================
 -- Phase 6 M3 — expose the operation → service mix to the dashboard
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Owner instruction for M3: stop after
---         the engineering review; do not apply and do not begin the Release
---         Gate until the implementation has been reviewed.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801114601, owner-approved via the M3 Release Gate (CLAUDE.md §3).
+--
+--         Verified after applying: callable, output identical to
+--         econ.v_operation_service_mix, owner gate fires 42501 for a non-owner,
+--         anon denied. Returns 0 rows — correct, external cost is zero.
 --
 -- WHY THIS EXISTS
 --   Section 6 (Question Cost Analytics) needs the "operation → service mix"
