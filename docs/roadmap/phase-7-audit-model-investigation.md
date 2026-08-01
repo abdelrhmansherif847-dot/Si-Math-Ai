@@ -71,6 +71,30 @@ project.
 
 ### 1.4 The alternatives
 
+> ## ✅ DECIDED 2026-08-01 — **Alternative A (In-row Supersede / Immutable Records)**
+>
+> Owner's reasons, recorded verbatim: it matches the locked ruling that financial
+> records are never edited in place; it preserves the full history; every change
+> produces a new revision; both the creator and the superseder are identifiable;
+> and no historical information can be lost.
+>
+> **Alternative B is REJECTED** — it relies on modifying the record itself, which
+> contradicts Immutable Financial Records.
+>
+> ### Five additional requirements, binding on the design
+>
+> 1. **No history may be deletable.**
+> 2. **Every revision must be fully traceable.**
+> 3. **There must be a clear current record without losing previous records.**
+> 4. **Any default financial report reads CURRENT records only**; history stays
+>    available for review.
+> 5. **Any query at risk of double-counting because multiple revisions exist must
+>    be called out explicitly in the design, together with the means of
+>    preventing that error.**
+>
+> Requirement 5 is the direct answer to Alternative A's one acknowledged
+> weakness, and it is now a design obligation rather than a caveat.
+
 Four candidates. **None implemented; recommendation stated, decision yours.**
 
 ---
