@@ -675,7 +675,7 @@ select.search-input{cursor:pointer}
     </div>
 
     <!-- SECTION 6 — Question Cost Analytics -->
-    <div class="card">
+    <div class="card" style="margin-bottom:18px">
       <div class="card-head">
         <div class="card-ico">🧮</div>
         <div>
@@ -684,6 +684,18 @@ select.search-input{cursor:pointer}
         </div>
       </div>
       <div id="econOperations"><div class="empty"><div class="ico">🧮</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 7 — Lesson Economics -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">📚</div>
+        <div>
+          <div class="card-title">Lesson Economics</div>
+          <div class="card-sub">AI cost per canonical lesson — which topics are expensive to teach</div>
+        </div>
+      </div>
+      <div id="econLessons"><div class="empty"><div class="ico">📚</div><p>Loading…</p></div></div>
     </div>
   </div>
 
@@ -1404,6 +1416,64 @@ async function loadEconOperations() {
     + '</div></div>';
 }
 
+/* --- SECTION 7: Lesson Economics ----------------------------------------
+   Every figure is a column of owner_econ_lesson_economics(), including
+   cost_per_question_usd — it is computed in econ.v_lesson_economics, never
+   divided here (INV-03).
+
+   The lesson NAME also comes from the RPC. By owner decision (2026-08-01)
+   econ.v_lesson_economics is left unchanged and the taxonomy join lives in the
+   RPC, so presentation stays at the presentation boundary. The join is LEFT,
+   so an unmapped lesson keeps its cost and reports a NULL name — rendered here
+   as its raw key plus an "unmapped" marker, never dropped and never disguised
+   behind a fallback label. */
+async function loadEconLessons() {
+  const host = document.getElementById('econLessons');
+  const r = await ecRpc('owner_econ_lesson_economics');
+  if (r.error) return ecFail(host, r);
+
+  const rows = r.rows;
+  if (!rows.length) {
+    // Zero rows is an empty period, not an error. Rule 3 still requires a
+    // reason, grounded in owner_econ_coverage()'s typed columns.
+    const cov = await ecRpc('owner_econ_coverage');
+    const ai  = (cov.rows || []).find(x => x.metric === 'ai_cost');
+    const why = ai
+      ? 'no external AI cost to attribute to lessons — external is ' + ecUsd(ai.value_external)
+        + ' while ' + ecUsd(ai.value_internal) + ' of internal cost is excluded from '
+        + 'business metrics (INV-25)'
+      : 'no external AI cost in this period';
+    host.innerHTML = '<div class="ec-row"><div class="ec-k">by lesson</div>'
+      + '<div class="ec-v">' + ecBlocked(why) + '</div></div>';
+    return;
+  }
+
+  host.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>Lesson</th><th>Topic</th>'
+    + '<th style="text-align:right">Cost USD</th><th style="text-align:right">Cost EGP</th>'
+    + '<th style="text-align:right">Questions</th><th style="text-align:right">Cost / Question</th>'
+    + '<th>Completeness</th><th>Confidence</th>'
+    + '</tr></thead><tbody>'
+    + rows.map(x =>
+        '<tr><td>' + (x.subtopic_name
+            ? esc(String(x.subtopic_name))
+            : '<span style="font-family:var(--font-mono);font-size:11.5px">'
+              + esc(String(x.subtopic_id)) + '</span>'
+              + '<span class="ec-blocked-why" style="font-size:11px"> · unmapped</span>')
+      + '</td>'
+      + '<td>' + (x.topic_name ? esc(String(x.topic_name)) : '<span class="ec-blocked-why">—</span>') + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.cost_usd) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecEgp(x.cost_egp) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.questions) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.cost_per_question_usd) + '</td>'
+      + '<td style="font-family:var(--font-mono);font-size:11.5px">' + esc(String(x.cost_completeness || '—')) + '</td>'
+      + '<td>' + ecBadge(x.confidence) + '</td></tr>').join('')
+    + '</tbody></table></div>'
+    + '<div class="ec-note">Cost per question is computed server-side in '
+    + 'econ.v_lesson_economics. Lesson names come from the taxonomy join inside '
+    + 'the RPC; a lesson with no taxonomy row keeps its cost and is marked unmapped.</div>';
+}
+
 // Entry point. Panels load independently: one failing RPC must not blank the
 // others, and the Coverage panel in particular has to survive to explain why.
 function loadEconomics() {
@@ -1414,6 +1484,7 @@ function loadEconomics() {
   loadEconCredits();
   loadEconPackages();
   loadEconOperations();
+  loadEconLessons();
 }
 
 async function loadEconCoverage() {
