@@ -1,15 +1,22 @@
 # Phase 6 M3 — Implementation & Engineering Review
 
-**Status: implementation complete, NOTHING APPLIED.** Both migrations are
-prepared and unapplied; the Release Gate has not begun. Per the owner's M3 workflow:
-implementation → engineering review → owner approval → apply + gate.
+**Status: ✅ SUPERSEDED BY APPLICATION.** This was the pre-application review;
+both migrations it reviews were subsequently owner-approved and applied to
+`igvkyxkmjnkzscqgommj` on 2026-08-01 as versions `20260801114601` and
+`20260801114637`. The text below is preserved as written — it describes the
+state *before* the migrations were applied.
+
+The M3-V1…V8 plan in §7 was executed on 2026-08-01 and **all eight passed on
+the first run**; both regression suites were clean. See
+`docs/roadmap/phase-6-m3-release-report.md` and
+`docs/roadmap/phase-6-m3-closeout.md`.
 
 Branch `claude/phase6-m3-economics-sections-4-6`, cut clean from `main` at
 `197a0b3`.
 
 | Scope | Sections 4, 5, 6 |
 |---|---|
-| Migrations | 2, both **not applied** — `..._m3_operation_mix.sql`, `..._m3_credit_summary.sql` |
+| Migrations | 2, both ✅ **applied** 2026-08-01 — `..._m3_operation_mix.sql` (`20260801114601`), `..._m3_credit_summary.sql` (`20260801114637`) |
 | New RPCs | 2 — `owner_econ_operation_mix()`, `owner_econ_credit_summary()` |
 | New tables | 0 |
 | New views | 0 |
@@ -371,7 +378,7 @@ the same principle that keeps `cost_per_credit` blocked rather than reporting
 
 ---
 
-## 7. Proposed Release Gate (for after approval — NOT run)
+## 7. Release Gate plan — ✅ EXECUTED 2026-08-01, all eight PASSED
 
 | # | Validation | Method |
 |---|---|---|
@@ -386,7 +393,8 @@ the same principle that keeps `cost_per_credit` blocked rather than reporting
 
 ---
 
-## Stop point
+## Stop point (historical)
 
-Implementation and this review are complete. **Awaiting owner review before
-applying the migration or beginning the Release Gate.** M4 not started.
+At the time of writing, implementation and this review were complete and
+awaiting owner review. That approval was given, the migrations were applied,
+and the gate passed. **M3 is closed** — see the closeout. M4 not started.

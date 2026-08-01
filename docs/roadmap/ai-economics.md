@@ -2052,15 +2052,16 @@ RPC referenced anywhere in the tab; **grep proves no provider or model literal i
 the tab**; adding a service or swapping a provider in the catalog changes the
 rendered dashboard with no code edit (verified once, in staging or by review).
 
-#### Phase 6 status — M1 ✅ COMPLETE, M2 ✅ COMPLETE
+#### Phase 6 status — M1 ✅, M2 ✅, M3 ✅ COMPLETE
 
 Phase 6 is being delivered one owner-approved milestone at a time.
 
 | Milestone | Scope | Status |
 |---|---|---|
 | **M1** | Tab shell, owner gate, read-only RPCs, Coverage panel, locked AI Cost presentation, confidence badges, blocked-state rendering | ✅ closed 2026-07-31 |
-| **M2** | Financial Overview, AI Cost Analytics, Revenue Analytics | ✅ closed 2026-08-01 |
-| M3+ | Remaining sections | not started |
+| **M2** | Financial Overview (1), AI Cost Analytics (2), Revenue Analytics (3) | ✅ closed 2026-08-01 |
+| **M3** | Credits Analytics (4), Package Profitability (5), Question Cost Analytics (6) | ✅ closed 2026-08-01 |
+| M4+ | Lesson Economics (7), Student Consumption (8), AI Service & Model (9) | not started |
 
 **Applied migrations**
 
@@ -2069,6 +2070,8 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | `20260731190337` | `aiecon_p6_coverage_cost_split` | M1 |
 | `20260801103847` | `aiecon_p6_m2_pnl_summary` | M2 |
 | `20260801105710` | `aiecon_p5_fix_rpc_count_types` | M2 (defect fix) |
+| `20260801114601` | `aiecon_p6_m3_operation_mix` | M3 |
+| `20260801114637` | `aiecon_p6_m3_credit_summary` | M3 |
 
 **M2 release gate.** V1–V8 executed 2026-08-01. V7 failed and uncovered a
 **pre-existing Phase 5 defect**: three `owner_econ_*` RPCs declared `bigint`
@@ -2085,7 +2088,20 @@ escape, since the prior checks tested views and function metadata only.
 UI milestone. The economics tab exists in the repo and is unreachable in
 production until that deploy happens.
 
-Closeout: `docs/roadmap/phase-6-m2-closeout.md`.
+**M3 release gate.** V1–V8 executed 2026-08-01; **all eight passed on the first
+run**, both regression suites clean. The pre-apply type probe introduced after
+M2 caught four instances of the same `sum(bigint) → numeric` defect class in
+`owner_econ_credit_summary()` *before* anything was applied, and `P5-17` picked
+up both new RPCs automatically because it discovers them from the catalog — two
+defences added after one failure, both demonstrably working.
+
+**Locked M3 decision.** `avg_credits_per_question` is **blocked by design**, not
+unfinished. The Economics layer has exactly one definition of a question — the
+external cost work item — and `public.question_records` must never be used as
+its denominator. Full ADR in `phase-6-m3-engineering-review.md` §5a.
+
+Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
+`docs/roadmap/phase-6-m3-closeout.md`.
 
 ### Phase 7 — Simulator + Break-even (sections 10–11)
 
