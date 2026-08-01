@@ -53,6 +53,13 @@ student impact during exam-prep windows.
 ## Architecture references
 
 - `DEPLOY.md` — deployment runbook (read §4 before any Edge Function work)
+- `docs/knowledge/knowledge-base.md` — **authoritative source of truth for how
+  Si Math AI is described anywhere** (positioning, three pillars, canonical
+  definition, taxonomy numbers, Founder terms). Read before writing any public
+  copy, meta tag or structured data. Enforced by
+  `scripts/validate-knowledge-layer.mjs` in CI.
+- `docs/knowledge/seo-implementation.md` — per-page SEO / AI-search implementation
+- `docs/knowledge/consistency-audit.md` — knowledge contradictions found and their status
 - `docs/roadmap/adaptive-verification.md` — Adaptive Verification Architecture blueprint
 - `docs/roadmap/phase-0-verification.md` — Phase 0 verification document
 - `docs/roadmap/ai-economics.md` — AI Economics (Owner Dashboard) Phase 1 architecture

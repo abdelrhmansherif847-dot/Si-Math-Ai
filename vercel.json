@@ -44,6 +44,18 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
+    },
+    {
+      "source": "/(robots\\.txt|sitemap\\.xml|llms\\.txt|llms-full\\.txt)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(admin|ai-monitor|chat|dashboard|progress|profile|settings|history|weakness|focus|mock-exam|onboarding|devices|manual-payment|reset-password)\\.html",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
     }
   ]
 }
