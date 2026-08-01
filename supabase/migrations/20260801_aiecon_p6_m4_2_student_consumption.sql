@@ -1,9 +1,22 @@
 -- ===========================================================================
 -- Phase 6 M4.2 — extend student economics for Section 8
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Owner instruction for M4.2: end at
---         implementation + engineering review; no apply, no Release Gate.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801124707, owner-approved via the M4.2 Release Gate
+--         (CLAUDE.md §3), then corrected in place by version 20260801130230.
+--
+--         THE GATE CAUGHT A DEFECT AT V4. The row set was driven by
+--         econ.v_student_economics alone — itself revenue FULL JOIN cost — so a
+--         student who consumed credits but had NEITHER revenue NOR cost was
+--         invisible on a panel about consumption. Measured: 2 of 9 consumers
+--         missing, 80 of 1,908 credits (4.2%) unreported. Fixed by FULL JOINing
+--         consumption into the row set; the `scoped` CTE below carries the
+--         corrected form. Re-verified: population 9 = 9, credits 1,908 = 1,908.
+--
+--         Also verified: econ.v_student_economics UNCHANGED (definition digest
+--         b103129c, 10 columns, no credit_transactions reference), positions
+--         1-10 preserved through the DROP, owner gate fires 42501, and NO PII —
+--         neither body reads profiles.
 --
 -- WHY A DROP + RECREATE (owner Decision 3, 2026-08-01)
 --   Section 8 needs credits consumed, usage rate and an anomaly flag alongside
@@ -164,13 +177,40 @@ BEGIN
       FROM consumption c
   ),
   scoped AS (
-    SELECT v.*,
+    -- FULL JOIN, not LEFT. econ.v_student_economics is itself revenue FULL JOIN
+    -- cost, so a student who consumed credits but has NEITHER revenue NOR cost
+    -- does not exist in it. Driving Section 8 off the view alone would make
+    -- such a student invisible on a panel about consumption — silently
+    -- dropping a real quantity, which INV-26 forbids.
+    --
+    -- Caught by the M4.2 release gate: 2 of 9 consumers (80 credits, 4.2% of
+    -- all consumption) were missing before this was widened. Section 8's
+    -- population is revenue UNION cost UNION consumption.
+    --
+    -- The view stays canonical for revenue/cost/profit (owner Decision 3) —
+    -- this widens WHO is listed, never what their money figures say.
+    SELECT COALESCE(v.user_id, c.user_id)  AS user_id,
+           v.revenue_egp,
+           v.cost_usd,
+           v.cost_egp,
+           v.questions,
+           v.cost_completeness,
+           v.profit_egp,
+           v.cost_exceeds_revenue,
+           -- A consumption-only student has no view row, so resolve the block
+           -- from the resolver directly rather than emitting a NULL reason,
+           -- which would breach owner rule 3.
+           CASE WHEN v.user_id IS NOT NULL THEN v.block_reason
+                ELSE econ.block_reason(NULL, NULL, NULL) END AS block_reason,
+           CASE WHEN v.user_id IS NOT NULL THEN v.confidence
+                ELSE econ.worst_confidence(NULL) END         AS confidence,
            COALESCE(c.credits_consumed, 0) AS credits_consumed,
            COALESCE(c.active_days, 0)      AS active_days,
            c.credits_conf
       FROM econ.v_student_economics v
-      LEFT JOIN consumption c ON c.user_id = v.user_id
-     ORDER BY v.cost_usd DESC NULLS LAST, v.revenue_egp DESC NULLS LAST
+      FULL JOIN consumption c ON c.user_id = v.user_id
+     ORDER BY v.cost_usd DESC NULLS LAST, v.revenue_egp DESC NULLS LAST,
+              c.credits_consumed DESC NULLS LAST
      LIMIT COALESCE(p_limit, 100)
   )
   SELECT s.user_id,

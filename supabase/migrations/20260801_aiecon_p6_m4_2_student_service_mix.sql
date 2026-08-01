@@ -1,10 +1,14 @@
 -- ===========================================================================
 -- Phase 6 M4.2 — per-student × service cost split for Section 8
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Applied together with
---         20260801_aiecon_p6_m4_2_student_consumption.sql; both land in the
---         same gate.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801124835, owner-approved via the M4.2 Release Gate
+--         (CLAUDE.md §3), together with
+--         20260801_aiecon_p6_m4_2_student_consumption.sql (20260801124707).
+--
+--         Verified after applying: callable, owner gate fires 42501 for a
+--         non-owner, anon denied, no PII in the output columns or the body.
+--         Returns 0 rows — correct, there are zero external work items.
 --
 -- WHY A SEPARATE RPC RATHER THAN MORE COLUMNS
 --   Section 8 asks for "student cost split by service". That is a different
