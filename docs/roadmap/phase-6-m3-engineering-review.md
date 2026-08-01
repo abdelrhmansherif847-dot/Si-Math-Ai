@@ -24,6 +24,13 @@ headline server-side, and §5 below records the finding as resolved. Kept as two
 migration files so each RPC's rationale stays self-contained; both land in the
 same gate.
 
+**Revision 3 (2026-08-01).** The owner locked the remaining open question as an
+architectural decision: "Average Credits per Question" is **blocked by design**
+rather than omitted, `public.question_records` is rejected as its denominator,
+and the reason is explicit in both the RPC and this document. The KPI is now
+present in `owner_econ_credit_summary()` (20 columns, up from 16) and renders
+blocked with `no_external_question_work_items`. See **§5a ADR**.
+
 ---
 
 ## 1. What was built
@@ -93,18 +100,19 @@ rather than at the release gate.
 
 ### 2b. `owner_econ_credit_summary()` — Section 4
 
-One owner-gated read RPC returning exactly one row of 16 typed columns: the
+One owner-gated read RPC returning exactly one row of 20 typed columns: the
 Section 4 period headline. It reads `econ.v_credit_flow` (the same view the
 panel tabulates), `econ.v_revenue_events` for purchased credits,
 `public.profiles` for the outstanding-liability snapshot, and
 `cost_engine.v_cost_daily` for cost-per-credit. No new view; no new table.
 
-Design decisions are recorded in §5 with the production values.
+Design decisions and production values are in §5; the locked decision on the
+question denominator is in **§5a**.
 
 ### The same probe on `owner_econ_credit_summary()` — it caught four real defects
 
-Run against the credit summary's body, the probe **failed on four of sixteen
-columns** before anything was applied:
+Run against the credit summary's body (16 columns at r2), the probe **failed on
+four of them** before anything was applied:
 
 | Pos | Column | Body yields | Declared | First result |
 |---|---|---|---|---|
@@ -129,7 +137,8 @@ count is integral so the cast is exact. The two migrations landing in the same
 gate, one casting and one deliberately not, is the rule applied consistently
 rather than a contradiction.
 
-Re-probed after the fix: **16/16 columns match.**
+Re-probed after the fix: **16/16 columns match** — and again after r3 added
+the four question columns: **20/20 match.**
 
 ### A second trap the probe surfaced: integer division
 
@@ -148,7 +157,7 @@ production: `avg_credits_per_user` returns `272.57`.
 | Invariant | Evidence |
 |---|---|
 | No client-side financial calculation (INV-03) | `reduce`, `+=`, `Math.*`, `parseFloat`, `parseInt`, arithmetic on any RPC field: **0 matches** across the new code |
-| Every number traces to a typed column | **28/28** existing-RPC fields verified against `pg_proc.proargnames`; the 16 credit-summary fields verified against the declared `RETURNS TABLE` (16/16) |
+| Every number traces to a typed column | **28/28** existing-RPC fields verified against `pg_proc.proargnames`; all **20/20** credit-summary fields verified against the declared `RETURNS TABLE` |
 | Client isolation (INV-04) | no reference to `consume_credits`, `admin_set_credit_cost`, `admin_adjust_credits`, `approve_payment_request`, `reject_payment_request`, `refund_ai_credit` |
 | No provider/model literal (§8.10 rule 10) | 0 matches |
 | Internal traffic excluded (INV-25) | `owner_cost_metrics.p_include_internal` defaults to `false`; the panels never override it |
@@ -204,7 +213,7 @@ Consumed / liability / burn rate / runway are all **period aggregates over a
 daily ledger**, and summing them in JavaScript would violate INV-03. The owner
 approved the architecturally correct fix: aggregate on the server.
 
-`owner_econ_credit_summary(p_from, p_to)` returns exactly one row, 16 typed
+`owner_econ_credit_summary(p_from, p_to)` returns exactly one row, 20 typed
 columns. Values measured against production:
 
 | KPI | Value |
@@ -221,6 +230,7 @@ columns. Values measured against production:
 | Avg daily burn | 43.36 |
 | Runway | 5,445.6 days |
 | Cost per credit | **blocked** — `no_external_ai_cost_in_period` |
+| Credits per question | **blocked by design** — `no_external_question_work_items` (§5a) |
 | Confidence (credits) | `actual` |
 | Confidence (cost per credit) | `blocked` |
 
@@ -249,16 +259,83 @@ period. Conflating a snapshot with a period aggregate is precisely the error M2
 found in `v_pnl_daily`'s composite confidence, so the column name carries the
 distinction rather than relying on documentation, and the panel states it too.
 
-### Still not delivered: avg credits per question
+---
 
-§Section 4 also lists "Avg Credits per Question". It is **deliberately omitted**.
-The econ layer's canonical question count is the cost work item, which is
-external-only and therefore zero today. The only populated alternative is
-`public.question_records` (1,196 rows), and adopting it would put **two
-different "questions" denominators on the same dashboard** — the one Section 4
-divides by, and the one Sections 5–8 report. That inconsistency is worse than
-the missing KPI. It unblocks on its own when external traffic exists. Raised
-for the owner rather than resolved unilaterally.
+## 5a. ADR — "Average Credits per Question" is blocked by design
+
+**Status: LOCKED by owner decision, 2026-08-01. This is an architectural
+decision, not an unfinished feature. Do not "complete" it by changing the
+denominator.**
+
+### Decision
+
+`avg_credits_per_question` ships **blocked**, with the explicit reason
+`no_external_question_work_items`, and stays blocked until external question
+work items exist. `public.question_records` must **not** be used as its
+denominator.
+
+### Context
+
+§Section 4 specifies the KPI as *credits consumed ÷ questions*. Two candidate
+denominators exist:
+
+| Candidate | Rows today | Population |
+|---|---|---|
+| `cost_engine.v_question_cost_current`, external work items | **0** | the Economics layer's question — external-only (INV-25) |
+| `public.question_records` | 1,196 | every question record, internal and external alike |
+
+Measured 2026-08-01: 27 `question` work items + 6 `unattributed`, **all
+internal**, zero external.
+
+### Rationale
+
+The Economics layer has exactly **one** definition of a question: the cost work
+item. It is what `econ.v_student_economics.questions` and
+`econ.v_package_economics.questions` already count, so every "questions" figure
+on the dashboard reports the same population.
+
+`question_records` would populate the KPI immediately — and that is precisely
+why it is rejected. Adopting it would put **two different definitions of
+"question" on one dashboard**: the one Section 4 divides by, and the one
+Sections 5–8 report. The two would diverge silently and by a large factor,
+since one counts internal traffic and the other excludes it.
+
+A number that looks right, and is measured against a different population than
+the numbers beside it, is worse than a number that is honestly absent. This is
+the same principle that keeps `cost_per_credit` blocked rather than reporting
+`$0.00`, and that kept the Phase 5 FX rate uninvented.
+
+### Consequences
+
+- The KPI renders `—` with `no_external_question_work_items` and a `blocked`
+  badge, exactly like every other blocked metric (owner rules 2–3).
+- `questions_external` is published **alongside** it, so the blocked state
+  evidences itself — an owner can see the denominator is `0` rather than being
+  asked to take the reason on trust.
+- It unblocks with **no code change** the moment external traffic is priced and
+  allocated (owner rule 4), like every other data-derived block in the layer.
+- The dashboard keeps a single, consistent meaning for "question" across
+  Sections 4 through 8.
+
+### Where this is enforced
+
+| Location | Form |
+|---|---|
+| `20260801_aiecon_p6_m3_credit_summary.sql` | header section **ON THE QUESTION DENOMINATOR**, and the `qwi` CTE comment naming `question_records` as forbidden |
+| The same file | `question_block_reason` resolves to `no_external_question_work_items` from data — never a stored constant |
+| `admin.html`, Section 4 | comment at the render site; the panel names the denominator and its current value |
+| This ADR | the reasoning, for whoever reads it in a year |
+
+### Verified behaviour
+
+| Field | Value |
+|---|---|
+| `credits_consumed` | 1,908 |
+| `questions_external` | **0** |
+| questions internal (excluded) | 27 |
+| `avg_credits_per_question` | **NULL** — never 0 |
+| `question_block_reason` | `no_external_question_work_items` |
+| `avg_credits_per_question_conf` | `blocked` |
 
 ---
 
@@ -285,7 +362,9 @@ for the owner rather than resolved unilaterally.
   panel ships without ever having displayed a populated table in production.
   The blocked path is verified; the populated path is not exercisable until
   external traffic exists.
-- Section 4's "avg credits per question" KPI remains undelivered by choice (§5).
+- Section 4's "avg credits per question" ships blocked by design (§5a ADR). It
+  is a locked decision, not a residual risk — recorded here so it is not
+  mistaken for one later.
 - `runway_days` divides a point-in-time liability by a period burn rate. That
   is the standard definition, but it mixes two clocks; the panel labels the
   liability as a snapshot so the mix is visible rather than implied.
@@ -301,7 +380,7 @@ for the owner rather than resolved unilaterally.
 | M3-V3 | Owner gate holds | `anon` cannot execute either RPC; non-owner gets `42501` |
 | M3-V4 | No client-side calculation | static scan of the three new panels |
 | M3-V5 | Every number is a typed column | field-to-`proargnames` check |
-| M3-V6 | Blocked states carry reasons | Section 4 `cost_block_reason`, Section 5 per-row, Section 6 empty-state |
+| M3-V6 | Blocked states carry reasons | Section 4 `cost_block_reason` **and `question_block_reason`** (§5a — must be `no_external_question_work_items`, value NULL, badge `blocked`), Section 5 per-row, Section 6 empty-state |
 | M3-V7 | INV-25 upheld | panels exclude internal; coverage split intact |
 | M3-V8 | No regression | `verify-economics.sql` (18 checks; P5-17 auto-covers both new RPCs, so its invoked count rises 8 → 10) + `verify-cost-engine.sql` read-only |
 

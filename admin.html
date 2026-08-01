@@ -1223,6 +1223,21 @@ async function loadEconCredits() {
           : '<div class="ec-cost"><div class="l primary"><span class="n">USD per credit</span>'
             + '<span class="a">' + ecUsd(s.cost_per_credit_usd) + '</span></div></div>')
       + '</div></div>'
+      // Blocked BY ARCHITECTURE, not by an unfinished feature. The Economics
+      // layer has exactly one definition of a question — the external cost
+      // work item — and this KPI waits for it rather than borrowing a second
+      // denominator from question_records. Owner decision, 2026-08-01.
+      + '<div class="ec-row"><div class="ec-k">credits per question</div><div class="ec-v">'
+      +   ecBadge(s.avg_credits_per_question_conf)
+      +   (s.question_block_reason
+          ? ecBlocked(s.question_block_reason)
+          : '<div class="ec-cost"><div class="l primary"><span class="n">Credits per question</span>'
+            + '<span class="a">' + ecNum(s.avg_credits_per_question) + '</span></div></div>')
+      +   '<div class="ec-d">Denominator is the external cost work item — the '
+      +     'Economics layer\'s single definition of a question, shared with '
+      +     'Sections 5–8. Currently ' + ecNum(s.questions_external) + ' external. '
+      +     'Unblocks with no code change once external traffic is priced.</div>'
+      + '</div></div>'
       + '<div class="ec-row"><div class="ec-k">period</div><div class="ec-v"><div class="ec-d">'
       +   esc(String(s.period_from || '—')) + ' → ' + esc(String(s.period_to || '—'))
       + '</div></div></div>';

@@ -59,6 +59,33 @@
 --   measured zero and is reported as 0. A ratio whose denominator is zero is
 --   NOT zero — it is undefined, and is reported as NULL with a stated reason.
 --
+-- ON THE QUESTION DENOMINATOR — a locked architectural decision, not a gap
+--   OWNER DECISION, 2026-08-01. avg_credits_per_question is intentionally
+--   BLOCKED, and will stay blocked until external question work items exist.
+--   It is not an unfinished feature and must not be "completed" by swapping in
+--   a different denominator.
+--
+--   The Economics layer has exactly ONE definition of a question: the cost
+--   work item, external-only (INV-25). It is what
+--   econ.v_student_economics.questions and econ.v_package_economics.questions
+--   already count, so every "questions" figure on the dashboard divides and
+--   reports the same population.
+--
+--   public.question_records holds 1,196 rows and would populate this KPI
+--   immediately — and that is exactly why it is rejected. Adopting it would put
+--   TWO different definitions of "question" on one dashboard: the one Section 4
+--   divides by, and the one Sections 5-8 report. A number that looks right and
+--   is measured against a different population than its neighbours is worse
+--   than a number that is honestly absent.
+--
+--   Measured 2026-08-01: 27 'question' + 6 'unattributed' work items, ALL
+--   internal, zero external. So the denominator is a measured zero and the KPI
+--   blocks with `no_external_question_work_items`.
+--
+--   This unblocks with NO code change the moment external traffic is priced
+--   and allocated — the same data-derived unblocking as every other metric
+--   here (owner rule 4).
+--
 -- ON liability_credits_now
 --   Deliberately named `_now`. It is sum(profiles.credits_balance), a
 --   POINT-IN-TIME snapshot of outstanding liability, and it ignores p_from and
@@ -99,7 +126,12 @@ RETURNS TABLE (
   cost_per_credit_usd        numeric,
   cost_block_reason          text,
   confidence                 text,
-  cost_per_credit_confidence text
+  cost_per_credit_confidence text,
+  -- Appended: avg credits per question. See "ON THE QUESTION DENOMINATOR".
+  questions_external               bigint,
+  avg_credits_per_question         numeric,
+  question_block_reason            text,
+  avg_credits_per_question_conf    text
 )
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, econ, cost_engine, ai_catalog
@@ -162,9 +194,25 @@ BEGIN
      WHERE (p_from IS NULL OR c.occurred_on >= p_from)
        AND (p_to   IS NULL OR c.occurred_on <= p_to)
   ),
+  qwi AS (
+    -- The Economics layer's ONE definition of a question: the external cost
+    -- work item. Never public.question_records — see header.
+    SELECT count(*) FILTER (WHERE NOT v.is_internal
+                              AND v.work_item_type = 'question') AS ext_items
+      FROM cost_engine.v_question_cost_current v
+     WHERE v.is_current
+       AND (p_from IS NULL OR v.occurred_at::date >= p_from)
+       AND (p_to   IS NULL OR v.occurred_at::date <= p_to)
+  ),
   calc AS (
     SELECT led.*, usr.n AS users, sold.credits AS sold_credits, sold.conf AS sold_conf,
            liab.credits AS liability, cost.ext_usd, cost.conf AS cost_conf,
+           qwi.ext_items,
+           CASE WHEN qwi.ext_items = 0 AND led.consumed = 0
+                  THEN 'no_external_question_work_items_and_no_credits_consumed'
+                WHEN qwi.ext_items = 0 THEN 'no_external_question_work_items'
+                WHEN led.consumed = 0  THEN 'no_credits_consumed_in_period'
+                ELSE NULL END AS question_block,
            -- Calendar span, so idle days still dilute the burn rate.
            CASE WHEN led.d_from IS NULL THEN 0
                 ELSE (led.d_to - led.d_from) + 1 END AS n_days,
@@ -173,7 +221,7 @@ BEGIN
                 WHEN led.consumed = 0 THEN 'no_credits_consumed_in_period'
                 WHEN cost.ext_usd = 0 THEN 'no_external_ai_cost_in_period'
                 ELSE NULL END AS cost_block
-      FROM led, usr, sold, liab, cost
+      FROM led, usr, sold, liab, cost, qwi
   )
   SELECT c.d_from,
          c.d_to,
@@ -205,7 +253,21 @@ BEGIN
          econ.worst_confidence(c.conf, c.sold_conf),
          CASE WHEN c.cost_block IS NOT NULL
               THEN econ.worst_confidence(NULL)   -- resolves to 'blocked'
-              ELSE econ.worst_confidence(c.conf, c.sold_conf, c.cost_conf) END
+              ELSE econ.worst_confidence(c.conf, c.sold_conf, c.cost_conf) END,
+         -- Appended: avg credits per question, blocked by architecture until
+         -- external work items exist. The denominator is published alongside
+         -- so the blocked state evidences itself rather than asserting.
+         c.ext_items,
+         CASE WHEN c.question_block IS NULL
+              THEN round(c.consumed::numeric / c.ext_items, 2) END,
+         c.question_block,
+         -- Both sides are COUNTED facts — consumed credits from the ledger,
+         -- questions from allocation — so this inherits the ledger class only.
+         -- Not the cost class: an unpriced call must not make a counted
+         -- question less certain (same reasoning as cost_per_credit, rule 1).
+         CASE WHEN c.question_block IS NOT NULL
+              THEN econ.worst_confidence(NULL)   -- resolves to 'blocked'
+              ELSE econ.worst_confidence(c.conf) END
     FROM calc c;
 END;
 $$;
