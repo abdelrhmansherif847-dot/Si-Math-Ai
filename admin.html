@@ -699,7 +699,7 @@ select.search-input{cursor:pointer}
     </div>
 
     <!-- SECTION 8 — Student Consumption Analytics -->
-    <div class="card">
+    <div class="card" style="margin-bottom:18px">
       <div class="card-head">
         <div class="card-ico">🎓</div>
         <div>
@@ -708,6 +708,18 @@ select.search-input{cursor:pointer}
         </div>
       </div>
       <div id="econStudents"><div class="empty"><div class="ico">🎓</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 9 — AI Service & Model Analytics (DIAGNOSTIC) -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">🔧</div>
+        <div>
+          <div class="card-title">AI Service &amp; Model Analytics</div>
+          <div class="card-sub">Engine health, quality and distribution — <b>diagnostic surface, includes internal traffic</b></div>
+        </div>
+      </div>
+      <div id="econServices"><div class="empty"><div class="ico">🔧</div><p>Loading…</p></div></div>
     </div>
   </div>
 
@@ -1586,6 +1598,105 @@ async function loadEconStudents() {
     + ecNum(s0.period_days) + '-day calendar span, matching the platform burn rate.</div>';
 }
 
+/* --- SECTION 9: AI Service & Model Analytics ----------------------------
+   A DIAGNOSTIC surface, not a business metric (owner decision, 2026-08-01).
+   It reports ALL observed AI telemetry INCLUDING internal traffic, it says so
+   on screen, and none of its numbers feeds an owner_econ_* business KPI.
+   INV-25 continues to govern business metrics only — the same principle the
+   Coverage panel already follows.
+
+   Served through owner_cost_* ONLY. This is the one panel that shows provider
+   and model, which INV-13 / P5-02 forbid in the econ layer, so it must never
+   be wired to an owner_econ_* RPC.
+
+   Two RPCs, no client arithmetic:
+     owner_cost_service_breakdown(NULL, …, true) — service → provider → model
+     owner_cost_health()                          — engine health
+
+   Cost per QUESTION is deliberately absent here. Work items are keyed by
+   service and a question spans models, so a per-model cost-per-question is
+   undefined rather than merely unavailable — see the migration header. */
+async function loadEconServices() {
+  const host = document.getElementById('econServices');
+  const [b, h] = await Promise.all([
+    // p_include_internal := true — this is the diagnostic surface.
+    ecRpc('owner_cost_service_breakdown', { p_service_code: null, p_include_internal: true }),
+    ecRpc('owner_cost_health')
+  ]);
+  if (b.error && !b.missing) return ecFail(host, b);
+
+  const banner = '<div class="ec-row"><div class="ec-k">surface</div><div class="ec-v">'
+    + '<div class="ec-d"><b>Diagnostic.</b> Shows all observed AI telemetry including '
+    + 'internal traffic, so its totals deliberately differ from the business metrics '
+    + 'in Sections 1–8, which exclude internal (INV-25). Nothing here feeds a business KPI.</div>'
+    + '</div></div>';
+
+  const tbl = (rows, keyCol, keyLabel) => rows.length
+    ? '<div style="overflow-x:auto"><table><thead><tr>'
+      + '<th>' + keyLabel + '</th><th style="text-align:right">Cost USD</th>'
+      + '<th style="text-align:right">Share</th><th style="text-align:right">Calls</th>'
+      + '<th style="text-align:right">Requests</th><th style="text-align:right">Tokens</th>'
+      + '<th style="text-align:right">Avg Tokens</th><th style="text-align:right">Avg Latency</th>'
+      + '<th style="text-align:right">Success</th><th style="text-align:right">$/Request</th>'
+      + '<th style="text-align:right">Int / Ext</th><th>Confidence</th>'
+      + '</tr></thead><tbody>'
+      + rows.map(x =>
+          '<tr><td style="font-family:var(--font-mono);font-size:12px">' + esc(keyCol(x)) + '</td>'
+        + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.total_cost_usd) + '</td>'
+        + '<td style="text-align:right">' + ecPct(x.cost_share_pct) + '</td>'
+        + '<td style="text-align:right">' + ecNum(x.calls) + '</td>'
+        + '<td style="text-align:right">' + ecNum(x.requests) + '</td>'
+        + '<td style="text-align:right">' + ecNum(x.total_tokens) + '</td>'
+        + '<td style="text-align:right">' + ecNum(x.avg_tokens_per_call) + '</td>'
+        + '<td style="text-align:right">' + ecNum(x.avg_latency_ms) + ' ms</td>'
+        + '<td style="text-align:right">' + ecPct(x.success_rate_pct) + '</td>'
+        + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.cost_per_request_usd) + '</td>'
+        + '<td style="text-align:right;font-family:var(--font-mono);font-size:11.5px">'
+        +   ecNum(x.internal_calls) + ' / ' + ecNum(x.external_calls) + '</td>'
+        + '<td>' + ecBadge(x.confidence) + '</td></tr>').join('')
+      + '</tbody></table></div>'
+    : ecBlocked('no priced calls in this period');
+
+  // Row selection by level is display filtering, not derivation — every figure
+  // shown is still a column the RPC returned.
+  const at = lvl => (b.rows || []).filter(x => x.level === lvl);
+
+  let body;
+  if (b.missing) {
+    body = '<div class="ec-d ec-blocked-why">Pending migration — the extended '
+         + 'owner_cost_service_breakdown() is not applied yet.</div>';
+  } else {
+    body = '<div class="ec-row"><div class="ec-k">by service</div><div class="ec-v">'
+         +   tbl(at('service'), x => x.service_code, 'Service') + '</div></div>'
+         + '<div class="ec-row"><div class="ec-k">by provider</div><div class="ec-v">'
+         +   tbl(at('provider'), x => x.service_code + ' → ' + x.provider_code, 'Service → Provider')
+         + '</div></div>'
+         + '<div class="ec-row"><div class="ec-k">by model</div><div class="ec-v">'
+         +   tbl(at('model'), x => x.service_code + ' → ' + x.model, 'Service → Model')
+         + '</div></div>';
+  }
+
+  // Engine health: every row is already (metric, value, detail) from a typed
+  // column, so it renders as returned. No reason is composed here.
+  const health = h.error
+    ? '<div class="ec-row"><div class="ec-k">engine health</div><div class="ec-v">'
+      + '<div class="ec-d ec-blocked-why">' + esc(h.error) + '</div></div></div>'
+    : (h.rows || []).map(x =>
+        '<div class="ec-row"><div class="ec-k">' + esc(String(x.metric)) + '</div><div class="ec-v">'
+      +   '<div class="ec-cost"><div class="l primary"><span class="n">'
+      +     esc(String(x.detail || '')) + '</span>'
+      +     '<span class="a">' + esc(String(x.value)) + '</span></div></div>'
+      + '</div></div>').join('');
+
+  host.innerHTML = banner + body
+    + '<div class="ec-note">Cost per <b>question</b> is not shown at model grain: work items are '
+    + 'keyed by service and a question spans several models, so the figure is undefined at this '
+    + 'grain rather than merely unavailable. It is available per service and per work item.</div>'
+    + '<div class="ec-row" style="margin-top:14px"><div class="ec-k"><b>engine health</b></div>'
+    + '<div class="ec-v"><div class="ec-d">from owner_cost_health()</div></div></div>'
+    + health;
+}
+
 // Entry point. Panels load independently: one failing RPC must not blank the
 // others, and the Coverage panel in particular has to survive to explain why.
 function loadEconomics() {
@@ -1598,6 +1709,7 @@ function loadEconomics() {
   loadEconOperations();
   loadEconLessons();
   loadEconStudents();
+  loadEconServices();
 }
 
 async function loadEconCoverage() {
