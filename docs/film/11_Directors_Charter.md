@@ -192,7 +192,7 @@ is watched through five lenses:
 
 **THE FIVE QUESTIONS — every take, every screening (owner protocol, 2026-07-31):**
 
-1. **Did I believe the performance?** Forget the technology. Did the character *think*? If not — retake.
+1. **Would I believe this character if I had never heard of AI?** Not "did the model generate well" — the model is not in the film; the character is. If the character isn't there — retake, regardless of what the render cost. **Credits are not a character; the audience never sees an invoice.**
 2. **What is the weakest frame?** Not the weakest shot — the frame where the illusion breaks. Find it. Fix it.
 3. **If this were a real actor — would I keep this take,** or ask for another performance? That is the standard.
 4. **Did the emotion increase?** Every cut raises something — tension, curiosity, empathy, authority. Flat = another take.
@@ -205,6 +205,8 @@ perfect. Every render competes against the previous one — on emotion, not qual
 
 **Verdict language of the room:** ❌ **Retake** · ✅ **Keep** · 🔥 **Hero Take.** Dailies speak in
 take verdicts, not gate numbers — the gates still run, silently, as the floor under the room.
+Director's Notes name **the take worth fighting for in the final cut** — never the take that is
+merely technically best. Between better rendering and better acting, acting wins. Every time.
 
 **Temporary assets are instruments, not drafts.** Temp voices, temp captions, temp music, temp
 moves exist to answer one question — *does the movie work?* — and are never protected, polished,
