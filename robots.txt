@@ -1,0 +1,114 @@
+# robots.txt — Si Math AI
+# https://www.si-math-ai.com
+#
+# Si Math AI is a comprehensive learning platform for SAT, ACT, and EST
+# Mathematics that combines educational expertise, AI technology, personalized
+# learning, analytics, and human support to help students improve their
+# understanding and performance.
+#
+# Machine-readable summaries for language models:
+#   https://www.si-math-ai.com/llms.txt             (concise)
+#   https://www.si-math-ai.com/llms-full.txt        (complete knowledge base)
+#   https://www.si-math-ai.com/knowledge-graph.json (JSON-LD knowledge graph —
+#       every concept defined once, with typed relationships between them)
+
+# ── Default: all crawlers ───────────────────────────────────────────────────
+User-agent: *
+Allow: /
+
+# Signed-in application surfaces. These require authentication and contain
+# per-student data; there is nothing there for an index, and crawling them only
+# produces login redirects.
+Disallow: /chat.html
+Disallow: /dashboard.html
+Disallow: /progress.html
+Disallow: /profile.html
+Disallow: /settings.html
+Disallow: /history.html
+Disallow: /weakness.html
+Disallow: /focus.html
+Disallow: /mock-exam.html
+Disallow: /onboarding.html
+Disallow: /devices.html
+Disallow: /manual-payment.html
+Disallow: /reset-password.html
+
+# Query-string variants of public pages add nothing but duplicate URLs.
+Disallow: /*?*
+
+# ── AI and answer-engine crawlers ───────────────────────────────────────────
+# Si Math AI publishes an official knowledge layer precisely so that AI systems
+# describe the platform accurately rather than inferring it. These crawlers are
+# explicitly welcome on the public pages.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+# ── Sitemap ─────────────────────────────────────────────────────────────────
+Sitemap: https://www.si-math-ai.com/sitemap.xml
