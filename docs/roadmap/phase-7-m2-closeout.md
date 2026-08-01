@@ -42,6 +42,12 @@ real one.
 direct API caller holding an owner session — the feature is misleading, not
 dangerous, and no dashboard surfaces it.
 
+> **Superseded 2026-08-01 — M1 has since been built and closed.** The defect
+> described below is **no longer live**: an unpriceable swap target now refuses
+> with `no_rate_card_for_target` instead of under-reporting. The finding is left
+> intact as the historical record of what the M2 closeout discovered. See
+> `phase-7-m1-closeout.md`.
+
 **M1 remains open and is the natural next milestone.** Recording this here so the
 roadmap does not carry a milestone marked complete that was never built.
 

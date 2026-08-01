@@ -2248,30 +2248,83 @@ Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
 simulated result is ever written to `cost_facts` or `service_bindings`; Net
 Profit stays **Blocked** until fixed costs exist.
 
-#### Phase 7 status — **IN PROGRESS** (M1 ❌ **not started** · M2 ✅ complete)
+#### Phase 7 status — **IN PROGRESS** (M1 ✅ complete · M2 ✅ complete)
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **M1** | `owner_cost_reprice()` scenario grammar — `service_swap`, refusal contract | ❌ **NOT IMPLEMENTED** |
+| **M1** | `owner_cost_reprice()` scenario grammar — `service_swap`, refusal contract | ✅ **COMPLETE** — 2 migrations, gate 10/10, closed 2026-08-01 |
 | **M2** | `platform_cost_entries` + Net Profit / Net Margin | ✅ **COMPLETE** — 4 migrations, gate 9/9 |
 | M3 | Simulator / Break-even RPCs | not started |
 
-##### ⚠ M1 was never implemented — correction to the milestone record
+##### M1 — the reprice defect, found and closed
 
-An interim status summary recorded M1 as complete. **It was not started**, and
-this was verified against production at the M2 closeout:
+An interim status summary had recorded M1 as complete when it had **not been
+started**; that was corrected at the M2 closeout, and M1 was then built.
 
-| Evidence | Finding |
-|---|---|
-| Applied `aiecon_p7_*` migrations | **only M2a, M2b, M2c, M2d** — no M1 migration exists |
-| `owner_cost_reprice` scenario grammar | still `swap_model_from` / `swap_model_to`; **no `service_swap`, no refusal contract** |
-| The M1 defect, re-measured | a swap to a model with **no rate card** still returns **`$0.06758175`** against an actual **`$0.22961425`** |
+**The defect, measured on production before and after:**
 
-**The reprice defect is live in production** — it under-reports by 70.6% on an
-unpriced swap target, presenting a fictional saving as real. **Contained:**
-`owner_cost_reprice` is called by **no client file**, is owner-gated,
-`anon`-denied and `STABLE`, so exposure is limited to a direct API caller holding
-an owner session. **M1 remains open and is the recommended next milestone.**
+| | Before M1 | After M1 |
+|---|---|---|
+| `actual_cost_usd` | `0.22961425` | — |
+| `simulated_cost_usd` | **`0.06758175`** | — |
+| `calls` | **76** | — |
+| Result | fictional **70.6% saving** | **refused** — `no_rate_card_for_target`, `affected_calls=24`, `affected_cost_usd=0.16203250` |
+
+`resolve_rate_card()` returned NULL for an unpriced target, `price_units()`
+returned `gross_usd = NULL` with `bad_unit` set, and the outer **`sum()` skipped
+those rows** while still counting them in `calls`. The number looked trustworthy
+*because the call count was right*. `price_units` had been reporting the failure
+through `bad_unit` all along — the old function discarded the signal.
+
+**Both halves are now refusals**: no rate card for the target
+(`no_rate_card_for_target`) and a card missing a unit the call consumed
+(`unpriceable_units_for_target`). The second was unreachable through the old
+grammar and produced the identical silent NULL.
+
+##### M1 — applied migrations
+
+| Version | Name | What |
+|---|---|---|
+| `20260801205515` | `aiecon_p7_m1_reprice_refusal_contract` | `cost_engine.apply_discounts()`, `price_units()` 3-arg overload, 2-arg entry point refactored to delegate, `owner_cost_reprice()` DROP+CREATE returning `jsonb` |
+| `20260801211727` | `aiecon_p7_m1_fix_reprice_anon_revoke` | **fix** — revoke `EXECUTE` from `anon` after DROP+CREATE re-applied default ACLs |
+
+**M1 release gate.** V1–V10 executed 2026-08-01; **10/10 PASS**, preceded by
+**35/35 pre-apply probes** (22 functional + 13 branch). Economics regression
+**17 PASS + 1 VACUOUS**; Cost Engine **25 PASS + 5 VACUOUS + 1 WARN** — baseline,
+no regression. Identity re-pricing reproduces **`$0.22961425`** exactly from raw
+units; population conservation holds; **0** synthetic rows left in production.
+
+**Locked M1 decisions.**
+- **Refusal replaces silent under-pricing.** Any scenario that cannot be priced
+  in full refuses, states the reason, and returns **no partial cost**. The old
+  `TABLE(...)` signature had nowhere to put a refusal — it was the defect's
+  *enabler*, not merely its container. One `jsonb` document is returned instead.
+- **Strict refusal on unpriced facts.** One unpriced fact in the window refuses
+  the whole simulation: no partial result, no skipped row, no estimated value.
+  Closes the same error class M1 began with.
+- **Refuse vs note.** REFUSE when the answer would be *wrong*; NOTE when it is
+  *right* but the scenario was partly inert (a swap matching no row). Refusing an
+  inert-but-correct scenario would be false rigour; ignoring it silently is the
+  failure class M1 exists to eliminate.
+- **`routing` is refused, not ignored** — it is deferred, so a scenario carrying
+  it would otherwise appear honoured. The entire old grammar refuses too, so an
+  old call cannot silently mean something new.
+- **One pricing implementation.** The 2-arg `price_units` delegates to the 3-arg
+  overload rather than duplicating the loop — accepted deliberately even though
+  it sits under `run_pricing`, to avoid the M4.2 divergence hazard. Proven
+  behaviour-preserving: all 76 facts re-price to the recorded gross, 0 mismatches.
+- **Discounts round per row**, matching the engine, so a 10% scenario discount
+  yields `0.20665270`, not exactly `0.9 × total` — correct, and stated.
+- **No FX shortcut, again.** A scenario rate is a hypothesis and may be used; a
+  missing real rate is never invented.
+
+**Carried forward.** The cross-provider swap *success* path still has no
+production data (only `openai` has rate cards) — **no fake provider or rate card
+was added**, per ruling; the refusal path was proven on real data.
+`telemetry_missing_for_facts` cannot fire while `cost_facts.call_id` holds its FK
+and `units` is `NOT NULL` — it guards the **Phase 8 `ai_model_calls` retention
+policy**, and was proven to fire by dropping the FK inside the probe. There is
+**no UI** — Section 10 is a later milestone.
 
 ##### M2 — applied migrations
 
@@ -2337,6 +2390,30 @@ requirements**, alongside the pre-apply type probe:
 Phase 6 learned that *a green check is only evidence if it could have gone red*.
 M2 adds the complement: **a check that was never run is not evidence at all.**
 
+**The two permanent process lessons M1 confirms and adds.** Both are **standing
+Release Gate requirements**, alongside the pre-apply type probe:
+
+> **3. Direct execution probes are mandatory for every new RPC — reaffirmed.**
+> This was earned at M2 and M1 complied with it: 35 pre-apply probes, every one
+> invoking `owner_cost_reprice` itself, driving all 13 refusal branches plus
+> identity conservation. That is what proved the fix before it was applied. The
+> requirement stands permanently, for every new or rebuilt RPC.
+
+> **4. Every `DROP` + `CREATE` of a function requires explicit privilege
+> verification AFTER apply. PostgreSQL recreates default ACLs.** M1's DROP+CREATE
+> of `owner_cost_reprice` re-applied Supabase's default privileges, which grant
+> `EXECUTE` to `anon` **directly** — and **`REVOKE … FROM PUBLIC` does not remove
+> a direct role grant**. `P4-06` caught it on the first post-apply run. Not
+> exploitable (the owner gate still returns `42501`), but a real break of the
+> Phase 4 defense-in-depth invariant. Closed by correcting the migration;
+> `P4-06` stands unmodified.
+
+M1's own complement to lesson 3: **35 probes tested the function's *behaviour*;
+the regression was in its *privileges*.** A probe interrogates what the code
+does — it cannot see what the catalog granted. That is the concrete reason the
+post-apply gate is not redundant with a pre-apply probe, and why both are
+required rather than either.
+
 **Both M2 regressions were closed by correcting the architecture, not the
 checks** — `P5-01` and `P5-04` stand unmodified.
 
@@ -2351,7 +2428,17 @@ Docs: `docs/roadmap/phase-7-investigation-and-plan.md`,
 `phase-7-audit-model-investigation.md`, `phase-7-net-profit-investigation.md`,
 `phase-7-m2-design-document.md`, `phase-7-m2-engineering-review.md`,
 `phase-7-m2d-fix-engineering-review.md`, `phase-7-m2-release-report.md`,
-`phase-7-m2-closeout.md`.
+`phase-7-m2-closeout.md`, `phase-7-m1-engineering-review.md`,
+`phase-7-m1-release-report.md`, `phase-7-m1-closeout.md`.
+
+**Verification Framework enhancements deferred out of Phase 7** (owner ruling):
+**VF-1** — add `P4-32` (reprice must refuse an unpriceable swap target) and
+`P4-33` (identity reprice conserves exactly) to `verify-cost-engine.sql`; M1
+fixed a defect that survived six milestones because no check would have caught
+it, and none would catch its return today. **VF-2** — `run_pricing` still carries
+its own inline copy of the discount fold that `cost_engine.apply_discounts()`
+now duplicates; refactoring the writer onto the helper widens the blast radius
+into `cost_facts`.
 
 ### Phase 8 — Completeness & scale
 
