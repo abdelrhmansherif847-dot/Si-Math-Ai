@@ -90,6 +90,11 @@ takes (acting-style lock) and cited as the behaviour standard in Kling motion pr
 are added only by the owner's 🔥 verdict.** Every experiment that feeds the library states its one
 question before it runs — an experiment that cannot name its question does not run.
 
+**Two levels (owner, 2026-08-01):** Level 1 is the performance; **Level 2 is the Character Rule —
+every 🔥 entry records *why it belongs to that character*, judged against the ACTING DNA in `11`.**
+An entry without its rule is an asset, not an identity. Every new take passes the Episode-10 test
+before it fires: *would this performance still feel like this same character in Episode 10?*
+
 **Founding entries** (owner-approved behaviour tests, kit era):
 
 | Vocabulary | ID |

@@ -43,6 +43,57 @@ The three inner lives — the key to every take in the film:
 **The directing principle:** every important line has a reaction stronger than the line itself.
 Sometimes the audience must remember the look more than the sentence. The reaction map lives in `09`.
 
+---
+
+## THE ACTING DNA — permanent character identities (owner, 2026-08-01)
+
+Above the inner lives sit the **identity rules** — the behavioural DNA every take of every scene is
+judged against, forever. Characters become iconic by behaving consistently, not by looking
+consistent. The goal: **recognizable as silhouettes** — the Judge known by how he breathes before
+speaking, the Lawyer by how he enters a room.
+
+### JUDGE ZERO — *the conclusion precedes the word*
+- He **never rushes.** He **never wastes movement** — a gesture that isn't necessary doesn't happen.
+- He **never reacts emotionally before thinking** — the thought is always visibly first.
+- Every pause has meaning; every movement is intentional.
+- **When he looks at someone, they feel judged before he speaks.**
+- **Signature beat (his silhouette-identity): the breath before the line.** Every dialogue take
+  opens with it. He speaks only after he has already reached the conclusion — that is why his
+  pauses have weight.
+
+### LAWYER ZERO — *he enters already convinced he will win*
+- He **owns every room he enters** — the entrance is the argument's first sentence.
+- He **never looks uncertain.** His confidence is **preparation, never arrogance.**
+- **His body teaches before his words do** — the gesture lands before the sentence.
+- Every gesture is deliberate; nothing decorates.
+- **Signature beat: the entrance.** He is recognizable by how he steps into a silence.
+
+### THE REPRESENTATIVES — *incomplete, never incompetent*
+- They **sincerely believe they are helping.** Their mistakes are honest.
+- The tragedy: they slowly discover they have been answering the wrong question.
+- **Their confidence does not collapse — it transforms into understanding.** The arc ends in
+  comprehension and dignity (the standing), never in humiliation.
+- **The audience should empathize with them.**
+- **Signature beat: the light-line** — their entire inner life, legible in one glow: brightness,
+  rhythm, dimming, steadiness.
+
+### THE EPISODE-10 TEST — generation-side, before any take fires
+
+> *Would this performance still feel like this same character in Episode 10?*
+
+If no — the take doesn't belong, however good it looks. This test runs **before generation** (the
+prompt is checked against the DNA) and **again at the screen** (alongside the five questions).
+
+### THE HERO LIBRARY'S TWO LEVELS
+
+**Level 1 — Hero Performances:** the takes themselves (best pause, best eye-move, best walk…).
+**Level 2 — Character Rules:** every library entry records **why it belongs to that character** —
+not how it looks. *"The Judge's pause is powerful because he never speaks until he has already
+reached a conclusion. The Lawyer's walk is powerful because he enters already convinced he will
+win. The Representatives' hesitation is powerful because it is the first crack in absolute
+certainty."* An entry without its rule is an asset, not an identity — and this film does not
+collect assets.
+
 **Acting over rendering — every time.** A softer frame with a true performance beats a crisp frame
 with a dead one.
 
