@@ -143,9 +143,13 @@ source of truth; a plate that fails on screen fails, whatever this ledger says.
 | F04 — session over the reveal | Shot 3 (in the can) + F04 temp VO | `010057d4` | ✅ |
 | **ASSEMBLY v1** | ~20s · 1080×1920 | **`d9482d1d`** | ✅ · **awaiting the director's screening** |
 
-Temp VO throughout (REP diegetic by design) · no music yet · known missing coverage: the LZ
-listening insert for F02 (needs one new plate: LZ at the defence table, tight — owner-approves on
-sight before it parents a take).
+Temp VO throughout (REP diegetic by design) · no music yet.
+
+**Competing takes & new setup (edit-room round 2):**
+| Item | ID | State |
+|---|---|---|
+| **T2B** — the failed answer, alternate performance (eager student, hairline crack after) | `4e93ad7a` | rendered · competing with T2A — owner chooses which survives |
+| **LZ listening-insert plate** (defence table, tight, head turned) | `62b0294f` | rendered · ⏳ **sight-approval required before it parents anything** |
 
 ### Voided at Gate 1 — wrong model
 
