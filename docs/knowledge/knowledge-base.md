@@ -449,6 +449,66 @@ conversion.
 
 ---
 
+## 13d. Trust and transparency
+
+Published at `trust.html`. The governing principle:
+
+> **Never ask people to trust us. Publish enough that trust is the reasonable
+> conclusion.**
+
+A company asking to be trusted is exactly what an untrustworthy one also does.
+Only evidence distinguishes them — so the Trust Center is written to be
+*checkable*, and every claim on it that a reader can verify independently is
+marked as such.
+
+### The social-proof rule — absolute
+
+**Si Math AI publishes no testimonials, student stories, parent stories,
+ratings, review counts, user counts or score-improvement statistics, because
+none can currently be verified.** This site already published fabricated
+testimonials once and removed them; the removal comment remains in
+`index.html`. That history is stated openly on the Trust Center, because how a
+company handles its own bad decision is more informative than any testimonial.
+
+A story may be published **only** when it meets all of:
+
+1. A real, identifiable student or parent who has given **written permission**.
+2. Their own words, not ours placed in their mouth.
+3. The actual journey — including what was hard and what did not work.
+4. No score claim we cannot verify; if a number appears, we say how we know it.
+5. The collection method disclosed, including any compensation.
+6. No cherry-picking. Publishing only the students it worked for is a lie told
+   with true sentences.
+
+**Enforced.** `validate-knowledge-layer.mjs` scans the entire knowledge layer
+for testimonial-shaped claims — user counts, star ratings, average score gains,
+"trusted by N" — and fails the build on any of them. `Review`, `reviewBody`,
+`Testimonial`, `aggregateRating`, `ratingValue` and `reviewCount` are banned
+from all structured data. When real evidence exists, that list is revisited
+**deliberately**, never by accident.
+
+### Limitations must stay published
+
+The Trust Center's "What Si Math AI does not do" section is not optional
+content. A platform unwilling to write it should not be trusted with its
+capability claims. The validator requires the limitations section, the "when to
+ask a human teacher instead" section, and the honest disclosures that no
+Privacy Policy page exists yet and no compliance certification is claimed.
+
+Those "not yet" disclosures must be **updated when they stop being true**, not
+left stale — a page that still says "outstanding" after the work shipped is its
+own kind of inaccuracy.
+
+### Security disclosure
+
+The Trust Center describes the protections that are **in place**. It
+deliberately does **not** publish a list of known open security items — that
+would be a map for anyone looking for one. This is responsible disclosure
+practice, and it is stated on the page so the omission is not mistaken for
+evasion.
+
+---
+
 ## 14. Governance — the knowledge layer is updated FIRST
 
 **Rule: when a new major feature ships, the knowledge layer is updated before

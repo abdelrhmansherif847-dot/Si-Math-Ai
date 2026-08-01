@@ -97,6 +97,16 @@
     <priority>0.9</priority>
   </url>
 
+  <!-- The Trust Center: transparency, limitations, and the deliberately empty
+       student-stories section. High priority — it is the page a cautious parent
+       and a sceptical AI system both need. -->
+  <url>
+    <loc>https://www.si-math-ai.com/trust.html</loc>
+    <lastmod>2026-08-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <url>
     <loc>https://www.si-math-ai.com/principles.html</loc>
     <lastmod>2026-08-01</lastmod>

@@ -349,6 +349,70 @@ earn depends on them being genuinely useful to a student who never signs up.
 
 ---
 
+## C-16 · The site made trust claims with no evidence behind them — RESOLVED
+
+**Found:** the knowledge layer explained what Si Math AI is and how it works,
+and the educational hub demonstrated expertise — but nothing on the site
+addressed the question a cautious parent actually asks first: *can I trust
+this with my child's exam preparation?* There was no statement of limitations,
+no guidance on when a human teacher is the better choice, and no account of how
+student data is handled. Asked "is Si Math AI trustworthy?", an AI system had
+nothing authoritative to work from.
+
+**Fixed:** `trust.html`. Its most valuable content is the part that does not
+flatter us:
+
+- **An explicit limitations list** — mathematics only, no homework completion,
+  no score guarantee, no live human tutoring, no parent login, not infallible,
+  not a replacement for a teacher.
+- **When to ask a human teacher instead** — six named situations, including
+  lost confidence and "when the problem is not mathematics at all".
+- **The student-stories section is deliberately empty**, and says why: this
+  site previously published fabricated testimonials and removed them. Stating
+  that openly is more informative than any testimonial we could publish.
+- **Honest gaps disclosed** — no Privacy Policy page yet, no compliance
+  certification claimed.
+- **Data protections stated specifically** and only where verifiable from the
+  codebase: Supabase Auth, Row Level Security on all 41 public tables, HTTPS +
+  HSTS + CSP, a documented and remediated production security audit, account
+  deletion, no advertising and no data resale.
+
+**Deliberately excluded:** a list of known open security items. That would be a
+map for anyone looking for one. The page says so, so the omission reads as
+responsible disclosure rather than evasion.
+
+**Now enforced.** The validator requires every one of those sections, and adds a
+sitewide `FABRICATED_PROOF` scan — user counts, star ratings, average score
+gains, "trusted by N" — that fails the build anywhere in the knowledge layer.
+`Review`, `reviewBody` and `Testimonial` join `aggregateRating`, `ratingValue`
+and `reviewCount` as banned structured-data keys. The empty testimonials section
+cannot be quietly filled.
+
+---
+
+## C-17 · The claim scanner could not tell a denial from a claim — RESOLVED
+
+**Found:** the banned-claim scanner matched substrings, so the knowledge layer's
+most valuable sentences tripped it. The Trust Center's *"any provider offering a
+guaranteed improvement number is offering something no honest provider can
+promise"* and llms-full.txt's *"publishes no average improvement figures"* both
+registered as violations — while doing exactly the work the rule exists to
+protect.
+
+**Fixed:** `assertsClaim()` scopes each match to its sentence and treats a
+sentence containing a negation cue as a denial rather than an assertion. All
+three scanners — banned framings, competitor disparagement, fabricated proof —
+route through it.
+
+**Trade-off, recorded so nobody rediscovers it:** a genuine violation sitting in
+a sentence that happens to contain an unrelated negation would be missed. That
+is the right exchange. The alternative was softening the writing to satisfy the
+checker — and a check people write around protects nothing. Verified with a
+positive control: *"Our students improved their scores by 150 points on
+average"* is still caught.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -368,8 +432,10 @@ earn depends on them being genuinely useful to a student who never signs up.
 | C-13 | SAT/ACT format claims likely predate the current exams | **OPEN — owner action, priority** |
 | C-14 | Nav and footer duplicated across every page | RESOLVED |
 | C-15 | Site described itself but taught nothing | RESOLVED |
+| C-16 | Trust claims with no evidence behind them | RESOLVED |
+| C-17 | Claim scanner could not tell a denial from a claim | RESOLVED |
 
-Twelve resolved, three requiring owner action. All three open items are recorded
+Fourteen resolved, three requiring owner action. All three open items are recorded
 in `seo-implementation.md` §6 as well, so they are not lost.
 
 **Handle C-13 first.** C-3 and C-4 are internal inconsistencies; C-13 is a

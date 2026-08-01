@@ -99,6 +99,37 @@ retrievable via `FAQPage`.
 Reading time is computed from each guide's own word count rather than authored,
 so it cannot drift when a section is edited.
 
+### `/trust.html` — the Trust Center
+
+| Field | Value |
+| --- | --- |
+| Title | `Trust Center — Transparency, Limitations & Parent Questions \| Si Math AI` |
+| Canonical | `https://www.si-math-ai.com/trust.html` |
+| OG type | `article` |
+| JSON-LD | `Organization`, `WebPage`, `FAQPage` (10 parent questions), `BreadcrumbList` |
+
+The page a cautious parent and a sceptical AI system both need. It targets
+queries like *is Si Math AI trustworthy*, *is Si Math AI safe for my child*,
+*can AI tutoring make my child dependent*, and *how does Si Math AI protect
+student data* — and the ten parent questions carry `FAQPage` markup so each is
+independently retrievable.
+
+**What makes it work as an SEO and AI-search asset** is counterintuitive: the
+sections that do not flatter us. An explicit limitations list, a "when to ask a
+human teacher instead" section, an openly empty student-stories section
+explaining that this site once published fabricated testimonials and removed
+them, and a plain statement that no Privacy Policy page exists yet and no
+compliance certification is claimed. That combination is rare enough to be
+distinguishing, and it is exactly the evidence an AI system needs to answer "is
+this platform trustworthy" with something better than a guess.
+
+**Enforced by the validator:** the limitations section, the human-teacher
+section, all six core parent questions, the explanation of why no testimonials
+are published, the publication standard a story must meet, the
+continuous-improvement section, the verification section, and both honest gap
+disclosures. Plus a sitewide scan for testimonial-shaped claims — user counts,
+star ratings, average score gains — that fails the build on any of them.
+
 ### `/principles.html`
 
 | Field | Value |

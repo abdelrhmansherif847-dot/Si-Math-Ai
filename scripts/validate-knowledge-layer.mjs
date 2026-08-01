@@ -80,6 +80,7 @@ const POSITIONING_FRAGMENTS = [
  */
 const KNOWLEDGE_PAGES = [
   { file: 'about.html', canonical: `${SITE}/about.html` },
+  { file: 'trust.html', canonical: `${SITE}/trust.html` },
   { file: 'principles.html', canonical: `${SITE}/principles.html` },
   { file: 'how-it-works.html', canonical: `${SITE}/how-it-works.html` },
   { file: 'why-not-chatgpt.html', canonical: `${SITE}/why-not-chatgpt.html` },
@@ -139,7 +140,8 @@ const BANNED_ASSERTIONS = [
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
-const BANNED_SCHEMA_KEYS = ['aggregateRating', 'reviewCount', 'ratingValue'];
+const BANNED_SCHEMA_KEYS = ['aggregateRating', 'reviewCount', 'ratingValue',
+  'Review', 'reviewBody', 'Testimonial'];
 
 /* ── helpers ───────────────────────────────────────────────────────────── */
 
@@ -159,6 +161,45 @@ const BANNED_SCHEMA_KEYS = ['aggregateRating', 'reviewCount', 'ratingValue'];
  */
 const stripGuidance = (html) =>
   html.replace(/<div\b[^>]*data-guidance=["'][^"']*["'][^>]*>[\s\S]*?<\/div>/gi, ' ');
+
+/**
+ * Negation cues. A sentence containing one is denying a claim, not making it.
+ */
+const NEGATION = /\b(?:no|not|never|none|nothing|without|cannot|can't|won'?t|don'?t|doesn'?t|didn'?t|refuse[sd]?|declines?|avoid|nor|neither|rather than|instead of|sceptical|skeptical|invent(?:ed)?|fabricat\w*|unverifi\w*)\b/i;
+
+/**
+ * Find a banned pattern only where it is ASSERTED.
+ *
+ * The knowledge layer necessarily quotes the things it forbids: the Trust
+ * Center says "any provider offering a guaranteed improvement number is
+ * offering something no honest provider can promise", and llms-full.txt says
+ * "publishes no average improvement figures". A naive substring scan flags both
+ * — and the fix cannot be to soften the writing, because those sentences are
+ * doing the most valuable work on the page.
+ *
+ * So the match is scoped to its sentence: if that sentence contains a negation
+ * cue, it is a denial and is not a violation.
+ *
+ * The trade-off, stated so nobody has to rediscover it: a genuine violation
+ * sitting in a sentence that happens to contain an unrelated "no" would be
+ * missed. That is an acceptable exchange for a scanner the writing does not
+ * have to work around — a check people disable or write around protects
+ * nothing.
+ */
+function assertsClaim(text, pattern) {
+  const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+  let m;
+  while ((m = re.exec(text))) {
+    // Widen to the surrounding sentence (bounded, so one runaway block of text
+    // cannot swallow the whole document into a single "sentence").
+    const from = Math.max(0, text.lastIndexOf('.', m.index) + 1);
+    const dot = text.indexOf('.', m.index + m[0].length);
+    const to = dot === -1 ? text.length : dot + 1;
+    const sentence = text.slice(Math.max(from, m.index - 400), Math.min(to, m.index + m[0].length + 400));
+    if (!NEGATION.test(sentence)) return m[0];
+  }
+  return null;
+}
 
 /** The same idea for the plain-text files: their "Accuracy notes" sections. */
 const stripGuidanceText = (text) =>
@@ -462,8 +503,8 @@ const scanTargets = [
 
 for (const [label, text] of scanTargets) {
   for (const [pattern, why] of BANNED_ASSERTIONS) {
-    const m = text.match(pattern);
-    ok(`${label}: no ${why}`, !m, m ? `matched: "${m[0]}"` : '');
+    const m = assertsClaim(text, pattern);
+    ok(`${label}: no ${why}`, !m, m ? `matched: "${m}"` : '');
   }
 }
 
@@ -493,9 +534,9 @@ const DISPARAGEMENT = [
 
 for (const [label, text] of scanTargets) {
   for (const [i, pattern] of DISPARAGEMENT.entries()) {
-    const m = text.match(pattern);
+    const m = assertsClaim(text, pattern);
     ok(`${label}: no disparagement of another product (#${i + 1})`, !m,
-      m ? `matched: "${m[0]}"` : '');
+      m ? `matched: "${m}"` : '');
   }
 }
 
@@ -537,6 +578,85 @@ if (has('ai-knowledge.html')) {
     /fictional dragon guide character, not a real person/i.test(ai));
   ok('ai-knowledge.html publishes a DefinedTermSet glossary',
     read('ai-knowledge.html').includes('"DefinedTermSet"'));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8c. The Trust Center
+   Trust is the one layer that cannot be generated — it is either earned by
+   publishing verifiable things, including unflattering ones, or it is not.
+   These checks stop the page quietly losing the parts that make it credible:
+   the limitations, the "use a human instead" advice, and the empty
+   student-stories section that a future marketing impulse will want to fill.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Trust Center');
+
+if (has('trust.html')) {
+  // Read RAW here: the limitation blocks are marked data-guidance and are
+  // therefore stripped from stripTags(), yet their presence is the whole point.
+  const trustRaw = read('trust.html');
+  const trustText = stripTags(trustRaw);
+
+  ok('trust.html publishes a limitations section',
+    /What Si Math AI does not do/i.test(trustRaw));
+  ok('trust.html tells students when to use a human teacher instead',
+    /When to ask a human teacher instead/i.test(trustText));
+  ok('trust.html answers the six core parent questions',
+    [/Can AI make my child dependent/i, /How do you protect my child's data/i,
+      /Is there human support/i, /How do I monitor my child's progress/i,
+      /How do you personalize learning/i, /How do you measure improvement/i]
+      .every((re) => re.test(trustText)));
+  ok('trust.html explains why no testimonials are published',
+    /not going to invent them|fabricated/i.test(trustText));
+  ok('trust.html states the standard a published story must meet',
+    /written permission/i.test(trustText));
+  ok('trust.html describes how the platform improves',
+    /student feedback/i.test(trustText) && /expert review|reviewed by specialists/i.test(trustText));
+  ok('trust.html offers a way to verify the claims independently',
+    /Check our claims yourself/i.test(trustText));
+
+  // Honest gaps must stay stated until they are genuinely closed. If a Privacy
+  // Policy ships, this check is what reminds you to update the page rather than
+  // leave a stale "not yet".
+  ok('trust.html discloses that no Privacy Policy page exists yet',
+    /Privacy Policy/i.test(trustText) && /not yet|outstanding/i.test(trustText));
+  ok('trust.html claims no compliance certification it cannot evidence',
+    /None claimed|does not claim any formal privacy certification/i.test(trustText));
+}
+
+/**
+ * The hardest rule to keep: no invented social proof, anywhere, ever.
+ *
+ * The temptation to fill an empty testimonials section is real, and it is
+ * exactly what this site already did once and had to undo. So the whole
+ * knowledge layer is scanned for testimonial-shaped claims — a numeric student
+ * count, a star rating, an average score gain — and any of them fails the build
+ * until the day real, verifiable evidence exists and this list is revisited
+ * deliberately rather than by accident.
+ */
+const FABRICATED_PROOF = [
+  [/\b(?:over|more than|join)\s+[\d,]+\+?\s*(?:students|users|learners|families|parents)\b/i,
+    'an unverified user/student count'],
+  [/\b\d(?:\.\d)?\s*(?:\/\s*5|out of 5|stars?)\b/i, 'a star rating'],
+  [/\bavg?(?:erage)?\.?\s+(?:score\s+)?(?:increase|improvement|gain)\b/i,
+    'an average score-improvement claim'],
+  [/\b(?:raised|improved|increased)\s+(?:their|his|her|my)?\s*scores?\s+by\s+\d+/i,
+    'a specific score-increase claim'],
+  [/\b\d{1,3}%\s+of\s+(?:our\s+)?students\b/i, 'an unverified student statistic'],
+  [/\btrusted by\s+[\d,]+/i, 'an unverified adoption claim'],
+];
+
+for (const [label, text] of scanTargets) {
+  for (const [pattern, what] of FABRICATED_PROOF) {
+    const m = assertsClaim(text, pattern);
+    ok(`${label}: publishes no ${what}`, !m, m ? `matched: "${m}"` : '');
+  }
+}
+if (has('trust.html')) {
+  const t = stripTags(read('trust.html'));
+  for (const [pattern, what] of FABRICATED_PROOF) {
+    const m = assertsClaim(t, pattern);
+    ok(`trust.html: publishes no ${what}`, !m, m ? `matched: "${m}"` : '');
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
