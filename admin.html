@@ -1152,25 +1152,91 @@ async function loadEconRevenue() {
 }
 
 /* --- SECTION 4: Credits Analytics --------------------------------------
-   Every figure is a column of owner_econ_credit_flow(). The panel renders the
-   flow itself and deliberately shows NO period headline (Credits Sold /
-   Consumed / Remaining liability / burn rate): those are period aggregates,
-   and summing the daily rows here would be a financial calculation in the
-   client, which INV-03 forbids. They need a server-side summary RPC — raised
-   in the M3 engineering review rather than faked here. */
+   Two server-side surfaces, no client arithmetic:
+     owner_econ_credit_summary() — the period headline (one row)
+     owner_econ_credit_flow()    — the daily × type table
+
+   The headline exists as an RPC because every Section 4 KPI is a period
+   aggregate over a daily ledger; summing those rows here would be a financial
+   calculation in the client (INV-03). Both read econ.v_credit_flow, so the
+   headline and the table reconcile by construction.
+
+   cost_per_credit is the only cost-derived figure here and carries its own
+   block reason and confidence, so a missing FX rate cannot drag a counted
+   credit down (owner rule 1 — revenue and cost display independently). */
 async function loadEconCredits() {
   const host = document.getElementById('econCredits');
-  const r = await ecRpc('owner_econ_credit_flow');
-  if (r.error) return ecFail(host, r);
+  const [sum, r] = await Promise.all([
+    ecRpc('owner_econ_credit_summary'),
+    ecRpc('owner_econ_credit_flow')
+  ]);
+  if (r.error && !r.missing) return ecFail(host, r);
+
+  let head = '';
+  if (sum.missing) {
+    head = '<div class="ec-row"><div class="ec-k">period headline</div><div class="ec-v">'
+         + '<div class="ec-d ec-blocked-why">Pending migration — '
+         + 'owner_econ_credit_summary() is not applied yet.</div></div></div>';
+  } else if (sum.error) {
+    head = '<div class="ec-row"><div class="ec-k">period headline</div><div class="ec-v">'
+         + '<div class="ec-d ec-blocked-why">' + esc(sum.error) + '</div></div></div>';
+  } else if (sum.rows[0]) {
+    const s = sum.rows[0];
+    head =
+        '<div class="ec-row"><div class="ec-k">credits issued</div><div class="ec-v">'
+      +   ecBadge(s.confidence)
+      +   '<div class="ec-cost">'
+      +     '<div class="l primary"><span class="n">Sold (purchased)</span>'
+      +       '<span class="a">' + ecNum(s.credits_sold) + '</span></div>'
+      +     '<div class="l"><span class="n">Granted (non-revenue)</span>'
+      +       '<span class="a">' + ecNum(s.credits_granted) + '</span></div>'
+      +     '<div class="l"><span class="n">Refunded</span>'
+      +       '<span class="a">' + ecNum(s.credits_refunded) + '</span></div>'
+      +   '</div></div></div>'
+      + '<div class="ec-row"><div class="ec-k">credits consumed</div><div class="ec-v">'
+      +   '<div class="ec-cost">'
+      +     '<div class="l primary"><span class="n">Consumed</span>'
+      +       '<span class="a">' + ecNum(s.credits_consumed) + '</span></div>'
+      +     '<div class="l"><span class="n">Net change</span>'
+      +       '<span class="a">' + ecNum(s.net_change) + '</span></div>'
+      +     '<div class="l"><span class="n">Active students</span>'
+      +       '<span class="a">' + ecNum(s.active_users) + '</span></div>'
+      +     '<div class="l"><span class="n">Avg per student</span>'
+      +       '<span class="a">' + ecNum(s.avg_credits_per_user) + '</span></div>'
+      +   '</div></div></div>'
+      + '<div class="ec-row"><div class="ec-k">liability &amp; runway</div><div class="ec-v">'
+      +   '<div class="ec-cost">'
+      +     '<div class="l primary"><span class="n">Outstanding credits</span>'
+      +       '<span class="a">' + ecNum(s.liability_credits_now) + '</span></div>'
+      +     '<div class="l"><span class="n">Avg daily burn</span>'
+      +       '<span class="a">' + ecNum(s.avg_daily_burn) + '</span></div>'
+      +     '<div class="l"><span class="n">Runway (days)</span>'
+      +       '<span class="a">' + ecNum(s.runway_days) + '</span></div>'
+      +   '</div>'
+      +   '<div class="ec-d">Outstanding credits is a point-in-time snapshot and '
+      +     'ignores the date range — there is no historical balance ledger.</div>'
+      + '</div></div>'
+      + '<div class="ec-row"><div class="ec-k">cost per credit</div><div class="ec-v">'
+      +   ecBadge(s.cost_per_credit_confidence)
+      +   (s.cost_block_reason
+          ? ecBlocked(s.cost_block_reason)
+          : '<div class="ec-cost"><div class="l primary"><span class="n">USD per credit</span>'
+            + '<span class="a">' + ecUsd(s.cost_per_credit_usd) + '</span></div></div>')
+      + '</div></div>'
+      + '<div class="ec-row"><div class="ec-k">period</div><div class="ec-v"><div class="ec-d">'
+      +   esc(String(s.period_from || '—')) + ' → ' + esc(String(s.period_to || '—'))
+      + '</div></div></div>';
+  }
 
   const rows = r.rows;
   if (!rows.length) {
-    host.innerHTML = '<div class="empty"><div class="ico">🎟️</div><p>No credit activity recorded.</p></div>';
+    host.innerHTML = head
+      + '<div class="empty"><div class="ico">🎟️</div><p>No credit activity recorded.</p></div>';
     return;
   }
 
   const shown = rows.slice(0, 60);
-  host.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>'
+  host.innerHTML = head + '<div style="overflow-x:auto"><table><thead><tr>'
     + '<th>Date</th><th>Type</th>'
     + '<th style="text-align:right">In</th><th style="text-align:right">Out</th>'
     + '<th style="text-align:right">Net</th><th style="text-align:right">Events</th>'
@@ -1187,8 +1253,8 @@ async function loadEconCredits() {
       + '<td>' + ecBadge(x.confidence) + '</td></tr>').join('')
     + '</tbody></table></div>'
     + '<div class="ec-note">Showing ' + ecNum(shown.length) + ' of ' + ecNum(rows.length)
-    + ' credit-flow rows. Period totals are not shown: they must be aggregated '
-    + 'server-side, never in the dashboard.</div>';
+    + ' credit-flow rows. Period totals above come from owner_econ_credit_summary(), '
+    + 'which reads this same view — the headline and this table cannot disagree.</div>';
 }
 
 /* --- SECTION 5: Package Profitability -----------------------------------
