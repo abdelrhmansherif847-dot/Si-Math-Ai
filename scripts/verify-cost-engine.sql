@@ -13,8 +13,33 @@
 --   transaction that ends in ROLLBACK, so production state is unchanged when
 --   the script finishes. Nothing here is destructive even if interrupted.
 --
--- READING THE OUTPUT
---   Every row is PASS, FAIL or WARN. Any FAIL blocks the Phase 4 exit.
+-- READING THE OUTPUT — four verdicts (VACUOUS added 2026-08-01)
+--
+--   PASS      the assertion examined >= 1 candidate row and found no violation
+--   VACUOUS   the assertion examined ZERO candidate rows — it proved NOTHING
+--   WARN      a known, accepted condition (e.g. all pricing is list price)
+--   FAIL      a violation was found. Any FAIL blocks the Phase 4 exit.
+--
+-- WHY VACUOUS EXISTS. Several checks here assert over populations that are
+-- legitimately empty today — 0 unpriced facts, 0 shared-cost requests, 0
+-- work items claiming invoice_verified. Each printed PASS indistinguishably
+-- from a check that examined 76 rows, so a reader could not tell a
+-- load-bearing pass from an empty one.
+--
+--   A green check is only evidence if it could have gone red.
+--
+-- VACUOUS is NOT a failure — an empty population is usually the correct state
+-- of this system, and failing on it would train everyone to ignore the suite.
+-- It records that the check abstained. Only FAIL blocks.
+--
+-- EVERY CHECK ALWAYS EMITS A ROW. Checks that read their verdict from a source
+-- row (P4-07/08/09 from v_pricing_coverage, P4-17 from allocation_runs) used
+-- to return NO ROW AT ALL when that source was empty — they disappeared from
+-- the output rather than reporting. In a run printing ~44 blocks, a missing
+-- block is far easier to overlook than a red one. Each now LEFT JOINs from a
+-- guaranteed single row, so an empty source yields an explicit verdict.
+--
+-- See docs/roadmap/verification-framework-audit.md for the full audit.
 -- ===========================================================================
 
 \pset pager off
@@ -76,42 +101,105 @@ SELECT 'P4-06' AS check,
 \echo ''
 \echo '=== B. Pricing coverage and correctness ===================================='
 
+-- P4-07/08/09 all read their verdict from v_pricing_coverage. Each previously
+-- did `FROM cost_engine.v_pricing_coverage` directly, so if that view ever
+-- returned zero rows the check emitted NO ROW — vanishing from the output
+-- instead of reporting. The LEFT JOIN from `(SELECT 1)` guarantees exactly one
+-- result row whatever the view does.
+--
+-- The view returns a single row today, but nothing in its definition enforces
+-- that, and a check should not depend on an unenforced property of the thing
+-- it is checking.
+
 -- P4-07 — every telemetry row has exactly one current cost fact.
 SELECT 'P4-07' AS check,
-       CASE WHEN unpriced_missing_fact = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       telemetry_calls::text || ' telemetry rows, ' || current_facts::text
-         || ' current facts, ' || unpriced_missing_fact::text || ' with no fact' AS detail
-  FROM cost_engine.v_pricing_coverage;
+       CASE WHEN c.telemetry_calls IS NULL       THEN 'FAIL'
+            WHEN c.unpriced_missing_fact = 0     THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       CASE WHEN c.telemetry_calls IS NULL
+            THEN 'v_pricing_coverage returned NO ROW — coverage cannot be established'
+            ELSE c.telemetry_calls::text || ' telemetry rows, ' || c.current_facts::text
+                 || ' current facts, ' || c.unpriced_missing_fact::text || ' with no fact'
+       END AS detail
+  FROM (SELECT 1) g LEFT JOIN cost_engine.v_pricing_coverage c ON true;
 
 -- P4-08 — pricing coverage >= 99%.
+--
+-- A NULL coverage_pct WITH telemetry present now FAILs rather than WARNs: it
+-- means the metric could not be computed over data that exists, which is at
+-- least as serious as a low value. WARN is reserved for the genuine "no data
+-- yet" case — zero telemetry rows — where there is nothing to cover.
 SELECT 'P4-08' AS check,
-       CASE WHEN coverage_pct >= 99 THEN 'PASS'
-            WHEN coverage_pct IS NULL THEN 'WARN' ELSE 'FAIL' END AS result,
-       'coverage ' || COALESCE(coverage_pct::text,'n/a') || '% (target >= 99%)' AS detail
-  FROM cost_engine.v_pricing_coverage;
+       CASE WHEN c.telemetry_calls IS NULL          THEN 'FAIL'
+            WHEN c.telemetry_calls = 0              THEN 'VACUOUS'
+            WHEN c.coverage_pct IS NULL             THEN 'FAIL'
+            WHEN c.coverage_pct >= 99               THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       CASE WHEN c.telemetry_calls IS NULL
+            THEN 'v_pricing_coverage returned NO ROW'
+            WHEN c.telemetry_calls = 0
+            THEN 'VACUOUS: 0 telemetry rows — nothing to price, coverage undefined'
+            ELSE 'coverage ' || COALESCE(c.coverage_pct::text, 'NULL over '
+                   || c.telemetry_calls::text || ' telemetry rows')
+                 || '% (target >= 99%), ' || c.telemetry_calls::text || ' row(s) examined'
+       END AS detail
+  FROM (SELECT 1) g LEFT JOIN cost_engine.v_pricing_coverage c ON true;
 
--- P4-09 — binding resolution >= 99% registered.
+-- P4-09 — binding resolution >= 99% registered. Same NULL treatment as P4-08.
 SELECT 'P4-09' AS check,
-       CASE WHEN binding_resolution_pct >= 99 THEN 'PASS'
-            WHEN binding_resolution_pct IS NULL THEN 'WARN' ELSE 'FAIL' END AS result,
-       'binding resolution ' || COALESCE(binding_resolution_pct::text,'n/a')
-         || '% registered (target >= 99%)' AS detail
-  FROM cost_engine.v_pricing_coverage;
+       CASE WHEN c.telemetry_calls IS NULL             THEN 'FAIL'
+            WHEN c.telemetry_calls = 0                 THEN 'VACUOUS'
+            WHEN c.binding_resolution_pct IS NULL      THEN 'FAIL'
+            WHEN c.binding_resolution_pct >= 99        THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       CASE WHEN c.telemetry_calls IS NULL
+            THEN 'v_pricing_coverage returned NO ROW'
+            WHEN c.telemetry_calls = 0
+            THEN 'VACUOUS: 0 telemetry rows — no bindings to resolve'
+            ELSE 'binding resolution ' || COALESCE(c.binding_resolution_pct::text, 'NULL')
+                 || '% registered (target >= 99%), ' || c.telemetry_calls::text
+                 || ' row(s) examined'
+       END AS detail
+  FROM (SELECT 1) g LEFT JOIN cost_engine.v_pricing_coverage c ON true;
 
 -- P4-10 — every unpriced fact states WHY (INV-26: never silently zero).
+-- P4-10 and P4-11 both assert over UNPRICED facts. Pricing coverage is 100%
+-- today, so that population is 0 and neither check can fail — they were
+-- printing PASS while proving nothing. VACUOUS now says so; both become
+-- load-bearing again the moment a single unpriced fact appears.
 SELECT 'P4-10' AS check,
-       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       count(*)::text || ' unpriced fact(s) with no unpriced_reason — must be 0' AS detail
-  FROM cost_engine.cost_facts
- WHERE is_current AND pricing_status = 'unpriced' AND unpriced_reason IS NULL;
+       CASE WHEN t.examined = 0   THEN 'VACUOUS'
+            WHEN t.violations = 0 THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       t.violations::text || ' of ' || t.examined::text
+         || ' unpriced fact(s) have no unpriced_reason'
+         || CASE WHEN t.examined = 0
+                 THEN ' — VACUOUS: 0 unpriced facts, so the reason rule was not exercised'
+                 ELSE ' — must be 0' END AS detail
+  FROM (
+    SELECT count(*) FILTER (WHERE pricing_status = 'unpriced') AS examined,
+           count(*) FILTER (WHERE pricing_status = 'unpriced'
+                              AND unpriced_reason IS NULL)     AS violations
+      FROM cost_engine.cost_facts WHERE is_current
+  ) t;
 
 -- P4-11 — unknown cost is NULL, never 0 (INV-23).
 SELECT 'P4-11' AS check,
-       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       count(*)::text || ' unpriced fact(s) carrying a non-NULL cost — must be 0' AS detail
-  FROM cost_engine.cost_facts
- WHERE is_current AND pricing_status = 'unpriced'
-   AND (net_cost_usd IS NOT NULL OR gross_cost_usd IS NOT NULL);
+       CASE WHEN t.examined = 0   THEN 'VACUOUS'
+            WHEN t.violations = 0 THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       t.violations::text || ' of ' || t.examined::text
+         || ' unpriced fact(s) carry a non-NULL cost'
+         || CASE WHEN t.examined = 0
+                 THEN ' — VACUOUS: 0 unpriced facts, so INV-23 was not exercised here'
+                 ELSE ' — must be 0' END AS detail
+  FROM (
+    SELECT count(*) FILTER (WHERE pricing_status = 'unpriced') AS examined,
+           count(*) FILTER (WHERE pricing_status = 'unpriced'
+                              AND (net_cost_usd IS NOT NULL
+                                OR gross_cost_usd IS NOT NULL)) AS violations
+      FROM cost_engine.cost_facts WHERE is_current
+  ) t;
 
 -- P4-12 — every priced fact traces to a rate card (INV-17).
 SELECT 'P4-12' AS check,
@@ -146,19 +234,30 @@ SELECT 'P4-29' AS check,
 
 -- P4-30 — a work item's confidence degrades to its weakest input: one
 -- list-priced contributing call makes the whole item modeled.
+-- Asserts over work items claiming invoice_verified. All pricing is currently
+-- list price, so that population is 0 and the check cannot fail — VACUOUS now
+-- reports that rather than showing a PASS indistinguishable from a real one.
 SELECT 'P4-30' AS check,
-       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       count(*)::text || ' work item(s) claiming invoice_verified despite a '
-         || 'list-priced contributing call — must be 0' AS detail
-  FROM cost_engine.question_cost_facts q
- WHERE q.is_current
-   AND q.price_confidence = 'invoice_verified'
+       CASE WHEN t.examined = 0   THEN 'VACUOUS'
+            WHEN t.violations = 0 THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       t.violations::text || ' of ' || t.examined::text
+         || ' invoice_verified work item(s) have a list-priced contributing call'
+         || CASE WHEN t.examined = 0
+                 THEN ' — VACUOUS: no work item claims invoice_verified (all pricing is list price)'
+                 ELSE ' — must be 0' END AS detail
+  FROM (
+SELECT count(*) FILTER (WHERE q.price_confidence = 'invoice_verified') AS examined,
+       count(*) FILTER (WHERE q.price_confidence = 'invoice_verified'
    AND EXISTS (
      SELECT 1 FROM cost_engine.cost_facts f
       WHERE f.is_current AND f.price_confidence = 'list_price'
         AND (f.question_record_id::text = q.work_item_id
              OR (f.question_record_id IS NULL AND f.request_id = q.request_id))
-   );
+   )) AS violations
+  FROM cost_engine.question_cost_facts q
+ WHERE q.is_current
+  ) t;
 
 -- P4-31 — how much of the current cost book rests on unverified prices.
 -- Informational, but it is the number that decides whether these figures are
@@ -206,12 +305,43 @@ SELECT 'P4-16' AS check,
          || ' variance=' || (allocated.t - priced.t) AS detail
   FROM allocated, priced;
 
--- P4-17 — the last allocation run asserted conservation and recorded it.
+-- P4-17 — EVERY allocation run asserted conservation and recorded it.
+--
+-- THIS CHECK USED TO INSPECT ONE RUN. It read
+-- `FROM cost_engine.allocation_runs ORDER BY started_at DESC LIMIT 1`, so a
+-- historical run that failed conservation was invisible to it permanently —
+-- measured 2026-08-01: 2 runs existed and 1 was checked. Conservation is a
+-- property of every run, not just the newest; a run that lost money and was
+-- then superseded is exactly the case worth catching.
+--
+-- It now asserts across all runs and reports the latest separately, so no
+-- diagnostic detail is lost. Same data, same behaviour, strictly more coverage.
+--
+-- It also emits a row when allocation_runs is empty, instead of vanishing.
 SELECT 'P4-17' AS check,
-       CASE WHEN conserved AND variance_usd = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       'last run conserved=' || COALESCE(conserved::text,'?')
-         || ' variance=' || COALESCE(variance_usd::text,'?') AS detail
-  FROM cost_engine.allocation_runs ORDER BY started_at DESC LIMIT 1;
+       CASE WHEN t.runs = 0       THEN 'VACUOUS'
+            WHEN t.bad_runs = 0   THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       CASE WHEN t.runs = 0
+            THEN 'VACUOUS: allocation_runs is empty — no run has asserted conservation'
+            ELSE t.bad_runs::text || ' of ' || t.runs::text
+                 || ' allocation run(s) failed conservation'
+                 || COALESCE(' [' || t.offenders || ']', '')
+                 || '; latest run conserved=' || COALESCE(t.latest_conserved::text, '?')
+                 || ' variance=' || COALESCE(t.latest_variance::text, '?')
+       END AS detail
+  FROM (
+    SELECT count(*)                                                        AS runs,
+           count(*) FILTER (WHERE conserved IS NOT TRUE
+                               OR variance_usd IS DISTINCT FROM 0)         AS bad_runs,
+           string_agg(id::text, ', ') FILTER (WHERE conserved IS NOT TRUE
+                               OR variance_usd IS DISTINCT FROM 0)         AS offenders,
+           (SELECT conserved    FROM cost_engine.allocation_runs
+             ORDER BY started_at DESC LIMIT 1)                             AS latest_conserved,
+           (SELECT variance_usd FROM cost_engine.allocation_runs
+             ORDER BY started_at DESC LIMIT 1)                             AS latest_variance
+      FROM cost_engine.allocation_runs
+  ) t;
 
 -- P4-18 — every call reaches a work item, and the ONLY reason a call is
 -- counted more than once is legitimate sharing.
@@ -289,12 +419,18 @@ WITH shared_src AS (
    WHERE q.is_current AND q.shared_cost_usd IS NOT NULL
    GROUP BY q.request_id
 )
+-- No request currently has a shared call, so this population is 0 and the
+-- lossless-split rule is not exercised. VACUOUS records that; the check
+-- becomes load-bearing as soon as one multi-question request is priced.
 SELECT 'P4-20' AS check,
-       CASE WHEN count(*) FILTER (WHERE s.src IS DISTINCT FROM d.dst) = 0
-            THEN 'PASS' ELSE 'FAIL' END AS result,
-       count(*)::text || ' request(s) with shared cost; '
-         || count(*) FILTER (WHERE s.src IS DISTINCT FROM d.dst)::text
-         || ' where the split does not sum back' AS detail
+       CASE WHEN count(*) = 0                                          THEN 'VACUOUS'
+            WHEN count(*) FILTER (WHERE s.src IS DISTINCT FROM d.dst) = 0 THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       count(*) FILTER (WHERE s.src IS DISTINCT FROM d.dst)::text || ' of '
+         || count(*)::text || ' request(s) with shared cost fail to sum back'
+         || CASE WHEN count(*) = 0
+                 THEN ' — VACUOUS: no request currently has a shared call'
+                 ELSE ' — must be 0' END AS detail
   FROM shared_src s FULL JOIN shared_dst d ON d.request_id = s.request_id;
 
 -- P4-21 — incomplete aggregates are labelled, never silently completed (INV-24).
@@ -305,11 +441,23 @@ SELECT 'P4-21' AS check,
  WHERE is_current AND cost_completeness = 'complete' AND unpriced_call_count > 0;
 
 -- P4-22 — a work item with nothing priced reports NULL, never 0 (INV-23).
+-- No work item is currently 'unknown', so INV-23's never-report-a-number rule
+-- is not exercised at this grain. VACUOUS records that honestly.
 SELECT 'P4-22' AS check,
-       CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS result,
-       count(*)::text || ' unknown work item(s) reporting a number instead of NULL' AS detail
-  FROM cost_engine.question_cost_facts
- WHERE is_current AND cost_completeness = 'unknown' AND total_cost_usd IS NOT NULL;
+       CASE WHEN t.examined = 0   THEN 'VACUOUS'
+            WHEN t.violations = 0 THEN 'PASS'
+            ELSE 'FAIL' END AS result,
+       t.violations::text || ' of ' || t.examined::text
+         || ' unknown work item(s) report a number instead of NULL'
+         || CASE WHEN t.examined = 0
+                 THEN ' — VACUOUS: no work item has cost_completeness = unknown'
+                 ELSE ' — must be 0' END AS detail
+  FROM (
+    SELECT count(*) FILTER (WHERE cost_completeness = 'unknown') AS examined,
+           count(*) FILTER (WHERE cost_completeness = 'unknown'
+                              AND total_cost_usd IS NOT NULL)    AS violations
+      FROM cost_engine.question_cost_facts WHERE is_current
+  ) t;
 
 -- P4-23 — parent/child never double counts: thread_cost >= total_cost always,
 -- and equals it when the item has no descendants (§8.8.4).
