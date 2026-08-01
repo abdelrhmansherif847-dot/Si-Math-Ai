@@ -117,6 +117,16 @@
     <priority>0.9</priority>
   </url>
 
+  <!-- The Knowledge Graph: every concept defined once, with typed edges.
+       knowledge-graph.json is the machine-readable artefact; every page links
+       to it via <link rel="alternate">. -->
+  <url>
+    <loc>https://www.si-math-ai.com/knowledge-graph.html</loc>
+    <lastmod>2026-08-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <url>
     <loc>https://www.si-math-ai.com/evidence.html</loc>
     <lastmod>2026-08-01</lastmod>

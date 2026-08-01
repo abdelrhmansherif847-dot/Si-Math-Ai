@@ -40,6 +40,7 @@ import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS } from '../docs/knowledge/faq-data.mjs';
 import { GUIDES as LEARN_GUIDES, GROUPS as LEARN_GROUPS } from '../docs/knowledge/learn-data.mjs';
 import { CAPABILITIES, RESEARCH, CHANGELOG, ROADMAP, NOT_ON_ROADMAP } from '../docs/knowledge/evidence-data.mjs';
+import { CONCEPTS, PREDICATES } from '../docs/knowledge/graph-data.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -81,6 +82,7 @@ const POSITIONING_FRAGMENTS = [
  */
 const KNOWLEDGE_PAGES = [
   { file: 'about.html', canonical: `${SITE}/about.html` },
+  { file: 'knowledge-graph.html', canonical: `${SITE}/knowledge-graph.html` },
   { file: 'why-we-built-si-math-ai.html', canonical: `${SITE}/why-we-built-si-math-ai.html` },
   { file: 'trust.html', canonical: `${SITE}/trust.html` },
   { file: 'evidence.html', canonical: `${SITE}/evidence.html` },
@@ -490,6 +492,106 @@ if (has('why-we-built-si-math-ai.html')) {
     /deliberately empty/i.test(wtext) && /own words/i.test(wtext));
   ok('why-we-built: explains why the reasoning is collective-voice',
     /collective voice/i.test(wtext));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1d. The Knowledge Graph
+   The registry of record. Three properties make it a graph rather than a list,
+   and all three are the kind that decay silently: no dangling edges, no orphan
+   concepts, and no concept defined in two places.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Knowledge Graph');
+
+const buildGraph = spawnSync(process.execPath, [resolve(REPO, 'scripts/build-graph.mjs'), '--check'], {
+  cwd: REPO, encoding: 'utf8',
+});
+ok('knowledge-graph.json/.html and the ai-knowledge glossary are in sync with graph-data.mjs',
+  buildGraph.status === 0, (buildGraph.stdout || '') + (buildGraph.stderr || ''));
+
+const conceptIds = new Set(CONCEPTS.map((c) => c.id));
+ok('every concept id is unique', conceptIds.size === CONCEPTS.length);
+
+for (const c of CONCEPTS) {
+  const label = `graph:${c.id}`;
+  ok(`${label}: has a definition`, typeof c.definition === 'string' && c.definition.length > 60);
+  ok(`${label}: has a purpose`, typeof c.purpose === 'string' && c.purpose.length > 40);
+  ok(`${label}: declares a kind`, !!c.kind);
+  ok(`${label}: names at least one documenting page`, c.pages.length > 0);
+  ok(`${label}: its canonical page is one of its pages`, c.pages.includes(c.canonicalPage));
+  ok(`${label}: its canonical page exists`, has(c.canonicalPage), c.canonicalPage);
+
+  // Rule 2: a dangling edge is a graph lying about its own structure.
+  for (const r of c.related) {
+    ok(`${label}: edge "${r.predicate}" targets a known concept`, conceptIds.has(r.target), r.target);
+    ok(`${label}: edge "${r.predicate}" uses a declared predicate`,
+      Object.prototype.hasOwnProperty.call(PREDICATES, r.predicate));
+    ok(`${label}: does not relate to itself`, r.target !== c.id);
+  }
+}
+
+/**
+ * Rule 3: every concept must be connected — degree greater than zero, counting
+ * edges in either direction. An isolated concept means either the graph is
+ * wrong or the concept is not real, and it is exactly the kind that drifts
+ * unnoticed because nothing forces anyone to look at it.
+ *
+ * Deliberately degree-based rather than inbound-only: a leaf concept that
+ * declares its parent via `partOf` is properly connected, and demanding an
+ * inbound edge for it would push authors into inventing relationships to
+ * satisfy the checker. (The first run of this check flagged five concepts —
+ * four turned out to be real missing edges, now added, and one was this rule
+ * being wrong.)
+ */
+const referenced = new Set(CONCEPTS.flatMap((c) => c.related.map((r) => r.target)));
+const isolated = CONCEPTS.filter((c) => !referenced.has(c.id) && c.related.length === 0);
+ok('no isolated concepts (every concept participates in at least one edge)',
+  isolated.length === 0, isolated.map((o) => o.id).join(', '));
+
+// Separately: the platform node should be the best-connected thing in the graph.
+const inboundCount = (id) => CONCEPTS.filter((c) => c.related.some((r) => r.target === id)).length;
+ok('the platform concept is referenced by other concepts', inboundCount('si-math-ai') >= 3);
+
+// The core path the graph exists to make explicit must stay traversable.
+const edge = (from, predicate, to) =>
+  CONCEPTS.find((c) => c.id === from)?.related.some((r) => r.predicate === predicate && r.target === to);
+ok('the core path holds: student → uses → zero', edge('student', 'uses', 'zero'));
+ok('the core path holds: zero → feeds → question-analysis', edge('zero', 'feeds', 'question-analysis'));
+ok('the core path holds: question-analysis → feeds → weakness-analyzer', edge('question-analysis', 'feeds', 'weakness-analyzer'));
+ok('the core path holds: weakness-analyzer → generates → focus-practice', edge('weakness-analyzer', 'generates', 'focus-practice'));
+ok('the core path holds: focus-practice → improves → student', edge('focus-practice', 'improves', 'student'));
+
+/**
+ * Rule 1, enforced: the canonical definition of Si Math AI in the graph must be
+ * the same sentence used everywhere else on the site. If the graph could define
+ * the platform differently from the rest of the knowledge layer, it would be a
+ * second source of truth rather than the only one.
+ */
+const platform = CONCEPTS.find((c) => c.id === 'si-math-ai');
+ok('the graph defines Si Math AI with the canonical definition, verbatim',
+  platform?.definition === CANONICAL_DEFINITION);
+
+// And the published graph must be valid JSON-LD with a resolvable context.
+if (has('knowledge-graph.json')) {
+  let parsed = null;
+  try { parsed = JSON.parse(read('knowledge-graph.json')); }
+  catch (e) { ok('knowledge-graph.json parses', false, e.message); }
+  if (parsed) {
+    ok('knowledge-graph.json parses', true);
+    ok('knowledge-graph.json declares a @context', !!parsed['@context']);
+    ok('knowledge-graph.json is @graph-shaped', Array.isArray(parsed['@graph']));
+    const terms = (parsed['@graph'] || []).filter((n) => n['@type'] === 'DefinedTerm');
+    ok(`knowledge-graph.json publishes all ${CONCEPTS.length} concepts`, terms.length === CONCEPTS.length);
+    ok('every published concept has a stable URI',
+      terms.every((t) => typeof t['@id'] === 'string' && t['@id'].startsWith(`${SITE}/knowledge-graph#`)));
+  }
+}
+
+// Every page advertises the machine-readable graph, so it is discoverable from
+// anywhere a crawler lands rather than only from the sitemap.
+for (const { file } of [...KNOWLEDGE_PAGES, ...LEARN_PAGES]) {
+  if (!has(file)) continue;
+  ok(`${file}: links the machine-readable knowledge graph`,
+    read(file).includes('rel="alternate" type="application/ld+json" href="knowledge-graph.json"'));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

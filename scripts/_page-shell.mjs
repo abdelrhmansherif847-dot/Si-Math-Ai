@@ -91,6 +91,7 @@ export function footer() {
           <li><a href="architecture.html">Architecture</a></li>
           <li><a href="changelog.html">Changelog</a></li>
           <li><a href="roadmap.html">Roadmap</a></li>
+          <li><a href="knowledge-graph.html">Knowledge Graph</a></li>
           <li><a href="ai-knowledge.html">Reference for AI Systems</a></li>
         </ul>
       </div>
@@ -120,7 +121,8 @@ export function headAssets() {
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="assets/knowledge.css"/>`;
+<link rel="stylesheet" href="assets/knowledge.css"/>
+<link rel="alternate" type="application/ld+json" href="knowledge-graph.json" title="Si Math AI Knowledge Graph"/>`;
 }
 
 /** The Organization node every page carries, so the entity resolves the same. */

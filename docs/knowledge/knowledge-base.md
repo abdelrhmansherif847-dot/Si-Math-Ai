@@ -579,6 +579,60 @@ writes it, replace the reserved block; do not have anyone else write it for them
 
 ---
 
+## 13f. The Knowledge Graph — the registry of record
+
+`docs/knowledge/graph-data.mjs` defines every important concept **exactly once**:
+definition, purpose, inputs, outputs, typed relationships, and the pages that
+document it. Generated into `knowledge-graph.json` (JSON-LD, a stable URI per
+concept) and `knowledge-graph.html`.
+
+**Pages describe concepts. The graph defines them.** If a page and the graph
+disagree, the graph is right and the page is a defect.
+
+### Why it exists
+
+By the time a site has twenty public pages, the same concept has been described
+on six of them. Each description is reasonable; collectively they drift — and an
+AI system asked "what is the Weakness Analyzer?" retrieves whichever page it
+happened to crawl. Everything else in this knowledge layer fights that drift with
+discipline. The graph removes the opportunity for it.
+
+### Rules, all enforced by CI
+
+1. **One definition per concept.** The graph's definition of Si Math AI must be
+   the canonical definition, byte for byte — otherwise the graph would be a
+   second source of truth rather than the only one.
+2. **No dangling edges.** Every relationship target must be a concept that
+   exists. A dangling edge is a graph lying about its own structure.
+3. **No isolated concepts.** Every concept participates in at least one edge in
+   either direction. Deliberately degree-based: a leaf that declares its parent
+   via `partOf` is properly connected, and demanding an inbound edge for it would
+   push authors into inventing relationships to satisfy the checker.
+4. **Every concept names a canonical page, and that page must exist.**
+5. **The core path stays traversable** — student → uses → Zero → feeds →
+   question analysis → feeds → Weakness Analyzer → generates → Focus Practice →
+   improves → student. If a refactor breaks that chain, the build fails.
+6. **The glossary on `ai-knowledge.html` is generated from the graph**, with each
+   term's `@id` pointing at the canonical graph node. It is a *reference* to the
+   registry in the linked-data sense, not a copy of it.
+7. **Every page advertises the graph** via
+   `<link rel="alternate" type="application/ld+json" href="knowledge-graph.json">`,
+   so it is discoverable wherever a crawler lands.
+
+### The vocabulary
+
+Ten predicates: `uses`, `feeds`, `generates`, `measures`, `records`, `requires`,
+`partOf`, `governs`, `improves`, `authoredBy`. Deliberately few — a large
+predicate vocabulary is harder to keep consistent than it is useful, so adding
+one is a considered act.
+
+They are namespaced under `https://www.si-math-ai.com/ns#` alongside schema.org.
+Concepts stay `DefinedTerm` so generic consumers still understand them; the edges
+are additive. Inventing meanings for existing schema.org properties would have
+been worse than declaring our own honestly.
+
+---
+
 ## 14. Governance — the knowledge layer is updated FIRST
 
 **Rule: when a new major feature ships, the knowledge layer is updated before
@@ -593,9 +647,26 @@ describes it one way and the knowledge layer another, the contradiction is what
 gets learned. The website must remain the single source of truth for humans and
 AI systems alike, which only holds if it is never the last thing updated.
 
+### The order: Graph → Documentation → Website → Product
+
+Knowledge is the foundation of development, not a write-up of it. A capability
+enters `docs/knowledge/graph-data.mjs` **before** it is documented, documented
+before it appears on the website, and on the website before it is announced as
+shipped.
+
+The reason is not tidiness. A concept that reaches the graph last has already
+been described three different ways by the time anyone reconciles them, and
+reconciling prose after the fact is work nobody ever schedules. Defining it once,
+first, costs about ten minutes and removes the drift permanently.
+
 ### Checklist for shipping a new capability
 
-1. **Update this file first.** Add the capability to §7 (the systems list), and
+0. **Add the concept to the Knowledge Graph** — `docs/knowledge/graph-data.mjs`:
+   definition, purpose, inputs, outputs, typed relationships, the pages that will
+   document it, and its canonical page. Then `node scripts/build-graph.mjs`.
+   CI fails on a dangling edge, an isolated concept, or a canonical page that
+   does not exist, so the graph cannot accept a half-specified concept.
+1. **Update this file.** Add the capability to §7 (the systems list), and
    to §6 if it changes the taxonomy.
 2. **Update `SYSTEMS` in `scripts/validate-knowledge-layer.mjs`.** This is
    deliberately a hard gate: the moment you add a ninth system to that array,

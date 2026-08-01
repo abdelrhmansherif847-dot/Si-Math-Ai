@@ -41,6 +41,12 @@ export const SHELL_PAGES = [
 const NAV_RE = /<nav class="k-nav">[\s\S]*?<\/nav>/;
 const FOOTER_RE = /<footer class="k-footer">[\s\S]*?<\/footer>/;
 
+/* Every page advertises the machine-readable knowledge graph, so it is
+   discoverable wherever a crawler lands rather than only from the sitemap.
+   Generated pages get this from headAssets(); hand-written ones get it here. */
+const GRAPH_LINK = '<link rel="alternate" type="application/ld+json" href="knowledge-graph.json" title="Si Math AI Knowledge Graph"/>';
+const CSS_LINK = '<link rel="stylesheet" href="assets/knowledge.css"/>';
+
 let changed = 0;
 const drifted = [];
 
@@ -53,7 +59,11 @@ for (const file of SHELL_PAGES) {
 
   // A page marks its own nav item current only if it appears in the nav at all;
   // principles / ai-knowledge / founder-badge live in the footer instead.
-  const out = src.replace(NAV_RE, nav(file)).replace(FOOTER_RE, footer());
+  let out = src.replace(NAV_RE, nav(file)).replace(FOOTER_RE, footer());
+  if (!out.includes(GRAPH_LINK)) {
+    if (!out.includes(CSS_LINK)) throw new Error(`${file}: no knowledge.css link to anchor the graph link to`);
+    out = out.replace(CSS_LINK, `${CSS_LINK}\n${GRAPH_LINK}`);
+  }
 
   if (out === src) continue;
   if (check) { drifted.push(file); continue; }

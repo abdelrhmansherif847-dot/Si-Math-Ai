@@ -464,6 +464,57 @@ pinned by the validator.
 
 ---
 
+## C-20 · The same concept was defined on six pages — RESOLVED
+
+**Found:** by the time the knowledge layer reached twenty-two public pages, core
+concepts had accumulated several descriptions each. "Weakness Analyzer" was
+defined on `how-it-works.html`, `evidence.html`, `architecture.html`,
+`ai-knowledge.html`, in `llms-full.txt` and in the FAQ. Each description was
+reasonable and none contradicted another *yet* — but nothing prevented it, and an
+AI system asked what the Weakness Analyzer is would retrieve whichever page it
+happened to crawl.
+
+Every previous layer fought this with discipline. Discipline is a decaying asset.
+
+**Fixed:** `docs/knowledge/graph-data.mjs` — 22 concepts, each defined exactly
+once, with purpose, inputs, outputs, typed relationships and a named canonical
+page. Generated into `knowledge-graph.json` (JSON-LD, one stable URI per concept,
+79 typed edges) and `knowledge-graph.html`.
+
+The change that makes it a source of truth rather than another copy of one:
+**the `DefinedTermSet` glossary on `ai-knowledge.html` is now generated from the
+graph**, with each term's `@id` pointing at the canonical graph node. It is a
+reference to the registry in the linked-data sense, not a duplicate of it.
+
+**Now enforced.** Definitions complete; the platform concept defined with the
+canonical definition byte for byte; no dangling edges; no isolated concepts;
+every predicate declared; every canonical page exists; the core path
+(student → Zero → question analysis → Weakness Analyzer → Focus Practice →
+student) still traversable; the published JSON valid with stable URIs; and every
+page advertising the graph via `<link rel="alternate">`.
+
+---
+
+## C-21 · The orphan rule was wrong, and found four real gaps first — RESOLVED
+
+**Found:** the first run of the connectedness check flagged five concepts. Four
+were genuine omissions — nothing in the graph pointed at Snap & Solve,
+Personalized Learning, Educational Principles or the Founder Badge, which meant
+the graph was quietly claiming they were unconnected to anything. Those edges
+were real and are now declared.
+
+The fifth was the rule being wrong. It required an *inbound* edge, which a leaf
+concept that correctly declares its parent via `partOf` will never have.
+
+**Fixed:** the rule is now degree-based — a concept must participate in at least
+one edge in either direction. Recorded here because the failure mode is
+instructive: a check strict enough to be wrong will be satisfied by inventing
+data. Had the rule not been corrected, the obvious fix would have been to
+fabricate an inbound relationship for `franco`, and the graph would have been
+worse for passing.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -487,8 +538,10 @@ pinned by the validator.
 | C-17 | Claim scanner could not tell a denial from a claim | RESOLVED |
 | C-18 | Claims explained but not evidenced | RESOLVED |
 | C-19 | Changelog could have been invented | RESOLVED (by constraint) |
+| C-20 | Same concept defined on six pages | RESOLVED |
+| C-21 | Orphan rule was wrong (and found four real gaps first) | RESOLVED |
 
-Sixteen resolved, three requiring owner action. All three open items are recorded
+Eighteen resolved, three requiring owner action. All three open items are recorded
 in `seo-implementation.md` §6 as well, so they are not lost.
 
 **Handle C-13 first.** C-3 and C-4 are internal inconsistencies; C-13 is a

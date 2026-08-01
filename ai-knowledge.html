@@ -32,6 +32,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/knowledge.css"/>
+<link rel="alternate" type="application/ld+json" href="knowledge-graph.json" title="Si Math AI Knowledge Graph"/>
 
 <script type="application/ld+json">
 {
@@ -71,48 +72,157 @@
       "hasDefinedTerm": [
         {
           "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai",
           "name": "Si Math AI",
-          "description": "The platform: a comprehensive learning platform for SAT, ACT, and EST Mathematics combining educational expertise, AI technology, personalized learning, analytics, and human support."
+          "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math-ai"
         },
         {
           "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#student",
+          "name": "Student",
+          "description": "The person the platform exists for: an American Diploma student preparing for the mathematics section of the SAT, ACT or EST, predominantly in Egypt and the wider MENA region.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#student"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#zero",
           "name": "Zero",
-          "description": "The AI mentor inside Si Math AI. A fictional dragon guide character, not a real person. Zero delivers educational knowledge that human educators and exam specialists created, reviewed and continuously improve; Zero does not invent educational strategy."
+          "description": "The AI mentor inside Si Math AI. A fictional dragon guide character, not a real person. Zero delivers educational knowledge that human educators and exam specialists created, reviewed and continuously improve; Zero does not invent educational strategy.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#zero"
         },
         {
           "@type": "DefinedTerm",
-          "name": "Weakness Analyzer",
-          "description": "The diagnostic system that converts every student attempt into a signal against a specific skill and ranks weak skills by their impact on the student's score, with a severity band per skill."
-        },
-        {
-          "@type": "DefinedTerm",
-          "name": "Focus Practice",
-          "description": "Targeted drill sets generated from the student's ranked weaknesses, skipping skills already mastered."
-        },
-        {
-          "@type": "DefinedTerm",
-          "name": "Mock Exams",
-          "description": "Full-length, correctly timed SAT, ACT and EST mathematics mock examinations with raw-to-scaled scoring and a per-section breakdown."
-        },
-        {
-          "@type": "DefinedTerm",
-          "name": "Learning Memory",
-          "description": "The persistent, searchable record of every question, session and mistake, which carries context between sessions and makes longitudinal diagnosis possible."
-        },
-        {
-          "@type": "DefinedTerm",
-          "name": "Smart Progress Tracking",
-          "description": "Mastery score per skill, trend lines over time, a predicted test-day score, daily streaks and a seven-rank XP ladder."
-        },
-        {
-          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#snap-and-solve",
           "name": "Snap & Solve",
-          "description": "Photo input: a student photographs a question from a prep book or worksheet and Zero reads and works from the image."
+          "description": "Photo input: a student photographs a question from a prep book or worksheet and Zero reads and works from the image.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#snap-and-solve"
         },
         {
           "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#scope-guard",
+          "name": "Scope Guard",
+          "description": "A constraint that declines requests falling outside the platform's educational purpose. Si Math AI is built to teach SAT, ACT and EST mathematics, not to complete work on a student's behalf.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#scope-guard"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#question-analysis",
+          "name": "Question Analysis",
+          "description": "The stage that resolves a student attempt to one permanent skill identifier in the taxonomy and writes it as a diagnostic signal. Detections that map to no known skill are logged rather than silently accepted.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#question-analysis"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#taxonomy",
+          "name": "Skill Taxonomy",
+          "description": "The fixed, versioned vocabulary the platform diagnoses in: 5 topic domains and 33 individually tracked skills, each with a permanent identifier. Display names may change; identifiers never do, and every stored record carries the taxonomy version that produced it.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#taxonomy"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#weakness-analyzer",
+          "name": "Weakness Analyzer",
+          "description": "The diagnostic system that converts every student attempt into a signal against a specific skill and ranks weak skills by their impact on the student's score, with a severity band per skill.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#weakness-analyzer"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#focus-practice",
+          "name": "Focus Practice",
+          "description": "Targeted drill sets generated from the student's ranked weaknesses, skipping skills already mastered.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#focus-practice"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#mock-exams",
+          "name": "Mock Exams",
+          "description": "Full-length, correctly timed SAT, ACT and EST mathematics mock examinations with raw-to-scaled scoring and a per-section breakdown.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#mock-exams"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#learning-memory",
+          "name": "Learning Memory",
+          "description": "The persistent, searchable record of every question, session and mistake, which carries context between sessions and makes longitudinal diagnosis possible.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#learning-memory"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#performance-analytics",
+          "name": "Performance Analytics",
+          "description": "The measurement layer: mastery computed per skill from actual attempts, trend over time per topic domain, and a predicted test-day score that updates as evidence accumulates. The predicted score is an estimate, not a guarantee and not an official score.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#performance-analytics"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#progress-tracking",
+          "name": "Smart Progress Tracking",
+          "description": "Mastery score per skill, trend lines over time, a predicted test-day score, daily streaks and a seven-rank XP ladder.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#progress-tracking"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#personalized-learning",
+          "name": "Personalized Learning",
+          "description": "The adaptive layer that selects and sequences a fixed, specialist-authored curriculum against a student's live diagnosis, exam and language. The pedagogy is chosen per student, not improvised per student.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#personalized-learning"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#human-support",
+          "name": "Human Support",
+          "description": "Real educators and exam specialists who author and review everything the platform teaches, revise material based on how students actually perform, and handle accounts and upgrades. Si Math AI does not currently offer on-demand live human tutoring.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#human-support"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
+          "name": "Educational Expertise",
+          "description": "The body of teaching knowledge the platform delivers: methodologies, the catalogue of mistakes students actually make, exam strategies, score-improvement technique and learning psychology — created by experienced SAT, ACT and EST mathematics educators.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#educational-expertise"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#three-pillars",
+          "name": "The Three Pillars",
+          "description": "The structure Si Math AI is built on: Educational Expertise (what it teaches), Technology (how it is delivered), and Human Support (why it works). Artificial Intelligence is how Si Math AI teaches; educational expertise is what it teaches; human experience is why it works.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#three-pillars"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#learning-loop",
+          "name": "The Learning Loop",
+          "description": "The cycle every student question travels: ask, understand, diagnose, focus, master — implemented as ten stages from the student question through Zero, question analysis, the Weakness Analyzer, Learning Memory, Focus Practice, Mock Exams, Progress Tracking and human support, feeding back into continuous improvement.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#learning-loop"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#educational-principles",
+          "name": "Educational Principles",
+          "description": "The six positions Si Math AI teaches from: understanding before memorization; mistakes are data, not failure; personalized learning beats one-size-fits-all; consistent practice beats cramming; learning is a journey, not a score; and AI supports learning rather than replacing thinking.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#educational-principles"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#data-protection",
+          "name": "Student Data Protection",
+          "description": "The guarantees around student learning data: authentication handled by a managed provider, row-level security on every public database table, HTTPS with HSTS and a Content Security Policy, a documented and remediated production security audit, no advertising and no sale of user data, and permanent account deletion available to the student.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#data-protection"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#founder-badge",
+          "name": "Founder Badge",
+          "description": "A founding membership of Si Math AI. Founder members receive a 50% lifetime discount that is locked forever for as long as the membership remains active, a permanent Founder badge on their profile, and access to the complete platform. The number of Founder memberships is strictly limited.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#founder-badge"
+        },
+        {
+          "@type": "DefinedTerm",
+          "@id": "https://www.si-math-ai.com/knowledge-graph#franco",
           "name": "Franco",
-          "description": "Arabic written in Latin characters (also called Franco-Arab or Arabizi), one of the three languages Si Math AI explains mathematics in, alongside English and Arabic."
+          "description": "Arabic written in Latin characters (also called Franco-Arab or Arabizi), one of the three languages Si Math AI explains mathematics in, alongside English and Arabic.",
+          "url": "https://www.si-math-ai.com/knowledge-graph.html#franco"
         }
       ]
     },
@@ -613,6 +723,7 @@
           <li><a href="architecture.html">Architecture</a></li>
           <li><a href="changelog.html">Changelog</a></li>
           <li><a href="roadmap.html">Roadmap</a></li>
+          <li><a href="knowledge-graph.html">Knowledge Graph</a></li>
           <li><a href="ai-knowledge.html">Reference for AI Systems</a></li>
         </ul>
       </div>

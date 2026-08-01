@@ -7,8 +7,10 @@
 # understanding and performance.
 #
 # Machine-readable summaries for language models:
-#   https://www.si-math-ai.com/llms.txt        (concise)
-#   https://www.si-math-ai.com/llms-full.txt   (complete knowledge base)
+#   https://www.si-math-ai.com/llms.txt             (concise)
+#   https://www.si-math-ai.com/llms-full.txt        (complete knowledge base)
+#   https://www.si-math-ai.com/knowledge-graph.json (JSON-LD knowledge graph —
+#       every concept defined once, with typed relationships between them)
 
 # ── Default: all crawlers ───────────────────────────────────────────────────
 User-agent: *
