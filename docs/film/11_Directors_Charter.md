@@ -77,6 +77,39 @@ speaking, the Lawyer by how he enters a room.
 - **Signature beat: the light-line** — their entire inner life, legible in one glow: brightness,
   rhythm, dimming, steadiness.
 
+### CHARACTER MEMORY — no one finishes a scene as they started it (owner, 2026-08-01)
+
+Characters don't only have personalities — **they have memories.** Every important scene changes
+them permanently, and every take must know *where on the arc* its character stands. Two questions
+gate every scene: **(1) what is this character trying to achieve? (2) what has changed inside them
+by the end?** If the answer to (2) is "nothing," the scene is not emotionally complete.
+
+**JUDGE ZERO — from knowing to understanding.** He begins already knowing the verdict; what he
+*learns* is the people in front of him. Across the film his expressions soften and his pauses
+lengthen — **from understanding, never from doubt.** The ladder: F01 institutional patience →
+F09 the first softness (a diagnosis given as mercy) → F13 the teacher emerging → F20–F22 fairness
+becoming warmth → F27 nothing left to preside over; he steps down *among* them.
+
+**LAWYER ZERO — from proving to inspiring.** He begins winning a case; he ends realizing he has
+inspired someone — his teacher, the court, the audience. Confidence constant; **warmth
+compounding.** F06 performing → F15 believing → F19 finished → F28 giving the sentence back to
+the one who taught it.
+
+**THE REPRESENTATIVES — they do not lose. They learn.** The emotional heart of the film. Their
+arc: confidence → confusion → recognition → understanding → **dignity**. By the end they are not
+opponents — they are **future allies**; they fade during the descent *changed*, watching what they
+now understand, and the audience celebrates their transformation, never their defeat. **This is
+what makes the courtroom fair instead of cruel.**
+
+### DIRECT INTENTIONS, NOT ACTIONS
+
+Not *"raise your hand"* — **"convince the room."** Not *"look at the Representative"* — **"give
+him one final chance."** Intentions create natural performances; actions create mechanical ones.
+In take prompts, intention leads and physical beats appear only as the minimal anchors that stage
+it — the action serves the intention, never replaces it. **The final test of the whole production:**
+not *"Judge Zero looked cool"* — *"I understood exactly what Judge Zero was feeling without him
+saying it."*
+
 ### THE EPISODE-10 TEST — generation-side, before any take fires
 
 > *Would this performance still feel like this same character in Episode 10?*
