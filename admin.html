@@ -639,7 +639,7 @@ select.search-input{cursor:pointer}
     </div>
 
     <!-- SECTION 3 — Revenue Analytics -->
-    <div class="card">
+    <div class="card" style="margin-bottom:18px">
       <div class="card-head">
         <div class="card-ico">📈</div>
         <div>
@@ -648,6 +648,42 @@ select.search-input{cursor:pointer}
         </div>
       </div>
       <div id="econRevenue"><div class="empty"><div class="ico">📈</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 4 — Credits Analytics -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico">🎟️</div>
+        <div>
+          <div class="card-title">Credits Analytics</div>
+          <div class="card-sub">Credit flow by day and transaction type — issued, consumed, net</div>
+        </div>
+      </div>
+      <div id="econCredits"><div class="empty"><div class="ico">🎟️</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 5 — Package Profitability -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-head">
+        <div class="card-ico">📦</div>
+        <div>
+          <div class="card-title">Package Profitability</div>
+          <div class="card-sub">Revenue, AI cost and margin per plan — blocked per row where inputs are missing</div>
+        </div>
+      </div>
+      <div id="econPackages"><div class="empty"><div class="ico">📦</div><p>Loading…</p></div></div>
+    </div>
+
+    <!-- SECTION 6 — Question Cost Analytics -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico">🧮</div>
+        <div>
+          <div class="card-title">Question Cost Analytics</div>
+          <div class="card-sub">Cost by operation, by pipeline stage, and the operation → service mix</div>
+        </div>
+      </div>
+      <div id="econOperations"><div class="empty"><div class="ico">🧮</div><p>Loading…</p></div></div>
     </div>
   </div>
 
@@ -943,24 +979,35 @@ function ecBadge(cls) {
   return '<span class="ec-badge ' + esc(c) + '">' + esc(c) + '</span>';
 }
 
-// Shared RPC caller. Returns {rows, error, denied} — never throws, and never
-// collapses a permission failure into "no data" (INV-26).
+// Shared RPC caller. Returns {rows, error, denied, missing} — never throws, and
+// never collapses a permission failure into "no data" (INV-26).
+//
+// `missing` separates "this RPC does not exist yet" from "this RPC failed".
+// M3 ships a panel whose migration is deliberately not applied, so the honest
+// rendering is "pending migration", not a red error. Distinguishing the two is
+// the same principle as `denied`: never let one failure mode wear another's
+// clothes.
 async function ecRpc(name, args) {
   let res;
   try { res = await sb.rpc(name, args || {}); }
   catch (e) { res = { error: e }; }
   if (res.error) {
     const m = res.error.message || '';
-    return { rows: [], error: m, denied: /permission|denied|forbidden|42501|403/i.test(m) };
+    const code = res.error.code || '';
+    return {
+      rows: [], error: m,
+      denied:  /permission|denied|forbidden|42501|403/i.test(m),
+      missing: code === 'PGRST202' || /could not find the function/i.test(m)
+    };
   }
-  return { rows: res.data || [], error: null, denied: false };
+  return { rows: res.data || [], error: null, denied: false, missing: false };
 }
 
 function ecFail(host, r, icon) {
-  host.innerHTML = '<div class="empty"><div class="ico">' + (r.denied ? '🔒' : '⚠️') + '</div><p>'
-    + (r.denied ? 'This panel requires role <b>owner</b>.'
-                : 'Could not load: ' + esc(r.error || 'unknown error'))
-    + '</p></div>';
+  let ico = '⚠️', msg = 'Could not load: ' + esc(r.error || 'unknown error');
+  if (r.denied)       { ico = '🔒'; msg = 'This panel requires role <b>owner</b>.'; }
+  else if (r.missing) { ico = '⏳'; msg = 'Pending migration — this panel\'s RPC is not applied yet.'; }
+  host.innerHTML = '<div class="empty"><div class="ico">' + ico + '</div><p>' + msg + '</p></div>';
 }
 
 // A blocked metric renders its reason, never a number and never a zero
@@ -1104,6 +1151,178 @@ async function loadEconRevenue() {
           + ' recognised-revenue days.</div>' : '');
 }
 
+/* --- SECTION 4: Credits Analytics --------------------------------------
+   Every figure is a column of owner_econ_credit_flow(). The panel renders the
+   flow itself and deliberately shows NO period headline (Credits Sold /
+   Consumed / Remaining liability / burn rate): those are period aggregates,
+   and summing the daily rows here would be a financial calculation in the
+   client, which INV-03 forbids. They need a server-side summary RPC — raised
+   in the M3 engineering review rather than faked here. */
+async function loadEconCredits() {
+  const host = document.getElementById('econCredits');
+  const r = await ecRpc('owner_econ_credit_flow');
+  if (r.error) return ecFail(host, r);
+
+  const rows = r.rows;
+  if (!rows.length) {
+    host.innerHTML = '<div class="empty"><div class="ico">🎟️</div><p>No credit activity recorded.</p></div>';
+    return;
+  }
+
+  const shown = rows.slice(0, 60);
+  host.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>Date</th><th>Type</th>'
+    + '<th style="text-align:right">In</th><th style="text-align:right">Out</th>'
+    + '<th style="text-align:right">Net</th><th style="text-align:right">Events</th>'
+    + '<th style="text-align:right">Users</th><th>Confidence</th>'
+    + '</tr></thead><tbody>'
+    + shown.map(x =>
+        '<tr><td style="font-family:var(--font-mono);font-size:12px">' + esc(String(x.flow_on)) + '</td>'
+      + '<td style="font-family:var(--font-mono);font-size:11.5px">' + esc(String(x.transaction_type)) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecNum(x.credits_in) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecNum(x.credits_out) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecNum(x.net_credits) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.events) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.users) + '</td>'
+      + '<td>' + ecBadge(x.confidence) + '</td></tr>').join('')
+    + '</tbody></table></div>'
+    + '<div class="ec-note">Showing ' + ecNum(shown.length) + ' of ' + ecNum(rows.length)
+    + ' credit-flow rows. Period totals are not shown: they must be aggregated '
+    + 'server-side, never in the dashboard.</div>';
+}
+
+/* --- SECTION 5: Package Profitability -----------------------------------
+   owner_econ_package_economics() resolves blocking PER ROW, so a plan with
+   revenue but no cost shows its revenue and blocks only profit/margin, with
+   that row's own reason. Nothing is derived here. */
+async function loadEconPackages() {
+  const host = document.getElementById('econPackages');
+  const r = await ecRpc('owner_econ_package_economics');
+  if (r.error) return ecFail(host, r);
+
+  const rows = r.rows;
+  if (!rows.length) {
+    host.innerHTML = '<div class="empty"><div class="ico">📦</div><p>No packages with revenue or cost yet.</p></div>';
+    return;
+  }
+
+  host.innerHTML = '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>Plan</th><th style="text-align:right">Revenue</th><th style="text-align:right">Net</th>'
+    + '<th style="text-align:right">AI Cost USD</th><th style="text-align:right">Questions</th>'
+    + '<th style="text-align:right">Profit</th><th style="text-align:right">Margin</th>'
+    + '<th>Confidence</th>'
+    + '</tr></thead><tbody>'
+    + rows.map(x => {
+        // A blocked row shows its reason in place of the number — never a zero.
+        const blocked = x.block_reason !== null && x.block_reason !== undefined;
+        const profit  = blocked ? '<span class="ec-blocked-why">—</span>' : ecEgp(x.profit_egp);
+        const margin  = blocked ? '<span class="ec-blocked-why">—</span>' : ecPct(x.margin_pct);
+        return '<tr><td style="font-family:var(--font-mono);font-size:12px">' + esc(String(x.plan_code)) + '</td>'
+          + '<td style="text-align:right;font-family:var(--font-mono)">' + ecEgp(x.revenue_egp) + '</td>'
+          + '<td style="text-align:right;font-family:var(--font-mono)">' + ecEgp(x.revenue_net_egp) + '</td>'
+          + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.cost_usd) + '</td>'
+          + '<td style="text-align:right">' + ecNum(x.questions) + '</td>'
+          + '<td style="text-align:right;font-family:var(--font-mono)">' + profit + '</td>'
+          + '<td style="text-align:right;font-family:var(--font-mono)">' + margin + '</td>'
+          + '<td>' + ecBadge(x.confidence) + '</td></tr>'
+          + (blocked
+              ? '<tr><td colspan="8" class="ec-d ec-blocked-why" style="padding-top:0">'
+                + esc(String(x.block_reason)) + '</td></tr>'
+              : '');
+      }).join('')
+    + '</tbody></table></div>';
+}
+
+/* --- SECTION 6: Question Cost Analytics ---------------------------------
+   Three server-side surfaces, no client arithmetic:
+     owner_cost_metrics('operation') — cost per student-facing operation
+     owner_cost_metrics('stage')     — cost per pipeline stage
+     owner_econ_operation_mix()      — operation → canonical service mix
+
+   Business metrics exclude internal traffic (INV-25), so include_internal is
+   left false. With today's production data — every call internal — all three
+   return zero rows. That is an empty period, not an error, and rule 3 requires
+   it to say WHY: the reason is grounded in owner_econ_coverage()'s typed
+   external/internal columns, never invented here. */
+async function loadEconOperations() {
+  const host = document.getElementById('econOperations');
+  const [op, stage, mix] = await Promise.all([
+    ecRpc('owner_cost_metrics', { p_dimension: 'operation' }),
+    ecRpc('owner_cost_metrics', { p_dimension: 'stage' }),
+    ecRpc('owner_econ_operation_mix')
+  ]);
+
+  // A hard failure on the cost dimensions is fatal for the panel; the mix RPC
+  // is allowed to be absent (its migration is not applied yet) and degrades to
+  // its own notice rather than blanking the section.
+  if (op.error && !op.missing) return ecFail(host, op);
+
+  const blockNote = async () => {
+    const cov = await ecRpc('owner_econ_coverage');
+    const ai  = (cov.rows || []).find(x => x.metric === 'ai_cost');
+    if (!ai) return 'no external AI cost in this period';
+    return 'no external AI cost to attribute — external is ' + ecUsd(ai.value_external)
+         + ' while ' + ecUsd(ai.value_internal) + ' of internal cost is excluded '
+         + 'from business metrics (INV-25)';
+  };
+
+  const table = (rows, keyLabel) =>
+      '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>' + keyLabel + '</th><th style="text-align:right">Cost USD</th>'
+    + '<th style="text-align:right">Share</th><th style="text-align:right">Work Items</th>'
+    + '<th style="text-align:right">Calls</th><th style="text-align:right">Coverage</th>'
+    + '<th>Confidence</th></tr></thead><tbody>'
+    + rows.map(x =>
+        '<tr><td style="font-family:var(--font-mono);font-size:12px">'
+      +   esc(String(x.display_name || x.dimension_key)) + '</td>'
+      + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.total_cost_usd) + '</td>'
+      + '<td style="text-align:right">' + ecPct(x.cost_share_pct) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.work_items) + '</td>'
+      + '<td style="text-align:right">' + ecNum(x.calls) + '</td>'
+      + '<td style="text-align:right">' + ecPct(x.coverage_pct) + '</td>'
+      + '<td>' + ecBadge(x.confidence) + '</td></tr>').join('')
+    + '</tbody></table></div>';
+
+  const why = (op.rows.length && stage.rows.length && mix.rows.length) ? null : await blockNote();
+
+  const block = (label, r, keyLabel) => {
+    let body;
+    if (r.missing)          body = '<div class="ec-d ec-blocked-why">Pending migration — '
+                                 + 'owner_econ_operation_mix() is not applied yet.</div>';
+    else if (r.error)       body = '<div class="ec-d ec-blocked-why">'
+                                 + esc(r.error) + '</div>';
+    else if (!r.rows.length) body = ecBlocked(why);
+    else                     body = table(r.rows, keyLabel);
+    return '<div class="ec-row"><div class="ec-k">' + label + '</div>'
+         + '<div class="ec-v">' + body + '</div></div>';
+  };
+
+  const mixTable = mix.rows.length
+    ? '<div style="overflow-x:auto"><table><thead><tr>'
+      + '<th>Operation</th><th>Service</th><th style="text-align:right">Cost USD</th>'
+      + '<th style="text-align:right">Work Items</th><th>Confidence</th>'
+      + '</tr></thead><tbody>'
+      + mix.rows.map(x =>
+          '<tr><td style="font-family:var(--font-mono);font-size:12px">' + esc(String(x.operation)) + '</td>'
+        + '<td style="font-family:var(--font-mono);font-size:12px">' + esc(String(x.service_code)) + '</td>'
+        + '<td style="text-align:right;font-family:var(--font-mono)">' + ecUsd(x.cost_usd) + '</td>'
+        + '<td style="text-align:right">' + ecNum(x.work_items) + '</td>'
+        + '<td>' + ecBadge(x.confidence) + '</td></tr>').join('')
+      + '</tbody></table></div>'
+    : null;
+
+  host.innerHTML =
+      block('by operation', op, 'Operation')
+    + block('by pipeline stage', stage, 'Stage')
+    + '<div class="ec-row"><div class="ec-k">operation → service mix</div><div class="ec-v">'
+    +   (mix.missing
+          ? '<div class="ec-d ec-blocked-why">Pending migration — owner_econ_operation_mix() is not applied yet.</div>'
+          : mix.error ? '<div class="ec-d ec-blocked-why">' + esc(mix.error) + '</div>'
+          : mixTable  ? mixTable
+          : ecBlocked(why))
+    + '</div></div>';
+}
+
 // Entry point. Panels load independently: one failing RPC must not blank the
 // others, and the Coverage panel in particular has to survive to explain why.
 function loadEconomics() {
@@ -1111,6 +1330,9 @@ function loadEconomics() {
   loadEconOverview();
   loadEconCost();
   loadEconRevenue();
+  loadEconCredits();
+  loadEconPackages();
+  loadEconOperations();
 }
 
 async function loadEconCoverage() {
