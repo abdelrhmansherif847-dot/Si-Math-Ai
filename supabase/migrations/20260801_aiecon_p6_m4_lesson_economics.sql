@@ -1,10 +1,16 @@
 -- ===========================================================================
 -- Phase 6 M4.1 — publish lesson economics for Section 7
 -- ===========================================================================
--- STATUS: ⛔ PREPARED, NOT APPLIED. Requires individual owner approval before
---         apply_migration (CLAUDE.md §3). Owner instruction for M4: each
---         milestone ends at implementation + engineering review; no apply and
---         no Release Gate until that milestone is individually approved.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801121050, owner-approved via the M4.1 Release Gate
+--         (CLAUDE.md §3).
+--
+--         Verified after applying: econ.v_lesson_economics UNCHANGED —
+--         definition digest 8e88c98f, still 7 columns, still no taxonomy
+--         reference (the owner decision, proven). RPC callable, 10 columns,
+--         values identical to the view, owner gate fires 42501 for a
+--         non-owner. Join logic exercised over engine data: 4 rows in, 4 out,
+--         all names resolved, ::bigint round-trips exactly.
 --
 -- WHY THIS EXISTS
 --   Section 7 (Lesson Economics) needs cost per canonical lesson.
