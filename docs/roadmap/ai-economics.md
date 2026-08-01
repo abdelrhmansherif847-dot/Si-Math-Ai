@@ -2248,6 +2248,111 @@ Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
 simulated result is ever written to `cost_facts` or `service_bindings`; Net
 Profit stays **Blocked** until fixed costs exist.
 
+#### Phase 7 status — **IN PROGRESS** (M1 ❌ **not started** · M2 ✅ complete)
+
+| Milestone | Scope | Status |
+|---|---|---|
+| **M1** | `owner_cost_reprice()` scenario grammar — `service_swap`, refusal contract | ❌ **NOT IMPLEMENTED** |
+| **M2** | `platform_cost_entries` + Net Profit / Net Margin | ✅ **COMPLETE** — 4 migrations, gate 9/9 |
+| M3 | Simulator / Break-even RPCs | not started |
+
+##### ⚠ M1 was never implemented — correction to the milestone record
+
+An interim status summary recorded M1 as complete. **It was not started**, and
+this was verified against production at the M2 closeout:
+
+| Evidence | Finding |
+|---|---|
+| Applied `aiecon_p7_*` migrations | **only M2a, M2b, M2c, M2d** — no M1 migration exists |
+| `owner_cost_reprice` scenario grammar | still `swap_model_from` / `swap_model_to`; **no `service_swap`, no refusal contract** |
+| The M1 defect, re-measured | a swap to a model with **no rate card** still returns **`$0.06758175`** against an actual **`$0.22961425`** |
+
+**The reprice defect is live in production** — it under-reports by 70.6% on an
+unpriced swap target, presenting a fictional saving as real. **Contained:**
+`owner_cost_reprice` is called by **no client file**, is owner-gated,
+`anon`-denied and `STABLE`, so exposure is limited to a direct API caller holding
+an owner session. **M1 remains open and is the recommended next milestone.**
+
+##### M2 — applied migrations
+
+| Version | Name | What |
+|---|---|---|
+| `20260801182954` | `aiecon_p7_m2a_platform_cost_entries` | `public.platform_cost_entries` (8 CHECKs, 2 partial unique indexes, freeze trigger, `REVOKE ALL` + RLS with zero policies), `econ.v_platform_costs_current`, `platform_cost_available()` rewrite |
+| `20260801183045` | `aiecon_p7_m2b_net_profit` | `econ.net_block_reason()`, `v_breakeven_inputs` 8 → 12 columns, `owner_econ_net_profit_series/summary()` |
+| `20260801183733` | `aiecon_p7_m2c_fix_set_platform_cost_ambiguity` | **fix** — `42702`, qualification only |
+| `20260801185207` | `aiecon_p7_m2d_restore_layer_boundary` | **fix** — `cost_engine.to_egp()`; econ stops reading `fx_rates`; writer renamed out of `owner_econ_*` |
+
+**M2 release gate.** V1–V9 executed 2026-08-01; **9/9 PASS** after two defects
+were found and fixed. Economics regression **17 PASS + 1 VACUOUS**; Cost Engine
+**20 PASS + 5 VACUOUS + 1 WARN** — identical to the M4.3 baseline, no regression.
+`platform_cost_entries` holds **0 rows**; every test rolled back. Net Profit is
+**blocked on all 14 months**, three ways over — no external AI cost, no FX rate,
+no platform data. That is the ruling working, not a defect.
+
+**Locked M2 decisions.**
+- **Immutable financial records, Audit Model = Alternative A** (in-row
+  supersede). A correction inserts a new revision and marks the previous row
+  `is_current = false`; the freeze trigger raises on DELETE unconditionally,
+  permits only the supersede columns to change, and makes supersede one-way.
+  **`change_reason` is mandatory on every correction**, enforced by CHECK *and*
+  by the RPC. `CHECK (amount > 0)` — credit notes are out of scope.
+- **The default financial read is the sanctioned view, never the raw table.**
+  Measured at the gate: after one correction, `sum(amount)` on the table returns
+  an inflated **55.00** while `econ.v_platform_costs_current` returns the correct
+  **30.00** from **1** row.
+- **Net Profit is MONTHLY only, with no allocation of any kind** — not equal,
+  revenue-weighted or AI-cost-weighted. Where data is not measured daily, no
+  daily measurement is invented; `v_pnl_daily` is untouched. Two explicit RPCs,
+  no grain parameter.
+- **No FX shortcut.** A USD entry with no rate makes the whole month NULL and
+  blocked; an EGP entry is never offered as a workaround.
+- **Namespace rule, now without exception:** `owner_econ_*` (15) and
+  `owner_cost_*` (6) are **read-only**; `owner_write_*` (1) mutates.
+  `owner_write_platform_cost` is the project's only writer, and its name says so.
+- **FX policy lives in `cost_engine`, not `econ`.** `cost_engine.to_egp()` owns
+  the rate lookup and the §8.7 month-of-occurrence match; econ consumes a
+  converted number and holds no `fx_rates` reference — the same relationship it
+  already has with `v_cost_daily.total_cost_egp`.
+- **Sibling resolver, not an extension.** `econ.net_block_reason()` composes
+  `econ.block_reason()` rather than changing a function four surfaces call.
+
+**The two permanent process lessons M2 earned.** Both are now **standing
+requirements**, alongside the pre-apply type probe:
+
+> **1. Every new RPC requires a direct execution probe.** The M2 probe exercised
+> the table, the freeze trigger, all eight constraints, the sanctioned view, the
+> resolver and both net-profit RPCs — and still shipped a function that raised
+> `42702` on every call, because **it never called that function**. Testing the
+> tables, triggers and views *around* a function proves nothing about the
+> function; `42702`, like `42804`, is raised only at execution.
+
+> **2. Every new JOIN must be checked against the architectural dependency
+> boundaries.** `econ.v_breakeven_inputs` joined `cost_engine.fx_rates`, inside
+> INV-05's forbidden set — and worse than the edge, **econ was implementing FX
+> policy**. The design document, the engineering review *and* the pre-apply probe
+> all missed it, because every one of them asked about types and behaviour and
+> none asked whether a new JOIN **crossed a forbidden edge**. A dependency edge is
+> as much a contract as a column type.
+
+Phase 6 learned that *a green check is only evidence if it could have gone red*.
+M2 adds the complement: **a check that was never run is not evidence at all.**
+
+**Both M2 regressions were closed by correcting the architecture, not the
+checks** — `P5-01` and `P5-04` stand unmodified.
+
+**Carried forward.** `P5-01` inspects **view → relation** edges, so an econ
+object calling a `cost_engine` *function* that touches the price book would not
+be caught. Real, and ruled a **separate Verification Framework Enhancement**
+rather than M2 scope. There is **no UI for platform cost entry** — RPC-only, by
+ruling; the admin interface is a later milestone.
+
+Docs: `docs/roadmap/phase-7-investigation-and-plan.md`,
+`phase-7-platform-cost-entries-investigation.md`,
+`phase-7-audit-model-investigation.md`, `phase-7-net-profit-investigation.md`,
+`phase-7-m2-design-document.md`, `phase-7-m2-engineering-review.md`,
+`phase-7-m2d-fix-engineering-review.md`, `phase-7-m2-release-report.md`,
+`phase-7-m2-closeout.md`.
+
 ### Phase 8 — Completeness & scale
 
 - Close GAP-3: wire `MOCK_EXAM`, `MOCK_TIMER`, `MOCK_PRACTICE`, `FOCUS_SESSION`,

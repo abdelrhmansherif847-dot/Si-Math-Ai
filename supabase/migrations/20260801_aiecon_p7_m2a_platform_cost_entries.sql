@@ -1,15 +1,22 @@
 -- ===========================================================================
 -- Phase 7 M2a — public.platform_cost_entries: immutable owner-entered fixed cost
 -- ===========================================================================
--- STATUS: ⚠ APPLIED 2026-08-01 as version 20260801182954, on owner approval of
---         the M2 engineering review. The M2 Release Gate then FAILED at V4:
---         owner_econ_set_platform_cost raised 42702 (ambiguous column) because
---         RETURNS TABLE output names are PL/pgSQL variables and the body's
---         column references were unqualified.
+-- STATUS: ✅ APPLIED 2026-08-01 as version 20260801182954, on owner approval of
+--         the M2 engineering review. SUPERSEDED IN PART by two follow-ups, both
+--         applied — this file is the historical record of the original.
 --
---         THE FIX BELOW IS PREPARED AND NOT YET APPLIED — it requires a
---         follow-up migration and owner approval. This file shows the corrected
---         body; production still carries the broken version until then.
+--         The M2 Release Gate FAILED at V4: owner_econ_set_platform_cost raised
+--         42702 (ambiguous column), because RETURNS TABLE output names are
+--         PL/pgSQL variables and the body's column references were unqualified.
+--         → fixed by M2c (qualification only). The body below carries the fix.
+--
+--         The gate's regression suite then failed P5-04: this file's writer is
+--         VOLATILE inside the read-only owner_econ_* namespace.
+--         → fixed by M2d. owner_econ_set_platform_cost is DROPPED and replaced
+--           by public.owner_write_platform_cost with an identical body.
+--
+--         ⚠ THE WRITER DEFINED IN §6 BELOW NO LONGER EXISTS. Read M2d for the
+--         live definition. Everything else in this file is current.
 --
 -- DESIGN OF RECORD: docs/roadmap/phase-7-m2-design-document.md
 -- Owner decisions closed 2026-08-01 (D1–D6) are encoded here; where this file
