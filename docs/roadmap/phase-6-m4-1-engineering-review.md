@@ -1,16 +1,23 @@
 # Phase 6 M4.1 — Lesson Economics: Implementation & Engineering Review
 
-**Status: implementation complete, NOTHING APPLIED.** The migration is prepared
-and unapplied; no Release Gate has begun. Per the owner's M4 workflow, each
-milestone ends at implementation → engineering review → **stop**, with no apply
-until that milestone is individually approved.
+**Status: ✅ SUPERSEDED BY APPLICATION.** This was the pre-application review;
+the migration it reviews was subsequently owner-approved and applied to
+`igvkyxkmjnkzscqgommj` on 2026-08-01 as version `20260801121050`. The text below
+is preserved as written — it describes the state *before* the migration was
+applied.
+
+The M4.1-V1…V8 plan in §6 was executed on 2026-08-01 and **all eight passed on
+the first run**; both regression suites were clean. Notably §5's stated residual
+risk — that the populated path was unexercised — was addressed during the gate
+by exercising the join and cast over engine data (V3d–V3g). See
+`phase-6-m4-1-release-report.md` and `phase-6-m4-1-closeout.md`.
 
 Branch `claude/phase6-m4-economics-sections-7-9`, cut clean from `main` at
 `44b2175`.
 
 | Scope | Section 7 — Lesson Economics |
 |---|---|
-| Migration | 1 — `20260801_aiecon_p6_m4_lesson_economics.sql` (**not applied**) |
+| Migration | 1 — `20260801_aiecon_p6_m4_lesson_economics.sql` ✅ **applied** 2026-08-01 (`20260801121050`) |
 | New RPCs | 1 — `owner_econ_lesson_economics()` |
 | New tables | 0 |
 | New views | 0 |
@@ -170,7 +177,7 @@ cannot lose information* — producing three different correct answers.
 
 ---
 
-## 6. Proposed M4.1 Release Gate (for after approval — NOT run)
+## 6. M4.1 Release Gate plan — ✅ EXECUTED 2026-08-01, all eight PASSED
 
 | # | Validation | Method |
 |---|---|---|
@@ -185,7 +192,8 @@ cannot lose information* — producing three different correct answers.
 
 ---
 
-## Stop point
+## Stop point (historical)
 
-Implementation and this review are complete. **Awaiting owner review before
-applying the migration or beginning the M4.1 Release Gate.** M4.2 not started.
+At the time of writing, implementation and this review were complete and
+awaiting owner review. That approval was given, the migration was applied, and
+the gate passed. **M4.1 is closed** — see the closeout. M4.2 not started.

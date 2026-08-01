@@ -2052,7 +2052,7 @@ RPC referenced anywhere in the tab; **grep proves no provider or model literal i
 the tab**; adding a service or swapping a provider in the catalog changes the
 rendered dashboard with no code edit (verified once, in staging or by review).
 
-#### Phase 6 status — M1 ✅, M2 ✅, M3 ✅ COMPLETE
+#### Phase 6 status — M1 ✅, M2 ✅, M3 ✅, M4.1 ✅ COMPLETE
 
 Phase 6 is being delivered one owner-approved milestone at a time.
 
@@ -2061,7 +2061,9 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | **M1** | Tab shell, owner gate, read-only RPCs, Coverage panel, locked AI Cost presentation, confidence badges, blocked-state rendering | ✅ closed 2026-07-31 |
 | **M2** | Financial Overview (1), AI Cost Analytics (2), Revenue Analytics (3) | ✅ closed 2026-08-01 |
 | **M3** | Credits Analytics (4), Package Profitability (5), Question Cost Analytics (6) | ✅ closed 2026-08-01 |
-| M4+ | Lesson Economics (7), Student Consumption (8), AI Service & Model (9) | not started |
+| **M4.1** | Lesson Economics (7) | ✅ closed 2026-08-01 |
+| M4.2 | Student Consumption (8) | not started |
+| M4.3 | AI Service & Model Analytics (9) | not started |
 
 **Applied migrations**
 
@@ -2072,6 +2074,7 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | `20260801105710` | `aiecon_p5_fix_rpc_count_types` | M2 (defect fix) |
 | `20260801114601` | `aiecon_p6_m3_operation_mix` | M3 |
 | `20260801114637` | `aiecon_p6_m3_credit_summary` | M3 |
+| `20260801121050` | `aiecon_p6_m4_lesson_economics` | M4.1 |
 
 **M2 release gate.** V1–V8 executed 2026-08-01. V7 failed and uncovered a
 **pre-existing Phase 5 defect**: three `owner_econ_*` RPCs declared `bigint`
@@ -2100,8 +2103,25 @@ unfinished. The Economics layer has exactly one definition of a question — the
 external cost work item — and `public.question_records` must never be used as
 its denominator. Full ADR in `phase-6-m3-engineering-review.md` §5a.
 
+**M4.1 release gate.** V1–V8 executed 2026-08-01; all eight passed on the first
+run, both regression suites clean. The pre-apply type probe was load-bearing for
+the third milestone running — `v_lesson_economics.questions` is `sum(bigint)`,
+which widens to `numeric`, so without its `::bigint` cast the RPC would have
+raised `42804`.
+
+**Locked M4 decisions (2026-08-01).**
+- **Section 9 is a diagnostic surface, not a business metric.** It shows all
+  observed AI telemetry including internal traffic, is labelled diagnostic, and
+  its numbers never feed any `owner_econ_*` business KPI. INV-25 continues to
+  apply to business metrics only. Same principle as the Coverage panel.
+- **Lesson display names live in the RPC, not the view.**
+  `econ.v_lesson_economics` is not modified; `owner_econ_lesson_economics()`
+  joins `taxonomy_subtopics` and exposes the name. Verified byte-identical at
+  the gate. The join is `LEFT`, so an unmapped lesson keeps its cost.
+
 Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
-`docs/roadmap/phase-6-m3-closeout.md`.
+`docs/roadmap/phase-6-m3-closeout.md`,
+`docs/roadmap/phase-6-m4-1-closeout.md`.
 
 ### Phase 7 — Simulator + Break-even (sections 10–11)
 
