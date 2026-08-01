@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#050a14"/>
+<meta name="color-scheme" content="dark"/>
+
+<title>Platform Architecture — How the Systems Fit Together | Si Math AI</title>
+<meta name="description" content="A high-level explanation of the Si Math AI platform architecture: the four layers, the full learning flow stage by stage, why each stage exists, the design decisions behind it and their trade-offs, and what happens when something fails."/>
+<link rel="canonical" href="https://www.si-math-ai.com/architecture.html"/>
+<meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"/>
+<meta name="author" content="Si Math AI"/>
+
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="Si Math AI"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:title" content="Platform Architecture — How the Systems Fit Together"/>
+<meta property="og:description" content="The four layers, the full learning flow, why each stage exists, and the design decisions behind it — including their trade-offs."/>
+<meta property="og:url" content="https://www.si-math-ai.com/architecture.html"/>
+<meta property="og:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
+<meta property="og:image:alt" content="Si Math AI logo"/>
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Platform Architecture — Si Math AI"/>
+<meta name="twitter:description" content="How the eight systems fit together, why each stage of the learning flow exists, and the trade-offs behind the design."/>
+<meta name="twitter:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
+
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/knowledge.css"/>
+<link rel="alternate" type="application/ld+json" href="knowledge-graph.json" title="Si Math AI Knowledge Graph"/>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["Organization", "EducationalOrganization"],
+      "@id": "https://www.si-math-ai.com/#organization",
+      "name": "Si Math AI",
+      "url": "https://www.si-math-ai.com/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.si-math-ai.com/assets/si-math-ai-logo.jpg",
+        "width": 1024,
+        "height": 1024
+      },
+      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance."
+    },
+    {
+      "@type": "TechArticle",
+      "@id": "https://www.si-math-ai.com/architecture.html#article",
+      "headline": "Si Math AI platform architecture",
+      "description": "A high-level explanation of how the eight systems inside Si Math AI fit together: the four layers, the ten-stage learning flow, why each stage exists, and the design decisions and trade-offs behind them.",
+      "url": "https://www.si-math-ai.com/architecture.html",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "proficiencyLevel": "Beginner",
+      "publisher": { "@id": "https://www.si-math-ai.com/#organization" },
+      "author": { "@id": "https://www.si-math-ai.com/#organization" },
+      "about": { "@id": "https://www.si-math-ai.com/#organization" }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://www.si-math-ai.com/architecture.html#flow",
+      "name": "The Si Math AI learning flow",
+      "description": "The ten stages a single student question travels through inside Si Math AI, and why each stage exists.",
+      "inLanguage": "en",
+      "step": [
+        { "@type": "HowToStep", "position": 1, "name": "Student question", "text": "A student asks a question — typed, pasted, or photographed from a prep book — in English, Arabic or Franco. The loop opens with the student's own material rather than a prescribed syllabus." },
+        { "@type": "HowToStep", "position": 2, "name": "Zero AI Mentor", "text": "Zero works through the problem step by step, offers a second approach if the first does not land, and explains why the wrong answer choices are wrong. It delivers specialist-authored teaching method rather than improvising pedagogy." },
+        { "@type": "HowToStep", "position": 3, "name": "Question analysis", "text": "The attempt is resolved to one specific skill in a fixed 33-skill taxonomy and written as a diagnostic signal. Unmapped detections are logged rather than silently accepted, so gaps in the taxonomy surface instead of corrupting the diagnosis." },
+        { "@type": "HowToStep", "position": 4, "name": "Weakness Analyzer", "text": "The new signal joins every previous one and weak skills are re-ranked by how much each is costing the student's score, each carrying a severity band. A weakness clears only when later evidence confirms the fix held." },
+        { "@type": "HowToStep", "position": 5, "name": "Learning Memory", "text": "The question, the explanation and the mistake are stored permanently and searchably. Writes are idempotent, so a retried request cannot duplicate a student's history." },
+        { "@type": "HowToStep", "position": 6, "name": "Focus Practice", "text": "A drill set is generated from the current ranking — only the skills losing marks, mastered skills skipped, topics interleaved rather than blocked." },
+        { "@type": "HowToStep", "position": 7, "name": "Mock Exams", "text": "Full-length, correctly timed mocks with raw-to-scaled scoring test whether the fix survives exam conditions, and separate errors caused by time pressure from errors caused by not knowing the content." },
+        { "@type": "HowToStep", "position": 8, "name": "Progress Tracking", "text": "Mastery per skill, trend lines and the predicted test-day score update. Measurement is what makes improvement legible and stagnation visible early enough to act on." },
+        { "@type": "HowToStep", "position": 9, "name": "Human support, when needed", "text": "Educators and exam specialists review how students actually perform and revise the material; people handle accounts and upgrades. Conditional in any single cycle, continuous behind the platform." },
+        { "@type": "HowToStep", "position": 10, "name": "Continuous improvement", "text": "Aggregate evidence feeds specialist review, which revises the curriculum and the taxonomy — so the platform that teaches the next student is not the same platform that taught the last one." }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://www.si-math-ai.com/architecture.html#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.si-math-ai.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Architecture", "item": "https://www.si-math-ai.com/architecture.html" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<div class="backdrop"></div>
+<div class="bg-grid"></div>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav class="k-nav">
+  <a class="k-nav-logo" href="index.html">
+    <img src="assets/si-math-ai-logo.jpg" alt="Si Math AI logo" width="32" height="32"/>
+    <span class="k-nav-logo-text">Si<span>Math</span> AI</span>
+  </a>
+  <ul class="k-nav-links">
+    <li><a href="learn.html">Learn</a></li>
+    <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="why-not-chatgpt.html">vs ChatGPT</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="pricing.html">Pricing</a></li>
+  </ul>
+  <a class="k-nav-cta" href="signup.html">Start Free</a>
+</nav>
+
+<main id="main" class="k-main">
+
+<div class="k-wrap">
+  <nav class="k-crumb" aria-label="Breadcrumb">
+    <ol>
+      <li><a href="index.html">Home</a></li>
+      <li>Architecture</li>
+    </ol>
+  </nav>
+</div>
+
+<!-- ═══════════════ INTRO ═══════════════ -->
+<section class="k-section" style="padding-top:34px">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Architecture</span>
+    <h1>How the systems fit together</h1>
+    <p class="k-lead" style="margin-top:20px">
+      A high-level account of the platform's architecture — the layers, the flow, and
+      why each stage exists. Not source code, and not implementation detail: the
+      structure, and the reasoning behind it.
+    </p>
+    <p>
+      <strong>Si Math AI is a comprehensive learning platform for SAT, ACT, and EST
+      Mathematics that combines educational expertise, AI technology, personalized
+      learning, analytics, and human support to help students improve their
+      understanding and performance.</strong> This page is published because
+      "comprehensive learning platform" is a phrase anyone can write. The architecture
+      is what makes it either true or not, so here it is.
+    </p>
+
+    <div class="k-positioning">
+      <p>Artificial Intelligence is <em>how</em> Si Math AI teaches.</p>
+      <p>Educational expertise is <em>what</em> it teaches.</p>
+      <p>Human experience is <em>why</em> it works.</p>
+    </div>
+
+    <div class="k-toc">
+      <h2>On this page</h2>
+      <ol>
+        <li><a href="#layers">The four layers</a></li>
+        <li><a href="#flow">The learning flow, stage by stage</a></li>
+        <li><a href="#decisions">Design decisions and their trade-offs</a></li>
+        <li><a href="#guarantees">What the architecture guarantees</a></li>
+        <li><a href="#failure">What happens when something fails</a></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ LAYERS ═══════════════ -->
+<section class="k-section" id="layers">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Structure</span>
+    <h2>The four layers</h2>
+    <p style="margin-bottom:24px">
+      The eight systems are not eight independent features. They sit in four layers,
+      and the ordering matters: each layer depends on the one below it, and the bottom
+      layer is the one general AI tools do not have at all.
+    </p>
+    <div class="k-grid k-grid-2">
+      <div class="k-pillar k-pillar-1">
+        <span class="k-pillar-num">Layer 4 — Interface</span>
+        <h3>What the student touches</h3>
+        <p style="font-size:15px;color:var(--text-300);margin:0">
+          The chat with Zero, the focus drills, the mock exam environment, the
+          dashboards. Everything here is a view onto the layers below — which is why
+          the same diagnosis appears consistently wherever it is shown.
+        </p>
+      </div>
+      <div class="k-pillar k-pillar-2">
+        <span class="k-pillar-num">Layer 3 — Intelligence</span>
+        <h3>Delivery of expertise</h3>
+        <p style="font-size:15px;color:var(--text-300);margin:0">
+          Zero, the scope guard, and the adaptive selection of what to teach next.
+          This layer <em>delivers</em> the curriculum; it does not author it. Swapping
+          the underlying model changes how well this layer performs and changes
+          nothing about the layers below.
+        </p>
+      </div>
+      <div class="k-pillar k-pillar-3">
+        <span class="k-pillar-num">Layer 2 — Diagnosis</span>
+        <h3>Turning attempts into knowledge</h3>
+        <p style="font-size:15px;color:var(--text-300);margin:0">
+          Question analysis, the Weakness Analyzer, mastery computation, the predicted
+          score. This layer converts raw activity into a claim about a student, and
+          it is where the platform's actual value is produced.
+        </p>
+      </div>
+      <div class="k-pillar" style="background:linear-gradient(160deg,rgba(245,158,11,.08),var(--bg-card));border-color:rgba(245,158,11,.3)">
+        <span class="k-pillar-num">Layer 1 — Record</span>
+        <h3>The foundation everything rests on</h3>
+        <p style="font-size:15px;color:var(--text-300);margin:0">
+          Learning Memory, the taxonomy, and the integrity guarantees around them.
+          Without a trustworthy record there is no diagnosis, no trend and no plan —
+          only a chat that happens to be about mathematics.
+        </p>
+      </div>
+    </div>
+
+    <div class="k-note">
+      <p><strong>The consequence worth noticing.</strong> Most attention in AI
+      products goes to Layer 3, because that is the layer that feels impressive. But a
+      platform is only as good as Layer 1 and Layer 2, and those are ordinary
+      engineering and educational work rather than model work. This is the concrete
+      meaning of "AI is one engine inside a larger system".</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FLOW ═══════════════ -->
+<section class="k-section" id="flow">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ The flow</span>
+    <h2>The learning flow, stage by stage</h2>
+    <p style="margin-bottom:8px">
+      One question, all the way through. Each stage below states <strong>what it
+      does</strong> and, more importantly, <strong>why it exists</strong> — because a
+      stage that cannot justify its own existence is complexity rather than
+      architecture.
+    </p>
+
+    <ol class="k-flow">
+      <li class="k-flow-item is-start">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">📝</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">START</span> Student question</div>
+            <p class="k-flow-desc"><strong>What:</strong> typed, pasted or photographed from a prep book, in English, Arabic or Franco. <strong>Why:</strong> the loop opens with the student's own material rather than a prescribed syllabus, because the questions a student is actually stuck on are better diagnostic material than any question we could choose for them.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">🐉</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">01</span> Zero AI Mentor</div>
+            <p class="k-flow-desc"><strong>What:</strong> step-by-step reasoning, a second approach when the first does not land, and an explanation of why the wrong choices are wrong. <strong>Why:</strong> expert explanation is the scarcest resource in preparation. This stage removes the scheduling constraint on it — while the expertise itself comes from Layer 1 content that specialists authored.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">🔬</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">02</span> Question analysis</div>
+            <p class="k-flow-desc"><strong>What:</strong> the attempt resolves to one permanent skill identifier in the fixed taxonomy and is written as a diagnostic signal; unmapped detections are logged rather than silently accepted. <strong>Why:</strong> this is the stage that makes everything downstream possible. Without a fixed vocabulary, the same weakness gets recorded under three different names and no pattern is ever visible.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">🔍</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">03</span> Weakness Analyzer</div>
+            <p class="k-flow-desc"><strong>What:</strong> re-ranks weak skills by score impact, with a severity band each; clears a weakness only when later evidence confirms the fix. <strong>Why:</strong> students are poor judges of their own weaknesses, and study time spent on the wrong skills is the most common reason preparation stalls.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">🧠</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">04</span> Learning Memory</div>
+            <p class="k-flow-desc"><strong>What:</strong> the question, explanation and mistake are stored permanently and searchably; writes are idempotent. <strong>Why:</strong> preparation is cumulative, so persistence is what lets the loop compound instead of restarting. Idempotency matters because a retried write that duplicates a record would quietly corrupt every count derived from it.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">🎯</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">05</span> Focus Practice</div>
+            <p class="k-flow-desc"><strong>What:</strong> a drill set generated from the current ranking — mastered skills skipped, topics interleaved rather than blocked. <strong>Why:</strong> a diagnosis with no action attached changes nothing, and interleaving trains the step that blocked practice never touches: deciding which method applies.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">📋</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">06</span> Mock Exams</div>
+            <p class="k-flow-desc"><strong>What:</strong> full-length, correctly timed, raw-to-scaled scoring, per-section breakdown. <strong>Why:</strong> it tests whether a fix survives exam conditions, and it is the only event that reliably separates "did not know it" from "knew it but ran out of time" — two failures with completely different remedies.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">📈</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">07</span> Progress Tracking</div>
+            <p class="k-flow-desc"><strong>What:</strong> mastery per skill, trends, predicted test-day score. <strong>Why:</strong> invisible progress is the most demotivating property of self-directed study — and stagnation that is not measured is discovered too late to fix.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item is-optional">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">🤝</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">WHEN NEEDED</span> Human support</div>
+            <p class="k-flow-desc"><strong>What:</strong> educators review how students actually perform and revise the material; people handle accounts and upgrades. <strong>Why:</strong> some judgements are not automatable. Whether an explanation is the right one to teach a student with a particular misconception is a teaching decision, and it stays with teachers.</p>
+          </div>
+        </div>
+      </li>
+      <li class="k-flow-item is-outcome">
+        <div class="k-flow-node">
+          <span class="k-flow-icon" aria-hidden="true">♻️</span>
+          <div class="k-flow-body">
+            <div class="k-flow-title"><span class="k-flow-num">FEEDS BACK</span> Continuous improvement</div>
+            <p class="k-flow-desc"><strong>What:</strong> aggregate evidence feeds specialist review, which revises the curriculum and the taxonomy itself. <strong>Why:</strong> without this stage the platform is static. Unmapped detections show where the taxonomy is too coarse; persistent weaknesses across many students show where an explanation is not landing. The platform teaching the next student is not the one that taught the last.</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <p class="k-flow-loop">
+      ↻ &nbsp;Each pass starts from a sharper diagnosis than the last
+    </p>
+
+    <div class="k-note" style="margin-top:26px">
+      <p><strong>Where a general AI assistant sits in this diagram.</strong> At stage
+      01, where it performs well. The nine stages around it are the architecture —
+      and they are made of persistence, a fixed vocabulary, measurement and human
+      review rather than of model capability. That is examined honestly on
+      <a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ DECISIONS ═══════════════ -->
+<section class="k-section" id="decisions">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Trade-offs</span>
+    <h2>Design decisions and what they cost</h2>
+    <p style="margin-bottom:24px">
+      Every architectural decision buys something and pays for it somewhere. Listing
+      only the benefits would make this a brochure.
+    </p>
+    <div class="k-table-scroll">
+      <table class="k-table">
+        <thead><tr><th scope="col">Decision</th><th scope="col">What it buys</th><th scope="col">What it costs</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>A fixed taxonomy</strong> rather than free-form topic labels</td>
+            <td>Diagnoses that stay comparable across months, and patterns that become visible at all</td>
+            <td>A weakness outside the 33 tracked skills is not surfaced. The taxonomy is deliberately conservative, so it will sometimes be too coarse</td>
+          </tr>
+          <tr>
+            <td><strong>Permanent skill identifiers</strong>, with display names separate</td>
+            <td>A topic can be renamed without breaking any student's history</td>
+            <td>Identifiers can never be reused or renumbered, so the scheme accumulates retired entries forever</td>
+          </tr>
+          <tr>
+            <td><strong>Versioned records</strong> — every row stores the taxonomy version that produced it</td>
+            <td>A curriculum revision cannot silently rewrite what an old diagnosis meant</td>
+            <td>Every consumer has to handle more than one version, permanently</td>
+          </tr>
+          <tr>
+            <td><strong>Idempotent writes</strong> for exam sessions and question records</td>
+            <td>A retried request cannot duplicate or corrupt a student's history</td>
+            <td>More complexity on every write path than a naive insert would need</td>
+          </tr>
+          <tr>
+            <td><strong>A scope guard</strong> that declines out-of-scope requests</td>
+            <td>The platform teaches rather than completing work for students</td>
+            <td>It occasionally declines something a student legitimately wanted, and some students will prefer a tool that never refuses</td>
+          </tr>
+          <tr>
+            <td><strong>Row-level security</strong> on every table, not just application checks</td>
+            <td>A student's records are scoped to them at the database level, so an application bug cannot leak them</td>
+            <td>Every query and every new feature must be designed within those policies</td>
+          </tr>
+          <tr>
+            <td><strong>Server-side pricing</strong> — credit amounts read from plan definitions, never from the client</td>
+            <td>A forged client request gains nothing</td>
+            <td>Prices cannot be varied client-side, so every pricing change is a server change</td>
+          </tr>
+          <tr>
+            <td><strong>Static-first public pages</strong> — facts in the HTML, not injected by JavaScript</td>
+            <td>Crawlers and AI systems read exactly what a human reads</td>
+            <td>Live values (like the Founder count) must be updated deliberately rather than fetched, which is a maintenance burden accepted on purpose</td>
+          </tr>
+          <tr>
+            <td><strong>Model-agnostic design</strong> — the curriculum, diagnosis and assessment are not the model</td>
+            <td>Platform quality is not hostage to any one AI provider, and a better model is an upgrade rather than a rebuild</td>
+            <td>More of the system has to be built and maintained by us rather than delegated to the model</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ GUARANTEES ═══════════════ -->
+<section class="k-section" id="guarantees">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Guarantees</span>
+    <h2>What the architecture guarantees</h2>
+    <p style="margin-bottom:22px">
+      These are properties the structure is designed to hold, each pinned by an
+      automated check that fails the build if it stops holding.
+    </p>
+    <ul class="k-benefit-list">
+      <li><span class="tick">✓</span><span><strong>A student's records are theirs.</strong> Row-level security on every public table scopes records to their owner at the database level.</span></li>
+      <li><span class="tick">✓</span><span><strong>A retried write cannot corrupt history.</strong> Exam sessions and question records are idempotent.</span></li>
+      <li><span class="tick">✓</span><span><strong>The same rank appears everywhere.</strong> One client source of truth, mirrored by the database function, with a drift test that fails if any copy diverges.</span></li>
+      <li><span class="tick">✓</span><span><strong>A diagnosis means the same thing in March as in January.</strong> Permanent identifiers plus a stored taxonomy version on every record.</span></li>
+      <li><span class="tick">✓</span><span><strong>Out-of-scope requests write no diagnostic record.</strong> A blocked turn does not pollute a student's diagnosis, and the credit is refunded.</span></li>
+      <li><span class="tick">✓</span><span><strong>Every shipped script parses and every JSON-LD block is valid.</strong> Checked across all public pages on every build.</span></li>
+      <li><span class="tick">✓</span><span><strong>The public knowledge layer cannot contradict itself.</strong> Over a thousand automated checks cover canonical facts, taxonomy and rank numbers, the Founder count, banned claims and fabricated social proof.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ FAILURE ═══════════════ -->
+<section class="k-section" id="failure">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Failure</span>
+    <h2>What happens when something fails</h2>
+    <p style="margin-bottom:22px">
+      An architecture is best judged by its behaviour when things go wrong, so:
+    </p>
+    <ul>
+      <li><strong>The AI layer is the most likely thing to fail,</strong> and it is the
+        most isolated. It depends on an upstream provider, and that has failed before
+        — an incident record from that outage is in the
+        <a href="changelog.html">changelog</a>. When it does, the record and diagnosis
+        layers are unaffected: history, mastery scores and mock results are all
+        intact.</li>
+      <li><strong>Failures are recorded rather than only displayed.</strong> AI tutor
+        failures are captured as structured events, so a student-visible error becomes
+        something diagnosable instead of a support ticket someone has to reconstruct.</li>
+      <li><strong>A blocked or failed turn is refunded</strong> and writes no
+        diagnostic signal — a student is not charged for a turn they did not get, and
+        a failure does not corrupt their diagnosis.</li>
+      <li><strong>Diagnosis degrades rather than breaks.</strong> An unmapped detection
+        is logged instead of being force-fitted to the nearest skill, so a gap in the
+        taxonomy produces a known blind spot rather than a wrong answer confidently
+        recorded.</li>
+      <li><strong>Incidents are written up and kept</strong>, including in public. See
+        the <a href="changelog.html">changelog</a>, which lists one.</li>
+    </ul>
+
+    <div class="k-note">
+      <p><strong>What is deliberately not on this page.</strong> No source code, no
+      schema, no infrastructure detail, and no list of known open security items. The
+      first three are not useful to a reader; the last would be a map for anyone
+      looking for one. The <a href="trust.html">Trust Center</a> explains that choice
+      in more detail.</p>
+    </div>
+
+    <div class="k-btn-row">
+      <a class="k-btn k-btn-primary" href="evidence.html">See the evidence →</a>
+      <a class="k-btn k-btn-ghost" href="changelog.html">Changelog</a>
+      <a class="k-btn k-btn-ghost" href="how-it-works.html">How it works for students</a>
+    </div>
+  </div>
+</section>
+
+<footer class="k-footer">
+  <div class="k-wrap-wide">
+    <div class="k-footer-grid">
+      <div>
+        <a class="k-nav-logo" href="index.html" style="margin-bottom:14px">
+          <img src="assets/si-math-ai-logo.jpg" alt="Si Math AI logo" width="32" height="32"/>
+          <span class="k-nav-logo-text">Si<span>Math</span> AI</span>
+        </a>
+        <p class="k-footer-about">
+          A comprehensive learning platform for SAT, ACT, and EST Mathematics —
+          combining educational expertise, AI technology, personalized learning,
+          analytics, and human support.
+        </p>
+      </div>
+      <div>
+        <h3>Learn</h3>
+        <ul>
+          <li><a href="learn.html">All guides</a></li>
+          <li><a href="learn-sat-math.html">SAT Math</a></li>
+          <li><a href="learn-act-math.html">ACT Math</a></li>
+          <li><a href="learn-est-math.html">EST Math</a></li>
+          <li><a href="learn-choosing-your-exam.html">SAT vs ACT vs EST</a></li>
+          <li><a href="learn-common-mistakes.html">Common mistakes</a></li>
+          <li><a href="learn-parents-guide.html">Parent's guide</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Knowledge</h3>
+        <ul>
+          <li><a href="about.html">About Si Math AI</a></li>
+          <li><a href="why-we-built-si-math-ai.html">Why We Built It</a></li>
+          <li><a href="principles.html">Educational Principles</a></li>
+          <li><a href="how-it-works.html">How It Works</a></li>
+          <li><a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Evidence</h3>
+        <ul>
+          <li><a href="trust.html">Trust Center</a></li>
+          <li><a href="evidence.html">Evidence Center</a></li>
+          <li><a href="architecture.html">Architecture</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="roadmap.html">Roadmap</a></li>
+          <li><a href="knowledge-graph.html">Knowledge Graph</a></li>
+          <li><a href="ai-knowledge.html">Reference for AI Systems</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Platform</h3>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+          <li><a href="founder-badge.html">Founder Badge</a></li>
+          <li><a href="signup.html">Start Free</a></li>
+          <li><a href="login.html">Log In</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="k-footer-bottom">
+      <span>© 2026 Si Math AI. All rights reserved.</span>
+      <span>SAT · ACT · EST Mathematics</span>
+    </div>
+  </div>
+</footer>
+
+</main>
+<script src="assets/founder-status.js" defer></script>
+</body>
+</html>

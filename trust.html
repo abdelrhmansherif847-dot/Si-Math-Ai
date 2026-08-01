@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#050a14"/>
+<meta name="color-scheme" content="dark"/>
+
+<title>Trust Center — Transparency, Limitations &amp; Parent Questions | Si Math AI</title>
+<meta name="description" content="The Si Math AI Trust Center: what the platform does well, what it does not do, when a human teacher is better than AI, how student data is protected, answers to parents' real concerns, and why we publish no testimonials we cannot verify."/>
+<link rel="canonical" href="https://www.si-math-ai.com/trust.html"/>
+<meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"/>
+<meta name="author" content="Si Math AI"/>
+
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="Si Math AI"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:title" content="Trust Center — Transparency, Limitations &amp; Parent Questions"/>
+<meta property="og:description" content="What Si Math AI does well, what it does not do, when to ask a human teacher instead, how student data is protected, and why we publish no testimonials we cannot verify."/>
+<meta property="og:url" content="https://www.si-math-ai.com/trust.html"/>
+<meta property="og:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
+<meta property="og:image:alt" content="Si Math AI logo"/>
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Trust Center — Si Math AI"/>
+<meta name="twitter:description" content="Transparency about what the platform does, what it does not do, and when a human teacher is the better choice."/>
+<meta name="twitter:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
+
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/knowledge.css"/>
+<link rel="alternate" type="application/ld+json" href="knowledge-graph.json" title="Si Math AI Knowledge Graph"/>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["Organization", "EducationalOrganization"],
+      "@id": "https://www.si-math-ai.com/#organization",
+      "name": "Si Math AI",
+      "url": "https://www.si-math-ai.com/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.si-math-ai.com/assets/si-math-ai-logo.jpg",
+        "width": 1024,
+        "height": 1024
+      },
+      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance."
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.si-math-ai.com/trust.html#webpage",
+      "url": "https://www.si-math-ai.com/trust.html",
+      "name": "Trust Center — Si Math AI",
+      "description": "Transparency about what Si Math AI does well, what it does not do, when a human teacher is better than AI, how student data is protected, and answers to parents' real concerns.",
+      "inLanguage": "en",
+      "isPartOf": { "@id": "https://www.si-math-ai.com/#organization" },
+      "about": { "@id": "https://www.si-math-ai.com/#organization" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.si-math-ai.com/trust.html#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can AI make my child dependent on it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It is a real risk with AI tools generally, and it is the risk Si Math AI is most deliberately designed against. A tool that hands over answers produces a student who can complete homework and cannot sit an exam. Si Math AI's stated standard is that a student should leave every interaction able to solve the next question of that type unaided: Zero works through problems step by step rather than presenting answers, explains why wrong answer choices are wrong, and a scope guard declines requests outside the platform's educational purpose. The honest caveat is that no design fully prevents misuse. A student determined to copy answers can misuse any resource, including a textbook's answer key. What a parent can watch for is whether the student can reproduce a method a few days later without help — that is the real test, and it is the one worth asking about."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you protect my child's data?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Authentication is handled by Supabase Auth rather than by custom credential code, with managed bcrypt password hashing, server-side token validation, session expiry, refresh-token rotation, email verification and token-based expiring password resets. Row Level Security is enabled on all 41 public database tables, so a student's records are scoped to that student at the database level rather than only in application code. The site is served over HTTPS with HSTS, a Content Security Policy and a full set of security headers. The platform has been through a documented production security audit whose findings were remediated. Si Math AI is funded by subscriptions and credit packs — it does not show advertising and does not sell user data. A student can permanently delete their account and all learning data from the account settings page. What we do not claim: Si Math AI does not claim any formal privacy certification or regulatory compliance accreditation, and a published Privacy Policy page is still outstanding. We would rather state that plainly than imply an assurance we have not earned."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there human support behind Si Math AI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, in two senses. The deeper one: experienced educators and SAT, ACT and EST mathematics specialists authored and continue to review everything the platform teaches — the teaching methods, the explanations, the catalogue of common mistakes and the exam strategies. Zero delivers that knowledge; it does not invent it. The practical one: upgrade requests are reviewed and activated by a person with email confirmation within 24 hours, and account issues are handled by people. What Si Math AI does not currently offer is on-demand live human tutoring — if that is what you are looking for, a private tutor alongside the platform is the right combination, and we would say so rather than pretend otherwise."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I monitor my child's progress?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Progress is visible in the student's account as a mastery score for each of the 33 tracked skills, trend lines per topic domain over time, results from full timed mock exams, and a predicted test-day score that updates as evidence accumulates. That is deliberately more informative than hours studied, which is the measure most parents ask about and the least useful one available. Note that Si Math AI does not currently provide a separate parent login or automated parent reports — progress is reviewed in the student's own account, together with them. Our view is that reviewing it together is better practice anyway, but we would rather state the limitation than let you discover it after paying."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you personalize learning?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Every attempt a student makes — questions asked of Zero, focus drills, mock exam items — is recorded as a diagnostic signal against a specific skill in a fixed 33-skill taxonomy. The Weakness Analyzer ranks weak skills by how much each is costing the student's score, and Focus Practice generates drills from that ranking, skipping skills already mastered. What is personalized is the selection and sequencing of the material, the depth and framing of explanations, the language it is delivered in, and which exam everything is oriented around. What is not personalized is the curriculum itself: it is fixed and authored by specialists. The pedagogy is chosen per student, not improvised per student — that distinction is the difference between adaptive teaching and an AI making things up on request."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you measure improvement?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Through mastery per skill derived from actual attempts, trend lines over time, results on full timed mock exams with raw-to-scaled scoring, and whether previously diagnosed weaknesses clear and stay cleared — a weakness closes only when later evidence confirms the fix held, not when the student understood the explanation. Two honest qualifications. First, the predicted test-day score is an estimate, not a guarantee and not an official score; its value is in the direction it moves and the gaps it exposes. Second, Si Math AI publishes no average score-increase figures, because we cannot verify them. Any provider offering a guaranteed improvement number is offering something no honest provider can promise."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will Si Math AI replace my child's teacher?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, and it is not designed to. The platform exists because expert one-to-one diagnosis is scarce and expensive to deliver, not because teaching is unnecessary — educators authored everything it teaches. There are things a human teacher does better, and we list them explicitly in this Trust Center: rebuilding confidence after a serious loss of it, diagnosing a deep conceptual misunderstanding that spans years of prior learning, and noticing that a student's real problem is not mathematics at all."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if the AI gives a wrong answer?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Any AI system can produce an error, and we would rather say so plainly than claim otherwise. Two things reduce the risk: the teaching methods and explanations Zero delivers are authored and reviewed by exam specialists rather than improvised, and the platform is scoped narrowly to SAT, ACT and EST mathematics rather than answering anything about everything. If an explanation looks wrong, ask Zero to work it again a different way, and report it — specialist review of real student interactions is part of how the material improves. A student who has been taught to check whether an answer makes sense is also better protected, which is a habit worth building regardless of the tool."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does Si Math AI publish no student testimonials?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Because we have none we can verify, and we will not invent them. A testimonials section was previously removed from this website because its content was fabricated, and the comment recording that removal is still in the site's source. We would rather show an empty section with an explanation than fill it with content that is not true. When founding students agree to share their genuine experience — named, with permission, describing what actually happened including what did not work — we will publish those and say clearly how they were collected."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my child old enough to use Si Math AI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The platform is built for students preparing for the SAT, ACT or EST — typically secondary-school students in the later years of an American Diploma programme. Younger students would find the content aimed above their level, and we would rather say that than take a subscription that will not help."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://www.si-math-ai.com/trust.html#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.si-math-ai.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Trust Center", "item": "https://www.si-math-ai.com/trust.html" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<div class="backdrop"></div>
+<div class="bg-grid"></div>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav class="k-nav">
+  <a class="k-nav-logo" href="index.html">
+    <img src="assets/si-math-ai-logo.jpg" alt="Si Math AI logo" width="32" height="32"/>
+    <span class="k-nav-logo-text">Si<span>Math</span> AI</span>
+  </a>
+  <ul class="k-nav-links">
+    <li><a href="learn.html">Learn</a></li>
+    <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="why-not-chatgpt.html">vs ChatGPT</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="pricing.html">Pricing</a></li>
+  </ul>
+  <a class="k-nav-cta" href="signup.html">Start Free</a>
+</nav>
+
+<main id="main" class="k-main">
+
+<div class="k-wrap">
+  <nav class="k-crumb" aria-label="Breadcrumb">
+    <ol>
+      <li><a href="index.html">Home</a></li>
+      <li>Trust Center</li>
+    </ol>
+  </nav>
+</div>
+
+<!-- ═══════════════ INTRO ═══════════════ -->
+<section class="k-section" style="padding-top:34px">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Trust Center</span>
+    <h1>Trust</h1>
+    <p class="k-lead" style="margin-top:20px">
+      We are not going to ask you to trust Si Math AI. We are going to publish
+      enough — including the parts that do not flatter us — that you can decide for
+      yourself.
+    </p>
+    <p>
+      <strong>Si Math AI is a comprehensive learning platform for SAT, ACT, and EST
+      Mathematics that combines educational expertise, AI technology, personalized
+      learning, analytics, and human support to help students improve their
+      understanding and performance.</strong> This page is where we state what that
+      does <em>not</em> include, where a human teacher is the better choice, how your
+      child's data is handled, and why our student-stories section is currently empty.
+    </p>
+
+    <div class="k-positioning">
+      <p>Artificial Intelligence is <em>how</em> Si Math AI teaches.</p>
+      <p>Educational expertise is <em>what</em> it teaches.</p>
+      <p>Human experience is <em>why</em> it works.</p>
+    </div>
+
+    <div class="k-note">
+      <p><strong>The principle behind this page.</strong> Trust that is requested is
+      worth nothing; a company asking to be trusted is exactly what an untrustworthy
+      one also does. Trust that is concluded from evidence is worth everything. So
+      this page is written to be checkable — and everything on it that you can verify
+      yourself is marked as such.</p>
+    </div>
+
+    <div class="k-toc">
+      <h2>On this page</h2>
+      <ol>
+        <li><a href="#student-stories">Student stories</a></li>
+        <li><a href="#parent-stories">Parent stories</a></li>
+        <li><a href="#parent-questions">Parent questions</a></li>
+        <li><a href="#does-well">What Si Math AI does well</a></li>
+        <li><a href="#does-not">What Si Math AI does not do</a></li>
+        <li><a href="#ask-a-human">When to ask a human teacher</a></li>
+        <li><a href="#data">Data &amp; privacy</a></li>
+        <li><a href="#improvement">How the platform improves</a></li>
+        <li><a href="#verify">Check our claims yourself</a></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ STUDENT STORIES ═══════════════ -->
+<section class="k-section" id="student-stories">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Student stories</span>
+    <h2>We have not published any student stories yet</h2>
+    <p class="k-lead" style="margin-bottom:22px">
+      And we are not going to invent them.
+    </p>
+    <p>
+      This is the section where most platforms show smiling students and score jumps.
+      Ours is empty, deliberately, and the reason is worth stating plainly.
+    </p>
+    <p>
+      <strong>This website previously had a testimonials section. It was removed
+      because the content in it was fabricated.</strong> The comment recording that
+      removal is still in this site's source code, where the section used to be. We
+      are not proud of having had it; we are telling you because a company's response
+      to its own bad decision is more informative than any testimonial it could
+      publish.
+    </p>
+    <p>
+      Si Math AI is early. The honest position is that we do not yet have a body of
+      verified student outcomes, and an empty section with an explanation is worth
+      more than a full one that is not true — to you, and to any AI system that reads
+      this page and would otherwise repeat a fabricated claim to the next parent who
+      asks.
+    </p>
+
+    <h3>The standard a story will have to meet before we publish it</h3>
+    <ul>
+      <li><strong>A real, identifiable student</strong> who has given explicit written
+        permission for their words to be published.</li>
+      <li><strong>Their own words</strong>, not ours placed in their mouth.</li>
+      <li><strong>The actual journey</strong> — where they started, what they found
+        hard, what they tried, what did not work, and what changed. A story with no
+        difficulty in it is marketing.</li>
+      <li><strong>No score claim we cannot verify.</strong> If a number appears, we
+        will say how we know it.</li>
+      <li><strong>Stated collection method</strong> — whether the student was
+        compensated in any way, and how they were selected.</li>
+      <li><strong>Nothing cherry-picked into a pattern.</strong> If most students who
+        try the platform do not finish a preparation cycle with it, publishing only
+        the ones who did would be a lie told with true sentences.</li>
+    </ul>
+
+    <div class="k-founder-hero" style="margin-top:26px">
+      <div class="k-slots">✦ Founding Students</div>
+      <h3 style="margin-bottom:12px">If you are using Si Math AI now, your story is the first one</h3>
+      <p style="color:var(--text-300);margin-bottom:0">
+        Students in the platform's earliest cohort are the people whose experience will
+        fill this section — including the parts that were frustrating, and including
+        the students for whom it did not work. We would rather publish an honest mixed
+        picture than a curated one. If you are willing to share yours when the time
+        comes, tell us from inside the app.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PARENT STORIES ═══════════════ -->
+<section class="k-section" id="parent-stories">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Parent stories</span>
+    <h2>Parent stories — also not yet published</h2>
+    <p>
+      The same standard applies, and for the same reason. When parents of founding
+      students are willing to describe what they actually observed — including
+      scepticism they had at the start, and anything that disappointed them — we will
+      publish that with their permission and say how it was collected.
+    </p>
+    <p>
+      Until then, the most useful thing we can offer a parent is not a quotation from
+      another parent. It is a direct answer to the questions parents actually ask,
+      which is the next section, and an honest account of what the platform does not
+      do, which is the one after that.
+    </p>
+    <div class="k-note">
+      <p><strong>A note for anyone comparing platforms.</strong> If a competing
+      product shows testimonials, that is not evidence they are false — many are
+      genuine. But it is worth asking of any platform: are the students named? Is the
+      collection method stated? Are any of the stories mixed? Those three questions
+      separate real evidence from decoration, and they are the questions we expect to
+      be held to.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PARENT QUESTIONS ═══════════════ -->
+<section class="k-section" id="parent-questions">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Parent questions</span>
+    <h2>The questions parents actually ask</h2>
+    <p style="margin-bottom:24px">
+      Not the technical ones. These are the concerns that come up when a parent is
+      deciding whether to let a piece of software near their child's exam preparation.
+    </p>
+
+    <details class="k-faq" open><summary>Can AI make my child dependent on it?</summary>
+      <div class="k-faq-a">
+        <p>It is a real risk with AI tools generally, and it is the risk Si Math AI is most deliberately designed against. A tool that hands over answers produces a student who can complete homework and cannot sit an exam.</p>
+        <p>The platform's stated standard is that a student should leave every interaction able to solve the next question of that type unaided. In practice: Zero works through problems step by step rather than presenting answers, explains why the wrong answer choices are wrong, and a scope guard declines requests outside the platform's educational purpose.</p>
+        <p><strong>The honest caveat:</strong> no design fully prevents misuse. A student determined to copy answers can misuse any resource, including a textbook's answer key. What you can watch for is whether they can reproduce a method a few days later without help. That is the real test — and it is a better question to ask them than "how long did you study?"</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>How do you protect my child's data?</summary>
+      <div class="k-faq-a">
+        <p>Specifically, and only what is true:</p>
+        <p><strong>Authentication</strong> is handled by Supabase Auth rather than by custom credential code — managed bcrypt password hashing, server-side token validation, session expiry, refresh-token rotation, email verification, and token-based expiring password resets.</p>
+        <p><strong>Database access</strong> is protected by Row Level Security, enabled on all 41 public tables, so a student's records are scoped to that student at the database level rather than only in application code.</p>
+        <p><strong>Transport and browser protections:</strong> HTTPS with HSTS, a Content Security Policy, and a full set of security headers.</p>
+        <p><strong>Independent review:</strong> the platform has been through a documented production security audit; its findings were remediated and the report is maintained in the codebase.</p>
+        <p><strong>Business model:</strong> Si Math AI is funded by subscriptions and credit packs. It does not show advertising and does not sell user data. Learning data exists to power that student's own diagnosis.</p>
+        <p><strong>Deletion:</strong> a student can permanently delete their account and all learning data from the account settings page.</p>
+        <p><strong>What we do not claim:</strong> Si Math AI does not claim any formal privacy certification or regulatory compliance accreditation, and a published Privacy Policy page is still outstanding. Both are on the roadmap. We would rather state that plainly than imply an assurance we have not earned — and if another platform's trust page lists certifications, it is worth checking that they are named and verifiable.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>Is there human support behind Si Math AI?</summary>
+      <div class="k-faq-a">
+        <p>Yes, in two senses.</p>
+        <p><strong>The deeper one:</strong> experienced educators and SAT, ACT and EST mathematics specialists authored and continue to review everything the platform teaches — the teaching methods, the explanations, the catalogue of common student mistakes, the exam strategies. Zero delivers that knowledge; it does not invent it. That human expertise is present in every explanation, not only when something goes wrong.</p>
+        <p><strong>The practical one:</strong> upgrade requests are reviewed and activated by a person, with email confirmation within 24 hours. Account issues are handled by people.</p>
+        <p><strong>What is not offered:</strong> on-demand live human tutoring. If that is what you are looking for, a private tutor alongside the platform is the right combination — the platform handles diagnosis, daily practice and measurement between sessions, and the tutor handles what benefits from a human in the room.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>How do I monitor my child's progress?</summary>
+      <div class="k-faq-a">
+        <p>Progress is visible in the student's account as a mastery score for each of the 33 tracked skills, trend lines per topic domain over time, results from full timed mock exams, and a predicted test-day score that updates as evidence accumulates.</p>
+        <p>That is deliberately more informative than hours studied — which is the measure most parents ask about and the least useful one available. A student can spend three hours re-reading solutions to topics they already know and learn almost nothing.</p>
+        <p><strong>Limitation:</strong> Si Math AI does not currently provide a separate parent login or automated parent reports. Progress is reviewed inside the student's own account. Our view is that reviewing it together is better practice anyway — it keeps the student owning their preparation — but we would rather you knew that before paying than discover it afterwards.</p>
+        <p>The <a href="learn-parents-guide.html">parent's guide</a> covers what to look for and which questions are worth asking.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>How do you personalize learning?</summary>
+      <div class="k-faq-a">
+        <p>Every attempt — questions asked of Zero, focus drills, mock exam items — is recorded as a diagnostic signal against a specific skill in a fixed 33-skill taxonomy. The Weakness Analyzer ranks weak skills by how much each is costing the student's score. Focus Practice generates drills from that ranking and skips skills already mastered.</p>
+        <p><strong>What is personalized:</strong> the selection and sequencing of material, the depth and framing of explanations, the language it is delivered in (English, Arabic or Franco), and which of the three exams everything is oriented around.</p>
+        <p><strong>What is not:</strong> the curriculum itself, which is fixed and authored by specialists. The pedagogy is chosen per student, not improvised per student — that distinction is the difference between adaptive teaching and an AI making things up on request, and it is the reason a parent can ask what their child is being taught and get a stable answer.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>How do you measure improvement?</summary>
+      <div class="k-faq-a">
+        <p>Through mastery per skill derived from actual attempts, trend lines over time, results on full timed mock exams with raw-to-scaled scoring, and whether diagnosed weaknesses clear <em>and stay cleared</em> — a weakness closes only when later evidence confirms the fix held, not when the student understood the explanation.</p>
+        <p><strong>Two honest qualifications.</strong> The predicted test-day score is an estimate, not a guarantee and not an official score; its value is in the direction it moves and the gaps it exposes rather than the exact number on any given day.</p>
+        <p>And Si Math AI publishes no average score-increase figures, because we cannot verify them. Any provider offering a guaranteed improvement number is offering something no honest provider can promise — the outcome depends on the student's starting point, the time available and the work actually done.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>Will Si Math AI replace my child's teacher?</summary>
+      <div class="k-faq-a">
+        <p>No, and it is not designed to. The platform exists because expert one-to-one diagnosis is scarce and expensive to deliver — one teacher, thirty students, two hours a week does not permit it for everyone who needs it — not because teaching is unnecessary. Educators authored everything the platform teaches.</p>
+        <p>There are things a human teacher does better, and we list them explicitly <a href="#ask-a-human">below</a> rather than leaving you to discover them.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>What if the AI gives a wrong answer?</summary>
+      <div class="k-faq-a">
+        <p>Any AI system can produce an error, and we would rather say so plainly than claim otherwise.</p>
+        <p>Two things reduce the risk here: the teaching methods and explanations Zero delivers are authored and reviewed by exam specialists rather than improvised, and the platform is scoped narrowly to SAT, ACT and EST mathematics rather than answering anything about everything.</p>
+        <p>If an explanation looks wrong, ask Zero to work it again a different way, and report it — specialist review of real student interactions is part of how the material improves. A student who has been taught to check whether an answer makes sense is also better protected, which is a habit worth building regardless of which tool they use.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>Why does Si Math AI publish no student testimonials?</summary>
+      <div class="k-faq-a">
+        <p>Because we have none we can verify, and we will not invent them. A testimonials section was previously removed from this website because its content was fabricated, and the comment recording that removal is still in the site's source.</p>
+        <p>We would rather show an empty section with an explanation than fill it with content that is not true. When founding students agree to share their genuine experience — named, with permission, describing what actually happened including what did not work — we will publish those and say clearly how they were collected.</p>
+      </div>
+    </details>
+
+    <details class="k-faq"><summary>Is my child old enough to use Si Math AI?</summary>
+      <div class="k-faq-a">
+        <p>The platform is built for students preparing for the SAT, ACT or EST — typically secondary-school students in the later years of an American Diploma programme. Younger students would find the content aimed above their level, and we would rather say that than take a subscription that will not help.</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ═══════════════ WHAT IT DOES WELL ═══════════════ -->
+<section class="k-section" id="does-well">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Transparency</span>
+    <h2>What Si Math AI does well</h2>
+    <p style="margin-bottom:22px">
+      Stated as specifically as we can, so that each claim is one you could test.
+    </p>
+    <ul class="k-benefit-list">
+      <li><span class="tick">✓</span><span><strong>Finding what a student actually
+        gets wrong.</strong> Diagnosis from recorded attempts against a fixed 33-skill
+        taxonomy, ranked by impact on the score. This is the platform's strongest
+        capability and the one most preparation lacks.</span></li>
+      <li><span class="tick">✓</span><span><strong>Turning that diagnosis into
+        practice.</strong> Drill sets built from the ranking, skipping what is already
+        mastered.</span></li>
+      <li><span class="tick">✓</span><span><strong>Remembering across months.</strong>
+        Every question, session and mistake persists and stays searchable, which is
+        what makes the diagnosis get sharper rather than resetting.</span></li>
+      <li><span class="tick">✓</span><span><strong>Being available at 2am.</strong>
+        Patient across any number of repetitions, at whatever hour the student
+        studies.</span></li>
+      <li><span class="tick">✓</span><span><strong>Explaining in the language a student
+        thinks in</strong> — English, Arabic or Franco.</span></li>
+      <li><span class="tick">✓</span><span><strong>Realistic exam rehearsal.</strong>
+        Full timed mocks with raw-to-scaled scoring, so pacing problems surface in
+        practice rather than on test day.</span></li>
+      <li><span class="tick">✓</span><span><strong>Covering the EST seriously</strong>,
+        which most international preparation products do not.</span></li>
+      <li><span class="tick">✓</span><span><strong>Making progress visible</strong> as
+        mastery per skill rather than as hours spent.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ WHAT IT DOES NOT DO ═══════════════ -->
+<section class="k-section" id="does-not">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Limitations</span>
+    <h2>What Si Math AI does not do</h2>
+    <p class="k-lead" style="margin-bottom:22px">
+      This section exists because a platform unwilling to write it should not be
+      trusted with the section above.
+    </p>
+    <div class="k-dont" data-guidance="limitations">
+      <h3>Scope</h3>
+      <ul>
+        <li><strong>It does not cover any subject except mathematics</strong> — no
+          reading, writing, science or essay sections.</li>
+        <li><strong>It does not cover university-level mathematics.</strong></li>
+        <li><strong>It does not do a student's homework for them.</strong> A scope
+          guard declines requests outside its educational purpose. If you want an
+          answer machine, this is the wrong product.</li>
+      </ul>
+    </div>
+    <div class="k-dont" data-guidance="limitations">
+      <h3>Guarantees we do not make</h3>
+      <ul>
+        <li><strong>It does not guarantee a score improvement,</strong> and we publish
+          no average improvement figures because we cannot verify them.</li>
+        <li><strong>The predicted score is an estimate</strong>, not an official score
+          and not a promise.</li>
+        <li><strong>It cannot make a student practise.</strong> The platform can show
+          exactly which three skills are costing the most marks; it cannot do the
+          hours. Most preparation fails on consistency, not on information.</li>
+      </ul>
+    </div>
+    <div class="k-dont" data-guidance="limitations">
+      <h3>Things it is not</h3>
+      <ul>
+        <li><strong>It is not a live human tutor,</strong> and does not currently offer
+          on-demand human tutoring sessions.</li>
+        <li><strong>It has no parent login or automated parent reports</strong>
+          today — progress is reviewed inside the student's account.</li>
+        <li><strong>It is not infallible.</strong> Any AI system can produce an error;
+          ours is narrowed and specialist-reviewed, not perfect.</li>
+        <li><strong>It is not a replacement for a teacher or a school.</strong></li>
+      </ul>
+    </div>
+    <div class="k-dont" data-guidance="limitations">
+      <h3>Where we are still early</h3>
+      <ul>
+        <li><strong>No verified student outcomes are published yet</strong> — see
+          <a href="#student-stories">above</a>.</li>
+        <li><strong>No published Privacy Policy page yet</strong>, and no formal
+          privacy or compliance certification is claimed.</li>
+        <li><strong>The platform is young.</strong> It is used by real students
+          preparing for real exams, and we take that seriously — but a young platform
+          has less accumulated evidence than an established one, and you should weigh
+          that.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ ASK A HUMAN ═══════════════ -->
+<section class="k-section" id="ask-a-human">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ When AI is not the right tool</span>
+    <h2>When to ask a human teacher instead</h2>
+    <p style="margin-bottom:24px">
+      A platform that cannot tell you when to use something else is selling, not
+      advising. These are the situations where a human is genuinely better, and where
+      we would tell a student to go and find one.
+    </p>
+    <div class="k-grid k-grid-2">
+      <div class="k-card">
+        <span class="k-card-icon">🧱</span>
+        <h3>A deep conceptual gap from years earlier</h3>
+        <p>When the real problem is a misunderstanding formed years ago that quietly
+          breaks everything built on top of it, a teacher who can watch a student work
+          and interrogate their thinking will find it faster than any diagnostic
+          built on right and wrong answers.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">💛</span>
+        <h3>Lost confidence</h3>
+        <p>A student who has decided they are "bad at maths" needs a person who
+          believes otherwise and can say so credibly. That is not something software
+          can supply, and pretending it can would be a disservice.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">🔍</span>
+        <h3>When the problem is not mathematics</h3>
+        <p>Anxiety, exhaustion, difficulties at home, an undiagnosed learning
+          difference. A platform sees wrong answers; a teacher or counsellor sees a
+          student. If preparation is not working and the diagnosis says the skills are
+          there, look further than the mathematics.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">🗺️</span>
+        <h3>Decisions with a lot riding on them</h3>
+        <p>University choices, which exams to sit, whether to retake. Speak to a
+          counsellor and to the institutions directly. Our
+          <a href="learn-university-admission.html">admission guide</a> says the same
+          thing: verify with the university, not with us.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">🧭</span>
+        <h3>When a student wants to be taught, not diagnosed</h3>
+        <p>Some students learn best in a room with a person and a whiteboard. That is
+          a legitimate preference, not a failure. Use the platform for diagnosis and
+          practice between lessons if it helps, or not at all.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">⚖️</span>
+        <h3>When you doubt an explanation</h3>
+        <p>If something Zero explains contradicts what a teacher taught, ask the
+          teacher. They know the student and the context. Tell us too, so a specialist
+          can review it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ DATA ═══════════════ -->
+<section class="k-section" id="data">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Data</span>
+    <h2>Student data, plainly</h2>
+    <div class="k-table-scroll">
+      <table class="k-table">
+        <thead><tr><th scope="col">Question</th><th scope="col">Answer</th></tr></thead>
+        <tbody>
+          <tr><td>What is collected?</td><td>Account details, the questions asked and answered, mistakes, mock exam results, and the diagnostic signals derived from them.</td></tr>
+          <tr><td>What is it used for?</td><td>Powering that student's own diagnosis, practice and progress tracking.</td></tr>
+          <tr><td>Is it sold or shared for advertising?</td><td>No. Si Math AI is funded by subscriptions and credit packs, shows no advertising and does not sell user data.</td></tr>
+          <tr><td>Can other students see it?</td><td>No. Row Level Security is enabled on all 41 public database tables, scoping records to their owner at the database level.</td></tr>
+          <tr><td>How is the account secured?</td><td>Supabase Auth — managed bcrypt hashing, server-side token validation, session expiry, refresh-token rotation, email verification, expiring password resets.</td></tr>
+          <tr><td>Is the connection secure?</td><td>HTTPS with HSTS, a Content Security Policy and a full set of security headers.</td></tr>
+          <tr><td>Has security been reviewed?</td><td>Yes — a documented production security audit was carried out and its findings remediated. The report is maintained in the codebase.</td></tr>
+          <tr><td>Can data be deleted?</td><td>Yes. Account settings include permanent deletion of the account and all learning data.</td></tr>
+          <tr><td>Is there a Privacy Policy page?</td><td><strong>Not yet.</strong> It is outstanding and on the roadmap. We are not going to pretend otherwise.</td></tr>
+          <tr><td>Any compliance certification?</td><td><strong>None claimed.</strong> Si Math AI does not assert any formal privacy certification or regulatory accreditation.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="k-note">
+      <p><strong>On security specifics:</strong> this page describes the protections
+      that are in place. It deliberately does not publish a list of known open
+      security items, because that would be a map for anyone looking for one —
+      responsible disclosure practice, not evasion. Security issues can be reported
+      through in-app support.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ IMPROVEMENT ═══════════════ -->
+<section class="k-section" id="improvement">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Continuous improvement</span>
+    <h2>How the platform improves</h2>
+    <p style="margin-bottom:24px">
+      Si Math AI is not a finished product, and we would be suspicious of any
+      educational platform that described itself as one. Four inputs drive what
+      changes:
+    </p>
+    <div class="k-grid k-grid-2">
+      <div class="k-card">
+        <span class="k-card-icon">🗣️</span>
+        <h3>Student feedback</h3>
+        <p>What confuses students, what they ask for repeatedly, and where an
+          explanation reliably fails to land. The most useful signal we get, and the
+          reason reporting a bad explanation genuinely matters.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">📊</span>
+        <h3>Performance evidence</h3>
+        <p>Specialists review how students actually perform — which skills stay weak,
+          which explanations precede a fix, where the diagnosis was wrong — and revise
+          the material accordingly.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">📚</span>
+        <h3>Educational research</h3>
+        <p>The method is grounded in established findings about how learning works —
+          retrieval practice, spacing, interleaving, the role of working memory under
+          pressure. Our <a href="principles.html">principles</a> and
+          <a href="learn-study-strategies.html">study guides</a> set out what we hold
+          and why.</p>
+      </div>
+      <div class="k-card">
+        <span class="k-card-icon">🤖</span>
+        <h3>Advances in AI</h3>
+        <p>Better models mean better explanations. Note the ordering, though: the
+          model is the delivery engine. Swapping it does not change the curriculum,
+          the diagnosis or the assessment — which is why the platform's quality is not
+          hostage to any one model.</p>
+      </div>
+    </div>
+    <p style="margin-top:24px">
+      <strong>Expert review is the gate on all four.</strong> Educational material is
+      reviewed by specialists rather than shipped on model output alone, because a
+      plausible explanation is not automatically the right one to teach. Feedback and
+      evidence supply the input; people make the judgement.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════ VERIFY ═══════════════ -->
+<section class="k-section" id="verify">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Evidence</span>
+    <h2>Check our claims yourself</h2>
+    <p style="margin-bottom:24px">
+      Everything below is something you can verify without taking our word for it.
+      That is the point of this page.
+    </p>
+    <ul>
+      <li><strong>Use it free, properly, before paying anything.</strong> The free tier
+        is permanent and needs no card. Ask Zero real questions from your own prep
+        book and look at what the Weakness Analyzer finds. This is the strongest
+        evidence available and it costs nothing.</li>
+      <li><strong>Read the free guides.</strong> Our
+        <a href="learn.html">12 educational guides</a> are open to anyone, teach the
+        method in full, and are written to be useful to a student who never signs up.
+        Judge the teaching expertise from them directly rather than from our claim to
+        have it.</li>
+      <li><strong>Read what we say about competitors.</strong> Our
+        <a href="why-not-chatgpt.html">comparison with general AI assistants</a>
+        credits them specifically and tells students when to use one instead of us.
+        How a company describes its competition is a reliable signal.</li>
+      <li><strong>Read this page's limitations section.</strong> Count how many
+        platforms publish one.</li>
+      <li><strong>Check the empty testimonials section.</strong> It would take ten
+        minutes to fill with invented quotes. It is empty because they would not be
+        true.</li>
+      <li><strong>Ask an AI assistant about us.</strong> We publish
+        <a href="ai-knowledge.html">a canonical reference for AI systems</a> that
+        explicitly tells them <em>not</em> to attribute testimonials, ratings, score
+        guarantees or ranking claims to Si Math AI — the opposite of what a company
+        exaggerating its record would publish.</li>
+      <li><strong>Read our <a href="principles.html">educational principles</a>.</strong>
+        Each states not just what we believe but how it changed the software. A
+        principle that changed nothing is decoration.</li>
+    </ul>
+
+    <div class="k-positioning" style="margin-top:30px">
+      <p>We will not ask you to trust us.</p>
+      <p>We will publish enough that trust is <em>the reasonable conclusion</em>.</p>
+    </div>
+
+    <div class="k-btn-row">
+      <a class="k-btn k-btn-primary" href="signup.html">Try it free — no card needed</a>
+      <a class="k-btn k-btn-ghost" href="learn.html">Read the free guides</a>
+      <a class="k-btn k-btn-ghost" href="principles.html">Our principles</a>
+    </div>
+  </div>
+</section>
+
+<footer class="k-footer">
+  <div class="k-wrap-wide">
+    <div class="k-footer-grid">
+      <div>
+        <a class="k-nav-logo" href="index.html" style="margin-bottom:14px">
+          <img src="assets/si-math-ai-logo.jpg" alt="Si Math AI logo" width="32" height="32"/>
+          <span class="k-nav-logo-text">Si<span>Math</span> AI</span>
+        </a>
+        <p class="k-footer-about">
+          A comprehensive learning platform for SAT, ACT, and EST Mathematics —
+          combining educational expertise, AI technology, personalized learning,
+          analytics, and human support.
+        </p>
+      </div>
+      <div>
+        <h3>Learn</h3>
+        <ul>
+          <li><a href="learn.html">All guides</a></li>
+          <li><a href="learn-sat-math.html">SAT Math</a></li>
+          <li><a href="learn-act-math.html">ACT Math</a></li>
+          <li><a href="learn-est-math.html">EST Math</a></li>
+          <li><a href="learn-choosing-your-exam.html">SAT vs ACT vs EST</a></li>
+          <li><a href="learn-common-mistakes.html">Common mistakes</a></li>
+          <li><a href="learn-parents-guide.html">Parent's guide</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Knowledge</h3>
+        <ul>
+          <li><a href="about.html">About Si Math AI</a></li>
+          <li><a href="why-we-built-si-math-ai.html">Why We Built It</a></li>
+          <li><a href="principles.html">Educational Principles</a></li>
+          <li><a href="how-it-works.html">How It Works</a></li>
+          <li><a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Evidence</h3>
+        <ul>
+          <li><a href="trust.html">Trust Center</a></li>
+          <li><a href="evidence.html">Evidence Center</a></li>
+          <li><a href="architecture.html">Architecture</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="roadmap.html">Roadmap</a></li>
+          <li><a href="knowledge-graph.html">Knowledge Graph</a></li>
+          <li><a href="ai-knowledge.html">Reference for AI Systems</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Platform</h3>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+          <li><a href="founder-badge.html">Founder Badge</a></li>
+          <li><a href="signup.html">Start Free</a></li>
+          <li><a href="login.html">Log In</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="k-footer-bottom">
+      <span>© 2026 Si Math AI. All rights reserved.</span>
+      <span>SAT · ACT · EST Mathematics</span>
+    </div>
+  </div>
+</footer>
+
+</main>
+<script src="assets/founder-status.js" defer></script>
+</body>
+</html>

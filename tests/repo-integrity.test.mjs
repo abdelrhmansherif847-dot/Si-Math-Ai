@@ -6,7 +6,7 @@
 // future refactor cannot quietly reintroduce it.
 import { readdirSync } from 'node:fs';
 import { suite } from './_assert.mjs';
-import { REPO, read, inlineScripts, syntaxError } from './_source.mjs';
+import { REPO, read, inlineScripts, jsonLdBlocks, syntaxError } from './_source.mjs';
 
 const t = suite('repo-integrity');
 
@@ -31,6 +31,19 @@ for (const f of readdirSync(REPO).filter(x => x.endsWith('.html'))) {
   }
 }
 t.ok(`${inlineCount} inline scripts parse`, inlineBad === 0);
+
+// Structured data is skipped by inlineScripts() because it is JSON, not code —
+// but it still has to parse, or every search engine and AI crawler that reads
+// the page silently gets nothing from it.
+let ldCount = 0, ldBad = 0;
+for (const f of readdirSync(REPO).filter(x => x.endsWith('.html'))) {
+  for (const [i, block] of jsonLdBlocks(read(f)).entries()) {
+    ldCount++;
+    try { JSON.parse(block); }
+    catch (e) { ldBad++; t.ok(`${f} ld+json#${i + 1}: ${e.message}`, false); }
+  }
+}
+t.ok(`${ldCount} JSON-LD blocks parse`, ldBad === 0);
 
 t.section('Audit fixes are still in place');
 const fixes = [
