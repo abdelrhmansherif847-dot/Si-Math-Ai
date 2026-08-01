@@ -82,14 +82,34 @@ Asset IDs are Higgsfield job/media IDs — pass them directly as `medias[].value
 |---|---|---|
 | **SHOT 3 — master crane reveal** | video `010057d4-5488-4bc5-aa87-9f1869cc9e6f` | Approved. 5s, cut to 3–4s in conform |
 
-### 🎞 MOTION REFERENCES — approved tests (style/behaviour reference, not final film)
+### 🔥 THE HERO LIBRARY — the acting vocabulary of the film (owner directive, 2026-08-01)
 
-| Asset | ID |
+Exceptional performances are saved here as **reusable benchmarks**, not spent in one scene. A
+library entry drives future takes directly: passed as `video_references` on Seedance dialogue
+takes (acting-style lock) and cited as the behaviour standard in Kling motion prompts. **Entries
+are added only by the owner's 🔥 verdict.** Every experiment that feeds the library states its one
+question before it runs — an experiment that cannot name its question does not run.
+
+**Founding entries** (owner-approved behaviour tests, kit era):
+
+| Vocabulary | ID |
 |---|---|
-| Judge Zero motion behaviour | video `feed5df0-3f50-4af5-abea-f1af8f6d35a5` |
-| Lawyer Zero motion behaviour | video `98a70c5c-bcf5-4e3e-b830-22930a1d78da` |
-| Courtroom ambient behaviour (seal pulse, particles) | video `d2e74e33-a7e9-4186-8668-2c166a6fe30b` |
-| Representatives ambient behaviour | video `2a7a424a-9e8e-4015-9075-e38aac6d3dac` |
+| Judge Zero — baseline motion behaviour | video `feed5df0-3f50-4af5-abea-f1af8f6d35a5` |
+| Lawyer Zero — baseline motion behaviour | video `98a70c5c-bcf5-4e3e-b830-22930a1d78da` |
+| Courtroom ambient (seal pulse, particles) | video `d2e74e33-a7e9-4186-8668-2c166a6fe30b` |
+| Representatives ambient (unison breath, head turn) | video `2a7a424a-9e8e-4015-9075-e38aac6d3dac` |
+
+**Candidate shelf** (awaiting the owner's 🔥 / ❌):
+
+| Candidate vocabulary | The one question it exists to answer | ID |
+|---|---|---|
+| The Judge's verdict eye-move (glasses off → gaze travel) | Can the Judge communicate the verdict through eye movement alone? | `6579380f` |
+| The Lawyer's conviction walk + presenting gesture | What body language communicates absolute confidence without arrogance? | `fb2efcda` |
+| The failed answer ×3 (T2A confident / T2B eager-crack / T2C wan) | Which emotional interpretation of the failed answer creates the strongest audience reaction? | `bdb7a37f` / `4e93ad7a` / `e0d67c98` |
+| REP voice ×5 (Mark / Eric / Grant / Brooks / Roman) | Which voice makes the machine's sincerity most believable — and most quietly tragic? | `d2829f12` / `a7b096de` / `0e2fd8e0` / `45147f6c` / `5d7c504d` |
+
+Open slots the film still needs: best pause · best head turn · best courtroom entrance · best
+silence · best tail/wing counterweight · best hand-on-gavel · best standing (the five).
 
 ### ⏳ PENDING OWNER VERDICT — merge sequence tests (Act IV)
 
