@@ -125,3 +125,22 @@ No migration written. No object created. No file changed outside this document.
    corrected to match).
 3. If **A** or **C**: how should future months render — omitted, or shown blocked
    with a distinct reason such as `future_period`?
+
+---
+
+## Owner rulings — 2026-08-01
+
+Recorded after this investigation was reviewed:
+
+1. **Option B.** M3 is **deferred**; the simulator (M4) is built first, because it
+   has real data behind it today and break-even does not.
+2. **The M3/M4 split is authoritative.** M3 = `owner_econ_breakeven()` + Section 11
+   only; M4 = `owner_econ_simulate()` + Section 10. The `ai-economics.md` roadmap
+   table has been corrected to match.
+3. **Future months render blocked with a distinct `future_period` reason** — not
+   omitted, and not conflated with `no_cost_in_period`. A reader must be able to
+   tell "has not happened yet" from "pending data".
+
+Ruling 3 is binding on M3 whenever it is built.
+
+Continues in `phase-7-m4-investigation.md`.

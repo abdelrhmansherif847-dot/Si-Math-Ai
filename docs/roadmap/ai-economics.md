@@ -2254,7 +2254,44 @@ Profit stays **Blocked** until fixed costs exist.
 |---|---|---|
 | **M1** | `owner_cost_reprice()` scenario grammar — `service_swap`, refusal contract | ✅ **COMPLETE** — 2 migrations, gate 10/10, closed 2026-08-01 |
 | **M2** | `platform_cost_entries` + Net Profit / Net Margin | ✅ **COMPLETE** — 4 migrations, gate 9/9 |
-| M3 | Simulator / Break-even RPCs | not started |
+| **M3** | `owner_econ_breakeven()` + Section 11 panel | ⏸ **DEFERRED** — blocked on data, see ruling below |
+| **M4** | `owner_econ_simulate()` + Section 10 panel | **next** |
+
+##### M3 / M4 rulings (owner, 2026-08-01)
+
+The roadmap table previously combined "Simulator / Break-even RPCs" into a single
+M3 while `phase-7-investigation-and-plan.md` split them. **The split is
+authoritative**: M3 is break-even only, M4 is the simulator. Smaller milestones
+have caught more — M1 and M2 both proved it.
+
+**M3 is deferred, and the simulator is built first.** A pre-implementation
+investigation measured that `owner_econ_breakeven()` would render **blocked on
+100% of months**, and would stay blocked even after fixed costs and an FX rate
+were entered, because the platform has **no priced student traffic yet**:
+
+| Break-even input | State on 2026-08-01 |
+|---|---|
+| External AI cost | **0 of 76 facts are external** — all 76 are `is_internal = true` |
+| FX rate | `cost_engine.fx_rates` **empty** |
+| Fixed costs | `platform_cost_entries` **empty** |
+| Distinct students in cost facts | **1**, and internal |
+| Cost history | **3 days** (2026-07-29 → 07-31) |
+
+Not a defect — INV-25 correctly excludes internal traffic from business metrics,
+which is the same reason M2's Net Profit blocked on all 14 months. The simulator
+runs on `include_internal: true` and **does** have data today, so it is built
+first. Break-even returns when there is external traffic to break even on.
+Nothing in M4 depends on M3.
+
+**Locked M3 decision, for when it is built:** revenue is recognized forward
+through `2027-07` while AI cost can only be historical, so 8 of 14 months can
+**never** unblock. Those months render **blocked with a distinct
+`future_period` reason** — not omitted, and not conflated with
+`no_cost_in_period`. This is the same distinction M4.3 drew between an *omitted*
+metric (never resolvable) and a *blocked* one (data-limited): a reader must be
+able to tell "has not happened yet" from "pending data".
+
+Investigation: `docs/roadmap/phase-7-m3-investigation.md`.
 
 ##### M1 — the reprice defect, found and closed
 
