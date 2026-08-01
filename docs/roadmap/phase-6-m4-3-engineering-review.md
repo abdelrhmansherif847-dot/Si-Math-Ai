@@ -17,7 +17,7 @@ Branch `claude/phase6-m4-3-service-model-analytics`, cut clean from `main` at
 
 | Scope | Section 9 — AI Service & Model Analytics |
 |---|---|
-| Migration | 1 — `20260801_aiecon_p6_m4_3_service_quality.sql` (**not applied**) |
+| Migration | 1 — `20260801_aiecon_p6_m4_3_service_quality.sql` (*not applied at time of writing; applied `20260801135335`*) |
 | RPCs | 1 **extended** — `owner_cost_service_breakdown`, 8 → 22 cols |
 | New RPCs / tables / views | 0 / 0 / 0 |
 | **`econ` objects touched** | **0** |
@@ -234,7 +234,11 @@ additive.
 
 ---
 
-## 9. Proposed M4.3 Release Gate (for after approval — NOT run)
+## 9. Proposed M4.3 Release Gate
+
+> **Executed 2026-08-01 — 8/8 PASS.** Results in the release report. One line
+> below was wrong as proposed: V8 names `P4-05` as the expected WARN, but the
+> WARN is **`P4-31`** (100% of cost list-priced). `P4-05` passed at 6/6.
 
 | # | Validation | Method |
 |---|---|---|
@@ -259,7 +263,11 @@ silently absorbed.
 
 ---
 
-## Stop point
+## Stop point *(historical)*
 
 Implementation and this review are complete. **Awaiting owner review before
 applying the migration or beginning the M4.3 Release Gate.** No Phase 7 work.
+
+> **Resolved.** The owner approved on 2026-08-01. The migration was applied as
+> `20260801135335`, the Release Gate passed 8/8, and M4.3 was closed out. This
+> stop point is retained as the historical record.

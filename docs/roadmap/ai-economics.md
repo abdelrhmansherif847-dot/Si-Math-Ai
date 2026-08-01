@@ -1474,7 +1474,7 @@ net.
 | `owner_econ_packages(p_from, p_to)` | Section 5 |
 | `owner_econ_operations(p_from, p_to)` | Sections 6 + 7, including the operation × service mix |
 | `owner_econ_students(p_from, p_to, p_limit)` | Section 8 |
-| `owner_econ_models(p_from, p_to)` | Section 9 — thin pass-through of `owner_cost_metrics('service'/'service_provider'/'service_model')` |
+| ~~`owner_econ_models(p_from, p_to)`~~ | Section 9 — **never built, by locked decision (M4.3).** Section 9 exposes `provider_code` and `model`, which INV-13 / P5-02 forbid in `econ`, so it is served **directly** by `owner_cost_service_breakdown()` + `owner_cost_health()` with no `econ` wrapper. See the M4.3 closeout. |
 | `owner_econ_simulate(p_scenario jsonb)` | Section 10 — calls `owner_cost_reprice()` for the cost side |
 | `owner_econ_breakeven(p_from, p_to)` | Section 11 |
 | `owner_econ_coverage()` | Which KPIs are Actual vs Blocked right now, and why — merges telemetry coverage with `owner_cost_health()` |
@@ -1615,17 +1615,24 @@ first-class and separately reportable.)*
 drills down through provider to model. **No model name is hardcoded** — the table
 is a pass-through of `owner_cost_service_breakdown()`.
 
-| KPI | Grain | Now | After CE |
-|---|---|---|---|
-| Requests, prompt/completion/total tokens, avg tokens per request | service → provider → model | Blocked | Actual |
-| Avg cost per request / per question | service → provider → model | Blocked | Actual |
-| Avg latency | service → provider → model | Partial — `verification_meta.pipeline_latency_ms` is pipeline-level | Actual per call |
-| Success / failure rate | service → provider → model | Partial — `oai_http_status` (41 error rows) | Actual per call |
-| **Cost share by service** | service | Blocked | Actual |
-| **Most expensive capability** | service | Blocked | Actual |
-| **Over cost target** | service | Blocked | Derived (needs `cost_target_usd`) |
-| **Provider concentration** | provider | Blocked | Actual |
-| Pricing coverage %; unregistered bindings | — | n/a | Actual — engine health |
+> **Delivered in M4.3, closed 2026-08-01.** Section 9 is a **diagnostic surface
+> served only by `owner_cost_*` RPCs** — it includes internal traffic, says so on
+> screen, and never feeds an `owner_econ_*` business KPI. It is the **only fully
+> populated panel**, precisely because Sections 1–8 exclude internal traffic
+> (INV-25) and 100% of telemetry is currently internal.
+
+| KPI | Grain | Status |
+|---|---|---|
+| Requests, prompt/completion/total tokens, avg tokens per call | service → provider → model | ✅ **Actual** |
+| Avg cost per **request** | service → provider → model | ✅ **Actual** |
+| Avg cost per **question** | service → provider → model | ⛔ **OMITTED, not blocked** — work items are keyed by service and a question spans several models, so the figure is *undefined at this grain*, not data-limited. Available per service and per work item. |
+| Avg latency | service → provider → model | ✅ **Actual per call** |
+| Success / failure rate | service → provider → model | ✅ **Actual per call** — denominator is calls whose outcome is *known*; unknown is excluded, never counted as failure (INV-26) |
+| **Cost share by service** | service | ✅ **Actual** — totals exactly 100.00% |
+| **Most expensive capability** | service | ✅ **Actual** — `tutor`, 59.17% |
+| **Over cost target** | service | ⚠️ **Still unreportable.** 0 of 12 services carry a `cost_target_usd`, and `owner_cost_health()` emits `service_over_budget` only on breach — so "no targets set" and "none breached" are indistinguishable. **Open question for the owner.** |
+| **Provider concentration** | provider | ✅ **Actual** — trivially 100%, one provider registered |
+| Pricing coverage %; unregistered bindings | — | ✅ **Actual** — engine health, 100.00% |
 
 ### Sections 10–11 — Simulator & Break-even
 
@@ -2052,9 +2059,11 @@ RPC referenced anywhere in the tab; **grep proves no provider or model literal i
 the tab**; adding a service or swapping a provider in the catalog changes the
 rendered dashboard with no code edit (verified once, in staging or by review).
 
-#### Phase 6 status — M1 ✅, M2 ✅, M3 ✅, M4.1 ✅, M4.2 ✅ COMPLETE
+#### Phase 6 status — **COMPLETE AND FROZEN** (M1 ✅ M2 ✅ M3 ✅ M4.1 ✅ M4.2 ✅ M4.3 ✅)
 
-Phase 6 is being delivered one owner-approved milestone at a time.
+Phase 6 was delivered one owner-approved milestone at a time. **All nine
+dashboard sections are implemented, applied and gate-verified.** Closed
+2026-08-01; see `phase-6-m4-3-closeout.md`.
 
 | Milestone | Scope | Status |
 |---|---|---|
@@ -2063,7 +2072,7 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | **M3** | Credits Analytics (4), Package Profitability (5), Question Cost Analytics (6) | ✅ closed 2026-08-01 |
 | **M4.1** | Lesson Economics (7) | ✅ closed 2026-08-01 |
 | **M4.2** | Student Consumption (8) | ✅ closed 2026-08-01 |
-| M4.3 | AI Service & Model Analytics (9) | not started — **last remaining section** |
+| **M4.3** | AI Service & Model Analytics (9) | ✅ closed 2026-08-01 — **final section** |
 
 **Applied migrations**
 
@@ -2078,6 +2087,11 @@ Phase 6 is being delivered one owner-approved milestone at a time.
 | `20260801124707` | `aiecon_p6_m4_2_student_consumption` | M4.2 |
 | `20260801124835` | `aiecon_p6_m4_2_student_service_mix` | M4.2 |
 | `20260801130230` | `aiecon_p6_m4_2_student_consumption_full_join_fix` | M4.2 (gate fix) |
+| `20260801135335` | `aiecon_p6_m4_3_service_quality` | **M4.3** |
+
+**Sixteen `aiecon` migrations applied across Phases 2–6.** The repo holds fifteen
+`aiecon` files: M4.2's gate fix was folded into its parent file at the M4.2
+closeout rather than kept separate. Every applied version is accounted for.
 
 **M2 release gate.** V1–V8 executed 2026-08-01. V7 failed and uncovered a
 **pre-existing Phase 5 defect**: three `owner_econ_*` RPCs declared `bigint`
@@ -2150,10 +2164,59 @@ checking are separate defences and both are required.
 - **`avg_daily_usage` divides by the shared calendar span**, matching
   `owner_econ_credit_summary().avg_daily_burn` — not per-student active days.
 
+**M4.3 release gate.** V1–V8 executed 2026-08-01; **8/8 PASS**. Cost reconciles
+to exactly `$0.22961425` and shares total exactly `100.00%` at all three levels;
+`owner_cost_service_breakdown` columns 1–8 verified identical in **shape, values
+and call-site resolution** across the required `DROP FUNCTION`.
+
+V4e reported FAIL on first run and **the defect was in the assertion, not the
+code** — it compared the model-level row count against distinct model *names*
+(2) when that branch groups by *(service, provider, model)* (8). No code was
+changed.
+
+The gate also found that **`P5-02b` passes vacuously**: it reads
+`econ.v_service_economics`, which holds 0 rows because it excludes internal
+traffic. Pre-existing since Phase 5. A non-vacuous form was run instead — every
+value of all 8 populated econ views vs every provider code and model name,
+**890 rows, 0 leaks**. Folding it into `verify-economics.sql` is recommended and
+deliberately left out of M4.3's scope.
+
+> **The generalised lesson, now three times learned: a green check is only
+> evidence if it could have gone red.** M4.1 caught a vacuous pass, M4.2 a check
+> blind to an absent row, M4.3 a check whose input is empty. The pre-apply probe
+> and `P5-17` defend against *type* drift; nothing defends against a vacuous
+> assertion except reading it and asking what would make it fail.
+
+**Locked M4.3 decisions.**
+- **Section 9 is a diagnostic surface, served only by `owner_cost_*` RPCs.** It
+  reports all observed telemetry **including internal traffic**, labels itself
+  diagnostic on screen, and **its numbers never feed any `owner_econ_*` business
+  KPI**. INV-25 governs business metrics only — and remains a *default*, not a
+  suggestion: `p_include_internal` still defaults to `false`, so Section 9 opts
+  in explicitly rather than changing what every other caller sees.
+- **No provider or model identifier enters `econ`, by construction.** Section 9
+  exposes `provider_code` and `model`, which INV-13 / P5-02 forbid in `econ`, so
+  it is served from `public`. The migration reads only `cost_engine.cost_facts`
+  and `public.ai_model_calls`; its body contains **zero** executable `econ.`
+  references.
+- **Confidence is mapped inline, duplicating `econ.cost_confidence()`,
+  deliberately.** The cost layer must not depend on `econ`;
+  `owner_cost_metrics()` already carries the same inline mapping. Calling into
+  `econ` from a cost-facing RPC would invert the layer dependency.
+- **Cost per question is OMITTED at model grain, not blocked.** Work items are
+  keyed by service and a question spans several models, so the figure is
+  **undefined, not data-limited**. A *blocked* metric promises it will resolve;
+  an *omitted* one never will. The inverse of the M3 §5a decision, where the
+  metric genuinely was data-limited and blocking was correct.
+- **One canonical service-grain surface.** `owner_cost_service_breakdown()` was
+  extended 8 → 22 columns rather than duplicated, so no second overlapping
+  definition can diverge — the hazard M4.2 hit.
+
 Closeouts: `docs/roadmap/phase-6-m2-closeout.md`,
 `docs/roadmap/phase-6-m3-closeout.md`,
 `docs/roadmap/phase-6-m4-1-closeout.md`,
-`docs/roadmap/phase-6-m4-2-closeout.md`.
+`docs/roadmap/phase-6-m4-2-closeout.md`,
+`docs/roadmap/phase-6-m4-3-closeout.md`.
 
 ### Phase 7 — Simulator + Break-even (sections 10–11)
 
