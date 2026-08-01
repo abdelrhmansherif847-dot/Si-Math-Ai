@@ -1,8 +1,13 @@
 -- ===========================================================================
 -- Phase 5 defect fix — RPC count columns declared bigint, body yields numeric
 -- ===========================================================================
--- Owner-approved 2026-08-01 (CLAUDE.md §3), following the M2 Release Gate
--- failure at V7.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801105710, owner-approved (CLAUDE.md §3) following the M2
+--         Release Gate failure at V7.
+--
+--         Verified after applying: all three functions callable, values
+--         identical to their source views, and the cast lossless on live data.
+--         verify-economics.sql 18/18 including the new P5-17.
 --
 -- THE DEFECT
 --   Three owner RPCs declare a count column as `bigint`, but the view feeding

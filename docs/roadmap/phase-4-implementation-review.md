@@ -1,7 +1,12 @@
 # Phase 4 — Cost Engine: Implementation Review
 
-**Status: PREPARED, NOT APPLIED.** The migration requires individual owner
-approval before `apply_migration` (CLAUDE.md §3).
+**Status: ✅ APPLIED AND COMPLETE.** Owner-approved and applied to
+`igvkyxkmjnkzscqgommj` on 2026-07-31 (versions `20260731174338`,
+`20260731174858`, `20260731180053`). Phase 4 was closed by the owner on
+2026-07-31.
+
+This document is the pre-application review and is preserved as written; the
+text below describes the migration as it stood before approval.
 
 | | |
 |---|---|

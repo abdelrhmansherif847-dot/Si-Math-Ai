@@ -194,7 +194,7 @@ SELECT 'P4-15' AS check,
 \echo '=== D. Allocation: conservation and attribution (§8.8) ====================='
 
 -- P4-16 — §8.8.5 CONSERVATION over ALL time, independently of any single run.
--- This is the architecture'"'"'s literal statement of the law.
+-- This is the architecture's literal statement of the law.
 WITH allocated AS (
   SELECT COALESCE(sum(total_cost_usd),0) t FROM cost_engine.question_cost_facts WHERE is_current
 ), priced AS (

@@ -1,7 +1,17 @@
 -- ===========================================================================
 -- Owner → Credits control center — backend (RPCs + operation display names)
 -- ===========================================================================
--- STATUS: PENDING OWNER APPROVAL (CLAUDE.md §3). Target igvkyxkmjnkzscqgommj.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-07-22 as migration version
+--         20260722133212.
+--
+--         The header previously read "PENDING OWNER APPROVAL" and was never
+--         updated when the migration was applied. Corrected 2026-08-01 during
+--         the Phase 6 M2 closeout sweep, on this evidence:
+--           • supabase_migrations.schema_migrations carries version
+--             20260722133212 named credits_dashboard_backend
+--           • both RPCs (admin_credits_overview, admin_set_credit_cost) are
+--             present in production
+--         The apply itself predates this correction; only the header changed.
 --
 -- Makes the Credits dashboard a complete, data-driven billing control center
 -- without touching the ai-tutor / admin-actions Edge Functions and without

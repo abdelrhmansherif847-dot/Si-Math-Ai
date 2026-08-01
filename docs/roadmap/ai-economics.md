@@ -1999,12 +1999,15 @@ table, provider, or model; guard script green.
 
 ### Phase 5 status — ✅ COMPLETE
 
-**Applied to `igvkyxkmjnkzscqgommj` on 2026-07-31 and verified 17/17.**
+**Applied to `igvkyxkmjnkzscqgommj` on 2026-07-31 and verified 17/17 at the
+Phase 5 gate.** The suite has since grown to 18 checks — P5-17 was added on
+2026-08-01 during the Phase 6 M2 closeout — and stands at 18/18.
 
 | Artifact | Path |
 |---|---|
 | Migration (applied) | `supabase/migrations/20260731_aiecon_p5_economics.sql` |
-| Verification | `scripts/verify-economics.sql` — 17 checks (P5-01…P5-16) |
+| Defect fix (applied) | `supabase/migrations/20260801_aiecon_p5_fix_rpc_count_types.sql` |
+| Verification | `scripts/verify-economics.sql` — 18 checks (P5-01…P5-17) |
 
 Exit criteria met: every `owner_econ_*` RPC is `STABLE`, `SECURITY DEFINER`
 and owner-gated (7/7); no `econ` object references a rate card, discount rule,
@@ -2048,6 +2051,41 @@ Internal is never a KPI — not trended, targeted, ranked, or surfaced in any
 RPC referenced anywhere in the tab; **grep proves no provider or model literal in
 the tab**; adding a service or swapping a provider in the catalog changes the
 rendered dashboard with no code edit (verified once, in staging or by review).
+
+#### Phase 6 status — M1 ✅ COMPLETE, M2 ✅ COMPLETE
+
+Phase 6 is being delivered one owner-approved milestone at a time.
+
+| Milestone | Scope | Status |
+|---|---|---|
+| **M1** | Tab shell, owner gate, read-only RPCs, Coverage panel, locked AI Cost presentation, confidence badges, blocked-state rendering | ✅ closed 2026-07-31 |
+| **M2** | Financial Overview, AI Cost Analytics, Revenue Analytics | ✅ closed 2026-08-01 |
+| M3+ | Remaining sections | not started |
+
+**Applied migrations**
+
+| Version | Migration | Milestone |
+|---|---|---|
+| `20260731190337` | `aiecon_p6_coverage_cost_split` | M1 |
+| `20260801103847` | `aiecon_p6_m2_pnl_summary` | M2 |
+| `20260801105710` | `aiecon_p5_fix_rpc_count_types` | M2 (defect fix) |
+
+**M2 release gate.** V1–V8 executed 2026-08-01. V7 failed and uncovered a
+**pre-existing Phase 5 defect**: three `owner_econ_*` RPCs declared `bigint`
+for a column their view produces as `numeric`, because `sum(bigint)` widens to
+`numeric` and a count begins as `count(*)`, which is `bigint`. plpgsql
+validates `RETURN QUERY` against `RETURNS TABLE` only at execution, so all
+three shipped un-callable on 2026-07-31 and stayed that way until M2's AI Cost
+panel became their first consumer. Fixed by casting in the function bodies;
+all eight validations then passed. `verify-economics.sql` gained **P5-17**, a
+smoke test that *invokes* every `owner_econ_*` RPC — the gap that let this
+escape, since the prior checks tested views and function metadata only.
+
+**`admin.html` is built but NOT deployed** — deferred by the owner to a larger
+UI milestone. The economics tab exists in the repo and is unreachable in
+production until that deploy happens.
+
+Closeout: `docs/roadmap/phase-6-m2-closeout.md`.
 
 ### Phase 7 — Simulator + Break-even (sections 10–11)
 

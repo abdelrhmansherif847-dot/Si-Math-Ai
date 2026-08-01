@@ -1,6 +1,17 @@
 # Phase 6 M2 — Final Engineering Review
 
-**Status: review only. Nothing applied to production.**
+**Status: ✅ SUPERSEDED BY APPLICATION.** This was a pre-application review;
+the migration it reviews was subsequently owner-approved and applied to
+`igvkyxkmjnkzscqgommj` on 2026-08-01 as version `20260801103847`. The review
+text below is preserved as written — it describes the state *before* the
+migration was applied.
+
+The V1–V8 plan in §5 was executed on 2026-08-01. Seven passed on the first
+run; **V7 failed** and uncovered a pre-existing Phase 5 defect (three owner
+RPCs declaring `bigint` for a column their view produces as `numeric`), which
+was fixed under separate approval by version `20260801105710`. All eight then
+passed. See the M2 Final Closeout in `docs/roadmap/phase-6-m2-closeout.md`.
+
 Artifact under review: `supabase/migrations/20260731_aiecon_p6_m2_pnl_summary.sql`
 at commit `ac42876`.
 

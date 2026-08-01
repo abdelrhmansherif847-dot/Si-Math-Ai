@@ -1,7 +1,14 @@
 -- ===========================================================================
 -- Phase 6 M2 — period P&L summary for the Financial Overview section
 -- ===========================================================================
--- STATUS: PREPARED, NOT APPLIED. Requires owner approval (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-01 as migration version
+--         20260801103847, owner-approved via the M2 Release Gate (CLAUDE.md §3).
+--
+--         Verified after applying: econ.v_pnl_daily at 11 columns (1-9 unchanged
+--         in name, type and value), owner_econ_pnl_summary present, and the
+--         three dependent digests bit-identical to their pre-migration values —
+--         owner_econ_pnl() 77a987f0, v_breakeven_inputs 75df5a9c,
+--         v_coverage b51a582f.
 --
 -- WHY THIS EXISTS
 --   M2 requires that every displayed number trace directly to a named
