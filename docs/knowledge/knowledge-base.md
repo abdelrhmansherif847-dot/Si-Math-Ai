@@ -509,6 +509,76 @@ evasion.
 
 ---
 
+## 13e. Evidence — "How do we know this?"
+
+Published at `evidence.html`, `architecture.html`, `changelog.html` and
+`roadmap.html`. The governing rule:
+
+> **Every important claim must be able to answer "how do we know this?"
+> A claim that cannot is not finished, and does not ship.**
+
+### Evidence is labelled by type — and one type is deliberately missing
+
+| Type | Meaning |
+| --- | --- |
+| `mechanism` | What the software demonstrably does. Verifiable by using it — the strongest kind here, because the reader can check it rather than trust us. |
+| `research` | An established finding in the educational literature supporting the *principle* a feature applies. |
+| `record` | A dated, documented artefact in this repository — a migration, an incident record, an audit, a regression test. |
+
+**There is no `outcome` type.** We have no measured results showing our own
+students improve more than students using something else, and every capability
+on `evidence.html` states the limits of its own evidence. The validator fails the
+build if an `outcome`-typed item ever appears, so adding one has to be a
+considered decision with real data behind it rather than a word that drifted into
+a data file.
+
+### Citing research is not evidence about the product
+
+Citing Roediger & Karpicke does not mean research shows Si Math AI works. It
+means retrieval practice works and Si Math AI applies it. **Conflating those two
+is the most common dishonesty in edtech and is forbidden here.** The distinction
+is stated on the page itself, and the validator requires it to stay there.
+
+### Cite the inconvenient findings too
+
+Two of the twelve research foundations run against our own interest and must
+remain published — both are pinned by the validator:
+
+- **Bloom's two-sigma result** is cited as the origin of the aspiration, with an
+  explicit note that the headline magnitude has proven hard to replicate.
+- **Learning styles are rejected.** The evidence does not support matching
+  instruction to a self-reported style, so Si Math AI does not do it — and says
+  so, at the cost of a marketing line every competitor is free to use.
+
+No fabricated citations: author, year and title only, no invented DOIs, and no
+effect sizes quoted from memory.
+
+### The changelog and roadmap rules
+
+- **Every changelog entry traces to a dated artefact in this repository.**
+  Nothing is backfilled from memory. The changelog records its own establishment
+  date and says that earlier history is not detailed enough to write entries we
+  could stand behind. **It must keep including an incident** — a changelog of
+  only successes is a marketing document, and the validator enforces this.
+- **The roadmap contains no dates.** Dates make it a set of promises. The
+  validator fails on any year, quarter or month appearing in a roadmap item. Its
+  first group is the gaps the Trust Center already admits to, and it states what
+  we will deliberately never build.
+
+### The reserved founder note
+
+`why-we-built-si-math-ai.html` explains the platform's origin in the collective
+voice — accurate, and checkable against the architecture. The **personal**
+founder account is deliberately left unwritten and visibly marked as reserved.
+
+Writing a founder's personal story on their behalf would be fiction, and a site
+that publishes an honest limitations page beside an invented origin story is not
+honest — it is selectively honest, which is worse because it is harder to detect.
+The validator requires that section to stay marked as reserved. When the founder
+writes it, replace the reserved block; do not have anyone else write it for them.
+
+---
+
 ## 14. Governance — the knowledge layer is updated FIRST
 
 **Rule: when a new major feature ships, the knowledge layer is updated before

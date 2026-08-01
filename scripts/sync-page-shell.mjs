@@ -28,7 +28,9 @@ const check = process.argv.includes('--check');
 /** Hand-written pages. Generated pages build their own shell from the module. */
 export const SHELL_PAGES = [
   'about.html',
+  'why-we-built-si-math-ai.html',
   'trust.html',
+  'architecture.html',
   'principles.html',
   'how-it-works.html',
   'why-not-chatgpt.html',

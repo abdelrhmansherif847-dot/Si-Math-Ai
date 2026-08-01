@@ -39,6 +39,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS } from '../docs/knowledge/faq-data.mjs';
 import { GUIDES as LEARN_GUIDES, GROUPS as LEARN_GROUPS } from '../docs/knowledge/learn-data.mjs';
+import { CAPABILITIES, RESEARCH, CHANGELOG, ROADMAP, NOT_ON_ROADMAP } from '../docs/knowledge/evidence-data.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -80,7 +81,10 @@ const POSITIONING_FRAGMENTS = [
  */
 const KNOWLEDGE_PAGES = [
   { file: 'about.html', canonical: `${SITE}/about.html` },
+  { file: 'why-we-built-si-math-ai.html', canonical: `${SITE}/why-we-built-si-math-ai.html` },
   { file: 'trust.html', canonical: `${SITE}/trust.html` },
+  { file: 'evidence.html', canonical: `${SITE}/evidence.html` },
+  { file: 'architecture.html', canonical: `${SITE}/architecture.html` },
   { file: 'principles.html', canonical: `${SITE}/principles.html` },
   { file: 'how-it-works.html', canonical: `${SITE}/how-it-works.html` },
   { file: 'why-not-chatgpt.html', canonical: `${SITE}/why-not-chatgpt.html` },
@@ -380,6 +384,112 @@ for (const [label, get] of [
   const missing = PRINCIPLES.filter((p) => !text.includes(p));
   ok(`${label}: states all ${PRINCIPLES.length} educational principles`, missing.length === 0,
     missing.length ? `missing: ${missing.join(' · ')}` : '');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1c. The Evidence layer
+   The whole layer rests on one property: evidence is labelled honestly, and the
+   evidence we do NOT have is stated as plainly as the evidence we do. That is
+   the first thing a future edit will erode, so it is pinned here.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Evidence layer');
+
+const buildEvidence = spawnSync(process.execPath, [resolve(REPO, 'scripts/build-evidence.mjs'), '--check'], {
+  cwd: REPO, encoding: 'utf8',
+});
+ok('evidence, changelog and roadmap are in sync with evidence-data.mjs',
+  buildEvidence.status === 0, (buildEvidence.stdout || '') + (buildEvidence.stderr || ''));
+
+// Every capability must answer all four questions and admit its limits.
+const EVIDENCE_TYPES = new Set(['mechanism', 'research', 'record']);
+for (const c of CAPABILITIES) {
+  const label = `evidence:${c.id}`;
+  for (const field of ['what', 'why', 'how', 'honest']) {
+    ok(`${label}: answers "${field}"`, typeof c[field] === 'string' && c[field].length > 60);
+  }
+  ok(`${label}: cites at least two pieces of evidence`, c.evidence.length >= 2);
+  const badType = c.evidence.find((e) => !EVIDENCE_TYPES.has(e.type));
+  ok(`${label}: every evidence item is a known type`, !badType,
+    badType ? `unknown type "${badType.type}"` : '');
+  // A cross-reference to a research entry must resolve, or the page links nowhere.
+  const dangling = c.evidence.filter((e) => e.ref && !RESEARCH.some((r) => r.id === e.ref));
+  ok(`${label}: research references resolve`, dangling.length === 0,
+    dangling.map((d) => d.ref).join(', '));
+}
+
+/**
+ * The claim we must never start making. "Outcome" is deliberately absent from
+ * EVIDENCE_TYPES: we have no measured results showing our own students do
+ * better, and the day that changes it should be a considered decision with real
+ * data behind it — not a word that drifted into a data file.
+ */
+const outcomeTyped = CAPABILITIES.flatMap((c) => c.evidence).filter((e) => e.type === 'outcome');
+ok('no capability claims outcome evidence (we have none)', outcomeTyped.length === 0);
+
+if (has('evidence.html')) {
+  const evRaw = read('evidence.html');
+  const evText = stripTags(evRaw);
+  ok('evidence.html states plainly that it has no outcome evidence',
+    /no measured results/i.test(evText) && /outcome evidence/i.test(evText));
+  ok('evidence.html distinguishes research supporting a principle from research supporting the product',
+    /does not mean research shows Si Math AI works/i.test(evText));
+  ok('evidence.html publishes the "How do we know this?" standard',
+    /How do we know this/i.test(evText));
+  ok('evidence.html documents how features are built',
+    /How features are built/i.test(evText));
+}
+
+// Every research entry must carry real references, and the two caveats that run
+// against our own interest must stay published.
+for (const r of RESEARCH) {
+  ok(`research:${r.id}: cites at least one source`, Array.isArray(r.sources) && r.sources.length > 0);
+  ok(`research:${r.id}: says how Si Math AI applies it`, typeof r.applied === 'string' && r.applied.length > 40);
+}
+const bloom = RESEARCH.find((r) => r.id === 'bloom-1984');
+ok('the Bloom two-sigma caveat is published', !!bloom?.caveat && /difficult to replicate/i.test(bloom.caveat));
+// Both halves matter: that the evidence does not support learning styles, AND
+// that Si Math AI therefore does not use them. Publishing the first without the
+// second would be a fact with no consequence attached.
+const styles = RESEARCH.find((r) => r.id === 'pashler-2008');
+ok('the learning-styles finding is published',
+  !!styles && /lacks credible supporting evidence|does not support/i.test(styles.summary));
+ok('and Si Math AI states it therefore does not personalize by learning style',
+  !!styles && /does not personalize by learning style/i.test(styles.applied));
+
+// Changelog entries must be complete, and the incident must stay listed.
+for (const e of CHANGELOG) {
+  ok(`changelog "${e.title}": has a date, tag and items`,
+    !!e.date && !!e.tag && Array.isArray(e.items) && e.items.length > 0);
+}
+ok('the changelog still includes an incident (a log of only successes is marketing)',
+  CHANGELOG.some((e) => e.tag === 'Incident'));
+
+/**
+ * The roadmap promises nothing, so it must contain no dates. This is the check
+ * that stops "direction" quietly becoming a delivery schedule.
+ */
+const ROADMAP_DATE = /\b(?:20\d{2}|Q[1-4]\s*20\d{2}|January|February|March|April|May|June|July|August|September|October|November|December)\b/;
+for (const g of ROADMAP) {
+  for (const i of g.items) {
+    const m = `${i.title} ${i.detail}`.match(ROADMAP_DATE);
+    ok(`roadmap "${i.title}": states no date`, !m, m ? `matched: "${m[0]}"` : '');
+  }
+}
+ok('the roadmap leads with gaps already admitted publicly',
+  /publicly/i.test(ROADMAP[0]?.horizon || '') || /admitted/i.test(ROADMAP[0]?.intro || ''));
+ok('the roadmap says what will deliberately not be built', NOT_ON_ROADMAP.length >= 3);
+
+/**
+ * The reserved founder note must stay reserved. Writing a personal founder
+ * story on someone's behalf is exactly the fabrication this site refuses
+ * elsewhere, and it is the single most tempting page to "finish" later.
+ */
+if (has('why-we-built-si-math-ai.html')) {
+  const wtext = stripTags(read('why-we-built-si-math-ai.html'));
+  ok('why-we-built: the founder note is still marked as reserved and unwritten',
+    /deliberately empty/i.test(wtext) && /own words/i.test(wtext));
+  ok('why-we-built: explains why the reasoning is collective-voice',
+    /collective voice/i.test(wtext));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

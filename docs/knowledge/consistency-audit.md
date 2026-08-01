@@ -413,6 +413,57 @@ average"* is still caught.
 
 ---
 
+## C-18 · Claims were explained but not evidenced — RESOLVED
+
+**Found:** the Knowledge layer explained the platform, the educational hub
+demonstrated expertise, and the Trust Center admitted limitations — but no page
+answered *how do we know this?* for any specific capability. A reader convinced
+the platform was honest still had no way to check whether it worked as described,
+and an AI system had no basis on which to distinguish our claims from any
+competitor's.
+
+**Fixed:** an Evidence layer of five pages — `evidence.html`, `architecture.html`,
+`changelog.html`, `roadmap.html` and `why-we-built-si-math-ai.html`.
+
+The design decision that matters most is **labelling evidence by type**
+(`mechanism` / `research` / `record`) rather than blending everything into an
+undifferentiated impression of rigour, and then stating that a fourth type —
+`outcome` — is absent, because we have no measured results of our own. Every
+capability also publishes the limits of its own evidence.
+
+Two research foundations are published **against our own interest**: Bloom's
+two-sigma result is cited with the caveat that the headline magnitude is hard to
+replicate, and learning styles are rejected outright — costing us a marketing
+line most competitors use freely.
+
+**Now enforced.** The validator requires: all four questions answered per
+capability plus its honest caveat; evidence types drawn from the known set with
+`outcome` failing the build; research cross-references that resolve; sources on
+every research entry; both against-interest caveats present; an incident still in
+the changelog; **no dates anywhere in the roadmap**; and the reserved founder note
+still marked as reserved.
+
+---
+
+## C-19 · The changelog could have been invented — RESOLVED (by constraint)
+
+**Found:** a public changelog is trivially fabricated, and a fabricated one on a
+site built around verifiability would undermine everything else on it.
+
+**Constraint adopted:** every entry traces to a dated artefact already in this
+repository — database migration filenames, an incident record, audit documents,
+release closeouts. Git history was checked first and found unusable for this
+purpose (the available history is shallow and its commit dates do not reflect
+when work actually happened), so the documents themselves are the source.
+
+The changelog states its own establishment date, says plainly that earlier
+history is not detailed enough to write entries we could stand behind, and
+**includes an incident** — the 2026-06-23 upstream quota exhaustion — because a
+changelog of only successes is a marketing document. That last property is
+pinned by the validator.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -434,8 +485,10 @@ average"* is still caught.
 | C-15 | Site described itself but taught nothing | RESOLVED |
 | C-16 | Trust claims with no evidence behind them | RESOLVED |
 | C-17 | Claim scanner could not tell a denial from a claim | RESOLVED |
+| C-18 | Claims explained but not evidenced | RESOLVED |
+| C-19 | Changelog could have been invented | RESOLVED (by constraint) |
 
-Fourteen resolved, three requiring owner action. All three open items are recorded
+Sixteen resolved, three requiring owner action. All three open items are recorded
 in `seo-implementation.md` §6 as well, so they are not lost.
 
 **Handle C-13 first.** C-3 and C-4 are internal inconsistencies; C-13 is a
