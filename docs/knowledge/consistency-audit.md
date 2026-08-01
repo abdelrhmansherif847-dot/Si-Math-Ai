@@ -265,6 +265,90 @@ The governance rule and its shipping checklist are in `knowledge-base.md` §14.
 
 ---
 
+## C-13 · Exam format claims may predate the current exams — OPEN (owner action, priority)
+
+**Found while building the educational guides.** The site states two exam format
+facts in several places:
+
+| Claim | Where |
+| --- | --- |
+| SAT Math includes **"calculator & no-calculator"** practice | `index.html`, `how-it-works.html`, `faq.html`, `llms-full.txt` |
+| ACT Math is **"60 questions in 60 minutes"** | `index.html`, `how-it-works.html`, `faq.html`, `llms-full.txt` |
+
+Both are likely out of date. The SAT moved to a digital adaptive format in which
+the separate no-calculator module no longer exists, and the ACT has been revised
+with a shorter mathematics section. **This could not be verified from the build
+environment** (outbound network to external sites is blocked), so no numbers
+were changed — replacing one unverified figure with another would be worse than
+leaving the first.
+
+**Why this is the highest-priority open item.** Everything else in the knowledge
+layer is a positioning or consistency question. This one is a *correctness*
+question, on a page a student may rely on. A preparation platform that describes
+an exam format that no longer exists undermines exactly the authority this work
+was commissioned to build — and an AI system quoting it will repeat the error
+confidently.
+
+**Action required:**
+
+1. Confirm the current SAT Math calculator policy and the current ACT Math
+   section format from the official boards.
+2. Correct every occurrence listed above.
+3. Re-run `node scripts/validate-knowledge-layer.mjs`.
+
+**Mitigated in the meantime.** The twelve new educational guides carry **no exam
+format specifics at all** — no question counts, no section timings, no
+calculator-policy claims. This is enforced: `validate-knowledge-layer.mjs` scans
+every guide for those patterns and fails the build if one appears. The guides
+teach method — strategy, error patterns, pacing principles, psychology — which
+does not go stale. Every exam guide also carries a standing note telling students
+to confirm current format from the official source, and `llms.txt` and
+`llms-full.txt` instruct AI systems to cite the examination board rather than
+Si Math AI for format questions.
+
+So the new content is safe regardless of how this resolves. The existing claims
+still need correcting.
+
+---
+
+## C-14 · Nav and footer were copied across every page — RESOLVED
+
+**Found:** each hand-written page carried its own copy of the nav and footer. By
+the time the Knowledge Center reached six pages, adding a seventh meant editing
+six footers by hand — and the predictable outcome is that one gets missed and the
+new page becomes an orphan that is never crawled.
+
+**Fixed:** `scripts/_page-shell.mjs` is now the single definition of the nav,
+footer and shared head assets. The generators (`build-faq.mjs`,
+`build-learn.mjs`) build from it directly, and `scripts/sync-page-shell.mjs`
+propagates it to the hand-written pages. `validate-knowledge-layer.mjs` runs
+`sync-page-shell.mjs --check` in CI, so a page whose nav or footer has drifted
+fails the build.
+
+---
+
+## C-15 · The site described itself but taught nothing — RESOLVED
+
+**Found:** every page on the site was *about Si Math AI*. A student searching
+"how to improve SAT math score" or "common SAT mistakes" had no reason to arrive,
+and nothing to gain if they did. The claim of educational expertise was asserted
+rather than demonstrated.
+
+**Fixed:** twelve free educational guides at `learn.html`, plus
+`principles.html` stating the six educational principles the platform is built
+on. The guides teach method and withhold nothing; each carries exactly one
+restrained product mention.
+
+**Enforced as a separate tier.** Learn pages are held to the same *technical*
+standard as knowledge pages — full SEO head, valid structured data, canonical,
+cross-links — but are deliberately **exempt** from reciting the canonical
+definition and the positioning statement in body copy. That exemption is
+recorded in the validator with its reasoning: content interrupted by positioning
+statements stops being educational content, and the trust these pages exist to
+earn depends on them being genuinely useful to a student who never signs up.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -281,9 +365,15 @@ The governance rule and its shipping checklist are in `knowledge-base.md` §14.
 | C-10 | Comparison question answered defensively, with no dedicated page | RESOLVED |
 | C-11 | No canonical reference for AI systems | RESOLVED |
 | C-12 | Knowledge layer could fall behind the product | RESOLVED |
+| C-13 | SAT/ACT format claims likely predate the current exams | **OPEN — owner action, priority** |
+| C-14 | Nav and footer duplicated across every page | RESOLVED |
+| C-15 | Site described itself but taught nothing | RESOLVED |
 
-Ten resolved, two requiring an owner decision. Both open items are recorded in
-`seo-implementation.md` §6 as well, so they are not lost.
+Twelve resolved, three requiring owner action. All three open items are recorded
+in `seo-implementation.md` §6 as well, so they are not lost.
+
+**Handle C-13 first.** C-3 and C-4 are internal inconsistencies; C-13 is a
+factual claim about an external exam that a student may act on.
 
 Re-run the audit gate at any time:
 

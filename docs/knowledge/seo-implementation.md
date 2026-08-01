@@ -57,6 +57,64 @@ verbatim than four paraphrases of the same idea.
 | OG type | `article` |
 | JSON-LD | `Organization`, `SoftwareApplication` (with `featureList` + free `offers`), `Person` (Zero, `additionalType: FictionalCharacter`), `HowTo` (the five-step learning loop), `WebPage`, `BreadcrumbList` |
 
+### `/learn.html` + `/learn-*.html` — the Educational Knowledge Hub
+
+Twelve guides plus a hub index, **generated** from
+`docs/knowledge/learn-data.mjs` by `scripts/build-learn.mjs`. Never hand-edit
+them.
+
+| Field | Value |
+| --- | --- |
+| Hub title | `Learn — Free SAT, ACT & EST Math Guides \| Si Math AI` |
+| Guide titles | Query-shaped, e.g. `How to Improve a Math Score — What Works at Each Score Band` |
+| Canonical | `https://www.si-math-ai.com/learn-<slug>.html` |
+| OG type | `article` (guides), `website` (hub) |
+| Hub JSON-LD | `Organization`, `CollectionPage` with an `ItemList` of all 12, `BreadcrumbList` |
+| Guide JSON-LD | `Organization`, `Article`+`LearningResource` (with `teaches`, `educationalLevel`, `educationalUse`, `EducationalAudience`, `isAccessibleForFree`), `FAQPage`, `BreadcrumbList` |
+
+This is the top-of-funnel layer. The guides target informational queries a
+student searches long before they search for a product — *best SAT math study
+methods*, *common SAT mistakes*, *how to improve SAT math score*, *SAT vs ACT
+math*, *math test anxiety* — and each guide's FAQ block is separately
+retrievable via `FAQPage`.
+
+**Editorial rules, enforced by the validator:**
+
+- **No exam format specifics.** No question counts, section timings, calculator
+  policies or score scales. Boards set those and revise them; the guides teach
+  method, which does not go stale. `FORMAT_SPECIFICS` in the validator fails the
+  build if a number slips in. See `consistency-audit.md` C-13 — this is not a
+  stylistic preference, it is why the new content is safe while two existing
+  claims still need checking.
+- **Exam guides carry a standing verify note** directing students to the official
+  source for format details.
+- **One restrained product mention per guide,** in a single `.k-soft-cta` block.
+  These pages exist to be useful to a student who never signs up.
+- **Minimum substance:** ≥4 sections, ≥4 key points, ≥3 FAQs, ≥500 words of body.
+- Learn pages are **exempt** from reciting the canonical definition and
+  positioning statement in body copy — see `LEARN_PAGES` in the validator for the
+  reasoning. The canonical definition still appears in every guide's JSON-LD
+  `Organization` node.
+
+Reading time is computed from each guide's own word count rather than authored,
+so it cannot drift when a section is edited.
+
+### `/principles.html`
+
+| Field | Value |
+| --- | --- |
+| Title | `Our Educational Principles — Si Math AI` |
+| Canonical | `https://www.si-math-ai.com/principles.html` |
+| OG type | `article` |
+| JSON-LD | `Organization`, `AboutPage` with an `ItemList` of the six principles (each with a full `description`), `BreadcrumbList` |
+
+The six principles are published as a structured `ItemList` specifically so an
+AI system can retrieve them individually — asked "what is Si Math AI's teaching
+philosophy", the answer is available as data rather than requiring the page to be
+summarised. Each principle states what we believe, why, and **how it is built
+into the platform**; the validator requires all six to appear here and in
+`llms-full.txt`.
+
 ### `/why-not-chatgpt.html`
 
 | Field | Value |
@@ -289,6 +347,7 @@ prevent.
 | 6 | **Privacy Policy and Terms pages** | The footer previously linked both to `#`. Removed for now; restore the links once the pages exist. |
 | 7 | **Google Search Console + Bing Webmaster** | Submit `sitemap.xml`; add the verification meta tag or DNS record. |
 | 8 | **`system_settings.founder_slots_remaining`** | Must equal `FOUNDER_SLOTS_REMAINING` in `assets/founder-status.js` (currently **3**) or `pricing.html` will contradict the knowledge pages. See `consistency-audit.md` C-4. |
+| 9 | **⚠️ Verify the SAT and ACT format claims** | `consistency-audit.md` **C-13** — the site states "calculator & no-calculator" for the SAT and "60 questions in 60 minutes" for the ACT. Both likely predate the current exams and could not be verified from the build environment. **Highest-priority item on this list:** it is a correctness question, not a positioning one, and an AI system quoting it will repeat the error confidently. |
 
 ---
 

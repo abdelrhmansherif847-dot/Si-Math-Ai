@@ -25,6 +25,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS, FOUNDER_SLOTS_REMAINING } from '../docs/knowledge/faq-data.mjs';
+import { nav, footer, headAssets } from './_page-shell.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -169,12 +170,7 @@ const html = `<!DOCTYPE html>
 <meta name="twitter:description" content="Everything about Si Math AI: Zero, the Weakness Analyzer, Mock Exams, SAT / ACT / EST coverage, pricing and the Founder Badge."/>
 <meta name="twitter:image" content="${SITE}/assets/si-math-ai-logo.jpg"/>
 
-<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
-<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="assets/knowledge.css"/>
+${headAssets()}
 
 <script type="application/ld+json">
 ${jsonForScriptTag(graph)}
@@ -187,21 +183,7 @@ ${jsonForScriptTag(graph)}
 
 <a class="skip-link" href="#main">Skip to content</a>
 
-<nav class="k-nav">
-  <a class="k-nav-logo" href="index.html">
-    <img src="assets/si-math-ai-logo.jpg" alt="Si Math AI logo" width="32" height="32"/>
-    <span class="k-nav-logo-text">Si<span>Math</span> AI</span>
-  </a>
-  <ul class="k-nav-links">
-    <li><a href="about.html">About</a></li>
-    <li><a href="how-it-works.html">How It Works</a></li>
-    <li><a href="why-not-chatgpt.html">vs ChatGPT</a></li>
-    <li><a href="founder-badge.html">Founder Badge</a></li>
-    <li><a href="faq.html" aria-current="page">FAQ</a></li>
-    <li><a href="pricing.html">Pricing</a></li>
-  </ul>
-  <a class="k-nav-cta" href="signup.html">Start Free</a>
-</nav>
+${nav('faq.html')}
 
 <main id="main" class="k-main">
 
@@ -273,47 +255,7 @@ ${groups}
   </div>
 </section>
 
-<footer class="k-footer">
-  <div class="k-wrap-wide">
-    <div class="k-footer-grid">
-      <div>
-        <a class="k-nav-logo" href="index.html" style="margin-bottom:14px">
-          <img src="assets/si-math-ai-logo.jpg" alt="Si Math AI logo" width="32" height="32"/>
-          <span class="k-nav-logo-text">Si<span>Math</span> AI</span>
-        </a>
-        <p class="k-footer-about">
-          A comprehensive learning platform for SAT, ACT, and EST Mathematics —
-          combining educational expertise, AI technology, personalized learning,
-          analytics, and human support.
-        </p>
-      </div>
-      <div>
-        <h3>Knowledge Center</h3>
-        <ul>
-          <li><a href="about.html">About Si Math AI</a></li>
-          <li><a href="how-it-works.html">How It Works</a></li>
-          <li><a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></li>
-          <li><a href="ai-knowledge.html">Reference for AI Systems</a></li>
-          <li><a href="founder-badge.html">Founder Badge</a></li>
-          <li><a href="faq.html">FAQ</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3>Platform</h3>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="pricing.html">Pricing</a></li>
-          <li><a href="signup.html">Start Free</a></li>
-          <li><a href="login.html">Log In</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="k-footer-bottom">
-      <span>© 2026 Si Math AI. All rights reserved.</span>
-      <span>SAT · ACT · EST Mathematics</span>
-    </div>
-  </div>
-</footer>
+${footer()}
 
 </main>
 

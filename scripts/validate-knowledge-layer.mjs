@@ -38,6 +38,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS } from '../docs/knowledge/faq-data.mjs';
+import { GUIDES as LEARN_GUIDES, GROUPS as LEARN_GROUPS } from '../docs/knowledge/learn-data.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -73,15 +74,44 @@ const POSITIONING_FRAGMENTS = [
   'Human experience is',
 ];
 
-/** Public knowledge pages: the ones this gate owns end to end. */
+/**
+ * Public knowledge pages: pages ABOUT Si Math AI. Each must state the canonical
+ * definition and the three-pillar positioning in visible copy.
+ */
 const KNOWLEDGE_PAGES = [
   { file: 'about.html', canonical: `${SITE}/about.html` },
+  { file: 'principles.html', canonical: `${SITE}/principles.html` },
   { file: 'how-it-works.html', canonical: `${SITE}/how-it-works.html` },
   { file: 'why-not-chatgpt.html', canonical: `${SITE}/why-not-chatgpt.html` },
   { file: 'ai-knowledge.html', canonical: `${SITE}/ai-knowledge.html` },
   { file: 'founder-badge.html', canonical: `${SITE}/founder-badge.html` },
   { file: 'faq.html', canonical: `${SITE}/faq.html` },
 ];
+
+/**
+ * Educational pages: pages that TEACH. Held to the same technical standard —
+ * full SEO head, valid structured data, canonical, cross-links — but
+ * deliberately NOT required to recite the canonical definition or the
+ * positioning statement in body copy.
+ *
+ * That exemption is the point rather than an oversight. These guides exist to
+ * earn trust by being genuinely useful to a student who never signs up, and
+ * educational content interrupted by positioning statements stops being
+ * educational content. Each guide carries exactly one restrained product
+ * mention, and the canonical definition lives in its JSON-LD Organization node
+ * where machines read it and readers are not lectured by it.
+ */
+const LEARN_PAGES = [
+  { file: 'learn.html', canonical: `${SITE}/learn.html` },
+  ...LEARN_GUIDES.map((g) => ({
+    file: `learn-${g.slug}.html`,
+    canonical: `${SITE}/learn-${g.slug}.html`,
+    guide: g,
+  })),
+];
+
+/** Every page this gate owns, for the checks that apply to all of them. */
+const ALL_OWNED = [...KNOWLEDGE_PAGES, ...LEARN_PAGES];
 
 /** Pages that must carry a full SEO head but are not knowledge pages. */
 const SEO_PAGES = [
@@ -208,11 +238,115 @@ const emptyAnswers = CATEGORIES.flatMap((c) =>
 ok('every FAQ answer is substantive', emptyAnswers.length === 0, emptyAnswers.join('\n        '));
 
 /* ══════════════════════════════════════════════════════════════════════════
+   1b. The Educational Knowledge Hub
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Educational Knowledge Hub');
+
+const buildLearn = spawnSync(process.execPath, [resolve(REPO, 'scripts/build-learn.mjs'), '--check'], {
+  cwd: REPO, encoding: 'utf8',
+});
+ok('learn pages are in sync with docs/knowledge/learn-data.mjs',
+  buildLearn.status === 0, (buildLearn.stdout || '') + (buildLearn.stderr || ''));
+
+const syncShell = spawnSync(process.execPath, [resolve(REPO, 'scripts/sync-page-shell.mjs'), '--check'], {
+  cwd: REPO, encoding: 'utf8',
+});
+ok('hand-written pages carry the shared nav/footer from _page-shell.mjs',
+  syncShell.status === 0, (syncShell.stdout || '') + (syncShell.stderr || ''));
+
+// Each guide must be complete enough to be worth publishing.
+for (const g of LEARN_GUIDES) {
+  const label = `learn-${g.slug}`;
+  ok(`${label}: belongs to a declared group`, LEARN_GROUPS.some((x) => x.id === g.group));
+  ok(`${label}: has at least 4 sections`, g.sections.length >= 4, `has ${g.sections.length}`);
+  ok(`${label}: has at least 4 key points`, g.takeaways.length >= 4, `has ${g.takeaways.length}`);
+  ok(`${label}: has at least 3 FAQs`, g.faqs.length >= 3, `has ${g.faqs.length}`);
+  ok(`${label}: declares what it teaches`, Array.isArray(g.teaches) && g.teaches.length > 0);
+  ok(`${label}: has a restrained product mention`, !!g.softCta && g.softCta.length > 30);
+  const words = stripTags(g.sections.map((s) => s.body).join(' ')).split(/\s+/).length;
+  ok(`${label}: is substantive (≥500 words, has ${words})`, words >= 500);
+}
+
+/**
+ * The editorial rule that matters most for an authority resource: these guides
+ * must NOT state exam question counts, section timings or calculator policy.
+ * Boards set those and revise them — the site already carries claims that
+ * predate the digital SAT and the revised ACT (see consistency-audit.md C-13),
+ * and a preparation guide repeating an outdated format is worse than one that
+ * stays silent. Method does not go stale; formats do.
+ */
+const FORMAT_SPECIFICS = [
+  [/\b\d{2,3}\s+questions\b/i, 'a question count'],
+  [/\b\d{2,3}\s+minutes\b/i, 'a section timing'],
+  [/\bno[- ]calculator\b/i, 'a calculator-policy specific'],
+  [/\bscored?\s+\d{3,4}\b/i, 'a score-scale specific'],
+];
+
+for (const g of LEARN_GUIDES) {
+  const text = stripTags([g.lead, ...g.takeaways, ...g.sections.map((s) => `${s.h} ${s.body}`),
+    ...g.faqs.map((f) => `${f.q} ${f.a}`)].join(' '));
+  for (const [pattern, what] of FORMAT_SPECIFICS) {
+    const m = text.match(pattern);
+    ok(`learn-${g.slug}: states no ${what} (boards change these)`, !m,
+      m ? `matched: "${m[0]}"` : '');
+  }
+}
+
+// Exam guides carry the standing "confirm the current format" note.
+for (const g of LEARN_GUIDES.filter((x) => x.examGuide)) {
+  const file = `learn-${g.slug}.html`;
+  ok(`${file}: carries the verify-the-format note`,
+    has(file) && /confirm the current format/i.test(stripTags(read(file))));
+}
+
+// The hub must link every guide, and every guide must link back to the hub.
+if (has('learn.html')) {
+  const hub = read('learn.html');
+  for (const g of LEARN_GUIDES) {
+    ok(`learn.html links learn-${g.slug}.html`, hub.includes(`href="learn-${g.slug}.html"`));
+  }
+}
+for (const g of LEARN_GUIDES) {
+  const file = `learn-${g.slug}.html`;
+  if (!has(file)) continue;
+  ok(`${file} links back to the hub`, read(file).includes('href="learn.html"'));
+}
+
+// llms.txt must route AI systems to the guides, not only to the product pages.
+if (has('llms.txt')) {
+  const llms = read('llms.txt');
+  for (const g of LEARN_GUIDES) {
+    ok(`llms.txt lists learn-${g.slug}.html`, llms.includes(`/learn-${g.slug}.html`));
+  }
+  ok('llms.txt lists the learn hub', llms.includes('/learn.html'));
+  ok('llms.txt lists the principles page', llms.includes('/principles.html'));
+}
+
+// The six educational principles must be stated wherever they are published.
+const PRINCIPLES = [
+  'Understanding before memorization',
+  'Mistakes are data, not failure',
+  'Personalized learning beats one-size-fits-all',
+  'Consistent practice beats cramming',
+  'Learning is a journey, not a score',
+  'AI supports learning',
+];
+for (const [label, get] of [
+  ['principles.html', () => (has('principles.html') ? stripTags(read('principles.html')) : '')],
+  ['llms-full.txt', () => (has('llms-full.txt') ? read('llms-full.txt') : '')],
+]) {
+  const text = get();
+  const missing = PRINCIPLES.filter((p) => !text.includes(p));
+  ok(`${label}: states all ${PRINCIPLES.length} educational principles`, missing.length === 0,
+    missing.length ? `missing: ${missing.join(' · ')}` : '');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    2–4. SEO heads, canonicals and structured data
    ══════════════════════════════════════════════════════════════════════════ */
 section('SEO head + structured data');
 
-for (const { file, canonical } of [...KNOWLEDGE_PAGES, ...SEO_PAGES]) {
+for (const { file, canonical } of [...ALL_OWNED, ...SEO_PAGES]) {
   ok(`${file} exists`, has(file));
   if (!has(file)) continue;
   const html = read(file);
@@ -616,7 +750,7 @@ if (has('robots.txt')) {
 
 if (has('sitemap.xml')) {
   const sitemap = read('sitemap.xml');
-  for (const { canonical } of [...KNOWLEDGE_PAGES, ...SEO_PAGES]) {
+  for (const { canonical } of [...ALL_OWNED, ...SEO_PAGES]) {
     ok(`sitemap.xml lists ${canonical}`, sitemap.includes(`<loc>${canonical}</loc>`));
   }
   // Nothing private may leak into the sitemap.

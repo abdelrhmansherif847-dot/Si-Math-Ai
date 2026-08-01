@@ -384,7 +384,8 @@ details.k-faq > summary:focus-visible { outline: 2px solid var(--cyan); outline-
 /* ═══ FOOTER ═══ */
 .k-footer { border-top: 1px solid var(--border-soft); padding: 44px 0 36px; margin-top: var(--section-y); }
 .k-footer-grid { display: grid; gap: 26px; grid-template-columns: 1fr; }
-@media (min-width: 760px) { .k-footer-grid { grid-template-columns: 1.4fr 1fr 1fr; } }
+@media (min-width: 620px) { .k-footer-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 980px) { .k-footer-grid { grid-template-columns: 1.5fr 1fr 1fr 1fr; } }
 .k-footer h3 { font-size: 12px; font-family: var(--font-mono); font-weight: 600; letter-spacing: 1.1px; text-transform: uppercase; color: var(--text-400); margin-bottom: 12px; }
 .k-footer ul { list-style: none; padding: 0; }
 .k-footer li { margin-bottom: 9px; }
@@ -548,3 +549,86 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   background: rgba(245, 158, 11, .12); color: #fde68a;
   padding: 2px 6px; border-radius: 4px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * EDUCATIONAL KNOWLEDGE HUB (learn.html + learn-*.html)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Guide cards on the hub index. */
+.k-guide-card {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border-soft);
+  border-radius: var(--r-md); padding: 22px; height: 100%;
+  text-decoration: none; transition: border-color .2s, transform .2s;
+}
+.k-guide-card:hover { border-color: var(--cyan-border); transform: translateY(-2px); }
+.k-guide-card h3 { color: var(--text-100); margin: 0; font-size: 17.5px; line-height: 1.3; }
+.k-guide-card p { color: var(--text-300); font-size: 14.5px; margin: 0; line-height: 1.55; }
+.k-guide-meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font: 600 10.5px/1 var(--font-mono); letter-spacing: .9px; text-transform: uppercase;
+  color: var(--text-400);
+}
+.k-guide-topic { color: var(--cyan); }
+.k-guide-card .k-card-icon { font-size: 26px; margin: 0; }
+
+/* Hub section grouping. */
+.k-hub-group { margin-bottom: 44px; scroll-margin-top: calc(var(--nav-h) + 20px); }
+.k-hub-group > h2 { font-size: 22px; margin-bottom: 6px; }
+.k-hub-group > .k-hub-sub { color: var(--text-400); font-size: 15px; margin-bottom: 20px; }
+
+/* Key-takeaways box at the head of a guide. */
+.k-takeaways {
+  background: linear-gradient(160deg, rgba(56, 189, 248, .07), var(--bg-card));
+  border: 1px solid var(--cyan-border); border-radius: var(--r-lg);
+  padding: 22px; margin: 28px 0;
+}
+.k-takeaways h2 {
+  font-size: 12px; font-family: var(--font-mono); font-weight: 600;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
+}
+.k-takeaways ul { margin: 0; padding-left: 20px; }
+.k-takeaways li { color: var(--text-200); font-size: 15.5px; margin-bottom: 10px; }
+.k-takeaways li:last-child { margin-bottom: 0; }
+.k-takeaways li::marker { color: var(--cyan); }
+
+/* The one place a guide mentions the product. Deliberately restrained: these
+   pages exist to teach, and a hard sell inside educational content destroys the
+   trust the content was written to earn. */
+.k-soft-cta {
+  border: 1px dashed var(--border-mid); border-radius: var(--r-md);
+  padding: 18px 20px; margin: 30px 0 0; background: rgba(56, 189, 248, .04);
+}
+.k-soft-cta p { font-size: 14.5px; color: var(--text-400); margin: 0; }
+.k-soft-cta strong { color: var(--text-200); }
+.k-soft-cta a { color: var(--cyan); }
+
+/* Standing accuracy note on every exam guide. */
+.k-verify {
+  border-left: 3px solid var(--amber); background: rgba(245, 158, 11, .07);
+  padding: 15px 18px; border-radius: 0 var(--r-sm) var(--r-sm) 0; margin: 24px 0;
+}
+.k-verify p { margin: 0; font-size: 14.5px; color: var(--text-300); }
+.k-verify strong { color: #fcd34d; }
+
+/* Educational principles. */
+.k-principle {
+  background: var(--bg-card); border: 1px solid var(--border-soft);
+  border-radius: var(--r-lg); padding: 24px 22px; margin-bottom: 18px;
+  scroll-margin-top: calc(var(--nav-h) + 20px);
+}
+.k-principle-num {
+  font: 700 11px/1 var(--font-mono); letter-spacing: 1.2px;
+  color: var(--cyan); background: var(--cyan-bg-soft);
+  border: 1px solid var(--cyan-border-soft); border-radius: 100px;
+  padding: 6px 11px; display: inline-block; margin-bottom: 12px;
+}
+.k-principle h2 { font-size: clamp(19px, 2.4vw, 24px); margin-bottom: 12px; }
+.k-principle h3 {
+  font-size: 12px; font-family: var(--font-mono); font-weight: 600;
+  letter-spacing: 1.1px; text-transform: uppercase; color: var(--text-400);
+  margin: 18px 0 8px;
+}
+.k-principle p { color: var(--text-300); margin-bottom: 12px; }
+.k-principle p:last-child { margin-bottom: 0; }
+@media (min-width: 768px) { .k-principle { padding: 30px 28px; } }

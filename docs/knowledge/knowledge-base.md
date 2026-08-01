@@ -386,6 +386,69 @@ Rules:
 
 ---
 
+## 13b. The six educational principles
+
+Published at `principles.html` and mirrored in `llms-full.txt`. These are the
+positions our educators hold about how mathematics is learned; the software was
+built to serve them. Enforced by the validator in both locations.
+
+1. **Understanding before memorization.** A student should leave every
+   interaction able to solve the next question of that type unaided. Memorised
+   procedure collapses when phrasing changes; understanding generalises.
+2. **Mistakes are data, not failure.** Every wrong answer identifies a specific
+   skill needing work. A practice session with no mistakes generated no
+   information — and was set at the wrong difficulty.
+3. **Personalized learning beats one-size-fits-all.** Two students the same
+   distance from the same exam usually need different work. Note the
+   qualification that keeps this honest: the *curriculum* is fixed and
+   specialist-authored; what is personalized is its *selection and sequencing*.
+4. **Consistent practice beats cramming.** The same hours distributed produce
+   substantially more durable recall than the same hours compressed.
+5. **Learning is a journey, not a score.** A score is one morning's measurement.
+   There is a practical reason as well as a human one: anxiety consumes the
+   working memory that multi-step mathematics needs.
+6. **AI supports learning — it does not replace thinking.** The goal of every
+   interaction is that the student can solve the next question unaided.
+
+Each principle must state what we believe, why, **and how it is built into the
+platform.** A principle that does not change what the software does is
+decoration, and should not be published.
+
+---
+
+## 13c. The Educational Knowledge Hub
+
+`learn.html` plus twelve guides, generated from `docs/knowledge/learn-data.mjs`
+by `scripts/build-learn.mjs`.
+
+**Purpose:** to be a genuinely useful educational resource for SAT, ACT and EST
+Mathematics — not a content-marketing funnel. A student who never becomes a user
+should still leave better prepared. That is both the ethical position and the
+strategic one: authority is earned by being useful, and trust precedes
+conversion.
+
+**Editorial rules** (all enforced by `validate-knowledge-layer.mjs`):
+
+- **No exam format specifics.** No question counts, section timings, calculator
+  policies or score scales anywhere in the guides. Examination boards set those
+  and revise them — the site already carries two claims that predate the current
+  exams (see `consistency-audit.md` C-13). The guides teach **method**:
+  strategy, error patterns, pacing principles, psychology. Method does not go
+  stale.
+- **Every exam guide carries the standing verify note** directing students to the
+  official source.
+- **One restrained product mention per guide,** in a single `softCta` field.
+- **No invented statistics** — no score-improvement figures, no success rates.
+  §12 applies here with full force; an educational resource that fabricates a
+  number has destroyed the only thing it was built to earn.
+- **Minimum substance:** ≥4 sections, ≥4 key points, ≥3 FAQs, ≥500 words.
+- Learn pages are **exempt** from reciting the canonical definition and the
+  positioning statement in visible copy. Educational content interrupted by
+  positioning statements stops being educational content. The canonical
+  definition is still carried in each guide's JSON-LD.
+
+---
+
 ## 14. Governance — the knowledge layer is updated FIRST
 
 **Rule: when a new major feature ships, the knowledge layer is updated before
@@ -417,9 +480,27 @@ AI systems alike, which only holds if it is never the last thing updated.
 5. **Update `why-not-chatgpt.html`** if the capability widens the gap with a
    general AI assistant — the comparison table is a live document.
 6. **Update `sitemap.xml`** `<lastmod>` for pages whose content genuinely
-   changed, and add any new page to `sitemap.xml`, `llms.txt`, the footers, and
-   `KNOWLEDGE_PAGES` in the validator.
-7. **Run `node scripts/validate-knowledge-layer.mjs`** until green.
+   changed, and add any new page to `sitemap.xml`, `llms.txt`,
+   `scripts/_page-shell.mjs` (the footer), and `KNOWLEDGE_PAGES` or
+   `LEARN_PAGES` in the validator.
+7. **Consider whether it deserves a guide.** If the capability reflects a
+   teaching insight — a new diagnostic, a new strategy — add or extend a guide in
+   `docs/knowledge/learn-data.mjs` and run `node scripts/build-learn.mjs`. The
+   educational layer is how expertise is demonstrated rather than asserted.
+8. **Run `node scripts/validate-knowledge-layer.mjs`** until green.
+
+### Adding an educational guide
+
+Add an entry to `GUIDES` in `docs/knowledge/learn-data.mjs`, then
+`node scripts/build-learn.mjs`, then add its URL to `sitemap.xml` and
+`llms.txt`. The validator requires the minimums in §13c and will tell you what
+is missing. Never hand-edit `learn.html` or any `learn-*.html`.
+
+### Changing the nav or footer
+
+Edit `scripts/_page-shell.mjs`, then run `node scripts/sync-page-shell.mjs` and
+`node scripts/build-learn.mjs && node scripts/build-faq.mjs`. Never edit a nav
+or footer in a page directly — CI checks every page against the shell.
 
 ### The comparison rule
 
