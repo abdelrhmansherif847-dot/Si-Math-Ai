@@ -137,9 +137,51 @@ decision **D-A** below.
 
 ---
 
-## 4. Decisions I need from you before designing further
+## 4. Decisions — **RULED BY THE OWNER 2026-08-01, LOCKED**
 
-I am not deciding these alone; each changes the architecture.
+> **D-A — Diagnostic Mode: APPROVED.** Phase 7 supports an explicit, on-screen
+> diagnostic mode. **Business Mode** obeys INV-25. **Diagnostic Mode** uses all
+> data including internal. **The active mode must be visible to the user at all
+> times.** Diagnostic Mode never alters any business KPI.
+>
+> **D-B — `owner_cost_reprice()`: APPROVED as DROP + CREATE**, not patched. Any
+> scenario that cannot be priced **in full** must: **refuse to execute**, **state
+> the reason**, **compute no partial cost**, and **drop no row silently**. A
+> missing rate card yields a **Refused Scenario**, never a short number.
+>
+> **D-C — Timing: APPROVED.** No separate hotfix. `owner_cost_reprice()` is fixed
+> **inside Phase 7 M1**, keeping project history clean.
+>
+> **D-D — `platform_cost_entries`: DESIGN NOTHING YET.** A full investigation
+> first — purpose, schema, required columns, ownership, permissions, lifecycle,
+> CRUD, validation, audit trail, and impact on Simulator / Break-even / P&L.
+> Design is presented only after that, and **no code before owner approval**.
+> → delivered in `phase-7-platform-cost-entries-investigation.md`.
+>
+> **D-E — Cross-provider testing: NO FAKE OR MOCK DATA.** If no real rate card
+> exists for a second provider, the scenario **must refuse** and state why —
+> `Missing Rate Card`, `Unsupported Provider`, `Scenario Cannot Be Simulated`.
+> **A provider will not be registered merely to enable a test.**
+>
+> **General rule.** Phase 6's workflow continues in full: Investigation → Design
+> → Engineering Review → Approval → Implementation → Engineering Review →
+> Approval → Apply → Release Gate → Release Report → Closeout. **No code is
+> written before investigations are complete and approved.**
+
+### Consequences of these rulings for the plan below
+
+- **D-B + D-E together make the §1 defect a first-class M1 requirement**, not a
+  side fix: "no partial cost, no silent row drop" is precisely the property the
+  current function violates by returning `$0.06758175`.
+- **D-E removes the D-E risk rather than mitigating it.** A cross-provider swap
+  is *expected* to refuse on current data; that refusal becomes the tested
+  behaviour, and no second provider is registered to manufacture a success path.
+- **D-A means Diagnostic Mode is a first-class, labelled UI state**, not a
+  parameter — the mode indicator is part of M4's acceptance.
+- **D-D blocks M2 entirely** until the investigation is reviewed and a design
+  approved. M1 does not depend on M2 and can proceed once approved.
+
+*(Original framing of these five questions retained below for the record.)*
 
 ### D-A — Does the simulator get a diagnostic mode?
 
