@@ -538,9 +538,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (error && error.code === 'PGRST116') {
       const meta0 = currentUser.user_metadata || {};
       const fn0 = meta0.full_name || (currentUser.email ? currentUser.email.split('@')[0] : 'Student');
+      // ignoreDuplicates → ON CONFLICT DO NOTHING, which writes no columns on
+      // conflict. Without it PostgREST emits `SET id = EXCLUDED.id`, and
+      // `authenticated` has no UPDATE(id) since the SEC-01 column hardening
+      // (20260727_profiles_column_privilege_hardening.sql) — that fails with
+      // 42501 "permission denied for table profiles" even when no row conflicts,
+      // which is exactly what broke onboarding's final save. This is a
+      // create-if-missing safety net, so DO NOTHING is the correct semantics.
       await sb.from('profiles').upsert(
         { id: currentUser.id, email: currentUser.email, full_name: fn0 },
-        { onConflict: 'id' }
+        { onConflict: 'id', ignoreDuplicates: true }
       );
       const re = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
       profile = re.data;

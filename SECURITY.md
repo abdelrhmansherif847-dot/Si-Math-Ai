@@ -139,13 +139,57 @@ REVOKE DELETE, TRUNCATE, TRIGGER, REFERENCES ON public.profiles FROM anon, authe
 This is also **fail-closed for the future**: a column added to `profiles` later
 is not client-writable until someone grants it deliberately.
 
-**Why it did not break anything.** Every legitimate writer was traced before
-applying. All privileged writes run as `SECURITY DEFINER` functions owned by
-`postgres` (`approve_payment_request`, `change_user_role`, `consume_credits`,
-`refund_ai_credit`, `handle_new_user`, …) or as `service_role` (the
-`admin-actions` Edge Function, `ai-tutor`). Neither is affected by a revoke
-against `anon`/`authenticated`. The Owner Dashboard never writes these columns
-directly — it calls RPCs. Client writes touch only allow-listed columns.
+**What it broke, and why the trace missed it.** Every legitimate writer was
+traced before applying. All privileged writes run as `SECURITY DEFINER`
+functions owned by `postgres` (`approve_payment_request`, `change_user_role`,
+`consume_credits`, `refund_ai_credit`, `handle_new_user`, …) or as
+`service_role` (the `admin-actions` Edge Function, `ai-tutor`). Neither is
+affected by a revoke against `anon`/`authenticated`. The Owner Dashboard never
+writes these columns directly — it calls RPCs.
+
+The trace of *client* writes was column-accurate but statement-blind, and that
+gap took down signup. It recorded `onboarding.html` as writing
+`id, email, full_name (+ onboarding fields)` and confirmed all of them were
+allow-listed — `id` on `INSERT`, the rest on both. What it did not ask was which
+SQL statement supabase-js would actually emit. `.upsert(payload, { onConflict:
+'id' })` is a *merge-duplicates* upsert, and PostgREST compiles it to:
+
+```sql
+INSERT INTO profiles (id, email, …) VALUES (…)
+ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id, email = EXCLUDED.email, …
+```
+
+It re-assigns **every** payload column, the conflict key included — so the
+statement demands `UPDATE(id)`, which this fix deliberately withholds. Postgres
+rejects it with `42501 permission denied for table profiles`, checked at
+executor start: before RLS, and whether or not a row actually conflicts.
+
+`onboarding.html`'s final save used exactly that form. From 2026-07-27 every
+student reached step 3, pressed **Start Learning**, and got a red *permission
+denied for table profiles* — signup was blocked outright for five days
+(1 account affected; found 2026-08-01 from a student screenshot).
+`settings.html`'s create-if-missing safety net had the same defect, latent
+because it only runs when the profile row is absent.
+
+**Fixed client-side, deliberately — the grants were not touched.** Reopening
+`UPDATE(id)` would trade a security control for a client-library convenience.
+Instead:
+
+- `onboarding.html` saves with `UPDATE … WHERE id = auth.uid()` (allow-listed
+  columns only) and falls back to a plain `INSERT` if no row was updated, which
+  *is* granted on `id`.
+- `settings.html`'s safety net passes `ignoreDuplicates: true` → `ON CONFLICT
+  DO NOTHING`, which writes no columns on conflict and needs no `UPDATE`.
+- `tests/profiles-write-grants.test.mjs` fails the build on any merge-duplicates
+  upsert against `profiles`, and on any client write to a column the migration
+  does not grant. Its allow-lists are parsed out of the migration, so a future
+  grant change moves the test with it.
+
+**The generalisable lesson.** A column allow-list is enforced against the
+*statement the client library generates*, not against the fields the developer
+typed. Any ORM or REST layer that rewrites a write into `INSERT … ON CONFLICT
+DO UPDATE`, or that pads a payload with defaults, can demand privileges the
+payload does not visibly contain. Trace the SQL, not the object literal.
 
 **Verification performed against production:**
 

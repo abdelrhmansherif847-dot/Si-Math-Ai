@@ -40,6 +40,7 @@ silently extracting nothing.
 | `scope-guardrail` | `ai-tutor` v87 scope logic | Zero answering politics/programming/medical/legal (there was no domain restriction at all before v87); coaching wrongly refused; the guard failing closed on a malformed label; `hint_mode` being usable as a bypass. |
 | `zero-personality` | v87 redirect voice | The guardrail flattening Zero into a filter — the redirect losing the 🐉 anchor, the student's name, emoji, Egyptian dialect, or repeating verbatim; the personality layer being unwired from Priority 1. |
 | `constants-drift` | Cross-file constants | Rank thresholds diverging across the four JS copies and the SQL `rank_for_xp`; generated taxonomy/study-planner copies drifting from their source; the study-planner drift gate regaining its ability to self-repair. |
+| `profiles-write-grants` | Every browser write to `public.profiles` | The merge-duplicates upsert that broke onboarding: PostgREST emits `SET id = EXCLUDED.id`, `authenticated` lost `UPDATE(id)` in the SEC-01 column hardening, and every student got `42501 permission denied for table profiles` on the last signup step. Also catches any client write to a column the migration does not grant. Allow-lists are parsed from the migration, not restated. |
 | `repo-integrity` | Whole repo | Any shipped script failing to parse, plus a pinned assertion for **every** defect fixed in the 2026-07 audit so a future refactor cannot quietly reintroduce one. |
 
 ## Conventions
