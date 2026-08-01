@@ -163,13 +163,22 @@ present). The local branch was deleted. The audit, engineering review,
 release report and negative-control reasoning all remain reachable — and are in
 any case on `main`.
 
-**Note on the Phase 7 branch.** `claude/phase7-simulator-breakeven` was cut from
-`main` at `a1e2610`, so it is now **3 commits behind** `main` at `8b1d838`. It
-remains empty in the sense that matters — it carries **no work of its own** —
-but it is no longer level with `main`. It was left untouched deliberately, since
-the standing instruction is that nothing may happen on that branch. Fast-forward
-it to `main` when Phase 7 is authorised, so Phase 7 starts on a base that
-includes the verification framework improvements.
+**Note on the Phase 7 branch — resolved.** `claude/phase7-simulator-breakeven`
+was cut from `main` at `a1e2610` and therefore fell behind as this cycle landed.
+On owner instruction it was **fast-forwarded to `main`** as the final
+housekeeping step of this closeout.
+
+| Measure | Value |
+|---|---|
+| Commits **ahead** of `main` | **0** |
+| Commits **behind** `main` | **0** |
+| Files differing from `main` | **0** |
+
+It is a true fast-forward — the branch was an ancestor of `main`, so no merge
+commit was created and nothing was lost. The branch remains **empty**: it
+carries no code, no migration, no plan and no investigation of its own. Phase 7
+will start from a baseline that already includes the verification framework
+improvements.
 
 ---
 
