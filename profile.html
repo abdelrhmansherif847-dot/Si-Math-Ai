@@ -281,10 +281,17 @@ async function loadPage() {
   const xpToNext = nextRank ? nextRank.min - xp : 0;
 
   const planCode = (profile.plan_code || profile.plan || 'FREE').toUpperCase().replace('PRO','PRO');
+  // A plan is paid because the catalogue says it costs money — not because its
+  // code happens to start with PRO. Branching on the prefix meant any plan the
+  // owner adds under a different name showed a PAYING student the free badge.
+  // The prefix test survives only as the fallback for a catalogue that failed
+  // to load, so behaviour is unchanged when the read fails.
+  const planRow = PlanCatalog.get(planCode);
+  const isPaidPlan = planRow ? Number(planRow.price_egp) > 0 : planCode.startsWith('PRO');
   let planBadge;
-  if (profile.is_founder || planCode === 'FOUNDER') {
+  if (profile.is_founder || (planRow && planRow.is_founder) || planCode === 'FOUNDER') {
     planBadge = `<span class="h-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">👑 Founder</span>`;
-  } else if (planCode.startsWith('PRO')) {
+  } else if (isPaidPlan) {
     const planExpiry = profile.subscription_expires_at ? ' · Expires ' + new Date(profile.subscription_expires_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
     planBadge = `<span class="h-badge" style="background:rgba(168,85,247,.15);color:#a855f7;border:1px solid rgba(168,85,247,.3)">⭐ ${escHtml(PlanCatalog.name(planCode))}${planExpiry}</span>`;
   } else {

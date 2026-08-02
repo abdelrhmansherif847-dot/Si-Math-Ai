@@ -2058,14 +2058,21 @@ async function loadSuspiciousAccounts() {
       if (!byUser[uid]) byUser[uid] = { email: row.profiles.email, planCode: row.profiles.plan_code, fps: new Set() };
       byUser[uid].fps.add(row.device_fingerprint);
     });
+    // "Suspicious" means over the plan's own device_limit — the same number
+    // can_register_device() enforces. This used to assume 2-for-free/3-for-paid,
+    // so a plan with a different limit produced false accusations. The literals
+    // survive only as the fallback for a catalogue that failed to load.
+    const limitFor = function(code) {
+      const row = PlanCatalog.get(code);
+      if (row && row.device_limit != null) return Number(row.device_limit);
+      return code === 'FREE' ? 2 : 3;
+    };
     const rows = Object.values(byUser).filter(function(u) {
-      const limit = u.planCode === 'FREE' ? 2 : 3;
-      return u.fps.size > limit;
+      return u.fps.size > limitFor(u.planCode);
     }).sort((a, b) => b.fps.size - a.fps.size);
     if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-500)">No suspicious accounts found.</td></tr>'; return; }
     tbody.innerHTML = rows.map(function(u) {
-      const limit = u.planCode === 'FREE' ? 2 : 3;
-      return `<tr><td>${escHtml(u.email)}</td><td>${escHtml(u.planCode)}</td><td>${limit}</td><td style="color:var(--red);font-weight:700">${u.fps.size}</td></tr>`;
+      return `<tr><td>${escHtml(u.email)}</td><td>${planLabel(u.planCode)}</td><td>${limitFor(u.planCode)}</td><td style="color:var(--red);font-weight:700">${u.fps.size}</td></tr>`;
     }).join('');
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--red)">Error loading data.</td></tr>';

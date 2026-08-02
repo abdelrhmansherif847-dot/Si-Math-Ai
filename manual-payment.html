@@ -370,54 +370,74 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 // exactly the two things the Owner Dashboard can change at any moment, so every
 // one of them below is looked up in the rows loaded from the database rather
 // than written here.
-const BASE_PLAN   = 'PRO_MONTHLY';
-const ANNUAL_PLAN = 'PRO_ANNUAL';
-
 let planByCode = {};   // plan_code -> row, filled by init() from the DB
+let planRows   = [];   // active subscriptions, sort_order asc
 function planRow(code)   { return planByCode[code] || null; }
-function planName(code)  { const p = planRow(code); return p ? p.display_name : ''; }
-function planPrice(code) { const p = planRow(code); return p ? Number(p.price_egp) : null; }
 function monthsIn(cycle) {
   return cycle === 'monthly' ? 1 : cycle === 'quarterly' ? 3 : cycle === 'annual' ? 12 : null;
 }
 
-// Percentage saved by buying `code` instead of paying the monthly price for the
-// same span. Returns null when the arithmetic cannot be done, so the caller
-// drops the claim rather than printing a number that is no longer true.
-function savingVsMonthly(code) {
-  const monthly = planPrice(BASE_PLAN);
-  const plan = planRow(code);
+// The entry plan is whichever paid, non-Founder subscription costs least — not
+// a plan_code written here. "Everything in <X>" then names the right plan even
+// after a rename, and still works if PRO_MONTHLY is one day retired.
+function basePlan() {
+  return planRows
+    .filter(p => Number(p.price_egp) > 0 && !p.is_founder)
+    .sort((a, b) => Number(a.price_egp) - Number(b.price_egp))[0] || null;
+}
+// The plan a Founder offer is a discount ON: the dearest non-Founder annual.
+function annualPlan() {
+  return planRows
+    .filter(p => p.billing_cycle === 'annual' && !p.is_founder)
+    .sort((a, b) => Number(b.price_egp) - Number(a.price_egp))[0] || null;
+}
+
+// Percentage saved by buying `plan` instead of paying the entry plan's monthly
+// price for the same span. Returns null when the arithmetic cannot be done, so
+// the caller drops the claim rather than printing a number that is not true.
+function savingVsMonthly(plan) {
+  const base = basePlan();
+  const baseMonths = base && monthsIn(base.billing_cycle);
   const months = plan && monthsIn(plan.billing_cycle);
-  if (!monthly || !plan || !plan.price_egp || !months) return null;
-  const full = monthly * months;
+  if (!base || !baseMonths || !months || !plan.price_egp) return null;
+  const perMonth = Number(base.price_egp) / baseMonths;
+  const full = perMonth * months;
   if (full <= 0) return null;
   const pct = Math.round((1 - Number(plan.price_egp) / full) * 100);
   return pct > 0 ? pct : null;
 }
 
 // Subscription benefit lists — keep in sync with pricing.html buildPlanFeatures()
-// (truthful claims only). Every figure here is derived from the loaded catalogue.
+// (truthful claims only). Driven by billing_cycle and is_founder rather than by
+// a branch per plan_code, so a plan the owner adds tomorrow gets the right list
+// with no edit here.
 function featuresFor(plan) {
   const credits = plan.credits_granted;
-  const code = plan.plan_code;
-  const baseName = planName(BASE_PLAN) || 'the monthly plan';
-  if (code === BASE_PLAN) {
+  const base = basePlan();
+  const baseName = base ? base.display_name : 'the entry plan';
+  const cycle = plan.billing_cycle;
+
+  if (base && plan.plan_code === base.plan_code) {
     return ['Unlimited AI messages', 'Full weakness analysis + trends', 'Full 3-day study plan', 'Unlimited mock exams', 'Unlimited chat history'];
   }
-  if (code === 'PRO_QUARTERLY') {
-    return ['Everything in ' + baseName, '3 months at a lower monthly cost', credits.toLocaleString() + ' credits / 3 months'];
+
+  const out = ['Everything in ' + baseName];
+  if (cycle === 'quarterly') {
+    out.push('3 months at a lower monthly cost', credits.toLocaleString() + ' credits / 3 months');
+  } else if (cycle === 'annual') {
+    out.push('Early access to new features', 'Annual Member badge');
+  } else {
+    out.push(credits.toLocaleString() + ' credits');
   }
-  if (code === ANNUAL_PLAN) {
-    const saving = savingVsMonthly(ANNUAL_PLAN);
-    return ['Everything in ' + baseName, 'Early access to new features', 'Annual Member badge']
-      .concat(saving ? ['Save ' + saving + '% vs monthly'] : []);
+
+  if (plan.is_founder) {
+    out.push('👑 Permanent Founder badge', '📬 Direct feedback channel to the team', '🧪 All beta features unlocked');
+    if (plan.price_egp) out.push('🔒 Renewal locked at ' + Math.round(Number(plan.price_egp)).toLocaleString() + ' EGP forever');
+  } else {
+    const saving = savingVsMonthly(plan);
+    if (saving) out.push('Save ' + saving + '% vs monthly');
   }
-  if (code === 'FOUNDER_ANNUAL') {
-    const locked = planPrice('FOUNDER_ANNUAL');
-    return ['Everything in ' + (planName(ANNUAL_PLAN) || 'the annual plan'), '👑 Permanent Founder badge', '📬 Direct feedback channel to the team', '🧪 All beta features unlocked']
-      .concat(locked ? ['🔒 Renewal locked at ' + Math.round(locked).toLocaleString() + ' EGP forever'] : []);
-  }
-  return ['Unlimited AI messages', credits.toLocaleString() + ' credits'];
+  return out;
 }
 
 function cycleLabel(billing_cycle) {
@@ -436,8 +456,11 @@ function pricePer(billing_cycle) {
 function renderPlanCard(plan, opts) {
   opts = opts || {};
   const code = plan.plan_code;
-  const isFounder = code === 'FOUNDER_ANNUAL';
-  const isAnnual  = code === ANNUAL_PLAN;
+  // Founder and annual styling follow the plan's own columns, not two literal
+  // plan codes. A second Founder tier, or an annual plan under a new name,
+  // would otherwise render as a plain monthly card.
+  const isFounder = !!plan.is_founder;
+  const isAnnual  = plan.billing_cycle === 'annual' && !isFounder;
   const badgeText = isFounder
     ? '👑 FOUNDER — FIRST 50 ONLY'
     : cycleLabel(plan.billing_cycle) + (isAnnual ? ' <span class="best-value">Best Value</span>' : '');
@@ -457,14 +480,15 @@ function renderPlanCard(plan, opts) {
   // Owner Dashboard, so both are computed from the live catalogue. If the
   // arithmetic cannot be done — a missing price, a discount that no longer
   // exists — the claim is dropped rather than printed stale.
-  const annualPrice = planPrice(ANNUAL_PLAN);
-  const founderOff = (annualPrice && plan.price_egp) ? Math.round((1 - Number(plan.price_egp) / annualPrice) * 100) : null;
-  const annualMonths = monthsIn(plan.billing_cycle);
-  const perMonth = (isAnnual && plan.price_egp && annualMonths)
-    ? Math.round(Number(plan.price_egp) / annualMonths) : null;
+  const ref = annualPlan();
+  const founderOff = (ref && ref.price_egp && plan.price_egp)
+    ? Math.round((1 - Number(plan.price_egp) / Number(ref.price_egp)) * 100) : null;
+  const planMonths = monthsIn(plan.billing_cycle);
+  const perMonth = (isAnnual && plan.price_egp && planMonths)
+    ? Math.round(Number(plan.price_egp) / planMonths) : null;
   const note = isFounder
-    ? (founderOff > 0
-        ? `<div class="plan-note" style="margin-top:10px;color:#f5b942"><strong>${founderOff}% off ${esc(planName(ANNUAL_PLAN))}.</strong> When slots are gone, this offer closes permanently.</div>`
+    ? ((founderOff > 0 && ref)
+        ? `<div class="plan-note" style="margin-top:10px;color:#f5b942"><strong>${founderOff}% off ${esc(ref.display_name)}.</strong> When slots are gone, this offer closes permanently.</div>`
         : `<div class="plan-note" style="margin-top:10px;color:#f5b942">When slots are gone, this offer closes permanently.</div>`)
     : (isAnnual && perMonth) ? `<div class="plan-note" style="margin-top:10px">~${perMonth.toLocaleString()} EGP/month equivalent</div>` : '';
 
@@ -533,11 +557,18 @@ async function init() {
     sb.from('credit_packs').select('*').eq('active', true).order('sort_order')
   ]);
 
-  const allPlans = (plansRes.data || []).filter(p => p.plan_code !== 'FREE');
+  // Checkout lists what can be bought: anything with a price. Filtering on the
+  // literal code 'FREE' would miss a second free tier and would break if the
+  // free plan were ever recoded.
+  const allPlans = (plansRes.data || []).filter(p => Number(p.price_egp) > 0);
   planByCode = {};
   (plansRes.data || []).forEach(p => { planByCode[p.plan_code] = p; });
-  // Hide Founder Annual if no slots remain
-  const visiblePlans = allPlans.filter(p => p.plan_code !== 'FOUNDER_ANNUAL' || founderSlotsLeft > 0);
+  // basePlan()/annualPlan() derive the entry and annual reference plans from
+  // these rows, so no plan_code is written into this page's copy or its maths.
+  planRows = allPlans;
+  // Hide any Founder plan once its slots are gone — keyed on the is_founder
+  // column, so a second Founder tier is covered by the same rule.
+  const visiblePlans = allPlans.filter(p => !p.is_founder || founderSlotsLeft > 0);
 
   // A pack's plan_code comes from the database. It used to be looked up in a
   // hardcoded { name -> code } map, which meant renaming a pack in the Owner

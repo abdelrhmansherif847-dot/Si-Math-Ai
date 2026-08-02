@@ -1838,10 +1838,17 @@ async function loadDashboard() {
     var pc = (prof.plan_code || 'FREE').toUpperCase();
     var heroBadges = document.getElementById('heroPlanBadge');
     if (!heroBadges) return;
+    // A plan is paid because the catalogue says it costs money — not because
+    // its code happens to start with PRO. Branching on the prefix meant any
+    // plan the owner adds under a different name showed a PAYING student the
+    // free badge, complete with an "Upgrade →" link. The prefix test survives
+    // only as the fallback for a catalogue that failed to load.
+    var planRow = PlanCatalog.get(pc);
+    var isPaidPlan = planRow ? Number(planRow.price_egp) > 0 : pc.startsWith('PRO');
     var badge;
-    if (prof.is_founder || pc === 'FOUNDER') {
+    if (prof.is_founder || (planRow && planRow.is_founder) || pc === 'FOUNDER') {
       badge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#f5b942;font-family:var(--font-display);font-weight:700;font-size:12px">👑 Founder</span>';
-    } else if (pc.startsWith('PRO')) {
+    } else if (isPaidPlan) {
       badge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:#a855f7;font-family:var(--font-display);font-weight:700;font-size:12px">⭐ ' + esc(PlanCatalog.name(pc)) + '</span>';
     } else {
       badge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.28);color:#38bdf8;font-family:var(--font-display);font-weight:700;font-size:12px">🆓 Free Plan &nbsp;<a href="pricing.html" style="color:#38bdf8;font-size:11px;text-decoration:underline;opacity:.8">Upgrade →</a></span>';

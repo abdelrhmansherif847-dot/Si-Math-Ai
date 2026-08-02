@@ -392,11 +392,26 @@ function fmtPrice(egp) {
   return Number(egp).toLocaleString('en-EG', { maximumFractionDigits: 0 }) + ' EGP';
 }
 
-function cycleLabel(code) {
+// Reads the billing_cycle column. It used to parse the plan_code's suffix, so a
+// plan the owner adds as "SCHOLAR_TERM" on a quarterly cycle was priced per
+// month on the card. The suffix is kept only as the fallback for a row loaded
+// before billing_cycle existed.
+function cycleLabel(cycle, code) {
+  if (cycle === 'annual')    return '/ year';
+  if (cycle === 'quarterly') return '/ 3 months';
+  if (cycle === 'monthly')   return '/ month';
   if (!code) return '';
   if (code.endsWith('_ANNUAL')) return '/ year';
   if (code.endsWith('_QUARTERLY')) return '/ 3 months';
   return '/ month';
+}
+
+// Days in one billing period — the divisor behind the "≈ N/day" credit figure.
+function cycleDays(cycle, code) {
+  if (cycle === 'annual')    return 365;
+  if (cycle === 'quarterly') return 91;
+  if (cycle === 'monthly')   return 30;
+  return (code || '').endsWith('_ANNUAL') ? 365 : (code || '').endsWith('_QUARTERLY') ? 91 : 30;
 }
 
 function openModal(planCode, planName) {
@@ -493,10 +508,18 @@ function buildPlanFeatures(plan) {
   const limit = plan.daily_limit;
   const devices = plan.device_limit;
   const credits = plan.credits_granted;
+  // Period comes from the billing_cycle column, not from the plan_code's
+  // suffix. A plan the owner adds as "SCHOLAR_TERM" on a quarterly cycle was
+  // being advertised per month, because the old test was code.endsWith().
+  const cycle = plan.billing_cycle;
+  const periodLabel = cycle === 'annual' ? 'year' : cycle === 'quarterly' ? '3 months' : 'month';
+  const isAnnual = cycle === 'annual';
+  // Free is a price of zero, not a plan_code spelled FREE.
+  const isFreeTier = Number(plan.price_egp) === 0;
 
   const features = [];
-  if (code === 'FREE') {
-    features.push({ ok: true,  text: limit + ' AI messages per day' });
+  if (isFreeTier) {
+    features.push({ ok: true,  text: (limit != null ? limit + ' AI messages per day' : 'Daily AI messages') });
     features.push({ ok: true,  text: 'Top 3 weaknesses (basic view)' });
     features.push({ ok: true,  text: 'Mastery Rounds — Round 1 preview (Foundation, Day 1)' });
     features.push({ ok: true,  text: '1 mock exam per week' });
@@ -508,7 +531,7 @@ function buildPlanFeatures(plan) {
     features.push({ ok: false, text: 'Unlimited mock exams' });
     features.push({ ok: false, text: 'Unlimited chat history' });
   } else {
-    features.push({ ok: true,  text: credits.toLocaleString() + ' credits / ' + (code.endsWith('_ANNUAL') ? 'year' : code.endsWith('_QUARTERLY') ? '3 months' : 'month') });
+    features.push({ ok: true,  text: credits.toLocaleString() + ' credits / ' + periodLabel });
     features.push({ ok: true,  text: 'Unlimited daily AI messages' });
     features.push({ ok: true,  text: 'Full Weakness Analyzer (all topics, trends, deep analysis)' });
     if (plan.is_founder) {
@@ -525,7 +548,7 @@ function buildPlanFeatures(plan) {
       features.push({ ok: true,  text: 'All future price increases locked out' });
       features.push({ ok: true,  text: 'Direct feedback channel to the team' });
     }
-    if (code.endsWith('_ANNUAL')) {
+    if (isAnnual) {
       features.push({ ok: true,  text: 'Early access to new features (2–4 weeks before Monthly)' });
       features.push({ ok: true,  text: 'Best value — save vs monthly' });
     }
@@ -664,8 +687,11 @@ async function loadPage() {
     if (isFounderPlan && slotsLeft <= 0) continue;
 
     const features = buildPlanFeatures(plan);
-    const isFree = plan.plan_code === 'FREE';
-    const isRecommended = plan.plan_code === 'PRO_MONTHLY' && !isFounderPlan;
+    // Free means it costs nothing; recommended means it is the cheapest paid
+    // plan on offer. Neither is a fixed plan_code any more, so a renamed or
+    // newly added entry plan still gets the badge.
+    const isFree = Number(plan.price_egp) === 0;
+    const isRecommended = !isFounderPlan && !isFree && upgradeTarget && plan.plan_code === upgradeTarget.plan_code;
 
     let cardClass = 'plan-card';
     if (isFounderPlan) cardClass += ' is-founder-card';
@@ -698,10 +724,10 @@ async function loadPage() {
       <div class="pc-cycle">free forever</div>
       <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
     } else {
-      const perDay = Math.round(plan.credits_granted / (plan.plan_code.endsWith('_ANNUAL') ? 365 : plan.plan_code.endsWith('_QUARTERLY') ? 91 : 30));
+      const perDay = Math.round(plan.credits_granted / cycleDays(plan.billing_cycle, plan.plan_code));
       html += `<div class="pc-price">${Number(plan.price_egp).toLocaleString('en-EG',{maximumFractionDigits:0})}<span class="pc-price-unit"> EGP</span></div>
-      <div class="pc-cycle">${cycleLabel(plan.plan_code)}</div>
-      <div class="pc-credits-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>${plan.credits_granted.toLocaleString()}</b> credits ${cycleLabel(plan.plan_code).replace('/ ','per ')} <span style="color:var(--text-500)">≈ ${perDay}/day</span></div>
+      <div class="pc-cycle">${cycleLabel(plan.billing_cycle, plan.plan_code)}</div>
+      <div class="pc-credits-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>${plan.credits_granted.toLocaleString()}</b> credits ${cycleLabel(plan.billing_cycle, plan.plan_code).replace('/ ','per ')} <span style="color:var(--text-500)">≈ ${perDay}/day</span></div>
       <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
     }
 

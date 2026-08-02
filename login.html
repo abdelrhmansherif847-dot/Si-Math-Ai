@@ -343,6 +343,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="plan-catalog.js"></script>
 <script>
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
@@ -409,8 +410,14 @@ button{font-family:inherit;cursor:pointer}
 
   async function showDeviceWall(userId, planCode) {
     var{data:devices}=await supabaseClient.from('user_devices').select('device_name,last_seen').eq('user_id',userId).eq('is_active',true).order('last_seen',{ascending:false});
-    var limit=(planCode==='FREE')?2:3;
-    document.getElementById('dwPlan').textContent=(planCode==='FREE')?'Free':'Pro';
+    // Device limit and plan label come from the catalogue — can_register_device()
+    // enforces the database value, so the wall must quote the same number and
+    // the same plan name the rest of the site shows. The literals remain only as
+    // the fallback for a catalogue read that failed, matching the RPC default.
+    await PlanCatalog.load(supabaseClient);
+    var planRow=PlanCatalog.get(planCode);
+    var limit=(planRow&&planRow.device_limit!=null)?Number(planRow.device_limit):((planCode==='FREE')?2:3);
+    document.getElementById('dwPlan').textContent=planRow?planRow.display_name:((planCode==='FREE')?'Free':'Pro');
     document.getElementById('dwLimit').textContent=limit;
     document.getElementById('dwDevices').innerHTML=(devices||[]).slice(0,limit).map(function(d){
       var icon=/Android|iOS/.test(d.device_name||'')?'📱':'💻';
