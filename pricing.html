@@ -491,9 +491,21 @@ async function submitUpgrade() {
     .eq('user_id', currentUser.id)
     .eq('status', 'pending');
 
-  await sb.from('subscriptions').insert({
+  // plan_type is deliberately NOT written here.
+  //
+  // It used to be set to selectedPlanCode, the same value as plan_code — and
+  // subscriptions_plan_type_check permits only six legacy codes, so choosing
+  // any plan the owner authored from the dashboard (HERO, for one) made this
+  // INSERT fail the constraint. It failed silently: supabase-js returns
+  // { error } rather than throwing, nothing here reads the result, and the UI
+  // showed "request sent" either way.
+  //
+  // The column is nullable, plan_code on the same row carries the exact code,
+  // and nothing anywhere reads plan_type — so the honest write is no write.
+  // The server sets it on approval via legacy_plan_type(), which is where the
+  // category belongs: one writer, one rule.
+  const { error: pendingErr } = await sb.from('subscriptions').insert({
     user_id: currentUser.id,
-    plan_type: selectedPlanCode,
     plan_code: selectedPlanCode,
     active: false,
     status: 'pending',
@@ -503,6 +515,13 @@ async function submitUpgrade() {
     credits_remaining: 0,
     credits_granted: 0
   });
+
+  // Not fatal, and deliberately not blocking: the durable record of this
+  // request is profiles.upgrade_requested above and the payment_requests row
+  // the checkout page writes — this is a convenience row. But a failure here
+  // was invisible for as long as nobody read the result, which is how the
+  // plan_type constraint violation went unnoticed. Log it.
+  if (pendingErr) console.warn('[pricing] pending subscription row not created:', pendingErr.message || pendingErr);
 
   document.getElementById('upgradeForm').style.display = 'none';
   document.getElementById('upgradeSuccess').style.display = 'block';
