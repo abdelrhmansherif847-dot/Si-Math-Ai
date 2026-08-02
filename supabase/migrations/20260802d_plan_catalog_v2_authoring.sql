@@ -1,8 +1,18 @@
 -- =====================================================================
 -- Plan catalogue v2 — a plan becomes a record, not a code change
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval
---         (CLAUDE.md §3: every migration is approved individually).
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-02 as migration
+--         plan_catalog_v2_authoring. Owner-approved individually (CLAUDE.md §3).
+--
+--         POST-APPLY VERIFICATION: 14/14 PASS against live data — all 15
+--         authoring columns present; the 9 existing plans unchanged in price,
+--         credits, visibility and archive state, and carrying NO authored
+--         content, so nothing a student sees moved; is_best_value generated
+--         from badge; all 6 authoring functions deployed with zero anon
+--         EXECUTE; both views rebuilt; pricing_settings now spans every
+--         non-pack kind; FREE keeps daily_limit 15 and PRO_MONTHLY
+--         device_limit 3; checkout still resolves packs by key; an anonymous
+--         visitor can still price the product.
 --
 -- WHY THIS EXISTS
 -- ---------------
