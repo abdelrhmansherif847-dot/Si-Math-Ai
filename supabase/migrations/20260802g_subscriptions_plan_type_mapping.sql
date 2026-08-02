@@ -1,7 +1,37 @@
 -- ===========================================================================
 -- approve_payment_request writes a VALID subscriptions.plan_type
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-02, owner-approved
+--         individually (CLAUDE.md §3). Version 20260802184704.
+--
+--         The owner's requirement was explicit: fix EVERY writer, not just the
+--         one that failed. §2 and §3 do that; §4 asserts it rather than
+--         claiming it, and would abort the migration if either function still
+--         passed a raw plan_code.
+--
+--         POST-APPLY VERIFICATION — rehearsed against production inside
+--         transactions that were ROLLED BACK, calling the real functions:
+--
+--         approve_payment_request, one request per plan (11 plans):
+--           FREE ......... refused: "period_days = 0; it cannot be approved
+--                          without a period" — PRE-EXISTING and correct. FREE
+--                          costs nothing, so no checkout creates a request for
+--                          it. Not a plan_type failure; the guard is unchanged.
+--           HERO ......... ✅ plan_code HERO / plan_type PRO_ANNUAL / 25,000 credits
+--           PRO_QUARTERLY_COPY ✅ plan_code kept / plan_type PRO_QUARTERLY
+--           PRO_* , FOUNDER_* ✅ plan_type identical to plan_code, as before
+--           PACK_STARTER/VALUE/POWER ✅ 500/1,000/2,000 credits, no
+--                          subscriptions row — the pack branch returns first
+--
+--         activate_subscription, one COMPLETED payment per plan (8 plans):
+--           all 8 ✅, HERO -> PRO_ANNUAL, PRO_QUARTERLY_COPY -> PRO_QUARTERLY,
+--           six legacy codes -> themselves, FREE -> FREE
+--
+--         activate_pro_subscription: ✅ writes PRO_MONTHLY, unchanged
+--
+--         Production afterwards: 7 subscriptions rows, plan_types still only
+--         {FOUNDER_ANNUAL, PRO_MONTHLY}, 4 pending requests, founder slots 3,
+--         zero rehearsal leftovers, constraint byte-identical.
 --
 -- ── THE FAILURE ────────────────────────────────────────────────────────────
 --   new row for relation "subscriptions" violates check constraint
@@ -91,6 +121,27 @@
 --   HERO (182d)      -> PRO_ANNUAL        PRO_QUARTERLY_COPY (91d) -> PRO_QUARTERLY
 --   PACK_*           -> NULL (never reached: the pack branch returns earlier)
 --
+-- ── EVERY WRITER OF subscriptions.plan_type (full inventory) ───────────────
+-- Enumerated from pg_proc rather than from memory: every function whose body
+-- INSERTs or UPDATEs subscriptions, plus the triggers on the table, plus the
+-- client grants.
+--
+--   approve_payment_request      INSERT   plan_type := _req.plan_code   ✗ FIXED §2
+--   activate_subscription        INSERT   plan_type := v_plan.plan_code ✗ FIXED §3
+--   activate_pro_subscription    INSERT   plan_type := 'PRO_MONTHLY'    ✓ already valid
+--   consume_credits              UPDATE   does not touch plan_type      ✓
+--   enforce_my_subscription_expiry UPDATE does not touch plan_type      ✓
+--   trg_sync_subscription_status TRIGGER  does not touch plan_type      ✓
+--   pricing.html (browser)       INSERT   plan_type := selectedPlanCode ✗ removed
+--                                          in the same commit as this file
+--
+-- CORRECTION TO AN EARLIER NOTE. A previous draft of this file said
+-- activate_pro_subscription "carries the same latent bug". It does not. It
+-- writes the string literal 'PRO_MONTHLY', which the CHECK already permits, and
+-- it takes a month count rather than a plan_code — there is no code to map. It
+-- is left unchanged deliberately, and §4 asserts its literal stays valid so the
+-- claim is enforced rather than asserted.
+--
 -- ── NOT IN SCOPE, AND WHY ──────────────────────────────────────────────────
 -- • Widening or dropping the CHECK. Explicitly excluded by the owner. The
 --   better long-term shape is a foreign key to plan_definitions(plan_code) —
@@ -99,10 +150,10 @@
 --   decision. Recorded in docs/engineering/infrastructure-backlog.md.
 -- • Dropping plan_type. It is dead weight duplicated by plan_code, but removing
 --   a column is destructive and unrelated to unblocking the approval.
--- • activate_subscription / activate_pro_subscription. They write plan_type too
---   and carry the same latent bug, but neither is client-callable
---   (has_function_privilege('authenticated', …) = false for both) and neither
---   is on the Approve path. Left alone deliberately — see the note at the foot.
+-- • activate_pro_subscription's OTHER defect: it writes no plan_code at all, so
+--   rows it creates carry plan_type without a code. Pre-existing, unrelated to
+--   the constraint, and touching it would change behaviour this file has no
+--   mandate to change.
 --
 -- Target project: igvkyxkmjnkzscqgommj
 -- ===========================================================================
@@ -283,7 +334,115 @@ end;
 $function$;
 
 -- ---------------------------------------------------------------------------
--- 3. Assert every sellable plan now maps to a permitted value
+-- 3. activate_subscription — the same one-line change
+-- ---------------------------------------------------------------------------
+-- The Stripe/automated activation path. Not client-callable and not on the
+-- Approve button, but it writes plan_type from a plan_code exactly as
+-- approve_payment_request did, so it fails identically the first time it is
+-- reached with an authored plan. Fixing one path and leaving the other is how a
+-- defect comes back wearing a different stack trace.
+--
+-- Rebased on the live definition, verified 2026-08-02. Body verbatim except the
+-- plan_type value, which is marked.
+create or replace function public.activate_subscription(p_payment_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+DECLARE
+  v_payment         RECORD;
+  v_plan            RECORD;
+  v_end_date        TIMESTAMPTZ;
+  v_sub_id          UUID;
+  v_new_sub_cred    INTEGER;
+  v_already_founder BOOLEAN;
+  v_founder_result  JSONB;
+BEGIN
+  SELECT * INTO v_payment FROM payments WHERE id = p_payment_id AND status = 'COMPLETED';
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'payment_not_found_or_not_completed');
+  END IF;
+
+  IF v_payment.payment_type != 'SUBSCRIPTION' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_a_subscription_payment');
+  END IF;
+
+  SELECT * INTO v_plan FROM pricing_settings WHERE plan_code = v_payment.reference_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'plan_not_found');
+  END IF;
+
+  v_end_date := CASE v_plan.billing_cycle
+    WHEN 'monthly'    THEN now() + INTERVAL '1 month'
+    WHEN 'quarterly'  THEN now() + INTERVAL '3 months'
+    WHEN 'semiannual' THEN now() + INTERVAL '6 months'
+    WHEN 'annual'     THEN now() + INTERVAL '1 year'
+    WHEN 'one_time'   THEN NULL
+    WHEN 'custom'     THEN CASE WHEN COALESCE(v_plan.period_days, 0) > 0
+                                THEN now() + (v_plan.period_days || ' days')::interval
+                                ELSE NULL END
+    ELSE NULL
+  END;
+
+  UPDATE subscriptions
+  SET status = 'EXPIRED', active = false, updated_at = now()
+  WHERE user_id = v_payment.user_id AND status = 'ACTIVE';
+
+  -- ▼▼▼ THE ONE CHANGED LINE ▼▼▼
+  -- was: (v_payment.user_id, v_plan.plan_code, v_plan.plan_code, 'ACTIVE', ...)
+  INSERT INTO subscriptions
+    (user_id, plan_code, plan_type, status, active,
+     start_date, end_date, current_period_end,
+     auto_renew, credits_granted, payment_id)
+  VALUES
+    (v_payment.user_id, v_plan.plan_code, public.legacy_plan_type(v_plan.plan_code), 'ACTIVE', true,
+     now(), v_end_date, v_end_date,
+     false, v_plan.credits_granted, p_payment_id)
+  -- ▲▲▲
+  RETURNING id INTO v_sub_id;
+
+  UPDATE profiles
+  SET
+    plan_code               = v_plan.plan_code,
+    plan                    = lower(v_plan.plan_code),
+    subscription_credits    = subscription_credits + v_plan.credits_granted,
+    credits_balance         = (subscription_credits + v_plan.credits_granted) + pack_credits,
+    subscription_expires_at = v_end_date,
+    upgrade_requested       = false,
+    upgrade_note            = null
+  WHERE id = v_payment.user_id
+  RETURNING subscription_credits INTO v_new_sub_cred;
+
+  INSERT INTO credit_transactions
+    (user_id, transaction_type, credits, balance_after,
+     reference_type, reference_id, description)
+  SELECT
+    v_payment.user_id, 'GRANT', v_plan.credits_granted,
+    subscription_credits + pack_credits,
+    'SUBSCRIPTION', v_sub_id,
+    'Credits granted for ' || v_plan.display_name
+  FROM profiles WHERE id = v_payment.user_id;
+
+  IF v_plan.is_founder THEN
+    SELECT is_founder INTO v_already_founder FROM profiles WHERE id = v_payment.user_id;
+    IF NOT v_already_founder THEN
+      v_founder_result := claim_founder_slot(v_payment.user_id, p_payment_id);
+      IF NOT (v_founder_result->>'ok')::BOOLEAN THEN
+        RETURN jsonb_build_object('ok', false,
+          'reason', 'founder_slot_unavailable:' || (v_founder_result->>'reason'));
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'ok', true, 'subscription_id', v_sub_id, 'plan_code', v_plan.plan_code,
+    'credits_granted', v_plan.credits_granted, 'expires_at', v_end_date);
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Assert every sellable plan now maps to a permitted value
 -- ---------------------------------------------------------------------------
 -- Aborts rather than committing a mapping that still violates the constraint
 -- for some plan already in the catalogue.
@@ -300,6 +459,37 @@ begin
 
   if v_bad is not null then
     raise exception 'legacy_plan_type still yields a value the CHECK rejects: %', v_bad;
+  end if;
+end $$;
+
+-- No writer of plan_type may pass a raw plan_code through again. Checked
+-- against the function bodies themselves, so a future edit that reintroduces it
+-- cannot commit alongside this file's claim to have removed it.
+do $$
+declare
+  v_src text;
+begin
+  select pg_get_functiondef(p.oid) into v_src from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname='public' and p.proname='approve_payment_request';
+  if v_src !~ 'legacy_plan_type\(_req\.plan_code\)' then
+    raise exception 'approve_payment_request does not route plan_type through legacy_plan_type';
+  end if;
+
+  select pg_get_functiondef(p.oid) into v_src from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname='public' and p.proname='activate_subscription';
+  if v_src !~ 'legacy_plan_type\(v_plan\.plan_code\)' then
+    raise exception 'activate_subscription does not route plan_type through legacy_plan_type';
+  end if;
+
+  -- activate_pro_subscription is untouched on purpose; assert its literal is
+  -- and stays a permitted value, so "no change needed" is enforced, not assumed.
+  select pg_get_functiondef(p.oid) into v_src from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname='public' and p.proname='activate_pro_subscription';
+  if v_src !~ '''PRO_MONTHLY''' then
+    raise exception 'activate_pro_subscription no longer writes the literal PRO_MONTHLY — re-check it';
   end if;
 end $$;
 

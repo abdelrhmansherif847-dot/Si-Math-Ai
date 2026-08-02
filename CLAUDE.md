@@ -137,13 +137,14 @@ student impact during exam-prep windows.
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
+| `subscriptions.plan_type` | A legacy CATEGORY column, not a plan code, and read by nothing — `plan_code` on the same row is authoritative. `subscriptions_plan_type_check` permits six values only, so every writer maps through `legacy_plan_type()` (`20260802184704`). Never write a raw `plan_code` into it |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
 | `ai-tutor` deployed bundle | sha256 `1b6ac2d1507742872b38614181daea359dbcddf9d4aade60970c8e0692315aac`, deployed 2026-08-02T17:53:15Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}`. **Re-read this row from `list_edge_functions` rather than trusting it** — it was found one deploy stale on 2026-08-02 (it read version 133 / `c3f5fff1…` while production ran 134) |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **73 files** in `supabase/migrations/`, **137 applied** in the database |
+| Migrations | **74 files** in `supabase/migrations/`, **138 applied** in the database |
 | Static site | 46 root `*.html` pages on Vercel |
 | CI | `node tests/run-all.mjs` — 20 test suites + 7 validators = **27 checks** |
 
