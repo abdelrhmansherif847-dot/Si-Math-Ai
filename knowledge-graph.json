@@ -58,6 +58,10 @@
       "authoredBy": {
         "@id": "sma:authoredBy",
         "@type": "@id"
+      },
+      "accelerates": {
+        "@id": "sma:accelerates",
+        "@type": "@id"
       }
     }
   ],
@@ -91,6 +95,9 @@
       "hasDefinedTerm": [
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-course"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#student"
@@ -141,6 +148,9 @@
           "@id": "https://www.si-math-ai.com/knowledge-graph#three-pillars"
         },
         {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+        },
+        {
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-loop"
         },
         {
@@ -164,7 +174,7 @@
       "name": "Si Math AI",
       "conceptKind": "Platform",
       "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
-      "purpose": "To give students access to the kind of individual diagnosis and expert teaching that was previously available only to those who could afford a private tutor — and to make the resulting progress measurable.",
+      "purpose": "To multiply the impact of good teaching rather than substitute for it. Teaching already works; what a teacher cannot do thirty times over is diagnose each student individually, supply unlimited targeted practice and measure the result. Si Math AI does those things, and it is an optional accelerator — no student's success depends on it.",
       "inDefinedTermSet": {
         "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
       },
@@ -198,6 +208,48 @@
       ],
       "generates": [
         "https://www.si-math-ai.com/knowledge-graph#learning-loop"
+      ],
+      "accelerates": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-course",
+      "identifier": "si-math-course",
+      "name": "The Si Math Course",
+      "conceptKind": "Program",
+      "description": "The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It teaches the mathematics in full and needs no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.",
+      "purpose": "It is the teaching. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student's success should ever depend on purchasing an additional product.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math-course",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/why-we-built-si-math-ai.html",
+        "https://www.si-math-ai.com/why-not-chatgpt.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Experienced SAT, ACT and EST mathematics teaching",
+        "A sequenced curriculum and its worked material"
+      ],
+      "output": [
+        "Mathematical understanding",
+        "Exam technique",
+        "Students who are prepared without any software at all"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ],
+      "authoredBy": [
+        "https://www.si-math-ai.com/knowledge-graph#human-support"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
       ]
     },
     {
@@ -752,7 +804,8 @@
       ],
       "generates": [
         "https://www.si-math-ai.com/knowledge-graph#taxonomy",
-        "https://www.si-math-ai.com/knowledge-graph#educational-principles"
+        "https://www.si-math-ai.com/knowledge-graph#educational-principles",
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course"
       ],
       "authoredBy": [
         "https://www.si-math-ai.com/knowledge-graph#human-support"
@@ -785,6 +838,44 @@
       "requires": [
         "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
         "https://www.si-math-ai.com/knowledge-graph#human-support"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator",
+      "identifier": "learning-accelerator",
+      "name": "Learning Accelerator",
+      "conceptKind": "Positioning",
+      "description": "The role Si Math AI occupies relative to teaching. The course teaches; Si Math AI accelerates learning. The course builds knowledge; Si Math AI helps students reach their full potential faster through personalized guidance, continuous practice and intelligent learning support. Artificial Intelligence is not the teacher — it is the learning accelerator.",
+      "purpose": "To fix the direction of a relationship that technology companies routinely get backwards. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don't replace great teaching. We multiply its impact.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#learning-accelerator",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/why-we-built-si-math-ai.html",
+        "https://www.si-math-ai.com/why-not-chatgpt.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "A complete educational programme that already works",
+        "Technology that scales what a teacher cannot do thirty times over"
+      ],
+      "output": [
+        "The site-wide statement: \"We don't replace great teaching. We multiply its impact.\"",
+        "A published commitment that the platform is optional"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#three-pillars"
       ]
     },
     {

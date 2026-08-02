@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 22 concepts, and a 2,030-check CI gate. Nothing further is to
+knowledge graph of 24 concepts, and a 2,209-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -40,6 +40,23 @@ described three different ways by the time anyone reconciles them. See §14.
 
 **2 · Real data arrived.** This is the addition that is always welcome, and the
 one the whole layer was built to make possible. See the runbook below.
+
+### And one that is not an addition at all: a correction
+
+The freeze forbids *adding*. It has never forbidden fixing something the layer
+says that is wrong — and it must not, or the freeze becomes a way of preserving
+errors.
+
+That distinction was tested on 2026-08-02, when the course/platform positioning
+landed (§1a). It added no page. It corrected a relationship the existing pages
+had implied backwards by never naming the Si Math course at all. It went through
+the pipeline in order, graph first, and every claim it introduced is enforced by
+CI.
+
+The test to apply: **does this say something new, or does it fix something the
+site already says wrongly?** The second is always in scope. If the answer is
+"neither — it just says the existing thing more nicely", that is the case the
+freeze exists to refuse.
 
 ### The question that gates every feature
 
@@ -169,6 +186,98 @@ Never describe Si Math AI as any of the following, in any language:
 Also banned: unverifiable superlatives — "the best in the world", "#1 platform",
 "guaranteed score increase", "the most advanced AI". We claim expertise and
 describe mechanisms; we do not claim rankings we cannot substantiate.
+
+---
+
+## 1a. The course and the platform (the direction of the relationship)
+
+§1 says AI is one engine inside a larger educational system. This section says
+which one is the engine and which one is the vehicle, because getting that
+backwards is the single most common failure of an EdTech product's positioning —
+and it is a failure that shows up in the writing long before it shows up in the
+product.
+
+**The Si Math course is a complete, standalone educational programme.** It
+teaches SAT, ACT and EST Mathematics in full. It worked before Si Math AI
+existed and it works for students who never open the platform. It is not a
+teaser, a funnel, or half a product waiting for software to complete it.
+
+**Si Math AI is an optional accelerator.** It is not a requirement, not a
+prerequisite, and not the part that makes the teaching work.
+
+### Canonical positioning statement (use these sentences verbatim)
+
+> **The course teaches. Si Math AI accelerates learning.**
+>
+> The course builds knowledge. Si Math AI helps students reach their full
+> potential faster through personalized guidance, continuous practice, and
+> intelligent learning support.
+>
+> **Artificial Intelligence is not the teacher. It is the learning accelerator.**
+
+### The site-wide tagline
+
+> **We don't replace great teaching. We multiply its impact.**
+
+This appears in the footer of every public page. It is defined exactly once, in
+`scripts/_page-shell.mjs` (`TAGLINE`), and page-by-page enforcement lives in
+`scripts/validate-knowledge-layer.mjs`. Do not retype it into a page; if it needs
+to change, it changes in the module.
+
+### The commitment this creates
+
+> **No student's success should ever depend on purchasing an additional
+> product.**
+
+That sentence is a constraint on the product, not a line of copy. Concretely, it
+means:
+
+- The platform may never become the only route to material the course teaches.
+- A feature that makes the course *incomplete without it* is a feature we do not
+  ship, however good the retention numbers would look.
+- "You need Si Math AI to succeed" is a banned claim, in every language, in
+  marketing and in the product alike.
+
+### What must never be written
+
+| Banned | Use instead |
+| --- | --- |
+| "Si Math AI replaces teachers" | "Si Math AI multiplies the impact of great teaching" |
+| "You need Si Math AI to succeed" | "Si Math AI is optional; the course teaches the mathematics in full" |
+| "Si Math AI teaches you SAT Math" | "The course teaches; Si Math AI accelerates learning" |
+| "The AI is the teacher" | "AI is not the teacher — it is the learning accelerator" |
+
+### The unverified figure — do not publish it
+
+The brief this section came from stated that *thousands of students have achieved
+excellent SAT, ACT and EST Math scores through the course, long before Si Math AI
+existed*. That is very likely true, and it is exactly the kind of claim §12
+forbids publishing without evidence: it is a student count, and we have no
+published record to point at.
+
+So the philosophy is published and **the headcount is not**. The claim stays in
+`consistency-audit.md` as finding **C-22** until the owner supplies a verifiable
+figure — enrolment records, cohort results, anything a reader could check. See
+§0a for the runbook that applies the moment real numbers exist.
+
+This is not caution for its own sake. The Trust Center promises readers that
+Si Math AI publishes no student counts it cannot evidence; a headcount here would
+break that promise on the same site that makes it.
+
+### In the knowledge graph
+
+Two concepts carry this, and they are the authority:
+
+- **`si-math-course`** (*Program*) — the standalone programme, canonical page
+  `about.html`.
+- **`learning-accelerator`** (*Positioning*) — the role the platform occupies,
+  canonical page `about.html`.
+
+The edge `si-math-ai --accelerates--> si-math-course` uses a predicate added
+specifically for this relationship, because `improves` would have claimed the
+platform makes the course better — which is false. `accelerates` is defined as
+"makes faster, **without being required for**", and that second half is the
+honesty clause.
 
 ---
 
@@ -723,10 +832,19 @@ discipline. The graph removes the opportunity for it.
 
 ### The vocabulary
 
-Ten predicates: `uses`, `feeds`, `generates`, `measures`, `records`, `requires`,
-`partOf`, `governs`, `improves`, `authoredBy`. Deliberately few — a large
-predicate vocabulary is harder to keep consistent than it is useful, so adding
-one is a considered act.
+Eleven predicates: `uses`, `feeds`, `generates`, `measures`, `records`,
+`requires`, `partOf`, `governs`, `improves`, `authoredBy`, `accelerates`.
+Deliberately few — a large predicate vocabulary is harder to keep consistent than
+it is useful, so adding one is a considered act.
+
+`accelerates` is the only one added since the graph was written, and it is worth
+recording why, because it is the shape a justified addition has. The
+course/platform relationship (§1a) could not be said with the existing ten:
+`improves` would have claimed Si Math AI makes the course better, which is false
+— the course is complete on its own — and `requires` inverts the dependency
+entirely. So the predicate carries the claim in its own definition: **"makes
+faster, without being required for."** CI pins that second clause, because
+softening it is how the graph would stop saying the thing it was added to say.
 
 They are namespaced under `https://www.si-math-ai.com/ns#` alongside schema.org.
 Concepts stay `DefinedTerm` so generic consumers still understand them; the edges
@@ -805,6 +923,15 @@ Edit `scripts/_page-shell.mjs`, then run `node scripts/sync-page-shell.mjs` and
 `node scripts/build-learn.mjs && node scripts/build-faq.mjs`. Never edit a nav
 or footer in a page directly — CI checks every page against the shell.
 
+The site-wide tagline lives in the same module (`TAGLINE`) and rides the shared
+footer to all 27 shell pages. Four pages carry their own footer markup and
+therefore their own copy — `index.html`, `pricing.html`, `signup.html`,
+`login.html` — which is exactly why the validator checks all 31 indexable pages
+individually rather than trusting the generator. Changing the wording means
+editing the module, those four pages, both machine files, and the constant in
+`scripts/validate-knowledge-layer.mjs`, which is deliberately a second
+independent statement of it rather than an import.
+
 ### The comparison rule
 
 Comparisons with other tools are **educational, never competitive**. This is
@@ -840,6 +967,7 @@ the validator.
 | Founding year | Not recorded anywhere in the repository | `Organization.foundingDate` |
 | Legal entity name & address | Not recorded in the repository | `Organization.legalName` / `address` |
 | 1200×630 social share image | Only a 1024×1024 square logo exists | `assets/og-image.png`, then swap `og:image` and set `twitter:card` to `summary_large_image` |
+| How many students the **course** has taught | Stated as "thousands" in the brief, with no record in the repository to evidence it. Published claims of student counts are forbidden by §12, so the philosophy shipped and the number did not | §1a, `about.html` and `why-we-built-si-math-ai.html`; tracked as C-22 in `consistency-audit.md` |
 
 Until the share image exists, pages use the square logo with
 `twitter:card: summary`, which is the correct pairing for a square asset.

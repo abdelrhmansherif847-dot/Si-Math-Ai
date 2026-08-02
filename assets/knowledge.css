@@ -393,6 +393,18 @@ details.k-faq > summary:focus-visible { outline: 2px solid var(--cyan); outline-
 .k-footer a { color: var(--text-300); text-decoration: none; font-size: 14.5px; }
 .k-footer a:hover { color: var(--cyan); }
 .k-footer-about { font-size: 14px; color: var(--text-400); line-height: 1.65; max-width: 38ch; }
+
+/* The site-wide tagline. Deliberately the last piece of prose on every page:
+   the platform's relationship to teaching is the thing we most want a reader —
+   and a crawler — to leave with. Source: scripts/_page-shell.mjs (TAGLINE). */
+.k-footer-tagline {
+  margin: 34px 0 0 0; padding-top: 26px; border-top: 1px solid var(--border-soft);
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(15px, 2vw, 18px); line-height: 1.5;
+  color: var(--text-200); text-align: center;
+}
+.k-footer-tagline + .k-footer-bottom { margin-top: 22px; padding-top: 18px; border-top: none; }
+
 .k-footer-bottom {
   margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-soft);
   font-size: 13px; color: var(--text-500); display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: space-between;

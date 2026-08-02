@@ -17,6 +17,34 @@ export const CANONICAL_DEFINITION =
   'that combines educational expertise, AI technology, personalized learning, analytics, ' +
   'and human support to help students improve their understanding and performance.';
 
+/**
+ * The site-wide tagline. It appears in the footer of every public page, which
+ * makes it the one sentence a reader — or a crawler — cannot miss.
+ *
+ * It is here rather than in twenty-nine footers because it states the platform's
+ * relationship to teaching, and a claim that important must not be able to
+ * differ between two pages. Enforced page-by-page by
+ * scripts/validate-knowledge-layer.mjs.
+ *
+ * Written with a straight apostrophe deliberately: the validator compares it to
+ * the rendered text of every page, and a typographic apostrophe would make the
+ * comparison depend on entity decoding.
+ */
+export const TAGLINE = "We don't replace great teaching. We multiply its impact.";
+
+/**
+ * The canonical positioning of the platform relative to the course, as
+ * independently-checkable fragments. The Si Math course is a complete
+ * educational programme on its own; Si Math AI accelerates it and is optional.
+ *
+ * Defined once here, stated in graph-data.mjs as the `learning-accelerator`
+ * concept, and required on every knowledge page by the validator.
+ */
+export const POSITIONING_COURSE = [
+  'The course teaches. Si Math AI accelerates learning.',
+  'Artificial Intelligence is not the teacher. It is the learning accelerator.',
+];
+
 /** Top-level nav. `current` is a filename, e.g. 'learn.html'. */
 export function nav(current = '') {
   const items = [
@@ -106,6 +134,7 @@ export function footer() {
         </ul>
       </div>
     </div>
+    <p class="k-footer-tagline">${TAGLINE}</p>
     <div class="k-footer-bottom">
       <span>© 2026 Si Math AI. All rights reserved.</span>
       <span>SAT · ACT · EST Mathematics</span>

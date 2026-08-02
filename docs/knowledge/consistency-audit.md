@@ -515,6 +515,74 @@ worse for passing.
 
 ---
 
+## C-22 · The knowledge layer had no concept of the course — RESOLVED (with one open figure)
+
+**Found:** every page described Si Math AI as though the platform were the whole
+product. The Si Math course — a complete, standalone educational programme that
+teaches SAT, ACT and EST Mathematics in full — appeared nowhere in the knowledge
+graph, nowhere in `knowledge-base.md`, and nowhere on any public page.
+
+That is not a gap in coverage; it is an inverted relationship. A site that never
+names the teaching implies the software *is* the teaching, and the two most
+visible pages leaned that way: `why-we-built-si-math-ai.html` argued from a gap
+where individual attention is *absent*, and `about.html` opened on the platform
+with no statement that a student can succeed without it.
+
+**Fixed:** the correction went through the pipeline in order —
+
+1. **Graph.** Two concepts added: `si-math-course` (*Program*) and
+   `learning-accelerator` (*Positioning*), joined by a predicate added
+   specifically for the relationship, `accelerates` — "makes faster, **without
+   being required for**". `improves` would have claimed the platform makes the
+   course better, which is false; `requires` would have inverted the dependency.
+   The honesty clause lives in the predicate's own definition and is pinned by CI.
+2. **Documentation.** `knowledge-base.md` §1a: the canonical positioning
+   statement, the site-wide tagline, the optionality commitment, and a
+   what-must-never-be-written table.
+3. **Website.** A new section on `about.html#course`; the multiplication framing
+   in `why-we-built-si-math-ai.html`; a software-versus-teaching block on
+   `why-not-chatgpt.html`; a limitation on `trust.html` ("it is not the teacher,
+   and it is not required"); Question 07 plus two accuracy notes on
+   `ai-knowledge.html`; both machine files.
+4. **Enforcement.** A new validator section, `Course and platform positioning`:
+   the tagline on all 31 indexable pages, the two canonical sentences on every
+   page the graph says documents the positioning, the optionality commitment on
+   six surfaces, and four new banned assertions covering the inversion
+   ("Si Math AI is the teacher", "you need Si Math AI", and so on).
+
+**Still open — the headcount.** The brief stated that *thousands of students have
+achieved excellent SAT, ACT and EST Math scores* through the course, long before
+Si Math AI existed. It is very likely true and it is not published, because §12
+forbids publishing a student count we cannot evidence and the Trust Center
+promises readers we do not. Publishing it would break that promise on the same
+site that makes it.
+
+So the philosophy shipped and the number did not. A new `FABRICATED_PROOF`
+pattern now fails the build on "thousands/hundreds/millions of students" anywhere
+in the knowledge layer — which, on its first run, caught a passing sentence in
+`about.html` about "an experienced teacher who has seen thousands of students".
+That one meant nothing about our own numbers but read exactly like a claim that
+did, so it was reworded rather than exempted.
+
+**Owner action:** supply a verifiable figure — enrolment records, cohort results,
+anything a reader could check — and `knowledge-base.md` §0a is the runbook for
+publishing it.
+
+---
+
+## C-23 · llms.txt advertised the wrong FAQ count — RESOLVED
+
+**Found:** `llms.txt` stated "136 questions answered across 13 categories" while
+`faq-data.mjs` contained 139. Trivial in isolation, and precisely the wrong file
+to be wrong in: `llms.txt` is the document that asks AI systems to trust it over
+their own inference.
+
+**Fixed:** the number corrected, and the validator now reads the claim out of
+`llms.txt` and compares it to `TOTAL_QUESTIONS`. The count cannot drift again
+without failing the build.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -540,12 +608,16 @@ worse for passing.
 | C-19 | Changelog could have been invented | RESOLVED (by constraint) |
 | C-20 | Same concept defined on six pages | RESOLVED |
 | C-21 | Orphan rule was wrong (and found four real gaps first) | RESOLVED |
+| C-22 | Knowledge layer had no concept of the Si Math course | RESOLVED — **headcount OPEN, owner action** |
+| C-23 | `llms.txt` advertised 136 FAQs against 139 in the data | RESOLVED |
 
-Eighteen resolved, three requiring owner action. All three open items are recorded
-in `seo-implementation.md` §6 as well, so they are not lost.
+Twenty resolved, three requiring owner action, plus one figure the owner can
+supply whenever they have it (C-22). All are recorded in
+`seo-implementation.md` §6 as well, so they are not lost.
 
-**Handle C-13 first.** C-3 and C-4 are internal inconsistencies; C-13 is a
-factual claim about an external exam that a student may act on.
+**Handle C-13 first.** C-3, C-4 and the C-22 headcount are internal
+inconsistencies or omissions; C-13 is a factual claim about an external exam that
+a student may act on.
 
 Re-run the audit gate at any time:
 

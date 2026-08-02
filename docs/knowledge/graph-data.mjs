@@ -48,6 +48,14 @@ export const PREDICATES = {
   governs: 'constrains how something behaves',
   improves: 'raises the state of',
   authoredBy: 'is created and reviewed by',
+  // Added deliberately, because no existing predicate says the one thing that
+  // matters most about the platform's relationship to teaching. `improves`
+  // would claim Si Math AI makes the course better, which is false: the course
+  // is complete on its own. What the platform changes is the *rate* at which a
+  // student gets through it. The "without being required for" half is not
+  // decoration — it is the honesty clause, and it is what stops this edge ever
+  // being read as a dependency.
+  accelerates: 'makes faster, without being required for',
 };
 
 /**
@@ -62,7 +70,7 @@ export const CONCEPTS = [
     definition:
       'Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.',
     purpose:
-      'To give students access to the kind of individual diagnosis and expert teaching that was previously available only to those who could afford a private tutor — and to make the resulting progress measurable.',
+      'To multiply the impact of good teaching rather than substitute for it. Teaching already works; what a teacher cannot do thirty times over is diagnose each student individually, supply unlimited targeted practice and measure the result. Si Math AI does those things, and it is an optional accelerator — no student\'s success depends on it.',
     inputs: ['A student\'s own questions, drills and mock exam attempts', 'A specialist-authored curriculum and skill taxonomy'],
     outputs: ['Explanations', 'A ranked diagnosis of weak skills', 'Targeted practice', 'Measured mastery and a predicted score'],
     related: [
@@ -70,10 +78,30 @@ export const CONCEPTS = [
       { predicate: 'requires', target: 'educational-expertise' },
       { predicate: 'requires', target: 'human-support' },
       { predicate: 'generates', target: 'learning-loop' },
+      { predicate: 'accelerates', target: 'si-math-course', note: 'optional — the course is complete without it' },
     ],
     pages: ['about.html', 'how-it-works.html', 'ai-knowledge.html'],
     canonicalPage: 'about.html',
     schemaRefs: ['https://www.si-math-ai.com/#organization', 'https://www.si-math-ai.com/#software'],
+  },
+  {
+    id: 'si-math-course',
+    name: 'The Si Math Course',
+    kind: 'Program',
+    definition:
+      'The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It teaches the mathematics in full and needs no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.',
+    purpose:
+      'It is the teaching. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student\'s success should ever depend on purchasing an additional product.',
+    inputs: ['Experienced SAT, ACT and EST mathematics teaching', 'A sequenced curriculum and its worked material'],
+    outputs: ['Mathematical understanding', 'Exam technique', 'Students who are prepared without any software at all'],
+    related: [
+      { predicate: 'improves', target: 'student' },
+      { predicate: 'authoredBy', target: 'human-support', note: 'the same educators who author the platform\'s content' },
+      { predicate: 'governs', target: 'si-math-ai', note: 'the platform serves what the course teaches, not the reverse' },
+    ],
+    pages: ['about.html', 'why-we-built-si-math-ai.html', 'why-not-chatgpt.html', 'trust.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
   },
   {
     id: 'student',
@@ -368,6 +396,7 @@ export const CONCEPTS = [
       { predicate: 'governs', target: 'zero', note: 'Zero delivers it and may not depart from it' },
       { predicate: 'generates', target: 'taxonomy' },
       { predicate: 'generates', target: 'educational-principles' },
+      { predicate: 'generates', target: 'si-math-course', note: 'the course is what the expertise produces first' },
       { predicate: 'authoredBy', target: 'human-support' },
     ],
     pages: ['about.html', 'principles.html', 'evidence.html', 'ai-knowledge.html'],
@@ -390,6 +419,25 @@ export const CONCEPTS = [
       { predicate: 'requires', target: 'human-support' },
     ],
     pages: ['about.html', 'ai-knowledge.html', 'why-not-chatgpt.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'learning-accelerator',
+    name: 'Learning Accelerator',
+    kind: 'Positioning',
+    definition:
+      'The role Si Math AI occupies relative to teaching. The course teaches; Si Math AI accelerates learning. The course builds knowledge; Si Math AI helps students reach their full potential faster through personalized guidance, continuous practice and intelligent learning support. Artificial Intelligence is not the teacher — it is the learning accelerator.',
+    purpose:
+      'To fix the direction of a relationship that technology companies routinely get backwards. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don\'t replace great teaching. We multiply its impact.',
+    inputs: ['A complete educational programme that already works', 'Technology that scales what a teacher cannot do thirty times over'],
+    outputs: ['The site-wide statement: "We don\'t replace great teaching. We multiply its impact."', 'A published commitment that the platform is optional'],
+    related: [
+      { predicate: 'governs', target: 'si-math-ai' },
+      { predicate: 'requires', target: 'si-math-course', note: 'the claim only holds because the course is complete on its own' },
+      { predicate: 'partOf', target: 'three-pillars', note: 'it states where the technology pillar sits relative to the other two' },
+    ],
+    pages: ['about.html', 'why-we-built-si-math-ai.html', 'why-not-chatgpt.html', 'trust.html', 'ai-knowledge.html'],
     canonicalPage: 'about.html',
     schemaRefs: [],
   },
