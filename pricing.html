@@ -212,6 +212,10 @@ button{font-family:inherit;cursor:pointer}
 .btn-outline-plan{display:block;width:100%;padding:13px;border-radius:var(--r-sm);border:1px solid var(--border-mid);font-family:var(--font-display);font-weight:600;font-size:14px;background:transparent;color:var(--text-400);cursor:pointer;text-align:center;transition:all .2s}
 .btn-outline-plan:hover{color:var(--text-200);border-color:var(--border-soft)}
 
+.pc-authored-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;margin-bottom:9px;align-self:flex-start}
+.pc-icon{font-size:1.7rem;line-height:1;margin-bottom:5px}
+.pc-short{font-size:13px;color:var(--text-400);line-height:1.45;margin-top:3px}
+.pc-full{font-size:12.5px;color:var(--text-500);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft)}
 /* Credit packs */
 .packs-grid{display:grid;grid-template-columns:1fr;gap:14px}
 @media(min-width:540px){.packs-grid{grid-template-columns:repeat(3,1fr)}}
@@ -504,6 +508,16 @@ function toggleFaq(el) {
 }
 
 function buildPlanFeatures(plan) {
+  // A plan authored in the Owner Dashboard carries its own feature list, and
+  // that always wins. The hand-written ladder below is the fallback for the
+  // plans that predate authoring — it is what keeps this page unchanged for
+  // them rather than blanking their benefits.
+  if (Array.isArray(plan.features) && plan.features.length) {
+    return plan.features.map(f => ({
+      ok: f.included !== false,
+      text: String(f && f.text != null ? f.text : '')
+    })).filter(f => f.text);
+  }
   const code = plan.plan_code;
   const limit = plan.daily_limit;
   const devices = plan.device_limit;
@@ -599,8 +613,15 @@ async function loadPage() {
 
   const sub = subRes.data;
   const pendingSub = pendingSubRes.data;
-  const plans = plansRes.data || [];
-  const packs = packsRes.data || [];
+  // A plan reaches the pricing page only when it is public and not archived.
+  // `active` alone stopped being the whole answer once plans could be hidden
+  // (reachable by direct link) or retired. Rows loaded from a database without
+  // those columns have neither, and `undefined` passes both tests — which is
+  // what keeps this page working before the authoring migration is applied.
+  const isListable = (p) => (p.visibility === undefined || p.visibility === 'public')
+                         && !p.archived_at;
+  const plans = (plansRes.data || []).filter(isListable);
+  const packs = (packsRes.data || []).filter(isListable);
   const founderSlots = parseInt(slotsRes.data?.value || '50', 10);
 
   const chatCount = chatRes.count || 0;
@@ -704,11 +725,14 @@ async function loadPage() {
       btnHtml = `<button class="btn-outline-plan" disabled>Free forever</button>`;
     } else if (isFounderPlan) {
       btnHtml = `<button class="btn-upgrade-founder" onclick="openModal('${escHtml(plan.plan_code)}','${escHtml(plan.display_name)}')">👑 Claim Founder Spot</button>`;
+    } else if (plan.cta_href) {
+      // An authored destination is a link, not the standard checkout modal.
+      btnHtml = `<a class="btn-upgrade" style="display:block;text-align:center" href="${escHtml(plan.cta_href)}">${escHtml(plan.cta_text || ('Choose ' + plan.display_name))}</a>`;
     } else {
-      btnHtml = `<button class="btn-upgrade" onclick="openModal('${escHtml(plan.plan_code)}','${escHtml(plan.display_name)}')">⭐ Upgrade to ${escHtml(plan.display_name)}</button>`;
+      btnHtml = `<button class="btn-upgrade" onclick="openModal('${escHtml(plan.plan_code)}','${escHtml(plan.display_name)}')">${escHtml(plan.cta_text || ('⭐ Upgrade to ' + plan.display_name))}</button>`;
     }
 
-    html += `<div class="${cardClass}">`;
+    html += `<div class="${cardClass}"${(plan.theme_color && !isFounderPlan && !isRecommended) ? ` style="border-color:${plan.theme_color}55"` : ''}>`;
 
     if (isFounderPlan) {
       html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -717,7 +741,19 @@ async function loadPage() {
       <div class="slots-remaining${slotsUrgent ? ' urgent' : ''}">🔥 Only ${slotsLeft} spot${slotsLeft===1?'':'s'} remaining</div>`;
     }
 
+    // Everything below comes off the plan's own row when it is set, and falls
+    // back to the page's existing look when it is not.
+    const badgeTxt = (plan.badge && plan.badge !== 'none')
+      ? (plan.badge_text || ({best_value:'BEST VALUE',most_popular:'MOST POPULAR',new:'NEW',limited:'LIMITED'}[plan.badge] || ''))
+      : '';
+    const theme = plan.theme_color || '';
+    const accent = plan.accent_color || theme || '';
+    if (badgeTxt && !isFounderPlan) {
+      html += `<div class="pc-authored-badge" style="${accent ? `background:${accent}22;border-color:${accent}55;color:${accent}` : ''}">${escHtml(badgeTxt)}</div>`;
+    }
+    if (plan.icon) html += `<div class="pc-icon">${escHtml(plan.icon)}</div>`;
     html += `<div class="pc-name">${escHtml(plan.display_name)}</div>`;
+    if (plan.short_description) html += `<div class="pc-short">${escHtml(plan.short_description)}</div>`;
 
     if (isFree) {
       html += `<div class="pc-price">0<span class="pc-price-unit"> EGP</span></div>
@@ -725,7 +761,7 @@ async function loadPage() {
       <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
     } else {
       const perDay = Math.round(plan.credits_granted / cycleDays(plan.billing_cycle, plan.plan_code));
-      html += `<div class="pc-price">${Number(plan.price_egp).toLocaleString('en-EG',{maximumFractionDigits:0})}<span class="pc-price-unit"> EGP</span></div>
+      html += `<div class="pc-price"${theme ? ` style="color:${theme}"` : ''}>${Number(plan.price_egp).toLocaleString('en-EG',{maximumFractionDigits:0})}<span class="pc-price-unit"> ${escHtml(plan.currency || 'EGP')}</span></div>
       <div class="pc-cycle">${cycleLabel(plan.billing_cycle, plan.plan_code)}</div>
       <div class="pc-credits-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>${plan.credits_granted.toLocaleString()}</b> credits ${cycleLabel(plan.billing_cycle, plan.plan_code).replace('/ ','per ')} <span style="color:var(--text-500)">≈ ${perDay}/day</span></div>
       <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
@@ -742,6 +778,7 @@ async function loadPage() {
     html += `<ul class="pc-features">
       ${features.map(f => `<li><span class="${f.ok ? 'f-check' : 'f-cross'}">${f.ok ? '✓' : '✗'}</span><span>${escHtml(f.text)}</span></li>`).join('')}
     </ul>
+    ${plan.full_description ? `<div class="pc-full">${escHtml(plan.full_description)}</div>` : ''}
     ${btnHtml}
     </div>`;
   }

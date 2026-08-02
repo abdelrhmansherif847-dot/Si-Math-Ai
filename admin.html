@@ -746,6 +746,44 @@ select.search-input{cursor:pointer}
       .pp-num{max-width:104px;padding:6px 8px}
       .pp-note{font-size:12px;color:var(--text-400);line-height:1.5;margin:0 2px 14px;padding:9px 12px;border-radius:10px;background:rgba(56,189,248,.06);border:1px solid var(--cyan-border-soft)}
       .pp-ro{font-size:12.5px;color:var(--amber);margin:0 2px 12px}
+      /* ── Plan authoring ── */
+      .pb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+      .pb-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+      .pb-f>label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400)}
+      .pb-f>.hint{font-size:11px;color:var(--text-500);line-height:1.4}
+      .pb-f input,.pb-f select,.pb-f textarea{width:100%;padding:8px 10px;border-radius:9px;background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-family:inherit;font-size:13px}
+      .pb-f textarea{resize:vertical;min-height:60px;line-height:1.5}
+      .pb-f input:focus,.pb-f select:focus,.pb-f textarea:focus{outline:none;border-color:var(--cyan)}
+      .pb-f input[type=color]{padding:2px;height:34px;cursor:pointer}
+      .pb-wide{grid-column:1/-1}
+      .pb-sec{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin:18px 2px 10px;display:flex;align-items:center;gap:8px}
+      .pb-sec::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+      .pb-feat{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+      .pb-feat input[type=text]{flex:1;padding:7px 10px;border-radius:9px;background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-size:13px}
+      .pb-feat .mv{width:26px;height:28px;flex-shrink:0;border-radius:7px;background:var(--bg-card);border:1px solid var(--border-mid);color:var(--text-400);font-size:12px;line-height:1}
+      .pb-feat .mv:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan)}
+      .pb-feat .mv:disabled{opacity:.3;cursor:default}
+      .pb-feat .rm{width:28px;height:28px;flex-shrink:0;border-radius:7px;background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);font-size:13px;line-height:1}
+      .pb-feat label{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text-400);white-space:nowrap;cursor:pointer}
+      .pb-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)}
+      .pb-msg{flex:1 1 200px;font-size:12.5px;min-height:16px}
+      /* Live preview — mirrors the pricing page card */
+      .pb-prev{background:var(--bg-elev-1);border:1px solid var(--border-mid);border-radius:var(--r-lg);padding:20px;position:relative;overflow:hidden;max-width:330px}
+      .pb-prev .pv-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;margin-bottom:10px;font-weight:700}
+      .pb-prev .pv-icon{font-size:26px;line-height:1;margin-bottom:6px}
+      .pb-prev .pv-name{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff}
+      .pb-prev .pv-short{font-size:12.5px;color:var(--text-400);margin-top:3px;line-height:1.45}
+      .pb-prev .pv-price{font-family:var(--font-display);font-weight:800;font-size:28px;margin:12px 0 2px}
+      .pb-prev .pv-price span{font-size:13px;color:var(--text-400);font-weight:500}
+      .pb-prev .pv-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-bottom:12px}
+      .pb-prev .pv-feat{display:flex;gap:7px;font-size:12.5px;color:var(--text-300);margin-bottom:6px;align-items:flex-start}
+      .pb-prev .pv-feat .tick{flex-shrink:0;font-weight:700}
+      .pb-prev .pv-cta{display:block;width:100%;text-align:center;margin-top:14px;padding:10px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:13.5px;border:1px solid}
+      .pb-prev .pv-hidden{position:absolute;top:8px;right:10px;font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--amber)}
+      @media(min-width:1080px){#pbLayout{grid-template-columns:minmax(0,1fr) 350px!important}
+        #pbLayout>div:last-child{position:sticky;top:80px;align-self:start}}
+      .pp-arch td{opacity:.55}
+      .pp-act{display:flex;gap:5px;flex-wrap:wrap}
     </style>
 
     <!-- Summary cards -->
@@ -774,6 +812,192 @@ select.search-input{cursor:pointer}
     <!-- Operations, grouped by feature/page — data-driven from credit_costs -->
     <div id="cmOps"><div class="empty"><div class="ico">⏳</div><p>Loading operations…</p></div></div>
 
+    <!-- Create / edit a plan — the authoring surface -->
+    <div class="card" style="margin-top:8px" id="planBuilderCard">
+      <div class="card-head">
+        <div class="card-ico">✨</div>
+        <div>
+          <div class="card-title" id="pbTitle">Create New Plan</div>
+          <div class="card-sub" id="pbSub">Every field below is stored on the plan. No code change is needed for the site to show it.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="pbToggle()" id="pbToggleBtn">Open</button>
+      </div>
+
+      <div id="pbBody" style="display:none">
+        <div id="pbUnavailable" class="pp-ro" style="display:none"></div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:22px" id="pbLayout">
+          <div>
+            <div class="pb-sec">Identity</div>
+            <div class="pb-grid">
+              <div class="pb-f pb-wide">
+                <label for="pbName">Plan name</label>
+                <input type="text" id="pbName" maxlength="60" placeholder="e.g. Scholar Term" oninput="pbOnNameInput()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbCode">Internal plan code</label>
+                <input type="text" id="pbCode" maxlength="49" placeholder="AUTO" oninput="pbCodeEdited=true;pbRender()"/>
+                <span class="hint">Auto-generated from the name. Permanent once saved — payments and subscriptions are keyed to it.</span>
+              </div>
+              <div class="pb-f">
+                <label for="pbKind">Plan type</label>
+                <select id="pbKind" onchange="pbOnKindChange()">
+                  <option value="subscription">Subscription</option>
+                  <option value="pack">Credit Pack</option>
+                  <option value="lifetime">Lifetime</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div class="pb-f">
+                <label for="pbCycle">Billing cycle</label>
+                <select id="pbCycle" onchange="pbOnCycleChange()">
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="semiannual">Semiannual</option>
+                  <option value="annual">Annual</option>
+                  <option value="one_time">One-time</option>
+                  <option value="custom">Custom</option>
+                  <option value="none">None</option>
+                  <option value="pack">Pack</option>
+                </select>
+              </div>
+              <div class="pb-f">
+                <label for="pbPeriod">Period (days)</label>
+                <input type="number" id="pbPeriod" min="0" step="1" value="30" oninput="pbRender()"/>
+                <span class="hint" id="pbPeriodHint">How long access lasts after approval.</span>
+              </div>
+            </div>
+
+            <div class="pb-sec">Commercials</div>
+            <div class="pb-grid">
+              <div class="pb-f">
+                <label for="pbPrice">Price</label>
+                <input type="number" id="pbPrice" min="0" step="0.01" value="0" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbCurrency">Currency</label>
+                <input type="text" id="pbCurrency" maxlength="3" value="EGP" oninput="this.value=this.value.toUpperCase();pbRender()"/>
+                <span class="hint">Quoted in this currency. Settlement stays EGP — see the note below.</span>
+              </div>
+              <div class="pb-f">
+                <label for="pbCredits">Credits granted</label>
+                <input type="number" id="pbCredits" min="0" step="1" value="0" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbDevices">Device limit</label>
+                <input type="number" id="pbDevices" min="0" step="1" value="3" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbDaily">Daily message limit</label>
+                <input type="number" id="pbDaily" min="0" step="1" placeholder="unlimited"/>
+                <span class="hint">Leave empty for unlimited.</span>
+              </div>
+              <div class="pb-f">
+                <label for="pbOrder">Display order</label>
+                <input type="number" id="pbOrder" step="1" value="0"/>
+              </div>
+            </div>
+
+            <div class="pb-sec">Presentation</div>
+            <div class="pb-grid">
+              <div class="pb-f">
+                <label for="pbBadge">Badge</label>
+                <select id="pbBadge" onchange="pbOnBadgeChange()">
+                  <option value="none">No badge</option>
+                  <option value="best_value">Best Value</option>
+                  <option value="most_popular">Most Popular</option>
+                  <option value="new">New</option>
+                  <option value="limited">Limited</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div class="pb-f">
+                <label for="pbBadgeText">Badge text</label>
+                <input type="text" id="pbBadgeText" maxlength="30" placeholder="defaults to the badge name" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbIcon">Icon</label>
+                <input type="text" id="pbIcon" maxlength="8" placeholder="🎓" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbTheme">Theme colour</label>
+                <input type="color" id="pbTheme" value="#38bdf8" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbAccent">Accent colour</label>
+                <input type="color" id="pbAccent" value="#a855f7" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbVisibility">Visibility</label>
+                <select id="pbVisibility" onchange="pbRender()">
+                  <option value="public">Public — shown on the pricing page</option>
+                  <option value="hidden">Hidden — reachable by direct link only</option>
+                  <option value="internal">Internal — dashboard only</option>
+                </select>
+              </div>
+              <div class="pb-f pb-wide">
+                <label for="pbShort">Short description</label>
+                <input type="text" id="pbShort" maxlength="140" placeholder="One line under the plan name." oninput="pbRender()"/>
+              </div>
+              <div class="pb-f pb-wide">
+                <label for="pbFull">Full description</label>
+                <textarea id="pbFull" maxlength="1200" placeholder="Longer copy for the plan detail area."></textarea>
+              </div>
+            </div>
+
+            <div class="pb-sec">Feature list</div>
+            <div id="pbFeatures"></div>
+            <button class="btn btn-ghost btn-sm" onclick="pbAddFeature()">+ Add feature</button>
+            <span style="font-size:11.5px;color:var(--text-500);margin-left:10px" id="pbFeatCount"></span>
+
+            <div class="pb-sec">Call to action</div>
+            <div class="pb-grid">
+              <div class="pb-f">
+                <label for="pbCtaText">Button text</label>
+                <input type="text" id="pbCtaText" maxlength="40" placeholder="e.g. Upgrade to Scholar Term" oninput="pbRender()"/>
+              </div>
+              <div class="pb-f">
+                <label for="pbCtaHref">Button destination</label>
+                <input type="text" id="pbCtaHref" maxlength="200" placeholder="manual-payment.html?plan=CODE"/>
+                <span class="hint">Leave empty to use the standard checkout for this plan.</span>
+              </div>
+              <div class="pb-f">
+                <label for="pbActive">Status</label>
+                <select id="pbActive" onchange="pbRender()">
+                  <option value="true">Active — on sale</option>
+                  <option value="false">Inactive — not on sale</option>
+                </select>
+              </div>
+              <div class="pb-f">
+                <label for="pbFounder">Founder plan</label>
+                <select id="pbFounder">
+                  <option value="false">No</option>
+                  <option value="true">Yes — consumes a Founder slot</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pb-actions">
+              <button class="btn btn-primary btn-sm" id="pbSaveBtn" onclick="pbSave()">Create Plan</button>
+              <button class="btn btn-ghost btn-sm" onclick="pbReset()">Clear form</button>
+              <button class="btn btn-ghost btn-sm" id="pbCancelEditBtn" style="display:none" onclick="pbReset()">Cancel edit</button>
+              <span class="pb-msg" id="pbMsg"></span>
+            </div>
+          </div>
+
+          <div>
+            <div class="pb-sec">Live preview</div>
+            <div class="pb-prev" id="pbPreview"></div>
+            <div style="font-size:11.5px;color:var(--text-500);margin-top:10px;line-height:1.5">
+              This is the card the pricing page will render from the row you are about to save.
+              <strong>Currency is quoted, not settled</strong> — a non-EGP plan is displayed in
+              its currency while payment records stay EGP-denominated.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Plans & packs — the live catalogue every page reads from -->
     <div class="card" style="margin-top:8px">
       <div class="card-head">
@@ -793,9 +1017,17 @@ select.search-input{cursor:pointer}
       </div>
       <div id="ppReadOnly" class="pp-ro" style="display:none"></div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>Plan / Pack</th><th>Type</th><th>Price (EGP)</th><th>Credits</th><th>Sold</th><th>On&nbsp;plan</th></tr></thead>
-        <tbody id="cmPlansPacks"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-500)">Loading…</td></tr></tbody>
+        <thead><tr><th>Plan / Pack</th><th>Type</th><th>Price</th><th>Credits</th><th>Sold</th><th>On&nbsp;plan</th><th>Actions</th></tr></thead>
+        <tbody id="cmPlansPacks"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-500)">Loading…</td></tr></tbody>
       </table></div>
+
+      <div id="ppArchivedWrap" style="display:none;margin-top:18px">
+        <div class="pb-sec" style="margin-top:0">Archived <span style="text-transform:none;letter-spacing:0;color:var(--text-500)" id="ppArchivedNote"></span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Plan / Pack</th><th>Type</th><th>Price</th><th>Credits</th><th>Archived</th><th>On&nbsp;plan</th><th>Actions</th></tr></thead>
+          <tbody id="ppArchived"></tbody>
+        </table></div>
+      </div>
     </div>
   </div>
 
@@ -932,6 +1164,7 @@ async function init() {
   // therefore paint the Users table while an await here is still pending.
   await PlanCatalog.load(sb);
   populatePlanFilter();
+  pbReset();
 
   ensureValidStartingTab(role);
 
@@ -2315,6 +2548,342 @@ function cmCancelAll() {
   toast('Pending changes discarded', 'blue');
 }
 
+// ── Plan authoring ────────────────────────────────────────────────────────────
+// Everything a plan needs in order to appear on the site lives on its row, so
+// this form is the whole of "creating a plan". There is no second step, and no
+// file to edit afterwards — the pages already read the catalogue and now find
+// the presentation there too.
+var pbState = { features: [], editing: null };
+var pbCodeEdited = false;
+
+// Must agree with public.plan_code_from_name(). The leading/trailing underscore
+// trim is extra: the SQL fallback would produce "_PLAN" for a name starting
+// with an emoji, which its own plan_code CHECK then rejects. The form always
+// sends an explicit code, so trimming here is what the server actually stores.
+function pbCodeFromName(name) {
+  return String(name || '').trim().toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 49);
+}
+
+function pbToggle(force) {
+  var body = document.getElementById('pbBody');
+  var open = (force === undefined) ? body.style.display === 'none' : !!force;
+  body.style.display = open ? '' : 'none';
+  document.getElementById('pbToggleBtn').textContent = open ? 'Close' : 'Open';
+  if (open) pbRender();
+}
+
+function pbEl(id) { return document.getElementById(id); }
+function pbVal(id) { return (pbEl(id).value || '').trim(); }
+
+function pbOnNameInput() {
+  if (!pbCodeEdited && !pbState.editing) pbEl('pbCode').value = pbCodeFromName(pbVal('pbName'));
+  pbRender();
+}
+
+// The kind decides what the other fields even mean, so it drives them rather
+// than leaving the owner to work out that a pack has no billing cycle.
+function pbOnKindChange() {
+  var kind = pbEl('pbKind').value;
+  if (kind === 'pack')          { pbEl('pbCycle').value = 'pack';     pbEl('pbPeriod').value = 0; }
+  else if (kind === 'lifetime') { pbEl('pbCycle').value = 'one_time'; pbEl('pbPeriod').value = 0; }
+  else if (pbEl('pbCycle').value === 'pack' || pbEl('pbCycle').value === 'one_time') {
+    pbEl('pbCycle').value = 'monthly'; pbEl('pbPeriod').value = 30;
+  }
+  pbOnCycleChange();
+}
+
+function pbOnCycleChange() {
+  var cycle = pbEl('pbCycle').value;
+  var days = { monthly: 30, quarterly: 91, semiannual: 182, annual: 365, one_time: 0, pack: 0, none: 0 };
+  if (days[cycle] !== undefined) pbEl('pbPeriod').value = days[cycle];
+  var kind = pbEl('pbKind').value;
+  var oneTime = (kind === 'pack' || kind === 'lifetime' || cycle === 'one_time' || cycle === 'pack');
+  pbEl('pbPeriodHint').textContent = oneTime
+    ? 'Zero means it never expires. Credits are granted once.'
+    : 'How long access lasts after approval. Approval is refused if this is zero.';
+  pbRender();
+}
+
+function pbOnBadgeChange() {
+  var b = pbEl('pbBadge').value;
+  var defaults = { best_value: 'BEST VALUE', most_popular: 'MOST POPULAR', 'new': 'NEW', limited: 'LIMITED' };
+  var t = pbEl('pbBadgeText');
+  if (b === 'none') t.value = '';
+  else if (defaults[b] && (!t.value || Object.values(defaults).indexOf(t.value) >= 0)) t.value = defaults[b];
+  pbRender();
+}
+
+// ── Feature list: unlimited, editable, reorderable ──────────────────────────
+function pbAddFeature(text, included) {
+  pbState.features.push({ text: text || '', included: included !== false });
+  pbRenderFeatures(); pbRender();
+}
+function pbRemoveFeature(i) { pbState.features.splice(i, 1); pbRenderFeatures(); pbRender(); }
+function pbMoveFeature(i, d) {
+  var j = i + d;
+  if (j < 0 || j >= pbState.features.length) return;
+  var t = pbState.features[i]; pbState.features[i] = pbState.features[j]; pbState.features[j] = t;
+  pbRenderFeatures(); pbRender();
+}
+function pbFeatureEdit(i, field, value) {
+  if (!pbState.features[i]) return;
+  pbState.features[i][field] = value;
+  pbRender();
+}
+function pbRenderFeatures() {
+  var el = pbEl('pbFeatures');
+  el.innerHTML = pbState.features.map(function (f, i) {
+    return '<div class="pb-feat">' +
+      '<button class="mv" title="Move up" onclick="pbMoveFeature(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+      '<button class="mv" title="Move down" onclick="pbMoveFeature(' + i + ',1)"' + (i === pbState.features.length - 1 ? ' disabled' : '') + '>▼</button>' +
+      '<input type="text" maxlength="120" value="' + esc(f.text) + '" placeholder="Feature text" oninput="pbFeatureEdit(' + i + ',\'text\',this.value)"/>' +
+      '<label title="Unticked renders as a crossed-out feature, the way the pricing page shows what a plan does NOT include">' +
+        '<input type="checkbox"' + (f.included ? ' checked' : '') + ' onchange="pbFeatureEdit(' + i + ',\'included\',this.checked)"/>included</label>' +
+      '<button class="rm" title="Remove" onclick="pbRemoveFeature(' + i + ')">✕</button>' +
+    '</div>';
+  }).join('');
+  pbEl('pbFeatCount').textContent = pbState.features.length
+    ? pbState.features.length + ' feature' + (pbState.features.length === 1 ? '' : 's')
+    : 'No features yet — the page will fall back to its standard benefit list.';
+}
+
+// ── Live preview ────────────────────────────────────────────────────────────
+function pbRender() {
+  if (pbEl('pbBody').style.display === 'none') return;
+  var name = pbVal('pbName') || 'Untitled plan';
+  var theme = pbEl('pbTheme').value || '#38bdf8';
+  var accent = pbEl('pbAccent').value || '#a855f7';
+  var cur = pbVal('pbCurrency') || 'EGP';
+  var price = Number(pbEl('pbPrice').value || 0);
+  var credits = Number(pbEl('pbCredits').value || 0);
+  var cycle = pbEl('pbCycle').value;
+  var badge = pbEl('pbBadge').value;
+  var badgeText = pbVal('pbBadgeText');
+  var icon = pbVal('pbIcon');
+  var short = pbVal('pbShort');
+  var ctaText = pbVal('pbCtaText') || ('Choose ' + name);
+  var vis = pbEl('pbVisibility').value;
+  var active = pbEl('pbActive').value === 'true';
+
+  var suffix = { monthly: '/ month', quarterly: '/ 3 months', semiannual: '/ 6 months', annual: '/ year' }[cycle] || '';
+  var priceTxt;
+  try {
+    priceTxt = new Intl.NumberFormat(undefined, { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(price);
+  } catch (e) { priceTxt = price.toLocaleString() + ' ' + cur; }
+
+  var feats = pbState.features.filter(function (f) { return f.text; });
+  var html = '';
+  if (vis !== 'public' || !active) {
+    html += '<div class="pv-hidden">' + esc(!active ? 'INACTIVE' : vis.toUpperCase()) + '</div>';
+  }
+  if (badge !== 'none' && (badgeText || badge)) {
+    var bt = badgeText || badge.replace(/_/g, ' ').toUpperCase();
+    html += '<div class="pv-badge" style="background:' + accent + '22;border:1px solid ' + accent + '55;color:' + accent + '">' + esc(bt) + '</div>';
+  }
+  if (icon) html += '<div class="pv-icon">' + esc(icon) + '</div>';
+  html += '<div class="pv-name">' + esc(name) + '</div>';
+  if (short) html += '<div class="pv-short">' + esc(short) + '</div>';
+  html += '<div class="pv-price" style="color:' + theme + '">' + esc(priceTxt) + (suffix ? ' <span>' + esc(suffix) + '</span>' : '') + '</div>';
+  html += '<div class="pv-meta">' + credits.toLocaleString() + ' credits'
+        + (Number(pbEl('pbDevices').value || 0) ? ' · ' + Number(pbEl('pbDevices').value) + ' devices' : '') + '</div>';
+  feats.forEach(function (f) {
+    html += '<div class="pv-feat"><span class="tick" style="color:' + (f.included ? 'var(--green)' : 'var(--text-500)') + '">'
+          + (f.included ? '✓' : '✕') + '</span><span' + (f.included ? '' : ' style="color:var(--text-500)"') + '>' + esc(f.text) + '</span></div>';
+  });
+  if (!feats.length) html += '<div class="pv-feat" style="color:var(--text-500)"><span class="tick">·</span><span>Standard benefit list</span></div>';
+  html += '<div class="pv-cta" style="background:' + theme + '1f;border-color:' + theme + '66;color:' + theme + '">' + esc(ctaText) + '</div>';
+  pbEl('pbPreview').innerHTML = html;
+}
+
+// ── Save ────────────────────────────────────────────────────────────────────
+function pbCollect() {
+  var daily = pbVal('pbDaily');
+  return {
+    mode:              pbState.editing ? 'update' : 'create',
+    plan_code:         pbVal('pbCode') || pbCodeFromName(pbVal('pbName')),
+    display_name:      pbVal('pbName'),
+    kind:              pbEl('pbKind').value,
+    billing_cycle:     pbEl('pbCycle').value,
+    amount_egp:        Number(pbEl('pbPrice').value || 0),
+    currency:          (pbVal('pbCurrency') || 'EGP').toUpperCase(),
+    credits_granted:   Math.trunc(Number(pbEl('pbCredits').value || 0)),
+    period_days:       Math.trunc(Number(pbEl('pbPeriod').value || 0)),
+    device_limit:      Math.trunc(Number(pbEl('pbDevices').value || 0)),
+    daily_limit:       daily === '' ? null : Math.trunc(Number(daily)),
+    is_founder:        pbEl('pbFounder').value === 'true',
+    active:            pbEl('pbActive').value === 'true',
+    sort_order:        Math.trunc(Number(pbEl('pbOrder').value || 0)),
+    badge:             pbEl('pbBadge').value,
+    badge_text:        pbVal('pbBadgeText'),
+    theme_color:       pbEl('pbTheme').value,
+    accent_color:      pbEl('pbAccent').value,
+    icon:              pbVal('pbIcon'),
+    short_description: pbVal('pbShort'),
+    full_description:  pbVal('pbFull'),
+    features:          pbState.features.filter(function (f) { return (f.text || '').trim(); })
+                         .map(function (f) { return { text: f.text.trim(), included: f.included !== false }; }),
+    cta_text:          pbVal('pbCtaText'),
+    cta_href:          pbVal('pbCtaHref'),
+    visibility:        pbEl('pbVisibility').value
+  };
+}
+
+function pbMsg(text, kind) {
+  var el = pbEl('pbMsg');
+  el.textContent = text || '';
+  el.style.color = kind === 'red' ? 'var(--red)' : kind === 'green' ? 'var(--green)' : 'var(--text-400)';
+}
+
+// Reasons the server can refuse, in the owner's words rather than the API's.
+var PB_REASONS = {
+  forbidden:                        'You do not have permission to author plans.',
+  invalid_mode:                     'Internal error: unknown save mode.',
+  invalid_display_name:             'The plan name must be 1–60 characters.',
+  invalid_plan_code:                'The plan code must start with a letter and use only A–Z, 0–9 and underscores.',
+  plan_code_taken:                  'That plan code already exists. Pick another, or edit the existing plan instead.',
+  plan_not_found:                   'That plan no longer exists.',
+  display_name_taken:               'Another live plan already uses that name.',
+  features_must_be_an_array:        'Internal error: the feature list was malformed.',
+  too_many_features:                'A plan can carry at most 60 features.',
+  constraint_violation:             'One of the values is out of range for its field.',
+  invalid_number:                   'A numeric field contains something that is not a number.',
+  display_name_taken_while_archived:'A plan created while this one was archived has taken its name. Rename that plan first.',
+  plan_not_found_or_already_archived:'That plan is already archived.',
+  plan_not_found_or_not_archived:   'That plan is not archived.'
+};
+function pbReason(res) {
+  var r = (res && res.reason) || '';
+  return PB_REASONS[r] || ('The plan could not be saved (' + (r || 'unknown error') + ').');
+}
+
+async function pbSave() {
+  var plan = pbCollect();
+  if (!plan.display_name) { pbMsg('Give the plan a name first.', 'red'); return; }
+  if (!plan.plan_code)    { pbMsg('The plan needs an internal code.', 'red'); return; }
+
+  var btn = pbEl('pbSaveBtn'); btn.disabled = true;
+  pbMsg('Saving…');
+  var r;
+  try { r = await sb.rpc('admin_upsert_plan', { p_plan: plan }); } catch (e) { r = { error: e }; }
+  btn.disabled = false;
+
+  if (r && r.error) { pbMsg('Could not reach the server: ' + (r.error.message || r.error), 'red'); return; }
+  var data = r && r.data;
+  if (!data || !data.ok) { pbMsg(pbReason(data), 'red'); return; }
+
+  pbMsg((data.created ? 'Created' : 'Updated') + ' “' + plan.display_name + '” — live across the site.', 'green');
+  pbState.editing = null;
+  pbSetEditingUi();
+  loadPlanCatalog();
+  await PlanCatalog.load(sb, { force: true });
+}
+
+function pbSetEditingUi() {
+  var editing = !!pbState.editing;
+  pbEl('pbTitle').textContent = editing ? 'Edit Plan' : 'Create New Plan';
+  pbEl('pbSub').textContent = editing
+    ? 'Editing ' + pbState.editing + '. The plan code cannot change — payments and subscriptions are keyed to it.'
+    : 'Every field below is stored on the plan. No code change is needed for the site to show it.';
+  pbEl('pbSaveBtn').textContent = editing ? 'Save Changes' : 'Create Plan';
+  pbEl('pbCode').disabled = editing;
+  pbEl('pbCancelEditBtn').style.display = editing ? '' : 'none';
+}
+
+function pbReset() {
+  pbState = { features: [], editing: null };
+  pbCodeEdited = false;
+  ['pbName','pbCode','pbBadgeText','pbIcon','pbShort','pbFull','pbCtaText','pbCtaHref','pbDaily'].forEach(function (id) { pbEl(id).value = ''; });
+  pbEl('pbKind').value = 'subscription';
+  pbEl('pbCycle').value = 'monthly';
+  pbEl('pbPeriod').value = 30;
+  pbEl('pbPrice').value = 0;
+  pbEl('pbCurrency').value = 'EGP';
+  pbEl('pbCredits').value = 0;
+  pbEl('pbDevices').value = 3;
+  pbEl('pbOrder').value = 0;
+  pbEl('pbBadge').value = 'none';
+  pbEl('pbTheme').value = '#38bdf8';
+  pbEl('pbAccent').value = '#a855f7';
+  pbEl('pbVisibility').value = 'public';
+  pbEl('pbActive').value = 'true';
+  pbEl('pbFounder').value = 'false';
+  pbSetEditingUi();
+  pbRenderFeatures();
+  pbRender();
+  pbMsg('');
+}
+
+function pbEdit(code) {
+  var p = ppState.byCode[code];
+  if (!p) return;
+  pbReset();
+  pbState.editing = code;
+  pbEl('pbName').value = p.display_name || '';
+  pbEl('pbCode').value = p.plan_code;
+  pbEl('pbKind').value = p.kind || 'subscription';
+  pbEl('pbCycle').value = p.billing_cycle || 'none';
+  pbEl('pbPeriod').value = p.period_days == null ? 0 : p.period_days;
+  pbEl('pbPrice').value = p.price_egp == null ? 0 : p.price_egp;
+  pbEl('pbCurrency').value = p.currency || 'EGP';
+  pbEl('pbCredits').value = p.credits_granted == null ? 0 : p.credits_granted;
+  pbEl('pbDevices').value = p.device_limit == null ? 0 : p.device_limit;
+  pbEl('pbDaily').value = p.daily_limit == null ? '' : p.daily_limit;
+  pbEl('pbOrder').value = p.sort_order == null ? 0 : p.sort_order;
+  pbEl('pbBadge').value = p.badge || 'none';
+  pbEl('pbBadgeText').value = p.badge_text || '';
+  pbEl('pbIcon').value = p.icon || '';
+  if (p.theme_color) pbEl('pbTheme').value = p.theme_color;
+  if (p.accent_color) pbEl('pbAccent').value = p.accent_color;
+  pbEl('pbShort').value = p.short_description || '';
+  pbEl('pbFull').value = p.full_description || '';
+  pbEl('pbCtaText').value = p.cta_text || '';
+  pbEl('pbCtaHref').value = p.cta_href || '';
+  pbEl('pbVisibility').value = p.visibility || 'public';
+  pbEl('pbActive').value = p.active ? 'true' : 'false';
+  pbEl('pbFounder').value = p.is_founder ? 'true' : 'false';
+  pbState.features = (p.features || []).map(function (f) { return { text: f.text, included: f.included !== false }; });
+  pbSetEditingUi();
+  pbRenderFeatures();
+  pbToggle(true);
+  document.getElementById('planBuilderCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function pbLifecycle(rpc, args, confirmText, okText) {
+  if (confirmText && !confirm(confirmText)) return;
+  var r;
+  try { r = await sb.rpc(rpc, args); } catch (e) { r = { error: e }; }
+  var data = r && r.data;
+  if ((r && r.error) || !data || !data.ok) {
+    toast(pbReason(data), 'red');
+    return;
+  }
+  toast(okText(data), 'green');
+  loadPlanCatalog();
+  await PlanCatalog.load(sb, { force: true });
+}
+
+function pbDuplicate(code) {
+  pbLifecycle('admin_duplicate_plan', { p_source: code }, null,
+    function (d) { return 'Duplicated as ' + d.plan_code + ' — inactive and hidden until you publish it.'; });
+}
+
+function pbArchive(code) {
+  var p = ppState.byCode[code] || {};
+  var holders = p.active_holders || 0;
+  pbLifecycle('admin_archive_plan', { p_plan_code: code },
+    'Archive “' + (p.display_name || code) + '”?\n\n' +
+    'It comes off sale immediately and disappears from the pricing page.\n' +
+    (holders ? holders + ' student' + (holders === 1 ? '' : 's') + ' currently on this plan keep it, and keep every entitlement it grants.\n' : '') +
+    'Nothing is deleted — historical payments keep pointing at it, and you can restore it later.',
+    function (d) { return 'Archived. ' + (d.active_holders || 0) + ' holder(s) keep their access.'; });
+}
+
+function pbRestore(code) {
+  pbLifecycle('admin_restore_plan', { p_plan_code: code }, null,
+    function () { return 'Restored — inactive and hidden. Publish it when you are ready.'; });
+}
+
 // ── Plans & Packs — the editable catalogue ────────────────────────────────────
 // Every page on the platform reads a plan's name, price and credits from
 // plan_definitions. This panel is the only place those three values are
@@ -2322,12 +2891,24 @@ function cmCancelAll() {
 // deliberately NOT editable: plan_code is the key payment_requests,
 // subscriptions and profiles all carry, and kind decides which branch
 // approve_payment_request() takes — changing either would orphan history.
-var ppState = { plans: [], byCode: {}, pending: {}, readOnly: false };
+var ppState = { plans: [], byCode: {}, pending: {}, readOnly: false, canAuthor: false };
 
 // plan_code is [A-Z0-9_] by convention; this keeps a malformed one from
 // escaping into an element id or an inline handler.
 function ppKey(code) { return String(code || '').replace(/[^A-Za-z0-9_]/g, ''); }
-function ppTypeLabel(kind) { return kind === 'pack' ? 'Pack' : 'Subscription'; }
+function ppTypeLabel(kind) {
+  return { pack: 'Pack', lifetime: 'Lifetime', custom: 'Custom' }[kind] || 'Subscription';
+}
+
+// The two states that decide whether a student can see a plan at all, shown
+// where the owner is already looking rather than only inside the edit form.
+function ppFlagsHtml(plan) {
+  var out = '';
+  if (plan.visibility && plan.visibility !== 'public') out += ' <span class="chip">' + esc(plan.visibility) + '</span>';
+  var b = plan.badge && plan.badge !== 'none' ? (plan.badge_text || plan.badge.replace(/_/g, ' ')) : '';
+  if (b) out += ' <span class="chip blue">' + esc(b) + '</span>';
+  return out;
+}
 
 async function loadPlanCatalog() {
   var el = document.getElementById('cmPlansPacks');
@@ -2373,8 +2954,18 @@ async function loadPlanCatalog() {
   ppState.plans = (data.plans || []).map(function (p) {
     return {
       plan_code: p.plan_code, display_name: p.display_name, kind: p.kind,
-      price_egp: Number(p.amount_egp), credits_granted: Number(p.credits_granted),
-      billing_cycle: p.billing_cycle, active: p.active !== false,
+      price_egp: Number(p.amount_egp), currency: p.currency || 'EGP',
+      credits_granted: Number(p.credits_granted),
+      billing_cycle: p.billing_cycle, period_days: p.period_days,
+      device_limit: p.device_limit, daily_limit: p.daily_limit,
+      is_founder: !!p.is_founder, active: p.active !== false,
+      sort_order: p.sort_order,
+      badge: p.badge || 'none', badge_text: p.badge_text,
+      theme_color: p.theme_color, accent_color: p.accent_color, icon: p.icon,
+      short_description: p.short_description, full_description: p.full_description,
+      features: Array.isArray(p.features) ? p.features : [],
+      cta_text: p.cta_text, cta_href: p.cta_href,
+      visibility: p.visibility || 'public', archived_at: p.archived_at || null,
       sold_count: Number(p.sold_count || 0), sold_revenue: Number(p.sold_revenue || 0),
       active_holders: Number(p.active_holders || 0)
     };
@@ -2382,17 +2973,66 @@ async function loadPlanCatalog() {
   ppState.byCode = {};
   ppState.plans.forEach(function (p) { ppState.byCode[p.plan_code] = p; });
   ppState.pending = {};
+
+  // The authoring surface only exists after the v2 migration. Without it the
+  // catalogue still lists and inline-edits, but Create/Duplicate/Archive would
+  // call RPCs that are not deployed, so the form says so instead of failing.
+  ppState.canAuthor = ppState.plans.some(function (p) { return p.visibility !== undefined && p.archived_at !== undefined; })
+                      && data.plans.length > 0 && ('visibility' in data.plans[0]);
+  var pbu = document.getElementById('pbUnavailable');
+  if (!ppState.canAuthor) {
+    pbu.style.display = '';
+    pbu.textContent = '⚠ Plan authoring needs supabase/migrations/20260802d_plan_catalog_v2_authoring.sql applied. '
+                    + 'Until then this form cannot save, and the actions below are limited to inline edits.';
+  } else {
+    pbu.style.display = 'none';
+  }
+
   ppRender();
   ppUpdateEditbar();
 }
 
 function ppRender() {
   var el = document.getElementById('cmPlansPacks');
-  if (!ppState.plans.length) {
-    el.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-500)">None.</td></tr>';
-    return;
+  var live = ppState.plans.filter(function (p) { return !p.archived_at; });
+  var archived = ppState.plans.filter(function (p) { return !!p.archived_at; });
+
+  el.innerHTML = live.length ? live.map(ppRowHtml).join('')
+    : '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-500)">None.</td></tr>';
+
+  var wrap = document.getElementById('ppArchivedWrap');
+  if (archived.length) {
+    wrap.style.display = '';
+    document.getElementById('ppArchivedNote').textContent =
+      '— off sale, still honoured for anyone already on them';
+    document.getElementById('ppArchived').innerHTML = archived.map(ppArchivedRowHtml).join('');
+  } else {
+    wrap.style.display = 'none';
   }
-  el.innerHTML = ppState.plans.map(ppRowHtml).join('');
+}
+
+// Price with the plan's own currency, so a non-EGP plan is not silently read as
+// pounds. Falls back to a plain number if the runtime has no such currency.
+function ppPrice(p) {
+  if (p.price_egp == null) return '—';
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency', currency: (p.currency || 'EGP').toUpperCase(), maximumFractionDigits: 0
+    }).format(Number(p.price_egp));
+  } catch (e) { return cmNum(p.price_egp) + ' ' + (p.currency || 'EGP'); }
+}
+
+function ppArchivedRowHtml(plan) {
+  var k = ppKey(plan.plan_code);
+  return '<tr class="pp-arch" id="pparch_' + k + '">' +
+    '<td><div class="bold">' + esc(plan.display_name) + '</div><div class="cm-id">' + esc(plan.plan_code) + '</div></td>' +
+    '<td><span class="chip">' + ppTypeLabel(plan.kind) + '</span></td>' +
+    '<td class="mono">' + esc(ppPrice(plan)) + '</td>' +
+    '<td class="mono">' + cmNum(plan.credits_granted) + '</td>' +
+    '<td class="mono" style="font-size:11.5px">' + esc(fmtDate(plan.archived_at)) + '</td>' +
+    '<td class="mono">' + cmNum(plan.active_holders) + '</td>' +
+    '<td><div class="pp-act"><button class="btn btn-ghost btn-sm" onclick="pbRestore(\'' + k + '\')">Restore</button></div></td>' +
+  '</tr>';
 }
 
 function ppRowHtml(plan) {
@@ -2405,13 +3045,21 @@ function ppRowHtml(plan) {
   var inactive = plan.active ? '' : ' <span class="chip">inactive</span>';
   return '<tr id="pprow_' + k + '"' + (p ? ' class="cm-dirty"' : '') + '>' +
     '<td><input type="text" maxlength="60" class="search-input pp-name" id="ppname_' + k + '" value="' + esc(name) + '" oninput="ppOnEdit(\'' + k + '\')"/>' +
-      '<div class="cm-id">' + esc(plan.plan_code) + inactive + '</div>' +
+      '<div class="cm-id">' + esc(plan.plan_code) + inactive + ppFlagsHtml(plan) + '</div>' +
       '<div class="cm-delta" id="ppdelta_' + k + '">' + (p ? esc(ppDeltaText(plan, p)) : '') + '</div></td>' +
     '<td><span class="' + chip + '">' + ppTypeLabel(plan.kind) + '</span></td>' +
-    '<td><input type="number" min="0" step="0.01" class="search-input pp-num" id="ppprice_' + k + '" value="' + Number(price) + '" oninput="ppOnEdit(\'' + k + '\')"/></td>' +
+    '<td><input type="number" min="0" step="0.01" class="search-input pp-num" id="ppprice_' + k + '" value="' + Number(price) + '" oninput="ppOnEdit(\'' + k + '\')"/>' +
+      ((plan.currency && plan.currency !== 'EGP') ? '<div class="cm-id">' + esc(plan.currency) + '</div>' : '') + '</td>' +
     '<td><input type="number" min="0" step="1" class="search-input pp-num" id="ppcred_' + k + '" value="' + Number(credits) + '" oninput="ppOnEdit(\'' + k + '\')"/></td>' +
     '<td class="mono" title="' + cmEgp(plan.sold_revenue) + ' approved">' + cmNum(plan.sold_count) + '</td>' +
     '<td class="mono">' + cmNum(plan.active_holders) + '</td>' +
+    '<td><div class="pp-act">' +
+      (ppState.canAuthor
+        ? '<button class="btn btn-ghost btn-sm" onclick="pbEdit(\'' + k + '\')">Edit</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="pbDuplicate(\'' + k + '\')">Duplicate</button>' +
+          '<button class="btn btn-red btn-sm" onclick="pbArchive(\'' + k + '\')">Archive</button>'
+        : '<span class="cm-muted" style="font-size:11.5px">inline edit only</span>') +
+    '</div></td>' +
   '</tr>';
 }
 

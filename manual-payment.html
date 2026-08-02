@@ -412,6 +412,14 @@ function savingVsMonthly(plan) {
 // a branch per plan_code, so a plan the owner adds tomorrow gets the right list
 // with no edit here.
 function featuresFor(plan) {
+  // A plan authored in the Owner Dashboard carries its own list and it wins.
+  // The derived ladder below is the fallback for the plans that predate
+  // authoring, so checkout is unchanged for them.
+  if (Array.isArray(plan.features) && plan.features.length) {
+    return plan.features
+      .filter(f => f && f.text && f.included !== false)
+      .map(f => String(f.text));
+  }
   const credits = plan.credits_granted;
   const base = basePlan();
   const baseName = base ? base.display_name : 'the entry plan';
@@ -461,9 +469,16 @@ function renderPlanCard(plan, opts) {
   // would otherwise render as a plain monthly card.
   const isFounder = !!plan.is_founder;
   const isAnnual  = plan.billing_cycle === 'annual' && !isFounder;
+  // An authored badge replaces the derived cycle label; without one the card
+  // keeps showing the cycle exactly as it always has.
+  const authoredBadge = (plan.badge && plan.badge !== 'none')
+    ? (plan.badge_text || ({best_value:'BEST VALUE',most_popular:'MOST POPULAR',new:'NEW',limited:'LIMITED'}[plan.badge] || ''))
+    : '';
   const badgeText = isFounder
     ? '👑 FOUNDER — FIRST 50 ONLY'
-    : cycleLabel(plan.billing_cycle) + (isAnnual ? ' <span class="best-value">Best Value</span>' : '');
+    : (authoredBadge
+        ? esc(authoredBadge)
+        : cycleLabel(plan.billing_cycle) + (isAnnual ? ' <span class="best-value">Best Value</span>' : ''));
   const badgeCls = isFounder ? '' : (plan.billing_cycle === 'annual' ? 'annual' : 'monthly');
   const cardStyle = isFounder
     ? 'border-color:#f5b942;background:linear-gradient(135deg,rgba(245,185,66,.08),rgba(168,85,247,.05));position:relative;overflow:hidden'
@@ -496,8 +511,9 @@ function renderPlanCard(plan, opts) {
     ${slotsBanner}
     <div class="check">✓</div>
     <div class="plan-badge ${badgeCls}" style="${badgeStyle}">${badgeText}</div>
-    <div class="plan-name">${esc(plan.display_name)}</div>
-    <div class="plan-price" style="${priceColor}">${Math.round(plan.price_egp)} <span>${pricePer(plan.billing_cycle)}</span></div>
+    <div class="plan-name">${plan.icon ? esc(plan.icon) + ' ' : ''}${esc(plan.display_name)}</div>
+    ${plan.short_description ? `<div class="plan-note" style="margin:2px 0 6px">${esc(plan.short_description)}</div>` : ''}
+    <div class="plan-price" style="${plan.theme_color ? `color:${esc(plan.theme_color)}` : priceColor}">${Math.round(plan.price_egp)} <span>${esc(plan.currency && plan.currency !== 'EGP' ? plan.currency : '')}${plan.currency && plan.currency !== 'EGP' ? ' ' : ''}${pricePer(plan.billing_cycle)}</span></div>
     <div class="plan-features">${features.map(f => `<div class="plan-feat">${f}</div>`).join('')}</div>
     ${note}
   </div>`;
@@ -513,12 +529,14 @@ function renderPackCard(pack, opts) {
   // credit_packs view exposes the flag.
   const isBest = pack.is_best_value !== undefined ? !!pack.is_best_value : opts.index === 1;
   const note = isBest ? '<div class="plan-note" style="margin-top:10px;color:var(--cyan)">⭐ Best value per credit</div>' : '';
-  const features = [
-    pack.credits.toLocaleString() + ' credits',
-    'One-time purchase — never expires',
-    'Use when your monthly credits run out',
-    'Stack with any subscription'
-  ];
+  const features = (Array.isArray(pack.features) && pack.features.length)
+    ? pack.features.filter(f => f && f.text && f.included !== false).map(f => String(f.text))
+    : [
+        pack.credits.toLocaleString() + ' credits',
+        'One-time purchase — never expires',
+        'Use when your monthly credits run out',
+        'Stack with any subscription'
+      ];
   return `<div class="plan-card${opts.selected ? ' selected' : ''}" data-plan="${esc(code)}" data-amount="${pack.price_egp}" data-label="${esc(pack.name)}" data-kind="pack" onclick="selectPlan(this)" style="${isBest ? 'border-color:var(--cyan-border);background:linear-gradient(160deg,rgba(56,189,248,.06),var(--bg-card))' : ''}">
     <div class="check">✓</div>
     <div class="plan-badge monthly">${isBest ? 'BEST VALUE' : 'CREDIT PACK'}</div>
@@ -553,14 +571,17 @@ async function init() {
 
   // Load active subscriptions and packs from DB — single source of truth (shared with pricing.html)
   const [plansRes, packsRes] = await Promise.all([
-    sb.from('pricing_settings').select('plan_code, display_name, billing_cycle, price_egp, credits_granted, device_limit, is_founder, sort_order').eq('active', true).order('sort_order'),
+    sb.from('pricing_settings').select('*').eq('active', true).order('sort_order'),
     sb.from('credit_packs').select('*').eq('active', true).order('sort_order')
   ]);
 
   // Checkout lists what can be bought: anything with a price. Filtering on the
   // literal code 'FREE' would miss a second free tier and would break if the
   // free plan were ever recoded.
-  const allPlans = (plansRes.data || []).filter(p => Number(p.price_egp) > 0);
+  // Buyable means priced, public and not archived. A hidden plan is still
+  // reachable by direct link (?plan=CODE) — it just is not listed.
+  const listable = p => (p.visibility === undefined || p.visibility === 'public') && !p.archived_at;
+  const allPlans = (plansRes.data || []).filter(p => Number(p.price_egp) > 0 && listable(p));
   planByCode = {};
   (plansRes.data || []).forEach(p => { planByCode[p.plan_code] = p; });
   // basePlan()/annualPlan() derive the entry and annual reference plans from
@@ -577,7 +598,7 @@ async function init() {
   // payment could not be approved at all. Deriving the code from the name is
   // kept only as the pre-migration fallback, for the window before the
   // credit_packs view exposes plan_code.
-  const packs = (packsRes.data || []).map(p => ({
+  const packs = (packsRes.data || []).filter(listable).map(p => ({
     ...p,
     _planCode: p.plan_code || ('PACK_' + String(p.name).toUpperCase().replace(/\s+/g, '_'))
   }));

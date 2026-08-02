@@ -35,12 +35,18 @@
 (function (global) {
   'use strict';
 
-  // Full column set. `billing_cycle` and its neighbours only exist after the
-  // consolidation migration; LEGACY_COLS is what plan_definitions carried
-  // before it, so a page shipped ahead of the migration still renders.
-  var FULL_COLS = 'plan_code, display_name, kind, amount_egp, credits_granted, ' +
-                  'billing_cycle, period_days, device_limit, daily_limit, ' +
-                  'is_founder, is_best_value, active, sort_order';
+  // Three column sets, newest first. Each is a superset of the next, and load()
+  // falls back down the list on error, so a page always renders whichever
+  // migration the database has actually had applied. V2_COLS adds the authoring
+  // surface (badge, colours, icon, copy, features, CTA, visibility, archive).
+  var V2_COLS = 'plan_code, display_name, kind, amount_egp, currency, credits_granted, ' +
+                'billing_cycle, period_days, device_limit, daily_limit, ' +
+                'is_founder, is_best_value, active, sort_order, badge, badge_text, ' +
+                'theme_color, accent_color, icon, short_description, full_description, ' +
+                'features, cta_text, cta_href, visibility, archived_at';
+  var V1_COLS = 'plan_code, display_name, kind, amount_egp, credits_granted, ' +
+                'billing_cycle, period_days, device_limit, daily_limit, ' +
+                'is_founder, is_best_value, active, sort_order';
   var LEGACY_COLS = 'plan_code, display_name, kind, amount_egp, credits_granted, period_days';
 
   var _rows        = null;   // array of catalogue rows, DB order
@@ -58,12 +64,24 @@
       .join(' ');
   }
 
+  // A feature is {text, included}. Anything else in the array is coerced rather
+  // than dropped, so a hand-edited row still renders instead of vanishing.
+  function normalizeFeatures(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(function (f) {
+      if (f == null) return null;
+      if (typeof f === 'string') return { text: f, included: true };
+      return { text: String(f.text == null ? '' : f.text), included: f.included !== false };
+    }).filter(function (f) { return f && f.text; });
+  }
+
   function normalize(row) {
     return {
       plan_code:       row.plan_code,
       display_name:    row.display_name,
       kind:            row.kind || 'subscription',
       price_egp:       row.amount_egp == null ? null : Number(row.amount_egp),
+      currency:        row.currency || 'EGP',
       credits_granted: row.credits_granted == null ? null : Number(row.credits_granted),
       billing_cycle:   row.billing_cycle || null,
       period_days:     row.period_days == null ? null : Number(row.period_days),
@@ -75,7 +93,24 @@
       // the safe default: it shows a plan that might be retired rather than
       // hiding one that is on sale.
       active:          row.active === undefined ? true : row.active !== false,
-      sort_order:      row.sort_order == null ? 0 : Number(row.sort_order)
+      sort_order:      row.sort_order == null ? 0 : Number(row.sort_order),
+
+      // Authoring surface (v2). Every one of these is null/empty on a plan that
+      // predates the authoring migration, and every consumer treats
+      // null as "fall back to what the page already does" — which is why
+      // applying v2 changes nothing about how the existing plans render.
+      badge:             row.badge || 'none',
+      badge_text:        row.badge_text || null,
+      theme_color:       row.theme_color || null,
+      accent_color:      row.accent_color || null,
+      icon:              row.icon || null,
+      short_description: row.short_description || null,
+      full_description:  row.full_description || null,
+      features:          normalizeFeatures(row.features),
+      cta_text:          row.cta_text || null,
+      cta_href:          row.cta_href || null,
+      visibility:        row.visibility || 'public',
+      archived_at:       row.archived_at || null
     };
   }
 
@@ -92,15 +127,19 @@
     if (_loadPromise && !(opts && opts.force)) return _loadPromise;
     if (!sb || !sb.from) { _loadPromise = Promise.resolve(api); return _loadPromise; }
 
-    _loadPromise = Promise.resolve(sb.from('plan_definitions').select(FULL_COLS))
-      .then(function (res) {
-        if (res && !res.error && Array.isArray(res.data)) return res.data;
-        // Pre-migration schema: retry with the columns that definitely exist.
-        return Promise.resolve(sb.from('plan_definitions').select(LEGACY_COLS))
-          .then(function (r2) {
-            return (r2 && !r2.error && Array.isArray(r2.data)) ? r2.data : null;
-          });
-      })
+    // Walk the column sets newest-first. Each step is one round trip and only
+    // happens when the previous one failed, so an up-to-date database pays for
+    // exactly one query.
+    var attempt = function (cols, rest) {
+      return Promise.resolve(sb.from('plan_definitions').select(cols))
+        .then(function (res) {
+          if (res && !res.error && Array.isArray(res.data)) return res.data;
+          return rest.length ? attempt(rest[0], rest.slice(1)) : null;
+        })
+        .catch(function () { return rest.length ? attempt(rest[0], rest.slice(1)) : null; });
+    };
+
+    _loadPromise = attempt(V2_COLS, [V1_COLS, LEGACY_COLS])
       .then(function (data) { if (data) ingest(data); return api; })
       .catch(function () { return api; });
 
@@ -127,10 +166,93 @@
     return row ? row.credits_granted : null;
   }
 
-  function byKind(kind, includeInactive) {
+  // Default badge wording. `badge_text` on the row always wins — this is only
+  // the label for a badge the owner selected without typing their own words.
+  var BADGE_LABEL = {
+    best_value:   'BEST VALUE',
+    most_popular: 'MOST POPULAR',
+    'new':        'NEW',
+    limited:      'LIMITED'
+  };
+
+  // What the owner chose to show on the badge, or null for no badge. A 'custom'
+  // badge with no text is no badge at all, not an empty pill.
+  function badgeOf(codeOrPlan) {
+    var p = (typeof codeOrPlan === 'string') ? get(codeOrPlan) : codeOrPlan;
+    if (!p || !p.badge || p.badge === 'none') return null;
+    var text = p.badge_text || BADGE_LABEL[p.badge] || null;
+    return text ? { kind: p.badge, text: text } : null;
+  }
+
+  // How long one billing period lasts, in months. Drives "per month" maths on
+  // pages that compare plans. Null when the cycle has no recurring period.
+  function monthsIn(cycle) {
+    return cycle === 'monthly' ? 1 : cycle === 'quarterly' ? 3
+         : cycle === 'semiannual' ? 6 : cycle === 'annual' ? 12 : null;
+  }
+
+  var CYCLE_SUFFIX = {
+    monthly:    '/ month',
+    quarterly:  '/ 3 months',
+    semiannual: '/ 6 months',
+    annual:     '/ year'
+  };
+
+  // 'monthly' -> '/ month'. One-time, pack and custom cycles have no suffix,
+  // because "1,299 EGP / one_time" is not a thing anyone wants to read.
+  function periodLabel(codeOrPlan) {
+    var p = (typeof codeOrPlan === 'string') ? get(codeOrPlan) : codeOrPlan;
+    return (p && CYCLE_SUFFIX[p.billing_cycle]) || '';
+  }
+
+  // Currency-aware price. Intl gives the right symbol and grouping for whatever
+  // the owner set, and falls back to "1,299 EGP" if the runtime does not know
+  // the code. Note: the plan is QUOTED in its currency; settlement is a separate
+  // concern the catalogue does not model.
+  function formatPrice(codeOrPlan, opts) {
+    var p = (typeof codeOrPlan === 'string') ? get(codeOrPlan) : codeOrPlan;
+    if (!p || p.price_egp == null) return '';
+    var cur = (p.currency || 'EGP').toUpperCase();
+    var n = Number(p.price_egp);
+    var digits = (opts && opts.decimals) || 0;
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency', currency: cur,
+        minimumFractionDigits: digits, maximumFractionDigits: digits
+      }).format(n);
+    } catch (e) {
+      return n.toLocaleString(undefined, { maximumFractionDigits: digits }) + ' ' + cur;
+    }
+  }
+
+  // `opts` may be a boolean for backwards compatibility (true = everything).
+  //   default          — what a student should see: live, public, on sale
+  //   {all:true}       — everything the catalogue holds, archived included
+  //   {archived:true}  — only archived plans
+  function byKind(kind, opts) {
     if (!_rows) return [];
+    if (opts === true) opts = { all: true };
+    opts = opts || {};
     return _rows
-      .filter(function (r) { return r.kind === kind && (includeInactive || r.active); })
+      .filter(function (r) {
+        if (r.kind !== kind) return false;
+        if (opts.archived) return !!r.archived_at;
+        if (opts.all) return true;
+        return r.active && r.visibility === 'public' && !r.archived_at;
+      })
+      .sort(function (a, b) {
+        return a.sort_order - b.sort_order || a.plan_code.localeCompare(b.plan_code);
+      });
+  }
+
+  // Everything a profile can hold — every kind except 'pack'. A lifetime or
+  // custom plan is a plan, so anything reasoning about "the plans on offer"
+  // must include them or it will go stale the first time one is created.
+  function planKinds() { return ['subscription', 'lifetime', 'custom']; }
+
+  function acrossKinds(opts) {
+    return planKinds()
+      .reduce(function (acc, k) { return acc.concat(byKind(k, opts)); }, [])
       .sort(function (a, b) {
         return a.sort_order - b.sort_order || a.plan_code.localeCompare(b.plan_code);
       });
@@ -139,20 +261,46 @@
   var api = {
     load:          load,
     isLoaded:      function () { return !!_rows; },
-    all:           function (includeInactive) {
+    all:           function (opts) {
                      if (!_rows) return [];
-                     return includeInactive ? _rows.slice() : _rows.filter(function (r) { return r.active; });
+                     if (opts === true) opts = { all: true };
+                     opts = opts || {};
+                     if (opts.all) return _rows.slice();
+                     if (opts.archived) return _rows.filter(function (r) { return !!r.archived_at; });
+                     return _rows.filter(function (r) {
+                       return r.active && r.visibility === 'public' && !r.archived_at;
+                     });
                    },
     get:           get,
     name:          nameOf,
     price:         priceOf,
     credits:       creditsOf,
-    subscriptions: function (includeInactive) { return byKind('subscription', includeInactive); },
-    packs:         function (includeInactive) { return byKind('pack', includeInactive); },
-    codes:         function (kind, includeInactive) {
-                     return byKind(kind, includeInactive).map(function (r) { return r.plan_code; });
+    // Plans (every non-pack kind) and packs. `subscriptions` keeps its name
+    // because that is what every caller already says, but it now spans
+    // subscription + lifetime + custom.
+    subscriptions: acrossKinds,
+    plans:         acrossKinds,
+    packs:         function (opts) { return byKind('pack', opts); },
+    ofKind:        byKind,
+    planKinds:     planKinds,
+    codes:         function (kind, opts) {
+                     var rows = (kind === 'subscription' || kind === 'plan')
+                       ? acrossKinds(opts) : byKind(kind, opts);
+                     return rows.map(function (r) { return r.plan_code; });
                    },
-    humanize:      humanize
+    // Presentation, all read from the row.
+    badge:         badgeOf,
+    features:      function (code) { var p = get(code); return p ? p.features : []; },
+    periodLabel:   periodLabel,
+    formatPrice:   formatPrice,
+    monthsIn:      monthsIn,
+    icon:          function (code) { var p = get(code); return (p && p.icon) || null; },
+    themeColor:    function (code) { var p = get(code); return (p && p.theme_color) || null; },
+    accentColor:   function (code) { var p = get(code); return (p && p.accent_color) || null; },
+    ctaText:       function (code) { var p = get(code); return (p && p.cta_text) || null; },
+    ctaHref:       function (code) { var p = get(code); return (p && p.cta_href) || null; },
+    humanize:      humanize,
+    BADGE_LABEL:   BADGE_LABEL
   };
 
   global.PlanCatalog = api;

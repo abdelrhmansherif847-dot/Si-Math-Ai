@@ -324,4 +324,125 @@ t.section('No hardcoded plan-code list survives anywhere');
   t.is('no production file hand-maintains a plan-code list', offenders, []);
 }
 
+// ── Authoring: a plan is a record, not a code change ──────────────────────
+t.section('The Owner Dashboard can author a whole plan');
+{
+  const admin = read('admin.html');
+  // Every field the owner asked to configure must actually be on the form.
+  // This list IS the spec; a field quietly dropped fails here.
+  const FIELDS = {
+    'plan name': 'pbName', 'internal plan code': 'pbCode', 'plan type': 'pbKind',
+    'billing cycle': 'pbCycle', 'price': 'pbPrice', 'currency': 'pbCurrency',
+    'credits': 'pbCredits', 'device limit': 'pbDevices', 'display order': 'pbOrder',
+    'active/inactive': 'pbActive', 'badge': 'pbBadge', 'badge text': 'pbBadgeText',
+    'theme colour': 'pbTheme', 'accent colour': 'pbAccent', 'icon': 'pbIcon',
+    'short description': 'pbShort', 'full description': 'pbFull',
+    'feature list': 'pbFeatures', 'CTA text': 'pbCtaText', 'CTA destination': 'pbCtaHref',
+    'visibility': 'pbVisibility',
+  };
+  for (const [label, id] of Object.entries(FIELDS)) {
+    t.ok(`the form has a ${label} field`, new RegExp(`id="${id}"`).test(admin));
+  }
+
+  // The vocabularies the owner asked for.
+  for (const k of ['subscription', 'pack', 'lifetime', 'custom'])
+    t.ok(`plan type offers ${k}`, new RegExp(`<option value="${k}"`).test(admin));
+  for (const c of ['monthly', 'quarterly', 'semiannual', 'annual', 'one_time', 'custom'])
+    t.ok(`billing cycle offers ${c}`, new RegExp(`<option value="${c}"`).test(admin));
+  for (const b of ['best_value', 'most_popular', 'new', 'limited', 'custom'])
+    t.ok(`badge offers ${b}`, new RegExp(`<option value="${b}"`).test(admin));
+  for (const v of ['public', 'hidden', 'internal'])
+    t.ok(`visibility offers ${v}`, new RegExp(`<option value="${v}"`).test(admin));
+
+  // Unlimited features, with the four operations the owner asked for.
+  t.ok('features can be added', /function pbAddFeature/.test(admin));
+  t.ok('features can be edited', /function pbFeatureEdit/.test(admin));
+  t.ok('features can be removed', /function pbRemoveFeature/.test(admin));
+  t.ok('features can be reordered', /function pbMoveFeature/.test(admin));
+  t.ok('the feature list has no fixed size', !/pbState\.features\.length\s*[<>]=?\s*\d/.test(codeOnly(admin)));
+
+  // Lifecycle and preview.
+  // These three go through the shared pbLifecycle() helper rather than three
+  // literal sb.rpc() calls, so the assertion looks for the RPC name itself.
+  t.ok('a plan can be duplicated', /'admin_duplicate_plan'/.test(admin));
+  t.ok('a plan can be archived', /'admin_archive_plan'/.test(admin));
+  t.ok('an archived plan can be restored', /'admin_restore_plan'/.test(admin));
+  t.ok('every lifecycle call is dispatched through one guarded helper',
+    /async function pbLifecycle/.test(admin));
+  t.ok('the card is previewed before saving', /id="pbPreview"/.test(admin) && /function pbRender/.test(admin));
+  t.ok('saving goes through the guarded authoring RPC', /rpc\('admin_upsert_plan'/.test(admin));
+
+  // Create must not silently become edit — the defect the probe caught.
+  t.ok('the form declares create vs update explicitly',
+    /mode:\s*pbState\.editing\s*\?\s*'update'\s*:\s*'create'/.test(admin));
+  // plan_code is the join key: editable while creating, frozen once saved.
+  t.ok('plan_code is frozen when editing an existing plan',
+    /pbEl\('pbCode'\)\.disabled = editing/.test(admin));
+}
+
+// ── The catalogue module carries the authoring surface ────────────────────
+t.section('plan-catalog.js exposes the authored metadata');
+{
+  const w = {};
+  evalSnippet(read('plan-catalog.js'), { window: w }, []);
+  const P = w.PlanCatalog;
+  for (const fn of ['badge', 'features', 'periodLabel', 'formatPrice', 'icon',
+                    'themeColor', 'accentColor', 'ctaText', 'ctaHref', 'plans', 'ofKind'])
+    t.ok(`PlanCatalog.${fn} exists`, typeof P[fn] === 'function');
+
+  // Every non-pack kind counts as a plan, or a lifetime plan silently vanishes
+  // from anything reasoning about "the plans on offer".
+  t.is('planKinds spans every non-pack kind', P.planKinds().sort(),
+    ['custom', 'lifetime', 'subscription']);
+
+  // Unloaded must degrade, never throw.
+  t.is('badge() on an unknown plan is null', P.badge('NOPE'), null);
+  t.is('features() on an unknown plan is empty', P.features('NOPE'), []);
+  t.is('formatPrice() on an unknown plan is empty', P.formatPrice('NOPE'), '');
+  t.is('periodLabel() on an unknown plan is empty', P.periodLabel('NOPE'), '');
+}
+
+// ── Visibility is enforced by the pages, not just stored ──────────────────
+t.section('Hidden and archived plans stay off the public pages');
+for (const f of ['pricing.html', 'manual-payment.html', 'settings.html']) {
+  const src = codeOnly(read(f));
+  t.ok(`${f} filters on visibility`, /visibility\s*===?\s*'public'|visibility === undefined/.test(src));
+  t.ok(`${f} excludes archived plans`, /archived_at/.test(src));
+}
+
+// ── Authored copy wins, and its absence is not a blank card ───────────────
+t.section('Authored content overrides, absence falls back');
+for (const f of ['pricing.html', 'manual-payment.html']) {
+  const src = read(f);
+  t.ok(`${f} prefers the plan's own feature list`,
+    /Array\.isArray\(p(lan|ack)\.features\)\s*&&\s*p(lan|ack)\.features\.length/.test(src));
+}
+t.ok('pricing.html renders the authored badge', /plan\.badge_text/.test(read('pricing.html')));
+t.ok('pricing.html renders the authored icon', /plan\.icon/.test(read('pricing.html')));
+t.ok('pricing.html renders the authored CTA', /plan\.cta_href/.test(read('pricing.html')));
+t.ok('pricing.html honours the plan currency', /plan\.currency/.test(read('pricing.html')));
+
+// ── The authoring migration says what it does ─────────────────────────────
+t.section('The authoring migration is present and honest');
+{
+  let m = '';
+  for (const p of ['supabase/migrations/20260802d_plan_catalog_v2_authoring.sql',
+                   'supabase/migrations-pending/20260802d_plan_catalog_v2_authoring.sql']) {
+    try { m = read(p); break; } catch { /* next */ }
+  }
+  t.ok('the authoring migration exists', !!m);
+  if (m) {
+    t.ok('it widens the plan kinds', /'lifetime'[\s\S]{0,40}'custom'/.test(m));
+    t.ok('it widens the billing cycles', /semiannual/.test(m));
+    t.ok('it makes is_best_value generated from badge',
+      /generated always as \(badge = 'best_value'\) stored/.test(m));
+    t.ok('it teaches fulfilment the new kinds', /_one_time/.test(m));
+    t.ok('it states that currency is quoted, not settled',
+      /Currency is a presentation field|quoted.*settled|settled in EGP/i.test(m));
+    t.ok('it records the create-vs-update defect the probe found', /mode/.test(m) && /silently UPDATED a live plan/i.test(m));
+    t.ok('it carries a rollback', /ROLLBACK/.test(m));
+    t.ok('archiving never deletes', /Deleting is never offered/i.test(m));
+  }
+}
+
 t.done();
