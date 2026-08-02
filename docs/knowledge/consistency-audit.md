@@ -752,7 +752,7 @@ rewriting a paragraph.
 
 ---
 
-## C-27 · "Optional" left the reader to guess why the platform exists — RESOLVED
+## C-27 · "Optional" left the reader to guess why the platform exists — RESOLVED (framing superseded by C-29)
 
 **Found:** C-22 established that Si Math AI is optional and the Si Math course is
 complete. Both true, and together they leave a question hanging: *if the course is
@@ -763,6 +763,13 @@ teaching falls short somewhere."**
 Nothing on the site said that. Nothing on the site prevented it either, which for
 a positioning document is the same defect: the layer was relying on readers not
 drawing the natural inference.
+
+> **Superseded in part.** The fix below located the gap in "limits of time and
+> human capacity" and listed what no person can do. That is more defensible than
+> most marketing and still wrong — see **C-29**, which replaced the framing while
+> keeping the concept. The complement statement, the value statement and the
+> division of labour all survive; the "no person can…" list and the
+> time-and-capacity wording do not.
 
 **Fixed:** a new concept, `continuous-personalization` (*Positioning*), and the
 statement it exists to carry —
@@ -889,6 +896,72 @@ does not have to rediscover it.
 
 ---
 
+## C-29 · The site compared a teacher to software — RESOLVED (supersedes part of C-27)
+
+**Found:** C-27 answered *"why does the platform exist if the teacher is good?"*
+by locating the gap in **limits of time and human capacity**, and publishing a
+list of six things *no person can do*. Careful, accurate, and still the wrong
+shape — because it is a comparison between a teacher and software.
+
+This is not a copywriting problem. It is a psychology problem, and it is the
+biggest marketing risk the platform has:
+
+> A parent who has already paid for a mathematics course protects that decision.
+> Told *"the platform helps because the teacher cannot…"*, they hear **"the course
+> I paid for is not good enough."** Resistance forms before they have understood
+> the product, and nothing said afterwards undoes it.
+
+**The rule that follows, and it is absolute:** Si Math AI must never be presented
+as compensation for weak teaching. It must always be presented as solving
+educational problems that are outside the scope of teaching itself. The teacher is
+not failing; the teacher is doing a different job.
+
+**Fixed — compare functions, never people to products.**
+
+| Withdrawn | Published instead |
+| --- | --- |
+| "limits of time and human capacity" | "Some educational tasks are continuous rather than instructional." |
+| "No person can remember every mistake…" | "remembering every mistake over months" — a task, not a deficit |
+| Teacher **vs** AI | Teaching **and** Continuous Personalized Learning Support |
+
+The seven continuous tasks are now stated as *work*: remembering every mistake
+over months, analyzing thousands of solved questions, daily personalized revision,
+detecting forgotten concepts, measuring long-term progress, monitoring learning
+consistency, adapting practice continuously. **Those are not teaching
+responsibilities. They are continuous educational support responsibilities.**
+
+A new comparison table contrasts *a teacher* with *a learning system* — and the
+right-hand column deliberately does **not** name Si Math AI. At that level the
+comparison is between two kinds of educational work, and naming the product would
+drag it back into a contest.
+
+And the closing statement, now published on four surfaces:
+
+> The teacher teaches. Si Math AI stays with the student after the lesson ends.
+> Not because the teacher is missing. Because learning continues after teaching
+> ends.
+
+**A new kind of check: `BANNED_PHRASINGS`.** Every other rule in the validator runs
+through the negation-aware matcher, so a page can deny a claim out loud. This group
+cannot, and the reason is mechanical: **the banned strings contain negation cues
+themselves.** *"teachers cannot"* contains *cannot*; *"no human can"* contains
+*no*. Routed through `assertsClaim()` every one would be read as a denial and
+skipped, and the check would be decorative. So they are scanned directly, and the
+pages that must quote them put them inside `data-guidance="prohibition"` blocks.
+
+The split between the two groups is now principled rather than incidental:
+**a pattern goes in `BANNED_PHRASINGS` if and only if it contains its own negation
+cue.** The first attempt put "compensation for weak teaching" there too, and it
+immediately failed on four pages — all of them *denying* it. That belongs with the
+negation-aware group, and moving it is what made the boundary explicit.
+
+**Also caught:** a pre-existing FAQ answer — *"the platform exists because one
+teacher cannot sit individually with thirty students every week"* — which had been
+sitting there since before any of this positioning work, and which the new check
+found on its first run.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -921,8 +994,9 @@ does not have to rediscover it.
 | C-26 | The site described itself accurately and uselessly | RESOLVED |
 | C-27 | "Optional" left the reader to guess why the platform exists | RESOLVED |
 | C-28 | The site described a product, not a method | RESOLVED |
+| C-29 | The site compared a teacher to software | RESOLVED — supersedes part of C-27 |
 
-Twenty-five resolved, three requiring owner action, plus one figure the owner can
+Twenty-six resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

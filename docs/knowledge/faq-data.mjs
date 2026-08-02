@@ -108,7 +108,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Do I need Si Math AI to succeed?',
-        a: '<p>No. The Si Math course teaches the mathematics in full, and students prepared successfully through it before Si Math AI existed. A student who never opens the platform is a fully served student, not a half-served one.</p><p>The platform exists because one teacher cannot sit individually with thirty students every week — it supplies the diagnosis, the targeted practice and the measurement that do not scale in a classroom. That is a real gap and worth filling, but it is an accelerator, and we will not build a feature that makes the course incomplete without it.</p>',
+        a: '<p>No. The Si Math course teaches the mathematics in full, and students prepared successfully through it before Si Math AI existed. A student who never opens the platform is a fully served student, not a half-served one.</p><p>The platform exists because some educational tasks are continuous rather than instructional — remembering every mistake over months, detecting forgotten concepts, measuring long-term progress. Those are not teaching responsibilities; they are continuous educational support responsibilities, and they belong to the weeks between lessons. It is an accelerator, and we will not build a feature that makes the course incomplete without it.</p>',
       },
       {
         q: 'Is Si Math AI better than ChatGPT for SAT Math?',

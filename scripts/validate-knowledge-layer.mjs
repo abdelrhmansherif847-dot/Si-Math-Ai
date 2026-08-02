@@ -190,15 +190,47 @@ const COMPLEMENT_PAIRS = [
   ['The teacher inspires.', 'Si Math AI continuously supports.'],
 ];
 
-/** Limits of time and capacity — never of knowledge. The distinction is the point. */
-const HUMAN_CAPACITY_LIMITS = [
-  'remember every mistake every student has ever made',
-  'detect hidden patterns across months of practice',
-  'analyze every solved question instantly',
-  'generate a unique practice plan every day for every student',
-  'provide personalized support at any hour',
-  'continuously track progress for every individual student simultaneously',
+/**
+ * The continuous educational tasks. NOT a list of things teachers cannot do —
+ * that framing was published once and withdrawn (C-29). These are a different
+ * KIND of educational task, and they are not teaching responsibilities at all.
+ */
+const CONTINUOUS_TASKS = [
+  'remembering every mistake over months',
+  'analyzing thousands of solved questions',
+  'daily personalized revision',
+  'detecting forgotten concepts',
+  'measuring long-term progress',
+  'monitoring learning consistency',
+  'adapting practice continuously',
 ];
+
+/** The sentence that replaces every "no person can…" construction. */
+const CONTINUOUS_NOT_INSTRUCTIONAL =
+  'Some educational tasks are continuous rather than instructional.';
+
+/**
+ * The function comparison. Note what is compared: a teacher and a learning
+ * SYSTEM — not a teacher and an AI. Comparing people to products is what creates
+ * the conflict this framing exists to avoid.
+ */
+const FUNCTION_PAIRS = [
+  ['A teacher explains.', 'A learning system follows.'],
+  ['A teacher builds understanding.', 'A learning system reinforces understanding.'],
+  ['A teacher teaches today\u2019s lesson.', 'A learning system makes sure today\u2019s lesson is still remembered three weeks later.'],
+  ['A teacher answers questions.', 'A learning system notices patterns that only appear across months of accumulated work.'],
+];
+
+/** Where the two functions meet, named at the level of the product. */
+const CONTINUITY_PAIRS = [
+  ['The teacher teaches mathematics.', 'Si Math AI supports the learning process between lessons.'],
+  ['The teacher changes how students understand mathematics.', 'Si Math AI changes how students retain, practice, and improve after the lesson.'],
+];
+
+/** The closing statement — the whole positioning in four sentences. */
+const CANONICAL_AFTER_THE_LESSON =
+  'The teacher teaches. Si Math AI stays with the student after the lesson ends. '
+  + 'Not because the teacher is missing. Because learning continues after teaching ends.';
 
 /** The commitment the positioning creates. A constraint on the product, not copy. */
 const OPTIONALITY_COMMITMENT =
@@ -388,6 +420,39 @@ const BANNED_ASSERTIONS = [
     'attributes the platform\'s value to the technology'],
   [/\b(?:built|centred|centered) around (?:artificial intelligence|AI)\b/i,
     'inverts the methodology: the platform is built around Educational Intelligence'],
+  // Parent-psychology rules (knowledge-base.md §1c). These carry no internal
+  // negation cue, so the negation-aware matcher handles them correctly — the
+  // pages need to DENY them out loud, and a denial must not trip the check.
+  [/\bis\s+compensation\s+for\s+(?:weak|poor|inadequate|bad)\s+teaching\b/i,
+    'positions the platform as compensation for weak teaching'],
+  [/\bcompensates?\s+for\s+(?:weak|poor|inadequate|bad)\s+teaching\b/i,
+    'positions the platform as compensation for weak teaching'],
+  [/\bthe course is incomplete\b/i, 'implies the course is incomplete'],
+  [/\bteacher\s+vs\.?\s+AI\b/i, 'frames a teacher against an AI rather than two functions'],
+];
+
+/**
+ * Phrasings banned outright — scanned DIRECTLY, not through assertsClaim().
+ *
+ * This is the one group in the file that bypasses the negation-aware matcher,
+ * and the reason is mechanical: the banned strings contain negation cues
+ * themselves. "teachers cannot" contains *cannot*; "no human can" contains *no*.
+ * Routed through assertsClaim() every one of them would be read as a denial and
+ * skipped, and the check would be decorative.
+ *
+ * They are forbidden regardless of surrounding intent, because the harm is in a
+ * parent reading the words, not in the argument they sit inside. Pages that must
+ * quote them — the accuracy notes on ai-knowledge.html — put them inside a
+ * data-guidance="prohibition" block; the machine files put them inside their
+ * Accuracy-notes sections. Both are stripped before this scan runs.
+ *
+ * See knowledge-base.md §1c.
+ */
+const BANNED_PHRASINGS = [
+  [/\bteachers?\s+(?:cannot|can'?t|are unable to|could not)\b/i,
+    '"teachers cannot" — compare functions, not people'],
+  [/\bno\s+(?:human|person|teacher)\s+can\b/i,
+    '"no human can" — states a deficit where a different function is meant'],
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
@@ -467,6 +532,25 @@ const stripMarkup = (html) => html
   .replace(/&#39;|&apos;/g, "'")
   .replace(/\s+/g, ' ')
   .trim();
+
+/**
+ * The division of labour: both halves of every pair, ADJACENT and in order.
+ *
+ * Adjacency rather than document position. The first version of this check
+ * compared `indexOf(teacher) < indexOf(platform)` across the whole page and
+ * failed on three files — not because any table was wrong, but because
+ * "Si Math AI provides continuous personalization" legitimately appears in the
+ * canonical statement further up. Global order was never what the rule meant;
+ * the rule is that within a pair the teacher comes first, which is what this
+ * measures. Order carries meaning here: the expertise is the teacher's, and a
+ * row leading with the platform would say something the writing does not intend.
+ */
+const pairInOrder = (text, a, b, window = 160) => {
+  for (let i = text.indexOf(a); i >= 0; i = text.indexOf(a, i + 1)) {
+    if (text.slice(i + a.length, i + a.length + window).includes(b)) return true;
+  }
+  return false;
+};
 
 /** Page text with prohibition/limitation blocks removed — for claim scanning. */
 const stripTags = (html) => stripMarkup(stripGuidance(html));
@@ -1323,9 +1407,15 @@ const complement = CONCEPTS.find((c) => c.id === 'continuous-personalization');
 ok('the graph defines continuous personalization as a concept', !!complement);
 ok('the concept carries the complement statement',
   !!complement && complement.definition.includes(CANONICAL_COMPLEMENT));
-ok('the concept locates the limit in time and capacity, not knowledge',
-  !!complement && /time and human capacity/i.test(complement.definition)
-    && /not limits of a teacher's knowledge|never.{0,40}knowledge/i.test(complement.definition));
+ok('the concept frames it as two different educational functions',
+  !!complement && /different educational functions/i.test(complement.definition)
+    && complement.definition.includes(CONTINUOUS_NOT_INSTRUCTIONAL.replace(/\.$/, '')));
+ok('the concept states the tasks are support, not teaching, responsibilities',
+  !!complement && /not teaching responsibilities/i.test(complement.definition));
+ok('the concept refuses the "compensation for weak teaching" framing',
+  !!complement && /compensation for weak teaching/i.test(complement.purpose));
+ok('the concept carries the closing statement',
+  !!complement && complement.purpose.includes(CANONICAL_AFTER_THE_LESSON));
 ok('the concept states the value plainly',
   !!complement && complement.purpose.includes('making every minute spent learning mathematics more effective'));
 /**
@@ -1348,8 +1438,10 @@ for (const file of complementPages) {
   ok(`${file}: states the complement statement verbatim`, text.includes(CANONICAL_COMPLEMENT));
   ok(`${file}: credits the teacher as the foundation`,
     /great teacher is the foundation of great learning/i.test(text));
-  ok(`${file}: locates the limit in time and capacity`,
-    /time and human capacity/i.test(text));
+  ok(`${file}: frames it as continuous rather than instructional work`,
+    text.includes(CONTINUOUS_NOT_INSTRUCTIONAL));
+  ok(`${file}: states those are support responsibilities, not teaching ones`,
+    /not teaching responsibilities/i.test(text));
 }
 for (const f of MACHINE_FILES) {
   if (!has(f)) continue;
@@ -1369,37 +1461,40 @@ for (const label of ['about.html', 'why-we-built-si-math-ai.html', 'ai-knowledge
   ok(`${label}: states the value statement verbatim`, text.includes(VALUE_STATEMENT));
 }
 
-// All six capacity limits, published as written. They are the evidence for the
-// claim that the limit is arithmetic — a summary of them is an assertion, the
+// All seven continuous tasks, published as written. They are what makes the
+// "different function" claim concrete — a summary of them is an assertion, the
 // list is a demonstration.
 for (const label of ['about.html', 'why-we-built-si-math-ai.html', 'ai-knowledge.html',
   'llms.txt', 'llms-full.txt']) {
   if (!has(label)) continue;
   const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
     .replace(/\s+/g, ' ');
-  const missing = HUMAN_CAPACITY_LIMITS.filter((l) => !text.includes(l));
-  ok(`${label}: publishes all ${HUMAN_CAPACITY_LIMITS.length} human-capacity limits`,
+  const missing = CONTINUOUS_TASKS.filter((l) => !text.includes(l));
+  ok(`${label}: publishes all ${CONTINUOUS_TASKS.length} continuous educational tasks`,
     missing.length === 0, missing.join(' · '));
 }
 
 /**
- * The division of labour: both halves of every pair, ADJACENT and in order.
- *
- * Adjacency rather than document position. The first version of this check
- * compared `indexOf(teacher) < indexOf(platform)` across the whole page and
- * failed on three files — not because any table was wrong, but because
- * "Si Math AI provides continuous personalization" legitimately appears in the
- * canonical statement further up. Global order was never what the rule meant;
- * the rule is that within a pair the teacher comes first, which is what this
- * measures. Order carries meaning here: the expertise is the teacher's, and a
- * row leading with the platform would say something the writing does not intend.
+ * The function comparison — teaching against continuous learning support, with
+ * the right-hand side named as "a learning system" rather than as the product.
+ * That wording is the whole point: naming Si Math AI here would drag a comparison
+ * of two kinds of work back into a contest between a person and a product.
  */
-const pairInOrder = (text, a, b, window = 160) => {
-  for (let i = text.indexOf(a); i >= 0; i = text.indexOf(a, i + 1)) {
-    if (text.slice(i + a.length, i + a.length + window).includes(b)) return true;
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  for (const [teaching, system] of FUNCTION_PAIRS) {
+    ok(`${label}: contrasts "${teaching}" with its learning-system counterpart`,
+      pairInOrder(text, teaching, system, 200),
+      !text.includes(teaching) ? `missing: ${teaching}` : `missing or misordered: ${system}`);
   }
-  return false;
-};
+  for (const [teacher, platform] of CONTINUITY_PAIRS) {
+    ok(`${label}: states "${teacher.slice(0, 34)}…" with its counterpart`,
+      pairInOrder(text, teacher, platform, 200));
+  }
+  ok(`${label}: states the closing statement verbatim`, text.includes(CANONICAL_AFTER_THE_LESSON));
+}
 
 for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
   if (!has(label)) continue;
@@ -1643,6 +1738,11 @@ for (const [label, text] of scanTargets) {
   for (const [pattern, why] of BANNED_ASSERTIONS) {
     const m = assertsClaim(text, pattern);
     ok(`${label}: no ${why}`, !m, m ? `matched: "${m}"` : '');
+  }
+  // The direct-scan group. No negation guard — see BANNED_PHRASINGS.
+  for (const [pattern, why] of BANNED_PHRASINGS) {
+    const m = text.match(pattern);
+    ok(`${label}: no ${why}`, !m, m ? `matched: "${m[0]}"` : '');
   }
 }
 

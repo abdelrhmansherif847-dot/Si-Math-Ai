@@ -76,7 +76,7 @@ export const CONCEPTS = [
     definition:
       'Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.',
     purpose:
-      'To multiply the impact of good teaching rather than substitute for it. Teaching already works; what a teacher cannot do thirty times over is diagnose each student individually, supply unlimited targeted practice and measure the result. Si Math AI does those things, and it is an optional accelerator — no student\'s success depends on it.',
+      'To multiply the impact of good teaching rather than substitute for it. Teaching already works. Some educational tasks are continuous rather than instructional — individual diagnosis, unlimited targeted practice, long-term measurement — and those are a different kind of work from teaching, not a shortfall in it. Si Math AI does that work, and it is an optional accelerator: no student\'s success depends on it.',
     inputs: ['A student\'s own questions, drills and mock exam attempts', 'A specialist-authored curriculum and skill taxonomy'],
     outputs: ['Explanations', 'A ranked diagnosis of weak skills', 'Targeted practice', 'Measured mastery and a predicted score'],
     related: [
@@ -259,7 +259,7 @@ export const CONCEPTS = [
     definition:
       'The AI mentor inside Si Math AI. A fictional dragon guide character, not a real person. Zero delivers educational knowledge that human educators and exam specialists created, reviewed and continuously improve; Zero does not invent educational strategy.',
     purpose:
-      'To remove the scheduling constraint on expert explanation. A teacher cannot sit with every student at midnight; Zero can, delivering the method a specialist chose rather than one it improvised.',
+      'To make expert explanation available whenever a student is actually working. A lesson happens at a fixed hour; questions do not. Zero delivers the method a specialist chose, at midnight or on a Sunday, rather than one it improvised.',
     inputs: ['A student question — typed, pasted or photographed', 'Specialist-authored teaching methods and mistake patterns', 'The student\'s exam context and history'],
     outputs: ['A step-by-step explanation', 'An explanation of why the wrong answer choices are wrong', 'A diagnostic signal for every interaction'],
     related: [
@@ -557,7 +557,7 @@ export const CONCEPTS = [
       'The role Si Math AI occupies relative to teaching. The course and the platform solve two different educational problems: the course answers "How do I learn Mathematics?", and Si Math AI answers "How do I learn Mathematics in the smartest and most efficient way possible?" The course is responsible for teaching; Si Math AI is responsible for optimizing the student\'s learning journey. Artificial Intelligence is not the teacher — it is the learning accelerator.',
     purpose:
       'To fix the direction of a relationship that technology companies routinely get backwards, and to stop the two being compared as though they did the same job. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don\'t replace great teaching. We multiply its impact.',
-    inputs: ['A complete educational programme that already works', 'Technology that scales what a teacher cannot do thirty times over'],
+    inputs: ['A complete educational programme that already works', 'Technology that carries the continuous, between-lessons half of the work'],
     outputs: ['The site-wide statement: "We don\'t replace great teaching. We multiply its impact."', 'A published commitment that the platform is optional', 'A clear division of responsibility: teaching versus optimization'],
     related: [
       { predicate: 'governs', target: 'si-math-ai' },
@@ -602,16 +602,20 @@ export const CONCEPTS = [
     name: 'Continuous Personalization',
     kind: 'Positioning',
     definition:
-      'What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. The platform exists because of limits of time and human capacity — not limits of a teacher\'s knowledge: no person carrying a full teaching timetable can remember every mistake each of them has made, detect patterns across months, analyse every solved question instantly, rebuild a practice plan daily for each student, answer at any hour, and track every individual\'s progress simultaneously.',
+      'What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. Teaching and continuous learning support are different educational functions, not better and worse versions of one. Some educational tasks are continuous rather than instructional. They are: remembering every mistake over months, analyzing thousands of solved questions, daily personalized revision, detecting forgotten concepts, measuring long-term progress, monitoring learning consistency and adapting practice continuously. Those are not teaching responsibilities. They are continuous educational support responsibilities.',
     purpose:
-      'To correct the misconception that Si Math AI exists because a teacher is not enough. A great teacher is the foundation of great learning, and the platform was never designed to replace excellent teaching — it was designed to solve a different problem. Its value is not teaching more mathematics. Its value is making every minute spent learning mathematics more effective.',
+      'To correct the misconception that Si Math AI exists because a teacher is not enough, and to do it without ever presenting the platform as compensation for weak teaching. A great teacher is the foundation of great learning. The teacher teaches. Si Math AI stays with the student after the lesson ends. Not because the teacher is missing. Because learning continues after teaching ends. Its value is not teaching more mathematics; its value is making every minute spent learning mathematics more effective.',
     inputs: ['Expert teaching that already works', 'Every interaction a single student has ever had with the platform'],
+    // The continuous tasks, stated as work rather than as anyone's shortfall.
+
     outputs: [
-      'Memory of every mistake a student has made',
-      'Patterns detected across months of practice',
-      'A practice plan rebuilt as often as the evidence changes',
-      'Support available at any hour',
-      'Progress tracked for every student simultaneously',
+      'remembering every mistake over months',
+      'analyzing thousands of solved questions',
+      'daily personalized revision',
+      'detecting forgotten concepts',
+      'measuring long-term progress',
+      'monitoring learning consistency',
+      'adapting practice continuously',
     ],
     related: [
       { predicate: 'partOf', target: 'learning-accelerator' },

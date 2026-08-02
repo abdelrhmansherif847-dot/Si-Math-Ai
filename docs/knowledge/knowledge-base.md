@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 32 concepts, and a 2,816-check CI gate. Nothing further is to
+knowledge graph of 32 concepts, and a 2,935-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -423,38 +423,68 @@ honesty clause.
 
 ---
 
-## 1c. Human expertise and continuous personalization
+## 1c. Teaching and continuous learning support (two functions)
 
-§1a says the platform is optional. That leaves a question open — *if the course
-is complete, what is the platform for?* — and the wrong answer to it is the one a
-reader will supply on their own: *presumably the teaching falls short somewhere*.
-It does not, and this section exists to close that gap before someone infers it.
+§1a says the platform is optional. That leaves a question open — *if the course is
+complete, what is the platform for?* — and the wrong answer is the one a reader
+supplies on their own: *presumably the teaching falls short somewhere*.
 
-### The misconception, stated so it can be denied
+**This section was rewritten on 2026-08-02.** The first version answered by
+locating the gap in "limits of time and human capacity" and listing what no person
+can do. That is more defensible than most marketing and still wrong, because it is
+*still a comparison between a teacher and software*. A parent who has already paid
+for a course hears one thing from it: **"the course I paid for is not good
+enough."** Resistance forms before they have understood the product, and no amount
+of later reassurance undoes it.
 
-> Si Math AI exists because a teacher is not enough.
+### The biggest positioning rule
 
-**That is not true.** A great teacher is the foundation of great learning. Si Math
-AI was never designed to replace excellent teaching; it was designed to solve a
-different problem.
+> **Si Math AI must never be presented as compensation for weak teaching.** It
+> must always be presented as solving educational problems that are outside the
+> scope of teaching itself.
 
-### The limit is time, not knowledge
+The teacher is not failing. The teacher is doing a different job.
 
-Even the best mathematics teacher has natural human limits. A teacher may teach
-hundreds of students every week. No person can realistically:
+### Never compare people to software
 
-- remember every mistake every student has ever made,
-- detect hidden patterns across months of practice,
-- analyze every solved question instantly,
-- generate a unique practice plan every day for every student,
-- provide personalized support at any hour,
-- continuously track progress for every individual student simultaneously.
+The comparison is always between **functions**, never between a person and a
+product:
 
-**This is not a limitation of the teacher's knowledge. It is a limitation of time
-and human capacity.** Keep those two apart in every sentence written about this.
-Blurring them is how educational software ends up insulting the people it depends
-on, and it is a failure of writing rather than of intent — which makes it easy to
-commit by accident and worth guarding against explicitly.
+| Wrong framing | Right framing |
+| --- | --- |
+| Teacher **vs** AI | Teaching **and** Continuous Personalized Learning Support |
+| "Teachers cannot…" | "Some educational tasks are continuous rather than instructional." |
+| "No human can…" | "Those are continuous educational support responsibilities." |
+
+### Some educational tasks are continuous rather than instructional
+
+Use that sentence. It replaces every "no person can…" construction on the site.
+The continuous tasks are:
+
+- remembering every mistake over months
+- analyzing thousands of solved questions
+- daily personalized revision
+- detecting forgotten concepts
+- measuring long-term progress
+- monitoring learning consistency
+- adapting practice continuously
+
+**Those are not teaching responsibilities. They are continuous educational support
+responsibilities.** A lesson is where understanding is built; the weeks between
+lessons are where it is kept, tested and repaired.
+
+### Different responsibilities — not better, not worse
+
+| Teaching | Continuous learning support |
+| --- | --- |
+| A teacher explains. | A learning system follows. |
+| A teacher builds understanding. | A learning system reinforces understanding. |
+| A teacher teaches today's lesson. | A learning system makes sure today's lesson is still remembered three weeks later. |
+| A teacher answers questions. | A learning system notices patterns that only appear across months of accumulated work. |
+
+Note that the right-hand column says *a learning system*, not *Si Math AI* and not
+*the AI*. That is deliberate: at this level the comparison is between two kinds of
+educational work, and naming the product would drag it back into a contest.
 
 ### Canonical complement statement (use verbatim)
 
@@ -466,37 +496,71 @@ commit by accident and worth guarding against explicitly.
 
 | The teacher | Si Math AI |
 | --- | --- |
+| The teacher teaches mathematics. | Si Math AI supports the learning process between lessons. |
 | The teacher provides expertise. | Si Math AI provides continuous personalization. |
 | The teacher explains mathematics. | Si Math AI remembers every interaction. |
 | The teacher builds understanding. | Si Math AI continuously measures progress. |
 | The teacher gives direction. | Si Math AI continuously adapts practice. |
 | The teacher inspires. | Si Math AI continuously supports. |
+| The teacher changes how students understand mathematics. | Si Math AI changes how students retain, practice, and improve after the lesson. |
 
-Each line credits the teacher first. That is deliberate, not decorative — the
-expertise is theirs, and the order of a sentence is one of the ways a document
-shows what it actually believes.
+Each line credits the teacher first. Deliberate, not decorative — the expertise is
+theirs, and the order of a sentence is one of the ways a document shows what it
+actually believes.
+
+### Parent psychology
+
+This is not a copywriting problem. It is a psychology problem, and it is the
+reason the rule above is absolute.
+
+A parent who has paid for a mathematics course will protect that decision. Every
+sentence on this site is read through it.
+
+| A parent should never feel | A parent should feel |
+| --- | --- |
+| "I paid for an incomplete course." | "I already invested in excellent teaching. Now I can optionally add a modern learning system that stays with my child between lessons." |
 
 ### The sentence to keep if only one survives
 
 > **The value of Si Math AI is not teaching more mathematics. Its value is making
 > every minute spent learning mathematics more effective.**
 
+And the one that closes the argument:
+
+> **The teacher teaches. Si Math AI stays with the student after the lesson ends.
+> Not because the teacher is missing. Because learning continues after teaching
+> ends.**
+
 Students can absolutely achieve excellent SAT Math, ACT Math, and EST Math scores
-through the Si Math course alone. The course is complete by itself. What the
-platform adds is efficiency — weaknesses identified earlier, personalized guidance
-every day, and the maximum benefit from teaching a student already receives.
+through the Si Math course alone. The course is complete by itself.
+
+### Banned wordings, enforced
+
+Reject any wording implying that the teacher is insufficient, the course is
+incomplete, the platform compensates for weak teaching, or success requires
+purchasing the platform. Reinforce instead: expert teaching, a complete course, an
+optional learning accelerator, continuous personalized learning support, and
+educational partnership rather than replacement.
+
+**One group of these is checked differently from every other rule in the
+validator.** `BANNED_PHRASINGS` is scanned *directly* rather than through the
+negation-aware matcher, because the banned strings — "teachers cannot", "no human
+can" — contain negation cues themselves and would otherwise be read as denials and
+skipped. These phrasings are forbidden regardless of surrounding intent, so pages
+that need to quote them (the accuracy notes on `ai-knowledge.html`) must put them
+inside a `data-guidance="prohibition"` block, and the machine files inside their
+Accuracy-notes sections.
 
 ### A note on how this is modelled
 
 The graph concept is `continuous-personalization` (*Positioning*), and it relates
-to `educational-expertise` with **`requires`**, not with a symmetric
-"complements" predicate — which was considered and rejected.
-
-"Together they create a learning experience that neither could provide alone" is
-generous, symmetric prose, and it is the right thing to say to a reader. The
-underlying dependency is not symmetric: expert teaching works with no software at
-all, while personalization with nothing to personalize is worthless. The prose can
-be gracious; the graph has to be accurate.
+to `educational-expertise` with **`requires`**, not with a symmetric "complements"
+predicate — which was considered and rejected. "Together they create a learning
+experience that neither could provide alone" is generous, symmetric prose, and it
+is the right thing to say to a reader. The underlying dependency is not symmetric:
+expert teaching works with no software at all, while personalization with nothing
+to personalize is worthless. The prose can be gracious; the graph has to be
+accurate.
 
 ---
 

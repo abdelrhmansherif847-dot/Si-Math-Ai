@@ -125,19 +125,53 @@ export const COMPLEMENT_PAIRS = [
 ];
 
 /**
- * What no individual teacher can do at scale. These are limits of time and human
- * capacity, never of knowledge — the distinction is the entire point of the list,
- * and dropping it would turn a description of arithmetic into a criticism of
- * teachers.
+ * The continuous educational tasks — the work that happens between lessons.
+ *
+ * THESE ARE NOT THINGS TEACHERS CANNOT DO. That framing was published once and
+ * withdrawn: it invites a parent who has already paid for a course to hear "the
+ * course you bought is not good enough", and resistance forms before they have
+ * understood the product. These are simply a different *kind* of educational
+ * task — continuous rather than instructional — and they are not teaching
+ * responsibilities at all.
+ *
+ * Write them as functions. Never as deficits. See knowledge-base.md §1c.
  */
-export const HUMAN_CAPACITY_LIMITS = [
-  'remember every mistake every student has ever made',
-  'detect hidden patterns across months of practice',
-  'analyze every solved question instantly',
-  'generate a unique practice plan every day for every student',
-  'provide personalized support at any hour',
-  'continuously track progress for every individual student simultaneously',
+export const CONTINUOUS_TASKS = [
+  'remembering every mistake over months',
+  'analyzing thousands of solved questions',
+  'daily personalized revision',
+  'detecting forgotten concepts',
+  'measuring long-term progress',
+  'monitoring learning consistency',
+  'adapting practice continuously',
 ];
+
+/** The sentence that replaces every "no person can…" construction. */
+export const CONTINUOUS_NOT_INSTRUCTIONAL =
+  'Some educational tasks are continuous rather than instructional.';
+
+/**
+ * The function comparison. Note what is being compared: a teacher and a learning
+ * *system* — not a teacher and an AI, and not a person and a product. Comparing
+ * people to software is what creates the conflict this framing exists to avoid.
+ */
+export const FUNCTION_PAIRS = [
+  ['A teacher explains.', 'A learning system follows.'],
+  ['A teacher builds understanding.', 'A learning system reinforces understanding.'],
+  ['A teacher teaches today’s lesson.', 'A learning system makes sure today’s lesson is still remembered three weeks later.'],
+  ['A teacher answers questions.', 'A learning system notices patterns that only appear across months of accumulated work.'],
+];
+
+/** Where the two functions meet, named at the level of the product. */
+export const CONTINUITY_PAIRS = [
+  ['The teacher teaches mathematics.', 'Si Math AI supports the learning process between lessons.'],
+  ['The teacher changes how students understand mathematics.', 'Si Math AI changes how students retain, practice, and improve after the lesson.'],
+];
+
+/** The whole positioning in four sentences, and the closing one that matters. */
+export const CANONICAL_AFTER_THE_LESSON =
+  'The teacher teaches. Si Math AI stays with the student after the lesson ends. '
+  + 'Not because the teacher is missing. Because learning continues after teaching ends.';
 
 /**
  * The methodology layer — the deepest one, and the only one a competitor cannot
