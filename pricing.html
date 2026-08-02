@@ -574,8 +574,11 @@ function buildPlanFeatures(plan) {
   const cycle = plan.billing_cycle;
   const periodLabel = cycle === 'annual' ? 'year' : cycle === 'quarterly' ? '3 months' : 'month';
   const isAnnual = cycle === 'annual';
-  // Free is a price of zero, not a plan_code spelled FREE.
-  const isFreeTier = Number(plan.price_egp) === 0;
+  // Free is a price of zero, not a plan_code spelled FREE — and it must match
+  // the test consume_credits uses, or the page advertises one set of rules
+  // while the server enforces another. Server predicate:
+  //   coalesce(amount_egp,0) = 0 AND coalesce(credits_granted,0) = 0
+  const isFreeTier = Number(plan.price_egp || 0) === 0 && Number(plan.credits_granted || 0) === 0;
 
   const features = [];
   if (isFreeTier) {
@@ -592,7 +595,14 @@ function buildPlanFeatures(plan) {
     features.push({ ok: false, text: 'Unlimited chat history' });
   } else {
     features.push({ ok: true,  text: credits.toLocaleString() + ' credits / ' + periodLabel });
-    features.push({ ok: true,  text: 'Unlimited daily AI messages' });
+    // A paid plan is never blocked by daily_limit — consume_credits charges
+    // from message #1 and the balance is the real limit. So the plan IS
+    // unlimited by day; where the owner set a number, name it as the pace it is
+    // rather than leaving the card and the usage meter contradicting each other
+    // ("Unlimited" on one, "184 / 200" on the other).
+    features.push({ ok: true,  text: limit != null
+      ? 'Up to ' + limit + ' AI messages per day'
+      : 'Unlimited daily AI messages' });
     features.push({ ok: true,  text: 'Full Weakness Analyzer (all topics, trends, deep analysis)' });
     if (plan.is_founder) {
       features.push({ ok: true,  text: 'All 7 Mastery Rounds — Foundation → Mastery → Elite I–III → Legend' });
@@ -678,6 +688,16 @@ async function loadPage() {
   const activePlan = plans.find(p => p.plan_code === currentPlanCode);
   const deviceLimit = activePlan?.device_limit || 2;
   const dailyLimit = activePlan?.daily_limit || null;
+  // daily_limit caps both tiers, but what happens AT the cap differs, and the
+  // copy has to say which:
+  //   zero-price tier -> the allowance is spent; purchased credits continue
+  //   paid plan       -> a hard stop for the day; credits do NOT extend it,
+  //                      and every message already cost credits getting there
+  // Telling a paying student to "buy a pack to continue after the daily limit"
+  // is false, so that line is free-tier only.
+  const isFreeTier = activePlan
+    ? (Number(activePlan.price_egp || 0) === 0 && Number(activePlan.credits_granted || 0) === 0)
+    : true;
 
   // The "Upgrade Now" banner button used to name its target plan inline
   // ("Pro Monthly"), which went stale the moment that plan was renamed in the
@@ -875,7 +895,11 @@ async function loadPage() {
         <span class="usage-count" style="color:${dailyLimit && todayUsage >= dailyLimit ? 'var(--red)' : 'var(--text-400)'}">${todayUsage}${dailyLimit ? ' / ' + dailyLimit : ' (unlimited)'}</span>
       </div>
       ${dailyLimit ? `<div class="usage-bar"><div class="usage-fill" style="width:${Math.min(100,(todayUsage/dailyLimit)*100)}%;background:${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'};box-shadow:0 0 6px ${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'}66"></div></div>` : ''}
-      ${dailyLimit ? `<div class="usage-note">Resets at midnight UTC · <a href="#packs" style="color:var(--cyan)">Buy a pack</a> to continue after the daily limit · <a href="#plans" style="color:var(--cyan)">Upgrade</a> for unlimited</div>` : `<div class="usage-note">No daily limit on your plan</div>`}
+      ${dailyLimit
+          ? (isFreeTier
+              ? `<div class="usage-note">Resets at midnight UTC · <a href="#packs" style="color:var(--cyan)">Buy a pack</a> to continue after the daily limit · <a href="#plans" style="color:var(--cyan)">Upgrade</a> for unlimited</div>`
+              : `<div class="usage-note">${todayUsage >= dailyLimit ? 'Daily limit reached — resets at midnight UTC. Credits do not extend it. ' : 'Resets at midnight UTC · '}Each message also uses credits · <a href="#plans" style="color:var(--cyan)">Upgrade</a> for a higher limit</div>`)
+          : `<div class="usage-note">No daily limit on your plan</div>`}
     </div>
     <div class="usage-row">
       <div class="usage-header">

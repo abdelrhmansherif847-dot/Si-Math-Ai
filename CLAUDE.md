@@ -134,6 +134,7 @@ student impact during exam-prep windows.
 | Supabase project | `igvkyxkmjnkzscqgommj` |
 | Edge Functions | `ai-tutor` (platform version **135**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
 | `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v96'` — the server-side quota gate. **Deployed**, and the deployed bundle is byte-for-byte identical to `main` (all four files) |
+| `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
@@ -144,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **74 files** in `supabase/migrations/`, **138 applied** in the database |
+| Migrations | **75 files** in `supabase/migrations/`, **139 applied** in the database |
 | Static site | 46 root `*.html` pages on Vercel |
 | CI | `node tests/run-all.mjs` — 20 test suites + 7 validators = **27 checks** |
 
