@@ -2,8 +2,10 @@
 
 **Reported:** 2026-08-02 — "free users are not being blocked after reaching the
 question limit; the backend keeps serving Zero responses."
-**Status:** code fix complete (`ai-tutor` v96 + `chat.html`), **not yet
-deployed**. One migration PREPARED and awaiting approval.
+**Status:** code complete and merged. Both migrations **APPLIED** to production
+(2026-08-02). **`ai-tutor` v96 is NOT deployed** — the running function is still
+v95 / platform version 133. That deploy is the only remaining production step,
+and until it happens the server-side gate is not in force.
 **Branch:** `claude/free-quota-enforcement-bug-satsry`
 
 ---
@@ -241,14 +243,25 @@ charging unkeyed for the life of the isolate after the migration landed, which
 is the exact failure the change exists to prevent. `keyed: false` is logged so
 an unprotected request is greppable.
 
-### 5.6 PREPARED, not applied
+### 5.6 Both migrations APPLIED
 
-Two migrations, both requiring explicit approval (CLAUDE.md §3):
+Owner-approved individually (CLAUDE.md §3) and applied to
+`igvkyxkmjnkzscqgommj` on 2026-08-02:
 
-| File | What it closes | When |
-|---|---|---|
-| `20260802_consume_credits_idempotency.sql` | §5.5 — duplicate charge on retry | **First**, before the deploy — additive and backward-compatible |
-| `20260802_refund_ai_credit_server_only.sql` | §4 — client-callable quota reset | **Last**, after the site is live |
+| Version | File | Closes | Verified |
+|---|---|---|---|
+| `20260802173710` | `supabase/migrations/20260802e_consume_credits_idempotency.sql` | §5.5 — duplicate charge on retry | 9/9 |
+| `20260802174206` | `supabase/migrations/20260802f_refund_ai_credit_server_only.sql` | §4 — client-callable quota reset | 4/4 |
+
+Post-apply verification is recorded in each file's header. The idempotency
+migration was checked on both the admin and FREE branches with live calls; every
+test row was deleted afterwards and the FREE account used is back to zero used
+today with an unchanged balance.
+
+**The second one was applied ahead of its stated prerequisite, at the owner's
+direction.** Its header says so. Until v96 and the new `chat.html` are live, the
+PRE-v96 page's browser refunds return `permission denied`, so students are
+charged for out-of-scope turns and failed calls. The gap closes on deploy.
 
 ---
 
@@ -301,32 +314,41 @@ Full suite: **27/27 green**, up from 26 (baseline re-run before any edit).
 
 ---
 
-## 8. Deployment — order matters, and it is not symmetric
+## 8. Deployment — what is done, and what is left
 
 Recorded in full at `docs/engineering/deployment-pipeline.md` §5.6.
 
-1. **Apply `20260802_consume_credits_idempotency.sql`.** Additive: the new
-   parameter has a default, so today's seven-argument callers are untouched and
-   behave exactly as now. Safe against the currently-live v95 + old client, which
-   is why it goes first rather than last — it means the gate is protected against
-   duplicate charging from its very first request.
-2. **Deploy `ai-tutor` v96** (DEPLOY.md §4 — never the inline MCP tool; Path B
-   CLI only, four-file bundle).
-3. **Verify** platform version + sha256 + all four bundle files.
-4. **Merge `chat.html`** to `main`.
-5. **Apply `20260802_refund_ai_credit_server_only.sql`.**
-6. **Run the end-to-end verification** in §10.
+| # | Step | State |
+|---|---|---|
+| 1 | Apply `20260802e_consume_credits_idempotency.sql` | ✅ done — version `20260802173710` |
+| 2 | Apply `20260802f_refund_ai_credit_server_only.sql` | ✅ done — version `20260802174206` |
+| 3 | Merge the branch to `main` (Vercel publishes the site) | ✅ done |
+| 4 | **Deploy `ai-tutor` v96** — DEPLOY.md §4 Path B (CLI), four-file bundle | ❌ **NOT DONE** |
+| 5 | Verify platform version + sha256 + all four bundle files | pending step 4 |
+| 6 | Run the end-to-end verification in §10 | pending step 4 |
 
-Between 2 and 4 both halves charge — students are billed twice per turn (free
-students under the cap: two daily slots, zero credits). Visible, bounded,
-refundable. The reverse order charges *nobody* for the length of the window,
-which is the bug this work exists to remove. Do not reverse it, and do not do
-both in one breath — verify between.
+Steps 2 and 3 were taken ahead of step 4 at the owner's explicit direction, and
+the consequence has to be stated rather than buried, because it is the exact
+condition this document exists to describe.
 
-Step 1 does not shrink that window (the old client and the new function use
-different `client_request_id` values for the same turn — the old client does not
-send one to `consume_credits` at all). It is first because it is free to do
-first and because it means step 2 lands already protected.
+**Until step 4 lands, no chat turn is charged at all.** The live site is the v96
+`chat.html`, which no longer charges because the server was supposed to; the live
+function is v95, which never did. Free students are unlimited and paid students
+are not debited. That is a wider hole than the one reported — the reported bug at
+least metered honest clients.
+
+Also open until step 4: the pre-v96 refund path is revoked with no server-side
+replacement running, so any student still on a cached copy of the old page is
+charged for out-of-scope turns and failed calls.
+
+Both close the moment v96 is deployed. Neither needs any further code change —
+the branch is complete and green; it is the deploy that is outstanding.
+
+The original ordering rationale, kept because it is the reusable part: deploying
+the function first costs a **double charge** for the length of the window
+(visible, bounded, refundable), while shipping the site first costs **no charge
+at all**. When a responsibility moves between surfaces, the receiving surface has
+to be live before the sending one stops.
 
 ---
 

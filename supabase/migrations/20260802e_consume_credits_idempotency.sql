@@ -1,14 +1,32 @@
 -- ===========================================================================
 -- consume_credits becomes idempotent per client_request_id
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-02, owner-approved
+--         individually (CLAUDE.md §3). Version 20260802173710.
 --
--- APPLY THIS **FIRST**, BEFORE DEPLOYING ai-tutor v96. It is additive and
--- backward-compatible — the new parameter has a DEFAULT, so today's callers
--- (chat.html via credit-config.js, passing seven named arguments) keep working
--- unchanged and get exactly today's behaviour. There is no window in which it
--- breaks the running system, which is why it can go ahead of the deploy rather
--- than after it.
+--         Applied BEFORE the ai-tutor v96 deploy, deliberately: it is additive
+--         and backward-compatible — the new parameter has a DEFAULT, so today's
+--         callers (chat.html via credit-config.js, passing seven named
+--         arguments) keep working unchanged and get exactly today's behaviour.
+--         There is no window in which it breaks the running system, so it goes
+--         ahead of the deploy and the new code lands already protected.
+--
+--         POST-APPLY VERIFICATION — 9/9 PASS against live data:
+--           • the seven-argument call still resolves and charges normally
+--             (this is credit-config.js) — no "function is not unique"
+--           • pg_proc holds exactly ONE consume_credits (no stray overload)
+--           • a keyed call charges, a second call with the same key returns the
+--             SAME log_id with idempotent_replay: true
+--           • a third call with the same key but a DIFFERENT feature also
+--             replays — the key wins over the operation, which is what "one
+--             logical send" has to mean
+--           • exactly one ai_usage_logs row exists for the key
+--           • verified on BOTH the admin branch and the FREE daily branch
+--           • uniq_ai_usage_logs_user_request present
+--           • grants end at authenticated=true, anon=false, service_role=true
+--         All test rows were deleted afterwards; the FREE account used for the
+--         test is back to 0 used today with an unchanged balance, and
+--         ai_usage_logs holds no keyed rows.
 --
 -- ── THE DEFECT ─────────────────────────────────────────────────────────────
 -- v96 moves the charge into the Edge Function, so **every HTTP request that

@@ -1,20 +1,29 @@
 -- ===========================================================================
 -- refund_ai_credit becomes server-only
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-02, owner-approved
+--         individually (CLAUDE.md §3). Version 20260802174206.
 --
--- PREREQUISITE: ai-tutor v96 (the entitlement gate) must be DEPLOYED first,
--- and chat.html v96 merged. Applying this against a pre-v96 client breaks the
--- browser's refund path with no server-side replacement, so an out-of-scope
--- turn or a failed call would keep the student's credits. Order is:
---   1. apply 20260802_consume_credits_idempotency.sql   (additive; safe first)
---   2. deploy ai-tutor v96                              (DEPLOY.md §4)
---   3. verify platform version + sha256
---   4. merge chat.html to main                          (Vercel publishes it)
---   5. apply THIS file
--- v96's refundEntitlement() already works in BOTH states — it tries the
--- service-role client first and falls back to the user's JWT — so there is no
--- window in which refunds stop working, whenever step 5 happens.
+--         POST-APPLY VERIFICATION — 4/4 PASS against live data:
+--           authenticated EXECUTE ......... false  (was true — this is the fix)
+--           anon EXECUTE .................. false  (unchanged)
+--           service_role EXECUTE .......... true
+--           service-role branch in body ... present
+--         The paired grant on consume_credits was re-checked in the same query
+--         and is intact (authenticated=true, anon=false).
+--
+--         ⚠️ APPLIED AHEAD OF ITS STATED PREREQUISITE, knowingly. The intended
+--         order was: idempotency migration → deploy v96 → verify → merge the
+--         site → apply this. It was applied at the owner's explicit direction
+--         before the v96 deploy, which leaves one gap for as long as the
+--         PRE-v96 chat.html is the live site: that page calls
+--         refund_ai_credit from the browser on an out-of-scope turn or a failed
+--         call, and those calls now return `permission denied`. Students are
+--         charged for redirects and failures until v96 + the new chat.html are
+--         live — a daily slot for FREE users, the per-operation credits for
+--         paid ones. Nothing else regresses, and the gap closes on deploy.
+--         Recorded here rather than in a commit message because the file is
+--         where someone reading the schema history will look.
 --
 -- ── WHAT THIS CLOSES ───────────────────────────────────────────────────────
 -- consume_credits() derives a FREE student's daily usage by counting rows:
