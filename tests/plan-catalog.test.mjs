@@ -9,7 +9,9 @@
 // reintroduces its own plan table fails here rather than quietly showing a
 // student a name or a price the owner already changed.
 import { suite } from './_assert.mjs';
-import { read, slice, inlineScripts, syntaxError, evalSnippet } from './_source.mjs';
+import { read, slice, inlineScripts, syntaxError, evalSnippet, REPO } from './_source.mjs';
+import { readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 const t = suite('plan-catalog');
 
@@ -252,6 +254,74 @@ for (const f of ['admin.html', 'devices.html', 'login.html']) {
   t.ok(`${f} reads device_limit from the catalogue`, derived);
   t.ok(`${f} keeps the 2-or-3 literal only as a guarded fallback`,
     !bare || /PlanCatalog\.get\(/.test(src));
+}
+
+// ── Feature entitlement is a catalogue question, not a list of codes ───────
+t.section('Focus D1/D2 entitlement is catalogue-driven');
+{
+  // focus.html gated D1 signal writes and D2 focus mastery on a hardcoded array
+  // of four plan codes, so a plan added in Owner → Plans & Packs silently
+  // withheld those features from students who had paid for it. Run the real
+  // gate, not a paraphrase.
+  const gate = slice(read('focus.html'), '// Live-stage eligibility gate.', '// Task-clear emit.', 'D1 gate');
+  const CAT = {
+    FREE:            { kind: 'subscription', price_egp: 0,    active: true  },
+    PRO_MONTHLY:     { kind: 'subscription', price_egp: 349,  active: true  },
+    PRO_QUARTERLY:   { kind: 'subscription', price_egp: 899,  active: true  },
+    PRO_ANNUAL:      { kind: 'subscription', price_egp: 2999, active: true  },
+    FOUNDER_ANNUAL:  { kind: 'subscription', price_egp: 1499, active: true  },
+    FOUNDER_MONTHLY: { kind: 'subscription', price_egp: 249,  active: false },
+    SCHOLAR_TERM:    { kind: 'subscription', price_egp: 749,  active: true  },
+    PACK_VALUE:      { kind: 'pack',         price_egp: 349,  active: true  },
+  };
+  const cat = loaded => ({ isLoaded: () => loaded, get: c => CAT[c] || null });
+  const run = (code, uid, loaded, live = true) =>
+    evalSnippet(gate + '\nconst R = d1UserEligible();', {
+      window: { _planCode: code, _uid: uid, PlanCatalog: cat(loaded) },
+      PlanCatalog: cat(loaded), D1_LIVE_ENABLED: live,
+    }, ['R']).R;
+
+  // Parity with the array this replaced — nobody's access may change.
+  const OLD = ['FOUNDER_ANNUAL', 'PRO_MONTHLY', 'PRO_QUARTERLY', 'PRO_ANNUAL'];
+  for (const c of ['FREE', 'PRO_MONTHLY', 'PRO_QUARTERLY', 'PRO_ANNUAL', 'FOUNDER_ANNUAL'])
+    t.is(`${c} decides exactly as the old list did`, run(c, 'u1', true), OLD.includes(c));
+
+  // The point of the change.
+  t.ok('a plan added tomorrow is eligible with no code edit', run('SCHOLAR_TERM', 'u1', true) === true);
+  t.ok('a retired paid plan keeps grandfathered access', run('FOUNDER_MONTHLY', 'u1', true) === true);
+
+  // It must not become a way in.
+  t.ok('FREE is never eligible', run('FREE', 'u1', true) === false);
+  t.ok('FREE is never eligible even with no catalogue', run('FREE', 'u1', false) === false);
+  t.ok('a credit pack is not a subscription', run('PACK_VALUE', 'u1', true) === false);
+  t.ok('an unknown code is refused when the catalogue is loaded', run('BOGUS', 'u1', true) === false);
+  t.ok('no user id is refused (RLS could not be satisfied)', run('PRO_ANNUAL', null, true) === false);
+  t.ok('a null plan_code is refused', run(null, 'u1', true) === false);
+  t.ok('the D1_LIVE_ENABLED kill switch still wins', run('PRO_ANNUAL', 'u1', true, false) === false);
+
+  // A failed catalogue read must not silently switch the feature off.
+  for (const c of ['PRO_MONTHLY', 'FOUNDER_ANNUAL', 'SCHOLAR_TERM'])
+    t.ok(`${c} keeps access when the catalogue is unavailable`, run(c, 'u1', false) === true);
+}
+
+// ── Nowhere in the repo may hand-maintain a list of plan codes ─────────────
+t.section('No hardcoded plan-code list survives anywhere');
+{
+  // An array literal holding a plan code is a list someone has to remember to
+  // edit when a plan is added. focus.html's D1_ELIGIBLE_PLANS was the last one.
+  const LIST = /\[[^\]\n]*?['"](?:PRO_[A-Z_]+|FOUNDER_[A-Z_]+|PACK_[A-Z_]+)['"][^\]\n]*?\]/;
+  const SKIP = new Set(['.git', 'node_modules', 'supabase', 'docs', 'scripts', 'tests']);
+  const walk = (dir, out = []) => {
+    for (const e of readdirSync(dir)) {
+      if (SKIP.has(e) || e.startsWith('.')) continue;
+      const full = join(dir, e);
+      if (statSync(full).isDirectory()) walk(full, out);
+      else if (/\.(html|js|mjs)$/.test(e)) out.push(relative(REPO, full));
+    }
+    return out;
+  };
+  const offenders = walk(REPO).filter(f => LIST.test(codeOnly(read(f))));
+  t.is('no production file hand-maintains a plan-code list', offenders, []);
 }
 
 t.done();
