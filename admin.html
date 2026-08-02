@@ -496,13 +496,9 @@ select.search-input{cursor:pointer}
       </div>
       <div class="search-row">
         <input type="text" class="search-input" id="userSearch" placeholder="Search by name or email…" oninput="filterUsers()"/>
+        <!-- Options are populated from the plan catalogue by populatePlanFilter(). -->
         <select class="search-input" id="planFilter" style="flex:0 0 auto;min-width:130px" onchange="filterUsers()">
           <option value="">All Plans</option>
-          <option value="FREE">Free</option>
-          <option value="PRO_MONTHLY">Pro Monthly</option>
-          <option value="PRO_QUARTERLY">Pro Quarterly</option>
-          <option value="PRO_ANNUAL">Pro Annual</option>
-          <option value="FOUNDER_ANNUAL">Founder</option>
         </select>
       </div>
       <div class="tbl-wrap">
@@ -746,6 +742,10 @@ select.search-input{cursor:pointer}
       .cm-delta{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;margin-top:3px;min-height:12px}
       .cm-cost{max-width:80px;padding:6px 8px}
       .cm-muted{color:var(--text-500)}
+      .pp-name{min-width:160px;padding:6px 8px;font-weight:700}
+      .pp-num{max-width:104px;padding:6px 8px}
+      .pp-note{font-size:12px;color:var(--text-400);line-height:1.5;margin:0 2px 14px;padding:9px 12px;border-radius:10px;background:rgba(56,189,248,.06);border:1px solid var(--cyan-border-soft)}
+      .pp-ro{font-size:12.5px;color:var(--amber);margin:0 2px 12px}
     </style>
 
     <!-- Summary cards -->
@@ -774,15 +774,27 @@ select.search-input{cursor:pointer}
     <!-- Operations, grouped by feature/page — data-driven from credit_costs -->
     <div id="cmOps"><div class="empty"><div class="ico">⏳</div><p>Loading operations…</p></div></div>
 
-    <!-- Reference: plans & packs (read-only) that feed the revenue figures -->
+    <!-- Plans & packs — the live catalogue every page reads from -->
     <div class="card" style="margin-top:8px">
       <div class="card-head">
         <div class="card-ico">📦</div>
-        <div><div class="card-title">Plans &amp; Packs (reference)</div><div class="card-sub">Subscription &amp; credit-pack pricing behind the revenue figures above</div></div>
+        <div><div class="card-title">Plans &amp; Packs</div><div class="card-sub">Name, price and credits for every subscription and credit pack</div></div>
+        <div class="cm-editbar" id="ppEditbar" style="margin-left:auto">
+          <span class="cnt" id="ppPendingCount">0 unsaved</span>
+          <button class="btn btn-green btn-sm" onclick="ppSaveAll()">Save All Changes</button>
+          <button class="btn btn-ghost btn-sm" onclick="ppCancelAll()">Cancel</button>
+        </div>
       </div>
+      <div class="pp-note">
+        This table is the platform's single source of truth. Saving here updates the pricing page,
+        the checkout page, the settings and profile pages, and the credits granted on approval —
+        all from one row, with no code change. <strong>A price change applies to future purchases
+        only</strong>; students already on a plan keep the credits they were granted.
+      </div>
+      <div id="ppReadOnly" class="pp-ro" style="display:none"></div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>Plan / Pack</th><th>Type</th><th>Price (EGP)</th><th>Credits</th></tr></thead>
-        <tbody id="cmPlansPacks"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-500)">Loading…</td></tr></tbody>
+        <thead><tr><th>Plan / Pack</th><th>Type</th><th>Price (EGP)</th><th>Credits</th><th>Sold</th><th>On&nbsp;plan</th></tr></thead>
+        <tbody id="cmPlansPacks"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-500)">Loading…</td></tr></tbody>
       </table></div>
     </div>
   </div>
@@ -847,6 +859,7 @@ select.search-input{cursor:pointer}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="plan-catalog.js"></script>
 <script>
 const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
@@ -911,6 +924,15 @@ async function init() {
 
   applyRoleTitle(role);
   applyRoleVisibility(role);
+
+  // Load the plan catalogue before anything renders a plan name or filters by
+  // a plan code — this dashboard must never show a label the database has
+  // already been told to change. It has to happen before
+  // ensureValidStartingTab(), which schedules a tab switch on a timer and can
+  // therefore paint the Users table while an await here is still pending.
+  await PlanCatalog.load(sb);
+  populatePlanFilter();
+
   ensureValidStartingTab(role);
 
   document.getElementById('pageLoader').style.display = 'none';
@@ -918,6 +940,18 @@ async function init() {
   await loadStats();
   loadPaymentRequests();
   loadDashboardSections();
+}
+
+// The plan filter used to carry a hand-written <option> per plan, which meant a
+// plan renamed in Plans & Packs still filtered under its old label — and a new
+// plan could not be filtered at all.
+function populatePlanFilter() {
+  const sel = document.getElementById('planFilter');
+  if (!sel) return;
+  const opts = PlanCatalog.subscriptions(true)
+    .map(p => `<option value="${esc(p.plan_code)}">${esc(p.display_name)}</option>`)
+    .join('');
+  if (opts) sel.innerHTML = '<option value="">All Plans</option>' + opts;
 }
 
 // ── Role-aware UI ───────────────────────────────────────────────────────────
@@ -1804,7 +1838,7 @@ async function loadUpgradeRequests() {
     <tbody>${data.map(u => `<tr>
       <td><div class="bold">${esc(u.full_name || '—')}</div><div style="font-size:11.5px;color:var(--text-500)">${esc(u.email || u.id)}</div></td>
       <td><span class="chip amber">${esc(u.upgrade_note || 'Upgrade request')}</span></td>
-      <td><span class="chip ${planChip(u.plan_code)}">${u.plan_code || 'FREE'}</span></td>
+      <td>${planLabel(u.plan_code)}</td>
       <td class="mono">${(u.credits_balance || 0).toLocaleString()}</td>
       <td><div style="display:flex;gap:6px">
         <button class="btn btn-green btn-sm" onclick="openApproveModal('${u.id}','${esc(u.full_name||u.email||u.id)}','${esc(u.upgrade_note||'')}')">Create &amp; Approve</button>
@@ -1917,7 +1951,7 @@ function renderUsers(users) {
   tbody.innerHTML = users.map(u => `<tr>
     <td class="bold">${esc(u.full_name || '—')}</td>
     <td style="font-size:12.5px">${esc(u.email || '—')}</td>
-    <td><span class="chip ${planChip(u.plan_code)}">${u.plan_code || 'FREE'}</span>${u.is_founder ? '<span class="chip amber" style="margin-left:4px">👑</span>' : ''}</td>
+    <td>${planLabel(u.plan_code)}${u.is_founder ? '<span class="chip amber" style="margin-left:4px">👑</span>' : ''}</td>
     <td class="mono">${(u.credits_balance || 0).toLocaleString()}</td>
     <td class="mono" style="font-size:11.5px">${fmtDate(u.created_at)}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.id}')">Manage</button></td>
@@ -1942,7 +1976,7 @@ async function openUserModal(userId) {
   const { data: devices } = await sb.from('user_devices').select('id, device_name, fingerprint, created_at').eq('user_id', userId);
   document.getElementById('modalBody').innerHTML = `
     <div class="modal-row"><span class="modal-lbl">Email</span><span class="modal-val">${esc(u.email || '—')}</span></div>
-    <div class="modal-row"><span class="modal-lbl">Plan</span><span class="modal-val"><span class="chip ${planChip(u.plan_code)}">${u.plan_code || 'FREE'}</span></span></div>
+    <div class="modal-row"><span class="modal-lbl">Plan</span><span class="modal-val">${planLabel(u.plan_code)}</span></div>
     <div class="modal-row"><span class="modal-lbl">Subscription Credits</span><span class="modal-val mono">${(u.subscription_credits || 0).toLocaleString()}</span></div>
     <div class="modal-row"><span class="modal-lbl">Pack Credits</span><span class="modal-val mono">${(u.pack_credits || 0).toLocaleString()}</span></div>
     <div class="modal-row"><span class="modal-lbl">Total Balance</span><span class="modal-val mono">${(u.credits_balance || 0).toLocaleString()}</span></div>
@@ -2024,14 +2058,21 @@ async function loadSuspiciousAccounts() {
       if (!byUser[uid]) byUser[uid] = { email: row.profiles.email, planCode: row.profiles.plan_code, fps: new Set() };
       byUser[uid].fps.add(row.device_fingerprint);
     });
+    // "Suspicious" means over the plan's own device_limit — the same number
+    // can_register_device() enforces. This used to assume 2-for-free/3-for-paid,
+    // so a plan with a different limit produced false accusations. The literals
+    // survive only as the fallback for a catalogue that failed to load.
+    const limitFor = function(code) {
+      const row = PlanCatalog.get(code);
+      if (row && row.device_limit != null) return Number(row.device_limit);
+      return code === 'FREE' ? 2 : 3;
+    };
     const rows = Object.values(byUser).filter(function(u) {
-      const limit = u.planCode === 'FREE' ? 2 : 3;
-      return u.fps.size > limit;
+      return u.fps.size > limitFor(u.planCode);
     }).sort((a, b) => b.fps.size - a.fps.size);
     if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-500)">No suspicious accounts found.</td></tr>'; return; }
     tbody.innerHTML = rows.map(function(u) {
-      const limit = u.planCode === 'FREE' ? 2 : 3;
-      return `<tr><td>${escHtml(u.email)}</td><td>${escHtml(u.planCode)}</td><td>${limit}</td><td style="color:var(--red);font-weight:700">${u.fps.size}</td></tr>`;
+      return `<tr><td>${escHtml(u.email)}</td><td>${planLabel(u.planCode)}</td><td>${limitFor(u.planCode)}</td><td style="color:var(--red);font-weight:700">${u.fps.size}</td></tr>`;
     }).join('');
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--red)">Error loading data.</td></tr>';
@@ -2134,7 +2175,7 @@ async function loadCreditsMgmt() {
   cmRenderFilters();
   cmRenderOps();
   cmUpdateEditbar();
-  loadPlansPacksRef();
+  loadPlanCatalog();
 }
 
 function cmRenderSummary(s) {
@@ -2274,23 +2315,200 @@ function cmCancelAll() {
   toast('Pending changes discarded', 'blue');
 }
 
-async function loadPlansPacksRef() {
+// ── Plans & Packs — the editable catalogue ────────────────────────────────────
+// Every page on the platform reads a plan's name, price and credits from
+// plan_definitions. This panel is the only place those three values are
+// written, so an edit here is an edit everywhere. plan_code and kind are
+// deliberately NOT editable: plan_code is the key payment_requests,
+// subscriptions and profiles all carry, and kind decides which branch
+// approve_payment_request() takes — changing either would orphan history.
+var ppState = { plans: [], byCode: {}, pending: {}, readOnly: false };
+
+// plan_code is [A-Z0-9_] by convention; this keeps a malformed one from
+// escaping into an element id or an inline handler.
+function ppKey(code) { return String(code || '').replace(/[^A-Za-z0-9_]/g, ''); }
+function ppTypeLabel(kind) { return kind === 'pack' ? 'Pack' : 'Subscription'; }
+
+async function loadPlanCatalog() {
   var el = document.getElementById('cmPlansPacks');
-  try {
-    var r = await Promise.all([
-      sb.from('pricing_settings').select('display_name, plan_code, price_egp, credits_granted, active').eq('active', true).order('sort_order'),
-      sb.from('credit_packs').select('name, price_egp, credits, active').eq('active', true).order('sort_order')
-    ]);
-    var plans = (r[0] && r[0].data) || [], packs = (r[1] && r[1].data) || [];
-    var rows = plans.map(function (p) {
-      return '<tr><td class="bold">' + esc(p.display_name || p.plan_code) + '</td><td><span class="chip">Subscription</span></td><td class="mono">' + cmNum(p.price_egp) + '</td><td class="mono">' + cmNum(p.credits_granted) + '</td></tr>';
-    }).concat(packs.map(function (p) {
-      return '<tr><td class="bold">' + esc(p.name) + '</td><td><span class="chip">Pack</span></td><td class="mono">' + cmNum(p.price_egp) + '</td><td class="mono">' + cmNum(p.credits) + '</td></tr>';
-    }));
-    el.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-500)">None.</td></tr>';
-  } catch (e) {
-    el.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-500)">Could not load plans/packs.</td></tr>';
+  var ro = document.getElementById('ppReadOnly');
+  var res;
+  try { res = await sb.rpc('admin_plan_catalog'); } catch (e) { res = { error: e }; }
+  var data = res && res.data;
+
+  if (!(res && !res.error) || !data || !data.ok) {
+    // The consolidation migration has not been applied yet. Fall back to the
+    // pre-consolidation reads so the panel still shows the catalogue — but
+    // read-only, because editing before the migration would write one copy of
+    // a value that still lives in three places.
+    ppState.readOnly = true;
+    ppState.plans = [];
+    ppState.byCode = {};
+    ppState.pending = {};
+    ppUpdateEditbar();
+    ro.style.display = '';
+    ro.textContent = '⚠ Read-only — admin_plan_catalog() did not respond. ' +
+      'Editing needs supabase/migrations/20260802_plan_catalog_single_source.sql applied, ' +
+      'and the signed-in account to be an admin.';
+    try {
+      var r = await Promise.all([
+        sb.from('pricing_settings').select('display_name, plan_code, price_egp, credits_granted, active').eq('active', true).order('sort_order'),
+        sb.from('credit_packs').select('name, price_egp, credits, active').eq('active', true).order('sort_order')
+      ]);
+      var plans = (r[0] && r[0].data) || [], packs = (r[1] && r[1].data) || [];
+      var rows = plans.map(function (p) {
+        return '<tr><td class="bold">' + esc(p.display_name || p.plan_code) + '</td><td><span class="chip">Subscription</span></td><td class="mono">' + cmNum(p.price_egp) + '</td><td class="mono">' + cmNum(p.credits_granted) + '</td><td class="cm-muted">—</td><td class="cm-muted">—</td></tr>';
+      }).concat(packs.map(function (p) {
+        return '<tr><td class="bold">' + esc(p.name) + '</td><td><span class="chip">Pack</span></td><td class="mono">' + cmNum(p.price_egp) + '</td><td class="mono">' + cmNum(p.credits) + '</td><td class="cm-muted">—</td><td class="cm-muted">—</td></tr>';
+      }));
+      el.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-500)">None.</td></tr>';
+    } catch (e) {
+      el.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-500)">Could not load plans/packs.</td></tr>';
+    }
+    return;
   }
+
+  ppState.readOnly = false;
+  ro.style.display = 'none';
+  ppState.plans = (data.plans || []).map(function (p) {
+    return {
+      plan_code: p.plan_code, display_name: p.display_name, kind: p.kind,
+      price_egp: Number(p.amount_egp), credits_granted: Number(p.credits_granted),
+      billing_cycle: p.billing_cycle, active: p.active !== false,
+      sold_count: Number(p.sold_count || 0), sold_revenue: Number(p.sold_revenue || 0),
+      active_holders: Number(p.active_holders || 0)
+    };
+  });
+  ppState.byCode = {};
+  ppState.plans.forEach(function (p) { ppState.byCode[p.plan_code] = p; });
+  ppState.pending = {};
+  ppRender();
+  ppUpdateEditbar();
+}
+
+function ppRender() {
+  var el = document.getElementById('cmPlansPacks');
+  if (!ppState.plans.length) {
+    el.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-500)">None.</td></tr>';
+    return;
+  }
+  el.innerHTML = ppState.plans.map(ppRowHtml).join('');
+}
+
+function ppRowHtml(plan) {
+  var k = ppKey(plan.plan_code);
+  var p = ppState.pending[plan.plan_code];
+  var name    = p ? p.display_name    : plan.display_name;
+  var price   = p ? p.price_egp       : plan.price_egp;
+  var credits = p ? p.credits_granted : plan.credits_granted;
+  var chip = plan.kind === 'pack' ? 'chip' : 'chip blue';
+  var inactive = plan.active ? '' : ' <span class="chip">inactive</span>';
+  return '<tr id="pprow_' + k + '"' + (p ? ' class="cm-dirty"' : '') + '>' +
+    '<td><input type="text" maxlength="60" class="search-input pp-name" id="ppname_' + k + '" value="' + esc(name) + '" oninput="ppOnEdit(\'' + k + '\')"/>' +
+      '<div class="cm-id">' + esc(plan.plan_code) + inactive + '</div>' +
+      '<div class="cm-delta" id="ppdelta_' + k + '">' + (p ? esc(ppDeltaText(plan, p)) : '') + '</div></td>' +
+    '<td><span class="' + chip + '">' + ppTypeLabel(plan.kind) + '</span></td>' +
+    '<td><input type="number" min="0" step="0.01" class="search-input pp-num" id="ppprice_' + k + '" value="' + Number(price) + '" oninput="ppOnEdit(\'' + k + '\')"/></td>' +
+    '<td><input type="number" min="0" step="1" class="search-input pp-num" id="ppcred_' + k + '" value="' + Number(credits) + '" oninput="ppOnEdit(\'' + k + '\')"/></td>' +
+    '<td class="mono" title="' + cmEgp(plan.sold_revenue) + ' approved">' + cmNum(plan.sold_count) + '</td>' +
+    '<td class="mono">' + cmNum(plan.active_holders) + '</td>' +
+  '</tr>';
+}
+
+function ppDeltaText(plan, p) {
+  var parts = [];
+  if (p.display_name !== plan.display_name) parts.push('“' + plan.display_name + '” → “' + p.display_name + '”');
+  if (p.price_egp !== plan.price_egp) parts.push(plan.price_egp + '→' + p.price_egp + ' EGP');
+  if (p.credits_granted !== plan.credits_granted) parts.push(plan.credits_granted + '→' + p.credits_granted + ' cr');
+  return parts.join('   ');
+}
+
+function ppOnEdit(key) {
+  var plan = null;
+  for (var i = 0; i < ppState.plans.length; i++) {
+    if (ppKey(ppState.plans[i].plan_code) === key) { plan = ppState.plans[i]; break; }
+  }
+  if (!plan) return;
+  var nameEl  = document.getElementById('ppname_' + key);
+  var priceEl = document.getElementById('ppprice_' + key);
+  var credEl  = document.getElementById('ppcred_' + key);
+  var name    = (nameEl ? nameEl.value : '').trim();
+  var price   = Number(priceEl ? priceEl.value : NaN);
+  var credits = Number(credEl ? credEl.value : NaN);
+
+  var dirty = (name && name !== plan.display_name) ||
+              (Number.isFinite(price) && price !== plan.price_egp) ||
+              (Number.isFinite(credits) && credits !== plan.credits_granted);
+
+  var row = document.getElementById('pprow_' + key);
+  var delta = document.getElementById('ppdelta_' + key);
+  if (dirty) {
+    ppState.pending[plan.plan_code] = {
+      display_name:    name || plan.display_name,
+      price_egp:       Number.isFinite(price) ? price : plan.price_egp,
+      credits_granted: Number.isFinite(credits) ? credits : plan.credits_granted
+    };
+    if (row) row.classList.add('cm-dirty');
+    if (delta) delta.textContent = ppDeltaText(plan, ppState.pending[plan.plan_code]);
+  } else {
+    delete ppState.pending[plan.plan_code];
+    if (row) row.classList.remove('cm-dirty');
+    if (delta) delta.textContent = '';
+  }
+  ppUpdateEditbar();
+}
+
+function ppUpdateEditbar() {
+  var n = Object.keys(ppState.pending).length;
+  document.getElementById('ppPendingCount').textContent = n + ' unsaved change' + (n === 1 ? '' : 's');
+  document.getElementById('ppEditbar').classList.toggle('show', n > 0 && !ppState.readOnly);
+}
+
+function ppCancelAll() {
+  ppState.pending = {};
+  ppRender();
+  ppUpdateEditbar();
+  toast('Pending plan changes discarded', 'blue');
+}
+
+async function ppSaveAll() {
+  var codes = Object.keys(ppState.pending);
+  if (!codes.length) return;
+
+  // Validate before writing anything — the server re-checks all of this, but
+  // catching it here means a bad row never becomes a half-applied batch.
+  for (var i = 0; i < codes.length; i++) {
+    var pend = ppState.pending[codes[i]], label = ppState.byCode[codes[i]].display_name;
+    if (!pend.display_name || pend.display_name.length > 60) { toast('“' + label + '” needs a name of 1–60 characters', 'red'); return; }
+    if (!Number.isFinite(pend.price_egp) || pend.price_egp < 0) { toast('“' + label + '” has an invalid price', 'red'); return; }
+    if (!Number.isFinite(pend.credits_granted) || pend.credits_granted < 0 || pend.credits_granted % 1 !== 0) { toast('“' + label + '” needs a whole, non-negative credit amount', 'red'); return; }
+  }
+
+  var priced = codes.filter(function (c) { return ppState.pending[c].price_egp !== ppState.byCode[c].price_egp; });
+  var credited = codes.filter(function (c) { return ppState.pending[c].credits_granted !== ppState.byCode[c].credits_granted; });
+  var warn = 'Save ' + codes.length + ' plan change' + (codes.length === 1 ? '' : 's') + '?\n\n' +
+    codes.map(function (c) { return '• ' + ppDeltaText(ppState.byCode[c], ppState.pending[c]); }).join('\n') +
+    (priced.length ? '\n\nNew prices show on the pricing and checkout pages immediately.' : '') +
+    (credited.length ? '\nNew credit amounts apply to purchases approved from now on. Students already on these plans keep the credits they were granted.' : '');
+  if (!confirm(warn)) return;
+
+  var okCount = 0, failCount = 0, firstReason = null;
+  for (var j = 0; j < codes.length; j++) {
+    var code = codes[j], pend2 = ppState.pending[code], r;
+    try {
+      r = await sb.rpc('admin_update_plan', {
+        p_plan_code:       code,
+        p_display_name:    pend2.display_name,
+        p_price_egp:       pend2.price_egp,
+        p_credits_granted: pend2.credits_granted
+      });
+    } catch (e) { r = { error: e }; }
+    if (r && !r.error && r.data && r.data.ok) okCount++;
+    else { failCount++; if (!firstReason) firstReason = (r && r.data && r.data.reason) || (r && r.error && r.error.message) || 'unknown error'; }
+  }
+  if (okCount) toast(okCount + ' plan' + (okCount === 1 ? '' : 's') + ' updated — live across the site', 'green');
+  if (failCount) toast(failCount + ' update' + (failCount === 1 ? '' : 's') + ' failed (' + esc(String(firstReason)) + ')', 'red');
+  loadPlanCatalog();
 }
 
 // Feedback tab — REMOVED, migrated to ai-monitor.html
@@ -2355,7 +2573,7 @@ async function viewPaymentDetail(id) {
   body.innerHTML = `
     <div class="modal-row"><span class="modal-lbl">Student</span><span class="modal-val">${esc(data.profiles?.full_name || '—')}</span></div>
     <div class="modal-row"><span class="modal-lbl">Email</span><span class="modal-val">${esc(data.profiles?.email || '—')}</span></div>
-    <div class="modal-row"><span class="modal-lbl">Current Plan</span><span class="modal-val"><span class="chip ${planChip(data.profiles?.plan_code)}">${esc(data.profiles?.plan_code || 'FREE')}</span></span></div>
+    <div class="modal-row"><span class="modal-lbl">Current Plan</span><span class="modal-val">${planLabel(data.profiles?.plan_code)}</span></div>
     <div class="modal-sep"></div>
     <div class="modal-row"><span class="modal-lbl">Requested Plan</span><span class="modal-val"><span class="chip blue">${esc(data.plan_label || data.plan_code)}</span></span></div>
     <div class="modal-row"><span class="modal-lbl">Amount</span><span class="modal-val bold">${Number(data.amount_egp).toLocaleString()} EGP</span></div>
@@ -2417,7 +2635,27 @@ async function rejectPaymentRequest(requestId) {
 // Helpers
 function esc(str) { return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(iso) { if (!iso) return '—'; return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
-function planChip(code) { return { FREE:'gray', PRO_MONTHLY:'blue', PRO_QUARTERLY:'blue', PRO_ANNUAL:'green', FOUNDER_ANNUAL:'amber' }[code] || 'gray'; }
+// Chip colour is derived from what the plan IS, not from a hardcoded list of
+// plan codes — a plan added or renamed in Plans & Packs gets the right colour
+// with no edit here. Founder plans are amber, the most expensive paid plan is
+// green, other paid plans blue, free/unknown gray.
+function planChip(code) {
+  const plan = PlanCatalog.get(code);
+  if (!plan || !plan.price_egp) return 'gray';
+  if (plan.is_founder) return 'amber';
+  const paid = PlanCatalog.subscriptions(true).filter(p => p.price_egp > 0 && !p.is_founder);
+  const top = paid.reduce((a, p) => (p.price_egp > a ? p.price_egp : a), 0);
+  return plan.price_egp >= top ? 'green' : 'blue';
+}
+
+// Admin tables show the plan's current name, with the immutable plan_code on
+// hover. Showing only the code meant a plan renamed in Plans & Packs still read
+// as its old identity here while every student-facing page had moved on.
+function planLabel(code) {
+  if (!code) code = 'FREE';
+  const name = PlanCatalog.name(code);
+  return `<span class="chip ${planChip(code)}" title="${esc(code)}">${esc(name)}</span>`;
+}
 
 // ── Dashboard Overview loaders ──────────────────────────────────────────────
 function _isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
@@ -2479,9 +2717,19 @@ async function loadStudentActivity() {
   } catch(e) { console.error('loadStudentActivity', e); }
 }
 
-// Live subscription plan codes (kind='subscription' in plan_definitions).
-// Everything else approved in payment_requests is a credit pack (kind='pack').
-const SUBSCRIPTION_PLAN_CODES = ['PRO_MONTHLY','PRO_QUARTERLY','PRO_ANNUAL','FOUNDER_ANNUAL'];
+// Live subscription plan codes, read from the catalogue (kind='subscription'
+// in plan_definitions). Everything else approved in payment_requests is a
+// credit pack (kind='pack'). Inactive plans are included on purpose: a plan
+// retired last month still has approved payment_requests rows this month, and
+// dropping them would silently understate subscription revenue.
+// FREE is excluded — it is never purchased, so it can never appear here.
+function subscriptionPlanCodes() {
+  const codes = PlanCatalog.codes('subscription', true).filter(c => c !== 'FREE');
+  // Before the catalogue loads there is nothing to filter on. Returning a
+  // sentinel that matches no row keeps the count honest (0) rather than
+  // letting `.in()` receive an empty array, which Postgrest rejects.
+  return codes.length ? codes : ['__NONE__'];
+}
 
 // (2) Revenue & Payments
 // Source of truth is payment_requests (the live manual-payment flow written by
@@ -2536,19 +2784,25 @@ async function loadPlansConversion() {
     document.getElementById('planPaid').textContent = paid;
     document.getElementById('planConv').textContent = total > 0 ? ((paid / total) * 100).toFixed(1) + '%' : '—';
 
-    const order = ['FREE','PRO_MONTHLY','PRO_QUARTERLY','PRO_ANNUAL','FOUNDER_ANNUAL'];
-    const colors = { FREE:'#536b8c', PRO_MONTHLY:'#38bdf8', PRO_QUARTERLY:'#0ea5e9', PRO_ANNUAL:'#22c55e', FOUNDER_ANNUAL:'#f5b942' };
-    const planLabels = { FREE:'Free', PRO_MONTHLY:'Pro Monthly', PRO_QUARTERLY:'Pro Quarterly', PRO_ANNUAL:'Pro Annual', FOUNDER_ANNUAL:'Founder' };
+    // Catalogue order, plus any plan_code students actually hold that the
+    // catalogue no longer lists (a retired plan someone is still on) — those
+    // used to vanish from the mix entirely and make the bar under-total.
+    const catalogue = PlanCatalog.codes('subscription', true);
+    const order = catalogue.concat(Object.keys(counts).filter(c => catalogue.indexOf(c) < 0).sort());
+    // Fixed palette by position, cycled — a colour cannot be keyed to a plan
+    // code without hardcoding the plan list again.
+    const PALETTE = ['#536b8c','#38bdf8','#0ea5e9','#22c55e','#f5b942','#a855f7','#f97316','#14b8a6'];
     const mix = document.getElementById('planMix');
     const legend = document.getElementById('planMixLegend');
     mix.innerHTML = '';
     legend.innerHTML = '';
-    order.forEach(p => {
+    order.forEach((p, i) => {
       const c = counts[p] || 0;
       const pct = total > 0 ? (c / total * 100) : 0;
-      const lbl = planLabels[p] || p;
-      if (pct > 0) mix.innerHTML += `<div title="${lbl}: ${c}" style="width:${pct}%;background:${colors[p]}"></div>`;
-      legend.innerHTML += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[p]};margin-right:6px;vertical-align:middle"></span>${lbl}: ${c} (${pct.toFixed(1)}%)</span>`;
+      const lbl = PlanCatalog.name(p);
+      const color = PALETTE[i % PALETTE.length];
+      if (pct > 0) mix.innerHTML += `<div title="${esc(lbl)}: ${c}" style="width:${pct}%;background:${color}"></div>`;
+      legend.innerHTML += `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${color};margin-right:6px;vertical-align:middle"></span>${esc(lbl)}: ${c} (${pct.toFixed(1)}%)</span>`;
     });
   } catch(e) { console.error('loadPlansConversion', e); }
 }
@@ -2563,9 +2817,9 @@ async function loadSubscriptionGrowth() {
     // New subscriptions = approved subscription-plan payment_requests (not profile
     // creation date). Pack purchases are excluded via the plan_code filter.
     const [newMonth, new30, prevMonth, churnedRes] = await Promise.all([
-      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', SUBSCRIPTION_PLAN_CODES).gte('created_at', monthStart),
-      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', SUBSCRIPTION_PLAN_CODES).gte('created_at', since30),
-      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', SUBSCRIPTION_PLAN_CODES).gte('created_at', prevMonthStart).lt('created_at', monthStart),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', subscriptionPlanCodes()).gte('created_at', monthStart),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', subscriptionPlanCodes()).gte('created_at', since30),
+      sb.from('payment_requests').select('id', { count:'exact', head:true }).eq('status','approved').in('plan_code', subscriptionPlanCodes()).gte('created_at', prevMonthStart).lt('created_at', monthStart),
       sb.from('profiles').select('id', { count:'exact', head:true }).neq('plan_code','FREE').lt('subscription_expires_at', now),
     ]);
     const cm = newMonth.count ?? 0;

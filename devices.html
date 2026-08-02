@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="plan-catalog.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -197,7 +198,15 @@ document.getElementById('hamb').addEventListener('click', () => { sidebar.classL
 overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
 sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); } }));
 
-function getPlanLimit(planCode) { return planCode === 'FREE' ? 2 : 3; }
+// device_limit is a column on the plan, and can_register_device() enforces the
+// database value. Hardcoding 2-or-3 here meant this page could tell a student a
+// limit the server did not agree with. The literal is kept only as the fallback
+// for a catalogue that failed to load, matching the RPC's own default of 2.
+function getPlanLimit(planCode) {
+  const row = window.PlanCatalog && PlanCatalog.get(planCode);
+  if (row && row.device_limit != null) return Number(row.device_limit);
+  return planCode === 'FREE' ? 2 : 3;
+}
 
 function getDeviceFingerprint() {
   // Must be identical to deviceGuard() on all protected pages
@@ -306,16 +315,22 @@ async function loadPage() {
   const initials = (user.email || '?')[0].toUpperCase();
   document.getElementById('topAvatar').textContent = initials;
 
-  const { data: profile } = await sb.from('profiles').select('plan_code, is_admin').eq('id', user.id).single();
+  // The catalogue supplies this page's plan label and its device limit, so both
+  // track whatever the Owner Dashboard last saved.
+  const [{ data: profile }] = await Promise.all([
+    sb.from('profiles').select('plan_code, is_admin').eq('id', user.id).single(),
+    PlanCatalog.load(sb),
+  ]);
   const planCode = (profile && profile.plan_code) || 'FREE';
   const isAdmin = !!(profile && profile.is_admin);
   const limit = getPlanLimit(planCode);
+  const planLabel = PlanCatalog.name(planCode);
 
   if (isAdmin) { const an = document.getElementById('adminNavSection'); if (an) an.style.display = 'block'; }
 
   document.getElementById('planBadgeTop').innerHTML = planCode !== 'FREE'
-    ? `<span style="background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold);padding:3px 10px;border-radius:100px">⭐ Pro</span>`
-    : `<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan);padding:3px 10px;border-radius:100px">Free</span>`;
+    ? `<span style="background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold);padding:3px 10px;border-radius:100px">⭐ ${escHtml(planLabel)}</span>`
+    : `<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan);padding:3px 10px;border-radius:100px">${escHtml(planLabel)}</span>`;
 
   const currentFp = await registerCurrentDevice(user.id, isAdmin);
 
@@ -347,7 +362,7 @@ function buildHTML(devices, planCode, limit, currentFp, user) {
   <div class="sec-label" style="margin-top:0">Device Usage</div>
   <div class="card">
     <div class="limit-display">
-      <span class="limit-text">${planCode !== 'FREE' ? '⭐ Pro Plan' : '🆓 Free Plan'} — ${limit} device${limit>1?'s':''} allowed</span>
+      <span class="limit-text">${planCode !== 'FREE' ? '⭐ ' + escHtml(planLabel) : '🆓 ' + escHtml(planLabel)} — ${limit} device${limit>1?'s':''} allowed</span>
       <span class="limit-count" style="color:${fillColor}">${used} / ${limit}</span>
     </div>
     <div class="plan-bar"><div class="plan-fill" style="width:${pct}%;background:${fillColor};box-shadow:0 0 8px ${fillColor}66"></div></div>

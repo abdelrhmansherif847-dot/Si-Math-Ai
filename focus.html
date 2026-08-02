@@ -435,6 +435,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="plan-catalog.js"></script>
 <script src="taxonomy.js"></script>
 <script src="taxonomy-write.js"></script>
 <script src="regenerate-reports.js"></script>
@@ -869,11 +870,32 @@ async function _afterTaskToggle(nextStatus) {
 // of truth (subscription expiry is enforced server-side before the profile loads,
 // so an expired Pro reads as FREE and is excluded). Owner receives no special
 // handling — eligibility is purely "does this account hold a paid plan code".
-var D1_ELIGIBLE_PLANS = ['FOUNDER_ANNUAL', 'PRO_MONTHLY', 'PRO_QUARTERLY', 'PRO_ANNUAL'];
+//
+// Which codes are paid is read from the plan catalogue (public.plan_definitions)
+// rather than listed here. This used to be a hardcoded array of four codes, so a
+// plan added in Owner → Plans & Packs silently withheld D1 signals and D2 focus
+// mastery from students who had paid for it, until someone remembered to edit
+// this file. Now the catalogue answers, and a new paid plan is eligible the
+// moment it exists.
+//
+// Three states, in order of authority:
+//   • catalogue loaded  → eligible iff the plan is a subscription with a price.
+//     An inactive plan still counts: retiring a plan takes it off sale, it does
+//     not revoke what a grandfathered subscriber already pays for.
+//   • catalogue absent  → any plan_code other than FREE. That is the same answer
+//     for every plan the catalogue has ever held, and it still excludes free and
+//     expired accounts, so the fallback cannot over-grant.
+//   • FREE / no code    → never eligible, checked before either of the above.
 function d1UserEligible() {
   if (!D1_LIVE_ENABLED) return false;
   if (!window._uid) return false; // no authenticated user_id → cannot satisfy RLS
-  return D1_ELIGIBLE_PLANS.indexOf(window._planCode) !== -1;
+  var code = window._planCode;
+  if (!code || code === 'FREE') return false;
+  if (window.PlanCatalog && PlanCatalog.isLoaded()) {
+    var plan = PlanCatalog.get(code);
+    return !!plan && plan.kind === 'subscription' && Number(plan.price_egp) > 0;
+  }
+  return true;
 }
 
 // Task-clear emit. btnEl carries data-task-id / data-topic / data-subtopic /
@@ -1706,6 +1728,10 @@ async function loadData() {
     sb.from('profiles').select('*').eq('id', user.id).single(),
     sb.from('exam_mistakes').select('topic, subtopic').eq('user_id', user.id),
     sb.from('weakness_reports').select('*').eq('user_id', user.id).order('priority_rank', { ascending: true }),
+    // d1UserEligible() asks the catalogue which plan codes are paid. Loaded here,
+    // alongside the profile that supplies window._planCode, so the gate has both
+    // halves of its answer before anything can call it.
+    PlanCatalog.load(sb),
   ]);
 
   const profile    = profRes.data  || null;

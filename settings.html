@@ -454,6 +454,7 @@ button{font-family:inherit;cursor:pointer}
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="plan-catalog.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // ===== Supabase =====
@@ -878,19 +879,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== Subscription Section =====
-  const PLAN_NAMES = {
-    'free':'Free Plan', 'FREE':'Free Plan',
-    'basic':'Basic Plan', 'BASIC':'Basic Plan',
-    'pro':'Pro Plan', 'PRO':'Pro Plan', 'PRO_MONTHLY':'Pro Plan', 'PRO_ANNUAL':'Pro Plan',
-    'premium':'Premium Plan', 'PREMIUM':'Premium Plan',
-    'founder':'Founder Plan', 'FOUNDER':'Founder Plan',
-  };
+  // Plan names come from the catalogue. This used to be a literal map that
+  // collapsed PRO_MONTHLY and PRO_ANNUAL to the single label "Pro Plan", so a
+  // student on the annual plan was told they were on "Pro Plan" and a rename in
+  // the Owner Dashboard never reached this page at all.
+  function planNameOf(code) {
+    return window.PlanCatalog ? PlanCatalog.name(code || 'FREE') : (code || 'FREE');
+  }
   const BADGE_CLASS = {
     'free':'free', 'FREE':'free',
     'basic':'free', 'BASIC':'free',
   };
-  // Normalize for comparisons: treat any plan not free/basic as paid
+  // Paid means the catalogue gives it a price. The name comparison below is the
+  // fallback for a catalogue that failed to load, and for the pre-plan_code
+  // `profiles.plan` strings that predate the catalogue entirely.
   function isPaidPlan(code) {
+    const row = window.PlanCatalog && PlanCatalog.get(code);
+    if (row) return Number(row.price_egp) > 0;
     var c = (code||'').toLowerCase();
     return c !== 'free' && c !== 'basic' && c !== '';
   }
@@ -924,8 +929,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const sub = subRes.data;
     const txs = txRes.data || [];
 
-    const planCode = p.plan_code || 'free';
-    const planName = p.is_founder ? 'Founder Plan' : (PLAN_NAMES[planCode] || planCode);
+    const planCode = p.plan_code || 'FREE';
+    // The plan's own name in both cases. Hardcoding "Founder Plan" for founders
+    // meant a rename never reached them, and it mislabelled a lapsed founder —
+    // is_founder stays true after the subscription expires, so someone back on
+    // the free plan was still told they were on the Founder plan. Their Founder
+    // status is shown by the separate ⭐ badge below, which is what it is: a
+    // status, not the plan they are currently paying for.
+    const planName = planNameOf(planCode);
     const subCred  = p.subscription_credits || 0;
     const packCred = p.pack_credits || 0;
     const total    = p.credits_balance || (subCred + packCred);
@@ -1028,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
     packSection.style.display = '';
 
     const tiles = packs.map(pk => `
-      <div class="pack-tile" data-pack-id="${pk.id}" data-pack-name="${pk.name}" data-pack-credits="${pk.credits}" data-pack-price="${pk.price_egp}">
+      <div class="pack-tile" data-pack-id="${pk.id}" data-pack-code="${pk.plan_code || ''}" data-pack-name="${pk.name}" data-pack-credits="${pk.credits}" data-pack-price="${pk.price_egp}">
         <div class="pt-credits">${pk.credits}</div>
         <div class="pt-label">${pk.name}</div>
         <div class="pt-price">${pk.price_egp} EGP</div>
@@ -1067,7 +1078,12 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.disabled = true;
       const origHtml = btn.innerHTML;
       btn.innerHTML = '…Submitting request';
-      const note = `[CREDIT PACK: ${tile.dataset.packName}]`;
+      // Carry the pack's plan_code as well as its name. The name is what the
+      // admin reads; the plan_code is what stays correct if the pack is
+      // renamed between the request and its approval.
+      const note = tile.dataset.packCode
+        ? `[CREDIT PACK: ${tile.dataset.packName} (${tile.dataset.packCode})]`
+        : `[CREDIT PACK: ${tile.dataset.packName}]`;
       const { error } = await sb.from('profiles').update({
         upgrade_requested: true,
         upgrade_note: note
@@ -1087,7 +1103,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Kick off everything
   async function initAll() {
-    await loadProfile();
+    // The catalogue has to be in hand before the subscription card names a
+    // plan, or the card falls back to a derived label for a moment.
+    await Promise.all([loadProfile(), PlanCatalog.load(sb)]);
     await Promise.all([loadSubscription(), loadCreditPacks()]);
   }
   initAll();

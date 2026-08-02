@@ -238,11 +238,36 @@ Row counts are live values, not estimates.
 | `plan_definitions` | 7 | Package catalogue: `credits_granted, period_days, amount_egp, kind ∈ {subscription,pack}` | The join key for revenue → credits sold |
 | `pricing_settings` | 6 | Display pricing + `daily_limit` (FREE = 15/day) | Second copy of price; must stay in lockstep with `plan_definitions` |
 | `credit_packs` | 3 | Pack display catalogue (199/349/649 EGP) | Third copy of pack price |
+
+> **Superseded — 2026-08-02.** The three-copy problem in the last two rows is
+> resolved by `20260802_plan_catalog_single_source.sql` (⛔ prepared, awaiting
+> owner approval). It promotes `plan_definitions` to the sole catalogue and
+> recreates `pricing_settings` and `credit_packs` as views over it, so there is
+> one row per plan physically and the lockstep this table asks for is no longer
+> something anyone has to maintain. Read counts above as pre-consolidation.
+> Once applied, the row count for `plan_definitions` becomes 9 — `FREE` and the
+> inactive `FOUNDER_MONTHLY` existed only in `pricing_settings` and move in.
+>
+> Two things this closes that were not written down as risks here:
+> * **A price and its credit grant could disagree.** `manual-payment.html` wrote
+>   `payment_requests.amount_egp` from `pricing_settings`, while
+>   `approve_payment_request()` granted credits from `plan_definitions`. Editing
+>   one table meant the student paid the new price and received the old credits,
+>   with no error and no log line.
+> * **A renamed pack could not be sold.** `manual-payment.html` mapped a pack to
+>   its `plan_code` through a hardcoded `{ name → code }` object, so a rename
+>   produced a `plan_code` absent from `plan_definitions` and
+>   `approve_payment_request()` raised `Unknown plan_code`. The `credit_packs`
+>   view now carries `plan_code` and the map is gone.
 | `subscriptions` | 7 | `current_period_end`, active flag | Needed for active-subscriber counts and deferred revenue |
 | `profiles` | 19 | `plan_code, credits_balance, subscription_credits, pack_credits, is_admin, is_founder, subscription_expires_at` | Balance = outstanding credit liability |
 
-Current catalogue: PRO_MONTHLY 349 · PRO_QUARTERLY 899 · PRO_ANNUAL 2999 ·
-FOUNDER_ANNUAL 1499 · packs 199/349/649 EGP.
+Catalogue as measured on 2026-07-28: PRO_MONTHLY 349 · PRO_QUARTERLY 899 ·
+PRO_ANNUAL 2999 · FOUNDER_ANNUAL 1499 · packs 199/349/649 EGP. These are a
+snapshot for the analysis above, **not a reference** — since the Owner → Plans
+& Packs panel shipped, prices and credit grants are editable at any time and
+only `plan_definitions` is authoritative. Nothing should read these numbers
+from this document.
 
 ### 4.2 Credits & consumption
 
