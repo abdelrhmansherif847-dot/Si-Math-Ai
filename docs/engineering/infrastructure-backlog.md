@@ -104,6 +104,49 @@ listing." Largely obviated if INFRA-3 ships.
 
 ---
 
+## INFRA-5 — Study Planner still charges from the browser
+
+**Status:** `PROPOSED` — raised by the v96 quota-enforcement fix.
+
+**Context.** v96 moved the chat quota gate out of `chat.html` and into the
+`ai-tutor` Edge Function, because a gate the client decides whether to open is
+not a gate. The same pattern still exists on one other path: `chat.html`'s Study
+Planner charges `STUDY_PLAN` (20 credits, `always_charge`) via
+`CreditConfig.charge()` in the browser, and refunds via `refund_ai_credit()` in
+the browser if generation throws.
+
+**Why it was left alone, and why that is not "fine".** The Study Planner makes
+**no provider call** — `window.StudyPlanner.buildStudyPlan()` is a pure
+client-side computation over data the student already has. So the charge is a
+paywall on a local feature, not a gate in front of spend: skipping it costs the
+platform no money and does not touch the FREE daily cap (`always_charge` rows
+never take the free branch). That is why it was correctly out of scope for a fix
+whose defect was "free students get unmetered LLM calls".
+
+It is still a client-enforced paywall. A student who skips the charge gets the
+feature for free. That is a revenue question rather than a cost or quota one,
+which is why it is here rather than in the fix.
+
+**Interaction with the pending migration.**
+`supabase/migrations-pending/20260802_refund_ai_credit_server_only.sql` revokes
+`refund_ai_credit` from `authenticated`. When it is applied, this path's refund
+stops working and a student whose plan generation throws keeps the 20-credit
+charge — recoverable by admin adjustment, and rare, but real. The migration
+records this and offers holding its §2 as an option.
+
+**Options.**
+  (a) Move the charge server-side, as v96 did for chat. Needs a server-side
+      entry point for the planner, which does not exist today — it is deliberately
+      a client engine (`_shared/study-planner.core.js` runs in the browser).
+  (b) A narrow `SECURITY DEFINER` RPC that refunds only `STUDY_PLAN` rows younger
+      than N seconds for the calling user. Restores the refund without restoring
+      a general client-callable quota reset. Smaller, and enough to unblock §2.
+
+(b) is the cheaper of the two and is the one to do first if the migration is
+approved before (a) is scheduled.
+
+---
+
 ## Note: migrations applied without a committed file
 
 Observed 2026-08-02: `plan_catalog_single_source` (03:56 UTC-equivalent

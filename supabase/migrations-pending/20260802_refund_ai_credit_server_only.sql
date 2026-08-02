@@ -1,0 +1,232 @@
+-- ===========================================================================
+-- refund_ai_credit becomes server-only
+-- ===========================================================================
+-- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
+--
+-- PREREQUISITE: ai-tutor v96 (the entitlement gate) must be DEPLOYED first,
+-- and chat.html v96 merged. Applying this against a pre-v96 client breaks the
+-- browser's refund path with no server-side replacement, so an out-of-scope
+-- turn or a failed call would keep the student's credits. Order is:
+--   1. deploy ai-tutor v96      (DEPLOY.md §4)
+--   2. merge chat.html to main  (Vercel publishes it)
+--   3. apply this file
+-- v96's refundEntitlement() already works in BOTH states — it tries the
+-- service-role client first and falls back to the user's JWT — so there is no
+-- window in which refunds stop working, whenever step 3 happens.
+--
+-- ── WHAT THIS CLOSES ───────────────────────────────────────────────────────
+-- consume_credits() derives a FREE student's daily usage by counting rows:
+--
+--     SELECT COUNT(*) INTO v_daily_used
+--     FROM ai_usage_logs
+--     WHERE user_id = p_user_id
+--       AND created_at >= date_trunc('day', now() AT TIME ZONE 'UTC');
+--
+-- refund_ai_credit() DELETEs the row:
+--
+--     DELETE FROM ai_usage_logs
+--     WHERE id = p_log_id AND user_id = auth.uid()
+--     RETURNING user_id, credits_used INTO v_user_id, v_credits;
+--
+-- So every refund rewinds the daily counter by one. The function is granted to
+-- `authenticated` (measured 2026-08-02: has_function_privilege('authenticated',
+-- 'public.refund_ai_credit(uuid)', 'EXECUTE') = true; anon = false), and its
+-- only authorization check is that the row belongs to the caller.
+--
+-- A student can therefore call it on their OWN log ids, from the browser
+-- console, with no tooling — and the FREE tier's rows are the cheapest possible
+-- target, because they carry credits_used = 0 and the function has an explicit
+-- branch for them:
+--
+--     IF v_credits IS NULL OR v_credits = 0 THEN
+--       RETURN jsonb_build_object('ok', true, 'refunded', 0,
+--                                 'reason', 'no_credits_were_charged');
+--
+-- The row is already deleted by then. "Nothing to restore" is true about the
+-- credits and false about the quota. 807 of the 1,177 rows in ai_usage_logs are
+-- zero-credit rows (measured 2026-08-02) — that is what the FREE daily cap is
+-- made of, and any of them can be erased by the student they belong to.
+--
+-- This was the SECOND way free students could exceed their limit. The first —
+-- that the Edge Function never charged at all — is fixed in v96 and needs no
+-- migration. This one does, because the grant is the vulnerability.
+--
+-- ── WHAT THIS DOES ─────────────────────────────────────────────────────────
+--   1. Adds a service-role branch to refund_ai_credit, mirroring AUTHZ-01 in
+--      consume_credits: a caller with no JWT (auth.uid() IS NULL — only
+--      service_role reaches this) may reverse any log row; an end user, if the
+--      grant is ever restored, still only reaches their own.
+--   2. Revokes EXECUTE from `authenticated`. After this, the only party that
+--      can rewind a usage row is the Edge Function, and only for a turn it
+--      observed fail.
+--
+-- Deliberately NOT in scope: changing the DELETE to a soft-delete
+-- (`refunded_at`), which would let a refunded turn keep its daily slot without
+-- keeping its credits. v96 gets that outcome without a schema change — it
+-- simply does not refund a zero-credit turn on the out-of-scope path, because
+-- there are no credits to return and the only effect would be the rewind. If a
+-- later feature needs "return the credits, keep the slot" for a PAID turn, that
+-- is when the column earns its place.
+--
+-- ── BLAST RADIUS (measured 2026-08-02, not assumed) ────────────────────────
+--   callers of refund_ai_credit in .html/.js .. 1 file (chat.html), 2 call
+--                                               sites after v96:
+--                                                 • drainRefundQueue() — legacy
+--                                                   one-shot drain of a queue
+--                                                   written by a pre-v96 client
+--                                                 • the Study Planner failure
+--                                                   path (see below)
+--   other SQL functions calling it ............ 0
+--   rows affected ............................. 0 (grants and body only)
+--   REFUND transactions to date ............... 3
+--
+-- The Study Planner call site is the one behaviour change a reviewer must
+-- accept. It charges STUDY_PLAN (always_charge = true, 20 credits) from the
+-- browser and refunds from the browser if its local engine throws. That path
+-- makes NO provider call — window.StudyPlanner.buildStudyPlan() is a pure
+-- client-side computation — so it is a paywall, not a gate in front of spend,
+-- and it was correctly out of scope for v96. After this migration its refund
+-- stops working and a student whose plan generation throws keeps the 20-credit
+-- charge. STUDY_PLAN is always_charge, so the row is never a free daily slot
+-- and the quota hole does not apply to it; the cost is a rare unrefunded
+-- charge, recoverable by an admin credit adjustment.
+--
+-- Two ways to close that properly, both larger than this file and neither
+-- required to fix the reported bug:
+--   (a) move the Study Planner charge server-side as v96 did for chat, or
+--   (b) give it a narrow SECURITY DEFINER RPC that refunds only STUDY_PLAN
+--       rows younger than N seconds for the calling user.
+-- Recorded in docs/engineering/infrastructure-backlog.md. If neither is
+-- acceptable yet, apply §1 of this file and hold §2 — the service-role branch
+-- is useful on its own and closes nothing until the revoke lands.
+--
+-- Target project: igvkyxkmjnkzscqgommj
+-- ===========================================================================
+
+begin;
+
+-- ---------------------------------------------------------------------------
+-- 1. Service-role branch (mirrors AUTHZ-01 in consume_credits)
+-- ---------------------------------------------------------------------------
+-- Only the DELETE predicate changes. Every other line is the live body,
+-- verbatim — verified against pg_get_functiondef on 2026-08-02.
+create or replace function public.refund_ai_credit(p_log_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+DECLARE
+  v_user_id     uuid;
+  v_credits     INTEGER;
+  v_tx          RECORD;
+  v_sub_refund  INTEGER := 0;
+  v_pack_refund INTEGER := 0;
+  v_new_total   INTEGER;
+BEGIN
+  -- Atomically claim the usage-log row. The DELETE row-lock makes exactly one
+  -- concurrent caller succeed; the rest get NOT FOUND. This closes the
+  -- double-refund window that a bare SELECT-then-DELETE left open.
+  --
+  -- Dual-authorization (mirrors AUTHZ-01 in consume_credits): an end user
+  -- (auth.uid() not null) may only reverse their own row. The Edge Function
+  -- acts as service_role (auth.uid() IS NULL) and may reverse any row — it is
+  -- the party that observed the failure, and after §2 below it is the only
+  -- party that can call this at all.
+  DELETE FROM ai_usage_logs
+  WHERE id = p_log_id
+    AND (auth.uid() IS NULL OR user_id = auth.uid())
+  RETURNING user_id, credits_used INTO v_user_id, v_credits;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'log_not_found');
+  END IF;
+
+  -- Free plan / nothing charged: the row is already removed, nothing to restore.
+  IF v_credits IS NULL OR v_credits = 0 THEN
+    RETURN jsonb_build_object('ok', true, 'refunded', 0, 'reason', 'no_credits_were_charged');
+  END IF;
+
+  -- Determine which buckets were originally deducted, from the CONSUME
+  -- transaction description ('… (sub:N pack:M)' | '(pack:N)' | no suffix).
+  SELECT * INTO v_tx
+  FROM credit_transactions
+  WHERE reference_id = p_log_id AND transaction_type = 'CONSUME'
+  ORDER BY created_at DESC LIMIT 1;
+
+  IF v_tx IS NOT NULL THEN
+    IF v_tx.description LIKE '%(sub:% pack:%)%' THEN
+      v_sub_refund  := (regexp_match(v_tx.description, 'sub:(\d+)'))[1]::INTEGER;
+      v_pack_refund := (regexp_match(v_tx.description, 'pack:(\d+)'))[1]::INTEGER;
+    ELSIF v_tx.description LIKE '%(pack:%)%' THEN
+      v_pack_refund := (regexp_match(v_tx.description, 'pack:(\d+)'))[1]::INTEGER;
+    ELSE
+      v_sub_refund := v_credits;
+    END IF;
+  ELSE
+    -- No transaction record — restore all to subscription_credits (safe default).
+    v_sub_refund := v_credits;
+  END IF;
+
+  -- Restore credits to the correct buckets and keep credits_balance in lockstep.
+  UPDATE profiles
+  SET subscription_credits = subscription_credits + v_sub_refund,
+      pack_credits         = pack_credits + v_pack_refund,
+      credits_balance      = credits_balance + v_credits
+  WHERE id = v_user_id
+  RETURNING credits_balance INTO v_new_total;
+
+  -- Ledger the refund.
+  INSERT INTO credit_transactions
+    (user_id, transaction_type, credits, balance_after, reference_type, reference_id, description)
+  VALUES
+    (v_user_id, 'REFUND', v_credits, v_new_total,
+     'AI_USAGE', p_log_id, 'Refund: AI call failed after credit deduction');
+
+  RETURN jsonb_build_object(
+    'ok',            true,
+    'refunded',      v_credits,
+    'sub_refund',    v_sub_refund,
+    'pack_refund',   v_pack_refund,
+    'balance_after', v_new_total
+  );
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- 2. The client loses the ability to rewind its own quota
+-- ---------------------------------------------------------------------------
+-- `anon` was already revoked by 20260730_sec08a_rpc_grant_hygiene.sql, which
+-- deliberately RETAINED authenticated ("see review note 3") because the browser
+-- was the only refunder at the time. v96 moved that job to the server, so the
+-- reason for the retention is gone.
+revoke execute on function public.refund_ai_credit(uuid) from public, anon, authenticated;
+grant  execute on function public.refund_ai_credit(uuid) to service_role;
+
+comment on function public.refund_ai_credit(uuid) is
+  'Server-only since 2026-08-02. Reverses one ai_usage_logs row and restores its credits. Callable by service_role only: the DELETE removes the row that consume_credits counts for the FREE daily cap, so a client-callable refund is a client-callable quota reset. Issued by the ai-tutor Edge Function (v96+) on failures it observed.';
+
+commit;
+
+-- ===========================================================================
+-- VERIFICATION (run after applying)
+-- ===========================================================================
+--   -- expect: authenticated=false, anon=false, service_role=true
+--   SELECT has_function_privilege('authenticated','public.refund_ai_credit(uuid)','EXECUTE') AS authenticated,
+--          has_function_privilege('anon',         'public.refund_ai_credit(uuid)','EXECUTE') AS anon,
+--          has_function_privilege('service_role', 'public.refund_ai_credit(uuid)','EXECUTE') AS service_role;
+--
+--   -- expect: true (the service-role branch is live)
+--   SELECT pg_get_functiondef(p.oid) LIKE '%auth.uid() IS NULL OR user_id = auth.uid()%'
+--     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE n.nspname = 'public' AND p.proname = 'refund_ai_credit';
+--
+--   -- Behavioural, as a signed-in student (should now fail):
+--   --   select public.refund_ai_credit('<one of your own log ids>');
+--   --   → ERROR: permission denied for function refund_ai_credit
+--
+-- ── Rollback ───────────────────────────────────────────────────────────────
+--   grant execute on function public.refund_ai_credit(uuid) to authenticated;
+--   -- and, to restore the pre-migration body, drop the `auth.uid() IS NULL OR`
+--   -- clause from the DELETE predicate above.
+-- ===========================================================================

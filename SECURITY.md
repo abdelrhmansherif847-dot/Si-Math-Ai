@@ -659,7 +659,10 @@ meaningful.
 - **Output escaping: broadly correct.** 16 of 18 pages define and use `esc()`.
   The Owner Dashboard correctly escapes cross-tenant data. Only SEC-06 was
   unescaped.
-- **`consume_credits` authorization: correct** (see the SEC-08 correction).
+- **`consume_credits` authorization: correct** (see the SEC-08 correction). Its
+  *invocation* was not: nothing server-side called it until v96 (§5.2 layer 4).
+  Auditing an RPC's authorization answers "may this caller do it", never "does
+  anything make the caller ask".
 - **Dependency vulnerabilities: none.** There is no `package.json` and no npm
   dependency tree; the only third-party runtime code is the CDN assets in
   SEC-07. The Edge Function's imports are version-pinned
@@ -809,9 +812,24 @@ Layered posture, outermost first:
 1. **Cloudflare** proxied DNS — absorbs L3/L4, provides "Under Attack" mode.
 2. **WAF rate limits** (§5.1) — per-IP ceiling before requests reach Supabase.
 3. **In-function limiter** (v88) — per-user ceiling, best-effort across isolates.
-4. **Credits system** — the durable per-user economic ceiling, already enforced
-   server-side by `consume_credits`. This is the real backstop against a
+4. **Credits system** — the durable per-user economic ceiling, enforced
+   server-side by `consume_credits`, **charged by the `ai-tutor` entitlement
+   gate (v96) before any provider call**. This is the real backstop against a
    *funded* attacker: they can only spend what they have bought.
+
+   > **Corrected 2026-08-02.** This line previously read "already enforced
+   > server-side by `consume_credits`" and it was wrong for as long as it stood.
+   > `consume_credits` *is* a correct server-side gate — the flaw was never in
+   > the RPC — but until v96 the only caller was `chat.html`, in the browser.
+   > Layer 4 therefore did not exist for any caller that declined to invoke it,
+   > and layer 3 (200/hr) was the real ceiling: roughly 4,800 unmetered turns a
+   > day against a FREE plan whose limit is 15.
+   >
+   > The sentence was believed because it named a real, correct function and
+   > described the intended architecture. **When this document says a control is
+   > enforced server-side, that has to mean the server calls it** — not that a
+   > server-side implementation of it exists. See
+   > `docs/engineering/free-quota-enforcement-investigation.md`.
 5. **OpenAI spend cap** — a hard monthly limit on the OpenAI account, so no
    failure of layers 1–4 can produce an unbounded bill.
 

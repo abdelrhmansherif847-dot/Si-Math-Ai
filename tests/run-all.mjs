@@ -14,7 +14,7 @@ const REPO = resolve(HERE, '..');
 const filter = process.argv[2] || '';
 
 // Suites that read the Edge Function's TypeScript need Node's type stripping.
-const NEEDS_TS = /scope-guardrail|zero-personality|edge-security|shared-cors|exam-strategy|verification-v0|verification-core-parity/;
+const NEEDS_TS = /scope-guardrail|zero-personality|edge-security|shared-cors|exam-strategy|verification-v0|verification-core-parity|entitlement-gate/;
 
 const suites = readdirSync(HERE).filter(f => f.endsWith('.test.mjs')).sort()
   .filter(f => !filter || f.includes(filter));

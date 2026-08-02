@@ -16,9 +16,12 @@ The inline deploy path has caused two production outages (2026-06-17) by
 deploying a truncated stub instead of the real function. Students received 500
 errors for the duration.
 
-`supabase/functions/ai-tutor/index.ts` is **~274 KB / 4,943 lines** (measured
-2026-08-02). An earlier version of this file said "~55 KB" — the function has
-grown five-fold since, which makes this prohibition *more* binding, not less.
+`supabase/functions/ai-tutor/index.ts` is **~233 KB / 4,240 lines** (measured
+2026-08-02, after v96). An earlier version of this file said "~55 KB" — the
+function has grown four-fold since, which makes this prohibition *more* binding,
+not less. (The same entry previously read "~274 KB / 4,943 lines", which did not
+match the file it described; the rule stands either way, and the point is the
+order of magnitude, not the digits.)
 
 `ai-tutor` is also a **multi-file bundle** since v83: `index.ts` imports from
 `_shared/`. Any deploy path that ships only `index.ts` produces a function that
@@ -130,7 +133,8 @@ student impact during exam-prep windows.
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
 | Edge Functions | `ai-tutor` (platform version **133**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v95'` |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v95'` (branch `claude/free-quota-enforcement-bug-satsry` carries **v96**, the server-side quota gate — **not deployed**) |
+| FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | `ai-tutor` deployed bundle | sha256 `c3f5fff1539aa9bed2ab5e03595325c82dbc8746c80918eb67ab029ed9543dd2`, deployed 2026-07-31T16:39:24Z |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
@@ -138,7 +142,7 @@ student impact during exam-prep windows.
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **68 files** in `supabase/migrations/`, **131 applied** in the database |
 | Static site | 46 root `*.html` pages on Vercel |
-| CI | `node tests/run-all.mjs` — 17 test suites + 7 validators = **24 checks** |
+| CI | `node tests/run-all.mjs` — 20 test suites + 7 validators = **27 checks** |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
