@@ -89,9 +89,9 @@ export const CONCEPTS = [
     name: 'The Si Math Course',
     kind: 'Program',
     definition:
-      'The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It teaches the mathematics in full and needs no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.',
+      'The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It answers the question "How do I learn Mathematics?" — teaching the mathematics in full, and needing no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.',
     purpose:
-      'It is the teaching. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student\'s success should ever depend on purchasing an additional product.',
+      'It is the teaching, and it owns that responsibility entirely. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student\'s success should ever depend on purchasing an additional product.',
     inputs: ['Experienced SAT, ACT and EST mathematics teaching', 'A sequenced curriculum and its worked material'],
     outputs: ['Mathematical understanding', 'Exam technique', 'Students who are prepared without any software at all'],
     related: [
@@ -427,17 +427,46 @@ export const CONCEPTS = [
     name: 'Learning Accelerator',
     kind: 'Positioning',
     definition:
-      'The role Si Math AI occupies relative to teaching. The course teaches; Si Math AI accelerates learning. The course builds knowledge; Si Math AI helps students reach their full potential faster through personalized guidance, continuous practice and intelligent learning support. Artificial Intelligence is not the teacher — it is the learning accelerator.',
+      'The role Si Math AI occupies relative to teaching. The course and the platform solve two different educational problems: the course answers "How do I learn Mathematics?", and Si Math AI answers "How do I learn Mathematics in the smartest and most efficient way possible?" The course is responsible for teaching; Si Math AI is responsible for optimizing the student\'s learning journey. Artificial Intelligence is not the teacher — it is the learning accelerator.',
     purpose:
-      'To fix the direction of a relationship that technology companies routinely get backwards. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don\'t replace great teaching. We multiply its impact.',
+      'To fix the direction of a relationship that technology companies routinely get backwards, and to stop the two being compared as though they did the same job. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don\'t replace great teaching. We multiply its impact.',
     inputs: ['A complete educational programme that already works', 'Technology that scales what a teacher cannot do thirty times over'],
-    outputs: ['The site-wide statement: "We don\'t replace great teaching. We multiply its impact."', 'A published commitment that the platform is optional'],
+    outputs: ['The site-wide statement: "We don\'t replace great teaching. We multiply its impact."', 'A published commitment that the platform is optional', 'A clear division of responsibility: teaching versus optimization'],
     related: [
       { predicate: 'governs', target: 'si-math-ai' },
       { predicate: 'requires', target: 'si-math-course', note: 'the claim only holds because the course is complete on its own' },
       { predicate: 'partOf', target: 'three-pillars', note: 'it states where the technology pillar sits relative to the other two' },
+      { predicate: 'generates', target: 'between-lessons', note: 'the accelerator role, stated as where it operates' },
     ],
     pages: ['about.html', 'why-we-built-si-math-ai.html', 'why-not-chatgpt.html', 'trust.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'between-lessons',
+    name: 'The Between-Lessons Layer',
+    kind: 'Positioning',
+    definition:
+      'Where Si Math AI operates: the time between lessons. A great teacher explains; a great educational system follows the student after the lesson ends. The platform is the educational operating system running in that gap — not extra practice, and not more mathematics. It continuously answers what to study next, why a mistake keeps repeating, which topic yields the largest score improvement, whether the student is actually improving, whether they are ready for the exam, and what is worth revising today.',
+    purpose:
+      'To name the value precisely enough that nobody has to compare the platform with the teaching. The teacher delivers knowledge; Si Math AI turns knowledge into long-term mastery — it makes sure today\'s lesson is still remembered three weeks from now. A student is not buying more mathematics. They are buying a smarter learning process.',
+    inputs: ['Everything the student did since the last lesson', 'The record of every previous attempt, mistake and session'],
+    outputs: [
+      'What should I study next?',
+      'Why do I keep making this mistake?',
+      'Which topic gives me the biggest score improvement?',
+      'Am I actually improving?',
+      'Am I ready for the exam?',
+      'What should I revise today instead of wasting hours?',
+    ],
+    related: [
+      { predicate: 'partOf', target: 'learning-accelerator' },
+      { predicate: 'requires', target: 'learning-memory', note: 'a system cannot follow a student it does not remember' },
+      { predicate: 'requires', target: 'weakness-analyzer', note: 'answers "why do I keep making this mistake"' },
+      { predicate: 'requires', target: 'performance-analytics', note: 'answers "am I improving" and "am I ready"' },
+      { predicate: 'improves', target: 'student' },
+    ],
+    pages: ['about.html', 'how-it-works.html', 'why-not-chatgpt.html', 'ai-knowledge.html'],
     canonicalPage: 'about.html',
     schemaRefs: [],
   },

@@ -45,6 +45,30 @@ export const POSITIONING_COURSE = [
   'Artificial Intelligence is not the teacher. It is the learning accelerator.',
 ];
 
+/**
+ * The two questions. This is the distinction that stops a reader comparing the
+ * course and the platform as competing purchases — they answer different
+ * questions, so there is nothing to weigh against each other.
+ *
+ * Written without surrounding quote marks in the checked strings so the match
+ * does not depend on whether a page renders straight quotes, curly quotes or
+ * &quot; entities.
+ */
+export const TWO_QUESTIONS = [
+  'How do I learn Mathematics?',
+  'How do I learn Mathematics in the smartest and most efficient way possible?',
+];
+
+/** The division of responsibility, in the three forms it is stated in. */
+export const RESPONSIBILITY_PAIRS = [
+  'The teacher teaches. Si Math AI coaches.',
+  'The teacher delivers knowledge. Si Math AI turns knowledge into long-term mastery.',
+  'A great teacher explains. A great educational system follows the student after the lesson ends.',
+];
+
+/** Where the platform lives, and what it is explicitly not. */
+export const BETWEEN_LESSONS = 'an educational operating system that works between lessons';
+
 /** Top-level nav. `current` is a filename, e.g. 'learn.html'. */
 export function nav(current = '') {
   const items = [

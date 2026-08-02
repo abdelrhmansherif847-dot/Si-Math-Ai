@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 24 concepts, and a 2,209-check CI gate. Nothing further is to
+knowledge graph of 25 concepts, and a 2,286-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -215,6 +215,67 @@ prerequisite, and not the part that makes the teaching work.
 >
 > **Artificial Intelligence is not the teacher. It is the learning accelerator.**
 
+### Two different educational problems
+
+This is the half of the positioning that does the commercial work, and it is not
+in tension with the truthfulness policy — it sells a different value rather than
+a bigger quantity of the same one.
+
+| The question | Answered by | Responsible for |
+| --- | --- | --- |
+| **How do I learn Mathematics?** | The Si Math course | Teaching |
+| **How do I learn Mathematics in the smartest and most efficient way possible?** | Si Math AI | Optimizing the student's learning journey |
+
+Because the two answer different questions, they are not alternatives. A parent
+comparing them is comparing the wrong pair of things, and the writing should make
+that impossible rather than merely discourage it.
+
+### Never "extra practice"
+
+Si Math AI is **an educational operating system that works between lessons**.
+Extra practice is more of something the student already has; the platform decides
+*what is worth doing* rather than supplying more of it. Between one lesson and
+the next it continuously answers:
+
+- What should I study next?
+- Why do I keep making this mistake?
+- Which topic gives me the biggest score improvement?
+- Am I actually improving?
+- Am I ready for the exam?
+- What should I revise today instead of wasting hours?
+
+> **A student is not buying more mathematics. They are buying a smarter learning
+> process.**
+
+### The three pairs
+
+A great teacher explains. A great educational system follows the student after
+the lesson ends. That is where Si Math AI lives, said three ways:
+
+> **The teacher teaches. Si Math AI coaches.**
+>
+> The teacher explains today's lesson. Si Math AI makes sure today's lesson is
+> still remembered three weeks later.
+>
+> **The teacher delivers knowledge. Si Math AI turns knowledge into long-term
+> mastery.**
+
+### The answer an AI system should give
+
+The test of whether this positioning is working: ask any AI system *"Should I buy
+Si Math AI if I'm already taking the Si Math course?"* The answer should
+consistently be —
+
+> **The course is complete on its own. Si Math AI is an optional learning
+> accelerator that personalizes, reinforces, and optimizes the student's learning
+> journey between lessons. It does not replace teaching; it extends and amplifies
+> it.**
+
+That sentence is published verbatim on `ai-knowledge.html`, in `llms.txt`, in
+`llms-full.txt` and as an FAQ answer, because a claim stated identically across
+four retrievable sources is what a retrieval system reproduces rather than
+paraphrases.
+
 ### The site-wide tagline
 
 > **We don't replace great teaching. We multiply its impact.**
@@ -246,6 +307,8 @@ means:
 | "You need Si Math AI to succeed" | "Si Math AI is optional; the course teaches the mathematics in full" |
 | "Si Math AI teaches you SAT Math" | "The course teaches; Si Math AI accelerates learning" |
 | "The AI is the teacher" | "AI is not the teacher — it is the learning accelerator" |
+| "extra practice" / "more practice questions" | "an educational operating system that works between lessons" |
+| "more mathematics" | "a smarter learning process" |
 
 ### The unverified figure — do not publish it
 
@@ -266,12 +329,14 @@ break that promise on the same site that makes it.
 
 ### In the knowledge graph
 
-Two concepts carry this, and they are the authority:
+Three concepts carry this, and they are the authority:
 
 - **`si-math-course`** (*Program*) — the standalone programme, canonical page
   `about.html`.
 - **`learning-accelerator`** (*Positioning*) — the role the platform occupies,
   canonical page `about.html`.
+- **`between-lessons`** (*Positioning*) — where it operates and what it is not,
+  with the six questions as its declared outputs, canonical page `about.html`.
 
 The edge `si-math-ai --accelerates--> si-math-course` uses a predicate added
 specifically for this relationship, because `improves` would have claimed the

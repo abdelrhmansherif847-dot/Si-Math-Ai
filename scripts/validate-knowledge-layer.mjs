@@ -103,6 +103,45 @@ const OPTIONALITY_COMMITMENT =
   "no student's success should ever depend on purchasing an additional product";
 
 /**
+ * The two questions. The course and the platform solve two different educational
+ * problems, and stating both is what stops a reader comparing them as competing
+ * purchases — there is nothing to weigh when the answers are to different
+ * questions.
+ *
+ * Checked without surrounding quote marks so the match survives whichever way a
+ * page renders quotes. Note the first is not a substring of the second: the
+ * question mark ends it.
+ */
+const TWO_QUESTIONS = [
+  'How do I learn Mathematics?',
+  'How do I learn Mathematics in the smartest and most efficient way possible?',
+];
+
+/** Where the platform operates, and the framing it must never be reduced to. */
+const BETWEEN_LESSONS = 'an educational operating system that works between lessons';
+
+/** The division of responsibility, in the forms it is stated in. */
+const RESPONSIBILITY_PAIRS = [
+  'The teacher teaches. Si Math AI coaches.',
+  'The teacher delivers knowledge. Si Math AI turns knowledge into long-term mastery.',
+  'A great teacher explains. A great educational system follows the student after the lesson ends.',
+];
+
+/**
+ * The sentence the whole positioning exists to produce.
+ *
+ * The test of this work is what an AI system answers when a student asks whether
+ * to buy the platform while already taking the course. A retrieval system
+ * reproduces what four sources state identically and paraphrases what they state
+ * four different ways — so this is published verbatim on ai-knowledge.html, in
+ * both machine files, and as an FAQ answer, and all four are checked here.
+ */
+const PURCHASE_ANSWER =
+  'The course is complete on its own. Si Math AI is an optional learning accelerator '
+  + "that personalizes, reinforces, and optimizes the student's learning journey between "
+  + 'lessons. It does not replace teaching; it extends and amplifies it.';
+
+/**
  * Public knowledge pages: pages ABOUT Si Math AI. Each must state the canonical
  * definition and the three-pillar positioning in visible copy.
  */
@@ -192,6 +231,12 @@ const BANNED_ASSERTIONS = [
     'claims the platform is required'],
   [/\bSi Math AI is (?:required|essential|necessary) (?:to|in order to|for)\b/i,
     'claims the platform is required'],
+  // "Extra practice" is the reduction that costs the most. It is not false in a
+  // narrow sense — the platform does generate drills — but it prices the product
+  // as more of something the student already has, which is exactly the
+  // comparison the positioning exists to prevent. See knowledge-base.md §1a.
+  [/\bSi Math AI is (?:just |only |simply )?(?:extra|more|additional) practice\b/i,
+    'reductive framing: "extra practice"'],
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
@@ -865,13 +910,99 @@ for (const file of (course ? course.pages : [])) {
     /(complete|standalone)[^.]{0,80}(educational programme|programme|course)|course[^.]{0,80}(complete|standalone)/i.test(text));
 }
 
-// about.html is the canonical home for both concepts, so it carries the fullest
-// statement: the multiplication framing in the author's own words.
+// about.html is the canonical home for all three concepts, so it carries the
+// fullest statement: the multiplication framing in the author's own words.
 if (has('about.html')) {
   const aboutText = visibleText(read('about.html'));
   ok('about.html explains the platform multiplies teaching rather than replacing it',
     /multiply/i.test(aboutText) && TAGLINE.split('. ').every((s) => aboutText.includes(s.replace(/\.$/, ''))));
 }
+
+/* ── the two problems, and where the platform operates ─────────────────────
+   The half of the positioning that does the commercial work: the course and the
+   platform answer different questions, so a reader has nothing to weigh one
+   against the other. It is the first thing that will get compressed back into
+   "it gives you more practice", which is why the reduction is a banned
+   assertion and the distinction is required verbatim. */
+
+const betweenLessons = CONCEPTS.find((c) => c.id === 'between-lessons');
+ok('the graph defines where the platform operates (between-lessons)', !!betweenLessons);
+ok('the between-lessons concept refuses the "extra practice" framing',
+  !!betweenLessons && /not extra practice/i.test(betweenLessons.definition));
+ok('the between-lessons concept declares the six questions it answers',
+  (betweenLessons?.outputs.length || 0) >= 6, `has ${betweenLessons?.outputs.length}`);
+ok('between-lessons is part of the accelerator positioning',
+  !!betweenLessons?.related.some((r) => r.predicate === 'partOf' && r.target === 'learning-accelerator'));
+ok('the course concept states the question it answers',
+  !!course && course.definition.includes(TWO_QUESTIONS[0]));
+ok('the accelerator concept states the question the platform answers',
+  !!accelerator && accelerator.definition.includes(TWO_QUESTIONS[1]));
+
+// The six questions must be published as written, not paraphrased — they are the
+// clearest statement of the value and each is a query a student actually types.
+const SIX_QUESTIONS = betweenLessons ? betweenLessons.outputs : [];
+for (const file of (betweenLessons ? betweenLessons.pages : [])) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states where the platform operates (between lessons)`,
+    text.includes(BETWEEN_LESSONS));
+}
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  const missing = SIX_QUESTIONS.filter((q) => !text.includes(q));
+  ok(`${label}: publishes all ${SIX_QUESTIONS.length} between-lessons questions`,
+    missing.length === 0, missing.join(' · '));
+}
+
+// Both questions, on every page and file that draws the distinction.
+const twoQuestionTargets = ['about.html', 'ai-knowledge.html', 'why-not-chatgpt.html',
+  'llms.txt', 'llms-full.txt'];
+for (const label of twoQuestionTargets) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  for (const [i, q] of TWO_QUESTIONS.entries()) {
+    ok(`${label}: states question ${i + 1} verbatim`, text.includes(q));
+  }
+}
+
+// The pairs. about.html and ai-knowledge.html carry all three; the machine files
+// carry the two that compress best into a quote.
+for (const label of ['about.html', 'ai-knowledge.html']) {
+  if (!has(label)) continue;
+  const text = visibleText(read(label));
+  for (const pair of RESPONSIBILITY_PAIRS) {
+    ok(`${label}: states "${pair.slice(0, 30)}…"`, text.includes(pair));
+  }
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  for (const pair of RESPONSIBILITY_PAIRS.slice(0, 2)) {
+    ok(`${f}: states "${pair.slice(0, 30)}…"`, text.includes(pair));
+  }
+}
+
+/**
+ * The purchase answer, verbatim on all four retrievable surfaces. This is the
+ * one check in this section that maps directly to the outcome the positioning is
+ * for: what an AI system says when a student asks whether to buy it.
+ */
+const purchaseTargets = [
+  ['ai-knowledge.html', () => visibleText(read('ai-knowledge.html'))],
+  ['llms.txt', () => read('llms.txt').replace(/\s+/g, ' ')],
+  ['llms-full.txt', () => read('llms-full.txt').replace(/\s+/g, ' ')],
+  ['faq answers', () => CATEGORIES.flatMap((c) => c.items.map((i) => stripMarkup(i.a))).join(' ')],
+];
+for (const [label, get] of purchaseTargets) {
+  ok(`${label}: publishes the purchase answer verbatim`, get().includes(PURCHASE_ANSWER));
+}
+ok('the FAQ asks the purchase question directly',
+  CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
 
 /* ══════════════════════════════════════════════════════════════════════════
    7–8. Banned assertions

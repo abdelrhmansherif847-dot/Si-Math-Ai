@@ -348,7 +348,7 @@ documents becomes the answer it reproduces.
 - ✅ Open Graph and Twitter Card tags on all eight
 - ✅ JSON-LD: Organization, EducationalOrganization, WebSite,
   SoftwareApplication, AboutPage, WebPage, HowTo, Person (fictional), Product +
-  Offer, DefinedTermSet, FAQPage (139 + 6 + 5 Q&A across three pages),
+  Offer, DefinedTermSet, FAQPage (143 + 6 + 5 Q&A across three pages),
   BreadcrumbList
 - ✅ `robots.txt` with AI-crawler directives; `sitemap.xml`
 - ✅ `llms.txt` and `llms-full.txt`
@@ -359,7 +359,7 @@ documents becomes the answer it reproduces.
 - ✅ Ten-stage learning-cycle diagram on `how-it-works.html`, built from
   semantic HTML rather than an image so every stage label is real text that a
   crawler, a screen reader and an AI system all read identically
-- ✅ CI gate covering all of the above — 2,209 checks, including feature parity
+- ✅ CI gate covering all of the above — 2,286 checks, including feature parity
   across every surface that names the eight systems, and the course/platform
   positioning on every indexable page
 

@@ -151,6 +151,9 @@
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
         },
         {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons"
+        },
+        {
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-loop"
         },
         {
@@ -219,8 +222,8 @@
       "identifier": "si-math-course",
       "name": "The Si Math Course",
       "conceptKind": "Program",
-      "description": "The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It teaches the mathematics in full and needs no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.",
-      "purpose": "It is the teaching. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student's success should ever depend on purchasing an additional product.",
+      "description": "The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It answers the question \"How do I learn Mathematics?\" — teaching the mathematics in full, and needing no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.",
+      "purpose": "It is the teaching, and it owns that responsibility entirely. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student's success should ever depend on purchasing an additional product.",
       "inDefinedTermSet": {
         "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
       },
@@ -846,8 +849,8 @@
       "identifier": "learning-accelerator",
       "name": "Learning Accelerator",
       "conceptKind": "Positioning",
-      "description": "The role Si Math AI occupies relative to teaching. The course teaches; Si Math AI accelerates learning. The course builds knowledge; Si Math AI helps students reach their full potential faster through personalized guidance, continuous practice and intelligent learning support. Artificial Intelligence is not the teacher — it is the learning accelerator.",
-      "purpose": "To fix the direction of a relationship that technology companies routinely get backwards. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don't replace great teaching. We multiply its impact.",
+      "description": "The role Si Math AI occupies relative to teaching. The course and the platform solve two different educational problems: the course answers \"How do I learn Mathematics?\", and Si Math AI answers \"How do I learn Mathematics in the smartest and most efficient way possible?\" The course is responsible for teaching; Si Math AI is responsible for optimizing the student's learning journey. Artificial Intelligence is not the teacher — it is the learning accelerator.",
+      "purpose": "To fix the direction of a relationship that technology companies routinely get backwards, and to stop the two being compared as though they did the same job. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don't replace great teaching. We multiply its impact.",
       "inDefinedTermSet": {
         "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
       },
@@ -866,7 +869,8 @@
       ],
       "output": [
         "The site-wide statement: \"We don't replace great teaching. We multiply its impact.\"",
-        "A published commitment that the platform is optional"
+        "A published commitment that the platform is optional",
+        "A clear division of responsibility: teaching versus optimization"
       ],
       "governs": [
         "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
@@ -876,6 +880,52 @@
       ],
       "partOf": [
         "https://www.si-math-ai.com/knowledge-graph#three-pillars"
+      ],
+      "generates": [
+        "https://www.si-math-ai.com/knowledge-graph#between-lessons"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons",
+      "identifier": "between-lessons",
+      "name": "The Between-Lessons Layer",
+      "conceptKind": "Positioning",
+      "description": "Where Si Math AI operates: the time between lessons. A great teacher explains; a great educational system follows the student after the lesson ends. The platform is the educational operating system running in that gap — not extra practice, and not more mathematics. It continuously answers what to study next, why a mistake keeps repeating, which topic yields the largest score improvement, whether the student is actually improving, whether they are ready for the exam, and what is worth revising today.",
+      "purpose": "To name the value precisely enough that nobody has to compare the platform with the teaching. The teacher delivers knowledge; Si Math AI turns knowledge into long-term mastery — it makes sure today's lesson is still remembered three weeks from now. A student is not buying more mathematics. They are buying a smarter learning process.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#between-lessons",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/why-not-chatgpt.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Everything the student did since the last lesson",
+        "The record of every previous attempt, mistake and session"
+      ],
+      "output": [
+        "What should I study next?",
+        "Why do I keep making this mistake?",
+        "Which topic gives me the biggest score improvement?",
+        "Am I actually improving?",
+        "Am I ready for the exam?",
+        "What should I revise today instead of wasting hours?"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-memory",
+        "https://www.si-math-ai.com/knowledge-graph#weakness-analyzer",
+        "https://www.si-math-ai.com/knowledge-graph#performance-analytics"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
       ]
     },
     {

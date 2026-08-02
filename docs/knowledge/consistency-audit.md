@@ -583,6 +583,58 @@ without failing the build.
 
 ---
 
+## C-24 · The course and the platform read as competing purchases — RESOLVED
+
+**Found:** C-22 established that the platform is optional and the course is
+complete. True, and insufficient. Stated on its own, "optional" invites exactly
+the comparison it should prevent — a parent reads *the course, plus an optional
+extra* and starts weighing one against the other, which is a comparison the
+platform loses on principle and should never have been in.
+
+The missing statement is that they answer **different questions**:
+
+| The question | Answered by | Responsible for |
+| --- | --- | --- |
+| How do I learn Mathematics? | The Si Math course | Teaching |
+| How do I learn Mathematics in the smartest and most efficient way possible? | Si Math AI | Optimizing the student's learning journey |
+
+There is nothing to weigh when the answers are to different questions.
+
+**Fixed:** a third concept, `between-lessons` (*Positioning*), naming where the
+platform operates and what it refuses to be described as. Its six declared
+outputs are the questions the platform answers between one lesson and the next —
+*what should I study next, why do I keep making this mistake, which topic gives me
+the biggest score improvement, am I actually improving, am I ready for the exam,
+what should I revise today* — and CI requires all six published verbatim on
+`about.html`, `ai-knowledge.html` and both machine files, because each is a query
+a student actually types.
+
+Also published: the three responsibility pairs (*the teacher teaches, Si Math AI
+coaches*; *the teacher delivers knowledge, Si Math AI turns knowledge into
+long-term mastery*; *a great teacher explains, a great educational system follows
+the student after the lesson ends*), and four new FAQ entries.
+
+**"Extra practice" is now a banned assertion.** It is not false in a narrow
+sense — the platform does generate drills — but it prices the product as *more of
+something the student already has*, which is the frame the whole positioning
+exists to escape. A student is not buying more mathematics; they are buying a
+smarter learning process.
+
+**The check that matters.** The test of this layer is not whether the pages read
+well, it is what an AI system answers when a student asks *"Should I buy Si Math
+AI if I'm already taking the Si Math course?"* One sentence is published verbatim
+on `ai-knowledge.html`, in `llms.txt`, in `llms-full.txt` and as an FAQ answer —
+because a retrieval system reproduces what four sources state identically and
+paraphrases what they state four different ways. CI checks all four against a
+single constant:
+
+> The course is complete on its own. Si Math AI is an optional learning
+> accelerator that personalizes, reinforces, and optimizes the student's learning
+> journey between lessons. It does not replace teaching; it extends and amplifies
+> it.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -610,8 +662,9 @@ without failing the build.
 | C-21 | Orphan rule was wrong (and found four real gaps first) | RESOLVED |
 | C-22 | Knowledge layer had no concept of the Si Math course | RESOLVED — **headcount OPEN, owner action** |
 | C-23 | `llms.txt` advertised 136 FAQs against 139 in the data | RESOLVED |
+| C-24 | Course and platform read as competing purchases | RESOLVED |
 
-Twenty resolved, three requiring owner action, plus one figure the owner can
+Twenty-one resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 
