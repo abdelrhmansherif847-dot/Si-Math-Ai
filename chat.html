@@ -448,6 +448,7 @@ button{font-family:inherit;cursor:pointer}
 .usage-row .u-l{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
 .usage-row .u-v{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;margin-top:2px}
 .usage-row .u-v .u-plan{font-size:11px;color:var(--cyan-3);font-weight:600}
+.usage-row .u-note{font-size:10px;color:var(--text-400);margin-top:5px;line-height:1.35}
 .usage-row .u-track{height:6px;margin-top:7px;background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:100px;overflow:hidden}
 .usage-row .u-track i{display:block;height:100%;border-radius:100px;background:linear-gradient(90deg,var(--cyan-2),var(--cyan))}
 .continue-bar{display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:14px;background:linear-gradient(135deg,rgba(56,189,248,.12),var(--bg-card));border:1px solid var(--cyan-border);cursor:pointer;transition:all .2s;text-align:left}
@@ -665,6 +666,9 @@ button{font-family:inherit;cursor:pointer}
                  tick. A literal here was how "10" survived the move to 15. -->
             <div class="u-v"><span id="usageNow">0</span> / <span id="usageMax">—</span> <span class="u-plan" id="usagePlan">(Free)</span></div>
             <div class="u-track"><i id="usageBar" style="width:0%"></i></div>
+            <!-- Says which of the two meanings this number carries. Empty on
+                 the free tier, where "x / 15" already reads as the cap it is. -->
+            <div class="u-note" id="usageNote" style="display:none"></div>
           </div>
         </div>
         <div class="continue-bar" id="continueBar" style="display:none">
@@ -1690,7 +1694,25 @@ button{font-family:inherit;cursor:pointer}
       var p = this.plan;
       return p !== 'free' && p !== 'basic' && p !== '' && p !== 'free plan';
     },
-    // The daily cap for THIS student's plan, resolved from the plan catalogue
+    // Is this a zero-price tier? It decides what daily_limit MEANS, and the
+    // test must match the one consume_credits uses:
+    //   coalesce(amount_egp,0) = 0 AND coalesce(credits_granted,0) = 0
+    // Free tier  -> daily_limit is a HARD cap; messages cost no credits.
+    // Paid plan  -> credits are charged from message #1 and daily_limit never
+    //               blocks; it is a suggested pace this counter displays.
+    // Unknown (catalogue not loaded) -> undefined, and the counter says so
+    // rather than implying either rule.
+    isFreeTier: function(){
+      try {
+        if (window.PlanCatalog && PlanCatalog.isLoaded()) {
+          var p = PlanCatalog.get(this.planCode || 'FREE');
+          if (!p) return undefined;
+          return Number(p.price_egp || 0) === 0 && Number(p.credits_granted || 0) === 0;
+        }
+      } catch (_) {}
+      return undefined;
+    },
+    // The daily figure for THIS student's plan, resolved from the plan catalogue
     // (public.plan_definitions.daily_limit) — the same column consume_credits
     // reads through the pricing_settings view.
     //
@@ -1714,15 +1736,21 @@ button{font-family:inherit;cursor:pointer}
     },
     bumpUsage: function(){
       var max = this.dailyLimit();
-      // No cap, or not known yet: just count up. Clamping to a guessed ceiling
-      // is how "x / 10" outlived the limit it described.
-      this.usage = (typeof max === 'number') ? Math.min(this.usage+1, max) : this.usage+1;
+      // Clamp ONLY where the server actually stops you — the free tier's hard
+      // cap. On a paid plan daily_limit is a pace, and the student may pass it,
+      // so the counter has to keep counting: sticking at "200 / 200" would
+      // claim a block that will not happen.
+      this.usage = (this.isFreeTier() === true && typeof max === 'number')
+        ? Math.min(this.usage + 1, max)
+        : this.usage + 1;
       this.renderUsage();
     },
     renderUsage: function(){
       var max = this.dailyLimit();
+      var free = this.isFreeTier();
       var nowEl=document.getElementById('usageNow'), maxEl=document.getElementById('usageMax'),
-          planEl=document.getElementById('usagePlan'), barEl=document.getElementById('usageBar');
+          planEl=document.getElementById('usagePlan'), barEl=document.getElementById('usageBar'),
+          noteEl=document.getElementById('usageNote');
       if(nowEl) nowEl.textContent=this.usage;
       if(planEl) planEl.textContent=this.isPaid()?'(Pro)':'(Free)';
       if(maxEl){
@@ -1735,6 +1763,20 @@ button{font-family:inherit;cursor:pointer}
         barEl.style.width = (typeof max === 'number' && max > 0)
           ? Math.min(100, Math.round(this.usage/max*100))+'%'
           : '0%';   // uncapped or unknown: nothing meaningful to fill toward
+      }
+      // The same "3 / 200" means "3 of a hard cap" on the free tier and "3 of a
+      // suggested pace" on a paid plan. Only the paid case needs saying — on the
+      // free tier the number already means what it looks like.
+      if(noteEl){
+        if (free === false && typeof max === 'number') {
+          noteEl.textContent = this.usage >= max
+            ? 'Above your suggested daily pace — you are not blocked. Credits are what apply.'
+            : 'A suggested daily pace, not a limit — your credit balance is what applies.';
+          noteEl.style.display = '';
+        } else {
+          noteEl.textContent = '';
+          noteEl.style.display = 'none';
+        }
       }
     }
   };

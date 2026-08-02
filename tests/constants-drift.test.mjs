@@ -6,7 +6,9 @@
 // divergence fail loudly instead of silently showing a student a different rank
 // on different pages. See PRODUCTION-READINESS.md §5.
 import { suite } from './_assert.mjs';
-import { read } from './_source.mjs';
+import { read, REPO } from './_source.mjs';
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const t = suite('constants-drift');
 
@@ -124,5 +126,61 @@ for (const [label, out] of [['chat.html', chatOut], ['pricing.html', pricingOut]
 t.ok('the check would catch the original defect',
   /\b\d+\s+(?:free|daily)\s+(?:messages?|questions?|analyses)/i
     .test('Free plan users get their 10 daily messages first'));
+
+// ── What daily_limit MEANS must not drift between server and pages ─────────
+// consume_credits treated "has a daily_limit" as "that many free operations a
+// day". FREE was the only plan with one, so nobody noticed until HERO — a
+// 1,949 EGP plan — was authored with 200 and became free for its first 200
+// messages daily.
+//
+// The rule now depends on whether the PLAN is a zero-price tier, and that test
+// exists in three places: the SQL, chat.html's counter and pricing.html's copy.
+// If they disagree, the page advertises one set of rules while the server
+// enforces another — which is the whole shape of the original bug.
+t.section('The free-tier test is the same on the server and in the pages');
+
+const migDirs = ['supabase/migrations', 'supabase/migrations-pending'];
+const migFile = migDirs.flatMap(d => {
+  try { return readdirSync(resolve(REPO, d)).map(f => `${d}/${f}`); }
+  catch { return []; }
+}).filter(f => f.endsWith('.sql') && read(f).includes('v_is_free_tier'));
+
+t.is('exactly one migration defines the free-tier predicate', migFile.length, 1);
+if (migFile.length === 1) {
+  const sql = read(migFile[0]);
+  t.ok('the SQL keys on zero price AND zero grant',
+    /coalesce\(amount_egp,\s*0\)\s*=\s*0\s+and\s+coalesce\(credits_granted,\s*0\)\s*=\s*0/i.test(sql));
+  t.ok('the free-tier branch requires it (not just "has a daily_limit")',
+    /IF\s+v_is_free_tier\s+AND\s+v_daily_limit\s+IS\s+NOT\s+NULL/i.test(sql));
+  t.ok('an unknown plan falls to the PAID path, not the free one',
+    /v_is_free_tier\s*:=\s*coalesce\(v_is_free_tier,\s*false\)/i.test(sql));
+}
+
+// Both pages must apply price === 0 AND credits === 0 — not price alone, which
+// is what pricing.html used to do.
+//
+// EVERY definition, not "at least one". pricing.html declares isFreeTier twice
+// (the feature copy and the usage widget); an earlier version of this check
+// used a single .test() and stayed green when one of them was reverted to the
+// price-only form. Collect them all and require each to name credits_granted.
+for (const f of ['chat.html', 'pricing.html']) {
+  const src = stripComments(read(f));
+  const defs = [...src.matchAll(/isFreeTier[^\n]*?=[^\n;]+/g)].map(m => m[0]);
+  t.ok(`${f} defines the free-tier test at least once`, defs.length > 0);
+  const priceOnly = defs.filter(d => /price_egp/.test(d) && !/credits_granted/.test(d));
+  t.is(`${f}: every free-tier test names credits_granted`, priceOnly, []);
+}
+
+t.ok('chat.html resolves the free-tier test from the catalogue, not a plan_code',
+  !/planCode\s*===\s*['"]FREE['"]/.test(stripComments(chatSrc)));
+
+// The paid meaning has to be stated where a paid student sees the number,
+// otherwise "3 / 200" reads as a cap that will block them.
+t.ok('the chat counter explains a paid plan\'s number',
+  /suggested daily pace/i.test(chatSrc));
+t.ok('the pricing usage note explains a paid plan\'s number',
+  /suggested daily pace|not a limit/i.test(pricingSrc));
+t.ok('the Owner Dashboard says which meaning applies',
+  /hard cap/i.test(read('admin.html')) && /suggested daily pace/i.test(read('admin.html')));
 
 t.done();
