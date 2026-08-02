@@ -260,6 +260,22 @@ other, the receiving surface must be live before the sending surface stops. A
 gate is the clearest case, but the same holds for a write path, a schema
 contract, or a header the other side has begun to require.
 
+**Migrations take a side in this too.** A migration is backward-compatible or it
+is not, and that decides whether it goes first or last:
+
+- **Additive and defaulted → apply FIRST.** `20260802_consume_credits_idempotency.sql`
+  adds a parameter with a `DEFAULT`, so every existing caller keeps resolving and
+  keeps its current behaviour. Applying it ahead of the deploy means the new code
+  lands already protected instead of running unprotected until someone gets to
+  step 5.
+- **Removes a capability → apply LAST.** `20260802_refund_ai_credit_server_only.sql`
+  revokes `EXECUTE` from `authenticated`. Applied before the site ships, it breaks
+  the refund path the *currently live* page still uses.
+
+The test is not "is it a migration", it is **"does anything live today stop
+working the moment this lands"**. If yes, it goes after the thing that replaces
+it. If no, put it first and reduce the window.
+
 ---
 
 ## 6. Manual approval points, in order

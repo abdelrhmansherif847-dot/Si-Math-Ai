@@ -127,23 +127,31 @@ It is still a client-enforced paywall. A student who skips the charge gets the
 feature for free. That is a revenue question rather than a cost or quota one,
 which is why it is here rather than in the fix.
 
-**Interaction with the pending migration.**
-`supabase/migrations-pending/20260802_refund_ai_credit_server_only.sql` revokes
-`refund_ai_credit` from `authenticated`. When it is applied, this path's refund
-stops working and a student whose plan generation throws keeps the 20-credit
-charge — recoverable by admin adjustment, and rare, but real. The migration
-records this and offers holding its §2 as an option.
+**Its refund is already gone (v96).** The path used to charge first and refund
+from the browser if the local engine threw — the last authenticated client route
+to `refund_ai_credit`. Rather than break it when
+`20260802_refund_ai_credit_server_only.sql` lands, the order was inverted: the
+plan is **built first and charged after**, so the failure the refund existed to
+undo can no longer happen after a charge. The planner makes no provider call, so
+doing the work before the paywall costs nothing.
+
+Residual: a throw in `saveStudyPlan` after the charge leaves the student charged
+with no persisted plan. The plan is still rendered (`saved: false`), so they get
+what they paid for; only persistence is lost.
+
+**What remains for this item** is only that the charge is client-side and
+therefore skippable.
 
 **Options.**
   (a) Move the charge server-side, as v96 did for chat. Needs a server-side
       entry point for the planner, which does not exist today — it is deliberately
       a client engine (`_shared/study-planner.core.js` runs in the browser).
-  (b) A narrow `SECURITY DEFINER` RPC that refunds only `STUDY_PLAN` rows younger
-      than N seconds for the calling user. Restores the refund without restoring
-      a general client-callable quota reset. Smaller, and enough to unblock §2.
+  (b) Charge through a narrow `SECURITY DEFINER` RPC that also writes the plan,
+      so the paywall and the persistence commit together.
 
-(b) is the cheaper of the two and is the one to do first if the migration is
-approved before (a) is scheduled.
+Neither blocks the migration any more. This is a revenue question, not a cost or
+quota one — nothing here can run up a provider bill or touch the FREE daily cap
+(`STUDY_PLAN` is `always_charge`, so it never takes the free branch).
 
 ---
 

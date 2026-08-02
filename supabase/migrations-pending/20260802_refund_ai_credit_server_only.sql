@@ -7,12 +7,14 @@
 -- and chat.html v96 merged. Applying this against a pre-v96 client breaks the
 -- browser's refund path with no server-side replacement, so an out-of-scope
 -- turn or a failed call would keep the student's credits. Order is:
---   1. deploy ai-tutor v96      (DEPLOY.md §4)
---   2. merge chat.html to main  (Vercel publishes it)
---   3. apply this file
+--   1. apply 20260802_consume_credits_idempotency.sql   (additive; safe first)
+--   2. deploy ai-tutor v96                              (DEPLOY.md §4)
+--   3. verify platform version + sha256
+--   4. merge chat.html to main                          (Vercel publishes it)
+--   5. apply THIS file
 -- v96's refundEntitlement() already works in BOTH states — it tries the
 -- service-role client first and falls back to the user's JWT — so there is no
--- window in which refunds stop working, whenever step 3 happens.
+-- window in which refunds stop working, whenever step 5 happens.
 --
 -- ── WHAT THIS CLOSES ───────────────────────────────────────────────────────
 -- consume_credits() derives a FREE student's daily usage by counting rows:
@@ -69,36 +71,36 @@
 -- is when the column earns its place.
 --
 -- ── BLAST RADIUS (measured 2026-08-02, not assumed) ────────────────────────
---   callers of refund_ai_credit in .html/.js .. 1 file (chat.html), 2 call
---                                               sites after v96:
---                                                 • drainRefundQueue() — legacy
---                                                   one-shot drain of a queue
---                                                   written by a pre-v96 client
---                                                 • the Study Planner failure
---                                                   path (see below)
+--   callers of refund_ai_credit in .html/.js .. 0 as of v96. Asserted in CI by
+--                                               tests/entitlement-gate.test.mjs
+--                                               ("No shipped page can invoke
+--                                               refund_ai_credit"), over every
+--                                               root *.html and *.js, not just
+--                                               the page that used to call it
 --   other SQL functions calling it ............ 0
 --   rows affected ............................. 0 (grants and body only)
 --   REFUND transactions to date ............... 3
 --
--- The Study Planner call site is the one behaviour change a reviewer must
--- accept. It charges STUDY_PLAN (always_charge = true, 20 credits) from the
--- browser and refunds from the browser if its local engine throws. That path
--- makes NO provider call — window.StudyPlanner.buildStudyPlan() is a pure
--- client-side computation — so it is a paywall, not a gate in front of spend,
--- and it was correctly out of scope for v96. After this migration its refund
--- stops working and a student whose plan generation throws keeps the 20-credit
--- charge. STUDY_PLAN is always_charge, so the row is never a free daily slot
--- and the quota hole does not apply to it; the cost is a rare unrefunded
--- charge, recoverable by an admin credit adjustment.
+-- An earlier draft of this header recorded two surviving call sites and asked
+-- the reviewer to accept the consequences of breaking them. Both were removed
+-- instead, which is why this migration now takes nothing away:
 --
--- Two ways to close that properly, both larger than this file and neither
--- required to fix the reported bug:
---   (a) move the Study Planner charge server-side as v96 did for chat, or
---   (b) give it a narrow SECURITY DEFINER RPC that refunds only STUDY_PLAN
---       rows younger than N seconds for the calling user.
--- Recorded in docs/engineering/infrastructure-backlog.md. If neither is
--- acceptable yet, apply §1 of this file and hold §2 — the service-role branch
--- is useful on its own and closes nothing until the revoke lands.
+--   • drainRefundQueue() replayed a pre-v96 localStorage queue through this RPC
+--     once per page load. It is now discardLegacyRefundQueue(), which deletes
+--     the queue without calling anything. A "legacy" call site is still a live
+--     call site, and its input was client-controlled localStorage.
+--
+--   • The Study Planner charged before generating and refunded if its local
+--     engine threw. It now BUILDS THE PLAN FIRST and charges after, so the
+--     failure it was refunding cannot occur after a charge. The planner makes
+--     no provider call (window.StudyPlanner.buildStudyPlan is pure client-side
+--     computation), so ordering the work before the paywall costs nothing.
+--
+-- Its charge is still issued from the browser and is still skippable by a
+-- determined caller — a paywall on a local feature, not a gate in front of
+-- spend, and unable to touch the FREE cap because STUDY_PLAN is always_charge.
+-- That is INFRA-5 in docs/engineering/infrastructure-backlog.md and is a
+-- revenue question rather than the cost/quota one v96 fixes.
 --
 -- Target project: igvkyxkmjnkzscqgommj
 -- ===========================================================================

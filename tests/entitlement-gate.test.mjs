@@ -23,8 +23,9 @@
 // Per docs/roadmap/verification-framework-audit.md: a green check is only
 // evidence if it could have gone red. Each wiring assertion below fails if the
 // call it names is removed or moved after a provider call.
+import { readdirSync } from 'node:fs';
 import { suite } from './_assert.mjs';
-import { read, slice, importTS } from './_source.mjs';
+import { read, slice, importTS, REPO } from './_source.mjs';
 
 const t = suite('entitlement-gate');
 
@@ -196,6 +197,66 @@ const alreadyLegacy = fakeClient(ok({ ok: false, reason: 'feature_not_found' }))
 await chargeEntitlement(alreadyLegacy, 'u', 'AI_CHAT_MESSAGE', null);
 t.is('a missing legacy feature does not retry itself', alreadyLegacy.calls.length, 1);
 
+// ── Idempotency ─────────────────────────────────────────────────────────────
+// Moving the charge server-side means every HTTP request that reaches the gate
+// charges — including askAI()'s automatic retry on a transport-only failure,
+// which re-sends the same payload and the same client_request_id. The CAI-P1
+// pre-flight cannot absorb that (it reads question_records, written only after
+// the model call), so the key has to reach consume_credits.
+t.section('One logical send is charged once');
+
+const KEY = '11111111-1111-4111-8111-111111111111';
+
+const keyed = fakeClient(ok({ ok: true, credits_used: 5, log_id: 'log-k' }));
+const first = await chargeEntitlement(keyed, 'u', 'CHAT_TEXT', 's', KEY);
+t.is('the idempotency key is passed to the RPC',
+  keyed.calls[0].args.p_client_request_id, KEY);
+t.ok('a keyed charge reports itself as keyed', first.keyed);
+t.ok('a first charge is not a replay', !first.replay);
+
+const replayed = await chargeEntitlement(
+  fakeClient(ok({ ok: true, credits_used: 5, log_id: 'log-k', idempotent_replay: true })),
+  'u', 'CHAT_TEXT', 's', KEY);
+t.ok('a replay is allowed through', replayed.ok);
+t.ok('a replay is reported as a replay', replayed.replay);
+t.is('a replay returns the ORIGINAL log id, so the refund handle stays correct',
+  replayed.logId, 'log-k');
+
+const unkeyed = fakeClient(ok({ ok: true, log_id: 'log-u', credits_used: 0 }));
+await chargeEntitlement(unkeyed, 'u', 'CHAT_TEXT', 's', null);
+t.ok('no key means the argument is omitted, not sent as null',
+  !('p_client_request_id' in unkeyed.calls[0].args));
+
+// Pre-migration: consume_credits has no p_client_request_id yet. PostgREST
+// rejects at the schema cache, so no SQL runs and nothing was charged — the
+// unkeyed retry is safe rather than merely convenient.
+const preMigration = fakeClient((fn, args) =>
+  'p_client_request_id' in args
+    ? { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.consume_credits(...) in the schema cache' } }
+    : ok({ ok: true, credits_used: 5, log_id: 'log-fb' }));
+const fellThrough = await chargeEntitlement(preMigration, 'u', 'CHAT_TEXT', 's', KEY);
+t.ok('a missing key parameter does not deny the student', fellThrough.ok);
+t.is('the fallback drops the key and charges', preMigration.calls.length, 2);
+t.ok('the retry carries no key', !('p_client_request_id' in preMigration.calls[1].args));
+t.ok('an unkeyed charge says so, so the gap is greppable', !fellThrough.keyed);
+
+// A real RPC error must NOT be mistaken for a missing signature — that would
+// turn a fail-closed outage into a silent unkeyed charge.
+const realError = fakeClient({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } });
+const notSignature = await chargeEntitlement(realError, 'u', 'CHAT_TEXT', 's', KEY);
+t.is('a genuine RPC error is not retried as a signature problem', realError.calls.length, 1);
+t.ok('a genuine RPC error still fails closed', !notSignature.ok && notSignature.unavailable);
+
+// feature_not_found charges nothing, so the key is still unused and the
+// legacy-feature retry has to stay idempotent too.
+const fbKeyed = fakeClient((fn, args) =>
+  args.p_feature === 'CHAT_TEXT'
+    ? ok({ ok: false, reason: 'feature_not_found' })
+    : ok({ ok: true, credits_used: 5, log_id: 'log-fbk' }));
+await chargeEntitlement(fbKeyed, 'u', 'CHAT_TEXT', 's', KEY);
+t.is('the legacy-feature retry keeps the idempotency key',
+  fbKeyed.calls[1].args.p_client_request_id, KEY);
+
 // ── Refunds ─────────────────────────────────────────────────────────────────
 t.section('Refunding an unused entitlement');
 
@@ -303,5 +364,36 @@ t.ok('askAI translates the server 402 into a quota verdict',
 t.ok('askAI distinguishes "could not check" from "no"',
   /status === 503/.test(CHAT));
 t.ok('the page enqueues no new refunds', !/enqueueRefund\(/.test(CHAT));
+t.ok('the client still sends the idempotency key the gate needs',
+  /client_request_id:\s*pendingRequestId/.test(CHAT) || /client_request_id/.test(CHAT));
+
+// ── The invariant, across every shipped page ────────────────────────────────
+// refund_ai_credit deletes the ai_usage_logs row that consume_credits counts
+// for the FREE daily cap, so ANY authenticated client path to it is a
+// client-callable quota reset. This is checked over every page rather than over
+// chat.html, because the next one to reintroduce it will not be chat.html.
+t.section('No shipped page can invoke refund_ai_credit');
+
+const PAGES = readdirSync(REPO)
+  .filter(f => /\.(html|js)$/.test(f))
+  .filter(f => f !== 'knowledge-graph.json');
+
+const refunders = PAGES.filter(f => /\.rpc\(\s*['"]refund_ai_credit['"]/.test(read(f)));
+t.is('no root page or script calls refund_ai_credit', refunders, []);
+
+// Study Planner: the charge moved AFTER the plan is built, so a throw in
+// gather/build costs the student nothing and needs no refund to undo.
+const PLANNER = slice(
+  CHAT,
+  'async function generateStudyPlan(uid){',
+  'function send(){',
+  'chat.html generateStudyPlan',
+);
+t.ok('the planner builds the plan before charging',
+  PLANNER.indexOf('buildStudyPlan(') < PLANNER.indexOf('CreditConfig.charge('));
+t.ok('the planner issues no refund',
+  !/\.rpc\(\s*['"]refund_ai_credit['"]/.test(PLANNER));
+t.ok('the planner tells the student they were not charged',
+  /not charged/i.test(PLANNER));
 
 t.done();

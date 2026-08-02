@@ -996,8 +996,7 @@ button{font-family:inherit;cursor:pointer}
   let pendingRequestId = null;
   const INFLIGHT_KEY = 'simath_chat_inflight';
   const INFLIGHT_TTL_MS = 120000;
-  const REFUND_QUEUE_KEY = 'simath_chat_refund_queue';
-  const REFUND_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+  const REFUND_QUEUE_KEY = 'simath_chat_refund_queue';   // v96: read only to delete
   function caiUuid() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -1019,24 +1018,24 @@ button{font-family:inherit;cursor:pointer}
   function clearInflight() {
     try { sessionStorage.removeItem(INFLIGHT_KEY); } catch (e) {}
   }
-  // LEGACY DRAIN (v96). Chat refunds are issued by the Edge Function now, so
-  // nothing on this page enqueues one any more. What can still exist is a queue
-  // written by a client that shipped before v96 and is sitting in a returning
-  // student's localStorage. Drain it once, best-effort, and clear it either way
-  // — retrying forever would keep a client-callable refund path warm, which is
-  // precisely what migrations-pending/20260802_refund_ai_credit_server_only.sql
-  // exists to close.
-  async function drainRefundQueue() {
-    let queue;
-    try { queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]'); }
-    catch (e) { return; }
+  // v96: DISCARD, do not drain. A queue can still exist in a returning
+  // student's localStorage, written by a client that shipped before v96.
+  //
+  // An earlier draft drained it once — replaying each entry through
+  // refund_ai_credit and then clearing. That is one call too many: this page
+  // must contain NO authenticated path that reaches that RPC, because the RPC
+  // deletes the ai_usage_logs row that consume_credits counts for the FREE
+  // daily cap. Keeping a single "legacy" call site alive keeps a client-callable
+  // quota reset alive with it, and it is the call site an attacker would reach
+  // for — the queue is client-controlled localStorage, so its contents are
+  // whatever the caller decides they are.
+  //
+  // The entries are dropped instead. What is lost: a genuine unrefunded charge
+  // from a pre-v96 session, capped at a handful of turns per affected student
+  // and recoverable by admin adjustment. What is gained: the invariant that
+  // nothing on this page can reverse a charge, which is checkable by grep.
+  function discardLegacyRefundQueue() {
     try { localStorage.removeItem(REFUND_QUEUE_KEY); } catch (e) {}
-    if (!Array.isArray(queue) || queue.length === 0) return;
-    const now = Date.now();
-    for (const item of queue) {
-      if (!item || !item.log_id || (now - (item.ts || 0)) > REFUND_MAX_AGE_MS) continue;
-      try { await sb.rpc('refund_ai_credit', { p_log_id: item.log_id }); } catch (e) {}
-    }
   }
   async function recoverInflight() {
     if (!currentUser) return;
@@ -1089,7 +1088,7 @@ button{font-family:inherit;cursor:pointer}
       SignalEngine.renderUsage();
       loadChatHistory();
       renderEmptyStateHistory();
-      drainRefundQueue();
+      discardLegacyRefundQueue();
       recoverInflight();
       if (seededTopic && !drillMode) {
         const chip = document.createElement('div');
@@ -2340,11 +2339,38 @@ button{font-family:inherit;cursor:pointer}
 
   async function generateStudyPlan(uid){
     isSending = true; sendBtn.disabled = true; addTyping();
-    var creditLogId = null;
     try {
-      // 1) Credit gate — the study_plan operation resolved from the centralized
-      //    credit config (credit-config.js → public.credit_costs), the same path
-      //    every other AI operation uses. No hardcoded feature name or cost here.
+      // ── v96: CHARGE LAST, so there is nothing to refund ────────────────────
+      // This used to charge first and refund from the browser if generation
+      // threw. That refund was the last authenticated client path to
+      // refund_ai_credit — an RPC that deletes the ai_usage_logs row
+      // consume_credits counts for the FREE daily cap, i.e. a client-callable
+      // quota reset. It is being revoked from `authenticated`
+      // (migrations-pending/20260802_refund_ai_credit_server_only.sql).
+      //
+      // Removing the refund and leaving the order alone would mean a student
+      // whose plan generation threw silently loses 20 credits. Reordering
+      // removes the need instead: the planner is a PURE CLIENT-SIDE engine
+      // (window.StudyPlanner.buildStudyPlan — no provider call, no server
+      // round-trip), so building the plan first costs the platform nothing and
+      // a throw in gather/build now costs the student nothing either.
+      //
+      // 1) Gather real data → 2) run the pure engine.
+      var availability = await getStudyAvailability(uid);
+      var state = await window.StudyPlannerClient.gatherStudentState(sb, uid, { now: Date.now(), availability: availability });
+      var plan  = window.StudyPlanner.buildStudyPlan(state);
+      var sig   = window.StudyPlanner.planSignature(state);
+
+      // 3) Credit gate — the study_plan operation resolved from the centralized
+      //    credit config (credit-config.js → public.credit_costs). No hardcoded
+      //    feature name or cost here.
+      //
+      //    Still charged from the browser, and still therefore skippable by a
+      //    determined caller. That is a paywall on a local computation, not a
+      //    gate in front of spend — nothing here can run up a provider bill or
+      //    touch the FREE daily cap (STUDY_PLAN is always_charge, so it never
+      //    takes the free branch). Moving it server-side is INFRA-5, and it is
+      //    a revenue question rather than the cost/quota one v96 fixes.
       var cr = await CreditConfig.charge(sb, {
         userId: uid, op: 'study_plan', model: 'study-planner',
         sessionId: currentSessionId || null
@@ -2360,20 +2386,25 @@ button{font-family:inherit;cursor:pointer}
         else addStudyPlanNotice('Could not start the Study Planner: '+escapeHtml(cr.reason||'unknown'));
         return;
       }
-      creditLogId = cr.log_id || null;
-      // 2) Gather real data → 3) run the pure engine → 4) persist.
-      var availability = await getStudyAvailability(uid);
-      var state = await window.StudyPlannerClient.gatherStudentState(sb, uid, { now: Date.now(), availability: availability });
-      var plan  = window.StudyPlanner.buildStudyPlan(state);
-      var sig   = window.StudyPlanner.planSignature(state);
-      var saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, studyPlanCost());
+
+      // 4) Persist. The one remaining window: a throw here leaves the charge
+      //    standing with no saved plan. The plan itself is already built and is
+      //    rendered below regardless of whether persistence succeeded, so the
+      //    student gets what they paid for even then — `saved:false` tells them
+      //    it was not stored.
+      var saved = null;
+      try {
+        saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, studyPlanCost());
+      } catch (saveErr) {
+        try { console.error('[study-planner] save failed after charge', saveErr); } catch(_){}
+      }
       removeTyping();
       renderStudyPlan(plan, { saved: saved && saved.persisted, justGenerated: true, credits: cr.credits_used });
     } catch(e){
       removeTyping();
-      // Refund the credit if generation failed after charging.
-      if (creditLogId) { try { await sb.rpc('refund_ai_credit', { p_log_id: creditLogId }); } catch(_){} }
-      addStudyPlanNotice('Something went wrong generating your plan and your credits were refunded. Please try again.');
+      // Nothing was charged: the gate above runs after the plan is built, and
+      // every throw that reaches here happens before it.
+      addStudyPlanNotice('Something went wrong generating your plan. You were not charged — please try again.');
       try { console.error('[study-planner] generate failed', e); } catch(_){}
     } finally { isSending = false; sendBtn.disabled = false; }
   }

@@ -2023,6 +2023,8 @@ interface EntitlementDecision {
   balance:      number | null;
   required:     number | null;
   unavailable:  boolean;        // could not decide (vs. decided "no")
+  replay:       boolean;        // this key had already been charged
+  keyed:        boolean;        // the charge carried an idempotency key
 }
 
 // Charged operation, derived from the request — never received from it. A
@@ -2050,11 +2052,30 @@ function asInt(v: unknown): number | null {
 const DENIED = (reason: string, extra: Partial<EntitlementDecision> = {}): EntitlementDecision => ({
   ok: false, reason, logId: null, creditsUsed: 0, feature: '',
   dailyUsed: null, dailyLimit: null, balance: null, required: null,
-  unavailable: false, ...extra,
+  unavailable: false, replay: false, keyed: false, ...extra,
 });
+
+// PostgREST's answer when the argument list matches no overload. Seen when
+// ai-tutor v96 is deployed before
+// migrations-pending/20260802_consume_credits_idempotency.sql is applied: the
+// eight-argument form does not exist yet. The request is REJECTED at the schema
+// cache — no SQL runs, so nothing is charged and retrying without the key is
+// safe rather than merely convenient.
+const RPC_SIGNATURE_MISSING = /PGRST202|Could not find the function|does not exist/i;
+
+function signatureMissing(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  return RPC_SIGNATURE_MISSING.test(String(e.code ?? '')) ||
+         RPC_SIGNATURE_MISSING.test(String(e.message ?? ''));
+}
 
 /**
  * Spend one unit of the student's entitlement for `feature`.
+ *
+ * `clientRequestId` is the idempotency key for ONE logical student send. It is
+ * what stops a retry from charging twice — see the block comment on the gate
+ * call site, and the migration that teaches consume_credits to honour it.
  *
  * Returns the decision; never throws. `unavailable: true` means the system
  * could not decide — the caller must deny, not allow.
@@ -2064,10 +2085,10 @@ async function chargeEntitlement(
   userId: string,
   feature: string,
   sessionId: string | null,
+  clientRequestId: string | null = null,
 ): Promise<EntitlementDecision> {
-  let res: { data: unknown; error: unknown };
-  try {
-    res = await sbAdmin.rpc('consume_credits', {
+  const call = async (withKey: boolean): Promise<{ data: unknown; error: unknown } | null> => {
+    const args: Record<string, unknown> = {
       p_user_id:    userId,
       p_feature:    feature,
       // Tokens and cost are unknown before the call. ai_model_calls carries the
@@ -2077,12 +2098,33 @@ async function chargeEntitlement(
       p_comp_tok:   0,
       p_cost_usd:   0,
       p_session_id: sessionId,
-    });
-  } catch {
-    return DENIED('rpc_threw', { unavailable: true, feature });
+    };
+    if (withKey && clientRequestId) args.p_client_request_id = clientRequestId;
+    try { return await sbAdmin.rpc('consume_credits', args); }
+    catch { return null; }
+  };
+
+  let keyed = !!clientRequestId;
+  let res = await call(keyed);
+
+  // Pre-migration fallback. Deliberately NOT cached across requests: a cached
+  // "the key is unsupported" would keep charging unkeyed for the life of the
+  // isolate after the migration landed, which is the failure this whole change
+  // exists to prevent. One rejected round-trip per request, only until the
+  // migration is applied, is the cheaper mistake.
+  if (keyed && res && res.error && signatureMissing(res.error)) {
+    console.log('[ai-tutor] entitlement-key-unsupported', JSON.stringify({
+      note: 'consume_credits has no p_client_request_id yet — charging unkeyed',
+    }));
+    keyed = false;
+    res = await call(false);
   }
 
-  if (res.error) return DENIED('rpc_error', { unavailable: true, feature });
+  if (!res) {
+    return DENIED('rpc_threw', { unavailable: true, feature, keyed });
+  }
+
+  if (res.error) return DENIED('rpc_error', { unavailable: true, feature, keyed });
 
   // Array.isArray, and the boolean check on `ok`, are not paranoia about a
   // function we control — they are about what a WRONG answer here would mean.
@@ -2092,12 +2134,12 @@ async function chargeEntitlement(
   // undecidable: deny, and say it is our problem.
   const d = res.data as Record<string, unknown> | null;
   if (!d || typeof d !== 'object' || Array.isArray(d) || typeof d.ok !== 'boolean') {
-    return DENIED('no_result', { unavailable: true, feature });
+    return DENIED('no_result', { unavailable: true, feature, keyed });
   }
 
   if (d.ok === true) {
     return {
-      ok: true, reason: '', feature,
+      ok: true, reason: '', feature, keyed,
       logId:       typeof d.log_id === 'string' ? d.log_id : null,
       creditsUsed: asInt(d.credits_used) ?? 0,
       dailyUsed:   asInt(d.daily_used),
@@ -2105,19 +2147,27 @@ async function chargeEntitlement(
       balance:     asInt(d.balance_after),
       required:    null,
       unavailable: false,
+      // The RPC recognised this key and did NOT charge again. The log_id is the
+      // original charge's, so the refund handle stays correct for the one turn
+      // that was actually paid for.
+      replay:      d.idempotent_replay === true,
     };
   }
 
   const reason = typeof d.reason === 'string' ? d.reason : 'denied';
 
   // The catalogue does not know this operation. Retry ONCE against the legacy
-  // flat feature before giving up — and deny if that is missing too.
+  // flat feature before giving up — and deny if that is missing too. The key
+  // travels with the retry: a `feature_not_found` charges nothing, so the key
+  // is still unused and the retry must stay idempotent too.
   if (reason === 'feature_not_found' && feature !== ENTITLEMENT_FALLBACK_FEATURE) {
-    return await chargeEntitlement(sbAdmin, userId, ENTITLEMENT_FALLBACK_FEATURE, sessionId);
+    return await chargeEntitlement(
+      sbAdmin, userId, ENTITLEMENT_FALLBACK_FEATURE, sessionId, clientRequestId,
+    );
   }
 
   return DENIED(reason, {
-    feature,
+    feature, keyed,
     dailyUsed:  asInt(d.daily_used),
     dailyLimit: asInt(d.daily_limit),
     balance:    asInt(d.balance) ?? asInt(d.pack_credits),
@@ -2638,10 +2688,40 @@ serve(async (req) => {
     // ── ENTITLEMENT GATE (v96) — the last thing before any provider call ────
     // See the block above serve() for why this is here and why it fails closed.
     // Everything past this line can reach OpenAI; nothing before it does.
+    //
+    // clientRequestId is the idempotency key, and it is load-bearing rather
+    // than decorative. Moving the charge here means EVERY HTTP request that
+    // reaches this line charges — including askAI()'s automatic retry on a
+    // transport-only failure, which re-sends the same payload and therefore the
+    // same key. The CAI-P1 pre-flight above cannot absorb that: it reads
+    // question_records, which is not written until after the model call, so a
+    // retry fired during the 10-30s a completion takes finds nothing and would
+    // charge a second time for one logical send.
+    //
+    // consume_credits honours the key once
+    // migrations-pending/20260802_consume_credits_idempotency.sql is applied,
+    // returning the ORIGINAL charge — same log_id, same credits — instead of
+    // making a new one. Until then chargeEntitlement falls back to the unkeyed
+    // call, so this is safe to deploy in either order; `keyed` records which
+    // happened, so the log says whether the protection was actually in force.
     const chargedFeature = creditFeatureFor(imagesData.length > 0, followUpType);
     const entitlement = await chargeEntitlement(
-      sbAdmin, user.id, chargedFeature, resolvedSessionId,
+      sbAdmin, user.id, chargedFeature, resolvedSessionId, clientRequestId,
     );
+
+    if (entitlement.replay) {
+      console.log('[ai-tutor] entitlement-replay', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), crid: clientRequestId,
+        log_id: entitlement.logId, credits: entitlement.creditsUsed,
+      }));
+    } else if (entitlement.ok && !entitlement.keyed && clientRequestId) {
+      // The caller supplied a key and the RPC could not use it. Not fatal — the
+      // charge is correct — but this request is NOT protected against a retry,
+      // and that is worth being able to grep for while the migration is pending.
+      console.log('[ai-tutor] entitlement-unkeyed', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), crid: clientRequestId,
+      }));
+    }
 
     if (!entitlement.ok) {
       console.log('[ai-tutor] entitlement-denied', JSON.stringify({

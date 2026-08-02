@@ -178,13 +178,77 @@ still does — see §7) and no longer calls `refund_ai_credit` on any chat path.
 verdict; the send path renders the same upsell copy it always did. The refund
 queue is now a one-shot legacy drain for queues written by pre-v96 clients.
 
-### 5.4 PREPARED, not applied
+### 5.4 No client path to `refund_ai_credit` remains
 
-`supabase/migrations-pending/20260802_refund_ai_credit_server_only.sql` — adds a
-service-role branch to `refund_ai_credit` and revokes `EXECUTE` from
-`authenticated`, closing §4. **Requires explicit approval (CLAUDE.md §3).**
-Prerequisites and blast radius, including the Study Planner consequence, are in
-the file header.
+Asserted in CI over every root `*.html` and `*.js`, not just the page that used
+to call it. Two call sites were removed rather than grandfathered:
+
+- **`drainRefundQueue()`** replayed a pre-v96 `localStorage` queue through the
+  RPC on every page load. Now `discardLegacyRefundQueue()`, which deletes the
+  queue and calls nothing. A "legacy" call site is still a live one, and its
+  input was client-controlled storage — i.e. whatever the caller decided.
+- **The Study Planner** charged first and refunded from the browser if its local
+  engine threw. It now **builds the plan first and charges after**, so the
+  failure it was refunding cannot happen after a charge. The planner makes no
+  provider call, so ordering the work before the paywall costs nothing. The
+  residual window is a throw in `saveStudyPlan` after the charge; the plan is
+  still rendered (with `saved: false`), so the student gets what they paid for.
+
+### 5.5 Third hole: the charge was not idempotent
+
+**Found by the pre-deployment idempotency check, and it is a regression v96
+introduced.** Moving the charge server-side means every HTTP request that
+reaches the gate charges. `askAI()` retries **once, automatically**, on a
+transport-only failure (the cold-start / preflight class that surfaces with no
+HTTP status), reusing the same payload and therefore the same
+`client_request_id`. Before v96 that was safe: the browser charged once and
+retried only the invocation.
+
+The existing CAI-P1 pre-flight cannot absorb it — it reads `question_records`,
+which is not written until *after* the model call. So for the 10–30 seconds a
+completion takes, a retry finds nothing and charges again.
+
+Measured 2026-08-02:
+
+| Table | Idempotency key |
+|---|---|
+| `question_records` | `uniq_question_records_user_request` UNIQUE `(user_id, client_request_id)` WHERE not null |
+| `ai_usage_logs` | **none** — no column, no index beyond the PK |
+
+The *answer* was deduplicated and the *charge* was not, because until v96 the
+charge did not happen here.
+
+Fix: `supabase/migrations-pending/20260802_consume_credits_idempotency.sql` adds
+`ai_usage_logs.client_request_id` + a partial unique index mirroring the one
+`question_records` already has, and gives `consume_credits` a
+`p_client_request_id` parameter (DEFAULT NULL) that returns the **existing**
+charge — same `log_id`, same credits, `idempotent_replay: true` — instead of
+making a second one.
+
+The replay check sits *after* the `FOR UPDATE` on `profiles`, because that lock
+is the serialization point for a student: a duplicate blocks there until the
+winner commits, so the winner's row is visible by the time the check runs.
+Checking before the lock lets both callers past. The unique index is the
+guarantee behind that reasoning rather than a second copy of it — on
+`unique_violation` the handler reverses the deduction this call made and returns
+the winner's decision.
+
+`chargeEntitlement` passes the key and falls back to the unkeyed call if the
+parameter does not exist yet (PostgREST `PGRST202`, which rejects at the schema
+cache before any SQL runs — so nothing was charged and the retry is safe). The
+fallback is deliberately **not cached**: a cached "unsupported" would keep
+charging unkeyed for the life of the isolate after the migration landed, which
+is the exact failure the change exists to prevent. `keyed: false` is logged so
+an unprotected request is greppable.
+
+### 5.6 PREPARED, not applied
+
+Two migrations, both requiring explicit approval (CLAUDE.md §3):
+
+| File | What it closes | When |
+|---|---|---|
+| `20260802_consume_credits_idempotency.sql` | §5.5 — duplicate charge on retry | **First**, before the deploy — additive and backward-compatible |
+| `20260802_refund_ai_credit_server_only.sql` | §4 — client-callable quota reset | **Last**, after the site is live |
 
 ---
 
@@ -241,16 +305,51 @@ Full suite: **27/27 green**, up from 26 (baseline re-run before any edit).
 
 Recorded in full at `docs/engineering/deployment-pipeline.md` §5.6.
 
-1. **Deploy `ai-tutor` v96 first** (DEPLOY.md §4 — never the inline MCP tool),
-   then verify platform version + sha256.
-2. **Then merge `chat.html`** to `main`.
-3. **Then** seek approval for the migration in §5.4.
+1. **Apply `20260802_consume_credits_idempotency.sql`.** Additive: the new
+   parameter has a default, so today's seven-argument callers are untouched and
+   behave exactly as now. Safe against the currently-live v95 + old client, which
+   is why it goes first rather than last — it means the gate is protected against
+   duplicate charging from its very first request.
+2. **Deploy `ai-tutor` v96** (DEPLOY.md §4 — never the inline MCP tool; Path B
+   CLI only, four-file bundle).
+3. **Verify** platform version + sha256 + all four bundle files.
+4. **Merge `chat.html`** to `main`.
+5. **Apply `20260802_refund_ai_credit_server_only.sql`.**
+6. **Run the end-to-end verification** in §10.
 
-Between 1 and 2 both halves charge — students are billed twice per turn (free
-students under the cap: two daily slots, zero credits). That is visible,
-bounded and refundable. The reverse order charges *nobody* for the length of the
-window, which is the bug this work exists to remove. Do not reverse it, and do
-not do both in one breath — verify between.
+Between 2 and 4 both halves charge — students are billed twice per turn (free
+students under the cap: two daily slots, zero credits). Visible, bounded,
+refundable. The reverse order charges *nobody* for the length of the window,
+which is the bug this work exists to remove. Do not reverse it, and do not do
+both in one breath — verify between.
+
+Step 1 does not shrink that window (the old client and the new function use
+different `client_request_id` values for the same turn — the old client does not
+send one to `consume_credits` at all). It is first because it is free to do
+first and because it means step 2 lands already protected.
+
+---
+
+## 10. End-to-end verification
+
+To run **after** step 5, against production. Each check names what would make it
+fail, so a pass means something.
+
+| # | Check | Method | Pass |
+|---|---|---|---|
+| 1 | Free user at the cap gets 402 | Test account on FREE, 15 turns, then one more | HTTP 402, `reason: daily_limit_reached`, `daily_used: 15`; the upsell renders; **no `ai_model_calls` row for the blocked turn** |
+| 2 | Paid user unaffected | PRO account, several turns | 200 each, `credits_balance` falls by the per-operation cost, no 402 |
+| 3 | RPC failure fails closed | Rename `consume_credits` in a transaction and roll back, or point the gate at a missing feature | HTTP 503 `entitlement_unavailable`, **not** 402, and no OpenAI call |
+| 4 | Refunds are server-only | As a signed-in student: `select public.refund_ai_credit('<own log id>')` | `permission denied for function refund_ai_credit` |
+| 5 | No duplicate charge on retry | Two invocations with the same `client_request_id` | One `ai_usage_logs` row; second reply carries `idempotent_replay: true` with the same `log_id` |
+
+Check 1's "no `ai_model_calls` row" clause is the one that actually proves the
+gate is *before* the provider call rather than merely present — a gate that
+denies after the completion would pass every other clause.
+
+Check 3 must distinguish 503 from 402. A fail-closed path that reports "out of
+credits" would send a paying student to the pricing page during an outage, and
+would look identical to check 1 in the logs.
 
 ---
 
