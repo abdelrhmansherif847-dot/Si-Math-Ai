@@ -150,10 +150,16 @@
 --   decision. Recorded in docs/engineering/infrastructure-backlog.md.
 -- • Dropping plan_type. It is dead weight duplicated by plan_code, but removing
 --   a column is destructive and unrelated to unblocking the approval.
--- • activate_pro_subscription's OTHER defect: it writes no plan_code at all, so
---   rows it creates carry plan_type without a code. Pre-existing, unrelated to
---   the constraint, and touching it would change behaviour this file has no
---   mandate to change.
+-- • Two OTHER defects found in these same functions while reviewing them. Both
+--   are unrelated to the constraint, both are tracked independently in
+--   docs/engineering/subscription-writer-backlog.md, and neither is touched
+--   here — mixing them into a closed production fix is how a fix stops being
+--   reviewable:
+--     SUB-1  activate_subscription INSERTs into a table with UNIQUE(user_id)
+--            without ON CONFLICT, so it cannot activate the same user twice.
+--            LIVE — admin-actions calls it.
+--     SUB-2  activate_pro_subscription writes no plan_code at all. Dead code;
+--            nothing calls it and it has produced no rows.
 --
 -- Target project: igvkyxkmjnkzscqgommj
 -- ===========================================================================

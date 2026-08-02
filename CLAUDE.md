@@ -208,6 +208,10 @@ safe or that a merge is sufficient.
 - `docs/engineering/v0-lessons-learned.md` — rules carried forward from Phase V0
 - `docs/engineering/infrastructure-backlog.md` — platform/deployment work, kept
   deliberately separate from the Truth System backlog
+- `docs/engineering/subscription-writer-backlog.md` — open defects in the
+  functions that write `subscriptions` (SUB-1 renewal INSERT vs UPSERT, live;
+  SUB-2 missing `plan_code`, dead code). Read before touching
+  `activate_subscription` or `activate_pro_subscription`
 
 **Knowledge layer (public, frozen)**
 - `docs/knowledge/knowledge-base.md` — **authoritative source of truth for how
