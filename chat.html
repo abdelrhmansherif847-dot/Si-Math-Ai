@@ -996,8 +996,7 @@ button{font-family:inherit;cursor:pointer}
   let pendingRequestId = null;
   const INFLIGHT_KEY = 'simath_chat_inflight';
   const INFLIGHT_TTL_MS = 120000;
-  const REFUND_QUEUE_KEY = 'simath_chat_refund_queue';
-  const REFUND_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+  const REFUND_QUEUE_KEY = 'simath_chat_refund_queue';   // v96: read only to delete
   function caiUuid() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -1005,39 +1004,38 @@ button{font-family:inherit;cursor:pointer}
       return v.toString(16);
     });
   }
-  function writeInflight(requestId, creditLogId) {
+  // v96: the record no longer carries a credit_log_id. It existed so a
+  // refresh-during-send could refund from the browser; the Edge Function issues
+  // that refund itself now, so keeping a field that is always null would only
+  // suggest to the next reader that this page still reverses charges.
+  function writeInflight(requestId) {
     try {
       sessionStorage.setItem(INFLIGHT_KEY, JSON.stringify({
-        request_id: requestId, credit_log_id: creditLogId || null, ts: Date.now()
+        request_id: requestId, ts: Date.now()
       }));
     } catch (e) { /* sessionStorage unavailable — degrade to memory-only */ }
   }
   function clearInflight() {
     try { sessionStorage.removeItem(INFLIGHT_KEY); } catch (e) {}
   }
-  function enqueueRefund(logId) {
-    if (!logId) return;
-    try {
-      const queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]');
-      queue.push({ log_id: logId, ts: Date.now() });
-      localStorage.setItem(REFUND_QUEUE_KEY, JSON.stringify(queue));
-    } catch (e) {}
-  }
-  async function drainRefundQueue() {
-    let queue;
-    try { queue = JSON.parse(localStorage.getItem(REFUND_QUEUE_KEY) || '[]'); }
-    catch (e) { return; }
-    if (!Array.isArray(queue) || queue.length === 0) return;
-    const remaining = [];
-    const now = Date.now();
-    for (const item of queue) {
-      if (!item || !item.log_id || (now - (item.ts || 0)) > REFUND_MAX_AGE_MS) continue;
-      try {
-        const { data: rd, error: rerr } = await sb.rpc('refund_ai_credit', { p_log_id: item.log_id });
-        if (rerr || !rd || !rd.ok) remaining.push(item);
-      } catch (e) { remaining.push(item); }
-    }
-    try { localStorage.setItem(REFUND_QUEUE_KEY, JSON.stringify(remaining)); } catch (e) {}
+  // v96: DISCARD, do not drain. A queue can still exist in a returning
+  // student's localStorage, written by a client that shipped before v96.
+  //
+  // An earlier draft drained it once — replaying each entry through
+  // refund_ai_credit and then clearing. That is one call too many: this page
+  // must contain NO authenticated path that reaches that RPC, because the RPC
+  // deletes the ai_usage_logs row that consume_credits counts for the FREE
+  // daily cap. Keeping a single "legacy" call site alive keeps a client-callable
+  // quota reset alive with it, and it is the call site an attacker would reach
+  // for — the queue is client-controlled localStorage, so its contents are
+  // whatever the caller decides they are.
+  //
+  // The entries are dropped instead. What is lost: a genuine unrefunded charge
+  // from a pre-v96 session, capped at a handful of turns per affected student
+  // and recoverable by admin adjustment. What is gained: the invariant that
+  // nothing on this page can reverse a charge, which is checkable by grep.
+  function discardLegacyRefundQueue() {
+    try { localStorage.removeItem(REFUND_QUEUE_KEY); } catch (e) {}
   }
   async function recoverInflight() {
     if (!currentUser) return;
@@ -1056,8 +1054,11 @@ button{font-family:inherit;cursor:pointer}
       clearInflight();
       if (row.session_id) openSession(row.session_id);
     } else {
-      // Edge Function never committed. Refund the credit if we have a log id.
-      if (inflight.credit_log_id) enqueueRefund(inflight.credit_log_id);
+      // Edge Function never committed. v96: nothing to reverse from here — a
+      // request that never reached the function was never charged, and one that
+      // reached it and failed was refunded by the function itself, on the turn
+      // it observed fail. A speculative refund from the browser would reverse a
+      // charge that legitimately stands.
       clearInflight();
     }
   }
@@ -1087,7 +1088,7 @@ button{font-family:inherit;cursor:pointer}
       SignalEngine.renderUsage();
       loadChatHistory();
       renderEmptyStateHistory();
-      drainRefundQueue();
+      discardLegacyRefundQueue();
       recoverInflight();
       if (seededTopic && !drillMode) {
         const chip = document.createElement('div');
@@ -1335,8 +1336,31 @@ button{font-family:inherit;cursor:pointer}
       } catch (_) {}
       // ───────────────────────────────────────────────────────────────────
       const status = error.context && error.context.status;
+      // v96: 402 is the server's quota verdict. Read the body for the reason
+      // consume_credits actually gave and attach it to the error, so the caller
+      // renders the right upsell instead of a generic failure. supabase-js
+      // exposes the raw Response on error.context; clone() so the read cannot
+      // disturb anything else that touches it.
+      if (status === 402) {
+        var verdict = null;
+        try {
+          if (error.context && typeof error.context.clone === 'function') {
+            verdict = await error.context.clone().json();
+          }
+        } catch (_) { /* body unreadable \u2014 fall through to the generic message */ }
+        const qErr = new Error('You\u2019ve reached your plan\u2019s limit.');
+        qErr.quota = {
+          reason:      (verdict && verdict.reason) || 'quota_exhausted',
+          daily_used:  verdict && verdict.daily_used,
+          daily_limit: verdict && verdict.daily_limit,
+          balance:     verdict && verdict.balance,
+          required:    verdict && verdict.required,
+        };
+        throw qErr;
+      }
       if (status === 401 || status === 403) throw new Error('Your session expired. Please sign in again.');
       if (status === 429)                   throw new Error('You\u2019ve hit today\u2019s limit. Please try again later or upgrade your plan.');
+      if (status === 503)                   throw new Error('We could not check your plan just now. Please try again in a moment.');
       if (status && status >= 500)          throw new Error('Zero is temporarily unavailable. Please try again in a moment.');
       // Network / generic / OpenAI errors bubbled through the function
       throw new Error(error.message || 'Could not reach Zero. Please check your connection and try again.');
@@ -2315,11 +2339,38 @@ button{font-family:inherit;cursor:pointer}
 
   async function generateStudyPlan(uid){
     isSending = true; sendBtn.disabled = true; addTyping();
-    var creditLogId = null;
     try {
-      // 1) Credit gate — the study_plan operation resolved from the centralized
-      //    credit config (credit-config.js → public.credit_costs), the same path
-      //    every other AI operation uses. No hardcoded feature name or cost here.
+      // ── v96: CHARGE LAST, so there is nothing to refund ────────────────────
+      // This used to charge first and refund from the browser if generation
+      // threw. That refund was the last authenticated client path to
+      // refund_ai_credit — an RPC that deletes the ai_usage_logs row
+      // consume_credits counts for the FREE daily cap, i.e. a client-callable
+      // quota reset. It is being revoked from `authenticated`
+      // (migrations-pending/20260802_refund_ai_credit_server_only.sql).
+      //
+      // Removing the refund and leaving the order alone would mean a student
+      // whose plan generation threw silently loses 20 credits. Reordering
+      // removes the need instead: the planner is a PURE CLIENT-SIDE engine
+      // (window.StudyPlanner.buildStudyPlan — no provider call, no server
+      // round-trip), so building the plan first costs the platform nothing and
+      // a throw in gather/build now costs the student nothing either.
+      //
+      // 1) Gather real data → 2) run the pure engine.
+      var availability = await getStudyAvailability(uid);
+      var state = await window.StudyPlannerClient.gatherStudentState(sb, uid, { now: Date.now(), availability: availability });
+      var plan  = window.StudyPlanner.buildStudyPlan(state);
+      var sig   = window.StudyPlanner.planSignature(state);
+
+      // 3) Credit gate — the study_plan operation resolved from the centralized
+      //    credit config (credit-config.js → public.credit_costs). No hardcoded
+      //    feature name or cost here.
+      //
+      //    Still charged from the browser, and still therefore skippable by a
+      //    determined caller. That is a paywall on a local computation, not a
+      //    gate in front of spend — nothing here can run up a provider bill or
+      //    touch the FREE daily cap (STUDY_PLAN is always_charge, so it never
+      //    takes the free branch). Moving it server-side is INFRA-5, and it is
+      //    a revenue question rather than the cost/quota one v96 fixes.
       var cr = await CreditConfig.charge(sb, {
         userId: uid, op: 'study_plan', model: 'study-planner',
         sessionId: currentSessionId || null
@@ -2335,20 +2386,25 @@ button{font-family:inherit;cursor:pointer}
         else addStudyPlanNotice('Could not start the Study Planner: '+escapeHtml(cr.reason||'unknown'));
         return;
       }
-      creditLogId = cr.log_id || null;
-      // 2) Gather real data → 3) run the pure engine → 4) persist.
-      var availability = await getStudyAvailability(uid);
-      var state = await window.StudyPlannerClient.gatherStudentState(sb, uid, { now: Date.now(), availability: availability });
-      var plan  = window.StudyPlanner.buildStudyPlan(state);
-      var sig   = window.StudyPlanner.planSignature(state);
-      var saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, studyPlanCost());
+
+      // 4) Persist. The one remaining window: a throw here leaves the charge
+      //    standing with no saved plan. The plan itself is already built and is
+      //    rendered below regardless of whether persistence succeeded, so the
+      //    student gets what they paid for even then — `saved:false` tells them
+      //    it was not stored.
+      var saved = null;
+      try {
+        saved = await window.StudyPlannerClient.saveStudyPlan(sb, uid, plan, sig, studyPlanCost());
+      } catch (saveErr) {
+        try { console.error('[study-planner] save failed after charge', saveErr); } catch(_){}
+      }
       removeTyping();
       renderStudyPlan(plan, { saved: saved && saved.persisted, justGenerated: true, credits: cr.credits_used });
     } catch(e){
       removeTyping();
-      // Refund the credit if generation failed after charging.
-      if (creditLogId) { try { await sb.rpc('refund_ai_credit', { p_log_id: creditLogId }); } catch(_){} }
-      addStudyPlanNotice('Something went wrong generating your plan and your credits were refunded. Please try again.');
+      // Nothing was charged: the gate above runs after the plan is built, and
+      // every throw that reaches here happens before it.
+      addStudyPlanNotice('Something went wrong generating your plan. You were not charged — please try again.');
       try { console.error('[study-planner] generate failed', e); } catch(_){}
     } finally { isSending = false; sendBtn.disabled = false; }
   }
@@ -2383,210 +2439,181 @@ button{font-family:inherit;cursor:pointer}
     // CAI-P1: generate (or reuse) the idempotency key for this logical send.
     // Persist before any network call so a refresh-during-send can recover.
     if (!pendingRequestId) pendingRequestId = caiUuid();
-    writeInflight(pendingRequestId, null);
+    writeInflight(pendingRequestId);
 
-    // Credit gate: resolve the operation from the centralized credit config
-    // (credit-config.js → public.credit_costs) and pre-authorise via
-    // consume_credits before hitting the edge fn. Image/PDF upload → chat_image;
-    // an explicit "explain again / simpler" follow-up → chat_followup; otherwise
-    // chat_text. Costs are never hardcoded here. Tokens are unknown now (0); the
-    // edge function logs actual token usage.
-    var _creditOp = (attsToSend && attsToSend.length) ? 'chat_image'
-                  : (pendingFollowUpType ? 'chat_followup' : 'chat_text');
-    CreditConfig.charge(sb, {
-      userId:    currentUser ? currentUser.id : null,
-      op:        _creditOp,
-      model:     'claude-3-5-haiku',
-      sessionId: currentSessionId || null
-    }).then((creditResult) => {
-      if (!creditResult || creditResult.reason === 'rpc_error' || creditResult.reason === 'no_client' || creditResult.reason === 'no_result') {
+    // ── v96: the quota gate is SERVER-SIDE ──────────────────────────────────
+    // This block used to call consume_credits() here, in the browser, and then
+    // invoke the Edge Function only if the RPC said yes. The RPC was correct;
+    // asking it from the client was not. Anything that reached the function by
+    // another route — a fetch() from the console, a replayed request, a second
+    // client — was never metered, so free students were served past their daily
+    // limit. See supabase/functions/ai-tutor/index.ts, ENTITLEMENT GATE (v96).
+    //
+    // The charge now happens inside the function, before any OpenAI call, and
+    // the operation is DERIVED there from the request rather than named here.
+    // A blocked turn comes back as HTTP 402 with the reason, which askAI()
+    // rethrows as a quota error and the catch below renders as the upsell.
+    //
+    // The refund is the server’s too: it is the only party that knows whether
+    // the call actually failed. Nothing on this page reverses a charge any more.
+    SignalEngine.bumpUsage();
+    askAI(apiText, sig, urlsToSend).then(response => {
+      // CAI-P1 success-path ordering: clear inflight → render → clear pendingRequestId.
+      // Clearance precedes render so a refresh between steps cannot replay
+      // an already-rendered answer via the recovery query.
+      clearInflight();
+      removeTyping();
+      addAI(sig, response);
+      // v87 domain guardrail: an out-of-scope turn is a redirect, not a
+      // tutoring service, so the student is not charged for it. The server
+      // returns 200 (the OpenAI call did happen), which means the failure
+      // path never fires.
+      //
+      // v96: the refund that used to run here now runs in the Edge Function,
+      // which issues it on the same turn it classified. Doing it from the
+      // browser meant the client decided when a charge was reversed — and
+      // because refund_ai_credit DELETEs the ai_usage_logs row that
+      // consume_credits counts for the daily cap, that decision could rewind
+      // the free allowance at will.
+      //
+      // No question_records row is written for these turns either, so nothing
+      // downstream (history, signals, mastery, AI Monitor) sees them.
+      if (response && response.scope_guard === true) {
         SignalEngine.discardBuffer();
-        removeTyping();
-        showError('Could not verify your credits. Please refresh and try again.');
-        clearInflight(); pendingRequestId = null;
-        isSending = false; sendBtn.disabled = false;
-        return;
-      }
-      if (!creditResult.ok) {
-        SignalEngine.discardBuffer();
-        removeTyping();
-        clearInflight(); pendingRequestId = null;
-        if (creditResult.reason === 'daily_limit_reached') {
-          showCreditError('You\'ve used all ' + (creditResult.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
-        } else if (creditResult.reason === 'insufficient_credits') {
-          showCreditError('Not enough credits remaining (balance: ' + (creditResult.balance || 0) + '). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> to top up, or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade your plan</a> for a new monthly allowance.');
-        } else {
-          showCreditError('Access check failed: ' + escapeHtml(creditResult.reason || 'unknown'));
-        }
-        isSending = false; sendBtn.disabled = false;
-        return;
-      }
-      // Credits OK — proceed with the AI call
-      SignalEngine.bumpUsage();
-      const creditLogId = creditResult.log_id || null;
-      // Re-write inflight with credit_log_id so a refresh-during-send can refund
-      // the credit if the Edge Function never commits a row.
-      writeInflight(pendingRequestId, creditLogId);
-      askAI(apiText, sig, urlsToSend).then(response => {
-        // CAI-P1 success-path ordering: clear inflight → render → clear pendingRequestId.
-        // Clearance precedes render so a refresh between steps cannot replay
-        // an already-rendered answer via the recovery query.
-        clearInflight();
-        removeTyping();
-        addAI(sig, response);
-        // v87 domain guardrail: an out-of-scope turn is a redirect, not a
-        // tutoring service, so the student is not charged for it. The server
-        // returns 200 (the OpenAI call did happen), which means the failure
-        // refund below never fires — refund explicitly here instead. Reuses the
-        // same RPC + retry queue as the failure path, so a refund that fails
-        // transiently is retried on the next load rather than lost.
-        // No question_records row is written for these turns either, so nothing
-        // downstream (history, signals, mastery, AI Monitor) sees them.
-        if (response && response.scope_guard === true) {
-          SignalEngine.discardBuffer();
-          if (creditLogId) {
-            sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
-              .then(({ data: rd, error: rerr }) => {
-                if (rerr || !rd || !rd.ok) { enqueueRefund(creditLogId); return; }
-                if (rd.refunded > 0) console.info('Credit refunded (out-of-scope turn):', rd.refunded);
-              })
-              .catch(e => { console.warn('Refund RPC failed:', e); enqueueRefund(creditLogId); });
-          }
-          // Keep the redirect in the live conversation window so Zero has the
-          // context if the student replies. Nothing is persisted server-side.
-          sessionMessages.push({role:'user', content: apiText});
-          sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
-          return;   // .finally() below clears inflight + re-enables the composer
-        }
-        // Phase B: surface the detected-questions index for multi-question uploads.
-        if (response && Array.isArray(response.detected_questions)) {
-          renderDetectedQuestions(response.detected_questions);
-        }
-        // Keep the uploaded image(s) in the live window too, so a later "explain
-        // question 2" in the same session resolves without a re-upload (mirrors
-        // the openSession rehydration path). All images replay as image_url blocks.
-        var liveImgs = urlsToSend.filter(function(u){ return typeof u==='string' && u.indexOf('data:image/')===0; });
-        if (liveImgs.length) {
-          sessionMessages.push({ role:'user', content: [{ type:'text', text: apiText }].concat(
-            liveImgs.map(function(u){ return { type:'image_url', image_url:{ url:u } }; })
-          )});
-        } else {
-          sessionMessages.push({role:'user', content: apiText});
-        }
+        // Keep the redirect in the live conversation window so Zero has the
+        // context if the student replies. Nothing is persisted server-side.
+        sessionMessages.push({role:'user', content: apiText});
         sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
-        const _respTopic = (response && response.topic)    || null;
-        const _respSub   = (response && response.subtopic) || null;
-        // When a drill is active and the answered question is off-topic for the drill,
-        // the drill banner says one topic while the analyzer/mastery records another.
-        // Suppress all analyzer/mastery emissions for off-topic answers so the entire
-        // drill session stays attributed to exactly one topic.
-        const _drillActive   = (typeof drillMode !== 'undefined') && drillMode && !drillComplete;
-        const _drillOffTopic = _drillActive && !drillQuestionMatchesActiveTopic(_respTopic, _respSub);
+        return;   // .finally() below clears inflight + re-enables the composer
+      }
+      // Phase B: surface the detected-questions index for multi-question uploads.
+      if (response && Array.isArray(response.detected_questions)) {
+        renderDetectedQuestions(response.detected_questions);
+      }
+      // Keep the uploaded image(s) in the live window too, so a later "explain
+      // question 2" in the same session resolves without a re-upload (mirrors
+      // the openSession rehydration path). All images replay as image_url blocks.
+      var liveImgs = urlsToSend.filter(function(u){ return typeof u==='string' && u.indexOf('data:image/')===0; });
+      if (liveImgs.length) {
+        sessionMessages.push({ role:'user', content: [{ type:'text', text: apiText }].concat(
+          liveImgs.map(function(u){ return { type:'image_url', image_url:{ url:u } }; })
+        )});
+      } else {
+        sessionMessages.push({role:'user', content: apiText});
+      }
+      sessionMessages.push({role:'assistant', content: (response && response.answer) || ''});
+      const _respTopic = (response && response.topic)    || null;
+      const _respSub   = (response && response.subtopic) || null;
+      // When a drill is active and the answered question is off-topic for the drill,
+      // the drill banner says one topic while the analyzer/mastery records another.
+      // Suppress all analyzer/mastery emissions for off-topic answers so the entire
+      // drill session stays attributed to exactly one topic.
+      const _drillActive   = (typeof drillMode !== 'undefined') && drillMode && !drillComplete;
+      const _drillOffTopic = _drillActive && !drillQuestionMatchesActiveTopic(_respTopic, _respSub);
 
-        // v76: is_repeat=true means the server updated an existing record instead of
-        // creating a new one. record_id in the response is the ORIGINAL question's ID.
-        const _isRepeat = !!(response && response.is_repeat);
+      // v76: is_repeat=true means the server updated an existing record instead of
+      // creating a new one. record_id in the response is the ORIGINAL question's ID.
+      const _isRepeat = !!(response && response.is_repeat);
 
-        if (_drillOffTopic) {
-          // Discard buffered per-message signals; do not emit post-response signals.
-          SignalEngine.discardBuffer();
-        } else {
-          // For repeats, always fire a weakness signal — repeated confusion is strong evidence.
-          // Guard on topic only: with canonical responses, topic-level detections now
-          // return subtopic='' — requiring _respSub here would silently drop their repeat
-          // signals. sendSignal tolerates a blank subtopic (writes '' via the boundary).
-          if (_isRepeat && _respTopic) {
-            const _rType = response.repeat_type;
-            SignalEngine.sendSignal({
-              type: _rType === 'solve_again' ? 'repeated' : 'explanation_repeated',
-              topic: _respTopic, sub: _respSub,
-              count: _rType === 'solve_again' ? 2 : undefined,
-            });
-            SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
-          }
-          // Pipeline unification: when the AI flags a weakness on a topic the local
-          // keyword map missed (sig is null), record it in weakness_signals so the
-          // Weakness Analyzer sees AI-detected weaknesses too.
-          else if (response && response.weakness_signal === true && !sig && _respTopic && _respSub) {
-            SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
-          }
-          // Image / short-text math questions: local keyword classifier can't see
-          // the image content, so sig is null. Emit a topic signal anyway when the
-          // backend confirms it's math (is_math=true) and student's confidence is low.
-          else if (response && response.is_math === true && !sig && _respTopic && _respSub) {
-            var sentConf = SignalEngine.getConfidence();
-            if (sentConf != null && sentConf <= 3) {
-              SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: sentConf});
-            }
-          }
-          // For repeats: keep __lastQRecId pointing at the ORIGINAL record (which the
-          // server returned as record_id). Do not overwrite with null or a new id.
-          if (!_isRepeat) {
-            window.__lastQRecId = (response && response.record_id) || null;
-          }
-          // flushBuffer always uses the correct parent record_id (either newly created
-          // or the original returned by the server for repeats).
-          SignalEngine.flushBuffer((response && response.record_id) || window.__lastQRecId, currentSessionId);
-        }
-        awardChatXP();
-        if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
-        drillOnQuestionAnswered(_respTopic, _respSub);
-        // Update mastery_records — skip for re-explanations (Case 2) since the student
-        // hasn't demonstrated new understanding; update for solve-again (Case 1) with
-        // isRepeat=true so MasteryEngine can weight it appropriately.
-        if (!_drillOffTopic && (!_isRepeat || response.repeat_type === 'solve_again')) {
-          const rawMTopic = _respTopic || (sig && sig.topic) || null;
-          const rawMSub   = _respSub   || (sig && sig.sub)   || null;
-          // Phase 3: resolve through the single canonical write boundary so
-          // mastery_records only ever stores canonical names/ids — never a
-          // lowercase/Arabic/generic passthrough. Unmapped → skip + log once.
-          const mCanon = window.TaxonomyWrite ? window.TaxonomyWrite.canonical({
-            topic: rawMTopic, subtopic: rawMSub,
-            wordProblem: response && response.problem_type === 'word_problem' ? true
-                       : (response && response.problem_type === 'concept' ? false : undefined)
-          }) : null;
-          if (mCanon && window.MasteryEngine && currentUser) {
-            window.MasteryEngine.onQuestion(sb, currentUser.id, mCanon.topic, mCanon.subtopic, {
-              confidence:     sig ? (sig.confidence || null) : null,
-              weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
-              isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
-              isRepeat:       _isRepeat || (SignalEngine.topicCounts[mCanon.subtopic] || 0) >= 2,
-              problem_type:   mCanon.problem_type,
-              topic_id:       mCanon.topic_id,
-              subtopic_id:    mCanon.subtopic_id
-            });
-          } else if (!mCanon && rawMTopic && window.TaxonomyWrite && currentUser) {
-            window.TaxonomyWrite.logUnmapped(sb, { rawTopic: rawMTopic, rawSubtopic: rawMSub, source: 'chat', userId: currentUser.id });
-          }
-        }
-      }).catch(err => {
+      if (_drillOffTopic) {
+        // Discard buffered per-message signals; do not emit post-response signals.
         SignalEngine.discardBuffer();
-        removeTyping();
-        showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
-        // Refund the credit deducted before the failed AI call. If the refund
-        // RPC itself fails (network/transient), enqueue it for retry on next load.
-        if (creditLogId) {
-          sb.rpc('refund_ai_credit', { p_log_id: creditLogId })
-            .then(({ data: rd, error: rerr }) => {
-              if (rerr || !rd || !rd.ok) { enqueueRefund(creditLogId); return; }
-              if (rd.refunded > 0) console.info('Credit refunded after AI failure:', rd.refunded);
-            })
-            .catch(e => { console.warn('Refund RPC failed:', e); enqueueRefund(creditLogId); });
+      } else {
+        // For repeats, always fire a weakness signal — repeated confusion is strong evidence.
+        // Guard on topic only: with canonical responses, topic-level detections now
+        // return subtopic='' — requiring _respSub here would silently drop their repeat
+        // signals. sendSignal tolerates a blank subtopic (writes '' via the boundary).
+        if (_isRepeat && _respTopic) {
+          const _rType = response.repeat_type;
+          SignalEngine.sendSignal({
+            type: _rType === 'solve_again' ? 'repeated' : 'explanation_repeated',
+            topic: _respTopic, sub: _respSub,
+            count: _rType === 'solve_again' ? 2 : undefined,
+          });
+          SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
         }
-      }).finally(() => {
-        // CAI-P1: failure clears inflight + pendingRequestId. The send is
-        // terminal — a manual retry generates a fresh request_id.
-        clearInflight();
-        pendingRequestId = null;
-        isSending = false;
-        sendBtn.disabled = false;
-      });
-    }).catch(() => {
+        // Pipeline unification: when the AI flags a weakness on a topic the local
+        // keyword map missed (sig is null), record it in weakness_signals so the
+        // Weakness Analyzer sees AI-detected weaknesses too.
+        else if (response && response.weakness_signal === true && !sig && _respTopic && _respSub) {
+          SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: 2});
+        }
+        // Image / short-text math questions: local keyword classifier can't see
+        // the image content, so sig is null. Emit a topic signal anyway when the
+        // backend confirms it's math (is_math=true) and student's confidence is low.
+        else if (response && response.is_math === true && !sig && _respTopic && _respSub) {
+          var sentConf = SignalEngine.getConfidence();
+          if (sentConf != null && sentConf <= 3) {
+            SignalEngine.sendSignal({type:'topic', topic: _respTopic, sub: _respSub, confidence: sentConf});
+          }
+        }
+        // For repeats: keep __lastQRecId pointing at the ORIGINAL record (which the
+        // server returned as record_id). Do not overwrite with null or a new id.
+        if (!_isRepeat) {
+          window.__lastQRecId = (response && response.record_id) || null;
+        }
+        // flushBuffer always uses the correct parent record_id (either newly created
+        // or the original returned by the server for repeats).
+        SignalEngine.flushBuffer((response && response.record_id) || window.__lastQRecId, currentSessionId);
+      }
+      awardChatXP();
+      if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
+      drillOnQuestionAnswered(_respTopic, _respSub);
+      // Update mastery_records — skip for re-explanations (Case 2) since the student
+      // hasn't demonstrated new understanding; update for solve-again (Case 1) with
+      // isRepeat=true so MasteryEngine can weight it appropriately.
+      if (!_drillOffTopic && (!_isRepeat || response.repeat_type === 'solve_again')) {
+        const rawMTopic = _respTopic || (sig && sig.topic) || null;
+        const rawMSub   = _respSub   || (sig && sig.sub)   || null;
+        // Phase 3: resolve through the single canonical write boundary so
+        // mastery_records only ever stores canonical names/ids — never a
+        // lowercase/Arabic/generic passthrough. Unmapped → skip + log once.
+        const mCanon = window.TaxonomyWrite ? window.TaxonomyWrite.canonical({
+          topic: rawMTopic, subtopic: rawMSub,
+          wordProblem: response && response.problem_type === 'word_problem' ? true
+                     : (response && response.problem_type === 'concept' ? false : undefined)
+        }) : null;
+        if (mCanon && window.MasteryEngine && currentUser) {
+          window.MasteryEngine.onQuestion(sb, currentUser.id, mCanon.topic, mCanon.subtopic, {
+            confidence:     sig ? (sig.confidence || null) : null,
+            weaknessSignal: (typeof response.weakness_signal === 'boolean') ? response.weakness_signal : null,
+            isMultiConcept: !!(sig && sig.multiConcept && sig.multiConcept.length > 0),
+            isRepeat:       _isRepeat || (SignalEngine.topicCounts[mCanon.subtopic] || 0) >= 2,
+            problem_type:   mCanon.problem_type,
+            topic_id:       mCanon.topic_id,
+            subtopic_id:    mCanon.subtopic_id
+          });
+        } else if (!mCanon && rawMTopic && window.TaxonomyWrite && currentUser) {
+          window.TaxonomyWrite.logUnmapped(sb, { rawTopic: rawMTopic, rawSubtopic: rawMSub, source: 'chat', userId: currentUser.id });
+        }
+      }
+    }).catch(err => {
       SignalEngine.discardBuffer();
       removeTyping();
-      showError('Network error checking your credits. Please try again.');
-      clearInflight(); pendingRequestId = null;
-      isSending = false; sendBtn.disabled = false;
+      // v96: a turn the server refused for quota reasons arrives here as a
+      // typed error carrying the RPC's own verdict, so the upsell says the same
+      // thing it always did — it is just no longer this page's decision to make.
+      // The refund that used to run here is the server's now: it is the only
+      // party that can tell a genuine failure from a claimed one.
+      if (err && err.quota) {
+        var q = err.quota;
+        if (q.reason === 'daily_limit_reached') {
+          showCreditError('You\'ve used all ' + (q.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
+        } else if (q.reason === 'insufficient_credits') {
+          showCreditError('Not enough credits remaining (balance: ' + (q.balance || 0) + '). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> to top up, or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade your plan</a> for a new monthly allowance.');
+        } else {
+          showCreditError('Access check failed: ' + escapeHtml(q.reason || 'unknown'));
+        }
+      } else {
+        showError(err && err.message ? err.message : 'Could not reach Si. Please try again.');
+      }
+    }).finally(() => {
+      // CAI-P1: failure clears inflight + pendingRequestId. The send is
+      // terminal — a manual retry generates a fresh request_id.
+      clearInflight();
+      pendingRequestId = null;
+      isSending = false;
+      sendBtn.disabled = false;
     });
   }
 

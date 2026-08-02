@@ -232,6 +232,52 @@ pattern already in production. After it, the size bound should go *down*.
 
 ---
 
+### 5.6 A change split across both surfaces has an ORDER, and the order is not symmetric
+
+The two surfaces deploy independently — a merge publishes the site, a CLI step
+publishes the function — so any change that spans both has a window where one
+half is live and the other is not. §5.3 records that the repo runs ahead of
+production; this is the case where *which* half runs ahead decides whether the
+window is an annoyance or an outage.
+
+The rule: **ship the half that fails safe first.** Work out what each ordering
+does during the window and pick the one whose failure mode you would accept for
+an hour.
+
+The worked example is the v96 quota gate, and it is worth keeping because the
+asymmetry is stark:
+
+| Order | During the window | Verdict |
+|---|---|---|
+| Edge Function first | Both halves charge → students billed twice per turn (free students under the cap: two daily slots, zero credits) | Accept — visible, bounded, refundable |
+| `chat.html` first | Neither half charges → **nobody is metered at all** | Never — this is the bug being fixed, restored on purpose |
+
+So: deploy `ai-tutor` v96, verify the platform version and sha256, *then* merge
+the site. Not the other way round, and not in the same breath — verify between.
+
+The generalisable form: when a responsibility MOVES from one surface to the
+other, the receiving surface must be live before the sending surface stops. A
+gate is the clearest case, but the same holds for a write path, a schema
+contract, or a header the other side has begun to require.
+
+**Migrations take a side in this too.** A migration is backward-compatible or it
+is not, and that decides whether it goes first or last:
+
+- **Additive and defaulted → apply FIRST.** `20260802_consume_credits_idempotency.sql`
+  adds a parameter with a `DEFAULT`, so every existing caller keeps resolving and
+  keeps its current behaviour. Applying it ahead of the deploy means the new code
+  lands already protected instead of running unprotected until someone gets to
+  step 5.
+- **Removes a capability → apply LAST.** `20260802_refund_ai_credit_server_only.sql`
+  revokes `EXECUTE` from `authenticated`. Applied before the site ships, it breaks
+  the refund path the *currently live* page still uses.
+
+The test is not "is it a migration", it is **"does anything live today stop
+working the moment this lands"**. If yes, it goes after the thing that replaces
+it. If no, put it first and reduce the window.
+
+---
+
 ## 6. Manual approval points, in order
 
 1. **Merge to `main`** → deploys the static site. *No approval gate today* (§5.2).

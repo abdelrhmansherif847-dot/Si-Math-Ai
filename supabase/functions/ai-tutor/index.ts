@@ -1,4 +1,43 @@
-// ai-tutor Edge Function v95
+// ai-tutor Edge Function v96
+// v96 (the free quota is enforced here, before OpenAI): free students were not
+// being blocked at their daily limit. The reason was not a broken check — it
+// was the absence of one. This function never consulted a plan, a balance or a
+// usage counter. It authenticated the caller, applied an in-isolate rate limit
+// of 200/hr, and called OpenAI.
+//
+// The daily cap lived entirely in the browser: chat.html called consume_credits()
+// itself, read the verdict, and only then invoked this function. consume_credits
+// is a correct gate — SECURITY DEFINER, dual-authorization guard, FREE-plan
+// branch, atomic under FOR UPDATE — and production data shows it doing its job
+// whenever it was called. It was simply never called by the server, so declining
+// to call it cost a student nothing. One fetch() with a valid JWT and the reply
+// was unmetered, up to 4,800 turns a day.
+//
+// Two smaller holes fell out of the same trace and are closed here too:
+//
+//   • refund_ai_credit DELETEs the ai_usage_logs row, and consume_credits
+//     derives daily usage by COUNTing those rows. Any refund therefore rewinds
+//     the daily counter. The RPC is granted to `authenticated` and scoped only
+//     by `user_id = auth.uid()`, so a student could refund their own turns from
+//     the console and never reach the cap. Refunds are now issued by this
+//     function, on failures it observed, and an out-of-scope turn returns
+//     credits without returning its free daily slot.
+//
+//   • The charged operation is derived from the request rather than named by
+//     it, and telemetry now reports against the same derivation it bills, so
+//     the two cannot drift.
+//
+// What did NOT change: the RPC, the plan catalogue, the pricing, the FREE
+// allowance, and what a student sees when they hit it. The gate was moved to
+// where a gate has to be, not redesigned.
+//
+// DEPLOYMENT ORDER IS LOAD-BEARING. Deploy this function BEFORE merging the
+// chat.html change to main. The two together charge exactly once; this one
+// alone double-charges for the length of the window (free students under the
+// cap: two daily slots per message, zero credits); chat.html alone charges
+// nobody at all, which is the bug this version exists to fix. See
+// docs/engineering/deployment-pipeline.md.
+//
 // v95 (Zero Block Strategy — block sizes are computed, not chosen): a student
 // asked the same EST question twice and got 6-question blocks once and the
 // correct 10 the next time. Neither retrieval nor the knowledge base supplied
@@ -225,7 +264,7 @@ import { runL3ShadowPipeline } from '../_shared/verification.core.ts';
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v95';
+const AI_TUTOR_VERSION = 'v96';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -322,7 +361,14 @@ const MAX_FOLLOWUP_CHARS  = 64;
 // loop, a scripted scraper, a student sharing an account with a bot) which is
 // what actually threatens the OpenAI bill. The authoritative global limit
 // belongs at the WAF, and the durable per-user quota is the credits system
-// (consume_credits) which is already enforced server-side.
+// (consume_credits), charged by the entitlement gate below.
+//
+// That last clause used to read "which is already enforced server-side", and it
+// was wrong for as long as it stood: consume_credits was called by the browser,
+// not by this function, so nothing here enforced a quota at all. The sentence
+// described the intended architecture and was read as a description of the
+// running one. v96 made it true. Do not weaken it back into an aspiration —
+// if the gate below is ever removed, this comment must go with it.
 // See SECURITY.md §SEC-06 for the layered model and the Cloud Armor rules.
 const RATE_LIMITS: Array<{ windowMs: number; max: number; label: string }> = [
   { windowMs: 60_000,     max: 20,  label: '20/min'  },
@@ -1919,6 +1965,249 @@ function normaliseQ(s: string): string {
   return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ENTITLEMENT GATE  (v96)
+// ═══════════════════════════════════════════════════════════════════════════
+// WHY THIS EXISTS
+// ---------------
+// Until v96 this function performed NO quota check. The only thing between an
+// authenticated student and an OpenAI call was the in-isolate rate limiter
+// (20/min, 200/hr) — three hundred times the FREE plan's daily allowance, not
+// durable, and per-isolate. The FREE daily cap was enforced entirely in the
+// BROWSER: chat.html called consume_credits() itself and only then invoked
+// this function. A caller who skipped that step — one fetch() with their own
+// JWT — got unmetered tutoring.
+//
+// The comment beside RATE_LIMITS said "the durable per-user quota is the
+// credits system (consume_credits) which is already enforced server-side".
+// consume_credits IS a correct server-side gate; it was simply never called
+// from the server. A gate the client chooses whether to open is not a gate.
+//
+// WHAT CHANGED
+// ------------
+// The charge now happens HERE, before any provider call, using the service-role
+// client. chat.html no longer charges (it would double-bill). The AUTHZ-01
+// guard inside consume_credits explicitly provides for this: a caller with no
+// JWT (auth.uid() IS NULL — i.e. service_role) may consume on behalf of any
+// user, while an end user may only spend their own.
+//
+// FAIL CLOSED, ALWAYS
+// -------------------
+// Every failure to reach a decision denies the request. That is the whole
+// point: the defect being fixed is a path that served tutoring without a
+// decision. An RPC error, a missing feature row, a malformed result — none of
+// them may fall through to OpenAI. The student sees a retryable 503; they do
+// not see a free answer.
+//
+// PLACEMENT
+// ---------
+// The gate sits after the idempotency pre-flight and after the worksheet
+// navigation guard, and before repeat detection:
+//   • idempotency hits replay a stored answer with no provider call, so they
+//     must not be charged a second time for one logical send;
+//   • worksheet-navigation turns are declared "0 tokens" and return before any
+//     model call, so they are not tutoring and are not billed;
+//   • every remaining path reaches a provider — the repeat re-solve
+//     (repeatOaiRes), question detection (detectQuestionsInImages), the main
+//     completion, the v2 difficulty classifier and the L3 shadow pipeline.
+// Anything added between the gate and those calls must stay downstream of it.
+
+interface EntitlementDecision {
+  ok:           boolean;
+  reason:       string;         // '' when ok
+  logId:        string | null;  // ai_usage_logs.id — the refund handle
+  creditsUsed:  number;
+  feature:      string;
+  dailyUsed:    number | null;
+  dailyLimit:   number | null;
+  balance:      number | null;
+  required:     number | null;
+  unavailable:  boolean;        // could not decide (vs. decided "no")
+  replay:       boolean;        // this key had already been charged
+  keyed:        boolean;        // the charge carried an idempotency key
+}
+
+// Charged operation, derived from the request — never received from it. A
+// client that could name its own operation could name the cheapest one.
+// Mirrors chat.html's former derivation exactly (image → CHAT_IMAGE, explicit
+// follow-up → CHAT_FOLLOWUP, else CHAT_TEXT) so per-operation cost reporting
+// keeps meaning what it meant.
+function creditFeatureFor(hasImages: boolean, followUpType: string | null): string {
+  return hasImages    ? 'CHAT_IMAGE'
+       : followUpType ? 'CHAT_FOLLOWUP'
+       : 'CHAT_TEXT';
+}
+
+// The pre-operation-migration feature that is guaranteed to exist. credit-config.js
+// falls back to it in the browser when a granular chat feature is missing or
+// inactive; the server does the same so deactivating CHAT_TEXT cannot lock every
+// student out. It is a fallback to a DIFFERENT CHARGE, never to no charge — if
+// this one is missing too, the request is denied.
+const ENTITLEMENT_FALLBACK_FEATURE = 'AI_CHAT_MESSAGE';
+
+function asInt(v: unknown): number | null {
+  return (typeof v === 'number' && Number.isFinite(v)) ? Math.trunc(v) : null;
+}
+
+const DENIED = (reason: string, extra: Partial<EntitlementDecision> = {}): EntitlementDecision => ({
+  ok: false, reason, logId: null, creditsUsed: 0, feature: '',
+  dailyUsed: null, dailyLimit: null, balance: null, required: null,
+  unavailable: false, replay: false, keyed: false, ...extra,
+});
+
+// PostgREST's answer when the argument list matches no overload. Seen when
+// ai-tutor v96 is deployed before
+// migrations-pending/20260802_consume_credits_idempotency.sql is applied: the
+// eight-argument form does not exist yet. The request is REJECTED at the schema
+// cache — no SQL runs, so nothing is charged and retrying without the key is
+// safe rather than merely convenient.
+const RPC_SIGNATURE_MISSING = /PGRST202|Could not find the function|does not exist/i;
+
+function signatureMissing(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  return RPC_SIGNATURE_MISSING.test(String(e.code ?? '')) ||
+         RPC_SIGNATURE_MISSING.test(String(e.message ?? ''));
+}
+
+/**
+ * Spend one unit of the student's entitlement for `feature`.
+ *
+ * `clientRequestId` is the idempotency key for ONE logical student send. It is
+ * what stops a retry from charging twice — see the block comment on the gate
+ * call site, and the migration that teaches consume_credits to honour it.
+ *
+ * Returns the decision; never throws. `unavailable: true` means the system
+ * could not decide — the caller must deny, not allow.
+ */
+async function chargeEntitlement(
+  sbAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  feature: string,
+  sessionId: string | null,
+  clientRequestId: string | null = null,
+): Promise<EntitlementDecision> {
+  const call = async (withKey: boolean): Promise<{ data: unknown; error: unknown } | null> => {
+    const args: Record<string, unknown> = {
+      p_user_id:    userId,
+      p_feature:    feature,
+      // Tokens and cost are unknown before the call. ai_model_calls carries the
+      // real per-call spend (v90 telemetry); this row is the entitlement ledger.
+      p_model_name: null,
+      p_prompt_tok: 0,
+      p_comp_tok:   0,
+      p_cost_usd:   0,
+      p_session_id: sessionId,
+    };
+    if (withKey && clientRequestId) args.p_client_request_id = clientRequestId;
+    try { return await sbAdmin.rpc('consume_credits', args); }
+    catch { return null; }
+  };
+
+  let keyed = !!clientRequestId;
+  let res = await call(keyed);
+
+  // Pre-migration fallback. Deliberately NOT cached across requests: a cached
+  // "the key is unsupported" would keep charging unkeyed for the life of the
+  // isolate after the migration landed, which is the failure this whole change
+  // exists to prevent. One rejected round-trip per request, only until the
+  // migration is applied, is the cheaper mistake.
+  if (keyed && res && res.error && signatureMissing(res.error)) {
+    console.log('[ai-tutor] entitlement-key-unsupported', JSON.stringify({
+      note: 'consume_credits has no p_client_request_id yet — charging unkeyed',
+    }));
+    keyed = false;
+    res = await call(false);
+  }
+
+  if (!res) {
+    return DENIED('rpc_threw', { unavailable: true, feature, keyed });
+  }
+
+  if (res.error) return DENIED('rpc_error', { unavailable: true, feature, keyed });
+
+  // Array.isArray, and the boolean check on `ok`, are not paranoia about a
+  // function we control — they are about what a WRONG answer here would mean.
+  // A result whose shape we do not recognise has not told us the student may
+  // proceed, and reporting it as "you are out of credits" would send a paying
+  // student to the pricing page because the contract changed. Unrecognised is
+  // undecidable: deny, and say it is our problem.
+  const d = res.data as Record<string, unknown> | null;
+  if (!d || typeof d !== 'object' || Array.isArray(d) || typeof d.ok !== 'boolean') {
+    return DENIED('no_result', { unavailable: true, feature, keyed });
+  }
+
+  if (d.ok === true) {
+    return {
+      ok: true, reason: '', feature, keyed,
+      logId:       typeof d.log_id === 'string' ? d.log_id : null,
+      creditsUsed: asInt(d.credits_used) ?? 0,
+      dailyUsed:   asInt(d.daily_used),
+      dailyLimit:  asInt(d.daily_limit),
+      balance:     asInt(d.balance_after),
+      required:    null,
+      unavailable: false,
+      // The RPC recognised this key and did NOT charge again. The log_id is the
+      // original charge's, so the refund handle stays correct for the one turn
+      // that was actually paid for.
+      replay:      d.idempotent_replay === true,
+    };
+  }
+
+  const reason = typeof d.reason === 'string' ? d.reason : 'denied';
+
+  // The catalogue does not know this operation. Retry ONCE against the legacy
+  // flat feature before giving up — and deny if that is missing too. The key
+  // travels with the retry: a `feature_not_found` charges nothing, so the key
+  // is still unused and the retry must stay idempotent too.
+  if (reason === 'feature_not_found' && feature !== ENTITLEMENT_FALLBACK_FEATURE) {
+    return await chargeEntitlement(
+      sbAdmin, userId, ENTITLEMENT_FALLBACK_FEATURE, sessionId, clientRequestId,
+    );
+  }
+
+  return DENIED(reason, {
+    feature, keyed,
+    dailyUsed:  asInt(d.daily_used),
+    dailyLimit: asInt(d.daily_limit),
+    balance:    asInt(d.balance) ?? asInt(d.pack_credits),
+    required:   asInt(d.required),
+    // A structurally valid "no" is a decision, not an outage — except when the
+    // catalogue itself is unusable, which is an operator problem and must be
+    // reported as one rather than as "you are out of credits".
+    unavailable: reason === 'feature_not_found',
+  });
+}
+
+/**
+ * Hand back an entitlement this request did not end up using.
+ *
+ * `refund_ai_credit` scopes its DELETE with `user_id = auth.uid()`, so the
+ * service-role client (auth.uid() IS NULL) matches no row today and returns
+ * log_not_found. The user-JWT client is therefore tried as the fallback. The
+ * order is deliberate: admin first is the intended end state, and once
+ * migrations-pending/20260802_refund_ai_credit_server_only.sql is approved and
+ * applied — restricting this RPC to the server — the fallback simply stops
+ * being reached. Both orderings work in both states, so the code and the
+ * migration can ship independently.
+ */
+async function refundEntitlement(
+  sbAdmin: ReturnType<typeof createClient>,
+  sbUser:  ReturnType<typeof createClient>,
+  logId: string,
+): Promise<boolean> {
+  const attempt = async (c: ReturnType<typeof createClient>) => {
+    try {
+      const { data, error } = await c.rpc('refund_ai_credit', { p_log_id: logId });
+      if (error) return false;
+      const d = data as Record<string, unknown> | null;
+      return !!(d && d.ok === true);
+    } catch { return false; }
+  };
+  if (await attempt(sbAdmin)) return true;
+  return await attempt(sbUser);
+}
+
 serve(async (req) => {
   const origin = req.headers.get('Origin') ?? '';
   const cid    = newCorrelationId();
@@ -1939,6 +2228,13 @@ serve(async (req) => {
   // Stays null on every successful request, which is what keeps the failure
   // write strictly on the error path.
   let failureRow: TutorFailureRow | null = null;
+  // v96 entitlement handle. Declared out here for the same reason as the
+  // telemetry above: the top-level catch has to be able to hand the charge back
+  // for a request that never produced an answer, and it cannot see bindings
+  // scoped inside the try. null until the gate has actually charged.
+  let creditLogId:  string | null = null;
+  let creditsSpent: number = 0;
+  let sbUserForRefund: ReturnType<typeof createClient> | null = null;
   const teleCtx: {
     clientRequestId:  string | null;
     questionRecordId: string | null;
@@ -1993,7 +2289,8 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const sbAdmin = createClient(SUPABASE_URL, SUPABASE_KEY);
-    teleAdmin = sbAdmin;   // v90: the `finally` flush needs a client
+    teleAdmin = sbAdmin;         // v90: the `finally` flush needs a client
+    sbUserForRefund = sbUser;    // v96: the catch-path refund needs the caller's JWT
 
     // ── 6. Authentication ──────────────────────────────────────────────────
     const { data: { user } } = await sbUser.auth.getUser();
@@ -2112,12 +2409,13 @@ serve(async (req) => {
     //
     // What it does: derives the credit operation so cost can be attributed to
     // what the student was charged for. DERIVED, not received — this function
-    // is never told which operation the client charged. The rule mirrors
-    // chat.html:2395 exactly (image → CHAT_IMAGE, explicit follow-up →
-    // CHAT_FOLLOWUP, else CHAT_TEXT).
-    teleCtx.operation = imagesData.length ? 'CHAT_IMAGE'
-                      : followUpType      ? 'CHAT_FOLLOWUP'
-                      : 'CHAT_TEXT';
+    // is never told which operation to charge for.
+    //
+    // v96: the rule moved into creditFeatureFor() and is now the SAME call the
+    // entitlement gate charges with, so the operation cost is reported against
+    // cannot drift from the operation actually billed. It used to be an inline
+    // copy of chat.html's derivation, kept in agreement by a comment.
+    teleCtx.operation = creditFeatureFor(imagesData.length > 0, followUpType);
 
     // Parent record ID sent by client for repeat/re-explanation detection (v76).
     const parentRecordId: string | null = cleanUuid(body.parent_record_id);
@@ -2386,6 +2684,83 @@ serve(async (req) => {
         worksheet_guard: true,
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
     }
+
+    // ── ENTITLEMENT GATE (v96) — the last thing before any provider call ────
+    // See the block above serve() for why this is here and why it fails closed.
+    // Everything past this line can reach OpenAI; nothing before it does.
+    //
+    // clientRequestId is the idempotency key, and it is load-bearing rather
+    // than decorative. Moving the charge here means EVERY HTTP request that
+    // reaches this line charges — including askAI()'s automatic retry on a
+    // transport-only failure, which re-sends the same payload and therefore the
+    // same key. The CAI-P1 pre-flight above cannot absorb that: it reads
+    // question_records, which is not written until after the model call, so a
+    // retry fired during the 10-30s a completion takes finds nothing and would
+    // charge a second time for one logical send.
+    //
+    // consume_credits honours the key once
+    // migrations-pending/20260802_consume_credits_idempotency.sql is applied,
+    // returning the ORIGINAL charge — same log_id, same credits — instead of
+    // making a new one. Until then chargeEntitlement falls back to the unkeyed
+    // call, so this is safe to deploy in either order; `keyed` records which
+    // happened, so the log says whether the protection was actually in force.
+    const chargedFeature = creditFeatureFor(imagesData.length > 0, followUpType);
+    const entitlement = await chargeEntitlement(
+      sbAdmin, user.id, chargedFeature, resolvedSessionId, clientRequestId,
+    );
+
+    if (entitlement.replay) {
+      console.log('[ai-tutor] entitlement-replay', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), crid: clientRequestId,
+        log_id: entitlement.logId, credits: entitlement.creditsUsed,
+      }));
+    } else if (entitlement.ok && !entitlement.keyed && clientRequestId) {
+      // The caller supplied a key and the RPC could not use it. Not fatal — the
+      // charge is correct — but this request is NOT protected against a retry,
+      // and that is worth being able to grep for while the migration is pending.
+      console.log('[ai-tutor] entitlement-unkeyed', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), crid: clientRequestId,
+      }));
+    }
+
+    if (!entitlement.ok) {
+      console.log('[ai-tutor] entitlement-denied', JSON.stringify({
+        cid, uid: user.id.slice(0, 8), feature: chargedFeature,
+        reason: entitlement.reason, daily_used: entitlement.dailyUsed,
+        daily_limit: entitlement.dailyLimit, balance: entitlement.balance,
+        unavailable: entitlement.unavailable,
+      }));
+
+      // 503 when we could not decide, 402 when the answer was "no". The
+      // distinction matters to the client: one is "try again", the other is
+      // "buy credits", and conflating them either hides an outage behind an
+      // upsell or tells a paying student to upgrade because the RPC timed out.
+      if (entitlement.unavailable) {
+        return safeError(
+          503, 'entitlement_unavailable',
+          'We could not check your plan just now. Please try again in a moment.',
+          origin, { correlation_id: cid },
+        );
+      }
+      return safeError(
+        402, 'quota_exhausted',
+        'You have used your free questions for today.',
+        origin,
+        {
+          reason:      entitlement.reason,
+          daily_used:  entitlement.dailyUsed,
+          daily_limit: entitlement.dailyLimit,
+          balance:     entitlement.balance,
+          required:    entitlement.required,
+        },
+      );
+    }
+
+    // Held so the failure paths below can hand the entitlement back. Assigned
+    // to the handler-scoped binding declared before the try, because the
+    // top-level catch needs it too.
+    creditLogId  = entitlement.logId;
+    creditsSpent = entitlement.creditsUsed;
 
     // Days until exam (used by Zero for personalised responses)
     let daysUntilExam: number | null = null;
@@ -3379,6 +3754,35 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         q_chars:    question.length,
         had_answer: !!String(parsed.answer || '').trim(),
       }));
+
+      // ── v96: an out-of-scope turn refunds CREDITS but keeps its daily slot ──
+      // v87's rule stands — a redirect is not a tutoring service, so the student
+      // keeps their credits. What changes is that "refund" no longer means
+      // "erase the usage row", because refund_ai_credit DELETEs it and
+      // consume_credits counts rows to compute daily usage. Refunding a
+      // zero-credit FREE-tier turn therefore rewinds the daily counter, and a
+      // student who only ever sends out-of-scope messages would never reach the
+      // cap while still costing a real gpt-4o call every turn.
+      //
+      // So: refund when there is something to refund (creditsSpent > 0 — the
+      // paid path, and the FREE-over-cap path that fell through to pack
+      // credits), and leave the free daily slot spent. The OpenAI call was made
+      // either way; the slot is what it was made against.
+      if (creditLogId && creditsSpent > 0) {
+        const guardLogId = creditLogId;
+        const refundTask = refundEntitlement(sbAdmin, sbUser, guardLogId)
+          .then((done) => {
+            console.log('[ai-tutor] entitlement-refund', JSON.stringify({
+              cid, log_id: guardLogId, credits: creditsSpent, ok: done, on: 'scope_guard',
+            }));
+          })
+          .catch(() => { /* never rejects; see refundEntitlement */ });
+        const EdgeRtS = (globalThis as unknown as {
+          EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
+        }).EdgeRuntime;
+        if (EdgeRtS?.waitUntil) EdgeRtS.waitUntil(refundTask);
+      }
+
       return new Response(JSON.stringify({
         answer:          scopeRedirectMessage(lang, studentName, question),
         hint:            '',
@@ -3815,6 +4219,32 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         err, cid, requestId, providerCalls: teleSink.length, ctx: teleCtx,
       });
     } catch { failureRow = null; /* recording is optional; the response is not */ }
+
+    // ── v96: hand the entitlement back ──────────────────────────────────────
+    // The student is about to get a 500 and no answer, so they must not have
+    // paid for one — in credits OR in a free daily slot. This is the refund the
+    // browser used to issue, moved to the only party that actually knows the
+    // request failed. A student could always claim failure; the server observes
+    // it.
+    //
+    // Fire-and-forget with waitUntil for the same reason the telemetry flush is:
+    // holding the error response open for a refund round-trip helps nobody. A
+    // refund that fails leaves a charged row, which AI Monitor can reconcile —
+    // strictly better than delaying or replacing the response.
+    if (creditLogId && teleAdmin && sbUserForRefund) {
+      const lostLogId = creditLogId;
+      const refundTask = refundEntitlement(teleAdmin, sbUserForRefund, lostLogId)
+        .then((done) => {
+          console.log('[ai-tutor] entitlement-refund', JSON.stringify({
+            cid, log_id: lostLogId, credits: creditsSpent, ok: done, on: 'failure',
+          }));
+        })
+        .catch(() => { /* refundEntitlement never rejects; belt to that braces */ });
+      const EdgeRtR = (globalThis as unknown as {
+        EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void }
+      }).EdgeRuntime;
+      if (EdgeRtR?.waitUntil) EdgeRtR.waitUntil(refundTask);
+    }
 
     return safeError(
       500,

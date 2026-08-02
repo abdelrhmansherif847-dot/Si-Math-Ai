@@ -104,6 +104,57 @@ listing." Largely obviated if INFRA-3 ships.
 
 ---
 
+## INFRA-5 — Study Planner still charges from the browser
+
+**Status:** `PROPOSED` — raised by the v96 quota-enforcement fix.
+
+**Context.** v96 moved the chat quota gate out of `chat.html` and into the
+`ai-tutor` Edge Function, because a gate the client decides whether to open is
+not a gate. The same pattern still exists on one other path: `chat.html`'s Study
+Planner charges `STUDY_PLAN` (20 credits, `always_charge`) via
+`CreditConfig.charge()` in the browser, and refunds via `refund_ai_credit()` in
+the browser if generation throws.
+
+**Why it was left alone, and why that is not "fine".** The Study Planner makes
+**no provider call** — `window.StudyPlanner.buildStudyPlan()` is a pure
+client-side computation over data the student already has. So the charge is a
+paywall on a local feature, not a gate in front of spend: skipping it costs the
+platform no money and does not touch the FREE daily cap (`always_charge` rows
+never take the free branch). That is why it was correctly out of scope for a fix
+whose defect was "free students get unmetered LLM calls".
+
+It is still a client-enforced paywall. A student who skips the charge gets the
+feature for free. That is a revenue question rather than a cost or quota one,
+which is why it is here rather than in the fix.
+
+**Its refund is already gone (v96).** The path used to charge first and refund
+from the browser if the local engine threw — the last authenticated client route
+to `refund_ai_credit`. Rather than break it when
+`20260802_refund_ai_credit_server_only.sql` lands, the order was inverted: the
+plan is **built first and charged after**, so the failure the refund existed to
+undo can no longer happen after a charge. The planner makes no provider call, so
+doing the work before the paywall costs nothing.
+
+Residual: a throw in `saveStudyPlan` after the charge leaves the student charged
+with no persisted plan. The plan is still rendered (`saved: false`), so they get
+what they paid for; only persistence is lost.
+
+**What remains for this item** is only that the charge is client-side and
+therefore skippable.
+
+**Options.**
+  (a) Move the charge server-side, as v96 did for chat. Needs a server-side
+      entry point for the planner, which does not exist today — it is deliberately
+      a client engine (`_shared/study-planner.core.js` runs in the browser).
+  (b) Charge through a narrow `SECURITY DEFINER` RPC that also writes the plan,
+      so the paywall and the persistence commit together.
+
+Neither blocks the migration any more. This is a revenue question, not a cost or
+quota one — nothing here can run up a provider bill or touch the FREE daily cap
+(`STUDY_PLAN` is `always_charge`, so it never takes the free branch).
+
+---
+
 ## Note: migrations applied without a committed file
 
 Observed 2026-08-02: `plan_catalog_single_source` (03:56 UTC-equivalent
