@@ -14,42 +14,33 @@
 // The single most important assertion in this file is "default off": with no
 // env change, deploying V0 must leave L3 Shadow byte-identical.
 import { suite } from './_assert.mjs';
-import { read, slice, importTS } from './_source.mjs';
+import { read, slice, REPO } from './_source.mjs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const t = suite('verification-v0');
 
-const SRC = read('supabase/functions/ai-tutor/index.ts');
+// V1-T16 moved the L3 pipeline out of index.ts into this module. The suite is
+// unchanged apart from where it reads the bytes from — the assertions below
+// still execute the real shipped source, and still guard the same properties.
+const SRC = read('supabase/functions/_shared/verification.core.ts');
 
-// One contiguous slice: the answer-equivalence helpers (blindVerdictFrom needs
-// answersEquivalent) followed by the V0 block.
-const V0_BLOCK = slice(
-  SRC,
-  '// Normalize a final-answer string for equality comparison.',
-  '// Harden tutor-answer extraction',
-  'ai-tutor V0 observation surface',
-);
+// V1-T16 turned this into a real ES module with real exports, so the suite now
+// IMPORTS it rather than slicing text out of index.ts. That is strictly closer
+// to production: Deno loads these exact bytes the same way.
+const MODULE_URL = pathToFileURL(
+  resolve(REPO, 'supabase/functions/_shared/verification.core.ts')).href;
 
-const EXPORTS = [
-  'POLICY_VERSION', 'PLAN_ID', 'DEFAULT_EXPLORATION_FRACTION',
-  'explorationFraction', 'isForcedExploration', 'judgeAnswerBlindEnabled',
-  'blindVerdictFrom', 'runJudgePrecommit', 'buildDecisionRow',
-  'DECISION_LOG_ENABLED', 'answersEquivalent', 'JUDGE_PRECOMMIT_SYSTEM_PROMPT',
-];
+let loadSeq = 0;
 
 /**
- * Import the real V0 block with a stubbed Deno env and stubbed telemetry.
- * A fresh module per call, so module-scope env reads (DECISION_LOG_ENABLED)
- * are re-evaluated against the env under test.
+ * Import the real module with a stubbed Deno env.
+ * A fresh instance per call (cache-busting query), because module-scope env
+ * reads — DECISION_LOG_ENABLED, OPENAI_KEY — are evaluated once per instance.
  */
-function load(env = {}) {
-  const prelude = `
-declare const globalThis: any;
-(globalThis as any).Deno = { env: { get: (k: string) => (${JSON.stringify(env)} as any)[k] } };
-type ModelCallRow = any;
-const OPENAI_KEY = 'test-key';
-function recordModelCall(sink: any, args: any): void { if (sink) sink.push(args); }
-`;
-  return importTS(prelude + V0_BLOCK, EXPORTS);
+async function load(env = {}) {
+  globalThis.Deno = { env: { get: (k) => env[k] } };
+  return import(`${MODULE_URL}?v=${++loadSeq}`);
 }
 
 // ── V0-T10: policy identity ─────────────────────────────────────────────────
