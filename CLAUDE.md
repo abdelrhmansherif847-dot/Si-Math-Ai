@@ -135,6 +135,7 @@ student impact during exam-prep windows.
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
+| Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **68 files** in `supabase/migrations/`, **131 applied** in the database |
 | Static site | 46 root `*.html` pages on Vercel |
 | CI | `node tests/run-all.mjs` — 17 test suites + 7 validators = **24 checks** |
@@ -220,5 +221,9 @@ safe or that a merge is sufficient.
   `question_records`. **Its consumer audit is stale** — `ai-monitor.html` was built
   afterwards and now reads `verification_meta`'s internal shape
 - `docs/roadmap/ai-economics.md` — AI Economics (Owner Dashboard) architecture
+- `docs/roadmap/plan-catalog-v2.md` — **the plan catalogue.** `plan_definitions`
+  is the single source of truth for what a plan is called, costs, grants and
+  looks like; plans are authored from the Owner Dashboard and need no code
+  change. Read §11 before touching plans, pricing, checkout or entitlements
 - `docs/roadmap/verification-framework-audit.md` — the vacuous-assertion audit and
   the rule it produced: *a green check is only evidence if it could have gone red*

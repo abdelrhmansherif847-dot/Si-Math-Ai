@@ -198,6 +198,25 @@
     annual:     '/ year'
   };
 
+  // Days per period, as an explicit table rather than months x 30.44. The
+  // approximation put semiannual at 183 while the dashboard form writes 182,
+  // and two definitions that disagree by a day are still two definitions.
+  // These are the same numbers the Create Plan form fills in.
+  var CYCLE_DAYS = { monthly: 30, quarterly: 91, semiannual: 182, annual: 365 };
+
+  // Length of one billing period in days. A plan's own period_days always wins
+  // over the named cycle — a custom plan can be any length.
+  function cycleDays(codeOrPlanOrCycle) {
+    if (codeOrPlanOrCycle && typeof codeOrPlanOrCycle === 'object') {
+      var authored = Number(codeOrPlanOrCycle.period_days);
+      if (isFinite(authored) && authored > 0) return authored;
+      return CYCLE_DAYS[codeOrPlanOrCycle.billing_cycle] || null;
+    }
+    var p = get(codeOrPlanOrCycle);
+    if (p) return cycleDays(p);
+    return CYCLE_DAYS[codeOrPlanOrCycle] || null;
+  }
+
   // 'monthly' -> '/ month'. One-time, pack and custom cycles have no suffix,
   // because "1,299 EGP / one_time" is not a thing anyone wants to read.
   function periodLabel(codeOrPlan) {
@@ -294,6 +313,8 @@
     periodLabel:   periodLabel,
     formatPrice:   formatPrice,
     monthsIn:      monthsIn,
+    cycleDays:     cycleDays,
+    CYCLE_DAYS:    CYCLE_DAYS,
     icon:          function (code) { var p = get(code); return (p && p.icon) || null; },
     themeColor:    function (code) { var p = get(code); return (p && p.theme_color) || null; },
     accentColor:   function (code) { var p = get(code); return (p && p.accent_color) || null; },

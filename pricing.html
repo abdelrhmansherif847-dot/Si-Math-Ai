@@ -90,6 +90,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="plan-catalog.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -406,10 +407,23 @@ function fmtPrice(egp) {
 // plan the owner adds as "SCHOLAR_TERM" on a quarterly cycle was priced per
 // month on the card. The suffix is kept only as the fallback for a row loaded
 // before billing_cycle existed.
+// The billing-cycle vocabulary lives in plan-catalog.js and nowhere else. It
+// used to be spelled out here, which is how a semiannual plan came to be
+// advertised "/ month": the database learned the cycle and this function did
+// not. Delegating means a cycle added to the catalogue is understood here the
+// same day. The suffix rules below are the fallback for a page loaded before
+// the module, and for rows that predate billing_cycle entirely.
 function cycleLabel(cycle, code) {
-  if (cycle === 'annual')    return '/ year';
-  if (cycle === 'quarterly') return '/ 3 months';
-  if (cycle === 'monthly')   return '/ month';
+  if (window.PlanCatalog) {
+    const viaModule = window.PlanCatalog.periodLabel({ billing_cycle: cycle });
+    if (viaModule) return viaModule;
+  }
+  if (cycle === 'annual')     return '/ year';
+  if (cycle === 'semiannual') return '/ 6 months';
+  if (cycle === 'quarterly')  return '/ 3 months';
+  if (cycle === 'monthly')    return '/ month';
+  // A one-time, pack or custom cycle has no recurring period to name.
+  if (cycle === 'one_time' || cycle === 'pack' || cycle === 'custom' || cycle === 'none') return '';
   if (!code) return '';
   if (code.endsWith('_ANNUAL')) return '/ year';
   if (code.endsWith('_QUARTERLY')) return '/ 3 months';
@@ -417,10 +431,17 @@ function cycleLabel(cycle, code) {
 }
 
 // Days in one billing period — the divisor behind the "≈ N/day" credit figure.
-function cycleDays(cycle, code) {
-  if (cycle === 'annual')    return 365;
-  if (cycle === 'quarterly') return 91;
-  if (cycle === 'monthly')   return 30;
+// The plan's own period_days is authoritative when it has one: a custom plan
+// can be any length, and no vocabulary of named cycles can cover that.
+function cycleDays(cycle, code, periodDays) {
+  const authored = Number(periodDays);
+  if (Number.isFinite(authored) && authored > 0) return authored;
+  const viaModule = window.PlanCatalog ? window.PlanCatalog.cycleDays(cycle) : null;
+  if (viaModule) return viaModule;
+  if (cycle === 'annual')     return 365;
+  if (cycle === 'semiannual') return 182;
+  if (cycle === 'quarterly')  return 91;
+  if (cycle === 'monthly')    return 30;
   return (code || '').endsWith('_ANNUAL') ? 365 : (code || '').endsWith('_QUARTERLY') ? 91 : 30;
 }
 
@@ -766,10 +787,10 @@ async function loadPage() {
       <div class="pc-cycle">free forever</div>
       <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
     } else {
-      const perDay = Math.round(plan.credits_granted / cycleDays(plan.billing_cycle, plan.plan_code));
+      const perDay = Math.round(plan.credits_granted / cycleDays(plan.billing_cycle, plan.plan_code, plan.period_days));
       html += `<div class="pc-price"${theme ? ` style="color:${theme}"` : ''}>${Number(plan.price_egp).toLocaleString('en-EG',{maximumFractionDigits:0})}<span class="pc-price-unit"> ${escHtml(plan.currency || 'EGP')}</span></div>
       <div class="pc-cycle">${cycleLabel(plan.billing_cycle, plan.plan_code)}</div>
-      <div class="pc-credits-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>${plan.credits_granted.toLocaleString()}</b> credits ${cycleLabel(plan.billing_cycle, plan.plan_code).replace('/ ','per ')} <span style="color:var(--text-500)">≈ ${perDay}/day</span></div>
+      <div class="pc-credits-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><b>${plan.credits_granted.toLocaleString()}</b> credits ${cycleLabel(plan.billing_cycle, plan.plan_code).replace('/ ','per ') || 'total'} <span style="color:var(--text-500)">≈ ${perDay}/day</span></div>
       <div class="pc-devices-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>${plan.device_limit} device${plan.device_limit===1?'':'s'} allowed</div>`;
     }
 

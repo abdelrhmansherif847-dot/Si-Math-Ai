@@ -240,8 +240,10 @@ Row counts are live values, not estimates.
 | `credit_packs` | 3 | Pack display catalogue (199/349/649 EGP) | Third copy of pack price |
 
 > **Superseded — 2026-08-02.** The three-copy problem in the last two rows is
-> resolved by `20260802_plan_catalog_single_source.sql` (⛔ prepared, awaiting
-> owner approval). It promotes `plan_definitions` to the sole catalogue and
+> resolved by `20260802_plan_catalog_single_source.sql` (✅ **applied**, and
+> extended by `20260802d_plan_catalog_v2_authoring.sql` into a full authoring
+> system — see `docs/roadmap/plan-catalog-v2.md`). It promotes
+> `plan_definitions` to the sole catalogue and
 > recreates `pricing_settings` and `credit_packs` as views over it, so there is
 > one row per plan physically and the lockstep this table asks for is no longer
 > something anyone has to maintain. Read counts above as pre-consolidation.
@@ -265,9 +267,15 @@ Row counts are live values, not estimates.
 Catalogue as measured on 2026-07-28: PRO_MONTHLY 349 · PRO_QUARTERLY 899 ·
 PRO_ANNUAL 2999 · FOUNDER_ANNUAL 1499 · packs 199/349/649 EGP. These are a
 snapshot for the analysis above, **not a reference** — since the Owner → Plans
-& Packs panel shipped, prices and credit grants are editable at any time and
-only `plan_definitions` is authoritative. Nothing should read these numbers
-from this document.
+& Packs panel shipped, prices and credit grants are editable at any time, plans
+can be created, archived and restored from the dashboard, and only
+`plan_definitions` is authoritative. Nothing should read these numbers from this
+document.
+
+**One caveat for every figure in this file:** a plan now carries a `currency`.
+It is **quoted, not settled** — `payment_requests.amount_egp` and every econ
+object remain EGP-denominated. Do not read a non-EGP plan's revenue as that
+currency. See `docs/roadmap/plan-catalog-v2.md` §7.
 
 ### 4.2 Credits & consumption
 
