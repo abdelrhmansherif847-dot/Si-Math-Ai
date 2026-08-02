@@ -279,6 +279,16 @@ const PAGE_ALIASES = [
   ['Knowledge Graph', 'knowledge-graph.html'],
 ];
 
+/**
+ * The four names. `Organization.alternateName` is "Si Math" while prose names
+ * "the Si Math course" as a different thing — a machine reading both could
+ * conclude the organization IS the course. Defining all four together is the
+ * only way a reader gets the hierarchy right.
+ */
+const CANONICAL_NAMING =
+  'Si Math is the umbrella brand. The Si Math course is the taught programme. '
+  + 'Si Math AI is the platform. Zero is the AI mentor inside the platform.';
+
 /** The commitment the positioning creates. A constraint on the product, not copy. */
 const OPTIONALITY_COMMITMENT =
   "no student's success should ever depend on purchasing an additional product";
@@ -1384,6 +1394,37 @@ for (const label of ['ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
   const missing = PAGE_ALIASES.filter(([t]) => !text.includes(t)).map(([t]) => t);
   ok(`${label}: publishes all ${PAGE_ALIASES.length} topic→page mappings`,
     missing.length === 0, missing.join(' · '));
+}
+
+/**
+ * The naming hierarchy, verbatim. This is the whole point of the audit that
+ * produced it: two AI systems crawling the site should resolve four names the
+ * same way, and before this they had two of the four defined together.
+ */
+const brand = CONCEPTS.find((c) => c.id === 'si-math');
+ok('the graph defines the Si Math umbrella brand', !!brand);
+ok('the brand concept names both things offered under it',
+  !!brand && edge('si-math', 'governs', 'si-math-course') && edge('si-math', 'governs', 'si-math-ai'));
+for (const file of (brand ? brand.pages : [])) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states the naming hierarchy verbatim`, text.includes(CANONICAL_NAMING));
+  for (const n of ['Si Math', 'The Si Math course', 'Si Math AI', 'Zero']) {
+    ok(`${file}: defines "${n}" in the naming table`, text.includes(n));
+  }
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  ok(`${f}: states the naming hierarchy verbatim`,
+    read(f).replace(/\s+/g, ' ').includes(CANONICAL_NAMING));
+}
+// The alternateName is what creates the ambiguity, so wherever it is published
+// the disambiguation must be too.
+for (const { file } of [...KNOWLEDGE_PAGES, ...SEO_PAGES]) {
+  if (!has(file)) continue;
+  if (!/"alternateName"\s*:\s*"Si Math"/.test(read(file))) continue;
+  ok(`${file}: publishes the naming hierarchy alongside alternateName "Si Math"`,
+    visibleText(read(file)).includes(CANONICAL_NAMING));
 }
 
 // Works with any teaching — the claim that makes the optionality real.

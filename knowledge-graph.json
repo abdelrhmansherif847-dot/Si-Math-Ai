@@ -116,6 +116,9 @@
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
         },
         {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math"
+        },
+        {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
         },
         {
@@ -261,6 +264,35 @@
       ],
       "specializes": [
         "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#si-math",
+      "identifier": "si-math",
+      "name": "Si Math",
+      "conceptKind": "Brand",
+      "description": "The umbrella name. Si Math is the brand under which two distinct things are offered: the Si Math course, a complete educational programme taught by human educators, and Si Math AI, the optional learning platform published at si-math-ai.com. Zero is the AI mentor inside the platform, not a separate product and not a person.",
+      "purpose": "To remove an ambiguity the knowledge layer created for itself. \"Si Math\" appears as the organization's alternate name in structured data while \"the Si Math course\" names a different thing in prose, and a machine reading both could reasonably conclude the organization is the course, or that the course is the platform under an older name. Four names exist; all four are now defined in one place.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math",
+      "canonicalPage": "https://www.si-math-ai.com/ai-knowledge.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "output": [
+        "The Si Math course — the taught programme",
+        "Si Math AI — the platform"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/#organization"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course",
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
       ]
     },
     {
