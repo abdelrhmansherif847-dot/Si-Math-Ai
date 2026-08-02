@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 34 concepts, and a 3,087-check CI gate. Nothing further is to
+knowledge graph of 34 concepts, and a 3,107-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -70,15 +70,22 @@ rather than add. The next real improvements are not documentation: verify C-13,
 supply the figures in §15, and collect the outcome evidence §0a is built to
 receive. See `consistency-audit.md` C-31.
 
-### The question that gates every feature
+### The questions that gate every feature
 
-Before building anything, ask:
+Before building anything, ask all three:
 
-> **"Will this genuinely help students learn better?"**
+> 1. **Does this improve learning?**
+> 2. **Does this improve understanding?**
+> 3. **Does this improve long-term retention?**
 
-If yes, build it. If no, do not — however impressive the technology is. This is
-what keeps Si Math AI an education platform rather than a feature list, and it
-applies to documentation as much as to code.
+**If the answer to any of them is "no", the feature should not exist** — however
+impressive the technology is.
+
+Three questions replaced the single earlier one ("will this genuinely help
+students learn better?") on 2026-08-02, because a motivated advocate can answer
+that one yes about almost anything. The third is the one most features fail: a
+great deal of educational software improves performance during the session and
+nothing afterwards. See `governance.md` §7.
 
 ### And the philosophy, which does not change as the platform grows
 
@@ -1361,7 +1368,12 @@ been worse than declaring our own honestly.
 
 ---
 
-## 14. Governance — the knowledge layer is updated FIRST
+## 14. Governance — the mechanics of shipping a change
+
+> **Whether a change belongs in the layer is decided by `governance.md`, not
+> here.** The layer has been FROZEN since 2026-08-02; most proposals stop at
+> Gate 1 of that document. This section is the *how* — which files, which
+> generators, which commands — for a change that has already passed those gates.
 
 **Rule: when a new major feature ships, the knowledge layer is updated before
 the feature is announced anywhere else.** Not afterwards, and not "when we get

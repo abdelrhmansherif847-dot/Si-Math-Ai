@@ -1324,6 +1324,74 @@ ok('the FAQ asks the purchase question directly',
   CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
 
 /* ══════════════════════════════════════════════════════════════════════════
+   5c. Governance — the document that refuses things
+   docs/knowledge/governance.md decides WHETHER a change belongs in the layer.
+   It is checked for the same reason every canonical claim is: an unenforced
+   rule decays, and the sections most likely to be quietly deleted are the ones
+   that say no.
+
+   This is deliberately a shallow check. It cannot verify that a process was
+   followed — no check can. It verifies the document still contains the parts
+   that make following it possible, which is the honest limit of what CI can
+   assert about a process.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Knowledge Layer governance');
+
+const GOV = 'docs/knowledge/governance.md';
+ok(`${GOV} exists`, has(GOV));
+if (has(GOV)) {
+  const gov = read(GOV);
+
+  ok('governance declares the layer frozen', /Status: FROZEN/i.test(gov));
+
+  // The five sections the document exists to hold. Each is one someone would be
+  // tempted to drop, because each of them refuses something.
+  const REQUIRED_SECTIONS = [
+    ['what belongs', /##\s*2\..*What belongs in the Knowledge Layer/i],
+    ['what does not belong', /##\s*3\..*What does not belong/i],
+    ['when it must be updated', /##\s*4\..*When documentation \*?must\*? be updated/i],
+    ['when it must stay unchanged', /##\s*5\..*When it must deliberately remain unchanged/i],
+    ['the review process', /##\s*6\..*The review process/i],
+  ];
+  for (const [label, re] of REQUIRED_SECTIONS) {
+    ok(`governance covers "${label}"`, re.test(gov));
+  }
+
+  // The four gates. Removing one is how a review process becomes a formality.
+  for (const gate of ['Origin', 'Novelty', 'Placement', 'Enforcement']) {
+    ok(`governance keeps the "${gate}" gate`, new RegExp(`Gate \\d+ · ${gate}`).test(gov));
+  }
+
+  ok('governance states the direction of causation',
+    /Documentation follows the product\. Never the reverse\./i.test(gov));
+  ok('governance names what the remaining work is, and that it is not documentation',
+    /None of it is documentation/i.test(gov));
+  ok('governance states how the freeze ends',
+    /##\s*9\..*Unfreezing/i.test(gov) && /the product evolved/i.test(gov));
+}
+
+/**
+ * The three-question feature gate, on all three surfaces that carry it. It
+ * replaced a single question that a motivated advocate could answer yes to about
+ * anything, so the value is in there being three — a version that quietly loses
+ * one is the old gate again.
+ */
+const FEATURE_GATE = [
+  'Does this improve learning?',
+  'Does this improve understanding?',
+  'Does this improve long-term retention?',
+];
+for (const f of [GOV, 'docs/knowledge/knowledge-base.md', 'CLAUDE.md']) {
+  if (!has(f)) { ok(`${f} exists`, false); continue; }
+  const text = read(f);
+  const missing = FEATURE_GATE.filter((q) => !text.includes(q));
+  ok(`${f}: states all three feature-gate questions`, missing.length === 0,
+    missing.join(' · '));
+  ok(`${f}: states that any "no" blocks the feature`,
+    /answer to any (?:of them )?is "no", the feature should not exist/i.test(text));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    6a. Retrieval surface — resolving names instead of leaving them to inference
    An AI system asked "does Si Math AI have Performance Analytics?" or "where is
    the Learning Philosophy page?" will answer either way. The only question is
