@@ -39,7 +39,23 @@ COUPLINGS=(
   "weakness_reports:topic_id:topic_id:*.js"
   "mastery_records:topic_id:topic_id:*.js"
   "focus_tasks:topic_id:topic_id:*.html"
+  # Truth System v2 V0. The Edge Function writes verification_decisions on every
+  # L3 shadow run; without this entry the guard exits 0 even when the migration
+  # was never applied, which is the exact deploy-ordering race this script
+  # exists to prevent. decision_uid is the sentinel: any column proves the table
+  # landed, and this is the one the idempotent write depends on.
+  "verification_decisions:decision_uid:verification_decisions:*.ts"
 )
+
+# ── GLOB SEMANTICS — READ BEFORE ADDING AN ENTRY ──────────────────────────
+# The 4th field is passed to `grep --include`, which matches the file's BASE
+# NAME, not its path. A path-style glob such as
+#   supabase/functions/ai-tutor/index.ts
+# therefore matches NOTHING: the entry prints SKIP and is never checked. Two
+# existing entries above are in that state and have never armed (see the
+# V1-T16 deployment readiness review). Use a basename or extension pattern —
+# `*.ts`, `*.js`, `*.html`, `index.ts` — and confirm a new entry reports OK or
+# FAIL rather than SKIP before trusting it.
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 fail=0

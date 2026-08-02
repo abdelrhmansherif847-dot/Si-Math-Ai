@@ -73,19 +73,37 @@ Re-run `scripts/check-migration-parity.sh`. Must exit 0.
 
 > ⛔ **MULTI-FILE BUNDLE (v83+): copy-paste Path A is DISALLOWED.**
 >
-> As of v83, `index.ts` begins with `import '../_shared/taxonomy.core.js'`
-> (the single-source taxonomy). The function is no longer a single file — it
-> is a bundle of `index.ts` + `_shared/taxonomy.core.js`. The Dashboard
-> copy-paste path ships ONLY `index.ts`; the import would resolve to nothing,
-> the function would fail at cold start, and every student request would 500 —
-> exactly the outage class this section guards against.
+> As of v83 the function is no longer a single file, and **as of V1-T16 it is a
+> FOUR-file bundle.** The Dashboard copy-paste path ships ONLY `index.ts`; the
+> imports would resolve to nothing, the function would fail at cold start, and
+> every student request would 500 — exactly the outage class this section
+> guards against.
+>
+> The import graph the bundler must follow:
+>
+> ```
+> supabase/functions/ai-tutor/index.ts
+> ├── ../_shared/telemetry.core.ts       recordModelCall, flushModelCalls
+> ├── ../_shared/verification.core.ts    runL3ShadowPipeline (the L3 pipeline)
+> │   └── ./telemetry.core.ts            nested import
+> └── ../_shared/taxonomy.core.js        side-effect import
+> ```
+>
+> `_shared/cors.ts` and `_shared/study-planner.core.js` are NOT reachable from
+> `ai-tutor` (`cors.ts` belongs to `admin-actions`). Expect exactly four files.
 >
 > **For any version that imports from `_shared/`, deploy via Path B (CLI) ONLY.**
-> The CLI bundles the entire `supabase/functions/ai-tutor/` directory tree
-> (including `_shared`). Do NOT use Path A for v83+.
+> The CLI follows the import graph out of `supabase/functions/ai-tutor/` and
+> pulls in the `_shared/` modules it reaches — note they are SIBLINGS of the
+> function directory, not inside it. Do NOT use Path A for v83+.
 >
-> Post-deploy, VERIFY the bundle is multi-file: `get_edge_function` (or the
-> Dashboard file list) must show BOTH `index.ts` AND `_shared/taxonomy.core.js`.
+> Post-deploy, VERIFY the bundle: `get_edge_function` (or the Dashboard file
+> list) must show **all four** of `index.ts`, `_shared/telemetry.core.ts`,
+> `_shared/verification.core.ts` and `_shared/taxonomy.core.js`.
+>
+> **This check is now load-bearing rather than precautionary.** Before V1-T16 a
+> partial bundle meant a missing taxonomy helper. It now means the ENTIRE
+> verification pipeline is absent, and the function cannot start at all.
 
 ### Approved path A — Supabase Dashboard copy-paste (PRE-v83 single-file only)
 
@@ -211,11 +229,39 @@ After deploy, on production:
 
 ## 7. Rollback
 
+**Record the rollback target BEFORE deploying.** It is the platform version and
+`ezbr_sha256` currently live, and it is the only unambiguous identity of the
+bytes you would be restoring. Capture both in the release report:
+
+```
+list_edge_functions → ai-tutor → { version, ezbr_sha256 }
+```
+
+Do not rely on a version number written in this file — it is stale the moment
+the next deploy lands. Read it from the live project each time.
+
 - **Edge Function:** Dashboard → Edge Functions → `ai-tutor` → Versions →
-  select previous version → Restore.
+  select the recorded previous version → Restore. A restore reinstates the
+  **whole bundle**, all four files together, so there is no partial-restore
+  state to reason about.
 - **Client assets:** revert deployment in hosting provider to previous build.
 - **Migrations:** never auto-rollback in production. If a migration is
   unsafe, apply a forward-fix migration.
+
+### 7.1 Rolling back the function does NOT require rolling back the migration
+
+The two layers are independent and should be treated that way.
+
+An additive migration that only CREATES objects nothing else reads is inert
+once the code referencing it is gone. Leaving the new table in place after a
+function rollback is the **recommended** partial rollback: it is harmless, and
+it leaves the database forward-compatible so the retry is a function deploy
+alone.
+
+Drop a newly-added table only if it is genuinely unwanted, and only while
+nothing reads it — verify that claim before relying on it rather than assuming
+it. For `verification_decisions` (Truth System V0) nothing reads it until the
+Audit Engine arrives, and its rollback statement is in the migration header.
 
 ## 8. Post-deploy
 
