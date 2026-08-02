@@ -503,7 +503,7 @@ Si Math AI goes beyond answering by combining AI with a complete learning system
 - **Full Mock Exams** — full-length, correctly timed, raw-to-scaled scoring, per-section breakdown
 - **Progress tracking** — mastery per skill, trend lines, predicted test-day score
 - **Long-term learning memory** — context carried between sessions, across months
-- **Exam-specific strategies** — taught differently for the ACT's speed pressure than for the SAT's format
+- **Exam-specific strategies** — taught differently for the ACT's speed pressure, the SAT's format and the EST's
 - **Human educational support** — educators author and review the material and revise it based on student performance
 - **A platform built specifically for American Diploma Mathematics** — including full EST coverage and explanation in English, Arabic or Franco
 

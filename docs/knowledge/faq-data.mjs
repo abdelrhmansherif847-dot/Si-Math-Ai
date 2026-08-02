@@ -211,7 +211,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Does Zero know which exam I am preparing for?',
-        a: '<p>Yes. The platform carries your exam context between sessions, and it matters: the same topic is approached differently for the ACT\'s time pressure than for the SAT\'s format. A general AI tool has no reason to know which exam you are sitting.</p>',
+        a: '<p>Yes. The platform carries your exam context between sessions, and it matters: the same topic is approached differently for the ACT\'s time pressure, the SAT\'s format and the EST\'s. A general AI tool has no reason to know which exam you are sitting.</p>',
       },
       {
         q: 'Does Zero make mistakes?',
@@ -328,7 +328,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Do mock exams use real timing?',
-        a: '<p>Yes — real timing and real format for each exam, including the ACT\'s 60 questions in 60 minutes, which is a fundamentally different pacing problem from the SAT.</p>',
+        a: '<p>Yes — real timing and real format for each of the three exams. Pacing is the clearest example of why that matters: the ACT\'s per-question budget is a fundamentally different problem from the SAT\'s or the EST\'s, and practising one at the wrong tempo trains the wrong habit.</p>',
       },
       {
         q: 'What is raw-to-scaled scoring?',
@@ -430,7 +430,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Does Si Math AI support the EST?',
-        a: '<p>Yes, at the same depth as the SAT and ACT: Number Theory &amp; Arithmetic, Algebra &amp; Inequalities, Geometry &amp; Measurement, and Data &amp; Probability. Full EST support is one of the reasons the platform was built — it matters enormously for Egyptian university admission and is barely addressed by international preparation products.</p>',
+        a: '<p>Yes. EST Mathematics is covered at the same depth as the SAT and ACT: Number Theory &amp; Arithmetic, Algebra &amp; Inequalities, Geometry &amp; Measurement, and Data &amp; Probability. Full EST support is one of the reasons the platform was built — it matters enormously for Egyptian university admission and is barely addressed by international preparation products.</p>',
       },
       {
         q: 'Can I prepare for more than one exam?',

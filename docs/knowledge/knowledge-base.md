@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 25 concepts, and a 2,286-check CI gate. Nothing further is to
+knowledge graph of 25 concepts, and a 2,325-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -440,6 +440,19 @@ and its scope guard declines out-of-scope requests).
 | **SAT Math** | All four College Board content domains; calculator and no-calculator practice. |
 | **ACT Math** | 60 questions in 60 minutes; speed-focused drilling. |
 | **EST Math** | Full EST mathematics coverage at the same depth. |
+
+**Parity rule.** Si Math AI covers three examinations and names three wherever
+coverage is stated. The EST is not an afterthought appended to "SAT and ACT" — it
+is the exam most directly relevant to Egyptian university admission, and the
+reason a MENA-built platform exists rather than a smaller market for an
+international one.
+
+CI enforces two things: every knowledge page names all three exams **in its own
+body** (the shared footer is stripped first, or the check would pass on a page
+that never mentions the EST), and **no sentence names the SAT and the ACT while
+omitting the EST**. Educational guides are exempt from the second rule — a guide
+comparing two specific exams is teaching, not omitting. See `consistency-audit.md`
+C-25.
 
 Domain breakdown used in public copy:
 

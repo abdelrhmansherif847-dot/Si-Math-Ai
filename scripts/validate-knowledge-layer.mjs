@@ -391,6 +391,18 @@ const emptyAnswers = CATEGORIES.flatMap((c) =>
   c.items.filter((i) => !i.a || stripTags(i.a).length < 40).map((i) => i.q));
 ok('every FAQ answer is substantive', emptyAnswers.length === 0, emptyAnswers.join('\n        '));
 
+/**
+ * Every FAQ ANSWER as plain text, scanned by several sections below.
+ *
+ * Questions are allowed to quote a framing the site forbids — "Is Si Math AI
+ * just an AI?" is a question the FAQ legitimately asks and answers with "no" —
+ * so the scanners read the answers only, from the data module rather than
+ * through the rendered page.
+ */
+const faqAnswerText = CATEGORIES
+  .flatMap((c) => c.items.map((i) => stripTags(i.a)))
+  .join('\n');
+
 /* ══════════════════════════════════════════════════════════════════════════
    1b. The Educational Knowledge Hub
    ══════════════════════════════════════════════════════════════════════════ */
@@ -1005,16 +1017,90 @@ ok('the FAQ asks the purchase question directly',
   CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
 
 /* ══════════════════════════════════════════════════════════════════════════
+   6c. Exam parity — the EST is not the third exam, it is a first one
+   Si Math AI covers three examinations, and the EST is the one that matters most
+   for Egyptian university admission. It is also the one that silently drops out
+   of copy, because "SAT and ACT" is the familiar pair and the EST gets appended
+   only when someone remembers. Two checks, both of which have gone red on this
+   repository:
+
+     1. Every knowledge page must name all three in its OWN body. The shared
+        footer links "EST Math" on every page, so the footer is stripped before
+        the check — otherwise the check would pass on a page that never mentions
+        the exam at all, which is the vacuous-assertion failure recorded in
+        docs/roadmap/verification-framework-audit.md.
+     2. No sentence may name the SAT and the ACT while omitting the EST. That is
+        the exact shape the omission takes.
+
+   Learn pages are exempt from rule 2 by design: a guide comparing two specific
+   exams is doing legitimate teaching, and forcing the third into every
+   comparison would make the writing worse, not fairer.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Exam parity (SAT · ACT · EST)');
+
+const EXAMS = ['SAT', 'ACT', 'EST'];
+const stripFooter = (html) => html.replace(/<footer class="k-footer">[\s\S]*?<\/footer>/gi, ' ');
+
+/** The first sentence naming the SAT and the ACT but not the EST, or null. */
+function examPairWithoutEST(text) {
+  for (const s of text.split(/(?<=[.!?])\s+/)) {
+    if (/\bSAT\b/.test(s) && /\bACT\b/.test(s) && !/\bEST\b/.test(s)) return s.trim().slice(0, 140);
+  }
+  return null;
+}
+
+for (const { file } of [...KNOWLEDGE_PAGES, ...SEO_PAGES, { file: 'learn.html' }]) {
+  if (!has(file)) continue;
+  const body = stripMarkup(stripFooter(read(file)));
+  const missing = EXAMS.filter((e) => !new RegExp(`\\b${e}\\b`).test(body));
+  ok(`${file}: names all three exams in its own body`, missing.length === 0,
+    missing.length ? `missing: ${missing.join(', ')}` : '');
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f);
+  const missing = EXAMS.filter((e) => !new RegExp(`\\b${e}\\b`).test(text));
+  ok(`${f}: names all three exams`, missing.length === 0, missing.join(', '));
+}
+
+const pairTargets = [
+  ...KNOWLEDGE_PAGES.filter((p) => p.file !== 'faq.html').filter((p) => has(p.file))
+    .map((p) => [p.file, stripTags(read(p.file))]),
+  ...SEO_PAGES.filter((p) => has(p.file)).map((p) => [p.file, stripTags(read(p.file))]),
+  ['faq answers', faqAnswerText],
+  ...MACHINE_FILES.filter(has).map((f) => [f, read(f).replace(/\s+/g, ' ')]),
+];
+for (const [label, text] of pairTargets) {
+  const hit = examPairWithoutEST(text);
+  ok(`${label}: no sentence names SAT and ACT while omitting the EST`, !hit,
+    hit ? `"${hit}"` : '');
+}
+
+// The three-exam comparison guide must genuinely compare three, in its prose and
+// in the structured data an AI system reads off it.
+const chooser = LEARN_GUIDES.find((g) => g.slug === 'choosing-your-exam');
+ok('the exam-choice guide declares it teaches a three-way comparison',
+  !!chooser && chooser.teaches.some((t) => /SAT vs ACT vs EST/i.test(t)),
+  chooser ? chooser.teaches.join(' · ') : 'guide not found');
+ok('the exam-choice guide names the EST in its own FAQ questions',
+  !!chooser && chooser.faqs.some((f) => /\bEST\b/.test(f.q)));
+
+// Every exam guide must be reachable as a "related guide" from at least one
+// sibling. Stated honestly: this is a floor, not a fairness measure. It does NOT
+// detect the imbalance that prompted the rotation in build-learn.mjs — the EST
+// guide was under-linked, never unlinked, and this check stayed green throughout.
+// It guards the harder failure: an exam guide reachable only from the hub.
+for (const g of LEARN_GUIDES.filter((x) => x.examGuide)) {
+  const linked = LEARN_GUIDES.filter((x) => x.slug !== g.slug)
+    .some((x) => has(`learn-${x.slug}.html`)
+      && read(`learn-${x.slug}.html`).includes(`k-guide-card" href="learn-${g.slug}.html"`));
+  ok(`learn-${g.slug}: is offered as a related guide somewhere`, linked);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    7–8. Banned assertions
    ══════════════════════════════════════════════════════════════════════════ */
 section('Truthfulness');
-
-// FAQ questions are allowed to quote a banned framing ("Is Si Math AI just an
-// AI?"); the ANSWERS are what must never assert it. So the FAQ is scanned from
-// its data module, answers only, rather than through the rendered page.
-const faqAnswerText = CATEGORIES
-  .flatMap((c) => c.items.map((i) => stripTags(i.a)))
-  .join('\n');
 
 const scanTargets = [
   ...KNOWLEDGE_PAGES.filter((p) => p.file !== 'faq.html')

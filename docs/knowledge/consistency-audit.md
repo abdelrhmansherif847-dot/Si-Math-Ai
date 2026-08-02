@@ -635,6 +635,60 @@ single constant:
 
 ---
 
+## C-25 · The EST was the third exam everywhere it was named — RESOLVED
+
+**Found:** Si Math AI covers three examinations, and the EST is the one that
+matters most for Egyptian university admission — it is the reason a MENA-built
+platform exists at all rather than a smaller market for an international one. It
+was nonetheless the exam that quietly dropped out of copy, because *"SAT and
+ACT"* is the familiar pair and the EST got appended only when someone remembered.
+
+The structural surfaces were fine — the shared footer, `Organization.knowsAbout`,
+the homepage exam cards and the FAQ all covered three exams evenly. The omissions
+were in prose and in one generator:
+
+| Where | What it said |
+| --- | --- |
+| `learn-choosing-your-exam` `teaches[]` | `SAT vs ACT comparison` — on a guide titled *SAT vs ACT vs EST*, in the structured data an AI system reads |
+| Its two comparison FAQs | *"Should I take the SAT or the ACT?"*, *"Do universities prefer the SAT over the ACT?"* |
+| Its key-points list | SAT and ACT contrasted; EST absent from the line |
+| `learn-act-math` | *"the two most common exams"* |
+| `learn-common-mistakes` FAQ | *"the most common mistake in SAT and ACT Math"* |
+| `faq-data` exam-context and mock-timing answers | ACT contrasted with SAT only |
+| `how-it-works`, `why-not-chatgpt`, `llms-full.txt` | *"taught differently for the ACT's speed pressure than for the SAT's format"* |
+| `index.html` hero | *"knows you're prepping for the SAT"* |
+| `about.html`, `why-we-built` | *"an experienced SAT mathematics teacher"* |
+| `build-learn.mjs` `related()` | took the out-of-group pool in declaration order, so every page needing filler linked the SAT and ACT guides |
+
+**Fixed:** all of the above rewritten to name three exams where three are meant,
+and `related()` now rotates the pool by the guide's own index. Measured: related
+cards went from SAT/ACT/EST at 6/6/4 to 5/5/4, and the two least-linked guides
+from 1 to 2. A modest correction — recorded at its real size, because the
+temptation with a fairness fix is to describe it as bigger than it was.
+
+**Enforced by two new checks, both of which go red on a planted violation:**
+
+1. **Every knowledge page names all three exams in its own body.** The footer is
+   stripped first. Without that, the check would pass on a page that never
+   mentions the EST at all, since the shared footer links *EST Math* everywhere —
+   the vacuous-assertion failure recorded in `verification-framework-audit.md`.
+2. **No sentence names the SAT and the ACT while omitting the EST.** That is the
+   precise shape the omission takes, so it is the precise shape of the check.
+
+Learn pages are exempt from rule 2 deliberately. A guide comparing two specific
+exams is doing legitimate teaching, and forcing a third exam into every
+comparison would make the writing worse rather than fairer. The comparison guide
+is instead held to a direct standard: its `teaches[]` must declare a three-way
+comparison and its FAQ questions must name the EST.
+
+**One check is weaker than it looks, stated plainly:** "every exam guide is
+offered as a related guide somewhere" stayed green through the whole episode,
+because the EST guide was under-linked rather than unlinked. It is a floor
+against an orphaned guide, not a measure of fairness, and the comment above it
+says so.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -663,8 +717,9 @@ single constant:
 | C-22 | Knowledge layer had no concept of the Si Math course | RESOLVED — **headcount OPEN, owner action** |
 | C-23 | `llms.txt` advertised 136 FAQs against 139 in the data | RESOLVED |
 | C-24 | Course and platform read as competing purchases | RESOLVED |
+| C-25 | The EST was the third exam everywhere it was named | RESOLVED |
 
-Twenty-one resolved, three requiring owner action, plus one figure the owner can
+Twenty-two resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

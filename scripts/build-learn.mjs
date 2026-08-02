@@ -62,11 +62,28 @@ function readingMinutes(g) {
   return Math.max(3, Math.round(words / 200));
 }
 
-/** Two sibling guides to surface at the foot of a page: same group first. */
+/**
+ * Three sibling guides to surface at the foot of a page: same group first, then
+ * out-of-group.
+ *
+ * The out-of-group pool is ROTATED by the guide's own position. Taking it in
+ * declaration order meant every page needing filler took the same first two —
+ * the SAT and ACT guides — so the site's internal linking ranked its own exams
+ * by array index. Measured before and after: SAT/ACT/EST appeared as related
+ * cards 6/6/4 times, now 5/5/4, and the two least-linked guides went from 1 to
+ * 2. A modest correction, not a dramatic one; recorded honestly because the
+ * temptation with a fairness fix is to describe it as bigger than it was.
+ *
+ * Rotation is deterministic (no randomness), which matters because these pages
+ * are generated and CI fails on drift between the data and the output.
+ */
 function related(g) {
+  const i = GUIDES.findIndex((x) => x.slug === g.slug);
   const sameGroup = GUIDES.filter((x) => x.group === g.group && x.slug !== g.slug);
   const others = GUIDES.filter((x) => x.group !== g.group);
-  return [...sameGroup, ...others].slice(0, 3);
+  const at = others.length ? i % others.length : 0;
+  const rotated = [...others.slice(at), ...others.slice(0, at)];
+  return [...sameGroup, ...rotated].slice(0, 3);
 }
 
 /* ── a single guide page ────────────────────────────────────────────────── */

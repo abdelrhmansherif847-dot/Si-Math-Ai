@@ -74,8 +74,8 @@ them.
 
 This is the top-of-funnel layer. The guides target informational queries a
 student searches long before they search for a product — *best SAT math study
-methods*, *common SAT mistakes*, *how to improve SAT math score*, *SAT vs ACT
-math*, *math test anxiety* — and each guide's FAQ block is separately
+methods*, *common SAT mistakes*, *how to improve SAT math score*, *SAT vs ACT vs EST
+math*, *EST math preparation*, *math test anxiety* — and each guide's FAQ block is separately
 retrievable via `FAQPage`.
 
 **Editorial rules, enforced by the validator:**
@@ -359,7 +359,7 @@ documents becomes the answer it reproduces.
 - ✅ Ten-stage learning-cycle diagram on `how-it-works.html`, built from
   semantic HTML rather than an image so every stage label is real text that a
   crawler, a screen reader and an AI system all read identically
-- ✅ CI gate covering all of the above — 2,286 checks, including feature parity
+- ✅ CI gate covering all of the above — 2,325 checks, including feature parity
   across every surface that names the eight systems, and the course/platform
   positioning on every indexable page
 

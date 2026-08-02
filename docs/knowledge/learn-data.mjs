@@ -17,7 +17,8 @@
  *      averages, no success rates. See knowledge-base.md §12.
  *   3. NO UNVERIFIED EXAM FORMAT SPECIFICS. Question counts, section timings,
  *      and calculator policies are set by the examination boards and change
- *      (the SAT moved to a digital adaptive format; the ACT has been revised).
+ *      (the SAT moved to a digital adaptive format; the ACT has been revised; EST
+ *      format details are set by its own administrators and change too).
  *      Content here teaches METHOD — strategy, error patterns, psychology,
  *      pacing principles — which does not go stale. Where a format detail is
  *      genuinely needed, express it as a principle ("budget your time by
@@ -182,7 +183,7 @@ export const GUIDES = [
     sections: [
       {
         h: 'The ACT rewards speed and breadth',
-        body: `<p>Comparing the two most common exams in one line: the SAT tends to test fewer ideas more deeply, while the ACT tends to test more ideas more quickly. Neither is harder in the abstract — they suit different students, which is the entire basis for <a href="learn-choosing-your-exam.html">choosing between them</a>.</p>
+        body: `<p>Comparing the exams in one line: the SAT tends to test fewer ideas more deeply, the EST sits close to the SAT in shape, and the ACT tends to test more ideas more quickly. Neither is harder in the abstract — they suit different students, which is the entire basis for <a href="learn-choosing-your-exam.html">choosing between them</a>.</p>
 <p>For ACT Mathematics, this has two direct consequences. First, your <strong>average time per question is short</strong>, so efficiency is a scored skill rather than a nicety. Second, the <strong>content range is wide</strong> — including topics that appear rarely enough that students never get around to practising them, and then meet them cold on test day.</p>`,
       },
       {
@@ -342,10 +343,10 @@ export const GUIDES = [
       'How to decide between the SAT, ACT and EST: what genuinely differs between them, which student profile suits each, and how to make the decision with evidence rather than reputation.',
     summary: 'What genuinely differs between the three exams, and how to decide with evidence rather than hearsay.',
     lead: 'Choose the exam that fits how you work — but choose it from evidence, not from reputation. The most reliable method takes one afternoon.',
-    teaches: ['Choosing a standardised examination', 'SAT vs ACT comparison', 'Admission planning'],
+    teaches: ['Choosing a standardised examination', 'SAT vs ACT vs EST comparison', 'Admission planning'],
     takeaways: [
       'Start from where you are applying — that constrains the choice before preference does.',
-      'The SAT tends to reward depth of reasoning; the ACT tends to reward speed and breadth.',
+      'The SAT tends to reward depth of reasoning; the ACT tends to reward speed and breadth; the EST sits closest to the SAT in shape.',
       'The EST is the exam most directly relevant to Egyptian university admission for many students.',
       'Sit a timed section of each and compare. Two afternoons beats months of speculation.',
       'Choose one and commit. Splitting preparation across two exams usually costs more than it gains.',
@@ -396,16 +397,16 @@ export const GUIDES = [
     ],
     faqs: [
       {
-        q: 'Should I take the SAT or the ACT?',
-        a: '<p>Sit a timed mathematics section of each under realistic conditions and compare — not just the scores, but where time ran out and what kind of errors you made. Direct evidence about your own performance is far more reliable than any general description of the two exams.</p>',
+        q: 'Should I take the SAT, the ACT or the EST?',
+        a: '<p>Start from where you are applying: for many Egyptian universities the EST is the directly relevant exam, while applications abroad more commonly ask for the SAT or ACT. Once the destination has narrowed the field, sit a timed mathematics section of each remaining option under realistic conditions and compare — not just the scores, but where time ran out and what kind of errors you made. Direct evidence about your own performance is far more reliable than any general description of the three exams.</p>',
       },
       {
         q: 'Can I take more than one of these exams?',
         a: '<p>Yes, and some students need to — commonly an EST for local admission plus an SAT or ACT for applications abroad. Sequence them rather than preparing for both simultaneously: shared skill work continuously, exam-specific format practice concentrated on whichever comes next.</p>',
       },
       {
-        q: 'Do universities prefer the SAT over the ACT?',
-        a: '<p>Institutions that accept both generally state no preference, but this is exactly the kind of policy that varies and changes. Verify with the specific universities you are applying to rather than relying on general advice.</p>',
+        q: 'Do universities prefer the SAT, the ACT or the EST?',
+        a: '<p>Institutions that accept more than one generally state no preference between them, but which exams are accepted at all varies a great deal — the EST is widely recognised for Egyptian admission and much less so outside the region, while the SAT and ACT travel further. This is exactly the kind of policy that varies and changes, so verify with the specific universities you are applying to rather than relying on general advice.</p>',
       },
       {
         q: 'When should I decide which exam to take?',
@@ -663,7 +664,7 @@ export const GUIDES = [
     ],
     faqs: [
       {
-        q: 'What is the most common mistake in SAT and ACT Math?',
+        q: 'What is the most common mistake in SAT, ACT and EST Math?',
         a: '<p>Answering a different question from the one asked — solving for x when the question asks for 2x, or giving area when it asks for perimeter. The mathematics is right and the mark is lost. Circling what is asked before solving, and re-reading it before selecting, largely eliminates it.</p>',
       },
       {
