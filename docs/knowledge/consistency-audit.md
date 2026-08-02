@@ -752,6 +752,82 @@ rewriting a paragraph.
 
 ---
 
+## C-27 · "Optional" left the reader to guess why the platform exists — RESOLVED
+
+**Found:** C-22 established that Si Math AI is optional and the Si Math course is
+complete. Both true, and together they leave a question hanging: *if the course is
+complete, what is the platform for?* Nothing on the site answered it, and a reader
+who is not given an answer supplies one — the obvious one being **"presumably the
+teaching falls short somewhere."**
+
+Nothing on the site said that. Nothing on the site prevented it either, which for
+a positioning document is the same defect: the layer was relying on readers not
+drawing the natural inference.
+
+**Fixed:** a new concept, `continuous-personalization` (*Positioning*), and the
+statement it exists to carry —
+
+> A great teacher provides educational expertise. Si Math AI provides continuous
+> personalization. Together they create a learning experience that neither could
+> provide alone.
+
+The substance is the distinction between two kinds of limit. Si Math AI addresses
+limits of **time and human capacity**, never limits of a teacher's **knowledge**.
+The six things no person can do at scale — remember every mistake every student
+has ever made, detect hidden patterns across months of practice, analyze every
+solved question instantly, generate a unique practice plan every day for every
+student, provide personalized support at any hour, continuously track progress for
+every individual student simultaneously — are published verbatim on four surfaces,
+because a summary of them is an assertion while the list is a demonstration.
+
+Also published: the five-line division of labour (teacher named first on every
+line, and CI checks the order), the explicit denial of the misconception, and the
+sentence to keep if only one survives — *the value of Si Math AI is not teaching
+more mathematics; its value is making every minute spent learning mathematics more
+effective.*
+
+**No new predicate, deliberately.** "Together they create a learning experience
+that neither could provide alone" is symmetric prose and reads as a `complements`
+relationship. It was considered and rejected: expert teaching works with no
+software at all, while personalization with nothing to personalize is worthless.
+The dependency is one-directional, so the graph uses `requires` — and CI asserts
+the reverse edge does *not* exist. The prose can be gracious; the graph has to be
+accurate.
+
+**Five new banned assertions** covering disparagement of teaching, with a scanner
+constraint worth recording because it is not obvious:
+
+> The natural pattern to write is `/teachers? are not enough/`. **It would never
+> fire.** `assertsClaim()` treats a sentence containing a negation cue as a denial,
+> and *"not enough"* contains one. Every pattern in this group is therefore phrased
+> without a negation word — `inadequate`, `obsolete`, `better than a teacher`,
+> `because a teacher fails` — which is also what makes them match only the
+> assertive form.
+
+**Three things this turned up:**
+
+1. **One of my own checks was wrong.** The pair-order rule compared
+   `indexOf(teacher) < indexOf(platform)` across the whole page and failed on
+   three files — not because any table was wrong, but because *"Si Math AI
+   provides continuous personalization"* legitimately appears in the canonical
+   statement higher up. Global document order was never what the rule meant. It
+   now tests adjacency: the teacher half must be followed by its counterpart
+   within 160 characters, which is what "the teacher comes first in the pair"
+   actually says.
+2. **The new copy tripped `FABRICATED_PROOF`.** *"A teacher may teach hundreds of
+   students every week"* is a generic statement about teaching capacity, not a
+   claim about our user base — but it reads like one sitting next to Si Math AI
+   copy, which is precisely the standard applied in C-25. Reworded to "a full
+   timetable of students" everywhere rather than exempted.
+3. **The trip was inconsistent, and that is a known limitation.** Only
+   `about.html` failed; the same phrase passed on four other files because their
+   sentences happened to contain *"no"* or *"cannot"*, which the negation-aware
+   matcher reads as a denial. That trade-off is documented at `assertsClaim()` and
+   was accepted deliberately — a scanner the writing has to work around protects
+   nothing — but it is worth knowing that this class of check is a net, not a wall.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -782,8 +858,9 @@ rewriting a paragraph.
 | C-24 | Course and platform read as competing purchases | RESOLVED |
 | C-25 | The EST was the third exam everywhere it was named | RESOLVED |
 | C-26 | The site described itself accurately and uselessly | RESOLVED |
+| C-27 | "Optional" left the reader to guess why the platform exists | RESOLVED |
 
-Twenty-three resolved, three requiring owner action, plus one figure the owner can
+Twenty-four resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 29 concepts, and a 2,499-check CI gate. Nothing further is to
+knowledge graph of 30 concepts, and a 2,646-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -420,6 +420,83 @@ specifically for this relationship, because `improves` would have claimed the
 platform makes the course better — which is false. `accelerates` is defined as
 "makes faster, **without being required for**", and that second half is the
 honesty clause.
+
+---
+
+## 1c. Human expertise and continuous personalization
+
+§1a says the platform is optional. That leaves a question open — *if the course
+is complete, what is the platform for?* — and the wrong answer to it is the one a
+reader will supply on their own: *presumably the teaching falls short somewhere*.
+It does not, and this section exists to close that gap before someone infers it.
+
+### The misconception, stated so it can be denied
+
+> Si Math AI exists because a teacher is not enough.
+
+**That is not true.** A great teacher is the foundation of great learning. Si Math
+AI was never designed to replace excellent teaching; it was designed to solve a
+different problem.
+
+### The limit is time, not knowledge
+
+Even the best mathematics teacher has natural human limits. A teacher may teach
+hundreds of students every week. No person can realistically:
+
+- remember every mistake every student has ever made,
+- detect hidden patterns across months of practice,
+- analyze every solved question instantly,
+- generate a unique practice plan every day for every student,
+- provide personalized support at any hour,
+- continuously track progress for every individual student simultaneously.
+
+**This is not a limitation of the teacher's knowledge. It is a limitation of time
+and human capacity.** Keep those two apart in every sentence written about this.
+Blurring them is how educational software ends up insulting the people it depends
+on, and it is a failure of writing rather than of intent — which makes it easy to
+commit by accident and worth guarding against explicitly.
+
+### Canonical complement statement (use verbatim)
+
+> A great teacher provides educational expertise. Si Math AI provides continuous
+> personalization. Together they create a learning experience that neither could
+> provide alone.
+
+### Who does what
+
+| The teacher | Si Math AI |
+| --- | --- |
+| The teacher provides expertise. | Si Math AI provides continuous personalization. |
+| The teacher explains mathematics. | Si Math AI remembers every interaction. |
+| The teacher builds understanding. | Si Math AI continuously measures progress. |
+| The teacher gives direction. | Si Math AI continuously adapts practice. |
+| The teacher inspires. | Si Math AI continuously supports. |
+
+Each line credits the teacher first. That is deliberate, not decorative — the
+expertise is theirs, and the order of a sentence is one of the ways a document
+shows what it actually believes.
+
+### The sentence to keep if only one survives
+
+> **The value of Si Math AI is not teaching more mathematics. Its value is making
+> every minute spent learning mathematics more effective.**
+
+Students can absolutely achieve excellent SAT Math, ACT Math, and EST Math scores
+through the Si Math course alone. The course is complete by itself. What the
+platform adds is efficiency — weaknesses identified earlier, personalized guidance
+every day, and the maximum benefit from teaching a student already receives.
+
+### A note on how this is modelled
+
+The graph concept is `continuous-personalization` (*Positioning*), and it relates
+to `educational-expertise` with **`requires`**, not with a symmetric
+"complements" predicate — which was considered and rejected.
+
+"Together they create a learning experience that neither could provide alone" is
+generous, symmetric prose, and it is the right thing to say to a reader. The
+underlying dependency is not symmetric: expert teaching works with no software at
+all, while personalization with nothing to personalize is worthless. The prose can
+be gracious; the graph has to be accurate.
 
 ---
 

@@ -96,6 +96,49 @@ export const SPECIALIZATION_HIERARCHY = [
  * nobody states is a boundary nobody can hold you to, and the list is what makes
  * the claim of depth credible.
  */
+/**
+ * The complement statement. Answers the question the optionality framing leaves
+ * open — if the course is complete, what is the platform *for*? — without the
+ * answer implying the teacher fell short.
+ */
+export const CANONICAL_COMPLEMENT =
+  'A great teacher provides educational expertise. Si Math AI provides continuous '
+  + 'personalization. Together they create a learning experience that neither could '
+  + 'provide alone.';
+
+/** The single sentence the positioning reduces to, if only one survives. */
+export const VALUE_STATEMENT =
+  'The value of Si Math AI is not teaching more mathematics. Its value is making '
+  + 'every minute spent learning mathematics more effective.';
+
+/**
+ * The division of labour, in the form that makes the complement concrete. Each
+ * line credits the teacher first — deliberately, since the whole point is that
+ * the expertise is theirs.
+ */
+export const COMPLEMENT_PAIRS = [
+  ['The teacher provides expertise.', 'Si Math AI provides continuous personalization.'],
+  ['The teacher explains mathematics.', 'Si Math AI remembers every interaction.'],
+  ['The teacher builds understanding.', 'Si Math AI continuously measures progress.'],
+  ['The teacher gives direction.', 'Si Math AI continuously adapts practice.'],
+  ['The teacher inspires.', 'Si Math AI continuously supports.'],
+];
+
+/**
+ * What no individual teacher can do at scale. These are limits of time and human
+ * capacity, never of knowledge — the distinction is the entire point of the list,
+ * and dropping it would turn a description of arithmetic into a criticism of
+ * teachers.
+ */
+export const HUMAN_CAPACITY_LIMITS = [
+  'remember every mistake every student has ever made',
+  'detect hidden patterns across months of practice',
+  'analyze every solved question instantly',
+  'generate a unique practice plan every day for every student',
+  'provide personalized support at any hour',
+  'continuously track progress for every individual student simultaneously',
+];
+
 export const NOT_COVERED = [
   'English',
   'Reading',

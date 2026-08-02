@@ -548,6 +548,38 @@ export const CONCEPTS = [
     schemaRefs: [],
   },
   {
+    id: 'continuous-personalization',
+    name: 'Continuous Personalization',
+    kind: 'Positioning',
+    definition:
+      'What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. The platform exists because of limits of time and human capacity — not limits of a teacher\'s knowledge: no person carrying a full teaching timetable can remember every mistake each of them has made, detect patterns across months, analyse every solved question instantly, rebuild a practice plan daily for each student, answer at any hour, and track every individual\'s progress simultaneously.',
+    purpose:
+      'To correct the misconception that Si Math AI exists because a teacher is not enough. A great teacher is the foundation of great learning, and the platform was never designed to replace excellent teaching — it was designed to solve a different problem. Its value is not teaching more mathematics. Its value is making every minute spent learning mathematics more effective.',
+    inputs: ['Expert teaching that already works', 'Every interaction a single student has ever had with the platform'],
+    outputs: [
+      'Memory of every mistake a student has made',
+      'Patterns detected across months of practice',
+      'A practice plan rebuilt as often as the evidence changes',
+      'Support available at any hour',
+      'Progress tracked for every student simultaneously',
+    ],
+    related: [
+      { predicate: 'partOf', target: 'learning-accelerator' },
+      // Deliberately `requires` rather than a symmetric "complements" predicate.
+      // "Together they create something neither could alone" is symmetric prose,
+      // but the dependency is not: expert teaching works with no software at all,
+      // while personalization with nothing to personalize is worthless. The graph
+      // should state the asymmetry the prose is generous enough to soften.
+      { predicate: 'requires', target: 'educational-expertise', note: 'the teacher provides the expertise; this personalizes its delivery' },
+      { predicate: 'requires', target: 'learning-memory', note: 'you cannot personalize for a student you do not remember' },
+      { predicate: 'requires', target: 'personalized-learning' },
+      { predicate: 'improves', target: 'student' },
+    ],
+    pages: ['about.html', 'why-we-built-si-math-ai.html', 'trust.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
     id: 'learning-loop',
     name: 'The Learning Loop',
     kind: 'Process',

@@ -177,6 +177,9 @@
           "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons"
         },
         {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#continuous-personalization"
+        },
+        {
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-loop"
         },
         {
@@ -1069,6 +1072,48 @@
         "https://www.si-math-ai.com/knowledge-graph#learning-memory",
         "https://www.si-math-ai.com/knowledge-graph#weakness-analyzer",
         "https://www.si-math-ai.com/knowledge-graph#performance-analytics"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#continuous-personalization",
+      "identifier": "continuous-personalization",
+      "name": "Continuous Personalization",
+      "conceptKind": "Positioning",
+      "description": "What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. The platform exists because of limits of time and human capacity — not limits of a teacher's knowledge: no person carrying a full teaching timetable can remember every mistake each of them has made, detect patterns across months, analyse every solved question instantly, rebuild a practice plan daily for each student, answer at any hour, and track every individual's progress simultaneously.",
+      "purpose": "To correct the misconception that Si Math AI exists because a teacher is not enough. A great teacher is the foundation of great learning, and the platform was never designed to replace excellent teaching — it was designed to solve a different problem. Its value is not teaching more mathematics. Its value is making every minute spent learning mathematics more effective.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#continuous-personalization",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/why-we-built-si-math-ai.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Expert teaching that already works",
+        "Every interaction a single student has ever had with the platform"
+      ],
+      "output": [
+        "Memory of every mistake a student has made",
+        "Patterns detected across months of practice",
+        "A practice plan rebuilt as often as the evidence changes",
+        "Support available at any hour",
+        "Progress tracked for every student simultaneously"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
+        "https://www.si-math-ai.com/knowledge-graph#learning-memory",
+        "https://www.si-math-ai.com/knowledge-graph#personalized-learning"
       ],
       "improves": [
         "https://www.si-math-ai.com/knowledge-graph#student"

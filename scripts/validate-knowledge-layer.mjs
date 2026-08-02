@@ -120,6 +120,41 @@ const SPECIALIZATION_HIERARCHY = [
   'EST Math',
 ];
 
+/**
+ * The complement statement, and the sentence the whole positioning reduces to.
+ *
+ * These close the gap the optionality framing (§1a) leaves open: if the course is
+ * complete, what is the platform for? Left unanswered, a reader supplies the
+ * wrong answer themselves — *presumably the teaching falls short somewhere*.
+ */
+const CANONICAL_COMPLEMENT =
+  'A great teacher provides educational expertise. Si Math AI provides continuous '
+  + 'personalization. Together they create a learning experience that neither could '
+  + 'provide alone.';
+
+const VALUE_STATEMENT =
+  'The value of Si Math AI is not teaching more mathematics. Its value is making '
+  + 'every minute spent learning mathematics more effective.';
+
+/** The division of labour. Teacher first on every line, deliberately. */
+const COMPLEMENT_PAIRS = [
+  ['The teacher provides expertise.', 'Si Math AI provides continuous personalization.'],
+  ['The teacher explains mathematics.', 'Si Math AI remembers every interaction.'],
+  ['The teacher builds understanding.', 'Si Math AI continuously measures progress.'],
+  ['The teacher gives direction.', 'Si Math AI continuously adapts practice.'],
+  ['The teacher inspires.', 'Si Math AI continuously supports.'],
+];
+
+/** Limits of time and capacity — never of knowledge. The distinction is the point. */
+const HUMAN_CAPACITY_LIMITS = [
+  'remember every mistake every student has ever made',
+  'detect hidden patterns across months of practice',
+  'analyze every solved question instantly',
+  'generate a unique practice plan every day for every student',
+  'provide personalized support at any hour',
+  'continuously track progress for every individual student simultaneously',
+];
+
 /** The commitment the positioning creates. A constraint on the product, not copy. */
 const OPTIONALITY_COMMITMENT =
   "no student's success should ever depend on purchasing an additional product";
@@ -273,6 +308,25 @@ const BANNED_ASSERTIONS = [
     'over-broadening: claims coverage of all subjects'],
   [/\bSi Math AI (?:covers|teaches|supports|helps with)\s+(?:English|Reading|Science|essay writing|admissions)\b/i,
     'over-broadening: claims a subject outside the specialization'],
+  // Disparagement of teaching. Si Math AI addresses limits of time and human
+  // capacity, never limits of a teacher's knowledge — see knowledge-base.md §1c.
+  //
+  // NOTE ON THESE PATTERNS. The obvious one to write is /teachers? are not
+  // enough/, and it would never fire: assertsClaim() treats a sentence
+  // containing a negation cue as a denial, and "not enough" contains one. So
+  // every pattern here is phrased WITHOUT a negation word, which is also what
+  // makes them match only the assertive form. This is a real constraint of the
+  // scanner and worth knowing before adding to the list.
+  [/\b(?:teachers?|teaching|human teachers?)\s+(?:is|are)\s+(?:inadequate|insufficient|obsolete|outdated|unnecessary|redundant|the bottleneck|the problem|the limitation)\b/i,
+    'disparages teaching'],
+  [/\bSi Math AI (?:is )?better than (?:a |the |your |any )?(?:human )?teachers?\b/i,
+    'claims superiority over teachers'],
+  [/\bbecause (?:a |the |their )?teachers?\s+(?:fails?|lacks?|struggles?)\b/i,
+    'attributes the platform to teacher failure'],
+  [/\bteachers?\s+(?:lacks?)\s+the\s+(?:knowledge|skill|expertise|ability)\b/i,
+    'attributes the platform to a gap in teacher knowledge'],
+  [/\bmakes?\s+(?:the |a |your )?teachers?\s+(?:obsolete|redundant|unnecessary)\b/i,
+    'claims the platform makes teachers unnecessary'],
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
@@ -1051,6 +1105,124 @@ for (const [label, get] of purchaseTargets) {
 }
 ok('the FAQ asks the purchase question directly',
   CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6ba. Expertise and personalization — why it exists alongside a great teacher
+   §1a establishes that the platform is optional. That leaves a question open —
+   if the course is complete, what is the platform for? — and a reader who is not
+   given the answer supplies one: presumably the teaching falls short somewhere.
+
+   It does not. The platform addresses limits of TIME AND HUMAN CAPACITY, never
+   limits of a teacher's knowledge, and keeping those two apart is a writing
+   problem rather than an intent problem — which is exactly the kind that gets
+   committed by accident. Hence the checks.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Expertise and continuous personalization');
+
+const complement = CONCEPTS.find((c) => c.id === 'continuous-personalization');
+ok('the graph defines continuous personalization as a concept', !!complement);
+ok('the concept carries the complement statement',
+  !!complement && complement.definition.includes(CANONICAL_COMPLEMENT));
+ok('the concept locates the limit in time and capacity, not knowledge',
+  !!complement && /time and human capacity/i.test(complement.definition)
+    && /not limits of a teacher's knowledge|never.{0,40}knowledge/i.test(complement.definition));
+ok('the concept states the value plainly',
+  !!complement && complement.purpose.includes('making every minute spent learning mathematics more effective'));
+/**
+ * The modelling decision, pinned. `requires` rather than a symmetric
+ * "complements" predicate: the prose is generously symmetric — "neither could
+ * provide alone" — but the dependency is not. Expert teaching works with no
+ * software; personalization with nothing to personalize is worthless. If someone
+ * later softens this edge, the graph stops saying the true thing.
+ */
+ok('personalization depends on the expertise, not the reverse',
+  edge('continuous-personalization', 'requires', 'educational-expertise')
+    && !edge('educational-expertise', 'requires', 'continuous-personalization'));
+
+// The statement, verbatim, on every page the graph says documents the concept.
+const complementPages = complement ? complement.pages : [];
+ok('the graph names at least four pages documenting the complement', complementPages.length >= 4);
+for (const file of complementPages) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states the complement statement verbatim`, text.includes(CANONICAL_COMPLEMENT));
+  ok(`${file}: credits the teacher as the foundation`,
+    /great teacher is the foundation of great learning/i.test(text));
+  ok(`${file}: locates the limit in time and capacity`,
+    /time and human capacity/i.test(text));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  ok(`${f}: states the complement statement verbatim`, text.includes(CANONICAL_COMPLEMENT));
+  ok(`${f}: credits the teacher as the foundation`,
+    /great teacher is the foundation of great learning/i.test(text));
+}
+
+// The one sentence to keep if only one survives.
+for (const label of ['about.html', 'why-we-built-si-math-ai.html', 'ai-knowledge.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  ok(`${label}: states the value statement verbatim`, text.includes(VALUE_STATEMENT));
+}
+
+// All six capacity limits, published as written. They are the evidence for the
+// claim that the limit is arithmetic — a summary of them is an assertion, the
+// list is a demonstration.
+for (const label of ['about.html', 'why-we-built-si-math-ai.html', 'ai-knowledge.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = HUMAN_CAPACITY_LIMITS.filter((l) => !text.includes(l));
+  ok(`${label}: publishes all ${HUMAN_CAPACITY_LIMITS.length} human-capacity limits`,
+    missing.length === 0, missing.join(' · '));
+}
+
+/**
+ * The division of labour: both halves of every pair, ADJACENT and in order.
+ *
+ * Adjacency rather than document position. The first version of this check
+ * compared `indexOf(teacher) < indexOf(platform)` across the whole page and
+ * failed on three files — not because any table was wrong, but because
+ * "Si Math AI provides continuous personalization" legitimately appears in the
+ * canonical statement further up. Global order was never what the rule meant;
+ * the rule is that within a pair the teacher comes first, which is what this
+ * measures. Order carries meaning here: the expertise is the teacher's, and a
+ * row leading with the platform would say something the writing does not intend.
+ */
+const pairInOrder = (text, a, b, window = 160) => {
+  for (let i = text.indexOf(a); i >= 0; i = text.indexOf(a, i + 1)) {
+    if (text.slice(i + a.length, i + a.length + window).includes(b)) return true;
+  }
+  return false;
+};
+
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  for (const [teacher, platform] of COMPLEMENT_PAIRS) {
+    ok(`${label}: states "${teacher}" with its counterpart, teacher first`,
+      pairInOrder(text, teacher, platform),
+      !text.includes(teacher) ? `missing: ${teacher}`
+        : !text.includes(platform) ? `missing: ${platform}`
+          : 'both present but not paired in order');
+  }
+}
+
+// And the denial itself must stay published, since an unstated misconception is
+// one a reader resolves for themselves.
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  ok(`${label}: denies the "a teacher is not enough" misconception explicitly`,
+    /because a teacher is not enough/i.test(text));
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    6bb. Specialization — one field, with its boundary published
