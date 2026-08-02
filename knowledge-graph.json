@@ -188,6 +188,9 @@
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
         },
         {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#any-teaching"
+        },
+        {
           "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons"
         },
         {
@@ -1137,6 +1140,38 @@
       ],
       "generates": [
         "https://www.si-math-ai.com/knowledge-graph#between-lessons"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#any-teaching",
+      "identifier": "any-teaching",
+      "name": "Works With Any Teaching",
+      "conceptKind": "Positioning",
+      "description": "Si Math AI is not tied to one course or one teacher. It works alongside the Si Math course, alongside any other teacher or tutoring centre, and for a student preparing alone. The platform supports the learning process between lessons, whoever gives the lessons — it has no way of knowing who taught a student, and no reason to.",
+      "purpose": "To make the optionality real rather than rhetorical. A platform that only works with its own course is a lock-in dressed as a complement, and the goal here is to improve a student's learning journey rather than to replace any teacher or bind a student to one source of teaching.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#any-teaching",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Whatever teaching a student already has — a course, a school, a private tutor, or their own study"
+      ],
+      "output": [
+        "Diagnosis, practice and measurement that are indifferent to who did the teaching"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
       ]
     },
     {

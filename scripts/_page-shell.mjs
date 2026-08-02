@@ -220,6 +220,71 @@ export const TECHNOLOGY_CONDITIONS = [
   'Continuous feedback',
 ];
 
+/**
+ * The canonical rebuttal — the answer to "isn't this just an AI chatbot?".
+ *
+ * Deliberately NOT a third definition. CANONICAL_DEFINITION answers "what is
+ * it?" and CANONICAL_SPECIALIZATION answers "what is it for?"; a third sentence
+ * repeated on all thirty-one pages would dilute both rather than reinforce them.
+ * This one has a distinct job — it is the contrast form — so it is pinned where
+ * the "is this just an AI?" question actually gets asked.
+ */
+export const CANONICAL_REBUTTAL =
+  'Si Math AI is not just an AI chatbot. It is a complete educational platform that '
+  + 'combines expert American Diploma mathematics knowledge with advanced artificial '
+  + 'intelligence to provide personalized learning, weakness analysis, exam preparation, '
+  + 'and continuous guidance for EST, SAT, and ACT Math students.';
+
+/**
+ * Feature names people search for, mapped to what actually provides them.
+ *
+ * This exists because an AI system asked "does Si Math AI have Performance
+ * Analytics?" should get a correct answer rather than a guess. `provides: null`
+ * means the feature DOES NOT EXIST — those rows are the most valuable ones here,
+ * and removing them would leave a retrieval system free to infer.
+ */
+export const CAPABILITY_ALIASES = [
+  { name: 'AI Tutor', provides: 'Zero AI Mentor' },
+  { name: 'Zero AI Tutor', provides: 'Zero AI Mentor' },
+  { name: 'Weakness Analysis', provides: 'Weakness Analyzer' },
+  { name: 'Personalized Learning', provides: 'Personalized Learning' },
+  { name: 'Focus Practice', provides: 'Focus Practice' },
+  { name: 'Mock Exams', provides: 'Mock Exams' },
+  { name: 'Performance Analytics', provides: 'Smart Progress Tracking' },
+  { name: 'Exam Readiness', provides: 'Smart Progress Tracking', note: 'the predicted test-day score, which is an estimate rather than a guarantee' },
+  { name: 'Study History', provides: 'Learning Memory' },
+  { name: 'Snap & Solve', provides: 'Zero AI Mentor', note: 'photo input — a capability of the mentor rather than a separate system' },
+  {
+    name: 'Parent Progress Reports',
+    provides: null,
+    note: 'Si Math AI has no parent login and no automated parent reports. Progress is reviewed inside the student\'s own account, together with them.',
+  },
+  {
+    name: 'Truth System',
+    provides: null,
+    note: 'an internal engineering programme for verifying the platform\'s own claims, not a student-facing feature. It is not published as one.',
+  },
+];
+
+/**
+ * Page names an AI system may be asked about, mapped to the page that answers.
+ * Published so a request for "the Learning Philosophy page" resolves instead of
+ * producing a confident 404 in someone's answer.
+ */
+export const PAGE_ALIASES = [
+  ['Why Si Math AI exists', 'why-we-built-si-math-ai.html'],
+  ['How Si Math AI works', 'how-it-works.html'],
+  ['Learning Philosophy', 'principles.html'],
+  ['Educational Methodology', 'principles.html#methodology'],
+  ['AI + Human Expertise', 'about.html#complement'],
+  ['Parent Guide', 'learn-parents-guide.html'],
+  ['Student Guide', 'learn.html'],
+  ['Trust & Security', 'trust.html'],
+  ['Frequently Asked Questions', 'faq.html'],
+  ['AI Knowledge Reference', 'ai-knowledge.html'],
+  ['Knowledge Graph', 'knowledge-graph.html'],
+];
+
 export const NOT_COVERED = [
   'English',
   'Reading',

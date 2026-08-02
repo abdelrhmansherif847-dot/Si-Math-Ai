@@ -962,6 +962,76 @@ found on its first run.
 
 ---
 
+## C-30 · Names the site never resolved, and two features it does not have — RESOLVED
+
+**Found:** a brief arrived asking for eleven "new" knowledge pages, twelve named
+features, and a set of philosophy statements. Auditing it against the layer:
+
+- **Ten of the eleven pages already existed** under different names — *Learning
+  Philosophy* is `principles.html`, *AI + Human Expertise* is
+  `about.html#complement`, *Educational Methodology* is
+  `principles.html#methodology`. The eleventh, *Student Guide*, is what
+  `learn.html` and its twelve free guides already are.
+- **Nine of the twelve features existed** under different names — *Performance
+  Analytics* is Smart Progress Tracking, *Study History* is Learning Memory,
+  *AI Tutor* is Zero.
+- **Every philosophy point was already built and CI-enforced** by C-22 and C-26
+  through C-29.
+
+So the gap was never content. It was that **nothing published the mapping**, and
+an AI system asked "where is the Learning Philosophy page?" or "does Si Math AI
+have Performance Analytics?" answers either way — from something published, or
+from a guess.
+
+**Fixed:** two alias tables on `ai-knowledge.html` and in both machine files —
+feature name → the system that provides it, and topic name → the page that
+answers it. CI checks every alias maps to a real system and every topic to a page
+that exists. *A published index of topics that resolves to a 404 is worse than not
+publishing one.* No page was created; the freeze held.
+
+### Two features were requested that do not exist
+
+| Requested | Reality |
+| --- | --- |
+| **Parent Progress Reports** | Si Math AI has **no parent login and no automated parent reports**. `trust.html` states this in three places, and `llms-full.txt` in one. |
+| **Truth System** | An **internal engineering programme** (`docs/roadmap/truth-system-v2-*`) for verifying the platform's own claims. Phase V0 is merged but **not deployed**. It appears on no public page, correctly. |
+
+Publishing either would have been a false claim, and the first would have
+contradicted the Trust Center **on the same site** — worse than either statement
+alone. Both are now published as **absences**, which serves a reader and an AI
+system better than silence: an unanswered question gets answered anyway, just
+badly. `BANNED_ASSERTIONS` fails the build on claiming either.
+
+### Genuinely new: works with any teaching
+
+The one substantive addition. Until now the layer named only the Si Math course,
+which implied the platform was tied to it. It is not: it works alongside the Si
+Math course, alongside any other teacher or tutoring centre, and for a student
+preparing alone — the diagnosis is built from the student's own attempts. Concept
+`any-teaching`, and it is what makes C-22's optionality real rather than
+rhetorical. *A platform that only works with its own course is a lock-in dressed
+as a complement.*
+
+### The rebuttal is not a third definition
+
+The brief asked for one sentence to "repeat everywhere". It is published — but on
+five surfaces rather than thirty-one, and the reasoning is worth recording because
+it will look like an omission later. §1 answers *what is it?*; §1b answers *what is
+it for?*. A third near-identical sentence on every page dilutes both rather than
+reinforcing them, which is the opposite of what repetition is for. It is required
+where the "is this just an AI?" question is actually asked.
+
+### A check of mine that was only a floor
+
+The first version of the Truth System rule asked whether the page marked it
+internal *anywhere*. The positive control planted "The Truth System helps students
+verify answers" on the same page — and it **passed**, because the disclaimer was
+still present further down. Page-level presence is not sentence-level truth. A
+sentence-scoped banned assertion now catches the claim itself, and the page-level
+check is documented as the floor it is.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -995,8 +1065,9 @@ found on its first run.
 | C-27 | "Optional" left the reader to guess why the platform exists | RESOLVED |
 | C-28 | The site described a product, not a method | RESOLVED |
 | C-29 | The site compared a teacher to software | RESOLVED — supersedes part of C-27 |
+| C-30 | Unresolved names; two features that do not exist | RESOLVED |
 
-Twenty-six resolved, three requiring owner action, plus one figure the owner can
+Twenty-seven resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

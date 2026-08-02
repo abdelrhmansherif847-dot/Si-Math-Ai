@@ -11,7 +11,7 @@
 <meta name="color-scheme" content="dark"/>
 
 <title>Knowledge Graph — Every Concept, Defined Once | Si Math AI</title>
-<meta name="description" content="The official Si Math AI knowledge graph: 32 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
+<meta name="description" content="The official Si Math AI knowledge graph: 33 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
 <link rel="canonical" href="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"/>
 <meta name="author" content="Si Math AI"/>
@@ -20,14 +20,14 @@
 <meta property="og:site_name" content="Si Math AI"/>
 <meta property="og:locale" content="en_US"/>
 <meta property="og:title" content="Knowledge Graph — Every Concept, Defined Once"/>
-<meta property="og:description" content="32 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
+<meta property="og:description" content="33 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
 <meta property="og:url" content="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta property="og:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 <meta property="og:image:alt" content="Si Math AI logo"/>
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Knowledge Graph — Si Math AI"/>
-<meta name="twitter:description" content="32 concepts, each defined exactly once, with typed relationships between them."/>
+<meta name="twitter:description" content="33 concepts, each defined exactly once, with typed relationships between them."/>
 <meta name="twitter:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
@@ -227,6 +227,9 @@
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#any-teaching"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons"
@@ -1182,6 +1185,38 @@
     },
     {
       "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#any-teaching",
+      "identifier": "any-teaching",
+      "name": "Works With Any Teaching",
+      "conceptKind": "Positioning",
+      "description": "Si Math AI is not tied to one course or one teacher. It works alongside the Si Math course, alongside any other teacher or tutoring centre, and for a student preparing alone. The platform supports the learning process between lessons, whoever gives the lessons — it has no way of knowing who taught a student, and no reason to.",
+      "purpose": "To make the optionality real rather than rhetorical. A platform that only works with its own course is a lock-in dressed as a complement, and the goal here is to improve a student's learning journey rather than to replace any teacher or bind a student to one source of teaching.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#any-teaching",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Whatever teaching a student already has — a course, a school, a private tutor, or their own study"
+      ],
+      "output": [
+        "Diagnosis, practice and measurement that are indifferent to who did the teaching"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
       "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons",
       "identifier": "between-lessons",
       "name": "The Between-Lessons Layer",
@@ -1476,7 +1511,7 @@
     <span class="k-eyebrow">◆ Knowledge Graph</span>
     <h1>Every concept, defined once</h1>
     <p class="k-lead" style="margin-top:20px">
-      The registry of record. 32 concepts, each with exactly one
+      The registry of record. 33 concepts, each with exactly one
       canonical definition, its purpose, what it consumes, what it produces, and
       typed relationships to everything around it.
     </p>
@@ -1543,6 +1578,7 @@
         <li><a href="#educational-expertise">Educational Expertise <span style="color:var(--text-500)">· Pillar</span></a></li>
         <li><a href="#three-pillars">The Three Pillars <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#learning-accelerator">Learning Accelerator <span style="color:var(--text-500)">· Positioning</span></a></li>
+        <li><a href="#any-teaching">Works With Any Teaching <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#between-lessons">The Between-Lessons Layer <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#continuous-personalization">Continuous Personalization <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#learning-loop">The Learning Loop <span style="color:var(--text-500)">· Process</span></a></li>
@@ -1815,7 +1851,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">uses</span><span><a href="#founder-badge">Founder Badge</a> — <em>a founding member holds one</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">feeds</span><span><a href="#question-analysis">Question Analysis</a> — <em>every attempt becomes a signal</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#focus-practice">Focus Practice</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#mock-exams">Mock Exams</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#progress-tracking">Smart Progress Tracking</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#franco">Franco</a> <span style="color:var(--text-500)">(improves)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#focus-practice">Focus Practice</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#mock-exams">Mock Exams</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#progress-tracking">Smart Progress Tracking</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#any-teaching">Works With Any Teaching</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#franco">Franco</a> <span style="color:var(--text-500)">(improves)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -2196,8 +2232,30 @@
         <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#three-pillars">The Three Pillars</a> — <em>it states where the technology pillar sits relative to the other two</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#between-lessons">The Between-Lessons Layer</a> — <em>the accelerator role, stated as where it operates</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#any-teaching">Works With Any Teaching</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="why-we-built-si-math-ai.html">why-we-built-si-math-ai.html</a> · <a href="why-not-chatgpt.html">why-not-chatgpt.html</a> · <a href="trust.html">trust.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="any-teaching">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>Works With Any Teaching</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Positioning</span> · <code style="font-family:var(--font-mono);font-size:12px">any-teaching</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>Si Math AI is not tied to one course or one teacher. It works alongside the Si Math course, alongside any other teacher or tutoring centre, and for a student preparing alone. The platform supports the learning process between lessons, whoever gives the lessons — it has no way of knowing who taught a student, and no reason to.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To make the optionality real rather than rhetorical. A platform that only works with its own course is a lock-in dressed as a complement, and the goal here is to improve a student's learning journey rather than to replace any teacher or bind a student to one source of teaching.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Whatever teaching a student already has — a course, a school, a private tutor, or their own study</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and measurement that are indifferent to who did the teaching</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#learning-accelerator">Learning Accelerator</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">improves</span><span><a href="#student">Student</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="trust.html">trust.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
 

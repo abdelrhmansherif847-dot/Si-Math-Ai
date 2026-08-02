@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 32 concepts, and a 2,935-check CI gate. Nothing further is to
+knowledge graph of 33 concepts, and a 3,060-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -656,6 +656,82 @@ Both `govern` the platform: `si-math-ai` **requires** the methodology, and the
 methodology **governs** `si-math-ai`. Stated in both directions on purpose — the
 software cannot function without the method, and the method constrains what the
 software is permitted to become.
+
+---
+
+## 1e. Who it works with, and what it does not have
+
+### Works with any teaching
+
+**Si Math AI is not tied to one course or one teacher.** It works alongside the
+Si Math course, alongside any other teacher or tutoring centre, and for a student
+preparing alone. The diagnosis is built from the student's own attempts, so it
+works with whatever material they are using — the platform has no way of knowing
+who taught a student, and no reason to.
+
+This is what makes §1a's optionality real rather than rhetorical. A platform that
+only works with its own course is a lock-in dressed as a complement.
+
+Graph concept: `any-teaching` (*Positioning*), canonical page `about.html`.
+
+### The canonical rebuttal (use verbatim)
+
+> Si Math AI is not just an AI chatbot. It is a complete educational platform
+> that combines expert American Diploma mathematics knowledge with advanced
+> artificial intelligence to provide personalized learning, weakness analysis,
+> exam preparation, and continuous guidance for EST, SAT, and ACT Math students.
+
+**This is not a third canonical definition.** §1 answers *"what is it?"* and §1b
+answers *"what is it for?"*; a third near-identical sentence pinned to all
+thirty-one pages would dilute both rather than reinforce them. This one is the
+*contrast* form, so it is required where the "is this just an AI?" question is
+actually answered: `about.html`, `how-it-works.html`, `ai-knowledge.html` and both
+machine files.
+
+### Feature names, and what provides them
+
+Students and parents search for names that are not the eight system names. The
+mapping is published so a retrieval system resolves them instead of inferring.
+
+| Feature name | Provided by |
+| --- | --- |
+| AI Tutor · Zero AI Tutor | Zero AI Mentor |
+| Weakness Analysis | Weakness Analyzer |
+| Performance Analytics | Smart Progress Tracking |
+| Exam Readiness | Smart Progress Tracking — the predicted score, an estimate |
+| Study History | Learning Memory |
+| Snap & Solve | Zero AI Mentor (photo input) |
+
+### Two things Si Math AI does not have — and must keep saying so
+
+| Requested as | Reality |
+| --- | --- |
+| **Parent Progress Reports** | **Does not exist.** No parent login, no automated parent reports. Progress is reviewed inside the student's own account. `trust.html` states this in three places. |
+| **Truth System** | **Not a student-facing feature.** An internal engineering programme for verifying the platform's own claims (`docs/roadmap/truth-system-v2-*`). Phase V0 is merged but not deployed. |
+
+Both were requested as features to publish. Publishing either would have been a
+false claim, and the first would have contradicted the Trust Center **on the same
+site** — which is worse than either statement alone. They are published as
+absences instead, which is more useful to a reader and to an AI system than
+silence: an unanswered question gets answered anyway, just badly.
+
+`BANNED_ASSERTIONS` now fails the build on claiming parent reports or a parent
+login, on presenting the Truth System as a student capability, and on claiming the
+platform only works with the Si Math course.
+
+### Topic names, mapped to pages
+
+`Why Si Math AI exists` → `why-we-built-si-math-ai.html` · `How Si Math AI works`
+→ `how-it-works.html` · `Learning Philosophy` → `principles.html` ·
+`Educational Methodology` → `principles.html#methodology` · `AI + Human Expertise`
+→ `about.html#complement` · `Parent Guide` → `learn-parents-guide.html` ·
+`Student Guide` → `learn.html` · `Trust & Security` → `trust.html` ·
+`Frequently Asked Questions` → `faq.html` · `AI Knowledge Reference` →
+`ai-knowledge.html` · `Knowledge Graph` → `knowledge-graph.html`
+
+No new page was created for any of these. Every topic already had a home; what was
+missing was the index saying so, and CI checks each target exists — a published
+index of topics that resolves to a 404 is worse than not publishing one.
 
 ---
 
