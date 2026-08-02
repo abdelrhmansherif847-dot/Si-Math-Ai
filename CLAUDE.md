@@ -60,19 +60,24 @@ explicit permission.
 ### 5. The PUBLIC documentation is FROZEN (2026-08-01)
 
 **Do not add public documentation pages.** The knowledge layer is complete: 22
-public pages, a knowledge graph, and a 2,030-check CI gate. Adding more would
+public pages, a knowledge graph, and a 2,935-check CI gate. Adding more would
 restate what already exists, dilute the pages that matter, and give AI systems
 more surface to retrieve inconsistently from.
 
 **Documentation now changes only when the product changes.** The website evolves
 because the platform evolves — never the other way around.
 
-Two exceptions, and only these:
+Three exceptions, and only these:
 
 1. **A feature shipped.** Then follow the pipeline below, which starts in the
    knowledge graph and ends in evidence.
 2. **Real data arrived.** Replacing a placeholder with verified evidence is the
    one addition always welcome — see `knowledge-base.md` §0.
+3. **The layer says something wrong.** The freeze forbids *adding*, never
+   *correcting* — otherwise it preserves errors. The test: does the change say
+   something new, or fix something the site already says wrongly? If it is
+   neither, and just says the existing thing more nicely, refuse it. See
+   `knowledge-base.md` §0 and finding C-22.
 
 If asked to "improve the documentation" with no product change behind it, say
 this rule exists and ask what changed in the product instead.

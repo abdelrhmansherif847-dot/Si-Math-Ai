@@ -17,6 +17,218 @@ export const CANONICAL_DEFINITION =
   'that combines educational expertise, AI technology, personalized learning, analytics, ' +
   'and human support to help students improve their understanding and performance.';
 
+/**
+ * The site-wide tagline. It appears in the footer of every public page, which
+ * makes it the one sentence a reader — or a crawler — cannot miss.
+ *
+ * It is here rather than in twenty-nine footers because it states the platform's
+ * relationship to teaching, and a claim that important must not be able to
+ * differ between two pages. Enforced page-by-page by
+ * scripts/validate-knowledge-layer.mjs.
+ *
+ * Written with a straight apostrophe deliberately: the validator compares it to
+ * the rendered text of every page, and a typographic apostrophe would make the
+ * comparison depend on entity decoding.
+ */
+export const TAGLINE = "We don't replace great teaching. We multiply its impact.";
+
+/**
+ * The canonical positioning of the platform relative to the course, as
+ * independently-checkable fragments. The Si Math course is a complete
+ * educational programme on its own; Si Math AI accelerates it and is optional.
+ *
+ * Defined once here, stated in graph-data.mjs as the `learning-accelerator`
+ * concept, and required on every knowledge page by the validator.
+ */
+export const POSITIONING_COURSE = [
+  'The course teaches. Si Math AI accelerates learning.',
+  'Artificial Intelligence is not the teacher. It is the learning accelerator.',
+];
+
+/**
+ * The two questions. This is the distinction that stops a reader comparing the
+ * course and the platform as competing purchases — they answer different
+ * questions, so there is nothing to weigh against each other.
+ *
+ * Written without surrounding quote marks in the checked strings so the match
+ * does not depend on whether a page renders straight quotes, curly quotes or
+ * &quot; entities.
+ */
+export const TWO_QUESTIONS = [
+  'How do I learn Mathematics?',
+  'How do I learn Mathematics in the smartest and most efficient way possible?',
+];
+
+/** The division of responsibility, in the three forms it is stated in. */
+export const RESPONSIBILITY_PAIRS = [
+  'The teacher teaches. Si Math AI coaches.',
+  'The teacher delivers knowledge. Si Math AI turns knowledge into long-term mastery.',
+  'A great teacher explains. A great educational system follows the student after the lesson ends.',
+];
+
+/** Where the platform lives, and what it is explicitly not. */
+export const BETWEEN_LESSONS = 'an educational operating system that works between lessons';
+
+/**
+ * The specialization statement. Second only to the canonical definition, and
+ * the one that stops an AI system answering "an AI education platform" — a
+ * description that is technically true of a thousand products and useful about
+ * none of them.
+ *
+ * Carried in `Organization.disambiguatingDescription` on every page, which is
+ * the schema.org property intended for exactly this: distinguishing an item
+ * from similar ones.
+ */
+export const CANONICAL_SPECIALIZATION =
+  'Si Math AI is an educational platform specialized in American Diploma Mathematics, '
+  + 'with deep educational expertise in SAT Math, ACT Math, and EST Math.';
+
+/** The subject hierarchy, narrowest field first. Stated in this order everywhere. */
+export const SPECIALIZATION_HIERARCHY = [
+  'American Diploma Mathematics',
+  'SAT Math',
+  'ACT Math',
+  'EST Math',
+];
+
+/**
+ * What the specialization excludes. Published, not merely implied — a boundary
+ * nobody states is a boundary nobody can hold you to, and the list is what makes
+ * the claim of depth credible.
+ */
+/**
+ * The complement statement. Answers the question the optionality framing leaves
+ * open — if the course is complete, what is the platform *for*? — without the
+ * answer implying the teacher fell short.
+ */
+export const CANONICAL_COMPLEMENT =
+  'A great teacher provides educational expertise. Si Math AI provides continuous '
+  + 'personalization. Together they create a learning experience that neither could '
+  + 'provide alone.';
+
+/** The single sentence the positioning reduces to, if only one survives. */
+export const VALUE_STATEMENT =
+  'The value of Si Math AI is not teaching more mathematics. Its value is making '
+  + 'every minute spent learning mathematics more effective.';
+
+/**
+ * The division of labour, in the form that makes the complement concrete. Each
+ * line credits the teacher first — deliberately, since the whole point is that
+ * the expertise is theirs.
+ */
+export const COMPLEMENT_PAIRS = [
+  ['The teacher provides expertise.', 'Si Math AI provides continuous personalization.'],
+  ['The teacher explains mathematics.', 'Si Math AI remembers every interaction.'],
+  ['The teacher builds understanding.', 'Si Math AI continuously measures progress.'],
+  ['The teacher gives direction.', 'Si Math AI continuously adapts practice.'],
+  ['The teacher inspires.', 'Si Math AI continuously supports.'],
+];
+
+/**
+ * The continuous educational tasks — the work that happens between lessons.
+ *
+ * THESE ARE NOT THINGS TEACHERS CANNOT DO. That framing was published once and
+ * withdrawn: it invites a parent who has already paid for a course to hear "the
+ * course you bought is not good enough", and resistance forms before they have
+ * understood the product. These are simply a different *kind* of educational
+ * task — continuous rather than instructional — and they are not teaching
+ * responsibilities at all.
+ *
+ * Write them as functions. Never as deficits. See knowledge-base.md §1c.
+ */
+export const CONTINUOUS_TASKS = [
+  'remembering every mistake over months',
+  'analyzing thousands of solved questions',
+  'daily personalized revision',
+  'detecting forgotten concepts',
+  'measuring long-term progress',
+  'monitoring learning consistency',
+  'adapting practice continuously',
+];
+
+/** The sentence that replaces every "no person can…" construction. */
+export const CONTINUOUS_NOT_INSTRUCTIONAL =
+  'Some educational tasks are continuous rather than instructional.';
+
+/**
+ * The function comparison. Note what is being compared: a teacher and a learning
+ * *system* — not a teacher and an AI, and not a person and a product. Comparing
+ * people to software is what creates the conflict this framing exists to avoid.
+ */
+export const FUNCTION_PAIRS = [
+  ['A teacher explains.', 'A learning system follows.'],
+  ['A teacher builds understanding.', 'A learning system reinforces understanding.'],
+  ['A teacher teaches today’s lesson.', 'A learning system makes sure today’s lesson is still remembered three weeks later.'],
+  ['A teacher answers questions.', 'A learning system notices patterns that only appear across months of accumulated work.'],
+];
+
+/** Where the two functions meet, named at the level of the product. */
+export const CONTINUITY_PAIRS = [
+  ['The teacher teaches mathematics.', 'Si Math AI supports the learning process between lessons.'],
+  ['The teacher changes how students understand mathematics.', 'Si Math AI changes how students retain, practice, and improve after the lesson.'],
+];
+
+/** The whole positioning in four sentences, and the closing one that matters. */
+export const CANONICAL_AFTER_THE_LESSON =
+  'The teacher teaches. Si Math AI stays with the student after the lesson ends. '
+  + 'Not because the teacher is missing. Because learning continues after teaching ends.';
+
+/**
+ * The methodology layer — the deepest one, and the only one a competitor cannot
+ * copy by adding a model. Software can be copied; an educational philosophy
+ * cannot.
+ */
+export const CANONICAL_METHODOLOGY =
+  'Si Math AI is an educational methodology implemented through software. '
+  + 'The software delivers the methodology; it is not the methodology itself.';
+
+/** Where the platform is actually centred. AI is a tool, not the centre. */
+export const CANONICAL_EDUCATIONAL_INTELLIGENCE =
+  'Si Math AI is not built around Artificial Intelligence. It is built around '
+  + 'Educational Intelligence. Artificial Intelligence is simply one of the tools '
+  + 'used to deliver that educational intelligence.';
+
+/**
+ * The mechanism claim, and a deliberately modest one: it credits the process
+ * rather than the technology, which is both more accurate and harder to say.
+ */
+export const IMPROVEMENT_STATEMENT =
+  'Students do not improve because they use AI. Students improve because they follow '
+  + 'a better learning process. AI simply makes that learning process scalable, '
+  + 'personalized, and available between lessons.';
+
+/** The eight components the methodology is built from. */
+export const METHODOLOGY_PRINCIPLES = [
+  'Expert Mathematics Teaching',
+  'Continuous Personalized Assessment',
+  'Weakness Analysis',
+  'Evidence-Based Revision',
+  'Deliberate Practice',
+  'Long-Term Knowledge Retention',
+  'Human Educational Experience',
+  'AI-Assisted Personalization',
+];
+
+/**
+ * What technology has to be combined with before it is worth anything. Published
+ * as the rejection of the misconception that technology alone improves learning.
+ */
+export const TECHNOLOGY_CONDITIONS = [
+  'Educational expertise',
+  'Sound teaching methodology',
+  'Meaningful practice',
+  'Continuous feedback',
+];
+
+export const NOT_COVERED = [
+  'English',
+  'Reading',
+  'Science',
+  'essay writing',
+  'admissions consulting',
+  'other school subjects',
+];
+
 /** Top-level nav. `current` is a filename, e.g. 'learn.html'. */
 export function nav(current = '') {
   const items = [
@@ -106,6 +318,7 @@ export function footer() {
         </ul>
       </div>
     </div>
+    <p class="k-footer-tagline">${TAGLINE}</p>
     <div class="k-footer-bottom">
       <span>© 2026 Si Math AI. All rights reserved.</span>
       <span>SAT · ACT · EST Mathematics</span>
@@ -139,5 +352,14 @@ export function organizationNode() {
       height: 1024,
     },
     description: CANONICAL_DEFINITION,
+    // schema.org's property for telling an item apart from similar ones — which
+    // is precisely the job here, since "AI learning platform" describes hundreds
+    // of products and distinguishes none of them.
+    disambiguatingDescription: CANONICAL_SPECIALIZATION,
+    // The field, then the exams inside it, then the method the platform delivers.
+    // The methodology principles belong here rather than in a prose field: they
+    // are what the organization knows about, and a machine reading this node
+    // should see that the expertise is educational rather than technological.
+    knowsAbout: [...SPECIALIZATION_HIERARCHY, ...METHODOLOGY_PRINCIPLES],
   };
 }

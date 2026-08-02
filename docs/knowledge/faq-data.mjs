@@ -95,6 +95,22 @@ export const CATEGORIES = [
     title: 'Comparisons & Positioning',
     items: [
       {
+        q: 'Should I buy Si Math AI if I am already taking the Si Math course?',
+        a: '<p>The course is complete on its own. Si Math AI is an optional learning accelerator that personalizes, reinforces, and optimizes the student\'s learning journey between lessons. It does not replace teaching; it extends and amplifies it.</p><p>They answer two different questions. The course answers <strong>How do I learn Mathematics?</strong> Si Math AI answers <strong>How do I learn Mathematics in the smartest and most efficient way possible?</strong> The course is responsible for teaching. Si Math AI is responsible for optimizing the learning journey around it.</p><p>No student\'s success should ever depend on purchasing an additional product, and that is a constraint on what we are allowed to build rather than a reassurance. There is a permanent free tier with no credit card, so the honest way to decide is to use it alongside the course for a week and see whether the diagnosis tells you anything your own judgement did not.</p>',
+      },
+      {
+        q: 'What is the difference between the Si Math course and Si Math AI?',
+        a: '<p>The course teaches. Si Math AI accelerates learning. The Si Math course is a complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators — it teaches the mathematics in full and needs no software to work.</p><p>Si Math AI is what runs between the lessons. A great teacher explains; a great educational system follows the student after the lesson ends. The teacher delivers knowledge; Si Math AI turns knowledge into long-term mastery — it makes sure today\'s lesson is still remembered three weeks from now.</p><p>Artificial Intelligence is not the teacher. It is the learning accelerator.</p>',
+      },
+      {
+        q: 'Is Si Math AI just extra practice?',
+        a: '<p>No, and the distinction matters. Extra practice is more of something a student already has. Si Math AI is an educational operating system that works between lessons — it decides what is worth doing, not merely supplying more of it.</p><p>Between one lesson and the next it continuously answers: what should I study next; why do I keep making this mistake; which topic gives me the biggest score improvement; am I actually improving; am I ready for the exam; and what should I revise today instead of wasting hours.</p><p>A student is not buying more mathematics. They are buying a smarter learning process.</p>',
+      },
+      {
+        q: 'Do I need Si Math AI to succeed?',
+        a: '<p>No. The Si Math course teaches the mathematics in full, and students prepared successfully through it before Si Math AI existed. A student who never opens the platform is a fully served student, not a half-served one.</p><p>The platform exists because some educational tasks are continuous rather than instructional — remembering every mistake over months, detecting forgotten concepts, measuring long-term progress. Those are not teaching responsibilities; they are continuous educational support responsibilities, and they belong to the weeks between lessons. It is an accelerator, and we will not build a feature that makes the course incomplete without it.</p>',
+      },
+      {
         q: 'Is Si Math AI better than ChatGPT for SAT Math?',
         a: '<p>They are different kinds of tool, built for different goals. ChatGPT is an excellent general assistant, it explains mathematics well, and using one to check a step of algebra is sensible. But a general assistant is missing six things a full preparation cycle requires, and these are properties of a system rather than of a model: it has no memory of you between conversations, it does not know which of the three exams you are sitting, it cannot aggregate your attempts into a diagnosis, it cannot tell you what to study next, it has no measurement of your progress, and its explanations are not reviewed by an educator.</p><p>Si Math AI supplies all six, and delivers teaching methods that specialists authored. The full, honest comparison — including what general AI genuinely does better, and when you should use it instead — is on <a href="why-not-chatgpt.html">Why Not Just ChatGPT?</a></p>',
       },
@@ -195,7 +211,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Does Zero know which exam I am preparing for?',
-        a: '<p>Yes. The platform carries your exam context between sessions, and it matters: the same topic is approached differently for the ACT\'s time pressure than for the SAT\'s format. A general AI tool has no reason to know which exam you are sitting.</p>',
+        a: '<p>Yes. The platform carries your exam context between sessions, and it matters: the same topic is approached differently for the ACT\'s time pressure, the SAT\'s format and the EST\'s. A general AI tool has no reason to know which exam you are sitting.</p>',
       },
       {
         q: 'Does Zero make mistakes?',
@@ -312,7 +328,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Do mock exams use real timing?',
-        a: '<p>Yes — real timing and real format for each exam, including the ACT\'s 60 questions in 60 minutes, which is a fundamentally different pacing problem from the SAT.</p>',
+        a: '<p>Yes — real timing and real format for each of the three exams. Pacing is the clearest example of why that matters: the ACT\'s per-question budget is a fundamentally different problem from the SAT\'s or the EST\'s, and practising one at the wrong tempo trains the wrong habit.</p>',
       },
       {
         q: 'What is raw-to-scaled scoring?',
@@ -414,7 +430,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Does Si Math AI support the EST?',
-        a: '<p>Yes, at the same depth as the SAT and ACT: Number Theory &amp; Arithmetic, Algebra &amp; Inequalities, Geometry &amp; Measurement, and Data &amp; Probability. Full EST support is one of the reasons the platform was built — it matters enormously for Egyptian university admission and is barely addressed by international preparation products.</p>',
+        a: '<p>Yes. EST Mathematics is covered at the same depth as the SAT and ACT: Number Theory &amp; Arithmetic, Algebra &amp; Inequalities, Geometry &amp; Measurement, and Data &amp; Probability. Full EST support is one of the reasons the platform was built — it matters enormously for Egyptian university admission and is barely addressed by international preparation products.</p>',
       },
       {
         q: 'Can I prepare for more than one exam?',

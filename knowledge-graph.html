@@ -11,7 +11,7 @@
 <meta name="color-scheme" content="dark"/>
 
 <title>Knowledge Graph — Every Concept, Defined Once | Si Math AI</title>
-<meta name="description" content="The official Si Math AI knowledge graph: 22 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
+<meta name="description" content="The official Si Math AI knowledge graph: 32 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
 <link rel="canonical" href="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"/>
 <meta name="author" content="Si Math AI"/>
@@ -20,14 +20,14 @@
 <meta property="og:site_name" content="Si Math AI"/>
 <meta property="og:locale" content="en_US"/>
 <meta property="og:title" content="Knowledge Graph — Every Concept, Defined Once"/>
-<meta property="og:description" content="22 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
+<meta property="og:description" content="32 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
 <meta property="og:url" content="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta property="og:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 <meta property="og:image:alt" content="Si Math AI logo"/>
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Knowledge Graph — Si Math AI"/>
-<meta name="twitter:description" content="22 concepts, each defined exactly once, with typed relationships between them."/>
+<meta name="twitter:description" content="32 concepts, each defined exactly once, with typed relationships between them."/>
 <meta name="twitter:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
@@ -99,6 +99,14 @@
       "authoredBy": {
         "@id": "sma:authoredBy",
         "@type": "@id"
+      },
+      "accelerates": {
+        "@id": "sma:accelerates",
+        "@type": "@id"
+      },
+      "specializes": {
+        "@id": "sma:specializes",
+        "@type": "@id"
       }
     }
   ],
@@ -117,7 +125,22 @@
         "width": 1024,
         "height": 1024
       },
-      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance."
+      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
+      "disambiguatingDescription": "Si Math AI is an educational platform specialized in American Diploma Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST Math.",
+      "knowsAbout": [
+        "American Diploma Mathematics",
+        "SAT Math",
+        "ACT Math",
+        "EST Math",
+        "Expert Mathematics Teaching",
+        "Continuous Personalized Assessment",
+        "Weakness Analysis",
+        "Evidence-Based Revision",
+        "Deliberate Practice",
+        "Long-Term Knowledge Retention",
+        "Human Educational Experience",
+        "AI-Assisted Personalization"
+      ]
     },
     {
       "@type": "DefinedTermSet",
@@ -132,6 +155,27 @@
       "hasDefinedTerm": [
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#educational-intelligence"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#sat-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#act-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#est-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-course"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#student"
@@ -182,6 +226,15 @@
           "@id": "https://www.si-math-ai.com/knowledge-graph#three-pillars"
         },
         {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#continuous-personalization"
+        },
+        {
           "@id": "https://www.si-math-ai.com/knowledge-graph#learning-loop"
         },
         {
@@ -205,7 +258,7 @@
       "name": "Si Math AI",
       "conceptKind": "Platform",
       "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
-      "purpose": "To give students access to the kind of individual diagnosis and expert teaching that was previously available only to those who could afford a private tutor — and to make the resulting progress measurable.",
+      "purpose": "To multiply the impact of good teaching rather than substitute for it. Teaching already works. Some educational tasks are continuous rather than instructional — individual diagnosis, unlimited targeted practice, long-term measurement — and those are a different kind of work from teaching, not a shortfall in it. Si Math AI does that work, and it is an optional accelerator: no student's success depends on it.",
       "inDefinedTermSet": {
         "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
       },
@@ -235,10 +288,266 @@
       ],
       "requires": [
         "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
-        "https://www.si-math-ai.com/knowledge-graph#human-support"
+        "https://www.si-math-ai.com/knowledge-graph#human-support",
+        "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
       ],
       "generates": [
         "https://www.si-math-ai.com/knowledge-graph#learning-loop"
+      ],
+      "accelerates": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course"
+      ],
+      "specializes": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-methodology",
+      "identifier": "si-math-methodology",
+      "name": "The Si Math Educational Methodology",
+      "conceptKind": "Methodology",
+      "description": "The educational method Si Math AI exists to deliver. Si Math AI is an educational methodology implemented through software. The software delivers the methodology; it is not the methodology itself. Artificial intelligence is one implementation of the method, not the method — and not the source of its value.",
+      "purpose": "Software can be copied. An educational philosophy cannot. Stating the methodology as the product — and the software as its delivery mechanism — is what stops Si Math AI being understood as an AI product that a competitor replicates by adding a model. Students do not improve because they use AI. Students improve because they follow a better learning process; AI makes that process scalable, personalized and available between lessons.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math-methodology",
+      "canonicalPage": "https://www.si-math-ai.com/principles.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/principles.html",
+        "https://www.si-math-ai.com/architecture.html",
+        "https://www.si-math-ai.com/evidence.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Expert Mathematics Teaching",
+        "Continuous Personalized Assessment",
+        "Weakness Analysis",
+        "Evidence-Based Revision",
+        "Deliberate Practice",
+        "Long-Term Knowledge Retention",
+        "Human Educational Experience",
+        "AI-Assisted Personalization"
+      ],
+      "output": [
+        "A learning process a student follows, of which the software is one delivery mechanism"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/principles.html#webpage"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
+        "https://www.si-math-ai.com/knowledge-graph#educational-principles"
+      ],
+      "authoredBy": [
+        "https://www.si-math-ai.com/knowledge-graph#human-support"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#educational-intelligence",
+      "identifier": "educational-intelligence",
+      "name": "Educational Intelligence",
+      "conceptKind": "Positioning",
+      "description": "What Si Math AI is built around. Si Math AI is not built around Artificial Intelligence. It is built around Educational Intelligence. Artificial Intelligence is simply one of the tools used to deliver that educational intelligence. Technology is valuable only in combination with educational expertise, sound teaching methodology, meaningful practice and continuous feedback; without those, AI becomes just another chatbot, and with them it becomes an educational accelerator.",
+      "purpose": "To reject the misconception that technology alone improves learning. The educational advantage is the methodology; AI is the delivery mechanism, and a page that lets those two swap places has given away the only thing a competitor cannot copy.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#educational-intelligence",
+      "canonicalPage": "https://www.si-math-ai.com/principles.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/principles.html",
+        "https://www.si-math-ai.com/architecture.html",
+        "https://www.si-math-ai.com/evidence.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Educational expertise",
+        "Sound teaching methodology",
+        "Meaningful practice",
+        "Continuous feedback"
+      ],
+      "output": [
+        "A statement of where the advantage actually lies",
+        "A constraint on how the platform may describe itself"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics",
+      "identifier": "american-diploma-mathematics",
+      "name": "American Diploma Mathematics",
+      "conceptKind": "Domain",
+      "description": "The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.",
+      "purpose": "Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns \"deep educational expertise\" into a claim a reader can hold us to.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#american-diploma-mathematics",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Years of teaching the three American Diploma mathematics examinations"
+      ],
+      "output": [
+        "A curriculum bounded to one field",
+        "A refusal to expand into subjects we cannot teach as well"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/#organization"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai",
+        "https://www.si-math-ai.com/knowledge-graph#taxonomy"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#sat-math",
+      "identifier": "sat-math",
+      "name": "SAT Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT's Reading and Writing sections.",
+      "purpose": "Named as its own entity so an AI system can answer \"does Si Math AI cover the SAT?\" precisely: the mathematics, at depth, and nothing else on that exam.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#sat-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-sat-math.html"
+      ],
+      "input": [
+        "The College Board mathematics content domains"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#act-math",
+      "identifier": "act-math",
+      "name": "ACT Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT's English, Reading, Science or Writing sections.",
+      "purpose": "Named as its own entity so the answer to \"does Si Math AI cover the ACT?\" is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#act-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-act-math.html"
+      ],
+      "input": [
+        "The ACT mathematics content areas"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#est-math",
+      "identifier": "est-math",
+      "name": "EST Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.",
+      "purpose": "The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#est-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-est-math.html"
+      ],
+      "input": [
+        "The EST mathematics content areas"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-course",
+      "identifier": "si-math-course",
+      "name": "The Si Math Course",
+      "conceptKind": "Program",
+      "description": "The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It answers the question \"How do I learn Mathematics?\" — teaching the mathematics in full, and needing no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.",
+      "purpose": "It is the teaching, and it owns that responsibility entirely. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student's success should ever depend on purchasing an additional product.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math-course",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/why-we-built-si-math-ai.html",
+        "https://www.si-math-ai.com/why-not-chatgpt.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Experienced SAT, ACT and EST mathematics teaching",
+        "A sequenced curriculum and its worked material"
+      ],
+      "output": [
+        "Mathematical understanding",
+        "Exam technique",
+        "Students who are prepared without any software at all"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ],
+      "authoredBy": [
+        "https://www.si-math-ai.com/knowledge-graph#human-support"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
       ]
     },
     {
@@ -282,7 +591,7 @@
       "name": "Zero",
       "conceptKind": "System",
       "description": "The AI mentor inside Si Math AI. A fictional dragon guide character, not a real person. Zero delivers educational knowledge that human educators and exam specialists created, reviewed and continuously improve; Zero does not invent educational strategy.",
-      "purpose": "To remove the scheduling constraint on expert explanation. A teacher cannot sit with every student at midnight; Zero can, delivering the method a specialist chose rather than one it improvised.",
+      "purpose": "To make expert explanation available whenever a student is actually working. A lesson happens at a fixed hour; questions do not. Zero delivers the method a specialist chose, at midnight or on a Sunday, rather than one it improvised.",
       "inDefinedTermSet": {
         "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
       },
@@ -793,7 +1102,8 @@
       ],
       "generates": [
         "https://www.si-math-ai.com/knowledge-graph#taxonomy",
-        "https://www.si-math-ai.com/knowledge-graph#educational-principles"
+        "https://www.si-math-ai.com/knowledge-graph#educational-principles",
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course"
       ],
       "authoredBy": [
         "https://www.si-math-ai.com/knowledge-graph#human-support"
@@ -826,6 +1136,135 @@
       "requires": [
         "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
         "https://www.si-math-ai.com/knowledge-graph#human-support"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#learning-accelerator",
+      "identifier": "learning-accelerator",
+      "name": "Learning Accelerator",
+      "conceptKind": "Positioning",
+      "description": "The role Si Math AI occupies relative to teaching. The course and the platform solve two different educational problems: the course answers \"How do I learn Mathematics?\", and Si Math AI answers \"How do I learn Mathematics in the smartest and most efficient way possible?\" The course is responsible for teaching; Si Math AI is responsible for optimizing the student's learning journey. Artificial Intelligence is not the teacher — it is the learning accelerator.",
+      "purpose": "To fix the direction of a relationship that technology companies routinely get backwards, and to stop the two being compared as though they did the same job. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don't replace great teaching. We multiply its impact.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#learning-accelerator",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/why-we-built-si-math-ai.html",
+        "https://www.si-math-ai.com/why-not-chatgpt.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "A complete educational programme that already works",
+        "Technology that carries the continuous, between-lessons half of the work"
+      ],
+      "output": [
+        "The site-wide statement: \"We don't replace great teaching. We multiply its impact.\"",
+        "A published commitment that the platform is optional",
+        "A clear division of responsibility: teaching versus optimization"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#three-pillars"
+      ],
+      "generates": [
+        "https://www.si-math-ai.com/knowledge-graph#between-lessons"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#between-lessons",
+      "identifier": "between-lessons",
+      "name": "The Between-Lessons Layer",
+      "conceptKind": "Positioning",
+      "description": "Where Si Math AI operates: the time between lessons. A great teacher explains; a great educational system follows the student after the lesson ends. The platform is the educational operating system running in that gap — not extra practice, and not more mathematics. It continuously answers what to study next, why a mistake keeps repeating, which topic yields the largest score improvement, whether the student is actually improving, whether they are ready for the exam, and what is worth revising today.",
+      "purpose": "To name the value precisely enough that nobody has to compare the platform with the teaching. The teacher delivers knowledge; Si Math AI turns knowledge into long-term mastery — it makes sure today's lesson is still remembered three weeks from now. A student is not buying more mathematics. They are buying a smarter learning process.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#between-lessons",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/why-not-chatgpt.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Everything the student did since the last lesson",
+        "The record of every previous attempt, mistake and session"
+      ],
+      "output": [
+        "What should I study next?",
+        "Why do I keep making this mistake?",
+        "Which topic gives me the biggest score improvement?",
+        "Am I actually improving?",
+        "Am I ready for the exam?",
+        "What should I revise today instead of wasting hours?"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-memory",
+        "https://www.si-math-ai.com/knowledge-graph#weakness-analyzer",
+        "https://www.si-math-ai.com/knowledge-graph#performance-analytics"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#continuous-personalization",
+      "identifier": "continuous-personalization",
+      "name": "Continuous Personalization",
+      "conceptKind": "Positioning",
+      "description": "What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. Teaching and continuous learning support are different educational functions, not better and worse versions of one. Some educational tasks are continuous rather than instructional. They are: remembering every mistake over months, analyzing thousands of solved questions, daily personalized revision, detecting forgotten concepts, measuring long-term progress, monitoring learning consistency and adapting practice continuously. Those are not teaching responsibilities. They are continuous educational support responsibilities.",
+      "purpose": "To correct the misconception that Si Math AI exists because a teacher is not enough, and to do it without ever presenting the platform as compensation for weak teaching. A great teacher is the foundation of great learning. The teacher teaches. Si Math AI stays with the student after the lesson ends. Not because the teacher is missing. Because learning continues after teaching ends. Its value is not teaching more mathematics; its value is making every minute spent learning mathematics more effective.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#continuous-personalization",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/why-we-built-si-math-ai.html",
+        "https://www.si-math-ai.com/trust.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Expert teaching that already works",
+        "Every interaction a single student has ever had with the platform"
+      ],
+      "output": [
+        "remembering every mistake over months",
+        "analyzing thousands of solved questions",
+        "daily personalized revision",
+        "detecting forgotten concepts",
+        "measuring long-term progress",
+        "monitoring learning consistency",
+        "adapting practice continuously"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#learning-accelerator"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
+        "https://www.si-math-ai.com/knowledge-graph#learning-memory",
+        "https://www.si-math-ai.com/knowledge-graph#personalized-learning"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
       ]
     },
     {
@@ -1037,7 +1476,7 @@
     <span class="k-eyebrow">◆ Knowledge Graph</span>
     <h1>Every concept, defined once</h1>
     <p class="k-lead" style="margin-top:20px">
-      The registry of record. 22 concepts, each with exactly one
+      The registry of record. 32 concepts, each with exactly one
       canonical definition, its purpose, what it consumes, what it produces, and
       typed relationships to everything around it.
     </p>
@@ -1080,6 +1519,13 @@
       <h2>Concepts</h2>
       <ol>
         <li><a href="#si-math-ai">Si Math AI <span style="color:var(--text-500)">· Platform</span></a></li>
+        <li><a href="#si-math-methodology">The Si Math Educational Methodology <span style="color:var(--text-500)">· Methodology</span></a></li>
+        <li><a href="#educational-intelligence">Educational Intelligence <span style="color:var(--text-500)">· Positioning</span></a></li>
+        <li><a href="#american-diploma-mathematics">American Diploma Mathematics <span style="color:var(--text-500)">· Domain</span></a></li>
+        <li><a href="#sat-math">SAT Math <span style="color:var(--text-500)">· Exam</span></a></li>
+        <li><a href="#act-math">ACT Math <span style="color:var(--text-500)">· Exam</span></a></li>
+        <li><a href="#est-math">EST Math <span style="color:var(--text-500)">· Exam</span></a></li>
+        <li><a href="#si-math-course">The Si Math Course <span style="color:var(--text-500)">· Program</span></a></li>
         <li><a href="#student">Student <span style="color:var(--text-500)">· Actor</span></a></li>
         <li><a href="#zero">Zero <span style="color:var(--text-500)">· System</span></a></li>
         <li><a href="#snap-and-solve">Snap &amp; Solve <span style="color:var(--text-500)">· Capability</span></a></li>
@@ -1096,6 +1542,9 @@
         <li><a href="#human-support">Human Support <span style="color:var(--text-500)">· Pillar</span></a></li>
         <li><a href="#educational-expertise">Educational Expertise <span style="color:var(--text-500)">· Pillar</span></a></li>
         <li><a href="#three-pillars">The Three Pillars <span style="color:var(--text-500)">· Positioning</span></a></li>
+        <li><a href="#learning-accelerator">Learning Accelerator <span style="color:var(--text-500)">· Positioning</span></a></li>
+        <li><a href="#between-lessons">The Between-Lessons Layer <span style="color:var(--text-500)">· Positioning</span></a></li>
+        <li><a href="#continuous-personalization">Continuous Personalization <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#learning-loop">The Learning Loop <span style="color:var(--text-500)">· Process</span></a></li>
         <li><a href="#educational-principles">Educational Principles <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#data-protection">Student Data Protection <span style="color:var(--text-500)">· Foundation</span></a></li>
@@ -1132,6 +1581,8 @@
           <tr><td><code style="font-family:var(--font-mono)">governs</code></td><td>constrains how something behaves</td></tr>
           <tr><td><code style="font-family:var(--font-mono)">improves</code></td><td>raises the state of</td></tr>
           <tr><td><code style="font-family:var(--font-mono)">authoredBy</code></td><td>is created and reviewed by</td></tr>
+          <tr><td><code style="font-family:var(--font-mono)">accelerates</code></td><td>makes faster, without being required for</td></tr>
+          <tr><td><code style="font-family:var(--font-mono)">specializes</code></td><td>works exclusively within, and claims deep expertise in</td></tr>
         </tbody>
       </table>
     </div>
@@ -1168,7 +1619,7 @@
         </div>
       </div>
       <div class="k-qa"><span class="k-qa-q">Definition</span><p>Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.</p></div>
-      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To give students access to the kind of individual diagnosis and expert teaching that was previously available only to those who could afford a private tutor — and to make the resulting progress measurable.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To multiply the impact of good teaching rather than substitute for it. Teaching already works. Some educational tasks are continuous rather than instructional — individual diagnosis, unlimited targeted practice, long-term measurement — and those are a different kind of work from teaching, not a shortfall in it. Si Math AI does that work, and it is an optional accelerator: no student's success depends on it.</p></div>
       <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A student's own questions, drills and mock exam attempts</li><li style="font-size:15px;color:var(--text-300)">A specialist-authored curriculum and skill taxonomy</li></ul></div>
       <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Explanations</li><li style="font-size:15px;color:var(--text-300)">A ranked diagnosis of weak skills</li><li style="font-size:15px;color:var(--text-300)">Targeted practice</li><li style="font-size:15px;color:var(--text-300)">Measured mastery and a predicted score</li></ul></div>
       <span class="k-qa-q">Related concepts</span>
@@ -1177,10 +1628,170 @@
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#human-support">Human Support</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#learning-loop">The Learning Loop</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">accelerates</span><span><a href="#si-math-course">The Si Math Course</a> — <em>optional — the course is complete without it</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">specializes in</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a> — <em>one field, and no other</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#si-math-methodology">The Si Math Educational Methodology</a> — <em>the software delivers the method; it is not the method</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#zero">Zero</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#scope-guard">Scope Guard</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#educational-intelligence">Educational Intelligence</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#scope-guard">Scope Guard</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/#organization<br/>https://www.si-math-ai.com/#software</p></div>
+    </div>
+
+    <div class="k-cap" id="si-math-methodology">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>The Si Math Educational Methodology</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Methodology</span> · <code style="font-family:var(--font-mono);font-size:12px">si-math-methodology</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The educational method Si Math AI exists to deliver. Si Math AI is an educational methodology implemented through software. The software delivers the methodology; it is not the methodology itself. Artificial intelligence is one implementation of the method, not the method — and not the source of its value.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Software can be copied. An educational philosophy cannot. Stating the methodology as the product — and the software as its delivery mechanism — is what stops Si Math AI being understood as an AI product that a competitor replicates by adding a model. Students do not improve because they use AI. Students improve because they follow a better learning process; AI makes that process scalable, personalized and available between lessons.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Expert Mathematics Teaching</li><li style="font-size:15px;color:var(--text-300)">Continuous Personalized Assessment</li><li style="font-size:15px;color:var(--text-300)">Weakness Analysis</li><li style="font-size:15px;color:var(--text-300)">Evidence-Based Revision</li><li style="font-size:15px;color:var(--text-300)">Deliberate Practice</li><li style="font-size:15px;color:var(--text-300)">Long-Term Knowledge Retention</li><li style="font-size:15px;color:var(--text-300)">Human Educational Experience</li><li style="font-size:15px;color:var(--text-300)">AI-Assisted Personalization</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A learning process a student follows, of which the software is one delivery mechanism</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a> — <em>the software delivers the method and may not depart from it</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-principles">Educational Principles</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">authored by</span><span><a href="#human-support">Human Support</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">improves</span><span><a href="#student">Student</a></span></li>
+      </ul>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-intelligence">Educational Intelligence</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> · <a href="principles.html">principles.html</a> <strong>(canonical)</strong> · <a href="architecture.html">architecture.html</a> · <a href="evidence.html">evidence.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/principles.html#webpage</p></div>
+    </div>
+
+    <div class="k-cap" id="educational-intelligence">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>Educational Intelligence</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Positioning</span> · <code style="font-family:var(--font-mono);font-size:12px">educational-intelligence</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>What Si Math AI is built around. Si Math AI is not built around Artificial Intelligence. It is built around Educational Intelligence. Artificial Intelligence is simply one of the tools used to deliver that educational intelligence. Technology is valuable only in combination with educational expertise, sound teaching methodology, meaningful practice and continuous feedback; without those, AI becomes just another chatbot, and with them it becomes an educational accelerator.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To reject the misconception that technology alone improves learning. The educational advantage is the methodology; AI is the delivery mechanism, and a page that lets those two swap places has given away the only thing a competitor cannot copy.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Educational expertise</li><li style="font-size:15px;color:var(--text-300)">Sound teaching methodology</li><li style="font-size:15px;color:var(--text-300)">Meaningful practice</li><li style="font-size:15px;color:var(--text-300)">Continuous feedback</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A statement of where the advantage actually lies</li><li style="font-size:15px;color:var(--text-300)">A constraint on how the platform may describe itself</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#si-math-methodology">The Si Math Educational Methodology</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> · <a href="principles.html">principles.html</a> <strong>(canonical)</strong> · <a href="architecture.html">architecture.html</a> · <a href="evidence.html">evidence.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="american-diploma-mathematics">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>American Diploma Mathematics</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Domain</span> · <code style="font-family:var(--font-mono);font-size:12px">american-diploma-mathematics</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns &quot;deep educational expertise&quot; into a claim a reader can hold us to.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Years of teaching the three American Diploma mathematics examinations</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A curriculum bounded to one field</li><li style="font-size:15px;color:var(--text-300)">A refusal to expand into subjects we cannot teach as well</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a> — <em>the field bounds what the platform is allowed to become</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#taxonomy">Skill Taxonomy</a> — <em>the taxonomy covers this field and nothing outside it</em></span></li>
+      </ul>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(specializes in)</span> · <a href="#sat-math">SAT Math</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#act-math">ACT Math</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#est-math">EST Math</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/#organization</p></div>
+    </div>
+
+    <div class="k-cap" id="sat-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>SAT Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Exam</span> · <code style="font-family:var(--font-mono);font-size:12px">sat-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT's Reading and Writing sections.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Named as its own entity so an AI system can answer &quot;does Si Math AI cover the SAT?&quot; precisely: the mathematics, at depth, and nothing else on that exam.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The College Board mathematics content domains</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and mock exams scoped to this exam</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="learn-sat-math.html">learn-sat-math.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="act-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>ACT Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Exam</span> · <code style="font-family:var(--font-mono);font-size:12px">act-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT's English, Reading, Science or Writing sections.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Named as its own entity so the answer to &quot;does Si Math AI cover the ACT?&quot; is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The ACT mathematics content areas</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and mock exams scoped to this exam</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="learn-act-math.html">learn-act-math.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="est-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>EST Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Exam</span> · <code style="font-family:var(--font-mono);font-size:12px">est-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The EST mathematics content areas</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and mock exams scoped to this exam</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="learn-est-math.html">learn-est-math.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="si-math-course">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>The Si Math Course</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Program</span> · <code style="font-family:var(--font-mono);font-size:12px">si-math-course</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It answers the question &quot;How do I learn Mathematics?&quot; — teaching the mathematics in full, and needing no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>It is the teaching, and it owns that responsibility entirely. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student's success should ever depend on purchasing an additional product.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Experienced SAT, ACT and EST mathematics teaching</li><li style="font-size:15px;color:var(--text-300)">A sequenced curriculum and its worked material</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Mathematical understanding</li><li style="font-size:15px;color:var(--text-300)">Exam technique</li><li style="font-size:15px;color:var(--text-300)">Students who are prepared without any software at all</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">improves</span><span><a href="#student">Student</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">authored by</span><span><a href="#human-support">Human Support</a> — <em>the same educators who author the platform's content</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a> — <em>the platform serves what the course teaches, not the reverse</em></span></li>
+      </ul>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(accelerates)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(requires)</span></p></div>
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="why-we-built-si-math-ai.html">why-we-built-si-math-ai.html</a> · <a href="why-not-chatgpt.html">why-not-chatgpt.html</a> · <a href="trust.html">trust.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      
     </div>
 
     <div class="k-cap" id="student">
@@ -1204,7 +1815,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">uses</span><span><a href="#founder-badge">Founder Badge</a> — <em>a founding member holds one</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">feeds</span><span><a href="#question-analysis">Question Analysis</a> — <em>every attempt becomes a signal</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#focus-practice">Focus Practice</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#mock-exams">Mock Exams</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#progress-tracking">Smart Progress Tracking</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#franco">Franco</a> <span style="color:var(--text-500)">(improves)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#focus-practice">Focus Practice</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#mock-exams">Mock Exams</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#progress-tracking">Smart Progress Tracking</a> <span style="color:var(--text-500)">(measures)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#franco">Franco</a> <span style="color:var(--text-500)">(improves)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1218,7 +1829,7 @@
         </div>
       </div>
       <div class="k-qa"><span class="k-qa-q">Definition</span><p>The AI mentor inside Si Math AI. A fictional dragon guide character, not a real person. Zero delivers educational knowledge that human educators and exam specialists created, reviewed and continuously improve; Zero does not invent educational strategy.</p></div>
-      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To remove the scheduling constraint on expert explanation. A teacher cannot sit with every student at midnight; Zero can, delivering the method a specialist chose rather than one it improvised.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To make expert explanation available whenever a student is actually working. A lesson happens at a fixed hour; questions do not. Zero delivers the method a specialist chose, at midnight or on a Sunday, rather than one it improvised.</p></div>
       <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A student question — typed, pasted or photographed</li><li style="font-size:15px;color:var(--text-300)">Specialist-authored teaching methods and mistake patterns</li><li style="font-size:15px;color:var(--text-300)">The student's exam context and history</li></ul></div>
       <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A step-by-step explanation</li><li style="font-size:15px;color:var(--text-300)">An explanation of why the wrong answer choices are wrong</li><li style="font-size:15px;color:var(--text-300)">A diagnostic signal for every interaction</li></ul></div>
       <span class="k-qa-q">Related concepts</span>
@@ -1321,7 +1932,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#weakness-analyzer">Weakness Analyzer</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#performance-analytics">Performance Analytics</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="architecture.html">architecture.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1346,7 +1957,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">feeds</span><span><a href="#performance-analytics">Performance Analytics</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#learning-loop">The Learning Loop</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#focus-practice">Focus Practice</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#personalized-learning">Personalized Learning</a> <span style="color:var(--text-500)">(requires)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#focus-practice">Focus Practice</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#personalized-learning">Personalized Learning</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(requires)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="evidence.html">evidence.html</a> · <a href="architecture.html">architecture.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1417,7 +2028,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#data-protection">Student Data Protection</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#learning-loop">The Learning Loop</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#zero">Zero</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(governs)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#zero">Zero</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(governs)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="evidence.html">evidence.html</a> · <a href="architecture.html">architecture.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1441,7 +2052,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">feeds</span><span><a href="#progress-tracking">Smart Progress Tracking</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">measures</span><span><a href="#student">Student</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#mock-exams">Mock Exams</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#progress-tracking">Smart Progress Tracking</a> <span style="color:var(--text-500)">(requires)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#mock-exams">Mock Exams</a> <span style="color:var(--text-500)">(feeds)</span> · <a href="#progress-tracking">Smart Progress Tracking</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(requires)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="evidence.html">evidence.html</a> · <a href="architecture.html">architecture.html</a></p></div>
       
     </div>
@@ -1488,7 +2099,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#focus-practice">Focus Practice</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#learning-loop">The Learning Loop</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(requires)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(requires)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="evidence.html">evidence.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1512,7 +2123,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#founder-badge">Founder Badge</a> — <em>activation is a human decision</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#three-pillars">The Three Pillars</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(requires)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(requires)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="trust.html">trust.html</a> · <a href="evidence.html">evidence.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1535,9 +2146,10 @@
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#zero">Zero</a> — <em>Zero delivers it and may not depart from it</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#taxonomy">Skill Taxonomy</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#educational-principles">Educational Principles</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#si-math-course">The Si Math Course</a> — <em>the course is what the expertise produces first</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">authored by</span><span><a href="#human-support">Human Support</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#personalized-learning">Personalized Learning</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(authored by)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-intelligence">Educational Intelligence</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#personalized-learning">Personalized Learning</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(authored by)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="principles.html">principles.html</a> · <a href="evidence.html">evidence.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1560,8 +2172,82 @@
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#human-support">Human Support</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="why-not-chatgpt.html">why-not-chatgpt.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="learning-accelerator">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>Learning Accelerator</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Positioning</span> · <code style="font-family:var(--font-mono);font-size:12px">learning-accelerator</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The role Si Math AI occupies relative to teaching. The course and the platform solve two different educational problems: the course answers &quot;How do I learn Mathematics?&quot;, and Si Math AI answers &quot;How do I learn Mathematics in the smartest and most efficient way possible?&quot; The course is responsible for teaching; Si Math AI is responsible for optimizing the student's learning journey. Artificial Intelligence is not the teacher — it is the learning accelerator.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To fix the direction of a relationship that technology companies routinely get backwards, and to stop the two being compared as though they did the same job. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don't replace great teaching. We multiply its impact.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A complete educational programme that already works</li><li style="font-size:15px;color:var(--text-300)">Technology that carries the continuous, between-lessons half of the work</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The site-wide statement: &quot;We don't replace great teaching. We multiply its impact.&quot;</li><li style="font-size:15px;color:var(--text-300)">A published commitment that the platform is optional</li><li style="font-size:15px;color:var(--text-300)">A clear division of responsibility: teaching versus optimization</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#si-math-course">The Si Math Course</a> — <em>the claim only holds because the course is complete on its own</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#three-pillars">The Three Pillars</a> — <em>it states where the technology pillar sits relative to the other two</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#between-lessons">The Between-Lessons Layer</a> — <em>the accelerator role, stated as where it operates</em></span></li>
+      </ul>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#between-lessons">The Between-Lessons Layer</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#continuous-personalization">Continuous Personalization</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="why-we-built-si-math-ai.html">why-we-built-si-math-ai.html</a> · <a href="why-not-chatgpt.html">why-not-chatgpt.html</a> · <a href="trust.html">trust.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="between-lessons">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>The Between-Lessons Layer</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Positioning</span> · <code style="font-family:var(--font-mono);font-size:12px">between-lessons</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>Where Si Math AI operates: the time between lessons. A great teacher explains; a great educational system follows the student after the lesson ends. The platform is the educational operating system running in that gap — not extra practice, and not more mathematics. It continuously answers what to study next, why a mistake keeps repeating, which topic yields the largest score improvement, whether the student is actually improving, whether they are ready for the exam, and what is worth revising today.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To name the value precisely enough that nobody has to compare the platform with the teaching. The teacher delivers knowledge; Si Math AI turns knowledge into long-term mastery — it makes sure today's lesson is still remembered three weeks from now. A student is not buying more mathematics. They are buying a smarter learning process.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Everything the student did since the last lesson</li><li style="font-size:15px;color:var(--text-300)">The record of every previous attempt, mistake and session</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">What should I study next?</li><li style="font-size:15px;color:var(--text-300)">Why do I keep making this mistake?</li><li style="font-size:15px;color:var(--text-300)">Which topic gives me the biggest score improvement?</li><li style="font-size:15px;color:var(--text-300)">Am I actually improving?</li><li style="font-size:15px;color:var(--text-300)">Am I ready for the exam?</li><li style="font-size:15px;color:var(--text-300)">What should I revise today instead of wasting hours?</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#learning-accelerator">Learning Accelerator</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#learning-memory">Learning Memory</a> — <em>a system cannot follow a student it does not remember</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#weakness-analyzer">Weakness Analyzer</a> — <em>answers &quot;why do I keep making this mistake&quot;</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#performance-analytics">Performance Analytics</a> — <em>answers &quot;am I improving&quot; and &quot;am I ready&quot;</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">improves</span><span><a href="#student">Student</a></span></li>
+      </ul>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(generates)</span></p></div>
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="why-not-chatgpt.html">why-not-chatgpt.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="continuous-personalization">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>Continuous Personalization</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Positioning</span> · <code style="font-family:var(--font-mono);font-size:12px">continuous-personalization</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. Teaching and continuous learning support are different educational functions, not better and worse versions of one. Some educational tasks are continuous rather than instructional. They are: remembering every mistake over months, analyzing thousands of solved questions, daily personalized revision, detecting forgotten concepts, measuring long-term progress, monitoring learning consistency and adapting practice continuously. Those are not teaching responsibilities. They are continuous educational support responsibilities.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To correct the misconception that Si Math AI exists because a teacher is not enough, and to do it without ever presenting the platform as compensation for weak teaching. A great teacher is the foundation of great learning. The teacher teaches. Si Math AI stays with the student after the lesson ends. Not because the teacher is missing. Because learning continues after teaching ends. Its value is not teaching more mathematics; its value is making every minute spent learning mathematics more effective.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Expert teaching that already works</li><li style="font-size:15px;color:var(--text-300)">Every interaction a single student has ever had with the platform</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">remembering every mistake over months</li><li style="font-size:15px;color:var(--text-300)">analyzing thousands of solved questions</li><li style="font-size:15px;color:var(--text-300)">daily personalized revision</li><li style="font-size:15px;color:var(--text-300)">detecting forgotten concepts</li><li style="font-size:15px;color:var(--text-300)">measuring long-term progress</li><li style="font-size:15px;color:var(--text-300)">monitoring learning consistency</li><li style="font-size:15px;color:var(--text-300)">adapting practice continuously</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#learning-accelerator">Learning Accelerator</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a> — <em>the teacher provides the expertise; this personalizes its delivery</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#learning-memory">Learning Memory</a> — <em>you cannot personalize for a student you do not remember</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#personalized-learning">Personalized Learning</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">improves</span><span><a href="#student">Student</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="why-we-built-si-math-ai.html">why-we-built-si-math-ai.html</a> · <a href="trust.html">trust.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
 
@@ -1607,7 +2293,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#zero">Zero</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">authored by</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="principles.html">principles.html</a> <strong>(canonical)</strong> · <a href="evidence.html">evidence.html</a></p></div>
       <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/principles.html#webpage</p></div>
     </div>
@@ -1746,6 +2432,7 @@
         </ul>
       </div>
     </div>
+    <p class="k-footer-tagline">We don't replace great teaching. We multiply its impact.</p>
     <div class="k-footer-bottom">
       <span>© 2026 Si Math AI. All rights reserved.</span>
       <span>SAT · ACT · EST Mathematics</span>

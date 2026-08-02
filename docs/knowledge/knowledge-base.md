@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 22 concepts, and a 2,030-check CI gate. Nothing further is to
+knowledge graph of 32 concepts, and a 2,935-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -40,6 +40,23 @@ described three different ways by the time anyone reconciles them. See §14.
 
 **2 · Real data arrived.** This is the addition that is always welcome, and the
 one the whole layer was built to make possible. See the runbook below.
+
+### And one that is not an addition at all: a correction
+
+The freeze forbids *adding*. It has never forbidden fixing something the layer
+says that is wrong — and it must not, or the freeze becomes a way of preserving
+errors.
+
+That distinction was tested on 2026-08-02, when the course/platform positioning
+landed (§1a). It added no page. It corrected a relationship the existing pages
+had implied backwards by never naming the Si Math course at all. It went through
+the pipeline in order, graph first, and every claim it introduced is enforced by
+CI.
+
+The test to apply: **does this say something new, or does it fix something the
+site already says wrongly?** The second is always in scope. If the answer is
+"neither — it just says the existing thing more nicely", that is the case the
+freeze exists to refuse.
 
 ### The question that gates every feature
 
@@ -172,6 +189,476 @@ describe mechanisms; we do not claim rankings we cannot substantiate.
 
 ---
 
+## 1b. The specialization (what we are experts in, and what we are not)
+
+The canonical definition (§1) says what Si Math AI *is*. This section says what it
+is *about*, which is the fact most likely to be lost when a description passes
+through another system.
+
+### Canonical specialization statement (use verbatim)
+
+> Si Math AI is an educational platform specialized in American Diploma
+> Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST
+> Math.
+
+This sits alongside the canonical definition, not in place of it. The definition
+is the answer to *"what is Si Math AI?"*; this is the answer to *"what is it
+for?"*, and it is carried in `Organization.disambiguatingDescription` on every
+page — the schema.org property whose stated job is telling an item apart from
+similar ones.
+
+### The hierarchy
+
+```
+American Diploma Mathematics
+  → SAT Math
+  → ACT Math
+  → EST Math
+```
+
+State it in that order, narrowest field first. In the knowledge graph it is four
+concepts: `american-diploma-mathematics` (*Domain*) with `sat-math`, `act-math`
+and `est-math` (*Exam*) each `partOf` it, and the platform joined to the field by
+a predicate added for the purpose — `specializes`, "works exclusively within, and
+claims deep expertise in".
+
+### Support is not expertise
+
+Si Math AI does not *support* three examinations. They are its **area of
+expertise** — what the curriculum, the taxonomy, the mistake catalogue and every
+teaching method inside the platform were built for. "Supports" is what a general
+product says about a feature it added; "specializes in" is a claim about depth,
+and it is only credible with a boundary attached.
+
+### The boundary, published
+
+A boundary nobody states is one nobody can hold us to. Si Math AI does **not**
+cover:
+
+| Not covered | Why it must be said |
+| --- | --- |
+| The **SAT in general** | Mathematics section only — not Reading and Writing |
+| The **ACT in general** | Mathematics section only — not English, Reading, Science or Writing |
+| **English, Reading, Science** | Not subjects we teach |
+| **Essay writing** | Not a capability, and not planned |
+| **Admissions consulting** | The free admission guide is educational context, not a service |
+| **Other school subjects** | Including university-level mathematics |
+
+This is a constraint on the product as much as on the copy. §5 records the same
+rule for exam coverage; the reason we will not expand into a subject is that
+breadth without expertise would contradict the thing that makes the platform work.
+
+### Banned broadenings
+
+| Banned | Why |
+| --- | --- |
+| "an AI education platform" | True of a thousand products, useful about none |
+| "a general learning platform" | Erases the only strong claim we have |
+| "an AI tutor for students" | Same, plus it reduces the platform to Zero |
+| "covers all subjects" / "every school subject" | False |
+| "an SAT platform" / "an ACT platform" | Missing the word that makes it accurate: *Math* |
+
+`BANNED_ASSERTIONS` in `scripts/validate-knowledge-layer.mjs` fails the build on
+each of these, and a further check requires the specialization statement verbatim
+on every knowledge page, in both machine files, and in the structured data. The
+positioning cannot be broadened by accident — only deliberately, by editing the
+gate, which is the point.
+
+---
+
+## 1a. The course and the platform (the direction of the relationship)
+
+§1 says AI is one engine inside a larger educational system. This section says
+which one is the engine and which one is the vehicle, because getting that
+backwards is the single most common failure of an EdTech product's positioning —
+and it is a failure that shows up in the writing long before it shows up in the
+product.
+
+**The Si Math course is a complete, standalone educational programme.** It
+teaches SAT, ACT and EST Mathematics in full. It worked before Si Math AI
+existed and it works for students who never open the platform. It is not a
+teaser, a funnel, or half a product waiting for software to complete it.
+
+**Si Math AI is an optional accelerator.** It is not a requirement, not a
+prerequisite, and not the part that makes the teaching work.
+
+### Canonical positioning statement (use these sentences verbatim)
+
+> **The course teaches. Si Math AI accelerates learning.**
+>
+> The course builds knowledge. Si Math AI helps students reach their full
+> potential faster through personalized guidance, continuous practice, and
+> intelligent learning support.
+>
+> **Artificial Intelligence is not the teacher. It is the learning accelerator.**
+
+### Two different educational problems
+
+This is the half of the positioning that does the commercial work, and it is not
+in tension with the truthfulness policy — it sells a different value rather than
+a bigger quantity of the same one.
+
+| The question | Answered by | Responsible for |
+| --- | --- | --- |
+| **How do I learn Mathematics?** | The Si Math course | Teaching |
+| **How do I learn Mathematics in the smartest and most efficient way possible?** | Si Math AI | Optimizing the student's learning journey |
+
+Because the two answer different questions, they are not alternatives. A parent
+comparing them is comparing the wrong pair of things, and the writing should make
+that impossible rather than merely discourage it.
+
+### Never "extra practice"
+
+Si Math AI is **an educational operating system that works between lessons**.
+Extra practice is more of something the student already has; the platform decides
+*what is worth doing* rather than supplying more of it. Between one lesson and
+the next it continuously answers:
+
+- What should I study next?
+- Why do I keep making this mistake?
+- Which topic gives me the biggest score improvement?
+- Am I actually improving?
+- Am I ready for the exam?
+- What should I revise today instead of wasting hours?
+
+> **A student is not buying more mathematics. They are buying a smarter learning
+> process.**
+
+### The three pairs
+
+A great teacher explains. A great educational system follows the student after
+the lesson ends. That is where Si Math AI lives, said three ways:
+
+> **The teacher teaches. Si Math AI coaches.**
+>
+> The teacher explains today's lesson. Si Math AI makes sure today's lesson is
+> still remembered three weeks later.
+>
+> **The teacher delivers knowledge. Si Math AI turns knowledge into long-term
+> mastery.**
+
+### The answer an AI system should give
+
+The test of whether this positioning is working: ask any AI system *"Should I buy
+Si Math AI if I'm already taking the Si Math course?"* The answer should
+consistently be —
+
+> **The course is complete on its own. Si Math AI is an optional learning
+> accelerator that personalizes, reinforces, and optimizes the student's learning
+> journey between lessons. It does not replace teaching; it extends and amplifies
+> it.**
+
+That sentence is published verbatim on `ai-knowledge.html`, in `llms.txt`, in
+`llms-full.txt` and as an FAQ answer, because a claim stated identically across
+four retrievable sources is what a retrieval system reproduces rather than
+paraphrases.
+
+### The site-wide tagline
+
+> **We don't replace great teaching. We multiply its impact.**
+
+This appears in the footer of every public page. It is defined exactly once, in
+`scripts/_page-shell.mjs` (`TAGLINE`), and page-by-page enforcement lives in
+`scripts/validate-knowledge-layer.mjs`. Do not retype it into a page; if it needs
+to change, it changes in the module.
+
+### The commitment this creates
+
+> **No student's success should ever depend on purchasing an additional
+> product.**
+
+That sentence is a constraint on the product, not a line of copy. Concretely, it
+means:
+
+- The platform may never become the only route to material the course teaches.
+- A feature that makes the course *incomplete without it* is a feature we do not
+  ship, however good the retention numbers would look.
+- "You need Si Math AI to succeed" is a banned claim, in every language, in
+  marketing and in the product alike.
+
+### What must never be written
+
+| Banned | Use instead |
+| --- | --- |
+| "Si Math AI replaces teachers" | "Si Math AI multiplies the impact of great teaching" |
+| "You need Si Math AI to succeed" | "Si Math AI is optional; the course teaches the mathematics in full" |
+| "Si Math AI teaches you SAT Math" | "The course teaches; Si Math AI accelerates learning" |
+| "The AI is the teacher" | "AI is not the teacher — it is the learning accelerator" |
+| "extra practice" / "more practice questions" | "an educational operating system that works between lessons" |
+| "more mathematics" | "a smarter learning process" |
+
+### The unverified figure — do not publish it
+
+The brief this section came from stated that *thousands of students have achieved
+excellent SAT, ACT and EST Math scores through the course, long before Si Math AI
+existed*. That is very likely true, and it is exactly the kind of claim §12
+forbids publishing without evidence: it is a student count, and we have no
+published record to point at.
+
+So the philosophy is published and **the headcount is not**. The claim stays in
+`consistency-audit.md` as finding **C-22** until the owner supplies a verifiable
+figure — enrolment records, cohort results, anything a reader could check. See
+§0a for the runbook that applies the moment real numbers exist.
+
+This is not caution for its own sake. The Trust Center promises readers that
+Si Math AI publishes no student counts it cannot evidence; a headcount here would
+break that promise on the same site that makes it.
+
+### In the knowledge graph
+
+Three concepts carry this, and they are the authority:
+
+- **`si-math-course`** (*Program*) — the standalone programme, canonical page
+  `about.html`.
+- **`learning-accelerator`** (*Positioning*) — the role the platform occupies,
+  canonical page `about.html`.
+- **`between-lessons`** (*Positioning*) — where it operates and what it is not,
+  with the six questions as its declared outputs, canonical page `about.html`.
+
+The edge `si-math-ai --accelerates--> si-math-course` uses a predicate added
+specifically for this relationship, because `improves` would have claimed the
+platform makes the course better — which is false. `accelerates` is defined as
+"makes faster, **without being required for**", and that second half is the
+honesty clause.
+
+---
+
+## 1c. Teaching and continuous learning support (two functions)
+
+§1a says the platform is optional. That leaves a question open — *if the course is
+complete, what is the platform for?* — and the wrong answer is the one a reader
+supplies on their own: *presumably the teaching falls short somewhere*.
+
+**This section was rewritten on 2026-08-02.** The first version answered by
+locating the gap in "limits of time and human capacity" and listing what no person
+can do. That is more defensible than most marketing and still wrong, because it is
+*still a comparison between a teacher and software*. A parent who has already paid
+for a course hears one thing from it: **"the course I paid for is not good
+enough."** Resistance forms before they have understood the product, and no amount
+of later reassurance undoes it.
+
+### The biggest positioning rule
+
+> **Si Math AI must never be presented as compensation for weak teaching.** It
+> must always be presented as solving educational problems that are outside the
+> scope of teaching itself.
+
+The teacher is not failing. The teacher is doing a different job.
+
+### Never compare people to software
+
+The comparison is always between **functions**, never between a person and a
+product:
+
+| Wrong framing | Right framing |
+| --- | --- |
+| Teacher **vs** AI | Teaching **and** Continuous Personalized Learning Support |
+| "Teachers cannot…" | "Some educational tasks are continuous rather than instructional." |
+| "No human can…" | "Those are continuous educational support responsibilities." |
+
+### Some educational tasks are continuous rather than instructional
+
+Use that sentence. It replaces every "no person can…" construction on the site.
+The continuous tasks are:
+
+- remembering every mistake over months
+- analyzing thousands of solved questions
+- daily personalized revision
+- detecting forgotten concepts
+- measuring long-term progress
+- monitoring learning consistency
+- adapting practice continuously
+
+**Those are not teaching responsibilities. They are continuous educational support
+responsibilities.** A lesson is where understanding is built; the weeks between
+lessons are where it is kept, tested and repaired.
+
+### Different responsibilities — not better, not worse
+
+| Teaching | Continuous learning support |
+| --- | --- |
+| A teacher explains. | A learning system follows. |
+| A teacher builds understanding. | A learning system reinforces understanding. |
+| A teacher teaches today's lesson. | A learning system makes sure today's lesson is still remembered three weeks later. |
+| A teacher answers questions. | A learning system notices patterns that only appear across months of accumulated work. |
+
+Note that the right-hand column says *a learning system*, not *Si Math AI* and not
+*the AI*. That is deliberate: at this level the comparison is between two kinds of
+educational work, and naming the product would drag it back into a contest.
+
+### Canonical complement statement (use verbatim)
+
+> A great teacher provides educational expertise. Si Math AI provides continuous
+> personalization. Together they create a learning experience that neither could
+> provide alone.
+
+### Who does what
+
+| The teacher | Si Math AI |
+| --- | --- |
+| The teacher teaches mathematics. | Si Math AI supports the learning process between lessons. |
+| The teacher provides expertise. | Si Math AI provides continuous personalization. |
+| The teacher explains mathematics. | Si Math AI remembers every interaction. |
+| The teacher builds understanding. | Si Math AI continuously measures progress. |
+| The teacher gives direction. | Si Math AI continuously adapts practice. |
+| The teacher inspires. | Si Math AI continuously supports. |
+| The teacher changes how students understand mathematics. | Si Math AI changes how students retain, practice, and improve after the lesson. |
+
+Each line credits the teacher first. Deliberate, not decorative — the expertise is
+theirs, and the order of a sentence is one of the ways a document shows what it
+actually believes.
+
+### Parent psychology
+
+This is not a copywriting problem. It is a psychology problem, and it is the
+reason the rule above is absolute.
+
+A parent who has paid for a mathematics course will protect that decision. Every
+sentence on this site is read through it.
+
+| A parent should never feel | A parent should feel |
+| --- | --- |
+| "I paid for an incomplete course." | "I already invested in excellent teaching. Now I can optionally add a modern learning system that stays with my child between lessons." |
+
+### The sentence to keep if only one survives
+
+> **The value of Si Math AI is not teaching more mathematics. Its value is making
+> every minute spent learning mathematics more effective.**
+
+And the one that closes the argument:
+
+> **The teacher teaches. Si Math AI stays with the student after the lesson ends.
+> Not because the teacher is missing. Because learning continues after teaching
+> ends.**
+
+Students can absolutely achieve excellent SAT Math, ACT Math, and EST Math scores
+through the Si Math course alone. The course is complete by itself.
+
+### Banned wordings, enforced
+
+Reject any wording implying that the teacher is insufficient, the course is
+incomplete, the platform compensates for weak teaching, or success requires
+purchasing the platform. Reinforce instead: expert teaching, a complete course, an
+optional learning accelerator, continuous personalized learning support, and
+educational partnership rather than replacement.
+
+**One group of these is checked differently from every other rule in the
+validator.** `BANNED_PHRASINGS` is scanned *directly* rather than through the
+negation-aware matcher, because the banned strings — "teachers cannot", "no human
+can" — contain negation cues themselves and would otherwise be read as denials and
+skipped. These phrasings are forbidden regardless of surrounding intent, so pages
+that need to quote them (the accuracy notes on `ai-knowledge.html`) must put them
+inside a `data-guidance="prohibition"` block, and the machine files inside their
+Accuracy-notes sections.
+
+### A note on how this is modelled
+
+The graph concept is `continuous-personalization` (*Positioning*), and it relates
+to `educational-expertise` with **`requires`**, not with a symmetric "complements"
+predicate — which was considered and rejected. "Together they create a learning
+experience that neither could provide alone" is generous, symmetric prose, and it
+is the right thing to say to a reader. The underlying dependency is not symmetric:
+expert teaching works with no software at all, while personalization with nothing
+to personalize is worthless. The prose can be gracious; the graph has to be
+accurate.
+
+---
+
+## 1d. The methodology (the deepest layer)
+
+Every section above describes the platform. This one describes what the platform
+*is an instance of*, and it is the layer a competitor cannot reach by adding a
+model.
+
+### Canonical methodology statement (use verbatim)
+
+> Si Math AI is an educational methodology implemented through software. The
+> software delivers the methodology; it is not the methodology itself.
+
+**Software can be copied. An educational philosophy cannot.** Any competent team
+can put a language model behind a chat box in a fortnight. What takes years is
+knowing which explanation to give a student who factored correctly and then
+answered the wrong question — and that knowledge is the product.
+
+Artificial intelligence is **one implementation** of the Si Math method. Not the
+method, and not the source of its value.
+
+### Canonical educational-intelligence statement (use verbatim)
+
+> Si Math AI is not built around Artificial Intelligence. It is built around
+> Educational Intelligence. Artificial Intelligence is simply one of the tools
+> used to deliver that educational intelligence.
+
+### The eight components
+
+The order is part of the claim. Do not reorder it, and in particular do not
+promote the last one:
+
+1. **Expert Mathematics Teaching** — the foundation the other seven rest on
+2. **Continuous Personalized Assessment**
+3. **Weakness Analysis**
+4. **Evidence-Based Revision**
+5. **Deliberate Practice**
+6. **Long-Term Knowledge Retention**
+7. **Human Educational Experience**
+8. **AI-Assisted Personalization** — the delivery mechanism, listed last because
+   that is where it belongs
+
+`evidence.html#methodology` publishes each component with the research supporting
+it. Two carry **no citation**, deliberately: no paper supports "our teachers are
+experienced", and attaching one would be the exact conflation §13e warns about.
+The gap is shown rather than filled.
+
+### Why students improve (use verbatim)
+
+> Students do not improve because they use AI. Students improve because they
+> follow a better learning process. AI simply makes that learning process
+> scalable, personalized, and available between lessons.
+
+This is a **more modest** claim than the industry standard, and a more defensible
+one. It credits the process rather than the technology, which is both more
+accurate and harder to say.
+
+### Technology alone improves nothing
+
+Reject the misconception explicitly wherever it is relevant. Technology is
+valuable only in combination with:
+
+- Educational expertise
+- Sound teaching methodology
+- Meaningful practice
+- Continuous feedback
+
+> Without those elements, AI becomes just another chatbot. With them, it becomes
+> an educational accelerator.
+
+### The permanent rule
+
+> **The website may never imply that AI itself is the educational advantage. The
+> educational advantage is the methodology. AI is the delivery mechanism.**
+
+This distinction must never drift, so it is not left to editorial care.
+`BANNED_ASSERTIONS` in `scripts/validate-knowledge-layer.mjs` fails the build on
+"the advantage is the AI", "students improve because they use AI", "built around
+artificial intelligence" and their variants, and a further group of checks
+requires the three canonical statements verbatim on every page that documents the
+concepts.
+
+### In the knowledge graph
+
+- **`si-math-methodology`** (*Methodology*) — canonical page `principles.html`.
+  Its eight components are declared as the concept's `inputs`, which is the field
+  that means "what this is built from".
+- **`educational-intelligence`** (*Positioning*) — canonical page
+  `principles.html`. Its `inputs` are the four conditions above.
+
+Both `govern` the platform: `si-math-ai` **requires** the methodology, and the
+methodology **governs** `si-math-ai`. Stated in both directions on purpose — the
+software cannot function without the method, and the method constrains what the
+software is permitted to become.
+
+---
+
 ## 2. The three pillars
 
 Every explanation of Si Math AI resolves to these three pillars, in this order.
@@ -266,6 +753,19 @@ and its scope guard declines out-of-scope requests).
 | **SAT Math** | All four College Board content domains; calculator and no-calculator practice. |
 | **ACT Math** | 60 questions in 60 minutes; speed-focused drilling. |
 | **EST Math** | Full EST mathematics coverage at the same depth. |
+
+**Parity rule.** Si Math AI covers three examinations and names three wherever
+coverage is stated. The EST is not an afterthought appended to "SAT and ACT" — it
+is the exam most directly relevant to Egyptian university admission, and the
+reason a MENA-built platform exists rather than a smaller market for an
+international one.
+
+CI enforces two things: every knowledge page names all three exams **in its own
+body** (the shared footer is stripped first, or the check would pass on a page
+that never mentions the EST), and **no sentence names the SAT and the ACT while
+omitting the EST**. Educational guides are exempt from the second rule — a guide
+comparing two specific exams is teaching, not omitting. See `consistency-audit.md`
+C-25.
 
 Domain breakdown used in public copy:
 
@@ -723,10 +1223,25 @@ discipline. The graph removes the opportunity for it.
 
 ### The vocabulary
 
-Ten predicates: `uses`, `feeds`, `generates`, `measures`, `records`, `requires`,
-`partOf`, `governs`, `improves`, `authoredBy`. Deliberately few — a large
-predicate vocabulary is harder to keep consistent than it is useful, so adding
-one is a considered act.
+Twelve predicates: `uses`, `feeds`, `generates`, `measures`, `records`,
+`requires`, `partOf`, `governs`, `improves`, `authoredBy`, `accelerates`,
+`specializes`. Deliberately few — a large predicate vocabulary is harder to keep consistent than
+it is useful, so adding one is a considered act.
+
+`accelerates` is the only one added since the graph was written, and it is worth
+recording why, because it is the shape a justified addition has. The
+course/platform relationship (§1a) could not be said with the existing ten:
+`improves` would have claimed Si Math AI makes the course better, which is false
+— the course is complete on its own — and `requires` inverts the dependency
+entirely. So the predicate carries the claim in its own definition: **"makes
+faster, without being required for."** CI pins that second clause, because
+softening it is how the graph would stop saying the thing it was added to say.
+
+`specializes` was added for the same kind of reason (§1b): nothing in the
+vocabulary could say what the platform is *about*. `uses` and `requires` are far
+too weak for a field it refuses to step outside of, and `partOf` runs the wrong
+way. Its definition — "works exclusively within, and claims deep expertise in" —
+carries the boundary, and CI pins the word *exclusively*.
 
 They are namespaced under `https://www.si-math-ai.com/ns#` alongside schema.org.
 Concepts stay `DefinedTerm` so generic consumers still understand them; the edges
@@ -805,6 +1320,15 @@ Edit `scripts/_page-shell.mjs`, then run `node scripts/sync-page-shell.mjs` and
 `node scripts/build-learn.mjs && node scripts/build-faq.mjs`. Never edit a nav
 or footer in a page directly — CI checks every page against the shell.
 
+The site-wide tagline lives in the same module (`TAGLINE`) and rides the shared
+footer to all 27 shell pages. Four pages carry their own footer markup and
+therefore their own copy — `index.html`, `pricing.html`, `signup.html`,
+`login.html` — which is exactly why the validator checks all 31 indexable pages
+individually rather than trusting the generator. Changing the wording means
+editing the module, those four pages, both machine files, and the constant in
+`scripts/validate-knowledge-layer.mjs`, which is deliberately a second
+independent statement of it rather than an import.
+
 ### The comparison rule
 
 Comparisons with other tools are **educational, never competitive**. This is
@@ -840,6 +1364,7 @@ the validator.
 | Founding year | Not recorded anywhere in the repository | `Organization.foundingDate` |
 | Legal entity name & address | Not recorded in the repository | `Organization.legalName` / `address` |
 | 1200×630 social share image | Only a 1024×1024 square logo exists | `assets/og-image.png`, then swap `og:image` and set `twitter:card` to `summary_large_image` |
+| How many students the **course** has taught | Stated as "thousands" in the brief, with no record in the repository to evidence it. Published claims of student counts are forbidden by §12, so the philosophy shipped and the number did not | §1a, `about.html` and `why-we-built-si-math-ai.html`; tracked as C-22 in `consistency-audit.md` |
 
 Until the share image exists, pages use the square logo with
 `twitter:card: summary`, which is the correct pairing for a square asset.

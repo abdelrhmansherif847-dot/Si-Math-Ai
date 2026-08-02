@@ -22,9 +22,13 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  CAPABILITIES, RESEARCH, CHANGELOG, CHANGELOG_ESTABLISHED, ROADMAP, NOT_ON_ROADMAP,
+  CAPABILITIES, RESEARCH, METHODOLOGY, CHANGELOG, CHANGELOG_ESTABLISHED, ROADMAP, NOT_ON_ROADMAP,
 } from '../docs/knowledge/evidence-data.mjs';
-import { SITE, CANONICAL_DEFINITION, nav, footer, headAssets, organizationNode } from './_page-shell.mjs';
+import {
+  SITE, CANONICAL_DEFINITION, CANONICAL_METHODOLOGY, CANONICAL_EDUCATIONAL_INTELLIGENCE,
+  IMPROVEMENT_STATEMENT, TECHNOLOGY_CONDITIONS,
+  nav, footer, headAssets, organizationNode,
+} from './_page-shell.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -145,6 +149,20 @@ ${ev}
     </div>`;
   }).join('\n\n');
 
+  const methodology = METHODOLOGY.map((m, i) => {
+    const link = m.ref
+      ? `<a href="#${esc(m.ref)}">See the research →</a>`
+      : '<span class="k-ev-tag k-ev-mechanism">No citation claimed</span>';
+    return `    <div class="k-cap">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
+        <h3>${esc(m.name)}</h3>
+      </div>
+      <p>${esc(m.what)}</p>
+      <p style="margin-top:10px">${link}</p>
+    </div>`;
+  }).join('\n\n');
+
   const research = RESEARCH.map((r) => `    <div class="k-res" id="${esc(r.id)}">
       <h3>${esc(r.finding)}</h3>
       <p>${r.summary}</p>
@@ -252,11 +270,57 @@ ${r.sources.map((s) => `        <li>${esc(s)}</li>`).join('\n')}
     <div class="k-toc">
       <h2>On this page</h2>
       <ol>
+        <li><a href="#methodology">The methodology (${METHODOLOGY.length} components)</a></li>
         <li><a href="#capabilities">Evidence for every capability</a></li>
         <li><a href="#research">Research foundations (${RESEARCH.length})</a></li>
         <li><a href="#how-we-build">How features are built</a></li>
         <li><a href="#elsewhere">Evidence published elsewhere</a></li>
       </ol>
+    </div>
+  </div>
+</section>
+
+<section class="k-section" id="methodology">
+  <div class="k-wrap k-body">
+    <span class="k-eyebrow">◆ Methodology</span>
+    <h2>The methodology is the product</h2>
+    <p class="k-lead" style="margin-bottom:20px">
+      <strong>${esc(CANONICAL_METHODOLOGY)}</strong>
+    </p>
+    <p>
+      Software can be copied. An educational philosophy cannot. That is why this page
+      begins with the method rather than the features: the method is the claim, so the
+      method is what needs evidence attached to it.
+    </p>
+
+    <div class="k-positioning">
+      <p>${esc(CANONICAL_EDUCATIONAL_INTELLIGENCE)}</p>
+    </div>
+
+    <div class="k-note">
+      <p><strong>${esc(IMPROVEMENT_STATEMENT)}</strong></p>
+    </div>
+
+    <p>
+      It follows that technology alone improves nothing. It is worth something only in
+      combination with ${TECHNOLOGY_CONDITIONS.map((c) => `<strong>${esc(c.toLowerCase())}</strong>`).join(', ')}.
+      Without those elements, AI becomes just another chatbot. With them, it becomes an
+      educational accelerator.
+    </p>
+
+    <p style="margin-top:22px">
+      The ${METHODOLOGY.length} components, and what supports each. Note which one is listed last —
+      artificial intelligence is the delivery mechanism, not the advantage:
+    </p>
+    <div class="k-cap-list" style="margin-top:18px">
+${methodology}
+    </div>
+
+    <div class="k-honest">
+      <p><strong>Two components carry no citation, and that is deliberate.</strong> No
+      paper supports "our teachers are experienced". Attaching one would be the exact
+      conflation this page warns about elsewhere, so the gap is shown rather than
+      filled.</p>
     </div>
   </div>
 </section>

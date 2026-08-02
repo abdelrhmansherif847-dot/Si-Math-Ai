@@ -39,7 +39,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS } from '../docs/knowledge/faq-data.mjs';
 import { GUIDES as LEARN_GUIDES, GROUPS as LEARN_GROUPS } from '../docs/knowledge/learn-data.mjs';
-import { CAPABILITIES, RESEARCH, CHANGELOG, ROADMAP, NOT_ON_ROADMAP } from '../docs/knowledge/evidence-data.mjs';
+import {
+  CAPABILITIES, RESEARCH, METHODOLOGY as METHODOLOGY_DATA, CHANGELOG, ROADMAP, NOT_ON_ROADMAP,
+} from '../docs/knowledge/evidence-data.mjs';
 import { CONCEPTS, PREDICATES } from '../docs/knowledge/graph-data.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -75,6 +77,203 @@ const POSITIONING_FRAGMENTS = [
   'Educational expertise is',
   'Human experience is',
 ];
+
+/**
+ * The site-wide tagline. Stated here independently of scripts/_page-shell.mjs
+ * on purpose: a validator that imported the value it checks would prove only
+ * that a string equals itself. The module and this file are cross-checked
+ * below, so a change has to be made deliberately in two places.
+ */
+const TAGLINE = "We don't replace great teaching. We multiply its impact.";
+
+/**
+ * The canonical positioning of the platform relative to the course.
+ *
+ * This is the correction that matters most in the whole knowledge layer, and it
+ * is the one an EdTech site drifts away from fastest, because the drift is
+ * always flattering: the software slowly starts describing itself as the
+ * teacher. Both sentences are required verbatim on every page that documents
+ * the `learning-accelerator` concept.
+ */
+const COURSE_POSITIONING = [
+  'The course teaches. Si Math AI accelerates learning.',
+  'Artificial Intelligence is not the teacher. It is the learning accelerator.',
+];
+
+/**
+ * The methodology layer — the deepest one, and the only claim a competitor
+ * cannot match by adding a model.
+ *
+ * The permanent rule it encodes: the website may never imply that AI itself is
+ * the educational advantage. The advantage is the methodology; AI is the
+ * delivery mechanism. That is a distinction which drifts silently, because
+ * "AI-powered" is the easier sentence to write.
+ */
+const CANONICAL_METHODOLOGY =
+  'Si Math AI is an educational methodology implemented through software. '
+  + 'The software delivers the methodology; it is not the methodology itself.';
+
+const CANONICAL_EDUCATIONAL_INTELLIGENCE =
+  'Si Math AI is not built around Artificial Intelligence. It is built around '
+  + 'Educational Intelligence. Artificial Intelligence is simply one of the tools '
+  + 'used to deliver that educational intelligence.';
+
+const IMPROVEMENT_STATEMENT =
+  'Students do not improve because they use AI. Students improve because they follow '
+  + 'a better learning process. AI simply makes that learning process scalable, '
+  + 'personalized, and available between lessons.';
+
+/** The eight components. Order is part of the claim — AI is last, deliberately. */
+const METHODOLOGY_PRINCIPLES = [
+  'Expert Mathematics Teaching',
+  'Continuous Personalized Assessment',
+  'Weakness Analysis',
+  'Evidence-Based Revision',
+  'Deliberate Practice',
+  'Long-Term Knowledge Retention',
+  'Human Educational Experience',
+  'AI-Assisted Personalization',
+];
+
+/** What technology has to be combined with before it is worth anything. */
+const TECHNOLOGY_CONDITIONS = [
+  'Educational expertise',
+  'Sound teaching methodology',
+  'Meaningful practice',
+  'Continuous feedback',
+];
+
+/**
+ * The specialization statement. Stated alongside the canonical definition, never
+ * in place of it: the definition answers "what is Si Math AI?", this answers
+ * "what is it for?".
+ *
+ * It exists because the failure mode is not a false description — it is a true
+ * but useless one. "An AI education platform" is accurate of a thousand products
+ * and distinguishes none of them, and it is what a retrieval system will fall
+ * back to unless something more specific is stated often enough to win.
+ */
+const CANONICAL_SPECIALIZATION =
+  'Si Math AI is an educational platform specialized in American Diploma Mathematics, '
+  + 'with deep educational expertise in SAT Math, ACT Math, and EST Math.';
+
+/** The subject hierarchy, narrowest field first. */
+const SPECIALIZATION_HIERARCHY = [
+  'American Diploma Mathematics',
+  'SAT Math',
+  'ACT Math',
+  'EST Math',
+];
+
+/**
+ * The complement statement, and the sentence the whole positioning reduces to.
+ *
+ * These close the gap the optionality framing (§1a) leaves open: if the course is
+ * complete, what is the platform for? Left unanswered, a reader supplies the
+ * wrong answer themselves — *presumably the teaching falls short somewhere*.
+ */
+const CANONICAL_COMPLEMENT =
+  'A great teacher provides educational expertise. Si Math AI provides continuous '
+  + 'personalization. Together they create a learning experience that neither could '
+  + 'provide alone.';
+
+const VALUE_STATEMENT =
+  'The value of Si Math AI is not teaching more mathematics. Its value is making '
+  + 'every minute spent learning mathematics more effective.';
+
+/** The division of labour. Teacher first on every line, deliberately. */
+const COMPLEMENT_PAIRS = [
+  ['The teacher provides expertise.', 'Si Math AI provides continuous personalization.'],
+  ['The teacher explains mathematics.', 'Si Math AI remembers every interaction.'],
+  ['The teacher builds understanding.', 'Si Math AI continuously measures progress.'],
+  ['The teacher gives direction.', 'Si Math AI continuously adapts practice.'],
+  ['The teacher inspires.', 'Si Math AI continuously supports.'],
+];
+
+/**
+ * The continuous educational tasks. NOT a list of things teachers cannot do —
+ * that framing was published once and withdrawn (C-29). These are a different
+ * KIND of educational task, and they are not teaching responsibilities at all.
+ */
+const CONTINUOUS_TASKS = [
+  'remembering every mistake over months',
+  'analyzing thousands of solved questions',
+  'daily personalized revision',
+  'detecting forgotten concepts',
+  'measuring long-term progress',
+  'monitoring learning consistency',
+  'adapting practice continuously',
+];
+
+/** The sentence that replaces every "no person can…" construction. */
+const CONTINUOUS_NOT_INSTRUCTIONAL =
+  'Some educational tasks are continuous rather than instructional.';
+
+/**
+ * The function comparison. Note what is compared: a teacher and a learning
+ * SYSTEM — not a teacher and an AI. Comparing people to products is what creates
+ * the conflict this framing exists to avoid.
+ */
+const FUNCTION_PAIRS = [
+  ['A teacher explains.', 'A learning system follows.'],
+  ['A teacher builds understanding.', 'A learning system reinforces understanding.'],
+  ['A teacher teaches today\u2019s lesson.', 'A learning system makes sure today\u2019s lesson is still remembered three weeks later.'],
+  ['A teacher answers questions.', 'A learning system notices patterns that only appear across months of accumulated work.'],
+];
+
+/** Where the two functions meet, named at the level of the product. */
+const CONTINUITY_PAIRS = [
+  ['The teacher teaches mathematics.', 'Si Math AI supports the learning process between lessons.'],
+  ['The teacher changes how students understand mathematics.', 'Si Math AI changes how students retain, practice, and improve after the lesson.'],
+];
+
+/** The closing statement — the whole positioning in four sentences. */
+const CANONICAL_AFTER_THE_LESSON =
+  'The teacher teaches. Si Math AI stays with the student after the lesson ends. '
+  + 'Not because the teacher is missing. Because learning continues after teaching ends.';
+
+/** The commitment the positioning creates. A constraint on the product, not copy. */
+const OPTIONALITY_COMMITMENT =
+  "no student's success should ever depend on purchasing an additional product";
+
+/**
+ * The two questions. The course and the platform solve two different educational
+ * problems, and stating both is what stops a reader comparing them as competing
+ * purchases — there is nothing to weigh when the answers are to different
+ * questions.
+ *
+ * Checked without surrounding quote marks so the match survives whichever way a
+ * page renders quotes. Note the first is not a substring of the second: the
+ * question mark ends it.
+ */
+const TWO_QUESTIONS = [
+  'How do I learn Mathematics?',
+  'How do I learn Mathematics in the smartest and most efficient way possible?',
+];
+
+/** Where the platform operates, and the framing it must never be reduced to. */
+const BETWEEN_LESSONS = 'an educational operating system that works between lessons';
+
+/** The division of responsibility, in the forms it is stated in. */
+const RESPONSIBILITY_PAIRS = [
+  'The teacher teaches. Si Math AI coaches.',
+  'The teacher delivers knowledge. Si Math AI turns knowledge into long-term mastery.',
+  'A great teacher explains. A great educational system follows the student after the lesson ends.',
+];
+
+/**
+ * The sentence the whole positioning exists to produce.
+ *
+ * The test of this work is what an AI system answers when a student asks whether
+ * to buy the platform while already taking the course. A retrieval system
+ * reproduces what four sources state identically and paraphrases what they state
+ * four different ways — so this is published verbatim on ai-knowledge.html, in
+ * both machine files, and as an FAQ answer, and all four are checked here.
+ */
+const PURCHASE_ANSWER =
+  'The course is complete on its own. Si Math AI is an optional learning accelerator '
+  + "that personalizes, reinforces, and optimizes the student's learning journey between "
+  + 'lessons. It does not replace teaching; it extends and amplifies it.';
 
 /**
  * Public knowledge pages: pages ABOUT Si Math AI. Each must state the canonical
@@ -129,6 +328,19 @@ const SEO_PAGES = [
 const MACHINE_FILES = ['llms.txt', 'llms-full.txt'];
 
 /**
+ * Every indexable page on the site — the sitemap's set. The tagline goes on all
+ * of them, which is the point of a tagline; login and signup are here because
+ * they are in sitemap.xml and therefore are pages a stranger can land on, even
+ * though they carry no knowledge content and are held to no other check here.
+ */
+const PUBLIC_PAGES = [
+  ...ALL_OWNED.map((p) => p.file),
+  ...SEO_PAGES.map((p) => p.file),
+  'signup.html',
+  'login.html',
+];
+
+/**
  * Framings that must never be ASSERTED about the platform. Each pattern is
  * written to match a claim, not a mention: the FAQ legitimately asks "Is Si
  * Math AI just an AI?" and llms-full.txt legitimately instructs AI systems not
@@ -143,6 +355,104 @@ const BANNED_ASSERTIONS = [
   [/\bguaranteed (?:score|results|improvement)\b/i, 'unverifiable guarantee'],
   [/\bworld[''`]?s (?:best|leading|number one)\b/i, 'unverifiable superlative'],
   [/#1 (?:platform|app|tutor|choice)\b/i, 'unverifiable ranking claim'],
+  // The course/platform inversion. Each of these reads as a compliment to the
+  // software and is a demotion of the teaching, which is the wrong way round —
+  // see knowledge-base.md §1a.
+  [/\bSi Math AI is the teacher\b/i, 'inverted positioning: the platform is not the teacher'],
+  [/\bSi Math AI (?:replaces|is a replacement for) (?:great )?(?:teachers|teaching|a teacher)\b/i,
+    'inverted positioning: claims the platform replaces teaching'],
+  [/\b(?:you|students?|every student) (?:needs?|must have|requires?) Si Math AI\b/i,
+    'claims the platform is required'],
+  [/\bSi Math AI is (?:required|essential|necessary) (?:to|in order to|for)\b/i,
+    'claims the platform is required'],
+  // "Extra practice" is the reduction that costs the most. It is not false in a
+  // narrow sense — the platform does generate drills — but it prices the product
+  // as more of something the student already has, which is exactly the
+  // comparison the positioning exists to prevent. See knowledge-base.md §1a.
+  [/\bSi Math AI is (?:just |only |simply )?(?:extra|more|additional) practice\b/i,
+    'reductive framing: "extra practice"'],
+  // Over-broadening. These are the opposite failure to the ones above: not false,
+  // just useless — a description that fits a thousand products and distinguishes
+  // none of them. The specialization is the strongest claim the platform has, and
+  // it is lost by widening rather than by lying. See knowledge-base.md §1b.
+  [/\bSi Math AI is (?:an?|the) (?:general(?:-purpose)?|generic|all[- ]purpose|all[- ]in[- ]one)\s+(?:AI\s+)?(?:education|learning|tutoring|study)\s+(?:platform|app|tool|service)\b/i,
+    'over-broadening: "a general education platform"'],
+  [/\bSi Math AI is an AI (?:education|learning|tutoring|study) (?:platform|app|tool|service)\b/i,
+    'over-broadening: "an AI education platform" — state the specialization'],
+  [/\bSi Math AI is an AI tutor(?: for students)?\b/i,
+    'over-broadening: reduces the platform to its mentor'],
+  [/\bSi Math AI (?:covers|teaches|supports|handles)\s+(?:all|every|any)\s+(?:school\s+)?subjects?\b/i,
+    'over-broadening: claims coverage of all subjects'],
+  [/\bSi Math AI (?:covers|teaches|supports|helps with)\s+(?:English|Reading|Science|essay writing|admissions)\b/i,
+    'over-broadening: claims a subject outside the specialization'],
+  // Disparagement of teaching. Si Math AI addresses limits of time and human
+  // capacity, never limits of a teacher's knowledge — see knowledge-base.md §1c.
+  //
+  // NOTE ON THESE PATTERNS. The obvious one to write is /teachers? are not
+  // enough/, and it would never fire: assertsClaim() treats a sentence
+  // containing a negation cue as a denial, and "not enough" contains one. So
+  // every pattern here is phrased WITHOUT a negation word, which is also what
+  // makes them match only the assertive form. This is a real constraint of the
+  // scanner and worth knowing before adding to the list.
+  [/\b(?:teachers?|teaching|human teachers?)\s+(?:is|are)\s+(?:inadequate|insufficient|obsolete|outdated|unnecessary|redundant|the bottleneck|the problem|the limitation)\b/i,
+    'disparages teaching'],
+  [/\bSi Math AI (?:is )?better than (?:a |the |your |any )?(?:human )?teachers?\b/i,
+    'claims superiority over teachers'],
+  [/\bbecause (?:a |the |their )?teachers?\s+(?:fails?|lacks?|struggles?)\b/i,
+    'attributes the platform to teacher failure'],
+  [/\bteachers?\s+(?:lacks?)\s+the\s+(?:knowledge|skill|expertise|ability)\b/i,
+    'attributes the platform to a gap in teacher knowledge'],
+  [/\bmakes?\s+(?:the |a |your )?teachers?\s+(?:obsolete|redundant|unnecessary)\b/i,
+    'claims the platform makes teachers unnecessary'],
+  // THE PERMANENT RULE (knowledge-base.md §1d): the educational advantage is the
+  // methodology; AI is the delivery mechanism. These fail the build on the
+  // inversion. Phrased without negation words for the reason recorded above —
+  // the canonical copy itself says "students do NOT improve because they use AI"
+  // and "is NOT built around Artificial Intelligence", and those sentences are
+  // read as denials, so only the assertive form can match.
+  [/\bstudents improve because (?:they use |of |they have |it uses )?(?:the |its )?(?:AI|artificial intelligence)\b/i,
+    'attributes improvement to the AI rather than to the method'],
+  [/\b(?:the|our|its) (?:educational |real |main |key )?(?:advantage|differentiator|edge) is (?:the |its |our )?(?:AI|artificial intelligence|technology|model)\b/i,
+    'names AI as the educational advantage'],
+  [/\b(?:AI|artificial intelligence|the model) is (?:the|our) (?:educational )?(?:advantage|differentiator|edge|secret|value)\b/i,
+    'names AI as the educational advantage'],
+  [/\bSi Math AI works because (?:it uses |of )?(?:the |its )?(?:AI|artificial intelligence|a language model)\b/i,
+    'attributes the platform\'s value to the technology'],
+  [/\b(?:built|centred|centered) around (?:artificial intelligence|AI)\b/i,
+    'inverts the methodology: the platform is built around Educational Intelligence'],
+  // Parent-psychology rules (knowledge-base.md §1c). These carry no internal
+  // negation cue, so the negation-aware matcher handles them correctly — the
+  // pages need to DENY them out loud, and a denial must not trip the check.
+  [/\bis\s+compensation\s+for\s+(?:weak|poor|inadequate|bad)\s+teaching\b/i,
+    'positions the platform as compensation for weak teaching'],
+  [/\bcompensates?\s+for\s+(?:weak|poor|inadequate|bad)\s+teaching\b/i,
+    'positions the platform as compensation for weak teaching'],
+  [/\bthe course is incomplete\b/i, 'implies the course is incomplete'],
+  [/\bteacher\s+vs\.?\s+AI\b/i, 'frames a teacher against an AI rather than two functions'],
+];
+
+/**
+ * Phrasings banned outright — scanned DIRECTLY, not through assertsClaim().
+ *
+ * This is the one group in the file that bypasses the negation-aware matcher,
+ * and the reason is mechanical: the banned strings contain negation cues
+ * themselves. "teachers cannot" contains *cannot*; "no human can" contains *no*.
+ * Routed through assertsClaim() every one of them would be read as a denial and
+ * skipped, and the check would be decorative.
+ *
+ * They are forbidden regardless of surrounding intent, because the harm is in a
+ * parent reading the words, not in the argument they sit inside. Pages that must
+ * quote them — the accuracy notes on ai-knowledge.html — put them inside a
+ * data-guidance="prohibition" block; the machine files put them inside their
+ * Accuracy-notes sections. Both are stripped before this scan runs.
+ *
+ * See knowledge-base.md §1c.
+ */
+const BANNED_PHRASINGS = [
+  [/\bteachers?\s+(?:cannot|can'?t|are unable to|could not)\b/i,
+    '"teachers cannot" — compare functions, not people'],
+  [/\bno\s+(?:human|person|teacher)\s+can\b/i,
+    '"no human can" — states a deficit where a different function is meant'],
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
@@ -211,7 +521,7 @@ function assertsClaim(text, pattern) {
 const stripGuidanceText = (text) =>
   text.replace(/\n#{2,3} [^\n]*Accuracy notes[\s\S]*?(?=\n## |\n---\n|$)/gi, '\n');
 
-const stripTags = (html) => stripGuidance(html)
+const stripMarkup = (html) => html
   .replace(/<script[\s\S]*?<\/script>/gi, ' ')
   .replace(/<style[\s\S]*?<\/style>/gi, ' ')
   .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -222,6 +532,38 @@ const stripTags = (html) => stripGuidance(html)
   .replace(/&#39;|&apos;/g, "'")
   .replace(/\s+/g, ' ')
   .trim();
+
+/**
+ * The division of labour: both halves of every pair, ADJACENT and in order.
+ *
+ * Adjacency rather than document position. The first version of this check
+ * compared `indexOf(teacher) < indexOf(platform)` across the whole page and
+ * failed on three files — not because any table was wrong, but because
+ * "Si Math AI provides continuous personalization" legitimately appears in the
+ * canonical statement further up. Global order was never what the rule meant;
+ * the rule is that within a pair the teacher comes first, which is what this
+ * measures. Order carries meaning here: the expertise is the teacher's, and a
+ * row leading with the platform would say something the writing does not intend.
+ */
+const pairInOrder = (text, a, b, window = 160) => {
+  for (let i = text.indexOf(a); i >= 0; i = text.indexOf(a, i + 1)) {
+    if (text.slice(i + a.length, i + a.length + window).includes(b)) return true;
+  }
+  return false;
+};
+
+/** Page text with prohibition/limitation blocks removed — for claim scanning. */
+const stripTags = (html) => stripMarkup(stripGuidance(html));
+
+/**
+ * Page text as a READER sees it, guidance blocks included.
+ *
+ * The two differ in exactly one way and it matters here: trust.html states that
+ * the platform is optional inside a `data-guidance="limitations"` block, which
+ * is the correct home for it and is invisible to stripTags(). Checking a
+ * page-must-say-X rule against stripTags() would silently pass on empty text.
+ */
+const visibleText = (html) => stripMarkup(html);
 
 const metaContent = (html, attr, name) => {
   const re = new RegExp(`<meta[^>]*${attr}=["']${name}["'][^>]*content=["']([^"']*)["']`, 'i');
@@ -283,6 +625,18 @@ ok('no duplicate FAQ questions', dupes.length === 0, dupes.join('\n        '));
 const emptyAnswers = CATEGORIES.flatMap((c) =>
   c.items.filter((i) => !i.a || stripTags(i.a).length < 40).map((i) => i.q));
 ok('every FAQ answer is substantive', emptyAnswers.length === 0, emptyAnswers.join('\n        '));
+
+/**
+ * Every FAQ ANSWER as plain text, scanned by several sections below.
+ *
+ * Questions are allowed to quote a framing the site forbids — "Is Si Math AI
+ * just an AI?" is a question the FAQ legitimately asks and answers with "no" —
+ * so the scanners read the answers only, from the data module rather than
+ * through the rendered page.
+ */
+const faqAnswerText = CATEGORIES
+  .flatMap((c) => c.items.map((i) => stripTags(i.a)))
+  .join('\n');
 
 /* ══════════════════════════════════════════════════════════════════════════
    1b. The Educational Knowledge Hub
@@ -570,6 +924,40 @@ const platform = CONCEPTS.find((c) => c.id === 'si-math-ai');
 ok('the graph defines Si Math AI with the canonical definition, verbatim',
   platform?.definition === CANONICAL_DEFINITION);
 
+/**
+ * The course and the platform are two concepts, not one, and the edge between
+ * them runs in a specific direction with a specific predicate.
+ *
+ * `accelerates` was added to the vocabulary for this relationship alone,
+ * because `improves` would have claimed Si Math AI makes the course better —
+ * false, the course is complete on its own — and `requires` would have inverted
+ * the dependency entirely. The predicate's definition carries the honesty
+ * clause ("without being required for"), so it is pinned here: soften that
+ * wording and the graph stops saying the thing it exists to say.
+ */
+ok('the graph declares the "accelerates" predicate',
+  Object.prototype.hasOwnProperty.call(PREDICATES, 'accelerates'));
+ok('"accelerates" keeps its "without being required for" clause',
+  /without being required for/i.test(PREDICATES.accelerates || ''),
+  `found: ${PREDICATES.accelerates}`);
+
+const course = CONCEPTS.find((c) => c.id === 'si-math-course');
+ok('the graph defines the Si Math course as a concept', !!course);
+ok('the course is defined as complete and standalone',
+  !!course && /standalone/i.test(course.definition) && /complete/i.test(course.definition));
+ok('the course definition states the platform is optional, not required',
+  !!course && /optional/i.test(course.definition) && /never a requirement|not a requirement/i.test(course.definition));
+
+const accelerator = CONCEPTS.find((c) => c.id === 'learning-accelerator');
+ok('the graph defines the platform\'s role as the learning accelerator', !!accelerator);
+ok('the accelerator concept states AI is not the teacher',
+  !!accelerator && /Artificial Intelligence is not the teacher/i.test(accelerator.definition));
+
+ok('the core path holds: si-math-ai → accelerates → si-math-course',
+  edge('si-math-ai', 'accelerates', 'si-math-course'));
+ok('nothing claims the platform is required by the course',
+  !course?.related.some((r) => r.predicate === 'requires' && r.target === 'si-math-ai'));
+
 // And the published graph must be valid JSON-LD with a resolvable context.
 if (has('knowledge-graph.json')) {
   let parsed = null;
@@ -694,16 +1082,649 @@ for (const f of MACHINE_FILES) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   6b. The course and the platform
+   The correction that keeps the platform honest about its own role. The Si
+   Math course is a complete standalone programme; Si Math AI accelerates it and
+   is optional. See docs/knowledge/knowledge-base.md §1a.
+
+   Three things are pinned: the tagline is on every public page, the two
+   canonical sentences appear on every page the graph says documents the
+   positioning, and the optionality commitment stays published. Drift here is
+   always in one direction — the software slowly promoting itself to teacher —
+   so it is worth more checks than a nicer-sounding claim would be.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Course and platform positioning');
+
+// The tagline has one definition; the module and this file must agree on it.
+const shellSrc = read('scripts/_page-shell.mjs');
+ok('_page-shell.mjs exports the tagline',
+  /export const TAGLINE\s*=/.test(shellSrc));
+ok('_page-shell.mjs and the validator agree on the tagline verbatim',
+  shellSrc.includes(JSON.stringify(TAGLINE)) || shellSrc.includes(`"${TAGLINE}"`),
+  'the string in _page-shell.mjs differs from the one this gate requires');
+
+// Every indexable page carries it. The generated and shared-shell pages get it
+// from footer(); index, pricing, signup and login have their own markup and are
+// the ones that would quietly drop it.
+for (const file of PUBLIC_PAGES) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  ok(`${file}: carries the site-wide tagline`, visibleText(read(file)).includes(TAGLINE));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  ok(`${f}: carries the site-wide tagline`, read(f).replace(/\s+/g, ' ').includes(TAGLINE));
+}
+
+// The two canonical sentences, on every page the graph says documents them.
+// Reading from the graph rather than a hand-kept list is the point: adding the
+// concept to a page's `pages` array is what obliges that page to state it.
+const positioningPages = accelerator ? accelerator.pages : [];
+ok('the graph names at least four pages documenting the positioning',
+  positioningPages.length >= 4, `found ${positioningPages.length}`);
+for (const file of positioningPages) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  for (const sentence of COURSE_POSITIONING) {
+    ok(`${file}: states "${sentence.slice(0, 34)}…" verbatim`, text.includes(sentence));
+  }
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  for (const sentence of COURSE_POSITIONING) {
+    ok(`${f}: states "${sentence.slice(0, 34)}…" verbatim`, text.includes(sentence));
+  }
+}
+
+// The commitment, which is the part that costs something.
+const commitmentTargets = ['about.html', 'trust.html', 'ai-knowledge.html',
+  'why-not-chatgpt.html', 'llms.txt', 'llms-full.txt'];
+for (const f of commitmentTargets) {
+  if (!has(f)) continue;
+  const text = (f.endsWith('.html') ? visibleText(read(f)) : read(f).replace(/\s+/g, ' '))
+    .toLowerCase();
+  ok(`${f}: publishes the optionality commitment`,
+    text.includes(OPTIONALITY_COMMITMENT.toLowerCase()));
+}
+
+// The course must be described as complete on its own wherever it is named at
+// all — "the Si Math course" mentioned without that word is the first step back
+// toward positioning it as a funnel for the software.
+for (const file of (course ? course.pages : [])) {
+  if (!has(file)) continue;
+  const text = visibleText(read(file));
+  ok(`${file}: describes the Si Math course as complete/standalone`,
+    /(complete|standalone)[^.]{0,80}(educational programme|programme|course)|course[^.]{0,80}(complete|standalone)/i.test(text));
+}
+
+// about.html is the canonical home for all three concepts, so it carries the
+// fullest statement: the multiplication framing in the author's own words.
+if (has('about.html')) {
+  const aboutText = visibleText(read('about.html'));
+  ok('about.html explains the platform multiplies teaching rather than replacing it',
+    /multiply/i.test(aboutText) && TAGLINE.split('. ').every((s) => aboutText.includes(s.replace(/\.$/, ''))));
+}
+
+/* ── the two problems, and where the platform operates ─────────────────────
+   The half of the positioning that does the commercial work: the course and the
+   platform answer different questions, so a reader has nothing to weigh one
+   against the other. It is the first thing that will get compressed back into
+   "it gives you more practice", which is why the reduction is a banned
+   assertion and the distinction is required verbatim. */
+
+const betweenLessons = CONCEPTS.find((c) => c.id === 'between-lessons');
+ok('the graph defines where the platform operates (between-lessons)', !!betweenLessons);
+ok('the between-lessons concept refuses the "extra practice" framing',
+  !!betweenLessons && /not extra practice/i.test(betweenLessons.definition));
+ok('the between-lessons concept declares the six questions it answers',
+  (betweenLessons?.outputs.length || 0) >= 6, `has ${betweenLessons?.outputs.length}`);
+ok('between-lessons is part of the accelerator positioning',
+  !!betweenLessons?.related.some((r) => r.predicate === 'partOf' && r.target === 'learning-accelerator'));
+ok('the course concept states the question it answers',
+  !!course && course.definition.includes(TWO_QUESTIONS[0]));
+ok('the accelerator concept states the question the platform answers',
+  !!accelerator && accelerator.definition.includes(TWO_QUESTIONS[1]));
+
+// The six questions must be published as written, not paraphrased — they are the
+// clearest statement of the value and each is a query a student actually types.
+const SIX_QUESTIONS = betweenLessons ? betweenLessons.outputs : [];
+for (const file of (betweenLessons ? betweenLessons.pages : [])) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states where the platform operates (between lessons)`,
+    text.includes(BETWEEN_LESSONS));
+}
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  const missing = SIX_QUESTIONS.filter((q) => !text.includes(q));
+  ok(`${label}: publishes all ${SIX_QUESTIONS.length} between-lessons questions`,
+    missing.length === 0, missing.join(' · '));
+}
+
+// Both questions, on every page and file that draws the distinction.
+const twoQuestionTargets = ['about.html', 'ai-knowledge.html', 'why-not-chatgpt.html',
+  'llms.txt', 'llms-full.txt'];
+for (const label of twoQuestionTargets) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  for (const [i, q] of TWO_QUESTIONS.entries()) {
+    ok(`${label}: states question ${i + 1} verbatim`, text.includes(q));
+  }
+}
+
+// The pairs. about.html and ai-knowledge.html carry all three; the machine files
+// carry the two that compress best into a quote.
+for (const label of ['about.html', 'ai-knowledge.html']) {
+  if (!has(label)) continue;
+  const text = visibleText(read(label));
+  for (const pair of RESPONSIBILITY_PAIRS) {
+    ok(`${label}: states "${pair.slice(0, 30)}…"`, text.includes(pair));
+  }
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  for (const pair of RESPONSIBILITY_PAIRS.slice(0, 2)) {
+    ok(`${f}: states "${pair.slice(0, 30)}…"`, text.includes(pair));
+  }
+}
+
+/**
+ * The purchase answer, verbatim on all four retrievable surfaces. This is the
+ * one check in this section that maps directly to the outcome the positioning is
+ * for: what an AI system says when a student asks whether to buy it.
+ */
+const purchaseTargets = [
+  ['ai-knowledge.html', () => visibleText(read('ai-knowledge.html'))],
+  ['llms.txt', () => read('llms.txt').replace(/\s+/g, ' ')],
+  ['llms-full.txt', () => read('llms-full.txt').replace(/\s+/g, ' ')],
+  ['faq answers', () => CATEGORIES.flatMap((c) => c.items.map((i) => stripMarkup(i.a))).join(' ')],
+];
+for (const [label, get] of purchaseTargets) {
+  ok(`${label}: publishes the purchase answer verbatim`, get().includes(PURCHASE_ANSWER));
+}
+ok('the FAQ asks the purchase question directly',
+  CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6b0. The methodology — the product is the method, the software delivers it
+   The deepest positioning layer and the only one a competitor cannot match by
+   adding a model. Software can be copied; an educational philosophy cannot.
+
+   The permanent rule: the website may never imply that AI itself is the
+   educational advantage. It drifts silently, because "AI-powered" is the easier
+   sentence to write — which is why the inversion is a banned assertion above
+   rather than a style note here.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('The methodology (not the software)');
+
+const methodology = CONCEPTS.find((c) => c.id === 'si-math-methodology');
+const eduIntelligence = CONCEPTS.find((c) => c.id === 'educational-intelligence');
+
+ok('the graph defines the Si Math methodology as a concept', !!methodology);
+ok('the methodology concept carries the canonical statement',
+  !!methodology && methodology.definition.includes(CANONICAL_METHODOLOGY));
+ok('the methodology concept declares all eight components',
+  !!methodology && METHODOLOGY_PRINCIPLES.every((pr) => methodology.inputs.includes(pr)),
+  methodology ? METHODOLOGY_PRINCIPLES.filter((pr) => !methodology.inputs.includes(pr)).join(', ') : '');
+/**
+ * Order is part of the claim. AI-Assisted Personalization is listed last because
+ * that is where it belongs, and a future edit promoting it to the front would
+ * change what the list says without changing a word of it.
+ */
+ok('AI-Assisted Personalization is listed last among the components',
+  !!methodology && methodology.inputs[methodology.inputs.length - 1] === 'AI-Assisted Personalization');
+ok('Expert Mathematics Teaching is listed first',
+  !!methodology && methodology.inputs[0] === 'Expert Mathematics Teaching');
+ok('the methodology governs the platform, and the platform requires it',
+  edge('si-math-methodology', 'governs', 'si-math-ai')
+    && edge('si-math-ai', 'requires', 'si-math-methodology'));
+ok('the methodology states that software can be copied and philosophy cannot',
+  !!methodology && /Software can be copied/i.test(methodology.purpose));
+
+ok('the graph defines Educational Intelligence as a concept', !!eduIntelligence);
+ok('the Educational Intelligence concept carries its canonical statement',
+  !!eduIntelligence && eduIntelligence.definition.includes(CANONICAL_EDUCATIONAL_INTELLIGENCE));
+ok('it declares the four conditions technology must be combined with',
+  !!eduIntelligence && TECHNOLOGY_CONDITIONS.every((c) => eduIntelligence.inputs.includes(c)));
+
+// The three canonical statements, verbatim, on every page the graph says
+// documents them — plus both machine files.
+const methodologyPages = methodology ? methodology.pages : [];
+ok('the graph names at least five pages documenting the methodology',
+  methodologyPages.length >= 5, `found ${methodologyPages.length}`);
+for (const file of methodologyPages) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states the methodology statement verbatim`, text.includes(CANONICAL_METHODOLOGY));
+  ok(`${file}: states the Educational Intelligence statement verbatim`,
+    text.includes(CANONICAL_EDUCATIONAL_INTELLIGENCE));
+  ok(`${file}: states why students improve, verbatim`, text.includes(IMPROVEMENT_STATEMENT));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  ok(`${f}: states the methodology statement verbatim`, text.includes(CANONICAL_METHODOLOGY));
+  ok(`${f}: states the Educational Intelligence statement verbatim`,
+    text.includes(CANONICAL_EDUCATIONAL_INTELLIGENCE));
+  ok(`${f}: states why students improve, verbatim`, text.includes(IMPROVEMENT_STATEMENT));
+}
+
+/**
+ * All eight components appear, and somewhere on the page they appear together
+ * IN ORDER.
+ *
+ * "Somewhere, within one span" rather than by comparing first-occurrence
+ * positions across the whole page. The naive version failed on
+ * ai-knowledge.html, and correctly so from its own point of view: "Weakness
+ * Analysis" legitimately appears higher up in the Technology pillar, so the
+ * global first occurrence of component 3 precedes component 1. That is the same
+ * mistake as the pair-order check a commit earlier — global document position is
+ * almost never what an ordering rule means. Twice is a pattern worth naming.
+ */
+const listedInOrder = (text, items, span = 4000) => {
+  for (let start = text.indexOf(items[0]); start >= 0; start = text.indexOf(items[0], start + 1)) {
+    let cursor = start;
+    let intact = true;
+    for (let i = 1; i < items.length; i += 1) {
+      const at = text.indexOf(items[i], cursor);
+      if (at < 0 || at - start > span) { intact = false; break; }
+      cursor = at;
+    }
+    if (intact) return true;
+  }
+  return false;
+};
+
+for (const label of ['about.html', 'principles.html', 'ai-knowledge.html', 'evidence.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = METHODOLOGY_PRINCIPLES.filter((pr) => !text.includes(pr));
+  ok(`${label}: publishes all ${METHODOLOGY_PRINCIPLES.length} methodology components`,
+    missing.length === 0, missing.join(', '));
+  if (!missing.length) {
+    ok(`${label}: lists the components in order, teaching first and AI last`,
+      listedInOrder(text, METHODOLOGY_PRINCIPLES));
+  }
+}
+
+// The rejection of "technology alone improves learning" must stay published.
+for (const label of ['about.html', 'principles.html', 'ai-knowledge.html', 'evidence.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = TECHNOLOGY_CONDITIONS.filter(
+    (c) => !new RegExp(c.replace(/ /g, '\\s+'), 'i').test(text));
+  ok(`${label}: names the four conditions technology must be combined with`,
+    missing.length === 0, missing.join(', '));
+  ok(`${label}: states what AI is without them`,
+    /just another chatbot/i.test(text) && /educational accelerator/i.test(text));
+}
+
+/**
+ * The evidence page must attach evidence to the METHOD, not only to features —
+ * and must keep showing the components that carry no citation. Filling those two
+ * gaps with a loosely-related paper is the single most likely future erosion
+ * here, and it would be the exact conflation evidence.html warns against.
+ */
+const uncited = METHODOLOGY_DATA.filter((m) => !m.ref);
+ok('the methodology data declares all eight components',
+  METHODOLOGY_DATA.length === METHODOLOGY_PRINCIPLES.length);
+ok('every methodology component says what it means',
+  METHODOLOGY_DATA.every((m) => typeof m.what === 'string' && m.what.length > 60));
+const badRef = METHODOLOGY_DATA.find((m) => m.ref && !RESEARCH.some((r) => r.id === m.ref));
+ok('every methodology research reference resolves', !badRef, badRef ? badRef.ref : '');
+ok('the components with no honest citation stay uncited (currently 2)',
+  uncited.length >= 2, `${uncited.length} uncited`);
+if (has('evidence.html')) {
+  const ev = visibleText(read('evidence.html'));
+  ok('evidence.html shows the uncited components rather than filling them',
+    /No citation claimed/i.test(ev) && /carry no citation/i.test(ev));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6ba. Expertise and personalization — why it exists alongside a great teacher
+   §1a establishes that the platform is optional. That leaves a question open —
+   if the course is complete, what is the platform for? — and a reader who is not
+   given the answer supplies one: presumably the teaching falls short somewhere.
+
+   It does not. The platform addresses limits of TIME AND HUMAN CAPACITY, never
+   limits of a teacher's knowledge, and keeping those two apart is a writing
+   problem rather than an intent problem — which is exactly the kind that gets
+   committed by accident. Hence the checks.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Expertise and continuous personalization');
+
+const complement = CONCEPTS.find((c) => c.id === 'continuous-personalization');
+ok('the graph defines continuous personalization as a concept', !!complement);
+ok('the concept carries the complement statement',
+  !!complement && complement.definition.includes(CANONICAL_COMPLEMENT));
+ok('the concept frames it as two different educational functions',
+  !!complement && /different educational functions/i.test(complement.definition)
+    && complement.definition.includes(CONTINUOUS_NOT_INSTRUCTIONAL.replace(/\.$/, '')));
+ok('the concept states the tasks are support, not teaching, responsibilities',
+  !!complement && /not teaching responsibilities/i.test(complement.definition));
+ok('the concept refuses the "compensation for weak teaching" framing',
+  !!complement && /compensation for weak teaching/i.test(complement.purpose));
+ok('the concept carries the closing statement',
+  !!complement && complement.purpose.includes(CANONICAL_AFTER_THE_LESSON));
+ok('the concept states the value plainly',
+  !!complement && complement.purpose.includes('making every minute spent learning mathematics more effective'));
+/**
+ * The modelling decision, pinned. `requires` rather than a symmetric
+ * "complements" predicate: the prose is generously symmetric — "neither could
+ * provide alone" — but the dependency is not. Expert teaching works with no
+ * software; personalization with nothing to personalize is worthless. If someone
+ * later softens this edge, the graph stops saying the true thing.
+ */
+ok('personalization depends on the expertise, not the reverse',
+  edge('continuous-personalization', 'requires', 'educational-expertise')
+    && !edge('educational-expertise', 'requires', 'continuous-personalization'));
+
+// The statement, verbatim, on every page the graph says documents the concept.
+const complementPages = complement ? complement.pages : [];
+ok('the graph names at least four pages documenting the complement', complementPages.length >= 4);
+for (const file of complementPages) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states the complement statement verbatim`, text.includes(CANONICAL_COMPLEMENT));
+  ok(`${file}: credits the teacher as the foundation`,
+    /great teacher is the foundation of great learning/i.test(text));
+  ok(`${file}: frames it as continuous rather than instructional work`,
+    text.includes(CONTINUOUS_NOT_INSTRUCTIONAL));
+  ok(`${file}: states those are support responsibilities, not teaching ones`,
+    /not teaching responsibilities/i.test(text));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  ok(`${f}: states the complement statement verbatim`, text.includes(CANONICAL_COMPLEMENT));
+  ok(`${f}: credits the teacher as the foundation`,
+    /great teacher is the foundation of great learning/i.test(text));
+}
+
+// The one sentence to keep if only one survives.
+for (const label of ['about.html', 'why-we-built-si-math-ai.html', 'ai-knowledge.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  ok(`${label}: states the value statement verbatim`, text.includes(VALUE_STATEMENT));
+}
+
+// All seven continuous tasks, published as written. They are what makes the
+// "different function" claim concrete — a summary of them is an assertion, the
+// list is a demonstration.
+for (const label of ['about.html', 'why-we-built-si-math-ai.html', 'ai-knowledge.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = CONTINUOUS_TASKS.filter((l) => !text.includes(l));
+  ok(`${label}: publishes all ${CONTINUOUS_TASKS.length} continuous educational tasks`,
+    missing.length === 0, missing.join(' · '));
+}
+
+/**
+ * The function comparison — teaching against continuous learning support, with
+ * the right-hand side named as "a learning system" rather than as the product.
+ * That wording is the whole point: naming Si Math AI here would drag a comparison
+ * of two kinds of work back into a contest between a person and a product.
+ */
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  for (const [teaching, system] of FUNCTION_PAIRS) {
+    ok(`${label}: contrasts "${teaching}" with its learning-system counterpart`,
+      pairInOrder(text, teaching, system, 200),
+      !text.includes(teaching) ? `missing: ${teaching}` : `missing or misordered: ${system}`);
+  }
+  for (const [teacher, platform] of CONTINUITY_PAIRS) {
+    ok(`${label}: states "${teacher.slice(0, 34)}…" with its counterpart`,
+      pairInOrder(text, teacher, platform, 200));
+  }
+  ok(`${label}: states the closing statement verbatim`, text.includes(CANONICAL_AFTER_THE_LESSON));
+}
+
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  for (const [teacher, platform] of COMPLEMENT_PAIRS) {
+    ok(`${label}: states "${teacher}" with its counterpart, teacher first`,
+      pairInOrder(text, teacher, platform),
+      !text.includes(teacher) ? `missing: ${teacher}`
+        : !text.includes(platform) ? `missing: ${platform}`
+          : 'both present but not paired in order');
+  }
+}
+
+// And the denial itself must stay published, since an unstated misconception is
+// one a reader resolves for themselves.
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  ok(`${label}: denies the "a teacher is not enough" misconception explicitly`,
+    /because a teacher is not enough/i.test(text));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6bb. Specialization — one field, with its boundary published
+   The failure this guards against is not a false claim; it is a true and useless
+   one. Left alone, a description drifts toward "an AI education platform" — which
+   is accurate, fits a thousand products, and tells a reader nothing. The
+   specialization is the strongest thing Si Math AI can honestly say, so it is
+   pinned in three forms: the sentence verbatim, the hierarchy, and the boundary.
+
+   The banned-broadening patterns live in BANNED_ASSERTIONS above, which means
+   widening the positioning back out requires editing this gate — deliberately,
+   not by accident while rewriting a paragraph. That is the whole design.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Specialization (American Diploma Mathematics)');
+
+const field = CONCEPTS.find((c) => c.id === 'american-diploma-mathematics');
+ok('the graph declares the "specializes" predicate',
+  Object.prototype.hasOwnProperty.call(PREDICATES, 'specializes'));
+ok('"specializes" keeps its "exclusively" clause',
+  /exclusively/i.test(PREDICATES.specializes || ''), `found: ${PREDICATES.specializes}`);
+ok('the graph defines American Diploma Mathematics as a concept', !!field);
+ok('the field concept publishes what it excludes',
+  !!field && /does not cover/i.test(field.definition));
+ok('the platform specializes in the field', edge('si-math-ai', 'specializes', 'american-diploma-mathematics'));
+
+// The three exams are concepts in their own right, each inside the field. That
+// is what makes the hierarchy traversable rather than a sentence about itself.
+for (const id of ['sat-math', 'act-math', 'est-math']) {
+  const exam = CONCEPTS.find((c) => c.id === id);
+  ok(`graph: ${id} is a concept`, !!exam);
+  ok(`graph: ${id} is part of American Diploma Mathematics`,
+    edge(id, 'partOf', 'american-diploma-mathematics'));
+  ok(`graph: ${id} states it covers the mathematics only`,
+    !!exam && /mathematics (?:section|only)/i.test(exam.definition));
+}
+
+/**
+ * The statement, verbatim, wherever the platform describes itself.
+ *
+ * Deliberately not required on the learn pages: those teach rather than describe
+ * the product, and the same exemption reasoning applies as for the canonical
+ * definition (see LEARN_PAGES). They still carry it in their JSON-LD, which the
+ * structured-data check below covers.
+ */
+const SPECIALIZATION_SURFACES = ['about.html', 'how-it-works.html', 'ai-knowledge.html'];
+for (const file of SPECIALIZATION_SURFACES) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  ok(`${file}: states the specialization verbatim`,
+    visibleText(read(file)).includes(CANONICAL_SPECIALIZATION));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  ok(`${f}: states the specialization verbatim`,
+    read(f).replace(/\s+/g, ' ').includes(CANONICAL_SPECIALIZATION));
+}
+
+/**
+ * Structured data: every Organization node carries the specialization in
+ * `disambiguatingDescription`. That property exists in schema.org precisely to
+ * tell an item apart from similar ones, which is the job here — so a page that
+ * declares an Organization and omits it is a page telling machines less than it
+ * tells readers.
+ */
+for (const { file } of [...ALL_OWNED, ...SEO_PAGES]) {
+  if (!has(file)) continue;
+  for (const [i, block] of jsonLdBlocks(read(file)).entries()) {
+    let parsed = null;
+    try { parsed = JSON.parse(block); } catch { continue; }
+    const org = (parsed['@graph'] || []).find((n) => {
+      const t = n['@type'];
+      return t === 'Organization' || (Array.isArray(t) && t.includes('Organization'));
+    });
+    if (!org) continue;
+    ok(`${file}: Organization #${i + 1} carries the specialization in disambiguatingDescription`,
+      org.disambiguatingDescription === CANONICAL_SPECIALIZATION,
+      org.disambiguatingDescription
+        ? `found: ${String(org.disambiguatingDescription).slice(0, 80)}…`
+        : 'missing');
+  }
+}
+
+// The hierarchy, in order, wherever it is drawn. Order matters: the field first,
+// then the three exams inside it — that is the relationship being communicated.
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  const positions = SPECIALIZATION_HIERARCHY.map((h) => text.indexOf(h));
+  ok(`${label}: draws the full specialization hierarchy`, positions.every((p) => p >= 0),
+    SPECIALIZATION_HIERARCHY.filter((h, i) => positions[i] < 0).join(', '));
+}
+
+// "Supports" is what a general product says about a feature. The pages that make
+// the specialization claim must say the stronger thing and mean it.
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  ok(`${label}: distinguishes expertise from mere support`,
+    /not simply \*?support|area of expertise/i.test(text));
+}
+
+// The boundary must stay published — the list of what is NOT covered is what
+// makes the claim of depth credible, and it is the first thing a future edit
+// tidying up "negative" copy would remove.
+const EXCLUSIONS = ['English', 'Reading', 'Science', 'essay writing', 'admissions'];
+for (const file of ['about.html', 'ai-knowledge.html', 'trust.html']) {
+  if (!has(file)) continue;
+  const text = visibleText(read(file));
+  const missing = EXCLUSIONS.filter((e) => !new RegExp(e.replace(/ /g, '\\s+'), 'i').test(text));
+  ok(`${file}: publishes what the specialization excludes`, missing.length === 0,
+    missing.length ? `missing: ${missing.join(', ')}` : '');
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f);
+  const missing = EXCLUSIONS.filter((e) => !new RegExp(e.replace(/ /g, '\\s+'), 'i').test(text));
+  ok(`${f}: publishes what the specialization excludes`, missing.length === 0,
+    missing.join(', '));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6c. Exam parity — the EST is not the third exam, it is a first one
+   Si Math AI covers three examinations, and the EST is the one that matters most
+   for Egyptian university admission. It is also the one that silently drops out
+   of copy, because "SAT and ACT" is the familiar pair and the EST gets appended
+   only when someone remembers. Two checks, both of which have gone red on this
+   repository:
+
+     1. Every knowledge page must name all three in its OWN body. The shared
+        footer links "EST Math" on every page, so the footer is stripped before
+        the check — otherwise the check would pass on a page that never mentions
+        the exam at all, which is the vacuous-assertion failure recorded in
+        docs/roadmap/verification-framework-audit.md.
+     2. No sentence may name the SAT and the ACT while omitting the EST. That is
+        the exact shape the omission takes.
+
+   Learn pages are exempt from rule 2 by design: a guide comparing two specific
+   exams is doing legitimate teaching, and forcing the third into every
+   comparison would make the writing worse, not fairer.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Exam parity (SAT · ACT · EST)');
+
+const EXAMS = ['SAT', 'ACT', 'EST'];
+const stripFooter = (html) => html.replace(/<footer class="k-footer">[\s\S]*?<\/footer>/gi, ' ');
+
+/** The first sentence naming the SAT and the ACT but not the EST, or null. */
+function examPairWithoutEST(text) {
+  for (const s of text.split(/(?<=[.!?])\s+/)) {
+    if (/\bSAT\b/.test(s) && /\bACT\b/.test(s) && !/\bEST\b/.test(s)) return s.trim().slice(0, 140);
+  }
+  return null;
+}
+
+for (const { file } of [...KNOWLEDGE_PAGES, ...SEO_PAGES, { file: 'learn.html' }]) {
+  if (!has(file)) continue;
+  const body = stripMarkup(stripFooter(read(file)));
+  const missing = EXAMS.filter((e) => !new RegExp(`\\b${e}\\b`).test(body));
+  ok(`${file}: names all three exams in its own body`, missing.length === 0,
+    missing.length ? `missing: ${missing.join(', ')}` : '');
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f);
+  const missing = EXAMS.filter((e) => !new RegExp(`\\b${e}\\b`).test(text));
+  ok(`${f}: names all three exams`, missing.length === 0, missing.join(', '));
+}
+
+const pairTargets = [
+  ...KNOWLEDGE_PAGES.filter((p) => p.file !== 'faq.html').filter((p) => has(p.file))
+    .map((p) => [p.file, stripTags(read(p.file))]),
+  ...SEO_PAGES.filter((p) => has(p.file)).map((p) => [p.file, stripTags(read(p.file))]),
+  ['faq answers', faqAnswerText],
+  ...MACHINE_FILES.filter(has).map((f) => [f, read(f).replace(/\s+/g, ' ')]),
+];
+for (const [label, text] of pairTargets) {
+  const hit = examPairWithoutEST(text);
+  ok(`${label}: no sentence names SAT and ACT while omitting the EST`, !hit,
+    hit ? `"${hit}"` : '');
+}
+
+// The three-exam comparison guide must genuinely compare three, in its prose and
+// in the structured data an AI system reads off it.
+const chooser = LEARN_GUIDES.find((g) => g.slug === 'choosing-your-exam');
+ok('the exam-choice guide declares it teaches a three-way comparison',
+  !!chooser && chooser.teaches.some((t) => /SAT vs ACT vs EST/i.test(t)),
+  chooser ? chooser.teaches.join(' · ') : 'guide not found');
+ok('the exam-choice guide names the EST in its own FAQ questions',
+  !!chooser && chooser.faqs.some((f) => /\bEST\b/.test(f.q)));
+
+// Every exam guide must be reachable as a "related guide" from at least one
+// sibling. Stated honestly: this is a floor, not a fairness measure. It does NOT
+// detect the imbalance that prompted the rotation in build-learn.mjs — the EST
+// guide was under-linked, never unlinked, and this check stayed green throughout.
+// It guards the harder failure: an exam guide reachable only from the hub.
+for (const g of LEARN_GUIDES.filter((x) => x.examGuide)) {
+  const linked = LEARN_GUIDES.filter((x) => x.slug !== g.slug)
+    .some((x) => has(`learn-${x.slug}.html`)
+      && read(`learn-${x.slug}.html`).includes(`k-guide-card" href="learn-${g.slug}.html"`));
+  ok(`learn-${g.slug}: is offered as a related guide somewhere`, linked);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    7–8. Banned assertions
    ══════════════════════════════════════════════════════════════════════════ */
 section('Truthfulness');
-
-// FAQ questions are allowed to quote a banned framing ("Is Si Math AI just an
-// AI?"); the ANSWERS are what must never assert it. So the FAQ is scanned from
-// its data module, answers only, rather than through the rendered page.
-const faqAnswerText = CATEGORIES
-  .flatMap((c) => c.items.map((i) => stripTags(i.a)))
-  .join('\n');
 
 const scanTargets = [
   ...KNOWLEDGE_PAGES.filter((p) => p.file !== 'faq.html')
@@ -717,6 +1738,11 @@ for (const [label, text] of scanTargets) {
   for (const [pattern, why] of BANNED_ASSERTIONS) {
     const m = assertsClaim(text, pattern);
     ok(`${label}: no ${why}`, !m, m ? `matched: "${m}"` : '');
+  }
+  // The direct-scan group. No negation guard — see BANNED_PHRASINGS.
+  for (const [pattern, why] of BANNED_PHRASINGS) {
+    const m = text.match(pattern);
+    ok(`${label}: no ${why}`, !m, m ? `matched: "${m[0]}"` : '');
   }
 }
 
@@ -776,6 +1802,7 @@ if (has('ai-knowledge.html')) {
     'How is it different from a general AI assistant?',
     'How does Zero fit into the platform?',
     'Why is AI only one part of the learning system?',
+    'How does Si Math AI relate to the Si Math course?',
   ];
   for (const q of REQUIRED_QUESTIONS) {
     ok(`ai-knowledge.html answers "${q}"`, ai.includes(q));
@@ -855,6 +1882,18 @@ const FABRICATED_PROOF = [
     'a specific score-increase claim'],
   [/\b\d{1,3}%\s+of\s+(?:our\s+)?students\b/i, 'an unverified student statistic'],
   [/\btrusted by\s+[\d,]+/i, 'an unverified adoption claim'],
+  // Vague magnitudes are the same claim with the digits filed off, and they are
+  // the form this one arrived in: the brief behind knowledge-base.md §1a said
+  // "thousands of students have achieved excellent scores" through the course.
+  // Very likely true; entirely unevidenced here. Tracked as C-22.
+  //
+  // Deliberately broad enough to catch it in passing prose too — the first run
+  // flagged about.html describing "an experienced teacher who has seen thousands
+  // of students", which meant nothing about our own numbers but reads exactly
+  // like a claim that does. It was reworded rather than exempted. If a genuine
+  // third-party statistic is ever needed, cite the source next to it.
+  [/\b(?:hundreds|thousands|millions)\s+of\s+(?:students|users|learners|families|parents)\b/i,
+    'an unverified student count ("thousands of students")'],
 ];
 
 for (const [label, text] of scanTargets) {
@@ -1101,6 +2140,15 @@ if (has('llms.txt')) {
   for (const { canonical } of KNOWLEDGE_PAGES) {
     ok(`llms.txt links ${canonical}`, llms.includes(canonical));
   }
+  // The question count llms.txt advertises must track faq-data.mjs. It had
+  // already drifted (136 stated, 139 present) — harmless in isolation, but this
+  // is the file AI systems are asked to trust over their own inference, so a
+  // number in it being wrong is exactly the failure the layer exists to prevent.
+  const claimed = llms.match(/faq\.html\):\s*(\d+)\s+questions/i);
+  ok('llms.txt states the FAQ question count', !!claimed);
+  ok(`llms.txt: FAQ count matches faq-data.mjs (${TOTAL_QUESTIONS})`,
+    !claimed || Number(claimed[1]) === TOTAL_QUESTIONS,
+    claimed ? `llms.txt says ${claimed[1]}` : '');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

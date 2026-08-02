@@ -515,6 +515,453 @@ worse for passing.
 
 ---
 
+## C-22 · The knowledge layer had no concept of the course — RESOLVED (with one open figure)
+
+**Found:** every page described Si Math AI as though the platform were the whole
+product. The Si Math course — a complete, standalone educational programme that
+teaches SAT, ACT and EST Mathematics in full — appeared nowhere in the knowledge
+graph, nowhere in `knowledge-base.md`, and nowhere on any public page.
+
+That is not a gap in coverage; it is an inverted relationship. A site that never
+names the teaching implies the software *is* the teaching, and the two most
+visible pages leaned that way: `why-we-built-si-math-ai.html` argued from a gap
+where individual attention is *absent*, and `about.html` opened on the platform
+with no statement that a student can succeed without it.
+
+**Fixed:** the correction went through the pipeline in order —
+
+1. **Graph.** Two concepts added: `si-math-course` (*Program*) and
+   `learning-accelerator` (*Positioning*), joined by a predicate added
+   specifically for the relationship, `accelerates` — "makes faster, **without
+   being required for**". `improves` would have claimed the platform makes the
+   course better, which is false; `requires` would have inverted the dependency.
+   The honesty clause lives in the predicate's own definition and is pinned by CI.
+2. **Documentation.** `knowledge-base.md` §1a: the canonical positioning
+   statement, the site-wide tagline, the optionality commitment, and a
+   what-must-never-be-written table.
+3. **Website.** A new section on `about.html#course`; the multiplication framing
+   in `why-we-built-si-math-ai.html`; a software-versus-teaching block on
+   `why-not-chatgpt.html`; a limitation on `trust.html` ("it is not the teacher,
+   and it is not required"); Question 07 plus two accuracy notes on
+   `ai-knowledge.html`; both machine files.
+4. **Enforcement.** A new validator section, `Course and platform positioning`:
+   the tagline on all 31 indexable pages, the two canonical sentences on every
+   page the graph says documents the positioning, the optionality commitment on
+   six surfaces, and four new banned assertions covering the inversion
+   ("Si Math AI is the teacher", "you need Si Math AI", and so on).
+
+**Still open — the headcount.** The brief stated that *thousands of students have
+achieved excellent SAT, ACT and EST Math scores* through the course, long before
+Si Math AI existed. It is very likely true and it is not published, because §12
+forbids publishing a student count we cannot evidence and the Trust Center
+promises readers we do not. Publishing it would break that promise on the same
+site that makes it.
+
+So the philosophy shipped and the number did not. A new `FABRICATED_PROOF`
+pattern now fails the build on "thousands/hundreds/millions of students" anywhere
+in the knowledge layer — which, on its first run, caught a passing sentence in
+`about.html` about "an experienced teacher who has seen thousands of students".
+That one meant nothing about our own numbers but read exactly like a claim that
+did, so it was reworded rather than exempted.
+
+**Owner action:** supply a verifiable figure — enrolment records, cohort results,
+anything a reader could check — and `knowledge-base.md` §0a is the runbook for
+publishing it.
+
+---
+
+## C-23 · llms.txt advertised the wrong FAQ count — RESOLVED
+
+**Found:** `llms.txt` stated "136 questions answered across 13 categories" while
+`faq-data.mjs` contained 139. Trivial in isolation, and precisely the wrong file
+to be wrong in: `llms.txt` is the document that asks AI systems to trust it over
+their own inference.
+
+**Fixed:** the number corrected, and the validator now reads the claim out of
+`llms.txt` and compares it to `TOTAL_QUESTIONS`. The count cannot drift again
+without failing the build.
+
+---
+
+## C-24 · The course and the platform read as competing purchases — RESOLVED
+
+**Found:** C-22 established that the platform is optional and the course is
+complete. True, and insufficient. Stated on its own, "optional" invites exactly
+the comparison it should prevent — a parent reads *the course, plus an optional
+extra* and starts weighing one against the other, which is a comparison the
+platform loses on principle and should never have been in.
+
+The missing statement is that they answer **different questions**:
+
+| The question | Answered by | Responsible for |
+| --- | --- | --- |
+| How do I learn Mathematics? | The Si Math course | Teaching |
+| How do I learn Mathematics in the smartest and most efficient way possible? | Si Math AI | Optimizing the student's learning journey |
+
+There is nothing to weigh when the answers are to different questions.
+
+**Fixed:** a third concept, `between-lessons` (*Positioning*), naming where the
+platform operates and what it refuses to be described as. Its six declared
+outputs are the questions the platform answers between one lesson and the next —
+*what should I study next, why do I keep making this mistake, which topic gives me
+the biggest score improvement, am I actually improving, am I ready for the exam,
+what should I revise today* — and CI requires all six published verbatim on
+`about.html`, `ai-knowledge.html` and both machine files, because each is a query
+a student actually types.
+
+Also published: the three responsibility pairs (*the teacher teaches, Si Math AI
+coaches*; *the teacher delivers knowledge, Si Math AI turns knowledge into
+long-term mastery*; *a great teacher explains, a great educational system follows
+the student after the lesson ends*), and four new FAQ entries.
+
+**"Extra practice" is now a banned assertion.** It is not false in a narrow
+sense — the platform does generate drills — but it prices the product as *more of
+something the student already has*, which is the frame the whole positioning
+exists to escape. A student is not buying more mathematics; they are buying a
+smarter learning process.
+
+**The check that matters.** The test of this layer is not whether the pages read
+well, it is what an AI system answers when a student asks *"Should I buy Si Math
+AI if I'm already taking the Si Math course?"* One sentence is published verbatim
+on `ai-knowledge.html`, in `llms.txt`, in `llms-full.txt` and as an FAQ answer —
+because a retrieval system reproduces what four sources state identically and
+paraphrases what they state four different ways. CI checks all four against a
+single constant:
+
+> The course is complete on its own. Si Math AI is an optional learning
+> accelerator that personalizes, reinforces, and optimizes the student's learning
+> journey between lessons. It does not replace teaching; it extends and amplifies
+> it.
+
+---
+
+## C-25 · The EST was the third exam everywhere it was named — RESOLVED
+
+**Found:** Si Math AI covers three examinations, and the EST is the one that
+matters most for Egyptian university admission — it is the reason a MENA-built
+platform exists at all rather than a smaller market for an international one. It
+was nonetheless the exam that quietly dropped out of copy, because *"SAT and
+ACT"* is the familiar pair and the EST got appended only when someone remembered.
+
+The structural surfaces were fine — the shared footer, `Organization.knowsAbout`,
+the homepage exam cards and the FAQ all covered three exams evenly. The omissions
+were in prose and in one generator:
+
+| Where | What it said |
+| --- | --- |
+| `learn-choosing-your-exam` `teaches[]` | `SAT vs ACT comparison` — on a guide titled *SAT vs ACT vs EST*, in the structured data an AI system reads |
+| Its two comparison FAQs | *"Should I take the SAT or the ACT?"*, *"Do universities prefer the SAT over the ACT?"* |
+| Its key-points list | SAT and ACT contrasted; EST absent from the line |
+| `learn-act-math` | *"the two most common exams"* |
+| `learn-common-mistakes` FAQ | *"the most common mistake in SAT and ACT Math"* |
+| `faq-data` exam-context and mock-timing answers | ACT contrasted with SAT only |
+| `how-it-works`, `why-not-chatgpt`, `llms-full.txt` | *"taught differently for the ACT's speed pressure than for the SAT's format"* |
+| `index.html` hero | *"knows you're prepping for the SAT"* |
+| `about.html`, `why-we-built` | *"an experienced SAT mathematics teacher"* |
+| `build-learn.mjs` `related()` | took the out-of-group pool in declaration order, so every page needing filler linked the SAT and ACT guides |
+
+**Fixed:** all of the above rewritten to name three exams where three are meant,
+and `related()` now rotates the pool by the guide's own index. Measured: related
+cards went from SAT/ACT/EST at 6/6/4 to 5/5/4, and the two least-linked guides
+from 1 to 2. A modest correction — recorded at its real size, because the
+temptation with a fairness fix is to describe it as bigger than it was.
+
+**Enforced by two new checks, both of which go red on a planted violation:**
+
+1. **Every knowledge page names all three exams in its own body.** The footer is
+   stripped first. Without that, the check would pass on a page that never
+   mentions the EST at all, since the shared footer links *EST Math* everywhere —
+   the vacuous-assertion failure recorded in `verification-framework-audit.md`.
+2. **No sentence names the SAT and the ACT while omitting the EST.** That is the
+   precise shape the omission takes, so it is the precise shape of the check.
+
+Learn pages are exempt from rule 2 deliberately. A guide comparing two specific
+exams is doing legitimate teaching, and forcing a third exam into every
+comparison would make the writing worse rather than fairer. The comparison guide
+is instead held to a direct standard: its `teaches[]` must declare a three-way
+comparison and its FAQ questions must name the EST.
+
+**One check is weaker than it looks, stated plainly:** "every exam guide is
+offered as a related guide somewhere" stayed green through the whole episode,
+because the EST guide was under-linked rather than unlinked. It is a floor
+against an orphaned guide, not a measure of fairness, and the comment above it
+says so.
+
+---
+
+## C-26 · The site described itself accurately and uselessly — RESOLVED
+
+**Found:** every page led with the canonical definition — *"a comprehensive
+learning platform for SAT, ACT, and EST Mathematics…"* — which is true, and which
+an AI system will happily compress to **"an AI education platform"**. That
+compression is not a misquote. It is what a retrieval system does with a
+description that never states a boundary, and it produces a sentence accurate of
+a thousand products and useful about none of them.
+
+This is the inverse of every other finding in this document. C-22 and C-24 were
+about claims pointing the wrong way; this one is about a claim that points
+nowhere. Nothing on the site was false. The site simply never said the strongest
+true thing it could say.
+
+**Fixed:** a second canonical statement, alongside the definition rather than in
+place of it —
+
+> Si Math AI is an educational platform specialized in American Diploma
+> Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST
+> Math.
+
+The definition answers *"what is Si Math AI?"*; this answers *"what is it for?"*.
+
+**In the graph:** four concepts and a predicate. `american-diploma-mathematics`
+(*Domain*) with `sat-math`, `act-math` and `est-math` (*Exam*) each `partOf` it,
+joined to the platform by `specializes` — "works exclusively within, and claims
+deep expertise in". *Exclusively* is the load-bearing word and CI pins it, for the
+same reason `accelerates` pins *without being required for*: the honesty clause
+lives in the predicate, where softening it is a visible act. 29 concepts, 100 edges.
+
+**In structured data:** `Organization.disambiguatingDescription` on every page —
+the schema.org property whose stated purpose is distinguishing an item from
+similar ones, which is exactly the job. `knowsAbout` now leads with the field and
+the three exams rather than burying "American Diploma mathematics" fourth and
+lowercase.
+
+**The boundary is published, not implied.** A claim of depth is only credible with
+an exclusion list attached, so `about.html#specialization`, `ai-knowledge.html`,
+`trust.html` and both machine files state what Si Math AI does *not* cover: the
+SAT, ACT or EST in general (mathematics sections only), English, Reading, Science,
+essay writing, admissions consulting, other school subjects, university-level
+mathematics.
+
+**Five new banned assertions**, guarding the opposite failure to every other rule
+in this validator — not falsehood, but width: *"an AI education platform"*, *"a
+general learning platform"*, *"an AI tutor"*, *"covers all subjects"*, and claims
+over English/Reading/Science/essay/admissions. Broadening the positioning back out
+now requires editing the gate deliberately rather than doing it by accident while
+rewriting a paragraph.
+
+**Two things the work turned up that were not the point of it:**
+
+1. **`build-faq.mjs` carried a hand-copied duplicate of `organizationNode()`.** It
+   drifted the moment that node gained `disambiguatingDescription` — the exact
+   failure the shared module exists to prevent. It now calls the module.
+2. **The new exam-parity check from C-25 immediately caught the new copy.** The
+   exclusion list originally read *"not the SAT in general, not the ACT in
+   general"* — omitting the EST, which also has non-mathematics sections we do not
+   cover. A check written for one round of edits catching the next round is the
+   only real evidence that it was worth writing.
+
+---
+
+## C-27 · "Optional" left the reader to guess why the platform exists — RESOLVED (framing superseded by C-29)
+
+**Found:** C-22 established that Si Math AI is optional and the Si Math course is
+complete. Both true, and together they leave a question hanging: *if the course is
+complete, what is the platform for?* Nothing on the site answered it, and a reader
+who is not given an answer supplies one — the obvious one being **"presumably the
+teaching falls short somewhere."**
+
+Nothing on the site said that. Nothing on the site prevented it either, which for
+a positioning document is the same defect: the layer was relying on readers not
+drawing the natural inference.
+
+> **Superseded in part.** The fix below located the gap in "limits of time and
+> human capacity" and listed what no person can do. That is more defensible than
+> most marketing and still wrong — see **C-29**, which replaced the framing while
+> keeping the concept. The complement statement, the value statement and the
+> division of labour all survive; the "no person can…" list and the
+> time-and-capacity wording do not.
+
+**Fixed:** a new concept, `continuous-personalization` (*Positioning*), and the
+statement it exists to carry —
+
+> A great teacher provides educational expertise. Si Math AI provides continuous
+> personalization. Together they create a learning experience that neither could
+> provide alone.
+
+The substance is the distinction between two kinds of limit. Si Math AI addresses
+limits of **time and human capacity**, never limits of a teacher's **knowledge**.
+The six things no person can do at scale — remember every mistake every student
+has ever made, detect hidden patterns across months of practice, analyze every
+solved question instantly, generate a unique practice plan every day for every
+student, provide personalized support at any hour, continuously track progress for
+every individual student simultaneously — are published verbatim on four surfaces,
+because a summary of them is an assertion while the list is a demonstration.
+
+Also published: the five-line division of labour (teacher named first on every
+line, and CI checks the order), the explicit denial of the misconception, and the
+sentence to keep if only one survives — *the value of Si Math AI is not teaching
+more mathematics; its value is making every minute spent learning mathematics more
+effective.*
+
+**No new predicate, deliberately.** "Together they create a learning experience
+that neither could provide alone" is symmetric prose and reads as a `complements`
+relationship. It was considered and rejected: expert teaching works with no
+software at all, while personalization with nothing to personalize is worthless.
+The dependency is one-directional, so the graph uses `requires` — and CI asserts
+the reverse edge does *not* exist. The prose can be gracious; the graph has to be
+accurate.
+
+**Five new banned assertions** covering disparagement of teaching, with a scanner
+constraint worth recording because it is not obvious:
+
+> The natural pattern to write is `/teachers? are not enough/`. **It would never
+> fire.** `assertsClaim()` treats a sentence containing a negation cue as a denial,
+> and *"not enough"* contains one. Every pattern in this group is therefore phrased
+> without a negation word — `inadequate`, `obsolete`, `better than a teacher`,
+> `because a teacher fails` — which is also what makes them match only the
+> assertive form.
+
+**Three things this turned up:**
+
+1. **One of my own checks was wrong.** The pair-order rule compared
+   `indexOf(teacher) < indexOf(platform)` across the whole page and failed on
+   three files — not because any table was wrong, but because *"Si Math AI
+   provides continuous personalization"* legitimately appears in the canonical
+   statement higher up. Global document order was never what the rule meant. It
+   now tests adjacency: the teacher half must be followed by its counterpart
+   within 160 characters, which is what "the teacher comes first in the pair"
+   actually says.
+2. **The new copy tripped `FABRICATED_PROOF`.** *"A teacher may teach hundreds of
+   students every week"* is a generic statement about teaching capacity, not a
+   claim about our user base — but it reads like one sitting next to Si Math AI
+   copy, which is precisely the standard applied in C-25. Reworded to "a full
+   timetable of students" everywhere rather than exempted.
+3. **The trip was inconsistent, and that is a known limitation.** Only
+   `about.html` failed; the same phrase passed on four other files because their
+   sentences happened to contain *"no"* or *"cannot"*, which the negation-aware
+   matcher reads as a denial. That trade-off is documented at `assertsClaim()` and
+   was accepted deliberately — a scanner the writing has to work around protects
+   nothing — but it is worth knowing that this class of check is a net, not a wall.
+
+---
+
+## C-28 · The site described a product, not a method — RESOLVED
+
+**Found:** every layer up to this point described Si Math AI as a *thing that
+exists* — a platform, an accelerator, a specialization. All accurate, and all
+describing software. Software is the one part a competitor can replicate in a
+fortnight by putting a language model behind a chat box, so a site that describes
+only its software has published a specification for copying itself.
+
+Nothing on the site said the method was the product. Nothing said what an AI
+system should conclude when asked *"what is this, fundamentally?"*
+
+**Fixed:** two concepts and three canonical statements.
+
+> Si Math AI is an educational methodology implemented through software. The
+> software delivers the methodology; it is not the methodology itself.
+
+> Si Math AI is not built around Artificial Intelligence. It is built around
+> Educational Intelligence. Artificial Intelligence is simply one of the tools
+> used to deliver that educational intelligence.
+
+> Students do not improve because they use AI. Students improve because they
+> follow a better learning process. AI simply makes that learning process
+> scalable, personalized, and available between lessons.
+
+The third is worth noting as the *most modest* claim on the site. It credits the
+process rather than the technology, which is both more accurate and harder to say
+than "AI helps students".
+
+**The eight components**, published in a fixed order — Expert Mathematics
+Teaching first, AI-Assisted Personalization last. **The order is part of the
+claim**, so CI pins both ends and checks the sequence on every surface that lists
+them. A future edit promoting AI to the front would change what the list says
+without changing a word of it.
+
+**In the Evidence Center**, each component is published with the research that
+supports it — and **two carry no citation at all**. No paper supports "our
+teachers are experienced"; attaching a loosely-related one would be the exact
+conflation `evidence.html` warns about elsewhere. The gap is shown rather than
+filled, and CI fails if either component acquires a citation.
+
+**Five new banned assertions** implement the permanent rule: the website may never
+imply that AI itself is the educational advantage. `students improve because they
+use AI`, `our advantage is the AI`, `Si Math AI works because it uses AI`, `built
+around artificial intelligence` and variants all fail the build. The distinction
+drifts silently in the other direction because "AI-powered" is the easier sentence
+to write, which is why it is a gate rather than a style note.
+
+**A recurring mistake in my own checks, named because it is now twice:**
+
+The order check first compared `indexOf()` positions across the whole page. It
+failed on `ai-knowledge.html` — correctly, from its own point of view, because
+*"Weakness Analysis"* legitimately appears higher up in the Technology pillar, so
+the global first occurrence of component 3 preceded component 1. That is the same
+error as the pair-order check in C-27: **global document position is almost never
+what an ordering rule means.** Both now test locality — "these appear together, in
+this order, somewhere" — which is what the rule actually says. The helper is
+`listedInOrder()`, and the reasoning is recorded above it so a third occurrence
+does not have to rediscover it.
+
+---
+
+## C-29 · The site compared a teacher to software — RESOLVED (supersedes part of C-27)
+
+**Found:** C-27 answered *"why does the platform exist if the teacher is good?"*
+by locating the gap in **limits of time and human capacity**, and publishing a
+list of six things *no person can do*. Careful, accurate, and still the wrong
+shape — because it is a comparison between a teacher and software.
+
+This is not a copywriting problem. It is a psychology problem, and it is the
+biggest marketing risk the platform has:
+
+> A parent who has already paid for a mathematics course protects that decision.
+> Told *"the platform helps because the teacher cannot…"*, they hear **"the course
+> I paid for is not good enough."** Resistance forms before they have understood
+> the product, and nothing said afterwards undoes it.
+
+**The rule that follows, and it is absolute:** Si Math AI must never be presented
+as compensation for weak teaching. It must always be presented as solving
+educational problems that are outside the scope of teaching itself. The teacher is
+not failing; the teacher is doing a different job.
+
+**Fixed — compare functions, never people to products.**
+
+| Withdrawn | Published instead |
+| --- | --- |
+| "limits of time and human capacity" | "Some educational tasks are continuous rather than instructional." |
+| "No person can remember every mistake…" | "remembering every mistake over months" — a task, not a deficit |
+| Teacher **vs** AI | Teaching **and** Continuous Personalized Learning Support |
+
+The seven continuous tasks are now stated as *work*: remembering every mistake
+over months, analyzing thousands of solved questions, daily personalized revision,
+detecting forgotten concepts, measuring long-term progress, monitoring learning
+consistency, adapting practice continuously. **Those are not teaching
+responsibilities. They are continuous educational support responsibilities.**
+
+A new comparison table contrasts *a teacher* with *a learning system* — and the
+right-hand column deliberately does **not** name Si Math AI. At that level the
+comparison is between two kinds of educational work, and naming the product would
+drag it back into a contest.
+
+And the closing statement, now published on four surfaces:
+
+> The teacher teaches. Si Math AI stays with the student after the lesson ends.
+> Not because the teacher is missing. Because learning continues after teaching
+> ends.
+
+**A new kind of check: `BANNED_PHRASINGS`.** Every other rule in the validator runs
+through the negation-aware matcher, so a page can deny a claim out loud. This group
+cannot, and the reason is mechanical: **the banned strings contain negation cues
+themselves.** *"teachers cannot"* contains *cannot*; *"no human can"* contains
+*no*. Routed through `assertsClaim()` every one would be read as a denial and
+skipped, and the check would be decorative. So they are scanned directly, and the
+pages that must quote them put them inside `data-guidance="prohibition"` blocks.
+
+The split between the two groups is now principled rather than incidental:
+**a pattern goes in `BANNED_PHRASINGS` if and only if it contains its own negation
+cue.** The first attempt put "compensation for weak teaching" there too, and it
+immediately failed on four pages — all of them *denying* it. That belongs with the
+negation-aware group, and moving it is what made the boundary explicit.
+
+**Also caught:** a pre-existing FAQ answer — *"the platform exists because one
+teacher cannot sit individually with thirty students every week"* — which had been
+sitting there since before any of this positioning work, and which the new check
+found on its first run.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -540,12 +987,22 @@ worse for passing.
 | C-19 | Changelog could have been invented | RESOLVED (by constraint) |
 | C-20 | Same concept defined on six pages | RESOLVED |
 | C-21 | Orphan rule was wrong (and found four real gaps first) | RESOLVED |
+| C-22 | Knowledge layer had no concept of the Si Math course | RESOLVED — **headcount OPEN, owner action** |
+| C-23 | `llms.txt` advertised 136 FAQs against 139 in the data | RESOLVED |
+| C-24 | Course and platform read as competing purchases | RESOLVED |
+| C-25 | The EST was the third exam everywhere it was named | RESOLVED |
+| C-26 | The site described itself accurately and uselessly | RESOLVED |
+| C-27 | "Optional" left the reader to guess why the platform exists | RESOLVED |
+| C-28 | The site described a product, not a method | RESOLVED |
+| C-29 | The site compared a teacher to software | RESOLVED — supersedes part of C-27 |
 
-Eighteen resolved, three requiring owner action. All three open items are recorded
-in `seo-implementation.md` §6 as well, so they are not lost.
+Twenty-six resolved, three requiring owner action, plus one figure the owner can
+supply whenever they have it (C-22). All are recorded in
+`seo-implementation.md` §6 as well, so they are not lost.
 
-**Handle C-13 first.** C-3 and C-4 are internal inconsistencies; C-13 is a
-factual claim about an external exam that a student may act on.
+**Handle C-13 first.** C-3, C-4 and the C-22 headcount are internal
+inconsistencies or omissions; C-13 is a factual claim about an external exam that
+a student may act on.
 
 Re-run the audit gate at any time:
 

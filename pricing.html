@@ -51,7 +51,8 @@
         "width": 1024,
         "height": 1024
       },
-      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance."
+      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
+      "disambiguatingDescription": "Si Math AI is an educational platform specialized in American Diploma Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST Math."
     },
     {
       "@type": "WebPage",
@@ -331,6 +332,11 @@ button{font-family:inherit;cursor:pointer}
   <div id="pageContent">
     <div class="empty-state"><div class="big-spin"></div><br>Loading plans…</div>
   </div>
+  <!-- Site-wide tagline. Single definition: scripts/_page-shell.mjs (TAGLINE).
+       Static markup, deliberately outside #pageContent — that container is
+       replaced wholesale by loadPage(), and a crawler that never runs the
+       script would otherwise see a page with no prose on it at all. -->
+  <p style="margin:34px auto 8px;max-width:44ch;text-align:center;padding-top:24px;border-top:1px solid var(--border-soft);font-family:var(--font-display);font-weight:700;font-size:15px;line-height:1.55;color:var(--text-400)">We don't replace great teaching. We multiply its impact.</p>
 </main>
 
 <!-- Upgrade Request Modal -->

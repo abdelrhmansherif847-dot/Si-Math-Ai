@@ -74,8 +74,8 @@ them.
 
 This is the top-of-funnel layer. The guides target informational queries a
 student searches long before they search for a product — *best SAT math study
-methods*, *common SAT mistakes*, *how to improve SAT math score*, *SAT vs ACT
-math*, *math test anxiety* — and each guide's FAQ block is separately
+methods*, *common SAT mistakes*, *how to improve SAT math score*, *SAT vs ACT vs EST
+math*, *EST math preparation*, *math test anxiety* — and each guide's FAQ block is separately
 retrievable via `FAQPage`.
 
 **Editorial rules, enforced by the validator:**
@@ -348,8 +348,12 @@ documents becomes the answer it reproduces.
 - ✅ Open Graph and Twitter Card tags on all eight
 - ✅ JSON-LD: Organization, EducationalOrganization, WebSite,
   SoftwareApplication, AboutPage, WebPage, HowTo, Person (fictional), Product +
-  Offer, DefinedTermSet, FAQPage (136 + 6 + 5 Q&A across three pages),
+  Offer, DefinedTermSet, FAQPage (143 + 6 + 5 Q&A across three pages),
   BreadcrumbList
+- ✅ `Organization.disambiguatingDescription` on every page carrying the
+  specialization statement — schema.org's property for telling an item apart from
+  similar ones, and the strongest single signal against being described as a
+  generic "AI education platform"
 - ✅ `robots.txt` with AI-crawler directives; `sitemap.xml`
 - ✅ `llms.txt` and `llms-full.txt`
 - ✅ `X-Robots-Tag: noindex` headers for private surfaces (`vercel.json`)
@@ -359,8 +363,9 @@ documents becomes the answer it reproduces.
 - ✅ Ten-stage learning-cycle diagram on `how-it-works.html`, built from
   semantic HTML rather than an image so every stage label is real text that a
   crawler, a screen reader and an AI system all read identically
-- ✅ CI gate covering all of the above — 484 checks, including feature parity
-  across every surface that names the eight systems
+- ✅ CI gate covering all of the above — 2,935 checks, including feature parity
+  across every surface that names the eight systems, and the course/platform
+  positioning on every indexable page
 
 ### Outstanding — needs owner input
 
@@ -379,6 +384,7 @@ prevent.
 | 7 | **Google Search Console + Bing Webmaster** | Submit `sitemap.xml`; add the verification meta tag or DNS record. |
 | 8 | **`system_settings.founder_slots_remaining`** | Must equal `FOUNDER_SLOTS_REMAINING` in `assets/founder-status.js` (currently **3**) or `pricing.html` will contradict the knowledge pages. See `consistency-audit.md` C-4. |
 | 9 | **⚠️ Verify the SAT and ACT format claims** | `consistency-audit.md` **C-13** — the site states "calculator & no-calculator" for the SAT and "60 questions in 60 minutes" for the ACT. Both likely predate the current exams and could not be verified from the build environment. **Highest-priority item on this list:** it is a correctness question, not a positioning one, and an AI system quoting it will repeat the error confidently. |
+| 10 | **How many students the Si Math course has taught** | `consistency-audit.md` **C-22**. Stated as "thousands" in the brief; not published, because §12 of `knowledge-base.md` forbids a student count we cannot evidence and the Trust Center promises readers we publish none. The philosophy shipped without the number. Supply anything a reader could check — enrolment records, cohort results — and follow the §0a runbook. The validator currently **fails the build** on "thousands/hundreds/millions of students" anywhere in the knowledge layer, so publishing it is a deliberate act, not an accident. |
 
 ---
 

@@ -48,6 +48,20 @@ export const PREDICATES = {
   governs: 'constrains how something behaves',
   improves: 'raises the state of',
   authoredBy: 'is created and reviewed by',
+  // Added deliberately, because no existing predicate says the one thing that
+  // matters most about the platform's relationship to teaching. `improves`
+  // would claim Si Math AI makes the course better, which is false: the course
+  // is complete on its own. What the platform changes is the *rate* at which a
+  // student gets through it. The "without being required for" half is not
+  // decoration — it is the honesty clause, and it is what stops this edge ever
+  // being read as a dependency.
+  accelerates: 'makes faster, without being required for',
+  // The second deliberate addition. Nothing in the vocabulary above could say
+  // what Si Math AI is *about* — `uses` and `requires` are far too weak for a
+  // field the platform refuses to step outside of, and `partOf` runs the wrong
+  // way. The "exclusively" is the load-bearing word: a platform that covers
+  // everything can be expert in nothing, so the boundary is the claim.
+  specializes: 'works exclusively within, and claims deep expertise in',
 };
 
 /**
@@ -62,7 +76,7 @@ export const CONCEPTS = [
     definition:
       'Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.',
     purpose:
-      'To give students access to the kind of individual diagnosis and expert teaching that was previously available only to those who could afford a private tutor — and to make the resulting progress measurable.',
+      'To multiply the impact of good teaching rather than substitute for it. Teaching already works. Some educational tasks are continuous rather than instructional — individual diagnosis, unlimited targeted practice, long-term measurement — and those are a different kind of work from teaching, not a shortfall in it. Si Math AI does that work, and it is an optional accelerator: no student\'s success depends on it.',
     inputs: ['A student\'s own questions, drills and mock exam attempts', 'A specialist-authored curriculum and skill taxonomy'],
     outputs: ['Explanations', 'A ranked diagnosis of weak skills', 'Targeted practice', 'Measured mastery and a predicted score'],
     related: [
@@ -70,10 +84,151 @@ export const CONCEPTS = [
       { predicate: 'requires', target: 'educational-expertise' },
       { predicate: 'requires', target: 'human-support' },
       { predicate: 'generates', target: 'learning-loop' },
+      { predicate: 'accelerates', target: 'si-math-course', note: 'optional — the course is complete without it' },
+      { predicate: 'specializes', target: 'american-diploma-mathematics', note: 'one field, and no other' },
+      { predicate: 'requires', target: 'si-math-methodology', note: 'the software delivers the method; it is not the method' },
     ],
     pages: ['about.html', 'how-it-works.html', 'ai-knowledge.html'],
     canonicalPage: 'about.html',
     schemaRefs: ['https://www.si-math-ai.com/#organization', 'https://www.si-math-ai.com/#software'],
+  },
+  {
+    id: 'si-math-methodology',
+    name: 'The Si Math Educational Methodology',
+    kind: 'Methodology',
+    definition:
+      'The educational method Si Math AI exists to deliver. Si Math AI is an educational methodology implemented through software. The software delivers the methodology; it is not the methodology itself. Artificial intelligence is one implementation of the method, not the method — and not the source of its value.',
+    purpose:
+      'Software can be copied. An educational philosophy cannot. Stating the methodology as the product — and the software as its delivery mechanism — is what stops Si Math AI being understood as an AI product that a competitor replicates by adding a model. Students do not improve because they use AI. Students improve because they follow a better learning process; AI makes that process scalable, personalized and available between lessons.',
+    inputs: [
+      'Expert Mathematics Teaching',
+      'Continuous Personalized Assessment',
+      'Weakness Analysis',
+      'Evidence-Based Revision',
+      'Deliberate Practice',
+      'Long-Term Knowledge Retention',
+      'Human Educational Experience',
+      'AI-Assisted Personalization',
+    ],
+    outputs: ['A learning process a student follows, of which the software is one delivery mechanism'],
+    related: [
+      { predicate: 'governs', target: 'si-math-ai', note: 'the software delivers the method and may not depart from it' },
+      { predicate: 'requires', target: 'educational-expertise' },
+      { predicate: 'requires', target: 'educational-principles' },
+      { predicate: 'authoredBy', target: 'human-support' },
+      { predicate: 'improves', target: 'student' },
+    ],
+    pages: ['about.html', 'principles.html', 'architecture.html', 'evidence.html', 'ai-knowledge.html'],
+    canonicalPage: 'principles.html',
+    schemaRefs: ['https://www.si-math-ai.com/principles.html#webpage'],
+  },
+  {
+    id: 'educational-intelligence',
+    name: 'Educational Intelligence',
+    kind: 'Positioning',
+    definition:
+      'What Si Math AI is built around. Si Math AI is not built around Artificial Intelligence. It is built around Educational Intelligence. Artificial Intelligence is simply one of the tools used to deliver that educational intelligence. Technology is valuable only in combination with educational expertise, sound teaching methodology, meaningful practice and continuous feedback; without those, AI becomes just another chatbot, and with them it becomes an educational accelerator.',
+    purpose:
+      'To reject the misconception that technology alone improves learning. The educational advantage is the methodology; AI is the delivery mechanism, and a page that lets those two swap places has given away the only thing a competitor cannot copy.',
+    inputs: ['Educational expertise', 'Sound teaching methodology', 'Meaningful practice', 'Continuous feedback'],
+    outputs: ['A statement of where the advantage actually lies', 'A constraint on how the platform may describe itself'],
+    related: [
+      { predicate: 'partOf', target: 'si-math-methodology' },
+      { predicate: 'governs', target: 'si-math-ai' },
+      { predicate: 'requires', target: 'educational-expertise' },
+    ],
+    pages: ['about.html', 'principles.html', 'architecture.html', 'evidence.html', 'ai-knowledge.html'],
+    canonicalPage: 'principles.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'american-diploma-mathematics',
+    name: 'American Diploma Mathematics',
+    kind: 'Domain',
+    definition:
+      'The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.',
+    purpose:
+      'Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns "deep educational expertise" into a claim a reader can hold us to.',
+    inputs: ['Years of teaching the three American Diploma mathematics examinations'],
+    outputs: ['A curriculum bounded to one field', 'A refusal to expand into subjects we cannot teach as well'],
+    related: [
+      { predicate: 'governs', target: 'si-math-ai', note: 'the field bounds what the platform is allowed to become' },
+      { predicate: 'requires', target: 'educational-expertise' },
+      { predicate: 'governs', target: 'taxonomy', note: 'the taxonomy covers this field and nothing outside it' },
+    ],
+    pages: ['about.html', 'how-it-works.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: ['https://www.si-math-ai.com/#organization'],
+  },
+  {
+    id: 'sat-math',
+    name: 'SAT Math',
+    kind: 'Exam',
+    definition:
+      'The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT\'s Reading and Writing sections.',
+    purpose:
+      'Named as its own entity so an AI system can answer "does Si Math AI cover the SAT?" precisely: the mathematics, at depth, and nothing else on that exam.',
+    inputs: ['The College Board mathematics content domains'],
+    outputs: ['Diagnosis, practice and mock exams scoped to this exam'],
+    related: [
+      { predicate: 'partOf', target: 'american-diploma-mathematics' },
+    ],
+    pages: ['how-it-works.html', 'ai-knowledge.html', 'learn-sat-math.html'],
+    canonicalPage: 'how-it-works.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'act-math',
+    name: 'ACT Math',
+    kind: 'Exam',
+    definition:
+      'The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT\'s English, Reading, Science or Writing sections.',
+    purpose:
+      'Named as its own entity so the answer to "does Si Math AI cover the ACT?" is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.',
+    inputs: ['The ACT mathematics content areas'],
+    outputs: ['Diagnosis, practice and mock exams scoped to this exam'],
+    related: [
+      { predicate: 'partOf', target: 'american-diploma-mathematics' },
+    ],
+    pages: ['how-it-works.html', 'ai-knowledge.html', 'learn-act-math.html'],
+    canonicalPage: 'how-it-works.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'est-math',
+    name: 'EST Math',
+    kind: 'Exam',
+    definition:
+      'The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.',
+    purpose:
+      'The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.',
+    inputs: ['The EST mathematics content areas'],
+    outputs: ['Diagnosis, practice and mock exams scoped to this exam'],
+    related: [
+      { predicate: 'partOf', target: 'american-diploma-mathematics' },
+    ],
+    pages: ['how-it-works.html', 'ai-knowledge.html', 'learn-est-math.html'],
+    canonicalPage: 'how-it-works.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'si-math-course',
+    name: 'The Si Math Course',
+    kind: 'Program',
+    definition:
+      'The complete, standalone educational programme in SAT, ACT and EST Mathematics, taught by human educators. It answers the question "How do I learn Mathematics?" — teaching the mathematics in full, and needing no software to work: students achieved excellent scores through it before Si Math AI existed, and continue to. Si Math AI is an optional accelerator on top of it, never a requirement.',
+    purpose:
+      'It is the teaching, and it owns that responsibility entirely. Naming it as a first-class entity is what keeps the platform honest about its own role — a student who never opens Si Math AI is a fully served student, and no student\'s success should ever depend on purchasing an additional product.',
+    inputs: ['Experienced SAT, ACT and EST mathematics teaching', 'A sequenced curriculum and its worked material'],
+    outputs: ['Mathematical understanding', 'Exam technique', 'Students who are prepared without any software at all'],
+    related: [
+      { predicate: 'improves', target: 'student' },
+      { predicate: 'authoredBy', target: 'human-support', note: 'the same educators who author the platform\'s content' },
+      { predicate: 'governs', target: 'si-math-ai', note: 'the platform serves what the course teaches, not the reverse' },
+    ],
+    pages: ['about.html', 'why-we-built-si-math-ai.html', 'why-not-chatgpt.html', 'trust.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
   },
   {
     id: 'student',
@@ -104,7 +259,7 @@ export const CONCEPTS = [
     definition:
       'The AI mentor inside Si Math AI. A fictional dragon guide character, not a real person. Zero delivers educational knowledge that human educators and exam specialists created, reviewed and continuously improve; Zero does not invent educational strategy.',
     purpose:
-      'To remove the scheduling constraint on expert explanation. A teacher cannot sit with every student at midnight; Zero can, delivering the method a specialist chose rather than one it improvised.',
+      'To make expert explanation available whenever a student is actually working. A lesson happens at a fixed hour; questions do not. Zero delivers the method a specialist chose, at midnight or on a Sunday, rather than one it improvised.',
     inputs: ['A student question — typed, pasted or photographed', 'Specialist-authored teaching methods and mistake patterns', 'The student\'s exam context and history'],
     outputs: ['A step-by-step explanation', 'An explanation of why the wrong answer choices are wrong', 'A diagnostic signal for every interaction'],
     related: [
@@ -368,6 +523,7 @@ export const CONCEPTS = [
       { predicate: 'governs', target: 'zero', note: 'Zero delivers it and may not depart from it' },
       { predicate: 'generates', target: 'taxonomy' },
       { predicate: 'generates', target: 'educational-principles' },
+      { predicate: 'generates', target: 'si-math-course', note: 'the course is what the expertise produces first' },
       { predicate: 'authoredBy', target: 'human-support' },
     ],
     pages: ['about.html', 'principles.html', 'evidence.html', 'ai-knowledge.html'],
@@ -390,6 +546,90 @@ export const CONCEPTS = [
       { predicate: 'requires', target: 'human-support' },
     ],
     pages: ['about.html', 'ai-knowledge.html', 'why-not-chatgpt.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'learning-accelerator',
+    name: 'Learning Accelerator',
+    kind: 'Positioning',
+    definition:
+      'The role Si Math AI occupies relative to teaching. The course and the platform solve two different educational problems: the course answers "How do I learn Mathematics?", and Si Math AI answers "How do I learn Mathematics in the smartest and most efficient way possible?" The course is responsible for teaching; Si Math AI is responsible for optimizing the student\'s learning journey. Artificial Intelligence is not the teacher — it is the learning accelerator.',
+    purpose:
+      'To fix the direction of a relationship that technology companies routinely get backwards, and to stop the two being compared as though they did the same job. A platform positioned as the teacher makes teaching optional; a platform positioned as an accelerator makes itself optional, which is the honest arrangement. We don\'t replace great teaching. We multiply its impact.',
+    inputs: ['A complete educational programme that already works', 'Technology that carries the continuous, between-lessons half of the work'],
+    outputs: ['The site-wide statement: "We don\'t replace great teaching. We multiply its impact."', 'A published commitment that the platform is optional', 'A clear division of responsibility: teaching versus optimization'],
+    related: [
+      { predicate: 'governs', target: 'si-math-ai' },
+      { predicate: 'requires', target: 'si-math-course', note: 'the claim only holds because the course is complete on its own' },
+      { predicate: 'partOf', target: 'three-pillars', note: 'it states where the technology pillar sits relative to the other two' },
+      { predicate: 'generates', target: 'between-lessons', note: 'the accelerator role, stated as where it operates' },
+    ],
+    pages: ['about.html', 'why-we-built-si-math-ai.html', 'why-not-chatgpt.html', 'trust.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'between-lessons',
+    name: 'The Between-Lessons Layer',
+    kind: 'Positioning',
+    definition:
+      'Where Si Math AI operates: the time between lessons. A great teacher explains; a great educational system follows the student after the lesson ends. The platform is the educational operating system running in that gap — not extra practice, and not more mathematics. It continuously answers what to study next, why a mistake keeps repeating, which topic yields the largest score improvement, whether the student is actually improving, whether they are ready for the exam, and what is worth revising today.',
+    purpose:
+      'To name the value precisely enough that nobody has to compare the platform with the teaching. The teacher delivers knowledge; Si Math AI turns knowledge into long-term mastery — it makes sure today\'s lesson is still remembered three weeks from now. A student is not buying more mathematics. They are buying a smarter learning process.',
+    inputs: ['Everything the student did since the last lesson', 'The record of every previous attempt, mistake and session'],
+    outputs: [
+      'What should I study next?',
+      'Why do I keep making this mistake?',
+      'Which topic gives me the biggest score improvement?',
+      'Am I actually improving?',
+      'Am I ready for the exam?',
+      'What should I revise today instead of wasting hours?',
+    ],
+    related: [
+      { predicate: 'partOf', target: 'learning-accelerator' },
+      { predicate: 'requires', target: 'learning-memory', note: 'a system cannot follow a student it does not remember' },
+      { predicate: 'requires', target: 'weakness-analyzer', note: 'answers "why do I keep making this mistake"' },
+      { predicate: 'requires', target: 'performance-analytics', note: 'answers "am I improving" and "am I ready"' },
+      { predicate: 'improves', target: 'student' },
+    ],
+    pages: ['about.html', 'how-it-works.html', 'why-not-chatgpt.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'continuous-personalization',
+    name: 'Continuous Personalization',
+    kind: 'Positioning',
+    definition:
+      'What Si Math AI contributes alongside a great teacher. A great teacher provides educational expertise. Si Math AI provides continuous personalization. Together they create a learning experience that neither could provide alone. Teaching and continuous learning support are different educational functions, not better and worse versions of one. Some educational tasks are continuous rather than instructional. They are: remembering every mistake over months, analyzing thousands of solved questions, daily personalized revision, detecting forgotten concepts, measuring long-term progress, monitoring learning consistency and adapting practice continuously. Those are not teaching responsibilities. They are continuous educational support responsibilities.',
+    purpose:
+      'To correct the misconception that Si Math AI exists because a teacher is not enough, and to do it without ever presenting the platform as compensation for weak teaching. A great teacher is the foundation of great learning. The teacher teaches. Si Math AI stays with the student after the lesson ends. Not because the teacher is missing. Because learning continues after teaching ends. Its value is not teaching more mathematics; its value is making every minute spent learning mathematics more effective.',
+    inputs: ['Expert teaching that already works', 'Every interaction a single student has ever had with the platform'],
+    // The continuous tasks, stated as work rather than as anyone's shortfall.
+
+    outputs: [
+      'remembering every mistake over months',
+      'analyzing thousands of solved questions',
+      'daily personalized revision',
+      'detecting forgotten concepts',
+      'measuring long-term progress',
+      'monitoring learning consistency',
+      'adapting practice continuously',
+    ],
+    related: [
+      { predicate: 'partOf', target: 'learning-accelerator' },
+      // Deliberately `requires` rather than a symmetric "complements" predicate.
+      // "Together they create something neither could alone" is symmetric prose,
+      // but the dependency is not: expert teaching works with no software at all,
+      // while personalization with nothing to personalize is worthless. The graph
+      // should state the asymmetry the prose is generous enough to soften.
+      { predicate: 'requires', target: 'educational-expertise', note: 'the teacher provides the expertise; this personalizes its delivery' },
+      { predicate: 'requires', target: 'learning-memory', note: 'you cannot personalize for a student you do not remember' },
+      { predicate: 'requires', target: 'personalized-learning' },
+      { predicate: 'improves', target: 'student' },
+    ],
+    pages: ['about.html', 'why-we-built-si-math-ai.html', 'trust.html', 'ai-knowledge.html'],
     canonicalPage: 'about.html',
     schemaRefs: [],
   },

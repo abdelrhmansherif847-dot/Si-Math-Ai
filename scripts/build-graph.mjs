@@ -118,6 +118,8 @@ const PRED_LABEL = {
   uses: 'uses', feeds: 'feeds', generates: 'generates', measures: 'measures',
   records: 'records', requires: 'requires', partOf: 'is part of',
   governs: 'governs', improves: 'improves', authoredBy: 'authored by',
+  accelerates: 'accelerates',
+  specializes: 'specializes in',
 };
 
 /** Reverse edges, so each concept can show what points at it. */

@@ -25,7 +25,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS, FOUNDER_SLOTS_REMAINING } from '../docs/knowledge/faq-data.mjs';
-import { nav, footer, headAssets } from './_page-shell.mjs';
+import { nav, footer, headAssets, organizationNode } from './_page-shell.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -75,19 +75,10 @@ const faqEntities = CATEGORIES.flatMap((cat) =>
 const graph = {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type': ['Organization', 'EducationalOrganization'],
-      '@id': `${SITE}/#organization`,
-      name: 'Si Math AI',
-      url: `${SITE}/`,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE}/assets/si-math-ai-logo.jpg`,
-        width: 1024,
-        height: 1024,
-      },
-      description: CANONICAL_DEFINITION,
-    },
+    // Was a hand-copied duplicate of organizationNode(). It drifted the moment
+    // that node gained disambiguatingDescription — the exact failure the shared
+    // module exists to prevent, so it now calls the module.
+    organizationNode(),
     {
       '@type': 'FAQPage',
       '@id': `${SITE}/faq.html#faqpage`,
