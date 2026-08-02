@@ -131,11 +131,12 @@ for (const f of PLAN_PAGES.concat(['plan-catalog.js'])) {
 
 // ── The migration is the only place the consolidation is defined ───────────
 t.section('The consolidation migration says what it does');
-const MIG = 'supabase/migrations-pending/20260802_plan_catalog_single_source.sql';
+// Applied 2026-08-02, so it lives in migrations/. The pending path is still
+// tried, so this suite keeps working if the file is ever staged again.
 let mig = '';
-try { mig = read(MIG); } catch { /* moved to migrations/ after approval */ }
-if (!mig) {
-  try { mig = read('supabase/migrations/20260802_plan_catalog_single_source.sql'); } catch { /* not present */ }
+for (const p of ['supabase/migrations/20260802_plan_catalog_single_source.sql',
+                 'supabase/migrations-pending/20260802_plan_catalog_single_source.sql']) {
+  try { mig = read(p); break; } catch { /* try the next location */ }
 }
 t.ok('the consolidation migration exists', !!mig);
 if (mig) {

@@ -2340,8 +2340,9 @@ async function loadPlanCatalog() {
     ppState.pending = {};
     ppUpdateEditbar();
     ro.style.display = '';
-    ro.textContent = '⚠ Read-only — admin_plan_catalog() is not deployed yet. ' +
-      'Apply supabase/migrations-pending/20260802_plan_catalog_single_source.sql to enable editing.';
+    ro.textContent = '⚠ Read-only — admin_plan_catalog() did not respond. ' +
+      'Editing needs supabase/migrations/20260802_plan_catalog_single_source.sql applied, ' +
+      'and the signed-in account to be an admin.';
     try {
       var r = await Promise.all([
         sb.from('pricing_settings').select('display_name, plan_code, price_egp, credits_granted, active').eq('active', true).order('sort_order'),

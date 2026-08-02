@@ -1,8 +1,23 @@
 -- =====================================================================
 -- Plan catalogue — one source of truth for name, price and credits
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval
---         (CLAUDE.md §3: every migration is approved individually).
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-02, owner-approved
+--         individually (CLAUDE.md §3).
+--
+--         POST-APPLY VERIFICATION: 14/14 PASS against live data — 9 plans in
+--         plan_definitions, both compat views in place, all 6 pricing_settings
+--         and all 3 credit_packs rows reproduced field-for-field, plan_code
+--         exposed on packs, FREE daily_limit still 15, PRO_MONTHLY
+--         device_limit still 3, all 7 prices and credit grants unchanged,
+--         packs still period_days=0, both RPCs deployed, legacy tables carry
+--         no client grants, views readable by anon+authenticated.
+--
+--         FOLLOW-UP: Supabase's advisor then flagged both new RPCs as
+--         `anon`-executable — Supabase's default privileges grant EXECUTE to
+--         anon at CREATE time, which the `revoke ... from public` below does
+--         not remove. Closed by 20260802b_plan_rpc_grant_hygiene.sql. Not a
+--         live bypass (the is_admin gate refused anon regardless), but it
+--         regressed the standard set by 20260730_sec08a_rpc_grant_hygiene.sql.
 --
 -- WHY THIS EXISTS
 -- ---------------
