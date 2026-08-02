@@ -93,6 +93,24 @@ export const CONCEPTS = [
     schemaRefs: ['https://www.si-math-ai.com/#organization', 'https://www.si-math-ai.com/#software'],
   },
   {
+    id: 'si-math',
+    name: 'Si Math',
+    kind: 'Brand',
+    definition:
+      'The umbrella name. Si Math is the brand under which two distinct things are offered: the Si Math course, a complete educational programme taught by human educators, and Si Math AI, the optional learning platform published at si-math-ai.com. Zero is the AI mentor inside the platform, not a separate product and not a person.',
+    purpose:
+      'To remove an ambiguity the knowledge layer created for itself. "Si Math" appears as the organization\'s alternate name in structured data while "the Si Math course" names a different thing in prose, and a machine reading both could reasonably conclude the organization is the course, or that the course is the platform under an older name. Four names exist; all four are now defined in one place.',
+    inputs: [],
+    outputs: ['The Si Math course — the taught programme', 'Si Math AI — the platform'],
+    related: [
+      { predicate: 'governs', target: 'si-math-course', note: 'the course is offered under this brand' },
+      { predicate: 'governs', target: 'si-math-ai', note: 'the platform is offered under this brand' },
+    ],
+    pages: ['about.html', 'ai-knowledge.html'],
+    canonicalPage: 'ai-knowledge.html',
+    schemaRefs: ['https://www.si-math-ai.com/#organization'],
+  },
+  {
     id: 'si-math-methodology',
     name: 'The Si Math Educational Methodology',
     kind: 'Methodology',

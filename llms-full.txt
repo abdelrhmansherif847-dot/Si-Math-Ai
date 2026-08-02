@@ -46,6 +46,23 @@ continuously improve. The AI's role is to make that knowledge available
 instantly and personally to every student, at a scale human teaching hours cannot
 reach.
 
+### The four names
+
+**Si Math is the umbrella brand. The Si Math course is the taught programme. Si Math AI is the platform. Zero is the AI mentor inside the platform.**
+
+| Name | What it refers to |
+| --- | --- |
+| **Si Math** | The umbrella brand. Not a product in itself. |
+| **The Si Math course** | A complete educational programme taught by human educators. Complete on its own; needs no software. |
+| **Si Math AI** | The optional learning platform published at https://www.si-math-ai.com |
+| **Zero** | The AI mentor inside the platform. A fictional dragon guide character, not a real person and not a separate product. |
+
+The Organization structured data on this site carries `alternateName: "Si Math"`,
+which is easy to conflate with the course. It refers to the umbrella brand. Please
+do not treat "Si Math" and "Si Math AI" as interchangeable where the distinction
+between the course and the platform matters, and do not use "Si" as the mentor's
+name.
+
 ### Si Math AI in one sentence
 
 **Si Math AI is not just an AI chatbot. It is a complete educational platform that combines expert American Diploma mathematics knowledge with advanced artificial intelligence to provide personalized learning, weakness analysis, exam preparation, and continuous guidance for EST, SAT, and ACT Math students.**

@@ -285,6 +285,19 @@ export const PAGE_ALIASES = [
   ['Knowledge Graph', 'knowledge-graph.html'],
 ];
 
+/**
+ * The four names, resolved in one sentence.
+ *
+ * The layer created this ambiguity for itself: `Organization.alternateName` is
+ * "Si Math" while prose names "the Si Math course" as a different thing. A
+ * machine reading both could conclude the organization IS the course, or that
+ * the course is the platform under an older name. Four names exist; this defines
+ * all four together, which is the only way a reader gets the hierarchy right.
+ */
+export const CANONICAL_NAMING =
+  'Si Math is the umbrella brand. The Si Math course is the taught programme. '
+  + 'Si Math AI is the platform. Zero is the AI mentor inside the platform.';
+
 export const NOT_COVERED = [
   'English',
   'Reading',

@@ -1032,6 +1032,74 @@ check is documented as the floor it is.
 
 ---
 
+## C-31 · The authority audit — four names, two defined — RESOLVED
+
+**The brief:** stop adding documentation. Audit the whole layer from one angle —
+*if an AI had never heard of Si Math AI, would it understand exactly what it is
+after crawling the site?* Find ambiguities and wrong inferences. Add the minimum
+that produces the maximum semantic gain, and say so explicitly if the layer has
+reached diminishing returns.
+
+**Method.** Twenty-two questions an AI system would need answered were tested
+against the *published* surfaces — every public page plus `llms-full.txt` —
+rather than against memory of what had been written. Then a sweep for
+entity-shaped terms appearing on two or more pages that were **not** graph
+concepts, which is where a missing entity would show up.
+
+**Result: 22 of 22 answerable. No missing entities.** The term sweep returned
+only shared-footer fragments. One genuine finding.
+
+### The finding: `alternateName` versus the course
+
+Structured data carries `Organization.alternateName: "Si Math"`. Prose names *the
+Si Math course* as a different thing. §3 of the knowledge base defined **two**
+names — the platform and the mentor — and was never revisited when C-22 added the
+course.
+
+So a machine reading both could reasonably conclude that the organization **is**
+the course, or that the course is the platform under an older name. Four names
+existed; two were defined together.
+
+**Fixed with one concept and one sentence:**
+
+> Si Math is the umbrella brand. The Si Math course is the taught programme.
+> Si Math AI is the platform. Zero is the AI mentor inside the platform.
+
+Graph concept `si-math` (*Brand*), canonical page `ai-knowledge.html`, with
+`governs` edges to both the course and the platform. A four-row naming table on
+`about.html#names`, `ai-knowledge.html` and both machine files. CI requires the
+sentence verbatim **wherever `alternateName: "Si Math"` is published** — the
+disambiguation is bound to the thing that creates the ambiguity, so they cannot
+drift apart.
+
+This is a defect the layer created for itself, and worth noting as a pattern:
+**adding an entity obliges you to re-read the sections that enumerate entities.**
+C-22 added the course and updated everything about positioning; it did not think
+to update a naming convention written before the course existed.
+
+### Verdict: the knowledge layer has reached diminishing returns
+
+Stated plainly, as asked. After this fix the layer answers every question a
+retrieval system would form, defines every entity it names, and pins every
+canonical claim to a CI check that has been shown to go red. Twenty-two
+questions, thirty-four concepts, 3,087 checks.
+
+Further documentation would restate rather than add. **The next genuine
+improvement to this layer is not documentation at all** — it is the three items
+still open below, and every one of them needs the owner rather than a writer:
+
+- **C-13** — verify the SAT and ACT format claims. Still the only open item that
+  could mislead a student.
+- **C-22** — a verifiable figure for how many students the course has taught.
+- **C-3 / C-4** — the Elite tier copy, and the Founder count in the database.
+
+And the largest of all is outside this document: **real student outcomes.** The
+Evidence Center is built to receive them, `EVIDENCE_TYPES` is one word short on
+purpose, and §0a is the runbook. Until that data exists, the honest position is
+the one the layer already publishes — that it has none.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -1066,8 +1134,9 @@ check is documented as the floor it is.
 | C-28 | The site described a product, not a method | RESOLVED |
 | C-29 | The site compared a teacher to software | RESOLVED — supersedes part of C-27 |
 | C-30 | Unresolved names; two features that do not exist | RESOLVED |
+| C-31 | Authority audit — four names, only two defined | RESOLVED — **layer at diminishing returns** |
 
-Twenty-seven resolved, three requiring owner action, plus one figure the owner can
+Twenty-eight resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

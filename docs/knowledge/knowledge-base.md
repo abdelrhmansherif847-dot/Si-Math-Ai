@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 33 concepts, and a 3,060-check CI gate. Nothing further is to
+knowledge graph of 34 concepts, and a 3,107-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -58,15 +58,34 @@ site already says wrongly?** The second is always in scope. If the answer is
 "neither — it just says the existing thing more nicely", that is the case the
 freeze exists to refuse.
 
-### The question that gates every feature
+### Closed by audit, 2026-08-02
 
-Before building anything, ask:
+An authority audit tested twenty-two questions an AI system would need answered
+against the published surfaces, and swept for entity-shaped terms that were not
+graph concepts. **22 of 22 answerable; no missing entities; one genuine ambiguity**
+(§3, the four names) — now fixed.
 
-> **"Will this genuinely help students learn better?"**
+The layer is at **diminishing returns**. Further documentation would restate
+rather than add. The next real improvements are not documentation: verify C-13,
+supply the figures in §15, and collect the outcome evidence §0a is built to
+receive. See `consistency-audit.md` C-31.
 
-If yes, build it. If no, do not — however impressive the technology is. This is
-what keeps Si Math AI an education platform rather than a feature list, and it
-applies to documentation as much as to code.
+### The questions that gate every feature
+
+Before building anything, ask all three:
+
+> 1. **Does this improve learning?**
+> 2. **Does this improve understanding?**
+> 3. **Does this improve long-term retention?**
+
+**If the answer to any of them is "no", the feature should not exist** — however
+impressive the technology is.
+
+Three questions replaced the single earlier one ("will this genuinely help
+students learn better?") on 2026-08-02, because a motivated advocate can answer
+that one yes about almost anything. The third is the one most features fail: a
+great deal of educational software improves performance during the session and
+nothing afterwards. See `governance.md` §7.
 
 ### And the philosophy, which does not change as the platform grows
 
@@ -776,6 +795,29 @@ Every explanation of Si Math AI resolves to these three pillars, in this order.
 
 ## 3. Identity
 
+### The four names (this is the disambiguation, read it first)
+
+> **Si Math is the umbrella brand. The Si Math course is the taught programme.
+> Si Math AI is the platform. Zero is the AI mentor inside the platform.**
+
+| Name | What it refers to |
+| --- | --- |
+| **Si Math** | The umbrella brand. Not a product in itself. |
+| **The Si Math course** | A complete educational programme taught by human educators. Complete on its own; needs no software. |
+| **Si Math AI** | The optional learning platform at si-math-ai.com. |
+| **Zero** | The AI mentor inside the platform. A fictional dragon guide character, not a real person. |
+
+This section used to define **two** names. The layer then added the Si Math course
+(§1a) without revisiting it, which left `Organization.alternateName: "Si Math"` in
+structured data sitting next to prose naming a *different* thing — and a machine
+reading both could reasonably conclude the organization **is** the course, or that
+the course is the platform under an older name.
+
+That was the only genuine ambiguity the 2026-08-02 authority audit found. Graph
+concept `si-math` (*Brand*), canonical page `ai-knowledge.html`; CI requires the
+sentence above verbatim wherever `alternateName: "Si Math"` is published.
+
+
 | Field | Value |
 | --- | --- |
 | Canonical brand name | **Si Math AI** (three words, "AI" capitalised) |
@@ -1326,7 +1368,12 @@ been worse than declaring our own honestly.
 
 ---
 
-## 14. Governance — the knowledge layer is updated FIRST
+## 14. Governance — the mechanics of shipping a change
+
+> **Whether a change belongs in the layer is decided by `governance.md`, not
+> here.** The layer has been FROZEN since 2026-08-02; most proposals stop at
+> Gate 1 of that document. This section is the *how* — which files, which
+> generators, which commands — for a change that has already passed those gates.
 
 **Rule: when a new major feature ships, the knowledge layer is updated before
 the feature is announced anywhere else.** Not afterwards, and not "when we get

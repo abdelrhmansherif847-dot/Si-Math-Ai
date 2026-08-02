@@ -11,7 +11,7 @@
 <meta name="color-scheme" content="dark"/>
 
 <title>Knowledge Graph — Every Concept, Defined Once | Si Math AI</title>
-<meta name="description" content="The official Si Math AI knowledge graph: 33 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
+<meta name="description" content="The official Si Math AI knowledge graph: 34 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
 <link rel="canonical" href="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"/>
 <meta name="author" content="Si Math AI"/>
@@ -20,14 +20,14 @@
 <meta property="og:site_name" content="Si Math AI"/>
 <meta property="og:locale" content="en_US"/>
 <meta property="og:title" content="Knowledge Graph — Every Concept, Defined Once"/>
-<meta property="og:description" content="33 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
+<meta property="og:description" content="34 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
 <meta property="og:url" content="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta property="og:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 <meta property="og:image:alt" content="Si Math AI logo"/>
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Knowledge Graph — Si Math AI"/>
-<meta name="twitter:description" content="33 concepts, each defined exactly once, with typed relationships between them."/>
+<meta name="twitter:description" content="34 concepts, each defined exactly once, with typed relationships between them."/>
 <meta name="twitter:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
@@ -155,6 +155,9 @@
       "hasDefinedTerm": [
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
@@ -302,6 +305,35 @@
       ],
       "specializes": [
         "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#si-math",
+      "identifier": "si-math",
+      "name": "Si Math",
+      "conceptKind": "Brand",
+      "description": "The umbrella name. Si Math is the brand under which two distinct things are offered: the Si Math course, a complete educational programme taught by human educators, and Si Math AI, the optional learning platform published at si-math-ai.com. Zero is the AI mentor inside the platform, not a separate product and not a person.",
+      "purpose": "To remove an ambiguity the knowledge layer created for itself. \"Si Math\" appears as the organization's alternate name in structured data while \"the Si Math course\" names a different thing in prose, and a machine reading both could reasonably conclude the organization is the course, or that the course is the platform under an older name. Four names exist; all four are now defined in one place.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math",
+      "canonicalPage": "https://www.si-math-ai.com/ai-knowledge.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "output": [
+        "The Si Math course — the taught programme",
+        "Si Math AI — the platform"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/#organization"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-course",
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
       ]
     },
     {
@@ -1511,7 +1543,7 @@
     <span class="k-eyebrow">◆ Knowledge Graph</span>
     <h1>Every concept, defined once</h1>
     <p class="k-lead" style="margin-top:20px">
-      The registry of record. 33 concepts, each with exactly one
+      The registry of record. 34 concepts, each with exactly one
       canonical definition, its purpose, what it consumes, what it produces, and
       typed relationships to everything around it.
     </p>
@@ -1554,6 +1586,7 @@
       <h2>Concepts</h2>
       <ol>
         <li><a href="#si-math-ai">Si Math AI <span style="color:var(--text-500)">· Platform</span></a></li>
+        <li><a href="#si-math">Si Math <span style="color:var(--text-500)">· Brand</span></a></li>
         <li><a href="#si-math-methodology">The Si Math Educational Methodology <span style="color:var(--text-500)">· Methodology</span></a></li>
         <li><a href="#educational-intelligence">Educational Intelligence <span style="color:var(--text-500)">· Positioning</span></a></li>
         <li><a href="#american-diploma-mathematics">American Diploma Mathematics <span style="color:var(--text-500)">· Domain</span></a></li>
@@ -1668,9 +1701,31 @@
         <li><span class="k-ev-tag k-ev-mechanism">specializes in</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a> — <em>one field, and no other</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#si-math-methodology">The Si Math Educational Methodology</a> — <em>the software delivers the method; it is not the method</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#educational-intelligence">Educational Intelligence</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#scope-guard">Scope Guard</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math">Si Math</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#si-math-methodology">The Si Math Educational Methodology</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#educational-intelligence">Educational Intelligence</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#scope-guard">Scope Guard</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/#organization<br/>https://www.si-math-ai.com/#software</p></div>
+    </div>
+
+    <div class="k-cap" id="si-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>Si Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Brand</span> · <code style="font-family:var(--font-mono);font-size:12px">si-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The umbrella name. Si Math is the brand under which two distinct things are offered: the Si Math course, a complete educational programme taught by human educators, and Si Math AI, the optional learning platform published at si-math-ai.com. Zero is the AI mentor inside the platform, not a separate product and not a person.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>To remove an ambiguity the knowledge layer created for itself. &quot;Si Math&quot; appears as the organization's alternate name in structured data while &quot;the Si Math course&quot; names a different thing in prose, and a machine reading both could reasonably conclude the organization is the course, or that the course is the platform under an older name. Four names exist; all four are now defined in one place.</p></div>
+
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The Si Math course — the taught programme</li><li style="font-size:15px;color:var(--text-300)">Si Math AI — the platform</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-course">The Si Math Course</a> — <em>the course is offered under this brand</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a> — <em>the platform is offered under this brand</em></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a> <strong>(canonical)</strong></p></div>
+      <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/#organization</p></div>
     </div>
 
     <div class="k-cap" id="si-math-methodology">
@@ -1825,7 +1880,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">authored by</span><span><a href="#human-support">Human Support</a> — <em>the same educators who author the platform's content</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a> — <em>the platform serves what the course teaches, not the reverse</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(accelerates)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(requires)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(accelerates)</span> · <a href="#si-math">Si Math</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(requires)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="why-we-built-si-math-ai.html">why-we-built-si-math-ai.html</a> · <a href="why-not-chatgpt.html">why-not-chatgpt.html</a> · <a href="trust.html">trust.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>

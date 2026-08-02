@@ -57,10 +57,10 @@ Active branch: `claude/si-math-migration-strategy-dnrteg`
 Never push to `main` directly. Never push to a different branch without
 explicit permission.
 
-### 5. The PUBLIC documentation is FROZEN (2026-08-01)
+### 5. The PUBLIC documentation is FROZEN (closed by audit, 2026-08-02)
 
 **Do not add public documentation pages.** The knowledge layer is complete: 22
-public pages, a knowledge graph, and a 3,060-check CI gate. Adding more would
+public pages, a knowledge graph, and a 3,107-check CI gate. Adding more would
 restate what already exists, dilute the pages that matter, and give AI systems
 more surface to retrieve inconsistently from.
 
@@ -82,6 +82,13 @@ Three exceptions, and only these:
 If asked to "improve the documentation" with no product change behind it, say
 this rule exists and ask what changed in the product instead.
 
+**`docs/knowledge/governance.md` is the authority on whether a change belongs.**
+Four gates — origin, novelty, placement, enforcement — and most proposals stop at
+the first. `knowledge-base.md` §14 is the mechanics for a change that passed them.
+The layer was closed by audit rather than by assertion: 22 of 22 crawler
+questions answerable, no missing entities, one ambiguity found and fixed
+(`consistency-audit.md` C-31).
+
 **What this freeze does NOT cover.** It governs the **public knowledge layer** —
 the root `*.html` pages, `docs/knowledge/`, `llms.txt`, `sitemap.xml`, structured
 data. It does **not** govern internal engineering records under `docs/roadmap/`
@@ -99,13 +106,15 @@ Knowledge Graph → Documentation → Website → Implementation
 `docs/knowledge/graph-data.mjs` first, always. CI rejects a half-specified
 concept, so the graph cannot accept one.
 
-### The question that gates every feature
+### The questions that gate every feature
 
-> **"Will this genuinely help students learn better?"**
+> 1. **Does this improve learning?**
+> 2. **Does this improve understanding?**
+> 3. **Does this improve long-term retention?**
 
-If yes, build it. If no, do not — however impressive the technology is. That
-question is what keeps Si Math AI an education platform rather than a feature
-list.
+**If the answer to any is "no", the feature should not exist** — however
+impressive the technology is. The educational methodology is the primary product;
+the software is its delivery system. See `governance.md` §7.
 
 ---
 
