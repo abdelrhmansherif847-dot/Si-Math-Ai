@@ -232,6 +232,53 @@ const CANONICAL_AFTER_THE_LESSON =
   'The teacher teaches. Si Math AI stays with the student after the lesson ends. '
   + 'Not because the teacher is missing. Because learning continues after teaching ends.';
 
+/**
+ * The canonical rebuttal — the answer to "isn't this just an AI chatbot?".
+ *
+ * Deliberately NOT a third definition pinned to all 31 pages. The definition
+ * answers "what is it?" and the specialization answers "what is it for?"; a third
+ * near-identical sentence everywhere would dilute both. This is the contrast
+ * form, so it is required where that question actually gets asked.
+ */
+const CANONICAL_REBUTTAL =
+  'Si Math AI is not just an AI chatbot. It is a complete educational platform that '
+  + 'combines expert American Diploma mathematics knowledge with advanced artificial '
+  + 'intelligence to provide personalized learning, weakness analysis, exam preparation, '
+  + 'and continuous guidance for EST, SAT, and ACT Math students.';
+
+/**
+ * Feature names people search for. The two with `provides: null` DO NOT EXIST,
+ * and those are the rows that matter: an AI system asked "does Si Math AI have
+ * parent reports?" should find the answer rather than infer one. Removing them
+ * would leave the question open, which is how a confident wrong answer happens.
+ */
+const CAPABILITY_ALIASES = [
+  ['AI Tutor', 'Zero AI Mentor'],
+  ['Weakness Analysis', 'Weakness Analyzer'],
+  ['Performance Analytics', 'Smart Progress Tracking'],
+  ['Exam Readiness', 'Smart Progress Tracking'],
+  ['Study History', 'Learning Memory'],
+  ['Snap & Solve', 'Zero AI Mentor'],
+];
+
+/** Capabilities Si Math AI does NOT have, and must keep saying so. */
+const ABSENT_CAPABILITIES = ['Parent Progress Reports', 'Truth System'];
+
+/** Topic names an AI may be asked for, and the page that answers each. */
+const PAGE_ALIASES = [
+  ['Why Si Math AI exists', 'why-we-built-si-math-ai.html'],
+  ['How Si Math AI works', 'how-it-works.html'],
+  ['Learning Philosophy', 'principles.html'],
+  ['Educational Methodology', 'principles.html'],
+  ['AI + Human Expertise', 'about.html'],
+  ['Parent Guide', 'learn-parents-guide.html'],
+  ['Student Guide', 'learn.html'],
+  ['Trust & Security', 'trust.html'],
+  ['Frequently Asked Questions', 'faq.html'],
+  ['AI Knowledge Reference', 'ai-knowledge.html'],
+  ['Knowledge Graph', 'knowledge-graph.html'],
+];
+
 /** The commitment the positioning creates. A constraint on the product, not copy. */
 const OPTIONALITY_COMMITMENT =
   "no student's success should ever depend on purchasing an additional product";
@@ -429,6 +476,21 @@ const BANNED_ASSERTIONS = [
     'positions the platform as compensation for weak teaching'],
   [/\bthe course is incomplete\b/i, 'implies the course is incomplete'],
   [/\bteacher\s+vs\.?\s+AI\b/i, 'frames a teacher against an AI rather than two functions'],
+  // Capabilities the platform does not have. The Trust Center states both
+  // absences; a marketing page claiming them would contradict it on the same
+  // site, which is worse than either statement alone.
+  [/\b(?:offers?|provides?|includes?|has|with)\s+(?:a\s+)?(?:automated\s+)?parent\s+(?:progress\s+)?reports?\b/i,
+    'claims parent progress reports, which do not exist'],
+  [/\bparent\s+(?:login|dashboard|portal)\s+(?:is\s+)?available\b/i,
+    'claims a parent login, which does not exist'],
+  [/\bonly works? with the Si Math course\b/i,
+    'claims the platform is tied to one course'],
+  // Sentence-scoped, because the page-level "is it marked internal?" check below
+  // is only a floor: it passes as long as the disclaimer appears SOMEWHERE on the
+  // page, so a false claim elsewhere on the same page slipped through the first
+  // positive control. This catches the claim itself.
+  [/\bTruth System\s+(?:helps|lets|allows|gives|provides|shows|is a feature|is a capability)\b/i,
+    'presents the Truth System as a student-facing feature'],
 ];
 
 /**
@@ -1250,6 +1312,101 @@ for (const [label, get] of purchaseTargets) {
 }
 ok('the FAQ asks the purchase question directly',
   CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6a. Retrieval surface — resolving names instead of leaving them to inference
+   An AI system asked "does Si Math AI have Performance Analytics?" or "where is
+   the Learning Philosophy page?" will answer either way. The only question is
+   whether it answers from something published or from a guess.
+
+   The rows that matter most are the two capabilities the platform does NOT have.
+   The Trust Center states both absences; a page claiming them would contradict
+   it on the same site, which is worse than either statement alone.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Retrieval surface (feature and page names)');
+
+// The rebuttal, verbatim, where the "is this just an AI?" question is answered.
+const REBUTTAL_SURFACES = ['about.html', 'how-it-works.html', 'ai-knowledge.html'];
+for (const file of REBUTTAL_SURFACES) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  ok(`${file}: states the canonical rebuttal verbatim`,
+    visibleText(read(file)).includes(CANONICAL_REBUTTAL));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  ok(`${f}: states the canonical rebuttal verbatim`,
+    read(f).replace(/\s+/g, ' ').includes(CANONICAL_REBUTTAL));
+}
+
+// Every feature alias resolves to a system that actually exists in SYSTEMS.
+for (const label of ['ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  for (const [alias, system] of CAPABILITY_ALIASES) {
+    ok(`${label}: maps "${alias}" to the system that provides it`,
+      pairInOrder(text, alias, system, 260),
+      !text.includes(alias) ? `missing: ${alias}` : `not mapped to ${system}`);
+  }
+}
+
+/**
+ * The absences. These are the most valuable rows on the page and the first a
+ * future marketing edit would delete, so each must appear WITH its denial.
+ */
+for (const label of ['ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  ok(`${label}: states that parent progress reports do not exist`,
+    /Parent Progress Reports/i.test(text) && /Not available/i.test(text));
+  ok(`${label}: states the Truth System is not a student-facing feature`,
+    /Truth System/i.test(text) && /Not a student-facing feature/i.test(text));
+}
+// Wherever "Truth System" appears publicly at all, it must be marked internal.
+for (const { file } of [...KNOWLEDGE_PAGES, ...SEO_PAGES]) {
+  if (!has(file)) continue;
+  const text = visibleText(read(file));
+  if (!/Truth System/i.test(text)) continue;
+  ok(`${file}: marks the Truth System as internal wherever it names it`,
+    /internal engineering programme/i.test(text));
+}
+
+// Every page alias points at a page that exists. A published index of topics
+// that resolves to a 404 is worse than not publishing one.
+for (const [topic, file] of PAGE_ALIASES) {
+  ok(`page alias "${topic}" resolves to a real page`, has(file), file);
+}
+for (const label of ['ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = PAGE_ALIASES.filter(([t]) => !text.includes(t)).map(([t]) => t);
+  ok(`${label}: publishes all ${PAGE_ALIASES.length} topic→page mappings`,
+    missing.length === 0, missing.join(' · '));
+}
+
+// Works with any teaching — the claim that makes the optionality real.
+const anyTeaching = CONCEPTS.find((c) => c.id === 'any-teaching');
+ok('the graph defines "works with any teaching"', !!anyTeaching);
+ok('the concept names all three arrangements',
+  !!anyTeaching && /Si Math course/i.test(anyTeaching.definition)
+    && /any other teacher or tutoring centre/i.test(anyTeaching.definition)
+    && /preparing alone/i.test(anyTeaching.definition));
+ok('the concept refuses lock-in as a motive',
+  !!anyTeaching && /lock-in/i.test(anyTeaching.purpose));
+for (const file of (anyTeaching ? anyTeaching.pages : [])) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states the platform is not tied to one course or teacher`,
+    /not tied to one course or one teacher/i.test(text));
+  ok(`${file}: names the self-study case`, /preparing alone/i.test(text));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  ok(`${f}: states the platform is not tied to one course or teacher`,
+    /not tied to one course or one teacher/i.test(read(f)));
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    6b0. The methodology — the product is the method, the software delivers it

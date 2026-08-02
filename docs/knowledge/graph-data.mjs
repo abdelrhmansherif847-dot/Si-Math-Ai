@@ -570,6 +570,24 @@ export const CONCEPTS = [
     schemaRefs: [],
   },
   {
+    id: 'any-teaching',
+    name: 'Works With Any Teaching',
+    kind: 'Positioning',
+    definition:
+      'Si Math AI is not tied to one course or one teacher. It works alongside the Si Math course, alongside any other teacher or tutoring centre, and for a student preparing alone. The platform supports the learning process between lessons, whoever gives the lessons — it has no way of knowing who taught a student, and no reason to.',
+    purpose:
+      'To make the optionality real rather than rhetorical. A platform that only works with its own course is a lock-in dressed as a complement, and the goal here is to improve a student\'s learning journey rather than to replace any teacher or bind a student to one source of teaching.',
+    inputs: ['Whatever teaching a student already has — a course, a school, a private tutor, or their own study'],
+    outputs: ['Diagnosis, practice and measurement that are indifferent to who did the teaching'],
+    related: [
+      { predicate: 'partOf', target: 'learning-accelerator' },
+      { predicate: 'improves', target: 'student' },
+    ],
+    pages: ['about.html', 'how-it-works.html', 'trust.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: [],
+  },
+  {
     id: 'between-lessons',
     name: 'The Between-Lessons Layer',
     kind: 'Positioning',
