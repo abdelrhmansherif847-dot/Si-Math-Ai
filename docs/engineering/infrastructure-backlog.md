@@ -59,11 +59,18 @@ to the served paths. Not decided.
 
 **Status:** `APPROVED` as engineering infrastructure work. Not scheduled.
 
-**Problem.** Nothing makes it visible that the repository is ahead of production.
-`main` currently contains an `ai-tutor` that is not deployed, and the only way to
-know is to compare the live platform version and bundle sha256 against the source
-by hand. The same applies to migrations: 68 files in the repo, 133 applied in the
-database, and the two counts drift independently.
+**Problem.** Nothing makes it visible whether the repository is ahead of
+production. The only way to know is to compare the live platform version and
+bundle sha256 against the source by hand. The same applies to migrations: 73
+files in the repo, 137 applied in the database, and the two counts drift
+independently.
+
+**Demonstrated again on 2026-08-02.** `main` and the deployed `ai-tutor` are in
+sync right now (v96 / platform version 135) — but establishing that took a
+manual four-file byte comparison, and the same exercise found `CLAUDE.md`
+recording platform version 133 while production ran 134. A stale figure in the
+one file that claims to be the measured baseline is exactly the failure this
+item removes.
 
 "Is it live?" is currently a question you can only answer by querying, and
 nothing prompts you to ask it.

@@ -132,13 +132,13 @@ student impact during exam-prep windows.
 | | |
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
-| Edge Functions | `ai-tutor` (platform version **134**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v95'` (branch `claude/free-quota-enforcement-bug-satsry` carries **v96**, the server-side quota gate — **not deployed**) |
+| Edge Functions | `ai-tutor` (platform version **135**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v96'` — the server-side quota gate. **Deployed**, and the deployed bundle is byte-for-byte identical to `main` (all four files) |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
-| ⚠️ Quota gate status | **`main` carries v96; production runs v95.** Both v96 migrations are APPLIED and the v96 site is live, so **no chat turn is charged until `ai-tutor` v96 is deployed.** That deploy is the outstanding step — see the investigation record §8 |
+| Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
-| `ai-tutor` deployed bundle | sha256 `03441f52dbb14e30dd8f179b95a2a936bf014b342eb191e1fb75dab05965a865`, deployed 2026-08-02T04:47:29Z. (This row previously read version 133 / `c3f5fff1…` / 2026-07-31 — one deploy stale. Re-read it from `list_edge_functions` rather than trusting it.) |
+| `ai-tutor` deployed bundle | sha256 `1b6ac2d1507742872b38614181daea359dbcddf9d4aade60970c8e0692315aac`, deployed 2026-08-02T17:53:15Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}`. **Re-read this row from `list_edge_functions` rather than trusting it** — it was found one deploy stale on 2026-08-02 (it read version 133 / `c3f5fff1…` while production ran 134) |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
@@ -154,11 +154,15 @@ recorded "v69 / platform version 78" as if the two moved together; they do not.
 The only unambiguous identity for what is *running* is the platform version plus
 the bundle sha256.
 
-**The repo is currently ahead of production.** Phase V0 is merged into `main`
-but **not deployed** — the running function predates it. Do not assume code in
-`main` is live.
+**`main` and the deployed function are in sync right now** — verified 2026-08-02
+by comparing all four bundle files against `main`, byte for byte. That is the
+exception, not the rule: the repo is *routinely* ahead of production, because
+merging deploys the site automatically and nothing deploys the Edge Function.
+Phase V0 sat merged-but-undeployed for exactly this reason until v96 shipped
+with it. **Never infer "live" from "merged"** — compare the platform version and
+bundle sha256, which is a query, not a read.
 
-**The migration file count and the applied count differ** (68 vs 131): early
+**The migration file count and the applied count differ** (73 vs 137): early
 migrations were applied without a committed file. `scripts/check-migration-parity.sh`
 exists for this. Do not treat the file list as the applied list.
 

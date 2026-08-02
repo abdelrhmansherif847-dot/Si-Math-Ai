@@ -203,9 +203,13 @@ mechanism is either a Vercel deploy-approval setting or a CI gate on those paths
 
 ### 5.3 The repository is routinely ahead of production
 
-`main` currently contains an `ai-tutor` that is not deployed. Nothing in the
-repository or on any dashboard makes that visible — you have to compare the
-source against the live platform version and sha256 by hand.
+`main` and the deployed `ai-tutor` are in sync as of 2026-08-02 (v96 / platform
+version 135), and that is the unusual state, not the normal one — merging
+publishes the site automatically while nothing publishes the function. Nothing in
+the repository or on any dashboard makes the difference visible: you have to
+compare the source against the live platform version and sha256 by hand, which
+is how the v96 deploy was confirmed and how CLAUDE.md was found recording a
+platform version one deploy stale.
 
 **Recommendation:** a small CI or dashboard check that compares the deployed
 bundle identity against `main` and reports the drift. Until it exists, treat

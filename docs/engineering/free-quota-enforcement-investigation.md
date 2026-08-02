@@ -2,11 +2,10 @@
 
 **Reported:** 2026-08-02 — "free users are not being blocked after reaching the
 question limit; the backend keeps serving Zero responses."
-**Status:** code complete and merged. Both migrations **APPLIED** to production
-(2026-08-02). **`ai-tutor` v96 is NOT deployed** — the running function is still
-v95 / platform version 133. That deploy is the only remaining production step,
-and until it happens the server-side gate is not in force.
-**Branch:** `claude/free-quota-enforcement-bug-satsry`
+**Status:** ✅ **SHIPPED** (2026-08-02). Code merged to `main`, both migrations
+applied, `ai-tutor` **v96 deployed** — platform version 135, sha256
+`1b6ac2d1…`, deployed 17:53:15Z. The server-side quota gate is in force.
+**Branch:** `claude/free-quota-enforcement-bug-satsry` (merged)
 
 ---
 
@@ -314,68 +313,115 @@ Full suite: **27/27 green**, up from 26 (baseline re-run before any edit).
 
 ---
 
-## 8. Deployment — what is done, and what is left
+## 8. Deployment — shipped
 
 Recorded in full at `docs/engineering/deployment-pipeline.md` §5.6.
 
 | # | Step | State |
 |---|---|---|
-| 1 | Apply `20260802e_consume_credits_idempotency.sql` | ✅ done — version `20260802173710` |
-| 2 | Apply `20260802f_refund_ai_credit_server_only.sql` | ✅ done — version `20260802174206` |
-| 3 | Merge the branch to `main` (Vercel publishes the site) | ✅ done |
-| 4 | **Deploy `ai-tutor` v96** — DEPLOY.md §4 Path B (CLI), four-file bundle | ❌ **NOT DONE** |
-| 5 | Verify platform version + sha256 + all four bundle files | pending step 4 |
-| 6 | Run the end-to-end verification in §10 | pending step 4 |
+| 1 | Apply `20260802e_consume_credits_idempotency.sql` | ✅ version `20260802173710` |
+| 2 | Apply `20260802f_refund_ai_credit_server_only.sql` | ✅ version `20260802174206` |
+| 3 | Merge to `main` (Vercel publishes the site) | ✅ `e591c85` |
+| 4 | Deploy `ai-tutor` v96 — DEPLOY.md §4 Path B (CLI) | ✅ platform version **135**, 17:53:15Z |
+| 5 | Verify version, sha256, bundle files | ✅ §9 |
+| 6 | Behavioural verification | ✅ at the RPC layer — §9. One caveat, stated there |
 
-Steps 2 and 3 were taken ahead of step 4 at the owner's explicit direction, and
-the consequence has to be stated rather than buried, because it is the exact
-condition this document exists to describe.
+### The transition window cost nothing
 
-**Until step 4 lands, no chat turn is charged at all.** The live site is the v96
-`chat.html`, which no longer charges because the server was supposed to; the live
-function is v95, which never did. Free students are unlimited and paid students
-are not debited. That is a wider hole than the one reported — the reported bug at
-least metered honest clients.
+Steps 2 and 3 went ahead of step 4 at the owner's direction, which opened the
+window this document warns about: for about three minutes the v96 site charged
+nobody and the v95 function charged nobody either.
 
-Also open until step 4: the pre-v96 refund path is revoked with no server-side
-replacement running, so any student still on a cached copy of the old page is
-charged for out-of-scope turns and failed calls.
+**Measured: zero turns occurred in it.** The merge landed ~17:50Z, the deploy at
+17:53:15Z, and the last student turn before both was 16:24Z. No student reached
+an unmetered request.
 
-Both close the moment v96 is deployed. Neither needs any further code change —
-the branch is complete and green; it is the deploy that is outstanding.
-
-The original ordering rationale, kept because it is the reusable part: deploying
-the function first costs a **double charge** for the length of the window
-(visible, bounded, refundable), while shipping the site first costs **no charge
-at all**. When a responsibility moves between surfaces, the receiving surface has
-to be live before the sending one stops.
+That is luck, not design, and it is worth writing down as luck. The ordering
+rule stands unchanged: deploying the function first costs a **double charge**
+for the length of the window — visible, bounded, refundable — while shipping the
+site first costs **no charge at all**. When a responsibility moves between
+surfaces, the receiving surface must be live before the sending one stops.
 
 ---
 
-## 10. End-to-end verification
+## 9. Post-deployment verification (2026-08-02)
 
-To run **after** step 5, against production. Each check names what would make it
-fail, so a pass means something.
+### Deployment integrity — 4/4
 
-| # | Check | Method | Pass |
-|---|---|---|---|
-| 1 | Free user at the cap gets 402 | Test account on FREE, 15 turns, then one more | HTTP 402, `reason: daily_limit_reached`, `daily_used: 15`; the upsell renders; **no `ai_model_calls` row for the blocked turn** |
-| 2 | Paid user unaffected | PRO account, several turns | 200 each, `credits_balance` falls by the per-operation cost, no 402 |
-| 3 | RPC failure fails closed | Rename `consume_credits` in a transaction and roll back, or point the gate at a missing feature | HTTP 503 `entitlement_unavailable`, **not** 402, and no OpenAI call |
-| 4 | Refunds are server-only | As a signed-in student: `select public.refund_ai_credit('<own log id>')` | `permission denied for function refund_ai_credit` |
-| 5 | No duplicate charge on retry | Two invocations with the same `client_request_id` | One `ai_usage_logs` row; second reply carries `idempotent_replay: true` with the same `log_id` |
+| Check | Result |
+|---|---|
+| Platform version | **135**, ACTIVE |
+| sha256 | `1b6ac2d1507742872b38614181daea359dbcddf9d4aade60970c8e0692315aac` |
+| Bundle files | all four present |
+| Source identity | `AI_TUTOR_VERSION = v96`; all four files **byte-for-byte identical** to `main @ e591c85` |
 
-Check 1's "no `ai_model_calls` row" clause is the one that actually proves the
-gate is *before* the provider call rather than merely present — a gate that
-denies after the completion would pass every other clause.
+The byte comparison is the check that matters here, not the presence of a
+version string. DEPLOY.md §4 exists because this function has twice been
+deployed as a truncated stub; comparing 231,776 characters of `index.ts` against
+the repo is what actually rules that out.
 
-Check 3 must distinguish 503 from 402. A fail-closed path that reports "out of
-credits" would send a paying student to the pricing page during an outage, and
-would look identical to check 1 in the logs.
+### The gate's position, measured in the deployed bytes
+
+| Landmark | Offset | Relative to gate (+24498) |
+|---|---|---|
+| idempotency replay | +11387 | before — not charged |
+| worksheet guard (0 tokens) | +22201 | before — not charged |
+| direct OpenAI completion | +38704 | after |
+| vision question detection | +80307 | after |
+| v2 difficulty classifier | +101619 | after |
+| L3 shadow pipeline | +105014 | after |
+
+### Behaviour — 6/6, at the RPC layer
+
+| Check | Result |
+|---|---|
+| FREE user at the cap | `daily_limit_reached`, `daily_used: 15`, `daily_limit: 15`, `pack_credits: 0` |
+| Paid path charges | 20 credits deducted, 20000 → 19980 |
+| Retry with the same key | `idempotent_replay: true`, same `log_id`, balance still 19980, one row, one CONSUME |
+| Server-side refund | `refunded: 20`, balance restored to 20000 |
+| Client refund | `authenticated` → **insufficient_privilege** |
+| Grants | refund: client=false / service_role=true · charge: authenticated=true, anon=false |
+
+**Caveat, stated because it changes what these prove.** These exercised
+`consume_credits` and `refund_ai_credit` directly, not the Edge Function over
+HTTP — the verifying environment cannot reach `*.supabase.co`. Combined with the
+byte-identical source and the offsets above, the inference is strong; it is not
+the same as an end-to-end HTTP test, and should not be written up as one.
+
+Every account touched was restored exactly: the paid test account is back to
+20000, the FREE account back to 0 used today, zero test rows left.
+
+### Not yet observed
+
+At 18:02Z, **no production request had reached version 135** — every log line is
+version 134, and `ai_usage_logs` holds no row with a `client_request_id`. Since
+only v96 sends that key, the first non-null value in that column is the moment
+v96 is proven to have served a real student. `ai_tutor_failures` is empty.
 
 ---
 
-## 9. What this should change about how the codebase is read
+## 10. The one check still outstanding
+
+§9 covers everything verifiable without production traffic. Two of the original
+end-to-end checks cannot be closed from the RPC layer, and both need exactly one
+real chat turn to close:
+
+| Check | Why the RPC layer cannot close it | What closes it |
+|---|---|---|
+| The gate runs **before** the provider call | The offsets in §9 prove it in the source. They do not prove the deployed isolate executes that path | A blocked turn that leaves **no `ai_model_calls` row**. A gate that denied *after* the completion would pass every other check |
+| v96 is what answers students | `consume_credits` was exercised directly, not through the function | The first non-null `ai_usage_logs.client_request_id`. v95 never sends that key, so one row is proof |
+
+Both resolve on the first student message. Until then the honest statement is
+"deployed and verified by inspection", not "verified in production".
+
+The 503-vs-402 distinction is worth re-checking when traffic exists too: a
+fail-closed path that reported "out of credits" would send a paying student to
+the pricing page during an outage, and would be indistinguishable from a genuine
+cap hit in the logs.
+
+---
+
+## 11. What this should change about how the codebase is read
 
 The bug was not hard to see once looked for; it was hard to look for, because
 two documents and one code comment said it was already handled. Each was written
