@@ -450,5 +450,65 @@ export const NOT_ON_ROADMAP = [
   { title: 'Score guarantees', detail: 'No honest provider can offer one, and we will not publish improvement averages we cannot verify.' },
 ];
 
+/**
+ * THE METHODOLOGY — the eight components of the Si Math educational method.
+ *
+ * These sit on evidence.html rather than only on principles.html for a specific
+ * reason: the methodology is the claim, so it is the thing that needs evidence
+ * attached. Each component names what it means and, where one exists, the
+ * research entry above that supports the principle.
+ *
+ * `ref` obeys the same rule as everything else on that page: citing research
+ * about a principle is NOT evidence that Si Math AI works. It is evidence that
+ * the principle works, and a statement that we apply it. Two components carry no
+ * `ref` at all — that is honest rather than an omission, because no citation
+ * supports "our teachers are experienced" and pretending otherwise would be the
+ * exact conflation evidence.html warns about.
+ */
+export const METHODOLOGY = [
+  {
+    name: 'Expert Mathematics Teaching',
+    what: 'The curriculum, explanations, mistake catalogue and exam strategy are authored and reviewed by experienced SAT, ACT and EST mathematics educators. This is the foundation the other seven rest on.',
+    ref: null,
+  },
+  {
+    name: 'Continuous Personalized Assessment',
+    what: 'Every attempt — in chat, a drill or a mock — is assessed against one canonical skill rather than left as undifferentiated activity, so assessment is continuous instead of episodic.',
+    ref: 'black-wiliam-1998',
+  },
+  {
+    name: 'Weakness Analysis',
+    what: 'Assessment is aggregated into a ranked diagnosis: which specific skills are costing the most marks, with a severity band each. Students are poor judges of their own weaknesses, which is why this is external rather than self-reported.',
+    ref: 'kornell-bjork-2007',
+  },
+  {
+    name: 'Evidence-Based Revision',
+    what: 'What a student revises is decided by their own recorded evidence, not by chapter order or by what feels uncomfortable.',
+    ref: 'hattie-timperley-2007',
+  },
+  {
+    name: 'Deliberate Practice',
+    what: 'Practice is targeted at identified weaknesses and skips skills already mastered — effortful and specific rather than high-volume and comfortable.',
+    ref: 'roediger-karpicke-2006',
+  },
+  {
+    name: 'Long-Term Knowledge Retention',
+    what: 'The method is built for what survives to test day, not for what a student can do in the lesson. Spacing and interleaving are the mechanism; Learning Memory is what makes them possible across months.',
+    ref: 'cepeda-2006',
+  },
+  {
+    name: 'Human Educational Experience',
+    what: 'Judgements about what to teach and how to teach it stay with people. Specialists review how students actually perform and revise the material accordingly.',
+    ref: null,
+  },
+  {
+    name: 'AI-Assisted Personalization',
+    what: 'Artificial intelligence delivers the seven components above to one student at a time, at any hour, in the language they think in. It is the delivery mechanism, listed last because that is where it belongs.',
+    ref: 'bloom-1984',
+  },
+];
+
+export const TOTAL_METHODOLOGY = METHODOLOGY.length;
+
 export const TOTAL_CAPABILITIES = CAPABILITIES.length;
 export const TOTAL_RESEARCH = RESEARCH.length;

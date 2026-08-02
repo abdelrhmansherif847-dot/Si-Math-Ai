@@ -139,6 +139,53 @@ export const HUMAN_CAPACITY_LIMITS = [
   'continuously track progress for every individual student simultaneously',
 ];
 
+/**
+ * The methodology layer — the deepest one, and the only one a competitor cannot
+ * copy by adding a model. Software can be copied; an educational philosophy
+ * cannot.
+ */
+export const CANONICAL_METHODOLOGY =
+  'Si Math AI is an educational methodology implemented through software. '
+  + 'The software delivers the methodology; it is not the methodology itself.';
+
+/** Where the platform is actually centred. AI is a tool, not the centre. */
+export const CANONICAL_EDUCATIONAL_INTELLIGENCE =
+  'Si Math AI is not built around Artificial Intelligence. It is built around '
+  + 'Educational Intelligence. Artificial Intelligence is simply one of the tools '
+  + 'used to deliver that educational intelligence.';
+
+/**
+ * The mechanism claim, and a deliberately modest one: it credits the process
+ * rather than the technology, which is both more accurate and harder to say.
+ */
+export const IMPROVEMENT_STATEMENT =
+  'Students do not improve because they use AI. Students improve because they follow '
+  + 'a better learning process. AI simply makes that learning process scalable, '
+  + 'personalized, and available between lessons.';
+
+/** The eight components the methodology is built from. */
+export const METHODOLOGY_PRINCIPLES = [
+  'Expert Mathematics Teaching',
+  'Continuous Personalized Assessment',
+  'Weakness Analysis',
+  'Evidence-Based Revision',
+  'Deliberate Practice',
+  'Long-Term Knowledge Retention',
+  'Human Educational Experience',
+  'AI-Assisted Personalization',
+];
+
+/**
+ * What technology has to be combined with before it is worth anything. Published
+ * as the rejection of the misconception that technology alone improves learning.
+ */
+export const TECHNOLOGY_CONDITIONS = [
+  'Educational expertise',
+  'Sound teaching methodology',
+  'Meaningful practice',
+  'Continuous feedback',
+];
+
 export const NOT_COVERED = [
   'English',
   'Reading',
@@ -275,6 +322,10 @@ export function organizationNode() {
     // is precisely the job here, since "AI learning platform" describes hundreds
     // of products and distinguishes none of them.
     disambiguatingDescription: CANONICAL_SPECIALIZATION,
-    knowsAbout: SPECIALIZATION_HIERARCHY,
+    // The field, then the exams inside it, then the method the platform delivers.
+    // The methodology principles belong here rather than in a prose field: they
+    // are what the organization knows about, and a machine reading this node
+    // should see that the expertise is educational rather than technological.
+    knowsAbout: [...SPECIALIZATION_HIERARCHY, ...METHODOLOGY_PRINCIPLES],
   };
 }

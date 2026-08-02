@@ -828,6 +828,67 @@ constraint worth recording because it is not obvious:
 
 ---
 
+## C-28 · The site described a product, not a method — RESOLVED
+
+**Found:** every layer up to this point described Si Math AI as a *thing that
+exists* — a platform, an accelerator, a specialization. All accurate, and all
+describing software. Software is the one part a competitor can replicate in a
+fortnight by putting a language model behind a chat box, so a site that describes
+only its software has published a specification for copying itself.
+
+Nothing on the site said the method was the product. Nothing said what an AI
+system should conclude when asked *"what is this, fundamentally?"*
+
+**Fixed:** two concepts and three canonical statements.
+
+> Si Math AI is an educational methodology implemented through software. The
+> software delivers the methodology; it is not the methodology itself.
+
+> Si Math AI is not built around Artificial Intelligence. It is built around
+> Educational Intelligence. Artificial Intelligence is simply one of the tools
+> used to deliver that educational intelligence.
+
+> Students do not improve because they use AI. Students improve because they
+> follow a better learning process. AI simply makes that learning process
+> scalable, personalized, and available between lessons.
+
+The third is worth noting as the *most modest* claim on the site. It credits the
+process rather than the technology, which is both more accurate and harder to say
+than "AI helps students".
+
+**The eight components**, published in a fixed order — Expert Mathematics
+Teaching first, AI-Assisted Personalization last. **The order is part of the
+claim**, so CI pins both ends and checks the sequence on every surface that lists
+them. A future edit promoting AI to the front would change what the list says
+without changing a word of it.
+
+**In the Evidence Center**, each component is published with the research that
+supports it — and **two carry no citation at all**. No paper supports "our
+teachers are experienced"; attaching a loosely-related one would be the exact
+conflation `evidence.html` warns about elsewhere. The gap is shown rather than
+filled, and CI fails if either component acquires a citation.
+
+**Five new banned assertions** implement the permanent rule: the website may never
+imply that AI itself is the educational advantage. `students improve because they
+use AI`, `our advantage is the AI`, `Si Math AI works because it uses AI`, `built
+around artificial intelligence` and variants all fail the build. The distinction
+drifts silently in the other direction because "AI-powered" is the easier sentence
+to write, which is why it is a gate rather than a style note.
+
+**A recurring mistake in my own checks, named because it is now twice:**
+
+The order check first compared `indexOf()` positions across the whole page. It
+failed on `ai-knowledge.html` — correctly, from its own point of view, because
+*"Weakness Analysis"* legitimately appears higher up in the Technology pillar, so
+the global first occurrence of component 3 preceded component 1. That is the same
+error as the pair-order check in C-27: **global document position is almost never
+what an ordering rule means.** Both now test locality — "these appear together, in
+this order, somewhere" — which is what the rule actually says. The helper is
+`listedInOrder()`, and the reasoning is recorded above it so a third occurrence
+does not have to rediscover it.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -859,8 +920,9 @@ constraint worth recording because it is not obvious:
 | C-25 | The EST was the third exam everywhere it was named | RESOLVED |
 | C-26 | The site described itself accurately and uselessly | RESOLVED |
 | C-27 | "Optional" left the reader to guess why the platform exists | RESOLVED |
+| C-28 | The site described a product, not a method | RESOLVED |
 
-Twenty-four resolved, three requiring owner action, plus one figure the owner can
+Twenty-five resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

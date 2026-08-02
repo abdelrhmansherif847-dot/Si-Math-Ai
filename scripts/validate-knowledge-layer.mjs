@@ -39,7 +39,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIES, TOTAL_QUESTIONS } from '../docs/knowledge/faq-data.mjs';
 import { GUIDES as LEARN_GUIDES, GROUPS as LEARN_GROUPS } from '../docs/knowledge/learn-data.mjs';
-import { CAPABILITIES, RESEARCH, CHANGELOG, ROADMAP, NOT_ON_ROADMAP } from '../docs/knowledge/evidence-data.mjs';
+import {
+  CAPABILITIES, RESEARCH, METHODOLOGY as METHODOLOGY_DATA, CHANGELOG, ROADMAP, NOT_ON_ROADMAP,
+} from '../docs/knowledge/evidence-data.mjs';
 import { CONCEPTS, PREDICATES } from '../docs/knowledge/graph-data.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -96,6 +98,49 @@ const TAGLINE = "We don't replace great teaching. We multiply its impact.";
 const COURSE_POSITIONING = [
   'The course teaches. Si Math AI accelerates learning.',
   'Artificial Intelligence is not the teacher. It is the learning accelerator.',
+];
+
+/**
+ * The methodology layer — the deepest one, and the only claim a competitor
+ * cannot match by adding a model.
+ *
+ * The permanent rule it encodes: the website may never imply that AI itself is
+ * the educational advantage. The advantage is the methodology; AI is the
+ * delivery mechanism. That is a distinction which drifts silently, because
+ * "AI-powered" is the easier sentence to write.
+ */
+const CANONICAL_METHODOLOGY =
+  'Si Math AI is an educational methodology implemented through software. '
+  + 'The software delivers the methodology; it is not the methodology itself.';
+
+const CANONICAL_EDUCATIONAL_INTELLIGENCE =
+  'Si Math AI is not built around Artificial Intelligence. It is built around '
+  + 'Educational Intelligence. Artificial Intelligence is simply one of the tools '
+  + 'used to deliver that educational intelligence.';
+
+const IMPROVEMENT_STATEMENT =
+  'Students do not improve because they use AI. Students improve because they follow '
+  + 'a better learning process. AI simply makes that learning process scalable, '
+  + 'personalized, and available between lessons.';
+
+/** The eight components. Order is part of the claim — AI is last, deliberately. */
+const METHODOLOGY_PRINCIPLES = [
+  'Expert Mathematics Teaching',
+  'Continuous Personalized Assessment',
+  'Weakness Analysis',
+  'Evidence-Based Revision',
+  'Deliberate Practice',
+  'Long-Term Knowledge Retention',
+  'Human Educational Experience',
+  'AI-Assisted Personalization',
+];
+
+/** What technology has to be combined with before it is worth anything. */
+const TECHNOLOGY_CONDITIONS = [
+  'Educational expertise',
+  'Sound teaching methodology',
+  'Meaningful practice',
+  'Continuous feedback',
 ];
 
 /**
@@ -327,6 +372,22 @@ const BANNED_ASSERTIONS = [
     'attributes the platform to a gap in teacher knowledge'],
   [/\bmakes?\s+(?:the |a |your )?teachers?\s+(?:obsolete|redundant|unnecessary)\b/i,
     'claims the platform makes teachers unnecessary'],
+  // THE PERMANENT RULE (knowledge-base.md §1d): the educational advantage is the
+  // methodology; AI is the delivery mechanism. These fail the build on the
+  // inversion. Phrased without negation words for the reason recorded above —
+  // the canonical copy itself says "students do NOT improve because they use AI"
+  // and "is NOT built around Artificial Intelligence", and those sentences are
+  // read as denials, so only the assertive form can match.
+  [/\bstudents improve because (?:they use |of |they have |it uses )?(?:the |its )?(?:AI|artificial intelligence)\b/i,
+    'attributes improvement to the AI rather than to the method'],
+  [/\b(?:the|our|its) (?:educational |real |main |key )?(?:advantage|differentiator|edge) is (?:the |its |our )?(?:AI|artificial intelligence|technology|model)\b/i,
+    'names AI as the educational advantage'],
+  [/\b(?:AI|artificial intelligence|the model) is (?:the|our) (?:educational )?(?:advantage|differentiator|edge|secret|value)\b/i,
+    'names AI as the educational advantage'],
+  [/\bSi Math AI works because (?:it uses |of )?(?:the |its )?(?:AI|artificial intelligence|a language model)\b/i,
+    'attributes the platform\'s value to the technology'],
+  [/\b(?:built|centred|centered) around (?:artificial intelligence|AI)\b/i,
+    'inverts the methodology: the platform is built around Educational Intelligence'],
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
@@ -1105,6 +1166,145 @@ for (const [label, get] of purchaseTargets) {
 }
 ok('the FAQ asks the purchase question directly',
   CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6b0. The methodology — the product is the method, the software delivers it
+   The deepest positioning layer and the only one a competitor cannot match by
+   adding a model. Software can be copied; an educational philosophy cannot.
+
+   The permanent rule: the website may never imply that AI itself is the
+   educational advantage. It drifts silently, because "AI-powered" is the easier
+   sentence to write — which is why the inversion is a banned assertion above
+   rather than a style note here.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('The methodology (not the software)');
+
+const methodology = CONCEPTS.find((c) => c.id === 'si-math-methodology');
+const eduIntelligence = CONCEPTS.find((c) => c.id === 'educational-intelligence');
+
+ok('the graph defines the Si Math methodology as a concept', !!methodology);
+ok('the methodology concept carries the canonical statement',
+  !!methodology && methodology.definition.includes(CANONICAL_METHODOLOGY));
+ok('the methodology concept declares all eight components',
+  !!methodology && METHODOLOGY_PRINCIPLES.every((pr) => methodology.inputs.includes(pr)),
+  methodology ? METHODOLOGY_PRINCIPLES.filter((pr) => !methodology.inputs.includes(pr)).join(', ') : '');
+/**
+ * Order is part of the claim. AI-Assisted Personalization is listed last because
+ * that is where it belongs, and a future edit promoting it to the front would
+ * change what the list says without changing a word of it.
+ */
+ok('AI-Assisted Personalization is listed last among the components',
+  !!methodology && methodology.inputs[methodology.inputs.length - 1] === 'AI-Assisted Personalization');
+ok('Expert Mathematics Teaching is listed first',
+  !!methodology && methodology.inputs[0] === 'Expert Mathematics Teaching');
+ok('the methodology governs the platform, and the platform requires it',
+  edge('si-math-methodology', 'governs', 'si-math-ai')
+    && edge('si-math-ai', 'requires', 'si-math-methodology'));
+ok('the methodology states that software can be copied and philosophy cannot',
+  !!methodology && /Software can be copied/i.test(methodology.purpose));
+
+ok('the graph defines Educational Intelligence as a concept', !!eduIntelligence);
+ok('the Educational Intelligence concept carries its canonical statement',
+  !!eduIntelligence && eduIntelligence.definition.includes(CANONICAL_EDUCATIONAL_INTELLIGENCE));
+ok('it declares the four conditions technology must be combined with',
+  !!eduIntelligence && TECHNOLOGY_CONDITIONS.every((c) => eduIntelligence.inputs.includes(c)));
+
+// The three canonical statements, verbatim, on every page the graph says
+// documents them — plus both machine files.
+const methodologyPages = methodology ? methodology.pages : [];
+ok('the graph names at least five pages documenting the methodology',
+  methodologyPages.length >= 5, `found ${methodologyPages.length}`);
+for (const file of methodologyPages) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  const text = visibleText(read(file));
+  ok(`${file}: states the methodology statement verbatim`, text.includes(CANONICAL_METHODOLOGY));
+  ok(`${file}: states the Educational Intelligence statement verbatim`,
+    text.includes(CANONICAL_EDUCATIONAL_INTELLIGENCE));
+  ok(`${file}: states why students improve, verbatim`, text.includes(IMPROVEMENT_STATEMENT));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f).replace(/\s+/g, ' ');
+  ok(`${f}: states the methodology statement verbatim`, text.includes(CANONICAL_METHODOLOGY));
+  ok(`${f}: states the Educational Intelligence statement verbatim`,
+    text.includes(CANONICAL_EDUCATIONAL_INTELLIGENCE));
+  ok(`${f}: states why students improve, verbatim`, text.includes(IMPROVEMENT_STATEMENT));
+}
+
+/**
+ * All eight components appear, and somewhere on the page they appear together
+ * IN ORDER.
+ *
+ * "Somewhere, within one span" rather than by comparing first-occurrence
+ * positions across the whole page. The naive version failed on
+ * ai-knowledge.html, and correctly so from its own point of view: "Weakness
+ * Analysis" legitimately appears higher up in the Technology pillar, so the
+ * global first occurrence of component 3 precedes component 1. That is the same
+ * mistake as the pair-order check a commit earlier — global document position is
+ * almost never what an ordering rule means. Twice is a pattern worth naming.
+ */
+const listedInOrder = (text, items, span = 4000) => {
+  for (let start = text.indexOf(items[0]); start >= 0; start = text.indexOf(items[0], start + 1)) {
+    let cursor = start;
+    let intact = true;
+    for (let i = 1; i < items.length; i += 1) {
+      const at = text.indexOf(items[i], cursor);
+      if (at < 0 || at - start > span) { intact = false; break; }
+      cursor = at;
+    }
+    if (intact) return true;
+  }
+  return false;
+};
+
+for (const label of ['about.html', 'principles.html', 'ai-knowledge.html', 'evidence.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = METHODOLOGY_PRINCIPLES.filter((pr) => !text.includes(pr));
+  ok(`${label}: publishes all ${METHODOLOGY_PRINCIPLES.length} methodology components`,
+    missing.length === 0, missing.join(', '));
+  if (!missing.length) {
+    ok(`${label}: lists the components in order, teaching first and AI last`,
+      listedInOrder(text, METHODOLOGY_PRINCIPLES));
+  }
+}
+
+// The rejection of "technology alone improves learning" must stay published.
+for (const label of ['about.html', 'principles.html', 'ai-knowledge.html', 'evidence.html',
+  'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  const missing = TECHNOLOGY_CONDITIONS.filter(
+    (c) => !new RegExp(c.replace(/ /g, '\\s+'), 'i').test(text));
+  ok(`${label}: names the four conditions technology must be combined with`,
+    missing.length === 0, missing.join(', '));
+  ok(`${label}: states what AI is without them`,
+    /just another chatbot/i.test(text) && /educational accelerator/i.test(text));
+}
+
+/**
+ * The evidence page must attach evidence to the METHOD, not only to features —
+ * and must keep showing the components that carry no citation. Filling those two
+ * gaps with a loosely-related paper is the single most likely future erosion
+ * here, and it would be the exact conflation evidence.html warns against.
+ */
+const uncited = METHODOLOGY_DATA.filter((m) => !m.ref);
+ok('the methodology data declares all eight components',
+  METHODOLOGY_DATA.length === METHODOLOGY_PRINCIPLES.length);
+ok('every methodology component says what it means',
+  METHODOLOGY_DATA.every((m) => typeof m.what === 'string' && m.what.length > 60));
+const badRef = METHODOLOGY_DATA.find((m) => m.ref && !RESEARCH.some((r) => r.id === m.ref));
+ok('every methodology research reference resolves', !badRef, badRef ? badRef.ref : '');
+ok('the components with no honest citation stay uncited (currently 2)',
+  uncited.length >= 2, `${uncited.length} uncited`);
+if (has('evidence.html')) {
+  const ev = visibleText(read('evidence.html'));
+  ok('evidence.html shows the uncited components rather than filling them',
+    /No citation claimed/i.test(ev) && /carry no citation/i.test(ev));
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    6ba. Expertise and personalization — why it exists alongside a great teacher

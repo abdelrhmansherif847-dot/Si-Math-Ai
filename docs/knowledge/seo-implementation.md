@@ -363,7 +363,7 @@ documents becomes the answer it reproduces.
 - ✅ Ten-stage learning-cycle diagram on `how-it-works.html`, built from
   semantic HTML rather than an image so every stage label is real text that a
   crawler, a screen reader and an AI system all read identically
-- ✅ CI gate covering all of the above — 2,646 checks, including feature parity
+- ✅ CI gate covering all of the above — 2,816 checks, including feature parity
   across every surface that names the eight systems, and the course/platform
   positioning on every indexable page
 

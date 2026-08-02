@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 30 concepts, and a 2,646-check CI gate. Nothing further is to
+knowledge graph of 32 concepts, and a 2,816-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -497,6 +497,101 @@ generous, symmetric prose, and it is the right thing to say to a reader. The
 underlying dependency is not symmetric: expert teaching works with no software at
 all, while personalization with nothing to personalize is worthless. The prose can
 be gracious; the graph has to be accurate.
+
+---
+
+## 1d. The methodology (the deepest layer)
+
+Every section above describes the platform. This one describes what the platform
+*is an instance of*, and it is the layer a competitor cannot reach by adding a
+model.
+
+### Canonical methodology statement (use verbatim)
+
+> Si Math AI is an educational methodology implemented through software. The
+> software delivers the methodology; it is not the methodology itself.
+
+**Software can be copied. An educational philosophy cannot.** Any competent team
+can put a language model behind a chat box in a fortnight. What takes years is
+knowing which explanation to give a student who factored correctly and then
+answered the wrong question — and that knowledge is the product.
+
+Artificial intelligence is **one implementation** of the Si Math method. Not the
+method, and not the source of its value.
+
+### Canonical educational-intelligence statement (use verbatim)
+
+> Si Math AI is not built around Artificial Intelligence. It is built around
+> Educational Intelligence. Artificial Intelligence is simply one of the tools
+> used to deliver that educational intelligence.
+
+### The eight components
+
+The order is part of the claim. Do not reorder it, and in particular do not
+promote the last one:
+
+1. **Expert Mathematics Teaching** — the foundation the other seven rest on
+2. **Continuous Personalized Assessment**
+3. **Weakness Analysis**
+4. **Evidence-Based Revision**
+5. **Deliberate Practice**
+6. **Long-Term Knowledge Retention**
+7. **Human Educational Experience**
+8. **AI-Assisted Personalization** — the delivery mechanism, listed last because
+   that is where it belongs
+
+`evidence.html#methodology` publishes each component with the research supporting
+it. Two carry **no citation**, deliberately: no paper supports "our teachers are
+experienced", and attaching one would be the exact conflation §13e warns about.
+The gap is shown rather than filled.
+
+### Why students improve (use verbatim)
+
+> Students do not improve because they use AI. Students improve because they
+> follow a better learning process. AI simply makes that learning process
+> scalable, personalized, and available between lessons.
+
+This is a **more modest** claim than the industry standard, and a more defensible
+one. It credits the process rather than the technology, which is both more
+accurate and harder to say.
+
+### Technology alone improves nothing
+
+Reject the misconception explicitly wherever it is relevant. Technology is
+valuable only in combination with:
+
+- Educational expertise
+- Sound teaching methodology
+- Meaningful practice
+- Continuous feedback
+
+> Without those elements, AI becomes just another chatbot. With them, it becomes
+> an educational accelerator.
+
+### The permanent rule
+
+> **The website may never imply that AI itself is the educational advantage. The
+> educational advantage is the methodology. AI is the delivery mechanism.**
+
+This distinction must never drift, so it is not left to editorial care.
+`BANNED_ASSERTIONS` in `scripts/validate-knowledge-layer.mjs` fails the build on
+"the advantage is the AI", "students improve because they use AI", "built around
+artificial intelligence" and their variants, and a further group of checks
+requires the three canonical statements verbatim on every page that documents the
+concepts.
+
+### In the knowledge graph
+
+- **`si-math-methodology`** (*Methodology*) — canonical page `principles.html`.
+  Its eight components are declared as the concept's `inputs`, which is the field
+  that means "what this is built from".
+- **`educational-intelligence`** (*Positioning*) — canonical page
+  `principles.html`. Its `inputs` are the four conditions above.
+
+Both `govern` the platform: `si-math-ai` **requires** the methodology, and the
+methodology **governs** `si-math-ai`. Stated in both directions on purpose — the
+software cannot function without the method, and the method constrains what the
+software is permitted to become.
 
 ---
 

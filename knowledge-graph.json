@@ -90,7 +90,15 @@
         "American Diploma Mathematics",
         "SAT Math",
         "ACT Math",
-        "EST Math"
+        "EST Math",
+        "Expert Mathematics Teaching",
+        "Continuous Personalized Assessment",
+        "Weakness Analysis",
+        "Evidence-Based Revision",
+        "Deliberate Practice",
+        "Long-Term Knowledge Retention",
+        "Human Educational Experience",
+        "AI-Assisted Personalization"
       ]
     },
     {
@@ -106,6 +114,12 @@
       "hasDefinedTerm": [
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#educational-intelligence"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
@@ -233,7 +247,8 @@
       ],
       "requires": [
         "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
-        "https://www.si-math-ai.com/knowledge-graph#human-support"
+        "https://www.si-math-ai.com/knowledge-graph#human-support",
+        "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
       ],
       "generates": [
         "https://www.si-math-ai.com/knowledge-graph#learning-loop"
@@ -243,6 +258,96 @@
       ],
       "specializes": [
         "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-methodology",
+      "identifier": "si-math-methodology",
+      "name": "The Si Math Educational Methodology",
+      "conceptKind": "Methodology",
+      "description": "The educational method Si Math AI exists to deliver. Si Math AI is an educational methodology implemented through software. The software delivers the methodology; it is not the methodology itself. Artificial intelligence is one implementation of the method, not the method — and not the source of its value.",
+      "purpose": "Software can be copied. An educational philosophy cannot. Stating the methodology as the product — and the software as its delivery mechanism — is what stops Si Math AI being understood as an AI product that a competitor replicates by adding a model. Students do not improve because they use AI. Students improve because they follow a better learning process; AI makes that process scalable, personalized and available between lessons.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#si-math-methodology",
+      "canonicalPage": "https://www.si-math-ai.com/principles.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/principles.html",
+        "https://www.si-math-ai.com/architecture.html",
+        "https://www.si-math-ai.com/evidence.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Expert Mathematics Teaching",
+        "Continuous Personalized Assessment",
+        "Weakness Analysis",
+        "Evidence-Based Revision",
+        "Deliberate Practice",
+        "Long-Term Knowledge Retention",
+        "Human Educational Experience",
+        "AI-Assisted Personalization"
+      ],
+      "output": [
+        "A learning process a student follows, of which the software is one delivery mechanism"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/principles.html#webpage"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise",
+        "https://www.si-math-ai.com/knowledge-graph#educational-principles"
+      ],
+      "authoredBy": [
+        "https://www.si-math-ai.com/knowledge-graph#human-support"
+      ],
+      "improves": [
+        "https://www.si-math-ai.com/knowledge-graph#student"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#educational-intelligence",
+      "identifier": "educational-intelligence",
+      "name": "Educational Intelligence",
+      "conceptKind": "Positioning",
+      "description": "What Si Math AI is built around. Si Math AI is not built around Artificial Intelligence. It is built around Educational Intelligence. Artificial Intelligence is simply one of the tools used to deliver that educational intelligence. Technology is valuable only in combination with educational expertise, sound teaching methodology, meaningful practice and continuous feedback; without those, AI becomes just another chatbot, and with them it becomes an educational accelerator.",
+      "purpose": "To reject the misconception that technology alone improves learning. The educational advantage is the methodology; AI is the delivery mechanism, and a page that lets those two swap places has given away the only thing a competitor cannot copy.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#educational-intelligence",
+      "canonicalPage": "https://www.si-math-ai.com/principles.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/principles.html",
+        "https://www.si-math-ai.com/architecture.html",
+        "https://www.si-math-ai.com/evidence.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Educational expertise",
+        "Sound teaching methodology",
+        "Meaningful practice",
+        "Continuous feedback"
+      ],
+      "output": [
+        "A statement of where the advantage actually lies",
+        "A constraint on how the platform may describe itself"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-methodology"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise"
       ]
     },
     {
