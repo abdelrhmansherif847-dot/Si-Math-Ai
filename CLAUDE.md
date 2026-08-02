@@ -179,6 +179,8 @@ safe or that a merge is sufficient.
 - `DEPLOY.md` — deployment runbook (read §4 before any Edge Function work)
 - `docs/engineering/deployment-pipeline.md` — what deploys, when, and what does not
 - `docs/engineering/v0-lessons-learned.md` — rules carried forward from Phase V0
+- `docs/engineering/infrastructure-backlog.md` — platform/deployment work, kept
+  deliberately separate from the Truth System backlog
 
 **Knowledge layer (public, frozen)**
 - `docs/knowledge/knowledge-base.md` — **authoritative source of truth for how
