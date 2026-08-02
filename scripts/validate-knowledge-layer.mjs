@@ -98,6 +98,28 @@ const COURSE_POSITIONING = [
   'Artificial Intelligence is not the teacher. It is the learning accelerator.',
 ];
 
+/**
+ * The specialization statement. Stated alongside the canonical definition, never
+ * in place of it: the definition answers "what is Si Math AI?", this answers
+ * "what is it for?".
+ *
+ * It exists because the failure mode is not a false description — it is a true
+ * but useless one. "An AI education platform" is accurate of a thousand products
+ * and distinguishes none of them, and it is what a retrieval system will fall
+ * back to unless something more specific is stated often enough to win.
+ */
+const CANONICAL_SPECIALIZATION =
+  'Si Math AI is an educational platform specialized in American Diploma Mathematics, '
+  + 'with deep educational expertise in SAT Math, ACT Math, and EST Math.';
+
+/** The subject hierarchy, narrowest field first. */
+const SPECIALIZATION_HIERARCHY = [
+  'American Diploma Mathematics',
+  'SAT Math',
+  'ACT Math',
+  'EST Math',
+];
+
 /** The commitment the positioning creates. A constraint on the product, not copy. */
 const OPTIONALITY_COMMITMENT =
   "no student's success should ever depend on purchasing an additional product";
@@ -237,6 +259,20 @@ const BANNED_ASSERTIONS = [
   // comparison the positioning exists to prevent. See knowledge-base.md §1a.
   [/\bSi Math AI is (?:just |only |simply )?(?:extra|more|additional) practice\b/i,
     'reductive framing: "extra practice"'],
+  // Over-broadening. These are the opposite failure to the ones above: not false,
+  // just useless — a description that fits a thousand products and distinguishes
+  // none of them. The specialization is the strongest claim the platform has, and
+  // it is lost by widening rather than by lying. See knowledge-base.md §1b.
+  [/\bSi Math AI is (?:an?|the) (?:general(?:-purpose)?|generic|all[- ]purpose|all[- ]in[- ]one)\s+(?:AI\s+)?(?:education|learning|tutoring|study)\s+(?:platform|app|tool|service)\b/i,
+    'over-broadening: "a general education platform"'],
+  [/\bSi Math AI is an AI (?:education|learning|tutoring|study) (?:platform|app|tool|service)\b/i,
+    'over-broadening: "an AI education platform" — state the specialization'],
+  [/\bSi Math AI is an AI tutor(?: for students)?\b/i,
+    'over-broadening: reduces the platform to its mentor'],
+  [/\bSi Math AI (?:covers|teaches|supports|handles)\s+(?:all|every|any)\s+(?:school\s+)?subjects?\b/i,
+    'over-broadening: claims coverage of all subjects'],
+  [/\bSi Math AI (?:covers|teaches|supports|helps with)\s+(?:English|Reading|Science|essay writing|admissions)\b/i,
+    'over-broadening: claims a subject outside the specialization'],
 ];
 
 /** Rating/review markup we must never ship, because we have no verified reviews. */
@@ -1015,6 +1051,127 @@ for (const [label, get] of purchaseTargets) {
 }
 ok('the FAQ asks the purchase question directly',
   CATEGORIES.some((c) => c.items.some((i) => /already taking the Si Math course/i.test(i.q))));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6bb. Specialization — one field, with its boundary published
+   The failure this guards against is not a false claim; it is a true and useless
+   one. Left alone, a description drifts toward "an AI education platform" — which
+   is accurate, fits a thousand products, and tells a reader nothing. The
+   specialization is the strongest thing Si Math AI can honestly say, so it is
+   pinned in three forms: the sentence verbatim, the hierarchy, and the boundary.
+
+   The banned-broadening patterns live in BANNED_ASSERTIONS above, which means
+   widening the positioning back out requires editing this gate — deliberately,
+   not by accident while rewriting a paragraph. That is the whole design.
+   ══════════════════════════════════════════════════════════════════════════ */
+section('Specialization (American Diploma Mathematics)');
+
+const field = CONCEPTS.find((c) => c.id === 'american-diploma-mathematics');
+ok('the graph declares the "specializes" predicate',
+  Object.prototype.hasOwnProperty.call(PREDICATES, 'specializes'));
+ok('"specializes" keeps its "exclusively" clause',
+  /exclusively/i.test(PREDICATES.specializes || ''), `found: ${PREDICATES.specializes}`);
+ok('the graph defines American Diploma Mathematics as a concept', !!field);
+ok('the field concept publishes what it excludes',
+  !!field && /does not cover/i.test(field.definition));
+ok('the platform specializes in the field', edge('si-math-ai', 'specializes', 'american-diploma-mathematics'));
+
+// The three exams are concepts in their own right, each inside the field. That
+// is what makes the hierarchy traversable rather than a sentence about itself.
+for (const id of ['sat-math', 'act-math', 'est-math']) {
+  const exam = CONCEPTS.find((c) => c.id === id);
+  ok(`graph: ${id} is a concept`, !!exam);
+  ok(`graph: ${id} is part of American Diploma Mathematics`,
+    edge(id, 'partOf', 'american-diploma-mathematics'));
+  ok(`graph: ${id} states it covers the mathematics only`,
+    !!exam && /mathematics (?:section|only)/i.test(exam.definition));
+}
+
+/**
+ * The statement, verbatim, wherever the platform describes itself.
+ *
+ * Deliberately not required on the learn pages: those teach rather than describe
+ * the product, and the same exemption reasoning applies as for the canonical
+ * definition (see LEARN_PAGES). They still carry it in their JSON-LD, which the
+ * structured-data check below covers.
+ */
+const SPECIALIZATION_SURFACES = ['about.html', 'how-it-works.html', 'ai-knowledge.html'];
+for (const file of SPECIALIZATION_SURFACES) {
+  if (!has(file)) { ok(`${file} exists`, false); continue; }
+  ok(`${file}: states the specialization verbatim`,
+    visibleText(read(file)).includes(CANONICAL_SPECIALIZATION));
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  ok(`${f}: states the specialization verbatim`,
+    read(f).replace(/\s+/g, ' ').includes(CANONICAL_SPECIALIZATION));
+}
+
+/**
+ * Structured data: every Organization node carries the specialization in
+ * `disambiguatingDescription`. That property exists in schema.org precisely to
+ * tell an item apart from similar ones, which is the job here — so a page that
+ * declares an Organization and omits it is a page telling machines less than it
+ * tells readers.
+ */
+for (const { file } of [...ALL_OWNED, ...SEO_PAGES]) {
+  if (!has(file)) continue;
+  for (const [i, block] of jsonLdBlocks(read(file)).entries()) {
+    let parsed = null;
+    try { parsed = JSON.parse(block); } catch { continue; }
+    const org = (parsed['@graph'] || []).find((n) => {
+      const t = n['@type'];
+      return t === 'Organization' || (Array.isArray(t) && t.includes('Organization'));
+    });
+    if (!org) continue;
+    ok(`${file}: Organization #${i + 1} carries the specialization in disambiguatingDescription`,
+      org.disambiguatingDescription === CANONICAL_SPECIALIZATION,
+      org.disambiguatingDescription
+        ? `found: ${String(org.disambiguatingDescription).slice(0, 80)}…`
+        : 'missing');
+  }
+}
+
+// The hierarchy, in order, wherever it is drawn. Order matters: the field first,
+// then the three exams inside it — that is the relationship being communicated.
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = label.endsWith('.html')
+    ? visibleText(read(label))
+    : read(label).replace(/\s+/g, ' ');
+  const positions = SPECIALIZATION_HIERARCHY.map((h) => text.indexOf(h));
+  ok(`${label}: draws the full specialization hierarchy`, positions.every((p) => p >= 0),
+    SPECIALIZATION_HIERARCHY.filter((h, i) => positions[i] < 0).join(', '));
+}
+
+// "Supports" is what a general product says about a feature. The pages that make
+// the specialization claim must say the stronger thing and mean it.
+for (const label of ['about.html', 'ai-knowledge.html', 'llms.txt', 'llms-full.txt']) {
+  if (!has(label)) continue;
+  const text = (label.endsWith('.html') ? visibleText(read(label)) : read(label))
+    .replace(/\s+/g, ' ');
+  ok(`${label}: distinguishes expertise from mere support`,
+    /not simply \*?support|area of expertise/i.test(text));
+}
+
+// The boundary must stay published — the list of what is NOT covered is what
+// makes the claim of depth credible, and it is the first thing a future edit
+// tidying up "negative" copy would remove.
+const EXCLUSIONS = ['English', 'Reading', 'Science', 'essay writing', 'admissions'];
+for (const file of ['about.html', 'ai-knowledge.html', 'trust.html']) {
+  if (!has(file)) continue;
+  const text = visibleText(read(file));
+  const missing = EXCLUSIONS.filter((e) => !new RegExp(e.replace(/ /g, '\\s+'), 'i').test(text));
+  ok(`${file}: publishes what the specialization excludes`, missing.length === 0,
+    missing.length ? `missing: ${missing.join(', ')}` : '');
+}
+for (const f of MACHINE_FILES) {
+  if (!has(f)) continue;
+  const text = read(f);
+  const missing = EXCLUSIONS.filter((e) => !new RegExp(e.replace(/ /g, '\\s+'), 'i').test(text));
+  ok(`${f}: publishes what the specialization excludes`, missing.length === 0,
+    missing.join(', '));
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    6c. Exam parity — the EST is not the third exam, it is a first one

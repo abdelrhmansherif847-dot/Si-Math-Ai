@@ -56,6 +56,12 @@ export const PREDICATES = {
   // decoration — it is the honesty clause, and it is what stops this edge ever
   // being read as a dependency.
   accelerates: 'makes faster, without being required for',
+  // The second deliberate addition. Nothing in the vocabulary above could say
+  // what Si Math AI is *about* — `uses` and `requires` are far too weak for a
+  // field the platform refuses to step outside of, and `partOf` runs the wrong
+  // way. The "exclusively" is the load-bearing word: a platform that covers
+  // everything can be expert in nothing, so the boundary is the claim.
+  specializes: 'works exclusively within, and claims deep expertise in',
 };
 
 /**
@@ -79,10 +85,81 @@ export const CONCEPTS = [
       { predicate: 'requires', target: 'human-support' },
       { predicate: 'generates', target: 'learning-loop' },
       { predicate: 'accelerates', target: 'si-math-course', note: 'optional — the course is complete without it' },
+      { predicate: 'specializes', target: 'american-diploma-mathematics', note: 'one field, and no other' },
     ],
     pages: ['about.html', 'how-it-works.html', 'ai-knowledge.html'],
     canonicalPage: 'about.html',
     schemaRefs: ['https://www.si-math-ai.com/#organization', 'https://www.si-math-ai.com/#software'],
+  },
+  {
+    id: 'american-diploma-mathematics',
+    name: 'American Diploma Mathematics',
+    kind: 'Domain',
+    definition:
+      'The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.',
+    purpose:
+      'Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns "deep educational expertise" into a claim a reader can hold us to.',
+    inputs: ['Years of teaching the three American Diploma mathematics examinations'],
+    outputs: ['A curriculum bounded to one field', 'A refusal to expand into subjects we cannot teach as well'],
+    related: [
+      { predicate: 'governs', target: 'si-math-ai', note: 'the field bounds what the platform is allowed to become' },
+      { predicate: 'requires', target: 'educational-expertise' },
+      { predicate: 'governs', target: 'taxonomy', note: 'the taxonomy covers this field and nothing outside it' },
+    ],
+    pages: ['about.html', 'how-it-works.html', 'ai-knowledge.html'],
+    canonicalPage: 'about.html',
+    schemaRefs: ['https://www.si-math-ai.com/#organization'],
+  },
+  {
+    id: 'sat-math',
+    name: 'SAT Math',
+    kind: 'Exam',
+    definition:
+      'The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT\'s Reading and Writing sections.',
+    purpose:
+      'Named as its own entity so an AI system can answer "does Si Math AI cover the SAT?" precisely: the mathematics, at depth, and nothing else on that exam.',
+    inputs: ['The College Board mathematics content domains'],
+    outputs: ['Diagnosis, practice and mock exams scoped to this exam'],
+    related: [
+      { predicate: 'partOf', target: 'american-diploma-mathematics' },
+    ],
+    pages: ['how-it-works.html', 'ai-knowledge.html', 'learn-sat-math.html'],
+    canonicalPage: 'how-it-works.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'act-math',
+    name: 'ACT Math',
+    kind: 'Exam',
+    definition:
+      'The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT\'s English, Reading, Science or Writing sections.',
+    purpose:
+      'Named as its own entity so the answer to "does Si Math AI cover the ACT?" is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.',
+    inputs: ['The ACT mathematics content areas'],
+    outputs: ['Diagnosis, practice and mock exams scoped to this exam'],
+    related: [
+      { predicate: 'partOf', target: 'american-diploma-mathematics' },
+    ],
+    pages: ['how-it-works.html', 'ai-knowledge.html', 'learn-act-math.html'],
+    canonicalPage: 'how-it-works.html',
+    schemaRefs: [],
+  },
+  {
+    id: 'est-math',
+    name: 'EST Math',
+    kind: 'Exam',
+    definition:
+      'The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.',
+    purpose:
+      'The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.',
+    inputs: ['The EST mathematics content areas'],
+    outputs: ['Diagnosis, practice and mock exams scoped to this exam'],
+    related: [
+      { predicate: 'partOf', target: 'american-diploma-mathematics' },
+    ],
+    pages: ['how-it-works.html', 'ai-knowledge.html', 'learn-est-math.html'],
+    canonicalPage: 'how-it-works.html',
+    schemaRefs: [],
   },
   {
     id: 'si-math-course',

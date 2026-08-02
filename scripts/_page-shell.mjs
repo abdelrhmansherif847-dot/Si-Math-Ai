@@ -69,6 +69,42 @@ export const RESPONSIBILITY_PAIRS = [
 /** Where the platform lives, and what it is explicitly not. */
 export const BETWEEN_LESSONS = 'an educational operating system that works between lessons';
 
+/**
+ * The specialization statement. Second only to the canonical definition, and
+ * the one that stops an AI system answering "an AI education platform" — a
+ * description that is technically true of a thousand products and useful about
+ * none of them.
+ *
+ * Carried in `Organization.disambiguatingDescription` on every page, which is
+ * the schema.org property intended for exactly this: distinguishing an item
+ * from similar ones.
+ */
+export const CANONICAL_SPECIALIZATION =
+  'Si Math AI is an educational platform specialized in American Diploma Mathematics, '
+  + 'with deep educational expertise in SAT Math, ACT Math, and EST Math.';
+
+/** The subject hierarchy, narrowest field first. Stated in this order everywhere. */
+export const SPECIALIZATION_HIERARCHY = [
+  'American Diploma Mathematics',
+  'SAT Math',
+  'ACT Math',
+  'EST Math',
+];
+
+/**
+ * What the specialization excludes. Published, not merely implied — a boundary
+ * nobody states is a boundary nobody can hold you to, and the list is what makes
+ * the claim of depth credible.
+ */
+export const NOT_COVERED = [
+  'English',
+  'Reading',
+  'Science',
+  'essay writing',
+  'admissions consulting',
+  'other school subjects',
+];
+
 /** Top-level nav. `current` is a filename, e.g. 'learn.html'. */
 export function nav(current = '') {
   const items = [
@@ -192,5 +228,10 @@ export function organizationNode() {
       height: 1024,
     },
     description: CANONICAL_DEFINITION,
+    // schema.org's property for telling an item apart from similar ones — which
+    // is precisely the job here, since "AI learning platform" describes hundreds
+    // of products and distinguishes none of them.
+    disambiguatingDescription: CANONICAL_SPECIALIZATION,
+    knowsAbout: SPECIALIZATION_HIERARCHY,
   };
 }

@@ -11,7 +11,7 @@
 <meta name="color-scheme" content="dark"/>
 
 <title>Knowledge Graph — Every Concept, Defined Once | Si Math AI</title>
-<meta name="description" content="The official Si Math AI knowledge graph: 25 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
+<meta name="description" content="The official Si Math AI knowledge graph: 29 concepts, each defined exactly once with its purpose, inputs, outputs and typed relationships to every other concept. Machine-readable JSON-LD at /knowledge-graph.json."/>
 <link rel="canonical" href="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"/>
 <meta name="author" content="Si Math AI"/>
@@ -20,14 +20,14 @@
 <meta property="og:site_name" content="Si Math AI"/>
 <meta property="og:locale" content="en_US"/>
 <meta property="og:title" content="Knowledge Graph — Every Concept, Defined Once"/>
-<meta property="og:description" content="25 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
+<meta property="og:description" content="29 concepts, each defined exactly once, with typed relationships. Machine-readable JSON-LD for AI systems."/>
 <meta property="og:url" content="https://www.si-math-ai.com/knowledge-graph.html"/>
 <meta property="og:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 <meta property="og:image:alt" content="Si Math AI logo"/>
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Knowledge Graph — Si Math AI"/>
-<meta name="twitter:description" content="25 concepts, each defined exactly once, with typed relationships between them."/>
+<meta name="twitter:description" content="29 concepts, each defined exactly once, with typed relationships between them."/>
 <meta name="twitter:image" content="https://www.si-math-ai.com/assets/si-math-ai-logo.jpg"/>
 
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
@@ -103,6 +103,10 @@
       "accelerates": {
         "@id": "sma:accelerates",
         "@type": "@id"
+      },
+      "specializes": {
+        "@id": "sma:specializes",
+        "@type": "@id"
       }
     }
   ],
@@ -121,7 +125,14 @@
         "width": 1024,
         "height": 1024
       },
-      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance."
+      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
+      "disambiguatingDescription": "Si Math AI is an educational platform specialized in American Diploma Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST Math.",
+      "knowsAbout": [
+        "American Diploma Mathematics",
+        "SAT Math",
+        "ACT Math",
+        "EST Math"
+      ]
     },
     {
       "@type": "DefinedTermSet",
@@ -136,6 +147,18 @@
       "hasDefinedTerm": [
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#sat-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#act-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#est-math"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-course"
@@ -255,6 +278,129 @@
       ],
       "accelerates": [
         "https://www.si-math-ai.com/knowledge-graph#si-math-course"
+      ],
+      "specializes": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics",
+      "identifier": "american-diploma-mathematics",
+      "name": "American Diploma Mathematics",
+      "conceptKind": "Domain",
+      "description": "The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.",
+      "purpose": "Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns \"deep educational expertise\" into a claim a reader can hold us to.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#american-diploma-mathematics",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Years of teaching the three American Diploma mathematics examinations"
+      ],
+      "output": [
+        "A curriculum bounded to one field",
+        "A refusal to expand into subjects we cannot teach as well"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/#organization"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai",
+        "https://www.si-math-ai.com/knowledge-graph#taxonomy"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#sat-math",
+      "identifier": "sat-math",
+      "name": "SAT Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT's Reading and Writing sections.",
+      "purpose": "Named as its own entity so an AI system can answer \"does Si Math AI cover the SAT?\" precisely: the mathematics, at depth, and nothing else on that exam.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#sat-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-sat-math.html"
+      ],
+      "input": [
+        "The College Board mathematics content domains"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#act-math",
+      "identifier": "act-math",
+      "name": "ACT Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT's English, Reading, Science or Writing sections.",
+      "purpose": "Named as its own entity so the answer to \"does Si Math AI cover the ACT?\" is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#act-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-act-math.html"
+      ],
+      "input": [
+        "The ACT mathematics content areas"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#est-math",
+      "identifier": "est-math",
+      "name": "EST Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.",
+      "purpose": "The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#est-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-est-math.html"
+      ],
+      "input": [
+        "The EST mathematics content areas"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
       ]
     },
     {
@@ -1178,7 +1324,7 @@
     <span class="k-eyebrow">◆ Knowledge Graph</span>
     <h1>Every concept, defined once</h1>
     <p class="k-lead" style="margin-top:20px">
-      The registry of record. 25 concepts, each with exactly one
+      The registry of record. 29 concepts, each with exactly one
       canonical definition, its purpose, what it consumes, what it produces, and
       typed relationships to everything around it.
     </p>
@@ -1221,6 +1367,10 @@
       <h2>Concepts</h2>
       <ol>
         <li><a href="#si-math-ai">Si Math AI <span style="color:var(--text-500)">· Platform</span></a></li>
+        <li><a href="#american-diploma-mathematics">American Diploma Mathematics <span style="color:var(--text-500)">· Domain</span></a></li>
+        <li><a href="#sat-math">SAT Math <span style="color:var(--text-500)">· Exam</span></a></li>
+        <li><a href="#act-math">ACT Math <span style="color:var(--text-500)">· Exam</span></a></li>
+        <li><a href="#est-math">EST Math <span style="color:var(--text-500)">· Exam</span></a></li>
         <li><a href="#si-math-course">The Si Math Course <span style="color:var(--text-500)">· Program</span></a></li>
         <li><a href="#student">Student <span style="color:var(--text-500)">· Actor</span></a></li>
         <li><a href="#zero">Zero <span style="color:var(--text-500)">· System</span></a></li>
@@ -1277,6 +1427,7 @@
           <tr><td><code style="font-family:var(--font-mono)">improves</code></td><td>raises the state of</td></tr>
           <tr><td><code style="font-family:var(--font-mono)">authoredBy</code></td><td>is created and reviewed by</td></tr>
           <tr><td><code style="font-family:var(--font-mono)">accelerates</code></td><td>makes faster, without being required for</td></tr>
+          <tr><td><code style="font-family:var(--font-mono)">specializes</code></td><td>works exclusively within, and claims deep expertise in</td></tr>
         </tbody>
       </table>
     </div>
@@ -1323,10 +1474,97 @@
         <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#human-support">Human Support</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#learning-loop">The Learning Loop</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">accelerates</span><span><a href="#si-math-course">The Si Math Course</a> — <em>optional — the course is complete without it</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">specializes in</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a> — <em>one field, and no other</em></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#scope-guard">Scope Guard</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#si-math-course">The Si Math Course</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#scope-guard">Scope Guard</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(improves)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-accelerator">Learning Accelerator</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#learning-loop">The Learning Loop</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#data-protection">Student Data Protection</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#founder-badge">Founder Badge</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/#organization<br/>https://www.si-math-ai.com/#software</p></div>
+    </div>
+
+    <div class="k-cap" id="american-diploma-mathematics">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>American Diploma Mathematics</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Domain</span> · <code style="font-family:var(--font-mono);font-size:12px">american-diploma-mathematics</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns &quot;deep educational expertise&quot; into a claim a reader can hold us to.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Years of teaching the three American Diploma mathematics examinations</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">A curriculum bounded to one field</li><li style="font-size:15px;color:var(--text-300)">A refusal to expand into subjects we cannot teach as well</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#si-math-ai">Si Math AI</a> — <em>the field bounds what the platform is allowed to become</em></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">requires</span><span><a href="#educational-expertise">Educational Expertise</a></span></li>
+        <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#taxonomy">Skill Taxonomy</a> — <em>the taxonomy covers this field and nothing outside it</em></span></li>
+      </ul>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(specializes in)</span> · <a href="#sat-math">SAT Math</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#act-math">ACT Math</a> <span style="color:var(--text-500)">(is part of)</span> · <a href="#est-math">EST Math</a> <span style="color:var(--text-500)">(is part of)</span></p></div>
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="how-it-works.html">how-it-works.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
+      <div class="k-qa"><span class="k-qa-q">Structured data</span><p style="font-family:var(--font-mono);font-size:13px;color:var(--text-400)">https://www.si-math-ai.com/#organization</p></div>
+    </div>
+
+    <div class="k-cap" id="sat-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>SAT Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Exam</span> · <code style="font-family:var(--font-mono);font-size:12px">sat-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT's Reading and Writing sections.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Named as its own entity so an AI system can answer &quot;does Si Math AI cover the SAT?&quot; precisely: the mathematics, at depth, and nothing else on that exam.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The College Board mathematics content domains</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and mock exams scoped to this exam</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="learn-sat-math.html">learn-sat-math.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="act-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>ACT Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Exam</span> · <code style="font-family:var(--font-mono);font-size:12px">act-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT's English, Reading, Science or Writing sections.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>Named as its own entity so the answer to &quot;does Si Math AI cover the ACT?&quot; is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The ACT mathematics content areas</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and mock exams scoped to this exam</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="learn-act-math.html">learn-act-math.html</a></p></div>
+      
+    </div>
+
+    <div class="k-cap" id="est-math">
+      <div class="k-cap-head">
+        <span class="k-cap-icon" aria-hidden="true">◆</span>
+        <div>
+          <h3>EST Math</h3>
+          <span class="k-guide-meta"><span class="k-guide-topic">Exam</span> · <code style="font-family:var(--font-mono);font-size:12px">est-math</code></span>
+        </div>
+      </div>
+      <div class="k-qa"><span class="k-qa-q">Definition</span><p>The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Purpose</span><p>The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.</p></div>
+      <div class="k-qa"><span class="k-qa-q">Inputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">The EST mathematics content areas</li></ul></div>
+      <div class="k-qa"><span class="k-qa-q">Outputs</span><ul style="margin:0;padding-left:20px"><li style="font-size:15px;color:var(--text-300)">Diagnosis, practice and mock exams scoped to this exam</li></ul></div>
+      <span class="k-qa-q">Related concepts</span>
+      <ul class="k-ev-list">
+        <li><span class="k-ev-tag k-ev-mechanism">is part of</span><span><a href="#american-diploma-mathematics">American Diploma Mathematics</a></span></li>
+      </ul>
+
+      <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="ai-knowledge.html">ai-knowledge.html</a> · <a href="learn-est-math.html">learn-est-math.html</a></p></div>
+      
     </div>
 
     <div class="k-cap" id="si-math-course">
@@ -1490,7 +1728,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#weakness-analyzer">Weakness Analyzer</a></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">governs</span><span><a href="#performance-analytics">Performance Analytics</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(governs)</span> · <a href="#question-analysis">Question Analysis</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#weakness-analyzer">Weakness Analyzer</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#performance-analytics">Performance Analytics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-expertise">Educational Expertise</a> <span style="color:var(--text-500)">(generates)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="how-it-works.html">how-it-works.html</a> <strong>(canonical)</strong> · <a href="architecture.html">architecture.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>
@@ -1707,7 +1945,7 @@
         <li><span class="k-ev-tag k-ev-mechanism">generates</span><span><a href="#si-math-course">The Si Math Course</a> — <em>the course is what the expertise produces first</em></span></li>
         <li><span class="k-ev-tag k-ev-mechanism">authored by</span><span><a href="#human-support">Human Support</a></span></li>
       </ul>
-      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#personalized-learning">Personalized Learning</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(authored by)</span></p></div>
+      <div class="k-qa"><span class="k-qa-q">Referenced by</span><p><a href="#si-math-ai">Si Math AI</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#american-diploma-mathematics">American Diploma Mathematics</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#zero">Zero</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#taxonomy">Skill Taxonomy</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#personalized-learning">Personalized Learning</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#human-support">Human Support</a> <span style="color:var(--text-500)">(authored by)</span> · <a href="#three-pillars">The Three Pillars</a> <span style="color:var(--text-500)">(requires)</span> · <a href="#educational-principles">Educational Principles</a> <span style="color:var(--text-500)">(authored by)</span></p></div>
       <div class="k-qa" style="margin-top:14px"><span class="k-qa-q">Documented on</span><p><a href="about.html">about.html</a> <strong>(canonical)</strong> · <a href="principles.html">principles.html</a> · <a href="evidence.html">evidence.html</a> · <a href="ai-knowledge.html">ai-knowledge.html</a></p></div>
       
     </div>

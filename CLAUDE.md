@@ -60,7 +60,7 @@ explicit permission.
 ### 5. The PUBLIC documentation is FROZEN (2026-08-01)
 
 **Do not add public documentation pages.** The knowledge layer is complete: 22
-public pages, a knowledge graph, and a 2,325-check CI gate. Adding more would
+public pages, a knowledge graph, and a 2,499-check CI gate. Adding more would
 restate what already exists, dilute the pages that matter, and give AI systems
 more surface to retrieve inconsistently from.
 

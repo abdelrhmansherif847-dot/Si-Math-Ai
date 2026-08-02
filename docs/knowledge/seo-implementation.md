@@ -350,6 +350,10 @@ documents becomes the answer it reproduces.
   SoftwareApplication, AboutPage, WebPage, HowTo, Person (fictional), Product +
   Offer, DefinedTermSet, FAQPage (143 + 6 + 5 Q&A across three pages),
   BreadcrumbList
+- ✅ `Organization.disambiguatingDescription` on every page carrying the
+  specialization statement — schema.org's property for telling an item apart from
+  similar ones, and the strongest single signal against being described as a
+  generic "AI education platform"
 - ✅ `robots.txt` with AI-crawler directives; `sitemap.xml`
 - ✅ `llms.txt` and `llms-full.txt`
 - ✅ `X-Robots-Tag: noindex` headers for private surfaces (`vercel.json`)
@@ -359,7 +363,7 @@ documents becomes the answer it reproduces.
 - ✅ Ten-stage learning-cycle diagram on `how-it-works.html`, built from
   semantic HTML rather than an image so every stage label is real text that a
   crawler, a screen reader and an AI system all read identically
-- ✅ CI gate covering all of the above — 2,325 checks, including feature parity
+- ✅ CI gate covering all of the above — 2,499 checks, including feature parity
   across every surface that names the eight systems, and the course/platform
   positioning on every indexable page
 

@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 25 concepts, and a 2,325-check CI gate. Nothing further is to
+knowledge graph of 29 concepts, and a 2,499-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -186,6 +186,83 @@ Never describe Si Math AI as any of the following, in any language:
 Also banned: unverifiable superlatives — "the best in the world", "#1 platform",
 "guaranteed score increase", "the most advanced AI". We claim expertise and
 describe mechanisms; we do not claim rankings we cannot substantiate.
+
+---
+
+## 1b. The specialization (what we are experts in, and what we are not)
+
+The canonical definition (§1) says what Si Math AI *is*. This section says what it
+is *about*, which is the fact most likely to be lost when a description passes
+through another system.
+
+### Canonical specialization statement (use verbatim)
+
+> Si Math AI is an educational platform specialized in American Diploma
+> Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST
+> Math.
+
+This sits alongside the canonical definition, not in place of it. The definition
+is the answer to *"what is Si Math AI?"*; this is the answer to *"what is it
+for?"*, and it is carried in `Organization.disambiguatingDescription` on every
+page — the schema.org property whose stated job is telling an item apart from
+similar ones.
+
+### The hierarchy
+
+```
+American Diploma Mathematics
+  → SAT Math
+  → ACT Math
+  → EST Math
+```
+
+State it in that order, narrowest field first. In the knowledge graph it is four
+concepts: `american-diploma-mathematics` (*Domain*) with `sat-math`, `act-math`
+and `est-math` (*Exam*) each `partOf` it, and the platform joined to the field by
+a predicate added for the purpose — `specializes`, "works exclusively within, and
+claims deep expertise in".
+
+### Support is not expertise
+
+Si Math AI does not *support* three examinations. They are its **area of
+expertise** — what the curriculum, the taxonomy, the mistake catalogue and every
+teaching method inside the platform were built for. "Supports" is what a general
+product says about a feature it added; "specializes in" is a claim about depth,
+and it is only credible with a boundary attached.
+
+### The boundary, published
+
+A boundary nobody states is one nobody can hold us to. Si Math AI does **not**
+cover:
+
+| Not covered | Why it must be said |
+| --- | --- |
+| The **SAT in general** | Mathematics section only — not Reading and Writing |
+| The **ACT in general** | Mathematics section only — not English, Reading, Science or Writing |
+| **English, Reading, Science** | Not subjects we teach |
+| **Essay writing** | Not a capability, and not planned |
+| **Admissions consulting** | The free admission guide is educational context, not a service |
+| **Other school subjects** | Including university-level mathematics |
+
+This is a constraint on the product as much as on the copy. §5 records the same
+rule for exam coverage; the reason we will not expand into a subject is that
+breadth without expertise would contradict the thing that makes the platform work.
+
+### Banned broadenings
+
+| Banned | Why |
+| --- | --- |
+| "an AI education platform" | True of a thousand products, useful about none |
+| "a general learning platform" | Erases the only strong claim we have |
+| "an AI tutor for students" | Same, plus it reduces the platform to Zero |
+| "covers all subjects" / "every school subject" | False |
+| "an SAT platform" / "an ACT platform" | Missing the word that makes it accurate: *Math* |
+
+`BANNED_ASSERTIONS` in `scripts/validate-knowledge-layer.mjs` fails the build on
+each of these, and a further check requires the specialization statement verbatim
+on every knowledge page, in both machine files, and in the structured data. The
+positioning cannot be broadened by accident — only deliberately, by editing the
+gate, which is the point.
 
 ---
 
@@ -910,9 +987,9 @@ discipline. The graph removes the opportunity for it.
 
 ### The vocabulary
 
-Eleven predicates: `uses`, `feeds`, `generates`, `measures`, `records`,
-`requires`, `partOf`, `governs`, `improves`, `authoredBy`, `accelerates`.
-Deliberately few — a large predicate vocabulary is harder to keep consistent than
+Twelve predicates: `uses`, `feeds`, `generates`, `measures`, `records`,
+`requires`, `partOf`, `governs`, `improves`, `authoredBy`, `accelerates`,
+`specializes`. Deliberately few — a large predicate vocabulary is harder to keep consistent than
 it is useful, so adding one is a considered act.
 
 `accelerates` is the only one added since the graph was written, and it is worth
@@ -923,6 +1000,12 @@ course/platform relationship (§1a) could not be said with the existing ten:
 entirely. So the predicate carries the claim in its own definition: **"makes
 faster, without being required for."** CI pins that second clause, because
 softening it is how the graph would stop saying the thing it was added to say.
+
+`specializes` was added for the same kind of reason (§1b): nothing in the
+vocabulary could say what the platform is *about*. `uses` and `requires` are far
+too weak for a field it refuses to step outside of, and `partOf` runs the wrong
+way. Its definition — "works exclusively within, and claims deep expertise in" —
+carries the boundary, and CI pins the word *exclusively*.
 
 They are namespaced under `https://www.si-math-ai.com/ns#` alongside schema.org.
 Concepts stay `DefinedTerm` so generic consumers still understand them; the edges

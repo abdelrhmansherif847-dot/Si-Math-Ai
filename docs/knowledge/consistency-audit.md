@@ -689,6 +689,69 @@ says so.
 
 ---
 
+## C-26 · The site described itself accurately and uselessly — RESOLVED
+
+**Found:** every page led with the canonical definition — *"a comprehensive
+learning platform for SAT, ACT, and EST Mathematics…"* — which is true, and which
+an AI system will happily compress to **"an AI education platform"**. That
+compression is not a misquote. It is what a retrieval system does with a
+description that never states a boundary, and it produces a sentence accurate of
+a thousand products and useful about none of them.
+
+This is the inverse of every other finding in this document. C-22 and C-24 were
+about claims pointing the wrong way; this one is about a claim that points
+nowhere. Nothing on the site was false. The site simply never said the strongest
+true thing it could say.
+
+**Fixed:** a second canonical statement, alongside the definition rather than in
+place of it —
+
+> Si Math AI is an educational platform specialized in American Diploma
+> Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST
+> Math.
+
+The definition answers *"what is Si Math AI?"*; this answers *"what is it for?"*.
+
+**In the graph:** four concepts and a predicate. `american-diploma-mathematics`
+(*Domain*) with `sat-math`, `act-math` and `est-math` (*Exam*) each `partOf` it,
+joined to the platform by `specializes` — "works exclusively within, and claims
+deep expertise in". *Exclusively* is the load-bearing word and CI pins it, for the
+same reason `accelerates` pins *without being required for*: the honesty clause
+lives in the predicate, where softening it is a visible act. 29 concepts, 100 edges.
+
+**In structured data:** `Organization.disambiguatingDescription` on every page —
+the schema.org property whose stated purpose is distinguishing an item from
+similar ones, which is exactly the job. `knowsAbout` now leads with the field and
+the three exams rather than burying "American Diploma mathematics" fourth and
+lowercase.
+
+**The boundary is published, not implied.** A claim of depth is only credible with
+an exclusion list attached, so `about.html#specialization`, `ai-knowledge.html`,
+`trust.html` and both machine files state what Si Math AI does *not* cover: the
+SAT, ACT or EST in general (mathematics sections only), English, Reading, Science,
+essay writing, admissions consulting, other school subjects, university-level
+mathematics.
+
+**Five new banned assertions**, guarding the opposite failure to every other rule
+in this validator — not falsehood, but width: *"an AI education platform"*, *"a
+general learning platform"*, *"an AI tutor"*, *"covers all subjects"*, and claims
+over English/Reading/Science/essay/admissions. Broadening the positioning back out
+now requires editing the gate deliberately rather than doing it by accident while
+rewriting a paragraph.
+
+**Two things the work turned up that were not the point of it:**
+
+1. **`build-faq.mjs` carried a hand-copied duplicate of `organizationNode()`.** It
+   drifted the moment that node gained `disambiguatingDescription` — the exact
+   failure the shared module exists to prevent. It now calls the module.
+2. **The new exam-parity check from C-25 immediately caught the new copy.** The
+   exclusion list originally read *"not the SAT in general, not the ACT in
+   general"* — omitting the EST, which also has non-mathematics sections we do not
+   cover. A check written for one round of edits catching the next round is the
+   only real evidence that it was worth writing.
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -718,8 +781,9 @@ says so.
 | C-23 | `llms.txt` advertised 136 FAQs against 139 in the data | RESOLVED |
 | C-24 | Course and platform read as competing purchases | RESOLVED |
 | C-25 | The EST was the third exam everywhere it was named | RESOLVED |
+| C-26 | The site described itself accurately and uselessly | RESOLVED |
 
-Twenty-two resolved, three requiring owner action, plus one figure the owner can
+Twenty-three resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

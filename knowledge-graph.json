@@ -62,6 +62,10 @@
       "accelerates": {
         "@id": "sma:accelerates",
         "@type": "@id"
+      },
+      "specializes": {
+        "@id": "sma:specializes",
+        "@type": "@id"
       }
     }
   ],
@@ -80,7 +84,14 @@
         "width": 1024,
         "height": 1024
       },
-      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance."
+      "description": "Si Math AI is a comprehensive learning platform for SAT, ACT, and EST Mathematics that combines educational expertise, AI technology, personalized learning, analytics, and human support to help students improve their understanding and performance.",
+      "disambiguatingDescription": "Si Math AI is an educational platform specialized in American Diploma Mathematics, with deep educational expertise in SAT Math, ACT Math, and EST Math.",
+      "knowsAbout": [
+        "American Diploma Mathematics",
+        "SAT Math",
+        "ACT Math",
+        "EST Math"
+      ]
     },
     {
       "@type": "DefinedTermSet",
@@ -95,6 +106,18 @@
       "hasDefinedTerm": [
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-ai"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#sat-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#act-math"
+        },
+        {
+          "@id": "https://www.si-math-ai.com/knowledge-graph#est-math"
         },
         {
           "@id": "https://www.si-math-ai.com/knowledge-graph#si-math-course"
@@ -214,6 +237,129 @@
       ],
       "accelerates": [
         "https://www.si-math-ai.com/knowledge-graph#si-math-course"
+      ],
+      "specializes": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics",
+      "identifier": "american-diploma-mathematics",
+      "name": "American Diploma Mathematics",
+      "conceptKind": "Domain",
+      "description": "The single field Si Math AI specializes in: the mathematics of the American Diploma examinations — SAT Math, ACT Math and EST Math. Not the SAT, ACT or EST in general — the mathematics sections only — and no other subject. Si Math AI does not cover English, Reading, Science, essay writing, admissions consulting or general school subjects, and does not intend to.",
+      "purpose": "Specialization is the strongest thing Si Math AI can honestly claim, so it is stated rather than left to be inferred. A platform that covers every subject can be expert in none; naming one field is what turns \"deep educational expertise\" into a claim a reader can hold us to.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#american-diploma-mathematics",
+      "canonicalPage": "https://www.si-math-ai.com/about.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/about.html",
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html"
+      ],
+      "input": [
+        "Years of teaching the three American Diploma mathematics examinations"
+      ],
+      "output": [
+        "A curriculum bounded to one field",
+        "A refusal to expand into subjects we cannot teach as well"
+      ],
+      "structuredDataRef": [
+        "https://www.si-math-ai.com/#organization"
+      ],
+      "governs": [
+        "https://www.si-math-ai.com/knowledge-graph#si-math-ai",
+        "https://www.si-math-ai.com/knowledge-graph#taxonomy"
+      ],
+      "requires": [
+        "https://www.si-math-ai.com/knowledge-graph#educational-expertise"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#sat-math",
+      "identifier": "sat-math",
+      "name": "SAT Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the SAT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the SAT's Reading and Writing sections.",
+      "purpose": "Named as its own entity so an AI system can answer \"does Si Math AI cover the SAT?\" precisely: the mathematics, at depth, and nothing else on that exam.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#sat-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-sat-math.html"
+      ],
+      "input": [
+        "The College Board mathematics content domains"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#act-math",
+      "identifier": "act-math",
+      "name": "ACT Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the ACT, and one of the three examinations Si Math AI specializes in. Coverage is of the mathematics only — Si Math AI does not cover the ACT's English, Reading, Science or Writing sections.",
+      "purpose": "Named as its own entity so the answer to \"does Si Math AI cover the ACT?\" is the mathematics specifically, rather than an implied claim over an exam whose other four sections we do not touch.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#act-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-act-math.html"
+      ],
+      "input": [
+        "The ACT mathematics content areas"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "https://www.si-math-ai.com/knowledge-graph#est-math",
+      "identifier": "est-math",
+      "name": "EST Math",
+      "conceptKind": "Exam",
+      "description": "The mathematics section of the EST, and one of the three examinations Si Math AI specializes in. It is the exam most directly relevant to Egyptian university admission, and is covered at the same depth as the other two rather than as an afterthought.",
+      "purpose": "The EST is the reason a platform built in the region exists rather than a smaller market for an international one, and it is the exam most often omitted by preparation products written elsewhere. Naming it as a first-class entity is what stops it becoming the third item in a list.",
+      "inDefinedTermSet": {
+        "@id": "https://www.si-math-ai.com/knowledge-graph#termset"
+      },
+      "url": "https://www.si-math-ai.com/knowledge-graph.html#est-math",
+      "canonicalPage": "https://www.si-math-ai.com/how-it-works.html",
+      "documentedOn": [
+        "https://www.si-math-ai.com/how-it-works.html",
+        "https://www.si-math-ai.com/ai-knowledge.html",
+        "https://www.si-math-ai.com/learn-est-math.html"
+      ],
+      "input": [
+        "The EST mathematics content areas"
+      ],
+      "output": [
+        "Diagnosis, practice and mock exams scoped to this exam"
+      ],
+      "partOf": [
+        "https://www.si-math-ai.com/knowledge-graph#american-diploma-mathematics"
       ]
     },
     {

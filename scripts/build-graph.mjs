@@ -119,6 +119,7 @@ const PRED_LABEL = {
   records: 'records', requires: 'requires', partOf: 'is part of',
   governs: 'governs', improves: 'improves', authoredBy: 'authored by',
   accelerates: 'accelerates',
+  specializes: 'specializes in',
 };
 
 /** Reverse edges, so each concept can show what points at it. */
