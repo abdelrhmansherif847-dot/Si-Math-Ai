@@ -1,7 +1,29 @@
 -- ===========================================================================
 -- daily_limit is a CAP, not a free allowance
 -- ===========================================================================
--- ⛔ NOT APPLIED. Requires explicit owner approval per CLAUDE.md §3.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-02, owner-approved
+--         individually (CLAUDE.md §3). Version 20260802192644.
+--
+--         POST-APPLY VERIFICATION — 7/7, calling the APPLIED function inside a
+--         transaction that was rolled back:
+--
+--   scenario                                    plan   result
+--   ------------------------------------------  -----  ---------------------------
+--   paid, message #1                            HERO   ok, 5 credits, 25000→24995
+--   paid, at daily cap, credits remain          HERO   REFUSED daily_limit_reached,
+--                                                      balance untouched at 24,995
+--   paid, daily_limit NULL, 500 sent today      PRO    ok, 5 credits — never capped
+--   free, under allowance                       FREE   ok, 0 credits
+--   free, at allowance, no credits              FREE   REFUSED daily_limit_reached
+--   free, at allowance, HAS credits             FREE   ok, 5 credits — continues
+--   free, always_charge at allowance, credits   FREE   ok, 20 credits — NOT capped
+--
+--         The last row is the one the NOT v_is_free_tier guard exists for. A
+--         FREE student using STUDY_PLAN falls to the paid branch; without the
+--         guard the cap would have refused them despite purchased credits.
+--
+--         Production afterwards: zero filler rows, HERO 25,000, PRO 3,402, no
+--         FREE profile carrying injected credits.
 --
 -- ── THE DEFECT ─────────────────────────────────────────────────────────────
 -- consume_credits branches on:
@@ -24,19 +46,26 @@
 -- rows, credits_used = 0 on every one, balance unchanged at 25,000.
 --
 -- ── THE PRODUCT RULE (owner, 2026-08-02) ───────────────────────────────────
--- daily_limit is a maximum, never an allowance:
+-- daily_limit is a maximum number of messages per day. It is never a free
+-- allowance, except on the free tier where the allowance IS the plan.
 --
---   FREE (zero-price tier)  daily_limit is a HARD daily cap. Operations cost
---                           no credits, because the plan costs nothing and
---                           grants nothing. 15/day, then the limit response.
---                           A student who bought a pack may continue on those
---                           credits — that is what pricing.html sells, and one
---                           FREE student is holding 20,000 of them.
+-- PAID plans — TWO INDEPENDENT CHECKS, both must pass:
+--     1. the balance covers this operation's configured cost, and
+--     2. today's usage is below daily_limit (when one is configured).
+--   Credits control how much a student can consume overall; daily_limit
+--   controls how much they can consume in one day. Neither substitutes for the
+--   other. Worked example, HERO — 25,000 credits, daily_limit 200:
+--     message   1  deducts the feature's cost
+--     message 200  deducts the feature's cost
+--     message 201  REFUSED, daily_limit_reached, with ~24,000 credits left
+--   A NULL daily_limit means no daily cap; the balance is then the only bound.
 --
---   PAID plans              Every chargeable message deducts credits from
---                           message #1. The credit BALANCE is the real limit.
---                           daily_limit never blocks — it is a soft usage
---                           target the UI displays (184/200) and may warn on.
+-- FREE (zero-price tier) — UNCHANGED, exactly as designed:
+--   the daily allowance first, then purchased credits if the student has any,
+--   then refused. Buying a pack still carries them past the limit. One FREE
+--   student is holding 20,000 credits and that must keep working.
+--
+-- The cost is whatever credit_costs says for the feature — never a constant.
 --
 -- ── WHAT DECIDES "FREE TIER" ───────────────────────────────────────────────
 -- Not `plan_code = 'FREE'`. Hardcoding a code is what Plan Catalog V2 exists to
@@ -293,10 +322,41 @@ BEGIN
     END IF;
 
   -- ── PAID path ────────────────────────────────────────────────────────────
-  -- Reached from message #1 for every paying plan, whatever its daily_limit.
-  -- The balance is the limit; daily_limit is a display/monitoring number the
-  -- UI renders and this function deliberately ignores.
+  -- Charged from message #1, and capped independently.
   ELSE
+    -- CHECK 2 of 2 — the daily cap, evaluated BEFORE the balance.
+    --
+    -- Deliberately first: a student at the cap cannot fix it by buying credits
+    -- today, so 'daily_limit_reached' is the only answer that tells them
+    -- something true. Reporting 'insufficient_credits' would send them to the
+    -- pricing page for something that will not help until tomorrow.
+    --
+    -- Guarded on NOT v_is_free_tier, and the guard is load-bearing rather than
+    -- decorative. Reaching this ELSE does not mean "paid": a FREE student using
+    -- an always_charge feature (STUDY_PLAN, MOCK_EXAM) lands here too, because
+    -- the branch above excludes always_charge. Without the guard, a FREE
+    -- student at 15/15 holding purchased credits would be refused a study plan
+    -- — breaking the one behaviour the owner asked to leave untouched, on the
+    -- exact student it was meant to protect (one holds 20,000 credits).
+    --
+    -- The free tier's cap is handled entirely by the branch above.
+    IF NOT v_is_free_tier AND v_daily_limit IS NOT NULL THEN
+      SELECT COUNT(*) INTO v_daily_used
+      FROM ai_usage_logs
+      WHERE user_id = p_user_id
+        AND created_at >= date_trunc('day', now() AT TIME ZONE 'UTC');
+
+      IF v_daily_used >= v_daily_limit THEN
+        RETURN jsonb_build_object(
+          'ok', false, 'reason', 'daily_limit_reached',
+          'daily_used', v_daily_used, 'daily_limit', v_daily_limit,
+          'balance', v_total,
+          'was_expired', v_was_expired
+        );
+      END IF;
+    END IF;
+
+    -- CHECK 1 of 2 — the balance covers this operation.
     IF v_total < v_cost THEN
       RETURN jsonb_build_object(
         'ok', false, 'reason', 'insufficient_credits',
@@ -384,7 +444,7 @@ END;
 $function$;
 
 comment on column public.plan_definitions.daily_limit is
-  'Maximum AI operations per UTC day. On a ZERO-PRICE plan (amount_egp = 0 and credits_granted = 0) it is a hard cap and operations cost no credits. On a PAID plan it is a SOFT usage target: the UI shows today''s usage against it and may warn, but consume_credits never blocks on it — the credit balance is the real limit. It is NOT a free daily allowance; treating it as one made a 1,949 EGP plan free for its first 200 messages a day (2026-08-02).';
+  'Maximum AI operations per UTC day. NULL means no daily cap. On a PAID plan it is an INDEPENDENT hard cap: every operation is charged its credit_costs price from the first one, AND the request is refused once the day''s count reaches this number, whatever the balance. On the ZERO-PRICE tier (amount_egp = 0 and credits_granted = 0) it is the free daily allowance instead — operations cost nothing up to it, and purchased credits carry the student past it. It is NOT a free allowance on a paid plan; treating it as one made a 1,949 EGP plan free for its first 200 messages a day (2026-08-02).';
 
 -- Assert the predicate still selects the free tier and nothing else.
 do $$
@@ -418,7 +478,10 @@ commit;
 --
 --   -- HERO student: now charged from message #1
 --   SELECT public.consume_credits('6b9a2f4b-...','CHAT_TEXT',null,0,0,0,null,gen_random_uuid());
---   -- expect ok:true, credits_used: 5, balance_after 24995 (was 25000)
+--   -- expect ok:true, credits_used = credit_costs.CHAT_TEXT, balance down by it
+--
+--   -- HERO student at 200/200 with credits left: refused on the CAP, not the balance
+--   -- expect ok:false, reason: daily_limit_reached, balance still ~24,000
 --
 --   -- FREE student at 15/15 with no credits: blocked
 --   -- expect ok:false, reason: daily_limit_reached

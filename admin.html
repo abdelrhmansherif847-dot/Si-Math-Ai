@@ -890,7 +890,7 @@ select.search-input{cursor:pointer}
               <div class="pb-f">
                 <label for="pbDaily">Daily message limit</label>
                 <input type="number" id="pbDaily" min="0" step="1" placeholder="unlimited"/>
-                <span class="hint">Leave empty for unlimited. On a <b>free plan</b> (0 price, 0 credits) this is a <b>hard cap</b> and messages cost no credits. On a <b>paid plan</b> it is only a <b>suggested daily pace</b> shown in the UI — credits are charged from the first message and the student is never blocked by this number.</span>
+                <span class="hint">Maximum messages per day. Leave empty for no daily cap. On a <b>paid plan</b> this is an <b>independent hard cap</b>: every message is charged its credit cost from the first one, <i>and</i> the student is blocked once they reach this number — credits do not extend it. On a <b>free plan</b> (0 price, 0 credits) it is the <b>free daily allowance</b> instead: messages cost nothing up to it, and purchased credits carry the student past it. It is never a free allowance on a paid plan.</span>
               </div>
               <div class="pb-f">
                 <label for="pbOrder">Display order</label>

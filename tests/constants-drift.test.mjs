@@ -165,7 +165,10 @@ if (migFile.length === 1) {
 // price-only form. Collect them all and require each to name credits_granted.
 for (const f of ['chat.html', 'pricing.html']) {
   const src = stripComments(read(f));
-  const defs = [...src.matchAll(/isFreeTier[^\n]*?=[^\n;]+/g)].map(m => m[0]);
+  // Two shapes in the wild: `const isFreeTier = <expr>;` (pricing.html) and
+  // `isFreeTier: function(){ ... }` (chat.html's SignalEngine). Take a window
+  // after each occurrence rather than assuming either.
+  const defs = [...src.matchAll(/isFreeTier\s*[:=][\s\S]{0,260}/g)].map(m => m[0]);
   t.ok(`${f} defines the free-tier test at least once`, defs.length > 0);
   const priceOnly = defs.filter(d => /price_egp/.test(d) && !/credits_granted/.test(d));
   t.is(`${f}: every free-tier test names credits_granted`, priceOnly, []);
@@ -174,13 +177,21 @@ for (const f of ['chat.html', 'pricing.html']) {
 t.ok('chat.html resolves the free-tier test from the catalogue, not a plan_code',
   !/planCode\s*===\s*['"]FREE['"]/.test(stripComments(chatSrc)));
 
-// The paid meaning has to be stated where a paid student sees the number,
-// otherwise "3 / 200" reads as a cap that will block them.
-t.ok('the chat counter explains a paid plan\'s number',
-  /suggested daily pace/i.test(chatSrc));
-t.ok('the pricing usage note explains a paid plan\'s number',
-  /suggested daily pace|not a limit/i.test(pricingSrc));
-t.ok('the Owner Dashboard says which meaning applies',
-  /hard cap/i.test(read('admin.html')) && /suggested daily pace/i.test(read('admin.html')));
+// daily_limit caps BOTH tiers; what differs is what happens at the cap, and
+// each surface has to say which. A paid student must not be told credits will
+// carry them past it (they will not), and a free student must not be told the
+// opposite (for them, credits do).
+t.ok('the chat counter tells a paid student credits do not extend the cap',
+  /credits do not extend it/i.test(chatSrc));
+t.ok('the chat counter tells a free student credits continue',
+  /Credits continue from here/i.test(chatSrc));
+t.ok('the pricing note offers the pack continuation to the free tier only',
+  /isFreeTier[\s\S]{0,400}Buy a pack[\s\S]{0,200}to continue after the daily limit/.test(pricingSrc));
+t.ok('the pricing note tells a paid student credits do not extend the cap',
+  /Credits do not extend it/i.test(pricingSrc));
+t.ok('the Owner Dashboard states both meanings',
+  /independent hard cap/i.test(read('admin.html')) && /free daily allowance/i.test(read('admin.html')));
+t.ok('nothing calls a paid daily_limit a suggestion any more',
+  !/suggested (daily )?pace/i.test(chatSrc + pricingSrc + read('admin.html')));
 
 t.done();

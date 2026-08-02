@@ -1697,9 +1697,10 @@ button{font-family:inherit;cursor:pointer}
     // Is this a zero-price tier? It decides what daily_limit MEANS, and the
     // test must match the one consume_credits uses:
     //   coalesce(amount_egp,0) = 0 AND coalesce(credits_granted,0) = 0
-    // Free tier  -> daily_limit is a HARD cap; messages cost no credits.
-    // Paid plan  -> credits are charged from message #1 and daily_limit never
-    //               blocks; it is a suggested pace this counter displays.
+    // Free tier  -> daily_limit is the free allowance: messages cost no
+    //               credits up to it, and purchased credits continue past it.
+    // Paid plan  -> credits are charged from message #1 AND daily_limit is an
+    //               independent hard cap; credits do not extend it.
     // Unknown (catalogue not loaded) -> undefined, and the counter says so
     // rather than implying either rule.
     isFreeTier: function(){
@@ -1735,14 +1736,12 @@ button{font-family:inherit;cursor:pointer}
       return undefined;
     },
     bumpUsage: function(){
-      var max = this.dailyLimit();
-      // Clamp ONLY where the server actually stops you — the free tier's hard
-      // cap. On a paid plan daily_limit is a pace, and the student may pass it,
-      // so the counter has to keep counting: sticking at "200 / 200" would
-      // claim a block that will not happen.
-      this.usage = (this.isFreeTier() === true && typeof max === 'number')
-        ? Math.min(this.usage + 1, max)
-        : this.usage + 1;
+      // Never clamped. The counter reports what the student actually sent, and
+      // both tiers can exceed the number shown beside it: a FREE student who
+      // bought credits continues past the allowance, and the paid cap is
+      // enforced server-side anyway. Clamping would invent a number to avoid
+      // showing "18 / 15", which is the true and more useful thing to show.
+      this.usage = this.usage + 1;
       this.renderUsage();
     },
     renderUsage: function(){
@@ -1764,14 +1763,19 @@ button{font-family:inherit;cursor:pointer}
           ? Math.min(100, Math.round(this.usage/max*100))+'%'
           : '0%';   // uncapped or unknown: nothing meaningful to fill toward
       }
-      // The same "3 / 200" means "3 of a hard cap" on the free tier and "3 of a
-      // suggested pace" on a paid plan. Only the paid case needs saying — on the
-      // free tier the number already means what it looks like.
+      // Both tiers cap at this number, but for different reasons, and the
+      // difference is what a student needs to know when they hit it:
+      //   free tier -> the allowance is spent; buying credits continues today
+      //   paid plan -> a hard daily cap; credits do NOT get you past it, and
+      //                every message already cost credits on the way here
       if(noteEl){
-        if (free === false && typeof max === 'number') {
+        if (typeof max === 'number' && free === false) {
           noteEl.textContent = this.usage >= max
-            ? 'Above your suggested daily pace — you are not blocked. Credits are what apply.'
-            : 'A suggested daily pace, not a limit — your credit balance is what applies.';
+            ? 'Daily limit reached. It resets at midnight UTC — credits do not extend it.'
+            : 'Daily limit. Each message also uses credits.';
+          noteEl.style.display = '';
+        } else if (typeof max === 'number' && free === true && this.usage >= max) {
+          noteEl.textContent = 'Free daily messages used. Credits continue from here.';
           noteEl.style.display = '';
         } else {
           noteEl.textContent = '';

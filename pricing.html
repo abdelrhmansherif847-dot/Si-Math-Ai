@@ -601,7 +601,7 @@ function buildPlanFeatures(plan) {
     // rather than leaving the card and the usage meter contradicting each other
     // ("Unlimited" on one, "184 / 200" on the other).
     features.push({ ok: true,  text: limit != null
-      ? 'No daily message limit (' + limit + '/day suggested pace)'
+      ? 'Up to ' + limit + ' AI messages per day'
       : 'Unlimited daily AI messages' });
     features.push({ ok: true,  text: 'Full Weakness Analyzer (all topics, trends, deep analysis)' });
     if (plan.is_founder) {
@@ -688,11 +688,13 @@ async function loadPage() {
   const activePlan = plans.find(p => p.plan_code === currentPlanCode);
   const deviceLimit = activePlan?.device_limit || 2;
   const dailyLimit = activePlan?.daily_limit || null;
-  // daily_limit means two different things and the copy below has to say which.
-  // On a zero-price tier it is a HARD cap and messages cost no credits. On a
-  // paid plan it is a SOFT usage target — consume_credits charges from message
-  // #1 and never blocks on it, so telling a paying student to "buy a pack to
-  // continue after the daily limit" would be false.
+  // daily_limit caps both tiers, but what happens AT the cap differs, and the
+  // copy has to say which:
+  //   zero-price tier -> the allowance is spent; purchased credits continue
+  //   paid plan       -> a hard stop for the day; credits do NOT extend it,
+  //                      and every message already cost credits getting there
+  // Telling a paying student to "buy a pack to continue after the daily limit"
+  // is false, so that line is free-tier only.
   const isFreeTier = activePlan
     ? (Number(activePlan.price_egp || 0) === 0 && Number(activePlan.credits_granted || 0) === 0)
     : true;
@@ -890,13 +892,13 @@ async function loadPage() {
     <div class="usage-row">
       <div class="usage-header">
         <span class="usage-label">💬 AI Messages Today</span>
-        <span class="usage-count" style="color:${dailyLimit && todayUsage >= dailyLimit ? (isFreeTier ? 'var(--red)' : 'var(--amber)') : 'var(--text-400)'}">${todayUsage}${dailyLimit ? ' / ' + dailyLimit : ' (unlimited)'}</span>
+        <span class="usage-count" style="color:${dailyLimit && todayUsage >= dailyLimit ? 'var(--red)' : 'var(--text-400)'}">${todayUsage}${dailyLimit ? ' / ' + dailyLimit : ' (unlimited)'}</span>
       </div>
-      ${dailyLimit ? `<div class="usage-bar"><div class="usage-fill" style="width:${Math.min(100,(todayUsage/dailyLimit)*100)}%;background:${todayUsage >= dailyLimit ? (isFreeTier ? 'var(--red)' : 'var(--amber)') : 'var(--cyan)'};box-shadow:0 0 6px ${todayUsage >= dailyLimit ? (isFreeTier ? 'var(--red)' : 'var(--amber)') : 'var(--cyan)'}66"></div></div>` : ''}
+      ${dailyLimit ? `<div class="usage-bar"><div class="usage-fill" style="width:${Math.min(100,(todayUsage/dailyLimit)*100)}%;background:${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'};box-shadow:0 0 6px ${todayUsage >= dailyLimit ? 'var(--red)' : 'var(--cyan)'}66"></div></div>` : ''}
       ${dailyLimit
           ? (isFreeTier
               ? `<div class="usage-note">Resets at midnight UTC · <a href="#packs" style="color:var(--cyan)">Buy a pack</a> to continue after the daily limit · <a href="#plans" style="color:var(--cyan)">Upgrade</a> for unlimited</div>`
-              : `<div class="usage-note">${todayUsage >= dailyLimit ? 'Above your suggested daily pace — you are not blocked. ' : ''}A suggested daily pace, not a limit · your credit balance is what applies</div>`)
+              : `<div class="usage-note">${todayUsage >= dailyLimit ? 'Daily limit reached — resets at midnight UTC. Credits do not extend it. ' : 'Resets at midnight UTC · '}Each message also uses credits · <a href="#plans" style="color:var(--cyan)">Upgrade</a> for a higher limit</div>`)
           : `<div class="usage-note">No daily limit on your plan</div>`}
     </div>
     <div class="usage-row">
