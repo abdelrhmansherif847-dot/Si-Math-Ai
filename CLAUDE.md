@@ -132,13 +132,13 @@ student impact during exam-prep windows.
 | | |
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
-| Edge Functions | `ai-tutor` (platform version **133**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
+| Edge Functions | `ai-tutor` (platform version **134**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
 | `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v95'` (branch `claude/free-quota-enforcement-bug-satsry` carries **v96**, the server-side quota gate — **not deployed**) |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | ⚠️ Quota gate status | **`main` carries v96; production runs v95.** Both v96 migrations are APPLIED and the v96 site is live, so **no chat turn is charged until `ai-tutor` v96 is deployed.** That deploy is the outstanding step — see the investigation record §8 |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
-| `ai-tutor` deployed bundle | sha256 `c3f5fff1539aa9bed2ab5e03595325c82dbc8746c80918eb67ab029ed9543dd2`, deployed 2026-07-31T16:39:24Z |
+| `ai-tutor` deployed bundle | sha256 `03441f52dbb14e30dd8f179b95a2a936bf014b342eb191e1fb75dab05965a865`, deployed 2026-08-02T04:47:29Z. (This row previously read version 133 / `c3f5fff1…` / 2026-07-31 — one deploy stale. Re-read it from `list_edge_functions` rather than trusting it.) |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |

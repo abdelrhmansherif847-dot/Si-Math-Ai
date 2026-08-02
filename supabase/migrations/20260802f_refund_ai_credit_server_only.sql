@@ -25,6 +25,13 @@
 --         Recorded here rather than in a commit message because the file is
 --         where someone reading the schema history will look.
 --
+--         MEASURED at apply time: ai_usage_logs held ZERO rows with a
+--         client_request_id, i.e. ai-tutor v96 had never served a request --
+--         only v96 sends that key. The running function was platform version
+--         134 (deployed 2026-08-02T04:47:29Z, sha256 03441f52...), which is
+--         v95 source. CLAUDE.md recorded 133 / c3f5fff1 and was one deploy
+--         stale; corrected there.
+--
 -- ── WHAT THIS CLOSES ───────────────────────────────────────────────────────
 -- consume_credits() derives a FREE student's daily usage by counting rows:
 --

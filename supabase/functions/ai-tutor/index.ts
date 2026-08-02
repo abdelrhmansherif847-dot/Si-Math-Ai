@@ -2057,7 +2057,7 @@ const DENIED = (reason: string, extra: Partial<EntitlementDecision> = {}): Entit
 
 // PostgREST's answer when the argument list matches no overload. Seen when
 // ai-tutor v96 is deployed before
-// migrations-pending/20260802_consume_credits_idempotency.sql is applied: the
+// 20260802e_consume_credits_idempotency.sql is applied (it now is): the
 // eight-argument form does not exist yet. The request is REJECTED at the schema
 // cache — no SQL runs, so nothing is charged and retrying without the key is
 // safe rather than merely convenient.
@@ -2186,10 +2186,11 @@ async function chargeEntitlement(
  * service-role client (auth.uid() IS NULL) matches no row today and returns
  * log_not_found. The user-JWT client is therefore tried as the fallback. The
  * order is deliberate: admin first is the intended end state, and once
- * migrations-pending/20260802_refund_ai_credit_server_only.sql is approved and
- * applied — restricting this RPC to the server — the fallback simply stops
- * being reached. Both orderings work in both states, so the code and the
- * migration can ship independently.
+ * 20260802f_refund_ai_credit_server_only.sql is applied — restricting this RPC
+ * to the server — the fallback simply stops being reached. That migration IS
+ * applied as of 2026-08-02, so on the deployed database the admin attempt is
+ * the one that succeeds; the fallback remains for a rollback of it, and
+ * because a gate should not depend on a grant staying exactly as it is today.
  */
 async function refundEntitlement(
   sbAdmin: ReturnType<typeof createClient>,
@@ -2699,7 +2700,7 @@ serve(async (req) => {
     // charge a second time for one logical send.
     //
     // consume_credits honours the key once
-    // migrations-pending/20260802_consume_credits_idempotency.sql is applied,
+    // 20260802e_consume_credits_idempotency.sql is applied (it now is),
     // returning the ORIGINAL charge — same log_id, same credits — instead of
     // making a new one. Until then chargeEntitlement falls back to the unkeyed
     // call, so this is safe to deploy in either order; `keyed` records which

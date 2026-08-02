@@ -2346,7 +2346,7 @@ button{font-family:inherit;cursor:pointer}
       // refund_ai_credit — an RPC that deletes the ai_usage_logs row
       // consume_credits counts for the FREE daily cap, i.e. a client-callable
       // quota reset. It is being revoked from `authenticated`
-      // (migrations-pending/20260802_refund_ai_credit_server_only.sql).
+      // (supabase/migrations/20260802f_refund_ai_credit_server_only.sql, applied).
       //
       // Removing the refund and leaving the order alone would mean a student
       // whose plan generation threw silently loses 20 credits. Reordering
