@@ -495,4 +495,34 @@ t.section('Every billing cycle the database accepts is understood by the pages')
     winPC.PlanCatalog.periodLabel({ billing_cycle: 'one_time' }), '');
 }
 
+// ── subscriptions.plan_type is not a plan_code ─────────────────────────────
+// subscriptions_plan_type_check permits six legacy codes and nothing else, so
+// writing a plan_code into plan_type works only while every plan happens to be
+// one of those six. Plan Catalog V2 ended that: the owner authored HERO
+// (semiannual, 182 days) and approving it raised
+//   new row for relation "subscriptions" violates check constraint
+//   "subscriptions_plan_type_check"
+//
+// The column is nullable, nothing reads it, and plan_code on the same row
+// carries the exact value — so the client writes nothing and the server writes
+// a mapped category. These guard both halves.
+t.section('plan_type is never written as a raw plan_code');
+
+const SUBS_WRITERS = readdirSync(REPO)
+  .filter(f => /\.(html|js)$/.test(f) && f !== 'knowledge-graph.json');
+
+for (const f of SUBS_WRITERS) {
+  const src = read(f);
+  if (!/from\('subscriptions'\)/.test(src)) continue;
+  // A page may SELECT plan_type (pricing.html does, and ignores the value).
+  // Assigning to it is the defect: `plan_type: <something>` in an object literal.
+  const writes = [...src.matchAll(/plan_type\s*:\s*[^,\n}]+/g)].map(m => m[0].trim());
+  t.is(`${f} assigns no plan_type`, writes, []);
+}
+
+// Admin's plan editor writes plan_definitions.daily_limit etc, not this column —
+// so the check above must not be vacuous. Prove the pattern would fire.
+t.ok('the check would catch the original defect',
+  /plan_type\s*:\s*[^,\n}]+/.test('plan_type: selectedPlanCode,'));
+
 t.done();
