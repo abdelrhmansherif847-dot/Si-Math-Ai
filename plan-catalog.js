@@ -166,6 +166,28 @@
     return row ? row.credits_granted : null;
   }
 
+  // How many AI operations this plan allows per UTC day, or null for no daily
+  // cap. This is the number consume_credits() actually enforces — it reads
+  // pricing_settings.daily_limit, which is this same column through the
+  // compatibility view.
+  //
+  // Exposed because pages were hardcoding it. chat.html's usage counter read
+  // "x / 10" and its over-limit upsell said "all 10 free messages" while the
+  // FREE plan had allowed 15 since 2026-07. Both were literals typed when the
+  // limit was 10; nothing told them it had moved. A page that asks the
+  // catalogue cannot drift, and a plan whose limit is edited in the Owner
+  // Dashboard now updates every display with no code change — rule 3 at the
+  // top of this file.
+  //
+  // Returns undefined (not null) when the catalogue has not loaded, so a caller
+  // can distinguish "no cap" from "not known yet". They render differently:
+  // "Unlimited" is a claim, and it must not be made from missing data.
+  function dailyLimitOf(code) {
+    if (!_byCode) return undefined;
+    var row = get(code);
+    return row ? row.daily_limit : null;
+  }
+
   // Default badge wording. `badge_text` on the row always wins — this is only
   // the label for a badge the owner selected without typing their own words.
   var BADGE_LABEL = {
@@ -294,6 +316,7 @@
     name:          nameOf,
     price:         priceOf,
     credits:       creditsOf,
+    dailyLimit:    dailyLimitOf,
     // Plans (every non-pack kind) and packs. `subscriptions` keeps its name
     // because that is what every caller already says, but it now spans
     // subscription + lifetime + custom.

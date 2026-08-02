@@ -814,8 +814,18 @@ async function loadPage() {
 
   // Credit packs
   if (packs.length > 0) {
+    // The free allowance is read from the catalogue, not typed here. This
+    // sentence said "10 daily messages" while the FREE plan had allowed 15
+    // since July — a literal that outlived the number it described. When the
+    // limit is unreadable the sentence drops the figure rather than guessing:
+    // quoting a wrong allowance on the page that takes payment is worse than
+    // quoting none.
+    const freeDaily = window.PlanCatalog ? PlanCatalog.dailyLimit('FREE') : undefined;
+    const freeAllowanceCopy = (typeof freeDaily === 'number')
+      ? `Free plan users get their ${freeDaily} daily messages first, then credits are used after the daily allowance runs out.`
+      : `Free plan users get their daily messages first, then credits are used after the daily allowance runs out.`;
     html += `<div class="sec-label" id="packs">Buy Credit Packs</div>
-    <div style="font-size:13px;color:var(--text-400);margin-bottom:14px;margin-top:-8px">Credits never expire. Available to all users — no subscription required. Free plan users get their 10 daily messages first, then credits are used after the daily allowance runs out.</div>
+    <div style="font-size:13px;color:var(--text-400);margin-bottom:14px;margin-top:-8px">Credits never expire. Available to all users — no subscription required. ${freeAllowanceCopy}</div>
     <div class="packs-grid">`;
 
     packs.forEach((pack, idx) => {

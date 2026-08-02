@@ -660,7 +660,10 @@ button{font-family:inherit;cursor:pointer}
           <span class="u-ic">⚡</span>
           <div class="u-body">
             <div class="u-l">Today's AI Analyses</div>
-            <div class="u-v"><span id="usageNow">0</span> / <span id="usageMax">10</span> <span class="u-plan" id="usagePlan">(Free)</span></div>
+            <!-- usageMax starts as '—', not a number: the real limit comes from
+                 plan_definitions.daily_limit via PlanCatalog and lands within a
+                 tick. A literal here was how "10" survived the move to 15. -->
+            <div class="u-v"><span id="usageNow">0</span> / <span id="usageMax">—</span> <span class="u-plan" id="usagePlan">(Free)</span></div>
             <div class="u-track"><i id="usageBar" style="width:0%"></i></div>
           </div>
         </div>
@@ -773,6 +776,10 @@ button{font-family:inherit;cursor:pointer}
 <!-- Centralized credit configuration (RFC operation-based credits). Resolves
      per-operation costs from public.credit_costs; pages never hardcode costs. -->
 <script src="credit-config.js"></script>
+<!-- Centralized plan catalogue. Resolves the per-plan daily limit from
+     public.plan_definitions so the usage counter and the over-limit upsell
+     state the number consume_credits actually enforces. -->
+<script src="plan-catalog.js"></script>
 <script>
   // ===== SUPABASE INIT =====
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -782,6 +789,9 @@ button{font-family:inherit;cursor:pointer}
   // Kick off the centralized credit-cost catalogue load early so per-operation
   // charging (chat_text / chat_image / chat_followup) resolves from config.
   try { if (window.CreditConfig) CreditConfig.load(sb); } catch (_) {}
+  // Same, for the plan catalogue: the usage counter and the over-limit upsell
+  // need this plan's real daily_limit, not a number typed into the page.
+  try { if (window.PlanCatalog) PlanCatalog.load(sb); } catch (_) {}
 
   async function deviceGuard(sb, userId) {
     var{data:_ap}=await sb.from('profiles').select('is_admin').eq('id',userId).single();
@@ -1084,8 +1094,16 @@ button{font-family:inherit;cursor:pointer}
         .eq('user_id', user.id)
         .gte('created_at', todayUTC);
       SignalEngine.plan = planCode.toLowerCase(); // normalize: 'PRO_MONTHLY' → 'pro_monthly'
+      SignalEngine.planCode = planCode;           // raw, for the catalogue lookup
       SignalEngine.usage = usageCount || 0;
       SignalEngine.renderUsage();
+      // The catalogue load was kicked off at page init and may not have landed
+      // yet, in which case the render above printed '—' for the limit. Re-render
+      // when it resolves so the real number appears without a reload. load()
+      // never rejects, so this needs no catch of its own.
+      try {
+        if (window.PlanCatalog) PlanCatalog.load(sb).then(function(){ SignalEngine.renderUsage(); });
+      } catch (_) {}
       loadChatHistory();
       renderEmptyStateHistory();
       discardLegacyRefundQueue();
@@ -1672,19 +1690,52 @@ button{font-family:inherit;cursor:pointer}
       var p = this.plan;
       return p !== 'free' && p !== 'basic' && p !== '' && p !== 'free plan';
     },
+    // The daily cap for THIS student's plan, resolved from the plan catalogue
+    // (public.plan_definitions.daily_limit) — the same column consume_credits
+    // reads through the pricing_settings view.
+    //
+    // This used to be `this.isPaid() ? 200 : 10`, two literals typed when the
+    // FREE limit was 10. It moved to 15 in July and the counter kept saying
+    // "x / 10", so a free student was shown a bar that filled at 10 while the
+    // server let them through to 15. The 200 was worse: it is not any plan's
+    // limit. PRO_MONTHLY and every other paid subscription carry daily_limit
+    // NULL — no daily cap at all — so a Pro student was shown a ceiling that
+    // does not exist.
+    //
+    // Returns: a number (real cap), null (no daily cap), or undefined (the
+    // catalogue has not loaded, so we do not know and must not guess).
+    dailyLimit: function(){
+      try {
+        if (window.PlanCatalog && PlanCatalog.isLoaded()) {
+          return PlanCatalog.dailyLimit(this.planCode || 'FREE');
+        }
+      } catch (_) {}
+      return undefined;
+    },
     bumpUsage: function(){
-      var max = this.isPaid()?200:10;
-      this.usage = Math.min(this.usage+1, max);
+      var max = this.dailyLimit();
+      // No cap, or not known yet: just count up. Clamping to a guessed ceiling
+      // is how "x / 10" outlived the limit it described.
+      this.usage = (typeof max === 'number') ? Math.min(this.usage+1, max) : this.usage+1;
       this.renderUsage();
     },
     renderUsage: function(){
-      var max = this.isPaid()?200:10;
+      var max = this.dailyLimit();
       var nowEl=document.getElementById('usageNow'), maxEl=document.getElementById('usageMax'),
           planEl=document.getElementById('usagePlan'), barEl=document.getElementById('usageBar');
       if(nowEl) nowEl.textContent=this.usage;
-      if(maxEl) maxEl.textContent=max;
       if(planEl) planEl.textContent=this.isPaid()?'(Pro)':'(Free)';
-      if(barEl) barEl.style.width=Math.round(this.usage/max*100)+'%';
+      if(maxEl){
+        // '—' while the catalogue is loading: honest about not knowing, and it
+        // resolves within the same tick as the rest of the page.
+        maxEl.textContent = (typeof max === 'number') ? max
+                          : (max === null ? '∞' : '—');
+      }
+      if(barEl){
+        barEl.style.width = (typeof max === 'number' && max > 0)
+          ? Math.min(100, Math.round(this.usage/max*100))+'%'
+          : '0%';   // uncapped or unknown: nothing meaningful to fill toward
+      }
     }
   };
 
@@ -2598,7 +2649,15 @@ button{font-family:inherit;cursor:pointer}
       if (err && err.quota) {
         var q = err.quota;
         if (q.reason === 'daily_limit_reached') {
-          showCreditError('You\'ve used all ' + (q.daily_limit || 10) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
+          // The server sends the limit it actually enforced, so that value is
+          // always right. The `|| 10` that used to sit here was a literal from
+          // when the FREE limit was 10 — it stayed behind when the limit became
+          // 15, ready to state a wrong number on any response that omitted the
+          // field. Fall back to the catalogue, and to naming no number at all
+          // rather than naming one we cannot source.
+          var _lim = (typeof q.daily_limit === 'number') ? q.daily_limit : null;
+          if (_lim === null) { try { var _c = PlanCatalog.dailyLimit(SignalEngine.planCode || 'FREE'); if (typeof _c === 'number') _lim = _c; } catch (_) {} }
+          showCreditError('You\'ve used all ' + (_lim === null ? 'your' : _lim) + ' free messages for today. <strong>Get more now:</strong> <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> (never expires) or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade to Pro</a> for unlimited daily messages.');
         } else if (q.reason === 'insufficient_credits') {
           showCreditError('Not enough credits remaining (balance: ' + (q.balance || 0) + '). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> to top up, or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade your plan</a> for a new monthly allowance.');
         } else {

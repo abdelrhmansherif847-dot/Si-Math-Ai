@@ -72,4 +72,57 @@ const cc = read('credit-config.js');
 t.ok('static costs are documented as a fallback only', /fallback used only before the live|DB is always authoritative/i.test(cc));
 t.ok('a live config loader exists', /credit_costs/.test(cc));
 
+// ── The daily free allowance is never a literal ────────────────────────────
+// The FREE plan's daily_limit moved from 10 to 15. Three places in the frontend
+// kept saying 10, because each held its own copy: the chat usage counter
+// (`isPaid()?200:10`), its over-limit upsell (`daily_limit || 10`), and the
+// pricing page's packs blurb ("their 10 daily messages"). The counter was the
+// worst of the three — a free student watched a bar fill at 10 while the server
+// let them through to 15.
+//
+// So this section does NOT assert that the pages say 15. Asserting the new
+// number would reproduce the original defect one value later. It asserts the
+// pages hold NO number at all and read plan_definitions.daily_limit instead,
+// which is the same column consume_credits enforces.
+t.section('The daily free allowance is read, never typed');
+
+// Comments discuss the old literals on purpose; only shipped output counts.
+const stripComments = (src) => src
+  .replace(/<!--[\s\S]*?-->/g, '')
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
+
+const chatSrc    = read('chat.html');
+const pricingSrc = read('pricing.html');
+const catalogSrc = read('plan-catalog.js');
+const chatOut    = stripComments(chatSrc);
+const pricingOut = stripComments(pricingSrc);
+
+t.ok('the catalogue exposes the per-plan daily limit',
+  /dailyLimit:\s*dailyLimitOf/.test(catalogSrc) && /function dailyLimitOf/.test(catalogSrc));
+t.ok('chat.html loads the plan catalogue',
+  /<script src="plan-catalog\.js">/.test(chatSrc));
+t.ok('the usage counter resolves its ceiling from the catalogue',
+  /PlanCatalog\.dailyLimit\(/.test(chatOut));
+
+t.ok('no hardcoded paid/free ceiling pair survives',
+  !/isPaid\(\)\s*\?\s*\d+\s*:\s*\d+/.test(chatOut));
+t.ok('no `daily_limit || <number>` fallback survives',
+  !/daily_limit\s*\|\|\s*\d/.test(chatOut) && !/daily_limit\s*\|\|\s*\d/.test(pricingOut));
+t.ok('the usageMax placeholder is not a number',
+  !/id="usageMax">\s*\d/.test(chatSrc));
+
+// The rendered-copy check. Catches a new literal written in prose, which is how
+// the pricing-page sentence went stale in the first place.
+for (const [label, out] of [['chat.html', chatOut], ['pricing.html', pricingOut]]) {
+  const hits = [...out.matchAll(/\b\d+\s+(?:free|daily)\s+(?:messages?|questions?|analyses)/gi)]
+    .map(m => m[0]);
+  t.is(`${label} quotes no literal daily allowance`, hits, []);
+}
+
+// Red-capable by construction: this is the exact string that was live.
+t.ok('the check would catch the original defect',
+  /\b\d+\s+(?:free|daily)\s+(?:messages?|questions?|analyses)/i
+    .test('Free plan users get their 10 daily messages first'));
+
 t.done();
