@@ -115,8 +115,25 @@ if (SIZE < 40_000) {
 // badly wrong" sanity check, not a budget — but it had become tight enough that
 // an ordinary prompt edit tripped it, which trains people to raise it reflexively
 // instead of reading it. 260 KB restores real headroom.
-if (SIZE > 260_000) {
-  FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 260000)`) || FAILED;
+//
+// Bumped from 260 KB -> 280 KB for Truth System v2 Phase V0, which grew the file
+// from 256,899 to ~273,000 bytes: the V0 observation surface (policy identity,
+// forced-exploration recording, the answer-blind pre-commitment, the decision-row
+// builder) plus its wiring in runL3ShadowPipeline.
+//
+// READ THIS BEFORE RAISING IT A SIXTH TIME. That this bound has now moved five
+// times is the finding, not the fix. Every raise has been for a real feature and
+// every raise has been correct in isolation, which is exactly how a 4,900-line
+// single file with a restricted deploy path is arrived at — and this function has
+// already caused two production outages by shipping incomplete (DEPLOY.md §4).
+//
+// The structural answer is already scoped and is the next phase of work:
+// V1-T16 moves the L3 pipeline into supabase/functions/_shared/verification.core.js,
+// following the taxonomy.core.js single-source pattern that is already in
+// production. After that extraction this number should go DOWN, and a raise that
+// is not preceded by an extraction should be challenged in review.
+if (SIZE > 280_000) {
+  FAILED = fail(`source file is suspiciously large: ${SIZE} bytes (expected <= 280000)`) || FAILED;
 }
 
 // Placeholder / TODO / FIXME markers that should never reach production.
