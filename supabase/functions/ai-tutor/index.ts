@@ -1778,6 +1778,217 @@ function answersEquivalent(a: string, b: string): boolean {
   return Math.abs(va - vb) <= 1e-9 * Math.max(1, Math.abs(va), Math.abs(vb));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TRUTH SYSTEM v2 — V0 OBSERVATION SURFACE
+// ═══════════════════════════════════════════════════════════════════════════
+// Blueprint: docs/roadmap/truth-system-v2-migration-strategy.md §3 (Phase V0)
+// Tasks V0-T01/T06/T10/T13. Rationale, assumptions and deferred work:
+// docs/roadmap/v0-notes.md — read that before changing anything here.
+//
+// Additive, and the one behavioural switch is OFF BY DEFAULT. With no env
+// change this deploy leaves L3 Shadow byte-identical: same OCR check, same two
+// solvers, same judge, same verdict, same verification_meta keys, same
+// question_records write. What is added is a second, identifier-free record of
+// WHO decided and under WHAT policy.
+//
+// It ships before anything reads it because none of it can be retrofitted: a
+// decision made without a policy version is permanently unattributable, and
+// forced exploration is free only while the pipeline has no early exit.
+
+// ── V0-T10 — policy identity ────────────────────────────────────────────────
+// Today's pipeline is a fixed straight line with no branching and no early
+// exit. That has always been a policy; it has never had a version, so no
+// decision it made is attributable to the logic that made it.
+//
+// POLICY_VERSION moves when the DECISION LOGIC moves. L3_PIPELINE_VERSION moves
+// when the pipeline's shape or prompts move. Separate on purpose — a prompt
+// edit is not a policy change, and conflating them makes the propensity log
+// unreadable the first time either moves alone.
+const POLICY_VERSION = 'v0-fixed-plan-1';
+const PLAN_ID        = 'l3-linear-v1';
+
+// ── V0-T13 — forced exploration (v2 §10.7, principle P7) ────────────────────
+// A fixed fraction verified BEYOND sufficiency, permanently: it is the audit
+// sample, the calibration set, OPE support, and the only measurement of
+// early-exit error. The fraction is 1.0 today and that is not a placeholder —
+// with no early exit every math question already gets the full plan.
+// NOTHING BRANCHES ON THE RESULT in V0. It is recorded, never acted on.
+const DEFAULT_EXPLORATION_FRACTION = 1;
+
+function explorationFraction(): number {
+  const raw = Number(Deno.env.get('VERIFICATION_EXPLORATION_FRACTION') ?? DEFAULT_EXPLORATION_FRACTION);
+  if (!Number.isFinite(raw)) return DEFAULT_EXPLORATION_FRACTION;   // junk config → today's behaviour
+  return Math.min(1, Math.max(0, raw));
+}
+
+// Draw is a parameter, not an internal Math.random(), so the decision is
+// reproducible under test. At fraction 1.0 every draw in [0,1) selects.
+function isForcedExploration(fraction: number, draw: number): boolean {
+  return draw < fraction;
+}
+
+// ── V0-T01 — answer-blind judging (v2 §7.3) ─────────────────────────────────
+// runJudge (below) receives Zero's explanation, Zero's final answer AND both
+// solver answers before it rules. That is the answer-conditioned configuration
+// measured at a false-positive rate of 0.719, against 0.012 for a judge that
+// commits to its own answer first: shown a candidate, a judge measures
+// plausibility rather than correctness.
+//
+// This adds the pre-committed judge ALONGSIDE it. The legacy verdict is still
+// computed, still written to judge_verdict, and still drives
+// verification_quality_score — nothing downstream moves. Both are recorded so
+// their disagreement can be measured before anything depends on either.
+//
+// THE RULING IS DERIVED, NOT ASKED FOR. Once the judge has committed, comparing
+// its answer to the candidate is a decision, not a judgement — and asking a
+// model to make it would hand back the candidate the pre-commitment exists to
+// withhold. This is the MODEL_OPINION assorter of v2 §9.1 verbatim, and it
+// costs one call instead of two.
+type BlindVerdict = 'agrees' | 'disagrees' | 'abstained';
+
+function judgeAnswerBlindEnabled(): boolean {
+  return (Deno.env.get('JUDGE_ANSWER_BLIND') ?? 'false') === 'true';
+}
+
+function blindVerdictFrom(
+  precommitAnswer: string, candidateAnswer: string,
+): { verdict: BlindVerdict; assorter: number } {
+  const a = String(precommitAnswer ?? '').trim();
+  const b = String(candidateAnswer  ?? '').trim();
+  // Either side missing is an ABSTENTION, not a disagreement. A judge that
+  // produced no answer expressed no opinion, and scoring that 0 would count a
+  // failed call as evidence against the candidate.
+  if (!a || !b) return { verdict: 'abstained', assorter: 0.5 };
+  return answersEquivalent(a, b)
+    ? { verdict: 'agrees',    assorter: 1 }
+    : { verdict: 'disagrees', assorter: 0 };
+}
+
+// The pre-commitment. Given the question and NOTHING else — not Zero's
+// explanation, not the tutor's final answer, not either solver's output.
+//
+// Enforced BY CONSTRUCTION: this function takes no candidate parameter, so
+// there is none in scope to leak into the payload. verification-v0.test.mjs
+// also asserts the outgoing body against known candidate strings, because "the
+// signature makes it impossible" is an argument and the test is evidence.
+//
+// Model matches runJudge (gpt-4o) so the two verdicts are comparable; a weaker
+// pre-committed judge would confound the comparison with a model gap.
+// "mathematician", not "solver", deliberately: verification-v0.test.mjs rejects
+// the words runJudge uses to label candidate material (tutor / candidate /
+// solver / proposed answer) anywhere in this prompt, so a future copy-paste
+// from runJudge fails the suite instead of quietly re-conditioning the judge.
+const JUDGE_PRECOMMIT_SYSTEM_PROMPT =
+  'You are a precise mathematician. Solve the problem and state only the final answer.\n' +
+  'Respond with exactly one line and nothing else:\n' +
+  'Final Answer: <single value, expression, or option letter>\n' +
+  'No reasoning, no explanation, no markdown.';
+
+async function runJudgePrecommit(
+  questionText: string, imageData: string | null, sink?: ModelCallRow[],
+): Promise<{ answer: string; raw: string }> {
+  const t0 = Date.now();
+  let recorded = false;   // guards against double-counting one call
+  try {
+    const userContent: unknown = imageData
+      ? [
+          { type: 'text', text: `Solve this math problem. Extracted text (may be partial): "${questionText.slice(0, 800)}"` },
+          { type: 'image_url', image_url: { url: imageData, detail: 'high' } },
+        ]
+      : questionText.slice(0, 1500);
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o', max_tokens: 300, temperature: 0,
+        messages: [
+          { role: 'system', content: JUDGE_PRECOMMIT_SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
+      }),
+    });
+    const json = await res.json();
+    recordModelCall(sink, {
+      service_code: 'judge', stage: 'precommit', model: 'gpt-4o',
+      started: t0, res, json,
+      meta: { max_tokens: 300, temperature: 0, sees_image: !!imageData },
+    });
+    recorded = true;
+    const raw = String(json.choices?.[0]?.message?.content || '').trim();
+    const m = /^\s*final\s*answer\s*[:=]\s*(.+?)\s*$/im.exec(raw);
+    const answer = (m ? m[1] : (raw.split('\n').map(l => l.trim()).filter(Boolean).at(-1) ?? ''));
+    return { answer: answer.replace(/[*_`$]/g, '').trim().slice(0, 120), raw };
+  } catch (e) {
+    if (!recorded) {
+      recordModelCall(sink, {
+        service_code: 'judge', stage: 'precommit', model: 'gpt-4o',
+        started: t0, err: e,
+        meta: { max_tokens: 300, temperature: 0, sees_image: !!imageData },
+      });
+    }
+    // A failed pre-commitment is an abstention, never a disagreement, and never
+    // a reason for the pipeline to fail.
+    return { answer: '', raw: '' };
+  }
+}
+
+// ── V0-T06 — the decision row payload ───────────────────────────────────────
+// Built by a named pure function rather than inline at the insert, so the
+// compliance boundary is testable: v2 §11/§23 require this row to carry no
+// student identifier, no image and no free text, because it is the one
+// verification store meant to be retained permanently.
+// verification-v0.test.mjs asserts the exact key set.
+const DECISION_LOG_ENABLED =
+  (Deno.env.get('VERIFICATION_DECISION_LOG_ENABLED') ?? 'true') !== 'false';
+
+interface DecisionRowInput {
+  decisionUid:         string;
+  decidedAt:           string;
+  pipelineVersion:     string;
+  questionRecordId:    string;
+  requestId?:          string | null;
+  clientRequestId?:    string | null;
+  lessonId?:           string | null;
+  difficultyBin?:      string | null;
+  forcedExploration:   boolean;
+  explorationFraction: number;
+  judgeAnswerBlind:    boolean;
+  blindVerdict?:       BlindVerdict | null;
+  blindAssorter?:      number | null;
+  legacyJudgeVerdict?: string | null;
+  solverAgreement?:    number | null;
+  pipelineLatencyMs?:  number | null;
+}
+
+function buildDecisionRow(i: DecisionRowInput): Record<string, unknown> {
+  return {
+    decision_uid:         i.decisionUid,
+    decided_at:           i.decidedAt,
+    question_record_id:   i.questionRecordId,
+    request_id:           i.requestId       ?? null,
+    client_request_id:    i.clientRequestId ?? null,
+    pipeline_version:     i.pipelineVersion,
+    policy_version:       POLICY_VERSION,
+    plan_id:              PLAN_ID,
+    lesson_id:            i.lessonId      ?? null,
+    difficulty_bin:       i.difficultyBin ?? null,
+    forced_exploration:   i.forcedExploration,
+    exploration_fraction: i.explorationFraction,
+    judge_answer_blind:   i.judgeAnswerBlind,
+    // Null unless the blind judge ran — the table's coherence constraint
+    // rejects a blind verdict recorded against a run that never made one.
+    blind_verdict:        i.judgeAnswerBlind ? (i.blindVerdict  ?? null) : null,
+    blind_assorter:       i.judgeAnswerBlind ? (i.blindAssorter ?? null) : null,
+    legacy_judge_verdict: i.legacyJudgeVerdict ?? null,
+    solver_agreement:     i.solverAgreement    ?? null,
+    pipeline_latency_ms:  i.pipelineLatencyMs  ?? null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// END V0 OBSERVATION SURFACE
+// ═══════════════════════════════════════════════════════════════════════════
+
 // Harden tutor-answer extraction (Fix #1). Zero's JSON schema only emits
 // `answer` (a full markdown explanation), but malformed / drifted responses
 // have historically left it empty while the value lived under a different key.
@@ -2398,6 +2609,10 @@ async function runL3ShadowPipeline(opts: {
   detectorMeta: Record<string, unknown>; startTime: number;
   requestId?: string; sessionId?: string | null; operation?: string | null;
   clientRequestId?: string | null;
+  // V0-T06 segment key. Canonical taxonomy subtopic id (e.g. ALG_006), already
+  // resolved by the taxonomy gate on the main path. Optional and defaulted to
+  // null so every existing call site stays valid.
+  lessonId?: string | null;
 }): Promise<void> {
   const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, tutorFinalAnswer, detectorMeta, startTime } = opts;
 
@@ -2441,6 +2656,23 @@ async function runL3ShadowPipeline(opts: {
 
   // 5. Judge (uses OCR confidence for hard ocr_uncertain rule)
   const judge = await runJudge(solveText, zeroAnswer, solverA, solverB, isImageQ ? ocr.confidence : 1.0, tutorFinalAnswer, teleSink);
+
+  // 5b. V0-T01 — answer-blind pre-commitment. OFF by default.
+  // Deliberately sequenced AFTER runJudge: the legacy verdict is produced from
+  // exactly the inputs it always was, in exactly the order it always was, so
+  // this addition cannot perturb the series ai-monitor.html has been charting.
+  const judgeAnswerBlind = judgeAnswerBlindEnabled();
+  let precommit: { answer: string; raw: string } | null = null;
+  let blind: { verdict: BlindVerdict; assorter: number } | null = null;
+  if (judgeAnswerBlind) {
+    precommit = await runJudgePrecommit(solveText, isImageQ ? imageData : null, teleSink);
+    // The candidate is what Zero actually published — the tutor's final answer.
+    blind = blindVerdictFrom(precommit.answer, tutorFinalAnswer ?? '');
+  }
+
+  // 5c. V0-T13 — forced-exploration selection. Recorded, never acted on.
+  const explorationFrac  = explorationFraction();
+  const forcedExploration = isForcedExploration(explorationFrac, Math.random());
 
   const pipeline_latency_ms = Date.now() - startTime;
   const isExpertTier = detectorMeta.tier === 'expert' || detectorMeta.gpt_tier === 'expert';
@@ -2536,6 +2768,24 @@ async function runL3ShadowPipeline(opts: {
     zero_answer_hash:            await sha256short(zeroAnswer),
     pipeline_latency_ms,
     expert_trigger:              isExpertTier,
+
+    // ── Truth System v2 V0 — APPEND-ONLY additions ──────────────────────────
+    // Every key above is untouched. ai-monitor.html reads this object's
+    // internal shape (pipeline_version, verification_quality_score, v2_tier,
+    // reasons, tier, pipeline_latency_ms) and already handles version skew, so
+    // new keys are safe and renamed or removed keys are not. Nothing may ever
+    // be renamed here.
+    policy_version:              POLICY_VERSION,
+    plan_id:                     PLAN_ID,
+    forced_exploration:          forcedExploration,
+    exploration_fraction:        explorationFrac,
+    judge_answer_blind:          judgeAnswerBlind,
+    ...(judgeAnswerBlind ? {
+      judge_precommit_model:     'gpt-4o',
+      judge_precommit_answer:    (precommit?.answer ?? '').slice(0, 120),
+      judge_blind_verdict:       blind?.verdict  ?? null,
+      judge_blind_assorter:      blind?.assorter ?? null,
+    } : {}),
   };
 
   // 8. UPDATE question_records — all Phase 0 columns, nullable
@@ -2560,6 +2810,59 @@ async function runL3ShadowPipeline(opts: {
     }));
   }
 
+  // 8b. V0-T06/T10/T13 — the decision row. Written BESIDE the update above,
+  // never instead of it: question_records keeps receiving exactly what it
+  // always did, and this is a second, identifier-free store.
+  //
+  // Isolated by construction. The whole write is wrapped, its failure is
+  // logged and swallowed, and it is placed AFTER the question_records update so
+  // that even a thrown error cannot cost L3 Shadow its telemetry. The decision
+  // log is a measurement substrate; it may never be able to damage the thing it
+  // measures.
+  //
+  // Idempotent on decision_uid, matching flushModelCalls' ON CONFLICT pattern.
+  // The uid is minted OUTSIDE the try, when the decision is made rather than
+  // when it is written — the same reason ai_model_calls mints call_uid at
+  // observation time (Phase 3 F1). Minted inside, a retry would generate a new
+  // uid and the ON CONFLICT clause would be decorative. The pipeline writes
+  // once today; this is what makes adding a retry a one-line change instead of
+  // a correctness question.
+  const decisionUid = crypto.randomUUID();
+  if (DECISION_LOG_ENABLED) {
+    try {
+      const decisionRow = buildDecisionRow({
+        decisionUid,
+        decidedAt:           new Date(startTime + pipeline_latency_ms).toISOString(),
+        pipelineVersion:     L3_PIPELINE_VERSION,
+        questionRecordId:    recordId,
+        requestId:           opts.requestId ?? null,
+        clientRequestId:     opts.clientRequestId ?? null,
+        lessonId:            opts.lessonId ?? null,
+        difficultyBin:       (detectorMeta.tier as string) ?? null,
+        forcedExploration,
+        explorationFraction: explorationFrac,
+        judgeAnswerBlind,
+        blindVerdict:        blind?.verdict  ?? null,
+        blindAssorter:       blind?.assorter ?? null,
+        legacyJudgeVerdict:  judge.verdict,
+        solverAgreement:     solver_agreement,
+        pipelineLatencyMs:   pipeline_latency_ms,
+      });
+      const { error: decisionErr } = await sbAdmin
+        .from('verification_decisions')
+        .upsert([decisionRow], { onConflict: 'decision_uid', ignoreDuplicates: true });
+      if (decisionErr) {
+        console.log('[ai-tutor] v0-decision-log-error', JSON.stringify({
+          record_id: recordId, msg: decisionErr.message,
+        }));
+      }
+    } catch (e) {
+      console.log('[ai-tutor] v0-decision-log-error', JSON.stringify({
+        record_id: recordId, msg: e instanceof Error ? e.message : String(e),
+      }));
+    }
+  }
+
   // 9. Structured telemetry
   console.log('[ai-tutor] verification-shadow', JSON.stringify({
     uid:                         userId.slice(0, 8),
@@ -2582,6 +2885,15 @@ async function runL3ShadowPipeline(opts: {
     verification_reason,
     expert_trigger:              isExpertTier,
     pipeline_latency_ms,
+    // V0 — the same additions, on the log line, so the comparison window is
+    // readable from logs alone before anything queries the new table.
+    policy_version:              POLICY_VERSION,
+    plan_id:                     PLAN_ID,
+    forced_exploration:          forcedExploration,
+    exploration_fraction:        explorationFrac,
+    judge_answer_blind:          judgeAnswerBlind,
+    judge_blind_verdict:         blind?.verdict  ?? null,
+    judge_blind_assorter:        blind?.assorter ?? null,
   }));
 
   } finally {
@@ -4515,6 +4827,10 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
         clientRequestId,
         sessionId:    resolvedSessionId,
         operation:    teleCtx.operation,
+        // V0-T06 segment key. Already resolved by the taxonomy gate above; the
+        // decision log needs a lesson grain because that is what the audit
+        // margin and the per-segment threshold derivation are computed at.
+        lessonId:     safeSubtopicId,
       }).catch(err => {
         console.log('[ai-tutor] l3-pipeline-error', JSON.stringify({
           uid: user.id.slice(0, 8), record_id: recordId,
