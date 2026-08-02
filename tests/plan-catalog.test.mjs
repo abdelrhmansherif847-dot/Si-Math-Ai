@@ -208,7 +208,10 @@ t.section('A newly added plan renders correctly everywhere');
       const perDay = Math.round(P.credits_granted / cycleDays(P.billing_cycle, P.plan_code));
       const freeF = buildPlanFeatures(F);`,
     { P: NEW, F: { plan_code: 'FREE', price_egp: 0, daily_limit: 15, device_limit: 2,
-                   credits_granted: 0, billing_cycle: 'none' } },
+                   credits_granted: 0, billing_cycle: 'none' },
+      // The page consults window.PlanCatalog when it is present; an empty
+      // window exercises the fallback path instead.
+      window: {} },
     ['feats', 'cyc', 'perDay', 'freeF']);
   t.is('pricing.html prices the new plan per its billing_cycle', priced.cyc, '/ 3 months');
   t.ok('pricing.html states the real credit period',
@@ -229,7 +232,8 @@ t.section('A newly added plan renders correctly everywhere');
       const cardNew = renderPlanCard(NEWP, {});
       const featsNew = featuresFor(NEWP);
       const cardFounder = renderPlanCard(ROWS[2], {});`,
-    { ROWS: rows, NEWP: NEW, esc: x => String(x), founderSlotsLeft: 12, selectPlan: () => {} },
+    { ROWS: rows, NEWP: NEW, esc: x => String(x), founderSlotsLeft: 12, selectPlan: () => {},
+      window: {} },
     ['cardNew', 'featsNew', 'cardFounder']);
   t.ok('checkout renders a card for the new plan', co.cardNew.includes('Scholar Term'));
   t.ok('checkout labels its cycle QUARTERLY', co.cardNew.includes('QUARTERLY'));
@@ -443,6 +447,52 @@ t.section('The authoring migration is present and honest');
     t.ok('it carries a rollback', /ROLLBACK/.test(m));
     t.ok('archiving never deletes', /Deleting is never offered/i.test(m));
   }
+}
+
+// ── The cycle vocabulary must not go stale on the pages ──────────────────
+t.section('Every billing cycle the database accepts is understood by the pages');
+{
+  // The database learned `semiannual` before the pages did, so a semiannual
+  // plan was advertised "/ month" and its per-day credit figure divided by 30
+  // instead of 182. Caught by comparing the dashboard preview against the
+  // rendered card. Both now delegate to plan-catalog.js, which owns the one
+  // definition — this asserts every cycle survives the round trip.
+  const winPC = {};
+  evalSnippet(read('plan-catalog.js'), { window: winPC }, []);
+  const pr = read('pricing.html');
+  const helpers = slice(pr, 'function cycleLabel(cycle, code)', 'function openModal(', 'cycle helpers');
+
+  const run = (cycle, win) => evalSnippet(
+    helpers + '\nconst L = cycleLabel(C, null);\nconst D = cycleDays(C, null, null);',
+    { C: cycle, window: win }, ['L', 'D']);
+
+  const EXPECT = {
+    monthly:    { label: '/ month',    days: 30  },
+    quarterly:  { label: '/ 3 months', days: 91  },
+    semiannual: { label: '/ 6 months', days: 182 },
+    annual:     { label: '/ year',     days: 365 },
+    one_time:   { label: '',           days: 30  },
+    custom:     { label: '',           days: 30  },
+  };
+  for (const [cycle, want] of Object.entries(EXPECT)) {
+    // With the module loaded — the path a browser actually takes.
+    t.is(`${cycle} label, module path`, run(cycle, winPC).L, want.label);
+    // And without it — the fallback for a page that loads before the module.
+    t.is(`${cycle} label, fallback path`, run(cycle, {}).L, want.label);
+  }
+  t.is('semiannual divides by 182, not 30', run('semiannual', winPC).D, 182);
+  t.is("a plan's own period_days wins over any named cycle",
+    evalSnippet(helpers + '\nconst D = cycleDays("custom", null, 200);', { window: winPC }, ['D']).D, 200);
+
+  // The module is the single definition; the pages must actually consult it.
+  for (const f of ['pricing.html', 'manual-payment.html']) {
+    t.ok(`${f} loads plan-catalog.js`, /<script src="plan-catalog\.js"><\/script>/.test(read(f)));
+    t.ok(`${f} delegates the cycle vocabulary to it`,
+      /window\.PlanCatalog\.(periodLabel|monthsIn)/.test(read(f)));
+  }
+  t.is('the module knows semiannual', winPC.PlanCatalog.monthsIn('semiannual'), 6);
+  t.is('the module gives no period for a one-time cycle',
+    winPC.PlanCatalog.periodLabel({ billing_cycle: 'one_time' }), '');
 }
 
 t.done();
