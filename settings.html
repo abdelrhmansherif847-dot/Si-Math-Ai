@@ -1028,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
     packSection.style.display = '';
 
     const tiles = packs.map(pk => `
-      <div class="pack-tile" data-pack-id="${pk.id}" data-pack-name="${pk.name}" data-pack-credits="${pk.credits}" data-pack-price="${pk.price_egp}">
+      <div class="pack-tile" data-pack-id="${pk.id}" data-pack-code="${pk.plan_code || ''}" data-pack-name="${pk.name}" data-pack-credits="${pk.credits}" data-pack-price="${pk.price_egp}">
         <div class="pt-credits">${pk.credits}</div>
         <div class="pt-label">${pk.name}</div>
         <div class="pt-price">${pk.price_egp} EGP</div>
@@ -1067,7 +1067,12 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.disabled = true;
       const origHtml = btn.innerHTML;
       btn.innerHTML = '…Submitting request';
-      const note = `[CREDIT PACK: ${tile.dataset.packName}]`;
+      // Carry the pack's plan_code as well as its name. The name is what the
+      // admin reads; the plan_code is what stays correct if the pack is
+      // renamed between the request and its approval.
+      const note = tile.dataset.packCode
+        ? `[CREDIT PACK: ${tile.dataset.packName} (${tile.dataset.packCode})]`
+        : `[CREDIT PACK: ${tile.dataset.packName}]`;
       const { error } = await sb.from('profiles').update({
         upgrade_requested: true,
         upgrade_note: note

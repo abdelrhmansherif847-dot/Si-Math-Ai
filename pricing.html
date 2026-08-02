@@ -589,6 +589,16 @@ async function loadPage() {
   const deviceLimit = activePlan?.device_limit || 2;
   const dailyLimit = activePlan?.daily_limit || null;
 
+  // The "Upgrade Now" banner button used to name its target plan inline
+  // ("Pro Monthly"), which went stale the moment that plan was renamed in the
+  // Owner Dashboard. Take the cheapest paid plan on offer instead, by price,
+  // and read its label from the same row the plan grid renders.
+  // Founder plans are excluded: they are a limited claim, not a general
+  // upgrade, and can be cheaper than the entry plan while having no slots left.
+  const upgradeTarget = plans
+    .filter(p => p.plan_code !== 'FREE' && !p.is_founder && Number(p.price_egp) > 0)
+    .sort((a, b) => Number(a.price_egp) - Number(b.price_egp))[0] || null;
+
   let html = '';
 
   // Support badges
@@ -638,7 +648,7 @@ async function loadPage() {
         <div class="credit-chip"><span class="cc-val">${(profile.pack_credits||0).toLocaleString()}</span><span class="cc-lbl">pack credits${!isPaid && (profile.pack_credits||0)===0 ? ' (buy a pack)' : ''}</span></div>
       </div>
     </div>
-    ${!isPaid && !pendingSub ? `<button style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:11px 22px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:14px;border:none;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(56,189,248,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openModal('PRO_MONTHLY','Pro Monthly')">⭐ Upgrade Now</button>` : ''}
+    ${!isPaid && !pendingSub && upgradeTarget ? `<button style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan-2),var(--cyan));color:#031020;padding:11px 22px;border-radius:var(--r-sm);font-family:var(--font-display);font-weight:700;font-size:14px;border:none;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(56,189,248,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openModal('${escHtml(upgradeTarget.plan_code)}','${escHtml(upgradeTarget.display_name)}')">⭐ Upgrade Now</button>` : ''}
   </div>`;
 
   // Plans grid
@@ -720,7 +730,10 @@ async function loadPage() {
 
     packs.forEach((pack, idx) => {
       const perCredit = (pack.price_egp / pack.credits).toFixed(2);
-      const isBest = idx === 1;
+      // "BEST VALUE" is a database flag, not the second card in the list. It
+      // used to be `idx === 1`, so reordering or adding a pack moved the badge
+      // to whichever pack happened to land in the middle.
+      const isBest = pack.is_best_value !== undefined ? !!pack.is_best_value : idx === 1;
       html += `<div class="pack-card${isBest ? ' is-best-value' : ''}">
         <div class="pack-credits-amount">${pack.credits.toLocaleString()}</div>
         <div class="pack-credits-label">credits</div>

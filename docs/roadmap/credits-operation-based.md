@@ -90,6 +90,10 @@ the migration is applied. `FOCUS_PLAN` is retired (superseded by
 Subscription prices already match the RFC (Monthly 349 / Quarterly 899 /
 Yearly 2999) — no change.
 
+> This table records a repricing that happened; it is history, not the live
+> price list. Since Owner → Plans & Packs shipped, `public.plan_definitions` is
+> the only authoritative source for a plan's name, price and credit grant.
+
 ---
 
 ## 3. Phase 1 — delivered on this branch
