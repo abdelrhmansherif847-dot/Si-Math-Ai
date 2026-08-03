@@ -284,7 +284,55 @@ this second route to the same failure. Its harness now feeds the real decision
 expression the student's message, so the suite executes the shipped code rather
 than a stub. `node tests/run-all.mjs`: **28/28 green.**
 
-### 8.5 Adjacent class — identified, deliberately NOT fixed
+### 8.5 Adversarial validation before deployment
+
+Three sweeps, run against the shipped source, each looking for both directions of
+error. **False positives — a real math turn demoted — are the expensive class:
+they cost the student the solution workflow and lose a practice record.**
+
+| round | what it attacked | result before fixes | after |
+|---|---|---|---|
+| 1 — 197 cases | EN / AR / Franco acknowledgements, equations, worksheet refs, answer-only messages, confusion, hint mode, degenerate input | 187/197 · **2 FP**, 8 FN | 197/197 |
+| 2 — vocabulary enumeration | every one of the 207 vocabulary tokens read for a mathematical meaning, then messages built only from vocabulary words | **1 FP** | 0 FP |
+| 3 — 44 fresh cases | written from scratch, none in the suite, to measure generalisation rather than recall | 37/44 · **0 FP**, 7 FN | 44/44 |
+
+**The three false positives, and what they taught:**
+
+1. **`"a"`** — in the vocabulary for "thanks a lot", but alone it is a
+   multiple-choice answer.
+2. **`"k"`** — in the vocabulary for "ok", but alone it is a variable.
+3. **`"zero"`** — in the vocabulary as the tutor's NAME ("thanks zero"), but read
+   alone it is the number, and *"whats 22 root 0"* is a real question from this
+   corpus whose answer a student would type exactly that way.
+
+All three are the same shape: **a token that is conversational in company and
+ambiguous alone.** Fixed by never demoting a single-token message that is one
+character or is `"zero"` — the ambiguity disappears the moment there is a second
+word.
+
+Round 3 producing **zero** false positives on cases the code had never seen is
+the result that justifies deployment: the expensive direction generalises. Its
+seven misses were all cheap — missing vocabulary (`صح`, `معلم`, `ينور`, `اوكيه`,
+`ايدك`) and a token cap one word too low for `"تمام كده يا زيرو شكرا جدا اوي"`.
+
+Two further hardening changes came out of the sweeps rather than from a failing
+case:
+
+- **A negation veto.** `فاهم`, `واضح`, `understand`, `clear`, `ok`, `تمام` and
+  `كويس` are all in the vocabulary, and their negations — "مش فاهم", "not clear",
+  "مش تمام" — are re-explanation requests carrying a weakness signal. Every one
+  already failed the all-tokens check, because no negation word is in the
+  vocabulary. The veto exists so a future edit adding one as harmless filler
+  cannot silently start **deleting** weakness signals instead of merely
+  mislabelling turns. That failure would be invisible in the data.
+- **Alef folding, but not ى.** `أ إ آ → ا` so "إيوه" and "آه" reach their entries.
+  ى is deliberately left alone: folding it to ي turns **قوى** (powers) into
+  **قوي** ("very") and would demote a student asking about exponents.
+
+All 261 adversarial cases are pinned in `is-math-classification.test.mjs`, so
+every defect found here fails the build if it returns.
+
+### 8.6 Adjacent class — identified, deliberately NOT fixed
 
 **Meta-commands are still stored as math.** "Speak English only",
 "كلمني عربي مش فرانكو", "اشرحه عربي" and "تحدث العربيه فقط معي فقط" all carry a

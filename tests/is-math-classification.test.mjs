@@ -253,8 +253,10 @@ t.is('empty input', isConversationalOnly(''), false);
 t.is('null input', isConversationalOnly(null), false);
 t.is('a long message is never conversational-only',
   isConversationalOnly('ok '.repeat(40)), false);
-t.is('more than six tokens is never conversational-only',
-  isConversationalOnly('ok ok ok ok ok ok ok'), false);
+t.is('a seven-word thank-you is still conversational',
+  isConversationalOnly('تمام كده يا زيرو شكرا جدا اوي'), true);
+t.is('but past the token cap nothing is conversational-only',
+  isConversationalOnly('ok ok ok ok ok ok ok ok ok'), false);
 
 // Hint mode appends a fixed instruction to the student's text. It is the
 // CLIENT's sentence, not the student's, and leaving it in handed every hint-mode
@@ -272,6 +274,88 @@ t.is('and a real problem in hint mode is still math',
 for (const q of ['مش فاهم', 'I don\'t understand', 'still confused', 'مش عارف', 'explain again'])
   t.is(`confusion is not an acknowledgement: ${JSON.stringify(q)}`,
     isConversationalOnly(q), false);
+
+// ───────────────────────────────────────────────────────────────────────────
+t.section('v98 — adversarial pass: what an attack on the vocabulary found');
+
+// Everything in this section is a defect the adversarial sweep produced before
+// deployment, not a case invented afterwards to match the code.
+
+// FOUND: two false positives on single-character messages. "a" was in the
+// vocabulary for "thanks a lot" and "k" for "ok", so both demoted — but alone
+// they are a multiple-choice answer and a variable. Demoting those erases the
+// student's answer to a question Zero asked.
+for (const q of ['a', 'b', 'c', 'd', 'e', 'k', 'x', 'y', 'n'])
+  t.is(`a bare single letter is never demoted: ${JSON.stringify(q)}`,
+    isConversationalOnly(q), false);
+t.is('…but it is still conversational in company', isConversationalOnly('thanks a lot'), true);
+
+// FOUND: "zero" is in the vocabulary as the tutor's NAME, so a bare "zero"
+// demoted — while read as a number it is exactly how a student would answer
+// "whats 22 root 0", which is a real question from this corpus.
+t.is('"zero" alone is not demoted — it is also the number',
+  isConversationalOnly('zero'), false);
+t.is('"thanks zero" is, because the vocative is unambiguous in company',
+  isConversationalOnly('thanks zero'), true);
+t.is('"ya zero" likewise', isConversationalOnly('ya zero'), true);
+
+// FOUND: "إيوه" and "آه" missed their vocabulary entries over an alef form.
+for (const q of ['إيوه', 'آه', 'أوك', 'أنا فهمت'])
+  t.is(`alef forms are folded: ${JSON.stringify(q)}`, isConversationalOnly(q), true);
+
+// …but ى is deliberately NOT folded to ي. Folding would turn "قوى" (powers)
+// into "قوي" ("very") and demote a student asking about exponents.
+t.is('"قوي" ("very") is conversational', isConversationalOnly('حلو قوي'), true);
+t.is('"قوى" (powers) is NOT — ى must not fold to ي', isConversationalOnly('قوى'), false);
+
+// FOUND: missing vocabulary. Cheap failures — the label simply stood — but each
+// one is a turn that kept a math topic it had not earned.
+for (const q of ['thanx', 'good job', 'well done', 'شكرا جدا', '7elw', '3azeem',
+                 'mersi', 'Shokraaaaan', 'okaaaaaay', 'thankssss'])
+  t.is(`now demoted: ${JSON.stringify(q)}`, isConversationalOnly(q), true);
+
+// The negation veto. Every one of these already failed the all-tokens check,
+// because no negation word is in the vocabulary — the veto exists so that a
+// future edit adding one as "harmless filler" cannot silently start deleting
+// weakness signals. "فاهم", "واضح", "understand", "clear", "ok", "تمام" and
+// "كويس" ARE all in the vocabulary; their negations are re-explanation requests.
+for (const q of ['not ok', 'not clear', 'not good', 'مش تمام', 'مش كويس',
+                 'مش واضح', 'مش فاهم', 'mesh tamam', 'msh fahem', 'la2',
+                 "i don't understand", 'i dont understand', 'no'])
+  t.is(`negated acknowledgement is never demoted: ${JSON.stringify(q)}`,
+    isConversationalOnly(q), false);
+
+// FOUND by a THIRD sweep, written from scratch to test generalisation rather
+// than recall: seven more vocabulary gaps, and a token cap set one word too low.
+// The same sweep produced ZERO false positives, which is the result that
+// mattered — the expensive direction held on cases the code had never seen.
+for (const q of ['ايوه صح', 'صح', 'ماشي يا معلم', 'الله ينور', 'اوكيه',
+                 'تسلم ايدك', 'تمام كده يا زيرو شكرا جدا اوي',
+                 'ok cool thanks bro', 'نعم فهمت', 'ok well done zero'])
+  t.is(`generalisation gap, now closed: ${JSON.stringify(q)}`,
+    isConversationalOnly(q), true);
+
+// …and the math from that sweep, which must keep surviving.
+for (const q of ['ok so the answer is 5', 'the answer is zero', 'zero is the answer',
+                 '3andi so2al', 'عندي سؤال', 'الاجابه صح ولا غلط', 'is my answer right',
+                 'sa7 wala la2', 'ok but why', 'اه بس ليه', 'ok explain step 2',
+                 'تمام بس اشرح تاني', 'ok 5', 'tamam 12', 'حلو ٣', 'اشرح', 'كمل', 'تاني'])
+  t.is(`still math after the third sweep: ${JSON.stringify(q)}`,
+    isConversationalOnly(q), false);
+
+// The hint-mode suffix is the CLIENT's sentence. Read the literal string out of
+// chat.html so that editing the client's wording fails here rather than silently
+// handing every hint-mode acknowledgement a dozen unrecognised tokens again.
+const CHAT = read('chat.html');
+const suffixLiteral = /'(\\n\\n\[Hint mode:[^']*)'/.exec(CHAT);
+t.ok('chat.html still appends a [Hint mode: …] suffix', !!suffixLiteral);
+if (suffixLiteral) {
+  const realSuffix = suffixLiteral[1].replace(/\\n/g, '\n');
+  t.is('the server strips the suffix chat.html actually sends',
+    isConversationalOnly('تمام' + realSuffix), true);
+  t.is('and a real problem carrying it is still math',
+    isConversationalOnly('3x=9' + realSuffix), false);
+}
 
 t.section('v98 — the wiring, not just the predicate');
 

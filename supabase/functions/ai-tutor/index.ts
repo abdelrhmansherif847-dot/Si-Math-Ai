@@ -1074,22 +1074,23 @@ const CONVERSATIONAL_TOKENS = new Set([
   'nice', 'cool', 'clear', 'perfect', 'excellent', 'awesome', 'amazing',
   'brilliant', 'wonderful', 'done', 'got', 'get', 'it', 'now', 'i', 'im',
   'understand', 'understood', 'understand', 'makes', 'sense', 'gotcha',
+  'well', 'job', 'work',
   // English — thanks and sign-off
-  'thanks', 'thank', 'thx', 'thnx', 'ty', 'tysm', 'you', 'u', 'so', 'much',
-  'a', 'lot', 'appreciate', 'welcome', 'np', 'bye', 'byee', 'goodbye', 'later',
-  'zero', 'bro', 'man', 'sir', 'dude', 'legend', 'king', 'goat',
+  'thanks', 'thank', 'thx', 'thnx', 'thanx', 'tnx', 'ty', 'tysm', 'you', 'u',
+  'so', 'much', 'a', 'lot', 'appreciate', 'welcome', 'np', 'bye', 'byee',
+  'goodbye', 'later', 'zero', 'bro', 'man', 'sir', 'dude', 'legend', 'king', 'goat',
   // English — filler
   'lol', 'haha', 'hahaha', 'hehe', 'hmm', 'hm', 'ah', 'aha', 'ahh', 'oh', 'ohh',
   'wow', 'yay', 'nice1', 'yes1',
   // Arabic — acknowledgement and reaction
   'تمام', 'تمم', 'ماشي', 'ماشى', 'كويس', 'كويسه', 'حلو', 'حلوه', 'جامد',
   'جميل', 'عظيم', 'ممتاز', 'برافو', 'اه', 'آه', 'ايوه', 'ايوا', 'أيوه', 'نعم',
-  'اوك', 'اوكي', 'أوك', 'طيب', 'خلاص', 'فهمت', 'فهمتها', 'فاهم', 'فاهمه',
+  'اوك', 'اوكي', 'اوكيه', 'أوك', 'صح', 'طيب', 'خلاص', 'فهمت', 'فهمتها', 'فاهم', 'فاهمه',
   'واضح', 'وضح', 'زي', 'الفل', 'كده', 'كدا', 'بس', 'اوي', 'أوي', 'قوي',
-  'يا', 'انا', 'أنا', 'زيرو', 'يبني', 'يسطا', 'باشا', 'وحش',
+  'يا', 'انا', 'أنا', 'زيرو', 'يبني', 'يسطا', 'باشا', 'معلم', 'وحش', 'ينور',
   // Arabic — thanks and sign-off
-  'شكرا', 'شكرًا', 'شكراً', 'متشكر', 'متشكرة', 'مرسي', 'ميرسي', 'تسلم',
-  'تسلمي', 'يعطيك', 'العافية', 'الله', 'يبارك', 'فيك', 'ربنا', 'يكرمك',
+  'شكرا', 'شكرًا', 'شكراً', 'شكر', 'جدا', 'جداً', 'متشكر', 'متشكرة', 'مرسي', 'ميرسي', 'تسلم',
+  'تسلمي', 'ايدك', 'يعطيك', 'العافية', 'الله', 'يبارك', 'فيك', 'ربنا', 'يكرمك',
   'سلام', 'باي', 'مع', 'السلامه', 'السلامة',
   // Franco
   'tamam', 'tmam', 'mashi', 'mashy', 'kwayes', 'kwayis', 'gamed', 'gamd',
@@ -1097,7 +1098,19 @@ const CONVERSATIONAL_TOKENS = new Set([
   'aywa', 'aiwa', 'ayw', 'khalas', '5alas', 'fahemt', 'fahem', 'wade7',
   'zy', 'el', 'fol', 'keda', 'kda', 'bas', 'awy', 'awi', '2awy',
   'ya', 'ana', 'enta', 'ysta', 'yasta', 'basha', 'ezay', 'temam',
+  '7elw', '7elo', 'helw', '3azeem', '3azim', 'mersi', 'merci', 'tmm',
 ]);
+
+// Negation and confusion markers. None of these is in the vocabulary above, so
+// today every one of them already fails the all-tokens check — this is insurance,
+// not logic. "فاهم", "واضح", "understand", "clear", "ok", "تمام" and "كويس" ARE
+// in the vocabulary, and their negations ("مش فاهم", "not clear", "مش تمام") are
+// re-explanation requests carrying a weakness signal. If a future edit ever adds
+// a negation word as harmless filler, those turns would be demoted to General and
+// the signal would be DELETED rather than merely mislabelled. That failure would
+// be silent, so it is vetoed at the door.
+const NEGATION_RE =
+  /(^|\s)(not|no|dont|don't|doesnt|doesn't|isnt|isn't|cant|can't|never|nope|neither)(\s|$)|مش|مافهمتش|مفهمتش|(^|\s)(لا|ما)(\s|$)|(^|\s)(mesh|msh|la2|ma3rafsh)(\s|$)/i;
 
 // The client appends this to the student's text when hint mode is on. It is the
 // client's instruction, not the student's message, and leaving it in place would
@@ -1108,18 +1121,41 @@ const HINT_SUFFIX_RE = /\n*\[Hint mode:[^\]]*\]\s*$/i;
 function isConversationalOnly(text: string): boolean {
   const stripped = String(text ?? '').replace(HINT_SUFFIX_RE, '').trim();
   if (!stripped || stripped.length > 80) return false;
+  if (NEGATION_RE.test(stripped)) return false;
 
   // Tokenise on anything that is not a letter or a digit, so an operator or a
   // numeral becomes its own token and fails the vocabulary check. Elongation
   // ("okkkk", "تماااام") is collapsed to at most two repeats, which is how these
   // are actually typed. Latin text is lowercased; Arabic has no case.
+  //
+  // Alef forms are folded (أ إ آ → ا) so "إيوه" and "آه" reach their vocabulary
+  // entry. ى is deliberately NOT folded to ي: that would turn "قوى" (powers)
+  // into "قوي" ("very"), and demote a student asking about exponents.
   const tokens = stripped
     .toLowerCase()
     .replace(/[ً-ْـ]/g, '')          // harakat + tatweel
+    .replace(/[أإآ]/g, 'ا')
     .replace(/(.)\1{2,}/gu, '$1$1')
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
-  if (!tokens.length || tokens.length > 6) return false;
+  // Eight, not six: "تمام كده يا زيرو شكرا جدا اوي" is seven and unmistakably
+  // chat. The cap is only a safety belt — every token still has to be in the
+  // vocabulary, and the vocabulary contains no math term, so length adds little
+  // risk on its own.
+  if (!tokens.length || tokens.length > 8) return false;
+
+  // Some tokens are conversational only IN COMPANY. Alone they are just as
+  // likely to be the student's ANSWER to a question Zero asked, and demoting
+  // those erases a real turn instead of a fake one:
+  //   • any single character — "a".."d" are multiple-choice answers, "x", "y",
+  //     "k", "n" are variables, and "k" is also how "ok" gets typed;
+  //   • "zero", which is in the vocabulary as the tutor's NAME ("thanks zero")
+  //     but read alone is the number — and "whats 22 root 0" is a real question
+  //     from this corpus, whose answer a student would type exactly that way.
+  // In company the ambiguity disappears: "thanks zero" and "ok" are unmistakable.
+  const AMBIGUOUS_ALONE = new Set(['zero']);
+  if (tokens.length === 1 &&
+      (tokens[0].length === 1 || AMBIGUOUS_ALONE.has(tokens[0]))) return false;
 
   return tokens.every((tok) =>
     CONVERSATIONAL_TOKENS.has(tok) ||
