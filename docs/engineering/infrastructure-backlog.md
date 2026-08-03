@@ -172,3 +172,32 @@ This is the pre-existing parity gap (`scripts/check-migration-parity.sh` exists
 for it) and it is recorded here only because it widened during the baseline work
 and is the direct motivation for INFRA-3. **No action taken and none proposed
 here** — whether to backfill the files is the owner's call.
+
+---
+
+## Note: platform audit, 2026-08-03
+
+An end-to-end QA pass over all 46 pages, the shared client modules, both Edge
+Functions and the client↔database contract produced 76 findings. 24 were fixed
+and verified; the remainder are recorded in
+`docs/engineering/platform-audit-2026-08-03.md`, grouped by what blocks them —
+the taxonomy freeze, the frozen pages, an Edge Function deploy, a migration, or
+a product decision.
+
+**Two items from it belong to this backlog's scope**, and are written up in full
+in that document rather than duplicated here:
+
+- **AUD-2** — `approve_payment_request` grants by a client-supplied `plan_code`
+  without ever checking the submitted `amount_egp` or `plan_label` against
+  `plan_definitions`. The admin UI now surfaces the granting field and flags a
+  mismatch, but the server still trusts the row. Needs a migration.
+- **AUD-3** — there is no service-role path to delete a user. `delete_my_account`
+  clears every row of personal data; the GoTrue sign-in record survives, because
+  `auth.admin.deleteUser` requires the service_role key. `settings.html` now
+  reports this honestly instead of claiming the account was fully removed.
+  Closing it needs an `admin-actions` action plus a deploy.
+
+The single highest-severity open item from that audit is **AUD-1**, which is not
+infrastructure: one canonical subtopic (`STA_004 Stem-and-Leaf Plots`) cannot be
+written to the database at all, because the alias table is missing the exact key
+its own display name normalises to. The fix is one line in a frozen file.
