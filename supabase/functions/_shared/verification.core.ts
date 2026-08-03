@@ -611,6 +611,209 @@ export async function sha256short(text: string): Promise<string> {
   } catch { return 'hash_unavailable'; }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// V3 SHADOW ROUTING GATE
+// ═══════════════════════════════════════════════════════════════════════════
+// WHY THIS EXISTS
+//   Routing into this pipeline used to be `is_math` alone. That flag answers
+//   "did the student work a math problem this turn?" and it is authored by the
+//   classifier, which sees the conversation history. The pipeline needs a
+//   strictly STRONGER precondition: the text it is about to hand to Solver A,
+//   Solver B and the Judge must itself be a solvable problem statement,
+//   because all three are instructed to solve it.
+//
+//   Production turns where the two diverged (observed 2026-08-03):
+//     • "okk good" — a bare acknowledgement one turn after a radicals question.
+//       The classifier carried the previous topic forward (Algebra / Exponents,
+//       is_math=true), the shadow was handed the phrase "okk good", and both
+//       solvers returned an empty answer. Row 3f52f205, confidence 0.200.
+//     • "Give me a similar SAT/ACT question on this topic" — the problem lives
+//       in Zero's OUTPUT, never in the student's input. The solvers were handed
+//       the request sentence and returned "x = 2 or x = 3" and "20". Row
+//       6f019c9d.
+//   Each wrote an l3-shadow-v3 row, so each appeared in the Question Inspector
+//   and each moved the solver-agreement and judge-verdict series that the
+//   verification programme reads as signal.
+//
+// DIRECTION OF FAILURE — deliberately asymmetric, and the opposite way round
+// from the domain scope guard, which fails open because refusing a real student
+// is the expensive error. Nothing here is student-facing: a false REJECT costs
+// one shadow sample and no one sees it, while a false ACCEPT poisons the corpus
+// the verification programme is built on. But dropping a real math question
+// would break "every math question is verified", so the rule is: reject only on
+// POSITIVE evidence that there is nothing to solve — no mathematical content at
+// all, or a request for a question to be generated. Anything carrying a digit,
+// an operator, LaTeX or a math term is accepted, however vague.
+//
+// PURE AND SYNCHRONOUS. No model call: the pipeline is meant to be cheap enough
+// to run on every math turn, and spending a classification call to decide
+// whether to spend four more would defeat that. Deterministic input produces
+// deterministic routing, which is what makes it testable.
+
+export type ShadowRoutingReason =
+  | 'image' | 'equation' | 'math_content'
+  | 'empty_input' | 'generation_request' | 'no_math_content';
+
+export interface ShadowRoutingDecision {
+  eligible: boolean;
+  reason: ShadowRoutingReason;
+}
+
+// Franco-Arabic ("Arabizi") spells Arabic sounds with digits — 3=ع, 7=ح, 2=ء,
+// 5=خ, 9=ق — and Egyptian students write that way constantly. "3amel eh",
+// "7aga", "2wel", "3am", "so2al" contain no numbers at all, so a bare digit test
+// routes every Franco greeting straight into the pipeline.
+//
+// Counting letters alone does not separate the two — "3am" is Franco and "5cm"
+// is a measurement, and both are one digit plus two letters. What separates
+// them is HOW MANY letters ride along, because the letters beside a numeral in
+// real math are a variable ("2x"), a question label ("Q17"), or a unit ("5cm"),
+// and a Franco word's letter run is arbitrary ("3amel", "7aga", "2wel").
+//
+// Replayed over 500 production turns. An earlier form of this rule required the
+// token to START with its digits, which silently dropped every worksheet
+// reference ("Q17", "q36") and "2x2" — the exact false negative this gate must
+// never produce.
+const NUMERAL_SUFFIXES = new Set(
+  ['cm', 'mm', 'km', 'kg', 'ml', 'hr', 'st', 'nd', 'rd', 'th', 'in', 'ft', 'sq']);
+
+function hasNumericEvidence(s: string): boolean {
+  // Arabic-Indic digits are never Franco — Franco is written in Latin script —
+  // so ٠-٩ counts on sight.
+  if (/[٠-٩]/.test(s)) return true;
+  return (s.match(/[A-Za-z0-9]+/g) || []).some((tok) => {
+    if (!/[0-9]/.test(tok)) return false;
+    const letters = tok.replace(/[0-9]/g, '');
+    // Bare digits ("1200"), or digits carrying one variable or label letter
+    // ("2x", "x2", "Q17", "2x2") — a numeral. Two letters only when they are a
+    // unit or an ordinal ("5cm", "3rd"). Anything longer is a Franco word.
+    if (letters.length <= 1) return true;
+    if (letters.length === 2) return NUMERAL_SUFFIXES.has(letters.toLowerCase());
+    return false;
+  });
+}
+
+// A relation symbol. Next to any operand it is the strongest single signal that
+// the message STATES a problem rather than talks about one.
+const SHADOW_RELATION_RE = /[=<>≤≥≠≈]/;
+const SHADOW_OPERAND_RE  = /[0-9٠-٩A-Za-zء-ي]/;
+
+// Operators that effectively never appear in conversational prose. Bare "-",
+// "*" and "/" are excluded on purpose — hyphens, emphasis and "SAT/ACT" are all
+// ordinary in chat, and any genuine use of them as operators arrives alongside
+// digits, which hasNumericEvidence already catches.
+const SHADOW_OPERATOR_RE = /[+×÷√^%∑∫π±]/;
+
+// LaTeX / MathJax delimiters and macros. chat.html renders these and the
+// classifier emits them, so they are a first-class signal.
+const SHADOW_LATEX_RE = /\\\(|\\\[|\\frac|\\sqrt|\\times|\\div|\$[^$]+\$/;
+
+// English math vocabulary. Deliberately EXCLUDES the bare topic word "math"
+// ("I love math", "math is amazing" are small talk, not problems) and excludes
+// short or collision-prone tokens — "log" (log in), "mean" (what do you mean),
+// "mode", "find" (find my report), "sin"/"cos"/"tan".
+const SHADOW_TERM_EN_RE = new RegExp('\\b(' + [
+  'solve', 'simplify', 'factori[sz]e', 'factor', 'expand', 'evaluate', 'compute',
+  'calculate', 'derivative', 'differentiate', 'integral', 'integrate', 'limit',
+  'equation', 'inequality', 'expression', 'polynomial', 'quadratic', 'linear',
+  'logarithm', 'exponent', 'radical', 'root', 'square', 'cube', 'squared',
+  'sine', 'cosine', 'tangent', 'angle', 'triangle', 'circle', 'rectangle',
+  'polygon', 'area', 'perimeter', 'circumference', 'volume', 'radius', 'diameter',
+  'slope', 'intercept', 'coordinate', 'vertex', 'parabola', 'graph',
+  'probability', 'permutation', 'combination', 'median', 'average', 'percent',
+  'percentage', 'ratio', 'proportion', 'fraction', 'decimal', 'integer',
+  'matrix', 'vector', 'sequence', 'numerator', 'denominator',
+].join('|') + ')\\b', 'i');
+
+// Arabic math vocabulary. Two traps, both of which this had to survive.
+//
+//   • JS \b is defined over ASCII word characters, so a naive test for "حل"
+//     also fires inside "مرحلة" and every Arabic sentence routes in. Hence the
+//     explicit non-letter boundary on both sides.
+//   • Arabic is agglutinative at the edges. Requiring a hard boundary alone
+//     then MISSES "المساحة" — the term is glued to the definite article — and
+//     "حلها". So a short, closed set of proclitics and enclitics is allowed
+//     between the boundary and the term, and nothing else is. "حلو" ("nice",
+//     ubiquitous small talk) is rejected because "و" is not an enclitic, and
+//     "مرحلة" is rejected because "مر" is not a proclitic.
+const SHADOW_TERM_AR_SOURCE = [
+  'احسب', 'أحسب', 'اوجد', 'أوجد', 'حل', 'بسط', 'بسّط', 'اختصر', 'عوض',
+  'معادلة', 'معادلات', 'متباينة', 'مقدار', 'دالة', 'مشتقة', 'تكامل',
+  'مساحة', 'محيط', 'حجم', 'مثلث', 'دائرة', 'مستطيل', 'زاوية', 'قطر',
+  'ميل', 'احتمال', 'نسبة', 'تناسب', 'كسر', 'جذر',
+  'متوسط', 'وسيط', 'متتابعة', 'مجموع', 'ناتج', 'قيمة',
+].join('|');
+const AR_LETTER     = '\\u0621-\\u064A';
+// Definite article and its combinations, the one-letter particles, and the
+// imperfect-verb prefixes — "احل", "نحل", "تحل", "يحل" are all how a student
+// says "solve". The boundary requirement still holds in front of these, which
+// is why "مرحلة" and "راحل" stay out: their "حل" is preceded by an Arabic
+// letter that no proclitic can absorb.
+const AR_PROCLITIC  = '(?:وال|فال|بال|كال|لل|ال|و|ف|ب|ك|ل|ي|ت|ن|أ|ا)?';
+const AR_ENCLITIC   = '(?:ها|هم|هن|نا|ات|ين|ون|ه|ي|ك|ة|ت)?';
+const SHADOW_TERM_AR_RE = new RegExp(
+  `(?:^|[^${AR_LETTER}])${AR_PROCLITIC}(?:${SHADOW_TERM_AR_SOURCE})${AR_ENCLITIC}(?:[^${AR_LETTER}]|$)`);
+
+// "Give me a similar question" — the student is asking Zero to PRODUCE a
+// problem. Whatever gets produced lives in the answer, so the request sentence
+// is not a problem statement and must not be solved.
+const SHADOW_GENERATION_RES: RegExp[] = [
+  // A verb of supply followed, within one clause, by a practice noun.
+  /\b(give|gimme|send|show|make|generate|create|set|bring)\b[^.?!\n]{0,40}?\b(questions?|problems?|exercises?|quiz|mcqs?|practice)\b/i,
+  // "another one", "one more question", "more practice", "a similar problem".
+  /\b(another|one more|more|extra|similar|new)\b[^.?!\n]{0,24}?\b(questions?|problems?|exercises?|practice|one)\b/i,
+  /\bquiz me\b/i,
+  /\b(practice|sample|similar)\s+(questions?|problems?|exercises?)\b/i,
+  // Arabic / Franco: هاتلي سؤال، عايز مسألة تانية، ابعتلي تمرين
+  /(هاتلي|هات لي|اديني|ادّيني|ابعتلي|ابعت لي|اعطني|أعطني|عايز|عاوز|عايزة|محتاج)[^.؟!\n]{0,30}?(سؤال|أسئلة|اسئلة|مسأل|مسائل|تمرين|تمارين)/,
+  /(سؤال|مسألة|تمرين)\s*(تاني|ثاني|آخر|اخر|جديد|كمان|زي ده|مشابه)/,
+  /\b(hatli|edini|3ayez|3awez)\b[^.?!\n]{0,24}?\b(so2al|mas2ala|tamrin)\b/i,
+];
+
+/**
+ * Decide whether the L3 shadow pipeline may run on a given input.
+ *
+ * Called with the EXACT inputs the pipeline would receive — on a turn that
+ * resolved a worksheet reference that is the indexed question text and its
+ * source image, not the student's bare phrase — so the gate judges the bytes
+ * the solvers will actually see.
+ *
+ * @param questionText the text Solver A, Solver B and the Judge will be told to solve
+ * @param hasImage     whether the pipeline will also receive an image
+ */
+export function isShadowEligibleInput(
+  questionText: string | null | undefined,
+  hasImage: boolean,
+): ShadowRoutingDecision {
+  // An upload is always a problem on this platform — the same axiom resolveScope
+  // and the is_math classifier already run on. The text may legitimately be
+  // empty or a bare "حل" / "help", and the solvers see the image directly, so
+  // the text carries no routing weight once an image is present.
+  if (hasImage) return { eligible: true, reason: 'image' };
+
+  const t = String(questionText ?? '').trim();
+  if (!t) return { eligible: false, reason: 'empty_input' };
+
+  // A relation or LaTeX means the message states a problem, whatever else it
+  // says around it. Checked BEFORE the generation rule on purpose, so
+  // "another question: 2x+5=11" routes on its equation, not on its phrasing.
+  if (SHADOW_LATEX_RE.test(t) ||
+      (SHADOW_RELATION_RE.test(t) && SHADOW_OPERAND_RE.test(t))) {
+    return { eligible: true, reason: 'equation' };
+  }
+
+  if (SHADOW_GENERATION_RES.some((re) => re.test(t))) {
+    return { eligible: false, reason: 'generation_request' };
+  }
+
+  if (hasNumericEvidence(t) || SHADOW_OPERATOR_RE.test(t) ||
+      SHADOW_TERM_EN_RE.test(t) || SHADOW_TERM_AR_RE.test(t)) {
+    return { eligible: true, reason: 'math_content' };
+  }
+
+  return { eligible: false, reason: 'no_math_content' };
+}
+
 // L3 shadow pipeline orchestrator. Runs after Response() is returned.
 // Writes telemetry to existing question_records row (UPDATE, not INSERT).
 export async function runL3ShadowPipeline(opts: {
