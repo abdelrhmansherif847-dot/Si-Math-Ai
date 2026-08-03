@@ -2094,8 +2094,20 @@ async function loadUpgradeRequests() {
 
 // Create & Approve modal
 let apvUserId = null;
+
+// #approveModal is shared with viewPaymentDetail(), which replaces the whole
+// body with payment-detail markup. That deleted every apv* element this form
+// needs, and nothing put them back — so after an admin opened any payment
+// "Details" modal, Create & Approve threw on the first getElementById and the
+// modal never opened again until a reload. Keep the pristine markup and
+// restore it on the way in.
+const _apvBodyTemplate = document.getElementById('approveModalBody').innerHTML;
+const _apvHeadTitle = document.querySelector('#approveModal .modal-head h3').textContent;
+
 function openApproveModal(userId, name, note) {
   apvUserId = userId;
+  document.getElementById('approveModalBody').innerHTML = _apvBodyTemplate;
+  document.querySelector('#approveModal .modal-head h3').textContent = _apvHeadTitle;
   document.getElementById('apvStudentName').textContent = name;
   document.getElementById('apvNote').textContent = note || 'No note provided';
   // Auto-fill type and ref from note
@@ -3221,6 +3233,31 @@ async function loadPaymentRequests() {
 }
 
 let _prDetailCache = {};
+// plan_label and amount_egp on a payment_requests row are whatever the client
+// submitted; approve_payment_request grants by plan_code alone. Reviewing only
+// the label meant approving a grant nobody had looked at, so show the plan_code
+// that actually grants next to the catalogue's real price, and flag a submitted
+// amount that disagrees with it.
+function _planGrantRows(data) {
+  const code = data.plan_code || '';
+  const plan = PlanCatalog.get(code);
+  const truePrice = plan ? plan.price_egp : null;
+  const submitted = Number(data.amount_egp);
+  const mismatch = truePrice != null && isFinite(submitted) && Number(truePrice) !== submitted;
+  let rows = `<div class="modal-row"><span class="modal-lbl">Grants (plan_code)</span>`
+    + `<span class="modal-val mono">${esc(code || '—')}</span></div>`;
+  if (truePrice != null) {
+    rows += `<div class="modal-row"><span class="modal-lbl">Catalogue price</span>`
+      + `<span class="modal-val${mismatch ? '' : ' bold'}">${Number(truePrice).toLocaleString()} EGP`
+      + (mismatch ? ` <span class="chip red">submitted ${submitted.toLocaleString()}</span>` : '')
+      + `</span></div>`;
+  } else if (code) {
+    rows += `<div class="modal-row"><span class="modal-lbl">Catalogue price</span>`
+      + `<span class="modal-val"><span class="chip red">no such plan_code</span></span></div>`;
+  }
+  return rows;
+}
+
 async function viewPaymentDetail(id) {
   const { data } = await sb.from('payment_requests')
     .select('*, profiles(full_name, email, plan_code)')
@@ -3235,6 +3272,7 @@ async function viewPaymentDetail(id) {
     <div class="modal-row"><span class="modal-lbl">Current Plan</span><span class="modal-val">${planLabel(data.profiles?.plan_code)}</span></div>
     <div class="modal-sep"></div>
     <div class="modal-row"><span class="modal-lbl">Requested Plan</span><span class="modal-val"><span class="chip blue">${esc(data.plan_label || data.plan_code)}</span></span></div>
+    ${_planGrantRows(data)}
     <div class="modal-row"><span class="modal-lbl">Amount</span><span class="modal-val bold">${Number(data.amount_egp).toLocaleString()} EGP</span></div>
     <div class="modal-row"><span class="modal-lbl">Method</span><span class="modal-val">${esc(data.method === 'vodafone_cash' ? '📱 Vodafone Cash' : '🏦 InstaPay')}</span></div>
     <div class="modal-row"><span class="modal-lbl">Reference</span><span class="modal-val mono" style="font-size:12px;text-align:right;max-width:280px;word-break:break-word">${esc(data.reference_note || '—')}</span></div>

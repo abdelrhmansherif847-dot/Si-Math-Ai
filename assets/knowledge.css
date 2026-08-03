@@ -504,7 +504,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 
 /* The loop closes: the outcome feeds the next question. */
 .k-flow-loop {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+  /* Must wrap. knowledge-graph.html renders a nine-link chain through this
+     rule; on a phone a single centred non-wrapping row spilled 291px past both
+     edges of the viewport, so the start of the chain was unreachable. */
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
   margin-top: 22px; padding: 14px 18px;
   border: 1px dashed var(--cyan-border); border-radius: 100px;
   background: var(--cyan-bg-soft);
@@ -678,6 +681,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   font-size: 15px; color: var(--text-300); line-height: 1.6;
 }
 .k-ev-list li:last-child { border-bottom: 0; }
+/* A flex item will not shrink below its longest unbreakable word unless
+   min-width is cleared. "visual/auditory/kinaesthetic" on evidence.html pushed
+   the row past the viewport on a phone. */
+.k-ev-list li > span:last-child { min-width: 0; overflow-wrap: break-word; }
 .k-ev-tag {
   flex-shrink: 0; min-width: 84px; text-align: center;
   font: 700 9.5px/1 var(--font-mono); letter-spacing: .9px; text-transform: uppercase;

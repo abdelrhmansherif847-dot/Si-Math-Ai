@@ -589,11 +589,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.innerWidth < 1024) { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
   }));
 
-  // ===== Segmented controls (visual only, value captured on save) =====
+  // ===== Segmented controls =====
+  // Visual only, EXCEPT #examSeg. Preferred Exam Type has no save button of its
+  // own, and the "Save Goals" button in the next card refuses to write unless
+  // all four goal fields are filled — so a student who had not set goals yet
+  // could not persist an exam-type change at all, while the control showed
+  // their choice as selected. profiles.exam_type drives dashboard, focus,
+  // mock-exam, history and progress, so the unsaved choice was load-bearing.
+  // exam_type is on the SEC-01 client-updatable allow-list.
   document.querySelectorAll('.seg').forEach(seg => {
-    seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    seg.querySelectorAll('button').forEach(b => b.addEventListener('click', async () => {
+      const prev = seg.querySelector('button.on');
+      if (prev === b) return;
       seg.querySelectorAll('button').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
+      if (seg.id !== 'examSeg' || !currentUser) return;
+      const examType = b.dataset.val;
+      const { error } = await sb.from('profiles').update({ exam_type: examType }).eq('id', currentUser.id);
+      if (error) {
+        b.classList.remove('on');
+        if (prev) prev.classList.add('on');
+        showMsg('goalsMsg', 'error', 'Could not save your exam type: ' + error.message);
+        return;
+      }
+      if (currentProfile) currentProfile.exam_type = examType;
+      showMsg('goalsMsg', 'success', '✅ Exam type saved — ' + examType + ' Mode.');
     }));
   });
 
@@ -846,27 +866,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error: rpcErr } = await sb.rpc('delete_my_account');
         if (rpcErr) throw new Error('Data cleanup failed: ' + rpcErr.message);
 
-        // 2. Delete the auth user via the Supabase auth REST endpoint
+        // 2. Attempt to remove the sign-in record.
+        //
+        // GoTrue has no self-service delete: auth.admin.deleteUser requires the
+        // service_role key, so this request cannot succeed from the browser and
+        // never could. It used to be fired with its response unchecked, and the
+        // student was then told unconditionally that the account was gone.
+        // Everything in step 1 IS deleted — every row of personal data, across
+        // 22 tables — so the honest report is that the data is gone while the
+        // e-mail record may remain. Removing that record needs a service-role
+        // path (see docs/engineering/infrastructure-backlog.md).
+        let authRecordRemoved = false;
         const { data: { session } } = await sb.auth.getSession();
         if (session) {
-          await fetch(
-            'https://igvkyxkmjnkzscqgommj.supabase.co/auth/v1/user',
-            {
-              method: 'DELETE',
-              headers: {
-                'Authorization': 'Bearer ' + session.access_token,
-                'apikey': 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp',
-              },
-            }
-          );
+          try {
+            const resp = await fetch(
+              'https://igvkyxkmjnkzscqgommj.supabase.co/auth/v1/user',
+              {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': 'Bearer ' + session.access_token,
+                  'apikey': 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp',
+                },
+              }
+            );
+            authRecordRemoved = resp.ok;
+          } catch (_) { /* offline or blocked — data deletion already succeeded */ }
         }
 
         // 3. Sign out and redirect
         await sb.auth.signOut();
+        const tail = authRecordRemoved
+          ? 'Your account and all data have been permanently removed.'
+          : 'All of your data has been permanently deleted and you have been signed out. '
+            + 'Your e-mail may remain on file as an empty sign-in record until it is cleared.';
         modal.innerHTML = `<div style="background:#0c1428;border:1px solid #1a2640;border-radius:18px;padding:40px 28px;max-width:400px;width:100%;text-align:center">
           <div style="font-size:40px;margin-bottom:12px">✅</div>
           <div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Account Deleted</div>
-          <p style="font-size:13.5px;color:var(--text-400)">Your account and all data have been permanently removed.</p>
+          <p style="font-size:13.5px;color:var(--text-400)">${tail}</p>
         </div>`;
         setTimeout(function() { window.location.href = 'index.html'; }, 2500);
       } catch (err) {
