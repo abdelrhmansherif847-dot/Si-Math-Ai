@@ -1,4 +1,33 @@
-// ai-tutor Edge Function v96
+// ai-tutor Edge Function v97
+// v97 (the V3 shadow pipeline runs only on turns that contain a problem):
+// non-math turns were reaching l3-shadow-v3 and writing shadow rows, so the
+// Question Inspector showed greetings and acknowledgements alongside real
+// verifications and the verification series carried their noise.
+//
+// The gate was `is_math`, which is necessary but not sufficient. is_math is a
+// model-authored label about the TURN, produced with the conversation history
+// in view; the pipeline needs a fact about the TEXT, because it instructs two
+// solvers and a judge to solve that text. The two diverge exactly where the
+// history does the talking: "okk good", one turn after a radicals question,
+// came back topic=Algebra / subtopic=Exponents / is_math=true, and both solvers
+// returned an empty answer (row 3f52f205, confidence 0.200). "Give me a similar
+// SAT/ACT question on this topic" came back is_math=true and the solvers were
+// handed the request sentence rather than the problem Zero then generated,
+// returning "x = 2 or x = 3" and "20" (row 6f019c9d).
+//
+// isShadowEligibleInput (_shared/verification.core.ts) is now consulted on the
+// exact bytes the solvers would receive — the resolved worksheet text and image
+// on a reference turn, the student's message otherwise. It is deterministic and
+// makes no model call, and it rejects only on positive evidence that there is
+// nothing to solve: an empty input, a request for a question to be GENERATED,
+// or text with no digit, operator, LaTeX or math term anywhere in it. An image
+// is always eligible. Anything holding a relation symbol is eligible even if it
+// also reads like a generation request, so "another question: 2x+5=11" still
+// runs. Skips are logged as [ai-tutor] l3-shadow-skipped with their reason.
+//
+// Scope held deliberately tight: is_math itself is untouched, so taxonomy,
+// mastery, weakness, difficulty and every client-rendered field behave exactly
+// as they did. The only behaviour that changes is which turns enter L3 Shadow.
 // v96 (the free quota is enforced here, before OpenAI): free students were not
 // being blocked at their daily limit. The reason was not a broken check — it
 // was the absence of one. This function never consulted a plan, a balance or a
@@ -259,12 +288,12 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { recordModelCall, flushModelCalls } from '../_shared/telemetry.core.ts';
 import type { ModelCallRow } from '../_shared/telemetry.core.ts';
-import { runL3ShadowPipeline } from '../_shared/verification.core.ts';
+import { runL3ShadowPipeline, isShadowEligibleInput } from '../_shared/verification.core.ts';
 
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v96';
+const AI_TUTOR_VERSION = 'v97';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -4146,25 +4175,49 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     }
 
     // ── L3 Shadow Pipeline (background — never blocks student response) ───────
-    // Double gate: VERIFICATION_ENABLED=true AND VERIFICATION_SHADOW_ONLY=true.
-    // Runs only on math questions that produced a persisted record.
+    // Triple gate: VERIFICATION_ENABLED=true AND VERIFICATION_SHADOW_ONLY=true
+    // AND the turn actually presented a solvable problem. Runs only on math
+    // questions that produced a persisted record.
     const verificationEnabled  = (Deno.env.get('VERIFICATION_ENABLED')   ?? 'false') === 'true';
     const verificationShadowOnly = (Deno.env.get('VERIFICATION_SHADOW_ONLY') ?? 'true')  !== 'false';
-    if (verificationEnabled && verificationShadowOnly && isMath && recordId) {
+    // Parity inputs for the shadow pipeline — Solver A/B + Judge must solve the
+    // SAME problem Zero solved. On a reference-resolved turn that is the indexed
+    // question text + its source image, not the bare student phrase. resolvedRef
+    // and a fresh imageData upload are mutually exclusive, so non-resolved turns
+    // collapse to today's exact inputs (question, imageData).
+    // Hoisted above the gate in v97 because the routing decision is made ON these
+    // bytes — the ones the solvers will see — not on the student's raw phrase.
+    const shadowQuestionText = resolvedRef ? resolvedRef.question_text : question;
+    const shadowImageData    = resolvedRef
+      ? (refImages[resolvedRef.image_index] ?? refImages[0] ?? null)
+      : imageData;
+    // v97: is_math is necessary but not sufficient. It is a model-authored label
+    // about the TURN, produced with the conversation history in view, so a bare
+    // "okk good" after a math question inherits the previous topic and arrives
+    // here is_math=true. The pipeline instructs two solvers and a judge to SOLVE
+    // shadowQuestionText, which only means anything when that text contains a
+    // problem. isShadowEligibleInput is the server-side, deterministic check for
+    // exactly that — see the routing-gate block in _shared/verification.core.ts
+    // for the production rows that motivated it and for why it rejects only on
+    // positive evidence that there is nothing to solve.
+    const shadowRouting  = isShadowEligibleInput(shadowQuestionText, !!shadowImageData);
+    const shadowGateOpen = verificationEnabled && verificationShadowOnly && isMath && !!recordId;
+    // A skip is a decision, not a non-event: without this line a missing shadow
+    // row is indistinguishable from a pipeline that crashed.
+    if (shadowGateOpen && !shadowRouting.eligible) {
+      console.log('[ai-tutor] l3-shadow-skipped', JSON.stringify({
+        uid: user.id.slice(0, 8), record_id: recordId,
+        reason: shadowRouting.reason,
+        q_chars: String(shadowQuestionText ?? '').length,
+        topic: safeInsertTopic, subtopic: safeInsertSubtopic,
+      }));
+    }
+    if (shadowGateOpen && shadowRouting.eligible) {
       const pipelineStart = Date.now();
       const detectorMeta: Record<string, unknown> = {
         tier: verificationFields.verification_tier as string ?? null,
         ...((verificationFields.verification_meta as Record<string, unknown>) ?? {}),
       };
-      // Parity inputs for the shadow pipeline — Solver A/B + Judge must solve the
-      // SAME problem Zero solved. On a reference-resolved turn that is the indexed
-      // question text + its source image, not the bare student phrase. resolvedRef
-      // and a fresh imageData upload are mutually exclusive, so non-resolved turns
-      // collapse to today's exact inputs (question, imageData).
-      const shadowQuestionText = resolvedRef ? resolvedRef.question_text : question;
-      const shadowImageData    = resolvedRef
-        ? (refImages[resolvedRef.image_index] ?? refImages[0] ?? null)
-        : imageData;
       const pipelineTask = runL3ShadowPipeline({
         sbAdmin,
         recordId,
