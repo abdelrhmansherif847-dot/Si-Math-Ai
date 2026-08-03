@@ -439,13 +439,28 @@ function chatCard(s, qCountMap, typeTag) {
   </a>`;
 }
 
+// The colour scale has to follow the exam's own score range. This divided every
+// score by 800, so a perfect ACT Math 36 came out at 4.5% and was painted red —
+// every ACT student saw their result styled as a failure. Note exam_type holds
+// the exam CODE that mock-exam.html writes ('ACT_MATH', 'EST_MATH_1', …), with
+// some legacy rows carrying the bare family ('SAT', 'EST'), so match on prefix.
+// PRACTICE has an open-ended range (scoreMax 9999) that no percentage can be
+// derived from — colour those by accuracy instead.
+function examScoreMax(examType) {
+  const t = String(examType || '').toUpperCase();
+  if (t.startsWith('ACT')) return 36;
+  if (t.startsWith('PRACTICE')) return null;
+  return 800;
+}
+
 function examCard(e, mistakeMap, typeTag) {
   const hasData  = e.correct_answers != null || e.wrong_answers != null;
   const total    = (e.correct_answers || 0) + (e.wrong_answers || 0);
   const accPct   = total > 0 ? Math.round((e.correct_answers || 0) / total * 100) : null;
   // Show actual exam score (e.g. 770) when available, else accuracy %, else —
   const scoreDisplay = e.score != null ? e.score : (accPct != null ? accPct + '%' : '—');
-  const cls      = e.score != null ? scoreCls(Math.round((e.score / 800) * 100))
+  const scoreMax = examScoreMax(e.exam_type);
+  const cls      = (e.score != null && scoreMax) ? scoreCls(Math.round((e.score / scoreMax) * 100))
                  : (accPct != null ? scoreCls(accPct) : '');
   const date     = relDate(e.created_at);
   const mistakes = mistakeMap[e.id] || 0;

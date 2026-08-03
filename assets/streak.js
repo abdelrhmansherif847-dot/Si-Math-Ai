@@ -70,13 +70,19 @@ window.updateStreak = async function(sb, userId, opts) {
     const storedCurrent = (profile && typeof profile.current_streak === 'number') ? profile.current_streak : 0;
     const storedBest    = (profile && typeof profile.best_streak    === 'number') ? profile.best_streak    : 0;
 
-    // Bail out rather than write a wrong value. If BOTH primary activity
-    // sources failed (offline, RLS hiccup, transient 5xx), the recompute would
-    // see an empty history and persist current_streak = 0 — silently wiping a
-    // legitimate streak on a page load that had nothing to do with practising.
-    // Leave the stored row untouched and let the next call self-heal.
-    if (qrsRes.error && examsRes.error) {
-      console.warn('[streak] both activity sources failed — leaving stored streak untouched');
+    // Bail out rather than write a wrong value. If ANY activity source failed
+    // (offline, RLS hiccup, transient 5xx), the recompute sees a partial history
+    // and can persist a current_streak that is too low — or 0 — on a page load
+    // that had nothing to do with practising. Leave the stored row untouched and
+    // let the next call self-heal.
+    //
+    // This used to require BOTH primary sources to fail, which missed the common
+    // case: a student's activity lives in ONE source (chat-only students are
+    // entirely in question_records, Focus-only students entirely in focus_tasks),
+    // so losing just that source wiped the streak while the other returned an
+    // empty-but-successful result.
+    if (qrsRes.error || examsRes.error || plansRes.error) {
+      console.warn('[streak] an activity source failed — leaving stored streak untouched');
       return { current_streak: storedCurrent, best_streak: storedBest, active_days: [], skipped: true };
     }
 
@@ -90,7 +96,13 @@ window.updateStreak = async function(sb, userId, opts) {
         .in('plan_id', planIds)
         .eq('status', 'DONE')
         .gte('completed_at', since.toISOString());
-      if (focusRes.error) console.warn('[streak] focus_tasks fetch error:', focusRes.error.message);
+      if (focusRes.error) {
+        // Same reasoning as the guard above: a Focus-only student's entire
+        // history is in this table, so a failed read must not be treated as
+        // "no activity".
+        console.warn('[streak] focus_tasks fetch failed — leaving stored streak untouched');
+        return { current_streak: storedCurrent, best_streak: storedBest, active_days: [], skipped: true };
+      }
     }
 
     // Build the set of Cairo-date strings the user was actually active.

@@ -152,10 +152,22 @@ const AVAIL = { hoursPerDay: 2, studyDays: [0, 1, 2, 3, 4] };
     const res = await C.saveStudyPlan(sb, 'u1', plan, sig, 20);
     assert(res.persisted === true, 'saveStudyPlan reports persisted');
     const upd = sb.__calls.updates.find((u) => u.table === 'study_plans');
-    assert(upd && 'superseded_at' in upd.vals, 'previous plan superseded before insert');
+    assert(upd && 'superseded_at' in upd.vals, 'previous plan superseded');
     const ins = sb.__calls.inserts.find((i) => i.table === 'study_plans');
     assert(ins && ins.vals.credits_charged === 20 && ins.vals.plan_json.version, 'new plan inserted with credits + json + signature');
     assert(ins.vals.plan_signature && typeof ins.vals.plan_signature.generatedAt === 'number', 'signature stored for regen checks');
+  }
+
+  /* ── 5b. a failed insert must NOT supersede the existing plan ─────────────── */
+  {
+    // The two writes are separate round trips with no transaction. Superseding
+    // first meant a failed insert left the student with no current plan at all —
+    // old one superseded, new one never stored — after 20 credits were charged.
+    const sb = makeSb({}, { errorTables: { study_plans: true } });
+    const res = await C.saveStudyPlan(sb, 'u1', { version: 'x' }, {}, 20);
+    assert(res.persisted === false, 'failed insert reports persisted:false');
+    const upd = sb.__calls.updates.find((u) => u.table === 'study_plans');
+    assert(!upd, 'failed insert leaves the previous plan un-superseded');
   }
 
   /* ── 6. saveStudyPlan never throws when the table is missing ──────────────── */

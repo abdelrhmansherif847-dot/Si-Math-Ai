@@ -634,6 +634,13 @@ async function loadPage() {
   // Enforce subscription expiry before reading profile/subscription state
   try { await sb.rpc('enforce_my_subscription_expiry'); } catch(_) {}
 
+  // The credit-packs copy asks the catalogue for the FREE plan's daily
+  // allowance, and dailyLimit() returns undefined until the catalogue is
+  // loaded. Without this the figure was permanently unresolvable and the
+  // sentence always fell back to its number-less form — on the one page that
+  // takes payment. load() never rejects; a failed read just leaves it unloaded.
+  await PlanCatalog.load(sb);
+
   document.getElementById('topAvatar').textContent = (user.email || '?')[0].toUpperCase();
 
   const [

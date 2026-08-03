@@ -105,6 +105,22 @@ t.is('no profile write attempted', failed.wrote, false);
 t.is('stored current returned unchanged', failed.current, 3);
 t.is('stored best returned unchanged', failed.best, 7);
 
+// A student's activity usually lives in exactly ONE source: chat-only students
+// are entirely in question_records, Focus-only students entirely in focus_tasks.
+// Requiring BOTH primaries to fail before bailing meant losing just that one
+// source computed a streak of 0 from the other source's empty-but-successful
+// result, and PERSISTED it. Each of these fails against that guard.
+for (const [label, fail, fixture] of [
+  ['question_records alone fails', { question_records: true }, { qrDays: [0,1,2] }],
+  ['exam_practice_sessions alone fails', { exam_practice_sessions: true }, { examDays: [0,1,2] }],
+  ['focus_plans alone fails', { focus_plans: true }, { focusDays: [0,1,2] }],
+  ['focus_tasks alone fails', { focus_tasks: true }, { focusDays: [0,1,2] }],
+]) {
+  const r = await run({ ...fixture, profile: { current_streak: 3, best_streak: 7 }, fail });
+  t.is(label + ' -> no write', r.wrote, false);
+  t.is(label + ' -> streak preserved', r.current, 3);
+}
+
 t.section('last_active_date is the real last activity day');
 t.is('active yesterday -> yesterday', (await run({ qrDays: [1] })).last, yday);
 t.is('active today -> today', (await run({ qrDays: [0] })).last, today);

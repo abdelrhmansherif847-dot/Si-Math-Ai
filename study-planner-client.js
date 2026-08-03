@@ -209,14 +209,23 @@
   /* ── Public: persistence ───────────────────────────────────────────────────── */
 
   /**
-   * saveStudyPlan — supersede the current plan and insert the new one. Returns
-   * { persisted:boolean, reason? }. Never throws (persistence is best-effort so
-   * a missing study_plans table pre-migration doesn't break generation).
+   * saveStudyPlan — insert the new plan, then supersede the previous ones.
+   * Returns { persisted:boolean, reason? }. Never throws (persistence is
+   * best-effort so a missing study_plans table pre-migration doesn't break
+   * generation).
+   *
+   * Insert FIRST. These are two separate round trips with no transaction
+   * between them, and superseding first meant a failed insert (network drop,
+   * transient 5xx, tab closed mid-flight) left the student with no current plan
+   * at all: the old one was already marked superseded and the new one never
+   * landed. getLatestStudyPlan filters on superseded_at IS NULL, so "show my
+   * study plan" then returned nothing — after the 20 credits had been charged.
+   * In this order a failure is inert: the previous plan is still current.
+   * getLatestStudyPlan takes the newest row, so the brief window in which two
+   * rows are un-superseded resolves to the new plan.
    */
   async function saveStudyPlan(sb, userId, plan, signature, creditsCharged) {
     try {
-      await sb.from('study_plans').update({ superseded_at: new Date().toISOString() })
-        .eq('user_id', userId).is('superseded_at', null);
       var res = await sb.from('study_plans').insert({
         user_id: userId,
         planner_version: (plan && plan.version) || PLANNER_VERSION_FALLBACK,
@@ -225,7 +234,12 @@
         credits_charged: num(creditsCharged, 20),
       }).select('id').single();
       if (res && res.error) { warn('study_plans insert', res.error); return { persisted: false, reason: res.error.message }; }
-      return { persisted: true, id: res && res.data && res.data.id };
+      var newId = res && res.data && res.data.id;
+      var q = sb.from('study_plans').update({ superseded_at: new Date().toISOString() })
+        .eq('user_id', userId).is('superseded_at', null);
+      if (newId) q = q.neq('id', newId);
+      await q;
+      return { persisted: true, id: newId };
     } catch (e) { warn('study_plans insert', e); return { persisted: false, reason: (e && e.message) || 'error' }; }
   }
 

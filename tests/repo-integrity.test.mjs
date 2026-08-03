@@ -49,7 +49,12 @@ t.section('Audit fixes are still in place');
 const fixes = [
   ['streak: no unconditional today-seed',        () => !/const dateSet = new Set\(\[todayStr\]\)/.test(read('assets/streak.js'))],
   ['streak: anchor falls back to yesterday',     () => /dateSet\.has\(yesterdayStr\)/.test(read('assets/streak.js'))],
-  ['streak: bails when both sources fail',       () => /qrsRes\.error && examsRes\.error/.test(read('assets/streak.js'))],
+  // Was `qrsRes.error && examsRes.error` — requiring BOTH primaries to fail.
+  // A student's activity usually lives in one source, so losing just that one
+  // computed 0 from the other's empty-but-successful result and persisted it.
+  // Any source failing must now bail; behaviour is covered by streak.test.mjs.
+  ['streak: bails when any source fails',        () => /qrsRes\.error \|\| examsRes\.error \|\| plansRes\.error/.test(read('assets/streak.js'))],
+  ['streak: bails when focus_tasks fails',       () => /focusRes\.error\)\s*\{[\s\S]{0,400}?skipped: true/.test(read('assets/streak.js'))],
   ['dashboard: heatmap reuses the streak set',   () => /streakRes\.active_days/.test(read('dashboard.html'))],
   ['dashboard: week strip is Cairo-derived',     () => /keyToUTC\(todayStr\)/.test(read('dashboard.html'))],
   ['progress: recomputes the streak',            () => /window\.updateStreak\(sb, user\.id\)/.test(read('progress.html'))],

@@ -2316,6 +2316,33 @@ button{font-family:inherit;cursor:pointer}
     return (window.StudyPlanner && window.StudyPlanner.STUDY_PLAN_CREDIT_COST) || 20;
   }
 
+  // consume_credits refuses with 'daily_limit_reached' from two different
+  // branches, and they mean opposite things to the student:
+  //
+  //   zero-price tier — daily_limit IS the free allowance, and purchased pack
+  //     credits DO carry the student past it. That response carries
+  //     `pack_credits`. Offering a credit pack here is correct.
+  //   paid plan — daily_limit is an independent cap checked BEFORE the balance,
+  //     so buying credits cannot lift it today. That response carries `balance`.
+  //     Offering a credit pack here sells something that will not work.
+  //
+  // The key present on the response is the discriminator, which is why this
+  // reads the shape rather than guessing from the local plan code.
+  function isFreeTierQuota(q){
+    return !!q && Object.prototype.hasOwnProperty.call(q, 'pack_credits');
+  }
+
+  // Copy for the paid-plan cap. Names the limit the server actually enforced
+  // when it sent one, names no number when it did not, and never pitches credits.
+  function dailyCapMessage(q, whatFailed){
+    var lim = (q && typeof q.daily_limit === 'number') ? q.daily_limit : null;
+    return 'You’ve reached your plan’s daily limit'
+      + (lim === null ? '' : ' of ' + lim)
+      + ', so you can’t send another ' + whatFailed + ' today. '
+      + 'It resets at midnight UTC. '
+      + '<a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">See plans with a higher daily limit</a>.';
+  }
+
   function studyPlanIntent(text){
     var t = (text||'').toLowerCase();
     // Plan noun: "plan / plans / plane / planning" are ordinary MATH vocabulary
@@ -2484,7 +2511,12 @@ button{font-family:inherit;cursor:pointer}
         removeTyping();
         if (cr.reason === 'feature_not_found') addStudyPlanNotice('The Study Planner isn’t enabled on your account yet. Please check back soon.');
         else if (cr.reason === 'insufficient_credits') showCreditError('A Study Plan costs '+studyPlanCost()+' credits (balance: '+(cr.balance||0)+'). <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Buy a credit pack</a> or <a href="pricing.html" style="color:var(--cyan);text-decoration:underline;font-weight:600">upgrade</a>.');
-        else if (cr.reason === 'daily_limit_reached') showCreditError('You’ve hit today’s free limit. <a href="pricing.html#packs" style="color:var(--cyan);text-decoration:underline;font-weight:600">Get more credits</a> to generate a Study Plan.');
+        // STUDY_PLAN is always_charge, so consume_credits' free-tier branch is
+        // skipped entirely and its paid branch only checks the cap when the
+        // student is NOT on a zero-price tier. daily_limit_reached therefore
+        // only ever reaches a PAYING student here — for whom it is not a "free
+        // limit", and for whom buying credits changes nothing today.
+        else if (cr.reason === 'daily_limit_reached') showCreditError(dailyCapMessage(cr, 'Study Plan'));
         else addStudyPlanNotice('Could not start the Study Planner: '+escapeHtml(cr.reason||'unknown'));
         return;
       }
@@ -2699,7 +2731,13 @@ button{font-family:inherit;cursor:pointer}
       // party that can tell a genuine failure from a claimed one.
       if (err && err.quota) {
         var q = err.quota;
-        if (q.reason === 'daily_limit_reached') {
+        if (q.reason === 'daily_limit_reached' && !isFreeTierQuota(q)) {
+          // Paid plan: the cap is absolute for today and credits cannot lift it
+          // (consume_credits checks it BEFORE the balance, precisely so a
+          // student cannot try to buy their way past). Pitching a credit pack
+          // here sold something that would not have worked.
+          showCreditError(dailyCapMessage(q, 'message'));
+        } else if (q.reason === 'daily_limit_reached') {
           // The server sends the limit it actually enforced, so that value is
           // always right. The `|| 10` that used to sit here was a literal from
           // when the FREE limit was 10 — it stayed behind when the limit became
