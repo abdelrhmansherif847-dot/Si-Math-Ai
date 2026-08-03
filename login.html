@@ -268,12 +268,17 @@ button{font-family:inherit;cursor:pointer}
           </div>
         </div>
 
-        <div class="form-row">
-          <label class="remember">
-            <input type="checkbox" id="remember"/>
-            <span class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-            <span>Remember me</span>
-          </label>
+        <!-- The "Remember me" checkbox that used to sit here was never read by
+             any code: the session is always persisted to localStorage with auto
+             refresh, checked or not. On a shared school or family computer that
+             is the opposite of what leaving it unticked promises — the next
+             person at that machine opened the dashboard already signed in.
+             Honouring it means giving every page a shared storage adapter that
+             can fall back to sessionStorage, because a session this page alone
+             put in sessionStorage would be invisible to the client each other
+             page builds. Recorded in docs/engineering/infrastructure-backlog.md;
+             until then the control is gone rather than lying. -->
+        <div class="form-row" style="justify-content:flex-end">
           <a class="forgot" href="#" id="forgotLink">Forgot password?</a>
         </div>
 
@@ -468,10 +473,20 @@ button{font-family:inherit;cursor:pointer}
           }
         }
         if(!migrated){
-          var{data:allowed}=await supabaseClient.rpc('can_register_device',{p_user_id:userId,p_fingerprint:fp});
-          if(!allowed){showDeviceWall(userId,(profile&&profile.plan_code)||'FREE');return;}
-          var info=getDeviceName();
-          await supabaseClient.from('user_devices').insert({user_id:userId,device_fingerprint:fp,device_name:info.name,browser:info.browser,os_name:info.os,is_active:true,last_seen:now,last_active:now});
+          // Destructure the error too. Reading only `data` meant a failed RPC
+          // (network blip, transient 5xx) produced data === null, which is
+          // falsy, and the student was shown "Too Many Devices — your plan
+          // allows N" — a definitive limit claim the server never made, on a
+          // device that may well be within their limit. A failed check is not a
+          // refusal: skip registration and let them through; the per-page device
+          // guard still runs on the next page and re-checks against real data.
+          var{data:allowed,error:devErr}=await supabaseClient.rpc('can_register_device',{p_user_id:userId,p_fingerprint:fp});
+          if(devErr){console.warn('[login] can_register_device failed:',devErr.message);}
+          else if(!allowed){showDeviceWall(userId,(profile&&profile.plan_code)||'FREE');return;}
+          else{
+            var info=getDeviceName();
+            await supabaseClient.from('user_devices').insert({user_id:userId,device_fingerprint:fp,device_name:info.name,browser:info.browser,os_name:info.os,is_active:true,last_seen:now,last_active:now});
+          }
         }
       }
       if(profile&&profile.onboarding_completed===true){window.location.href='dashboard.html';}

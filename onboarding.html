@@ -511,8 +511,17 @@ button{font-family:inherit;cursor:pointer}
     }
     document.getElementById('targetScore').classList.remove('err');
     if (!examDate) { showErr('err2', 'Please select your exam date.'); document.getElementById('examDate').classList.add('err'); return; }
-    var examMs = new Date(examDate).getTime();
-    if (examMs < Date.now()) { showErr('err2', 'Exam date must be in the future.'); document.getElementById('examDate').classList.add('err'); return; }
+    // <input type="date"> yields "YYYY-MM-DD", which new Date() parses as UTC
+    // midnight. Comparing that to Date.now() rejected TODAY for every student
+    // east of UTC — including Egypt, where the whole audience is — and rejected
+    // tomorrow too once it was past 22:00 Cairo. Compare date to date instead,
+    // in the student's own timezone, and allow today: sitting the exam today is
+    // exactly when a countdown matters most.
+    var _p = examDate.split('-');
+    var examDay = new Date(Number(_p[0]), Number(_p[1]) - 1, Number(_p[2]));
+    var _n = new Date();
+    var todayStart = new Date(_n.getFullYear(), _n.getMonth(), _n.getDate());
+    if (examDay < todayStart) { showErr('err2', 'Exam date must be today or later.'); document.getElementById('examDate').classList.add('err'); return; }
     document.getElementById('examDate').classList.remove('err');
     goTo(3);
   });
