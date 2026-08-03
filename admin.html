@@ -2074,11 +2074,22 @@ async function loadUpgradeRequests() {
       <td>${planLabel(u.plan_code)}</td>
       <td class="mono">${(u.credits_balance || 0).toLocaleString()}</td>
       <td><div style="display:flex;gap:6px">
-        <button class="btn btn-green btn-sm" onclick="openApproveModal('${u.id}','${esc(u.full_name||u.email||u.id)}','${esc(u.upgrade_note||'')}')">Create &amp; Approve</button>
+        <button class="btn btn-green btn-sm btn-apv-open" data-uid="${esc(u.id)}" data-name="${esc(u.full_name||u.email||u.id)}" data-note="${esc(u.upgrade_note||'')}">Create &amp; Approve</button>
         <button class="btn btn-red btn-sm" onclick="rejectUpgradeRequest('${u.id}')">Reject</button>
       </div></td>
     </tr>`).join('')}</tbody>
   </table></div>`;
+
+  // Student-supplied full_name / upgrade_note must never be interpolated into
+  // an onclick attribute: esc() leaves ' alone, and HTML-escaping it would not
+  // help either, since the attribute is HTML-decoded before the JS is parsed.
+  // A name of  x'),alert(1),('  would execute in an admin's session. Carry the
+  // values as data-* instead, where they stay data.
+  el.querySelectorAll('.btn-apv-open').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openApproveModal(btn.dataset.uid, btn.dataset.name, btn.dataset.note);
+    });
+  });
 }
 
 // Create & Approve modal

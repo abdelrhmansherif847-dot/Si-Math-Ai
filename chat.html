@@ -2318,26 +2318,31 @@ button{font-family:inherit;cursor:pointer}
 
   function studyPlanIntent(text){
     var t = (text||'').toLowerCase();
-    // Plan noun accepted everywhere: plan / plans / plane (common typo for
-    // "planner") / planner / planning, optionally prefixed "study ", plus the
-    // synonym "study schedule". The earlier /\bplan\b/ missed "Study Planner"
-    // (the official name) and the "study plane" typo, so those requests fell
-    // through to the generic LLM path instead of the personalized engine.
+    // Plan noun: "plan / plans / plane / planning" are ordinary MATH vocabulary
+    // in an SAT/EST/ACT tutor (the coordinate plane, a plane figure, a plan to
+    // solve an equation), so they only count when qualified by "study" — plus
+    // the synonym "study schedule". "Planner" is unambiguous and may stand
+    // alone, which is what makes the official name "Study Planner" and the
+    // "study plane" typo route correctly.
+    //
+    // The bare noun used to be accepted after any strong verb, so "make a plane
+    // through points A and B" and "create a plan to solve this equation" were
+    // routed to the planner and CHARGED 20 credits instead of being answered.
 
     // 1) Explicit VIEW (free) — a view verb beside a plan noun, checked first so
     //    "I want to see my study plan" stays a free view, not a paid generation.
-    if (/\b(show|view|see|open|display|check|what'?s|where'?s)\b[\s\S]{0,24}\b(my |the |current )?(?:(?:study\s+)?plan(?:ner|ning|s|e)?|study\s+schedule)\b/.test(t)) return 'view';
-    // 2) GENERATE (charged 20). Strong build verbs accept the bare noun; softer
-    //    verbs (want/need/…) require the word "study" to avoid false charges.
-    if (/\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(?:(?:study\s+)?plan(?:ner|ning|s|e)?|study\s+schedule)\b/.test(t)
-        || /\b(want|need|give|prepare|design|set ?up|make me|i'?d like|can you (?:make|create|build|generate|do))\b[\s\S]{0,24}\bstudy\s+(?:plan(?:ner|ning|s|e)?|schedule)\b/.test(t)
-        || /\bstudy\s+(?:plan(?:ner|ning|s|e)?|schedule)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
-        || /^\s*study\s+(?:plan(?:ner|ning|s|e)?|schedule)\s*[.!?]?\s*$/.test(t)) return 'generate';
+    if (/\b(show|view|see|open|display|check|what'?s|where'?s)\b[\s\S]{0,24}\b(my |the |current )?(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)) return 'view';
+    // 2) GENERATE (charged 20). Strong build verbs accept the qualified noun;
+    //    softer verbs (want/need/…) require the word "study" too.
+    if (/\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
+        || /\b(want|need|give|prepare|design|set ?up|make me|i'?d like|can you (?:make|create|build|generate|do))\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
+        || /\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
+        || /^\s*(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\s*[.!?]?\s*$/.test(t)) return 'generate';
     // 3) Generate — Arabic
     if (/(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز)\S*[\s\S]{0,24}(خط[ةه])/.test(t)
         || /خط[ةه]\s*(مذاكرة|مذاكره|دراسة|دراسه|استذكار)/.test(t)) return 'generate';
     // 4) Bare "my study plan(ner)" with no verb → view the existing one (free).
-    if (/\bmy (current )?study\s+plan(?:ner|ning|s|e)?\b/.test(t)) return 'view';
+    if (/\bmy (current )?(?:study\s+plan(?:ner|ning|s|e)?|planner)\b/.test(t)) return 'view';
     return null;
   }
 
@@ -2870,18 +2875,39 @@ button{font-family:inherit;cursor:pointer}
   });
 
   // ===== CHAT HISTORY ACTIONS =====
-  function renameChat(btn,e){
+  // Both of these used to touch only the DOM. loadChatHistory() rebuilds the
+  // sidebar from chat_sessions on every load, so a renamed chat reverted and a
+  // "deleted" chat came back — the student was shown an action that never
+  // happened. Persist first, and only then update the UI.
+  async function renameChat(btn,e){
     e.preventDefault();e.stopPropagation();
+    if(!currentUser) return;
     const item=btn.closest('.history-item');
     const titleEl=item.querySelector('.h-title');
     const old=titleEl.textContent.trim();
     const nw=prompt('Rename chat:',old);
-    if(nw&&nw.trim()) titleEl.textContent=nw.trim();
+    if(!nw||!nw.trim()) return;
+    const title=nw.trim().slice(0,200);
+    const { error }=await sb.from('chat_sessions').update({ title })
+      .eq('id',item.dataset.sessionId).eq('user_id',currentUser.id);
+    if(error){ alert('Could not rename this chat. Please try again.'); return; }
+    titleEl.textContent=title;
   }
-  function deleteChat(btn,e){
+  async function deleteChat(btn,e){
     e.preventDefault();e.stopPropagation();
+    if(!currentUser) return;
     const item=btn.closest('.history-item');
-    if(confirm('Delete this chat?')) item.remove();
+    const sessionId=item.dataset.sessionId;
+    // question_records cascades from chat_sessions, so this removes the
+    // questions in the chat too. Say so rather than let it surprise them.
+    if(!confirm('Delete this chat? The questions in it are removed from your history as well. This cannot be undone.')) return;
+    const { error }=await sb.from('chat_sessions').delete()
+      .eq('id',sessionId).eq('user_id',currentUser.id);
+    if(error){ alert('Could not delete this chat. Please try again.'); return; }
+    item.remove();
+    // If the open conversation is the one just deleted, clear the view instead
+    // of leaving the student reading messages that no longer exist.
+    if(currentSessionId===sessionId){ document.getElementById('newChat').click(); }
   }
 
   function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}

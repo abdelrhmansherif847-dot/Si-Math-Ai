@@ -343,7 +343,7 @@ async function loadPage() {
       ${nextRank ? `<span>${nextRank.min.toLocaleString()} XP</span>` : '<span>MAX</span>'}
     </div>
     <div class="rank-ladder-grid">
-      ${RANKS.map(r => {
+      ${window.SiRanks.RANKS.map(r => {
         const isCurrent = r.name === rank.name;
         const isEarned = xp >= r.min;
         return `<div class="rl-step${isCurrent ? ' rl-current' : isEarned ? ' rl-earned' : ''}" style="${isCurrent ? `border-color:${r.color}` : ''}">

@@ -362,6 +362,22 @@ button{font-family:inherit;cursor:pointer}
     var el = document.getElementById('loginErr');
     if (el) el.classList.remove('show');
   }
+  // showErr stays textContent-only — it renders raw server error strings, which
+  // must never be parsed as HTML. When a message needs an action, the control is
+  // built as a real element and returned, so its listener actually binds. Passing
+  // markup to showErr printed the tag source at the student and left the button
+  // unclickable.
+  function showErrWithAction(msg, label) {
+    showErr(msg);
+    var el = document.getElementById('loginErr');
+    if (!el) return null;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.style.cssText = 'background:none;border:none;color:var(--cyan);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;margin-left:4px';
+    el.appendChild(btn);
+    return btn;
+  }
 
   function _djb2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
   function _fpTz(){return(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):''; }
@@ -516,11 +532,16 @@ button{font-family:inherit;cursor:pointer}
       var{data,error}=await supabaseClient.auth.signInWithPassword({email,password});
       if(error){
         if(error.message&&(error.message.toLowerCase().includes('email not confirmed')||error.message.toLowerCase().includes('not confirmed'))){
-          showErr('Your email address is not confirmed. Please check your inbox (and spam folder) for a confirmation link. <button id="resendBtn" style="background:none;border:none;color:var(--cyan);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;margin-left:4px">Resend email</button>');
-          document.getElementById('resendBtn')?.addEventListener('click',async function(){
+          var resendBtn=showErrWithAction('Your email address is not confirmed. Please check your inbox (and spam folder) for a confirmation link.','Resend email');
+          resendBtn?.addEventListener('click',async function(){
             this.disabled=true;this.textContent='Sending…';
-            var r=await supabaseClient.auth.resend({type:'signup',email:email,options:{emailRedirectTo:'https://www.si-math-ai.com/login.html'}});
-            this.textContent=r.error?'Failed — try again':'Sent! Check your inbox';
+            try{
+              var r=await supabaseClient.auth.resend({type:'signup',email:email,options:{emailRedirectTo:'https://www.si-math-ai.com/login.html'}});
+              this.textContent=r.error?'Failed — try again':'Sent! Check your inbox';
+              if(r.error)this.disabled=false;
+            }catch(_){
+              this.textContent='Failed — try again';this.disabled=false;
+            }
           });
         } else {
           showErr(error.message);

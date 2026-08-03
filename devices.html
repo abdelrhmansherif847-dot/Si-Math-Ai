@@ -332,12 +332,14 @@ async function loadPage() {
     ? `<span style="background:var(--gold-soft);border:1px solid var(--gold-border);color:var(--gold);padding:3px 10px;border-radius:100px">⭐ ${escHtml(planLabel)}</span>`
     : `<span style="background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan);padding:3px 10px;border-radius:100px">${escHtml(planLabel)}</span>`;
 
+  // Clear stale alerts BEFORE registering, so a device-limit warning raised by
+  // registerCurrentDevice survives to be read. Clearing afterwards wiped it.
+  document.getElementById('alerts').innerHTML = '';
+
   const currentFp = await registerCurrentDevice(user.id, isAdmin);
 
   const { data: devices } = await sb.from('user_devices').select('*').eq('user_id', user.id).eq('is_active', true).order('last_seen', { ascending: false });
   const deviceList = devices || [];
-
-  document.getElementById('alerts').innerHTML = '';
 
   if (new URLSearchParams(window.location.search).get('blocked') === '1') {
     showAlert('warn', 'This device is not registered for your account. Please remove an existing device below to free up a slot.');
@@ -357,6 +359,7 @@ function buildHTML(devices, planCode, limit, currentFp, user) {
   const used = devices.length;
   const pct = Math.min(100, (used / limit) * 100);
   const fillColor = pct >= 100 ? 'var(--red)' : pct >= 75 ? 'var(--amber)' : 'var(--cyan)';
+  const planLabel = PlanCatalog.name(planCode);
 
   let html = `
   <div class="sec-label" style="margin-top:0">Device Usage</div>
@@ -448,7 +451,17 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-loadPage();
+// A rejection here used to leave the page on its "Loading devices…" spinner
+// with no signal at all. Surface it instead: this page is the only escape from
+// a device-limit block, so a silent failure strands the student.
+loadPage().catch((e) => {
+  console.error('[devices]', e);
+  const pc = document.getElementById('pageContent');
+  if (pc) {
+    pc.innerHTML = '<div class="empty-card">Could not load your devices. '
+      + 'Please refresh the page, or contact support if this keeps happening.</div>';
+  }
+});
 </script>
 <script src="nav.js" defer></script>
 </body>

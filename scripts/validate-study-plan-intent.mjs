@@ -57,6 +57,26 @@ const cases = [
   ['what is a planet', null],
   ['tell me about the plant cell', null],
   ['generate a schedule', null],
+  // Ordinary MATH vocabulary. "plan", "plane", "plans" and "planning" are words
+  // an exam-prep student uses about geometry and about solving, so an
+  // unqualified noun must never route to the planner. Each of these was routed
+  // and CHARGED 20 credits before the noun was required to be qualified by
+  // "study" — the student paid for a study plan instead of getting an answer.
+  ['make a plane through points A and B', null],
+  ['create a plane figure', null],
+  ['redo the plane question', null],
+  ['create a plan to solve this equation', null],
+  ['make a game plan for this problem', null],
+  ['new plan for factoring', null],
+  ['build a plane mirror diagram', null],
+  ["what's a coordinate plane", null],
+  ['show me the coordinate plane', null],
+  ['check the plans in this diagram', null],
+  ['how do I find the equation of a plane', null],
+  ['what is the xy-plane', null],
+  // "Planner" is unambiguous, so it still stands alone.
+  ['open the planner', 'view'],
+  ['make me a planner', 'generate'],
 ];
 
 let pass = 0, fail = 0;

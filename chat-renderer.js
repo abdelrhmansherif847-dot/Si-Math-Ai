@@ -29,8 +29,16 @@
     s = s.replace(/\\\[[\s\S]*?\\\]/g, saveMath);           // \[...\]  display
     s = s.replace(/\$[^\$\n]+?\$/g, saveMath);              // $...$    inline
     s = s.replace(/\\\([\s\S]*?\\\)/g, saveMath);           // \(...\)  inline
+    // Math is restored ESCAPED. The saved block never went through esc() (that
+    // is the point of saving it — esc() would corrupt LaTeX's < > &), but the
+    // result of this function is assigned with innerHTML, so restoring the raw
+    // source made anything between $...$ live markup: `$<img src=x
+    // onerror=...>$` fired in the reader's session, and in the admin/AI-monitor
+    // review panel it fired in an admin's. Escaping here is safe for KaTeX,
+    // which reads textContent — the entity decodes back to the character in the
+    // text node before renderMathInElement ever sees it.
     function restoreMath(t) {
-      return t.replace(/\x01M(\d+)\x01/g, function (_, n) { return mathBlocks[+n]; });
+      return t.replace(/\x01M(\d+)\x01/g, function (_, n) { return esc(mathBlocks[+n]); });
     }
     function esc(str) {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
