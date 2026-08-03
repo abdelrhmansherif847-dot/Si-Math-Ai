@@ -1926,7 +1926,10 @@ async function loadDashboard() {
     } else {
       achCont.innerHTML = achievements.slice(0,3).map(function(a) {
         var meta = ACHIEVEMENT_MAP[a.achievement_key] || {emoji:'🏅', title: (a.achievement_key || 'Achievement').replace(/_/g,' ')};
-        return '<div class="badge unlocked" aria-label="Achievement: ' + meta.title + ' (unlocked)"><span class="bi">' + meta.emoji + '</span><span class="bt">' + meta.title + '</span></div>';
+        // meta.title falls back to a value derived from achievement_key, and
+        // achievements rows are inserted client-side under the user's own JWT.
+        // Escape it in both the attribute and the body.
+        return '<div class="badge unlocked" aria-label="Achievement: ' + esc(meta.title) + ' (unlocked)"><span class="bi">' + meta.emoji + '</span><span class="bt">' + esc(meta.title) + '</span></div>';
       }).join('');
     }
   }
@@ -1941,7 +1944,9 @@ async function loadDashboard() {
       barsContainer.innerHTML = toShow.map(function(t) {
         var pct = Math.max(0, Math.min(100, Math.round(t.mastery)));
         var cls = pct >= 75 ? 'g' : pct >= 50 ? 'y' : 'r';
-        return '<div class="bar-row"><div class="bar-head"><span class="bar-name">' + t.topic + '</span><span class="bar-pct ' + cls + '">' + pct + '%</span></div><div class="bar-track"><div class="bar-fill ' + cls + '" data-width="' + pct + '" style="width:0%"></div></div></div>';
+        // t.topic comes from weakness_reports / mastery_records, both owner-
+        // writable — same untrusted-value rule the weakest banner already applies.
+        return '<div class="bar-row"><div class="bar-head"><span class="bar-name">' + esc(t.topic) + '</span><span class="bar-pct ' + cls + '">' + pct + '%</span></div><div class="bar-track"><div class="bar-fill ' + cls + '" data-width="' + pct + '" style="width:0%"></div></div></div>';
       }).join('');
     }
   }
@@ -1971,8 +1976,8 @@ async function loadDashboard() {
                      (r.subtopic ? '&subtopic=' + encodeURIComponent(r.subtopic) : '');
           return '<a class="due-review-item" href="' + href + '">' +
             '<div class="due-review-item-text">' +
-              '<div class="due-review-item-name">' + name + '</div>' +
-              '<div class="due-review-item-meta">' + meta + '</div>' +
+              '<div class="due-review-item-name">' + esc(name) + '</div>' +
+              '<div class="due-review-item-meta">' + esc(meta) + '</div>' +
             '</div>' +
             '<svg class="due-review-item-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
           '</a>';
@@ -2022,8 +2027,8 @@ async function loadDashboard() {
     var fpChips = document.getElementById('fpTopicChips');
     if (fpChips) {
       fpChips.innerHTML = relatedSubs.length
-        ? relatedSubs.map(function(r){ return '<span class="chip"><span class="cd"></span>' + r.subtopic + '</span>'; }).join('')
-        : '<span class="chip"><span class="cd"></span>' + weakness.topic + '</span>';
+        ? relatedSubs.map(function(r){ return '<span class="chip"><span class="cd"></span>' + esc(r.subtopic) + '</span>'; }).join('')
+        : '<span class="chip"><span class="cd"></span>' + esc(weakness.topic) + '</span>';
     }
     var curM = weakness.mastery_score || 0;
     var tgtM = Math.min(curM + 30, 80);
@@ -2050,7 +2055,9 @@ async function loadDashboard() {
   var chatBtn = document.getElementById('zeroChatBtn');
   if (zeroEl) {
     if (weakness && masteryRecs.length) {
-      var wLoc = weakness.subtopic ? weakness.topic + ' &rarr; ' + weakness.subtopic : weakness.topic;
+      // Escaped per part, keeping &rarr; a literal entity — the same shape the
+      // weakest banner above already uses for these untrusted values.
+      var wLoc = weakness.subtopic ? esc(weakness.topic) + ' &rarr; ' + esc(weakness.subtopic) : esc(weakness.topic);
       var sessCount = Math.min(chatSess.length + exams.length, 7);
       var sessPhrase = sessCount > 0 ? 'Based on your last ' + sessCount + ' sessions' : 'Based on your activity';
       var mastPhrase = (weakness.mastery_score != null) ? ' Your current mastery is <span class="time-hl">' + weakness.mastery_score + '%</span>.' : '';

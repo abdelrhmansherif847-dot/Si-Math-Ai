@@ -774,7 +774,7 @@ async function deviceGuard(sb, userId) {
     });
     mastRecs.forEach(function(m){
       if ((m.mastery_score||0) >= 70 && m.last_updated){
-        events.push({ date: new Date(m.last_updated), icon:'🎓', title: esc(window.Taxonomy.compat.displayTopic(m)||'Topic') + ' Mastered', sub: relDate(m.last_updated) + ' · ' + Math.round(m.mastery_score) + '% mastery', type:'mastery' });
+        events.push({ date: new Date(m.last_updated), icon:'🎓', title: (window.Taxonomy.compat.displayTopic(m)||'Topic') + ' Mastered', sub: relDate(m.last_updated) + ' · ' + Math.round(m.mastery_score) + '% mastery', type:'mastery' });
       }
     });
     exams.forEach(function(e){
@@ -802,8 +802,14 @@ async function deviceGuard(sb, userId) {
             (showLine ? '<div class="tl-line"></div>' : '') +
           '</div>' +
           '<div class="tl-body">' +
-            '<div class="tl-title">' + ev.title + '</div>' +
-            '<div class="tl-meta">' + ev.sub + '</div>' +
+            // Escaped here, once, for every event kind. Titles are built from
+            // exam_type and from an achievement_key fallback, both of which are
+            // client-written rows, so they are not trusted strings. Doing it at
+            // the single render site rather than per-producer is why the esc()
+            // that used to sit on the mastery title is gone — two of them would
+            // have double-escaped.
+            '<div class="tl-title">' + esc(ev.title) + '</div>' +
+            '<div class="tl-meta">' + esc(ev.sub) + '</div>' +
           '</div>' +
         '</div>';
       }).join('');

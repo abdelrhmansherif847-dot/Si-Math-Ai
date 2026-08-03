@@ -311,28 +311,38 @@ button{font-family:inherit;cursor:pointer}
     <button class="save-btn" id="cpSave" style="margin-top:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save New Password</button>
   </section>
 
-  <!-- SECTION 3: NOTIFICATIONS -->
+  <!-- SECTION 3: NOTIFICATIONS
+       These four toggles had no persistence and no delivery behind them: no
+       notification column on profiles, no notification system anywhere in the
+       platform. Three rendered as ON by default, so the page told every student
+       it was sending daily study reminders it has never sent, and a student who
+       switched one OFF saw it switch itself back on at the next reload.
+       Presented as unavailable until a notification system exists. -->
   <div class="sec-label">Notifications</div>
   <section class="card">
-    <div class="set-row">
+    <div style="font-size:13px;color:var(--text-400);padding:2px 2px 14px">
+      Notifications aren’t available yet — Si Math AI doesn’t send any e-mail or
+      push messages today. These controls will turn on when it does.
+    </div>
+    <div class="set-row" style="opacity:.5">
       <span class="set-ic">⏰</span>
       <div class="set-body"><div class="set-t">Study Reminders</div><div class="set-s">Daily nudges to keep your streak</div></div>
-      <label class="toggle"><input type="checkbox" checked/><span class="track"></span><span class="knob"></span></label>
+      <label class="toggle"><input type="checkbox" disabled aria-disabled="true"/><span class="track"></span><span class="knob"></span></label>
     </div>
-    <div class="set-row">
+    <div class="set-row" style="opacity:.5">
       <span class="set-ic">🎯</span>
       <div class="set-body"><div class="set-t">Focus Practice Updates</div><div class="set-s">When a new plan is generated</div></div>
-      <label class="toggle"><input type="checkbox" checked/><span class="track"></span><span class="knob"></span></label>
+      <label class="toggle"><input type="checkbox" disabled aria-disabled="true"/><span class="track"></span><span class="knob"></span></label>
     </div>
-    <div class="set-row">
+    <div class="set-row" style="opacity:.5">
       <span class="set-ic">📊</span>
       <div class="set-body"><div class="set-t">Weakness Analyzer Updates</div><div class="set-s">When new weak topics are detected</div></div>
-      <label class="toggle"><input type="checkbox" checked/><span class="track"></span><span class="knob"></span></label>
+      <label class="toggle"><input type="checkbox" disabled aria-disabled="true"/><span class="track"></span><span class="knob"></span></label>
     </div>
-    <div class="set-row">
+    <div class="set-row" style="opacity:.5">
       <span class="set-ic">📝</span>
       <div class="set-body"><div class="set-t">Mock Exam Reminders</div><div class="set-s">Reminders to take timed mocks</div></div>
-      <label class="toggle"><input type="checkbox"/><span class="track"></span><span class="knob"></span></label>
+      <label class="toggle"><input type="checkbox" disabled aria-disabled="true"/><span class="track"></span><span class="knob"></span></label>
     </div>
   </section>
 
@@ -424,19 +434,25 @@ button{font-family:inherit;cursor:pointer}
   <div class="sec-label">Data Management</div>
   <section class="card">
     <div class="btn-grid">
-      <button class="btn-tile"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></span>Export Learning History</button>
-      <button class="btn-tile"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></span>Export Focus Practice Data</button>
-      <button class="btn-tile"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg></span>Download Reports</button>
+      <button class="btn-tile" id="exportHistoryBtn"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></span>Export Learning History</button>
+      <button class="btn-tile" id="exportFocusBtn"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></span>Export Focus Practice Data</button>
+      <button class="btn-tile" id="exportReportsBtn"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg></span>Download Reports</button>
     </div>
+    <div id="exportMsg" style="display:none;font-size:13px;padding:10px 13px;border-radius:10px;margin-top:12px"></div>
   </section>
 
   <!-- SECTION 9: SUPPORT -->
   <div class="sec-label">Support</div>
   <section class="card">
     <div class="btn-grid">
-      <button class="btn-tile"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>Help Center</button>
-      <button class="btn-tile"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Contact Support</button>
-      <button class="btn-tile"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>Report a Problem</button>
+      <a class="btn-tile" href="faq.html"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>Help Center</a>
+      <!-- Contact Support and Report a Problem have no destination: there is no
+           support address, form or channel anywhere on the site. They were
+           buttons that silently did nothing when clicked. Marked unavailable
+           rather than wired to an invented address — when a channel exists,
+           turn these back into links to it. -->
+      <button class="btn-tile" disabled aria-disabled="true" style="opacity:.5;cursor:not-allowed" title="Not available yet"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Contact Support <span style="font-size:11px;opacity:.8;margin-left:auto">Coming soon</span></button>
+      <button class="btn-tile" disabled aria-disabled="true" style="opacity:.5;cursor:not-allowed" title="Not available yet"><span class="bt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>Report a Problem <span style="font-size:11px;opacity:.8;margin-left:auto">Coming soon</span></button>
     </div>
   </section>
 
@@ -798,6 +814,98 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.logout-btn').addEventListener('click', async () => {
     await sb.auth.signOut();
     window.location.href = 'login.html';
+  });
+
+  // ===== Data exports =====
+  // These three tiles had no click handler at all — clicking them did nothing,
+  // silently. They export the student's own rows, read under their own JWT, so
+  // RLS is the access check and no new privilege is involved.
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoke on the next tick — revoking synchronously can cancel the download
+    // in some browsers before it has read the blob.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function todayStamp() { return new Date().toISOString().slice(0, 10); }
+
+  async function runExport(btn, label, filename, fetchFn) {
+    if (!currentUser) return;
+    const original = btn.textContent;
+    btn.disabled = true;
+    hideMsg('exportMsg');
+    try {
+      const payload = await fetchFn(currentUser.id);
+      const rowCount = Object.values(payload)
+        .filter(Array.isArray).reduce((n, arr) => n + arr.length, 0);
+      if (rowCount === 0) {
+        showMsg('exportMsg', 'error', 'Nothing to export yet for ' + label + '.');
+        return;
+      }
+      downloadJson(filename, {
+        exported_at: new Date().toISOString(),
+        user_id: currentUser.id,
+        export: label,
+        ...payload,
+      });
+      showMsg('exportMsg', 'success', '✅ ' + label + ' downloaded (' + rowCount + ' records).');
+    } catch (e) {
+      showMsg('exportMsg', 'error', 'Could not export ' + label + ': ' + ((e && e.message) || 'unknown error'));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  // Supabase-js resolves with { data, error } rather than rejecting, so a failed
+  // read has to be turned into a throw for runExport's catch to report it —
+  // otherwise an RLS or network failure would download an empty file that looks
+  // like "you have no data".
+  async function readAll(table, columns, userId, orderCol) {
+    let q = sb.from(table).select(columns).eq('user_id', userId);
+    if (orderCol) q = q.order(orderCol, { ascending: false });
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  const _exportHistory = document.getElementById('exportHistoryBtn');
+  if (_exportHistory) _exportHistory.addEventListener('click', () => {
+    runExport(_exportHistory, 'Learning History', 'si-math-ai-learning-history-' + todayStamp() + '.json', async (uid) => ({
+      questions: await readAll('question_records', 'topic,subtopic,is_correct,difficulty,created_at', uid, 'created_at'),
+      exams: await readAll('exam_practice_sessions', 'exam_type,score,correct_answers,wrong_answers,duration_minutes,created_at', uid, 'created_at'),
+    }));
+  });
+
+  const _exportFocus = document.getElementById('exportFocusBtn');
+  if (_exportFocus) _exportFocus.addEventListener('click', () => {
+    runExport(_exportFocus, 'Focus Practice Data', 'si-math-ai-focus-practice-' + todayStamp() + '.json', async (uid) => {
+      const plans = await readAll('focus_plans', '*', uid, 'created_at');
+      // focus_tasks has no user_id column — it is reached through the plan ids.
+      const planIds = plans.map((p) => p.id).filter(Boolean);
+      let tasks = [];
+      if (planIds.length) {
+        const { data, error } = await sb.from('focus_tasks').select('*').in('plan_id', planIds);
+        if (error) throw new Error(error.message);
+        tasks = data || [];
+      }
+      return { plans, tasks };
+    });
+  });
+
+  const _exportReports = document.getElementById('exportReportsBtn');
+  if (_exportReports) _exportReports.addEventListener('click', () => {
+    runExport(_exportReports, 'Reports', 'si-math-ai-reports-' + todayStamp() + '.json', async (uid) => ({
+      weakness_reports: await readAll('weakness_reports', '*', uid, 'last_updated'),
+      mastery_records: await readAll('mastery_records', '*', uid, 'last_updated'),
+    }));
   });
 
   // ===== Delete account =====
