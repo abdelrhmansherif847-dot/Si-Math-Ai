@@ -1829,7 +1829,9 @@ async function loadDashboard() {
   var heroSub = document.getElementById('heroSub');
   if (heroSub) {
     var sub = 'Logged in as <span class="hl">' + esc(user.email||'') + '</span>';
-    if (examType) sub += ' &middot; Preparing for <span class="hl">' + examType + '</span>';
+    // profiles.exam_type is client-writable (it is on the SEC-01 update
+    // allow-list), so it gets the same treatment as the email beside it.
+    if (examType) sub += ' &middot; Preparing for <span class="hl">' + esc(examType) + '</span>';
     if (daysRemaining > 0) sub += ' &mdash; <span class="hl">' + daysRemaining + ' days</span> remaining';
     else if (prof.exam_date) sub += ' &mdash; exam day is here!';
     heroSub.innerHTML = sub;

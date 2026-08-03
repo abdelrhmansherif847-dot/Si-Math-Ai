@@ -77,6 +77,33 @@ const cases = [
   // "Planner" is unambiguous, so it still stands alone.
   ['open the planner', 'view'],
   ['make me a planner', 'generate'],
+  // A POSSESSIVE plan noun is unambiguous too — a student says "the plane" or
+  // "a plane" about geometry, never "my plan". These are the natural ways to
+  // ask for the plan you already have, and requiring the "study" qualifier
+  // briefly broke every one of them into an ordinary (charged) chat turn.
+  ['show my plan', 'view'],
+  ['view my plan', 'view'],
+  ['see my plan', 'view'],
+  ['open my plan', 'view'],
+  ["what's my plan", 'view'],
+  ['my plan', 'view'],
+  ['regenerate my plan', 'generate'],
+  ['make my plan', 'generate'],
+  ['update my plans', 'generate'],
+  // ...and the possessive must not drag "plane" back in with it.
+  ['what is the equation of my plane', null],
+  // Arabic carries the same rule, for the same reason: خطة alone just means
+  // "a plan", so asking for a plan to SOLVE something is a maths question, not
+  // a study-plan request. Accepting the bare noun after any verb charged these
+  // students 20 credits and answered with a study plan.
+  ['خطة مذاكرة', 'generate'],
+  ['اعمل خطة مذاكره', 'generate'],
+  ['اعمل خطتي', 'generate'],      // possessive: "make my plan"
+  ['جدد خطتي', 'generate'],       // "refresh my plan"
+  ['خطتي', 'view'],               // bare possessive → free view
+  ['اعمل خطة للحل', null],        // "make a plan for the solution"
+  ['عايز خطة لحل المسألة', null], // "I want a plan to solve the problem"
+  ['محتاج خطة للمسألة دي', null], // "I need a plan for this problem"
 ];
 
 let pass = 0, fail = 0;

@@ -837,8 +837,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function todayStamp() { return new Date().toISOString().slice(0, 10); }
 
   async function runExport(btn, label, filename, fetchFn) {
-    if (!currentUser) return;
-    const original = btn.textContent;
+    if (!currentUser) {
+      showMsg('exportMsg', 'error', 'Still loading your account — try again in a moment.');
+      return;
+    }
+    // Only the disabled flag is touched. Reading btn.textContent and writing it
+    // back would flatten the button to a text node and permanently delete the
+    // <svg> icon inside it after the first click.
+    if (btn.disabled) return;
     btn.disabled = true;
     hideMsg('exportMsg');
     try {
@@ -860,7 +866,6 @@ document.addEventListener('DOMContentLoaded', () => {
       showMsg('exportMsg', 'error', 'Could not export ' + label + ': ' + ((e && e.message) || 'unknown error'));
     } finally {
       btn.disabled = false;
-      btn.textContent = original;
     }
   }
 
@@ -878,8 +883,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const _exportHistory = document.getElementById('exportHistoryBtn');
   if (_exportHistory) _exportHistory.addEventListener('click', () => {
+    // Column names checked against the live schema. question_records has no
+    // is_correct — outcome lives in `resolution` / `weakness_signal` — and
+    // naming a column that does not exist makes PostgREST reject the whole
+    // request, so the student would have got an error instead of an export.
     runExport(_exportHistory, 'Learning History', 'si-math-ai-learning-history-' + todayStamp() + '.json', async (uid) => ({
-      questions: await readAll('question_records', 'topic,subtopic,is_correct,difficulty,created_at', uid, 'created_at'),
+      questions: await readAll('question_records', 'topic,subtopic,difficulty,resolution,weakness_signal,created_at', uid, 'created_at'),
       exams: await readAll('exam_practice_sessions', 'exam_type,score,correct_answers,wrong_answers,duration_minutes,created_at', uid, 'created_at'),
     }));
   });
@@ -887,7 +896,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const _exportFocus = document.getElementById('exportFocusBtn');
   if (_exportFocus) _exportFocus.addEventListener('click', () => {
     runExport(_exportFocus, 'Focus Practice Data', 'si-math-ai-focus-practice-' + todayStamp() + '.json', async (uid) => {
-      const plans = await readAll('focus_plans', '*', uid, 'created_at');
+      // focus_plans dates its rows with generated_date, not created_at.
+      const plans = await readAll('focus_plans', '*', uid, 'generated_date');
       // focus_tasks has no user_id column — it is reached through the plan ids.
       const planIds = plans.map((p) => p.id).filter(Boolean);
       let tasks = [];

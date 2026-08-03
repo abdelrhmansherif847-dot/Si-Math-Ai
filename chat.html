@@ -2380,20 +2380,41 @@ button{font-family:inherit;cursor:pointer}
     // through points A and B" and "create a plan to solve this equation" were
     // routed to the planner and CHARGED 20 credits instead of being answered.
 
+    // A POSSESSIVE plan noun — "my plan", "my current plans" — is unambiguous
+    // even without "study": a student says "the plane" or "a plane" about
+    // geometry, never "my plan". Accepting it keeps "show my plan" and
+    // "regenerate my plan" working, which requiring "study" had broken. "plane"
+    // is deliberately NOT in this group; the "my study plane" typo is already
+    // covered by the study-qualified group.
+    var MY_PLAN = 'my\\s+(?:current\\s+)?plan(?:ner|ning|s)?';
+
     // 1) Explicit VIEW (free) — a view verb beside a plan noun, checked first so
     //    "I want to see my study plan" stays a free view, not a paid generation.
-    if (/\b(show|view|see|open|display|check|what'?s|where'?s)\b[\s\S]{0,24}\b(my |the |current )?(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)) return 'view';
+    if (new RegExp('\\b(show|view|see|open|display|check|what\'?s|where\'?s)\\b[\\s\\S]{0,24}\\b(my |the |current )?(?:study\\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\\b').test(t)
+        || new RegExp('\\b(show|view|see|open|display|check|what\'?s|where\'?s)\\b[\\s\\S]{0,24}\\b' + MY_PLAN + '\\b').test(t)) return 'view';
     // 2) GENERATE (charged 20). Strong build verbs accept the qualified noun;
     //    softer verbs (want/need/…) require the word "study" too.
-    if (/\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
+    if (new RegExp('\\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\\b[\\s\\S]{0,24}\\b' + MY_PLAN + '\\b').test(t)
+        || /\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
         || /\b(want|need|give|prepare|design|set ?up|make me|i'?d like|can you (?:make|create|build|generate|do))\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
         || /\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
         || /^\s*(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\s*[.!?]?\s*$/.test(t)) return 'generate';
-    // 3) Generate — Arabic
-    if (/(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز)\S*[\s\S]{0,24}(خط[ةه])/.test(t)
-        || /خط[ةه]\s*(مذاكرة|مذاكره|دراسة|دراسه|استذكار)/.test(t)) return 'generate';
+    // 3) Generate — Arabic. Same rule as the English branch, for the same
+    //    reason: خطة on its own just means "a plan", so "اعمل خطة للحل" (make a
+    //    plan for the solution) and "عايز خطة لحل المسألة" (I want a plan to
+    //    solve the problem) are ordinary requests for maths help. Accepting the
+    //    bare noun after any verb charged 20 credits for those and returned a
+    //    study plan instead of an answer — to the students this branch exists
+    //    for. Require the study qualifier (مذاكرة / دراسة / استذكار), or the
+    //    possessive خطتي ("my plan"), which carries the same unambiguous sense
+    //    as "my plan" does in English.
+    if (/خط[ةه]\s*(مذاكرة|مذاكره|دراسة|دراسه|استذكار)/.test(t)
+        || /(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز|جدد|حدث)\S*[\s\S]{0,24}خطتي/.test(t)) return 'generate';
+    // 3b) Bare "خطتي" with no verb → view the existing plan (free), mirroring
+    //     the English "my plan" case below.
+    if (/خطتي/.test(t)) return 'view';
     // 4) Bare "my study plan(ner)" with no verb → view the existing one (free).
-    if (/\bmy (current )?(?:study\s+plan(?:ner|ning|s|e)?|planner)\b/.test(t)) return 'view';
+    if (/\bmy (current )?(?:study\s+plan(?:ner|ning|s|e)?|planner|plan(?:ner|ning|s)?)\b/.test(t)) return 'view';
     return null;
   }
 
@@ -2952,9 +2973,12 @@ button{font-family:inherit;cursor:pointer}
     const nw=prompt('Rename chat:',old);
     if(!nw||!nw.trim()) return;
     const title=nw.trim().slice(0,200);
-    const { error }=await sb.from('chat_sessions').update({ title })
-      .eq('id',item.dataset.sessionId).eq('user_id',currentUser.id);
-    if(error){ alert('Could not rename this chat. Please try again.'); return; }
+    // .select() so the write reports what it actually changed. Without it a
+    // filter that matches no row — a stale sidebar entry, an RLS mismatch —
+    // returns no error, and the UI would confirm a rename that never happened.
+    const { data, error }=await sb.from('chat_sessions').update({ title })
+      .eq('id',item.dataset.sessionId).eq('user_id',currentUser.id).select('id');
+    if(error||!data||!data.length){ alert('Could not rename this chat. Please try again.'); return; }
     titleEl.textContent=title;
   }
   async function deleteChat(btn,e){
@@ -2965,9 +2989,9 @@ button{font-family:inherit;cursor:pointer}
     // question_records cascades from chat_sessions, so this removes the
     // questions in the chat too. Say so rather than let it surprise them.
     if(!confirm('Delete this chat? The questions in it are removed from your history as well. This cannot be undone.')) return;
-    const { error }=await sb.from('chat_sessions').delete()
-      .eq('id',sessionId).eq('user_id',currentUser.id);
-    if(error){ alert('Could not delete this chat. Please try again.'); return; }
+    const { data, error }=await sb.from('chat_sessions').delete()
+      .eq('id',sessionId).eq('user_id',currentUser.id).select('id');
+    if(error||!data||!data.length){ alert('Could not delete this chat. Please try again.'); return; }
     item.remove();
     // If the open conversation is the one just deleted, clear the view instead
     // of leaving the student reading messages that no longer exist.
