@@ -49,10 +49,31 @@ exists so the next person does not have to rediscover any of it.
 | `login.html` | "Remember me" promised a security behaviour it never delivered | `e2de44e` |
 | `dashboard.html` | "This Month" stat rendered lifetime XP | `e2de44e` |
 
+Then the diff was reviewed against itself, and four defects it had *introduced*
+were fixed in `8d3777d`: an export naming a `question_records` column that does
+not exist (PostgREST rejects the whole request, so the feature would have errored
+for everyone), a `textContent` round-trip that deleted each export tile's icon on
+first click, a too-aggressive intent rule that turned "show my plan" into a
+charged chat turn, and rename/delete reporting success on a write that matched no
+row. The same pass fixed the Arabic intent branch — which had exactly the bug the
+English branch was fixed for, and matters more, since that branch exists for the
+students the platform is built for — and one `exam_type` sink the escaping pass
+had missed.
+
 Regression guards added, each verified to fail against the pre-fix source:
-12 false-positive phrasings in `validate-study-plan-intent.mjs`, 8 single-source
-failure cases in `streak.test.mjs`, and a failed-insert case in
+27 phrasings in `validate-study-plan-intent.mjs` (English and Arabic false
+charges, plus the free-view phrasings), 8 single-source failure cases in
+`streak.test.mjs`, and a failed-insert case in
 `validate-study-planner-client.mjs`.
+
+`scripts/smoke-pages.mjs` was added as an opt-in browser gate — deliberately not
+in `tests/run-all.mjs`, which is dependency-free by design. It loads every root
+page in Chromium and fails on any uncaught error or overflow at 360px. Read its
+header before using it: it stubs Supabase rather than blocking the CDN, because a
+blocked CDN aborts every page at `createClient`, leaving pages half-initialised
+(function declarations hoist, `var` assignments do not) and masking every error
+further down. Run against the pre-fix pages it reproduces both crashes this audit
+opened with and exits 1; against the branch it reports 46/46 clean.
 
 ---
 
@@ -257,3 +278,21 @@ Recorded so nobody re-files them.
   have worked: `exam_practice_sessions.exam_type` stores the exam *code*
   (`ACT_MATH`, `EST_MATH_1`, `SAT_MODULE_1`), with some legacy rows holding the bare
   family. Verified against the live table before fixing by prefix instead.
+
+- **"`deleteChat` claims a cascade to `question_records` that does not exist,
+  because no migration declares it."** The constraint is real:
+  `question_records_session_id_fkey`, `ON DELETE CASCADE`, confirmed by querying
+  `pg_constraint` in production. **The migration files are not the applied list** —
+  a known gap that `scripts/check-migration-parity.sh` exists for, and the exact
+  trap `CLAUDE.md` warns about. Grepping `supabase/migrations/` is not sufficient
+  evidence that a database object is absent.
+
+- **"`study plane geometry` still misroutes to the paid planner."** It does not;
+  it returns `null` both before and after. Checked directly against the extracted
+  function.
+
+- **"`isFreeTierQuota` can never return true."** True of the first version and
+  fixed in `63c9535` before this review landed — the reviewer was reading the
+  superseded diff. The underlying observation was correct and important, and it is
+  why the tier test now falls back to the catalogue: `ai-tutor` collapses
+  `pack_credits` into `balance` before the client ever sees the verdict.
