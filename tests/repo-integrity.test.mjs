@@ -54,7 +54,13 @@ const fixes = [
   // computed 0 from the other's empty-but-successful result and persisted it.
   // Any source failing must now bail; behaviour is covered by streak.test.mjs.
   ['streak: bails when any source fails',        () => /qrsRes\.error \|\| examsRes\.error \|\| plansRes\.error/.test(read('assets/streak.js'))],
-  ['streak: bails when focus_tasks fails',       () => /focusRes\.error\)\s*\{[\s\S]{0,400}?skipped: true/.test(read('assets/streak.js'))],
+  ['streak: bails when focus_tasks fails',       () => /focusRes\.error\)\s*\{[\s\S]{0,800}?skipped: true/.test(read('assets/streak.js'))],
+  // The day boundary must be the student's own, never a fixed foreign zone —
+  // pinning it to Cairo made the day start hours late outside Egypt, left
+  // today's square a dot after a post-midnight session, and broke real streaks.
+  ['streak: day keys resolve a per-student zone', () => /resolveTimeZone/.test(read('assets/streak.js'))],
+  ['streak: returns the frame it computed in',    () => /today_key/.test(read('assets/streak.js'))],
+  ['dashboard: no second day-key implementation', () => !/function cairoDayKey/.test(read('dashboard.html'))],
   ['dashboard: heatmap reuses the streak set',   () => /streakRes\.active_days/.test(read('dashboard.html'))],
   ['dashboard: week strip is Cairo-derived',     () => /keyToUTC\(todayStr\)/.test(read('dashboard.html'))],
   ['progress: recomputes the streak',            () => /window\.updateStreak\(sb, user\.id\)/.test(read('progress.html'))],

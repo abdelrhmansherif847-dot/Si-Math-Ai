@@ -2736,7 +2736,18 @@ button{font-family:inherit;cursor:pointer}
         SignalEngine.flushBuffer((response && response.record_id) || window.__lastQRecId, currentSessionId);
       }
       awardChatXP();
-      if (window.updateStreak && currentUser) window.updateStreak(sb, currentUser.id);
+      // activityToday is passed ONLY when the server confirmed it stored a
+      // question_records row for this turn (record_id came back). That is the
+      // hint's documented purpose and it had no caller until now: without it,
+      // a student who practises just after midnight depends on the follow-up
+      // SELECT already seeing the row it was told about, and if it does not,
+      // today's Weekly Progress square stays a placeholder dot despite the
+      // practice. It must never be passed unconditionally — an unconditional
+      // "today is active" seed is what once made streaks climb on page views.
+      if (window.updateStreak && currentUser) {
+        window.updateStreak(sb, currentUser.id,
+          (response && response.record_id) ? { activityToday: true } : undefined);
+      }
       drillOnQuestionAnswered(_respTopic, _respSub);
       // Update mastery_records — skip for re-explanations (Case 2) since the student
       // hasn't demonstrated new understanding; update for solve-again (Case 1) with

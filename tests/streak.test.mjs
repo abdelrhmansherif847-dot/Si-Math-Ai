@@ -44,6 +44,10 @@ function makeSb({ qrDays = [], examDays = [], focusDays = [], profile = {}, fail
     };
     const self = {
       select: () => self, eq: () => self, in: () => self, gte: () => self,
+      // The activity reads are ordered newest-first and capped, so that a
+      // PostgREST row-cap truncation drops the OLDEST history rather than the
+      // recent days the backward walk depends on.
+      order: () => self, limit: () => self,
       maybeSingle: () => Promise.resolve(res()),
       update(patch) { writes.push({ table, patch }); return { eq: () => Promise.resolve({ error: null }) }; },
       upsert: () => Promise.resolve({ error: null }),
@@ -54,11 +58,20 @@ function makeSb({ qrDays = [], examDays = [], focusDays = [], profile = {}, fail
   return { from: chain, _writes: writes };
 }
 
+// Every fixture in this file is built with cairoInstant(), i.e. at a chosen
+// CAIRO wall-clock hour, so the writer must be told to split days in Cairo for
+// those hours to mean what the assertions say. This used to be implicit: the
+// module hardcoded Africa/Cairo for every student on every device. It is now
+// the student's own zone (see the SiDay header in assets/streak.js), so the
+// test states the zone it is fixturing in instead of relying on a global pin.
+// Timezone-varying behaviour is covered by streak-timezone/-rollover.
+const FIXTURE_TZ = 'Africa/Cairo';
+
 async function run(fixture, opts) {
   const win = {};
   evalSnippet(SRC, { window: win }, []);
   const sb = makeSb(fixture);
-  const out = await win.updateStreak(sb, 'u1', opts);
+  const out = await win.updateStreak(sb, 'u1', { timezone: FIXTURE_TZ, ...(opts || {}) });
   const w = sb._writes.find(x => x.table === 'profiles');
   return { current: out.current_streak, best: out.best_streak, wrote: !!w,
            last: w?.patch?.last_active_date ?? null };

@@ -1754,9 +1754,25 @@ async function loadDashboard() {
     ? { topic: weakness.topic, mastery: Math.round(weakness.mastery_score || 0) }
     : null;
 
-  /* ── Derived: streaks (read from profiles, written by assets/streak.js) ── */
-  var currentStreak = prof.current_streak ?? 0;
-  var bestStreak    = prof.best_streak    ?? 0;
+  /* ── Derived: streaks ──
+   * Taken from the updateStreak() RESULT, falling back to the profiles row.
+   *
+   * These used to be read from `prof` alone. That row is fetched in a separate
+   * round trip AFTER updateStreak has already recomputed and written it, so the
+   * counter showed whatever the read happened to return while the Weekly
+   * Progress strip beside it was rendered from the fresh computation. If the
+   * write had not landed, or was refused, or the read raced it, the two
+   * disagreed on screen — a lit square for today next to a streak of 0, which
+   * is the desync being reported. Reading both from one value removes the race
+   * rather than narrowing it.
+   *
+   * On the bail path updateStreak returns the STORED numbers it just read, so
+   * this fallback is the same value either way and never renders a 0 the
+   * student did not earn. */
+  var currentStreak = (streakRes && typeof streakRes.current_streak === 'number' && !streakRes.skipped)
+    ? streakRes.current_streak : (prof.current_streak ?? 0);
+  var bestStreak = (streakRes && typeof streakRes.best_streak === 'number' && !streakRes.skipped)
+    ? streakRes.best_streak : (prof.best_streak ?? 0);
 
   /* Weekly heatmap activity source — reuses the day-key set assets/streak.js
    * just computed, so the heatmap and the streak counter are derived from ONE
@@ -1767,22 +1783,32 @@ async function loadDashboard() {
    * Day boundaries are pinned to Africa/Cairo (NOT the device timezone) for the
    * same determinism reason streak.js documents. The local rebuild below is the
    * degraded path for when streak.js failed to load or bailed out. */
-  var STREAK_TZ = 'Africa/Cairo';
-  function cairoDayKey(d) {
-    return new Intl.DateTimeFormat('en-CA', {
-      timeZone: STREAK_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-    }).format(d);
-  }
+  /* One frame for the whole card. The timezone is whatever updateStreak()
+     actually computed in, taken from its return value — not re-derived here.
+     This page used to carry its own cairoDayKey() copy and build `todayStr`
+     with it while `actSet` came from streak.js's copy: two implementations that
+     agreed only by coincidence, which is exactly the desync the Weekly Progress
+     strip and the Current Streak counter must not be able to have. */
+  var streakTz = (streakRes && streakRes.timezone) || SiDay.resolveTimeZone(prof.timezone);
+  var dayKeyOf = function(d) { return SiDay.dayKey(d, streakTz); };
   var actSet;
   if (!needHeatmapFallback) {
     actSet = new Set(streakRes.active_days);
   } else {
+    /* Degraded path only — streak.js failed to load or bailed on a read error.
+       Rebuilt in the SAME timezone so the strip cannot shift relative to the
+       stored counter. It is knowingly partial: it sees question_records and
+       exams but not Focus Practice, so a Focus-only day can be missing here.
+       That is why it runs only when the real day-set is unavailable. */
     actSet = new Set();
     weeklyQrs.concat(exams).forEach(function(s) {
-      if (s.created_at) actSet.add(cairoDayKey(new Date(s.created_at)));
+      if (s.created_at) actSet.add(dayKeyOf(new Date(s.created_at)));
     });
   }
-  var todayStr = cairoDayKey(new Date());
+  /* today_key comes from the same computation as active_days, so "is today
+     done?" is answered inside one frame even if the clock crosses midnight
+     between the streak call and this render. */
+  var todayStr = (streakRes && streakRes.today_key) || dayKeyOf(new Date());
 
   /* ── Derived: this week M–S ──
    * Derived from the CAIRO day key, not a device-local midnight. The strip used
