@@ -83,6 +83,33 @@ const NOW = Date.parse('2026-07-19T12:00:00Z');
 const AVAIL = { hoursPerDay: 2, studyDays: [0, 1, 2, 3, 4] };
 
 (async function run() {
+  /* ── 0. the streak the planner reports is the COMPUTED one ──────────────── */
+  // The planner's prose tells the student what streak they are on. Reading the
+  // raw profiles column meant reading the value the recompute WRITES, and
+  // chat.html — where plans are requested — does not await that write, so a
+  // plan built just after an answered question quoted a streak a day behind.
+  {
+    const sb = makeSb(fixtures());                 // fixture column says 4
+    const hadWindow = typeof globalThis.window !== 'undefined';
+    const prevWindow = globalThis.window;
+    globalThis.window = Object.assign({}, prevWindow || {}, {
+      getStreakSnapshot: (uid) => (uid === 'u1' ? { current_streak: 6, best_streak: 9 } : null),
+    });
+    try {
+      const st = await C.gatherStudentState(sb, 'u1', { now: NOW, availability: AVAIL });
+      assert(st.student.currentStreak === 6,
+        'planner prefers the COMPUTED streak (6) over the stored column (4)');
+
+      // A snapshot belonging to a different student must never be served.
+      globalThis.window.getStreakSnapshot = (uid) => (uid === 'someone-else' ? { current_streak: 99 } : null);
+      const st2 = await C.gatherStudentState(sb, 'u1', { now: NOW, availability: AVAIL });
+      assert(st2.student.currentStreak === 4,
+        'no snapshot for this user → falls back to the stored column, never another student\'s');
+    } finally {
+      if (hadWindow) globalThis.window = prevWindow; else delete globalThis.window;
+    }
+  }
+
   /* ── 1. gather maps every source correctly ──────────────────────────────── */
   {
     const sb = makeSb(fixtures());
@@ -91,6 +118,10 @@ const AVAIL = { hoursPerDay: 2, studyDays: [0, 1, 2, 3, 4] };
     assert(st.student.name === 'Nour' && st.student.examType === 'SAT', 'profile → student (first name, exam type)');
     assert(st.student.examDate === '2026-08-16' && st.student.xp === 640 && st.student.currentStreak === 4, 'profile → exam date / xp / streak');
     assert(st.student.availability === AVAIL, 'availability threaded from opts');
+    // ^ that case is also the FALLBACK contract: no window.getStreakSnapshot is
+    // defined in this harness, so currentStreak must come from the stored
+    // column exactly as it always did. This module has to keep working on a
+    // page where assets/streak.js is not loaded.
 
     assert(st.weakness.length === 2 && st.weakness[0].topic === 'Linear Functions', 'weakness_reports → weakness[]');
     assert(st.weakness[0].masteryScore === 22 && st.weakness[0].severityBand === 'critical' && st.weakness[0].recent7 === 5, 'weakness columns mapped');

@@ -133,6 +133,35 @@ const STREAK_WINDOW_DAYS = 120;
 // rule below keeps a live streak intact for a full day regardless. It must
 // never default to true — an unconditional "today is active" seed is what made
 // streaks climb on page views alone and then collapse a day or two later.
+/* The most recent computed result, for consumers that need the streak but have
+ * no reason to trigger a recompute of their own.
+ *
+ * The alternative for such a consumer is reading profiles.current_streak
+ * directly, which is the raw column the recompute WRITES — so it is stale for
+ * exactly as long as the write is in flight, and chat.html deliberately does
+ * not await updateStreak. A reader firing in that window sees the previous
+ * value. Publishing the computed result gives them the same number every other
+ * surface is showing, with the column as fallback.
+ *
+ * Keyed by user id so a session change cannot serve the previous student's
+ * streak. Deliberately in-memory only: persisting it would create a second
+ * durable copy of a value whose whole problem was having more than one.
+ */
+function publish(userId, result) {
+  try {
+    if (typeof window === 'undefined') return;
+    window.__siStreak = { userId: userId, at: Date.now(), result: result };
+  } catch (e) { /* non-browser host — the cache is an optimisation, not a contract */ }
+}
+
+// The published result for `userId`, or null. Callers MUST treat null as "ask
+// the database" rather than as "no streak".
+window.getStreakSnapshot = function (userId) {
+  var c = (typeof window !== 'undefined') ? window.__siStreak : null;
+  if (!c || !c.result || (userId && c.userId !== userId)) return null;
+  return c.result;
+};
+
 // opts.timezone — an explicit IANA zone for this student, when the caller has
 // one (e.g. a stored profile preference). Omitted, the student's device zone is
 // used. Resolved ONCE per call and threaded through every key computation
@@ -399,8 +428,10 @@ window.updateStreak = async function(sb, userId, opts) {
     // timezone + today_key travel with the day-set so every consumer renders in
     // the frame this computation used, instead of re-deriving "today" from its
     // own copy of the rules and hoping the two agree.
-    return { current_streak: current, best_streak: best, active_days: activeDays,
-             timezone: tz, today_key: todayStr };
+    const result = { current_streak: current, best_streak: best, active_days: activeDays,
+                     timezone: tz, today_key: todayStr };
+    publish(userId, result);
+    return result;
   } catch (err) {
     console.error('[streak-update-failed]', err?.message || err);
     // skipped:true — the caller must fall back to the stored streak rather than

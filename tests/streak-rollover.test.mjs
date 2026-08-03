@@ -309,6 +309,31 @@ t.section('Concurrency: a stale run must not clobber a fresher one');
   t.is('and IS persisted — the guard does not block a real break', row.current_streak, 0);
 }
 
+t.section('One source of truth: the computed result is published for other consumers');
+{
+  const win = {};
+  evalSnippet(SRC, { window: win }, []);
+  t.is('no snapshot before any run', win.getStreakSnapshot('u1'), null);
+
+  const sb = makeSb({ qr: [0, 1, 2].map(d => instantIn(TZ, d)) });
+  const out = await win.updateStreak(sb, 'u1', { timezone: TZ });
+  const snap = win.getStreakSnapshot('u1');
+  t.ok('a snapshot exists after a successful run', !!snap);
+  t.is('and it is the value that was returned', snap.current_streak, out.current_streak);
+  t.is('best_streak too', snap.best_streak, out.best_streak);
+  t.is('and the same day-set', snap.active_days, out.active_days);
+
+  // Keyed by user: a session change must not serve the previous student's data.
+  t.is('a different user id gets nothing', win.getStreakSnapshot('someone-else'), null);
+}
+{
+  // study-planner-client.js reads through this. If streak.js never ran, the
+  // consumer must fall back to the stored column rather than render 0.
+  const win = {};
+  evalSnippet(SRC, { window: win }, []);
+  t.is('null means "ask the database", not "no streak"', win.getStreakSnapshot('u1'), null);
+}
+
 t.section('A read failure never overwrites a real streak');
 {
   const win = {};

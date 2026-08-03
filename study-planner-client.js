@@ -36,6 +36,21 @@
 
   function num(n, d) { return (typeof n === 'number' && isFinite(n)) ? n : (d == null ? null : d); }
   function str(x) { return typeof x === 'string' ? x : ''; }
+
+  /* The streak assets/streak.js last COMPUTED for this student, falling back to
+   * the stored profiles column. Never throws and never blocks: if streak.js is
+   * not loaded on this page, or has not run yet, the column is used exactly as
+   * before. This module must keep working standalone — its validator runs it
+   * with no browser and no streak.js present. */
+  function streakSnapshot(userId, profile) {
+    try {
+      if (typeof window !== 'undefined' && typeof window.getStreakSnapshot === 'function') {
+        var snap = window.getStreakSnapshot(userId);
+        if (snap && typeof snap.current_streak === 'number') return snap.current_streak;
+      }
+    } catch (e) { /* fall through to the stored column */ }
+    return profile ? profile.current_streak : null;
+  }
   function arr(x) { return Array.isArray(x) ? x : []; }
   function keyOf(t, s) { return str(t).trim().toLowerCase() + '||' + str(s).trim().toLowerCase(); }
 
@@ -193,7 +208,15 @@
         targetScore: num(profile.target_score),
         xp: num(profile.xp, 0),
         rank: str(profile.rank_name) || null,
-        currentStreak: num(profile.current_streak, 0),
+        // The computed streak when assets/streak.js has published one for this
+        // student, else the stored column. chat.html — which is where a plan is
+        // requested — calls updateStreak WITHOUT awaiting it, so a plan built
+        // moments after an answered question would otherwise read the column
+        // mid-write and put a streak one day behind into the planner's context.
+        // The plan is prose the student reads; telling them they are on a 5-day
+        // streak the morning they reached 6 is the same inconsistency this
+        // system was fixed to stop, just in a different surface.
+        currentStreak: num(streakSnapshot(userId, profile), 0),
         // Availability is asked in chat (opts) — not stored server-side yet.
         availability: opts.availability || null,
       },
