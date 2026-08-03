@@ -133,7 +133,7 @@ student impact during exam-prep windows.
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
 | Edge Functions | `ai-tutor` (platform version **135**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v96'` — the server-side quota gate. **Deployed**, and the deployed bundle is byte-for-byte identical to `main` (all four files) |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v98'` — **NOT deployed.** Production runs **v96** (platform version 135). `main` is two source versions ahead: v97 (L3 Shadow routing gate) and v98 (conversational-turn demotion), which ship as ONE deploy. Approved to ship 2026-08-03; the deploy is the manual CLI step in DEPLOY.md §4 |
 | `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
@@ -147,7 +147,7 @@ student impact during exam-prep windows.
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **75 files** in `supabase/migrations/`, **139 applied** in the database |
 | Static site | 46 root `*.html` pages on Vercel |
-| CI | `node tests/run-all.mjs` — 20 test suites + 7 validators = **27 checks** |
+| CI | `node tests/run-all.mjs` — 21 test suites + 7 validators = **28 checks** |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -156,13 +156,14 @@ recorded "v69 / platform version 78" as if the two moved together; they do not.
 The only unambiguous identity for what is *running* is the platform version plus
 the bundle sha256.
 
-**`main` and the deployed function are in sync right now** — verified 2026-08-02
-by comparing all four bundle files against `main`, byte for byte. That is the
-exception, not the rule: the repo is *routinely* ahead of production, because
+**`main` is AHEAD of the deployed function right now** (2026-08-03): `main`
+carries v97 + v98, production runs v96 at platform version 135, sha256
+`1b6ac2d1…`. They were briefly in sync on 2026-08-02, and that was the
+exception, not the rule — the repo is *routinely* ahead of production, because
 merging deploys the site automatically and nothing deploys the Edge Function.
 Phase V0 sat merged-but-undeployed for exactly this reason until v96 shipped
-with it. **Never infer "live" from "merged"** — compare the platform version and
-bundle sha256, which is a query, not a read.
+with it, and v97/v98 are in that state now. **Never infer "live" from "merged"**
+— compare the platform version and bundle sha256, which is a query, not a read.
 
 **The migration file count and the applied count differ** (73 vs 137): early
 migrations were applied without a committed file. `scripts/check-migration-parity.sh`
