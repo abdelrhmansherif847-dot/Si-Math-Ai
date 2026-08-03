@@ -2326,10 +2326,34 @@ button{font-family:inherit;cursor:pointer}
   //     so buying credits cannot lift it today. That response carries `balance`.
   //     Offering a credit pack here sells something that will not work.
   //
-  // The key present on the response is the discriminator, which is why this
-  // reads the shape rather than guessing from the local plan code.
+  // Returns true (zero-price tier), false (paying), or null (cannot tell).
+  //
+  // Two response shapes reach this. The Study Planner path calls consume_credits
+  // directly, so it carries the RPC's own keys and `pack_credits` identifies the
+  // free branch outright. The chat path does NOT: ai-tutor normalises the
+  // verdict before returning 402 and collapses both into one `balance` field
+  // (`balance: asInt(d.balance) ?? asInt(d.pack_credits)`), so the key is gone
+  // by the time it gets here. Keying only on the shape would therefore have
+  // called every FREE student "paid" on the chat path and withheld the credit
+  // pack that genuinely would have unblocked them.
+  //
+  // So: trust the shape when it is there, and otherwise apply the same economic
+  // test consume_credits applies — amount_egp = 0 AND credits_granted = 0 — to
+  // the student's own plan. Never guess: an unknown plan returns null and the
+  // caller says nothing it cannot support.
   function isFreeTierQuota(q){
-    return !!q && Object.prototype.hasOwnProperty.call(q, 'pack_credits');
+    if (q && Object.prototype.hasOwnProperty.call(q, 'pack_credits')) return true;
+    try {
+      // SignalEngine is referenced LEXICALLY, not via window: it is a `var`
+      // inside this script's scope and does not appear on window at all, so a
+      // `window.SignalEngine &&` guard silently short-circuits and every paying
+      // student reads as FREE. The try/catch covers the ReferenceError if that
+      // ever stops being true. (The daily_limit_reached branch below has always
+      // referenced it this way.)
+      var p = PlanCatalog.get(SignalEngine.planCode || 'FREE');
+      if (!p) return null;
+      return Number(p.price_egp || 0) === 0 && Number(p.credits_granted || 0) === 0;
+    } catch (_) { return null; }
   }
 
   // Copy for the paid-plan cap. Names the limit the server actually enforced
@@ -2731,11 +2755,13 @@ button{font-family:inherit;cursor:pointer}
       // party that can tell a genuine failure from a claimed one.
       if (err && err.quota) {
         var q = err.quota;
-        if (q.reason === 'daily_limit_reached' && !isFreeTierQuota(q)) {
+        if (q.reason === 'daily_limit_reached' && isFreeTierQuota(q) === false) {
           // Paid plan: the cap is absolute for today and credits cannot lift it
           // (consume_credits checks it BEFORE the balance, precisely so a
           // student cannot try to buy their way past). Pitching a credit pack
           // here sold something that would not have worked.
+          // `=== false` on purpose: null means "plan unknown", and an unknown
+          // plan must not be told its credits are useless.
           showCreditError(dailyCapMessage(q, 'message'));
         } else if (q.reason === 'daily_limit_reached') {
           // The server sends the limit it actually enforced, so that value is
