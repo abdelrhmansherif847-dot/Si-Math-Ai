@@ -232,11 +232,20 @@ t.ok('the pre-v97 gate no longer exists',
 // ───────────────────────────────────────────────────────────────────────────
 t.section('Blast radius — nothing outside the shadow router moved');
 
-// is_math still drives taxonomy, mastery, weakness, difficulty and the client's
-// solution workflow. Narrowing it would have been a far larger change than the
-// reported bug, and a regression surface to match. Pin that it did not move.
-t.ok('is_math is still resolved from scope + the classifier, unchanged',
-  /const isMath = scopeDecision\.scope === 'coaching' \? false : isMathClaimed;/.test(IDX));
+// The routing gate must stay a ROUTER: it decides which turns enter L3 Shadow
+// and changes nothing else. is_math drives taxonomy, mastery, weakness,
+// difficulty and the client's solution workflow, and it is resolved upstream —
+// the shadow gate only reads it.
+//
+// v98 then narrowed is_math itself, deliberately and in its own change, so that
+// an acknowledgement stops inheriting the previous turn's topic. That expression
+// and its blast radius are pinned in is-math-classification.test.mjs, which owns
+// the "is_math means a math PROBLEM was worked" contract. What matters here is
+// only that the shadow gate consumes it rather than redefining it.
+t.ok('is_math is resolved upstream — scope + the classifier + the v98 demotion',
+  /const isMath = \(scopeDecision\.scope === 'coaching' \|\| conversationalOnly\)/.test(IDX));
+t.is('the shadow gate consumes is_math, it does not redefine it',
+  IDX.split('const isMath = ').length - 1, 1);
 t.ok('the taxonomy gate still keys off is_math', /if \(!isMath\) \{\n      safeInsertTopic/.test(IDX));
 t.ok('the difficulty detector still keys off is_math', /if \(detectorOn && isMath\) \{/.test(IDX));
 t.ok('detector v2 still keys off is_math',

@@ -1,4 +1,42 @@
-// ai-tutor Edge Function v97
+// ai-tutor Edge Function v98
+// v98 (an acknowledgement inherits no topic): v97 stopped non-math turns from
+// entering L3 Shadow, but the shadow row was the least of what they wrote. A
+// bare "okk good", one turn after "whats 22 root 0", was stored as
+// topic=Algebra, subtopic=Exponents, difficulty=Easy, is_math=true, with two
+// rules attached — and Zero re-solved the previous problem in the answer.
+//
+// is_math is not cosmetic. It gates taxonomy resolution here, and the response's
+// topic/subtopic then drive MasteryEngine.onQuestion and the weakness signals in
+// chat.html. So one "شكرا" after a hard question was recorded as practice on
+// that subtopic and fed mastery_records, weakness_signals, the Weakness
+// Analyzer, Focus Practice and every report built on them — evidence of a
+// competence the student never demonstrated. That is worse than the shadow noise
+// it also caused, because shadow rows are observational while mastery decides
+// what the student is shown next.
+//
+// The cause is the classifier's input, not its rules: it is sent a window of the
+// conversation and classifies the turn with that window in view, so a message
+// carrying no problem of its own inherits the previous one's identity.
+//
+// Fixed on both halves, neither trusted alone — the v93 lesson that a prompt
+// rule holds until it does not:
+//   • NORMAL_SYSTEM_PROMPT and HINT_SYSTEM_PROMPT now state that the history is
+//     CONTEXT for the reply and not the turn being classified, that a turn
+//     working no new problem inherits no topic and no difficulty, and that Zero
+//     must not re-solve on an acknowledgement. HINT_SYSTEM_PROMPT previously
+//     carried no is_math rule at all and simply asserted is_math=true, which is
+//     why every hint-mode acknowledgement kept its math label.
+//   • isConversationalOnly() demotes server-side. Precision-first, the inverse
+//     of the v97 shadow gate's asymmetry: wrongly demoting a real math turn
+//     costs the student the solution workflow AND loses a practice record, so it
+//     fires only when EVERY token of the message is in a closed acknowledgement
+//     vocabulary. One unrecognised token and the model's label stands. Never
+//     consulted on an image or worksheet-reference turn. The hint-mode suffix is
+//     stripped first, because it is the client's sentence, not the student's.
+//
+// Replayed over 457 production text turns: 4 of the 162 stored with a math topic
+// are demoted ("okk good", "ماشي" in hint mode, "Yes", "Shokraaaaan"), and none
+// of the other 158 moves. Demotions log [ai-tutor] conversational-turn-demoted.
 // v97 (the V3 shadow pipeline runs only on turns that contain a problem):
 // non-math turns were reaching l3-shadow-v3 and writing shadow rows, so the
 // Question Inspector showed greetings and acknowledgements alongside real
@@ -293,7 +331,7 @@ import { runL3ShadowPipeline, isShadowEligibleInput } from '../_shared/verificat
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v97';
+const AI_TUTOR_VERSION = 'v98';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -986,6 +1024,109 @@ function isMathTopic(topic: string, subtopic: string): boolean {
     'إحصاء', 'مثلث', 'دائرة', 'كسر', 'عدد',
   ];
   return mathPatterns.some(p => t.includes(p));
+}
+
+// ── isConversationalOnly: the turn that works NO problem ──────────────────────
+// WHY THIS EXISTS
+//   The classifier is sent a window of the conversation, and it classifies the
+//   turn with that window in view. That is right for answering and wrong for
+//   labelling: a bare "okk good", one turn after "whats 22 root 0", came back
+//   topic=Algebra, subtopic=Exponents, difficulty=Easy, is_math=true, with two
+//   rules attached, and Zero re-solved the previous problem. The acknowledgement
+//   inherited the previous turn's identity.
+//
+//   is_math is not cosmetic. It gates taxonomy resolution, and the response's
+//   topic/subtopic then drive MasteryEngine.onQuestion and the weakness signals
+//   in chat.html. A turn labelled Algebra/Exponents therefore lands in
+//   mastery_records, weakness_signals, the Weakness Analyzer, Focus Practice and
+//   every report built on them. One "شكرا" after a hard question is recorded as
+//   practice on that subtopic — evidence of a competence the student never
+//   demonstrated. That is worse than the L3 Shadow noise it also caused, because
+//   shadow rows are observational and mastery drives what the student is shown
+//   next.
+//
+// PRECISION FIRST — the inverse of the shadow gate's asymmetry.
+//   Wrongly forcing is_math=false on a real math turn costs the student the
+//   solution workflow AND loses a real practice record. Wrongly leaving one true
+//   costs one polluted row. So this fires only when the ENTIRE message is
+//   conversational filler: every token must come from the closed acknowledgement
+//   vocabulary below. One unrecognised token and the classifier's own label
+//   stands, untouched.
+//
+//   The closed vocabulary is what makes the guard safe without a separate math
+//   check: no digit, operator, variable or math term is in it, so "1+1",
+//   "solve it", "Q17" and "حل ده" all fail on their first token. "ok now solve
+//   2x=4" fails on "now". Never consulted on an image or worksheet-reference
+//   turn — those are problems by the same axiom every other gate uses.
+//
+// This is the server-side half. NORMAL_SYSTEM_PROMPT tells the model the same
+// rule, because the model also has to stop re-solving the previous question in
+// the ANSWER — a label fix cannot do that. Neither half is trusted alone: the
+// v93 fix learned that a prompt rule holds until it does not.
+
+// Acknowledgements, reactions, thanks and the social scaffolding around them,
+// in English, Arabic and Franco. Deliberately NOT a greeting list — greetings
+// are already classified correctly; this covers what follows an answer.
+const CONVERSATIONAL_TOKENS = new Set([
+  // English — acknowledgement and reaction
+  'ok', 'okk', 'okkk', 'okay', 'okey', 'oki', 'k', 'kk', 'yes', 'yeah', 'yea',
+  'yep', 'yup', 'sure', 'alright', 'aight', 'right', 'fine', 'good', 'great',
+  'nice', 'cool', 'clear', 'perfect', 'excellent', 'awesome', 'amazing',
+  'brilliant', 'wonderful', 'done', 'got', 'get', 'it', 'now', 'i', 'im',
+  'understand', 'understood', 'understand', 'makes', 'sense', 'gotcha',
+  // English — thanks and sign-off
+  'thanks', 'thank', 'thx', 'thnx', 'ty', 'tysm', 'you', 'u', 'so', 'much',
+  'a', 'lot', 'appreciate', 'welcome', 'np', 'bye', 'byee', 'goodbye', 'later',
+  'zero', 'bro', 'man', 'sir', 'dude', 'legend', 'king', 'goat',
+  // English — filler
+  'lol', 'haha', 'hahaha', 'hehe', 'hmm', 'hm', 'ah', 'aha', 'ahh', 'oh', 'ohh',
+  'wow', 'yay', 'nice1', 'yes1',
+  // Arabic — acknowledgement and reaction
+  'تمام', 'تمم', 'ماشي', 'ماشى', 'كويس', 'كويسه', 'حلو', 'حلوه', 'جامد',
+  'جميل', 'عظيم', 'ممتاز', 'برافو', 'اه', 'آه', 'ايوه', 'ايوا', 'أيوه', 'نعم',
+  'اوك', 'اوكي', 'أوك', 'طيب', 'خلاص', 'فهمت', 'فهمتها', 'فاهم', 'فاهمه',
+  'واضح', 'وضح', 'زي', 'الفل', 'كده', 'كدا', 'بس', 'اوي', 'أوي', 'قوي',
+  'يا', 'انا', 'أنا', 'زيرو', 'يبني', 'يسطا', 'باشا', 'وحش',
+  // Arabic — thanks and sign-off
+  'شكرا', 'شكرًا', 'شكراً', 'متشكر', 'متشكرة', 'مرسي', 'ميرسي', 'تسلم',
+  'تسلمي', 'يعطيك', 'العافية', 'الله', 'يبارك', 'فيك', 'ربنا', 'يكرمك',
+  'سلام', 'باي', 'مع', 'السلامه', 'السلامة',
+  // Franco
+  'tamam', 'tmam', 'mashi', 'mashy', 'kwayes', 'kwayis', 'gamed', 'gamd',
+  'shokran', 'shukran', 'motshaker', 'tslam', 'teslam', 'sa7', 'sa77',
+  'aywa', 'aiwa', 'ayw', 'khalas', '5alas', 'fahemt', 'fahem', 'wade7',
+  'zy', 'el', 'fol', 'keda', 'kda', 'bas', 'awy', 'awi', '2awy',
+  'ya', 'ana', 'enta', 'ysta', 'yasta', 'basha', 'ezay', 'temam',
+]);
+
+// The client appends this to the student's text when hint mode is on. It is the
+// client's instruction, not the student's message, and leaving it in place would
+// hand every hint-mode acknowledgement a dozen unrecognised tokens — which is
+// exactly how "ماشي" in hint mode kept its Algebra label.
+const HINT_SUFFIX_RE = /\n*\[Hint mode:[^\]]*\]\s*$/i;
+
+function isConversationalOnly(text: string): boolean {
+  const stripped = String(text ?? '').replace(HINT_SUFFIX_RE, '').trim();
+  if (!stripped || stripped.length > 80) return false;
+
+  // Tokenise on anything that is not a letter or a digit, so an operator or a
+  // numeral becomes its own token and fails the vocabulary check. Elongation
+  // ("okkkk", "تماااام") is collapsed to at most two repeats, which is how these
+  // are actually typed. Latin text is lowercased; Arabic has no case.
+  const tokens = stripped
+    .toLowerCase()
+    .replace(/[ً-ْـ]/g, '')          // harakat + tatweel
+    .replace(/(.)\1{2,}/gu, '$1$1')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+  if (!tokens.length || tokens.length > 6) return false;
+
+  return tokens.every((tok) =>
+    CONVERSATIONAL_TOKENS.has(tok) ||
+    // The elongation collapse leaves doubled forms ("okk" → "okk", "تماام" →
+    // "تماام"); accept a single-letter de-duplication of any vocabulary word so
+    // "okkk", "حلوو" and "tamaam" land on their base form.
+    CONVERSATIONAL_TOKENS.has(tok.replace(/(.)\1/gu, '$1')));
 }
 
 // ── cleanDifficulty ───────────────────────────────────────────────────────────
@@ -3491,6 +3632,7 @@ Determine if this is a math message and set "is_math" accordingly:
 - is_math = true: ANY message that includes an image — if an image is attached it is ALWAYS a math problem; set is_math=true regardless of how short or vague the text is ("حل", "solve", "help", "?", or even empty text)
 - is_math = false: greetings ("hi", "عامل ايه", "مرحبا", "أهلاً"), casual chat, asking how you are, motivation questions, study schedule questions, countdown to exam, "فاضل قد ايه", general conversation — and ONLY when NO image is attached
 - is_math = false: questions ABOUT the exam rather than math to work on — how many questions a section has, how long a module lasts, how it is scored, which topics appear, what the format is ("امتحان ال DSAT كام سوال", "how many questions in EST math", "امتحان est 1 math كام دقيقه"). Answer them fully and warmly; scope stays "math". But no problem was worked, so there is nothing to record: is_math=false
+- is_math = false: a message that works NO NEW PROBLEM — a pure acknowledgement or reaction to what you just said ("ok", "okk good", "got it", "I understand", "makes sense", "تمام", "شكرا", "ماشي", "كويس", "حلو", "جامد", "فهمت", "tamam", "mashi", "shokran"). **The conversation above is CONTEXT for how you reply — it is not the turn you are classifying. Classify ONLY the student's latest message.** A turn that adds no new problem inherits NO topic and NO difficulty from the previous one: set is_math=false, topic="General", subtopic="", difficulty="", rules=[]. Reply briefly and warmly, and do NOT re-solve or re-explain the previous question — they told you it landed. Ask what they want next.
 - When is_math = false: set topic="General", subtopic="", difficulty="", rules=[], concepts=[], weakness_signal=false
 - For casual/greeting messages: respond naturally in the "answer" field as a friendly tutor would — use the student's name and be warm
 
@@ -3579,6 +3721,11 @@ You are a mathematics specialist (SAT / EST / ACT / American Diploma math).
 - "coaching" — nerves, confidence, motivation, study habits, time management, burnout, goal setting, encouragement. IN SCOPE: drop the hint format and answer as a warm coach.
 - "out_of_scope" — politics, religion, medical, legal, programming, non-math science, history, geography, entertainment, opinions unrelated to studying math. Do NOT answer it; just set the label.
 When unsure, choose "math" or "coaching" — never refuse a student who might be asking something legitimate.
+
+## is_math — set it per turn, do not assume true
+Hint mode is usually a real problem, so is_math=true is the normal case. But hint mode does not make a message a problem:
+- is_math = false when the latest message works NO NEW PROBLEM — a pure acknowledgement or reaction ("ok", "تمام", "ماشي", "شكرا", "فهمت", "got it"). **The conversation above is CONTEXT for how you reply, not the turn you are classifying.** Such a turn inherits NO topic and NO difficulty: topic="General", subtopic="", difficulty="", rules=[]. Reply warmly and ask what they want to work on next.
+- is_math = false for coaching and out_of_scope turns, always.
 
 ## Response Format
 {
@@ -3851,7 +3998,31 @@ When unsure, choose "math" or "coaching" — never refuse a student who might be
     // for those before the model's label is read, so genuine math is untouched.
     // Cannot fire on a missing or junk scope either — that also resolves to
     // 'math' (fail-open), so this adds no new refusal path.
-    const isMath = scopeDecision.scope === 'coaching' ? false : isMathClaimed;
+    //
+    // v98: the second way a turn arrives is_math=true having worked no problem.
+    // The classifier reads the turn with the conversation window in view, so a
+    // bare acknowledgement inherits the previous question's identity — "okk good"
+    // after a radicals turn came back Algebra / Exponents / Easy with two rules,
+    // and that label propagates to taxonomy here, then to mastery_records and
+    // weakness_signals through the response's topic/subtopic. Enforced server-side
+    // for the same reason the coaching rule is: a prompt rule is a request, and
+    // the two fields have to agree whether or not the model kept them agreeing.
+    // Never fires on an image or worksheet-reference turn (isConversationalOnly
+    // is not even consulted), so genuine math is untouched.
+    const conversationalOnly = (imageData || resolvedRef)
+      ? false
+      : isConversationalOnly(question);
+    const isMath = (scopeDecision.scope === 'coaching' || conversationalOnly)
+      ? false
+      : isMathClaimed;
+    if (conversationalOnly && isMathClaimed) {
+      console.log('[ai-tutor] conversational-turn-demoted', JSON.stringify({
+        uid: user.id.slice(0, 8),
+        q_chars: question.length,
+        claimed_topic: finalTopic, claimed_subtopic: finalSubtopic,
+        gpt_is_math: gptIsMath ?? null, scope: scopeDecision.scope,
+      }));
+    }
 
     let rules = normalizeRules(parsed.rules);
     if (isMath && rules.length === 0) {

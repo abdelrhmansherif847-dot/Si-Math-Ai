@@ -1,12 +1,21 @@
-# Non-math turns were entering the V3 shadow pipeline — investigation and fix
+# Conversational turns were being recorded as math — investigation and fix
 
-**Reported:** 2026-08-03 — a Question Inspector row for a turn that began
-"hi zero hru" carried `pipeline_version = l3-shadow-v3`. The design contract is
-that V3 Shadow runs on math questions and nothing else.
-**Status:** ✅ **FIXED IN SOURCE, NOT YET DEPLOYED.** `ai-tutor` v97 is merged to
+**Reported:** 2026-08-03, in two stages. First: a Question Inspector row for a
+turn beginning "hi zero hru" carried `pipeline_version = l3-shadow-v3`, though
+V3 Shadow is meant to run on math questions and nothing else. Then, on reading
+§7 of the first fix: the shadow row was the *least* of what such a turn wrote —
+the same turns were polluting taxonomy, mastery and weakness.
+
+**Status:** ✅ **FIXED IN SOURCE, NOT YET DEPLOYED.** `ai-tutor` v98 is merged to
 the feature branch; production still runs v96 (platform version 135). Nothing
 deploys the Edge Function automatically — see DEPLOY.md §4.
 **Branch:** `claude/v3-shadow-math-routing-bfprpr`
+
+**Two layers, two versions.** v97 (§1–§6) stops non-math turns entering the L3
+shadow pipeline. v98 (§8) stops them being *classified* as math at all, which is
+where the damage actually was. **v98 is the fix that matters; v97 is defence in
+depth behind it.** They ship together — deploying v97 alone would silence the
+symptom that made the real bug visible.
 
 ---
 
@@ -169,16 +178,125 @@ shadow row is distinguishable from a pipeline that crashed.
 
 ---
 
-## 7. Adjacent defect — NOT fixed here
+## 7. The defect this uncovered — fixed in v98, see §8
 
-**`is_math` is still wrong on context-carried turns.** "okk good" was stored as
-`topic=Algebra, subtopic=Exponents, difficulty=Easy` with two rules attached. It
-therefore still pollutes **taxonomy, mastery and weakness**, exactly the way the
-v93 exam-format bug did before it was fixed. The same is true of "Speak English
-only" and the other meta-commands, several of which are stored as Algebra
-practice.
+**`is_math` was still wrong on context-carried turns.** "okk good" was stored as
+`topic=Algebra, subtopic=Exponents, difficulty=Easy` with two rules attached, so
+it still polluted **taxonomy, mastery and weakness** — exactly the way the v93
+exam-format bug did before it was fixed. This was flagged here as needing its
+own change rather than being folded into a shadow-routing fix. It got one.
 
-This is the same class of bug as `is-math-classification.test.mjs` pins, one
-layer earlier, and its blast radius is the whole student-facing record — which
-is precisely why it was not folded into a shadow-routing fix. It needs its own
-change, its own prompt rules, and its own regression suite.
+---
+
+## 8. v98 — the classification fix
+
+### 8.1 Why this is the more serious half
+
+`is_math` is not cosmetic. It gates taxonomy resolution in this function, and the
+response's `topic`/`subtopic` then drive `MasteryEngine.onQuestion` and the
+weakness signals in `chat.html`. Traced end to end, a turn labelled
+Algebra/Exponents reaches:
+
+```
+is_math=true
+  ├─ question_records.topic / subtopic / topic_id / difficulty / rules
+  ├─ chat.html → MasteryEngine.onQuestion   → mastery_records
+  ├─ chat.html → SignalEngine.sendSignal    → weakness_signals → Weakness Analyzer
+  │                                                            → Focus Practice
+  ├─ DifficultyDetector + detector v2       → verification_tier
+  └─ L3 Shadow                              → the v97 gate
+```
+
+One "شكرا" after a hard question is therefore recorded as **practice on that
+subtopic** — evidence of a competence the student never demonstrated. Shadow rows
+are observational; mastery decides what the student is shown next. This is the
+worse defect, and the shadow noise was a symptom of it.
+
+### 8.2 Root cause — the classifier's input, not its rules
+
+The classifier is sent a window of the conversation and classifies the turn
+**with that window in view**. That is right for answering and wrong for
+labelling. A message carrying no problem of its own inherits the previous one's
+identity: "okk good" came back Algebra / Exponents / Easy / `is_math=true`, and
+Zero re-solved the previous problem in the answer.
+
+`HINT_SYSTEM_PROMPT` made it worse: it carried **no `is_math` rule at all** and
+simply asserted `"is_math": true` in its response-format example. That is why
+every hint-mode acknowledgement in the corpus — "ماشي", "هسبلك", "لا جرب انت" —
+kept a math topic.
+
+The existing repeat path (`detectSolveAgain` / `detectReExplain` /
+`detectStepFollowUp`, v76/v85) already handles follow-ups correctly by UPDATEing
+the parent record instead of inserting. An acknowledgement is not a re-explain
+request, so it correctly falls through that path — and then wrongly becomes a new
+math record.
+
+### 8.3 The fix — both halves, neither trusted alone
+
+This is the v93 lesson: a prompt rule holds until it does not.
+
+- **Prompt.** Both system prompts now state that the conversation above is
+  **context for the reply, not the turn being classified**; that a turn working
+  no new problem inherits no topic and no difficulty; and that Zero must not
+  re-solve on an acknowledgement. `HINT_SYSTEM_PROMPT` gains its first `is_math`
+  rule.
+- **Server.** `isConversationalOnly()` demotes `is_math` to false.
+
+**Precision-first — the inverse of the v97 shadow gate's asymmetry.** There, a
+false reject cost one observational sample. Here, wrongly demoting a real math
+turn costs the student the solution workflow *and* loses a genuine practice
+record. So the guard fires only when **every token** of the message is in a
+closed acknowledgement vocabulary (English / Arabic / Franco). One unrecognised
+token and the model's label stands untouched.
+
+The closed vocabulary is also what makes a separate math check unnecessary: no
+digit, operator, variable or math term is in it, so `1+1`, `solve it`, `Q17` and
+`حل ده` all fail on their first token, and `ok now solve 2x=4` fails on "now".
+The hint-mode suffix is stripped first — it is the client's sentence, not the
+student's. Never consulted on an image or worksheet-reference turn.
+
+### 8.4 Verification
+
+**Replayed over 457 production text turns**, 162 of which were stored with a math
+topic. **Exactly 4 are demoted:**
+
+| question | was stored as |
+|---|---|
+| "okk good" | Algebra |
+| "ماشي" + hint-mode suffix | Algebra |
+| "Yes" | Algebra |
+| "Shokraaaaan" | Algebra |
+
+**None of the other 158 moves** — every equation, every worksheet reference,
+every genuine question is untouched.
+
+The downstream chain was verified rather than assumed, by running the shipped
+taxonomy core: `resolve({topic:'General', subtopic:''})` → **null**, so
+`TaxonomyWrite.canonical` returns null and `MasteryEngine.onQuestion` is skipped;
+`isAcademicTopic('General')` → **false**, so `logUnmapped` is skipped and
+`unmapped_detections` stays clean. The client's weakness branches are gated on
+`response.is_math === true` and on a non-empty `subtopic`, both of which are now
+false.
+
+`tests/is-math-classification.test.mjs` — the suite that already owns the
+"is_math means a math PROBLEM was worked" contract — gains 40 assertions for
+this second route to the same failure. Its harness now feeds the real decision
+expression the student's message, so the suite executes the shipped code rather
+than a stub. `node tests/run-all.mjs`: **28/28 green.**
+
+### 8.5 Adjacent class — identified, deliberately NOT fixed
+
+**Meta-commands are still stored as math.** "Speak English only",
+"كلمني عربي مش فرانكو", "اشرحه عربي" and "تحدث العربيه فقط معي فقط" all carry a
+math topic in the corpus. They are not acknowledgements, so `isConversationalOnly`
+correctly leaves them alone.
+
+They were left alone on purpose. There are hardened detectors already in this
+function — `detectExplicitEnglishRequest` / `detectExplicitArabicRequest` /
+`detectExplicitFrancoRequest`, trusted enough to persist a profile preference —
+so demoting on them would be easy. It would also be wrong for part of the class:
+"اشرحه عربي" is a **re-explanation request**, which is real learning evidence.
+Demoting it to General would not clean the data, it would **delete a weakness
+signal**. The correct fix is to extend `detectReExplain` so these attach to the
+parent record and bump `re_explanation_count` — a different change, with a
+failure mode worth designing for rather than guessing at.
