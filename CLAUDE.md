@@ -127,20 +127,20 @@ Si Math AI is a live Egyptian exam-prep platform (SAT / EST / ACT). The AI
 tutor "Zero" is used by real students. Production incidents have direct
 student impact during exam-prep windows.
 
-### Live system (verified 2026-08-02)
+### Live system (verified 2026-08-03T20:10Z)
 
 | | |
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
-| Edge Functions | `ai-tutor` (platform version **135**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v98'` — **NOT deployed.** Production runs **v96** (platform version 135). `main` is two source versions ahead: v97 (L3 Shadow routing gate) and v98 (conversational-turn demotion), which ship as ONE deploy. Approved to ship 2026-08-03; the deploy is the manual CLI step in DEPLOY.md §4 |
+| Edge Functions | `ai-tutor` (platform version **136**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v98'` — **DEPLOYED.** Production runs v98 at platform version 136 (deployed 2026-08-03T19:38:52Z), and the deployed bundle is byte-for-byte identical to `main` across all four files. v97 (L3 Shadow routing gate) and v98 (conversational-turn demotion) shipped together as ONE deploy, so only `v98` appears on the wire |
 | `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
 | `subscriptions.plan_type` | A legacy CATEGORY column, not a plan code, and read by nothing — `plan_code` on the same row is authoritative. `subscriptions_plan_type_check` permits six values only, so every writer maps through `legacy_plan_type()` (`20260802184704`). Never write a raw `plan_code` into it |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
-| `ai-tutor` deployed bundle | sha256 `1b6ac2d1507742872b38614181daea359dbcddf9d4aade60970c8e0692315aac`, deployed 2026-08-02T17:53:15Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}`. **Re-read this row from `list_edge_functions` rather than trusting it** — it was found one deploy stale on 2026-08-02 (it read version 133 / `c3f5fff1…` while production ran 134) |
+| `ai-tutor` deployed bundle | `ezbr_sha256` `2ebb41bc5924abcc83b49b9721c10bb15432ac685d3384343d98f7bf0629498a`, deployed 2026-08-03T19:38:52Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}` — verified present and byte-identical to `main`. **Re-read this row from `list_edge_functions` rather than trusting it.** It has now been found stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), and on 2026-08-03 it overstated the gap (it said v97/v98 were unshipped for the ~30 minutes between the deploy and this correction) |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
@@ -156,14 +156,23 @@ recorded "v69 / platform version 78" as if the two moved together; they do not.
 The only unambiguous identity for what is *running* is the platform version plus
 the bundle sha256.
 
-**`main` is AHEAD of the deployed function right now** (2026-08-03): `main`
-carries v97 + v98, production runs v96 at platform version 135, sha256
-`1b6ac2d1…`. They were briefly in sync on 2026-08-02, and that was the
-exception, not the rule — the repo is *routinely* ahead of production, because
+**`main` and the deployed function are in sync right now** (verified
+2026-08-03T20:10Z by comparing all four bundle files byte for byte): `main`
+carries v98, production runs v98 at platform version 136. **This is the
+exception, not the rule** — the repo is *routinely* ahead of production, because
 merging deploys the site automatically and nothing deploys the Edge Function.
 Phase V0 sat merged-but-undeployed for exactly this reason until v96 shipped
-with it, and v97/v98 are in that state now. **Never infer "live" from "merged"**
-— compare the platform version and bundle sha256, which is a query, not a read.
+with it, and v97/v98 sat that way for about six hours on 2026-08-03.
+**Never infer "live" from "merged"** — compare the platform version and bundle
+sha256, which is a query, not a read.
+
+That cuts both ways, and this file has now been wrong in both directions within
+24 hours. On 2026-08-03 at 19:33 it recorded v97/v98 as unshipped; they were
+deployed five minutes later and the row was not updated, so a session reading it
+at 20:00 would have concluded a deploy was still owed and could have redeployed
+from a branch that did not contain them — which would have *reverted* v97/v98 in
+production. **Before deploying anything, check whether the deploy you are about
+to perform is already done, and whether your working tree is behind `main`.**
 
 **The migration file count and the applied count differ** (73 vs 137): early
 migrations were applied without a committed file. `scripts/check-migration-parity.sh`
