@@ -49,7 +49,14 @@ function makeSb({ qrDays = [], examDays = [], focusDays = [], profile = {}, fail
       // recent days the backward walk depends on.
       order: () => self, limit: () => self,
       maybeSingle: () => Promise.resolve(res()),
-      update(patch) { writes.push({ table, patch }); return { eq: () => Promise.resolve({ error: null }) }; },
+      // The persist step is a compare-and-set: .update().eq('id').eq('current_streak').select().
+      // Reported as won — contention is modelled in streak-rollover.test.mjs.
+      update(patch) {
+        writes.push({ table, patch });
+        const q = { eq: () => q, select: () => Promise.resolve({ data: [{ id: 'u1' }], error: null }),
+                    then: (ok, err) => Promise.resolve({ error: null }).then(ok, err) };
+        return q;
+      },
       upsert: () => Promise.resolve({ error: null }),
       then: (ok, err) => Promise.resolve(res()).then(ok, err),
     };

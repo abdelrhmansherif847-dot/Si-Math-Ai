@@ -428,7 +428,8 @@ async function deviceGuard(sb, userId) {
        without passing through the dashboard kept seeing the last stored
        value. Dashboard said 0, Progress said 5, for the same student at the
        same moment. No activityToday hint: viewing a page is not practising. */
-    try { if (window.updateStreak) await window.updateStreak(sb, user.id); } catch(_) {}
+    var streakRes = null;
+    try { if (window.updateStreak) streakRes = await window.updateStreak(sb, user.id); } catch(_) {}
 
     // Avatar initial
     var avatarEl = document.getElementById('avatarEl');
@@ -501,9 +502,17 @@ async function deviceGuard(sb, userId) {
       if (ans) ans.style.display = 'block';
     }
 
-    // ── Streaks (read from profiles, written by assets/streak.js) ──
-    var currentStreak = profile.current_streak ?? 0;
-    var bestStreak    = profile.best_streak    ?? 0;
+    // ── Streaks ──
+    // From the updateStreak() RESULT, with the profiles row as fallback — the
+    // same single-source rule dashboard.html follows. Reading the row instead
+    // meant a second round trip after the recompute had already written it, so
+    // a concurrent write landing in that gap (or a write that never landed)
+    // showed a number this page had not computed. On the bail path the result
+    // carries the stored values, so the fallback agrees either way.
+    var currentStreak = (streakRes && typeof streakRes.current_streak === 'number' && !streakRes.skipped)
+      ? streakRes.current_streak : (profile.current_streak ?? 0);
+    var bestStreak = (streakRes && typeof streakRes.best_streak === 'number' && !streakRes.skipped)
+      ? streakRes.best_streak : (profile.best_streak ?? 0);
 
     // ── Derived counts ──
     var masteredTopics = mastRecs.filter(function(m){ return (m.mastery_score||0) >= 70; }).length;

@@ -114,11 +114,63 @@ earn.
 
 ---
 
+## 4b. The concurrent-write clobber — and a wrong call, corrected
+
+This was first recorded as "low risk, two writers converge on the same answer".
+Adversarial verification drove two overlapping `updateStreak` runs against one
+shared row with a deterministic scheduler and reproduced the loss:
+
+```
+laptop reads activity — today's row not committed yet   -> computes 5
+phone commits a question, recomputes, writes            -> 6
+laptop's UPDATE lands last                              -> 5   (correct 6 gone)
+```
+
+**The premise was the error.** "Recomputed from immutable rows" makes a *repeat*
+run idempotent; it says nothing about *concurrent* runs, because two runs
+straddling a commit do not read the same rows. The module's own header asserted
+the stronger claim ("refreshes, extra tabs and late-arriving rows are safe by
+construction") — that sentence was the false guarantee the missing guard hid
+behind, and it has been corrected in place rather than deleted.
+
+The repo already had the precedent: `mock-exam.html` guards `profiles.xp` with a
+compare-and-set retry loop whose comment names the second-tab scenario. The
+streak write, on a sibling column of the same row, had none.
+
+Fixed with **two** checks, because one is not enough:
+
+* **Before the write** — if the stored `last_active_date` is newer than any day
+  this run saw, a fresher recompute already ran; return its values and do not
+  write. This covers a winner whose write landed *before* this run even read the
+  profile, where the CAS guard would match and a blind retry would clobber.
+* **On the write** — `.eq('current_streak', <value read>).select()`, retried up
+  to four times. This covers a write landing *mid-run*.
+
+`last_active_date` is the freshness yardstick rather than the streak number,
+because a genuine break legitimately *lowers* the streak. A blanket
+"only write if higher" rule would make a broken streak unpersistable; a run that
+sees a real break holds the newest activity there is, so it still writes. Both
+directions are pinned by test.
+
+A losing run now also *returns* the stored truth with `skipped: true` instead of
+its own stale number, so a page that lost the race still renders the right value.
+
+**`progress.html` had the desync too** and is fixed the same way as the
+dashboard: it awaited the recompute, then re-read `profiles` and rendered
+`profile.current_streak` from that second round trip. It now renders from the
+`updateStreak` result. (`study-planner-client.js` also reads `current_streak`
+straight from `profiles` with no recompute, feeding it to the AI planner's
+context — left alone, since it is a read for prompt context rather than a
+rendered number, but noted as the remaining consumer of the raw column.)
+
 ## 5. Consistency guarantees, and their one limit
 
-* **Refresh / second tab.** The streak is always RECOMPUTED from immutable
-  activity rows, never incremented, so a repeat run with the same zone can only
-  produce the same answer. Pinned by test.
+* **Refresh.** The streak is always RECOMPUTED from immutable activity rows,
+  never incremented, so a repeat run over the same rows with the same zone can
+  only produce the same answer. Pinned by test.
+* **Second tab / overlapping runs.** Guarded by the two checks in §4b. Note this
+  is a *separate* property from idempotence — conflating the two is what left it
+  unguarded.
 * **Delayed synchronisation.** `chat.html` now passes `activityToday` — the
   hint's documented purpose, which had no caller — but only when the server
   confirmed a `question_records` row for that turn. It must never be passed
@@ -148,10 +200,10 @@ earn.
   side effect of this fix.
 * **`focus.html` `computeWeeklyStats` uses a device-local Monday** — a third day
   frame, disagreeing with both. The file is FROZEN.
-* **`profiles.update` is last-writer-wins** with no compare-and-set. Low risk
-  while the value is recomputed from source rows (two writers converge on the
-  same answer), but it is not formally safe under a concurrent day-boundary
-  crossing.
+* ~~`profiles.update` is last-writer-wins~~ — **fixed, see §4b.** This was first
+  written off here as low risk "because the value is recomputed from source
+  rows, so two writers converge". That reasoning is wrong and the claim was
+  wrong: adversarial verification reproduced the clobber deterministically.
 * **`chat.html`'s daily-usage counter uses a UTC day.** Correct as-is and
   deliberately not aligned: `consume_credits` enforces the quota with
   `date_trunc('day', now() AT TIME ZONE 'UTC')`, so the client matches the

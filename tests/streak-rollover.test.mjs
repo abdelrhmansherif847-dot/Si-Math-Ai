@@ -48,7 +48,15 @@ function makeSb({ qr = [], exams = [], focus = [], profile = {} } = {}) {
       order(col, o) { queries.push({ table, order: col, ascending: o && o.ascending }); return self; },
       limit(n) { queries.push({ table, limit: n }); return self; },
       maybeSingle: () => Promise.resolve(res()),
-      update(patch) { writes.push({ table, patch }); return { eq: () => Promise.resolve({ error: null }) }; },
+      // The persist step is a compare-and-set: .update().eq().eq().select().
+      // This stub always reports the write as won, which is the uncontended
+      // case every test in this file except the concurrency section models.
+      update(patch) {
+        writes.push({ table, patch });
+        const q = { eq: () => q, select: () => Promise.resolve({ data: [{ id: 'u1' }], error: null }),
+                    then: (ok, err) => Promise.resolve({ error: null }).then(ok, err) };
+        return q;
+      },
       upsert: () => Promise.resolve({ error: null }),
       then: (ok, err) => Promise.resolve(res()).then(ok, err),
     };
@@ -198,6 +206,107 @@ t.section('A streak longer than the fetch window is not reported as shorter');
   const r2 = await run({ qr: withGap, profile: { current_streak: 130, best_streak: 130 } },
                        { timezone: TZ });
   t.is('a real gap inside the window still breaks the streak', r2.current_streak, 3);
+}
+
+t.section('Concurrency: a stale run must not clobber a fresher one');
+{
+  // The reproduced race. Two overlapping recomputes against ONE profiles row:
+  //   A (laptop) reads before today's activity commits  -> computes 5
+  //   B (phone)  reads after it commits, writes         -> 6
+  //   A's UPDATE lands LAST
+  // Blind last-writer-wins persisted A's stale 5 over B's correct 6.
+  const row = { current_streak: 5, best_streak: 9, last_active_date: null };
+  const mkSb = (activity) => {
+    const chain = (table) => {
+      const res = () => {
+        switch (table) {
+          case 'question_records':       return { data: activity.map(c => ({ created_at: c })), error: null };
+          case 'exam_practice_sessions': return { data: [], error: null };
+          case 'focus_plans':            return { data: [], error: null };
+          case 'profiles':               return { data: { ...row }, error: null };
+          default:                       return { data: [], error: null };
+        }
+      };
+      let guard;                        // the .eq('current_streak', N) filter
+      const self = {
+        select: () => self, in: () => self, gte: () => self, order: () => self, limit: () => self,
+        eq(col, val) { if (col === 'current_streak') guard = val; return self; },
+        maybeSingle: () => Promise.resolve(res()),
+        update(patch) {
+          const q = {
+            eq(col, val) { if (col === 'current_streak') guard = val; return q; },
+            select() {
+              // Compare-and-set: apply only if the guard still matches.
+              if (guard !== undefined && guard !== row.current_streak) {
+                return Promise.resolve({ data: [], error: null });      // lost
+              }
+              Object.assign(row, patch);
+              return Promise.resolve({ data: [{ id: 'u1' }], error: null });
+            },
+            then: (ok, err) => { Object.assign(row, patch); return Promise.resolve({ error: null }).then(ok, err); },
+          };
+          return q;
+        },
+        upsert: () => Promise.resolve({ error: null }),
+        then: (ok, err) => Promise.resolve(res()).then(ok, err),
+      };
+      return self;
+    };
+    return { from: chain };
+  };
+
+  const yesterdayActivity = [1, 2, 3, 4, 5].map(d => instantIn(TZ, d));
+  const withToday = [instantIn(TZ, 0), ...yesterdayActivity];
+
+  const winA = {}; evalSnippet(SRC, { window: winA }, []);
+  const winB = {}; evalSnippet(SRC, { window: winB }, []);
+
+  // B (fresher: sees today) writes first and wins.
+  const bOut = await winB.updateStreak(mkSb(withToday), 'u1', { timezone: TZ });
+  t.is('the fresher run computes 6', bOut.current_streak, 6);
+  t.is('and persists it', row.current_streak, 6);
+
+  // A (stale: never saw today) now tries to write its 5, landing last.
+  const aOut = await winA.updateStreak(mkSb(yesterdayActivity), 'u1', { timezone: TZ });
+  t.is('the stale run must NOT overwrite the fresher 6', row.current_streak, 6);
+  // It also must not RENDER its stale 5: it returns the stored truth and flags
+  // skipped, so a page that lost the race still shows the right number.
+  t.is('and it reports the fresher value, not its own stale 5', aOut.current_streak, 6);
+  t.ok('flagged skipped so callers fall back rather than trust it', aOut.skipped === true);
+  t.is('and last_active_date keeps the newer day', String(row.last_active_date), todayKey);
+}
+{
+  // The guard must not make a GENUINE break unpersistable: a real break lowers
+  // the streak, and that run holds the newest activity there is, so it writes.
+  const row = { current_streak: 7, best_streak: 9, last_active_date: dayBefore(todayKey, 5) };
+  const mkSb = () => ({ from: (table) => {
+    const res = () => table === 'profiles'
+      ? { data: { ...row }, error: null }
+      : { data: table === 'question_records' ? [3, 4].map(d => ({ created_at: instantIn(TZ, d) })) : [], error: null };
+    let guard;
+    const self = {
+      select: () => self, in: () => self, gte: () => self, order: () => self, limit: () => self,
+      eq(col, val) { if (col === 'current_streak') guard = val; return self; },
+      maybeSingle: () => Promise.resolve(res()),
+      update(patch) {
+        const q = { eq(col, val) { if (col === 'current_streak') guard = val; return q; },
+          select() {
+            if (guard !== undefined && guard !== row.current_streak) return Promise.resolve({ data: [], error: null });
+            Object.assign(row, patch);
+            return Promise.resolve({ data: [{ id: 'u1' }], error: null });
+          },
+          then: (ok, err) => Promise.resolve({ error: null }).then(ok, err) };
+        return q;
+      },
+      upsert: () => Promise.resolve({ error: null }),
+      then: (ok, err) => Promise.resolve(res()).then(ok, err),
+    };
+    return self;
+  } });
+  const win = {}; evalSnippet(SRC, { window: win }, []);
+  const out = await win.updateStreak(mkSb(), 'u1', { timezone: TZ });
+  t.is('a genuinely broken streak computes 0', out.current_streak, 0);
+  t.is('and IS persisted — the guard does not block a real break', row.current_streak, 0);
 }
 
 t.section('A read failure never overwrites a real streak');

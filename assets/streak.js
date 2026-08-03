@@ -45,9 +45,14 @@
  *   3. Africa/Cairo, only if the runtime cannot name a zone at all.
  *
  * Determinism: the streak is always RECOMPUTED from immutable activity rows,
- * never incremented, so re-running it for the same student and zone can only
- * produce the same answer. Refreshes, extra tabs and late-arriving rows are
- * therefore safe by construction.
+ * never incremented, so re-running it over THE SAME ROWS for a given zone can
+ * only produce the same answer. That makes a refresh idempotent.
+ *
+ * It does NOT make concurrent runs safe, and an earlier version of this comment
+ * claimed it did. Two runs straddling a commit read DIFFERENT rows, so the one
+ * that started earlier can finish later carrying a staler answer. The write
+ * below is therefore a compare-and-set, not a blind update — see the reasoning
+ * at the persist step.
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function (root) {
   'use strict';
@@ -179,12 +184,16 @@ window.updateStreak = async function(sb, userId, opts) {
     // stand on.
     const { data: profile, error: pErr } = await sb
       .from('profiles')
-      .select('current_streak,best_streak')
+      .select('current_streak,best_streak,last_active_date')
       .eq('id', userId)
       .maybeSingle();
     if (pErr) console.warn('[streak] profile fetch error:', pErr.message);
     const storedCurrent = (profile && typeof profile.current_streak === 'number') ? profile.current_streak : 0;
     const storedBest    = (profile && typeof profile.best_streak    === 'number') ? profile.best_streak    : 0;
+    // The newest day any previous run recorded. This is the freshness yardstick
+    // the persist step measures our own view against.
+    const storedLastActive = (profile && profile.last_active_date)
+      ? String(profile.last_active_date).slice(0, 10) : null;
 
     // Bail out rather than write a wrong value. If ANY activity source failed
     // (offline, RLS hiccup, transient 5xx), the recompute sees a partial history
@@ -286,10 +295,74 @@ window.updateStreak = async function(sb, userId, opts) {
     const activeDays = Array.from(dateSet).sort();
     const lastActive = activeDays.length ? activeDays[activeDays.length - 1] : null;
 
-    const patch = { current_streak: current, best_streak: best };
-    if (lastActive) patch.last_active_date = lastActive;
-    const { error: uErr } = await sb.from('profiles').update(patch).eq('id', userId);
-    if (uErr) console.warn('[streak] profile update error:', uErr.message);
+    // Compare-and-set, following the precedent mock-exam.html already sets for
+    // profiles.xp. The write used to be a blind `.update(patch).eq('id', ...)`,
+    // so two overlapping recomputes resolved by whichever HTTP response landed
+    // last rather than by whichever read was fresher:
+    //
+    //   laptop reads activity  — today's row not committed yet     -> computes 5
+    //   phone commits a question, recomputes, writes               -> 6
+    //   laptop's UPDATE lands last                                 -> 5  (wrong)
+    //
+    // "The streak is recomputed from immutable rows, so concurrent runs agree"
+    // is a FALSE premise, and it is why this went unguarded: two runs straddling
+    // a commit do not read the same rows, so idempotence says nothing about
+    // concurrency. Reproduced deterministically before fixing.
+    //
+    // Losing the race must NOT simply mean "retry and overwrite" either: a
+    // genuine break legitimately LOWERS the streak, so a blanket
+    // only-write-if-higher rule would make a broken streak unpersistable.
+    // last_active_date is the freshness signal that separates the two cases. A
+    // stale run is stale precisely because it missed recent activity, so its
+    // newest active day is OLDER than the winner's. A run that sees a real
+    // break has the newest active day there is, so it still writes.
+    // "Is that row's view of the world newer than mine?" — true when it records
+    // activity on a day later than the newest day I could see.
+    const newerThanMine = (theirLastActive) => {
+      if (!theirLastActive) return false;
+      const theirs = String(theirLastActive).slice(0, 10);
+      return !lastActive || theirs > lastActive;
+    };
+
+    // Checked BEFORE the CAS, not only when it fails. A run can be stale and
+    // still hold a matching guard — the winner's write may land before this run
+    // even reads the profile, in which case the guard matches the value the
+    // winner just stored and a blind retry would happily overwrite it. The
+    // guard covers writes landing MID-run; this covers writes that landed
+    // BEFORE it. Both are needed.
+    if (newerThanMine(storedLastActive)) {
+      console.warn('[streak] stored row reflects newer activity than this run saw — not writing');
+      return { current_streak: storedCurrent, best_streak: storedBest, active_days: activeDays,
+               timezone: tz, today_key: todayStr, skipped: true };
+    }
+
+    let guardCurrent = storedCurrent;
+    let persisted = false;
+    for (let attempt = 0; attempt < 4 && !persisted; attempt++) {
+      const patch = { current_streak: current, best_streak: best };
+      if (lastActive) patch.last_active_date = lastActive;
+      const { data: won, error: uErr } = await sb.from('profiles')
+        .update(patch)
+        .eq('id', userId)
+        .eq('current_streak', guardCurrent)
+        .select('id');
+      if (uErr) { console.warn('[streak] profile update error:', uErr.message); break; }
+      if (won && won.length) { persisted = true; break; }
+
+      // Zero rows: someone wrote between our read and now. Re-read and decide.
+      const { data: fresh, error: rErr } = await sb.from('profiles')
+        .select('current_streak,best_streak,last_active_date')
+        .eq('id', userId)
+        .maybeSingle();
+      if (rErr || !fresh) { console.warn('[streak] CAS re-read failed — leaving the winner in place'); break; }
+      if (newerThanMine(fresh.last_active_date)) {
+        // The other run saw activity we did not. Its answer is the fresher one.
+        console.warn('[streak] a fresher recompute won the race — not overwriting');
+        break;
+      }
+      if (fresh.current_streak === current && fresh.best_streak >= best) { persisted = true; break; }
+      guardCurrent = fresh.current_streak;   // retry against what is there now
+    }
 
     const streakAchievements = [];
     if (current >= 7) {
