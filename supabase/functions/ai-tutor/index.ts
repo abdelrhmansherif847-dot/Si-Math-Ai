@@ -1842,22 +1842,74 @@ function parseScopeLabel(raw: unknown): ScopeLabel | null {
   return null;
 }
 
+// "Who made you?" and its variants, in the three languages students actually
+// use. Zero has a configured identity and a creator profile (see the Identity
+// Questions section of NORMAL_SYSTEM_PROMPT), and answering these is part of
+// the product, not an off-domain excursion.
+//
+// This is a DETERMINISTIC exemption rather than a prompt instruction, because
+// the prompt route demonstrably failed. The guard replaces the model's text
+// with a redirect whenever the model labels a turn out_of_scope, so a single
+// mislabel is enough to tell a student their question about Zero is "not my
+// world" — and HINT_SYSTEM_PROMPT, which classifies scope too, never listed
+// identity questions as in-scope and carries no identity rules at all. A model
+// judgement call was the only thing standing between the student and a refusal.
+//
+// Precision matters more than recall here: this must never swallow a maths
+// question. Every pattern requires an identity VERB (make/build/create/design/
+// develop, عمل/صنع/بنى/طور) or an explicit "who are you", bound to a
+// second-person object — so "who made this graph", "who created this function"
+// and "what created the remainder" do not match, and no equation can.
+const IDENTITY_PATTERNS: RegExp[] = [
+  // English / Franco: who made|built|created|designed|developed|programmed you
+  /\bwho(?:'s|s| is| was| are)?\s+(?:the\s+\w+\s+)?(?:made|make|built|build|created|create|designed|design|developed|develop|programmed|program|coded|code|invented|invent)\s+(?:you|u|zero|si\s*math)\b/i,
+  // who are you / what are you / tell me about yourself
+  /\bwho\s+(?:are|r)\s+(?:you|u)\b/i,
+  /\bwhat\s+are\s+you\b/i,
+  /\btell\s+me\s+about\s+(?:yourself|you)\b/i,
+  // who is behind / who owns / who is your creator|developer|maker|founder
+  /\bwho(?:'s|s| is)?\s+(?:behind|owns?|runs?)\s+(?:you|this|si\s*math|zero)\b/i,
+  /\bwho(?:'s|s| is)?\s+your\s+(?:creator|developer|maker|founder|owner|builder|boss)\b/i,
+  // Franco-Arabic: meen 3amalak / meen sana3ak / enta meen
+  /\b(?:meen|min|mein)\s+(?:elli\s+)?(?:3amalak|3amalk|sana3ak|sana3k|banak|bank|tawwarak|3amal|sana3)\b/i,
+  /\benta\s+meen\b/i,
+  // Arabic: مين عملك / مين صنعك / مين بناك / مين طورك / انت مين / مين اللي عملك
+  /مين\s*(?:هو\s*)?(?:اللي\s*)?(?:عملك|صنعك|بناك|طورك|صممك|برمجك|انشأك|أنشأك|خلقك)/,
+  /من\s*(?:هو\s*)?(?:الذي\s*)?(?:صنعك|أنشأك|انشأك|بناك|طورك|صممك|برمجك)/,
+  // No \b after Arabic: JS word boundaries are defined on [A-Za-z0-9_], so a
+  // trailing "؟" is not a boundary and the anchor silently never matches.
+  /(?:انت|أنت|إنت)\s*مين/,
+  /مين\s*(?:هو\s*)?(?:صاحب|مطور|مبرمج|مؤسس)\s*(?:ال)?(?:موقع|تطبيق|برنامج|زيرو|si\s*math)/i,
+  /مين\s*ورا\s*(?:ال)?(?:موقع|تطبيق|زيرو|si\s*math)/i,
+];
+
+function isIdentityQuestion(text: unknown): boolean {
+  const s = String(text ?? '').trim();
+  if (!s || s.length > 200) return false;   // long turns are not bare identity asks
+  return IDENTITY_PATTERNS.some((re) => re.test(s));
+}
+
 // Resolve the effective scope for a turn. FAIL-OPEN on every axis: the cost of
 // wrongly refusing a real student mid-revision is far higher than the cost of
 // answering one stray off-domain question.
 //   • image attached      → in scope (an upload is always a math problem here)
 //   • worksheet ref       → in scope (we already know which question they mean)
+//   • identity question   → in scope (Zero's own identity is part of the product)
 //   • scope missing/junk  → in scope (never refuse on a parse failure)
 //
 // hint_mode is deliberately NOT an exemption. It arrives on the request body,
 // so exempting it would let a crafted `{"hint_mode":true}` payload walk the
 // guard. HINT_SYSTEM_PROMPT classifies scope too, so hint turns are covered by
-// the same check.
+// the same check. The identity exemption below is derived from the student's
+// own message rather than from the request body, so it cannot be spoofed into
+// unlocking anything else: the only thing it permits is a turn that already
+// matches an identity question.
 function resolveScope(
   rawScope: unknown,
-  opts: { hasImage: boolean; hasRef: boolean },
+  opts: { hasImage: boolean; hasRef: boolean; message?: unknown },
 ): { scope: ScopeLabel; blocked: boolean } {
   if (opts.hasImage || opts.hasRef) return { scope: 'math', blocked: false };
+  if (isIdentityQuestion(opts.message)) return { scope: 'coaching', blocked: false };
   const label = parseScopeLabel(rawScope);
   if (label === null) return { scope: 'math', blocked: false };
   return { scope: label, blocked: label === 'out_of_scope' };
@@ -3754,9 +3806,20 @@ Use LaTeX: inline $x^2$, display $$\\frac{a}{b}$$
 ## 🎯 DOMAIN SCOPE — set "scope" on every response
 You are a mathematics specialist (SAT / EST / ACT / American Diploma math).
 - "math" — the student is asking about a math problem or concept. This is the normal hint-mode case.
-- "coaching" — nerves, confidence, motivation, study habits, time management, burnout, goal setting, encouragement. IN SCOPE: drop the hint format and answer as a warm coach.
+- "coaching" — nerves, confidence, motivation, study habits, time management, burnout, goal setting, encouragement, greetings, and IDENTITY QUESTIONS ABOUT ZERO ("who made you", "مين عملك؟", "who are you"). IN SCOPE: drop the hint format and answer as a warm coach.
 - "out_of_scope" — politics, religion, medical, legal, programming, non-math science, history, geography, entertainment, opinions unrelated to studying math. Do NOT answer it; just set the label.
 When unsure, choose "math" or "coaching" — never refuse a student who might be asking something legitimate.
+
+## Identity Questions — answer them, never refuse them
+This list used to omit identity questions, so a student in hint mode who asked
+"who created you?" could be told it was outside Zero's domain. It is not.
+If the student asks who made / built / created you, or who is behind Si Math AI:
+- Answer warmly as Zero 🐉, the AI companion of Si Math AI, in their language.
+- Say the platform was built by a passionate, ambitious engineer who believes every student's potential is far greater than their current grade.
+- Lead with the MISSION: making math learning smarter, fairer and more effective, one student at a time.
+- NEVER reveal personal names, contact details or private information.
+- Vary the wording each time; do not repeat a script.
+- Set scope="coaching", is_math=false, topic="General", subtopic="Identity".
 
 ## is_math — set it per turn, do not assume true
 Hint mode is usually a real problem, so is_math=true is the normal case. But hint mode does not make a message a problem:
@@ -3957,6 +4020,10 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
     const scopeDecision = resolveScope(parsed.scope, {
       hasImage: !!imageData,
       hasRef:   !!resolvedRef,
+      // The student's own words, so "who made you?" is answered from Zero's
+      // configured identity instead of being replaced by the off-domain
+      // redirect when the model happens to mislabel it.
+      message:  question,
     });
     if (scopeDecision.blocked) {
       console.log('[ai-tutor] scope-guard-fired', JSON.stringify({

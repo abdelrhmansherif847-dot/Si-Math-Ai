@@ -26,6 +26,40 @@ if (!m) { console.error('✗ could not locate studyPlanIntent() in chat.html'); 
 const studyPlanIntent = eval('(' + m[0].replace(/^function /, 'function ') + ')');
 
 const cases = [
+  // ── The unqualified-phrasing regression ───────────────────────────────────
+  // Requiring the literal word "study" was too strict. These are how students
+  // actually ask, and every one of them fell through to the LLM — which
+  // answered with a GENERIC written plan built from no student data and charged
+  // chat credits instead of the 20-credit study_plan operation. The reported
+  // symptoms (generic plans, no personalisation, wrong charge) were all this
+  // one gap, so each phrasing is pinned here individually.
+  ['make me a plan', 'generate'],
+  ['create a plan for me', 'generate'],
+  ['I need a plan', 'generate'],
+  ['give me a plan', 'generate'],
+  ['prepare a plan', 'generate'],
+  ['plan my studies', 'generate'],
+  ['plan my week', 'generate'],
+  ['plan my revision', 'generate'],
+  ['can you plan my week', 'generate'],
+  ['اعمل خطة', 'generate'],
+  ['اعملي خطة', 'generate'],
+  ['عايز خطة', 'generate'],
+  ['محتاج خطة', 'generate'],
+  ['جهزلي خطة', 'generate'],
+  // ...and the boundary that broadening must not cross. A "plan" with a maths
+  // or non-study object is not a study plan, and charging 20 credits for one is
+  // the same defect pointing the other way.
+  ['I want to plan a party', null],
+  ['new plan for factoring', null],
+  ['make a plan to solve this equation', null],
+  ['a plan for simplifying this', null],
+  // The -ing exception: "for factoring" is maths, "for studying" is not. Needs
+  // a request verb like every other generate case — a bare noun phrase with no
+  // verb is a fragment, not a request.
+  ['make a plan for studying', 'generate'],
+  ['plan a trip', null],
+
   // Reported failures — must now GENERATE (route to the personalized engine).
   ['Make a Study Planner', 'generate'],
   ['I want a study plane', 'generate'],

@@ -2392,11 +2392,48 @@ button{font-family:inherit;cursor:pointer}
     //    "I want to see my study plan" stays a free view, not a paid generation.
     if (new RegExp('\\b(show|view|see|open|display|check|what\'?s|where\'?s)\\b[\\s\\S]{0,24}\\b(my |the |current )?(?:study\\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\\b').test(t)
         || new RegExp('\\b(show|view|see|open|display|check|what\'?s|where\'?s)\\b[\\s\\S]{0,24}\\b' + MY_PLAN + '\\b').test(t)) return 'view';
-    // 2) GENERATE (charged 20). Strong build verbs accept the qualified noun;
-    //    softer verbs (want/need/…) require the word "study" too.
+    // 2) GENERATE (charged 20).
+    //
+    //    Requiring the literal word "study" was too strict and is what broke
+    //    this: "make me a plan", "plan my studies", "I need a plan" and
+    //    "can you plan my week" all fell through to the LLM, which answered
+    //    with a GENERIC written plan built from no student data and charged
+    //    chat credits instead of the 20-credit study_plan operation. Every
+    //    reported symptom — generic plans, no personalisation, wrong charge —
+    //    is that one gap.
+    //
+    //    The signal that actually separates the two senses is what FOLLOWS the
+    //    noun, not what precedes it. A maths "plan" always attaches a solving
+    //    object ("a plan TO SOLVE this", "خطة للحل"), and a "plane" attaches a
+    //    geometric one ("a plane THROUGH points A and B"). A study plan
+    //    attaches nothing, or attaches the student ("a plan for me", "my plan").
+    //    So the bare noun is accepted after a request verb UNLESS a maths
+    //    object follows it — and "plane" is never accepted at all.
+    //    NOT_A_STUDY_PLAN covers both wrong senses that follow the noun:
+    //      • a maths object — "to solve", "for factoring", "through points",
+    //        "of the equation". Any -ing verb counts EXCEPT the study ones, so
+    //        "a plan for factoring" is maths while "a plan for studying" is not.
+    //      • a non-study object — "plan a party", "plan a trip". Nothing to do
+    //        with the Study Planner, and charging 20 credits for it would be
+    //        the same defect in the other direction.
+    var MATH_OBJ = '(?:\\s+(?:to|for)\\s+(?:solve|answer|find|prove|calculate|graph|factor|simplify|the\\s+solution|this|that|it)\\b'
+                 + '|\\s+(?:to|for)\\s+(?!study|revis|learn|prepar)\\w+ing\\b'
+                 + '|\\s+(?:through|containing|passing|perpendicular|parallel|normal)\\b'
+                 + '|\\s+(?:of|for)\\s+(?:the\\s+)?(?:equation|problem|question|triangle|circle|line|curve|function|factoring|integration|differentiation)\\b'
+                 + '|\\s+(?:a|an|the|my|our)?\\s*(?:party|trip|holiday|vacation|wedding|event|birthday|dinner|meeting|budget|journey|route)\\b)';
+    var PLAN_N   = '(?:study\\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner|plan(?:ning|s)?|plan)';
+    var REQ_VERB = '(?:create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new'
+                 + '|want|need|give|prepare|design|set ?up|i\'?d like|can you (?:make|create|build|generate|do|give))';
+
     if (new RegExp('\\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\\b[\\s\\S]{0,24}\\b' + MY_PLAN + '\\b').test(t)
-        || /\b(create|make|build|generate|re-?generate|rebuild|update|refresh|redo|new)\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
-        || /\b(want|need|give|prepare|design|set ?up|make me|i'?d like|can you (?:make|create|build|generate|do))\b[\s\S]{0,24}\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t)
+        // Study-qualified noun always wins, whatever follows it.
+        || /\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b/.test(t) && new RegExp('\\b' + REQ_VERB + '\\b[\\s\\S]{0,24}\\b(?:study\\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\\b').test(t)
+        // Bare noun after a request verb, rejected when a maths object follows.
+        || (new RegExp('\\b' + REQ_VERB + '\\b[\\s\\S]{0,24}\\b' + PLAN_N + '\\b').test(t)
+            && !new RegExp('\\b' + PLAN_N + '\\b' + MATH_OBJ).test(t)
+            && !/\bplane\b/.test(t))
+        // "plan my studies / my week / my revision" — the noun used as a VERB.
+        || /\bplan\s+(?:my|our|the)\s+(?:stud(?:y|ies|ying)|week|revision|revisions|schedule|time|days?|month)\b/.test(t)
         || /\b(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\b[\s\S]{0,20}\b(please|now|for me)\b/.test(t)
         || /^\s*(?:study\s+(?:plan(?:ner|ning|s|e)?|schedule)|planner)\s*[.!?]?\s*$/.test(t)) return 'generate';
     // 3) Generate — Arabic. Same rule as the English branch, for the same
@@ -2408,8 +2445,17 @@ button{font-family:inherit;cursor:pointer}
     //    for. Require the study qualifier (مذاكرة / دراسة / استذكار), or the
     //    possessive خطتي ("my plan"), which carries the same unambiguous sense
     //    as "my plan" does in English.
+    //    Same correction as the English branch, and it matters more here because
+    //    this is the branch the platform's own students use. "اعمل خطة",
+    //    "عايز خطة" and "محتاج خطة" are how a study plan is actually asked for,
+    //    and requiring the مذاكرة/دراسة qualifier sent all of them to the LLM.
+    //    The maths sense is again identified by what FOLLOWS: خطة للحل / لحل
+    //    المسألة / عشان أحل — a plan *to solve something*.
+    var AR_MATH_OBJ = /خط[ةه]\s*(?:لل?حل|لحل|للمسال[ةه]|للمسأل[ةه]|للسؤال|عشان\s*(?:ا|أ)?حل|علشان\s*(?:ا|أ)?حل)/;
     if (/خط[ةه]\s*(مذاكرة|مذاكره|دراسة|دراسه|استذكار)/.test(t)
-        || /(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز|جدد|حدث)\S*[\s\S]{0,24}خطتي/.test(t)) return 'generate';
+        || /(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز|جدد|حدث)\S*[\s\S]{0,24}خطتي/.test(t)
+        || (/(اعمل|اعملي|إعمل|انشئ|أنشئ|اعطيني|أعطيني|عايز|عايزة|محتاج|محتاجة|سوي|جهز|جدد|حدث)\S*[\s\S]{0,24}خط[ةه]/.test(t)
+            && !AR_MATH_OBJ.test(t))) return 'generate';
     // 3b) Bare "خطتي" with no verb → view the existing plan (free), mirroring
     //     the English "my plan" case below.
     if (/خطتي/.test(t)) return 'view';

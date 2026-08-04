@@ -60,4 +60,45 @@ t.section('hint_mode must NOT be an exemption (it is client-supplied)');
 t.is('a crafted {"hint_mode":true} payload cannot walk the guard',
   blocked('out_of_scope', plain), true);
 
+// ── Identity questions ──────────────────────────────────────────────────────
+// Regression: asking Zero who made him was answered with the off-domain
+// redirect ("that one's not my world"). The guard REPLACES the model's text
+// whenever the label is out_of_scope, so one mislabel was enough to refuse —
+// and HINT_SYSTEM_PROMPT, which classifies scope too, never listed identity as
+// in-scope and carried no identity rules at all. Nothing server-side protected
+// it and no test covered it. The exemption is now derived from the student's
+// message, so it cannot depend on a model judgement call.
+const idBlocked = (msg, label = 'out_of_scope') =>
+  resolveScope(label, { hasImage: false, hasRef: false, message: msg }).blocked;
+
+t.section('Identity questions are ALWAYS answered, even if the model mislabels them');
+for (const q of [
+  'who created you?', 'Who created you', 'who made you?', 'who built you?',
+  'who designed you?', 'who developed you?', 'who programmed you?',
+  'who is behind you?', 'who is behind Si Math AI?', "who's your creator?",
+  'who is your developer', 'who owns this', 'who are you?', 'who r u',
+  'what are you?', 'tell me about yourself',
+  'مين عملك؟', 'مين صنعك؟', 'مين بناك؟', 'مين اللي عملك؟', 'مين طورك',
+  'انت مين؟', 'من صنعك', 'مين ورا الموقع',
+  'meen 3amalak', 'meen elli 3amalak', 'enta meen', 'meen sana3ak',
+]) t.is(`"${q}" is answered`, idBlocked(q), false);
+
+t.section('Identity exemption must NOT swallow maths (the expensive direction)');
+// Every one of these is off-domain or maths and must keep its normal treatment.
+for (const q of [
+  'who made this graph?', 'who created this function?', 'what created the remainder?',
+  'who invented calculus?', 'who discovered the Pythagorean theorem?',
+  'solve 2x + 5 = 11', 'what is the derivative of x^2?', 'حل المعادلة دي',
+  'who is the president?', 'who built the pyramids?', 'who wrote this book?',
+]) t.is(`"${q}" is NOT treated as an identity question`, idBlocked(q), true);
+
+t.section('The exemption never blocks a legitimate turn either');
+for (const label of ['math', 'coaching', 'out_of_scope', null, 'garbage'])
+  t.is(`identity + scope=${label} stays answered`, idBlocked('who made you?', label), false);
+
+t.section('Identity detection is bounded');
+t.is('empty message is not an identity question', idBlocked(''), true);
+t.is('a long essay mentioning "who made you" is not a bare identity ask',
+  idBlocked('x'.repeat(210) + ' who made you'), true);
+
 t.done();
