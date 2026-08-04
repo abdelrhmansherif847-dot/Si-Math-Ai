@@ -1789,8 +1789,26 @@ async function loadDashboard() {
      with it while `actSet` came from streak.js's copy: two implementations that
      agreed only by coincidence, which is exactly the desync the Weekly Progress
      strip and the Current Streak counter must not be able to have. */
-  var streakTz = (streakRes && streakRes.timezone) || SiDay.resolveTimeZone(prof.timezone);
-  var dayKeyOf = function(d) { return SiDay.dayKey(d, streakTz); };
+  /* SiDay ships inside assets/streak.js. If that script fails to load, this
+     page must still render from the stored profile values and the local heatmap
+     rebuild — the degraded path below was written for exactly that. Referencing
+     SiDay unconditionally turned one missing non-critical asset into a whole
+     dead dashboard ("Could not load"), which is worse than the problem it was
+     added to solve. */
+  var _day = (typeof SiDay !== 'undefined') ? SiDay : {
+    resolveTimeZone: function (tz) {
+      if (tz) return tz;
+      try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo'; }
+      catch (e) { return 'Africa/Cairo'; }
+    },
+    dayKey: function (d, tz) {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(d);
+    },
+  };
+  var streakTz = (streakRes && streakRes.timezone) || _day.resolveTimeZone(prof.timezone);
+  var dayKeyOf = function(d) { return _day.dayKey(d, streakTz); };
   var actSet;
   if (!needHeatmapFallback) {
     actSet = new Set(streakRes.active_days);

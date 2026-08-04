@@ -216,7 +216,16 @@ window.updateStreak = async function(sb, userId, opts) {
       .select('current_streak,best_streak,last_active_date')
       .eq('id', userId)
       .maybeSingle();
-    if (pErr) console.warn('[streak] profile fetch error:', pErr.message);
+    // A failed profiles read is as disqualifying as a failed activity read, and
+    // for a worse reason: storedBest would default to 0, so the high-water
+    // best_streak floor below silently disappears and a personal best of 130 is
+    // overwritten with whatever this window happens to contain — permanently,
+    // since nothing can reconstruct it. Bail exactly as the activity guard does.
+    if (pErr || !profile) {
+      console.warn('[streak] profile fetch failed — leaving stored streak untouched');
+      return { current_streak: 0, best_streak: 0, active_days: [],
+               timezone: tz, today_key: todayStr, skipped: true };
+    }
     const storedCurrent = (profile && typeof profile.current_streak === 'number') ? profile.current_streak : 0;
     const storedBest    = (profile && typeof profile.best_streak    === 'number') ? profile.best_streak    : 0;
     // The newest day any previous run recorded. This is the freshness yardstick
@@ -295,9 +304,23 @@ window.updateStreak = async function(sb, userId, opts) {
     // reason" being investigated. Trust the stored value in that case; a real
     // break always shows up as a missing day INSIDE the window, which this
     // guard cannot mask because the walk stops before reaching the edge.
-    const oldestLoadedKey = streakKeyMinusDays(todayStr, STREAK_WINDOW_DAYS);
-    const hitWindowEdge = current > 0 && cursorKey && cursorKey <= oldestLoadedKey;
-    if (hitWindowEdge && storedCurrent > current) current = storedCurrent;
+    //
+    // The horizon is NOT always the 120-day window. If a source came back at
+    // exactly ROW_CAP rows it was truncated, and the real horizon is the oldest
+    // day that source actually delivered — which for a heavy student can be far
+    // more recent than the window start. Measuring against the window alone let
+    // a 107-day streak read 37 and persist it, losing 9 more days for every
+    // further day of practice: the truncation moved the horizon forward while
+    // the guard kept watching a boundary the walk never reached.
+    const truncated = [qrsRes, examsRes, focusRes]
+      .some(r => r && Array.isArray(r.data) && r.data.length >= ROW_CAP);
+    let horizonKey = streakKeyMinusDays(todayStr, STREAK_WINDOW_DAYS);
+    if (truncated && dateSet.size) {
+      const oldestSeen = Array.from(dateSet).sort()[0];
+      if (oldestSeen > horizonKey) horizonKey = oldestSeen;
+    }
+    const hitHorizon = current > 0 && cursorKey && cursorKey <= horizonKey;
+    if (hitHorizon && storedCurrent > current) current = storedCurrent;
 
     // Best streak across the window — longest consecutive run.
     // Map each Cairo day-key to a UTC-midnight epoch so consecutive-day math is
@@ -347,10 +370,23 @@ window.updateStreak = async function(sb, userId, opts) {
     // break has the newest active day there is, so it still writes.
     // "Is that row's view of the world newer than mine?" — true when it records
     // activity on a day later than the newest day I could see.
+    // Bounded on BOTH sides, because an unbounded version freezes the streak:
+    //   * a stored date AFTER today is impossible-by-construction (a skewed
+    //     client clock, or the seed bug below). Treated as "fresher" it made
+    //     every later run bail, so the streak stuck at its old value forever.
+    //   * a stored date OLDER than the window we loaded is not evidence we are
+    //     stale — we simply did not load that far back. Treated as "fresher" it
+    //     made a lapsed student's streak unresettable, because an empty window
+    //     has no lastActive of its own to compare against.
+    // Only a date inside the window, at or before today, is real evidence that
+    // another run saw activity this one missed.
+    const windowStartKey = streakKeyMinusDays(todayStr, STREAK_WINDOW_DAYS);
     const newerThanMine = (theirLastActive) => {
       if (!theirLastActive) return false;
       const theirs = String(theirLastActive).slice(0, 10);
-      return !lastActive || theirs > lastActive;
+      if (theirs > todayStr) return false;        // impossible; ignore it
+      if (theirs < windowStartKey) return false;  // outside what we loaded
+      return theirs > (lastActive || '');
     };
 
     // Checked BEFORE the CAS, not only when it fails. A run can be stale and
@@ -366,17 +402,28 @@ window.updateStreak = async function(sb, userId, opts) {
     }
 
     let guardCurrent = storedCurrent;
+    let guardBest = storedBest;
     let persisted = false;
+    // What the row holds if we end up not writing. Updated from every re-read so
+    // a losing run reports the WINNER's numbers rather than its own stale ones.
+    let liveCurrent = storedCurrent, liveBest = storedBest;
+
     for (let attempt = 0; attempt < 4 && !persisted; attempt++) {
-      const patch = { current_streak: current, best_streak: best };
+      // best_streak is a high-water mark and is user-visible as a personal best,
+      // so it is floored against the freshest value we have seen. Without this
+      // a run that ties on current_streak wins the guard and writes its own
+      // lower best, rolling the record backwards.
+      const bestToWrite = Math.max(best, guardBest);
+      const patch = { current_streak: current, best_streak: bestToWrite };
       if (lastActive) patch.last_active_date = lastActive;
       const { data: won, error: uErr } = await sb.from('profiles')
         .update(patch)
         .eq('id', userId)
         .eq('current_streak', guardCurrent)
+        .eq('best_streak', guardBest)   // guard BOTH columns, not just one
         .select('id');
       if (uErr) { console.warn('[streak] profile update error:', uErr.message); break; }
-      if (won && won.length) { persisted = true; break; }
+      if (won && won.length) { persisted = true; best = bestToWrite; break; }
 
       // Zero rows: someone wrote between our read and now. Re-read and decide.
       const { data: fresh, error: rErr } = await sb.from('profiles')
@@ -384,13 +431,35 @@ window.updateStreak = async function(sb, userId, opts) {
         .eq('id', userId)
         .maybeSingle();
       if (rErr || !fresh) { console.warn('[streak] CAS re-read failed — leaving the winner in place'); break; }
+      liveCurrent = (typeof fresh.current_streak === 'number') ? fresh.current_streak : liveCurrent;
+      liveBest    = (typeof fresh.best_streak === 'number')    ? fresh.best_streak    : liveBest;
+
       if (newerThanMine(fresh.last_active_date)) {
-        // The other run saw activity we did not. Its answer is the fresher one.
         console.warn('[streak] a fresher recompute won the race — not overwriting');
         break;
       }
-      if (fresh.current_streak === current && fresh.best_streak >= best) { persisted = true; break; }
-      guardCurrent = fresh.current_streak;   // retry against what is there now
+      // Same newest day, so neither run can prove it is better informed at finer
+      // than day granularity. Retrying here is what made this last-write-wins
+      // all over again: the loser simply re-guarded on the winner's value and
+      // overwrote it. Only a run that saw strictly MORE days may proceed; an
+      // equal or shorter answer leaves the winner in place. A genuine break is
+      // still persistable — it is not caught here, because a break shortens the
+      // streak while ALSO carrying the newest activity there is, so it never
+      // loses to a run holding a fresher day.
+      if (current <= liveCurrent) {
+        console.warn('[streak] concurrent write is at least as well-informed — not overwriting');
+        break;
+      }
+      guardCurrent = liveCurrent;
+      guardBest = liveBest;
+    }
+
+    // The write was refused or failed. Report what the ROW holds, flagged, so
+    // every consumer falls back instead of rendering a number the database
+    // contradicts — and do not publish it as the snapshot.
+    if (!persisted) {
+      return { current_streak: liveCurrent, best_streak: Math.max(liveBest, storedBest),
+               active_days: activeDays, timezone: tz, today_key: todayStr, skipped: true };
     }
 
     const streakAchievements = [];
