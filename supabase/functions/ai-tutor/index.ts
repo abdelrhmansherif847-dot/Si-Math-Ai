@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v98
+// ai-tutor Edge Function v99
 // v98 (an acknowledgement inherits no topic): v97 stopped non-math turns from
 // entering L3 Shadow, but the shadow row was the least of what they wrote. A
 // bare "okk good", one turn after "whats 22 root 0", was stored as
@@ -331,7 +331,7 @@ import { runL3ShadowPipeline, isShadowEligibleInput } from '../_shared/verificat
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v98';
+const AI_TUTOR_VERSION = 'v99';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
