@@ -156,9 +156,20 @@ function publish(userId, result) {
 
 // The published result for `userId`, or null. Callers MUST treat null as "ask
 // the database" rather than as "no streak".
+// Bounded by age AND by the day it was computed for. Without the age bound a
+// long-lived tab kept serving a morning snapshot all day, so the planner
+// preferred a stale cache over a column that had since been updated by another
+// device; without the day check, a tab left open across midnight served
+// yesterday's day-set. Past either bound the caller falls back to the database,
+// which is the correct answer rather than a degraded one.
+var SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
 window.getStreakSnapshot = function (userId) {
   var c = (typeof window !== 'undefined') ? window.__siStreak : null;
   if (!c || !c.result || (userId && c.userId !== userId)) return null;
+  if (Date.now() - c.at > SNAPSHOT_MAX_AGE_MS) return null;
+  try {
+    if (c.result.today_key && c.result.today_key !== SiDay.dayKey(new Date(), c.result.timezone)) return null;
+  } catch (e) { return null; }
   return c.result;
 };
 
@@ -274,10 +285,48 @@ window.updateStreak = async function(sb, userId, opts) {
 
     // Build the set of Cairo-date strings the user was actually active.
     const dateSet = new Set();
-    if (seedToday) dateSet.add(todayStr);
-    (qrsRes.data   || []).forEach(r => { if (r && r.created_at)   dateSet.add(streakDayKey(new Date(r.created_at), tz)); });
-    (examsRes.data || []).forEach(r => { if (r && r.created_at)   dateSet.add(streakDayKey(new Date(r.created_at), tz)); });
-    (focusRes.data || []).forEach(r => { if (r && r.completed_at) dateSet.add(streakDayKey(new Date(r.completed_at), tz)); });
+    // Every day key comes from a PERSISTED row's server timestamp, and a day
+    // after today is discarded. Server clocks set created_at, but a device whose
+    // clock runs fast still shifts todayStr, and a row dated "tomorrow" would
+    // otherwise light a FUTURE Weekly Progress cell with a completed check and
+    // extend the streak by a day nobody has lived yet.
+    const addDay = (instant) => {
+      if (!instant) return;
+      const d = new Date(instant);
+      if (isNaN(d.getTime())) return;
+      const k = streakDayKey(d, tz);
+      if (k > todayStr) return;                // no credit for the future
+      dateSet.add(k);
+    };
+    (qrsRes.data   || []).forEach(r => r && addDay(r.created_at));
+    (examsRes.data || []).forEach(r => r && addDay(r.created_at));
+    (focusRes.data || []).forEach(r => r && addDay(r.completed_at));
+
+    // The "an activity just happened" hint, now anchored to PERSISTED data.
+    //
+    // It used to add the CLIENT's todayStr outright. That trusted the device
+    // clock for a day nothing in the database had yet claimed: a clock running
+    // an hour fast just before midnight credited tomorrow, inflating the streak
+    // by one, minting an unearned streak_7 and stamping a future
+    // last_active_date — which then froze every later run against the staleness
+    // check. The hint may now only CONFIRM a day the database already shows.
+    //
+    // opts.activityAt (a server timestamp, when a caller has one) is the precise
+    // form. The bare boolean is honoured only when the newest persisted row
+    // already falls on the caller's today, in which case it is a no-op that
+    // cannot invent a day — and when the row is not yet visible the anchor rule
+    // below keeps a live streak intact for the whole of the following day
+    // regardless, which is why nothing depends on the seed for correctness.
+    if (opts && opts.activityAt) {
+      addDay(opts.activityAt);
+    } else if (seedToday) {
+      const newest = [
+        ...(qrsRes.data   || []).map(r => r && r.created_at),
+        ...(examsRes.data || []).map(r => r && r.created_at),
+        ...(focusRes.data || []).map(r => r && r.completed_at),
+      ].filter(Boolean).sort().pop();
+      if (newest && streakDayKey(new Date(newest), tz) === todayStr) dateSet.add(todayStr);
+    }
 
     // Anchor the walk. A streak stays alive for the whole of the day AFTER the
     // last activity — practising yesterday and opening the app this morning

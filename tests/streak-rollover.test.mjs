@@ -132,9 +132,21 @@ t.section('Delayed synchronisation: the just-written row is not visible yet');
   // chat.html now passes activityToday for.
   const blind = await run({ qr: [instantIn(TZ, 1)] }, { timezone: TZ });
   t.ok('without the hint, today is absent', !blind.active_days.includes(todayKey));
-  const hinted = await run({ qr: [instantIn(TZ, 1)] }, { timezone: TZ, activityToday: true });
-  t.ok('with the hint, today is present', hinted.active_days.includes(todayKey));
-  t.is('and the streak includes today', hinted.current_streak, 2);
+
+  // The bare boolean is anchored to persisted data: with today's row not yet
+  // visible there is nothing to confirm, so it must NOT invent the day. The
+  // anchor rule keeps the streak alive meanwhile, which is why nothing depends
+  // on the seed for correctness.
+  const bare = await run({ qr: [instantIn(TZ, 1)] }, { timezone: TZ, activityToday: true });
+  t.ok('the bare hint cannot invent an unwitnessed day', !bare.active_days.includes(todayKey));
+  t.is('and the streak is still held alive by the anchor rule', bare.current_streak, 1);
+
+  // activityAt carries the SERVER timestamp of the row that was written, so the
+  // seed names a day the database can corroborate.
+  const stamped = await run({ qr: [instantIn(TZ, 1)] },
+    { timezone: TZ, activityAt: instantIn(TZ, 0, 0.5) });
+  t.ok('activityAt seeds the persisted row\'s day', stamped.active_days.includes(todayKey));
+  t.is('and the streak includes today', stamped.current_streak, 2);
 }
 
 t.section('Refresh and second device produce identical state');

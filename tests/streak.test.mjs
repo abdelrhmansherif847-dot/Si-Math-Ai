@@ -145,9 +145,23 @@ t.section('last_active_date is the real last activity day');
 t.is('active yesterday -> yesterday', (await run({ qrDays: [1] })).last, yday);
 t.is('active today -> today', (await run({ qrDays: [0] })).last, today);
 
-t.section('activityToday hint is opt-in and must never default on');
-t.is('with hint, today counts even if the write is not yet visible',
-  (await run({ qrDays: [1,2] }, { activityToday: true })).current, 3);
-t.is('without hint, same fixture holds at 2', (await run({ qrDays: [1,2] })).current, 2);
+t.section('The activity hint is anchored to persisted data, never the device clock');
+// The bare boolean may only CONFIRM a day the database already shows. It used
+// to add the client's today outright, so a device clock running fast before
+// midnight credited tomorrow — inflating the streak, minting an unearned
+// streak_7 and stamping a future last_active_date that then froze every later
+// run. With today's row invisible there is nothing to confirm, so it is a no-op.
+t.is('bare hint cannot invent a day the DB does not show',
+  (await run({ qrDays: [1,2] }, { activityToday: true })).current, 2);
+t.is('without the hint, the same fixture is unchanged',
+  (await run({ qrDays: [1,2] })).current, 2);
+// When the row IS visible the hint is a no-op that agrees with the data.
+t.is('hint alongside a visible row for today agrees with it',
+  (await run({ qrDays: [0,1,2] }, { activityToday: true })).current, 3);
+// activityAt is the precise form: a SERVER timestamp for the row just written.
+t.is('activityAt seeds the day of the persisted row',
+  (await run({ qrDays: [1,2] }, { activityAt: cairoInstant(0, 9) })).current, 3);
+t.is('activityAt in the FUTURE is discarded, not credited',
+  (await run({ qrDays: [1,2] }, { activityAt: cairoInstant(-1, 9) })).current, 2);
 
 t.done();

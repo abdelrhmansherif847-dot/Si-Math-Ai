@@ -30,19 +30,34 @@ const sameDay = ['2026-07-27T00:30:00Z', '2026-07-27T08:29:00Z', '2026-07-27T20:
   .map(s => days('2026-08-15', new Date(s)));
 t.is('same Cairo day gives one answer at 00:30/08:29/20:59Z', new Set(sameDay).size, 1);
 
-t.section('Device timezone independence (Cairo-pinned)');
+t.section('The countdown follows the STUDENT\'S local calendar day');
+// This section used to assert the opposite — that the answer was identical on
+// every device, because the module pinned the day to Africa/Cairo. That pin had
+// the same defect it had for the streak: "today" began at a foreign midnight,
+// so a student outside Egypt was told the wrong number for part of every day,
+// including "1 days remaining" on the morning of the exam.
+//
+// The old assertion was ALSO vacuous. It probed 2026-07-27T08:29Z, an instant
+// at which Cairo, LA, Kiritimati, Tokyo and UTC all fall on the same calendar
+// date — so it could not have gone red whatever the module did. The instant
+// below is chosen so the zones genuinely disagree about what day it is.
 const ORIGINAL_TZ = process.env.TZ;
-const ref = days('2026-08-15', NOW);
-let stable = true;
-for (const tz of ['Africa/Cairo', 'America/Los_Angeles', 'Pacific/Kiritimati', 'Asia/Tokyo', 'UTC']) {
+const SPLIT = new Date('2026-07-27T22:00:00Z');   // 07-28 in Cairo, still 07-27 in UTC/LA
+const byZone = {};
+for (const tz of ['Africa/Cairo', 'America/Los_Angeles', 'Pacific/Kiritimati', 'UTC']) {
   process.env.TZ = tz;
-  if (days('2026-08-15', NOW) !== ref) stable = false;
+  byZone[tz] = days('2026-08-15', SPLIT);
 }
-// Restore: the assertions below are timezone-sensitive BY DESIGN (they
-// demonstrate a device-local bug), so leaving TZ=UTC here would silently
-// invert their meaning.
+// Restore before the timezone-sensitive assertions further down.
 process.env.TZ = ORIGINAL_TZ;
-t.ok('identical in Cairo / LA / Kiritimati(UTC+14) / Tokyo / UTC', stable);
+
+// Cairo and Kiritimati have already rolled into 07-28; UTC and LA have not.
+t.is('Cairo (already 07-28) counts one day fewer', byZone['Africa/Cairo'], 18);
+t.is('Kiritimati (already 07-28) agrees with Cairo', byZone['Pacific/Kiritimati'], 18);
+t.is('UTC (still 07-27) counts one more', byZone['UTC'], 19);
+t.is('Los Angeles (still 07-27) agrees with UTC', byZone['America/Los_Angeles'], 19);
+t.ok('the answer tracks the device day rather than a fixed foreign one',
+  byZone['Africa/Cairo'] !== byZone['UTC']);
 
 t.section('Input shapes and invalid input');
 t.is('ISO timestamp accepted', days('2026-07-28T00:00:00+00:00', NOW), 1);

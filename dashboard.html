@@ -1806,6 +1806,12 @@ async function loadDashboard() {
         timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
       }).format(d);
     },
+    addDays: function (key, n) {
+      var p = String(key).split('-');
+      var t = new Date(Date.UTC(+p[0], (+p[1]) - 1, +p[2]) + n * 86400000);
+      var p2 = function (x) { return String(x).padStart(2, '0'); };
+      return t.getUTCFullYear() + '-' + p2(t.getUTCMonth() + 1) + '-' + p2(t.getUTCDate());
+    },
   };
   var streakTz = (streakRes && streakRes.timezone) || _day.resolveTimeZone(prof.timezone);
   var dayKeyOf = function(d) { return _day.dayKey(d, streakTz); };
@@ -1813,15 +1819,22 @@ async function loadDashboard() {
   if (!needHeatmapFallback) {
     actSet = new Set(streakRes.active_days);
   } else {
-    /* Degraded path only — streak.js failed to load or bailed on a read error.
-       Rebuilt in the SAME timezone so the strip cannot shift relative to the
-       stored counter. It is knowingly partial: it sees question_records and
-       exams but not Focus Practice, so a Focus-only day can be missing here.
-       That is why it runs only when the real day-set is unavailable. */
+    /* Degraded path — streak.js failed to load, or bailed on a read error.
+       DERIVED FROM THE COUNTER, so the strip and the number beside it cannot
+       disagree: a streak of N ending on last_active_date is exactly the days
+       L, L-1, … L-(N-1), which is the claim the counter is already making.
+
+       It used to rebuild from question_records ∪ exams instead. That query
+       cannot see Focus Practice, so a student who practises only there got a
+       strip with zero lit days sitting next to "6 day streak" — the two halves
+       of one card contradicting each other. Reconstructing the counter's own
+       implication is both consistent and honest: it shows what the streak
+       asserts, and claims nothing the streak does not. */
     actSet = new Set();
-    weeklyQrs.concat(exams).forEach(function(s) {
-      if (s.created_at) actSet.add(dayKeyOf(new Date(s.created_at)));
-    });
+    var lastKey = prof.last_active_date ? String(prof.last_active_date).slice(0, 10) : null;
+    if (lastKey && currentStreak > 0) {
+      for (var si = 0; si < currentStreak; si++) actSet.add(_day.addDays(lastKey, -si));
+    }
   }
   /* today_key comes from the same computation as active_days, so "is today
      done?" is answered inside one frame even if the clock crosses midnight

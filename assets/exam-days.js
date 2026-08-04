@@ -20,12 +20,24 @@
 // product's audience is Egyptian, and a student on a VPN should not see a
 // different countdown than the same student at home.
 (function () {
-  var EXAM_TZ = 'Africa/Cairo';
-
-  // 'YYYY-MM-DD' for the given instant, in Cairo local time.
-  function cairoDayKey(d) {
+  // The student's OWN day, matching assets/streak.js. This was pinned to
+  // Africa/Cairo for cross-device determinism, and that pin had the same defect
+  // it had for the streak: "today" began at a foreign midnight, so the
+  // countdown was off by one for a student outside Egypt for part of every day
+  // — 17:00 the previous afternoon in New York, 06:00 in Tokyo. On the exam day
+  // itself that reads "1 days remaining", which is the moment it matters most.
+  //
+  // Prefers SiDay (exported by assets/streak.js) so both surfaces on the
+  // dashboard use one implementation, and falls back to an equivalent local
+  // computation on pages that do not load it.
+  function dayKeyLocal(d) {
+    try {
+      if (typeof SiDay !== 'undefined' && SiDay && SiDay.dayKey) return SiDay.dayKey(d, null);
+    } catch (e) { /* fall through */ }
+    var tz;
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch (e) { tz = undefined; }
     return new Intl.DateTimeFormat('en-CA', {
-      timeZone: EXAM_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(d);
   }
 
@@ -48,7 +60,7 @@
     if (!examDate) return null;
     var key = String(examDate).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
-    var today = cairoDayKey(nowOverride instanceof Date ? nowOverride : new Date());
+    var today = dayKeyLocal(nowOverride instanceof Date ? nowOverride : new Date());
     return Math.round((keyToEpoch(key) - keyToEpoch(today)) / 86400000);
   };
 

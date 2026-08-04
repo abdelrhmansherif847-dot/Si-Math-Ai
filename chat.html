@@ -2744,9 +2744,16 @@ button{font-family:inherit;cursor:pointer}
       // today's Weekly Progress square stays a placeholder dot despite the
       // practice. It must never be passed unconditionally — an unconditional
       // "today is active" seed is what once made streaks climb on page views.
-      if (window.updateStreak && currentUser) {
+      // activityAt when the server told us WHEN the row was written, else the
+      // bare flag — which streak.js will only honour if the database already
+      // shows activity today, so neither form can credit a day on the strength
+      // of this device's clock. ai-tutor does not currently return a timestamp
+      // with record_id; the optional read below costs nothing and starts
+      // working the day it does.
+      if (window.updateStreak && currentUser && response && response.record_id) {
+        var _at = response.record_created_at || response.created_at || null;
         window.updateStreak(sb, currentUser.id,
-          (response && response.record_id) ? { activityToday: true } : undefined);
+          _at ? { activityAt: _at } : { activityToday: true });
       }
       drillOnQuestionAnswered(_respTopic, _respSub);
       // Update mastery_records — skip for re-explanations (Case 2) since the student
