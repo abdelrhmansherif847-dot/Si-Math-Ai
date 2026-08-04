@@ -156,6 +156,60 @@ Nothing lands separately; the schema and the application move together:
    the client wrapper falls back to the current in-browser path if the RPC is
    absent, so a revert is safe in either order.
 
+---
+
+## 5. The package, as prepared (nothing applied)
+
+All of it is on the branch and CI-green. **No migration has been run.**
+
+| Piece | File | State |
+|---|---|---|
+| Migration | `supabase/migrations/20260804_streak_server_side.sql` | PREPARED |
+| Rollback | `supabase/migrations/20260804_streak_server_side_rollback.sql` | PREPARED |
+| Client | `assets/streak.js` — RPC wrapper, unchanged signature | shipped, inert until the RPC exists |
+| Edge Function | none needed — no Edge Function touches the streak columns | verified by grep |
+| Tests | `tests/streak-rollover.test.mjs` — RPC preferred / absent / failing | 71 assertions green |
+
+The column-only `20260804_profiles_timezone.sql` is **deleted**: this migration
+adds the column too, and leaving both invited a double-apply.
+
+### Why this cannot be half-migrated
+
+The requirement was that the app never sit in a state where the schema exists and
+the application ignores it, or the reverse. That is guaranteed by the client
+shipping **first and inert**:
+
+* **Before the migration** — `recompute_streak` does not exist, the RPC returns
+  PGRST202, and the wrapper runs the in-browser path. Behaviour is exactly what
+  is in production today. This is the state the branch is in right now.
+* **After the migration** — the RPC answers and is used; the browser path becomes
+  dead code that still works.
+* **On rollback** — the grants are restored *first*, then the function dropped;
+  the wrapper detects the absent RPC and falls back on the next call.
+
+So the client can ship before, with, or after the migration, and no ordering
+produces a broken state. There is no deploy window to coordinate.
+
+One deliberate asymmetry: on a *real* RPC failure (timeout, permission) the
+wrapper does **not** retry in the browser. After the migration the columns are
+revoked, so that path could only fail again and render a 0 nobody earned; it
+reports the stored row flagged `skipped` instead.
+
+### What still needs approval
+
+Only the migration itself — `apply_migration` on
+`20260804_streak_server_side.sql`. Per the repo rule, migrations are approved
+individually and are irreversible in production.
+
+Two things to review closely before that, being the parts with real blast radius:
+
+1. **`SECURITY DEFINER`** — `search_path` is pinned to `public, pg_temp`, and the
+   function refuses when `auth.uid()` is set and differs from `p_user_id`
+   (service_role, having no `auth.uid()`, passes through for admin use).
+2. **The grant revocation** — the last statement, so any earlier failure rolls
+   back and leaves the client's existing write path intact. It is also the
+   statement that closes forgeability, and the one to restore first on rollback.
+
 ### The decision I need
 
 This changes what gets built, so I have not started it. Two viable paths:

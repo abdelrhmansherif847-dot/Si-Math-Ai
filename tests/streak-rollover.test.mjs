@@ -346,6 +346,59 @@ t.section('One source of truth: the computed result is published for other consu
   t.is('null means "ask the database", not "no streak"', win.getStreakSnapshot('u1'), null);
 }
 
+t.section('Server-side recompute: the RPC is preferred, the browser path is the fallback');
+{
+  // 1. RPC present -> its answer is used verbatim, and published.
+  const win = {}; evalSnippet(SRC, { window: win }, []);
+  const sb = makeSb({ qr: [instantIn(TZ, 5)] });     // deliberately NOT what the RPC says
+  let sawArgs = null;
+  // today_key must be the REAL current day in that zone: getStreakSnapshot
+  // refuses a snapshot computed for a different day, which is what stops a tab
+  // left open across midnight serving yesterday's day-set.
+  const rpcDays = [dayBefore(todayKey, 1), todayKey];
+  sb.rpc = (fn, args) => { sawArgs = { fn, args }; return Promise.resolve({ data: {
+    current_streak: 9, best_streak: 12, active_days: rpcDays,
+    timezone: TZ, today_key: todayKey }, error: null }); };
+  const out = await win.updateStreak(sb, 'u1', { timezone: TZ });
+  t.is('calls recompute_streak', sawArgs && sawArgs.fn, 'recompute_streak');
+  t.is('passes the user id', sawArgs && sawArgs.args.p_user_id, 'u1');
+  t.ok('passes a device timezone so a null column can be populated',
+    !!(sawArgs && sawArgs.args.p_device_tz));
+  t.is('uses the server answer, not the browser computation', out.current_streak, 9);
+  t.is('best_streak from the server', out.best_streak, 12);
+  t.is('timezone from the server', out.timezone, TZ);
+  t.is('active_days from the server', out.active_days, rpcDays);
+  t.is('and it is published for other consumers',
+    win.getStreakSnapshot('u1') && win.getStreakSnapshot('u1').current_streak, 9);
+}
+{
+  // 2. RPC absent (pre-migration) -> the browser path answers, unchanged. This
+  // is what makes the schema and client changes safe in either order.
+  const win = {}; evalSnippet(SRC, { window: win }, []);
+  const sb = makeSb({ qr: [0, 1, 2].map(d => instantIn(TZ, d)) });
+  sb.rpc = () => Promise.resolve({ data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
+  const out = await win.updateStreak(sb, 'u1', { timezone: TZ });
+  t.is('falls back to the in-browser recompute', out.current_streak, 3);
+  t.ok('and it is a real answer, not a skip', !out.skipped);
+}
+{
+  // 3. RPC exists and genuinely fails -> report the stored row, flagged. It must
+  // NOT retry in the browser: after the migration the columns are revoked, so
+  // that path can only fail again and render a 0 nobody earned.
+  const win = {}; evalSnippet(SRC, { window: win }, []);
+  const sb = makeSb({ qr: [0, 1].map(d => instantIn(TZ, d)),
+                      profile: { current_streak: 7, best_streak: 11 } });
+  let legacyWrote = false;
+  const origFrom = sb.from;
+  sb.from = (t2) => { const c = origFrom(t2); const u = c.update; c.update = (p) => { legacyWrote = true; return u(p); }; return c; };
+  sb.rpc = () => Promise.resolve({ data: null, error: { code: '57014', message: 'statement timeout' } });
+  const out = await win.updateStreak(sb, 'u1', { timezone: TZ });
+  t.is('reports the stored streak', out.current_streak, 7);
+  t.is('and the stored best', out.best_streak, 11);
+  t.ok('flagged so consumers fall back', out.skipped === true);
+  t.ok('does not attempt the revoked browser write', !legacyWrote);
+}
+
 t.section('A read failure never overwrites a real streak');
 {
   const win = {};

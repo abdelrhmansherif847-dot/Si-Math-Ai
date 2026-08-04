@@ -177,7 +177,89 @@ window.getStreakSnapshot = function (userId) {
 // one (e.g. a stored profile preference). Omitted, the student's device zone is
 // used. Resolved ONCE per call and threaded through every key computation
 // below, so a single run can never mix two frames.
-window.updateStreak = async function(sb, userId, opts) {
+/* ── The entry point ────────────────────────────────────────────────────────
+ *
+ * Prefers the server-side recompute_streak() RPC and falls back to the
+ * in-browser computation below when it is absent.
+ *
+ * Why the fallback stays. It is what makes the schema change and the client
+ * change safe in EITHER order: before the migration the RPC does not exist and
+ * this path runs; after it, the RPC answers and this path is dead code that
+ * still works if the migration is rolled back. There is no window in which the
+ * app is broken because only one half shipped.
+ *
+ * Why the server version is preferred. It runs in one transaction over every
+ * row, so it needs no 120-day window, no row cap, no compare-and-set, no
+ * staleness check and no read-after-write seed — all of which exist below only
+ * to compensate for computing this in a browser. It also reads the student's
+ * STORED timezone, so two devices in different zones agree instead of
+ * overwriting each other, and it is the only writer of the streak columns once
+ * the grants are revoked.
+ *
+ * The signature and the return shape are unchanged, which is what lets the
+ * computation move without editing mock-exam.html or focus.html — both FROZEN,
+ * and both callers.
+ */
+window.updateStreak = async function (sb, userId, opts) {
+  const tz = STREAK_DAY.resolveTimeZone(opts && opts.timezone);
+  try {
+    const res = await sb.rpc('recompute_streak', { p_user_id: userId, p_device_tz: tz });
+    if (res && !res.error && res.data) {
+      const d = res.data;
+      const result = {
+        current_streak: Number(d.current_streak) || 0,
+        best_streak:    Number(d.best_streak) || 0,
+        active_days:    Array.isArray(d.active_days) ? d.active_days.map(String) : [],
+        timezone:       d.timezone || tz,
+        today_key:      d.today_key || streakDayKey(new Date(), tz),
+      };
+      publish(userId, result);
+      return result;
+    }
+    if (res && res.error && !isMissingFunction(res.error)) {
+      // The RPC exists and genuinely failed. Do NOT fall through to the browser
+      // path: after the migration the columns are revoked, so it would only
+      // produce a second failure and a misleading 0. Report the stored row.
+      console.warn('[streak] recompute_streak failed:', res.error.message);
+      return await storedFallback(sb, userId, tz);
+    }
+  } catch (e) {
+    console.warn('[streak] recompute_streak unavailable:', (e && e.message) || e);
+  }
+  return legacyUpdateStreak(sb, userId, opts);
+};
+
+/* PostgREST reports an absent function as PGRST202 / 404. Anything else is a
+ * real failure and must not be mistaken for "not migrated yet". */
+function isMissingFunction(err) {
+  if (!err) return false;
+  if (err.code === 'PGRST202' || err.code === '404') return true;
+  return /could not find the function|does not exist|schema cache/i.test(err.message || '');
+}
+
+/* What to render when the recompute could not run: the row as it stands,
+ * flagged so callers fall back rather than trust it. Never 0 — that would look
+ * like a reset the student did not earn. */
+async function storedFallback(sb, userId, tz) {
+  try {
+    const { data } = await sb.from('profiles')
+      .select('current_streak,best_streak,last_active_date').eq('id', userId).maybeSingle();
+    return {
+      current_streak: (data && data.current_streak) || 0,
+      best_streak:    (data && data.best_streak) || 0,
+      active_days:    [],
+      timezone:       tz,
+      today_key:      streakDayKey(new Date(), tz),
+      skipped:        true,
+    };
+  } catch (e) {
+    return { current_streak: 0, best_streak: 0, active_days: [], skipped: true };
+  }
+}
+
+/* ── Pre-migration path: the in-browser recompute ───────────────────────────
+ * Everything below runs only while recompute_streak() is absent. */
+async function legacyUpdateStreak(sb, userId, opts) {
   try {
     const tz = STREAK_DAY.resolveTimeZone(opts && opts.timezone);
     const today = new Date();
