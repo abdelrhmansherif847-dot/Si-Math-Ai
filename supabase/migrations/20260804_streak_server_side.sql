@@ -1,4 +1,5 @@
--- PREPARED — NOT APPLIED. Needs explicit approval before apply_migration.
+-- APPLIED 2026-08-04. See also 20260804_streak_server_side_revoke_anon.sql, a
+-- follow-up this migration's verification checklist made necessary.
 --
 -- Move the streak computation from the browser into Postgres, and make the day
 -- boundary a property of the STUDENT rather than of the device in their hand.
