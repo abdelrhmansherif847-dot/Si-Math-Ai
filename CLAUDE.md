@@ -132,22 +132,22 @@ student impact during exam-prep windows.
 | | |
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
-| Edge Functions | `ai-tutor` (platform version **136**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v98'` — **DEPLOYED.** Production runs v98 at platform version 136 (deployed 2026-08-03T19:38:52Z), and the deployed bundle is byte-for-byte identical to `main` across all four files. v97 (L3 Shadow routing gate) and v98 (conversational-turn demotion) shipped together as ONE deploy, so only `v98` appears on the wire |
+| Edge Functions | `ai-tutor` (platform version **137**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v99'` — **DEPLOYED.** Production runs v99 at platform version 137 (deployed 2026-08-05T11:12:08Z), and the deployed bundle is byte-for-byte identical to `main` across all four files (265,058 / 9,385 / 59,591 / 30,314 bytes). v99 restores Zero's identity answers: `isIdentityQuestion()` exempts them inside `resolveScope`, so the scope guard can no longer replace them with the off-domain redirect. Confirmed live by a real student turn — "مين صنعك" at 11:14:43 returned the configured identity, not the redirect |
 | `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
 | `subscriptions.plan_type` | A legacy CATEGORY column, not a plan code, and read by nothing — `plan_code` on the same row is authoritative. `subscriptions_plan_type_check` permits six values only, so every writer maps through `legacy_plan_type()` (`20260802184704`). Never write a raw `plan_code` into it |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
-| `ai-tutor` deployed bundle | `ezbr_sha256` `2ebb41bc5924abcc83b49b9721c10bb15432ac685d3384343d98f7bf0629498a`, deployed 2026-08-03T19:38:52Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}` — verified present and byte-identical to `main`. **Re-read this row from `list_edge_functions` rather than trusting it.** It has now been found stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), and on 2026-08-03 it overstated the gap (it said v97/v98 were unshipped for the ~30 minutes between the deploy and this correction) |
+| `ai-tutor` deployed bundle | `ezbr_sha256` `e1527283c1069dc5b06fe8a0c153e301b1dfdae8ede47d9fcb064277b39e4eec`, deployed 2026-08-05T11:12:08Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}` — verified present and byte-identical to `main`. **Re-read this row from `list_edge_functions` rather than trusting it.** It has now been found stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), and on 2026-08-03 it overstated the gap (it said v97/v98 were unshipped for the ~30 minutes between the deploy and this correction) |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **75 files** in `supabase/migrations/`, **139 applied** in the database |
+| Migrations | **78 files** in `supabase/migrations/`, **141 applied** in the database (streak server-side + anon revoke applied 2026-08-04) |
 | Static site | 46 root `*.html` pages on Vercel |
-| CI | `node tests/run-all.mjs` — 21 test suites + 7 validators = **28 checks** |
+| CI | `node tests/run-all.mjs` — **31 checks** |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
