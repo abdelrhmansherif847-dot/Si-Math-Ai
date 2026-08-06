@@ -233,6 +233,81 @@ strings in `$…$`, no longer branches on `indexOf('$')`, and delegates to
 that reintroduces a second maths handler fails CI instead of waiting for a
 student to report red LaTeX in a third component.
 
+## Closing the class: every model string in chat.html (2026-08-06, final)
+
+An inventory of the whole repository asked one question — *where does
+model-generated text reach the DOM?* — and found the shared renderer was
+already the only maths **engine** (no page carries a delimiter table, no
+markdown library exists anywhere, only `chat.html` and `ai-monitor.html` load
+KaTeX and both load the shared module). What remained was subtler: model
+free-text rendered with `escapeHtml()` alone, which then got picked up by KaTeX
+*implicitly* because those spans sit inside the element passed to
+`renderMathInEl(el)`.
+
+None was reported broken. They worked by accident, carrying exactly the exposure
+that produced red LaTeX in Rules Used. Nine call sites were migrated to
+`renderInline`:
+
+| Surface | Was |
+| --- | --- |
+| Hint — "Old Dragon Advice" | `escapeHtml(hint)` |
+| Concept tags (from the response) | `escapeHtml(String(c))` |
+| Topic / subtopic / difficulty | `escapeHtml(topic)` … |
+| Detected-questions label + summary | `escapeHtml(lbl)` … |
+| Detected-questions reference labels | `escapeHtml(String(firstRef))` … |
+
+### One of them was genuinely broken
+
+`renderDetectedQuestions()` built its element and appended it **without ever
+calling `renderMathInEl`**. Maths in a worksheet's question index never rendered
+anywhere — it showed as literal `\( … \)`, unreported. Routing the labels
+through `renderInline` would have fixed nothing on its own: `renderInline` emits
+delimiters *for KaTeX to pick up*, and nothing was picking them up. The KaTeX
+call was added to complete the pipeline.
+
+### What was deliberately NOT migrated
+
+Scope runs in both directions, and "migrate everything" would have been wrong:
+
+- **HTML attribute values keep `escapeHtml`.** `renderInline` emits tags
+  (`<strong>`, `<span class="no-katex">`); inside `data-topic="…"` that corrupts
+  the markup and can break out of the quoting. **Element content takes
+  `renderInline`; attribute values take `escapeHtml`.** A test asserts no
+  `renderInline` ever appears in an attribute position.
+- **Deterministic UI**, because it is not model output: the Study Planner card
+  (the planner makes *zero* model calls — labels come from taxonomy and template
+  strings), SignalEngine's concept tags (a static keyword table), taxonomy
+  labels, `weakness.html`'s "AI recommendation" (a template string).
+- **The student's own message text**, which must stay escaped — rendering user
+  input as markdown and maths is a different decision entirely.
+- **Session titles**, per instruction. They are model-derived but sanitised
+  server-side (`deriveTitle` strips `*_\`$`) and render on pages that load no
+  KaTeX, so the worst case is a literal `\( x \)` in a title. Cosmetic, and
+  fixing it properly means an Edge Function deploy.
+- **Error strings and refusal codes** (`showError(msg)`, `cr.reason`) — machine
+  tokens, not model prose.
+
+### The resulting invariant
+
+```
+AI ──▶ renderInline / renderMarkdown ──▶ KaTeX ──▶ DOM
+```
+
+with no other route for model-generated text. `tests/model-text-rendering.test.mjs`
+(29 checks) pins both halves: every model surface delegates, and the
+deterministic surfaces do **not** — so an over-eager future migration fails too.
+
+Written test-first: 18 failures before the change, 29/29 after; CI 35/35, and the
+production suite still 46/46 with the main-answer differential unchanged at
+22/22 byte-identical.
+
+Two of those failures were **test** bugs caught while writing, both worth
+recording because each would have made a security check vacuous: the card's own
+avatar is an `<img>`, so a bare `/<img/` check can never pass; and once a payload
+is correctly escaped its text still contains the substring `onerror=`, inert,
+inside `&lt;…&gt;`. The assertion now tests for a live tag rather than a
+substring.
+
 ## Accepted trade-offs
 
 - **Inline math may no longer span a newline** (`\(…\)`, `$…$`). Display math
