@@ -117,6 +117,43 @@ Section G is a **property sweep**: 4,000 generated delimiter-soup documents
 placeholder. Run against the pre-fix renderer it reports **27 leaks in 4,000** —
 the intermittency, measured.
 
+## Production verification (real KaTeX)
+
+Run against the **shipped `chat-renderer.js` served over HTTP** and driven in
+Chromium with the real KaTeX 0.16.11 bundle — the same bytes production loads,
+confirmed by SHA-384 against all three SRI hashes pinned in `chat.html`
+(`katex.min.js`, `auto-render.min.js`, `katex.min.css` all match). **46/46.**
+
+- All four delimiter styles typeset, plus a multi-line `aligned` block.
+- Mixed `\(` + `$$` + `$` in one answer: three expressions, no error, bold intact.
+- Currency renders as text and is never typeset; the bold between two prices
+  renders.
+- Headings, bold, italic, code, both list kinds and fenced code present in the
+  DOM; fenced code is not typeset.
+- XSS: no `<img>` or `<script>` injected by any delimiter form, and no payload
+  executed.
+- The `ai-monitor.html` path renders identically — it loads the same module.
+- A differential against the pre-fix renderer: **22/22 already-correct
+  constructs byte-identical**, including tables and links, which this renderer
+  has never supported and which must stay literal rather than silently change.
+
+### One finding the harness could not have produced
+
+Two inputs still render red, and **correctly so**. `$$` cannot open display math
+inside `\(` or `\[` — `\( the term $$a+b$$ matters \)` is invalid LaTeX, and
+KaTeX is right to reject it. The renderer's job is not to make invalid LaTeX
+valid; it is to hand KaTeX exactly what the author wrote, which it now does.
+
+The verification asserts the stronger property instead of "no errors": the red
+carries the **author's** source byte for byte. Before the fix the same input put
+` the term ␁M0␁ matters ` inside the red — our placeholder. So:
+
+> **The red caused by our corruption is gone. Red caused by the model writing
+> invalid LaTeX remains, and should.** If it shows up in production, the remedy
+> is the system prompt — `ai-tutor/index.ts:3804` asks for `$`/`$$` while the
+> model also emits `\(`/`\[`, and mixing them is what produces `$$` nested inside
+> `\(` in the first place. That is a prompt change, not a renderer change.
+
 ## Accepted trade-offs
 
 - **Inline math may no longer span a newline** (`\(…\)`, `$…$`). Display math
@@ -124,10 +161,11 @@ the intermittency, measured.
   inline formula broken across lines now renders as source.
 - **A closing `$` glued to an alphanumeric is read as currency.** `$x$s` would
   render as text. Real notation does not do this; prices always do.
-- **KaTeX itself was not executed here.** This container cannot reach the CDN
-  (`status=000`), so the KaTeX-facing assertions model auto-render's scan rather
-  than running it. What is verified is that the renderer hands KaTeX exactly the
-  expressions the author wrote, and nothing else.
+- **The committed suite models auto-render rather than running it**, since CI has
+  no browser and this repo has no install step. Real KaTeX was executed
+  separately, in the production verification above — the CDN is unreachable from
+  the container, but `registry.npmjs.org` is not, so the exact pinned bundle was
+  fetched from npm and checked against the SRI hashes before use.
 - **Math inside fenced code blocks** is still stored as math before the code
   pass. Harmless: auto-render's default `ignoredTags` already covers `pre` and
   `code`, and only `ignoredClasses` was added.
