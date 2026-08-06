@@ -334,5 +334,17 @@ t.section('Wiring and accessibility');
   t.ok('the attachment hint is announced to screen readers',
     /id="ipHint"[^>]*aria-live="polite"/.test(SRC));
 }
+{
+  // The published FAQ answer is platform-neutral — Ctrl+V, Cmd+V, or long-press
+  // Paste on a phone or tablet. That is only honest while the handler stays
+  // keyed to the `paste` EVENT rather than to a keystroke or a platform: a
+  // mobile long-press Paste fires the same event with no keyboard involved,
+  // which is exactly how every case in this suite drives it. A future edit that
+  // gated on ctrlKey or sniffed the platform would quietly make the answer
+  // Windows-only, so it fails here instead.
+  const handler = slice(SRC, "input.addEventListener('paste'", '// Confidence selector', 'paste handler');
+  t.ok('the handler assumes no platform and no keyboard — mobile paste is the same event',
+    !/userAgent|navigator\.platform|ctrlKey|metaKey|keyCode|\bisMac\b|\bisWindows\b/i.test(handler));
+}
 
 t.done();

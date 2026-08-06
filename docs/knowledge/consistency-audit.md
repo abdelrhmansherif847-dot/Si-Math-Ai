@@ -1136,6 +1136,34 @@ must use **Copy Image**. This was measured in Chromium, not assumed
 among the most valuable statements on the site, and it is the one case here that
 looks broken and is not.
 
+### Platform neutrality
+
+The first wording was desktop-shaped — it led with "Ctrl + V (Cmd + V on a Mac)"
+and offered the Windows Snipping Tool as *the* example, which reads as
+Windows-only. That is off-key for a platform whose own FAQ says the interface is
+"built for the mid-range phones most students actually use": the core audience
+would have read an answer that appeared not to be about them.
+
+Rewritten to lead with the action rather than the keystroke — paste it "however
+your device pastes anything else" — with the Snipping Tool demoted to one
+example among many.
+
+**What it deliberately does not claim.** Whether a mobile browser offers an
+*image* paste into a plain `<textarea>` is the browser's behaviour, not the
+platform's, and it varies. The answer therefore never asserts that pasting works
+on every device; it says how you paste where you can, and points to the camera
+and gallery buttons as the route that works in every browser. Under governance §3
+an unverifiable "works on all mobile" would have been a feature-that-does-not-
+exist claim.
+
+**What is verified** is that nothing in the product makes it desktop-only. The
+handler is keyed to the `paste` *event*, never to a keystroke or a platform —
+pinned by a check in `tests/clipboard-paste.test.mjs` and confirmed against a
+planted `navigator.userAgent` sniff that leaves behaviour intact. Real iOS and
+Android clipboards were **not** tested; emulating a phone in desktop Chromium
+would exercise desktop Chromium's clipboard in a phone-shaped window, which is
+the vacuous kind of green check `verification-framework-audit.md` forbids.
+
 ### Enforcement (Gate 4)
 
 Three checks added to `scripts/validate-knowledge-layer.mjs`, guarded on the FAQ
