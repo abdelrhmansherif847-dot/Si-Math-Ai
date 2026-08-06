@@ -95,6 +95,53 @@ skipped silently, and a skipped check is not evidence. The committed suite
 covers the same logic against the same bytes; the browser run covers the
 platform APIs the suite has to fake, and is re-runnable on demand.
 
+## Scenario verification (2026-08-06)
+
+Two real-world capture routes were verified before merge. The native menus
+cannot be driven from Linux/headless, so what was driven is the thing that
+decides the outcome: the **clipboard payload each tool produces**, replayed
+through a real Chromium clipboard, a real `Control+V`, and the real handler.
+24/24 checks passed. The payload shapes were **measured, not assumed**.
+
+| Route | Measured `clipboardData.types` | Result |
+|---|---|---|
+| Snipping Tool / Win+Shift+S | `["Files"]` — one synthesized `image.png`, no text | Attaches; `preventDefault()`; nothing typed |
+| Chrome → Copy Image | `["text/html","Files"]` — bitmap **plus** the original `<img src>` | Attaches; `preventDefault()`; **URL not typed** |
+| Selecting an image → Ctrl+C | `["text/plain","text/html"]` — **no file at all** | Handler stands down; alt text pastes normally |
+
+All three downscale branches were exercised on real captures: 2560×1440 →
+1600×900 (width branch), 900×2400 → 600×1600 (height branch, which the wide
+case never reaches), and 420×300 unchanged. A 4K snip is nowhere near the 20 MB
+refusal and compresses on the way in.
+
+**The convergence check is the one that answers "same pipeline, no special
+cases".** The same source bytes were pushed through all three routes — a
+Snipping-Tool-shaped clipboard, a Copy-Image-shaped clipboard, and the file
+picker — and produced **byte-identical** attachments. A static check backs it
+up: the handler branches on nothing but the `image/` MIME prefix (no filename
+sniffing, no `userAgent`, no platform test).
+
+Two findings worth carrying forward:
+
+1. **Selection-copy is not an image-paste route.** Selecting a picture on a page
+   and pressing Ctrl+C gives Chromium no file — only the alt text and an HTML
+   fragment. The student must use right-click → **Copy Image**. Nothing is
+   broken by this (the alt text pastes as it always did), but it is the one
+   place where a student may expect an attachment and not get one.
+2. **The source URL stays out of the message because Chromium leaves
+   `text/plain` empty on Copy Image** — measured, not assumed. Should a browser
+   ever mirror the URL into `text/plain`, "preserve both" would type that URL
+   into the composer alongside the image. That was tested explicitly; the
+   outcome is visible and deletable rather than silent, and no measured browser
+   does it. Left unhardened on purpose: special-casing it would mean guessing
+   which text a student meant to keep, and the case that genuinely happens —
+   copying text *and* a figure out of a PDF — needs the text kept.
+
+Canvas taint was checked too: the clipboard hands over a `File` with no origin
+and the pipeline routes it `File → FileReader → data: URL → img`, so
+`toDataURL()` cannot throw. This matters because a throw there would skip both
+the push and `settle()`, hanging the decoding hint.
+
 ## Two things this did NOT do
 
 1. **Drag & drop was requested as "must not regress" — it does not exist.**

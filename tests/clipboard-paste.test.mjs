@@ -94,17 +94,18 @@ const file = (type, over = {}) => ({
   type, name: `clip-${++seq}`, size: 120000, dataUrl: `data:${type};base64,AAAA`, ...over,
 });
 
-// A paste event carrying `files`, `items`, or both, plus an optional text
-// flavour — the shapes a real clipboard produces.
-function paste({ files = [], text = '', itemsOnly = false } = {}) {
+// A paste event carrying `files`, `items`, or both, plus optional text and HTML
+// flavours — the shapes a real clipboard produces.
+function paste({ files = [], text = '', html = '', itemsOnly = false } = {}) {
   return {
     prevented: false,
     preventDefault() { this.prevented = true; },
     clipboardData: {
       files: itemsOnly ? [] : files,
       items: files.map(f => ({ kind: 'file', type: f.type, getAsFile: () => f }))
-        .concat(text ? [{ kind: 'string', type: 'text/plain' }] : []),
-      getData: (type) => (type === 'text/plain' ? text : ''),
+        .concat(text ? [{ kind: 'string', type: 'text/plain' }] : [])
+        .concat(html ? [{ kind: 'string', type: 'text/html' }] : []),
+      getData: (type) => (type === 'text/plain' ? text : type === 'text/html' ? html : ''),
     },
   };
 }
@@ -173,6 +174,47 @@ for (const type of ['image/png', 'image/jpeg', 'image/webp', 'image/gif']) {
   h.input.fire('paste', paste({ files: [file('image/png')], itemsOnly: true }));
   await settle();
   t.is('an image exposed only as a DataTransferItem still attaches', h.atts().length, 1);
+}
+
+t.section('The two clipboard shapes students actually produce');
+{
+  // Windows Snipping Tool / Win+Shift+S. The capture reaches the clipboard as a
+  // bitmap and nothing else; Chromium surfaces it as a single synthesized
+  // image/png File. Measured payload: types ["Files"], text/plain empty.
+  const h = harness();
+  const ev = paste({ files: [file('image/png', { name: 'image.png' })] });
+  h.input.fire('paste', ev);
+  await settle();
+  t.is('a screen snip attaches', h.atts().length, 1);
+  t.is('through the canvas pipeline, not raw', h.atts()[0].url, 'data:image/jpeg;base64,1600x800@0.85');
+  t.ok('and suppresses the default paste, since there is no text to keep', ev.prevented);
+}
+{
+  // Chrome right-click -> Copy Image. The decoded bitmap arrives as image/png
+  // ALONGSIDE a text/html fragment carrying the original <img src>. Measured
+  // payload: types ["text/html","Files"] — text/plain is absent, which is why
+  // the source URL never reaches the student's message box.
+  const h = harness();
+  const ev = paste({
+    files: [file('image/png', { name: 'q17.png' })],
+    html: '<img src="https://cdn.example.com/sat/q17.jpg">',
+  });
+  h.input.fire('paste', ev);
+  await settle();
+  t.is('a copied web image attaches', h.atts().length, 1);
+  t.is('through the same canvas pipeline', h.atts()[0].url, 'data:image/jpeg;base64,1600x800@0.85');
+  t.ok('an html-only text flavour does not count as text to preserve', ev.prevented);
+}
+{
+  // Selecting an image on a page and pressing Ctrl+C is NOT Copy Image: Chromium
+  // delivers text/plain (the alt text) and text/html with NO file at all. The
+  // handler must stay out of the way so the alt text pastes as it always did.
+  const h = harness();
+  const ev = paste({ text: 'diagram of a circle', html: '<img alt="diagram of a circle" src="blob:...">' });
+  h.input.fire('paste', ev);
+  await settle();
+  t.is('a selection copy of an image attaches nothing', h.atts().length, 0);
+  t.ok('and pastes its text normally', !ev.prevented);
 }
 
 t.section('Unsupported clipboard content is rejected cleanly');
