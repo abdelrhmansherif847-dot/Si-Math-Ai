@@ -271,6 +271,52 @@ t.section('F · Behaviour that was already correct is unchanged');
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+t.section('G2 · renderInline — the same math authority, without block wrappers');
+// Rules Used renders into inline <span>s in a flex column, so it cannot use
+// renderMarkdown's <div class="ai-md"><p> output. renderInline exists so that
+// consumer can reuse the SAME tokenizer instead of growing a second one — which
+// is exactly how normalizeRuleFormula came to double-wrap `\( p/q \)` as
+// `$\( p/q \)$` and hand KaTeX something it cannot parse.
+const inline = sandbox.window.renderInline;
+{
+  t.ok('renderInline is exported', typeof inline === 'function');
+}
+{
+  t.is('plain text passes through', inline('hello'), 'hello');
+  t.is('no block wrappers are emitted', /<div|<p[ >]/.test(inline('a\nb')), false);
+  t.is('bold still works', inline('**b**'), '<strong>b</strong>');
+  t.is('html is escaped', inline('<img src=x>'), '&lt;img src=x&gt;');
+}
+{
+  // The reported defect, at the renderer level.
+  t.is('already-delimited math is NOT re-wrapped', inline('\\( p/q \\)'), '\\( p/q \\)');
+  t.is('…not even when asked to treat a bare string as math',
+    inline('\\( p/q \\)', { mathIfBare: true }), '\\( p/q \\)');
+  t.is('…and the same for \\[…\\]',
+    inline('\\[ x^2 \\]', { mathIfBare: true }), '\\[ x^2 \\]');
+  t.is('…and for $…$', inline('$p/q$', { mathIfBare: true }), '$p/q$');
+}
+{
+  // The behaviour that must be preserved: a bare formula still becomes math.
+  t.is('a delimiter-free formula is treated as one expression',
+    inline('ax^2 + bx + c = 0', { mathIfBare: true }), '$ax^2 + bx + c = 0$');
+  t.is('without the flag it stays prose',
+    inline('ax^2 + bx + c = 0'), 'ax^2 + bx + c = 0');
+}
+{
+  // mathIfBare must not wrap a string that carries stray delimiters — wrapping
+  // "costs $5 and $2" would rebuild the very bug this replaces.
+  const out = inline('costs $5 and $2', { mathIfBare: true });
+  t.ok('a string with stray dollars is not wrapped as math', !/^\$/.test(out), out);
+  t.is('and its dollars are neutralised', katexMath(out), []);
+}
+{
+  t.is('inline mode leaks no placeholder', leaked(inline('\\( a $$b$$ c \\)')), []);
+  t.is('inline mode neutralises an unbalanced \\(', katexMath(inline('\\( a = 2 and more')), []);
+  t.ok('inline mode escapes XSS', !/<img/i.test(inline('$<img src=x onerror=1>$')));
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 t.section('G · Property sweep — the invariants hold for inputs nobody listed');
 // The cases above are the ones that were observed. This generates delimiter
 // soup instead, because the defect was a whole CLASS of input rather than a

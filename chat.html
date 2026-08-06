@@ -2153,7 +2153,11 @@ button{font-family:inherit;cursor:pointer}
       const ruleItems = rules.map(rl => {
         // Edge Function returns rules as plain strings; tolerate legacy {name, formula, description} objects
         const isStr   = typeof rl === 'string';
-        const name    = escapeHtml(isStr ? rl : (rl.name || rl.title || ''));
+        // Legacy plain-string rules ARE the rule text and routinely carry maths,
+        // so the name goes through the shared renderer too. Escaping alone left
+        // KaTeX to pair the delimiters on its own, which is the same exposure
+        // the main answer had — a price or a lone \( in a rule name was enough.
+        const name    = renderInline(isStr ? rl : (rl.name || rl.title || ''));
         const formula = (!isStr && rl.formula) ? '<span class="rule-formula">'+normalizeRuleFormula(rl.formula)+'</span>' : '';
         const desc    = (!isStr && (rl.desc || rl.description)) ? '<span class="rule-desc">'+normalizeRuleDesc(rl.desc || rl.description)+'</span>' : '';
         if (!name) return '';
@@ -3163,21 +3167,26 @@ button{font-family:inherit;cursor:pointer}
     s = s.replace(/\b(pi|theta|alpha|beta|gamma|delta|lambda|mu|sigma|phi|omega)\b/g, '\\$1');
     // <= >= != → LaTeX
     s = s.replace(/<=/g, '\\le').replace(/>=/g, '\\ge').replace(/!=/g, '\\neq');
-    // If the model already wrapped parts in $ delimiters, escape only what's
-    // outside and return — KaTeX will pick up the delimiters as-is.
-    if (s.indexOf('$') !== -1) return escapeHtml(s);
-    // Otherwise treat the whole formula as one math expression.
-    return '$' + escapeHtml(s) + '$';
+    // Everything above converts PLAIN TEXT into LaTeX. Deciding where the maths
+    // starts and ends is not this function's job and never was — that lives in
+    // chat-renderer.js, which is the single authority for it.
+    //
+    // This function used to make that call itself: no `$` in the string meant
+    // "bare formula", so it wrapped the lot in `$…$`. A model formula of
+    // `\( p/q \)` contains no `$`, so it became `$\( p/q \)$` and KaTeX failed
+    // with "Can't use function '\(' in math mode", printing the source in red.
+    // mathIfBare asks the tokenizer what it actually found instead of guessing.
+    return renderInline(s, { mathIfBare: true });
   }
 
-  // Description text is mostly prose, so just escape — but if it contains
-  // obvious math fragments wrapped in $ delimiters, leave them for KaTeX.
+  // Description text is mostly prose that may carry inline maths. Same
+  // authority, without mathIfBare — a sentence is not one big expression.
   function normalizeRuleDesc(raw){
     if (raw == null) return '';
     let s = String(raw).trim();
     if (!s) return '';
     s = s.replace(/<=/g, '\\le').replace(/>=/g, '\\ge').replace(/!=/g, '\\neq');
-    return escapeHtml(s);
+    return renderInline(s);
   }
 
   // Markdown + KaTeX rendering moved to chat-renderer.js (loaded above as a

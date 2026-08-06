@@ -24,8 +24,26 @@
 (function () {
   'use strict';
 
-  function renderMarkdown(raw) {
-    if (!raw) return '';
+  function esc(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function inlineFmt(t) {
+    t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    return t;
+  }
+
+  // ── The single math authority ───────────────────────────────────────────
+  // Every consumer that renders model-generated maths goes through protect().
+  // It is deliberately the ONLY place in the codebase that decides where a
+  // formula starts and ends. A second opinion is not a style problem: chat.html
+  // once carried one (normalizeRuleFormula wrapped anything without a `$` in
+  // `$…$`, turning a model's `\( p/q \)` into `$\( p/q \)$`, which KaTeX cannot
+  // parse), and it produced the same class of bug in a different component
+  // months after the first was fixed.
+  function protect(raw) {
     // Step 1: Protect LaTeX BEFORE any escaping — store it as placeholders.
     // This prevents esc() from corrupting LaTeX that uses < > & characters,
     // and prevents inlineFmt from converting * inside math to <em>.
@@ -115,9 +133,22 @@
           : '<span class="no-katex">' + esc(strays[+n]) + '</span>';
       });
     }
-    function esc(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
+    // mathCount / strayCount let a caller ask what the tokenizer FOUND without
+    // re-deciding it themselves — which is what the Rules Used path needs in
+    // order to tell "a bare formula" from "a formula that already has
+    // delimiters", instead of guessing from the presence of a `$`.
+    return {
+      text: s,
+      mathCount: mathBlocks.length,
+      strayCount: strays.length,
+      restore: restoreMath
+    };
+  }
+
+  function renderMarkdown(raw) {
+    if (!raw) return '';
+    var P = protect(raw);
+    var s = P.text;
     // Step 2: Protect code blocks
     var codeBlocks = [];
     s = s.replace(/```[\w]*\n?([\s\S]*?)```/g, function (_, code) {
@@ -127,12 +158,6 @@
     var lines = s.split('\n');
     var out = [];
     var i = 0;
-    function inlineFmt(t) {
-      t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-      t = t.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-      t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-      return t;
-    }
     while (i < lines.length) {
       var line = lines[i];
       if (line.indexOf('\x00CODE') !== -1) {
@@ -170,7 +195,34 @@
     }
     // Step 3: Restore LaTeX blocks AFTER all HTML processing (they land as raw text in the DOM,
     // which KaTeX's renderMathInElement will then find and render as math).
-    return '<div class="ai-md">' + restoreMath(out.join('')) + '</div>';
+    return '<div class="ai-md">' + P.restore(out.join('')) + '</div>';
+  }
+
+  /**
+   * Inline sibling of renderMarkdown: identical maths handling, no block
+   * wrappers. Exists so components that render into an inline <span> — the
+   * Rules Used list is the one that needed it — can reuse this tokenizer
+   * instead of growing their own. renderMarkdown's <div class="ai-md"><p>
+   * output would break those layouts, and that mismatch is the whole reason a
+   * second, weaker maths handler was written in chat.html in the first place.
+   *
+   * opts.mathIfBare: treat the entire string as one expression when the
+   * tokenizer found NO maths and NO stray delimiter — the "the model returned
+   * `ax^2 + bx + c = 0` with no delimiters at all" case. The condition is the
+   * tokenizer's own finding rather than a guess about `$`, which is precisely
+   * where the old normalizeRuleFormula went wrong: `\( p/q \)` has no `$`, so
+   * it wrapped it into `$\( p/q \)$` and handed KaTeX something unparseable.
+   * Requiring strayCount === 0 too keeps it from wrapping "costs $5 and $2".
+   */
+  function renderInline(raw, opts) {
+    if (raw == null) return '';
+    var src = String(raw);
+    if (!src) return '';
+    var P = protect(src);
+    if (opts && opts.mathIfBare && P.mathCount === 0 && P.strayCount === 0) {
+      P = protect('$' + src + '$');
+    }
+    return P.restore(inlineFmt(esc(P.text)));
   }
 
   function renderMathInEl(el) {
@@ -206,6 +258,8 @@
   }
 
   window.renderMarkdown  = renderMarkdown;
+  window.renderInline    = renderInline;
   window.renderMathInEl  = renderMathInEl;
-  window.ChatRenderer    = { renderMarkdown: renderMarkdown, renderMathInEl: renderMathInEl };
+  window.ChatRenderer    = { renderMarkdown: renderMarkdown, renderInline: renderInline,
+                             renderMathInEl: renderMathInEl };
 })();

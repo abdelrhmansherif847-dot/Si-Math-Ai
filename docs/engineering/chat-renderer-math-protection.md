@@ -154,6 +154,85 @@ carries the **author's** source byte for byte. Before the fix the same input put
 > model also emits `\(`/`\[`, and mixing them is what produces `$$` nested inside
 > `\(` in the first place. That is a prompt change, not a renderer change.
 
+## The same class again: "Rules Used" (2026-08-06, later)
+
+The main answer was fixed and students still saw `\( p/q \)` as literal red text
+— in the Rules Used list. Same class of defect, second location, and the reason
+is the one that matters: **two pieces of code were deciding what counts as
+maths.**
+
+`chat.html`'s `normalizeRuleFormula()` carried its own rule:
+
+```js
+if (s.indexOf('$') !== -1) return escapeHtml(s);   // has $  -> leave alone
+return '$' + escapeHtml(s) + '$';                  // no $   -> wrap the lot
+```
+
+It guarded for `$` and never for `\(` or `\[`. A model formula of `\( p/q \)`
+contains no `$`, so it became **`$\( p/q \)$`** — KaTeX matched the outer `$…$`
+and failed on the inner delimiter with *"Can't use function `\(` in math
+mode"*, printing the source in red under `throwOnError:false`.
+
+Note what this was **not**: the Rules block is inside the same element as the
+answer, and `renderMathInEl(el)` does reach it. Nothing skipped KaTeX. The
+string was corrupted *before* KaTeX ever saw it.
+
+### The fix: delete the second opinion, don't teach it
+
+Teaching `normalizeRuleFormula` about `\(` and `\[` would have worked until the
+next delimiter or the next component. Instead the duplicated maths logic is
+gone, and the rules path calls the shared renderer.
+
+The obstacle was real: Rules Used renders into inline `<span>`s in a flex
+column, and `renderMarkdown` emits `<div class="ai-md"><p dir="auto">`, which
+would break that layout. **That mismatch is why a second handler was written in
+the first place.** So the shared module grew an inline sibling:
+
+- `protect(raw)` — the tokenizer, extracted, now used by both entry points and
+  the only code in the repository that decides where a formula begins and ends.
+  It reports `mathCount` and `strayCount` so a caller can ask what was *found*
+  rather than guess.
+- `renderInline(raw, opts)` — identical maths handling, no block wrappers.
+  `opts.mathIfBare` treats the whole string as one expression **only when the
+  tokenizer found no maths and no stray delimiter**. That preserves the useful
+  half of the old behaviour (a bare `ax^2 + bx + c = 0` still renders as maths)
+  while making the broken half unrepresentable: `\( p/q \)` has maths, so it is
+  never re-wrapped, and `costs $5 and $2` has strays, so it is never wrapped
+  either.
+
+`chat.html` keeps only its plain-text→LaTeX conversions (`sqrt()`, `cbrt()`,
+greek words, `<=`/`>=`/`!=`). Those turn non-LaTeX into LaTeX; they are not a
+second opinion about delimiters and are duplicated nowhere.
+
+All three fields — name, formula, description — now go through it. Description
+and name previously relied on bare escaping plus KaTeX auto-render, which left
+them carrying the *same* latent exposure: `tests/rules-rendering.test.mjs`
+showed a price in a description being mis-paired as maths, and an unbalanced
+`\(` swallowing the real expression after it. Both were fixed by the same move.
+
+### Verified
+
+Written test-first, red first: `renderInline` absent, and 10 failures in the
+rules suite including the currency and unbalanced-opener cases. After: **69/69**
+in `chat-renderer.test.mjs`, **27/27** in `rules-rendering.test.mjs`.
+
+With real KaTeX, every formula shape the model produces now renders with **zero
+errors** — `\( p/q \)`, `\( ax^2+bx+c=0 \)`, `\[ … \]`, bare `ax^2+bx+c=0`,
+`$…$`, and legacy plain-string rules. The pre-fix run of the same trace produced
+`ParseError` on the `\(` shapes.
+
+The refactor is output-neutral for the main answer: the production
+differential against the pre-refactor renderer still reports **22/22
+byte-identical**, and the full production suite is still 46/46.
+
+### The guard that makes it stick
+
+`rules-rendering.test.mjs` asserts structurally that `chat.html` no longer wraps
+strings in `$…$`, no longer branches on `indexOf('$')`, and delegates to
+`renderInline` — and that no page carries its own delimiter table. A future edit
+that reintroduces a second maths handler fails CI instead of waiting for a
+student to report red LaTeX in a third component.
+
 ## Accepted trade-offs
 
 - **Inline math may no longer span a newline** (`\(…\)`, `$…$`). Display math
