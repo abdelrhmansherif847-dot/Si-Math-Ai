@@ -1,5 +1,26 @@
 # Response finalization — architectural audit
 
+> ## ⚠️ Read before acting on anything in this document
+>
+> 1. **This is an architectural FINDING, not an approved implementation.**
+>    Nothing here has been agreed as a design. The `finalizeResponse()` shape
+>    described below is the conclusion the audit pointed to — it is not a
+>    specification and has not been reviewed as one.
+> 2. **No code changes have been made.** `ai-tutor/index.ts` is untouched. No
+>    Edge Function change is prepared, no migration is written, no deploy has
+>    been made. Every line number here describes the code *as it stands*.
+> 3. **The proposed Response Finalization Pipeline MUST be re-evaluated during
+>    the Truth Engine redesign before any implementation.** The redesign may
+>    change the exits, the invariants, or the response contract itself — which
+>    could make this proposal wrong, not merely incomplete. Re-derive it against
+>    the new architecture; do not lift it from here and build it.
+>
+> **This document is a REQUIRED INPUT to the Truth Engine architecture phase.**
+> The finding cost a full audit to establish and must not be rediscovered from
+> scratch. Read it before designing the response contract — including the parts
+> that record what was checked and found *not* to be a problem, which are as
+> load-bearing as the defects.
+
 **Date:** 2026-08-06 · **Status:** `DEFERRED` — finding accepted, refactor
 deliberately not now. Owner decision, recorded below.
 
