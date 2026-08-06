@@ -733,7 +733,7 @@ button{font-family:inherit;cursor:pointer}
       <div class="img-preview multi" id="imgPreview" style="display:none">
         <div class="ip-strip" id="ipStrip"></div>
         <div class="ip-foot">
-          <span class="ip-hint" id="ipHint">Attached — ready to solve</span>
+          <span class="ip-hint" id="ipHint" role="status" aria-live="polite">Attached — ready to solve</span>
           <button class="ip-remove" id="removeImg" aria-label="Remove all attachments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
       </div>
@@ -1418,16 +1418,23 @@ button{font-family:inherit;cursor:pointer}
   // pendingAtts holds {url, name, pdf} entries; images and one optional PDF.
   const MAX_ATTACHMENTS=10;
   let pendingAtts=[];
+  // Images from a paste that are still decoding. Ctrl+V has no file dialog to
+  // acknowledge that the clipboard was read, so the strip stays up with a
+  // decoding hint until they land; without it a pasted screenshot looks like
+  // nothing happened until the thumbnail appears.
+  let pastePending=0;
   // Render the attachment strip from pendingAtts; hides the bar when empty.
   function renderAttachments(){
-    if(!pendingAtts.length){ imgPreview.style.display='none'; ipStrip.innerHTML=''; return; }
+    if(!pendingAtts.length && !pastePending){ imgPreview.style.display='none'; ipStrip.innerHTML=''; return; }
     ipStrip.innerHTML = pendingAtts.map(function(a,i){
       return a.pdf
         ? '<div class="ip-thumb pdf">PDF<button class="ip-x" data-i="'+i+'" aria-label="Remove">&times;</button></div>'
         : '<div class="ip-thumb"><img src="'+a.url+'" alt="attachment"/><button class="ip-x" data-i="'+i+'" aria-label="Remove">&times;</button></div>';
     }).join('');
     var n=pendingAtts.length;
-    ipHint.textContent = n===1 ? 'Attached — ready to solve' : n+' attached — ready to solve';
+    ipHint.textContent = pastePending
+      ? (pastePending===1 ? 'Pasting image…' : 'Pasting '+pastePending+' images…')
+      : (n===1 ? 'Attached — ready to solve' : n+' attached — ready to solve');
     imgPreview.style.display='flex';
   }
   ipStrip.addEventListener('click',function(e){
@@ -1860,35 +1867,48 @@ button{font-family:inherit;cursor:pointer}
     qGallery.click();
   });
 
-  // Shared image processing — used by both camera and gallery inputs.
-  // Appends to pendingAtts (multi-image, Issue #2) instead of replacing.
-  function processImageFile(f, inputEl) {
-    if (!f) return;
+  // Shared image processing — used by the camera and gallery inputs and by
+  // clipboard paste. Appends to pendingAtts (multi-image, Issue #2) instead of
+  // replacing.
+  //
+  // onSettled is optional and fires exactly once per call, on EVERY exit path
+  // including the rejections, so a caller can track how many files are still in
+  // flight. The paste handler counts on that: a rejected file that never
+  // settled would leave its "Pasting image…" hint on screen permanently.
+  function processImageFile(f, inputEl, onSettled) {
+    let settled = false;
+    const settle = () => { if (!settled) { settled = true; if (onSettled) onSettled(); } };
+    if (!f) { settle(); return; }
     if (pendingAtts.length >= MAX_ATTACHMENTS) {
       alert('You can attach up to ' + MAX_ATTACHMENTS + ' images per message.');
       if (inputEl) inputEl.value = '';
+      settle();
       return;
     }
     if (f.size > 20 * 1024 * 1024) {
       alert('Image is too large (max 20MB). Please choose a smaller file.');
       if (inputEl) inputEl.value = '';
+      settle();
       return;
     }
     const allowed = ['image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif'];
     if (!allowed.includes(f.type) && !f.type.startsWith('image/')) {
       alert('Unsupported file type. Please upload a JPEG, PNG, WebP, or HEIC image.');
       if (inputEl) inputEl.value = '';
+      settle();
       return;
     }
     const reader = new FileReader();
     reader.onerror = () => {
       alert('Could not read the image file. Please try again.');
       if (inputEl) inputEl.value = '';
+      settle();
     };
     reader.onload = (e) => {
       const img = new Image();
       img.onerror = () => {
         pendingAtts.push({ url: e.target.result, name: f.name, pdf: false });
+        settle();
         renderAttachments();
       };
       img.onload = () => {
@@ -1903,6 +1923,7 @@ button{font-family:inherit;cursor:pointer}
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         pendingAtts.push({ url: canvas.toDataURL('image/jpeg', 0.85), name: f.name, pdf: false });
+        settle();
         renderAttachments();
       };
       img.src = e.target.result;
@@ -1919,6 +1940,67 @@ button{font-family:inherit;cursor:pointer}
   qImage.addEventListener('change', () => processSelection(qImage));
   qGallery.addEventListener('change', () => processSelection(qGallery));
   removeImg.addEventListener('click', () => { qImage.value=''; qGallery.value=''; pendingAtts=[]; renderAttachments(); });
+
+  // ── Clipboard paste ────────────────────────────────────────────────────────
+  // Ctrl+V in the composer attaches whatever image is on the clipboard: a
+  // screenshot (Win+Shift+S, Snipping Tool, macOS capture), "Copy image" from a
+  // browser or a PDF viewer, or an image file copied in the file manager. The
+  // student's real path is screenshot → Ctrl+V → Enter, with no save-and-browse
+  // round trip in between.
+  //
+  // This is deliberately NOT a second upload path. The clipboard hands us real
+  // File objects, so they go through processImageFile() exactly as a picked file
+  // does — same size cap, same MIME allowlist, same canvas downscale, same
+  // pendingAtts entry — and by the time send() runs, nothing downstream (the
+  // payload, OCR, the AI call) can tell a pasted image from an uploaded one.
+  //
+  // Text and images coexist on the clipboard: copying a region of a PDF or a
+  // Word document yields both. Both are kept. The images attach, and the default
+  // paste is left alone so the text lands in the textarea as it always has.
+  // preventDefault() fires ONLY when the clipboard carries no text to insert, so
+  // an ordinary text paste never touches a line of this handler's logic.
+  input.addEventListener('paste', function(e){
+    var dt = e.clipboardData;
+    if (!dt) return;
+    // files is the reliable source; items is the fallback for browsers that
+    // expose a clipboard image only as a DataTransferItem.
+    var files = (dt.files && dt.files.length)
+      ? Array.from(dt.files)
+      : Array.from(dt.items || [])
+          .filter(function(it){ return it.kind === 'file'; })
+          .map(function(it){ return it.getAsFile(); });
+    var imgs = files.filter(function(f){ return f && f.type && f.type.indexOf('image/') === 0; });
+    // No image on the clipboard — plain text, HTML, a PDF, anything else. Leave
+    // the event entirely alone: the browser pastes exactly as it did before.
+    // That silent hand-back IS the clean rejection; an alert here would fire on
+    // every ordinary Ctrl+V of text.
+    if (!imgs.length) return;
+
+    if (!dt.getData || !dt.getData('text/plain')) e.preventDefault();
+
+    // In-flight pastes count against the cap too, so two fast pastes cannot
+    // overshoot it between decodes.
+    var room = MAX_ATTACHMENTS - pendingAtts.length - pastePending;
+    if (room <= 0) {
+      alert('You can attach up to ' + MAX_ATTACHMENTS + ' images per message.');
+      return;
+    }
+    var take = imgs.slice(0, room);
+    // One message for the whole paste, rather than processImageFile's per-file
+    // alert: pasting a dozen images must not produce a dozen dialogs.
+    if (imgs.length > take.length) {
+      alert('Attached ' + take.length + ' of ' + imgs.length + ' pasted images — the limit is '
+        + MAX_ATTACHMENTS + ' per message.');
+    }
+    pastePending += take.length;
+    renderAttachments();
+    take.forEach(function(f){
+      processImageFile(f, null, function(){
+        pastePending = Math.max(0, pastePending - 1);
+        renderAttachments();
+      });
+    });
+  });
 
   // Confidence selector
   const confHints={1:'1/5 · Not confident',2:'2/5 · A little unsure',3:'3/5 · Somewhat confident',4:'4/5 · Fairly confident',5:'5/5 · Very confident'};
