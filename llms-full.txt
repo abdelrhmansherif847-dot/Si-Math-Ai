@@ -100,7 +100,7 @@ the answer is available rather than inferred.
 | Performance Analytics | Smart Progress Tracking |
 | Exam Readiness | Smart Progress Tracking — the predicted test-day score, an estimate rather than a guarantee |
 | Study History | Learning Memory |
-| Snap & Solve | Zero AI Mentor — photo input, a capability of the mentor rather than a separate system |
+| Snap & Solve | Zero AI Mentor — image input (a photo, or a screenshot pasted from the clipboard), a capability of the mentor rather than a separate system |
 | **Parent Progress Reports** | **Not available.** No parent login and no automated parent reports. Progress is reviewed inside the student's own account. |
 | **Truth System** | **Not a student-facing feature.** An internal engineering programme for verifying the platform's own claims. |
 
@@ -445,8 +445,9 @@ local incomes and concentrated in a few cities.
 
 The 24/7 tutoring layer. Step-by-step reasoning at the level of detail the
 student needs; multiple approaches to the same problem when the first
-explanation does not land; **Snap & Solve** photo input so a question can be
-photographed straight from a prep book rather than retyped; explanation in
+explanation does not land; **Snap & Solve** image input so a question can be
+photographed straight from a prep book, or pasted from the clipboard as a
+screenshot, rather than retyped; explanation in
 English, Arabic or Franco; and explanation of *why the wrong answer choices are
 wrong*, because distractors on standardised exams are engineered around specific
 misconceptions.

@@ -18,7 +18,7 @@ Last reviewed: 2026-08-01 · Taxonomy version: 1 · **Status: FROZEN — see §0
 ## 0. STATUS: the documentation is frozen (2026-08-01)
 
 **The knowledge layer is complete and closed to additions.** 22 public pages, a
-knowledge graph of 34 concepts, and a 3,107-check CI gate. Nothing further is to
+knowledge graph of 34 concepts, and a 3,110-check CI gate. Nothing further is to
 be written unless the product changes.
 
 From here the website evolves **because the platform evolves** — never the other
@@ -719,7 +719,7 @@ mapping is published so a retrieval system resolves them instead of inferring.
 | Performance Analytics | Smart Progress Tracking |
 | Exam Readiness | Smart Progress Tracking — the predicted score, an estimate |
 | Study History | Learning Memory |
-| Snap & Solve | Zero AI Mentor (photo input) |
+| Snap & Solve | Zero AI Mentor (image input: a photo, or a screenshot pasted from the clipboard) |
 
 ### Two things Si Math AI does not have — and must keep saying so
 

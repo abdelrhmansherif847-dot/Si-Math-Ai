@@ -2012,6 +2012,34 @@ for (const [label, text] of scanTargets) {
   }
 }
 
+/* ── A published feature must exist in the product ─────────────────────────
+   governance.md §3 refuses "features that do not exist" — publishing one
+   contradicts the Trust Center on the same site, which is worse than either
+   statement alone. The FAQ now tells students they can paste a screenshot into
+   the chat, so the shipped composer has to actually do it, and has to do it
+   through Snap & Solve's existing image pipeline — that second half is what
+   makes the FAQ's "pasting is a shortcut into Snap & Solve, not a separate
+   feature" sentence true rather than merely reassuring.
+
+   This is the documentation -> product direction, which nothing else here
+   checks; tests/clipboard-paste.test.mjs covers the behaviour itself. The guard
+   is deliberate: removing the claim removes the obligation, so the check goes
+   red exactly when the page and the product disagree. */
+const claimsPaste = /paste a screenshot|Ctrl \+ V/i.test(faqAnswerText);
+if (claimsPaste) {
+  const composer = read('chat.html');
+  ok('FAQ claims clipboard paste: the composer registers a paste handler',
+    /input\.addEventListener\('paste'/.test(composer),
+    'faq-data.mjs promises Ctrl+V but chat.html has no paste listener');
+  ok('FAQ claims clipboard paste: it reuses the Snap & Solve image pipeline',
+    /addEventListener\('paste'[\s\S]{0,2500}?processImageFile\(/.test(composer),
+    'the paste handler does not reach processImageFile — the FAQ calls it a shortcut, not a separate feature');
+  ok('FAQ claims clipboard paste: the graph records clipboard input on Snap & Solve',
+    ((CONCEPTS.find((c) => c.id === 'snap-and-solve') || {}).inputs || [])
+      .some((i) => /clipboard/i.test(i)),
+    'graph-data.mjs still describes Snap & Solve as photo-only');
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    8b. Respectful comparison
    The comparison with other tools must stay educational, never competitive.

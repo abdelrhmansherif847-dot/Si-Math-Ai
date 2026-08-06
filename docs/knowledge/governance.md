@@ -238,6 +238,11 @@ correct.
 
 ---
 
-**Baseline at freeze:** 22 public knowledge pages (31 indexable URLs) · 34 graph
-concepts · 116 typed edges · 3,107 CI checks · 31 findings recorded in
-`consistency-audit.md`, 28 resolved and 3 awaiting the owner.
+**Current baseline** (§9: the layer re-freezes at a new baseline each time the
+product moves it): 22 public knowledge pages (31 indexable URLs) · 34 graph
+concepts · 118 typed edges · 3,110 CI checks · 32 findings recorded in
+`consistency-audit.md`, 29 resolved and 3 awaiting the owner.
+
+Last moved by C-32 (clipboard paste shipped; Snap & Solve widened from photo
+input to image input). The edge count read 116 here until then — it had been
+stale since before the freeze, and no page count or concept count changed.

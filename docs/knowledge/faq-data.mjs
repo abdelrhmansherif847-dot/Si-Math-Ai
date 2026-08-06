@@ -190,6 +190,10 @@ export const CATEGORIES = [
         a: '<p>Yes. The feature is called Snap &amp; Solve. Photograph a question from a prep book, worksheet or whiteboard and Zero reads it and works from the image, so you do not have to retype mathematical notation.</p>',
       },
       {
+        q: 'Can I paste a screenshot into the chat instead of uploading a file?',
+        a: '<p>Yes. Copy an image to the clipboard and press Ctrl + V (Cmd + V on a Mac) inside the chat box. It attaches exactly as an uploaded photo does and is read the same way — pasting is a shortcut into Snap &amp; Solve, not a separate feature. A capture taken with the Windows Snipping Tool (Win + Shift + S) works, and so does right-clicking a picture in your browser and choosing <b>Copy Image</b>.</p><p>One piece of browser behaviour is worth knowing, because it is the one case that looks broken and is not. <b>Selecting</b> an image on a page and pressing Ctrl + C does not put the picture on your clipboard — browsers copy the surrounding text instead, so there is nothing for the chat to attach. Use <b>Copy Image</b> from the right-click menu when you want the picture itself.</p><p>Text and images travel together. Copying a passage from a PDF that contains both will paste the text into your message and attach the picture at the same time.</p>',
+      },
+      {
         q: 'Does Zero explain step by step?',
         a: '<p>Yes. Every solution is worked through in sequence at the level of detail the student needs, rather than a final answer with the reasoning collapsed. A correct answer you cannot reproduce is treated as a failure state, not a success.</p>',
       },

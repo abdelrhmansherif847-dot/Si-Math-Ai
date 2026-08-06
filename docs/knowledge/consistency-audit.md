@@ -1100,6 +1100,59 @@ the one the layer already publishes — that it has none.
 
 ---
 
+## C-32 · Snap & Solve published as photo-only after paste shipped — RESOLVED
+
+**Origin:** a feature shipped (governance §4.1), not a documentation idea. The
+chat composer gained clipboard image paste — Ctrl+V attaches a screenshot
+through the same pipeline a photographed question already used.
+
+**The finding.** Every published surface defined Snap & Solve by the *photograph*:
+the graph's `inputs` were `['A photograph of a mathematics question']`, and
+`llms.txt`, `llms-full.txt` and `knowledge-base.md` §7 all described it as "photo
+input". A screenshot is not a photograph, so an AI system asked *"can I paste a
+screenshot into Si Math AI?"* could reasonably answer **no** while `faq.html`
+said yes.
+
+That is the C-31 standard — a specific wrong inference, demonstrated rather than
+imagined — and it is the contradiction §14 warns is the worst outcome: when two
+surfaces disagree, the disagreement is what gets learned.
+
+**Resolved** by widening the capability from *photo input* to *image input* at
+its four descriptors (graph, `knowledge-base.md` §7, `llms.txt` ×2,
+`llms-full.txt` ×2), and adding one FAQ carrying the detail. The prep-book
+sentence in `llms-full.txt` still says "photographed" and was left alone — it is
+specifically about working from a physical book, where it remains exact.
+
+**No new page, no new graph concept, no ninth system.** Pasting is a route into
+an existing capability; adding an entity for it would have been the third
+definition of one thing that governance §6 Gate 2 exists to refuse.
+
+### The published boundary
+
+The FAQ states what does **not** work: *selecting* an image and pressing Ctrl+C
+copies the surrounding text, not the picture, so nothing attaches — the student
+must use **Copy Image**. This was measured in Chromium, not assumed
+(`docs/engineering/clipboard-image-paste.md`). Per §2 a published boundary is
+among the most valuable statements on the site, and it is the one case here that
+looks broken and is not.
+
+### Enforcement (Gate 4)
+
+Three checks added to `scripts/validate-knowledge-layer.mjs`, guarded on the FAQ
+actually making the claim — so removing the claim removes the obligation, and the
+checks go red exactly when page and product disagree:
+
+1. the composer registers a paste handler;
+2. that handler reaches `processImageFile`, which is what makes the FAQ's
+   "a shortcut into Snap & Solve, not a separate feature" true;
+3. the graph records a clipboard input on Snap & Solve.
+
+Each was verified against a planted violation — removing the listener fails 1
+and 2, swapping in a duplicate pipeline fails 2, reverting the graph fails 3.
+**3,107 → 3,110 checks.**
+
+---
+
 ## Summary
 
 | ID | Finding | Status |
@@ -1135,8 +1188,9 @@ the one the layer already publishes — that it has none.
 | C-29 | The site compared a teacher to software | RESOLVED — supersedes part of C-27 |
 | C-30 | Unresolved names; two features that do not exist | RESOLVED |
 | C-31 | Authority audit — four names, only two defined | RESOLVED — **layer at diminishing returns** |
+| C-32 | Snap & Solve published as photo-only after paste shipped | RESOLVED |
 
-Twenty-eight resolved, three requiring owner action, plus one figure the owner can
+Twenty-nine resolved, three requiring owner action, plus one figure the owner can
 supply whenever they have it (C-22). All are recorded in
 `seo-implementation.md` §6 as well, so they are not lost.
 

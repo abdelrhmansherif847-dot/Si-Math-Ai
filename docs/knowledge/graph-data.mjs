@@ -296,10 +296,13 @@ export const CONCEPTS = [
     name: 'Snap & Solve',
     kind: 'Capability',
     definition:
-      'Photo input: a student photographs a question from a prep book or worksheet and Zero reads and works from the image.',
+      'Image input: a student photographs a question from a prep book or worksheet, or pastes a screenshot from the clipboard, and Zero reads and works from the image.',
     purpose:
-      'To remove the transcription barrier. Retyping mathematical notation is slow and error-prone, and a student working through a physical prep book should not have to do it.',
-    inputs: ['A photograph of a mathematics question'],
+      'To remove the transcription barrier. Retyping mathematical notation is slow and error-prone, and a student working through a physical prep book — or reading a question on screen — should not have to do it.',
+    inputs: [
+      'A photograph of a mathematics question',
+      'An image pasted from the clipboard, such as a screenshot',
+    ],
     outputs: ['The question, read and worked by Zero'],
     related: [
       { predicate: 'partOf', target: 'zero' },
