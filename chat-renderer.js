@@ -12,23 +12,94 @@
  *   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
  *   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
  *
- * Behavior matches chat.html exactly — do not divergence-edit either side.
+ * This is the ONLY implementation — chat.html and ai-monitor.html both call
+ * these globals and neither carries a copy. Keep it that way: an earlier note
+ * here warned against divergence from a duplicate in chat.html that no longer
+ * exists, and a second implementation is exactly how the two surfaces would
+ * start showing a student and an admin different things.
+ *
+ * Math protection is covered by tests/chat-renderer.test.mjs; the root cause it
+ * guards is in docs/engineering/chat-renderer-math-protection.md.
  */
 (function () {
   'use strict';
 
   function renderMarkdown(raw) {
     if (!raw) return '';
-    // Step 1: Protect LaTeX blocks BEFORE any escaping — store them as placeholders.
+    // Step 1: Protect LaTeX BEFORE any escaping — store it as placeholders.
     // This prevents esc() from corrupting LaTeX that uses < > & characters,
     // and prevents inlineFmt from converting * inside math to <em>.
+    //
+    // ONE left-to-right pass, not a regex per delimiter style. The previous
+    // version ran four sequential .replace() passes ($$, \[, $, \(), and both
+    // of its failure modes came from that shape:
+    //
+    //   * A later pass could match ACROSS an earlier pass's placeholder and
+    //     store it inside its own block. restoreMath is a single String.replace
+    //     and replacement text is never rescanned, so the inner placeholder
+    //     reached the DOM verbatim — the "▯M0▯" students reported.
+    //   * The patterns were unanchored, so one unbalanced \( matched forward to
+    //     the next \) anywhere later, swallowing headings and **bold** into a
+    //     "math" block that never reached inlineFmt.
+    //
+    // Scanning once removes both by construction: a placeholder is only ever
+    // emitted at the top level of the scan, because saving a block copies its
+    // source verbatim and jumps past it. No placeholder can end up inside a
+    // stored block, so one restore pass is provably sufficient.
     var mathBlocks = [];
+    var strays = [];
     function saveMath(m) { return '\x01M' + (mathBlocks.push(m) - 1) + '\x01'; }
-    var s = raw;
-    s = s.replace(/\$\$[\s\S]*?\$\$/g, saveMath);          // $$...$$  display
-    s = s.replace(/\\\[[\s\S]*?\\\]/g, saveMath);           // \[...\]  display
-    s = s.replace(/\$[^\$\n]+?\$/g, saveMath);              // $...$    inline
-    s = s.replace(/\\\([\s\S]*?\\\)/g, saveMath);           // \(...\)  inline
+    function saveStray(d) { return '\x01D' + (strays.push(d) - 1) + '\x01'; }
+
+    // Longest opener first, so $$ is tried before $.
+    // multiline: display math legitimately spans lines; inline math does not.
+    // That one rule is what stops a single unbalanced \( from eating a paragraph.
+    var DELIMS = [
+      { open: '$$',  close: '$$',  multiline: true  },
+      { open: '\\[', close: '\\]', multiline: true  },
+      { open: '\\(', close: '\\)', multiline: false },
+      { open: '$',   close: '$',   multiline: false, dollar: true }
+    ];
+
+    // Is there a well-formed math span starting at i? Anything rejected here is
+    // treated as ordinary text, which is the safe direction: a missed formula
+    // renders as the source the student can still read, whereas a wrongly
+    // accepted one swallows the prose around it.
+    function mathAt(src, i) {
+      for (var d = 0; d < DELIMS.length; d++) {
+        var D = DELIMS[d];
+        if (src.substr(i, D.open.length) !== D.open) continue;
+        var from = i + D.open.length;
+        var end  = src.indexOf(D.close, from);
+        if (end < 0) continue;                              // unbalanced
+        var body = src.slice(from, end);
+        if (!body) continue;                                // empty
+        if (!D.multiline && body.indexOf('\n') >= 0) continue;
+        if (body.indexOf(D.open) >= 0) continue;            // nested opener = mis-pairing
+        // Currency: "costs $5 and the pen costs $2" pairs two prose dollars and
+        // eats the sentence between them. A closing inline $ is never glued to
+        // an alphanumeric in real notation, but it always is in a price.
+        if (D.dollar && /[0-9A-Za-z]/.test(src.charAt(end + D.close.length))) continue;
+        return { raw: src.slice(i, end + D.close.length), end: end + D.close.length };
+      }
+      return null;
+    }
+
+    var s = '';
+    for (var p = 0; p < raw.length;) {
+      var hit = mathAt(raw, p);
+      if (hit) { s += saveMath(hit.raw); p = hit.end; continue; }
+      // A delimiter that is NOT math must not be left where KaTeX could pair it
+      // with a real one further down — that would simply move the swallowing
+      // out of here and into auto-render. Wrapping it in an ignored element
+      // takes it out of KaTeX's scan while leaving it visible to the reader.
+      var two = raw.substr(p, 2);
+      if (two === '\\(' || two === '\\)' || two === '\\[' || two === '\\]') {
+        s += saveStray(two); p += 2; continue;
+      }
+      if (raw.charAt(p) === '$') { s += saveStray('$'); p += 1; continue; }
+      s += raw.charAt(p); p += 1;
+    }
     // Math is restored ESCAPED. The saved block never went through esc() (that
     // is the point of saving it — esc() would corrupt LaTeX's < > &), but the
     // result of this function is assigned with innerHTML, so restoring the raw
@@ -38,7 +109,11 @@
     // which reads textContent — the entity decodes back to the character in the
     // text node before renderMathInElement ever sees it.
     function restoreMath(t) {
-      return t.replace(/\x01M(\d+)\x01/g, function (_, n) { return esc(mathBlocks[+n]); });
+      return t.replace(/\x01([MD])(\d+)\x01/g, function (_, kind, n) {
+        return kind === 'M'
+          ? esc(mathBlocks[+n])
+          : '<span class="no-katex">' + esc(strays[+n]) + '</span>';
+      });
     }
     function esc(str) {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -109,6 +184,11 @@
               { left: '\\(', right: '\\)', display: false },
               { left: '\\[', right: '\\]', display: true  }
             ],
+            // renderMarkdown has already decided what is math and what is not.
+            // Delimiters it rejected — an unbalanced \(, a price in dollars —
+            // are wrapped in .no-katex so auto-render does not descend into
+            // them and re-pair what the renderer deliberately left as prose.
+            ignoredClasses: ['no-katex'],
             throwOnError: false
           });
         } catch (e) { /* KaTeX render error — show raw math as fallback */ }
