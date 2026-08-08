@@ -1973,7 +1973,16 @@ function deriveTutorFinalAnswer(explanation: string): string {
   const markerRe = /(?:final\s+answer|the\s+answer\s+is|answer)\s*[:=]?\s*(.+)$/i;
   for (let i = lines.length - 1; i >= 0; i--) {
     const m = lines[i].match(markerRe);
-    if (m && m[1].trim()) return m[1].replace(/[*_`$]/g, '').trim().slice(0, 120);
+    if (!m) continue;
+    // Strip BEFORE testing. The old guard tested the raw capture, so a heading
+    // like "✅ **Final Answer**" captured "**" — truthy, so the loop committed —
+    // and then returned "" once the markdown came off.
+    const inline = m[1].replace(/[*_`$]/g, '').trim();
+    if (inline) return inline.slice(0, 120);
+    // The marker was a heading, which is how Zero actually writes it: the value
+    // is the line beneath. Commit to this marker either way — falling through to
+    // the last-line fallback here would return the heading itself.
+    return (lines[i + 1] ?? '').replace(/[*_`$]/g, '').trim().slice(0, 120);
   }
   return (lines.at(-1) ?? '').replace(/[*_`$]/g, '').trim().slice(0, 120);
 }
