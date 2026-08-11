@@ -189,6 +189,23 @@
       if (/^### /.test(line)) { out.push('<h5 dir="auto">' + inlineFmt(esc(line.slice(4))) + '</h5>'); i++; continue; }
       if (/^## /.test(line))  { out.push('<h4 dir="auto">' + inlineFmt(esc(line.slice(3))) + '</h4>'); i++; continue; }
       if (/^# /.test(line))   { out.push('<h3 dir="auto">' + inlineFmt(esc(line.slice(2))) + '</h3>'); i++; continue; }
+      // Zero never emits markdown headings. It writes each section as ONE line
+      // carrying the heading AND its body, separated by two spaces:
+      //   "📖 **Understand the Problem**  We need to interpret …"
+      //   "**📐 Step 1 — Analyze the Components**  The term …"
+      // Without this branch the line fell through to <p> below, the heading
+      // became inline bold at the start of a sentence, and every section
+      // rendered as an identical flat paragraph — .ai-md h5 never applied to a
+      // tutor response. Narrow on purpose: an optional short emoji prefix, bold
+      // at the very start, and TWO OR MORE spaces before non-empty body text. A
+      // heading-only line ("**Strategy**") has no body and stays a paragraph,
+      // which is the contract section F of the suite pins.
+      var zeroH = /^([^\w\s*]{0,4}\s*)\*\*([^*\n]+)\*\*\s{2,}(\S.*)$/.exec(line);
+      if (zeroH) {
+        out.push('<h5 dir="auto">' + inlineFmt(esc((zeroH[1] + zeroH[2]).trim())) + '</h5>');
+        out.push('<p dir="auto">'  + inlineFmt(esc(zeroH[3])) + '</p>');
+        i++; continue;
+      }
       if (line.trim() === '') { out.push('<div class="md-sp"></div>'); i++; continue; }
       out.push('<p dir="auto">' + inlineFmt(esc(line)) + '</p>');
       i++;
