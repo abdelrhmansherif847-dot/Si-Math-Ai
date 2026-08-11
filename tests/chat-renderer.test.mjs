@@ -347,4 +347,92 @@ t.section('G · Property sweep — the invariants hold for inputs nobody listed'
   t.is('none handed KaTeX a region containing a placeholder', mathWithPlaceholder, 0);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// H · Zero's section headings are structural, not a bold run-on
+//
+// Zero does not emit markdown headings. Every section arrives as ONE line
+// carrying the heading AND its body, separated by two spaces:
+//
+//   📖 **Understand the Problem**  We need to interpret the equation: \( F = … \)
+//   🎯 **Strategy — Identify the Components**  The equation represents …
+//   **📐 Step 1 — Analyze the Components**  The term \( 7.00y \) indicates …
+//   ✅ **Final Answer**  The best interpretation is: **B) …**
+//
+// The renderer has no branch for that shape, so each section falls through to
+// the generic `<p>` case and the heading becomes inline bold at the start of a
+// sentence. Every section then renders as an identical flat paragraph, the
+// step-by-step structure disappears, and .ai-md h3/h4/h5 — which exist and are
+// styled in chat.html:414-416 — are never applied to a tutor response.
+//
+// Verified against the stored ai_response of record be82f8a5 (2026-08-09).
+//
+// The heading-only shape (`**Strategy**` alone on its line, body beneath) is
+// DELIBERATELY NOT changed here: section F pins it as a paragraph, and this
+// fix is scoped to the inline-body shape only.
+t.section('H · Zero section headings become real headings');
+{
+  t.is('leading emoji + bold heading + body → h5 then p',
+    md('📖 **Understand the Problem**  We need to interpret the equation: \\( F = 2.50x + 7.00y \\).'),
+    '<div class="ai-md">' +
+    '<h5 dir="auto">📖 Understand the Problem</h5>' +
+    '<p dir="auto">We need to interpret the equation: \\( F = 2.50x + 7.00y \\).</p></div>');
+
+  t.is('an em-dash inside the heading stays in the heading',
+    md('🎯 **Strategy — Identify the Components**  The equation represents total money.'),
+    '<div class="ai-md">' +
+    '<h5 dir="auto">🎯 Strategy — Identify the Components</h5>' +
+    '<p dir="auto">The equation represents total money.</p></div>');
+
+  t.is('emoji INSIDE the bold is still a heading',
+    md('**📐 Step 1 — Analyze the Components**  The term \\( 7.00y \\) indicates the cost.'),
+    '<div class="ai-md">' +
+    '<h5 dir="auto">📐 Step 1 — Analyze the Components</h5>' +
+    '<p dir="auto">The term \\( 7.00y \\) indicates the cost.</p></div>');
+
+  t.is('bold inside the BODY still becomes strong, not a second heading',
+    md('✅ **Final Answer**  The best interpretation is: **B) The price of one salad.**'),
+    '<div class="ai-md">' +
+    '<h5 dir="auto">✅ Final Answer</h5>' +
+    '<p dir="auto">The best interpretation is: <strong>B) The price of one salad.</strong></p></div>');
+
+  // The whole shape, as one document — four sections must yield four headings.
+  const doc = [
+    '📖 **Understand the Problem**  Interpret the equation.',
+    '',
+    '🎯 **Strategy**  Identify the components.',
+    '',
+    '**📐 Step 1**  Analyze them.',
+    '',
+    '✅ **Final Answer**  Option B.',
+  ].join('\n');
+  const hOut = md(doc);
+  t.is('four sections produce four headings', (hOut.match(/<h5\b/g) || []).length, 4);
+  t.is('and four body paragraphs',            (hOut.match(/<p\b/g)  || []).length, 4);
+  t.ok('no section is left as a flat bold paragraph',
+    !/<p dir="auto">(?:📖|🎯|✅)?\s*<strong>/.test(hOut));
+}
+{
+  // Guard rails — shapes that must NOT be reinterpreted as headings.
+  t.is('heading-only line is unchanged (section F contract)',
+    md('**Strategy**'),
+    '<div class="ai-md"><p dir="auto"><strong>Strategy</strong></p></div>');
+
+  t.is('bold mid-sentence is not a heading',
+    md('The answer is **B** in this case.'),
+    '<div class="ai-md"><p dir="auto">The answer is <strong>B</strong> in this case.</p></div>');
+
+  t.is('a real markdown heading still wins',
+    md('## Heading'), '<div class="ai-md"><h4 dir="auto">Heading</h4></div>');
+
+  // Trailing whitespace is preserved today; this guard is about NOT promoting
+  // the line to a heading, so it pins the current output verbatim.
+  t.is('bold followed by only whitespace is not a heading',
+    md('**Strategy**   '),
+    '<div class="ai-md"><p dir="auto"><strong>Strategy</strong>   </p></div>');
+
+  t.is('a list item that happens to start bold is still a list',
+    md('- **Rule**  apply it'),
+    '<div class="ai-md"><ul dir="auto"><li dir="auto"><strong>Rule</strong>  apply it</li></ul></div>');
+}
+
 t.done();
