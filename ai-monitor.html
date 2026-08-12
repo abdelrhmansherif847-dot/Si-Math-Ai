@@ -829,6 +829,12 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   .qi-block{border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:14px 16px;background:rgba(255,255,255,.015)}
   .qi-block-t{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px}
   .qi-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  /* A 1fr track is minmax(auto,1fr) and its auto floor is the item's
+     min-content. Text wraps, so that floor is one word; a KaTeX .katex-display
+     block does not wrap, so its floor is the whole equation. Without this, one
+     column claims the width and starves the other — measured at a 640px drawer:
+     424.078px / 128.922px. min-width:0 lets both shrink and stay even. */
+  .qi-cols>*{min-width:0}
   @media(max-width:560px){.qi-cols{grid-template-columns:1fr}}
   .qi-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-500);margin-bottom:4px}
   .qi-val{font-size:13px;color:var(--text-100);word-break:break-word}
@@ -2641,9 +2647,11 @@ function qiOpen(i) {
       <div class="qi-block-t">Solver A ‖ Solver B <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— compared with each other</span></div>
       <div style="margin-bottom:10px">${qiField('Solver ↔ solver agreement', num(r.solver_agreement) === null ? null : (num(r.solver_agreement) >= 1 ? 'match — both reached the same normalised answer' : 'differ — the two solvers did not agree'))}</div>
       <div class="qi-cols">
-        <div>${qiField('Solver A Answer', sa[0], { math: true })}${qiTextBlock('Solver A Reasoning', sr[0], { math: true })}</div>
-        <div>${qiField('Solver B Answer', sa[1], { math: true })}${qiTextBlock('Solver B Reasoning', sr[1], { math: true })}</div>
+        <div>${qiField('Solver A Answer', sa[0], { math: true })}</div>
+        <div>${qiField('Solver B Answer', sa[1], { math: true })}</div>
       </div>
+      ${qiTextBlock('Solver A Reasoning', sr[0], { math: true })}
+      ${qiTextBlock('Solver B Reasoning', sr[1], { math: true })}
     </div>
     <div class="qi-block">
       <div class="qi-block-t">Judge <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— solvers' answer vs the tutor's answer</span></div>
