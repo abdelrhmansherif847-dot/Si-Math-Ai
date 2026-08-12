@@ -60,6 +60,11 @@ const qiTextBlock = sandbox.window.__qiTextBlock;
 // is the part the current code cannot satisfy.
 const renderedByShared = (html) => /class="[^"]*\bai-md\b/.test(html);
 
+// Visible text only. A rendered block carries the untouched source in data-raw
+// for the Copy button, so testing the whole HTML string for "**" or "\frac"
+// matches that attribute and reports a defect in markup the reader never sees.
+const visible = (html) => html.replace(/<[^>]+>/g, '');
+
 /** The math regions KaTeX auto-render would find in this HTML. */
 function katexMath(html) {
   const v = html
@@ -132,8 +137,32 @@ t.section('E. Tutor ai_response — the full stored shape');
   t.is('the final-answer expression reaches KaTeX',
     katexMath(html), [' m - \\frac{4}{3}n = -\\frac{5}{3} ']);
   t.ok('the heading renders through the shared renderer, not as raw **',
-    !/\*\*Final Answer\*\*/.test(html), html);
+    !/\*\*Final Answer\*\*/.test(visible(html)), visible(html));
   t.ok('the block was built by the shared renderer, not esc()', renderedByShared(html), html);
+}
+
+t.section('E2. Judge Reasoning — quotes answers, so it must render too');
+{
+  const src = 'Both solvers reach \\( -\\frac{5}{3} \\), matching the tutor.';
+  const html = qiTextBlock('Judge Reasoning', src, { math: true });
+  t.is('a quoted expression in judge prose reaches KaTeX',
+    katexMath(html), [' -\\frac{5}{3} ']);
+  t.ok('the block was built by the shared renderer, not esc()', renderedByShared(html), html);
+  t.ok('the surrounding judgement text survives', /Both solvers reach/.test(html), html);
+}
+
+// All six surfaces the drawer must render as mathematics.
+t.section('E3. Every one of the six surfaces is wired for math');
+{
+  const qiOpenSrc = slice(MON, 'function qiOpen(i) {', '\nfunction qiClose', 'qiOpen');
+  const wired = (call) => new RegExp(
+    call.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "[^)]*\\{\\s*math:\\s*true\\s*\\}").test(qiOpenSrc);
+  t.ok('1. ai_response',           wired("qiTextBlock('ai_response'"), qiOpenSrc.slice(0, 0));
+  t.ok('2. Solver A Answer',       wired("qiField('Solver A Answer'"));
+  t.ok('3. Solver A Reasoning',    wired("qiTextBlock('Solver A Reasoning'"));
+  t.ok('4. Solver B Answer',       wired("qiField('Solver B Answer'"));
+  t.ok('5. Solver B Reasoning',    wired("qiTextBlock('Solver B Reasoning'"));
+  t.ok('6. Judge Reasoning',       wired("qiTextBlock('Judge Reasoning'"));
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -145,6 +174,22 @@ t.section('F. Non-math content is unchanged');
   const html = qiField('Verdict', 'agrees', { math: true });
   t.is('a plain word is not treated as an expression', katexMath(html), []);
   t.ok('the word still appears', /agrees/.test(html), html);
+}
+// Every one of these is a REAL stored solver_answers value. An earlier draft of
+// this fix asked the renderer for mathIfBare unconditionally, which wrapped each
+// of them in $…$ and would have handed KaTeX an English sentence to typeset as
+// mathematics. These pin the routing rule that prevents it.
+t.section('F2. Real non-mathematical solver answers must stay text');
+for (const v of ['D', 'Decreasing linear', '21', 'N/A', '48',
+                 'A) If the width of the rectangle is 14 ft, then the area of the rectangle is 1,176 ft².']) {
+  const html = qiField('Solver A Answer', v, { math: true });
+  t.is(`not math: ${JSON.stringify(v.slice(0, 34))}`, katexMath(html), []);
+}
+{
+  const html = qiField('Solver A Answer',
+    'A) If the width of the rectangle is 14 ft, then the area of the rectangle is 1,176 ft².', { math: true });
+  t.ok('the sentence is still readable as a sentence',
+    /If the width of the rectangle is 14 ft/.test(visible(html)), visible(html));
 }
 {
   const html = qiTextBlock('Judge Reasoning',
@@ -201,13 +246,18 @@ t.section('J. Copy must yield the stored source, not KaTeX output');
 // between the math being correct and the math being visible.
 t.section('K. The drawer must run the typesetting pass after inserting HTML');
 {
-  const qiOpenSrc = slice(MON, 'function qiOpen(i) {', '\nfunction qiClose', 'qiOpen');
+  // Comments stripped first. The call sits under a comment that names
+  // renderMathInElement, and a bare substring test matched that prose — so
+  // deleting the call left the assertion green. Verified by mutation: it now
+  // goes red.
+  const qiOpenSrc = slice(MON, 'function qiOpen(i) {', '\nfunction qiClose', 'qiOpen')
+    .replace(/\/\/[^\n]*/g, '');
   t.ok('qiOpen writes into qiDrawerBody', /qiDrawerBody/.test(qiOpenSrc));
-  t.ok('qiOpen calls renderMathInEl after building the drawer',
-    /renderMathInEl/.test(qiOpenSrc), 'qiOpen never typesets — math stays raw');
+  t.ok('qiOpen CALLS renderMathInEl after building the drawer',
+    /renderMathInEl\s*\(/.test(qiOpenSrc), 'qiOpen never typesets — math stays raw');
 
   const bodyAt = qiOpenSrc.indexOf('qiDrawerBody');
-  const mathAt = qiOpenSrc.indexOf('renderMathInEl');
+  const mathAt = qiOpenSrc.search(/renderMathInEl\s*\(/);
   t.ok('the typesetting pass runs AFTER the innerHTML assignment, not before',
     mathAt > bodyAt && bodyAt !== -1, `innerHTML@${bodyAt} math@${mathAt}`);
 }

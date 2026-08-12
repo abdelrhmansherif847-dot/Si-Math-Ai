@@ -835,6 +835,15 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
   .qi-missing{font-style:italic;color:var(--text-500);font-size:12px}
   .qi-pre{font-family:var(--font-mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text-200);background:rgba(0,0,0,.25);border-radius:8px;padding:10px;max-height:220px;overflow:auto}
   .qi-pre.collapsed{max-height:96px}
+  /* Math-rendered variant. .qi-pre is a monospace log dump with pre-wrap, which
+     is right for a raw string and wrong for rendered Markdown — every blank line
+     would double. Rendered blocks opt out of both. */
+  .qi-pre.ai-md{font-family:inherit;font-size:12.5px;white-space:normal;word-break:normal}
+  .qi-val.ai-md{word-break:normal}
+  /* Same isolation the feedback panel uses (see .fb-text rules above): KaTeX
+     output is LTR even when the surrounding review text is Arabic. */
+  .qi-pre .katex,.qi-val .katex,.qi-pre .katex-display,.qi-val .katex-display{direction:ltr;unicode-bidi:isolate}
+  .qi-pre .katex-display{margin:.5em 0;overflow-x:auto;overflow-y:hidden}
   .qi-actions{display:flex;gap:10px;margin-top:6px}
   .qi-mini{cursor:pointer;background:transparent;border:1px solid var(--border-soft);color:var(--text-400);font-size:10.5px;font-family:var(--font-mono);border-radius:6px;padding:3px 9px}
   .qi-x{cursor:pointer;background:transparent;border:1px solid var(--border-soft);color:var(--text-300);border-radius:8px;width:30px;height:30px;font-size:16px;line-height:1}
@@ -2401,16 +2410,32 @@ function qiSolverChip(sa) {
 }
 
 // Renders a long-text block with collapse/expand + copy (clipboard only).
+//
+// opts.math routes the text through the SHARED renderer (chat-renderer.js,
+// already loaded in <head>) instead of esc(), so LaTeX the model wrote is shown
+// as mathematics rather than as backslashes. There is exactly one math
+// authority in this project and this is it — see rules-rendering.test.mjs for
+// what happened the last time a second one was introduced.
+//
+// Rendering is only half of it: KaTeX typesets nothing until renderMathInEl()
+// runs over a live node, which qiOpen does after assigning innerHTML.
 let qiPreSeq = 0;
-function qiTextBlock(label, text) {
+function qiTextBlock(label, text, opts) {
   if (text == null || text === '') {
     return `<div><div class="qi-lbl">${esc(label)}</div><div class="qi-missing">Not captured in this pipeline version</div></div>`;
   }
   const id = 'qiPre' + (++qiPreSeq);
   const long = String(text).length > 240;
+  const math = !!(opts && opts.math) && !!window.renderMarkdown;
+  // data-raw carries the ORIGINAL stored string for Copy. Once KaTeX has run,
+  // textContent contains its MathML fallback layer as well, so copying the
+  // rendered node returns every expression twice.
+  const body = math
+    ? `<div class="qi-pre ai-md${long ? ' collapsed' : ''}" id="${id}" data-raw="${esc(text)}">${window.renderMarkdown(String(text))}</div>`
+    : `<div class="qi-pre${long ? ' collapsed' : ''}" id="${id}">${esc(text)}</div>`;
   return `<div>
     <div class="qi-lbl">${esc(label)}</div>
-    <div class="qi-pre${long ? ' collapsed' : ''}" id="${id}">${esc(text)}</div>
+    ${body}
     <div class="qi-actions">
       ${long ? `<button class="qi-mini" onclick="qiToggle('${id}',this)">Show more</button>` : ''}
       <button class="qi-mini" onclick="qiCopy('${id}',this)">Copy</button>
@@ -2428,14 +2453,42 @@ function qiToggle(id, btn) {
 function qiCopy(id, btn) {
   const el = document.getElementById(id);
   if (!el) return;
-  navigator.clipboard.writeText(el.textContent || '').then(() => {
+  // Prefer the stored source over textContent — see qiTextBlock. A rendered
+  // block's textContent includes KaTeX's MathML layer, so it copies doubled.
+  const src = (el.dataset && el.dataset.raw != null) ? el.dataset.raw : (el.textContent || '');
+  navigator.clipboard.writeText(src).then(() => {
     const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = t; }, 1200);
   }).catch(() => {});
 }
 
-function qiField(label, val) {
-  const shown = (val == null || val === '') ? '<span class="qi-missing">Not captured in this pipeline version</span>' : esc(val);
-  return `<div><div class="qi-lbl">${esc(label)}</div><div class="qi-val">${shown}</div></div>`;
+// opts.math: as qiTextBlock, but for a single short value. renderInline's
+// mathIfBare wraps the whole string as one expression ONLY when the tokenizer
+// found no math and no stray delimiter in it — so a bare `-\frac{5}{3}` becomes
+// math, while an already-delimited `\( … \)` is left alone rather than being
+// double-wrapped into `$\( … \)$`, which is unparseable. That guard is the
+// renderer's, not ours; asking it is the whole point of not writing a second one.
+//
+// mathIfBare is offered ONLY when the value carries a LaTeX control sequence.
+// Solver answers are not always expressions — the stored corpus contains
+// "Decreasing linear", "N/A", "D", and "A) If the width of the rectangle is
+// 14 ft, then the area of the rectangle is 1,176 ft²." Asking for mathIfBare
+// unconditionally wraps each of those in $…$ and hands KaTeX an English
+// sentence to set as mathematics, which is a worse defect than the raw
+// backslashes this fix removes. Values without a control sequence still go
+// through renderInline, so an explicit \( … \) inside them renders normally.
+//
+// This is a ROUTING test, not a parser: it decides whether to offer the string
+// as one expression. Every judgement about what the math IS stays in
+// chat-renderer.js. Bound, stated plainly: bare `x^2` with no backslash is not
+// promoted to math. No stored answer has that shape; if one appears, it renders
+// as text rather than as something mangled.
+function qiField(label, val, opts) {
+  const QI_LATEX_CMD = /\\[a-zA-Z]/;   // kept inside: qiField ships as one slice
+  const math = !!(opts && opts.math) && !!window.renderInline;
+  const shown = (val == null || val === '')
+    ? '<span class="qi-missing">Not captured in this pipeline version</span>'
+    : (math ? window.renderInline(String(val), { mathIfBare: QI_LATEX_CMD.test(String(val)) }) : esc(val));
+  return `<div><div class="qi-lbl">${esc(label)}</div><div class="qi-val${math && val ? ' ai-md' : ''}">${shown}</div></div>`;
 }
 
 // ── Evidence-derived findings ───────────────────────────────────────────────
@@ -2577,14 +2630,14 @@ function qiOpen(i) {
     </div>
     <div class="qi-block">
       <div class="qi-block-t">Final Answer (sent to student)</div>
-      ${qiTextBlock('ai_response', r.ai_response)}
+      ${qiTextBlock('ai_response', r.ai_response, { math: true })}
     </div>
     <div class="qi-block">
       <div class="qi-block-t">Solver A ‖ Solver B <span style="color:var(--text-500);text-transform:none;letter-spacing:0">— compared with each other</span></div>
       <div style="margin-bottom:10px">${qiField('Solver ↔ solver agreement', num(r.solver_agreement) === null ? null : (num(r.solver_agreement) >= 1 ? 'match — both reached the same normalised answer' : 'differ — the two solvers did not agree'))}</div>
       <div class="qi-cols">
-        <div>${qiField('Solver A Answer', sa[0])}${qiTextBlock('Solver A Reasoning', sr[0])}</div>
-        <div>${qiField('Solver B Answer', sa[1])}${qiTextBlock('Solver B Reasoning', sr[1])}</div>
+        <div>${qiField('Solver A Answer', sa[0], { math: true })}${qiTextBlock('Solver A Reasoning', sr[0], { math: true })}</div>
+        <div>${qiField('Solver B Answer', sa[1], { math: true })}${qiTextBlock('Solver B Reasoning', sr[1], { math: true })}</div>
       </div>
     </div>
     <div class="qi-block">
@@ -2593,7 +2646,7 @@ function qiOpen(i) {
         ${qiField('Verdict', r.judge_verdict)}
         ${qiField('Judge confidence', r.verification_confidence != null ? Number(r.verification_confidence).toFixed(3) : null)}
       </div>
-      ${qiTextBlock('Judge Reasoning', m.judge_reasoning)}
+      ${qiTextBlock('Judge Reasoning', m.judge_reasoning, { math: true })}
       <div style="font-size:11px;color:var(--text-500);line-height:1.5;margin-top:8px">
         This verdict is about the tutor's answer, not about whether the two solvers agreed — that is the block above.
       </div>
@@ -2615,6 +2668,12 @@ function qiOpen(i) {
       <div class="qi-block-t">Detector V2 ${hasV2 ? '' : '<span style="color:var(--text-500)">(shadow)</span>'}</div>
       ${v2Block}
     </div>`;
+
+  // Typeset AFTER the innerHTML assignment above. KaTeX renders nothing until
+  // renderMathInElement walks a live node, so without this the drawer would emit
+  // perfectly-formed delimiters that stay on screen as backslashes — which is
+  // exactly the state this fix replaces. Same call the feedback panel makes.
+  if (window.renderMathInEl) window.renderMathInEl(document.getElementById('qiDrawerBody'));
 
   document.getElementById('qiOverlay').classList.add('open');
   const d = document.getElementById('qiDrawer');
