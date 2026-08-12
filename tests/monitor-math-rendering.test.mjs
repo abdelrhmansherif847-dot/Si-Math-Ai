@@ -236,6 +236,54 @@ t.section('J. Copy must yield the stored source, not KaTeX output');
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+// Layout. A CSS grid `1fr` track is minmax(auto, 1fr), and its `auto` floor is
+// the item's min-content contribution. Plain text wraps, so that floor is one
+// word wide; a KaTeX .katex-display block does NOT wrap, so its floor is the
+// full width of the equation. Putting a reasoning block inside a two-column
+// grid therefore lets the solver with display math claim the track and starve
+// its sibling — measured on record 98fc58d2 at a 640px drawer: columns
+// resolved to 424.078px and 128.922px, leaving 109px of usable width for
+// Solver B's mathematics and 1297px of hidden vertical overflow.
+//
+// The answers stay side by side, because comparing them is the point of the
+// block. The reasonings move out and take the full width.
+//
+// These assertions are structural because width is a browser property this
+// suite cannot measure. Real geometry is verified separately in a browser
+// against deliberately ASYMMETRIC fixtures — symmetric ones cannot expose this
+// class of bug at all, which is exactly why the PR #91 pass missed it.
+t.section('L. Reasoning blocks must not share a grid track with each other');
+{
+  const qiOpenSrc = slice(MON, 'function qiOpen(i) {', '\nfunction qiClose', 'qiOpen');
+  // Anchor on the solver block. qiOpen contains more than one .qi-cols — the
+  // Detector V2 panel has its own, and it comes first in the source.
+  const solverBlock = slice(qiOpenSrc, 'Solver A ‖ Solver B', '<div class="qi-block-t">Judge',
+    'solver block');
+  const cols = slice(solverBlock, '<div class="qi-cols">', '\n      </div>', 'solver qi-cols');
+
+  t.ok('both answers are inside .qi-cols',
+    /qiField\('Solver A Answer'/.test(cols) && /qiField\('Solver B Answer'/.test(cols), cols);
+  t.ok('Solver A Reasoning is NOT inside .qi-cols',
+    !/qiTextBlock\('Solver A Reasoning'/.test(cols), cols);
+  t.ok('Solver B Reasoning is NOT inside .qi-cols',
+    !/qiTextBlock\('Solver B Reasoning'/.test(cols), cols);
+  t.ok('both reasoning blocks are still rendered, outside the grid',
+    /qiTextBlock\('Solver A Reasoning'/.test(qiOpenSrc) &&
+    /qiTextBlock\('Solver B Reasoning'/.test(qiOpenSrc), '');
+
+  const aAt = qiOpenSrc.indexOf("qiTextBlock('Solver A Reasoning'");
+  const bAt = qiOpenSrc.indexOf("qiTextBlock('Solver B Reasoning'");
+  t.ok('A reasoning is rendered before B reasoning', aAt !== -1 && bAt > aAt, `${aAt} ${bAt}`);
+}
+{
+  // Defensive: without min-width:0 a grid item cannot shrink below its
+  // min-content, so ONE long unbreakable answer could re-create the starvation
+  // in the answers row even after the reasonings move out.
+  t.ok('.qi-cols children are allowed to shrink below min-content',
+    /\.qi-cols\s*>\s*\*\s*\{[^}]*min-width:\s*0/.test(MON), 'missing .qi-cols>*{min-width:0}');
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 // The root cause, and the one no string-inspection test above can reach.
 //
 // KaTeX only typesets when something calls renderMathInElement on a live node.
