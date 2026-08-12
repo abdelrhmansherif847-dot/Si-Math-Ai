@@ -178,14 +178,14 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
 .fb-img-wrap img{max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border-soft);display:block}
 /* Rendered AI Tutor response inside the feedback panel — mirrors chat.html */
 .fb-text.ai-rendered{white-space:normal}
-.fb-text .ai-md{line-height:1.65;color:var(--text-200);font-size:14px}
-.fb-text .ai-md h3{color:#fff;font-family:var(--font-display);font-size:14.5px;font-weight:700;margin:14px 0 6px}
-.fb-text .ai-md h4{color:#fff;font-family:var(--font-display);font-size:13.5px;font-weight:700;margin:12px 0 5px}
-.fb-text .ai-md h5{color:var(--text-100);font-family:var(--font-display);font-size:13px;font-weight:600;margin:10px 0 4px}
-.fb-text .ai-md p{margin:4px 0}
-.fb-text .ai-md ol,.fb-text .ai-md ul{padding-inline-start:20px;padding-left:0;margin:6px 0}
-.fb-text .ai-md li{margin:3px 0}
-.fb-text .ai-md code{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 6px;font-family:var(--font-mono);font-size:12.5px;color:#7dd3fc;unicode-bidi:isolate}
+.fb-text .ai-md,.qi-pre.ai-md{line-height:1.65;color:var(--text-200);font-size:14px}
+.fb-text .ai-md h3,.qi-pre.ai-md h3{color:#fff;font-family:var(--font-display);font-size:14.5px;font-weight:700;margin:14px 0 6px}
+.fb-text .ai-md h4,.qi-pre.ai-md h4{color:#fff;font-family:var(--font-display);font-size:13.5px;font-weight:700;margin:12px 0 5px}
+.fb-text .ai-md h5,.qi-pre.ai-md h5{color:var(--text-100);font-family:var(--font-display);font-size:13px;font-weight:600;margin:10px 0 4px}
+.fb-text .ai-md p,.qi-pre.ai-md p{margin:4px 0}
+.fb-text .ai-md ol,.fb-text .ai-md ul,.qi-pre.ai-md ol,.qi-pre.ai-md ul{padding-inline-start:20px;padding-left:0;margin:6px 0}
+.fb-text .ai-md li,.qi-pre.ai-md li{margin:3px 0}
+.fb-text .ai-md code,.qi-pre.ai-md code{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 6px;font-family:var(--font-mono);font-size:12.5px;color:#7dd3fc;unicode-bidi:isolate}
 /* Bidi isolation so Arabic+English review text matches the student view. */
 .fb-text .ai-md .katex,.fb-text .ai-md .katex-display{direction:ltr;unicode-bidi:isolate}
 .fb-text .ai-md pre{background:var(--bg-elev-2);border:1px solid var(--border-mid);border-radius:10px;padding:12px 14px;margin:10px 0;overflow-x:auto}
@@ -839,6 +839,11 @@ table.recent td.mono{font-family:var(--font-mono);font-size:11px}
      is right for a raw string and wrong for rendered Markdown — every blank line
      would double. Rendered blocks opt out of both. */
   .qi-pre.ai-md{font-family:inherit;font-size:12.5px;white-space:normal;word-break:normal}
+  /* The shared .ai-md list rule ends in padding-left:0, which in LTR overrides
+     its own padding-inline-start and leaves the markers outside the content box.
+     .fb-text does not clip, so it never showed; .qi-pre has overflow:auto and
+     ate the "1." of every numbered step. Restored here, after that rule. */
+  .qi-pre.ai-md ol,.qi-pre.ai-md ul{padding-left:22px;padding-inline-start:22px}
   .qi-val.ai-md{word-break:normal}
   /* Same isolation the feedback panel uses (see .fb-text rules above): KaTeX
      output is LTR even when the surrounding review text is Arabic. */
