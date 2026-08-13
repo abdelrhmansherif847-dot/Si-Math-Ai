@@ -113,6 +113,121 @@ export function answersEquivalent(a: string, b: string): boolean {
   return Math.abs(va - vb) <= 1e-9 * Math.max(1, Math.abs(va), Math.abs(vb));
 }
 
+// ── RC2 evidence record ──────────────────────────────────────────────────
+// RC2 PR1 (audit requirement R9). TELEMETRY ONLY — nothing below decides a
+// verdict. The clamp that uses these signals is PR3.
+//
+// The problem this exists to make measurable: a stored verdict currently
+// carries no record of what produced it, so an RC1 extraction failure, a real
+// tutor/solver conflict, a judge false positive, solver disagreement and thin
+// reasoning are all indistinguishable after the fact.
+//
+// WHY A NAIVE COMPARISON IS NOT ENOUGH. `answersEquivalent(tutorFinalAnswer,
+// solverAnswer)` looks like the obvious check and is wrong in production. RC1
+// returns the tutor's sentence, not a token:
+//
+//   "The sum of the solutions is \(\frac{26}{5}\), which corresponds to
+//    option D."                                          solver: "26/5"
+//
+// The same answer, and answersEquivalent returns false. Measured 2026-08-13:
+// the answer-blind judge reads 100% `disagrees` (32/32, zero abstentions) —
+// it is reporting incomparability, not disagreement.
+
+/** Candidate answer tokens inside a tutor sentence, in reading order.
+ *
+ *  Deliberately generous — recall matters more than precision here, because
+ *  the reducer below treats ANY match as agreement and treats ambiguity as
+ *  incomparable. A missed token can only cost a `match`; it can never
+ *  manufacture a `conflict`. */
+export function extractAnswerTokens(s: unknown): string[] {
+  const raw = String(s ?? '');
+  if (!raw.trim()) return [];
+  // Unwrap LaTeX so \frac{26}{5} and \(-25\) become comparable text.
+  const text = raw
+    .replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '$1/$2')
+    .replace(/\\d?frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '$1/$2')
+    .replace(/\\[()[\]]/g, ' ')
+    .replace(/\$+/g, ' ')
+    .replace(/[{}]/g, ' ')
+    .replace(/\\[a-zA-Z]+/g, ' ')
+    .replace(/[−–—]/g, '-');     // unicode minus / dashes -> ASCII
+
+  const out: string[] = [];
+  const push = (v: string) => { const x = v.trim(); if (x && !out.includes(x)) out.push(x); };
+
+  // Fractions first, so "26/5" is not split into "26" and "5".
+  const consumed: Array<[number, number]> = [];
+  const fracRe = /-?\d+(?:\.\d+)?\s*\/\s*-?\d+(?:\.\d+)?/g;
+  for (let m = fracRe.exec(text); m; m = fracRe.exec(text)) {
+    push(m[0].replace(/\s+/g, ''));
+    consumed.push([m.index, m.index + m[0].length]);
+  }
+  const inFraction = (i: number, len: number) =>
+    consumed.some(([a, b]) => i >= a && i + len <= b);
+
+  // Bare numerics, including negatives, decimals and thousands separators.
+  const numRe = /-?\d[\d,]*(?:\.\d+)?/g;
+  for (let m = numRe.exec(text); m; m = numRe.exec(text)) {
+    if (!inFraction(m.index, m[0].length)) push(m[0].replace(/,/g, ''));
+  }
+
+  // Option letters only in an explicitly option-shaped context, so ordinary
+  // prose ("a triangle") cannot contribute a spurious candidate.
+  const optRe = /(?:option|choice|answer)\s+\(?([A-E])\)?|\(([A-E])\)|\b([A-E])\)/gi;
+  for (let m = optRe.exec(text); m; m = optRe.exec(text)) {
+    push((m[1] || m[2] || m[3] || '').toUpperCase());
+  }
+  return out;
+}
+
+export type TutorVsSolver = 'match' | 'conflict' | 'incomparable';
+
+/** How the tutor's published answer relates to a solver's — MATCH-DOMINANT.
+ *
+ *  The asymmetry is the safety property, and it is what makes the PR3 clamp
+ *  able to promise that a `disagrees` never comes from a misread sentence:
+ *
+ *    no tokens                     -> incomparable
+ *    ANY token equivalent          -> match
+ *    exactly one token, differing  -> conflict
+ *    several tokens, none matching -> incomparable   (never `conflict`)
+ *
+ *  The last rule is why "the value of c is -25, which corresponds to option C"
+ *  cannot be read as conflicting with a solver that said "C", or with one that
+ *  said "-25". Ambiguity refuses to accuse. */
+export function tutorVsSolverFrom(tutorAnswer: unknown, solverAnswer: unknown): TutorVsSolver {
+  const solver = String(solverAnswer ?? '').trim();
+  if (!solver) return 'incomparable';
+  const tokens = extractAnswerTokens(tutorAnswer);
+  if (!tokens.length) return 'incomparable';
+  if (tokens.some((tk) => answersEquivalent(tk, solver))) return 'match';
+  return tokens.length === 1 ? 'conflict' : 'incomparable';
+}
+
+interface PreconditionInput {
+  ocrConfidence: number;
+  admissible: boolean;
+  tutorVsSolver: TutorVsSolver;
+  solversConverge: boolean;
+  reasoningSufficient: boolean;
+  judgeVerdict: string;
+}
+
+/** The FIRST precondition that would block a directional verdict, or null.
+ *
+ *  Recorded, never acted on — PR1 changes no verdict. Its purpose is to make
+ *  the PR3 measurement window a single GROUP BY instead of a reconstruction. */
+export function blockingPrecondition(i: PreconditionInput): string | null {
+  if (!(i.ocrConfidence >= 0.75))        return 'ocr';
+  if (!i.admissible)                     return 'admissible';
+  if (i.tutorVsSolver === 'incomparable') return 'comparable';
+  if (!i.solversConverge)                return 'solver_convergence';
+  if (!i.reasoningSufficient)            return 'reasoning';
+  if (i.judgeVerdict === 'inconclusive') return 'judge_downgrade';
+  return null;
+}
+// ── end RC2 evidence record ──────────────────────────────────────────────
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TRUTH SYSTEM v2 — V0 OBSERVATION SURFACE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -828,8 +943,13 @@ export async function runL3ShadowPipeline(opts: {
   // resolved by the taxonomy gate on the main path. Optional and defaulted to
   // null so every existing call site stays valid.
   lessonId?: string | null;
+  // RC2 PR1 (R9). A hint turn publishes no final answer, so there is nothing
+  // for the judge to compare. RECORDED ONLY here; PR2 is what makes it
+  // inadmissible. Optional and defaulted so existing call sites stay valid.
+  hintMode?: boolean;
 }): Promise<void> {
   const { sbAdmin, recordId, userId, questionText, imageData, zeroAnswer, tutorFinalAnswer, detectorMeta, startTime } = opts;
+  const hintMode = opts.hintMode === true;
 
   // v90: this pipeline runs entirely after the student response, so its four to
   // five model calls belong to a sink of its own — the main path has already
@@ -901,6 +1021,34 @@ export async function runL3ShadowPipeline(opts: {
   const low_quality_solver       =
     solverA.reasoning.length < LOW_QUALITY_REASONING_THRESHOLD ||
     solverB.reasoning.length < LOW_QUALITY_REASONING_THRESHOLD;
+
+  // 6b. RC2 PR1 (R9) — the evidence record. OBSERVED, NEVER ACTED ON.
+  //
+  // Everything below is computed from values the pipeline already has; no
+  // extra model call, no change to any verdict. It exists so that a stored row
+  // can later be classified as an RC1 extraction failure, a real tutor/solver
+  // conflict, a judge false positive, solver disagreement or thin reasoning —
+  // which is impossible today, because the string the judge was shown is
+  // discarded the moment runJudge returns.
+  //
+  // Compared against solver A: when the solvers converge the choice is
+  // immaterial, and when they do not, solver_convergence is already the
+  // blocking precondition, so the comparison is recorded for measurement
+  // rather than relied upon.
+  const rc2TutorRaw   = (tutorFinalAnswer ?? '').trim().slice(0, 120);
+  const rc2Tokens     = extractAnswerTokens(rc2TutorRaw);
+  const rc2VsSolver   = tutorVsSolverFrom(rc2TutorRaw, solverA.final_answer);
+  // A hint turn has no published answer by construction, so there is nothing
+  // to compare. PR1 only records that; PR2 is what makes it inadmissible.
+  const rc2Admissible = !hintMode && !!rc2TutorRaw;
+  const rc2Blocking   = blockingPrecondition({
+    ocrConfidence:       isImageQ ? ocr.confidence : 1.0,
+    admissible:          rc2Admissible,
+    tutorVsSolver:       rc2VsSolver,
+    solversConverge:     solver_agreement === 1.0,
+    reasoningSufficient: !low_quality_solver,
+    judgeVerdict:        judge.verdict,
+  });
 
   // verification_quality_score ∈ [0, 1]:
   //   0.40 * solver final-answer agreement
@@ -995,6 +1143,25 @@ export async function runL3ShadowPipeline(opts: {
     forced_exploration:          forcedExploration,
     exploration_fraction:        explorationFrac,
     judge_answer_blind:          judgeAnswerBlind,
+
+    // ── RC2 PR1 (R9) — the evidence record. Append-only, telemetry only.
+    // Stored RAW rather than hashed on purpose: a hash proves two runs saw the
+    // same string, which is not the question. The question is WHICH string,
+    // because that is what separates an RC1 extraction failure from a genuine
+    // answer conflict. zero_answer_hash above is unchanged and stays a hash.
+    rc2_tutor_answer_raw:        (tutorFinalAnswer ?? '').trim().slice(0, 120),
+    rc2_tutor_tokens:            rc2Tokens.slice(0, 12),
+    rc2_tutor_vs_solver:         rc2VsSolver,
+    rc2_solvers_converge:        solver_agreement === 1.0,
+    rc2_reasoning_sufficient:    !low_quality_solver,
+    rc2_admissible:              rc2Admissible,
+    rc2_hint_mode:               hintMode,
+    // The judge's UNCLAMPED opinion. Identical to judge_verdict today; recorded
+    // separately so that when PR3's clamp lands, the raw opinion it overrode is
+    // still on the record instead of being silently replaced.
+    rc2_judge_raw_verdict:       judge.verdict,
+    rc2_blocking_precondition:   rc2Blocking,
+
     ...(judgeAnswerBlind ? {
       judge_precommit_model:     'gpt-4o',
       judge_precommit_answer:    (precommit?.answer ?? '').slice(0, 120),
