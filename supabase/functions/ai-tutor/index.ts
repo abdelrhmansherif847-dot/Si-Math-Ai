@@ -4859,6 +4859,9 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
         // decision log needs a lesson grain because that is what the audit
         // margin and the per-segment threshold derivation are computed at.
         lessonId:     safeSubtopicId,
+        // RC2 PR1 (R9). A hint turn publishes no final answer, so the judge has
+        // nothing to compare. Recorded only — the verdict path is unchanged.
+        hintMode,
       }).catch(err => {
         console.log('[ai-tutor] l3-pipeline-error', JSON.stringify({
           uid: user.id.slice(0, 8), record_id: recordId,
