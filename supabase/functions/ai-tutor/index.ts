@@ -887,6 +887,137 @@ function detectExplicitArabicRequest(text: string): boolean {
   return false;
 }
 
+// ── Upstream failure handling (transient retry + honest degradation) ──────
+//
+// 2026-08-13, session 393c2193: three worksheet turns in 17 seconds each got
+//
+//   tutor_main  429 rate_limit_exceeded  prompt_tokens=0  completion_tokens=0
+//   "Rate limit reached for gpt-4o … tokens per min (TPM): Limit 30000"
+//
+// prompt_tokens=0 means the request was rejected at the gateway — the model
+// never saw the question. The solvers on the same records ran fine on 25,663
+// tokens, so the content was present; only the tutor call died.
+//
+// The student was not told. The degraded-answer guard floored the answer to a
+// hint that fallbackHint() had synthesised from an empty topic, so Zero replied
+// "Think about step one: what do you know, and what are you trying to find?"
+// — printed twice, because the same value went to both `answer` and `hint`, and
+// the client renders `hint` as Old Dragon Advice. hint_mode was false on all
+// three; the hint-mode branch never ran.
+
+/** Upstream statuses worth one more attempt. A 4xx that is not 429 is the
+ *  request's own fault and will fail identically on retry, so it never retries. */
+function isTransientUpstream(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+/** Maximum we will make a student wait before giving up and telling the truth.
+ *
+ *  Chosen from evidence, not taste. Eight real TPM 429s carried these resets:
+ *  364ms, 2.226s, 3.306s, 3.78s, 5.396s, 5.994s, 7.066s, 8.063s. A 2s cap — the
+ *  first version of this code — recovered exactly ONE of the eight and turned
+ *  the other seven into "wait 2s, fail anyway", which is worse than failing at
+ *  once. 9000ms clears the observed maximum of 8.063s with ~0.9s of headroom.
+ *  For scale: tutor_main itself normally takes 11-18s, and this path only runs
+ *  on a failure. */
+const RETRY_MAX_MS     = 9000;
+const RETRY_DEFAULT_MS = 400;
+
+/** Retry-After → ms, or null when the header is absent or unusable.
+ *
+ *  The numeric form is decided here and NEVER falls through to Date.parse:
+ *  Date.parse('-5') returns a valid date in 2001, so numeric garbage would be
+ *  read as a timestamp and clamp to a 0ms delay — an instant retry of a 429. */
+function parseRetryAfterMs(retryAfter: string | null): number | null {
+  if (!retryAfter) return null;
+  const secs = Number(retryAfter);
+  if (Number.isFinite(secs)) return secs > 0 ? Math.round(secs * 1000) : null;
+  const at = Date.parse(retryAfter);                     // HTTP-date form only
+  if (Number.isFinite(at)) { const d = at - Date.now(); return d > 0 ? d : null; }
+  return null;
+}
+
+/** The reset OpenAI states in the error body itself:
+ *    "…Limit 30000, Used 22211, Requested 11821. Please try again in 8.063s."
+ *  We already persist this string as oai_error_msg and were ignoring the one
+ *  number in it that says when the window reopens. */
+function parseResetFromMessage(msg: string | null | undefined): number | null {
+  if (!msg) return null;
+  const m = /try again in\s+([0-9]*\.?[0-9]+)\s*(ms|s)\b/i.exec(String(msg));
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(m[2].toLowerCase() === 'ms' ? n : n * 1000);
+}
+
+/** How long to wait before the single retry, or null meaning DO NOT RETRY.
+ *
+ *  Precedence: (a) Retry-After header, (b) the reset stated in the error body,
+ *  (c) a short default when neither is usable.
+ *
+ *  When the upstream says it needs longer than RETRY_MAX_MS, we do not sleep a
+ *  shorter arbitrary time and retry into a window we know is still closed —
+ *  that spends the student's time to buy a second guaranteed failure. We skip
+ *  the retry and take the honest failure path immediately. */
+function retryDelayMs(retryAfter: string | null, errMsg?: string | null): number | null {
+  const required = parseRetryAfterMs(retryAfter) ?? parseResetFromMessage(errMsg);
+  if (required === null) return RETRY_DEFAULT_MS;
+  return required > RETRY_MAX_MS ? null : required;
+}
+
+type TutorAttempt = { res: { ok: boolean; status: number; headers: { get(n: string): string | null } };
+                      json: any; startedAt: number; delayMs: number };
+
+/** One bounded retry, and EVERY attempt is returned. The caller records
+ *  telemetry per attempt: overwriting the first failure with the retry's
+ *  outcome would hide the very 429 that made this necessary. Bounded at two
+ *  calls by construction — there is no loop counter to get wrong. */
+async function callTutorModel(
+  doFetch: () => Promise<{ res: TutorAttempt['res']; json: any }>,
+  sleep: (ms: number) => Promise<void>,
+): Promise<{ res: TutorAttempt['res']; json: any; attempts: TutorAttempt[] }> {
+  const attempts: TutorAttempt[] = [];
+  // Captured BEFORE the fetch. Taking it afterwards makes started_at the END of
+  // the call, so recordModelCall's `Date.now() - started` reports ~0ms and the
+  // economic clock is wrong — which silently drags ai_monitor_call_health's
+  // latency percentiles down and makes R4b's skew meaningless for that row.
+  const firstAt = Date.now();
+  const first = await doFetch();
+  attempts.push({ ...first, startedAt: firstAt, delayMs: 0 });
+  const content = first.json?.choices?.[0]?.message?.content;
+  if ((first.res.ok && content) || !isTransientUpstream(first.res.status)) {
+    return { res: first.res, json: first.json, attempts };
+  }
+  const delayMs = retryDelayMs(
+    first.res.headers.get('retry-after'), first.json?.error?.message);
+  // null = the upstream needs longer than we are willing to make a student wait.
+  // Return the ORIGINAL failure untouched so its telemetry stays intact and the
+  // honest safe-failure path runs.
+  if (delayMs === null) return { res: first.res, json: first.json, attempts };
+  await sleep(delayMs);
+  const secondAt = Date.now();                            // likewise, before the fetch
+  const second = await doFetch();
+  attempts.push({ ...second, startedAt: secondAt, delayMs });
+  return { res: second.res, json: second.json, attempts };
+}
+
+/** The terminal answer, after extraction has produced nothing.
+ *
+ *  `modelUnavailable` is the whole point: when the upstream never produced
+ *  content, there is no tutoring to degrade to, and a synthesised hint would
+ *  tell the student to "think about step one" of a question the system never
+ *  read. safeNoAnswerMessage says the true thing and invites a resend.
+ *
+ *  When the model DID answer and extraction merely came up empty, the
+ *  pre-existing hint floor is preserved exactly. */
+function terminalTutorText(
+  extracted: string, hint: string, modelUnavailable: boolean, lang: string,
+): string {
+  if (extracted) return extracted;
+  if (modelUnavailable) return safeNoAnswerMessage(lang);
+  return (hint && hint.trim()) ? hint : safeNoAnswerMessage(lang);
+}
+
 // ── Fallback hint dictionary (topic keyword → AR/EN Socratic hint) ──────────
 function fallbackHint(topic: string, subtopic: string, lang: string): string {
   const t = (topic + ' ' + subtopic).toLowerCase();
@@ -3955,27 +4086,49 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
     ];
 
     const tutorModel = solveImages.length ? 'gpt-4o' : 'gpt-4o-mini';
-    const tutorT0    = Date.now();
-    const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
-      body: JSON.stringify({
-        model: tutorModel,
-        messages: openaiMessages,
-        response_format: { type: 'json_object' },
-        max_tokens: 2800,
-        temperature: 0.4,
-      }),
-    });
+    // One bounded retry on a transient upstream failure. The tutor model for an
+    // image turn is gpt-4o, whose org TPM ceiling one worksheet call nearly
+    // exhausts, so a second turn inside the same minute reliably 429s. Retrying
+    // with gpt-4o-mini instead is NOT done here: vision quality on worksheet
+    // photos is the reason gpt-4o is selected for image turns at all
+    // (docs/roadmap/ai-economics.md §350), and silently downgrading it on the
+    // hardest inputs would trade a visible failure for an invisible one.
+    const doTutorFetch = async () => {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+        body: JSON.stringify({
+          model: tutorModel,
+          messages: openaiMessages,
+          response_format: { type: 'json_object' },
+          max_tokens: 2800,
+          temperature: 0.4,
+        }),
+      });
+      return { res, json: await res.json() };
+    };
+    const tutorCall = await callTutorModel(
+      doTutorFetch, (ms) => new Promise((r) => setTimeout(r, ms)));
+    const oaiRes  = tutorCall.res;
+    const oaiData = tutorCall.json;
 
-    const oaiData = await oaiRes.json();
-    recordModelCall(teleSink, {
-      service_code: 'tutor', stage: 'tutor_main', model: tutorModel,
-      started: tutorT0, res: oaiRes, json: oaiData,
-      meta: {
-        max_tokens: 2800, temperature: 0.4,
-        image_count: solveImages.length, hint_mode: hintMode,
-      },
+    // One telemetry row PER ATTEMPT. Recording only the final outcome would
+    // erase the 429 that triggered the retry — the exact signal needed to see
+    // this happening again.
+    tutorCall.attempts.forEach((a, i) => {
+      recordModelCall(teleSink, {
+        service_code: 'tutor', stage: 'tutor_main', model: tutorModel,
+        // Every attempt reports its OWN pre-fetch timestamp, so latency_ms and
+        // started_at describe that attempt's real network call.
+        started: a.startedAt, res: a.res, json: a.json,
+        meta: {
+          max_tokens: 2800, temperature: 0.4,
+          image_count: solveImages.length, hint_mode: hintMode,
+          attempt: i + 1, attempts_total: tutorCall.attempts.length,
+          retry_delay_ms: a.delayMs || null,
+          retried_after_status: i > 0 ? tutorCall.attempts[i - 1].res.status : null,
+        },
+      });
     });
     let parsed: Record<string, unknown> = {};
     let degraded = false;
@@ -3992,10 +4145,16 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
     // leave `choices[0].message.content` falsy. Substituting '{}' would parse
     // cleanly and proceed with degraded=false — silently returning answer="".
     // Detect that case explicitly and mark it degraded so the answer guard fires.
+    // True ONLY when the upstream produced no content after the retry — i.e.
+    // the model never saw the question. Distinct from `degraded`, which also
+    // covers cases where the model answered and something downstream was
+    // filled in. The failure message is owed to the student only in this case.
+    let modelUnavailable = false;
     const oaiContent = oaiData?.choices?.[0]?.message?.content;
     if (!oaiRes.ok || !oaiContent) {
       parsed = {};
       degraded = true;
+      modelUnavailable = true;
       console.log('[ai-tutor] oai-no-content', JSON.stringify({
         uid: user.id.slice(0, 8),
         ok: oaiRes.ok, status: oaiRes.status,
@@ -4149,13 +4308,19 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
 
     // ── Post-process hint ─────────────────────────────────────────────────────
     let hint = String(parsed.hint || '').trim();
-    if (isMath && hint.length === 0) {
+    // Synthesise a hint only when the model actually ran. If it never saw the
+    // question, a hint about "step one" is not a degraded answer — it is a
+    // fabricated one, and the client renders it a second time as Old Dragon
+    // Advice. Leaving it empty both suppresses that block and lets the terminal
+    // guard reach safeNoAnswerMessage.
+    if (isMath && hint.length === 0 && !modelUnavailable) {
       hint = fallbackHint(finalTopic, finalSubtopic, lang);
       degraded = true;
     }
     // Hint mode safety: if GPT returned empty answer (parse failure or refusal),
     // populate with the hint so the student always gets a useful response.
-    if (hintMode && !String(parsed.answer || '').trim()) {
+    // Same exclusion — hint mode does not make a fabricated hint truthful.
+    if (hintMode && !modelUnavailable && !String(parsed.answer || '').trim()) {
       parsed.answer = hint || fallbackHint(finalTopic, finalSubtopic, lang);
     }
 
@@ -4172,15 +4337,20 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
     // content, a valid JSON object lacked answer/final_answer/result, or the
     // answer was whitespace-only), floor it to the hint, then a localized
     // last-resort message — so answer="" can never reach the response builder.
+    //
+    // When the upstream never produced content, the hint floor is skipped
+    // entirely: see terminalTutorText. That ordering is the fix — previously
+    // `hint` was always non-empty on a math turn, so safeNoAnswerMessage was
+    // unreachable and an upstream 429 was served to the student as coaching.
     if (!tutorAnswerText) {
-      tutorAnswerText = (hint && hint.trim())
-        ? hint
-        : safeNoAnswerMessage(lang);
+      tutorAnswerText = terminalTutorText(tutorAnswerText, hint, modelUnavailable, lang);
       degraded = true;
       console.log('[ai-tutor] empty-answer-guard', JSON.stringify({
         uid: user.id.slice(0, 8),
         source_key: tutorExtract.sourceKey,
-        used: (hint && hint.trim()) ? 'hint' : 'safe_message',
+        model_unavailable: modelUnavailable,
+        used: modelUnavailable ? 'safe_message_upstream_failed'
+            : (hint && hint.trim()) ? 'hint' : 'safe_message',
       }));
     }
     const tutorFinalAnswer = deriveTutorFinalAnswer(tutorAnswerText);
