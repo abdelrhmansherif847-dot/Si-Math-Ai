@@ -41,10 +41,10 @@ const fns = slice(SRC,
   '// ── Repeat Question Detection',
   'worksheet scoping helpers');
 const { currentWorksheetRows, resolveWithinRows, referencedQuestionNumber,
-        resolveQuestionReference } =
+        resolveQuestionReference, worksheetRowsFor } =
   await importTS(consts + '\n' + fns,
     ['currentWorksheetRows', 'resolveWithinRows', 'referencedQuestionNumber',
-     'resolveQuestionReference']);
+     'resolveQuestionReference', 'worksheetRowsFor']);
 
 /** Minimal stand-in for the Supabase query builder the resolver uses. */
 const fakeSb = (rows) => ({
@@ -229,9 +229,15 @@ t.section('I. Wiring — the handler must use the scoped path and stop on failur
                                 '\n// ── Repeat Question Detection', 'resolver fn');
   t.ok('the scoped set is computed from the queried rows',
     /currentWorksheetRows\(rows\)/.test(resolverFn), resolverFn);
-  t.ok('resolution runs against that scoped set, never `rows`',
-    /resolveWithinRows\(current,/.test(resolverFn) &&
+  t.ok('an explicit selection is consulted first',
+    /worksheetRowsFor\(rows, worksheetId\)/.test(resolverFn), resolverFn);
+  t.ok('an unknown selection degrades to the newest, not to the requested id',
+    /selected \?\? currentWorksheetRows\(rows\)/.test(resolverFn), resolverFn);
+  t.ok('resolution runs against that single scope, never `rows`',
+    /resolveWithinRows\(scope,/.test(resolverFn) &&
     !/resolveWithinRows\(rows/.test(resolverFn), resolverFn);
+  t.ok('the reported active worksheet comes from the same scope',
+    /currentWorksheetId: scope\[0\]/.test(resolverFn), resolverFn);
 
   // No automatic fallback to older rows may remain anywhere in the resolver.
   const resolver = slice(SRC, 'async function resolveQuestionReference(',
@@ -276,6 +282,145 @@ t.section('J. No stale images can reach the vision call when unresolved');
   t.ok('solveImages is gated on resolvedRef',
     /const solveImages = imagesData\.length \? imagesData : \(resolvedRef \? refImages : \[\]\)/.test(SRC),
     'solveImages gating changed');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Explicit worksheet selection (Worksheet Selector).
+//
+// Older worksheets become reachable ONLY when the student names one. The
+// scope is still exactly one worksheet per request — newest by default, or the
+// explicit pick. There is no third state and no fallback between them.
+// S0 is the property that lets the server ship AHEAD of the client. The
+// Edge Function is deployed manually and the page deploys itself on merge, so
+// for a while production runs this code while every browser still sends no
+// `worksheet_id` at all. That window is only safe if the new parameter is
+// inert when absent — not "close to" today's behaviour, identical to it.
+//
+// Omitting the argument is tested rather than passing undefined, because the
+// call the old client produces is a 3-argument one. It can go red: give the
+// parameter a default other than "newest", or make it required, and the
+// identity below breaks.
+t.section('S0. A client that never sends worksheet_id is completely unaffected');
+{
+  const refs = ['Q1','Q2','Q4','Q5','Q6','Q11','Q13','Q99','1','question 5',
+                'explain the circle problem','the bacteria culture question',
+                'the y-intercept question','the jog question about average speed'];
+  const divergent = [], escaped = [];
+  for (const q of refs) {
+    const bare = await resolveQuestionReference(fakeSb(bothRows), 'sess', q);        // 3 args
+    const withNull = await resolveQuestionReference(fakeSb(bothRows), 'sess', q, null);
+    if (JSON.stringify(bare) !== JSON.stringify(withNull)) divergent.push(q);
+    if (bare.hit && bare.hit.source_record_id !== TODAY) escaped.push(q);
+    if (bare.currentWorksheetId !== TODAY) escaped.push(`${q} (active=${bare.currentWorksheetId})`);
+  }
+  t.is('omitting the argument is identical to passing null, for every reference',
+    divergent, []);
+  t.is('and an absent selection never escapes the newest worksheet', escaped, []);
+  t.is('the whole battery ran', refs.length, 14);
+}
+
+t.section('S1. An explicit older selection makes that worksheet the scope');
+{
+  const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q11', YESTERDAY);
+  t.is('Q11 now resolves', r.hit?.q_index, 11);
+  t.is('inside the SELECTED worksheet', r.hit?.source_record_id, YESTERDAY);
+  t.is('and the active worksheet is reported as the selection', r.currentWorksheetId, YESTERDAY);
+  t.ok('it is the circle question from that page',
+    /line segments has a slope less than -4/.test(r.hit?.question_text || ''), r.hit?.question_text);
+  t.is('its image_index comes from that worksheet', r.hit?.image_index, 3);
+}
+
+t.section('S2. Selected worksheet lacks the number -> honest stop, no reach elsewhere');
+{
+  // Today's worksheet has no q_index 11 and no label 11. Selecting TODAY and
+  // asking for Q11 must NOT walk to yesterday, which does have it.
+  const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q11', TODAY);
+  t.is('Q11 is unresolved under an explicit TODAY selection', r.hit, null);
+  t.is('the active worksheet is still the selection', r.currentWorksheetId, TODAY);
+  // And the mirror: yesterday selected, a number only today has.
+  const r2 = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q2', YESTERDAY);
+  t.ok('a number absent from the selected older sheet does not reach today',
+    r2.hit === null || r2.hit.source_record_id === YESTERDAY, JSON.stringify(r2.hit));
+}
+
+t.section('S3. No selection behaves exactly as before');
+{
+  for (const sel of [null, undefined, '']) {
+    const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q4', sel);
+    t.is(`selection ${JSON.stringify(sel)} -> newest`, r.hit?.source_record_id, TODAY);
+    t.is('active id is the newest', r.currentWorksheetId, TODAY);
+  }
+  const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q11', null);
+  t.is('and Q11 is still unresolved without a selection', r.hit, null);
+}
+
+t.section('S4. A forged id from ANOTHER session is ignored, never honoured');
+{
+  const FOREIGN = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+  const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q4', FOREIGN);
+  t.is('an id absent from this session falls back to newest', r.currentWorksheetId, TODAY);
+  t.is('and resolution stays inside the newest', r.hit?.source_record_id, TODAY);
+  const r2 = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q11', FOREIGN);
+  t.is('a forged id cannot unlock a number the newest lacks', r2.hit, null);
+  t.ok('the forged id is never returned as the active worksheet',
+    r.currentWorksheetId !== FOREIGN && r2.currentWorksheetId !== FOREIGN, '');
+}
+
+t.section('S5. Cross-user safety is still enforced downstream');
+{
+  // worksheetRowsFor can only ever select from rows the session query returned,
+  // and that query is .eq(session_id). The image fetch keeps its own owner check.
+  t.is('an id not among the rows yields null, not a partial set',
+    worksheetRowsFor(bothRows, 'ffffffff-ffff-4fff-8fff-ffffffffffff'), null);
+  t.ok('the image fetch still filters by user_id',
+    /\.eq\('id', resolvedRef\.source_record_id\)[\s\S]{0,200}\.eq\('user_id', user\.id\)/.test(SRC),
+    'owner guard on the image fetch is missing or moved');
+}
+
+t.section('S6. Malformed selections are ignored safely');
+{
+  for (const bad of ['not-a-uuid', '../../etc/passwd', '   ', 12345, {}, []]) {
+    const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'Q4', bad);
+    t.is(`malformed ${JSON.stringify(bad)} -> newest`, r.currentWorksheetId, TODAY);
+  }
+}
+
+t.section('S7. The semantic matcher obeys the selection too');
+{
+  const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'explain the circle problem', YESTERDAY);
+  t.is('a phrase resolves under an explicit older selection', r.hit?.q_index, 11);
+  t.is('inside the selected worksheet', r.hit?.source_record_id, YESTERDAY);
+
+  const r2 = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'explain the circle problem', null);
+  t.is('and remains unreachable without one', r2.hit, null);
+
+  const r3 = await resolveQuestionReference(fakeSb(bothRows), 'sess', 'the bacteria culture question', YESTERDAY);
+  t.ok('a today-only phrase does not leak in under a yesterday selection',
+    r3.hit === null || r3.hit.source_record_id === YESTERDAY, JSON.stringify(r3.hit));
+}
+
+t.section('S8. ANTI-FALLBACK PROPERTY — the invariant, over every combination');
+{
+  // For every (selection, reference) pair the answer is either inside the
+  // scope that was asked for, or nothing. A third worksheet is never reachable.
+  // This is the property that must survive any future refactor of the matchers.
+  const refs = ['Q1','Q2','Q4','Q5','Q6','Q11','Q13','Q99','1','question 5',
+                'explain the circle problem','the bacteria culture question',
+                'the y-intercept question','the jog question about average speed'];
+  const sels = [null, TODAY, YESTERDAY];
+  let checked = 0, violations = [];
+  for (const sel of sels) {
+    const expected = sel ?? TODAY;                      // null => newest
+    for (const q of refs) {
+      const r = await resolveQuestionReference(fakeSb(bothRows), 'sess', q, sel);
+      checked++;
+      if (r.hit && r.hit.source_record_id !== expected) {
+        violations.push(`${JSON.stringify(q)} under ${sel ?? 'newest'} -> ${r.hit.source_record_id}`);
+      }
+    }
+  }
+  t.is('every combination was exercised', checked, refs.length * sels.length);
+  t.is('no reference ever escaped its scope', violations, []);
 }
 
 t.done();

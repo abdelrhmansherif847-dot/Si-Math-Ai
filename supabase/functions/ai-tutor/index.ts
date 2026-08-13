@@ -2293,6 +2293,23 @@ function currentWorksheetRows(rows: StoredQuestion[]): StoredQuestion[] {
   return rows.filter((r) => r.source_record_id === newest);
 }
 
+/** Rows of an EXPLICITLY selected worksheet, or null when the id names nothing
+ *  in this session.
+ *
+ *  Returning null rather than a fallback set is the safety property: the caller
+ *  decides what an unknown id means, and the only thing it is allowed to mean
+ *  is "use the newest". `rows` came from a query already filtered to this
+ *  session, so an id from another session or another student simply is not in
+ *  it — the scoping is inherited from that filter rather than re-checked here,
+ *  and the image fetch keeps its own owner guard downstream. */
+function worksheetRowsFor(rows: StoredQuestion[], worksheetId: unknown): StoredQuestion[] | null {
+  if (typeof worksheetId !== 'string') return null;
+  const id = worksheetId.trim();
+  if (!id) return null;
+  const picked = rows.filter((r) => r.source_record_id === id);
+  return picked.length ? picked : null;
+}
+
 /** The question number the student named, or null. Shared with the caller so the
  *  guard tells "asked for a number we lack" from "asked nothing numeric". */
 function referencedQuestionNumber(text: string): number | null {
@@ -2347,7 +2364,7 @@ function resolveWithinRows(rows: StoredQuestion[], text: string): StoredQuestion
 interface RefResolution { hit: StoredQuestion | null; currentWorksheetId: string | null }
 
 async function resolveQuestionReference(
-  sb: SbAdmin, sessionId: string, question: string,
+  sb: SbAdmin, sessionId: string, question: string, worksheetId?: unknown,
 ): Promise<RefResolution> {
   const none: RefResolution = { hit: null, currentWorksheetId: null };
   const text = (question || '').trim();
@@ -2359,10 +2376,14 @@ async function resolveQuestionReference(
   const rows = (data || []) as StoredQuestion[];
   if (!rows.length) return none;
 
-  const current = currentWorksheetRows(rows);
+  // Exactly one scope per request: the student's explicit pick, or the newest.
+  // An unknown, forged or malformed id degrades to the newest — never to the
+  // id that was asked for, and never to a search across both.
+  const selected = worksheetRowsFor(rows, worksheetId);
+  const scope = selected ?? currentWorksheetRows(rows);
   return {
-    hit: resolveWithinRows(current, text),
-    currentWorksheetId: current[0]?.source_record_id ?? null,
+    hit: resolveWithinRows(scope, text),
+    currentWorksheetId: scope[0]?.source_record_id ?? null,
   };
 }
 
@@ -3084,7 +3105,13 @@ serve(async (req) => {
     let refImages: string[] = [];
     let currentWorksheetId: string | null = null;
     if (!imageData && resolvedSessionId) {
-      const refResolution = await resolveQuestionReference(sbAdmin, resolvedSessionId, question);
+      // Explicit worksheet pick from the selector. Passed through unvalidated
+      // on purpose: worksheetRowsFor can only match rows the session query
+      // already returned, so an id from another session or student matches
+      // nothing and degrades to the newest. Validation by construction beats a
+      // second check that can drift from the query it is guarding.
+      const refResolution = await resolveQuestionReference(
+        sbAdmin, resolvedSessionId, question, body.worksheet_id);
       resolvedRef       = refResolution.hit;
       currentWorksheetId = refResolution.currentWorksheetId;
       if (resolvedRef?.source_record_id) {
@@ -3112,6 +3139,7 @@ serve(async (req) => {
         console.log('[ai-tutor] ref-resolved', JSON.stringify({
           uid: user.id.slice(0, 8), q_index: resolvedRef.q_index,
           label: resolvedRef.label, has_img: refImages.length > 0,
+          ws_explicit: typeof body.worksheet_id === 'string' && !!body.worksheet_id,
         }));
       }
     }
