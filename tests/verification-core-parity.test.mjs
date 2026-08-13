@@ -24,6 +24,7 @@
 // Do not regenerate the golden to make it pass. Find out what changed.
 import { suite } from './_assert.mjs';
 import { REPO } from './_source.mjs';
+import { goldenSubsetDiff, describeDiff } from './_subset.mjs';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdtempSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -56,6 +57,27 @@ t.is('the deterministic clock matches', POST.fixed_now, GOLDEN.fixed_now);
 t.is('scenario count matches', POST.scenarios.length, GOLDEN.scenarios.length);
 t.ok('the golden covers a meaningful number of scenarios', GOLDEN.scenarios.length >= 6);
 
+// ── The comparison rule ─────────────────────────────────────────────────────
+// The golden is a LOWER BOUND, not a photograph. Everything it witnessed must
+// still hold exactly — same values, same keys, same array lengths and order,
+// same types. Keys it never witnessed are outside its jurisdiction.
+//
+// This narrowing exists because the fixture is UNREGENERABLE: --source=pre
+// rebuilds the pipeline from ai-tutor/index.ts and V1-T16 moved the definition
+// out, so that capture crashes; --source=post would compare the code against
+// itself, which the `GOLDEN.source === 'pre'` assertion above refuses. Under
+// whole-object deep equality, any deliberate additive change to pipeline output
+// could only be made green by regenerating the golden — destroying the proof it
+// carries. See tests/_subset.mjs and tests/parity-guard.test.mjs.
+//
+// WHAT THIS NO LONGER CATCHES, stated plainly: a brand-new key added anywhere,
+// including a new field in a provider request body. Everything else the guard
+// caught before, it still catches.
+const same = (label, golden, replay) => {
+  const d = goldenSubsetDiff(golden, replay);
+  t.ok(d === null ? label : `${label} — ${describeDiff(d)}`, d === null);
+};
+
 // ── Per-scenario, per-artefact equality ─────────────────────────────────────
 const pick = (s, pred) => s.writes.find(pred);
 const upd  = (s) => pick(s, w => w.op === 'update' && w.table === 'question_records')?.payload;
@@ -72,14 +94,14 @@ for (let i = 0; i < GOLDEN.scenarios.length; i++) {
   // The provider calls themselves: same stages, same models, same params, same
   // order. A refactor that reordered or dropped a call would show up here even
   // if the final payload happened to match.
-  t.is('provider calls are identical', p.requests, g.requests);
+  same('provider calls are preserved', g.requests, p.requests);
 
   // Everything the pipeline writes, in order.
-  t.is('database writes are identical (tables, ops and payloads)', p.writes, g.writes);
+  same('database writes are preserved (tables, ops and payloads)', g.writes, p.writes);
 
   // Called out individually so a failure names the artefact rather than
   // dumping the whole write list.
-  t.is('verification_meta is identical', upd(p)?.verification_meta, upd(g)?.verification_meta);
+  same('verification_meta is preserved', upd(g)?.verification_meta, upd(p)?.verification_meta);
   t.is('judge verdict is identical', upd(p)?.judge_verdict, upd(g)?.judge_verdict);
   t.is('verification confidence is identical', upd(p)?.verification_confidence, upd(g)?.verification_confidence);
   t.is('solver agreement is identical', upd(p)?.solver_agreement, upd(g)?.solver_agreement);
@@ -89,27 +111,23 @@ for (let i = 0; i < GOLDEN.scenarios.length; i++) {
   t.is('verification_reason is identical',
     upd(p)?.verification_meta?.verification_reason,
     upd(g)?.verification_meta?.verification_reason);
-  t.is('the verification_decisions row is identical', dec(p), dec(g));
-  t.is('the ai_model_calls rows are identical', call(p), call(g));
-  t.is('the console telemetry payload is identical', p.shadow_log, g.shadow_log);
+  same('the verification_decisions row is preserved', dec(g), dec(p));
+  same('the ai_model_calls rows are preserved', call(g), call(p));
+  same('the console telemetry payload is preserved', g.shadow_log, p.shadow_log);
 }
 
-// ── Whole-fixture equality ──────────────────────────────────────────────────
+// ── Whole-fixture coverage ──────────────────────────────────────────────────
 // The per-artefact assertions above name what broke; this one guarantees
-// nothing was missed by them. `source` is the only field allowed to differ,
-// because it records which code path produced the capture.
-t.section('whole-fixture equality');
+// nothing was missed by them — it walks the ENTIRE golden, including any
+// artefact the loop above never singles out. `source` is the only field allowed
+// to differ, because it records which code path produced the capture.
+t.section('whole-fixture coverage');
 {
   const strip = (o) => { const c = structuredClone(o); delete c.source; return c; };
-  const a = JSON.stringify(strip(GOLDEN));
-  const b = JSON.stringify(strip(POST));
-  t.ok('every byte of the capture matches, except the source label', a === b);
-  if (a !== b) {
-    t.note(`golden ${a.length} bytes vs replay ${b.length} bytes`);
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      if (a[i] !== b[i]) { t.note(`first divergence at byte ${i}: ${JSON.stringify(a.slice(i - 80, i + 80))}`); break; }
-    }
-  }
+  const d = goldenSubsetDiff(strip(GOLDEN), strip(POST));
+  t.ok(d === null
+    ? 'every value the golden captured is still produced, unchanged'
+    : `the replay diverges from the golden — ${describeDiff(d)}`, d === null);
 }
 
 t.done();
