@@ -395,6 +395,18 @@ button{font-family:inherit;cursor:pointer}
 .ws-bar select{background:var(--bg-elev-1,#171a21);color:var(--text-100,#e8ecf1);border:1px solid var(--border-soft,#2a2f3a);border-radius:8px;padding:4px 9px;font-size:12.5px;max-width:100%}
 .ws-bar .ws-hint{font-size:11.5px;color:var(--text-500,#6b7484)}
 
+/* Confidence selector — a toggle first, the 1-5 rating only once it is ON.
+   The pill matches .hint-toggle so the two mode controls read as one family;
+   the cyan accent is kept from the old dots so the rating still looks like the
+   same control it always was. */
+.conf-toggle{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:100px;background:var(--bg-card);border:1px solid var(--border-mid);color:var(--text-400);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-display);-webkit-tap-highlight-color:transparent}
+@media (hover:hover) and (pointer:fine){.conf-toggle:hover{border-color:var(--cyan-border);color:#fff}}
+.conf-toggle:focus{outline:none}
+.conf-toggle:focus-visible{outline:2px solid rgba(56,189,248,.6);outline-offset:2px}
+.conf-toggle.active{background:rgba(56,189,248,.1);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(56,189,248,.15)}
+.conf-toggle svg{width:14px;height:14px;flex-shrink:0}
+.conf-rating{display:none;align-items:center;gap:10px;flex-wrap:wrap}
+.conf-rating.on{display:flex}
 /* Confidence selector */
 .conf-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .conf-bar .conf-l{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
@@ -725,15 +737,21 @@ button{font-family:inherit;cursor:pointer}
       </div>
 
       <div class="conf-bar" id="confBar">
-        <span class="conf-l">Your confidence:</span>
-        <div class="conf-dots" id="confDots">
-          <button class="conf-dot" data-c="1">1</button>
-          <button class="conf-dot" data-c="2">2</button>
-          <button class="conf-dot on" data-c="3">3</button>
-          <button class="conf-dot" data-c="4">4</button>
-          <button class="conf-dot" data-c="5">5</button>
+        <button class="conf-toggle" id="confToggleBtn" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span id="confToggleLabel">I already solved it — check my answer</span>
+        </button>
+        <div class="conf-rating" id="confRating">
+          <span class="conf-l">How confident are you in your answer?</span>
+          <div class="conf-dots" id="confDots">
+            <button class="conf-dot" data-c="1">1</button>
+            <button class="conf-dot" data-c="2">2</button>
+            <button class="conf-dot on" data-c="3">3</button>
+            <button class="conf-dot" data-c="4">4</button>
+            <button class="conf-dot" data-c="5">5</button>
+          </div>
+          <span class="conf-hint" id="confHint">3/5 · Neutral</span>
         </div>
-        <span class="conf-hint" id="confHint">3/5 · Somewhat confident</span>
       </div>
 
       <div class="hint-bar" id="hintBar">
@@ -1309,7 +1327,13 @@ button{font-family:inherit;cursor:pointer}
     const payload = {
       question: question,
       session_id: currentSessionId,
-      confidence: sig ? sig.confidence : SignalEngine.getConfidence(),
+      // Null when the student did not rate themselves. Do NOT fall back to
+      // sig.confidence here: that carries the neutral prior the weakness
+      // engines use, and sending it would re-create the fabricated 3 this
+      // redesign exists to remove.
+      confidence: payloadConfidence(),
+      // "I already solved this — check my work", as opposed to "teach me this".
+      attempt_check: confidenceModeOn(),
       messages: sessionMessages.slice(-10),
       follow_up_type: capturedFollowUpType,
       hint_mode: hintModeActive,
@@ -1545,8 +1569,10 @@ button{font-family:inherit;cursor:pointer}
       return null;
     },
     getConfidence: function(){
-      var on=document.querySelector('#confDots .conf-dot.on');
-      return on?parseInt(on.dataset.c,10):3;
+      // Signals read the NEUTRAL PRIOR when the student gave no rating, which
+      // is what they have always seen. The request payload deliberately reports
+      // null in that case instead — see the confidence-mode block.
+      return (typeof signalConfidence === 'function') ? signalConfidence() : 3;
     },
     analyze: function(text, skipSignals){
       var p=this.detect(text);
@@ -2113,12 +2139,86 @@ button{font-family:inherit;cursor:pointer}
   // ── end worksheet selector ────────────────────────────────────────────
 
   // Confidence selector
-  const confHints={1:'1/5 · Not confident',2:'2/5 · A little unsure',3:'3/5 · Somewhat confident',4:'4/5 · Fairly confident',5:'5/5 · Very confident'};
-  document.querySelectorAll('#confDots .conf-dot').forEach(d=>d.addEventListener('click',()=>{
-    document.querySelectorAll('#confDots .conf-dot').forEach(x=>x.classList.remove('on'));
-    d.classList.add('on');
-    document.getElementById('confHint').textContent=confHints[d.dataset.c];
-  }));
+  // NOTE: the line above is a slice boundary for tests/clipboard-paste.test.mjs,
+  // which ends its image-pipeline region there. Keep it.
+  // ── Confidence mode ───────────────────────────────────────────────────
+  // Confidence used to be a 1-5 dial that was always on screen, pre-set to 3,
+  // and mostly ignored: 81.7% of question_records.confidence_before is the
+  // literal value 3 — a self-assessment no student ever made.
+  //
+  // It is now a statement of intent the student makes on purpose:
+  //   OFF (default)  "I need help solving this."       -> rating hidden
+  //   ON             "I already tried. Check my work." -> rating shown
+  //
+  // The number is the STUDENT'S confidence in their OWN attempt. It has never
+  // meant Zero's confidence in its answer and must not start to.
+  //
+  // TWO READERS, DELIBERATELY DIFFERENT. When the student has said nothing:
+  //   • payloadConfidence() -> null. The request must not invent a rating; the
+  //     column is nullable and should record silence as silence.
+  //   • signalConfidence()  -> 3. The weakness and mastery engines have always
+  //     used 3 as their neutral prior. Handing them null instead would drop the
+  //     weakness weight from 0.6 to 0.5 and switch off the `conf <= 3` topic
+  //     signal for the ~82% of turns that never touch the control — a silent
+  //     analytics change nobody asked for.
+  var confidenceMode = false;          // OFF by default, never persisted
+  var confidenceValue = 3;             // remembered across toggles, sent only when ON
+
+  function confidenceModeOn() { return confidenceMode; }
+  function shouldShowRating() { return confidenceMode; }
+  function selectedConfidenceValue() { return confidenceValue; }
+
+  /** What the request reports: the student's rating, or null if they gave none. */
+  function payloadConfidence() { return confidenceMode ? confidenceValue : null; }
+
+  /** What the weakness/mastery engines read: unchanged from before this feature. */
+  function signalConfidence() { return confidenceMode ? confidenceValue : 3; }
+
+  var confHints = {1:'1/5 · Very unsure',2:'2/5 · Unsure',3:'3/5 · Neutral',
+                   4:'4/5 · Confident',5:'5/5 · Very confident'};
+
+  function renderConfidenceMode() {
+    var btn = document.getElementById('confToggleBtn');
+    var rating = document.getElementById('confRating');
+    var label = document.getElementById('confToggleLabel');
+    var hint = document.getElementById('confHint');
+    if (btn) {
+      btn.classList.toggle('active', confidenceMode);
+      // Release focus so touch browsers don't keep the pressed glow after the
+      // class is removed — the same fix .hint-toggle needed.
+      try { btn.setAttribute('aria-pressed', confidenceMode ? 'true' : 'false'); btn.blur(); } catch (e) {}
+    }
+    if (rating) rating.classList.toggle('on', confidenceMode);
+    if (label) label.textContent = confidenceMode
+      ? 'Checking my answer'
+      : 'I already solved it — check my answer';
+    if (hint) hint.textContent = confHints[confidenceValue];
+    document.querySelectorAll('#confDots .conf-dot').forEach(function (d) {
+      d.classList.toggle('on', parseInt(d.dataset.c, 10) === confidenceValue);
+    });
+  }
+
+  function setConfidenceMode(on) { confidenceMode = !!on; renderConfidenceMode(); }
+  function toggleConfidenceMode() { setConfidenceMode(!confidenceMode); }
+
+  /** The selection survives being switched off — the payload is gated on the
+   *  MODE, so a remembered number is harmless and saves a re-pick. */
+  function pickConfidence(n) {
+    var v = parseInt(n, 10);
+    if (!(v >= 1 && v <= 5)) return;
+    confidenceValue = v;
+    renderConfidenceMode();
+  }
+  // ── end confidence mode ───────────────────────────────────────────────
+
+  (function wireConfidenceMode() {
+    var btn = document.getElementById('confToggleBtn');
+    if (btn) btn.addEventListener('click', toggleConfidenceMode);
+    document.querySelectorAll('#confDots .conf-dot').forEach(function (d) {
+      d.addEventListener('click', function () { pickConfidence(d.dataset.c); });
+    });
+    renderConfidenceMode();
+  })();
 
   // PDF upload
   const qPdf=document.getElementById('qPdf');
