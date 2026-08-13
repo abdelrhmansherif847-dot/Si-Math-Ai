@@ -2257,40 +2257,77 @@ const REF_STOP = new Set([
   'this','that','one','about','problem','of','to','it','help','me','give','show','what','is','and',
 ]);
 
-async function resolveQuestionReference(
-  sb: SbAdmin, sessionId: string, question: string,
-): Promise<StoredQuestion | null> {
-  const text = (question || '').trim();
-  if (!text || !sessionId) return null;
-  const { data } = await sb.from('session_questions')
-    .select('id,q_index,label,question_text,summary,source_record_id,image_index')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false });
-  const rows = (data || []) as StoredQuestion[];
+// Answer when a question number was asked for, a current worksheet exists, and
+// that number is not in it. Deliberately NOT the re-attach guard below: the
+// student just uploaded a worksheet, so "re-attach" reads as broken. It must
+// also not hint an older worksheet was consulted — none was.
+function worksheetQuestionNotFoundMessage(q_number: string, lang: string): WorksheetGuardResult {
+  const MSGS: Record<string, string> = {
+    en: `I couldn't find question ${q_number} in the worksheet you sent. Could you check the number, send a clearer image of that question, or paste the question text? I'd rather ask than solve a different problem.`,
+    ar: `مالقيتش سؤال ${q_number} في الورقة اللي بعتها. ممكن تتأكد من الرقم، أو تبعت صورة أوضح للسؤال ده، أو تكتب نص السؤال؟ أحسن أسألك من إني أحل مسألة تانية.`,
+    franco: `Ma la2etsh so2al ${q_number} fel wara2a elli ba3tha. Mumken tet2aked mn el rakam, aw teb3at sora awda7 lel so2al da, aw tekteb nas el so2al? A7san as2alak mn enni a7el mas2ala tanya.`,
+  };
+  return { answer: MSGS[lang] ?? MSGS['en'], q_number: String(q_number), lang };
+}
+
+// ── Worksheet scoping for automatic question resolution ──────────────────
+//
+// Session 393c2193 (2026-08-13) ran ~20 hours over two uploads. The student sent
+// a new worksheet and asked for Q4/Q5/Q6; all three were answered from the
+// PREVIOUS day's, and its four images were re-attached to the vision call
+// (tutor_main image_count = 4, against 1 on the upload itself). The old
+// `byNumber` scanned the whole session — label search then q_index search, both
+// unscoped — and today's set carried labels 1,2,3 plus three nulls, so 4/5/6
+// matched nothing current and fell through to yesterday's "4.", "5.", "6.".
+//
+// Rule: once a worksheet is current, NO automatic path — numeric or semantic —
+// may reach an older source_record_id. Older worksheets stay stored and become
+// addressable again only via an explicit Switch Worksheet feature.
+
+/** Rows of the newest indexed worksheet. `rows` arrives created_at DESC, so the
+ *  first row carrying a source_record_id names it. Legacy rows without a source
+ *  stay one undivided set — scoping needs an origin to enforce. */
+function currentWorksheetRows(rows: StoredQuestion[]): StoredQuestion[] {
+  const newest = rows.find((r) => r.source_record_id)?.source_record_id ?? null;
+  if (!newest) return rows;
+  return rows.filter((r) => r.source_record_id === newest);
+}
+
+/** The question number the student named, or null. Shared with the caller so the
+ *  guard tells "asked for a number we lack" from "asked nothing numeric". */
+function referencedQuestionNumber(text: string): number | null {
+  const s = (text || '').trim();
+  if (!s) return null;
+  const EN = /\b(?:Q|question|prob(?:lem)?|number|num|#)\s*\.?\s*#?\s*(\d{1,3}|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(s);
+  const AR = /(?:سؤال|السؤال|مسألة|المسألة|رقم|نمرة)\s*(?:رقم\s*)?([٠-٩]{1,3}|\d{1,3}|الأول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر)/.exec(s);
+  const FR = /\b(?:so2al|so2aal|s2al|rakam|ra2m|nemra|nemrit)\s*\.?\s*(\d{1,3})\b/i.exec(s);
+  const ORDW = /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(s);
+  const BARE = /^(?:Q\s*\.?\s*)?(\d{1,3})$/i.exec(s);
+  const token = (EN?.[1] || AR?.[1] || FR?.[1] || ORDW?.[1] || BARE?.[1] || '').toLowerCase();
+  if (!token) return null;
+  if (/^\d+$/.test(token)) return parseInt(token, 10);
+  if (/[٠-٩]/.test(token)) return parseInt(token.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))), 10);
+  return ORD_EN[token] ?? ORD_AR[token] ?? null;
+}
+
+/** Numeric then semantic resolution, against the set it is handed and nothing
+ *  else. Both matchers scan the same rows: scoping one and not the other leaves
+ *  the same bug reachable by phrase instead of by number. */
+function resolveWithinRows(rows: StoredQuestion[], text: string): StoredQuestion | null {
   if (!rows.length) return null;
+  const s = (text || '').trim();
+  if (!s) return null;
 
-  // Most-recent row matching a numeric target — printed label wins over q_index.
-  const byNumber = (n: number): StoredQuestion | null =>
-    rows.find((r) => (r.label || '').replace(/\D/g, '') === String(n)) ||
-    rows.find((r) => r.q_index === n) || null;
-
-  // 1) Explicit number / ordinal (EN / AR / Franco), or a bare ordinal word.
-  const EN = /\b(?:Q|question|prob(?:lem)?|number|num|#)\s*\.?\s*#?\s*(\d{1,3}|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(text);
-  const AR = /(?:سؤال|السؤال|مسألة|المسألة|رقم|نمرة)\s*(?:رقم\s*)?([٠-٩]{1,3}|\d{1,3}|الأول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر)/.exec(text);
-  const FR = /\b(?:so2al|so2aal|s2al|rakam|ra2m|nemra|nemrit)\s*\.?\s*(\d{1,3})\b/i.exec(text);
-  const ORDW = /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i.exec(text);
-  let token = (EN?.[1] || AR?.[1] || FR?.[1] || ORDW?.[1] || '').toLowerCase();
-  if (token) {
-    let n: number | undefined;
-    if (/^\d+$/.test(token)) n = parseInt(token, 10);
-    else if (/[٠-٩]/.test(token)) n = parseInt(token.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))), 10);
-    else if (ORD_EN[token]) n = ORD_EN[token];
-    else if (ORD_AR[token]) n = ORD_AR[token];
-    if (n) { const hit = byNumber(n); if (hit) return hit; }
+  // 1) Explicit number / ordinal — printed label wins over q_index.
+  const n = referencedQuestionNumber(s);
+  if (n) {
+    const hit = rows.find((r) => (r.label || '').replace(/\D/g, '') === String(n)) ||
+                rows.find((r) => r.q_index === n) || null;
+    if (hit) return hit;
   }
 
   // 2) Semantic match — overlap student keywords with summary / question text.
-  const tokens = text.toLowerCase()
+  const tokens = s.toLowerCase()
     .replace(/[^a-z؀-ۿ\s]/g, ' ').split(/\s+/)
     .filter((w) => w.length > 2 && !REF_STOP.has(w));
   if (tokens.length) {
@@ -2303,6 +2340,30 @@ async function resolveQuestionReference(
     if (best && bestScore >= 1) return best;
   }
   return null;
+}
+
+/** `currentWorksheetId` is returned even on a miss: the caller needs to know a
+ *  worksheet EXISTS to choose between not-found and the re-attach guard. */
+interface RefResolution { hit: StoredQuestion | null; currentWorksheetId: string | null }
+
+async function resolveQuestionReference(
+  sb: SbAdmin, sessionId: string, question: string,
+): Promise<RefResolution> {
+  const none: RefResolution = { hit: null, currentWorksheetId: null };
+  const text = (question || '').trim();
+  if (!text || !sessionId) return none;
+  const { data } = await sb.from('session_questions')
+    .select('id,q_index,label,question_text,summary,source_record_id,image_index')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false });
+  const rows = (data || []) as StoredQuestion[];
+  if (!rows.length) return none;
+
+  const current = currentWorksheetRows(rows);
+  return {
+    hit: resolveWithinRows(current, text),
+    currentWorksheetId: current[0]?.source_record_id ?? null,
+  };
 }
 
 // ── Repeat Question Detection (v76) ──────────────────────────────────────────
@@ -3021,8 +3082,11 @@ serve(async (req) => {
     // (and its source image) into the solve, and the worksheet guard stands down.
     let resolvedRef: StoredQuestion | null = null;
     let refImages: string[] = [];
+    let currentWorksheetId: string | null = null;
     if (!imageData && resolvedSessionId) {
-      resolvedRef = await resolveQuestionReference(sbAdmin, resolvedSessionId, question);
+      const refResolution = await resolveQuestionReference(sbAdmin, resolvedSessionId, question);
+      resolvedRef       = refResolution.hit;
+      currentWorksheetId = refResolution.currentWorksheetId;
       if (resolvedRef?.source_record_id) {
         // .eq('user_id') is belt-and-braces: source_record_id comes from
         // session_questions in a session SEC-02 has already proven the caller
@@ -3056,12 +3120,26 @@ serve(async (req) => {
     // Must run after lang resolution (guard messages are language-aware) and
     // before any OpenAI call. Guard turns are not persisted to question_records.
     // Skipped when a reference resolved — we have the real question, no re-upload.
-    const worksheetGuard = resolvedRef ? null : worksheetGuardCheck(question, imageData, messages, lang);
+    // A number was named, a current worksheet exists, and it is not in there.
+    // worksheetGuardCheck stands down whenever a recent turn carried an image —
+    // exactly this case, since the student just uploaded one. Without its own
+    // branch the request falls through to the tutor with a bare "Q4", no images
+    // and the degenerate solver input: no stale worksheet, but no answer either.
+    const refNumber = (!imageData && currentWorksheetId && !resolvedRef)
+      ? referencedQuestionNumber(question) : null;
+    const unresolvedInCurrentWorksheet = refNumber !== null;
+
+    const worksheetGuard = resolvedRef ? null
+      : unresolvedInCurrentWorksheet
+        ? worksheetQuestionNotFoundMessage(String(refNumber), lang)
+        : worksheetGuardCheck(question, imageData, messages, lang);
     if (worksheetGuard) {
       console.log('[ai-tutor] worksheet-guard-fired', JSON.stringify({
         uid:    user.id.slice(0, 8),
         guard:  'worksheet',
-        reason: 'question_reference_without_image',
+        reason: unresolvedInCurrentWorksheet
+          ? 'question_not_in_current_worksheet'
+          : 'question_reference_without_image',
         q_number: worksheetGuard.q_number,
         lang:   worksheetGuard.lang,
       }));
