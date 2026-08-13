@@ -45,9 +45,11 @@ const fns = slice(SRC,
   'upstream failure helpers');
 const safeMsg = slice(SRC, 'function safeNoAnswerMessage(lang: string): string {',
   '\n}\n', 'safeNoAnswerMessage') + '\n}\n';
-const { isTransientUpstream, retryDelayMs, terminalTutorText, callTutorModel } =
+const { isTransientUpstream, retryDelayMs, terminalTutorText, callTutorModel,
+        parseResetFromMessage, parseRetryAfterMs, RETRY_MAX_MS } =
   await importTS(fns + '\n' + safeMsg,
-    ['isTransientUpstream', 'retryDelayMs', 'terminalTutorText', 'callTutorModel']);
+    ['isTransientUpstream', 'retryDelayMs', 'terminalTutorText', 'callTutorModel',
+     'parseResetFromMessage', 'parseRetryAfterMs', 'RETRY_MAX_MS']);
 
 const EN_SAFE = "I couldn't generate a full answer this time. Please resend your question and I'll take another look.";
 const GENERIC_HINT = 'Think about step one: what do you know, and what are you trying to find?';
@@ -103,17 +105,50 @@ t.section('E1. Which upstream statuses are transient');
   t.ok('200 is not a retry candidate', !isTransientUpstream(200));
 }
 
-t.section('E2. Retry-After is honoured and bounded');
+t.section('E2. Delay precedence — header, then error body, then default');
 {
+  // (a) Retry-After wins when usable.
   t.is('numeric seconds are converted to ms', retryDelayMs('1'), 1000);
-  t.is('a long Retry-After is clamped, never slept in full', retryDelayMs('120'), 2000);
-  t.is('absent header falls back to a short fixed delay', retryDelayMs(null), 400);
-  t.is('garbage header does not produce NaN', retryDelayMs('soon'), 400);
-  // Date.parse('-5') is a VALID date in 2001, so a malformed negative used to
-  // fall through to the date branch and clamp to 0 — an instant 429 retry.
-  t.is('negative is not allowed to invert into a zero delay', retryDelayMs('-5'), 400);
-  t.ok('the delay is always bounded', [null, '0', '1', '999999', 'x']
-    .every(h => retryDelayMs(h) >= 0 && retryDelayMs(h) <= 2000));
+  t.is('the header beats the error body',
+    retryDelayMs('2', 'Please try again in 8.063s.'), 2000);
+
+  // (b) The reset OpenAI states in the body, when there is no usable header.
+  // These are the eight real production values.
+  const MSG = (t) => `Rate limit reached for gpt-4o in organization org-X on tokens per min (TPM): Limit 30000, Used 22211, Requested 11821. Please try again in ${t}. Visit https://platform.openai.com/account/rate-limits to learn more.`;
+  t.is('decimal seconds parse (8.063s)', retryDelayMs(null, MSG('8.063s')), 8063);
+  t.is('milliseconds parse (364ms)',     retryDelayMs(null, MSG('364ms')),  364);
+  t.is('plain seconds parse (5.396s)',   retryDelayMs(null, MSG('5.396s')), 5396);
+  for (const [txt, ms] of [['2.226s',2226],['3.306s',3306],['3.78s',3780],
+                           ['5.994s',5994],['7.066s',7066]]) {
+    t.is(`observed reset ${txt} is recovered`, retryDelayMs(null, MSG(txt)), ms);
+  }
+
+  // (c) Default only when neither source is usable.
+  t.is('no header and no message', retryDelayMs(null, null), 400);
+  t.is('message without a reset phrase', retryDelayMs(null, 'Something broke.'), 400);
+  t.is('garbage header, no message', retryDelayMs('soon', null), 400);
+
+  t.section('E2b. Malformed timing is rejected safely');
+  t.is('negative header is not read as a 2001 date', retryDelayMs('-5', null), 400);
+  t.is('zero header is rejected', retryDelayMs('0', null), 400);
+  t.is('zero in the body is rejected', retryDelayMs(null, 'try again in 0s'), 400);
+  t.is('negative in the body is not matched', retryDelayMs(null, 'try again in -5s'), 400);
+  t.is('parseRetryAfterMs never falls through to Date.parse on numbers',
+    parseRetryAfterMs('-5'), null);
+  t.is('parseResetFromMessage returns null with no phrase',
+    parseResetFromMessage('Rate limit reached.'), null);
+
+  t.section('E2c. The cap is bounded and skips a knowingly premature retry');
+  t.is('the maximum is 9000ms, above the observed 8.063s worst case', RETRY_MAX_MS, 9000);
+  t.ok('every observed reset is inside the cap',
+    ['364ms','2.226s','3.306s','3.78s','5.396s','5.994s','7.066s','8.063s']
+      .every(x => retryDelayMs(null, MSG(x)) <= RETRY_MAX_MS));
+  t.is('a reset beyond the cap SKIPS the retry rather than retrying early',
+    retryDelayMs(null, MSG('60s')), null);
+  t.is('a Retry-After beyond the cap also skips', retryDelayMs('120', null), null);
+  t.ok('nothing usable ever exceeds the cap',
+    [null,'0','1','9','x'].every(h => { const d = retryDelayMs(h, null);
+      return d === null || (d >= 0 && d <= RETRY_MAX_MS); }));
 }
 
 t.section('E3. The retry itself — bounded, observable, transient-only');
@@ -159,6 +194,64 @@ t.section('E3. The retry itself — bounded, observable, transient-only');
     t.is('a successful first call makes exactly one request', calls, 1);
     t.is('and records exactly one attempt', r.attempts.length, 1);
   }
+}
+
+t.section('E4. Attempt timing is captured BEFORE each fetch');
+{
+  const FETCH_MS = 60;
+  const mk = (status, body = {}, headers = {}) => ({
+    res: { ok: status >= 200 && status < 300, status,
+           headers: { get: (n) => headers[n.toLowerCase()] ?? null } },
+    json: body,
+  });
+  const OK = mk(200, { choices: [{ message: { content: '{"answer":"x = 5"}' } }] });
+  const RL = mk(429, { error: { code: 'rate_limit_exceeded',
+    message: 'Rate limit reached. Please try again in 100ms.' } });
+
+  const seq = [RL, OK];
+  const entered = [];
+  const slowFetch = async () => {
+    entered.push(Date.now());
+    await new Promise(r => setTimeout(r, FETCH_MS));   // real network time
+    return seq.shift();
+  };
+  const r = await callTutorModel(slowFetch, (ms) => new Promise(res => setTimeout(res, ms)));
+  const done = Date.now();
+
+  t.is('two attempts', r.attempts.length, 2);
+  // A: a timestamp taken AFTER the fetch would sit at or past the moment the
+  // fetch resolved. Taken before, it sits at (or a hair after) fetch entry.
+  t.ok('attempt 1 startedAt is at fetch ENTRY, not fetch exit',
+    r.attempts[0].startedAt <= entered[0] + 5, `${r.attempts[0].startedAt - entered[0]}ms after entry`);
+  t.ok('attempt 2 startedAt is at fetch ENTRY, not fetch exit',
+    r.attempts[1].startedAt <= entered[1] + 5, `${r.attempts[1].startedAt - entered[1]}ms after entry`);
+
+  // B: latency, as recordModelCall computes it (Date.now() - started), must
+  // cover the real fetch duration. Capturing after the fetch yields ~0.
+  t.ok('attempt 2 latency covers the real retry fetch duration',
+    (done - r.attempts[1].startedAt) >= FETCH_MS - 5,
+    `${done - r.attempts[1].startedAt}ms measured, fetch took ${FETCH_MS}ms`);
+  t.ok('attempt 1 latency also covers its own fetch',
+    (r.attempts[1].startedAt - r.attempts[0].startedAt) >= FETCH_MS - 5, '');
+  t.ok('the two attempts do not share a timestamp',
+    r.attempts[0].startedAt !== r.attempts[1].startedAt, '');
+  t.is('the retry delay recorded is the parsed reset', r.attempts[1].delayMs, 100);
+}
+
+t.section('J. A reset beyond the cap skips the retry entirely');
+{
+  const mk = (status, body = {}, headers = {}) => ({
+    res: { ok: false, status, headers: { get: (n) => headers[n.toLowerCase()] ?? null } },
+    json: body,
+  });
+  const FAR = mk(429, { error: { message: 'Rate limit reached. Please try again in 60s.' } });
+  let calls = 0; const slept = [];
+  const r = await callTutorModel(async () => { calls++; return FAR; },
+                                 async (ms) => { slept.push(ms); });
+  t.is('no premature retry is issued', calls, 1);
+  t.is('and nothing is slept', slept.length, 0);
+  t.is('the original failure is preserved for telemetry', r.attempts.length, 1);
+  t.is('the returned status is still the real failure', r.res.status, 429);
 }
 
 // ───────────────────────────────────────────────────────────────────────────

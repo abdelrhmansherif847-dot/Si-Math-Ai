@@ -911,23 +911,58 @@ function isTransientUpstream(status: number): boolean {
   return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
-/** Retry-After → ms, bounded. A student is waiting on this request, so an
- *  honest failure beats a long sleep: OpenAI's suggestion is respected only up
- *  to RETRY_MAX_MS, and anything unparseable falls back to a short fixed wait. */
-const RETRY_MAX_MS     = 2000;
+/** Maximum we will make a student wait before giving up and telling the truth.
+ *
+ *  Chosen from evidence, not taste. Eight real TPM 429s carried these resets:
+ *  364ms, 2.226s, 3.306s, 3.78s, 5.396s, 5.994s, 7.066s, 8.063s. A 2s cap — the
+ *  first version of this code — recovered exactly ONE of the eight and turned
+ *  the other seven into "wait 2s, fail anyway", which is worse than failing at
+ *  once. 9000ms clears the observed maximum of 8.063s with ~0.9s of headroom.
+ *  For scale: tutor_main itself normally takes 11-18s, and this path only runs
+ *  on a failure. */
+const RETRY_MAX_MS     = 9000;
 const RETRY_DEFAULT_MS = 400;
-function retryDelayMs(retryAfter: string | null): number {
-  if (!retryAfter) return RETRY_DEFAULT_MS;
-  // Numeric form is decided here and never falls through: Date.parse('-5')
-  // returns a valid date in 2001, which would clamp to a 0ms delay and retry a
-  // 429 instantly. A negative is malformed, so it takes the default wait.
+
+/** Retry-After → ms, or null when the header is absent or unusable.
+ *
+ *  The numeric form is decided here and NEVER falls through to Date.parse:
+ *  Date.parse('-5') returns a valid date in 2001, so numeric garbage would be
+ *  read as a timestamp and clamp to a 0ms delay — an instant retry of a 429. */
+function parseRetryAfterMs(retryAfter: string | null): number | null {
+  if (!retryAfter) return null;
   const secs = Number(retryAfter);
-  if (Number.isFinite(secs)) {
-    return secs < 0 ? RETRY_DEFAULT_MS : Math.min(RETRY_MAX_MS, Math.round(secs * 1000));
-  }
-  const at = Date.parse(retryAfter);                     // HTTP-date form
-  if (Number.isFinite(at)) return Math.min(RETRY_MAX_MS, Math.max(0, at - Date.now()));
-  return RETRY_DEFAULT_MS;
+  if (Number.isFinite(secs)) return secs > 0 ? Math.round(secs * 1000) : null;
+  const at = Date.parse(retryAfter);                     // HTTP-date form only
+  if (Number.isFinite(at)) { const d = at - Date.now(); return d > 0 ? d : null; }
+  return null;
+}
+
+/** The reset OpenAI states in the error body itself:
+ *    "…Limit 30000, Used 22211, Requested 11821. Please try again in 8.063s."
+ *  We already persist this string as oai_error_msg and were ignoring the one
+ *  number in it that says when the window reopens. */
+function parseResetFromMessage(msg: string | null | undefined): number | null {
+  if (!msg) return null;
+  const m = /try again in\s+([0-9]*\.?[0-9]+)\s*(ms|s)\b/i.exec(String(msg));
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(m[2].toLowerCase() === 'ms' ? n : n * 1000);
+}
+
+/** How long to wait before the single retry, or null meaning DO NOT RETRY.
+ *
+ *  Precedence: (a) Retry-After header, (b) the reset stated in the error body,
+ *  (c) a short default when neither is usable.
+ *
+ *  When the upstream says it needs longer than RETRY_MAX_MS, we do not sleep a
+ *  shorter arbitrary time and retry into a window we know is still closed —
+ *  that spends the student's time to buy a second guaranteed failure. We skip
+ *  the retry and take the honest failure path immediately. */
+function retryDelayMs(retryAfter: string | null, errMsg?: string | null): number | null {
+  const required = parseRetryAfterMs(retryAfter) ?? parseResetFromMessage(errMsg);
+  if (required === null) return RETRY_DEFAULT_MS;
+  return required > RETRY_MAX_MS ? null : required;
 }
 
 type TutorAttempt = { res: { ok: boolean; status: number; headers: { get(n: string): string | null } };
@@ -942,16 +977,27 @@ async function callTutorModel(
   sleep: (ms: number) => Promise<void>,
 ): Promise<{ res: TutorAttempt['res']; json: any; attempts: TutorAttempt[] }> {
   const attempts: TutorAttempt[] = [];
+  // Captured BEFORE the fetch. Taking it afterwards makes started_at the END of
+  // the call, so recordModelCall's `Date.now() - started` reports ~0ms and the
+  // economic clock is wrong — which silently drags ai_monitor_call_health's
+  // latency percentiles down and makes R4b's skew meaningless for that row.
+  const firstAt = Date.now();
   const first = await doFetch();
-  attempts.push({ ...first, startedAt: Date.now(), delayMs: 0 });
+  attempts.push({ ...first, startedAt: firstAt, delayMs: 0 });
   const content = first.json?.choices?.[0]?.message?.content;
   if ((first.res.ok && content) || !isTransientUpstream(first.res.status)) {
     return { res: first.res, json: first.json, attempts };
   }
-  const delayMs = retryDelayMs(first.res.headers.get('retry-after'));
+  const delayMs = retryDelayMs(
+    first.res.headers.get('retry-after'), first.json?.error?.message);
+  // null = the upstream needs longer than we are willing to make a student wait.
+  // Return the ORIGINAL failure untouched so its telemetry stays intact and the
+  // honest safe-failure path runs.
+  if (delayMs === null) return { res: first.res, json: first.json, attempts };
   await sleep(delayMs);
+  const secondAt = Date.now();                            // likewise, before the fetch
   const second = await doFetch();
-  attempts.push({ ...second, startedAt: Date.now(), delayMs });
+  attempts.push({ ...second, startedAt: secondAt, delayMs });
   return { res: second.res, json: second.json, attempts };
 }
 
@@ -4040,7 +4086,6 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
     ];
 
     const tutorModel = solveImages.length ? 'gpt-4o' : 'gpt-4o-mini';
-    const tutorT0    = Date.now();
     // One bounded retry on a transient upstream failure. The tutor model for an
     // image turn is gpt-4o, whose org TPM ceiling one worksheet call nearly
     // exhausts, so a second turn inside the same minute reliably 429s. Retrying
@@ -4073,7 +4118,9 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
     tutorCall.attempts.forEach((a, i) => {
       recordModelCall(teleSink, {
         service_code: 'tutor', stage: 'tutor_main', model: tutorModel,
-        started: i === 0 ? tutorT0 : a.startedAt, res: a.res, json: a.json,
+        // Every attempt reports its OWN pre-fetch timestamp, so latency_ms and
+        // started_at describe that attempt's real network call.
+        started: a.startedAt, res: a.res, json: a.json,
         meta: {
           max_tokens: 2800, temperature: 0.4,
           image_count: solveImages.length, hint_mode: hintMode,
