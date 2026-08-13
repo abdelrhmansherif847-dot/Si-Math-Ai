@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v99
+// ai-tutor Edge Function v100
 // v98 (an acknowledgement inherits no topic): v97 stopped non-math turns from
 // entering L3 Shadow, but the shadow row was the least of what they wrote. A
 // bare "okk good", one turn after "whats 22 root 0", was stored as
@@ -331,7 +331,7 @@ import { runL3ShadowPipeline, isShadowEligibleInput } from '../_shared/verificat
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v99';
+const AI_TUTOR_VERSION = 'v100';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -684,6 +684,65 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 function cleanUuid(v: unknown): string | null {
   return (typeof v === 'string' && UUID_RE.test(v)) ? v : null;
 }
+
+// ── Attempt-check mode ───────────────────────────────────────────────────
+// The student now says which of two things they are asking for:
+//
+//   OFF (default)  "I need help solving this."       -> teach, exactly as before
+//   ON             "I already tried. Check my work." -> check the attempt, and
+//                                                       rate their own confidence
+//
+// The 1-5 number is STUDENT SELF-CONFIDENCE and always has been. It is not a
+// measure of how right Zero's answer is, and nothing downstream may read it
+// that way — `confidence_before` is the student's statement about themselves.
+
+/** The student's self-rating, or null when they did not give one.
+ *
+ *  Null rather than a default matters. The previous coercion turned every
+ *  unusable value into 3, which is why 81.7% of `confidence_before` in
+ *  production is the literal 3 — a self-assessment no student ever made. The
+ *  column is nullable and 8.7% of it is already null, so recording "they said
+ *  nothing" costs nothing and stops the field lying about the other 81.7%.
+ *
+ *  Today's client always sends a finite 1-5, so this is a no-op for it. */
+function parseConfidence(raw: unknown): number | null {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return null;
+  return Math.min(5, Math.max(1, Math.round(raw)));
+}
+
+/** Strictly boolean. A truthy string like "false" must not switch modes. */
+function isAttemptCheck(raw: unknown): boolean {
+  return raw === true;
+}
+
+/** The extra system message for an attempt-check turn.
+ *
+ *  Added as its own anchor rather than folded into the system prompt, following
+ *  the toneAnchor/langAnchor pattern already in this file: when the mode is off
+ *  the message array is byte-identical to before, which is what lets this
+ *  deploy ahead of the client that sends the flag.
+ *
+ *  Note this is the FIRST time the student's confidence reaches the model at
+ *  all. The prompt has long carried a rule keyed on "sent confidence <= 2", but
+ *  the value was never interpolated anywhere, so that rule has never been
+ *  reachable. It becomes reachable here — and only inside this new mode, so no
+ *  existing turn changes behaviour. */
+function attemptCheckAnchor(confidence: number | null): string {
+  const self = confidence === null
+    ? 'The student did not rate their own confidence.'
+    : `The student rates their own confidence in their attempt as ${confidence}/5 — ` +
+      'this is the student\'s self-assessment, not a measure of whether they are right.';
+  return (
+    '📝 ATTEMPT CHECK: The student has already tried this question themselves and is asking you to ' +
+    'check their work, not to teach it from scratch. ' +
+    self + ' ' +
+    'Start from what they did: say plainly whether their answer is correct, and if it is not, find ' +
+    'the first step where it went wrong and explain why that step fails — do not silently re-solve ' +
+    'the problem as though they had never attempted it. If their work is correct, confirm it and ' +
+    'explain briefly why the reasoning holds. Keep your normal teaching voice and format.'
+  );
+}
+// ── end attempt-check mode ───────────────────────────────────────────────
 
 // ── Taxonomy (single source of truth) ────────────────────────────────────────
 // Imported from the generated _shared copy of taxonomy.core.js — byte-identical
@@ -2831,10 +2890,10 @@ serve(async (req) => {
     // any downstream insert (mass assignment).
     const question:    string  = cleanStr(body.question, MAX_QUESTION_CHARS);
     const sessionId:   string | null = cleanUuid(body.session_id);
-    const rawConfidence = body.confidence;
-    const confidence:  number  = (typeof rawConfidence === 'number' && Number.isFinite(rawConfidence))
-      ? Math.min(5, Math.max(1, Math.round(rawConfidence)))
-      : 3;
+    // Student self-confidence, or null when they did not give one. See the
+    // attempt-check block for why this no longer defaults to 3.
+    const confidence: number | null = parseConfidence(body.confidence);
+    const attemptCheck: boolean = isAttemptCheck(body.attempt_check);
     const hintMode:    boolean = body.hint_mode === true;
     const followUpType: string | null = cleanStr(body.follow_up_type, MAX_FOLLOWUP_CHARS) || null;
     const clientRequestId: string | null = cleanUuid(body.client_request_id);
@@ -4182,12 +4241,17 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
       ? detectQuestionsInImages(imagesData, teleSink)
       : Promise.resolve([]);
 
+    // Null unless the student switched Confidence ON, so an ordinary turn
+    // assembles exactly the message array it did before this feature existed.
+    const attemptAnchor = attemptCheck ? attemptCheckAnchor(confidence) : null;
+
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'system', content: curriculumAnchor },
       ...(toneAnchor ? [{ role: 'system', content: toneAnchor }] : []),
       ...messages.slice(-10),
       { role: 'system', content: langAnchor },
+      ...(attemptAnchor ? [{ role: 'system', content: attemptAnchor }] : []),
       { role: 'user', content: userContent },
     ];
 
