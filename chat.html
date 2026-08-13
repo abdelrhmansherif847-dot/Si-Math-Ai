@@ -387,6 +387,14 @@ button{font-family:inherit;cursor:pointer}
 .msg-dd-item.danger svg{color:#ef4f5f}
 .msg-dd-item.danger:hover{background:rgba(239,79,95,.1);color:#ef4f5f}
 
+/* Worksheet selector — sits beside Confidence. Hidden unless the session has
+   more than one worksheet, so the usual single-worksheet session is unchanged. */
+.ws-bar{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ws-bar.on{display:flex}
+.ws-bar .ws-l{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
+.ws-bar select{background:var(--bg-elev-1,#171a21);color:var(--text-100,#e8ecf1);border:1px solid var(--border-soft,#2a2f3a);border-radius:8px;padding:4px 9px;font-size:12.5px;max-width:100%}
+.ws-bar .ws-hint{font-size:11.5px;color:var(--text-500,#6b7484)}
+
 /* Confidence selector */
 .conf-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .conf-bar .conf-l{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400)}
@@ -708,6 +716,12 @@ button{font-family:inherit;cursor:pointer}
         <button class="chip"><span class="d"></span>SAT Algebra Help</button>
         <button class="chip"><span class="d"></span>EST Practice Help</button>
         <button class="chip dragon-chip" id="dragonChip">🐉 Ask Zero for Wisdom</button>
+      </div>
+
+      <div class="ws-bar" id="wsBar">
+        <span class="ws-l">Worksheet:</span>
+        <select id="wsSelect" aria-label="Active worksheet"></select>
+        <span class="ws-hint" id="wsHint">Questions resolve from this worksheet only</span>
       </div>
 
       <div class="conf-bar" id="confBar">
@@ -1303,6 +1317,10 @@ button{font-family:inherit;cursor:pointer}
       // v76: always send last known record_id so server can link repeats/re-explanations
       // to the original question_record without creating a duplicate row.
       parent_record_id: window.__lastQRecId || null,
+      // Explicit worksheet pick. Null/absent = newest, which is the default and
+      // the only thing an unknown id may degrade to. Never sent for the newest,
+      // so "no selection" stays distinguishable from "chose the newest".
+      worksheet_id: (typeof selectedWorksheetId !== 'undefined' ? selectedWorksheetId : null),
     };
     // Optional extras (the function can ignore unknown fields)
     if (sig && sig.topic) payload.topic = sig.topic;
@@ -2001,6 +2019,98 @@ button{font-family:inherit;cursor:pointer}
       });
     });
   });
+
+  // ── Worksheet selector ────────────────────────────────────────────────
+  // A student may return to an older worksheet, but only by saying so.
+  //
+  // Three rules, and they are the reason PR #94's fix cannot decay:
+  //   1. the list is this session's worksheets, newest first;
+  //   2. the newest is active by default, and a NEW UPLOAD RESETS the selection
+  //      to itself — an older pick never survives an upload;
+  //   3. nothing is persisted. A selection surviving a page reload is the same
+  //      shape of bug: invisible state silently choosing which page gets solved.
+  //
+  // The server enforces the scope regardless; this is the control surface, not
+  // the guarantee. An id it sends that the server cannot place in the session
+  // degrades to the newest there, never to the requested id.
+  var selectedWorksheetId = null;      // never read from or written to storage
+  var worksheetList = [];
+
+  /** session_questions rows (created_at DESC) -> one entry per worksheet. */
+  function groupWorksheets(rows) {
+    var out = [], seen = Object.create(null);
+    (rows || []).forEach(function (r) {
+      var id = r && r.source_record_id;
+      if (!id) return;
+      if (!seen[id]) { seen[id] = { id: id, count: 0, at: r.created_at || null }; out.push(seen[id]); }
+      seen[id].count++;
+    });
+    return out;   // input is newest-first, so out is too
+  }
+
+  /** The worksheet a request should be scoped to. An unknown or malformed pick
+   *  resolves to the newest — never to the value that was asked for. */
+  function activeWorksheetId(list, selected) {
+    if (!list || !list.length) return null;
+    if (typeof selected === 'string' && selected) {
+      for (var i = 0; i < list.length; i++) if (list[i].id === selected) return selected;
+    }
+    return list[0].id;
+  }
+
+  /** One worksheet is not a choice, so it is not shown as one. */
+  function shouldShowSelector(list) { return !!list && list.length > 1; }
+
+  /** Reader-facing label. No uuid ever reaches the student. */
+  function worksheetLabel(w, index, total) {
+    var n = total - index;                                  // oldest = 1
+    var q = w.count === 1 ? '1 question' : w.count + ' questions';
+    return index === 0 ? ('Worksheet ' + n + ' · ' + q + ' · latest')
+                       : ('Worksheet ' + n + ' · ' + q);
+  }
+
+  function renderWorksheetBar() {
+    var bar = document.getElementById('wsBar');
+    var sel = document.getElementById('wsSelect');
+    if (!bar || !sel) return;
+    if (!shouldShowSelector(worksheetList)) { bar.classList.remove('on'); return; }
+    var active = activeWorksheetId(worksheetList, selectedWorksheetId);
+    sel.innerHTML = worksheetList.map(function (w, i) {
+      return '<option value="' + w.id + '"' + (w.id === active ? ' selected' : '') + '>' +
+             worksheetLabel(w, i, worksheetList.length).replace(/[<>&]/g, '') + '</option>';
+    }).join('');
+    sel.onchange = function () { onWorksheetPicked(sel.value); };
+    bar.classList.add('on');
+  }
+
+  async function loadWorksheets() {
+    if (!currentSessionId) { worksheetList = []; renderWorksheetBar(); return; }
+    try {
+      var res = await sb.from('session_questions')
+        .select('source_record_id,created_at')
+        .eq('session_id', currentSessionId)
+        .order('created_at', { ascending: false });
+      worksheetList = groupWorksheets(res.data || []);
+    } catch (e) { worksheetList = []; }
+    renderWorksheetBar();
+  }
+
+  /** Called after every tutor response. Resets the pick when the newest
+   *  worksheet has changed — i.e. a new one was uploaded and indexed. */
+  async function onWorksheetUploaded() {
+    var before = worksheetList.length ? worksheetList[0].id : null;
+    await loadWorksheets();
+    var after = worksheetList.length ? worksheetList[0].id : null;
+    if (after && after !== before) { selectedWorksheetId = null; renderWorksheetBar(); }
+  }
+
+  function onWorksheetPicked(v) {
+    // Storing null for the newest keeps "no selection" distinguishable from
+    // "chose the newest" in the payload and in telemetry.
+    selectedWorksheetId = (worksheetList[0] && v === worksheetList[0].id) ? null : v;
+    renderWorksheetBar();
+  }
+  // ── end worksheet selector ────────────────────────────────────────────
 
   // Confidence selector
   const confHints={1:'1/5 · Not confident',2:'2/5 · A little unsure',3:'3/5 · Somewhat confident',4:'4/5 · Fairly confident',5:'5/5 · Very confident'};
@@ -2870,6 +2980,13 @@ button{font-family:inherit;cursor:pointer}
         if (!_isRepeat) {
           window.__lastQRecId = (response && response.record_id) || null;
         }
+        // A new worksheet supersedes any explicit pick. Keyed on "the newest
+        // worksheet changed" rather than on a client-side image flag: the flag
+        // can drift from what the server actually indexed, and the rule is about
+        // the worksheet, not the upload gesture. Leaving an older selection
+        // active after an upload would feel exactly like the bug this selector
+        // exists to make impossible — a page the student did not choose.
+        if (typeof onWorksheetUploaded === 'function') onWorksheetUploaded();
         // flushBuffer always uses the correct parent record_id (either newly created
         // or the original returned by the server for repeats).
         SignalEngine.flushBuffer((response && response.record_id) || window.__lastQRecId, currentSessionId);
