@@ -20,16 +20,16 @@
   --cyan: #38bdf8;
   --cyan-2: #0ea5e9;
   --cyan-3: #7dd3fc;
-  --cyan-bg-soft: rgba(56, 189, 248, .1);
-  --cyan-border: rgba(56, 189, 248, .28);
-  --cyan-border-soft: rgba(56, 189, 248, .14);
+  --cyan-bg-soft: rgba(56,189,248,.1);
+  --cyan-border: rgba(56,189,248,.28);
+  --cyan-border-soft: rgba(56,189,248,.14);
 
   --purple: #a855f7;
-  --purple-soft: rgba(168, 85, 247, .1);
-  --purple-border: rgba(168, 85, 247, .3);
+  --purple-soft: rgba(168,85,247,.12);
+  --purple-border: rgba(168,85,247,.32);
 
-  --green: #4ade80;
-  --amber: #f59e0b;
+  --green: #22c55e;
+  --amber: #f5b942;
 
   --text-100: #ffffff;
   --text-200: #dde8f7;
