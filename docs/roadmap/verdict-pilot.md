@@ -397,3 +397,223 @@ during an unrelated change.
 No P4 verifier logic, no verdict, no `VERIFIED` state, no voting, no winner
 selection, no confidence, no sufficiency, no routing, no escalation, no cost or
 latency policy, no model ranking, no live providers, no production integration.
+
+*(P4 landed after this section was written and delivered the first three items
+as CONTRACTS ONLY — see below. Everything else in the list still stands.)*
+
+---
+
+# P4 — Verifier contract · verdict state contract · item cache key
+
+> **Status:** complete, offline, not deployed, not imported by the Edge Function.
+> **0 migrations. 0 deployment. 0 production changes.**
+
+P4 defines **how a future deterministic mathematics tool supplies evidence**, and
+how the result of that is represented and identified. It supplies no evidence and
+decides nothing.
+
+There is **no SymPy, no CAS, no Python, no subprocess, no container and no
+external service**, and no dependency was installed. What exists is the shape
+those will fill.
+
+## Three modules, one-way dependencies
+
+```
+deterministic-verifier.core.ts        ← base: contract, canonicalization, table stub
+        ↑                       ↑
+verification-cache-key.core.ts   verdict-state.core.ts
+```
+
+The separation is structural, not stylistic. **The verifier module does not
+contain the verdict vocabulary and does not import the module that does**, so a
+verifier cannot name a verdict — let alone assign one. A test asserts that edge
+in both directions rather than trusting the layering to hold by habit.
+
+Canonicalization lives in the base module and is used by all three, so P4 has
+**one** definition of "the same string". If a cache key and a dispute comparison
+ever disagreed about that, a stored result would be served for an item the
+dispute logic considers different. That is deliberately *not* a fourth copy of
+P2/P3's `literalKey`, and it required no change to P2 or P3.
+
+## A. The deterministic verifier contract
+
+```
+CANDIDATE ANSWER + ORIGINAL QUESTION / STRUCTURED PROBLEM
+                        ↓
+                DETERMINISTIC VERIFIER
+                        ↓
+                VERIFICATION EVIDENCE
+```
+
+**The sentence the whole phase turns on:** a verifier reporting `verified` means
+**one deterministic check succeeded for one candidate**. It does not mean the
+item's verdict is `VERIFIED`. Those are different words in different modules on
+purpose — lowercase outcome here, uppercase verdict state there.
+
+**Support and outcome are two axes, and that is the safety property.** The
+dangerous failure is a verifier that *could not run* being read as a verifier
+that *agreed*. `buildVerificationResult` enforces the relationship instead of
+documenting it:
+
+| situation | forced result |
+|---|---|
+| `unsupported` | `not_attempted`, evidence dropped, reason required |
+| supported, reported nothing | `inconclusive` — silence is not success |
+| supported, unrecognized outcome | `inconclusive` — never a pass |
+| no candidate | `insufficient_information` |
+| no subject | `insufficient_information` |
+
+No path through the constructor turns an absent check into `verified`, **including
+one that explicitly asks for it** — a report of `{support: 'unsupported', outcome:
+'verified'}` is corrected, because the absent check is the fact and the claim is
+not. Every non-decisive outcome carries a reason.
+
+**Independence is enforced by the type.** The request carries the question and
+the candidate. There is no field for what other models said, how many there were,
+or what they agreed on. A verifier that could see those would be contaminated by
+them, and "the verifier contradicts every model" would stop being evidence and
+become an echo. A later phase wanting cross-examination must add a parameter in
+the open.
+
+`createTableVerifier` **performs no mathematics.** It replays a committed table
+exactly as P1's replay engine replays fixture text. A supported item with no row
+is `inconclusive` with a stated reason: absence of an entry is absence of
+evidence, never agreement.
+
+## B. The verdict state contract
+
+Six states are representable — `VERIFIED`, `HIGH_CONFIDENCE`, `LOW_CONFIDENCE`,
+`AMBIGUOUS`, `INSUFFICIENT_INFORMATION`, `ITEM_DISPUTED` — and **nothing decides
+which one applies.**
+
+`createVerdictEnvelope` is a recorder whose `state` is always `null`; it has no
+branch that can produce any other value. `withVerdictState` carries a state a
+later phase has already chosen and chooses nothing itself — but it **refuses an
+assignment whose author is not named**, so "who decided this, and on what basis"
+can never be lost.
+
+### The case the contract exists for
+
+A deterministic verifier contradicts a candidate **every model agreed on**.
+
+A majority vote resolves that by promoting the models — precisely how a
+correlated error becomes truth, which is what P3's `UNANIMOUS-WRONG-1` exists to
+show. A verifier-always-wins rule resolves it the other way, assuming the
+verifier read the problem correctly; a verifier checking a misread question is
+confidently wrong in exactly the same way.
+
+**Both are decisions, and P4 makes neither.** It records a dispute holding both
+sides in full, with `resolution: null` and `resolved_by: null`. Nothing in the
+structure privileges either side — no weight, no precedence, no flag — and the
+suite scans the serialized envelope for `winner`, `prevail`, `authoritative`,
+`override` and finds none.
+
+**A dispute is observed, never inferred.** Only an explicit `contradicted`
+outcome creates one, and only when some model actually stated the candidate that
+was contradicted. "The verifier verified X, therefore Y is wrong" is an inference
+this layer must not make: X and Y may be two renderings of one answer.
+
+The model side collects aggregate agreement records **and** individual
+observations with no branch between them. Preferring one when the other exists
+would be a branch on how many models there were — and the count is not allowed to
+change what gets recorded.
+
+## C. The item cache key
+
+A deterministic, content-addressed key. **No table, no migration, no persistence**
+— nothing reads or writes anything.
+
+**The asymmetry that decides every choice:** over-splitting costs a cache miss;
+under-splitting serves a stale verification for a *different* item — a wrong
+answer delivered with a verifier's authority behind it. So every doubt resolves
+toward splitting:
+
+- **Case is part of the question.** `X` and `x` can be different variables.
+- **Choice order is part of the key.** Reordering options changes what "C" means —
+  Q79's failure mode reaching the cache layer.
+- **The verifier's version is in the key.** Without it, a verifier that has been
+  fixed serves its own old defect out of cache forever.
+- **The policy version is in the key.** Changing what verification *means* must
+  invalidate what it previously concluded.
+
+**What the key cannot see, structurally rather than carefully:** the material is
+assembled from `CACHE_KEY_FIELDS`, an explicit allow-list. An undeclared property
+is not filtered out — it is never read, and nothing stringifies the input object.
+The suite passes an input stuffed with `timestamp`, `student_id`, `session_id`,
+`request_id`, `nonce`, `attempt`, `engine_count` and submission order, and
+requires the material to be **unchanged byte for byte**.
+
+Engine count and execution order need no defending at all: **there is no such
+input.** The key describes the item and the verifier, never the models, which is
+why it is equally valid at N = 0 and N = 5 without mentioning either.
+
+**The material is the contract; the digest is a handle.** `cacheKeyMaterial`
+returns the inspectable canonical pre-image; every field is length-prefixed, so
+no value can impersonate a field boundary — without that, `["a","b"]` and
+`["a|b"]` are one cache entry. The digest is FNV-1a/64, a content-addressing
+function and explicitly not a security primitive.
+
+## Count-agnostic, inherited and re-proven
+
+N = 0, 1, 2, 3, 4, 5 all produce the same envelope key set, no verdict, and no
+count-derived field. **N = 1 against a verifier is still a dispute** — the
+contract is about sides, not counts. The engine count is provenance (who observed
+what) and never becomes confidence, sufficiency, quality or truth.
+
+## Tests and mutations
+
+Tests were written **before** the modules and confirmed to fail with
+`ERR_MODULE_NOT_FOUND` on the three P4 files — the contract did not exist.
+
+| suite | assertions | covers |
+|---|---|---|
+| `tests/deterministic-verifier.test.mjs` | 93 | V1–V11: contract shape, each of the five states explicit, provenance on every path, determinism, independence, totality, offline |
+| `tests/verdict-state-contract.test.mjs` | 119 | W1–W9: six states representable, no selection, the unanimous-contradiction case, dispute never inferred, N=0–5, permutation invariance, one-way layering |
+| `tests/verification-cache-key.test.mjs` | 77 | K1–K11: stability, every relevant input moves the key, forbidden metadata ignored, unforgeable field separation, declared allow-list, N-blindness |
+
+**26 mutations, all killed**, source restored byte-identically (sha256) after
+each:
+
+| | | | |
+|---|---|---|---|
+| M1 unsupported → verified | M8 unsupported keeps evidence | M15 unanimity suppresses dispute | M22 length prefixes dropped |
+| M2 silence → verified | M9 missing row → verified | M16 unnamed assigner defaulted | M23 whole input stringified |
+| M3 unrecognized → verified | M10 interpretation always present | M17 any string is a state | M24 policy version omitted |
+| M4 no candidate → verified | M11 unanimity → `VERIFIED` | M18 verifier version omitted | M25 digest silently changed |
+| M5 verifier version dropped | M12 verifier wins the dispute | M19 timestamp in the key | M26 format marker changed |
+| M6 candidate provenance dropped | M13 models win, verifier dropped | M20 student/session in the key | |
+| M7 non-deterministic method | M14 confidence from count | M21 choice order ignored | |
+
+### What mutation testing found
+
+All 26 killed on the first pass — which is exactly when a harness deserves least
+trust, so two **control** mutations were run to prove it can report a survivor at
+all. It can, and one of them exposed a real gap:
+
+**C2 — changing the FNV offset basis survived.** Every other assertion in the
+cache-key suite is *relative* ("these two differ", "these two match"), and every
+relative assertion survives a changed hash function because both sides move
+together. A persisted cache does not have that luxury: silently re-keying
+invalidates every stored entry while the suite reports green. Fixed by pinning the
+canonical material and the digest to golden values (§K1b), which makes the key a
+**cross-version** contract rather than an intra-run one. Re-running turned C2 red;
+it and the format-marker mutation became M25 and M26.
+
+**C1 — renaming an internal local — still survives, deliberately.** It is a pure
+refactor, and it is the control that proves the other 26 kills are real rather
+than an artifact of a harness that reports everything as dead.
+
+## Boundaries held
+
+`index.ts`, `verification.core.ts`, `telemetry.core.ts` and `taxonomy.core.js` are
+unchanged and none imports any pilot module. No P1/P2/P3 source file was modified
+— the STOP-and-report clause was never triggered. No fixture changed. No
+migration. No deployment. No production behaviour touched.
+
+## Still not built after P4
+
+No real verifier — no SymPy, CAS, Python, subprocess or service. No verdict
+selection, no truth authority, no evidence sufficiency, no confidence scoring, no
+voting, no winner selection, no escalation, no routing, no cost or latency policy,
+no model ranking, no live providers, no persistent cache, no production
+integration.
