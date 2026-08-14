@@ -109,26 +109,33 @@ content on a dark-themed product — trading a consistency bug for a visible one
 
 Instead, follow the repo's own established pattern. `taxonomy.core.js` is
 authored once, synced into `taxonomy.js` by `scripts/sync-taxonomy.mjs`, and CI
-fails on drift. `CLAUDE.md` names this the preferred way to share code and says
-to prefer it over duplicating logic. Applied here:
+fails on drift. `CLAUDE.md` names this the preferred way to share code.
 
-1. `assets/tokens.core.css` — the single authored token source, plus a declared
-   per-surface override set for the six surface-specific tokens.
-2. `scripts/sync-tokens.mjs` — regenerates each page's inline `:root` from it,
-   between explicit markers. Pages keep inlining; the bytes stop being authored
-   by hand.
-3. `scripts/validate-tokens.mjs` in `tests/run-all.mjs` — fails on drift, the
-   same gate `validate-taxonomy` already provides. **This is the part that makes
-   the fix durable**; without it the copies drift again.
+**BUILT — and deliberately smaller than this section originally proposed.**
+The sketch had three parts: an authored core file, a sync script regenerating
+every page's inline `:root`, and a CI gate. Only parts 1 and 3 were built:
 
-This makes `assets/knowledge.css` a consumer of the core file rather than a
-third opinion, and it is what turns the design-system bundle from "majority of
-20 opinions" into "a copy of the one source".
+1. **`assets/tokens.core.css`** — declares the **51 shared tokens**. A
+   declaration, not a stylesheet any page links: pages keep their inline blocks
+   so first paint stays dark with no extra request.
+2. ~~`scripts/sync-tokens.mjs`~~ — **not built.** A generator would rewrite all
+   19 app pages including the three frozen ones, and the pages already agree
+   after `1f0f05a`, so it would carry real risk for no present benefit. Add it
+   later if hand-editing 19 blocks ever becomes the bottleneck.
+3. **`scripts/validate-tokens.mjs`** — the gate, picked up automatically by
+   `tests/run-all.mjs` (it runs every `scripts/validate-*.mjs`), so there is no
+   CI wiring to keep in sync. **This is the part that makes the fix durable.**
+   Proved able to fail by `tests/token-drift-gate.test.mjs`.
+
+The gate enforces **rendered** equality, so notation differences never fail it,
+and it exempts the six per-surface tokens outright. Intentional divergence is
+recorded in an `EXCEPTIONS` list that each entry must justify in writing — and
+an entry that is no longer needed also fails, so the list cannot rot into a
+permanent excuse.
 
 **Sequencing:** §4's value decisions first (a small, reviewable diff touching 4
-files), then the mechanism (a larger, structural diff touching all 20). Doing
-them together would make a behaviour-changing diff indistinguishable from a
-mechanical one.
+files), then the gate. Doing them together would make a behaviour-changing diff
+indistinguishable from a mechanical one.
 
 ## 6. Explicitly out of scope
 

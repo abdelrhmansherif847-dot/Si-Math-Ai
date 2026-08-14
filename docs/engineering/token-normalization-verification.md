@@ -115,11 +115,17 @@ Three things bound how much this matters:
 3. **`dashboard.html` still renders colour emoji** after the change, so the
    effect is glyph- and context-dependent, not a blanket loss of colour emoji.
 
-**Open decision:** if colour emoji matter in the app UI, the fix is to append an
-explicit emoji family (`'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color
-Emoji'`) to the stacks rather than to revert the fallback chain. Not done here —
-it would change the token values the user approved, and it belongs with the
-frozen-file decision in §6.
+**DECIDED: recorded as an environment-dependent rendering observation, not a
+regression.** Layout and behaviour are unaffected — the difference is one glyph's
+font selection, in a container whose fallback resolution is not what a student's
+device will do. No emoji family was appended and the fallback order was not
+changed back; both would alter values that were reviewed and approved, to chase
+an effect that is not reproducible off this container.
+
+Revisit only if colour emoji are observed to disappear **on real devices**. The
+fix then is to append an explicit emoji family (`'Apple Color Emoji', 'Segoe UI
+Emoji', 'Noto Color Emoji'`) to the stacks — not to revert the fallback chain,
+which would reintroduce the drift this work removed.
 
 ## 6. Verdict and follow-ups
 
@@ -128,17 +134,24 @@ change; the one surprise was traced to a single glyph and characterised.
 
 Outstanding, each needing a decision:
 
-1. **Three frozen files still carry the old font stacks.** `mock-exam.html`,
-   `weakness.html` and `focus.html` are now the **only** remaining token
-   divergence on the site (`--font-display`, `--font-body`, `--font-mono`, plus a
-   cosmetic `--text-100: #fff`). Unfreezing them would take the site to full
-   convergence; leaving them means those three pages fall back differently when
-   the webfont fails.
-2. **Emoji stacks** — §5.
-3. **No CI drift gate yet.** Nothing stops the copies diverging again. The
-   `tokens.core.css` + sync-script + gate proposal in
-   `token-drift-audit.md` §5 is what makes this durable; until it exists, this
-   normalisation is a one-time cleanup, not a guarantee.
+1. **Three frozen files keep the shorter font stacks — CLOSED, by decision.**
+   `mock-exam.html`, `weakness.html` and `focus.html` stay frozen; they are not
+   being unfrozen merely to unify a fallback chain. This is now recorded as
+   **intentional documented divergence** in `scripts/validate-tokens.mjs`
+   `EXCEPTIONS`, with the reason attached, and the gate does not treat it as a
+   failure. The only effect is how those three pages fall back when the webfont
+   fails. Revisit if they are unfrozen for other reasons.
+2. **Emoji stacks — CLOSED.** Recorded as an environment-dependent observation,
+   not a regression. See §5.
+3. **CI drift gate — BUILT.** `assets/tokens.core.css` declares the 51 shared
+   tokens and `scripts/validate-tokens.mjs` enforces them, running automatically
+   in `tests/run-all.mjs` (now 46 checks). `tests/token-drift-gate.test.mjs`
+   proves it can go red. This normalisation is therefore no longer a one-time
+   cleanup.
 4. **`--border`, `--font-sans`, `--radius-card`** remain in
-   `reset-password.html`, all actively referenced. Removing them is a small
-   refactor, deliberately not bundled here.
+   `reset-password.html`, all actively referenced. The gate ignores them
+   correctly — each is defined by exactly one file, so there is nothing to
+   disagree with. Removing them is a small refactor, still deliberately unbundled.
+
+**Still open:** nothing from this workstream. The remaining item is the
+claude.ai/design upload, which is blocked on authorization only.
