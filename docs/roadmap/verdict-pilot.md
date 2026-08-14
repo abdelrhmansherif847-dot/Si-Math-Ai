@@ -617,3 +617,208 @@ selection, no truth authority, no evidence sufficiency, no confidence scoring, n
 voting, no winner selection, no escalation, no routing, no cost or latency policy,
 no model ranking, no live providers, no persistent cache, no production
 integration.
+
+*(P5 landed after this section was written and supplied one narrow real verifier.
+Everything else in the list still stands.)*
+
+---
+
+# P5 — the first real deterministic algebra verifier
+
+> **Status:** complete, offline, not deployed, not imported by the Edge Function.
+> **0 migrations. 0 deployment. 0 production changes.**
+
+P1–P4 built contracts. P5 actually verifies something: it substitutes a rational
+candidate into a linear equation in one variable and compares both sides in exact
+arithmetic.
+
+**And it is still only evidence.** A `verified` here means one deterministic check
+succeeded for one candidate. It is not a verdict, not truth, and not authority
+over the models.
+
+## There is no CAS, and nothing pretends there is
+
+Checked rather than assumed, before any code was written:
+
+| | |
+|---|---|
+| `python3` | present |
+| **`sympy`** | **not installed** |
+| CI | `setup-node` → `node tests/run-all.mjs`. **No install step at all** |
+| Dependencies | no `package.json`, no `deno.json`, no import map — dependency-free by design |
+| Deployed runtime | Supabase **Deno** Edge Function — cannot spawn a Python process |
+
+A SymPy-backed verifier would fail in CI even if installed locally, and could
+never run where verification eventually needs to run. So there is no symbolic
+algebra system here and **nothing is labelled as though there were**. What exists
+instead: a hand-written recursive-descent parser over a deliberately tiny grammar,
+and exact rational arithmetic in `BigInt`. Narrow and genuinely deterministic
+beats broad and pretending.
+
+## The problem arrives structured — this verifier never reads the prose
+
+The equation comes from P4's `subject.interpretation`:
+
+```
+{ type: 'linear_equation', equation: '3x + 7 = 22', variable: 'x' }
+```
+
+Deciding what a photographed, OCR'd, model-paraphrased question *means* is a
+different problem — and it is the one this product actually gets wrong. Handing a
+verifier a guess to check would launder that guess into a deterministic result,
+which is worse than not checking at all. A test asserts that changing
+`question_text` while holding the interpretation fixed changes nothing.
+
+## The supported subset, exactly
+
+One `=` · the grammar `{ + - * / ( ) digits . single-letter variables }` ·
+implicit multiplication (`3x`, `2(x+1)`) · exactly one variable matching the
+declared one · degree ≤ 1 in it · never in a denominator · candidate a rational
+(`5`, `-3`, `2.5`, `5/2`, `x = 5`, `5 = x`).
+
+Everything else is **explicitly unsupported with a named reason**, from an
+exported `ALGEBRA_REASONS` list: `unsupported_operator`, `unsupported_relation`,
+`multiple_variables`, `nonlinear_not_supported`, `variable_in_denominator`,
+`multiple_equals`, `parse_error`, `candidate_variable_mismatch` and the rest.
+
+Nothing outside the subset may come back `verified` — and nothing may come back
+`contradicted` either. **Blaming the candidate for the parser's limits would turn
+a gap in this pilot into deterministic-looking evidence against a model that may
+well be right.** A sweep asserts both, over every unsupported shape.
+
+## The degenerate cases, and why they are inconclusive
+
+After reduction the equation is `A·x = B`:
+
+| | |
+|---|---|
+| `A ≠ 0` | well posed. `verified` / `contradicted` are decisive, and a passing substitution really does mean this candidate is *the* answer |
+| `A = 0, B = 0` | an identity (`2x+3 = 2x+3`). Substitution succeeds for **every** value, so success says nothing about this candidate → **`inconclusive`** |
+| `A = 0, B ≠ 0` | no solution (`2x+3 = 2x+5`). Substitution fails for every value, so `contradicted` would blame the candidate for what is almost certainly a misread or OCR-damaged equation → **`inconclusive`** |
+
+Both carry the fact in their evidence. Never a decisive result the mathematics
+does not support.
+
+## Two independent walks
+
+`evaluateAt` substitutes and computes both sides; `reduceLinear` reduces the same
+tree to `A·x + B`. They are separate on purpose, they must agree, and a guard
+refuses to conclude anything if they ever do not. That is what makes "ignore one
+side of the equation" a detectable change rather than a silent one.
+
+## Safety: the input is hostile and the grammar is an allow-list
+
+This text comes from OCR, from students typing, and from models paraphrasing.
+Nothing compiles, executes, interpolates or evaluates any part of it — no dynamic
+code, no shell, no regular expression built from input, no property lookup keyed
+by parsed text. Every unrecognized character is refused **by name**; length (512)
+and nesting (32) are bounded.
+
+The safety suite proves it twice: it feeds the parser 16 code-shaped inputs — as
+equations *and* as candidates — against a **live canary**, and asserts the canary
+is untouched, no prototype polluted, nothing verified, nothing contradicted; then
+it scans the source for thirteen constructs (`eval`, `Function(`, dynamic
+`import(`, `require(`, `child_process`, `Deno.Command`, `fetch(`, `Deno.env`,
+filesystem, string-taking timers, `new RegExp(`, shell exec, dynamic property
+access from parsed text) and finds none.
+
+**Anti-vacuity:** a verifier that refused *everything* would pass that sweep
+perfectly, so a benign equation of the same shape is asserted to still verify.
+
+## The evidence boundary, now with real mathematics behind it
+
+> Three models agree the answer is 9. The verifier proves `3(9) + 7 = 34`, not 22.
+
+Until now that conflict was representable with a stub. Here one side is an actual
+exact-arithmetic result, and the requirement is unchanged: both survive, neither
+wins. P5 does not get to declare the models wrong because it did real
+mathematics, and the models do not get to outvote it because there are three of
+them — a verifier can be checking a misread equation, and three models can share
+one misconception.
+
+The envelope holds `resolution: null`, `state: null`, no winner, no confidence, no
+vote, at N = 0, 1 and 3, in either submission order.
+
+**One consequence worth stating for a future router.** P4 records a dispute only
+when the verifier *explicitly contradicted* the candidate the models stated.
+Proving `x = 5` is the unique solution while the models said 9 produces **no**
+dispute, because "verified X therefore Y is wrong" is an inference this layer must
+not make. So to see the conflict, a router must ask the verifier about **the
+models' candidate**, not only about its own. That is tested.
+
+The submissions in that suite are hand-built rather than taken from the P3
+fixture: `UNANIMOUS-WRONG-1` is an absolute-value inequality, which this pilot
+genuinely does not support, and pairing it with an unrelated equation would be
+dressing up a stub as a real check.
+
+## Tests and mutations
+
+Tests were written **before** the module and confirmed to fail with
+`ERR_MODULE_NOT_FOUND`.
+
+| suite | assertions | covers |
+|---|---|---|
+| `tests/algebra-verifier.test.mjs` | 220 | verified/contradicted, candidate normalization, whitespace, negatives, decimals, fractions, parentheses, degenerate equations, 15 unsupported shapes, P4 contract conformance, determinism, totality |
+| `tests/algebra-verifier-safety.test.mjs` | 71 | hostile input against a live canary, source scan for execution paths, length/nesting bounds, 16 refused characters, anti-vacuity control |
+| `tests/algebra-evidence-boundary.test.mjs` | 43 | unanimous models vs deterministic contradiction, no winner, no state, no confidence, dispute never inferred, N = 0/1/3, order invariance |
+
+**27 mutations run, 25 killed**, source restored byte-identically (sha256) after
+each — including three run against `verdict-state.core.ts`, so the P5 suite itself
+proves the verdict boundary rather than leaning on P4's suite.
+
+| | | | |
+|---|---|---|---|
+| A1 failed substitution → verified | A8 method dropped | A15 multiple `=` accepted | A22 parsing depends on model count |
+| A2 verified/contradicted swapped | A9 degenerate → decisive | A16 mismatched candidate variable | A23 verifier wins the dispute |
+| A3 one side ignored (substitution) | A10 degenerate branch skipped | A17 length bound removed | A24 confidence from model count |
+| A4 one side ignored (reduction) | A11 refused operators accepted | A18 nesting bound removed | A25 success assigns `VERIFIED` |
+| A5 unsupported → verified | A12 unknown chars skipped | A19 candidate stored as float | |
+| A6 unsupported → contradicted | A13 nonlinear accepted | A20 rationals rendered as floats | |
+| A7 verifier version dropped | A14 variable in denominator | A21 unsafe construct introduced | |
+
+### What mutation testing found
+
+**A20 survived the first pass, and it was a real gap.** Every fractional
+assertion compared two results that would move together if the renderer started
+emitting floats, and the only *pinned* rational strings were integers — so
+`candidate_normalized: '2.5'` could quietly replace `'5/2'` in the record with the
+suite still green. Exactly the class of gap P4's C2 exposed. Fixed by pinning the
+rendering at all three sites a rational appears (candidate, unique solution,
+substitution value) plus a no-decimal-point sweep over the evidence. A20 now dies
+with 7 assertions red.
+
+### Two survivors, both deliberate and both disclosed
+
+- **C1 — renaming an internal local.** A pure refactor. It is the control that
+  proves the harness can report a survivor, so the other 25 kills are real rather
+  than an artifact of a harness that calls everything dead.
+- **C2 — removing the internal-consistency guard.** It survives *by construction*:
+  the guard is unreachable while both walks are correct, so nothing observes its
+  absence on its own. It is a safety net, not a tested behaviour, and it is kept
+  deliberately — a future edit that breaks one walk would trip it. Recorded here
+  rather than quietly dropped from the list.
+
+## One test-infrastructure fix worth carrying forward
+
+The import scan in the P5 suite originally used the line-anchored
+`/^\s*import\s[^\n]*/gm` pattern the P3/P4 suites use, and it **missed a
+multi-line `import type { … } from '…'` entirely** — capturing only `import
+type {`, which contains no module specifier. It now matches through to the
+specifier instead. P1–P4's imports are all single-line so their scans are correct
+today, but the pattern is latent there. Same class as P2's B8 flat sort key: noted,
+not silently fixed in another phase's tests.
+
+## Boundaries held
+
+`index.ts`, `verification.core.ts`, `telemetry.core.ts` and `taxonomy.core.js` are
+unchanged and import no pilot module. No P1–P4 source file was modified — the
+STOP-and-report clause was never triggered. No fixture changed. No migration. No
+deployment. RC2 and `v1-t16-golden.json` untouched.
+
+## Still not built after P5
+
+No geometry, statistics, probability or word-problem verification. No graph
+sampling, no CAS, no quadratics, no inequalities, no systems, no radicals, no
+logs. No live model routing, no verdict selection, no Truth Engine, no truth
+authority, no sufficiency, no confidence, no escalation, no persistent cache, no
+production integration.
