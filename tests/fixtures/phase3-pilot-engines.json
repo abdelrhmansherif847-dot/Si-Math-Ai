@@ -1,0 +1,89 @@
+{
+  "_comment": [
+    "Verdict Pilot P1 — replay fixture for the deterministic mock engine.",
+    "",
+    "These are HAND-WRITTEN engine outputs, not captures from any live provider,",
+    "and they are not a benchmark. Nothing here asserts which answer is correct:",
+    "the 106-question sheet's key has NOT been established as ground truth, and P1",
+    "deliberately encodes no score, no accuracy figure and no 'right' engine.",
+    "",
+    "Their only job is to exercise normalization across the shapes a real engine",
+    "actually emits — a letter with a value, a value alone, a letter alone, prose,",
+    "and the Q79 shape where the value is right and the letter does not match it."
+  ],
+  "items": [
+    {
+      "id": "Q79",
+      "question_text": "How many integer values of n satisfy |n - 1| < 4 ?",
+      "choices": ["6", "7", "8", "9"],
+      "_note": [
+        "THE ARCHITECTURAL REGRESSION CASE.",
+        "-4 < n - 1 < 4  ->  -3 < n < 5  ->  n in {-2,-1,0,1,2,3,4}  ->  7 values.",
+        "With these choices, 7 sits at index 1, i.e. letter B.",
+        "engine_alpha derives 7 CORRECTLY and then publishes 'C', which maps to 8.",
+        "raw_answer and choice_letter must therefore stay independently",
+        "representable, or that mismatch is invisible and the turn looks correct."
+      ],
+      "engines": {
+        "engine_alpha": {
+          "provider": "mock",
+          "model": "alpha-1",
+          "text": "Reasoning:\nStart from |n - 1| < 4.\nThis gives -4 < n - 1 < 4.\nAdd 1 throughout: -3 < n < 5.\nThe integers strictly between -3 and 5 are -2, -1, 0, 1, 2, 3, 4.\nCounting them gives 7.\n\nFinal Answer: C) 7"
+        },
+        "engine_beta": {
+          "provider": "mock",
+          "model": "beta-1",
+          "text": "Reasoning:\n|n - 1| < 4 means -3 < n < 5.\nThe integer values are -2 through 4 inclusive, which is 7 values.\n\nFinal Answer: B) 7"
+        },
+        "engine_gamma": {
+          "provider": "mock",
+          "model": "gamma-1",
+          "text": "Reasoning:\nSolving the inequality and counting the integers.\n\nFinal Answer: 7"
+        },
+        "engine_delta": {
+          "provider": "mock",
+          "model": "delta-1",
+          "text": "Reasoning:\nI worked through the absolute value cases.\n\nFinal Answer: C"
+        }
+      }
+    },
+    {
+      "id": "PROSE-1",
+      "question_text": "What is the sum of the solutions of |-5x + 13| = 73 ?",
+      "choices": null,
+      "_note": [
+        "The RC1-shaped case: the engine states its answer inside a sentence",
+        "rather than as a bare token. Normalization must still surface a raw",
+        "answer without inventing a choice mapping that was never stated."
+      ],
+      "engines": {
+        "engine_alpha": {
+          "provider": "mock",
+          "model": "alpha-1",
+          "text": "Reasoning:\nPositive case gives x = -12, negative case gives x = 86/5.\nSumming: -60/5 + 86/5 = 26/5.\n\nFinal Answer: The sum of the solutions is 26/5."
+        },
+        "engine_beta": {
+          "provider": "mock",
+          "model": "beta-1",
+          "text": "Reasoning:\nBoth cases solved and summed.\n\nFinal Answer: 26/5"
+        }
+      }
+    },
+    {
+      "id": "NOANSWER-1",
+      "question_text": "Explain how to approach absolute value inequalities.",
+      "choices": null,
+      "_note": [
+        "An engine that published no final answer at all. Normalization must",
+        "represent that as absent rather than fabricating a value from the prose."
+      ],
+      "engines": {
+        "engine_alpha": {
+          "provider": "mock",
+          "model": "alpha-1",
+          "text": "Reasoning:\nSplit the absolute value into two cases and solve each one separately."
+        }
+      }
+    }
+  ]
+}
