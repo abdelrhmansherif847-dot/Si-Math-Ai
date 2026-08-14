@@ -2,6 +2,42 @@
 
 Repo-specific gotchas for future syncs. Read alongside `config.json`.
 
+## ▶ UPLOAD RUNBOOK — read this first
+
+The bundle is **built and validated**; only the upload is outstanding. It was
+blocked because `DesignSync` cannot authorize in a non-interactive environment
+(claude.ai/code has no terminal for `/design-login`). In a session that DOES
+have design authorization, do exactly this — **do not re-run the /design-sync
+skill's discovery**, it will try to detect a `storybook` or `package` shape and
+neither applies here:
+
+```sh
+node .design-sync/build-tokens.mjs                 # rebuild ds-bundle/ (deterministic)
+node .ds-sync/package-validate.mjs ./ds-bundle     # must print "✓ bundle is complete"
+```
+
+Then, with the `DesignSync` tool:
+
+1. `list_projects` → pick a non-colliding name → `create_project` (this repo has
+   never uploaded, so **create a fresh project**; do not adopt an existing one).
+2. **Record the returned `projectId` in `.design-sync/config.json` immediately**,
+   before uploading anything. A crash after upload but before recording orphans
+   the project and the next sync creates a duplicate.
+3. `finalize_plan` with `localDir: "./ds-bundle"`,
+   `writes: ["tokens/**", "fonts/**", "_ds_bundle.js", "_ds_bundle.css", "styles.css", "README.md", "_ds_sync.json", "_ds_needs_recompile"]`,
+   `deletes: ["tokens/**", "fonts/**"]`.
+4. `write_files` the sentinel `_ds_needs_recompile` first, then the content.
+   **The 28 woff2 files plus the rest exceed comfortable chunking — split into
+   two or three `write_files` calls** (the hard cap is 256 files per call).
+   Prefer `localPath` over inline `data` so file bytes never enter context.
+5. Re-write `_ds_needs_recompile`, then `write_files` `_ds_sync.json` **last, in
+   its own call** — the anchor must only ever vouch for a fully-applied state.
+6. Commit the `projectId` change and report `https://claude.ai/design/p/<projectId>`.
+
+There are **no components**, so there is no preview-grading loop to run and no
+`components/**` to upload — the empty `components/` dir is a local validator
+requirement only (see below).
+
 ## The shape: off-script, tokens-only
 
 - **`package-build.mjs` cannot run here and never will.** It consumes a built
