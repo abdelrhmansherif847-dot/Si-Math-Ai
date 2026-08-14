@@ -94,15 +94,32 @@ const EXCLUDE = new Set([
   '--radius-card',   // 16px, one page — sits between --r-md 14 and --r-lg 20
 ]);
 
-// Font stacks: the terse `'Manrope',sans-serif` form holds the majority, but the
-// difference from knowledge.css's form is only the fallback chain, not intent.
-// The fuller chain is strictly better for rendering and loses nothing, so it
-// wins here on merit rather than on count.
-const FONT_STACKS = {
-  '--font-display': "'Manrope', system-ui, -apple-system, sans-serif",
-  '--font-body': "'DM Sans', system-ui, -apple-system, sans-serif",
-  '--font-mono': "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
-};
+// THE SITE'S SINGLE SOURCE OF TRUTH WINS over anything derived here.
+//
+// assets/tokens.core.css declares the 51 shared tokens and CI enforces that
+// every page agrees with it (scripts/validate-tokens.mjs). So for those tokens
+// there is nothing to vote on — majority resolution is a fallback for the
+// per-surface and page-local tokens the core file deliberately does not govern.
+//
+// This replaced a hardcoded font-stack table here, which had quietly invented a
+// stack the site never used ('JetBrains Mono', ui-monospace, SFMono-Regular,
+// monospace — the site has no SFMono-Regular). A bundle that states a value the
+// site does not hold teaches the design agent something false, so the bundle
+// reads the source of truth instead of holding an opinion about it.
+const CORE_PATH = join(ROOT, 'assets/tokens.core.css');
+const CORE = (() => {
+  const src = readFileSync(CORE_PATH, 'utf8');
+  const i = src.search(/:root\s*\{/);
+  const start = src.indexOf('{', i);
+  let depth = 0, end = -1;
+  for (let j = start; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}' && !--depth) { end = j; break; }
+  }
+  const out = {};
+  for (const m of src.slice(start + 1, end).matchAll(/(--[a-zA-Z0-9-]+)\s*:\s*([^;]+);/g)) out[m[1]] = m[2].trim();
+  return out;
+})();
 
 // Responsive type + rhythm ladder, taken verbatim from index.html — the only
 // surface in the repo that defines a complete one (base + three breakpoints).
@@ -181,7 +198,7 @@ for (const [name, note, tokens] of GROUPS) {
   if (!present.length) continue;
   css += `\n  /* ${name}${note ? ` — ${note}` : ''} */\n`;
   for (const t of present) {
-    const v = FONT_STACKS[t] ?? winner(t);
+    const v = CORE[t] ?? winner(t);
     resolved[t] = v;
     css += `  ${t}: ${v};\n`;
   }
