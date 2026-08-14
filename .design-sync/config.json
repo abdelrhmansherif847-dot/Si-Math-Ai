@@ -1,0 +1,8 @@
+{
+  "shape": "tokens-only",
+  "globalName": "SiMathAI",
+  "buildCmd": "node .design-sync/build-tokens.mjs",
+  "readmeHeader": ".design-sync/conventions.md",
+  "projectId": null,
+  "_note": "OFF-SCRIPT LAYOUT. This repo has no package.json, no bundler and no JS component library (CLAUDE.md: 'No package.json, no bundler, no build step — deliberately'), so the /design-sync converter (package-build.mjs) cannot run against it and neither the 'storybook' nor the 'package' shape applies. .design-sync/build-tokens.mjs is the converter instead; package-validate.mjs is still the gate and passes clean. Read .design-sync/NOTES.md before any re-sync."
+}
