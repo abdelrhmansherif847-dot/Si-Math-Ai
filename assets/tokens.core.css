@@ -1,0 +1,93 @@
+/* Si Math AI — SHARED DESIGN TOKENS. The single source of truth.
+ *
+ * Every value here MUST be identical on every page that defines it.
+ * scripts/validate-tokens.mjs enforces that in CI and names the offending
+ * file, token and value when it is not.
+ *
+ * Change a value HERE FIRST, then update the pages that declare it. The gate
+ * compares RENDERED values, so #fff and #ffffff are the same thing and only
+ * real differences fail.
+ *
+ * NOT governed by this file:
+ *   - Per-surface tokens (--nav-h, --side-w, --fs-h1/h2/h3/body). They differ
+ *     between the marketing site, the app shell and the dashboard BY DESIGN.
+ *     See PER_SURFACE in the validator.
+ *   - Page-local tokens defined by exactly one file.
+ *   - Documented exceptions, listed with a reason in the validator.
+ *
+ * This file is a declaration, not a stylesheet any page links. Pages keep their
+ * inline :root blocks so first paint stays dark with no extra request; the gate
+ * is what keeps those copies honest.
+ */
+
+:root {
+
+  /* Surface */
+  --bg: #050a14;
+  --bg-elev-1: #0a1224;
+  --bg-elev-2: #0e1830;
+  --bg-card: #0c1428;
+  --bg-card-hi: #101a32;
+
+  /* Brand */
+  --cyan: #38bdf8;
+  --cyan-2: #0ea5e9;
+  --cyan-3: #7dd3fc;
+  --cyan-bg-soft: rgba(56,189,248,.1);
+  --cyan-bg-med: rgba(56,189,248,.16);
+  --cyan-border: rgba(56,189,248,.28);
+  --cyan-border-soft: rgba(56,189,248,.14);
+
+  /* Status */
+  --green: #22c55e;
+  --green-soft: rgba(34,197,94,.12);
+  --green-border: rgba(34,197,94,.32);
+  --amber: #f5b942;
+  --amber-soft: rgba(245,185,66,.12);
+  --amber-border: rgba(245,185,66,.32);
+  --red: #ef4f5f;
+  --red-soft: rgba(239,79,95,.12);
+  --red-border: rgba(239,79,95,.32);
+  --purple: #a855f7;
+  --purple-soft: rgba(168,85,247,.12);
+  --purple-border: rgba(168,85,247,.32);
+  --gold: #f59e0b;
+  --gold-soft: rgba(245,158,11,.12);
+  --gold-border: rgba(245,158,11,.32);
+
+  /* Text */
+  --text-100: #ffffff;
+  --text-200: #dde8f7;
+  --text-300: #a8bcd9;
+  --text-400: #7a90b2;
+  --text-500: #536b8c;
+
+  /* Border */
+  --border-soft: #1a2540;
+  --border-mid: #26334d;
+
+  /* Radius */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Type families */
+  --font-display: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Rhythm */
+  --container-x: 18px;
+  --section-y: 56px;
+}
