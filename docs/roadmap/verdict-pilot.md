@@ -255,3 +255,145 @@ No P3 disagreement classification, no P4 verifier logic, no verdict, no
 `VERIFIED` state, no voting, no winner selection, no confidence, no routing, no
 escalation, no cost or latency policy, no model ranking, no live providers, no
 production integration.
+
+*(P3 landed after this section was written; the rest of the list still stands.)*
+
+---
+
+# P3 — Disagreement Analyzer + correlated-error metrics
+
+> **Status:** complete, offline, not deployed, not imported by the Edge Function.
+> **0 migrations. 0 deployment. 0 production changes.**
+
+P3 adds two pure capabilities: a classifier for **why** outputs differ, and
+metrics for **how far engines fail together**. It classifies and measures. It
+decides nothing.
+
+## The honesty rule that shaped the classifier
+
+Most disagreement causes cannot be derived from the evidence P1 and P2 actually
+produce. Deciding that two engines differ because of an ALGEBRA slip rather than
+an ARITHMETIC one means reading their prose and judging it — a model's opinion,
+not a deterministic fact. A classifier that guessed would emit confident labels
+with nothing behind them, which is **worse than no label**: it would look like
+evidence.
+
+So the vocabulary is deliberately wider than what this module will ever assign.
+Four categories have a deterministic basis today:
+
+| category | the rule that assigns it |
+|---|---|
+| `CHOICE_MAPPING` | an engine's own label does not point at its own value, **or** engines that agree on the value publish different labels |
+| `ANSWER_EXTRACTION` | an engine published a final answer from which no value could be recovered |
+| `MISSING_INFORMATION` | a field is absent inside a submitted output |
+| `MODEL_DISAGREEMENT` | values genuinely diverge and nothing deterministic explains it |
+
+`INTERPRETATION`, `ARITHMETIC`, `ALGEBRA`, `GEOMETRY` and `TRANSCRIPTION` are
+**RESERVED**: named in the type and exported in `RESERVED_CATEGORIES`, never
+assigned. They need a verifier or a reasoning analysis that does not exist yet.
+They are listed so a later phase with a real basis has a name to use — and so
+the suite can prove none is emitted rather than trust a comment.
+
+**`MODEL_DISAGREEMENT` is the honest unresolved bucket**, not a fallback that
+hides a guess. Its `basis` says so verbatim:
+`raw_answers_diverge_no_deterministic_cause`.
+
+**Cross-engine `CHOICE_MAPPING` is the point of the classifier.** When engines
+derived the same value and published different labels, the value is *not* in
+dispute — the mapping is. Calling that a model disagreement would misattribute
+it, and would send a router escalating to more models over a bug that more
+models cannot fix. That is Q79 again, now visible across engines.
+
+Every finding carries `basis`, so a reader can always ask *why does this label
+exist?* and get an answer that is not "a model thought so".
+
+## The two rules that keep the metrics honest
+
+- **Agreement is not correctness.** Engines agreeing tells you they agree.
+  `pairwiseAgreement` needs no reference and uses none; it never produces an
+  error count.
+- **An error requires an independent reference.** "Wrong" is undefined without a
+  separately verified answer. Items with no reference contribute to agreement
+  statistics and are **excluded from every error statistic** — not counted as
+  correct, not counted as incorrect, simply not counted, and reported in
+  `excluded_no_reference`.
+
+**Undefined is reported, not invented.** `phi` is the 2×2 correlation of
+(*a* wrong, *b* wrong) and returns `null` **with a reason** whenever the data
+cannot support it — `no_paired_items_with_reference`, `sample_too_small`,
+`degenerate_margin_zero_variance`. Returning `0` there would read as
+"uncorrelated", a claim the sample does not make.
+
+`sharedErrorPatterns` surfaces the items where engines failed **together** —
+precisely the pattern a majority vote would promote to truth. `UNANIMOUS-WRONG-1`
+in the fixture is exactly that shape.
+
+## No benchmark score is encoded
+
+The preliminary per-model figures from the 106-question sheet are **not** ground
+truth and appear nowhere in the module, the fixture or the tests. No model name,
+no provider name, no ranking. `BenchmarkItem.reference` is supplied by the
+caller when an independent verifier produced one, and is absent otherwise.
+
+## Offline by construction
+
+Both imports are `import type`, so they are erased at runtime and the module
+pulls in nothing. No clock, no randomness, no I/O, no throw. Nothing in the
+deployed bundle imports it: `evidence.core`, `evidence-builder.core` and
+`disagreement.core` each have **zero** references in `index.ts` and
+`verification.core.ts`, asserted rather than observed.
+
+`literalKey` duplicates three lines of P2's normalizer rather than exporting it
+from there. Modifying a P2 source file for a trivial helper is a worse trade
+than a small self-contained copy — and P3's notion of "same string" may
+legitimately diverge from P2's later.
+
+## Tests and mutations
+
+| suite | assertions | covers |
+|---|---|---|
+| `tests/disagreement-analyzer.test.mjs` | 81 | D1–D12: the four assignable categories, the reserved five never emitted, cross-engine vs own-engine mapping, N=1 has nothing to classify, ordering, purity, offline |
+| `tests/correlated-error-metrics.test.mjs` | 61 | C1–C10: agreement without reference, error only with reference, exclusion accounting, phi and each null reason, unanimous/shared wrong, N=1/2/5, purity |
+
+**All 15 mutations killed** (N1–N15), source restored byte-identically after
+each: emit a reserved category · guess a cause from prose · treat cross-engine
+mapping as model disagreement · drop `basis` · classify at N=1 · read silence as
+disagreement · emit in construction order · count an unreferenced item as
+correct · count it as wrong · return `phi = 0` instead of `null` · drop the
+exclusion counters · let an abstention count as disagreement · hard-code an
+engine count · promote unanimous-wrong to a verdict · derive confidence from
+agreement.
+
+**Mutation testing found three genuine test gaps**, which is the point of doing
+it — the suites were green before and would have stayed green:
+
+- **N1** (an extra field smuggling a guessed category) survived because no
+  single fixture item produced `MODEL_DISAGREEMENT`. Fixed by adding a
+  mixed-case sweep item.
+- **N8** (unsorted output) survived because construction order coincidentally
+  matched declared order. Fixed by adding three letter-only engines submitted in
+  reverse.
+- **N13** (a hard-coded count of 3 engines) survived because the fixture had
+  exactly 3. Fixed by adding N=2, N=5 and N=1 unanimous-wrong cases.
+
+Two further mutations were broken rather than surviving — one missed its anchor,
+one was a no-op — and were rewritten before being counted. All 15 then killed.
+
+## One thing found and deliberately not fixed
+
+P3's D9c originally compared a **flat** sort key `` `${engines}|${fields}|${observed}` ``
+against the module's component-wise ordering. Those disagree: `|` (124) sorts
+after `,` (44), so a flat key can order two records differently from comparing
+their components in sequence. The module's ordering was verified correct and the
+**test** was fixed.
+
+**P2's B8 carries the same latent fragility.** It is not failing today, and
+fixing it would mean editing an existing P2 test file, which the P3 brief put
+out of scope. Recorded here so it is fixed deliberately rather than discovered
+during an unrelated change.
+
+## Still not built after P3
+
+No P4 verifier logic, no verdict, no `VERIFIED` state, no voting, no winner
+selection, no confidence, no sufficiency, no routing, no escalation, no cost or
+latency policy, no model ranking, no live providers, no production integration.
