@@ -1,7 +1,11 @@
 # Design token drift — audit and single-source proposal
 
-**Status:** audit complete, nothing changed. Awaiting decisions on §4 before any
-value is touched.
+**Status:** audit complete. §4 was decided and applied in commit `1f0f05a`;
+results verified in `token-normalization-verification.md`. "agreed everywhere"
+went 41 → 58 tokens, and the only divergence left is the three font stacks held
+by the three frozen files. §5's mechanism (one authored source + a CI drift gate)
+is still **not built** — until it is, this was a one-time cleanup rather than a
+guarantee.
 **Date:** 2026-08-14
 **Reproduce:** `node scripts/audit-tokens.mjs` (add `--json` for machine output).
 The script reports only; it changes nothing and always exits 0.
