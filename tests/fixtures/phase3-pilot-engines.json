@@ -84,6 +84,49 @@
           "text": "Reasoning:\nSplit the absolute value into two cases and solve each one separately."
         }
       }
+    },
+    {
+      "id": "SWEEP-1",
+      "question_text": "If 4x + 8 = 56, what is the value of x ?",
+      "choices": ["10", "11", "12", "13"],
+      "_note": [
+        "P2 COUNT-AGNOSTICISM. Five engines that all state the same value, so a",
+        "suite can slice 1, 2, 3, 4 and 5 of them from one item.",
+        "",
+        "The sweep exists to prove a NEGATIVE: nothing about the evidence changes",
+        "kind as the count rises. No record type appears at a threshold, no field",
+        "flips, and no quality/sufficiency signal emerges from having more engines.",
+        "A count is not a confidence."
+      ],
+      "engines": {
+        "engine_e1": { "provider": "mock", "model": "e1", "text": "Reasoning:\n4x = 48, so x = 12.\n\nFinal Answer: C) 12" },
+        "engine_e2": { "provider": "mock", "model": "e2", "text": "Reasoning:\nSubtract 8 then divide by 4.\n\nFinal Answer: C) 12" },
+        "engine_e3": { "provider": "mock", "model": "e3", "text": "Reasoning:\n56 - 8 = 48 and 48 / 4 = 12.\n\nFinal Answer: C) 12" },
+        "engine_e4": { "provider": "mock", "model": "e4", "text": "Reasoning:\nIsolating x gives 12.\n\nFinal Answer: C) 12" },
+        "engine_e5": { "provider": "mock", "model": "e5", "text": "Reasoning:\nx must be 12.\n\nFinal Answer: C) 12" }
+      }
+    },
+    {
+      "id": "UNANIMOUS-WRONG-1",
+      "question_text": "How many integer values of n satisfy |n - 1| < 4 ? (unanimous variant)",
+      "choices": ["6", "7", "8", "9"],
+      "_note": [
+        "THREE ENGINES, ONE ANSWER, AND IT IS NOT THE RIGHT ONE.",
+        "",
+        "Same inequality as Q79: -3 < n < 5 gives {-2,-1,0,1,2,3,4}, so 7 values.",
+        "All three engines here publish 'D) 9'. They agree with each other and",
+        "they are wrong together — a correlated error, which is exactly what a",
+        "majority vote would promote to truth.",
+        "",
+        "P2 must record the agreement as an observation and must NOT be able to",
+        "mark it verified. The fixture states no key and no score; the arithmetic",
+        "above is context for a reader, never data the builder consumes."
+      ],
+      "engines": {
+        "engine_alpha": { "provider": "mock", "model": "alpha-1", "text": "Reasoning:\nI counted the integers from -4 to 4.\n\nFinal Answer: D) 9" },
+        "engine_beta":  { "provider": "mock", "model": "beta-1",  "text": "Reasoning:\nThe range spans 9 integers.\n\nFinal Answer: D) 9" },
+        "engine_gamma": { "provider": "mock", "model": "gamma-1", "text": "Reasoning:\nCounting inclusively gives 9.\n\nFinal Answer: D) 9" }
+      }
     }
   ]
 }
