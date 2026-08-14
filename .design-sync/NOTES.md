@@ -16,6 +16,14 @@ node .design-sync/build-tokens.mjs                 # rebuild ds-bundle/ (determi
 node .ds-sync/package-validate.mjs ./ds-bundle     # must print "✓ bundle is complete"
 ```
 
+The build fetches the brand fonts on first run if `ds-bundle/fonts/` is absent,
+so a fresh clone reproduces the whole bundle from that one command — verified by
+deleting `ds-bundle/` and rebuilding. **It needs network the first time.** Built
+offline, the bundle still validates (a missing font is only a warning) but ships
+with system fonts, so confirm `ls ds-bundle/fonts/*.woff2 | wc -l` is 28 before
+uploading. If the validator is unavailable, the build alone is not sufficient
+evidence — do not upload an unvalidated bundle.
+
 Then, with the `DesignSync` tool:
 
 1. `list_projects` → pick a non-colliding name → `create_project` (this repo has

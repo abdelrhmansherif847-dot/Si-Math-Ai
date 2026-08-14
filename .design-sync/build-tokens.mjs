@@ -27,6 +27,7 @@
 // Re-run it any time the site's tokens change; output is deterministic.
 
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -148,6 +149,21 @@ mkdirSync(join(OUT, 'tokens'), { recursive: true });
 // NOT visually verified", which claims a gap where there is simply nothing to
 // verify. Local-only: ds-bundle/ is gitignored, and an empty dir uploads nothing.
 mkdirSync(join(OUT, 'components'), { recursive: true });
+
+// The repo holds no font files — they are fetched once into ds-bundle/fonts/.
+// Doing it here (rather than as a documented prerequisite) is what makes a fresh
+// clone reproduce the whole bundle with one command; a prerequisite step gets
+// missed, and the result validates anyway because a missing font is only a
+// warning — so the bundle would silently ship with system fonts.
+if (!existsSync(join(OUT, 'fonts', 'fonts.css'))) {
+  console.error('fonts/ missing — fetching brand fonts (network required)…');
+  try {
+    execFileSync(process.execPath, [join(ROOT, '.design-sync/fetch-fonts.mjs')], { stdio: 'inherit' });
+  } catch {
+    console.error('! font fetch failed — bundle will build and validate, but with system fonts.');
+    console.error('  Re-run `node .design-sync/fetch-fonts.mjs` with network before uploading.');
+  }
+}
 
 const resolved = {};
 let css = `/* Si Math AI — design tokens.
