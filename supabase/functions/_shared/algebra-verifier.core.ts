@@ -131,6 +131,10 @@ const MAX_EQUATION_CHARS = 512;
 const MAX_CANDIDATE_CHARS = 64;
 const MAX_DEPTH = 32;
 
+/** A variable name the tokenizer cannot produce, for the call sites where no
+ *  variable can be present and the argument is therefore unreachable. */
+const NO_VARIABLE = '(none)';
+
 // ───────────────────────────────────────────────────────────────────────────
 // EXACT RATIONAL ARITHMETIC
 //
@@ -464,8 +468,10 @@ function parseCandidate(raw: string, variable: string): Ok<Rat> | Fail {
   variablesIn(node.value, vars);
   if (vars.size > 0) return fail('unsupported_candidate_form');
 
-  // No variable is present, so the substitution value is irrelevant here.
-  const value = evaluateAt(node.value, ' none', rat(0n));
+  // The candidate has been checked to contain no variable, so the name and
+  // value passed here are unreachable. NO_VARIABLE is a name the tokenizer
+  // cannot produce: variables are single letters.
+  const value = evaluateAt(node.value, NO_VARIABLE, rat(0n));
   return value.ok ? value : fail('unsupported_candidate_form');
 }
 

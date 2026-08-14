@@ -120,6 +120,51 @@ t.section('C16. No execution path exists in the source at all');
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+t.section('C. Source hygiene — every pilot file is plain text');
+{
+  // A control byte in source is invisible in an editor, makes grep and diff
+  // treat the file as binary, and can hide a literal that reads as something
+  // else entirely. One reached this module during P5 as a stray NUL inside a
+  // sentinel string — inert, but invisible, and it silently turned the file
+  // binary for every text tool that touched it. This is the guard.
+  // SCOPE: the files P5 owns, plus the earlier pilot modules that are clean.
+  // This sweep found committed NUL bytes in deterministic-verifier.core.ts (1)
+  // and verdict-state.core.ts (10), used as separators inside template
+  // literals - functionally correct, and a NUL is genuinely collision-safe
+  // there, but invisible in source and enough to make grep and diff treat the
+  // file as binary. Fixing them means editing P4 source, which is out of scope
+  // for P5, so they are REPORTED rather than quietly patched and this list
+  // stays honest about what it actually covers.
+  const files = [
+    'supabase/functions/_shared/evidence.core.ts',
+    'supabase/functions/_shared/evidence-builder.core.ts',
+    'supabase/functions/_shared/disagreement.core.ts',
+    'supabase/functions/_shared/verification-cache-key.core.ts',
+    'supabase/functions/_shared/algebra-verifier.core.ts',
+    'tests/algebra-verifier.test.mjs',
+    'tests/algebra-verifier-safety.test.mjs',
+    'tests/algebra-evidence-boundary.test.mjs',
+  ];
+  for (const f of files) {
+    const src = read(f);
+    // Tab, newline and carriage return are the only control characters a source
+    // file has any business containing.
+    const bad = [...src].filter((ch) => {
+      const c = ch.codePointAt(0);
+      return (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0d) || c === 0x7f;
+    });
+    t.is(`${f.split('/').pop()} carries no control characters`, bad.map((c) => c.codePointAt(0)), []);
+  }
+  t.ok('anti-vacuity: the sweep actually read files', read(files[0]).length > 1000);
+  // The probe is built with fromCharCode rather than a literal control
+  // character, so proving the detector works cannot itself smuggle one into
+  // this file - which is exactly how the NUL above got in.
+  const probe = 'a' + String.fromCharCode(0) + 'b';
+  t.is('and the detector finds one when it is there',
+    [...probe].filter((ch) => ch.codePointAt(0) < 0x20 && ch.codePointAt(0) !== 0x09).length, 1);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 t.section('C. The parser is bounded — no input can make it run away');
 {
   const long = await ask(`${'1+'.repeat(5000)}x = 1`, '1');

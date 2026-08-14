@@ -798,6 +798,33 @@ with 7 assertions red.
   deliberately — a future edit that breaks one walk would trip it. Recorded here
   rather than quietly dropped from the list.
 
+## A source-hygiene defect found in P4, and NOT fixed here
+
+While repairing a stray NUL byte in P5's own module, a new sweep found the same
+thing in files **already committed in P4**:
+
+| file | NUL bytes | where |
+|---|---|---|
+| `_shared/deterministic-verifier.core.ts` | 1 | the table verifier's row key |
+| `_shared/verdict-state.core.ts` | 10 | the dispute sort keys |
+
+All of them sit inside template literals as **separators**, so they are
+functionally correct — a NUL is genuinely collision-safe there, better than the
+space that was intended, since no field value can contain one. Nothing behaves
+wrongly and every P4 test passes.
+
+They are still wrong to leave: an invisible control byte in source makes `grep`
+and `diff` treat the file as binary, which broke tooling twice during this
+session before the cause was found. The fix is to write them as explicit
+` ` escapes — same bytes, visible in source.
+
+**Not done here.** That means editing P4 source, which P5's brief puts out of
+scope, so it is reported rather than quietly patched — the same discipline
+applied to P2's B8 sort key. The hygiene sweep in
+`algebra-verifier-safety.test.mjs` therefore covers P1, P2, P3 and P5's files and
+**deliberately excludes those two**, with a comment saying so, rather than
+pretending to a coverage it does not have.
+
 ## One test-infrastructure fix worth carrying forward
 
 The import scan in the P5 suite originally used the line-anchored
