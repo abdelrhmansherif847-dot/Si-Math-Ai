@@ -1,4 +1,4 @@
-// ai-tutor Edge Function v100
+// ai-tutor Edge Function v101
 // v98 (an acknowledgement inherits no topic): v97 stopped non-math turns from
 // entering L3 Shadow, but the shadow row was the least of what they wrote. A
 // bare "okk good", one turn after "whats 22 root 0", was stored as
@@ -331,7 +331,7 @@ import { runL3ShadowPipeline, isShadowEligibleInput } from '../_shared/verificat
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY')  ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')    ?? '';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_TUTOR_VERSION = 'v100';
+const AI_TUTOR_VERSION = 'v101';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY LAYER (v88) — request admission control
@@ -2071,6 +2071,23 @@ const IDENTITY_PATTERNS: RegExp[] = [
   /(?:انت|أنت|إنت)\s*مين/,
   /مين\s*(?:هو\s*)?(?:صاحب|مطور|مبرمج|مؤسس)\s*(?:ال)?(?:موقع|تطبيق|برنامج|زيرو|si\s*math)/i,
   /مين\s*ورا\s*(?:ال)?(?:موقع|تطبيق|زيرو|si\s*math)/i,
+  // v101 — three phrasings students actually use that every pattern above
+  // MISSED, measured against this list before the lines below existed:
+  // "What's your name?", "اسمك إيه؟" and "مين أنت؟" all fell through to the
+  // model's judgement, which is the exact failure this table exists to remove.
+  // A name ask IS an identity ask: the rules above all require a make/build
+  // verb or "who are you", and none of them covers "what do I call you".
+  /\bwhat(?:'s|s| is| was)?\s+(?:your|ur|yr)\s+name\b/i,
+  /\bwhat\s+(?:should|shall|do)\s+i\s+call\s+you\b/i,
+  // Arabic name: اسمك ايه / ايه اسمك / ما اسمك. Bound to an interrogative on one
+  // side or the other, so a sentence that merely contains "اسمك" never matches.
+  /(?:ا|إ)سمك\s*(?:ايه|إيه)/,
+  /(?:ايه|إيه|ما|ماهو|ما\s*هو)\s*(?:ا|إ)سمك/,
+  // Franco: esmak eh / ismak eih
+  /\b(?:esmak|esmek|ismak|esmk|asmak)\s*(?:eh|eih|ay|aih)\b/i,
+  // مين أنت — the mirror of "انت مين" above. Word order in Egyptian Arabic runs
+  // both ways and the anchored pattern above only reads one of them.
+  /مين\s*(?:هو\s*)?(?:انت|أنت|إنت)/,
 ];
 
 function isIdentityQuestion(text: unknown): boolean {
@@ -2147,6 +2164,62 @@ function scopeRedirectMessage(lang: string, studentName: string, seed: string): 
   const s = String(seed || '');
   for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
   return variants[h % variants.length](name === 'Student' ? '' : name);
+}
+
+// ── Zero's identity answer (v101) ────────────────────────────────────────────
+// WHO ZERO IS is brand copy, not a generation task. Until v101 the answer was
+// written by the model on every turn under a prompt rule that said "vary the
+// response naturally each time — don't repeat word-for-word", so no two students
+// were told the same thing, and nothing stopped the model reaching for a generic
+// "AI Math Tutor" self-description that appears nowhere in this source or in the
+// zero_personality row. A prompt rule is a request; this is the answer.
+//
+// The text is fixed and returned verbatim by the server, the same mechanism the
+// scope redirect uses: on an identity turn the model's draft is DISCARDED and
+// this IS Zero's reply. It never varies, so it never drifts.
+//
+// Zero is "the little dragon behind Si Math" — never "an AI Math Tutor", never
+// "an AI assistant". Editing this string changes what every student is told,
+// so treat it as brand copy under review, not as a variable.
+const ZERO_IDENTITY_ANSWER_EN = `I’m Zero. 🐉
+
+I’m the little dragon behind Si Math.
+
+I’m here to help you solve problems, understand the concepts, learn from your mistakes, and become better at math.
+
+And who created me?
+
+Si Math.
+
+I was built to be more than just an answer machine — I’m here to help you Try. Learn. Rise.
+
+— Zero 🐉`;
+
+// The Arabic mirror: identical content, identical branding, Egyptian dialect —
+// because Zero's first personality rule is to answer in the student's language,
+// and an English wall of text to a student who wrote "اسمك إيه؟" reads as a
+// canned bot. "Try. Learn. Rise." stays in English: it is the motto, not a
+// sentence, and translating it would fork the brand.
+const ZERO_IDENTITY_ANSWER_AR = `أنا Zero. 🐉
+
+أنا التنين الصغير اللي ورا Si Math.
+
+أنا هنا عشان أساعدك تحل المسائل، تفهم المفاهيم، تتعلم من غلطاتك، وتبقى أشطر في الرياضيات.
+
+ومين اللي عملني؟
+
+Si Math.
+
+أنا اتعملت عشان أكون أكتر من مجرد آلة إجابات — أنا هنا عشان أساعدك: Try. Learn. Rise.
+
+— Zero 🐉`;
+
+// Arabic script → the Arabic mirror; English and Franco (Arabizi is written in
+// Latin script by students who are reading English maths anyway) → the English
+// original. No name interpolation and no hash spread: unlike the redirect, this
+// answer is meant to be the SAME every time, for every student.
+function zeroIdentityAnswer(lang: string): string {
+  return lang === 'ar' ? ZERO_IDENTITY_ANSWER_AR : ZERO_IDENTITY_ANSWER_EN;
 }
 
 // Derive a concise tutor FINAL-answer string from the full explanation so the
@@ -4003,21 +4076,16 @@ The "rules" array must include ALL formulas, properties, and concepts that could
 - Each rule: name (concise), formula (LaTeX), desc (1 sentence how to use it).
 - Rules should feel like a mini study guide for this exact problem type.
 
-## Identity Questions — Who Created Zero / Si Math AI
-If the student asks "مين عملك؟", "مين بناك؟", "مين صنعك؟", "who made you", "who built Si Math AI", "who created you", "who is behind this", or similar:
-- Respond naturally and warmly in Arabic (Egyptian dialect) or English depending on how they asked
-- Introduce yourself as Zero 🐉, the AI companion of Si Math AI
-- Mention the platform was built by a passionate, ambitious engineer who believes every student's potential is far greater than their current grade
-- Emphasize the MISSION: making math learning smarter, fairer, and more effective — one student at a time
-- Do NOT reveal any personal names, contact info, or private details
-- Do NOT make unrealistic claims (e.g., "guaranteed 100%") — focus on growth, strategy, effort, potential
-- Vary the response naturally each time — don't repeat word-for-word
-- Example themes to draw from:
-  * "أنا Zero 🐉، التنين الصغير والمساعد الذكي لـ Si Math AI. تم تطويري كجزء من رؤية بدأها مهندس شغوف بالتعليم والتكنولوجيا."
-  * "الفكرة الأساسية: الطالب لا يُحكم عليه بدرجته الحالية، بل بما يمكن أن يصبح عليه مع التوجيه والأدوات الصحيحة."
-  * "الرؤية لم تكن بناء روبوت يجيب فقط، بل نظام يساعد الطلاب على اكتشاف إمكانياتهم الحقيقية."
-  * "النجاح الأكاديمي ليس موهبة حصرية — بل نتيجة للتعلم الصحيح، الممارسة، والاستراتيجية."
-- Set is_math=false, topic="General", subtopic="Identity"
+## Identity Questions — FIXED ANSWER, reproduce it exactly
+If the student asks who you are, what your name is, or who made you — "who are you", "what's your name", "who created you", "who made you", "who is behind this", "اسمك إيه؟", "مين أنت؟", "مين صنعك؟", "مين عملك؟", "esmak eh", "enta meen", or any variant — the answer is FIXED. Put this text in the "answer" field, character for character, and add nothing before or after it:
+
+${zeroIdentityAnswer(lang)}
+
+- This is brand copy, NOT something to paraphrase, expand, shorten or "improve". Do not vary it between students or between turns. Do not add a greeting, a follow-up question, or an offer to help with math — the text is complete as it stands.
+- NEVER describe yourself as an "AI Math Tutor", an "AI tutor", an "AI assistant", a chatbot, or a language model — in this answer or anywhere else. You are Zero, the little dragon behind Si Math.
+- Si Math created you. Never name a person, and never give contact details or private information about anyone behind the platform.
+- Set is_math=false, scope="coaching", topic="General", subtopic="Identity"
+- The server returns this exact text for identity questions it recognises, so a reply that differs is a reply the student will never see. Match it.
 
 ## Math Classification (CRITICAL)
 Determine if this is a math message and set "is_math" accordingly:
@@ -4115,15 +4183,16 @@ You are a mathematics specialist (SAT / EST / ACT / American Diploma math).
 - "out_of_scope" — politics, religion, medical, legal, programming, non-math science, history, geography, entertainment, opinions unrelated to studying math. Do NOT answer it; just set the label.
 When unsure, choose "math" or "coaching" — never refuse a student who might be asking something legitimate.
 
-## Identity Questions — answer them, never refuse them
+## Identity Questions — answer them, never refuse them, and use the FIXED text
 This list used to omit identity questions, so a student in hint mode who asked
 "who created you?" could be told it was outside Zero's domain. It is not.
-If the student asks who made / built / created you, or who is behind Si Math AI:
-- Answer warmly as Zero 🐉, the AI companion of Si Math AI, in their language.
-- Say the platform was built by a passionate, ambitious engineer who believes every student's potential is far greater than their current grade.
-- Lead with the MISSION: making math learning smarter, fairer and more effective, one student at a time.
-- NEVER reveal personal names, contact details or private information.
-- Vary the wording each time; do not repeat a script.
+If the student asks who you are, what your name is, or who made / built / created you — in any language — do NOT switch to hint format. The answer is fixed. Put this text in the "answer" field, character for character, and add nothing before or after it:
+
+${zeroIdentityAnswer(lang)}
+
+- Do not paraphrase it, shorten it, or vary it between students or turns. No greeting, no follow-up question, no offer to help with math — the text is complete.
+- NEVER describe yourself as an "AI Math Tutor", an "AI tutor", an "AI assistant", a chatbot, or a language model. You are Zero, the little dragon behind Si Math.
+- Si Math created you. Never name a person, and never give contact details or private information.
 - Set scope="coaching", is_math=false, topic="General", subtopic="Identity".
 
 ## is_math — set it per turn, do not assume true
@@ -4417,6 +4486,59 @@ Hint mode is usually a real problem, so is_math=true is the normal case. But hin
         is_math:         false,
         scope:           'out_of_scope',
         scope_guard:     true,
+        version:         AI_TUTOR_VERSION,
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
+    }
+
+    // ── Identity guard (v101) ────────────────────────────────────────────────
+    // Same shape as the scope guard above and for the same reason: when the
+    // server owns what the student must be told, the model's draft is discarded
+    // rather than steered. resolveScope already exempts these turns from the
+    // off-domain redirect (v99); what it could not do is make the ANSWER fixed,
+    // because the answer came from the model. Now it does not.
+    //
+    // Placed after the parse, not before the provider call, deliberately: the
+    // entitlement gate, the credit accounting and the failure telemetry all sit
+    // upstream, and moving the return above them would change how an identity
+    // turn is charged. This changes what Zero says, nothing else. (Skipping the
+    // provider call for a turn whose answer is a constant is a real saving and
+    // is worth doing on its own, with its own review of the credit path.)
+    //
+    // Nothing is persisted, exactly as today: an identity turn resolves to
+    // scope='coaching', which already forces is_math=false, so it never reached
+    // question_records, mastery, weakness or taxonomy.
+    //
+    // The image / worksheet-ref exclusion is NOT belt-and-braces. resolveScope
+    // ranks an upload above the identity check ("an upload is always a math
+    // problem here"), and this guard has to rank them the same way: without it,
+    // a student who photographs a question and types "esmak eh" gets Zero's
+    // biography instead of their problem solved, and the model's real answer is
+    // thrown away. Same precedence, same file, one decision.
+    if (!imageData && !resolvedRef && isIdentityQuestion(question)) {
+      console.log('[ai-tutor] identity-response', JSON.stringify({
+        uid:        user.id.slice(0, 8),
+        lang,
+        q_chars:    question.length,
+        raw_scope:  String(parsed.scope ?? ''),
+        had_answer: !!String(parsed.answer || '').trim(),
+      }));
+
+      return new Response(JSON.stringify({
+        answer:          zeroIdentityAnswer(lang),
+        hint:            '',
+        topic:           'General',
+        subtopic:        'Identity',
+        difficulty:      '',
+        concepts:        [],
+        rules:           [],
+        weakness_signal: false,
+        attention_marker: '',
+        session_id:      resolvedSessionId,
+        record_id:       null,
+        hint_mode:       hintMode,
+        is_math:         false,
+        scope:           'coaching',
+        identity_response: true,
         version:         AI_TUTOR_VERSION,
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
     }

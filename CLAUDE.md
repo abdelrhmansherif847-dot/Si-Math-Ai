@@ -132,15 +132,16 @@ student impact during exam-prep windows.
 | | |
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
-| Edge Functions | `ai-tutor` (platform version **137**, ACTIVE) · `admin-actions` (platform version **15**, ACTIVE) |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v99'` — **DEPLOYED.** Production runs v99 at platform version 137 (deployed 2026-08-05T11:12:08Z), and the deployed bundle is byte-for-byte identical to `main` across all four files (265,058 / 9,385 / 59,591 / 30,314 bytes). v99 restores Zero's identity answers: `isIdentityQuestion()` exempts them inside `resolveScope`, so the scope guard can no longer replace them with the off-domain redirect. Confirmed live by a real student turn — "مين صنعك" at 11:14:43 returned the configured identity, not the redirect |
+| Edge Functions | `ai-tutor` (platform version **144**, ACTIVE, deployed 2026-08-13T20:38:11Z) · `admin-actions` (platform version **16**, ACTIVE) — read from `list_edge_functions` on 2026-08-15 |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v99'` in `origin/main`. **Which source version platform 144 is running was NOT verified** in the session that recorded this row — only the platform version and sha below were read. Do not infer it from this table: compare the deployed bundle against the tree you are about to ship, per the warning below. v99 is what restored Zero's identity answers: `isIdentityQuestion()` exempts them inside `resolveScope`, so the scope guard can no longer replace them with the off-domain redirect |
+| `ai-tutor` source version on the feature branch | `v101` on `claude/zero-identity-response-nj277b`, **UNDEPLOYED**, ahead of `origin/main`. v101 makes Zero's identity answer a fixed server-returned string instead of a model generation, and adds the name / reversed-word-order patterns (`what's your name`, `اسمك إيه؟`, `مين أنت؟`, `esmak eh`) that `isIdentityQuestion()` was missing. v100 (worksheet selector, design tokens) is also on this branch and unmerged |
 | `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
 | `subscriptions.plan_type` | A legacy CATEGORY column, not a plan code, and read by nothing — `plan_code` on the same row is authoritative. `subscriptions_plan_type_check` permits six values only, so every writer maps through `legacy_plan_type()` (`20260802184704`). Never write a raw `plan_code` into it |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
-| `ai-tutor` deployed bundle | `ezbr_sha256` `e1527283c1069dc5b06fe8a0c153e301b1dfdae8ede47d9fcb064277b39e4eec`, deployed 2026-08-05T11:12:08Z. Four files: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}` — verified present and byte-identical to `main`. **Re-read this row from `list_edge_functions` rather than trusting it.** It has now been found stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), and on 2026-08-03 it overstated the gap (it said v97/v98 were unshipped for the ~30 minutes between the deploy and this correction) |
+| `ai-tutor` deployed bundle | `ezbr_sha256` `2c91aa15a8138064833e73c405522f66448bafac41c01c082bec79313d002d55`, platform version 144, deployed 2026-08-13T20:38:11Z (read 2026-08-15). The four-file shape is unchanged: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}`. **The bundle was NOT compared against the tree this time** — the sha is recorded so the next session can tell whether anything moved, not as proof of parity. **Re-read this row from `list_edge_functions` rather than trusting it.** It has now been found stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), and on 2026-08-03 it overstated the gap (it said v97/v98 were unshipped for the ~30 minutes between the deploy and this correction) |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
@@ -156,10 +157,13 @@ recorded "v69 / platform version 78" as if the two moved together; they do not.
 The only unambiguous identity for what is *running* is the platform version plus
 the bundle sha256.
 
-**`main` and the deployed function are in sync right now** (verified
-2026-08-03T20:10Z by comparing all four bundle files byte for byte): `main`
-carries v98, production runs v98 at platform version 136. **This is the
-exception, not the rule** — the repo is *routinely* ahead of production, because
+**Whether `main` and the deployed function are in sync is UNKNOWN as of
+2026-08-15.** The last byte-for-byte comparison in this file was 2026-08-03, when
+`main` carried v98 and production ran v98 at platform version 136. Since then the
+platform counter has moved to 144 and no session has recorded a comparison, so
+that "in sync" claim has expired — treat it as unverified, not as reassurance.
+Being in sync was **the exception, not the rule** anyway — the repo is
+*routinely* ahead of production, because
 merging deploys the site automatically and nothing deploys the Edge Function.
 Phase V0 sat merged-but-undeployed for exactly this reason until v96 shipped
 with it, and v97/v98 sat that way for about six hours on 2026-08-03.
