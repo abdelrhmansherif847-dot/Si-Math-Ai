@@ -83,6 +83,19 @@ for (const q of [
   'meen 3amalak', 'meen elli 3amalak', 'enta meen', 'meen sana3ak',
 ]) t.is(`"${q}" is answered`, idBlocked(q), false);
 
+t.section('Name asks and reversed Arabic word order (v101 — every one of these MISSED)');
+// Measured against the v100 pattern table before these lines existed: each of
+// these returned false from isIdentityQuestion, so the student's question about
+// Zero rode on whatever label the model happened to produce. A name ask is an
+// identity ask; the v100 rules all required a make/build verb or "who are you".
+for (const q of [
+  "What's your name?", 'what is your name', 'whats your name', 'what is ur name',
+  'what should I call you', 'what do i call you',
+  'اسمك إيه؟', 'اسمك ايه', 'ايه اسمك', 'ما اسمك',
+  'مين أنت؟', 'مين انت', 'مين هو انت',
+  'esmak eh', 'ismak eih', 'esmak eh ya zero',
+]) t.is(`"${q}" is answered`, idBlocked(q), false);
+
 t.section('Identity exemption must NOT swallow maths (the expensive direction)');
 // Every one of these is off-domain or maths and must keep its normal treatment.
 for (const q of [
@@ -90,6 +103,10 @@ for (const q of [
   'who invented calculus?', 'who discovered the Pythagorean theorem?',
   'solve 2x + 5 = 11', 'what is the derivative of x^2?', 'حل المعادلة دي',
   'who is the president?', 'who built the pyramids?', 'who wrote this book?',
+  // v101 negatives: the name and reversed-order rules must not reach these.
+  'what is the name of this theorem?', 'what is the name of this shape',
+  'what is your favourite number?', 'ما اسم هذه النظرية',
+  'مين اللي كسب المباراة', 'اسم المتغير ده ايه',
 ]) t.is(`"${q}" is NOT treated as an identity question`, idBlocked(q), true);
 
 t.section('The exemption never blocks a legitimate turn either');
