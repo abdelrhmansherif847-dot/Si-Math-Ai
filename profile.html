@@ -149,7 +149,7 @@ button{font-family:inherit;cursor:pointer}
 <aside class="sidebar" id="sidebar">
   <div class="side-sec">Menu</div>
   <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
-  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
   <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
   <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
   <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
@@ -193,12 +193,12 @@ sidebar.querySelectorAll('.nav-item').forEach(a => a.addEventListener('click', (
 // Rank ladder lives in assets/ranks.js (single client source of truth).
 
 const ALL_ACHIEVEMENTS = [
-  { key: 'first_question',       icon: '💬', name: 'First Question',       desc: 'Asked your first question to the AI Tutor.' },
+  { key: 'first_question',       icon: '💬', name: 'First Question',       desc: 'Asked your first question to Zero.' },
   { key: 'first_mock_exam',      icon: '📝', name: 'First Mock Exam',       desc: 'Completed your first mock exam.' },
   { key: 'streak_7',             icon: '🔥', name: '7-Day Streak',          desc: 'Practiced for 7 days in a row.' },
   { key: 'streak_30',            icon: '⚡', name: '30-Day Streak',         desc: 'Practiced for 30 consecutive days.' },
   { key: 'first_mastered_topic', icon: '🎯', name: 'First Mastered Topic',  desc: 'Reached mastery on a topic.' },
-  { key: 'questions_100',        icon: '💯', name: '100 Questions Solved',  desc: 'Asked 100 questions to the AI Tutor.' },
+  { key: 'questions_100',        icon: '💯', name: '100 Questions Solved',  desc: 'Asked 100 questions to Zero.' },
   { key: 'consistency_champion', icon: '🏅', name: 'Consistency Champion', desc: 'Maintained a streak of 14+ days.' },
 ];
 

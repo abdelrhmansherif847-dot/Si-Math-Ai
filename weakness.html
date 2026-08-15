@@ -518,7 +518,7 @@ body.plan-free .pro-upsell{display:block}
   </a>
   <div class="side-sec">Menu</div>
   <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
-  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
   <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
   <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
   <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
@@ -642,7 +642,7 @@ body.plan-free .pro-upsell{display:block}
          Planner / Manual Practice / any future source). The two below are
          loading placeholders only. -->
     <div class="sources-row">
-      <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">AI Tutor</span></div>
+      <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">Chat with Zero</span></div>
       <span class="src-plus">+</span>
       <div class="src-box"><span class="src-v"><span class="skel" style="width:48px;height:32px;display:inline-block"></span></span><span class="src-l">Mock Exams</span></div>
     </div>
@@ -1246,7 +1246,7 @@ function showLoading(){
   document.getElementById('updatedAt').textContent='—';
 }
 function showEmpty(){
-  document.querySelector('.stats').innerHTML='<div class="stat d1" style="grid-column:1/-1"><div class="si">📊</div><div class="sl">No Analysis Yet</div><div class="sv" style="font-size:18px">Start chatting with Zero to generate your analysis</div><div class="sd"><a href="chat.html" style="color:var(--cyan-3)">Go to AI Tutor →</a></div></div>';
+  document.querySelector('.stats').innerHTML='<div class="stat d1" style="grid-column:1/-1"><div class="si">📊</div><div class="sl">No Analysis Yet</div><div class="sv" style="font-size:18px">Start chatting with Zero to generate your analysis</div><div class="sd"><a href="chat.html" style="color:var(--cyan-3)">Go to Chat with Zero →</a></div></div>';
   const rt=document.querySelector('.rank-table');if(rt)rt.innerHTML=emptyMsg('🏆','No weaknesses ranked yet','Ask Zero math questions to start building your profile.');
   const cardHeads=document.querySelectorAll('section.card .card-head');
   if(cardHeads[1])cardHeads[1].querySelector('.card-title').textContent='No data yet';
@@ -1357,7 +1357,7 @@ async function loadEvidenceBatched(reports, topN){
       if (s.source === 'AI_CHAT') {
         const q = s.source_question_id ? qrMap.get(s.source_question_id) : null;
         return {
-          src: 'AI Tutor', srcClass: 'chat', when,
+          src: 'Chat with Zero', srcClass: 'chat', when,
           body: q && q.question ? q.question : 'Earlier chat signal',
           link: q && q.session_id ? `chat.html?session=${encodeURIComponent(q.session_id)}` : null,
           linked: !!q,
@@ -1614,7 +1614,7 @@ function renderWhy(report,signals){
  * being silently absorbed into an existing bucket.
  */
 const SOURCE_LABELS={
-  AI_CHAT:'AI Tutor',
+  AI_CHAT:'Chat with Zero',
   MOCK_EXAM:'Mock Exam',
   FOCUS_PRACTICE:'Focus Practice',
   STUDY_PLANNER:'Study Planner',

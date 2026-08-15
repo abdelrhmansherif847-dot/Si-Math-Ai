@@ -228,7 +228,7 @@ function sampleState() {
   const labels = allTasks(plan).map((t) => t.label);
   assert(labels.some((l) => /^Solve \d+ Practice Questions$/.test(l)), 'includes "Solve N Practice Questions"');
   assert(labels.includes('Review previous mistakes'), 'includes "Review previous mistakes"');
-  assert(labels.includes('AI Tutor Review'), 'includes "AI Tutor Review"');
+  assert(labels.includes('Chat with Zero Review'), 'includes "Chat with Zero Review"');
   assert(labels.includes('Timed Practice'), 'includes "Timed Practice"');
   assert(plan.week.regeneratesOn === '2026-07-26', 'regeneratesOn = start + 7 days');
 }

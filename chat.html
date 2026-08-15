@@ -5,7 +5,7 @@
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
 <link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
-<title>Si Math AI — AI Tutor Chat</title>
+<title>Si Math AI — Chat with Zero</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -631,7 +631,7 @@ button{font-family:inherit;cursor:pointer}
 
   <div class="side-sec">Menu</div>
   <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
-  <a class="nav-item active" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor</a>
+  <a class="nav-item active" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
   <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
   <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
   <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exams</a>
@@ -670,7 +670,7 @@ button{font-family:inherit;cursor:pointer}
     <button class="db-exit" id="drillExitBtn" type="button" title="Exit drill" aria-label="Exit drill">✕</button>
   </div>
   <div class="chat-head">
-    <div class="eyebrow"><span class="live-dot"></span> AI Tutor</div>
+    <div class="eyebrow"><span class="live-dot"></span> Chat with Zero</div>
     <h1>Ask Zero</h1>
     <p>Upload a question or type it below to get step-by-step SAT &amp; EST math explanations.</p>
   </div>
@@ -3246,7 +3246,7 @@ button{font-family:inherit;cursor:pointer}
           user_id: currentUser.id,
           achievement_key: 'first_question',
           name: 'First Question',
-          description: 'Asked your first question to the AI Tutor',
+          description: 'Asked your first question to Zero',
           earned_at: new Date().toISOString()
         }, { onConflict: 'user_id,achievement_key', ignoreDuplicates: true });
       }
@@ -3257,7 +3257,7 @@ button{font-family:inherit;cursor:pointer}
           user_id: currentUser.id,
           achievement_key: 'questions_100',
           name: '100 Questions Solved',
-          description: 'Asked 100 questions to the AI Tutor',
+          description: 'Asked 100 questions to Zero',
           earned_at: new Date().toISOString()
         }, { onConflict: 'user_id,achievement_key', ignoreDuplicates: true });
         showXpToast('+5 XP · 🏅 100 Questions Solved!');
