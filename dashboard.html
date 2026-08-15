@@ -949,7 +949,7 @@ body::before{
   </a>
   <a class="nav-item" href="chat.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
-    <span class="nav-label">AI Tutor</span>
+    <span class="nav-label">Chat with Zero</span>
     <span class="nav-badge">Live</span>
   </a>
   <a class="nav-item" href="weakness.html">
@@ -1018,7 +1018,7 @@ body::before{
       </button>
       <button onclick="location.href='chat.html'" class="btn-ghost">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
-        Ask AI Tutor
+        Chat with Zero
       </button>
     </div>
   </section>
@@ -1344,7 +1344,7 @@ body::before{
       <div class="card-head">
         <div class="card-ico">🤖</div>
         <div>
-          <div class="card-title">AI Tutor</div>
+          <div class="card-title">Chat with Zero</div>
           <div class="card-sub">Instant step-by-step help</div>
         </div>
       </div>
@@ -2128,8 +2128,8 @@ async function loadDashboard() {
       zeroEl.innerHTML = sessPhrase + ', <span class="topic-hl">' + wLoc + '</span> is your highest-priority weakness right now.' + mastPhrase + dayPhrase + ' Open your focus plan to start improving now.';
       if (chatBtn) { chatBtn.href = 'chat.html'; chatBtn.textContent = 'Ask Zero About ' + weakness.topic; }
     } else if (!masteryRecs.length) {
-      zeroEl.textContent = 'Welcome! Start practising with the AI Tutor or take a Mock Exam. Your personalised insight will appear here after your first session.';
-      if (chatBtn) chatBtn.textContent = 'Start with AI Tutor';
+      zeroEl.textContent = 'Welcome! Start practising with Zero or take a Mock Exam. Your personalised insight will appear here after your first session.';
+      if (chatBtn) chatBtn.textContent = 'Chat with Zero';
     } else {
       zeroEl.textContent = "Great work so far! Keep practising daily to maintain your streak and improve your weakest topics. Check the Weakness Analyzer for detailed insights.";
     }

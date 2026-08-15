@@ -218,7 +218,7 @@ button{font-family:inherit;cursor:pointer}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard
   </a>
   <a class="nav-item" href="chat.html">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>AI Tutor
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero
   </a>
   <a class="nav-item" href="weakness.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer
@@ -640,7 +640,7 @@ async function deviceGuard(sb, userId) {
         '<div class="empty-state">' +
           '<div class="ei">📊</div>' +
           '<div class="et">No improvement data yet</div>' +
-          '<div class="es">Practice topics with the <a href="chat.html" style="color:var(--cyan)">AI Tutor</a> to start tracking mastery. Your strengths and weaknesses live on the <a href="weakness.html" style="color:var(--cyan)">Weakness Analyzer</a>.</div>' +
+          '<div class="es">Practice topics with the <a href="chat.html" style="color:var(--cyan)">Chat with Zero</a> to start tracking mastery. Your strengths and weaknesses live on the <a href="weakness.html" style="color:var(--cyan)">Weakness Analyzer</a>.</div>' +
         '</div>';
     }
 
@@ -685,7 +685,7 @@ async function deviceGuard(sb, userId) {
       milestones.push({
         icon: '🎯',
         title: 'Identify your first weakness',
-        sub: 'Ask the AI Tutor a question to start building your mastery profile',
+        sub: 'Ask Zero a question to start building your mastery profile',
         pct: 0,
         barColor: 'var(--cyan)',
         href: 'chat.html',
@@ -746,7 +746,7 @@ async function deviceGuard(sb, userId) {
     // ── Topic mastery grid ──
     var topicGrid = document.getElementById('topicGrid');
     if (mastRecs.length === 0){
-      topicGrid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">📚</div><div class="et">No topic data yet</div><div class="es">Mastery is tracked as you practice with the <a href="chat.html" style="color:var(--cyan)">AI Tutor</a>.</div></div>';
+      topicGrid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">📚</div><div class="et">No topic data yet</div><div class="es">Mastery is tracked as you practice with the <a href="chat.html" style="color:var(--cyan)">Chat with Zero</a>.</div></div>';
     } else {
       var sorted = mastRecs.slice().sort(function(a,b){ return (b.mastery_score||0)-(a.mastery_score||0); });
       topicGrid.innerHTML = sorted.map(function(m){

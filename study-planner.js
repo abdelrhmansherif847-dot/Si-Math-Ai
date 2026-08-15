@@ -580,7 +580,7 @@
 
      Each study day gets a concrete checklist, e.g.:
          Sunday   → Circle → Round 1 · Solve 15 Practice Questions · Review previous mistakes
-         Monday   → Circle → Round 2 · AI Tutor Review
+         Monday   → Circle → Round 2 · Chat with Zero Review
          Tuesday  → Circle → Round 3 · Timed Practice
 
      Days outside availability.studyDays are rest days with no assigned work.
@@ -738,7 +738,7 @@
     } else if (theme === 1) {
       if (state.tutor.topics.length) {
         var confused = mostConfusedLabel(state);
-        add({ type: 'ai_tutor_review', label: 'AI Tutor Review',
+        add({ type: 'ai_tutor_review', label: 'Chat with Zero Review',
           detail: 'Revisit with Zero the topics you asked about most' + (confused ? ' (e.g. ' + confused + ')' : '') + '.',
           ref: { kind: 'ai_tutor_review' } }, 15);
       } else {
