@@ -32,9 +32,10 @@
 import { chromium } from '../.ds-sync/node_modules/playwright/index.mjs';
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const REPO = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LABEL = process.argv[2];
 if (!LABEL) { console.error('usage: node scripts/capture-token-state.mjs <label> [--root <dir>]'); process.exit(1); }
 const rootFlag = process.argv.indexOf('--root');

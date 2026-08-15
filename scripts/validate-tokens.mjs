@@ -31,9 +31,10 @@
 //      fails, so the list cannot quietly rot.
 
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CORE = 'assets/tokens.core.css';
 
 // Differ per surface by design — never compared. Widening this list is a design

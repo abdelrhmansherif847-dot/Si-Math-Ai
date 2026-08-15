@@ -17,9 +17,10 @@
 
 import { chromium } from '../.ds-sync/node_modules/playwright/index.mjs';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const [A, B] = process.argv.slice(2);
 if (!A || !B) { console.error('usage: node scripts/compare-token-state.mjs <before> <after>'); process.exit(1); }
 const dir = (l) => join(ROOT, '.design-sync/.cache/regression', l);
