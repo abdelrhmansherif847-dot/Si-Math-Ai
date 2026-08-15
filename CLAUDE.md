@@ -133,8 +133,7 @@ student impact during exam-prep windows.
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
 | Edge Functions | `ai-tutor` (platform version **144**, ACTIVE, deployed 2026-08-13T20:38:11Z) · `admin-actions` (platform version **16**, ACTIVE) — read from `list_edge_functions` on 2026-08-15 |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v99'` in `origin/main`. **Which source version platform 144 is running was NOT verified** in the session that recorded this row — only the platform version and sha below were read. Do not infer it from this table: compare the deployed bundle against the tree you are about to ship, per the warning below. v99 is what restored Zero's identity answers: `isIdentityQuestion()` exempts them inside `resolveScope`, so the scope guard can no longer replace them with the off-domain redirect |
-| `ai-tutor` source version on the feature branch | `v101` on `claude/zero-identity-response-nj277b`, **UNDEPLOYED**, ahead of `origin/main`. v101 makes Zero's identity answer a fixed server-returned string instead of a model generation, and adds the name / reversed-word-order patterns (`what's your name`, `اسمك إيه؟`, `مين أنت؟`, `esmak eh`) that `isIdentityQuestion()` was missing. v100 (worksheet selector, design tokens) is also on this branch and unmerged |
+| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v101'` (merged 2026-08-15, commit `eebdce5`). **UNDEPLOYED as of that merge** — the merge is a repository event and does not touch the Edge Function. v101 makes Zero's identity answer a fixed string the server returns verbatim instead of a model generation, and adds the name / reversed-word-order patterns (`what's your name`, `اسمك إيه؟`, `مين أنت؟`, `esmak eh`) that `isIdentityQuestion()` did not match at all before it. **Which source version platform 144 is actually running was never verified** — only the platform version and the sha below were read. Do not infer it from this table |
 | `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
@@ -157,12 +156,14 @@ recorded "v69 / platform version 78" as if the two moved together; they do not.
 The only unambiguous identity for what is *running* is the platform version plus
 the bundle sha256.
 
-**Whether `main` and the deployed function are in sync is UNKNOWN as of
-2026-08-15.** The last byte-for-byte comparison in this file was 2026-08-03, when
-`main` carried v98 and production ran v98 at platform version 136. Since then the
-platform counter has moved to 144 and no session has recorded a comparison, so
-that "in sync" claim has expired — treat it as unverified, not as reassurance.
-Being in sync was **the exception, not the rule** anyway — the repo is
+**`main` and the deployed function are NOT in sync as of 2026-08-15.** `main`
+carries v101, merged at `eebdce5`, and no Edge Function deploy was performed with
+that merge — so whatever platform version 144 contains, it does not contain v101.
+What production IS running was not verified: the last byte-for-byte comparison in
+this file was 2026-08-03 (v98 at platform version 136), the counter has since
+moved to 144, and no session has recorded a comparison since. Treat the gap as
+known and its size as unknown. Being in sync was **the exception, not the rule**
+anyway — the repo is
 *routinely* ahead of production, because
 merging deploys the site automatically and nothing deploys the Edge Function.
 Phase V0 sat merged-but-undeployed for exactly this reason until v96 shipped
