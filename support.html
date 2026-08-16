@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Si Math AI — Get Help</title>
+<meta name="description" content="Get help with your Si Math AI account, subscription, mock exams or anything broken. Search the help centre or open a support request."/>
+<meta name="robots" content="noindex"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;--font-body:'DM Sans', system-ui, -apple-system, sans-serif;--font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden;background:#050a14}
+body{background-color:#050a14 !important;background:#050a14 !important;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh;position:relative}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:380px;height:380px;background:radial-gradient(circle,rgba(56,189,248,.12),transparent 70%);top:-120px;right:-120px}
+.orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(14,165,233,.08),transparent 70%);bottom:-60px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+/* TOP BAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:var(--space-3);padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:11px;background:var(--bg-card);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:13.5px;transition:all .2s}
+.back-btn:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-1px)}
+.back-btn svg{width:15px;height:15px}
+.back-btn .lbl-full{display:none}
+@media(min-width:560px){.back-btn .lbl-full{display:inline}.back-btn .lbl-short{display:none}}
+
+/* SIDEBAR */
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff;padding:0 6px 12px}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft);box-shadow:inset 0 0 18px rgba(56,189,248,.08)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+/* MAIN */
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:880px;margin:0 auto}
+.page-head{margin-bottom:var(--space-5);animation:rise .6s ease both}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:inline-flex;align-items:center;gap:8px}
+.eyebrow .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
+.page-head h1{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,7vw,36px);line-height:1.08;letter-spacing:-.02em;color:#fff}
+.page-head p{color:var(--text-300);font-size:15px;margin-top:8px;max-width:560px}
+.sec-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:var(--space-6) 4px var(--space-4);display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+.card{position:relative;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:var(--space-5);animation:rise .6s ease both}
+@media(min-width:768px){.card{padding:var(--space-6)}}
+
+.btn-sm{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--cyan-border);color:#fff;font-weight:600;font-size:13px;transition:all .2s}
+.btn-sm:hover{background:var(--cyan-bg-soft);border-color:var(--cyan);transform:translateY(-1px)}
+.btn-sm svg{width:14px;height:14px}
+.btn-sm[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.save-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:var(--r-md);border:none;background:var(--cyan);color:#031020;font-family:var(--font-display);font-weight:700;font-size:14.5px;box-shadow:0 6px 22px rgba(56,189,248,.26);transition:transform .2s,box-shadow .2s}
+.save-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(56,189,248,.4)}
+.save-btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.save-btn svg{width:15px;height:15px}
+.gfield label{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400);margin-bottom:8px}
+.gfield input,.gfield select,.gfield textarea{width:100%;background:var(--bg-elev-1);border:1px solid var(--border-mid);border-radius:var(--r-md);padding:13px 14px;color:var(--text-100);font-family:var(--font-body);font-size:15px}
+.gfield textarea{resize:vertical;min-height:110px;line-height:1.55}
+.gfield input:focus,.gfield select:focus,.gfield textarea:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+.gfield + .gfield{margin-top:var(--space-4)}
+.field-note{font-size:12px;color:var(--text-500);margin-top:6px}
+
+/* ── page-local: the Zero boundary note ────────────────────────────────────
+   The one thing a student most needs to know on this page is that it is NOT
+   Zero. Stated at the top, in the design system's own voice, rather than left
+   for them to discover by asking a maths question here and getting silence. */
+.boundary{display:flex;gap:13px;align-items:flex-start;padding:15px;border-radius:var(--r-md);background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);margin-bottom:var(--space-5);animation:rise .6s ease both}
+.boundary .bd-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--bg-elev-1);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
+.boundary .bd-ic svg{width:17px;height:17px}
+.boundary .bd-t{font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff}
+.boundary .bd-s{font-size:13px;color:var(--text-300);margin-top:3px}
+.boundary a.bd-link{color:var(--cyan);font-weight:600;border-bottom:1px solid var(--cyan-border)}
+
+/* ── page-local: not-ready notice ──────────────────────────────────────────
+   The site deploys on merge; the support schema is applied by hand. Those two
+   facts mean this page can reach students before its tables exist, so the
+   absent-schema state is a designed state, not an error screen. */
+.notready{display:none;gap:13px;align-items:flex-start;padding:16px;border-radius:var(--r-md);background:var(--amber-soft);border:1px solid var(--amber-border);margin-bottom:var(--space-5)}
+.notready.show{display:flex}
+.notready .nr-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--bg-elev-1);border:1px solid var(--amber-border);color:var(--amber)}
+.notready .nr-ic svg{width:17px;height:17px}
+.notready .nr-t{font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff}
+.notready .nr-s{font-size:13px;color:var(--text-300);margin-top:3px}
+
+/* ── page-local: view tabs ─────────────────────────────────────────────────*/
+.tabs{display:flex;gap:7px;background:var(--bg-elev-1);padding:5px;border-radius:13px;border:1px solid var(--border-soft);margin-bottom:var(--space-5)}
+.tabs button{flex:1;padding:11px 10px;border:none;background:transparent;border-radius:9px;color:var(--text-300);font-weight:700;font-size:13.5px;font-family:var(--font-display);transition:all .25s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.tabs button svg{width:15px;height:15px}
+.tabs button.on{background:var(--cyan);color:#031020;box-shadow:0 0 16px rgba(56,189,248,.3)}
+.tabs button .tcount{font-family:var(--font-mono);font-size:11px;padding:1px 7px;border-radius:100px;background:rgba(255,255,255,.14)}
+.tabs button.on .tcount{background:rgba(3,16,32,.18)}
+.view{display:none}
+.view.on{display:block}
+
+/* ── page-local: help centre ───────────────────────────────────────────────*/
+.hc-search{position:relative;margin-bottom:var(--space-4)}
+.hc-search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-500);pointer-events:none}
+.hc-search input{width:100%;background:var(--bg-elev-1);border:1px solid var(--border-mid);border-radius:var(--r-md);padding:13px 14px 13px 40px;color:var(--text-100);font-family:var(--font-body);font-size:15px}
+.hc-search input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--space-4)}
+.chip{padding:7px 13px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-300);font-size:12.5px;font-weight:600;transition:all .2s}
+.chip:hover{border-color:var(--cyan-border);color:#fff}
+.chip.on{background:var(--cyan-bg-med);border-color:var(--cyan);color:#fff}
+.art{border:1px solid var(--border-soft);border-radius:var(--r-md);background:var(--bg-elev-1);margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.art:hover{border-color:var(--cyan-border-soft)}
+.art-q{width:100%;display:flex;align-items:center;gap:12px;padding:15px;background:transparent;border:none;color:var(--text-100);font-family:var(--font-display);font-weight:600;font-size:14.5px;text-align:left}
+.art-q .art-cat{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);padding:3px 8px;border-radius:100px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);flex-shrink:0}
+.art-q .art-chev{margin-left:auto;flex-shrink:0;width:16px;height:16px;color:var(--text-500);transition:transform .25s}
+.art.open .art-chev{transform:rotate(180deg);color:var(--cyan)}
+.art-a{display:none;padding:0 15px 16px;font-size:14px;color:var(--text-300);line-height:1.62}
+.art.open .art-a{display:block}
+.art-a p{margin-bottom:10px}
+.art-a p:last-child{margin-bottom:0}
+.art-a strong{color:#fff;font-weight:600}
+
+/* ── page-local: tickets ───────────────────────────────────────────────────*/
+.tk{display:flex;align-items:center;gap:13px;width:100%;padding:15px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);margin-bottom:10px;transition:all .2s;text-align:left;color:var(--text-200)}
+.tk:hover{border-color:var(--cyan-border);transform:translateY(-2px)}
+.tk-body{flex:1;min-width:0}
+.tk-subj{font-family:var(--font-display);font-weight:600;font-size:14.5px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-meta{font-size:12px;color:var(--text-500);margin-top:3px;display:flex;gap:9px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:100px;font-family:var(--font-mono);font-size:10.5px;font-weight:500;flex-shrink:0;white-space:nowrap}
+.pill .pd{width:6px;height:6px;border-radius:50%}
+.pill.open{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan)}
+.pill.open .pd{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.pill.in_progress{background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber)}
+.pill.in_progress .pd{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.pill.awaiting_student{background:var(--purple-soft);border:1px solid var(--purple-border);color:var(--purple)}
+.pill.awaiting_student .pd{background:var(--purple);box-shadow:0 0 6px var(--purple)}
+.pill.resolved{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
+.pill.resolved .pd{background:var(--green);box-shadow:0 0 6px var(--green)}
+.pill.closed{background:var(--bg-elev-2);border:1px solid var(--border-mid);color:var(--text-400)}
+.pill.closed .pd{background:var(--text-500)}
+.empty{text-align:center;padding:34px 16px;color:var(--text-400);font-size:14px}
+.empty .em-ic{width:52px;height:52px;margin:0 auto 14px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-500)}
+.empty .em-ic svg{width:24px;height:24px}
+
+/* ── page-local: thread ────────────────────────────────────────────────────*/
+.th-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:var(--space-5)}
+.th-head .th-body{flex:1;min-width:0}
+.th-head h2{font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff;line-height:1.2}
+.th-head .th-meta{font-size:12.5px;color:var(--text-500);margin-top:5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.msg{display:flex;gap:11px;margin-bottom:var(--space-4)}
+.msg .m-av{width:32px;height:32px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:12px}
+.msg.student .m-av{background:var(--bg-elev-2);border:1px solid var(--border-mid);color:var(--text-300)}
+.msg.agent .m-av{background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan)}
+.msg.system .m-av{background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-500)}
+.msg .m-body{flex:1;min-width:0}
+.msg .m-who{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-500);margin-bottom:5px;display:flex;gap:9px;align-items:center}
+.msg .m-txt{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:13px 15px;font-size:14px;color:var(--text-200);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+.msg.agent .m-txt{background:var(--bg-card-hi);border-color:var(--cyan-border-soft)}
+.msg.system .m-txt{background:transparent;border-style:dashed;color:var(--text-400);font-size:13px}
+.m-att{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.m-att a{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:var(--r-sm);background:var(--bg-elev-2);border:1px solid var(--border-mid);font-size:12.5px;color:var(--text-300);transition:all .2s}
+.m-att a:hover{border-color:var(--cyan-border);color:#fff}
+.m-att svg{width:14px;height:14px;flex-shrink:0}
+.composer{border-top:1px solid var(--border-soft);padding-top:var(--space-5);margin-top:var(--space-5)}
+.cmp-row{display:flex;gap:10px;align-items:flex-end;margin-top:12px;flex-wrap:wrap}
+.attach-btn{display:inline-flex;align-items:center;gap:7px;padding:12px 15px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-300);font-weight:600;font-size:13px;transition:all .2s}
+.attach-btn:hover{border-color:var(--cyan-border);color:#fff}
+.attach-btn svg{width:15px;height:15px}
+.attach-name{font-size:12.5px;color:var(--text-400);align-self:center}
+.locked-note{padding:14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px dashed var(--border-mid);color:var(--text-400);font-size:13.5px;margin-top:var(--space-5)}
+
+/* ── page-local: meeting panel ─────────────────────────────────────────────*/
+.meet{border:1px solid var(--purple-border);background:linear-gradient(135deg,rgba(168,85,247,.1),var(--bg-card));border-radius:var(--r-lg);padding:var(--space-5);margin-top:var(--space-5)}
+.meet-head{display:flex;align-items:center;gap:11px;margin-bottom:13px}
+.meet-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--purple-soft);border:1px solid var(--purple-border);color:var(--purple)}
+.meet-ic svg{width:17px;height:17px}
+.meet-t{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
+.meet-s{font-size:12.5px;color:var(--text-400);margin-top:2px}
+.slot{display:flex;align-items:center;gap:12px;width:100%;padding:13px 15px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);margin-bottom:9px;transition:all .2s;text-align:left;color:var(--text-200)}
+.slot:hover{border-color:var(--purple-border);transform:translateY(-1px)}
+.slot .sl-when{flex:1;min-width:0}
+.slot .sl-d{font-family:var(--font-display);font-weight:600;font-size:14px;color:#fff}
+.slot .sl-t{font-size:12.5px;color:var(--text-400);margin-top:2px}
+.booked{display:flex;flex-direction:column;gap:11px}
+.booked .bk-when{font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff}
+.join-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:14px;border-radius:var(--r-md);background:linear-gradient(135deg,#9333ea,var(--purple));color:#fff;font-family:var(--font-display);font-weight:800;font-size:14.5px;border:none;box-shadow:0 8px 26px rgba(168,85,247,.28);transition:transform .2s}
+.join-btn:hover{transform:translateY(-2px)}
+.join-btn svg{width:16px;height:16px}
+
+/* ── page-local: toast ─────────────────────────────────────────────────────*/
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,120%);z-index:120;max-width:min(560px,calc(100vw - 32px));padding:13px 18px;border-radius:var(--r-md);background:var(--bg-card-hi);border:1px solid var(--border-mid);color:var(--text-100);font-size:13.5px;box-shadow:0 14px 40px rgba(2,6,14,.6);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
+.toast.show{transform:translate(-50%,0)}
+.toast.err{border-color:var(--red-border);background:linear-gradient(135deg,var(--red-soft),var(--bg-card-hi))}
+.toast.ok{border-color:var(--green-border);background:linear-gradient(135deg,var(--green-soft),var(--bg-card-hi))}
+
+.skel{height:64px;border-radius:var(--r-md);background:linear-gradient(90deg,var(--bg-elev-1),var(--bg-elev-2),var(--bg-elev-1));background-size:200% 100%;animation:shimmer 1.4s infinite;margin-bottom:10px}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1040px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="index.html" aria-label="Home">
+    <span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <a class="back-btn" href="dashboard.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      <span class="lbl-full">Back to Dashboard</span><span class="lbl-short">Dashboard</span>
+    </a>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <a class="side-brand" href="index.html"><span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span><span>Si<span class="mid">Math</span> <span class="ai">AI</span></span></a>
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
+  <a class="nav-item" href="weakness.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Weakness Analyzer</a>
+  <a class="nav-item" href="focus.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Focus Practice</a>
+  <a class="nav-item" href="mock-exam.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 1h6"/></svg>Mock Exam Timer</a>
+  <a class="nav-item" href="history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>History</a>
+  <a class="nav-item" href="progress.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress
+  </a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="devices.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Devices</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item active" href="support.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Get Help</a>
+  <a class="nav-item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>Pricing</a>
+  <div id="adminNavSection" style="display:none">
+    <div class="side-sec">Admin</div>
+    <a class="nav-item" href="admin.html" style="color:#ef4f5f">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      Admin Dashboard
+    </a>
+    <a class="nav-item" href="admin-support.html" style="color:#ef4f5f">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Support Queue
+    </a>
+  </div>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="page-head">
+    <div class="eyebrow"><span class="live-dot"></span> Support</div>
+    <h1>Get Help</h1>
+    <p>Search the help centre first — most answers are already there. If it does not cover your problem, open a request and a person will read it.</p>
+  </div>
+
+  <!-- Support tables are applied by hand while the site deploys on merge, so
+       this page can exist before its schema does. That state is designed, not
+       an error: everything interactive hides and this says why. -->
+  <div class="notready" id="notReady">
+    <span class="nr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></span>
+    <div>
+      <div class="nr-t">Support is being set up</div>
+      <div class="nr-s">This page is not accepting requests yet. Nothing you do here is lost — there is simply nowhere to send it. Please check back shortly.</div>
+    </div>
+  </div>
+
+  <!-- The single most useful thing on the page: this is not Zero. -->
+  <div class="boundary">
+    <span class="bd-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    <div>
+      <div class="bd-t">This page is for your account, not your maths</div>
+      <div class="bd-s">Stuck on a question? <a class="bd-link" href="chat.html">Chat with Zero</a> — that is what Zero is for, and it is the fastest way to an explanation. Use this page for logging in, payments, a mock exam that went wrong, or anything broken. Nobody here can see your maths work, and nothing you write here affects your Weakness Analyzer or Focus Practice.</div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button data-view="help" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Help Centre</button>
+    <button data-view="tickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>My Requests<span class="tcount" id="tkCount" style="display:none">0</span></button>
+  </div>
+
+  <!-- ═══ VIEW 1 · HELP CENTRE ═══════════════════════════════════════════ -->
+  <section class="view on" id="viewHelp">
+    <div class="hc-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="hcSearch" type="search" placeholder="Search the help centre…" autocomplete="off" aria-label="Search the help centre"/>
+    </div>
+    <div class="chips" id="hcChips"></div>
+    <div id="hcList"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+
+    <div class="sec-label">Still stuck?</div>
+    <section class="card">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff">Open a support request</div>
+          <div style="font-size:13px;color:var(--text-400);margin-top:3px">A person reads every request. Tell us what happened and what you saw.</div>
+        </div>
+        <button class="save-btn" id="goNewTicket">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          New request
+        </button>
+      </div>
+    </section>
+  </section>
+
+  <!-- ═══ VIEW 2 · MY REQUESTS ═══════════════════════════════════════════ -->
+  <section class="view" id="viewTickets">
+    <section class="card" id="newTicketCard" style="display:none;margin-bottom:16px">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff;margin-bottom:16px">New support request</div>
+      <div class="gfield">
+        <label for="ntCat">What is this about?</label>
+        <select id="ntCat">
+          <option value="account">Account Problem — login, password, devices</option>
+          <option value="billing">Subscription / Payment</option>
+          <option value="mock_exam">Mock Exam Problem</option>
+          <option value="technical">Technical Issue — something is broken</option>
+          <option value="platform_help">How do I use the platform?</option>
+          <option value="other">Something else</option>
+        </select>
+      </div>
+      <div class="gfield">
+        <label for="ntSubject">Subject</label>
+        <input id="ntSubject" type="text" maxlength="160" placeholder="A short summary, e.g. Payment sent but plan still FREE"/>
+        <div class="field-note">Between 3 and 160 characters.</div>
+      </div>
+      <div class="gfield">
+        <label for="ntBody">What happened?</label>
+        <textarea id="ntBody" maxlength="4000" placeholder="What were you doing, what did you expect, and what did you see instead? Dates and exact wording help."></textarea>
+        <div class="field-note"><span id="ntCount">0</span> / 4000 characters. Never include your password — we will never ask for it.</div>
+      </div>
+      <div class="cmp-row">
+        <button class="save-btn" id="ntSubmit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/></svg>
+          Send request
+        </button>
+        <button class="btn-sm" id="ntCancel">Cancel</button>
+      </div>
+    </section>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px" id="tkListHead">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff;flex:1">Your requests</div>
+      <button class="btn-sm" id="newTicketBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        New
+      </button>
+    </div>
+    <div id="tkList"><div class="skel"></div><div class="skel"></div></div>
+  </section>
+
+  <!-- ═══ VIEW 3 · ONE TICKET ════════════════════════════════════════════ -->
+  <section class="view" id="viewThread">
+    <button class="btn-sm" id="thBack" style="margin-bottom:16px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      All requests
+    </button>
+    <section class="card">
+      <div class="th-head">
+        <div class="th-body">
+          <h2 id="thSubject">…</h2>
+          <div class="th-meta" id="thMeta"></div>
+        </div>
+      </div>
+      <div id="thMessages"></div>
+      <div id="thComposer"></div>
+    </section>
+    <div id="thMeeting"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  'use strict';
+
+  const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const BUCKET = 'support-attachments';
+  const MAX_BYTES = 5242880;                                   // matches support_attachments_size_chk
+  const MIME_OK = ['image/png', 'image/jpeg', 'image/webp'];   // matches support_attachments_mime_chk
+
+  // ONE NAME PER CATEGORY, EVERYWHERE. The new-request dropdown, the ticket
+  // list, the help-centre chips and the seeded articles must all say the same
+  // thing: an article that tells a student to file under "Account Problem" and
+  // a list that then labels it "Account" reads as two different systems, and
+  // the student is the one who has to reconcile them.
+  const CATEGORIES = {
+    account:       'Account Problem',
+    billing:       'Subscription / Payment',
+    mock_exam:     'Mock Exam Problem',
+    technical:     'Technical Issue',
+    platform_help: 'Using the platform',
+    other:         'Other'
+  };
+  const STATUS_LABEL = {
+    open:             'Waiting for us',
+    in_progress:      'We are on it',
+    awaiting_student: 'Waiting for you',
+    resolved:         'Resolved',
+    closed:           'Closed'
+  };
+
+  const state = {
+    user: null, ready: false,
+    articles: [], hcCat: 'all', hcQuery: '',
+    tickets: [], ticket: null, messages: [], attachments: {},
+    meeting: null, slots: [], pendingFile: null, busy: false
+  };
+
+  // ── tiny DOM helpers ─────────────────────────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  let toastTimer = null;
+  function toast(msg, kind) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 4200);
+  }
+
+  // Article bodies are admin-authored markdown. Escape FIRST, then allow the
+  // two constructs the seeded articles actually use — **bold** and paragraph
+  // breaks. Anything else renders as the literal text an admin typed, which is
+  // the safe direction to fail in.
+  function md(text) {
+    return esc(text)
+      .split(/\n{2,}/)
+      .map((p) => '<p>' + p.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>') + '</p>')
+      .join('');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtRelative(iso) {
+    if (!iso) return '';
+    const secs = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (secs < 90) return 'just now';
+    const mins = Math.round(secs / 60);
+    if (mins < 60) return mins + ' min ago';
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
+    const days = Math.round(hrs / 24);
+    if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
+    return fmtDate(iso);
+  }
+  function statusPill(status) {
+    return '<span class="pill ' + esc(status) + '"><span class="pd"></span>' +
+           esc(STATUS_LABEL[status] || status) + '</span>';
+  }
+
+  // ── the not-ready probe ──────────────────────────────────────────────────
+  // The support schema is applied by hand, one migration at a time; the site
+  // deploys automatically on merge. So "the tables do not exist yet" is a
+  // state this page must survive rather than a bug. PostgREST answers an
+  // absent relation with 42P01, and an absent RPC with PGRST202.
+  function schemaMissing(error) {
+    if (!error) return false;
+    const code = error.code || '';
+    const msg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+    return code === '42P01' || code === 'PGRST202' || code === 'PGRST205' ||
+           /does not exist|schema cache|Not Found/i.test(msg);
+  }
+  function goNotReady() {
+    if (state.ready === false && $('notReady').classList.contains('show')) return;
+    state.ready = false;
+    $('notReady').classList.add('show');
+    $('tabs').style.display = 'none';
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('on'));
+  }
+
+  // ── views ────────────────────────────────────────────────────────────────
+  // Scrolling is OPT-IN. It is right when the student deliberately navigates —
+  // taps a tab, opens a ticket, goes back — and wrong every other time. Sending
+  // a message used to route through here and throw them to the top of the page,
+  // away from the message they had just written.
+  function show(view, scroll) {
+    if (!state.ready) return;
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('on'));
+    $('view' + view.charAt(0).toUpperCase() + view.slice(1)).classList.add('on');
+    document.querySelectorAll('#tabs button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.view === view || (view === 'thread' && b.dataset.view === 'tickets'));
+    });
+    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function scrollToLatest() {
+    const last = $('thMessages') && $('thMessages').lastElementChild;
+    if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // THE COMPOSER IS THE ONE PIECE OF DOM THE STUDENT OWNS. Anything that
+  // rebuilds it puts back what they had typed, where the caret was, and which
+  // file they picked — state.pendingFile lives outside the DOM so it survives
+  // on its own, but its label does not. A refresh that lands mid-sentence and
+  // eats the sentence is worse than no refresh at all.
+  function withDraft(fn) {
+    const ta = $('msgBody');
+    const draft = ta ? ta.value : '';
+    const focused = !!ta && document.activeElement === ta;
+    const selStart = ta ? ta.selectionStart : 0;
+    const selEnd = ta ? ta.selectionEnd : 0;
+    const attachLabel = $('attachName') ? $('attachName').textContent : '';
+    fn();
+    const ta2 = $('msgBody');
+    if (ta2 && draft) {
+      ta2.value = draft;
+      // preventScroll matters: focusing an element the browser considers
+      // off-screen scrolls it into view, which is exactly the jump this
+      // whole change exists to stop.
+      if (focused) { ta2.focus({ preventScroll: true }); try { ta2.setSelectionRange(selStart, selEnd); } catch (e) { /* not focusable yet */ } }
+    }
+    if ($('attachName') && attachLabel) $('attachName').textContent = attachLabel;
+  }
+
+  // ── HELP CENTRE ──────────────────────────────────────────────────────────
+  async function loadArticles() {
+    const { data, error } = await sb
+      .from('support_articles')
+      .select('slug,category,question,answer_md,sort_order')
+      .eq('published', true)
+      .order('category', { ascending: true })
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      if (schemaMissing(error)) { goNotReady(); return false; }
+      $('hcList').innerHTML = '<div class="empty">The help centre could not be loaded. Please refresh.</div>';
+      return true;
+    }
+    state.articles = data || [];
+    renderChips();
+    renderArticles();
+    return true;
+  }
+
+  function renderChips() {
+    const cats = [...new Set(state.articles.map((a) => a.category))];
+    $('hcChips').innerHTML =
+      '<button class="chip' + (state.hcCat === 'all' ? ' on' : '') + '" data-cat="all">All</button>' +
+      cats.map((c) => '<button class="chip' + (state.hcCat === c ? ' on' : '') + '" data-cat="' + esc(c) + '">' +
+                      esc(CATEGORIES[c] || c) + '</button>').join('');
+  }
+
+  function renderArticles() {
+    const q = state.hcQuery.trim().toLowerCase();
+    const list = state.articles.filter((a) => {
+      if (state.hcCat !== 'all' && a.category !== state.hcCat) return false;
+      if (!q) return true;
+      return (a.question + ' ' + a.answer_md).toLowerCase().includes(q);
+    });
+
+    if (!list.length) {
+      $('hcList').innerHTML =
+        '<div class="empty"><div class="em-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
+        (state.articles.length ? 'No article matches that. Try fewer words, or open a request below.'
+                               : 'No help articles yet.') + '</div>';
+      return;
+    }
+
+    $('hcList').innerHTML = list.map((a) =>
+      '<div class="art" data-slug="' + esc(a.slug) + '">' +
+        '<button class="art-q" type="button">' +
+          '<span class="art-cat">' + esc(CATEGORIES[a.category] || a.category) + '</span>' +
+          '<span>' + esc(a.question) + '</span>' +
+          '<svg class="art-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="art-a">' + md(a.answer_md) + '</div>' +
+      '</div>').join('');
+  }
+
+  // ── TICKET LIST ──────────────────────────────────────────────────────────
+  async function loadTickets() {
+    const { data, error } = await sb
+      .from('support_tickets')
+      .select('id,category,subject,status,meeting_granted,created_at,last_message_at')
+      .order('last_message_at', { ascending: false });
+
+    if (error) {
+      if (schemaMissing(error)) { goNotReady(); return; }
+      $('tkList').innerHTML = '<div class="empty">Your requests could not be loaded. Please refresh.</div>';
+      return;
+    }
+    state.tickets = data || [];
+    renderTickets();
+  }
+
+  function renderTickets() {
+    const c = $('tkCount');
+    const live = state.tickets.filter((t) => t.status !== 'closed').length;
+    if (live) { c.textContent = String(live); c.style.display = ''; } else { c.style.display = 'none'; }
+
+    if (!state.tickets.length) {
+      $('tkList').innerHTML =
+        '<div class="empty"><div class="em-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>' +
+        'You have not opened a request yet. If the help centre did not answer it, open one — a person reads every request.</div>';
+      return;
+    }
+
+    $('tkList').innerHTML = state.tickets.map((t) =>
+      '<button class="tk" data-id="' + esc(t.id) + '">' +
+        '<div class="tk-body">' +
+          '<div class="tk-subj">' + esc(t.subject) + '</div>' +
+          '<div class="tk-meta"><span>' + esc(CATEGORIES[t.category] || t.category) + '</span>' +
+          '<span>·</span><span>' + esc(fmtRelative(t.last_message_at)) + '</span>' +
+          (t.meeting_granted ? '<span>·</span><span style="color:var(--purple)">Meeting available</span>' : '') +
+          '</div>' +
+        '</div>' +
+        statusPill(t.status) +
+      '</button>').join('');
+  }
+
+  // ── CREATE A TICKET ──────────────────────────────────────────────────────
+  function openNewTicket() {
+    show('tickets', true);
+    $('newTicketCard').style.display = '';
+    $('tkListHead').style.display = 'none';
+    $('ntSubject').focus();
+  }
+  function closeNewTicket() {
+    $('newTicketCard').style.display = 'none';
+    $('tkListHead').style.display = '';
+    $('ntSubject').value = ''; $('ntBody').value = ''; $('ntCount').textContent = '0';
+  }
+
+  async function submitTicket() {
+    if (state.busy) return;
+    const category = $('ntCat').value;
+    const subject = $('ntSubject').value.trim();
+    const body = $('ntBody').value.trim();
+
+    if (subject.length < 3 || subject.length > 160) { toast('Give the request a subject between 3 and 160 characters.', 'err'); $('ntSubject').focus(); return; }
+    if (body.length < 1) { toast('Tell us what happened — an empty request cannot be answered.', 'err'); $('ntBody').focus(); return; }
+    if (body.length > 4000) { toast('That message is longer than 4000 characters. Please shorten it.', 'err'); return; }
+
+    state.busy = true; $('ntSubmit').disabled = true;
+
+    // Two writes, deliberately in this order. The ticket carries no body column
+    // — the first message IS the body — so a ticket without its message is an
+    // empty request nobody can answer. If the message fails, the ticket is
+    // removed again rather than left as a subject with no content.
+    const { data: ticket, error: tErr } = await sb
+      .from('support_tickets')
+      .insert({ user_id: state.user.id, category, subject })
+      .select('id,category,subject,status,meeting_granted,created_at,last_message_at')
+      .single();
+
+    if (tErr) {
+      state.busy = false; $('ntSubmit').disabled = false;
+      if (schemaMissing(tErr)) { goNotReady(); return; }
+      toast('That request could not be created. Please try again.', 'err');
+      return;
+    }
+
+    const { error: mErr } = await sb.from('support_messages').insert({
+      ticket_id: ticket.id, sender_id: state.user.id, sender_role: 'student', body
+    });
+
+    if (mErr) {
+      await sb.from('support_tickets').delete().eq('id', ticket.id);
+      state.busy = false; $('ntSubmit').disabled = false;
+      toast('Your message could not be saved, so the request was not opened. Please try again.', 'err');
+      return;
+    }
+
+    state.busy = false; $('ntSubmit').disabled = false;
+    closeNewTicket();
+    toast('Request sent. You will see the reply here.', 'ok');
+    await loadTickets();
+    openTicket(ticket.id);
+  }
+
+  // ── ONE TICKET ───────────────────────────────────────────────────────────
+  async function openTicket(id, scroll) {
+    state.ticket = state.tickets.find((t) => t.id === id) || null;
+    if (!state.ticket) return;
+    show('thread', scroll !== false);
+    renderThreadHead();
+    $('thMessages').innerHTML = '<div class="skel"></div><div class="skel"></div>';
+    $('thComposer').innerHTML = '';
+    $('thMeeting').innerHTML = '';
+    await loadThread();
+    await loadMeeting();
+  }
+
+  function renderThreadHead() {
+    const t = state.ticket; if (!t) return;
+    $('thSubject').textContent = t.subject;
+    $('thMeta').innerHTML =
+      statusPill(t.status) +
+      '<span>' + esc(CATEGORIES[t.category] || t.category) + '</span>' +
+      '<span>·</span><span>Opened ' + esc(fmtDate(t.created_at)) + '</span>';
+  }
+
+  async function loadAttachments(ids) {
+    state.attachments = {};
+    if (!ids.length) return;
+    const { data: atts } = await sb
+      .from('support_attachments')
+      .select('id,message_id,storage_path,mime_type')
+      .in('message_id', ids);
+    (atts || []).forEach((a) => {
+      (state.attachments[a.message_id] = state.attachments[a.message_id] || []).push(a);
+    });
+  }
+
+  async function loadThread() {
+    const { data, error } = await sb
+      .from('support_messages')
+      .select('id,sender_role,body,created_at')
+      .eq('ticket_id', state.ticket.id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      if (schemaMissing(error)) { goNotReady(); return; }
+      $('thMessages').innerHTML = '<div class="empty">This conversation could not be loaded.</div>';
+      return;
+    }
+    state.messages = data || [];
+    await loadAttachments(state.messages.map((m) => m.id));
+    renderThread();
+    renderComposer();
+  }
+
+  function renderThread() {
+    if (!state.messages.length) { $('thMessages').innerHTML = '<div class="empty">No messages yet.</div>'; return; }
+    $('thMessages').innerHTML = state.messages.map((m) => {
+      const who = m.sender_role === 'agent' ? 'Support' : (m.sender_role === 'system' ? 'System' : 'You');
+      const av  = m.sender_role === 'agent' ? 'S' : (m.sender_role === 'system' ? 'i' : 'You'.charAt(0));
+      const atts = state.attachments[m.id] || [];
+      return '<div class="msg ' + esc(m.sender_role) + '">' +
+        '<div class="m-av">' + esc(av) + '</div>' +
+        '<div class="m-body">' +
+          '<div class="m-who"><span>' + esc(who) + '</span><span>' + esc(fmtRelative(m.created_at)) + '</span></div>' +
+          '<div class="m-txt">' + esc(m.body) + '</div>' +
+          (atts.length ? '<div class="m-att">' + atts.map((a) =>
+            '<a href="#" data-path="' + esc(a.storage_path) + '">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.6-4.6a2 2 0 0 0-2.8 0L3 21"/></svg>' +
+            'Screenshot</a>').join('') + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // A student may post while the ticket is open, in progress, awaiting them, or
+  // resolved — replying to a resolved ticket is what reopens it. 'closed' is
+  // terminal, and the database refuses the write; saying so here means the
+  // student is not left typing into a box that will reject them.
+  function renderComposer() {
+    state.renderedStatus = state.ticket.status;
+    if (state.ticket.status === 'closed') {
+      $('thComposer').innerHTML =
+        '<div class="locked-note">This request is closed, so no more messages can be added to it. ' +
+        'If the same problem comes back, open a new request and mention this one.</div>';
+      return;
+    }
+    $('thComposer').innerHTML =
+      '<div class="composer">' +
+        '<div class="gfield">' +
+          '<label for="msgBody">' + (state.ticket.status === 'resolved' ? 'Still not right? Reply and we will reopen it' : 'Add a message') + '</label>' +
+          '<textarea id="msgBody" maxlength="4000" placeholder="Type your reply…"></textarea>' +
+        '</div>' +
+        '<div class="cmp-row">' +
+          '<button class="save-btn" id="msgSend">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/></svg>Send</button>' +
+          '<button class="attach-btn" id="attachBtn">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.6-4.6a2 2 0 0 0-2.8 0L3 21"/></svg>Attach a screenshot</button>' +
+          '<input type="file" id="attachInput" accept="image/png,image/jpeg,image/webp" style="display:none"/>' +
+          '<span class="attach-name" id="attachName"></span>' +
+        '</div>' +
+      '</div>';
+  }
+
+  async function sendMessage() {
+    if (state.busy) return;
+    const el = $('msgBody');
+    const body = (el ? el.value : '').trim();
+    if (!body) { toast('Write something first.', 'err'); return; }
+
+    state.busy = true; $('msgSend').disabled = true;
+
+    const { data: msg, error } = await sb.from('support_messages').insert({
+      ticket_id: state.ticket.id, sender_id: state.user.id, sender_role: 'student', body
+    }).select('id').single();
+
+    if (error) {
+      state.busy = false; $('msgSend').disabled = false;
+      if (schemaMissing(error)) { goNotReady(); return; }
+      toast('That message was not accepted. If this request was closed, open a new one.', 'err');
+      return;
+    }
+
+    if (state.pendingFile) {
+      const ok = await uploadAttachment(msg.id, state.pendingFile);
+      if (!ok) toast('The message was sent, but the screenshot did not upload.', 'err');
+      state.pendingFile = null;
+    }
+
+    el.value = '';
+    if ($('attachName')) $('attachName').textContent = '';
+    state.busy = false; $('msgSend').disabled = false;
+
+    // Refresh in place. Re-opening the ticket here is what used to throw the
+    // student to the top of the page, away from the message they had just sent.
+    await refreshTickets();
+    await refreshThread();
+    scrollToLatest();
+  }
+
+  // Path convention is load-bearing, not documentation: the storage policy
+  // requires ${own uid}/${a ticket you may post on}/… and refuses anything else.
+  async function uploadAttachment(messageId, file) {
+    const ext = (file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg');
+    const path = state.user.id + '/' + state.ticket.id + '/' + Date.now() + '.' + ext;
+
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) return false;
+
+    const { error: rowErr } = await sb.from('support_attachments').insert({
+      message_id: messageId, storage_path: path, mime_type: file.type,
+      byte_size: file.size, uploaded_by: state.user.id
+    });
+    if (rowErr) { await sb.storage.from(BUCKET).remove([path]); return false; }
+    return true;
+  }
+
+  async function openAttachment(path) {
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 300);
+    if (error || !data) { toast('That screenshot could not be opened.', 'err'); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  }
+
+  // ── MEETINGS — escalation only ───────────────────────────────────────────
+  // The booking panel does not exist until an agent grants it. That is the rule
+  // the whole feature is built around, so the page never shows a "book a call"
+  // button that would be refused: no grant, no panel.
+  async function loadMeeting() {
+    const { data: meetings, error } = await sb
+      .from('support_meetings')
+      .select('id,slot_id,status,provider,provider_ref,created_at')
+      .eq('ticket_id', state.ticket.id)
+      .order('created_at', { ascending: false });
+
+    if (error) { if (schemaMissing(error)) goNotReady(); return; }
+
+    state.meeting = (meetings || []).find((m) => m.status === 'scheduled') || null;
+
+    if (state.meeting) {
+      const { data: slot } = await sb.from('support_meeting_slots')
+        .select('id,starts_at,ends_at').eq('id', state.meeting.slot_id).maybeSingle();
+      renderBookedMeeting(slot);
+      return;
+    }
+
+    if (!state.ticket.meeting_granted) { $('thMeeting').innerHTML = ''; return; }
+
+    const { data: slots } = await sb
+      .from('support_meeting_slots')
+      .select('id,starts_at,ends_at,provider')
+      .eq('active', true)
+      .gt('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(24);
+
+    state.slots = slots || [];
+    renderSlots();
+  }
+
+  function renderSlots() {
+    if (!state.slots.length) {
+      $('thMeeting').innerHTML =
+        '<div class="meet"><div class="meet-head">' +
+          '<span class="meet-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>' +
+          '<div><div class="meet-t">A meeting was offered for this request</div>' +
+          '<div class="meet-s">No times are open right now. We will add more — check back, or say so in the conversation above.</div></div>' +
+        '</div></div>';
+      return;
+    }
+    $('thMeeting').innerHTML =
+      '<div class="meet"><div class="meet-head">' +
+        '<span class="meet-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>' +
+        '<div><div class="meet-t">Pick a time to talk it through</div>' +
+        '<div class="meet-s">Support offered a call for this request. Choose one time — the link appears here once it is booked.</div></div>' +
+      '</div>' +
+      state.slots.map((s) =>
+        '<button class="slot" data-slot="' + esc(s.id) + '">' +
+          '<div class="sl-when"><div class="sl-d">' + esc(fmtDateTime(s.starts_at)) + '</div>' +
+          '<div class="sl-t">' + esc(minutesBetween(s.starts_at, s.ends_at)) + ' minutes</div></div>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--purple)"><path d="m9 18 6-6-6-6"/></svg>' +
+        '</button>').join('') +
+      '</div>';
+  }
+
+  function minutesBetween(a, b) {
+    return Math.max(1, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
+  }
+
+  function renderBookedMeeting(slot) {
+    const ref = state.meeting.provider_ref || {};
+    const joinUrl = ref.join_url || '';
+    $('thMeeting').innerHTML =
+      '<div class="meet"><div class="meet-head">' +
+        '<span class="meet-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span>' +
+        '<div><div class="meet-t">Your meeting is booked</div>' +
+        '<div class="meet-s">' + esc(state.meeting.provider || 'zoom') + '</div></div>' +
+      '</div>' +
+      '<div class="booked">' +
+        '<div class="bk-when">' + esc(slot ? fmtDateTime(slot.starts_at) : 'Time to be confirmed') + '</div>' +
+        (joinUrl
+          ? '<a class="join-btn" href="' + esc(joinUrl) + '" target="_blank" rel="noopener noreferrer">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Join the meeting</a>'
+          : '<div class="locked-note" style="margin-top:0">The joining link is being created. It will appear here — reload this page in a moment.</div>') +
+        '<button class="btn-sm" id="cancelMeetBtn" style="align-self:flex-start">Cancel this meeting</button>' +
+      '</div></div>';
+  }
+
+  async function bookSlot(slotId) {
+    if (state.busy) return;
+    state.busy = true;
+    const { error } = await sb.rpc('support_book_meeting', {
+      p_ticket_id: state.ticket.id, p_slot_id: slotId
+    });
+    state.busy = false;
+
+    if (error) {
+      if (schemaMissing(error)) { goNotReady(); return; }
+      const m = error.message || '';
+      if (m.includes('slot_unavailable'))            toast('Someone just took that time. Please pick another.', 'err');
+      else if (m.includes('meeting_already_scheduled')) toast('This request already has a meeting booked.', 'err');
+      else if (m.includes('not_granted'))            toast('A meeting has not been offered for this request yet.', 'err');
+      else if (m.includes('slot_not_found'))         toast('That time is no longer listed. Please refresh.', 'err');
+      else                                           toast('That time could not be booked. Please try another.', 'err');
+      await loadMeeting();
+      return;
+    }
+    toast('Booked. The joining link will appear here.', 'ok');
+    await loadTickets();
+    state.ticket = state.tickets.find((t) => t.id === state.ticket.id) || state.ticket;
+    await loadMeeting();
+  }
+
+  async function cancelMeeting() {
+    if (state.busy || !state.meeting) return;
+    if (!window.confirm('Cancel this meeting? Booking another one needs support to offer it again.')) return;
+    state.busy = true;
+    const { error } = await sb.rpc('support_cancel_meeting', { p_meeting_id: state.meeting.id });
+    state.busy = false;
+    if (error) { toast('That meeting could not be cancelled.', 'err'); return; }
+    toast('Meeting cancelled.', 'ok');
+    await loadTickets();
+    state.ticket = state.tickets.find((t) => t.id === state.ticket.id) || state.ticket;
+    await loadMeeting();
+  }
+
+  // ── LIVE UPDATES ─────────────────────────────────────────────────────────
+  // A support conversation that never moves is one a student reloads hopefully
+  // a few times and then stops trusting. This polls rather than subscribing:
+  // Postgres realtime is not enabled for these tables, and enabling it is a
+  // schema decision, not a frontend one.
+  //
+  // FOUR RULES, because a careless poller is worse than none:
+  //   1. It never touches the composer unless the ticket's state actually
+  //      changed, and then withDraft() puts the student's text back.
+  //   2. It never moves the view — no scrolling, no tab switch, no ticket open.
+  //   3. It never overlaps itself, and never runs while a write is in flight,
+  //      so it cannot duplicate a send or race a booking.
+  //   4. It stops entirely while the tab is hidden, and refreshes once
+  //      immediately when the student comes back, which is when they actually
+  //      want to know whether anything happened.
+  const POLL_MS = 20000;
+  let polling = false;
+  let pollTimer = null;
+
+  async function refreshTickets() {
+    const { data, error } = await sb
+      .from('support_tickets')
+      .select('id,category,subject,status,meeting_granted,created_at,last_message_at')
+      .order('last_message_at', { ascending: false });
+    if (error) { if (schemaMissing(error)) goNotReady(); return; }
+    state.tickets = data || [];
+    renderTickets();
+    if (state.ticket) {
+      const fresh = state.tickets.find((t) => t.id === state.ticket.id);
+      if (fresh) state.ticket = fresh;
+    }
+  }
+
+  async function refreshThread() {
+    const t = state.ticket;
+    if (!t) return;
+    const { data, error } = await sb
+      .from('support_messages')
+      .select('id,sender_role,body,created_at')
+      .eq('ticket_id', t.id)
+      .order('created_at', { ascending: true });
+    if (error) { if (schemaMissing(error)) goNotReady(); return; }
+
+    const fresh = data || [];
+    const msgsChanged = fresh.length !== state.messages.length ||
+      fresh.some((m, i) => !state.messages[i] || state.messages[i].id !== m.id);
+    const statusChanged = state.renderedStatus !== t.status;
+    if (!msgsChanged && !statusChanged) return;   // nothing to redraw — leave the page alone
+
+    state.messages = fresh;
+    renderThreadHead();
+    if (msgsChanged) { await loadAttachments(fresh.map((m) => m.id)); renderThread(); }
+    if (statusChanged) withDraft(renderComposer);
+    await loadMeeting();
+  }
+
+  async function poll() {
+    if (polling || state.busy || document.hidden || !state.ready) return;
+    polling = true;
+    try {
+      await refreshTickets();
+      await refreshThread();
+    } catch (e) {
+      // A failed poll is a no-op. The next one tries again; nothing is shown to
+      // the student, because "we could not check for updates" is not news.
+    }
+    polling = false;
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(poll, POLL_MS);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+
+  // ── events ───────────────────────────────────────────────────────────────
+  $('hamb').addEventListener('click', () => { $('sidebar').classList.add('open'); $('overlay').classList.add('show'); });
+  $('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
+
+  $('tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-view]');
+    if (b) show(b.dataset.view, true);
+  });
+
+  $('hcSearch').addEventListener('input', (e) => { state.hcQuery = e.target.value; renderArticles(); });
+  $('hcChips').addEventListener('click', (e) => {
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    state.hcCat = c.dataset.cat;
+    renderChips(); renderArticles();
+  });
+  $('hcList').addEventListener('click', (e) => {
+    const q = e.target.closest('.art-q');
+    if (q) q.parentElement.classList.toggle('open');
+  });
+
+  $('goNewTicket').addEventListener('click', openNewTicket);
+  $('newTicketBtn').addEventListener('click', openNewTicket);
+  $('ntCancel').addEventListener('click', closeNewTicket);
+  $('ntSubmit').addEventListener('click', submitTicket);
+  $('ntBody').addEventListener('input', (e) => { $('ntCount').textContent = String(e.target.value.length); });
+
+  $('tkList').addEventListener('click', (e) => {
+    const t = e.target.closest('.tk');
+    if (t) openTicket(t.dataset.id, true);
+  });
+
+  $('thBack').addEventListener('click', () => { show('tickets', true); });
+
+  $('thMessages').addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-path]');
+    if (!a) return;
+    e.preventDefault();
+    openAttachment(a.dataset.path);
+  });
+
+  $('thComposer').addEventListener('click', (e) => {
+    if (e.target.closest('#msgSend')) { sendMessage(); return; }
+    if (e.target.closest('#attachBtn')) { $('attachInput').click(); }
+  });
+  $('thComposer').addEventListener('change', (e) => {
+    if (!e.target.matches('#attachInput')) return;
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (!MIME_OK.includes(f.type)) { toast('Screenshots must be PNG, JPEG or WebP.', 'err'); e.target.value = ''; return; }
+    if (f.size > MAX_BYTES)        { toast('That image is larger than 5 MB. Please attach a smaller one.', 'err'); e.target.value = ''; return; }
+    state.pendingFile = f;
+    $('attachName').textContent = f.name + ' — sends with your message';
+  });
+
+  $('thMeeting').addEventListener('click', (e) => {
+    const s = e.target.closest('.slot');
+    if (s) { bookSlot(s.dataset.slot); return; }
+    if (e.target.closest('#cancelMeetBtn')) cancelMeeting();
+  });
+
+  // ── boot ─────────────────────────────────────────────────────────────────
+  (async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { location.replace('login.html'); return; }
+    state.user = session.user;
+
+    const { data: profile } = await sb.from('profiles').select('role').eq('id', state.user.id).maybeSingle();
+    if (profile && ['admin', 'super_admin', 'owner'].includes(profile.role)) {
+      $('adminNavSection').style.display = '';
+    }
+
+    state.ready = true;
+    const ok = await loadArticles();
+    if (!ok) return;                       // schema absent — the page said so
+    await loadTickets();
+    startPolling();
+  })();
+});
+</script>
+</body>
+</html>

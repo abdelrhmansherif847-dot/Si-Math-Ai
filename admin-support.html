@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Si Math AI — Support Queue</title>
+<meta name="robots" content="noindex"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;--font-body:'DM Sans', system-ui, -apple-system, sans-serif;--font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --nav-h:56px;--side-w:248px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden;background:#050a14}
+body{background:#050a14!important;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:360px;height:360px;background:radial-gradient(circle,rgba(56,189,248,.1),transparent 70%);top:-120px;right:-110px}
+.orb-2{width:260px;height:260px;background:radial-gradient(circle,rgba(168,85,247,.08),transparent 70%);bottom:-60px;left:-90px}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:10px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff}
+.logo-mark{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;color:#0b1220;font-size:12px;font-weight:800;border:1px solid var(--cyan-border);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.admin-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:100px;background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em}
+.admin-badge svg{width:12px;height:12px}
+
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 12px 18px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:var(--text-300);font-weight:500;font-size:14px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.admin-active{background:var(--red-soft);color:#fff;border-color:var(--red-border)}
+.nav-item.admin-active svg{color:var(--red)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+.side-spacer{flex:1}
+
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px 48px;max-width:1080px;margin:0 auto}
+.page-hd{margin-bottom:20px}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--red);margin-bottom:9px;display:inline-flex;align-items:center;gap:8px}
+.eyebrow .live-dot{width:6px;height:6px;background:var(--red);border-radius:50%;box-shadow:0 0 8px var(--red);animation:pulse 2s infinite}
+.page-hd h1{font-family:var(--font-display);font-weight:800;font-size:clamp(24px,6vw,32px);line-height:1.1;letter-spacing:-.02em;color:#fff}
+.page-hd p{color:var(--text-300);font-size:14.5px;margin-top:7px;max-width:640px}
+
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
+.card-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.card-ico{width:36px;height:36px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border-soft);color:var(--cyan)}
+.card-ico svg{width:17px;height:17px}
+.card-ico.purple{background:var(--purple-soft);border-color:var(--purple-border);color:var(--purple)}
+.card-title{font-family:var(--font-display);font-weight:700;font-size:15.5px;color:#fff}
+.card-sub{font-size:12.5px;color:var(--text-400);margin-top:2px}
+
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+@media(min-width:760px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:14px}
+.stat-card .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500)}
+.stat-card .val{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;margin-top:5px}
+.stat-card .sub{font-size:11.5px;color:var(--text-500);margin-top:2px}
+.stat-card.amber .val{color:var(--amber)}
+.stat-card.green .val{color:var(--green)}
+.stat-card.purple .val{color:var(--purple)}
+
+.tabs{display:flex;gap:6px;background:var(--bg-elev-1);padding:5px;border-radius:12px;border:1px solid var(--border-soft);margin-bottom:18px;overflow-x:auto}
+.tab{flex:1;min-width:120px;padding:10px;border:none;background:transparent;border-radius:8px;color:var(--text-300);font-weight:700;font-size:13px;font-family:var(--font-display);transition:all .25s;white-space:nowrap}
+.tab.active{background:var(--cyan);color:#031020}
+.pane{display:none}.pane.on{display:block}
+
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:6px 12px;border-radius:100px;background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-300);font-size:12px;font-weight:600;transition:all .2s}
+.chip:hover{border-color:var(--cyan-border);color:#fff}
+.chip.on{background:var(--cyan-bg-med);border-color:var(--cyan);color:#fff}
+.chip .cn{font-family:var(--font-mono);font-size:10.5px;opacity:.8;margin-left:5px}
+.search-input{width:100%;background:var(--bg-elev-1);border:1px solid var(--border-mid);border-radius:var(--r-md);padding:12px 14px;color:var(--text-100);font-family:var(--font-body);font-size:14.5px;margin-bottom:14px}
+.search-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:100px;font-family:var(--font-mono);font-size:10px;font-weight:500;flex-shrink:0;white-space:nowrap}
+.pill .pd{width:6px;height:6px;border-radius:50%}
+.pill.open{background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan)}
+.pill.open .pd{background:var(--cyan)}
+.pill.in_progress{background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber)}
+.pill.in_progress .pd{background:var(--amber)}
+.pill.awaiting_student{background:var(--purple-soft);border:1px solid var(--purple-border);color:var(--purple)}
+.pill.awaiting_student .pd{background:var(--purple)}
+.pill.resolved{background:var(--green-soft);border:1px solid var(--green-border);color:var(--green)}
+.pill.resolved .pd{background:var(--green)}
+.pill.closed{background:var(--bg-elev-2);border:1px solid var(--border-mid);color:var(--text-400)}
+.pill.closed .pd{background:var(--text-500)}
+.pill.grant{background:var(--purple-soft);border:1px solid var(--purple-border);color:var(--purple)}
+.pill.mine{background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan-3)}
+
+.tk{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-soft);margin-bottom:9px;transition:all .2s;text-align:left;color:var(--text-200)}
+.tk:hover{border-color:var(--cyan-border);transform:translateY(-1px)}
+.tk-body{flex:1;min-width:0}
+.tk-subj{font-family:var(--font-display);font-weight:600;font-size:14.5px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-meta{font-size:11.5px;color:var(--text-500);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tk-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.empty{text-align:center;padding:32px 16px;color:var(--text-400);font-size:14px}
+
+.msg{display:flex;gap:11px;margin-bottom:14px}
+.m-av{width:30px;height:30px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:11px}
+.msg.student .m-av{background:var(--bg-elev-2);border:1px solid var(--border-mid);color:var(--text-300)}
+.msg.agent .m-av{background:var(--cyan-bg-med);border:1px solid var(--cyan-border);color:var(--cyan)}
+.msg.system .m-av{background:var(--bg-elev-1);border:1px solid var(--border-soft);color:var(--text-500)}
+.m-body{flex:1;min-width:0}
+.m-who{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-500);margin-bottom:4px;display:flex;gap:8px}
+.m-txt{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 14px;font-size:13.5px;color:var(--text-200);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+.msg.agent .m-txt{background:var(--bg-card-hi);border-color:var(--cyan-border-soft)}
+.msg.system .m-txt{background:transparent;border-style:dashed;color:var(--text-400);font-size:12.5px}
+.m-att{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.m-att a{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:var(--r-sm);background:var(--bg-elev-2);border:1px solid var(--border-mid);font-size:12px;color:var(--text-300)}
+.m-att a:hover{border-color:var(--cyan-border);color:#fff}
+.m-att svg{width:13px;height:13px}
+
+label.fl{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-400);margin-bottom:7px}
+input.fi,select.fi,textarea.fi{width:100%;background:var(--bg-elev-1);border:1px solid var(--border-mid);border-radius:var(--r-md);padding:12px 13px;color:var(--text-100);font-family:var(--font-body);font-size:14.5px}
+textarea.fi{resize:vertical;min-height:100px;line-height:1.55}
+input.fi:focus,select.fi:focus,textarea.fi:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+.frow{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px}
+@media(min-width:640px){.frow.two{grid-template-columns:1fr 1fr}.frow.three{grid-template-columns:1fr 1fr 1fr}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;border-radius:var(--r-md);border:1px solid var(--border-mid);background:var(--bg-elev-1);color:var(--text-200);font-weight:600;font-size:13.5px;transition:all .2s}
+.btn:hover{border-color:var(--cyan-border);color:#fff;transform:translateY(-1px)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.btn svg{width:14px;height:14px}
+.btn-primary{background:var(--cyan);border-color:var(--cyan);color:#031020;font-weight:700}
+.btn-primary:hover{background:var(--cyan-3);color:#031020}
+.btn-purple{background:var(--purple-soft);border-color:var(--purple-border);color:var(--purple)}
+.btn-purple:hover{border-color:var(--purple);color:#fff}
+.btn-red{background:var(--red-soft);border-color:var(--red-border);color:var(--red)}
+.btn-red:hover{border-color:var(--red);color:#fff}
+.btn-row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+
+.notready{display:none;gap:12px;align-items:flex-start;padding:16px;border-radius:var(--r-md);background:var(--amber-soft);border:1px solid var(--amber-border);margin-bottom:18px}
+.notready.show{display:flex}
+.notready .nr-ic{width:34px;height:34px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--bg-elev-1);border:1px solid var(--amber-border);color:var(--amber)}
+.notready .nr-ic svg{width:16px;height:16px}
+.notready .nr-t{font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff}
+.notready .nr-s{font-size:13px;color:var(--text-300);margin-top:3px}
+
+.denied{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;gap:12px;padding:20px}
+.denied .d-ic{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:var(--red-soft);border:1px solid var(--red-border);color:var(--red)}
+.denied .d-ic svg{width:28px;height:28px}
+.loader{display:flex;align-items:center;justify-content:center;min-height:70vh;color:var(--text-500);font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,150%);z-index:120;max-width:min(600px,calc(100vw - 32px));padding:13px 18px;border-radius:var(--r-md);background:var(--bg-card-hi);border:1px solid var(--border-mid);color:var(--text-100);font-size:13.5px;box-shadow:0 14px 40px rgba(2,6,14,.6);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
+.toast.show{transform:translate(-50%,0)}
+.toast.red{border-color:var(--red-border);background:linear-gradient(135deg,var(--red-soft),var(--bg-card-hi))}
+.toast.green{border-color:var(--green-border);background:linear-gradient(135deg,var(--green-soft),var(--bg-card-hi))}
+.skel{height:58px;border-radius:var(--r-md);background:linear-gradient(90deg,var(--bg-elev-1),var(--bg-elev-2),var(--bg-elev-1));background-size:200% 100%;animation:shimmer 1.4s infinite;margin-bottom:9px}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 26px);padding-right:26px;max-width:1200px}
+  .topbar{padding-left:calc(var(--side-w) + 26px)}.brand.in-topbar{display:none}
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.4)}}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<header class="topbar">
+  <button class="hamb" id="hambBtn" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <a href="dashboard.html" class="brand in-topbar">
+    <span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right">
+    <span class="admin-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      ADMIN
+    </span>
+  </div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="index.html" style="padding:0 8px 8px;margin-bottom:6px">
+    <span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <a class="nav-item" href="support.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Get Help</a>
+  <div class="side-sec">Admin</div>
+  <a class="nav-item" href="admin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>Admin Dashboard</a>
+  <a class="nav-item admin-active" href="admin-support.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support Queue</a>
+  <div class="side-spacer"></div>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<div class="loader" id="pageLoader">Checking access…</div>
+
+<div class="denied" id="accessDenied">
+  <div class="d-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+  <div style="font-family:var(--font-display);font-weight:800;font-size:20px;color:#fff">Support agents only</div>
+  <div style="color:var(--text-400);font-size:14px">This queue holds other students' conversations. Returning you to the dashboard…</div>
+</div>
+
+<main class="main" id="mainContent" style="display:none">
+
+  <section class="page-hd">
+    <div class="eyebrow"><span class="live-dot"></span> Admin Panel</div>
+    <h1>Support Queue</h1>
+    <p>Student support conversations, meeting slots and the help centre. Separate from Zero by design — nothing here touches a student's academic record, and nothing here is answered by a model.</p>
+  </section>
+
+  <!-- Same designed state as support.html: the schema is applied by hand, the
+       site deploys on merge, so an agent can reach this page before the tables
+       exist. -->
+  <div class="notready" id="notReady">
+    <span class="nr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></span>
+    <div>
+      <div class="nr-t">The support schema is not applied yet</div>
+      <div class="nr-s">Migrations <code>20260815a</code>–<code>20260815f</code> have not been run on this database, so there is no queue to show. This page will work the moment they are.</div>
+    </div>
+  </div>
+
+  <div id="workspace">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="lbl">Unanswered</div><div class="val" id="stOpen">—</div><div class="sub">status = open</div></div>
+      <div class="stat-card amber"><div class="lbl">In progress</div><div class="val" id="stProg">—</div><div class="sub">an agent is on it</div></div>
+      <div class="stat-card purple"><div class="lbl">Meetings live</div><div class="val" id="stMeet">—</div><div class="sub">scheduled</div></div>
+      <div class="stat-card green"><div class="lbl">Assigned to me</div><div class="val" id="stMine">—</div><div class="sub">not closed</div></div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-pane="queue">Queue</button>
+      <button class="tab" data-pane="slots">Meeting Slots</button>
+      <button class="tab" data-pane="articles">Help Articles</button>
+    </div>
+
+    <!-- ═══ QUEUE ═══════════════════════════════════════════════════════ -->
+    <section class="pane on" id="paneQueue">
+      <div id="queueList">
+        <input class="search-input" id="qSearch" type="search" placeholder="Search subject or student email…" autocomplete="off"/>
+        <div class="chips" id="qChips"></div>
+        <div id="qList"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      </div>
+
+      <div id="ticketDetail" style="display:none"></div>
+    </section>
+
+    <!-- ═══ SLOTS ═══════════════════════════════════════════════════════ -->
+    <section class="pane" id="paneSlots">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-ico purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+          <div><div class="card-title">Offer a new time</div><div class="card-sub">A slot is only bookable by a student whose ticket has been granted a meeting.</div></div>
+        </div>
+        <div class="frow two">
+          <div><label class="fl" for="slStart">Starts</label><input class="fi" id="slStart" type="datetime-local"/></div>
+          <div><label class="fl" for="slEnd">Ends</label><input class="fi" id="slEnd" type="datetime-local"/></div>
+        </div>
+        <div class="frow two">
+          <div><label class="fl" for="slProvider">Provider</label><input class="fi" id="slProvider" type="text" value="zoom" placeholder="zoom"/></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" id="slAdd" style="width:100%">Create slot</button></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-500)">Provider must be lower-case letters, digits or underscore — the database enforces it. Only <code>zoom</code> has an adapter today.</div>
+      </div>
+      <div id="slotList"><div class="skel"></div><div class="skel"></div></div>
+    </section>
+
+    <!-- ═══ ARTICLES ════════════════════════════════════════════════════ -->
+    <section class="pane" id="paneArticles">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          <div><div class="card-title">Write or edit an article</div><div class="card-sub">The slug is the identity — reusing one edits that article instead of adding a second.</div></div>
+        </div>
+        <div class="frow two">
+          <div><label class="fl" for="arSlug">Slug</label><input class="fi" id="arSlug" type="text" placeholder="cant-log-in"/></div>
+          <div><label class="fl" for="arCat">Category</label><select class="fi" id="arCat">
+            <option value="account">account</option><option value="billing">billing</option>
+            <option value="mock_exam">mock_exam</option><option value="technical">technical</option>
+            <option value="platform_help">platform_help</option><option value="other">other</option>
+          </select></div>
+        </div>
+        <div class="frow"><div><label class="fl" for="arQ">Question</label><input class="fi" id="arQ" type="text" maxlength="200" placeholder="I can't log in to my account"/></div></div>
+        <div class="frow"><div><label class="fl" for="arA">Answer</label><textarea class="fi" id="arA" maxlength="8000" placeholder="Plain language, from the student's side of the screen. **bold** works; blank lines make paragraphs."></textarea></div></div>
+        <div class="frow three">
+          <div><label class="fl" for="arSort">Sort order</label><input class="fi" id="arSort" type="number" value="100"/></div>
+          <div><label class="fl" for="arPub">Published</label><select class="fi" id="arPub"><option value="true">Yes — students see it</option><option value="false">No — draft</option></select></div>
+          <div style="display:flex;align-items:flex-end;gap:8px"><button class="btn btn-primary" id="arSave" style="flex:1">Save</button><button class="btn" id="arClear">Clear</button></div>
+        </div>
+      </div>
+      <div id="articleList"><div class="skel"></div><div class="skel"></div></div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  'use strict';
+
+  const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+  const SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+  const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const BUCKET = 'support-attachments';
+
+  const CATEGORIES = ['account', 'billing', 'mock_exam', 'technical', 'platform_help', 'other'];
+  const STATUSES = ['open', 'in_progress', 'awaiting_student', 'resolved', 'closed'];
+
+  // The same names the student sees on support.html and in the seeded articles.
+  // An agent reading "account" while the student was told to file under
+  // "Account Problem" is two vocabularies for one thing, and the mismatch
+  // surfaces the moment either of them quotes the other.
+  // The article editor below deliberately keeps the RAW enum values: it writes
+  // support_category, so it must show what it writes.
+  const CATEGORY_LABEL = {
+    account:       'Account Problem',
+    billing:       'Subscription / Payment',
+    mock_exam:     'Mock Exam Problem',
+    technical:     'Technical Issue',
+    platform_help: 'Using the platform',
+    other:         'Other'
+  };
+  const catLabel = (c) => CATEGORY_LABEL[c] || c;
+  const STATUS_LABEL = {
+    open: 'Unanswered', in_progress: 'In progress', awaiting_student: 'Waiting on student',
+    resolved: 'Resolved', closed: 'Closed'
+  };
+
+  // THE TRANSITION TABLE IS THE DATABASE'S, COPIED — not invented here.
+  // support_tickets_guard() in 20260815a raises on anything outside it, so an
+  // action this page offers that the guard refuses would surface as a raw
+  // Postgres error to an agent mid-conversation. The UI offers exactly what the
+  // guard permits, and nothing else.
+  const LEGAL_NEXT = {
+    open:             ['in_progress', 'closed'],
+    in_progress:      ['awaiting_student', 'resolved', 'closed'],
+    awaiting_student: ['in_progress', 'resolved', 'closed'],
+    resolved:         ['in_progress', 'closed'],
+    closed:           []
+  };
+
+  // An agent reply is TWO writes, and the first one moves the ticket on its own:
+  // support_touch_ticket() promotes 'open' to 'in_progress' when an agent posts.
+  // admin_support_reply() then applies p_set_status FROM that new status. So the
+  // statuses a reply may carry are the ones legal from the POST-TRIGGER status,
+  // which is why this is not simply LEGAL_NEXT[status].
+  function statusesAfterReply(status) {
+    const effective = (status === 'open') ? 'in_progress' : status;
+    return LEGAL_NEXT[effective] || [];
+  }
+
+  const state = {
+    user: null, role: 'user', ready: false, busy: false,
+    tickets: [], profiles: {}, filter: 'live', query: '',
+    ticket: null, messages: [], attachments: {}, meetings: [],
+    slots: [], articles: []
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  let toastTimer = null;
+  function toast(msg, kind) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 4600);
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtRelative(iso) {
+    if (!iso) return '';
+    const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 90) return 'just now';
+    const m = Math.round(s / 60); if (m < 60) return m + 'm ago';
+    const h = Math.round(m / 60); if (h < 24) return h + 'h ago';
+    const d = Math.round(h / 24); if (d < 30) return d + 'd ago';
+    return new Date(iso).toLocaleDateString();
+  }
+  function pill(status) {
+    return '<span class="pill ' + esc(status) + '"><span class="pd"></span>' + esc(STATUS_LABEL[status] || status) + '</span>';
+  }
+  function who(userId) {
+    const p = state.profiles[userId];
+    return p ? (p.email || p.full_name || userId.slice(0, 8)) : (userId ? userId.slice(0, 8) + '…' : 'unknown');
+  }
+
+  function schemaMissing(error) {
+    if (!error) return false;
+    const code = error.code || '';
+    const msg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+    return code === '42P01' || code === 'PGRST202' || code === 'PGRST205' ||
+           /does not exist|schema cache|Not Found/i.test(msg);
+  }
+  function goNotReady() {
+    state.ready = false;
+    $('notReady').classList.add('show');
+    $('workspace').style.display = 'none';
+  }
+
+  // RPC errors arrive as the exact sentences 20260815d raises. Translating the
+  // ones an agent can act on beats printing a Postgres error at them; anything
+  // unrecognised is shown verbatim rather than swallowed.
+  function rpcMessage(error, fallback) {
+    const m = (error && error.message) || '';
+    if (m.includes('forbidden'))                   return 'That action needs a support agent role.';
+    if (m.includes('grant_not_applicable'))        return 'Cannot grant: already granted, or a meeting is already scheduled on this ticket.';
+    if (m.includes('revoke_not_applicable'))       return 'Nothing to revoke — no unspent grant on this ticket.';
+    if (m.includes('slot_unavailable'))            return 'That time was taken while you were looking at it.';
+    if (m.includes('meeting_already_scheduled'))   return 'This ticket already has a meeting booked.';
+    if (m.includes('slot_locked'))                 return 'That slot has a meeting booked against it — cancel the meeting instead.';
+    if (m.includes('slot_not_found'))              return 'That slot no longer exists.';
+    if (m.includes('ticket_not_found'))            return 'That ticket no longer exists.';
+    if (m.includes('illegal ticket status transition')) return m;
+    if (m.includes('not_an_agent'))                return 'That person is not a support agent, so the ticket cannot be assigned to them.';
+    return m || fallback;
+  }
+
+  // ── LOAD ─────────────────────────────────────────────────────────────────
+  async function loadQueue() {
+    const { data, error } = await sb
+      .from('support_tickets')
+      .select('id,user_id,category,subject,status,meeting_granted,assigned_to,created_at,last_message_at')
+      .order('last_message_at', { ascending: false })
+      .limit(300);
+
+    if (error) {
+      if (schemaMissing(error)) { goNotReady(); return false; }
+      $('qList').innerHTML = '<div class="empty">The queue could not be loaded.</div>';
+      return true;
+    }
+    state.tickets = data || [];
+    await loadProfilesFor(state.tickets.map((t) => t.user_id).concat(state.tickets.map((t) => t.assigned_to)));
+
+    const { data: live } = await sb.from('support_meetings').select('id').eq('status', 'scheduled');
+    $('stMeet').textContent = String((live || []).length);
+
+    renderStats();
+    renderChips();
+    renderQueue();
+    return true;
+  }
+
+  async function loadProfilesFor(ids) {
+    const want = [...new Set(ids.filter(Boolean))].filter((id) => !state.profiles[id]);
+    if (!want.length) return;
+    const { data } = await sb.from('profiles').select('id,email,full_name').in('id', want);
+    (data || []).forEach((p) => { state.profiles[p.id] = p; });
+  }
+
+  function renderStats() {
+    const t = state.tickets;
+    $('stOpen').textContent = String(t.filter((x) => x.status === 'open').length);
+    $('stProg').textContent = String(t.filter((x) => x.status === 'in_progress').length);
+    $('stMine').textContent = String(t.filter((x) => x.assigned_to === state.user.id && x.status !== 'closed').length);
+  }
+
+  function renderChips() {
+    const t = state.tickets;
+    const counts = {
+      live: t.filter((x) => x.status !== 'closed' && x.status !== 'resolved').length,
+      mine: t.filter((x) => x.assigned_to === state.user.id && x.status !== 'closed').length,
+      unassigned: t.filter((x) => !x.assigned_to && x.status !== 'closed').length,
+      granted: t.filter((x) => x.meeting_granted).length,
+      all: t.length
+    };
+    const defs = [
+      ['live', 'Needs attention'], ['mine', 'Mine'], ['unassigned', 'Unassigned'],
+      ['granted', 'Meeting granted'], ['all', 'Everything']
+    ];
+    $('qChips').innerHTML = defs.map(([k, label]) =>
+      '<button class="chip' + (state.filter === k ? ' on' : '') + '" data-f="' + k + '">' +
+      esc(label) + '<span class="cn">' + counts[k] + '</span></button>').join('');
+  }
+
+  function visibleTickets() {
+    const q = state.query.trim().toLowerCase();
+    return state.tickets.filter((t) => {
+      if (state.filter === 'live' && (t.status === 'closed' || t.status === 'resolved')) return false;
+      if (state.filter === 'mine' && !(t.assigned_to === state.user.id && t.status !== 'closed')) return false;
+      if (state.filter === 'unassigned' && (t.assigned_to || t.status === 'closed')) return false;
+      if (state.filter === 'granted' && !t.meeting_granted) return false;
+      if (!q) return true;
+      return (t.subject + ' ' + who(t.user_id)).toLowerCase().includes(q);
+    });
+  }
+
+  function renderQueue() {
+    const list = visibleTickets();
+    if (!list.length) { $('qList').innerHTML = '<div class="empty">Nothing here. Try another filter.</div>'; return; }
+    $('qList').innerHTML = list.map((t) =>
+      '<button class="tk" data-id="' + esc(t.id) + '">' +
+        '<div class="tk-body">' +
+          '<div class="tk-subj">' + esc(t.subject) + '</div>' +
+          '<div class="tk-meta"><span>' + esc(who(t.user_id)) + '</span><span>·</span>' +
+          '<span>' + esc(catLabel(t.category)) + '</span><span>·</span>' +
+          '<span>' + esc(fmtRelative(t.last_message_at)) + '</span>' +
+          (t.assigned_to === state.user.id ? '<span class="pill mine">mine</span>' :
+            t.assigned_to ? '<span>· ' + esc(who(t.assigned_to)) + '</span>' : '<span>· unassigned</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="tk-right">' + pill(t.status) +
+          (t.meeting_granted ? '<span class="pill grant">meeting granted</span>' : '') +
+        '</div>' +
+      '</button>').join('');
+  }
+
+  // ── TICKET DETAIL ────────────────────────────────────────────────────────
+  async function openTicket(id, scroll) {
+    state.ticket = state.tickets.find((t) => t.id === id) || null;
+    if (!state.ticket) return;
+    $('queueList').style.display = 'none';
+    $('ticketDetail').style.display = '';
+    if (scroll !== false) {
+      $('ticketDetail').innerHTML = '<div class="skel"></div><div class="skel"></div>';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    await loadDetailData();
+    renderTicket();
+  }
+
+  // Every fetch the detail view needs, with no rendering and no view changes, so
+  // the poller can call it without disturbing anything the agent is doing.
+  async function loadDetailData() {
+    const id = state.ticket.id;
+    const [{ data: msgs }, { data: meets }] = await Promise.all([
+      sb.from('support_messages').select('id,sender_id,sender_role,body,created_at')
+        .eq('ticket_id', id).order('created_at', { ascending: true }),
+      sb.from('support_meetings').select('id,slot_id,status,provider,provider_ref,created_at')
+        .eq('ticket_id', id).order('created_at', { ascending: false })
+    ]);
+    state.messages = msgs || [];
+    state.meetings = meets || [];
+
+    state.attachments = {};
+    const ids = state.messages.map((m) => m.id);
+    if (ids.length) {
+      const { data: atts } = await sb.from('support_attachments')
+        .select('id,message_id,storage_path').in('message_id', ids);
+      (atts || []).forEach((a) => { (state.attachments[a.message_id] = state.attachments[a.message_id] || []).push(a); });
+    }
+
+    const { data: slots } = await sb.from('support_meeting_slots')
+      .select('id,starts_at,ends_at,provider,active')
+      .eq('active', true).gt('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true }).limit(40);
+    state.slots = slots || [];
+  }
+
+  function closeTicket() {
+    state.ticket = null;
+    $('ticketDetail').style.display = 'none';
+    $('ticketDetail').innerHTML = '';
+    $('queueList').style.display = '';
+  }
+
+  function renderTicket() {
+    const t = state.ticket;
+    const live = state.meetings.find((m) => m.status === 'scheduled') || null;
+    const replyStatuses = statusesAfterReply(t.status);
+    const directStatuses = LEGAL_NEXT[t.status] || [];
+
+    const thread = state.messages.map((m) => {
+      const label = m.sender_role === 'agent' ? who(m.sender_id) : (m.sender_role === 'system' ? 'System' : 'Student');
+      const av = m.sender_role === 'agent' ? 'A' : (m.sender_role === 'system' ? 'i' : 'S');
+      const atts = state.attachments[m.id] || [];
+      return '<div class="msg ' + esc(m.sender_role) + '"><div class="m-av">' + esc(av) + '</div><div class="m-body">' +
+        '<div class="m-who"><span>' + esc(label) + '</span><span>' + esc(fmtRelative(m.created_at)) + '</span></div>' +
+        '<div class="m-txt">' + esc(m.body) + '</div>' +
+        (atts.length ? '<div class="m-att">' + atts.map((a) =>
+          '<a href="#" data-path="' + esc(a.storage_path) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.6-4.6a2 2 0 0 0-2.8 0L3 21"/></svg>Screenshot</a>').join('') + '</div>' : '') +
+        '</div></div>';
+    }).join('') || '<div class="empty">No messages.</div>';
+
+    const composer = t.status === 'closed'
+      ? '<div class="empty" style="text-align:left;padding:14px;border:1px dashed var(--border-mid);border-radius:var(--r-md)">' +
+        'This ticket is closed. It is terminal — reopening is not a legal transition, so a follow-up needs a new ticket.</div>'
+      : '<div style="border-top:1px solid var(--border-soft);padding-top:16px;margin-top:16px">' +
+        '<label class="fl" for="reBody">Reply as support</label>' +
+        '<textarea class="fi" id="reBody" maxlength="4000" placeholder="Answer the student. This is written by you, not generated."></textarea>' +
+        '<div class="frow two" style="margin-top:12px">' +
+          '<div><label class="fl" for="reStatus">Then set status to</label><select class="fi" id="reStatus">' +
+            '<option value="">Leave as it lands</option>' +
+            replyStatuses.map((s) => '<option value="' + s + '">' + esc(STATUS_LABEL[s]) + '</option>').join('') +
+          '</select></div>' +
+          '<div style="display:flex;align-items:flex-end"><button class="btn btn-primary" id="reSend" style="width:100%">Send reply</button></div>' +
+        '</div></div>';
+
+    const meetingBlock = live
+      ? '<div class="card" style="border-color:var(--purple-border)"><div class="card-head">' +
+          '<span class="card-ico purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span>' +
+          '<div><div class="card-title">Meeting scheduled</div><div class="card-sub">' + esc(live.provider) +
+          ((live.provider_ref && live.provider_ref.join_url) ? ' · link created' : ' · link pending') + '</div></div></div>' +
+          '<div class="btn-row"><button class="btn btn-red" id="mtCancel">Cancel this meeting</button></div>' +
+          '<div style="font-size:12px;color:var(--text-500);margin-top:10px">Cancelling frees the slot. It does NOT return the grant — that is deliberate, so every meeting is preceded by a support decision.</div>' +
+        '</div>'
+      : (t.meeting_granted
+        ? '<div class="card" style="border-color:var(--purple-border)"><div class="card-head">' +
+            '<span class="card-ico purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>' +
+            '<div><div class="card-title">Meeting granted — the student can book</div><div class="card-sub">Or pick a time for them below.</div></div></div>' +
+            (state.slots.length
+              ? '<div class="frow two"><div><label class="fl" for="mtSlot">Open slots</label><select class="fi" id="mtSlot">' +
+                state.slots.map((s) => '<option value="' + esc(s.id) + '">' + esc(fmtDateTime(s.starts_at)) + '</option>').join('') +
+                '</select></div><div style="display:flex;align-items:flex-end"><button class="btn btn-purple" id="mtBook" style="width:100%">Schedule for student</button></div></div>'
+              : '<div style="font-size:13px;color:var(--text-400);margin-bottom:12px">No future slots exist. Create one in the Meeting Slots tab.</div>') +
+            '<div class="btn-row"><button class="btn" id="mtRevoke">Revoke the grant</button></div>' +
+          '</div>'
+        : '<div class="card"><div class="card-head">' +
+            '<span class="card-ico purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>' +
+            '<div><div class="card-title">No meeting offered</div><div class="card-sub">Booking is escalation-only: until you grant it, the student sees no booking panel at all.</div></div></div>' +
+            '<div class="btn-row"><button class="btn btn-purple" id="mtGrant">Offer a meeting</button></div>' +
+          '</div>');
+
+    $('ticketDetail').innerHTML =
+      '<button class="btn" id="tdBack" style="margin-bottom:14px">← Back to queue</button>' +
+      '<div class="card">' +
+        '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">' +
+          '<div style="flex:1;min-width:220px">' +
+            '<div style="font-family:var(--font-display);font-weight:800;font-size:19px;color:#fff">' + esc(t.subject) + '</div>' +
+            '<div style="font-size:12.5px;color:var(--text-500);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+              pill(t.status) + '<span>' + esc(catLabel(t.category)) + '</span><span>·</span>' +
+              '<span>' + esc(who(t.user_id)) + '</span><span>·</span>' +
+              '<span>opened ' + esc(fmtRelative(t.created_at)) + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="btn-row" style="margin-bottom:16px">' +
+          (t.assigned_to === state.user.id
+            ? '<button class="btn" id="asDrop">Unassign me</button>'
+            : '<button class="btn" id="asTake">Assign to me</button>') +
+          directStatuses.map((s) =>
+            '<button class="btn" data-set="' + s + '">Mark ' + esc(STATUS_LABEL[s].toLowerCase()) + '</button>').join('') +
+        '</div>' +
+        thread + composer +
+      '</div>' + meetingBlock;
+  }
+
+  // THE REPLY BOX IS THE AGENT'S WORKING SURFACE. Every re-render below rebuilds
+  // it, so a half-written reply and the chosen follow-up status are captured and
+  // put back — otherwise a background refresh landing mid-sentence costs the
+  // agent the sentence, and they learn not to trust the page.
+  async function withDraft(fn) {
+    const ta = $('reBody');
+    const draft = ta ? ta.value : '';
+    const focused = !!ta && document.activeElement === ta;
+    const selStart = ta ? ta.selectionStart : 0;
+    const selEnd = ta ? ta.selectionEnd : 0;
+    const sel = $('reStatus');
+    const chosen = sel ? sel.value : '';
+    await fn();
+    const ta2 = $('reBody');
+    if (ta2 && draft) {
+      ta2.value = draft;
+      // preventScroll matters: focusing an element the browser considers
+      // off-screen scrolls it into view, which is exactly the jump this
+      // whole change exists to stop.
+      if (focused) { ta2.focus({ preventScroll: true }); try { ta2.setSelectionRange(selStart, selEnd); } catch (e) { /* not focusable yet */ } }
+    }
+    const sel2 = $('reStatus');
+    if (sel2 && chosen && Array.prototype.some.call(sel2.options, (o) => o.value === chosen)) sel2.value = chosen;
+  }
+
+  // ── ACTIONS ──────────────────────────────────────────────────────────────
+  async function act(fn, okMsg) {
+    if (state.busy) return false;
+    state.busy = true;
+    const { error } = await fn();
+    state.busy = false;
+    if (error) {
+      if (schemaMissing(error)) { goNotReady(); return false; }
+      toast(rpcMessage(error, 'That action failed.'), 'red');
+      return false;
+    }
+    if (okMsg) toast(okMsg, 'green');
+
+    // Stay where the agent was. Re-opening the ticket used to reset the
+    // scroll to the top of the page after every single action.
+    const y = window.scrollY;
+    await loadQueue();
+    if (state.ticket) {
+      const fresh = state.tickets.find((x) => x.id === state.ticket.id);
+      if (fresh) { await withDraft(() => openTicket(fresh.id, false)); } else { closeTicket(); }
+    }
+    window.scrollTo({ top: y, behavior: 'instant' });
+    return true;
+  }
+
+  // ── LIVE UPDATES ─────────────────────────────────────────────────────────
+  // Same contract as support.html: poll, never overlap, never move the view,
+  // never eat a draft, and stop while the tab is hidden. An agent watching a
+  // queue that silently goes stale answers a ticket a colleague already took.
+  const POLL_MS = 20000;
+  let polling = false;
+  let pollTimer = null;
+
+  function detailSignature() {
+    const t = state.ticket;
+    if (!t) return '';
+    return [t.status, t.assigned_to, t.meeting_granted,
+            state.messages.map((m) => m.id).join(','),
+            state.meetings.map((m) => m.id + ':' + m.status).join(',')].join('|');
+  }
+
+  async function poll() {
+    if (polling || state.busy || document.hidden || !state.ready) return;
+    polling = true;
+    try {
+      const y = window.scrollY;
+      await loadQueue();
+      if (state.ticket) {
+        const fresh = state.tickets.find((x) => x.id === state.ticket.id);
+        if (!fresh) { closeTicket(); }
+        else {
+          const before = detailSignature();
+          state.ticket = fresh;
+          await loadDetailData();
+          if (detailSignature() !== before) await withDraft(renderTicket);   // redraw only on real change
+        }
+      }
+      window.scrollTo({ top: y, behavior: 'instant' });
+    } catch (e) {
+      // A failed poll is a no-op. Nothing is shown — "could not check for
+      // updates" is not information an agent can act on.
+    }
+    polling = false;
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(poll, POLL_MS);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+
+  async function openAttachment(path) {
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 300);
+    if (error || !data) { toast('That screenshot could not be opened.', 'red'); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  }
+
+  // ── SLOTS ────────────────────────────────────────────────────────────────
+  async function loadSlots() {
+    const { data, error } = await sb.from('support_meeting_slots')
+      .select('id,starts_at,ends_at,provider,active')
+      .order('starts_at', { ascending: false }).limit(120);
+    if (error) { if (schemaMissing(error)) goNotReady(); return; }
+    state.slots = data || [];
+
+    const { data: booked } = await sb.from('support_meetings')
+      .select('slot_id,status').neq('status', 'cancelled');
+    const taken = new Set((booked || []).map((m) => m.slot_id));
+
+    if (!state.slots.length) { $('slotList').innerHTML = '<div class="empty">No slots yet.</div>'; return; }
+    $('slotList').innerHTML = state.slots.map((s) => {
+      const isTaken = taken.has(s.id);
+      const past = new Date(s.starts_at) < new Date();
+      return '<div class="tk" style="cursor:default">' +
+        '<div class="tk-body"><div class="tk-subj">' + esc(fmtDateTime(s.starts_at)) + '</div>' +
+        '<div class="tk-meta"><span>' + esc(s.provider) + '</span><span>·</span><span>' +
+        Math.max(1, Math.round((new Date(s.ends_at) - new Date(s.starts_at)) / 60000)) + ' min</span>' +
+        (past ? '<span>· past</span>' : '') + '</div></div>' +
+        '<div class="tk-right">' +
+          (isTaken ? '<span class="pill grant">booked</span>'
+                   : s.active ? '<span class="pill open"><span class="pd"></span>open</span>'
+                              : '<span class="pill closed"><span class="pd"></span>withdrawn</span>') +
+          (s.active && !isTaken ? '<button class="btn" data-cancel-slot="' + esc(s.id) + '" style="padding:6px 11px;font-size:12px">Withdraw</button>' : '') +
+        '</div></div>';
+    }).join('');
+  }
+
+  // ── ARTICLES ─────────────────────────────────────────────────────────────
+  async function loadArticles() {
+    const { data, error } = await sb.from('support_articles')
+      .select('slug,category,question,answer_md,sort_order,published')
+      .order('category', { ascending: true }).order('sort_order', { ascending: true });
+    if (error) { if (schemaMissing(error)) goNotReady(); return; }
+    state.articles = data || [];
+    if (!state.articles.length) { $('articleList').innerHTML = '<div class="empty">No articles yet.</div>'; return; }
+    $('articleList').innerHTML = state.articles.map((a) =>
+      '<button class="tk" data-slug="' + esc(a.slug) + '">' +
+        '<div class="tk-body"><div class="tk-subj">' + esc(a.question) + '</div>' +
+        '<div class="tk-meta"><span>' + esc(a.slug) + '</span><span>·</span><span>' + esc(a.category) +
+        '</span><span>·</span><span>sort ' + esc(a.sort_order) + '</span></div></div>' +
+        '<div class="tk-right">' + (a.published
+          ? '<span class="pill resolved"><span class="pd"></span>published</span>'
+          : '<span class="pill closed"><span class="pd"></span>draft</span>') + '</div>' +
+      '</button>').join('');
+  }
+
+  function editArticle(slug) {
+    const a = state.articles.find((x) => x.slug === slug);
+    if (!a) return;
+    $('arSlug').value = a.slug; $('arCat').value = a.category; $('arQ').value = a.question;
+    $('arA').value = a.answer_md; $('arSort').value = a.sort_order;
+    $('arPub').value = a.published ? 'true' : 'false';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast('Editing "' + a.slug + '". Saving overwrites that article.', 'green');
+  }
+
+  // ── EVENTS ───────────────────────────────────────────────────────────────
+  $('hambBtn').addEventListener('click', () => { $('sidebar').classList.add('open'); $('overlay').classList.add('show'); });
+  $('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
+
+  $('tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('.tab'); if (!b) return;
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
+    document.querySelectorAll('.pane').forEach((p) => p.classList.remove('on'));
+    $('pane' + b.dataset.pane.charAt(0).toUpperCase() + b.dataset.pane.slice(1)).classList.add('on');
+    if (b.dataset.pane === 'slots') loadSlots();
+    if (b.dataset.pane === 'articles') loadArticles();
+  });
+
+  $('qSearch').addEventListener('input', (e) => { state.query = e.target.value; renderQueue(); });
+  $('qChips').addEventListener('click', (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    state.filter = c.dataset.f; renderChips(); renderQueue();
+  });
+  $('qList').addEventListener('click', (e) => {
+    const t = e.target.closest('.tk'); if (t) openTicket(t.dataset.id, true);
+  });
+
+  $('ticketDetail').addEventListener('click', async (e) => {
+    const t = state.ticket; if (!t) return;
+
+    if (e.target.closest('#tdBack')) { closeTicket(); return; }
+
+    const att = e.target.closest('a[data-path]');
+    if (att) { e.preventDefault(); openAttachment(att.dataset.path); return; }
+
+    if (e.target.closest('#asTake')) {
+      act(() => sb.rpc('admin_support_assign', { p_ticket_id: t.id, p_agent_id: state.user.id }), 'Assigned to you.'); return;
+    }
+    if (e.target.closest('#asDrop')) {
+      act(() => sb.rpc('admin_support_assign', { p_ticket_id: t.id, p_agent_id: null }), 'Unassigned.'); return;
+    }
+
+    const setBtn = e.target.closest('button[data-set]');
+    if (setBtn) {
+      act(() => sb.rpc('admin_support_set_status', { p_ticket_id: t.id, p_status: setBtn.dataset.set }),
+          'Status updated.'); return;
+    }
+
+    if (e.target.closest('#reSend')) {
+      const body = ($('reBody').value || '').trim();
+      if (!body) { toast('Write a reply first.', 'red'); return; }
+      const st = $('reStatus').value || null;
+      act(() => sb.rpc('admin_support_reply', { p_ticket_id: t.id, p_body: body, p_set_status: st }), 'Reply sent.');
+      return;
+    }
+
+    if (e.target.closest('#mtGrant')) {
+      act(() => sb.rpc('admin_support_grant_meeting', { p_ticket_id: t.id }),
+          'Meeting offered — the student can now pick a time.'); return;
+    }
+    if (e.target.closest('#mtRevoke')) {
+      act(() => sb.rpc('admin_support_revoke_meeting', { p_ticket_id: t.id }), 'Grant withdrawn.'); return;
+    }
+    if (e.target.closest('#mtBook')) {
+      const slotId = $('mtSlot').value;
+      act(() => sb.rpc('admin_support_schedule_for_student', { p_ticket_id: t.id, p_slot_id: slotId }),
+          'Booked for the student.'); return;
+    }
+    if (e.target.closest('#mtCancel')) {
+      const live = state.meetings.find((m) => m.status === 'scheduled');
+      if (!live) return;
+      if (!window.confirm('Cancel this meeting? The grant is NOT returned — the student would need a new one.')) return;
+      act(() => sb.rpc('support_cancel_meeting', { p_meeting_id: live.id }), 'Meeting cancelled.'); return;
+    }
+  });
+
+  $('slAdd').addEventListener('click', async () => {
+    const s = $('slStart').value, e2 = $('slEnd').value, p = ($('slProvider').value || 'zoom').trim();
+    if (!s || !e2) { toast('Both a start and an end are required.', 'red'); return; }
+    if (new Date(e2) <= new Date(s)) { toast('The end must be after the start — the database enforces it too.', 'red'); return; }
+    if (state.busy) return;
+    state.busy = true;
+    const { error } = await sb.rpc('admin_support_upsert_slot', {
+      p_slot: { starts_at: new Date(s).toISOString(), ends_at: new Date(e2).toISOString(), provider: p, active: true }
+    });
+    state.busy = false;
+    if (error) { if (schemaMissing(error)) { goNotReady(); return; } toast(rpcMessage(error, 'That slot was not created.'), 'red'); return; }
+    toast('Slot created.', 'green');
+    $('slStart').value = ''; $('slEnd').value = '';
+    loadSlots();
+  });
+
+  $('slotList').addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-cancel-slot]'); if (!b) return;
+    if (state.busy) return;
+    state.busy = true;
+    const { error } = await sb.rpc('admin_support_cancel_slot', { p_slot_id: b.dataset.cancelSlot });
+    state.busy = false;
+    if (error) { toast(rpcMessage(error, 'That slot could not be withdrawn.'), 'red'); return; }
+    toast('Slot withdrawn.', 'green');
+    loadSlots();
+  });
+
+  $('articleList').addEventListener('click', (e) => {
+    const a = e.target.closest('.tk'); if (a) editArticle(a.dataset.slug);
+  });
+  $('arClear').addEventListener('click', () => {
+    ['arSlug', 'arQ', 'arA'].forEach((id) => { $(id).value = ''; });
+    $('arSort').value = '100'; $('arPub').value = 'true'; $('arCat').value = 'account';
+  });
+  $('arSave').addEventListener('click', async () => {
+    const slug = ($('arSlug').value || '').trim();
+    const question = ($('arQ').value || '').trim();
+    const answer = ($('arA').value || '').trim();
+    if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(slug)) { toast('Slug must be lower-case letters, digits and hyphens, 2–80 characters.', 'red'); return; }
+    if (question.length < 3 || question.length > 200) { toast('The question must be 3–200 characters.', 'red'); return; }
+    if (answer.length < 3 || answer.length > 8000) { toast('The answer must be 3–8000 characters.', 'red'); return; }
+    if (state.busy) return;
+    state.busy = true;
+    const { error } = await sb.rpc('admin_support_upsert_article', {
+      p_article: {
+        slug, category: $('arCat').value, question, answer_md: answer,
+        sort_order: parseInt($('arSort').value, 10) || 100,
+        published: $('arPub').value === 'true'
+      }
+    });
+    state.busy = false;
+    if (error) { if (schemaMissing(error)) { goNotReady(); return; } toast(rpcMessage(error, 'That article was not saved.'), 'red'); return; }
+    toast('Article saved.', 'green');
+    loadArticles();
+  });
+
+  // ── BOOT ─────────────────────────────────────────────────────────────────
+  // The role gate mirrors admin.html's, including its fallback to is_admin when
+  // profiles.role is absent. It is a UI gate only: every write on this page goes
+  // through an RPC that calls support_require_agent(), so a non-agent who
+  // reached the markup still cannot change anything.
+  (async function init() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'index.html'; return; }
+
+    let profile = null;
+    try {
+      const r = await sb.from('profiles').select('is_admin, full_name, email, role').eq('id', user.id).single();
+      profile = r.data;
+    } catch (e) { profile = null; }
+    if (!profile) {
+      const r2 = await sb.from('profiles').select('is_admin, full_name, email').eq('id', user.id).single();
+      profile = r2.data;
+    }
+
+    const role = (profile && profile.role) || (profile && profile.is_admin ? 'admin' : 'user');
+    const isAgent = profile && (profile.is_admin || ['admin', 'super_admin', 'owner'].includes(role));
+
+    $('pageLoader').style.display = 'none';
+    if (!isAgent) {
+      $('accessDenied').style.display = 'flex';
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 3000);
+      return;
+    }
+
+    state.user = user; state.role = role; state.ready = true;
+    if (profile) state.profiles[user.id] = { id: user.id, email: profile.email, full_name: profile.full_name };
+    $('mainContent').style.display = '';
+    await loadQueue();
+    startPolling();
+  })();
+});
+</script>
+</body>
+</html>
