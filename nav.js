@@ -1,8 +1,14 @@
 /* nav.js — shared admin sidebar section.
  *
  * Every page renders its own sidebar, but the Admin section (Owner Dashboard /
- * Super Admin Dashboard / Admin Dashboard + AI Monitor) is centrally managed
- * here so role-aware visibility and labeling stay consistent site-wide.
+ * Super Admin Dashboard / Admin Dashboard + Support Queue + AI Monitor) is
+ * centrally managed here so role-aware visibility and labeling stay consistent
+ * site-wide.
+ *
+ * THE SLOT IS OVERWRITTEN, NOT DECORATED. render() assigns slot.innerHTML and
+ * sets slot.style.display itself, so any admin link hand-written into the slot
+ * on a page is destroyed on load. Add admin links HERE, never in a page — a
+ * static one looks correct in the source and does not exist in the browser.
  *
  * Usage on a page:
  *   <div id="adminNavSection"></div>          <!-- slot in the sidebar -->
@@ -32,6 +38,8 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>';
   var MONITOR_ICON =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 2-2 3 3"/></svg>';
+  var SUPPORT_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
   // Every page already loads the @supabase/supabase-js CDN bundle which
   // exposes `window.supabase`. nav.js creates its own dedicated client
@@ -93,6 +101,7 @@
     var page = currentPageFile();
     var aActive = page === 'admin.html' ? 'admin-active' : '';
     var mActive = page === 'ai-monitor.html' ? 'active' : '';
+    var sActive = page === 'admin-support.html' ? 'active' : '';
     var label = ROLE_LABEL[role] || 'Admin Dashboard';
     var showMonitor = lvl >= 2;
 
@@ -101,6 +110,15 @@
       + '<a class="nav-item ' + aActive + '" href="admin.html" style="color:#ef4f5f">'
       +   ADMIN_ICON
       +   '<span class="nav-label">' + label + '</span>'
+      + '</a>'
+      // Support Queue sits at lvl >= 1, the same threshold as Admin Dashboard,
+      // because that is exactly what the database enforces: every admin_support_*
+      // RPC calls support_require_agent(), which is has_role_at_least('admin').
+      // Showing it to anyone lower would be a link to a page whose every action
+      // returns 42501.
+      + '<a class="nav-item ' + sActive + '" href="admin-support.html" style="color:#ef4f5f">'
+      +   SUPPORT_ICON
+      +   '<span class="nav-label">Support Queue</span>'
       + '</a>';
     if (showMonitor) {
       html += ''
