@@ -2,15 +2,41 @@
 -- Help & Support · 4 of 6 — the RPC boundary
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 5. Revision 2 reconciled this file against APPROVED
+--         Revision 6. Revision 2 reconciled this file against APPROVED
 --         20260815a rev 4, 20260815b rev 4 and 20260815c rev 3; revision 3
 --         made the per-student meeting ceiling race-safe and applied it to
 --         BOTH booking doors; revision 4 moved its advisory lock into an
---         explicit support namespace — see section 0b. Revision 5 changes NO
---         executable SQL: it repairs the pg_locks verification, which could
+--         explicit support namespace — see section 0b. Revision 5 changed NO
+--         executable SQL: it repaired the pg_locks verification, which could
 --         not have falsified the namespacing claim it was written to test
 --         (signed-vs-unsigned key representation, missing objsubid assertion,
 --         unscoped post-commit check). See the VERIFICATION block.
+--
+--         REVISION 6 IS TWO TOKENS, AND WITHOUT THEM THIS FILE COULD NOT BE
+--         APPLIED AT ALL. Revisions 2-5 wrote, in both booking handlers:
+--
+--             get stacked diagnostics v_constraint = pg_exception_constraint;
+--
+--         PG_EXCEPTION_CONSTRAINT is not a GET STACKED DIAGNOSTICS item and
+--         never has been. The item that carries the violated constraint's name
+--         is CONSTRAINT_NAME; the PG_EXCEPTION_* items are DETAIL, HINT and
+--         CONTEXT only. PL/pgSQL validates a function body at CREATE FUNCTION
+--         time, so this was not a latent runtime bug waiting for a race — it
+--         is a parse error, and applying this migration failed outright:
+--
+--             ERROR: unrecognized GET DIAGNOSTICS item at or near
+--                    "pg_exception_constraint"
+--
+--         on support_book_meeting(), and again on
+--         admin_support_schedule_for_student(). Five revisions of review read
+--         past it because both handlers read correctly in English; only
+--         executing the file found it. That is the lesson worth keeping: a
+--         migration reviewed but never run is a migration whose syntax nobody
+--         has checked.
+--
+--         Nothing else changed. The advisory lock, the capacity helper, every
+--         function body, every grant and the whole VERIFICATION block are
+--         byte-identical to revision 5.
 -- DEPENDS ON: 20260815a — tables, and the four triggers that now own most of
 --                         what revision 1 of this file did by hand
 --             20260815b — support_setting_int(), support_slot_is_open(), and
@@ -252,7 +278,7 @@ begin
   exception
     when unique_violation then
       -- Which index fired decides which sentence the student reads.
-      get stacked diagnostics v_constraint = pg_exception_constraint;
+      get stacked diagnostics v_constraint = constraint_name;
       if v_constraint = 'support_meetings_one_per_slot_idx' then
         raise exception 'slot_unavailable: that time is no longer free'
           using errcode = '55006';
@@ -537,7 +563,7 @@ begin
     returning id into v_meeting;
   exception
     when unique_violation then
-      get stacked diagnostics v_constraint = pg_exception_constraint;
+      get stacked diagnostics v_constraint = constraint_name;
       if v_constraint = 'support_meetings_one_per_slot_idx' then
         raise exception 'slot_unavailable: that time is already taken'
           using errcode = '55006';
