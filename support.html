@@ -450,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     user: null, ready: false,
     articles: [], hcCat: 'all', hcQuery: '',
     tickets: [], ticket: null, messages: [], attachments: {},
-    meeting: null, slots: [], pendingFile: null, busy: false
+    meeting: null, slots: [], pendingFile: null, busy: false, linkFailed: null, lastSlot: null
   };
 
   // ── tiny DOM helpers ─────────────────────────────────────────────────────
@@ -902,6 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.meeting = (meetings || []).find((m) => m.status === 'scheduled') || null;
 
     if (state.meeting) {
+      if ((state.meeting.provider_ref || {}).join_url) state.linkFailed = null;
       const { data: slot } = await sb.from('support_meeting_slots')
         .select('id,starts_at,ends_at').eq('id', state.meeting.slot_id).maybeSingle();
       renderBookedMeeting(slot);
@@ -951,7 +952,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return Math.max(1, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
   }
 
+  // Redraw the panel from what is already in state — no fetch, so a failed
+  // provision can change the message immediately.
+  function renderMeetingPanel() {
+    if (!state.meeting) return;
+    renderBookedMeeting(state.lastSlot || null);
+  }
+
   function renderBookedMeeting(slot) {
+    state.lastSlot = slot;
     const ref = state.meeting.provider_ref || {};
     const joinUrl = ref.join_url || '';
     $('thMeeting').innerHTML =
@@ -965,7 +974,13 @@ document.addEventListener('DOMContentLoaded', () => {
         (joinUrl
           ? '<a class="join-btn" href="' + esc(joinUrl) + '" target="_blank" rel="noopener noreferrer">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Join the meeting</a>'
-          : '<div class="locked-note" style="margin-top:0">The joining link is being created. It will appear here — reload this page in a moment.</div>') +
+          : state.linkFailed
+            ? '<div class="locked-note" style="margin-top:0;border-color:var(--amber-border);color:var(--text-200)">' +
+              (state.linkFailed === 'host_busy'
+                ? 'That time clashes with another meeting, so a joining link could not be created. Your booking is safe — reply in the conversation above and support will move you to another time.'
+                : 'The joining link could not be created automatically. Your meeting is still booked, and support can see this. Try again, or reply above and we will sort it out.') +
+              '</div><button class="btn-sm" id="retryLinkBtn" style="align-self:flex-start">Try again</button>'
+            : '<div class="locked-note" style="margin-top:0">The joining link is being created. It will appear here in a moment.</div>') +
         '<button class="btn-sm" id="cancelMeetBtn" style="align-self:flex-start">Cancel this meeting</button>' +
       '</div></div>';
   }
@@ -989,19 +1004,74 @@ document.addEventListener('DOMContentLoaded', () => {
       await loadMeeting();
       return;
     }
-    toast('Booked. The joining link will appear here.', 'ok');
+    toast('Booked. Creating your joining link…', 'ok');
     await loadTickets();
     state.ticket = state.tickets.find((t) => t.id === state.ticket.id) || state.ticket;
     await loadMeeting();
+
+    // D1 · ASK FOR THE LINK NOW. Booking commits in Postgres with an empty
+    // provider_ref; the Edge Function is what turns that into a join url, and
+    // before this the function had no caller at all — a student booked and the
+    // link never arrived. Owner decision: client-triggered here, with the
+    // agent-run sweep as the safety net for a failure or a closed laptop.
+    //
+    // Deliberately NOT awaited into the booking result: the booking already
+    // succeeded, and a provider outage must not read as a failed booking.
+    const booked = state.meeting;
+    if (booked) provisionMeeting(booked.id);
+  }
+
+  // The invoke carries the caller's session automatically, and the function
+  // checks ownership against support_meetings.user_id — a student can only ever
+  // provision their own meeting. Nothing about the provider comes back: the
+  // response is {ok, status}, and the link is read from the row through RLS.
+  async function provisionMeeting(meetingId) {
+    try {
+      const { data, error } = await sb.functions.invoke('support-actions', {
+        body: { action: 'provision', meeting_id: meetingId },
+      });
+      const status = (data && data.status) || 'unavailable';
+      if (error || !data || data.ok !== true) {
+        // THE STUDENT IS NOT LEFT WAITING ON A LINK THAT IS NOT COMING.
+        // "The joining link is being created" is true for a few seconds and a
+        // lie after that. host_busy in particular is not a transient: the slot
+        // clashes with another meeting on the same host, and no amount of
+        // waiting fixes it. The panel switches to an honest state and offers a
+        // retry; the meeting itself is still booked either way.
+        if (status !== 'already_provisioned') {
+          state.linkFailed = status;
+          renderMeetingPanel();
+        }
+        return;
+      }
+      state.linkFailed = null;
+      await loadMeeting();
+    } catch (e) {
+      state.linkFailed = 'unavailable';
+      renderMeetingPanel();
+    }
   }
 
   async function cancelMeeting() {
     if (state.busy || !state.meeting) return;
     if (!window.confirm('Cancel this meeting? Booking another one needs support to offer it again.')) return;
     state.busy = true;
-    const { error } = await sb.rpc('support_cancel_meeting', { p_meeting_id: state.meeting.id });
+    const cancelledId = state.meeting.id;
+    const { error } = await sb.rpc('support_cancel_meeting', { p_meeting_id: cancelledId });
     state.busy = false;
     if (error) { toast('That meeting could not be cancelled.', 'err'); return; }
+
+    // D3 · RELEASE AT THE PROVIDER. Cancelling used to stop at Postgres, which
+    // left the Zoom meeting live and the join_url still readable on the
+    // cancelled row — a student could rejoin a call they had cancelled, and
+    // anyone they had forwarded the link to could too. The RPC owns the
+    // lifecycle and runs first; this removes the room afterwards.
+    try {
+      await sb.functions.invoke('support-actions', {
+        body: { action: 'release', meeting_id: cancelledId },
+      });
+    } catch (e) { /* the row is cancelled either way; an agent can re-release */ }
+
     toast('Meeting cancelled.', 'ok');
     await loadTickets();
     state.ticket = state.tickets.find((t) => t.id === state.ticket.id) || state.ticket;
@@ -1055,7 +1125,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const msgsChanged = fresh.length !== state.messages.length ||
       fresh.some((m, i) => !state.messages[i] || state.messages[i].id !== m.id);
     const statusChanged = state.renderedStatus !== t.status;
-    if (!msgsChanged && !statusChanged) return;   // nothing to redraw — leave the page alone
+
+    // I1 · THE MEETING IS ITS OWN REASON TO REDRAW. Provisioning fills in
+    // provider_ref seconds after booking, and that is neither a new message nor
+    // a status change — so the poller used to return early and the student sat
+    // on "the joining link is being created" until they navigated away and
+    // back. The signature covers the grant, the booking and the link.
+    const meetSig = [t.meeting_granted, state.meeting && state.meeting.id,
+                     state.meeting && !!(state.meeting.provider_ref || {}).join_url].join('|');
+    if (!msgsChanged && !statusChanged) {
+      await loadMeeting();
+      const after = [t.meeting_granted, state.meeting && state.meeting.id,
+                     state.meeting && !!(state.meeting.provider_ref || {}).join_url].join('|');
+      if (after === meetSig) return;   // genuinely nothing moved — leave the page alone
+      return;                          // loadMeeting() already redrew the panel
+    }
 
     state.messages = fresh;
     renderThreadHead();
@@ -1141,6 +1225,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('thMeeting').addEventListener('click', (e) => {
     const s = e.target.closest('.slot');
     if (s) { bookSlot(s.dataset.slot); return; }
+    if (e.target.closest('#retryLinkBtn')) {
+      if (!state.meeting) return;
+      state.linkFailed = null;
+      renderMeetingPanel();
+      provisionMeeting(state.meeting.id);
+      return;
+    }
     if (e.target.closest('#cancelMeetBtn')) cancelMeeting();
   });
 

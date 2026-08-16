@@ -253,7 +253,7 @@ input.fi:focus,select.fi:focus,textarea.fi:focus{outline:none;border-color:var(-
     <div class="stats-grid">
       <div class="stat-card"><div class="lbl">Unanswered</div><div class="val" id="stOpen">—</div><div class="sub">status = open</div></div>
       <div class="stat-card amber"><div class="lbl">In progress</div><div class="val" id="stProg">—</div><div class="sub">an agent is on it</div></div>
-      <div class="stat-card purple"><div class="lbl">Meetings live</div><div class="val" id="stMeet">—</div><div class="sub">scheduled</div></div>
+      <div class="stat-card purple"><div class="lbl">Meetings live</div><div class="val" id="stMeet">—</div><div class="sub" id="stMeetSub">scheduled</div></div>
       <div class="stat-card green"><div class="lbl">Assigned to me</div><div class="val" id="stMine">—</div><div class="sub">not closed</div></div>
     </div>
 
@@ -266,6 +266,12 @@ input.fi:focus,select.fi:focus,textarea.fi:focus{outline:none;border-color:var(-
     <!-- ═══ QUEUE ═══════════════════════════════════════════════════════ -->
     <section class="pane on" id="paneQueue">
       <div id="queueList">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px;font-size:12.5px;color:var(--text-500)">
+            Booked meetings whose joining link failed to create are retried by a sweep.
+          </div>
+          <button class="btn" id="sweepBtn">Sweep pending links</button>
+        </div>
         <input class="search-input" id="qSearch" type="search" placeholder="Search subject or student email…" autocomplete="off"/>
         <div class="chips" id="qChips"></div>
         <div id="qList"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
@@ -469,8 +475,17 @@ document.addEventListener('DOMContentLoaded', () => {
     state.tickets = data || [];
     await loadProfilesFor(state.tickets.map((t) => t.user_id).concat(state.tickets.map((t) => t.assigned_to)));
 
-    const { data: live } = await sb.from('support_meetings').select('id').eq('status', 'scheduled');
-    $('stMeet').textContent = String((live || []).length);
+    const { data: live } = await sb.from('support_meetings').select('id, provider_ref').eq('status', 'scheduled');
+    const scheduled = live || [];
+    const noLink = scheduled.filter((m) => !((m.provider_ref || {}).join_url)).length;
+    $('stMeet').textContent = String(scheduled.length);
+    // The sub-line is the alarm: a scheduled meeting with no link is a student
+    // who will turn up to nothing, and it is invisible from the queue rows.
+    const sub = $('stMeetSub');
+    if (sub) {
+      sub.textContent = noLink ? (noLink + ' with NO joining link') : 'all have links';
+      sub.style.color = noLink ? 'var(--amber)' : '';
+    }
 
     renderStats();
     renderChips();
@@ -625,10 +640,19 @@ document.addEventListener('DOMContentLoaded', () => {
         '</div></div>';
 
     const meetingBlock = live
-      ? '<div class="card" style="border-color:var(--purple-border)"><div class="card-head">' +
+      ? '<div class="card" style="border-color:' + ((live.provider_ref && live.provider_ref.join_url) ? 'var(--purple-border)' : 'var(--amber-border)') + '"><div class="card-head">' +
           '<span class="card-ico purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m23 7-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span>' +
           '<div><div class="card-title">Meeting scheduled</div><div class="card-sub">' + esc(live.provider) +
-          ((live.provider_ref && live.provider_ref.join_url) ? ' · link created' : ' · link pending') + '</div></div></div>' +
+          ((live.provider_ref && live.provider_ref.join_url) ? ' · link created' : ' · NO JOINING LINK') + '</div></div></div>' +
+          // A booked meeting with no link is a student who will turn up to
+          // nothing. It is called out here rather than left as a quiet word in
+          // a subtitle, and it carries its own retry so an agent does not have
+          // to sweep the whole queue to fix one.
+          ((live.provider_ref && live.provider_ref.join_url) ? '' :
+            '<div style="padding:12px 14px;border-radius:var(--r-md);background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--text-200);font-size:13px;margin-bottom:12px">' +
+            'This meeting has <strong>no joining link</strong>. The student sees that too and cannot join. ' +
+            'Retry below, or move them to a slot that does not clash with another meeting on the same host.</div>' +
+            '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-purple" id="mtRetryLink">Retry the link</button></div>') +
           '<div class="btn-row"><button class="btn btn-red" id="mtCancel">Cancel this meeting</button></div>' +
           '<div style="font-size:12px;color:var(--text-500);margin-top:10px">Cancelling frees the slot. It does NOT return the grant — that is deliberate, so every meeting is preceded by a support decision.</div>' +
         '</div>'
@@ -769,6 +793,53 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 
+  // ── the Edge Function boundary ───────────────────────────────────────────
+  // Booking commits with an empty provider_ref; support-actions turns that into
+  // a join link. Nothing about the provider comes back — {ok, status} only —
+  // and the link is read from the row through RLS like everything else.
+  async function provisionMeeting(meetingId) {
+    try {
+      const { data, error } = await sb.functions.invoke('support-actions', {
+        body: { action: 'provision', meeting_id: meetingId },
+      });
+      if (error || !data || data.ok !== true) {
+        const st = (data && data.status) || 'unavailable';
+        if (st === 'host_busy') toast('That host already has a meeting overlapping this slot — the link was not created.', 'red');
+        else if (st === 'no_adapter') toast('No meeting provider is configured, so no link was created.', 'red');
+        else if (st !== 'already_provisioned') toast('The meeting is booked, but the joining link was not created. Run a sweep to retry.', 'red');
+        return;
+      }
+      if (state.ticket) await openTicket(state.ticket.id, false);
+    } catch (e) { /* the sweep is the safety net */ }
+  }
+
+  // Cancelling stops at Postgres unless something removes the room at the
+  // provider too. Without this, a cancelled meeting stayed live and the
+  // student's join_url kept working.
+  async function releaseMeeting(meetingId) {
+    try {
+      const { data } = await sb.functions.invoke('support-actions', {
+        body: { action: 'release', meeting_id: meetingId },
+      });
+      if (!data || data.ok !== true) {
+        toast('The meeting was cancelled, but the provider room may still exist. Try Release again.', 'red');
+      }
+    } catch (e) { /* reported above */ }
+  }
+
+  async function sweepPending() {
+    if (state.busy) return;
+    state.busy = true;
+    const { data, error } = await sb.functions.invoke('support-actions', { body: { action: 'sweep' } });
+    state.busy = false;
+    if (error || !data || data.ok !== true) { toast('The sweep could not run.', 'red'); return; }
+    const t2 = data.tally || {};
+    toast(`Swept ${data.pending} pending of ${data.scanned} scheduled — ` +
+          Object.entries(t2).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing to do', 'green');
+    await loadQueue();
+    if (state.ticket) await openTicket(state.ticket.id, false);
+  }
+
   async function openAttachment(path) {
     const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 300);
     if (error || !data) { toast('That screenshot could not be opened.', 'red'); return; }
@@ -847,6 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (b.dataset.pane === 'articles') loadArticles();
   });
 
+  $('sweepBtn').addEventListener('click', sweepPending);
   $('qSearch').addEventListener('input', (e) => { state.query = e.target.value; renderQueue(); });
   $('qChips').addEventListener('click', (e) => {
     const c = e.target.closest('.chip'); if (!c) return;
@@ -895,13 +967,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('#mtBook')) {
       const slotId = $('mtSlot').value;
       act(() => sb.rpc('admin_support_schedule_for_student', { p_ticket_id: t.id, p_slot_id: slotId }),
-          'Booked for the student.'); return;
+          'Booked for the student.')
+        .then(() => { const live = state.meetings.find((m) => m.status === 'scheduled');
+                      if (live) provisionMeeting(live.id); });
+      return;
+    }
+    if (e.target.closest('#mtRetryLink')) {
+      const live = state.meetings.find((m) => m.status === 'scheduled');
+      if (live) provisionMeeting(live.id);
+      return;
     }
     if (e.target.closest('#mtCancel')) {
       const live = state.meetings.find((m) => m.status === 'scheduled');
       if (!live) return;
       if (!window.confirm('Cancel this meeting? The grant is NOT returned — the student would need a new one.')) return;
-      act(() => sb.rpc('support_cancel_meeting', { p_meeting_id: live.id }), 'Meeting cancelled.'); return;
+      act(() => sb.rpc('support_cancel_meeting', { p_meeting_id: live.id }), 'Meeting cancelled.')
+        .then((okd) => { if (okd) releaseMeeting(live.id); });
+      return;
     }
   });
 
@@ -909,6 +991,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = $('slStart').value, e2 = $('slEnd').value, p = ($('slProvider').value || 'zoom').trim();
     if (!s || !e2) { toast('Both a start and an end are required.', 'red'); return; }
     if (new Date(e2) <= new Date(s)) { toast('The end must be after the start — the database enforces it too.', 'red'); return; }
+
+    // I2/Q4 · ONE HOST, ONE MEETING AT A TIME. With a single Zoom licence two
+    // overlapping slots collide at meeting time, and the collision lands on two
+    // students rather than on us. This refuses the overlap at creation; the
+    // Edge Function refuses again at provisioning, which is where it would
+    // actually become two live rooms. Neither is a database constraint —
+    // that needs an exclusion constraint over a tstzrange, i.e. a seventh
+    // migration, which has deliberately not been written.
+    const wantS = new Date(s).getTime(), wantE = new Date(e2).getTime();
+    const clash = (state.slots || []).find((sl) => sl.active &&
+      (sl.host_id ?? null) === null &&
+      new Date(sl.starts_at).getTime() < wantE &&
+      new Date(sl.ends_at).getTime() > wantS);
+    if (clash) {
+      toast('That window overlaps an open slot on the same host (' + fmtDateTime(clash.starts_at) + '). Withdraw it first.', 'red');
+      return;
+    }
     if (state.busy) return;
     state.busy = true;
     const { error } = await sb.rpc('admin_support_upsert_slot', {
