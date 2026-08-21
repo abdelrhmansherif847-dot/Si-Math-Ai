@@ -9,6 +9,7 @@
 // Auto-discovered by tests/run-all.mjs (every scripts/validate-*.mjs is), so it
 // runs in CI with no workflow change. Plain Node, no TypeScript import, so it
 // needs no type-stripping flag.
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, extname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -95,12 +96,32 @@ for (const f of files) {
   }
 }
 
-// ── 4 · no committed .env ──────────────────────────────────────────────────
-for (const name of ['.env', '.env.local', 'supabase/.env']) {
-  try {
-    statSync(resolve(REPO, name));
-    fail(`${name} exists in the tree — Meta secrets belong in \`supabase secrets set\`, not a file`);
-  } catch { /* absent, which is correct */ }
+// ── 4 · no env file may be TRACKED ─────────────────────────────────────────
+// Tracked, not merely present. A local .env is a reasonable way to hold
+// credentials for an L0 run — safer than shell history, which keeps a
+// permanent System User token in plain text forever. The failure mode worth
+// gating is committing one, and an earlier version of this rule failed on mere
+// existence, which would have made the safe local workflow break CI and pushed
+// an operator toward the unsafe one.
+{
+  const ls = spawnSync('git', ['ls-files'], { cwd: REPO, encoding: 'utf8' });
+  if (ls.status === 0) {
+    const tracked = ls.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+    for (const f of tracked) {
+      if (/(^|\/)\.env(\.|$)/.test(f)) {
+        fail(`${f} is TRACKED by git — a committed env file is a committed credential. ` +
+          `Run: git rm --cached ${f}`);
+      }
+    }
+  } else {
+    // No git (a tarball, a sandbox). Fall back to the stricter check rather
+    // than skipping silently — a gate that quietly does nothing is worse than
+    // one that is occasionally annoying.
+    for (const name of ['.env', '.env.local', 'supabase/.env']) {
+      try { statSync(resolve(REPO, name)); fail(`${name} exists and git is unavailable to ` +
+        'confirm it is untracked — verify it is not committed'); } catch { /* absent */ }
+    }
+  }
 }
 
 // ── 5 · the L0 checker stays read-only ─────────────────────────────────────

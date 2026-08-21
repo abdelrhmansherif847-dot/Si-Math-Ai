@@ -8,3 +8,13 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Local secrets. A .env at the repo root is a REASONABLE way to hold the Meta
+# credentials for a local L0 run — safer than shell history, which persists a
+# permanent System User token in plain text. What must never happen is
+# committing one, so it is ignored here and scripts/validate-meta-source.mjs
+# fails if one is ever tracked. supabase/.gitignore already covers supabase/.env
+# and does NOT reach the root.
+.env
+.env.local
+.env.*.local
