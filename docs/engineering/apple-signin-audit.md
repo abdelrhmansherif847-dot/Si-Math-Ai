@@ -4,9 +4,11 @@
 Resend account that sends its mail, and the repository at
 `claude/apple-signin-auth-wysnha`. Every number below was measured, not recalled.
 
-**Status: code merged, feature OFF.** `auth-apple.js` ships with `ENABLED = false`.
-Nothing a student sees has changed. §5 is the work that must happen before the
-flag is flipped.
+**Status: code merged, feature OFF, and NOT yet approved to enable.**
+`auth-apple.js` ships with `ENABLED = false`; nothing a student sees has changed.
+§5 is the configuration that must exist before the flag is flipped, and
+§3 records a correction to this document's original account-linking claims —
+read it before relying on anything the first version said.
 
 ---
 
@@ -97,66 +99,143 @@ after two attempts.
 not fix the deliverability problem, which still affects password resets and any
 future mail. §7 lists that separately, because it is a separate bug.
 
-## 3. Identity linking — verified, not assumed
+## 3. Identity linking — verified empirically, and one earlier claim corrected
 
-Supabase's rule ([Identity Linking](https://supabase.com/docs/guides/auth/auth-identity-linking)):
+**Superseded 2026-08-21 (same day).** The first version of this section reasoned
+from Supabase's documentation. Documentation is not evidence, and the case that
+matters most — Hide My Email — is not described in those docs at all. This
+section now rests on the real GoTrue source and on tests run against a real
+Postgres. Harness and re-run instructions:
+`docs/engineering/gotrue-linking-harness/`.
 
-> Supabase Auth automatically links identities with the same email address to a
-> single user. … when a new identity can be linked to an existing user, Supabase
-> Auth will remove any other unconfirmed identities linked to an existing user.
+### How it was verified
 
-Automatic linking depends on email uniqueness, and this project satisfies it —
-checked directly: `select lower(email), count(*) … having count(*) > 1` returns
-**zero rows**, so "allow same email" is off and matching is unambiguous. All 28
-existing identities are `provider = 'email'`; there are **no** Apple identities
-yet, so there is nothing already forked to repair.
+GoTrue is the service Supabase Auth runs. It is open source, so the linking
+decision can be read and executed rather than believed. A throwaway local
+Postgres was migrated with GoTrue's own schema, and its own account-linking suite
+was run first (green) to prove the harness works. Five tests were then written
+reproducing Si Math AI's exact account shape — an email/password user with an
+`email` identity — and driving the real `createAccountFromExternalIdentity`.
+Production was never contacted.
 
-What that means, case by case:
+Both headline assertions were then deliberately inverted to confirm they could
+fail (`verification-framework-audit.md`: a green check is only evidence if it
+could have gone red). Both did.
 
-| Case | Result | Safe? |
-|---|---|---|
-| Existing **confirmed** user, Apple returns the same address | Apple identity attaches to the existing user. Same `user_id`. Password still works. | ✅ |
-| Existing **unconfirmed** user (all 3 iCloud students), same address | Apple identity attaches to the existing user. Same `user_id`, same profile, all FKs intact. Their unconfirmed password identity is **removed** — they must use Apple, or "Forgot password?" to get a password back. | ✅ data-safe |
-| Brand new student | New user. Nothing to preserve. | ✅ |
-| Returning Apple user | Matches on the Apple identity. Same `user_id`. | ✅ |
-| **Existing user picks "Hide My Email"** | Apple reports `…@privaterelay.appleid.com`. **Matches nothing. NEW `user_id`, new profile, second empty account.** | ❌ |
+The Apple-specific input is not invented either. `parseAppleIDToken`
+(`internal/api/provider/oidc.go`) sets `Verified: true` for **every** Apple
+email, private relays included — so `Verified: true` in the tests is exactly what
+Apple's provider hands the linking code. That matters, because
+`DetermineAccountLinking` only considers **verified** emails as linking
+candidates; an unverified one always creates a new account.
 
-**So: safe automatic linking cannot be guaranteed, and the exception is exactly
-the disaster case.** A student with credits, chat history, question records,
-weakness data and focus plans taps one Apple toggle and lands in a blank account.
-Nothing in Supabase prevents it, and no configuration switch turns it off.
+### Results
 
-For the three iCloud students specifically the risk is currently **zero either
-way** — all three have `credits_balance` 0, `onboarding_completed` false, and 0
-rows in `question_records`, `mastery_records`, `weakness_reports`, `focus_plans`,
-`exam_mistakes` and `chat_sessions`. There is nothing yet to lose. That is luck,
-and it expires the moment one of them starts studying.
+| | Case | Decision | `auth.users.id` | Accounts after |
+|---|---|---|---|---|
+| **A** | Existing **confirmed** user → Apple, same email | `LinkAccount` | ✅ **preserved** | 1 |
+| **B** | Existing **unconfirmed** user → Apple, same email | `LinkAccount` | ✅ **preserved** | 1 |
+| **C** | Existing user → Apple, **Hide My Email** | `CreateAccount` | ❌ **new id** | **2** |
+| **D** | New Apple user | `CreateAccount` | new (correct) | 1 |
+| **E** | Returning Apple user (same `sub`) | `AccountExists` | ✅ preserved | 1 |
+
+**A** additionally confirms the password survives: `encrypted_password` is
+byte-identical before and after, and both identities (`apple`, `email`) remain.
+Password login keeps working.
+
+**B is the case for the three locked-out iCloud students, and it costs more than
+the first version of this document said.** The `user_id` is preserved — so
+credits, chat history, question records, weakness reports and focus plans are all
+safe, which is the thing that matters. But because the account is unconfirmed,
+`RemoveUnconfirmedIdentities` (`internal/models/user.go`) runs, and it is
+destructive in three ways verified by test:
+
+1. The `email` identity is **destroyed** — only `apple` remains.
+2. `encrypted_password` is set to **NULL**. Not merely unusable: wiped.
+3. `user_metadata` is **overwritten** with Apple's identity data, which carries no
+   name. The student's `full_name` in `user_metadata` is lost.
+
+The account is then auto-confirmed (`user.Confirm`).
+
+Two consequences worth naming. First, `profiles.full_name` survives, because
+`handle_new_user()` fires on INSERT into `auth.users` only and linking performs no
+insert — so the name students actually see is unaffected. Second, and more
+serious: **a case-B student becomes Apple-only.** Their sole route back to a
+password is `resetPasswordForEmail` — an email to the same iCloud address that
+does not currently reach them. If Apple's client secret then expires (§5, every 6
+months), they are locked out with no working recovery. **That is a strong,
+concrete argument for fixing email deliverability before enabling Apple**, not
+after. See `email-deliverability-audit.md`.
+
+**C is the disaster case, and it is confirmed real.** Apple reports
+`…@privaterelay.appleid.com`; nothing matches; a second `auth.users` row is
+created. The original account is untouched and intact — nothing is deleted — but
+the student is now signed in as someone else, with zero credits and no history.
+
+### ⚠️ Correction: the guard prevents USE, not CREATION
+
+The first version of this document called the relay guard "prevention". **That
+was wrong, and the review that caught it was right.**
+
+Test **F** in the harness measures the exact timing. The second user row is
+written by `a.signupNewUser(tx, user)` inside the `CreateAccount` branch of
+`createAccountFromExternalIdentity` — which runs **server-side, inside the
+`GET /auth/v1/callback` request**, and is committed before GoTrue issues its
+redirect back to `www.si-math-ai.com`. The browser regains control only after the
+row exists. Counting rows at the earliest moment any client code could possibly
+run gives **2**.
+
+So, precisely:
+
+- **The duplicate account is created. Always. No browser-side code can stop it.**
+- What the guard does is stop that duplicate from becoming the account the student
+  *uses* — before onboarding runs, before any credits are granted, and before any
+  study data is written to the wrong `user_id`.
+- The result is an empty orphan row in `auth.users` plus a `profiles` row from
+  `handle_new_user()`. Harmless, but it is litter, and it will accumulate.
+
+**Preventing creation is only possible server-side**, and only in two ways:
+
+1. **`auth.linkIdentity()`** — the student is already signed in, so Apple attaches
+   to the account they are in and email matching never applies. Hide My Email
+   becomes harmless. This is the genuinely safe path, it belongs in
+   `settings.html`, and it needs Manual Linking enabled in the dashboard.
+2. **A `before-user-created` auth hook** — server-side, can reject the signup
+   before the row is written. Heavier: it is a Postgres function or an HTTP
+   endpoint invoked in the auth path, and getting it wrong blocks *all* signups.
+
+Neither is built here. The client guard is what is built, it is worth having, and
+it must be described for what it is: **damage limitation at the earliest point the
+browser can act, not prevention.**
 
 ### What this change does about it
 
-**Prevention, not repair.** `auth-apple.js` detects a private-relay address on an
-account that has not finished onboarding and stops before that account becomes
-the one they use (`needsRelayLinkCheck`). `login.html` shows an interstitial:
+`auth-apple.js` detects a private-relay address on an account that has not
+finished onboarding (`needsRelayLinkCheck`) and `login.html` stops there with an
+interstitial:
 
 - *"I'm new here — continue"* → proceeds normally.
-- *"I already have an account"* → signs out and tells them to log in the way they
-  already do, then use **Share My Email** next time.
+- *"I already have an account"* → signs out and points them at the account they
+  already have.
 
-It deletes nothing and merges nothing. The empty Apple user is left in place,
+It deletes nothing and merges nothing. The orphan Apple user is left in place,
 because deleting an `auth.users` row is irreversible and is not a decision this
 code should make.
 
 **A merge tool is deliberately not built.** Moving rows across `user_id`s touches
-twelve tables and a credits ledger; it is worth writing only if a fork actually
-happens, and the guard exists so it does not. If one ever does, the safe order is:
+twelve tables and a credits ledger. If a fork ever does happen, the safe order is
 `auth.identities` first (attach Apple to the real user, service-role only), then
 delete the empty duplicate — never re-key student data.
 
-**The genuinely safe path for existing students is `auth.linkIdentity()`** — a
-signed-in student attaches Apple to the account they are already in, so email
-matching never enters into it, and Hide My Email is harmless. That belongs in
-`settings.html`, needs Manual Linking enabled in the dashboard, and is proposed
-in §7 rather than built here: it is a different page and a different decision.
+### Current exposure
+
+All 28 existing identities are `provider='email'`; there are **no Apple identities
+yet**, so nothing is already forked. `auth.users` holds no duplicate emails, so
+matching is unambiguous. The three iCloud students have `credits_balance` 0,
+`onboarding_completed` false, and zero rows in `question_records`,
+`mastery_records`, `weakness_reports`, `focus_plans`, `exam_mistakes` and
+`chat_sessions` — nothing to lose today. That is luck, and it expires the moment
+one of them starts studying.
 
 ## 4. What was implemented
 
@@ -274,3 +353,73 @@ where u.email = '<test address>' order by i.created_at;
    of Hide My Email, for students who already have an account.
 4. **The resend rate limit** (`over_email_send_rate_limit` after two taps) is
    surfaced to the student as a generic failure. It should say how long to wait.
+
+## 8. Rollout plan — awaiting approval
+
+Sequenced so the email fix lands first. That order is not a preference: §3 showed
+that linking an unconfirmed account **wipes its password**, leaving the student
+Apple-only with password reset as their sole fallback — over the very email
+channel that is currently broken. Enabling Apple first would make those students
+dependent on a route we know does not work.
+
+| # | Step | Reversible? | Touches students? |
+|---|---|---|---|
+| 1 | `dig +short TXT _dmarc.si-math-ai.com`; publish the `p=none` record if absent | yes | no |
+| 2 | Back up current mailer config, apply the branded templates | yes, from the backup | mail wording only |
+| 3 | **Send a real test to an iCloud address. Inbox or Junk?** | n/a | no |
+| 4 | If still Junk: build `confirm.html` and move auth links onto our domain | yes | yes — own change, own review |
+| 5 | Release the three locked-out students by whichever route step 3 proved | no | yes — **separate approval** |
+| 6 | Apple Developer + Supabase provider config (§5) | yes | no — nothing is enabled yet |
+| 7 | Enable Manual Linking; add `linkIdentity()` to `settings.html` | yes | adds an option only |
+| 8 | Run the §6 test plan against production with a throwaway Apple ID | n/a | no |
+| 9 | Flip `ENABLED = true`, update the flag assertion in the test suite, merge | **yes — see §9** | yes |
+| 10 | Watch for 48h: new `auth.users` rows, `provider='apple'` identities, forks | n/a | no |
+
+Step 7 before step 9 matters: `linkIdentity()` is the only path that is safe
+regardless of Hide My Email, so existing students should have it available before
+the login-page button invites them down the path that is not.
+
+Query for step 10:
+
+```sql
+-- Forks: an Apple identity on a relay address next to an older account.
+select u.id, u.email, u.created_at,
+       (select string_agg(i.provider, ',') from auth.identities i where i.user_id = u.id) as providers
+from auth.users u
+where u.email like '%@privaterelay.appleid.com'
+order by u.created_at desc;
+```
+
+## 9. Rollback plan
+
+**The flag is the rollback.** Set `ENABLED = false` in `auth-apple.js` and merge:
+Vercel redeploys the static site automatically, the button disappears, and
+email/password login — which was never modified — carries on. No migration to
+reverse, no data to restore. That is the whole reason the change was built this
+way.
+
+Per layer:
+
+| Layer | To undo | Notes |
+|---|---|---|
+| Button / UI | `ENABLED = false`, merge | Live within a Vercel deploy |
+| Supabase Apple provider | Disable in the dashboard | In-flight sign-ins fail with a readable message — `friendlyError` covers it |
+| Email templates | Re-PATCH from `mailer-config-backup.json` | Take the backup *before* step 2 |
+| DMARC `p=none` | Delete the TXT record | Publishes no policy; changes no delivery |
+| Apple Developer config | Leave it | Inert while the provider is disabled |
+
+**What rollback does NOT undo**, and must be understood before step 9:
+
+- **Students already linked stay linked.** An Apple identity attached to an
+  existing account is not removed by turning the button off. For case-A students
+  that is harmless — their password still works. For **case-B students it is
+  not**: their password was wiped at link time, so disabling Apple leaves them
+  with password reset as their only way in. This is the second reason the email
+  fix must land first.
+- **Orphan accounts from Hide My Email stay.** They are empty and harmless.
+  Deleting them is a manual, service-role, individually-approved operation.
+
+If a fork is discovered: do **not** re-key student data. Attach the Apple identity
+to the correct `auth.users` row in `auth.identities` (service-role), verify the
+student can sign in and sees their real credits and history, and only then remove
+the empty duplicate.

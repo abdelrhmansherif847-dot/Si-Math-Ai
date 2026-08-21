@@ -10,6 +10,13 @@
 // isPrivateRelayEmail + needsRelayLinkCheck are what catch that case, so both
 // are pinned here — including the negative cases, so neither can be quietly
 // widened into "always ask" or narrowed into "never ask".
+//
+// Scope, stated exactly: this guard cannot stop the duplicate being CREATED.
+// GoTrue commits the second auth.users row inside its own /callback request,
+// before the browser is redirected back — measured, not assumed, in
+// docs/engineering/gotrue-linking-harness/ case F. What these assertions protect
+// is the next step: that the duplicate never becomes the account the student
+// uses, so no credits and no study data are written against the wrong user_id.
 import { suite } from './_assert.mjs';
 import { read, evalSnippet, inlineScripts } from './_source.mjs';
 

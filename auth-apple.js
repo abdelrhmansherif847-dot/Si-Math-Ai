@@ -83,10 +83,31 @@
 
   /**
    * True when this signed-in user arrived through Apple with a hidden address
-   * AND has nothing in their account yet — the only state in which a silent
-   * fork is both possible and still cheap to undo. A student who has already
-   * done work under this Apple identity is not at risk from it; interrupting
-   * them on every login would be noise.
+   * AND has nothing in their account yet.
+   *
+   * ── WHAT THIS CAN AND CANNOT DO ─────────────────────────────────────────────
+   * It CANNOT prevent the duplicate account from being created. Verified by test
+   * (docs/engineering/gotrue-linking-harness/, case F): GoTrue writes the second
+   * auth.users row inside the GET /auth/v1/callback request — a.signupNewUser()
+   * in the CreateAccount branch of createAccountFromExternalIdentity — and
+   * commits it before it redirects the browser back here. By the time any line
+   * of this file runs, the row exists. Counting rows at the earliest moment
+   * browser code could act gives two.
+   *
+   * What it DOES do is stop that duplicate becoming the account the student
+   * USES: before onboarding runs, before credits are granted, and before a
+   * single row of study data is written against the wrong user_id. That is
+   * damage limitation at the first moment the browser can act, and it should
+   * never be described as prevention.
+   *
+   * Preventing creation needs the server: auth.linkIdentity() from Settings
+   * (the student is already signed in, so email matching never applies), or a
+   * before-user-created auth hook. Neither is built yet — see the audit §3.
+   *
+   * The onboarding_completed test is what keeps this quiet: a student who has
+   * already done work under this Apple identity is not at risk, and asking them
+   * on every login would train them to click past the one screen that protects
+   * the account.
    */
   function needsRelayLinkCheck(user, profile) {
     if (!user || !isPrivateRelayEmail(user.email)) return false;
