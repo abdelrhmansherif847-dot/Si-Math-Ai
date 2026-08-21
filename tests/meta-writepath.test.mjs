@@ -10,6 +10,7 @@
 //
 // Executes the REAL shipped modules. No network, no Meta app, no ad account.
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { suite } from './_assert.mjs';
@@ -23,6 +24,8 @@ const ADS = await load('supabase/functions/_shared/meta-ads.core.ts');
 const PUB_SRC = readFileSync(resolve(REPO, 'supabase/functions/_shared/meta-publish.core.ts'), 'utf8');
 const ADS_SRC = readFileSync(resolve(REPO, 'supabase/functions/_shared/meta-ads.core.ts'), 'utf8');
 const L1_SRC = readFileSync(resolve(REPO, 'scripts/meta-l1-check.mjs'), 'utf8');
+const L11_PATH = resolve(REPO, 'scripts/meta-l1-1-validate.mjs');
+const L11_RAW = readFileSync(L11_PATH, 'utf8');
 
 const exec = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -286,6 +289,121 @@ t.section('5 · L1 cannot publish');
   // status: 'PAUSED' must not be reachable as a parameter.
   t.ok('ads never accept a status parameter', !/status:\s*args\./.test(exec(ADS_SRC)));
   t.ok('and PAUSED is a literal', /status:\s*'PAUSED'/.test(exec(ADS_SRC)));
+}
+
+// ══ 5b · L1-1 · the single validate_only runner ═══════════════════════════
+t.section('5b · L1-1 runner');
+
+{
+  // Source, EXCLUDING the self-inspection fence — that region has to name the
+  // endpoints it forbids, exactly as the runner's own guard does.
+  const fs = L11_RAW.indexOf('// SELF-INSPECT-BEGIN');
+  const fe = L11_RAW.lastIndexOf('// SELF-INSPECT-END');
+  t.ok('the runner carries a self-inspection fence', fs >= 0 && fe > fs);
+  const outside = exec(L11_RAW.slice(0, fs) + L11_RAW.slice(fe));
+
+  for (const needle of ['/media', '/feed', '/photos', '/videos', 'media_publish',
+    '/adsets', '/adcreatives', 'video_reels']) {
+    t.ok(`the runner references no ${needle}`, !outside.includes(needle));
+  }
+  t.ok('the runner names no DELETE', !/['"]DELETE['"]/.test(outside));
+  t.is('and contains EXACTLY one client.write() call',
+    (outside.match(/client\.write\s*\(/g) ?? []).length, 1);
+
+  // Ads capability only — a publish write would be refused by the client even
+  // if the runner somehow attempted one.
+  t.ok('the runner grants only the ads capability',
+    /capabilities:\s*\{\s*ads:\s*true\s*\}/.test(outside));
+  t.ok('and never grants publish', !/publish:\s*true/.test(outside));
+  t.ok('it sets dryRun: false for this one operation', /dryRun:\s*false/.test(outside));
+}
+
+{
+  // The guards, exercised by actually running the script. No network is
+  // reached: both aborts happen before any request is built.
+  const run = (env) => spawnSync(process.execPath, [L11_PATH], {
+    cwd: REPO, encoding: 'utf8',
+    env: { ...process.env, __META_CHECK_REEXEC: '', ...env },
+  });
+
+  const noFlag = run({});
+  t.is('without the approval flag it exits 2', noFlag.status, 2);
+  t.ok('naming the flag', /--approve-single-validate-only/.test(noFlag.stdout));
+
+  const withFlag = spawnSync(process.execPath, [L11_PATH, '--approve-single-validate-only'], {
+    cwd: REPO, encoding: 'utf8',
+    env: {
+      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
+      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0',
+      META_AD_ACCOUNT_ID: 'act_1', META_ENABLE_ADS: 'false',
+    },
+  });
+  t.is('with the flag but ads disabled it still exits 2', withFlag.status, 2);
+  t.ok('naming the switch', /META_ENABLE_ADS/.test(withFlag.stdout));
+
+  const bothOn = spawnSync(process.execPath, [L11_PATH, '--approve-single-validate-only'], {
+    cwd: REPO, encoding: 'utf8',
+    env: {
+      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
+      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0',
+      META_AD_ACCOUNT_ID: 'act_1', META_ENABLE_ADS: 'true', META_ENABLE_PUBLISH: 'true',
+    },
+  });
+  t.is('with publishing also enabled it refuses', bothOn.status, 2);
+  t.ok('because L1-1 is ads-only', /META_ENABLE_PUBLISH is enabled/.test(bothOn.stdout));
+}
+
+{
+  // The payload the runner will send: inert in every dimension.
+  const req = ADS.buildCampaign({
+    adAccountId: 'act_3317656315040315',
+    name: 'Si Math — L1-1 validation probe',
+    objective: 'OUTCOME_TRAFFIC',
+    maxDailyBudget: 0,
+  });
+  t.is('validate_only, and only validate_only', req.body.execution_options, ['validate_only']);
+  t.is('status PAUSED', req.body.status, 'PAUSED');
+  t.ok('no budget field at all', req.body.daily_budget === undefined);
+  t.is('the payload has exactly five keys', Object.keys(req.body).sort(),
+    ['execution_options', 'name', 'objective', 'special_ad_categories', 'status']);
+  t.ok('no ad set, ad or creative field is present',
+    !/adset|adcreative|creative|bid_amount|targeting/i.test(JSON.stringify(req.body)));
+  t.is('it targets the campaigns edge only', req.path, 'act_3317656315040315/campaigns');
+}
+
+{
+  // With dryRun FALSE — the L1-1 configuration — exactly one POST leaves the
+  // client, and it carries validate_only.
+  const local = { GET: 0, POST: 0, DELETE: 0, other: 0 };
+  const bodies = [];
+  const client = G.createMetaClient(ENV, {
+    dryRun: false,
+    capabilities: { ads: true },
+    fetchImpl: async (_url, init) => {
+      const m = (init?.method ?? 'GET').toUpperCase();
+      if (m in local) local[m] += 1; else local.other += 1;
+      if (init?.body) bodies.push(JSON.parse(init.body));
+      return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) };
+    },
+  });
+
+  const out = await client.write(sampleAds());
+  t.is('the write reports sent: true', out.sent, true);
+  t.is('exactly one POST left the client', local.POST, 1);
+  t.is('no DELETE', local.DELETE, 0);
+  t.is('no other method', local.other, 0);
+  t.is('and the sent body carried validate_only',
+    bodies[0]?.execution_options, ['validate_only']);
+  t.is('and status PAUSED', bodies[0]?.status, 'PAUSED');
+
+  // Publish stays refused on this very client.
+  let e = null;
+  try { await client.write(samplePublish()); } catch (err) { e = err; }
+  t.is('a publish write on the L1-1 client is refused', e?.name, 'CapabilityDisabled');
+  t.is('and issued no further request', local.POST, 1);
+
+  // These POSTs are counted separately and never added to the suite total,
+  // which must stay at zero — see section 6.
 }
 
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════

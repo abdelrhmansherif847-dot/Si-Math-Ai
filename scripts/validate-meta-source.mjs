@@ -181,6 +181,34 @@ for (const rel of L0) {
   }
 }
 
+// ── 5c · the L1-1 runner stays a single validate-only request ──────────────
+{
+  const rel = 'scripts/meta-l1-1-validate.mjs';
+  try {
+    const raw = readFileSync(resolve(REPO, rel), 'utf8');
+    // Skip the runner's own self-inspection fence: it must name the endpoints
+    // it forbids, so scanning it would fire on its own needles.
+    const fs2 = raw.indexOf('// SELF-INSPECT-BEGIN');
+    const fe2 = raw.lastIndexOf('// SELF-INSPECT-END');
+    if (fs2 < 0 || fe2 <= fs2) fail(`${rel}: self-inspection fence is missing`);
+    const src = (fs2 >= 0 && fe2 > fs2 ? raw.slice(0, fs2) + raw.slice(fe2) : raw)
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+
+    const writes = (src.match(/client\.write\s*\(/g) ?? []).length;
+    if (writes !== 1) fail(`${rel}: ${writes} client.write() calls — L1-1 sends exactly one`);
+    if (/publish:\s*true/.test(src)) fail(`${rel}: grants the publish capability — L1-1 is ads-only`);
+    if (/['"]DELETE['"]/.test(src)) fail(`${rel}: names DELETE`);
+    if (/validateOnly:\s*false/.test(src)) fail(`${rel}: disables validate-only — it would CREATE a campaign`);
+    for (const n of ['media_publish', '/media', '/feed', '/adsets', '/adcreatives']) {
+      if (src.includes(n)) fail(`${rel}: references ${n}`);
+    }
+  } catch (e) {
+    if (e && e.code === 'ENOENT') fail(`${rel} is missing`);
+    else throw e;
+  }
+}
+
 // ── 6 · the spec exists and stays in step ──────────────────────────────────
 const SPEC = 'docs/engineering/meta-marketing-integration.md';
 try {
