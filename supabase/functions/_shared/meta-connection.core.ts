@@ -808,42 +808,43 @@ export async function runConnectionCheck(
   }
 
   if (!igId) {
-    push(skip('ig.identity', 'Instagram account identity', 'no Instagram account id available'));
+    push(skip('ig.identity', 'Instagram account is reachable', 'no Instagram account id available'));
     push(skip('ig.publishing_limit', 'Instagram publishing quota is readable',
       'no Instagram account id available'));
   } else {
     try {
+      // account_type IS NOT A FIELD ON THIS NODE. Requesting it made Meta
+      // reject the WHOLE request with "(#100) Tried accessing nonexisting
+      // field (account_type)", so a perfectly healthy Instagram account
+      // failed this check. The IG User node reached through the Page exposes
+      // id, username, name, biography, followers_count, follows_count,
+      // media_count, profile_picture_url and website — account_type belongs to
+      // a different node type. Verified against this project's own account:
+      // id, username, media_count and followers_count all succeed; adding
+      // account_type is the only thing that fails.
       const igu = await client.get<{
-        id?: string; username?: string; account_type?: string;
-        media_count?: number; followers_count?: number;
-      }>(igId, { fields: 'id,username,account_type,media_count,followers_count' });
+        id?: unknown; username?: unknown;
+        media_count?: unknown; followers_count?: unknown;
+      }>(igId, { fields: 'id,username,media_count,followers_count' });
 
-      const type = igu.account_type ?? '';
-      const detail = `@${igu.username ?? '?'} — type ${type || 'unknown'}` +
+      // WHAT THIS CHECK CAN HONESTLY CLAIM.
+      // Not "the account is Professional" — no field available here states
+      // that, and inventing one from a successful read would be asserting
+      // something the API never said. What a successful read DOES establish is
+      // that the id resolves to a reachable Instagram account with this
+      // token, which is what the label now says.
+      //
+      // Professional status is not unverified, it is just not verified HERE:
+      // page.ig_link only returns instagram_business_account for a Professional
+      // account connected to the Page, and ig.publishing_limit only answers for
+      // one. Two independent checks already carry it, so this one does not need
+      // to guess.
+      push(ok('ig.identity', 'Instagram account is reachable',
+        `@${normalizeId(igu.username) || '?'} — id ${normalizeId(igu.id) || igId}` +
         (typeof igu.media_count === 'number' ? `, ${igu.media_count} media` : '') +
-        (typeof igu.followers_count === 'number' ? `, ${igu.followers_count} followers` : '');
-
-      // account_type is not returned on every edge/version. Absent is reported
-      // as WARN rather than FAIL: asserting a blocker on a field Meta may
-      // simply not have sent would be a check that goes red for the wrong
-      // reason, which is worse than one that says "could not verify".
-      if (!type) {
-        push(warn('ig.identity', 'Instagram account is Professional', detail +
-          ' — account_type not returned, could not verify Professional status'));
-      } else if (type === 'BUSINESS' || type === 'CREATOR' || type === 'MEDIA_CREATOR') {
-        push(ok('ig.identity', 'Instagram account is Professional', detail));
-      } else {
-        push(bad('ig.identity', 'Instagram account is Professional', detail, {
-          class: 'C',
-          reason: `The Instagram account is ${type}, not a Professional ` +
-            '(Business or Creator) account.',
-          action: 'Convert it in the Instagram app: Settings → Account type and tools → ' +
-            'Switch to professional account. The Content Publishing API refuses ' +
-            'personal accounts.',
-        }));
-      }
+        (typeof igu.followers_count === 'number' ? `, ${igu.followers_count} followers` : '')));
     } catch (e) {
-      push(bad('ig.identity', 'Instagram account is Professional',
+      push(bad('ig.identity', 'Instagram account is reachable',
         `read failed: ${errText(e)}`, classifyError(e, 'Instagram account')));
     }
 

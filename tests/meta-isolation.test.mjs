@@ -78,7 +78,7 @@ const HEALTHY = {
   me: () => res({ id: 'SU61593218806694', name: 'Automation' }),
   page: () => res({ id: 'PAGE1', name: 'Si Math', category: 'Education' }),
   igLink: () => res({ instagram_business_account: { id: 'IG1', username: 'simath' } }),
-  ig: () => res({ id: 'IG1', username: 'simath', account_type: 'BUSINESS', media_count: 12 }),
+  ig: () => res({ id: 'IG1', username: 'simath', media_count: 12, followers_count: 340 }),
   igLimit: () => res({ data: [{ quota_usage: 3, config: { quota_total: 50 } }] }),
   systemUsers: () => res({ data: [
     { id: 'SU61593218806694', name: 'Automation' },
@@ -368,22 +368,66 @@ t.section('4 · diagnosis — blockers are classified and actionable');
 }
 
 {
-  // A personal Instagram account is a class C the Content Publishing API
-  // refuses outright — distinct from "not linked".
-  const { report } = await run({ ig: () => res({
-    id: 'IG1', username: 'simath', account_type: 'PERSONAL',
-  }) });
-  t.is('a PERSONAL Instagram account FAILS', find(report, 'ig.identity')?.status, 'FAIL');
-  t.is('and is class C', find(report, 'ig.identity')?.blocker?.class, 'C');
-  t.ok('with the conversion path named',
-    /Switch to professional/.test(find(report, 'ig.identity')?.blocker?.action ?? ''));
+  // ══ REGRESSION · account_type is not a field on the IG User node ════════
+  // The check used to request it. Meta rejects the WHOLE request with
+  // "(#100) Tried accessing nonexisting field (account_type)", so a healthy,
+  // correctly-linked Instagram account failed L0. Verified against the real
+  // account: id, username, media_count and followers_count all succeed;
+  // adding account_type is the only thing that fails.
+  const { report, requests } = await run();
+
+  // 1 · the field must never be requested again. Asserted on the URL the REAL
+  // client built, so it fails if the field creeps back into the fields list.
+  const igReq = requests.filter((r) => r.rawUrl)
+    .map((r) => new URL(r.rawUrl))
+    .find((u) => u.pathname.endsWith('/IG1'));
+  t.ok('the Instagram node is read', !!igReq);
+  t.ok('account_type is NOT requested', !(igReq?.searchParams.get('fields') ?? '').includes('account_type'));
+  t.is('only fields that exist on this node are requested',
+    igReq?.searchParams.get('fields'), 'id,username,media_count,followers_count');
+
+  // 2 · a node WITHOUT account_type is a pass, not a warning.
+  const c = find(report, 'ig.identity');
+  t.is('a node with no account_type PASSES', c?.status, 'PASS');
+  t.ok('and raises no blocker', c?.blocker === null);
+  t.ok('the username is reported', /@simath/.test(c?.detail ?? ''));
+  t.ok('the media count is reported', /12 media/.test(c?.detail ?? ''));
+  t.ok('the follower count is reported', /340 followers/.test(c?.detail ?? ''));
+
+  // 3 · the label claims only what was verified. Professional status is
+  // carried by page.ig_link and ig.publishing_limit, not asserted here.
+  t.is('the label says reachable, not Professional', c?.label, 'Instagram account is reachable');
+  t.ok('no check claims Professional status from this read',
+    !report.checks.some((x) => /Professional/.test(x.label)));
+
+  // 4 · Instagram publishing is still gated on all three checks together.
+  const cap = report.capabilities.find((x) => x.id === 'instagram-publish');
+  t.is('instagram-publish is READY when all three pass', cap.ready, true);
 }
 
 {
-  // An absent account_type must not be reported as a personal account. A check
-  // that goes red for the wrong reason is worse than one that says "unverified".
-  const { report } = await run({ ig: () => res({ id: 'IG1', username: 'simath' }) });
-  t.is('an absent account_type is WARN, not FAIL', find(report, 'ig.identity')?.status, 'WARN');
+  // Failure detection must survive the fix. A genuinely unreadable node still
+  // blocks — the fix removed a false negative, not the check.
+  const { report } = await run({ ig: () => graphErr(100, 400) });
+  t.is('an unreadable Instagram node still FAILS', find(report, 'ig.identity')?.status, 'FAIL');
+  t.ok('and still raises a blocker', find(report, 'ig.identity')?.blocker !== null);
+  t.is('and instagram-publish is blocked',
+    report.capabilities.find((x) => x.id === 'instagram-publish').ready, false);
+}
+
+{
+  // The exact upstream error, reproduced: a nonexistent-field rejection is a
+  // 400 with code 100. Before the fix this is what the healthy account got.
+  const { report } = await run({
+    ig: () => res({ error: {
+      message: '(#100) Tried accessing nonexisting field (account_type) on node type (IGUser)',
+      code: 100, fbtrace_id: 'Atrace',
+    } }, 400),
+  });
+  t.is('the old failure mode is still detectable if it returns',
+    find(report, 'ig.identity')?.status, 'FAIL');
+  t.ok('and Meta\'s raw message is not relayed',
+    !/nonexisting field/.test(JSON.stringify(report)));
 }
 
 {
