@@ -88,10 +88,18 @@ const client = createMetaClient(read.env, {
 
 const detailOf = (e) => {
   const d = e?.detail ?? null;
-  if (!d) return `${e?.message ?? e}`;
-  return [d.message, d.userTitle, d.userMessage, d.type ? `type ${d.type}` : '',
+  const classification = `${e?.message ?? e}` +
+    (e?.code ? ` (code ${e.code}${e.subcode ? `/${e.subcode}` : ''})` : '') +
+    (e?.status ? ` [HTTP ${e.status}]` : '');
+  if (!d) return classification;
+  const parts = [d.message, d.userTitle, d.userMessage, d.type ? `type ${d.type}` : '',
     d.subcode ? `subcode ${d.subcode}` : '', d.fbtraceId ? `fbtrace ${d.fbtraceId}` : '']
     .filter(Boolean).join(' · ');
+  // A detail object whose every field is empty — an HTTP failure carrying no
+  // Graph error body, which is what a proxy or gateway produces — must not
+  // render as an empty string. That is how an abort message ends up saying
+  // "could not read the Page: ." and diagnosing nothing.
+  return parts || classification;
 };
 
 say('\n═══════════════════════════════════════════════════════════════');

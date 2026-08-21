@@ -651,6 +651,107 @@ t.section('5f · insights reader');
   t.is('the level is overridable', custom.level, 'campaign');
 }
 
+// ══ 5g · L1-2 · the Instagram container runner ═══════════════════════════
+t.section('5g · L1-2 container runner');
+
+{
+  const L12 = resolve(REPO, 'scripts/meta-l1-2-container.mjs');
+  const raw = readFileSync(L12, 'utf8');
+  const a = raw.indexOf('// SELF-INSPECT-BEGIN');
+  const bIdx = raw.lastIndexOf('// SELF-INSPECT-END');
+  t.ok('it carries a self-inspection fence', a >= 0 && bIdx > a);
+  const src = exec(raw.slice(0, a) + raw.slice(bIdx));
+
+  // THE defining property: there is no way to publish from this file.
+  t.ok('it never references media_publish', !src.includes('media_publish'));
+  t.ok('it never references the Page feed', !src.includes('/feed'));
+  t.ok('it never references photos or videos edges',
+    !src.includes('/photos') && !src.includes('/videos'));
+  t.ok('it never references the campaigns edge', !src.includes('/campaigns'));
+  t.is('it performs EXACTLY one write', (src.match(/writer\.write\s*\(/g) ?? []).length, 1);
+  t.ok('it grants the publish capability only', /capabilities:\s*\{\s*publish:\s*true\s*\}/.test(src));
+  t.ok('and never the ads capability', !/ads:\s*true/.test(src));
+  t.ok('every verification read uses a readOnly client',
+    /const reader = createMetaClient\(read\.env, \{ readOnly: true/.test(src));
+  t.ok('it names no DELETE', !/['"]DELETE['"]/.test(src));
+
+  // Verification uses only the evidence-supported field.
+  t.ok('it polls status_code', /fields: 'status_code'/.test(src));
+  t.ok("and does NOT poll an unverified `status` field",
+    !/fields: 'status_code,status'/.test(src) && !/fields: 'status'/.test(src));
+  t.ok('polling is bounded at five attempts', /POLL_MAX = 5/.test(src));
+  t.ok('at one-minute intervals', /POLL_INTERVAL_MS = 60_000/.test(src));
+
+  // The three post-create checks.
+  t.ok('it re-reads the publishing quota', /quota after/.test(src));
+  t.ok('it checks the container is absent from the media list',
+    /inMediaList/.test(src) && /\$\{igId\}\/media/.test(src));
+  t.ok('it requires exactly one POST', /calls\.POST === 1/.test(src));
+
+  // It must NOT claim a rollback it does not have.
+  t.ok('it does not claim a delete rollback', !/rollback/i.test(src));
+  t.ok('and the header says the write is irreversible', /IRREVERSIBLE/.test(raw));
+
+  // The retracted robots.txt claim must not have crept back as a refusal.
+  t.ok('a query-string image url is permitted, not refused',
+    /NOTE  the image url carries a query string/.test(src) &&
+    !/die\([^)]*query string/.test(src));
+
+  // A detail object with every field empty must still say something.
+  t.ok('an empty error detail falls back to the classification',
+    /return parts \|\| classification/.test(src));
+
+  const run = (args, env) => spawnSync(process.execPath, [L12, ...args], {
+    cwd: REPO, encoding: 'utf8',
+    env: {
+      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
+      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0',
+      META_IG_USER_ID: '17841428621952568', META_PAGE_ID: '1262787420248051', ...env,
+    },
+  });
+
+  t.is('without the approval flag it exits 2',
+    run([], { META_ENABLE_PUBLISH: 'true' }).status, 2);
+  t.is('without META_ENABLE_PUBLISH it exits 2',
+    run(['--approve-single-container'], {}).status, 2);
+
+  const adsOn = run(['--approve-single-container'],
+    { META_ENABLE_PUBLISH: 'true', META_ENABLE_ADS: 'true' });
+  t.is('with the ads switch on it refuses', adsOn.status, 2);
+  t.ok('because L1-2 is publish-only', /publish-only operation/.test(adsOn.stdout));
+
+  const noPage = run(['--approve-single-container'],
+    { META_ENABLE_PUBLISH: 'true', META_PAGE_ID: '' });
+  t.is('without META_PAGE_ID it refuses — the cross-check cannot run', noPage.status, 2);
+
+  // It reaches the cross-check and fails CLOSED when the Page cannot be read.
+  const blocked = run(['--approve-single-container'], { META_ENABLE_PUBLISH: 'true' });
+  t.is('an unreadable Page fails closed', blocked.status, 2);
+  t.ok('naming the cause rather than an empty string',
+    /could not read the Page's linked Instagram account: \S/.test(blocked.stdout));
+  t.ok('and it got past self-inspection first', /PASS  self-inspection/.test(blocked.stdout));
+}
+
+{
+  // The payload that would be sent.
+  const req = PUB.buildIgImageContainer({
+    igUserId: '17841428621952568',
+    imageUrl: 'https://www.si-math-ai.com/assets/si-math-ai-logo.jpg',
+    caption: 'Si Math AI — API connection test. This container is not published.',
+  });
+  t.is('it is a POST', req.method, 'POST');
+  t.is('to the media edge of the verified account', req.path, '17841428621952568/media');
+  t.is('governed by the publish capability', req.capability, 'publish');
+  t.is('the payload has exactly two keys', Object.keys(req.body).sort(), ['caption', 'image_url']);
+  // Asserted over KEYS. The serialised-body scan this replaced matched the
+  // caption's own "not published" — the same substring trap that made
+  // is_adset_budget_sharing_enabled read as an ad-set field, and that fired on
+  // the sentence documenting the no-fallback rule. Structure, not vocabulary.
+  t.is('no publish-related KEY exists',
+    Object.keys(req.body).filter((k) => /publish/i.test(k)), []);
+  t.ok('the image url is https', String(req.body.image_url).startsWith('https://'));
+}
+
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════
 t.section('6 · total network writes across this entire suite');
 

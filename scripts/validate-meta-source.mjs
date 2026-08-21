@@ -214,6 +214,33 @@ for (const rel of L0) {
   }
 }
 
+// ── 5e · the L1-2 container runner cannot publish ──────────────────────────
+{
+  const rel = 'scripts/meta-l1-2-container.mjs';
+  try {
+    const raw = readFileSync(resolve(REPO, rel), 'utf8');
+    const a = raw.indexOf('// SELF-INSPECT-BEGIN');
+    const b2 = raw.lastIndexOf('// SELF-INSPECT-END');
+    if (a < 0 || b2 <= a) fail(`${rel}: self-inspection fence is missing`);
+    const src = (a >= 0 && b2 > a ? raw.slice(0, a) + raw.slice(b2) : raw)
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+
+    if (src.includes('media_publish')) fail(`${rel}: references media_publish — L1-2 publishes nothing`);
+    for (const n of ['/feed', '/photos', '/videos', '/campaigns', 'video_reels']) {
+      if (src.includes(n)) fail(`${rel}: references ${n}`);
+    }
+    const w = (src.match(/writer\.write\s*\(/g) ?? []).length;
+    if (w !== 1) fail(`${rel}: ${w} writes — L1-2 sends exactly one POST`);
+    if (/ads:\s*true/.test(src)) fail(`${rel}: grants the ads capability — it is publish-only`);
+    if (/['"]DELETE['"]/.test(src)) fail(`${rel}: names DELETE — no rollback endpoint exists`);
+    if (!/fields: 'status_code'/.test(src)) fail(`${rel}: does not poll status_code`);
+  } catch (e) {
+    if (e && e.code === 'ENOENT') fail(`${rel} is missing`);
+    else throw e;
+  }
+}
+
 // ── 6 · the spec exists and stays in step ──────────────────────────────────
 const SPEC = 'docs/engineering/meta-marketing-integration.md';
 try {
