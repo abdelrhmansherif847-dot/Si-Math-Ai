@@ -406,6 +406,43 @@ t.section('5b · L1-1 runner');
   // which must stay at zero — see section 6.
 }
 
+// ══ 5c · the sandbox verifier is read-only and shields the live account ═══
+t.section('5c · sandbox verifier');
+
+{
+  const SB = resolve(REPO, 'scripts/meta-sandbox-verify.mjs');
+  const raw = readFileSync(SB, 'utf8');
+  const src = exec(raw);
+
+  t.ok('it builds a read-only client', /readOnly:\s*true/.test(src));
+  t.ok('it never calls write', !/\.write\s*\(/.test(src));
+  t.ok('it never calls post or del', !/\.(post|del)\s*\(/.test(src));
+  t.ok('it names no write method', !/['"](POST|DELETE|PUT|PATCH)['"]/.test(
+    src.replace(/m === 'GET'/g, '')));
+
+  const run = (args, env) => spawnSync(process.execPath, [SB, ...args], {
+    cwd: REPO, encoding: 'utf8',
+    env: {
+      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
+      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0', ...env,
+    },
+  });
+
+  // THE GUARD THAT MATTERS: the live account must stay out of this entirely,
+  // and a copy-paste slip is the likeliest way to break that.
+  const live = run(['act_3317656315040315'], { META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  t.is('it REFUSES the live ad account', live.status, 2);
+  t.ok('naming it as the live account', /LIVE Si Math Ads account/.test(live.stdout));
+
+  // ...including when the caller omits the act_ prefix on one side only.
+  const bare = run(['3317656315040315'], { META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  t.is('the guard survives a missing act_ prefix', bare.status, 2);
+
+  const noArg = run([], { META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  t.is('it refuses with no account id', noArg.status, 2);
+  t.ok('printing usage', /usage:/.test(noArg.stdout));
+}
+
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════
 t.section('6 · total network writes across this entire suite');
 
