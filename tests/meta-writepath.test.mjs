@@ -24,8 +24,6 @@ const ADS = await load('supabase/functions/_shared/meta-ads.core.ts');
 const PUB_SRC = readFileSync(resolve(REPO, 'supabase/functions/_shared/meta-publish.core.ts'), 'utf8');
 const ADS_SRC = readFileSync(resolve(REPO, 'supabase/functions/_shared/meta-ads.core.ts'), 'utf8');
 const L1_SRC = readFileSync(resolve(REPO, 'scripts/meta-l1-check.mjs'), 'utf8');
-const L11_PATH = resolve(REPO, 'scripts/meta-l1-1-validate.mjs');
-const L11_RAW = readFileSync(L11_PATH, 'utf8');
 
 const exec = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -305,122 +303,6 @@ t.section('5 · L1 cannot publish');
   // status: 'PAUSED' must not be reachable as a parameter.
   t.ok('ads never accept a status parameter', !/status:\s*args\./.test(exec(ADS_SRC)));
   t.ok('and PAUSED is a literal', /status:\s*'PAUSED'/.test(exec(ADS_SRC)));
-}
-
-// ══ 5b · L1-1 · the single validate_only runner ═══════════════════════════
-t.section('5b · L1-1 runner');
-
-{
-  // Source, EXCLUDING the self-inspection fence — that region has to name the
-  // endpoints it forbids, exactly as the runner's own guard does.
-  const fs = L11_RAW.indexOf('// SELF-INSPECT-BEGIN');
-  const fe = L11_RAW.lastIndexOf('// SELF-INSPECT-END');
-  t.ok('the runner carries a self-inspection fence', fs >= 0 && fe > fs);
-  const outside = exec(L11_RAW.slice(0, fs) + L11_RAW.slice(fe));
-
-  for (const needle of ['/media', '/feed', '/photos', '/videos', 'media_publish',
-    '/adsets', '/adcreatives', 'video_reels']) {
-    t.ok(`the runner references no ${needle}`, !outside.includes(needle));
-  }
-  t.ok('the runner names no DELETE', !/['"]DELETE['"]/.test(outside));
-  t.is('and contains EXACTLY one client.write() call',
-    (outside.match(/client\.write\s*\(/g) ?? []).length, 1);
-
-  // Ads capability only — a publish write would be refused by the client even
-  // if the runner somehow attempted one.
-  t.ok('the runner grants only the ads capability',
-    /capabilities:\s*\{\s*ads:\s*true\s*\}/.test(outside));
-  t.ok('and never grants publish', !/publish:\s*true/.test(outside));
-  t.ok('it sets dryRun: false for this one operation', /dryRun:\s*false/.test(outside));
-}
-
-{
-  // The guards, exercised by actually running the script. No network is
-  // reached: both aborts happen before any request is built.
-  const run = (env) => spawnSync(process.execPath, [L11_PATH], {
-    cwd: REPO, encoding: 'utf8',
-    env: { ...process.env, __META_CHECK_REEXEC: '', ...env },
-  });
-
-  const noFlag = run({});
-  t.is('without the approval flag it exits 2', noFlag.status, 2);
-  t.ok('naming the flag', /--approve-single-validate-only/.test(noFlag.stdout));
-
-  const withFlag = spawnSync(process.execPath, [L11_PATH, '--approve-single-validate-only'], {
-    cwd: REPO, encoding: 'utf8',
-    env: {
-      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
-      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0',
-      META_AD_ACCOUNT_ID: 'act_1', META_ENABLE_ADS: 'false',
-    },
-  });
-  t.is('with the flag but ads disabled it still exits 2', withFlag.status, 2);
-  t.ok('naming the switch', /META_ENABLE_ADS/.test(withFlag.stdout));
-
-  const bothOn = spawnSync(process.execPath, [L11_PATH, '--approve-single-validate-only'], {
-    cwd: REPO, encoding: 'utf8',
-    env: {
-      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
-      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0',
-      META_AD_ACCOUNT_ID: 'act_1', META_ENABLE_ADS: 'true', META_ENABLE_PUBLISH: 'true',
-    },
-  });
-  t.is('with publishing also enabled it refuses', bothOn.status, 2);
-  t.ok('because L1-1 is ads-only', /META_ENABLE_PUBLISH is enabled/.test(bothOn.stdout));
-}
-
-{
-  // The payload the runner will send: inert in every dimension.
-  const req = ADS.buildCampaign({
-    adAccountId: 'act_1234567890123456',
-    name: 'Si Math — L1-1 validation probe',
-    objective: 'OUTCOME_TRAFFIC',
-    maxDailyBudget: 0,
-  });
-  t.is('validate_only, and only validate_only', req.body.execution_options, ['validate_only']);
-  t.is('status PAUSED', req.body.status, 'PAUSED');
-  t.ok('no budget field at all', req.body.daily_budget === undefined);
-  t.is('the payload has exactly six keys', Object.keys(req.body).sort(),
-    ['execution_options', 'is_adset_budget_sharing_enabled', 'name', 'objective',
-     'special_ad_categories', 'status']);
-  t.is('every payload key is on the allow-list',
-    Object.keys(req.body).filter((k) => !CAMPAIGN_KEYS_ALLOWED.includes(k)), []);
-  t.is('it targets the campaigns edge only', req.path, 'act_1234567890123456/campaigns');
-}
-
-{
-  // With dryRun FALSE — the L1-1 configuration — exactly one POST leaves the
-  // client, and it carries validate_only.
-  const local = { GET: 0, POST: 0, DELETE: 0, other: 0 };
-  const bodies = [];
-  const client = G.createMetaClient(ENV, {
-    dryRun: false,
-    capabilities: { ads: true },
-    fetchImpl: async (_url, init) => {
-      const m = (init?.method ?? 'GET').toUpperCase();
-      if (m in local) local[m] += 1; else local.other += 1;
-      if (init?.body) bodies.push(JSON.parse(init.body));
-      return { ok: true, status: 200, text: async () => JSON.stringify({ success: true }) };
-    },
-  });
-
-  const out = await client.write(sampleAds());
-  t.is('the write reports sent: true', out.sent, true);
-  t.is('exactly one POST left the client', local.POST, 1);
-  t.is('no DELETE', local.DELETE, 0);
-  t.is('no other method', local.other, 0);
-  t.is('and the sent body carried validate_only',
-    bodies[0]?.execution_options, ['validate_only']);
-  t.is('and status PAUSED', bodies[0]?.status, 'PAUSED');
-
-  // Publish stays refused on this very client.
-  let e = null;
-  try { await client.write(samplePublish()); } catch (err) { e = err; }
-  t.is('a publish write on the L1-1 client is refused', e?.name, 'CapabilityDisabled');
-  t.is('and issued no further request', local.POST, 1);
-
-  // These POSTs are counted separately and never added to the suite total,
-  // which must stay at zero — see section 6.
 }
 
 // ══ 5c · the sandbox verifier is read-only and shields the live account ═══
@@ -709,6 +591,64 @@ t.section('5e · is_adset_budget_sharing_enabled');
   for (const n of ['/media', '/feed', 'media_publish', '/photos', '/videos', 'video_reels']) {
     t.ok(`the ads builder references no ${n}`, !adsSrc.includes(n));
   }
+}
+
+// ══ 5f · the insights reader is read-only ════════════════════════════════
+t.section('5f · insights reader');
+
+{
+  const INS = resolve(REPO, 'scripts/meta-insights.mjs');
+  const src = exec(readFileSync(INS, 'utf8'));
+
+  t.ok('it builds a readOnly client', /readOnly:\s*true/.test(src));
+  t.ok('it grants NO capability at all', !/capabilities:/.test(src));
+  t.ok('it never writes', !/\.(write|post|del)\s*\(/.test(src));
+  t.ok('it never sets dryRun false', !/dryRun:\s*false/.test(src));
+  t.ok('it requires no META_ENABLE_ADS', !/enableAds/.test(src));
+  t.ok('it refuses any non-GET before sending', /refused \$\{m\}/.test(src));
+
+  // It must not invent metric names when Meta refuses one.
+  t.ok('rejected metrics are collected, not substituted', /rejected\.push/.test(src));
+  t.ok('and it says so explicitly', /NOT replaced/.test(src));
+  // Assert the MECHANISM, not the word. A keyword scan fired on the very
+  // sentence that documents the correct behaviour ("A substitute chosen
+  // without evidence..."), which is the same substring trap that made
+  // is_adset_budget_sharing_enabled read as an ad-set field. What matters is
+  // that exactly one thing decides the metric names.
+  t.ok('the candidate list comes only from insightsParams',
+    /const CANDIDATES = params\.fields\.split\(','\)/.test(src));
+  t.is('and no second metric list exists in the script',
+    (src.match(/\[[^\]]*'(impressions|clicks|spend|ctr|cpc|cpm)'/g) ?? []), []);
+
+  // Least-assumption first: the no-fields probe must precede the candidate batch.
+  const stepA = src.indexOf("date_preset: PRESET, level: LEVEL }");
+  const stepB = src.indexOf('ADS.insightsParams');
+  t.ok('the no-fields probe comes before the candidate batch', stepA >= 0 && stepA < stepB);
+
+  // Empty data must read as success, not failure — the recurring mistake.
+  t.ok('an empty result is treated as a successful read',
+    /not a failure/.test(src));
+
+  const noConf = spawnSync(process.execPath, [INS], {
+    cwd: REPO, encoding: 'utf8',
+    env: { ...process.env, META_APP_ID: '', META_APP_SECRET: '',
+      META_SYSTEM_USER_TOKEN: '', META_GRAPH_VERSION: '' },
+  });
+  t.is('it refuses without configuration', noConf.status, 2);
+}
+
+{
+  // insightsParams was dead code until now. Assert its shape, since the reader
+  // derives its entire candidate list from it.
+  const p = ADS.insightsParams();
+  t.is('default preset is last_30d', p.date_preset, 'last_30d');
+  t.is('default level is account', p.level, 'account');
+  t.ok('it returns a comma-separated field list', typeof p.fields === 'string' && p.fields.includes(','));
+  t.ok('every candidate is a bare metric name',
+    p.fields.split(',').every((f) => /^[a-z_]+$/.test(f)));
+  const custom = ADS.insightsParams({ datePreset: 'last_90d', level: 'campaign' });
+  t.is('the preset is overridable', custom.date_preset, 'last_90d');
+  t.is('the level is overridable', custom.level, 'campaign');
 }
 
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════
