@@ -780,7 +780,7 @@ Ambiguity is never resolved for the operator: with two Pages visible, both are
 listed and **no** `META_PAGE_ID` is suggested. Guessing is how the wrong Page
 gets published to.
 
-### Four misdiagnoses found by running it
+### Five misdiagnoses found by running it
 
 All four were found by executing the checker rather than by reading it. The
 first three were one failure class — an unread or unreachable state reported as
@@ -838,6 +838,43 @@ and worse class, and produced the standing rule at the end of this section.
    always distinguished the two, and failing there would reintroduce exactly the
    false negative being removed.
 
+5. **`systemuser.in_business` — the check written to FIX finding 4 repeated
+   it.** It reported class D, "META_SYSTEM_USER_ID does not name a System User
+   in META_BUSINESS_ID", for the same correct configuration. Four defects, all
+   mine:
+
+   1. **A strict `===` between values whose runtime types are not guaranteed to
+      match.** `id` is *annotated* `string`, but a TypeScript annotation is
+      erased at runtime and Graph is not obliged to honour it. When an id
+      arrives as a JSON number, `61593218806694 === '61593218806694'` is false —
+      identical values, failed comparison, correct configuration reported as
+      broken. Now `idsEqual()`, which coerces and trims both sides.
+   2. **The failure withheld its own evidence.** It said "not among the 2 System
+      Users" *without listing them* — the one piece of data needed to judge the
+      claim. The owner had to ask for it. The raw ids are now printed.
+   3. **It read page one and treated absence as proof.** The edge's default
+      limit is 25 and it paginates by cursor, so that was a sample, not a
+      search. `listSystemUsers()` now walks pages by cursor, bounded at five,
+      and discloses an incomplete read instead of passing it off as complete.
+   4. **It asserted FAIL on semantics that could not be verified.** Meta's
+      reference for this edge was unreachable, so whether it returns
+      business-scoped ids for every System User, whether the list is filtered by
+      what the calling token may see, and whether a System User appears in its
+      own business's list are all unknown. There was no basis for deciding when
+      a no-match is real.
+
+   Also fixed: an id delivered as an oversized JSON number is corrupted by
+   `JSON.parse` before any comparison (18-digit ids exceed 2^53 — the app-scoped
+   id from finding 4 is one). That is now detected and disclosed rather than
+   silently compared.
+
+   **The check can no longer fail.** A direct node read (`GET
+   /{system-user-id}`) is the primary probe — immune to list filtering and
+   pagination because it asks about one id rather than searching a list — with
+   the paginated list as fallback. Confirmed → PASS; not confirmed → WARN
+   carrying the raw evidence, and saying plainly that a no-match does **not**
+   mean the id is wrong.
+
 **The rule this produced.** `docs/roadmap/verification-framework-audit.md` says
 a green check is only evidence if it could have gone red. Finding 4 is that rule
 read the other way round, and it is now a standing rule for this repo:
@@ -845,8 +882,22 @@ read the other way round, and it is now a standing rule for this repo:
 > **A red check is only evidence if it could have gone green.**
 
 A check that fails on a correct configuration is worse than no check. The first
-three findings sent an operator to fix a problem that did not exist; this one
-would have sent the owner to replace a System User that was right all along.
+three findings sent an operator to fix a problem that did not exist; findings 4
+and 5 would have sent the owner to replace a System User that was right all
+along — and finding 5 was the code written to fix finding 4.
+
+**The corollary, learned the same way.** A mutation test that is not confirmed
+to have applied proves nothing. One of the mutations for finding 5 reported
+"caught nothing" because the patch silently failed to match; re-run with an
+assertion that the edit landed, it produced nine failures. Verifying a
+diagnostic is subject to the same rule as the diagnostic itself: an unverified
+absence of evidence is not evidence of absence.
+
+**Where this leaves configuration checks.** Anything L0 cannot verify against a
+confirmed API contract is reported, not asserted. The token's own asset access
+— it read the Page, it read the Ad Account — is the authoritative signal that a
+System User is correctly set up. Cross-checks against ids in other namespaces
+are corroboration at best, and must never outrank a successful read.
 
 ### What L0 does not tell you
 

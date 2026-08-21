@@ -275,6 +275,38 @@ const warn = (id: string, label: string, detail: string, blocker: Blocker | null
 const skip = (id: string, label: string, because: string): CheckResult =>
   ({ id, label, status: 'SKIP', detail: `skipped — ${because}`, blocker: null });
 
+/** Compare two Graph ids safely.
+ *
+ *  `id` is ANNOTATED as string throughout this file, but a TypeScript
+ *  annotation is erased at runtime and Graph is not obliged to honour it. When
+ *  an id arrives as a JSON number, `61593218806694 === '61593218806694'` is
+ *  false — identical values, failed comparison, and a check that reports a
+ *  correct configuration as broken. That is exactly what happened here.
+ *
+ *  Both sides are coerced and trimmed. An absent id never equals anything. */
+export function normalizeId(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  return String(v).trim();
+}
+
+export function idsEqual(a: unknown, b: unknown): boolean {
+  const x = normalizeId(a);
+  return x !== '' && x === normalizeId(b);
+}
+
+/** True when an id survived JSON parsing intact.
+ *
+ *  A Graph id delivered as an unquoted JSON number larger than 2^53 is already
+ *  corrupted by JSON.parse before any comparison happens — 18-digit ids are
+ *  well past that, and the app-scoped id seen on this project's first real run
+ *  (122105760657440626) is one. Graph sends ids as strings in practice, so
+ *  this is a latent hazard rather than the present bug; it is detected and
+ *  reported rather than silently compared, because a comparison against a
+ *  corrupted value cannot be trusted in either direction. */
+export function idIsPrecisionSafe(v: unknown): boolean {
+  return typeof v !== 'number' || Number.isSafeInteger(v);
+}
+
 /** Ad account ids are `act_<digits>`. Operators paste them both ways, and the
  *  difference is a 404 that reads like a permission problem. Normalise rather
  *  than lecture. */
@@ -297,6 +329,47 @@ export const AD_ACCOUNT_STATUS: Record<number, string> = {
   201: 'ANY_ACTIVE',
   202: 'ANY_CLOSED',
 };
+
+interface SystemUserRow { id?: unknown; name?: unknown }
+
+/** Read a business's System Users across pages.
+ *
+ *  The edge's default limit is 25 and it paginates with cursors, so reading
+ *  page one and treating absence as proof — which the first version of this
+ *  check did — is not a search, it is a sample. Bounded at MAX_PAGES so a
+ *  misbehaving cursor cannot loop forever; when the bound is hit that is
+ *  reported rather than passed off as a complete read. */
+export async function listSystemUsers(
+  client: MetaClient,
+  businessId: string,
+  maxPages = 5,
+): Promise<{ rows: SystemUserRow[]; morePages: boolean; unsafe: boolean }> {
+  const rows: SystemUserRow[] = [];
+  let after = '';
+  let morePages = false;
+  let unsafe = false;
+
+  for (let page = 0; page < maxPages; page++) {
+    const params: Record<string, string> = { fields: 'id,name', limit: '100' };
+    if (after) params.after = after;
+    const r = await client.get<{
+      data?: SystemUserRow[];
+      paging?: { next?: string; cursors?: { after?: string } };
+    }>(`${businessId}/system_users`, params);
+
+    const batch = r.data ?? [];
+    for (const row of batch) if (!idIsPrecisionSafe(row.id)) unsafe = true;
+    rows.push(...batch);
+
+    if (!r.paging?.next) return { rows, morePages: false, unsafe };
+    after = r.paging.cursors?.after ?? '';
+    // A next link with no cursor cannot be followed through this client, which
+    // builds its own urls. Report the gap rather than pretending completeness.
+    if (!after) return { rows, morePages: true, unsafe };
+    morePages = true;
+  }
+  return { rows, morePages, unsafe };
+}
 
 /**
  * Run every L0 check. GET only.
@@ -568,41 +641,96 @@ export async function runConnectionCheck(
       `/me failed: ${errText(e)}`, classifyError(e, '/me')));
   }
 
-  // ══ 2b · is META_SYSTEM_USER_ID a real System User in this business? ═════
-  // The configuration check the id comparison was reaching for, done in the
-  // namespace the id actually belongs to. Needs business_management, so a
-  // failure here is a WARN: it means "could not verify", never "wrong".
-  if (!cfg.businessId || !cfg.systemUserId) {
-    push(skip('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
-      'META_BUSINESS_ID or META_SYSTEM_USER_ID is not set'));
+  // ══ 2b · does META_SYSTEM_USER_ID name a real System User? ═══════════════
+  //
+  // THIS CHECK CAN NO LONGER FAIL, AND THAT IS DELIBERATE.
+  //
+  // Its first version reported class D — "META_SYSTEM_USER_ID does not name a
+  // System User in META_BUSINESS_ID" — for a configuration that was correct:
+  // the same token passes debug_token as SYSTEM_USER, belongs to the right
+  // app, and reads the configured Page and Ad Account. It was the second
+  // false negative in this module in a row, and it was written as the FIX for
+  // the first one.
+  //
+  // Three defects were found in it, all mine:
+  //
+  //   1. `r.id === cfg.systemUserId` is a strict comparison between values
+  //      whose runtime types are not guaranteed to match. See idsEqual().
+  //   2. It reported "not among the 2 System Users" WITHOUT LISTING THEM, so
+  //      the one piece of data needed to judge the failure was withheld from
+  //      the person being asked to act on it.
+  //   3. It only ever read page one, and treated absence there as proof.
+  //
+  // And a fourth, which is why it now warns instead of failing: Meta's own
+  // reference for this edge could not be reached to confirm its semantics —
+  // whether it returns business-scoped ids for every System User, whether the
+  // list is filtered by what the calling token may see, or whether a System
+  // User appears in its own business's list at all. Without that, there is no
+  // basis for deciding when a no-match is real.
+  //
+  // The repo rule this module produced applies to itself: A RED CHECK IS ONLY
+  // EVIDENCE IF IT COULD HAVE GONE GREEN. Until the semantics are confirmed,
+  // a no-match is "not verified", never "wrong" — and the raw ids are printed
+  // so a human can make the call the code cannot.
+  if (!cfg.systemUserId) {
+    push(skip('systemuser.in_business', 'META_SYSTEM_USER_ID names a real System User',
+      'META_SYSTEM_USER_ID is not set'));
   } else {
+    const evidence: string[] = [];
+    let confirmed = '';
+
+    // ── probe A · read the node directly ──────────────────────────────────
+    // Immune to list filtering, ordering and pagination, because it asks
+    // about ONE id instead of searching a list for it. Strictly better
+    // evidence than membership, and it should have been the primary probe
+    // from the start.
     try {
-      const sus = await client.get<{
-        data?: Array<{ id?: string; name?: string }>; paging?: { next?: string };
-      }>(`${cfg.businessId}/system_users`, { fields: 'id,name', limit: '100' });
-      const rows = sus.data ?? [];
-      const hit = rows.find((r) => r.id === cfg.systemUserId);
-      if (hit) {
-        push(ok('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
-          `${hit.name ?? '(unnamed)'} — id ${hit.id}`));
-      } else if (sus.paging?.next) {
-        // More than 100 System Users and no match on page one proves nothing.
-        push(warn('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
-          `not among the first ${rows.length} System Users and more pages exist — ` +
-          'not verified either way'));
-      } else {
-        push(bad('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
-          `not among the ${rows.length} System Users of business ${cfg.businessId}`, {
-            class: 'D',
-            reason: 'META_SYSTEM_USER_ID does not name a System User in META_BUSINESS_ID.',
-            action: 'Confirm the id in Business Settings → Users → System users. Note this ' +
-              'is the BUSINESS-scoped id shown there, not the app-scoped id /me returns.',
-          }));
+      const node = await client.get<{ id?: unknown; name?: unknown }>(
+        cfg.systemUserId, { fields: 'id,name' },
+      );
+      if (idsEqual(node.id, cfg.systemUserId)) {
+        confirmed = `direct read: ${normalizeId(node.name) || '(unnamed)'}`;
+      } else if (node.id !== undefined) {
+        evidence.push(`direct read returned a different id (${normalizeId(node.id)})`);
       }
     } catch (e) {
-      push(warn('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
-        `could not read the business System User list: ${errText(e)} — this needs ` +
-        'business_management and is not required for publishing'));
+      evidence.push(`direct read failed: ${errText(e)}`);
+    }
+
+    // ── probe B · the business list, paginated ────────────────────────────
+    if (!confirmed && cfg.businessId) {
+      try {
+        const { rows, morePages, unsafe } = await listSystemUsers(client, cfg.businessId);
+        const hit = rows.find((r) => idsEqual(r.id, cfg.systemUserId));
+        if (hit) {
+          confirmed = `business list: ${normalizeId(hit.name) || '(unnamed)'}`;
+        } else {
+          // THE EVIDENCE, SHOWN. Defect 2 above: a failure that withholds the
+          // data needed to judge it is not a diagnostic.
+          const listed = rows.map((r) => `${normalizeId(r.id)}${r.name ? ` (${normalizeId(r.name)})` : ''}`);
+          evidence.push(`business list returned ${rows.length}: ${listed.join(', ') || '(none)'}`);
+          if (morePages) evidence.push('more pages remained unread');
+          if (unsafe) {
+            evidence.push('at least one id arrived as an oversized JSON number and lost ' +
+              'precision during parsing — comparison against it is unreliable');
+          }
+        }
+      } catch (e) {
+        evidence.push(`business list failed: ${errText(e)} (needs business_management)`);
+      }
+    } else if (!confirmed) {
+      evidence.push('META_BUSINESS_ID is not set, so the business list was not read');
+    }
+
+    if (confirmed) {
+      push(ok('systemuser.in_business', 'META_SYSTEM_USER_ID names a real System User',
+        `${cfg.systemUserId} confirmed — ${confirmed}`));
+    } else {
+      push(warn('systemuser.in_business', 'META_SYSTEM_USER_ID names a real System User',
+        `NOT VERIFIED for ${cfg.systemUserId} — ${evidence.join('; ')}. ` +
+        'This does NOT mean the id is wrong: the token\'s own asset access is the ' +
+        'authoritative signal, and this edge\'s semantics are unconfirmed. Change ' +
+        'META_SYSTEM_USER_ID only if Business Settings shows a different id.'));
     }
   }
 

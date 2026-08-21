@@ -83,6 +83,7 @@ const HEALTHY = {
   systemUsers: () => res({ data: [
     { id: 'SU61593218806694', name: 'Automation' },
   ] }),
+  systemUserNode: () => res({ id: 'SU61593218806694', name: 'Automation' }),
   adAccount: () => res({
     id: 'act_AD1', name: 'Si Math Ads', account_status: 1,
     currency: 'EGP', timezone_name: 'Africa/Cairo',
@@ -102,7 +103,8 @@ function route(url, fx) {
   if (path === 'PAGE1') return fields.includes('instagram_business_account') ? fx.igLink() : fx.page();
   if (path === 'IG1' || path === 'IGOTHER') return fx.ig();
   if (path.endsWith('/content_publishing_limit')) return fx.igLimit();
-  if (path.endsWith('/system_users')) return fx.systemUsers();
+  if (path.endsWith('/system_users')) return fx.systemUsers(u.searchParams.get('after') ?? '');
+  if (path === 'SU61593218806694' || path === '61593218806694') return fx.systemUserNode();
   if (path === 'act_AD1') return fx.adAccount();
   if (path.endsWith('/campaigns')) return fx.campaigns();
   return res({ error: { message: 'unrouted', code: 100 } }, 404);
@@ -432,32 +434,180 @@ t.section('4 · diagnosis — blockers are classified and actionable');
   t.is('the whole run is green', report.ok, true);
   t.is('no class D blocker is invented', blockersOfClass(report, 'D').length, 0);
 
-  // What the comparison was reaching for, done in the right namespace.
-  t.is('META_SYSTEM_USER_ID is verified against the business list',
-    find(report, 'systemuser.in_business')?.status, 'PASS');
-  t.ok('and names the System User', /Automation/.test(find(report, 'systemuser.in_business')?.detail ?? ''));
+  t.is('META_SYSTEM_USER_ID is confirmed', find(report, 'systemuser.in_business')?.status, 'PASS');
+}
 
-  // ...and it must still be able to FAIL, or the fix would just have deleted
-  // the diagnosis rather than relocating it.
-  const wrong = await run({ systemUsers: () => res({ data: [{ id: 'SOMEONE_ELSE', name: 'Other' }] }) });
-  const w = find(wrong.report, 'systemuser.in_business');
-  t.is('an id absent from the business list FAILS', w?.status, 'FAIL');
-  t.is('and is class D', w?.blocker?.class, 'D');
-  t.ok('and warns that the two id kinds differ',
-    /not the app-scoped id/.test(w?.blocker?.action ?? ''));
+// ══ REGRESSION · systemuser.in_business, the second false negative ════════
+t.section('4b · systemuser.in_business — verified, never asserted');
 
-  // A truncated first page proves nothing either way.
-  const paged = await run({ systemUsers: () => res({
-    data: [{ id: 'OTHER', name: 'X' }], paging: { next: 'https://next' },
-  }) });
-  t.is('an unmatched id with more pages is WARN, not FAIL',
-    find(paged.report, 'systemuser.in_business')?.status, 'WARN');
+{
+  // THE REPORTED CASE, exactly: the business list comes back with two System
+  // Users, neither matching META_SYSTEM_USER_ID — while the same token passes
+  // debug_token as SYSTEM_USER and reads the Page and Ad Account.
+  const { report } = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: () => res({ data: [
+      { id: '111111111111111', name: 'Other One' },
+      { id: '222222222222222', name: 'Other Two' },
+    ] }),
+  });
+  const c = find(report, 'systemuser.in_business');
 
-  // Missing business_management must not manufacture a blocker.
-  const noPerm = await run({ systemUsers: () => graphErr(200, 403) });
-  t.is('an unreadable System User list is WARN',
-    find(noPerm.report, 'systemuser.in_business')?.status, 'WARN');
-  t.ok('and raises no blocker', find(noPerm.report, 'systemuser.in_business')?.blocker === null);
+  t.is('a no-match is WARN, never FAIL', c?.status, 'WARN');
+  t.ok('and raises NO blocker', c?.blocker === null);
+  t.is('so it cannot invent a class D', blockersOfClass(report, 'D').length, 0);
+  t.is('and the run stays green', report.ok, true);
+
+  // Defect 2: the failure used to withhold the very data needed to judge it.
+  t.ok('the raw ids returned ARE listed', /111111111111111/.test(c?.detail ?? '') &&
+    /222222222222222/.test(c?.detail ?? ''));
+  t.ok('the count is stated', /returned 2/.test(c?.detail ?? ''));
+  t.ok('it says explicitly this does not mean the id is wrong',
+    /does NOT mean the id is wrong/.test(c?.detail ?? ''));
+  t.ok('and tells the owner not to change the value on this basis alone',
+    /only if Business Settings shows a different id/.test(c?.detail ?? ''));
+
+  // The decisive evidence is untouched.
+  t.is('the Page still passes', find(report, 'page.access')?.status, 'PASS');
+  t.is('the ad account still passes', find(report, 'adaccount.access')?.status, 'PASS');
+  t.is('the token is still a System User token', find(report, 'token.type')?.status, 'PASS');
+}
+
+{
+  // Defect 1: a strict === between a JSON number and a config string. Values
+  // identical, comparison false, correct configuration reported as broken.
+  const { report } = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: () => res({ data: [{ id: 61593218806694, name: 'Automation' }] }),
+  }, {}, { systemUserId: '61593218806694' });
+  t.is('a numeric id matches the string config', find(report, 'systemuser.in_business')?.status, 'PASS');
+  t.ok('and is credited to the business list',
+    /business list/.test(find(report, 'systemuser.in_business')?.detail ?? ''));
+
+  const padded = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: () => res({ data: [{ id: '  61593218806694  ', name: 'Automation' }] }),
+  }, {}, { systemUserId: '61593218806694' });
+  t.is('a padded id matches too', find(padded.report, 'systemuser.in_business')?.status, 'PASS');
+}
+
+{
+  // Probe A alone is sufficient: the direct node read is immune to list
+  // filtering and pagination, so a list that omits the System User no longer
+  // matters when the node itself resolves.
+  const { report, requests } = await run({
+    systemUsers: () => res({ data: [{ id: 'SOMEONE_ELSE', name: 'Other' }] }),
+  });
+  const c = find(report, 'systemuser.in_business');
+  t.is('a direct node read alone confirms', c?.status, 'PASS');
+  t.ok('and is credited to the direct read', /direct read/.test(c?.detail ?? ''));
+  // ...and the list is not even consulted once the node has answered.
+  const paths = requests.filter((r) => r.rawUrl).map((r) => new URL(r.rawUrl).pathname);
+  t.ok('the business list is skipped when the node confirms',
+    !paths.some((p) => p.endsWith('/system_users')));
+}
+
+{
+  // Defect 3: page one was treated as the whole list. A match on page two must
+  // now be found.
+  let call = 0;
+  const { report } = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: (after) => {
+      call++;
+      if (!after) {
+        return res({
+          data: [{ id: 'OTHER', name: 'X' }],
+          paging: { next: 'https://graph/next', cursors: { after: 'CURSOR2' } },
+        });
+      }
+      return res({ data: [{ id: 'SU61593218806694', name: 'Automation' }] });
+    },
+  });
+  t.is('a match on page two is found', find(report, 'systemuser.in_business')?.status, 'PASS');
+  t.is('and it took two requests to find it', call, 2);
+}
+
+{
+  // An unfollowable cursor must be reported as an incomplete read, not passed
+  // off as a complete one.
+  const { report } = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: () => res({ data: [{ id: 'OTHER' }], paging: { next: 'https://graph/next' } }),
+  });
+  const c = find(report, 'systemuser.in_business');
+  t.is('an unfollowable cursor is still WARN', c?.status, 'WARN');
+  t.ok('and the unread remainder is disclosed', /more pages remained unread/.test(c?.detail ?? ''));
+}
+
+{
+  // A pathological cursor loop must terminate rather than hang the checker.
+  let call = 0;
+  const { report } = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: () => {
+      call++;
+      return res({
+        data: [{ id: `OTHER${call}` }],
+        paging: { next: 'https://graph/next', cursors: { after: `C${call}` } },
+      });
+    },
+  });
+  t.ok('the page loop is bounded', call <= 5);
+  t.is('and the result is WARN, not a hang or a FAIL',
+    find(report, 'systemuser.in_business')?.status, 'WARN');
+}
+
+{
+  // An id delivered as an oversized JSON number is corrupted before any
+  // comparison. Comparing against it is unreliable in BOTH directions, so the
+  // corruption is disclosed rather than silently treated as a mismatch.
+  const { report } = await run({
+    systemUserNode: () => graphErr(100, 404),
+    systemUsers: () => res({ data: [{ id: 122105760657440626, name: 'Automation' }] }),
+  });
+  const c = find(report, 'systemuser.in_business');
+  t.is('an unsafe numeric id yields WARN', c?.status, 'WARN');
+  t.ok('and the precision loss is disclosed', /lost\s+precision/.test(c?.detail ?? ''));
+}
+
+{
+  // Neither probe readable — still WARN, still no blocker.
+  const { report } = await run({
+    systemUserNode: () => graphErr(200, 403),
+    systemUsers: () => graphErr(200, 403),
+  });
+  const c = find(report, 'systemuser.in_business');
+  t.is('two unreadable probes yield WARN', c?.status, 'WARN');
+  t.ok('and raise no blocker', c?.blocker === null);
+  t.ok('and business_management is named as the likely cause',
+    /business_management/.test(c?.detail ?? ''));
+}
+
+{
+  // Unset config skips rather than warning — nothing was asked, nothing failed.
+  const { report } = await run({}, {}, { systemUserId: '' });
+  t.is('an unset META_SYSTEM_USER_ID SKIPs', find(report, 'systemuser.in_business')?.status, 'SKIP');
+}
+
+{
+  // The helper in isolation, since the paging contract is the subtle part.
+  const seen = [];
+  const stub = G.createMetaClient(ENV, {
+    readOnly: true,
+    fetchImpl: async (url) => {
+      const after = new URL(url).searchParams.get('after') ?? '';
+      seen.push(after);
+      if (!after) return res({ data: [{ id: 'A' }], paging: { next: 'n', cursors: { after: 'C1' } } });
+      if (after === 'C1') return res({ data: [{ id: 'B' }], paging: { next: 'n', cursors: { after: 'C2' } } });
+      return res({ data: [{ id: 'C' }] });
+    },
+  });
+  const out = await C.listSystemUsers(stub, 'BIZ1');
+  t.is('listSystemUsers walks every page', out.rows.map((r) => r.id), ['A', 'B', 'C']);
+  t.is('and stops when paging.next is absent', out.morePages, false);
+  t.is('passing the cursor each time', seen, ['', 'C1', 'C2']);
+  t.is('and reports no precision loss', out.unsafe, false);
 }
 
 {
