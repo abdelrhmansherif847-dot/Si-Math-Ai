@@ -1,10 +1,18 @@
 # Meta marketing integration — implementation specification
 
-**Status: PROPOSED. No code written, nothing deployed, no migration applied.**
-This is the answer to "what do we need to implement on the code side", written
-against the repository as it stands on branch `claude/si-math-meta-api-qmej6e`
-(inspected 2026-08-21). It is a specification to approve or amend, not a record
-of work done.
+**Status: L0 BUILT. Nothing deployed, no migration applied, nothing published.**
+
+- **§10.0 (L0, read-only) — implemented.** See §15 for what shipped and what
+  running it revealed. Never executed against the real Si Math configuration:
+  `graph.facebook.com` is egress-blocked from the environment it was written
+  in, so the first real run is yours.
+- **§10.1 (L1) and §10.2 (L2) — NOT implemented, and gated on your approval of
+  the L0 results.** No publish path, no ads write path, and no media-container
+  code exists in the repository.
+- Everything else below remains a specification to approve or amend.
+
+Written against the repository on branch `claude/si-math-meta-api-qmej6e`
+(inspected 2026-08-21).
 
 Graph API facts below were checked against public sources on 2026-08-21 and are
 cited inline. `developers.facebook.com` is blocked by this environment's egress
@@ -655,7 +663,7 @@ Neither file should be applied until you approve each one individually.
 | Step | Work | Gate |
 |---|---|---|
 | 0 | Assign IG account + Ad Account to the System User; start business verification and App Review | **your action, not code — and the long pole** |
-| 1 | `meta-graph.core.ts` + `meta-connection-check.mjs` + `meta-graph.test.mjs` | L0 green |
+| 1 | ~~`meta-graph.core.ts` + `meta-connection-check.mjs` + tests~~ **DONE — §15** | L0 green *(awaiting first real run)* |
 | 2 | `meta-publish.core.ts` + `meta-redact.core.ts` + isolation suite | L1 green (IG container + FB unpublished) |
 | 3 | `marketing-actions/index.ts` + deploy script + `DEPLOY.md` §4.2 | deployed, L0 green through the function |
 | 4 | First controlled publish | L2 step 1–2, your approval per post |
@@ -700,3 +708,77 @@ System User token longevity and `appsecret_proof`:
 `developers.facebook.com` is egress-blocked from this environment, so these are
 secondary sources. **Confirm every endpoint path, permission name and metric
 name against Meta's own reference before writing the call.**
+
+
+---
+
+## 15. L0 — what shipped (2026-08-21)
+
+### Files
+
+| File | Role |
+|---|---|
+| `supabase/functions/_shared/meta-graph.core.ts` | The adapter. The only module that knows Meta's HTTP shape. Env reader, `appSecretProof`, `redactUrl`/`redactSecrets`, error mapping, and a client whose `post()`/`del()` throw. |
+| `supabase/functions/_shared/meta-connection.core.ts` | The L0 checks. Pure — no env, no I/O, no database — so the suite executes these exact bytes. |
+| `scripts/meta-connection-check.mjs` | Operator CLI. Reads the environment, renders the report, sets the exit code. `--json`, `--verbose`. |
+| `scripts/validate-meta-source.mjs` | Repo-wide CI gate. Auto-discovered by `tests/run-all.mjs`. |
+| `tests/meta-graph.test.mjs` | 65 checks — adapter behaviour. |
+| `tests/meta-isolation.test.mjs` | 138 checks — the four boundaries. |
+| `tests/run-all.mjs` | One line: the two suites added to `NEEDS_TS`. |
+
+Run it:
+
+```bash
+export META_APP_ID=... META_APP_SECRET=... META_SYSTEM_USER_TOKEN=...
+export META_GRAPH_VERSION=v26.0 META_PAGE_ID=... META_SYSTEM_USER_ID=61593218806694
+export META_AD_ACCOUNT_ID=act_... META_IG_USER_ID=... META_BUSINESS_ID=...
+
+node scripts/meta-connection-check.mjs            # human report
+node scripts/meta-connection-check.mjs --json     # machine-readable
+```
+
+Exit codes: `0` all checks passed · `1` at least one FAIL · `2` could not run.
+
+### How read-only is enforced
+
+Three overlapping mechanisms, so a write would have to survive all three:
+
+1. The client is constructed `{ readOnly: true }`; `post()` and `del()` throw
+   `ReadOnlyViolation` **before reaching fetch** (asserted: zero network calls).
+2. The check module calls only `client.get()` and `client.debugToken()`.
+3. `meta-isolation.test.mjs` records every request the real module makes and
+   fails if any method is not `GET`; `validate-meta-source.mjs` greps the
+   shipped bytes for write-shaped endpoints, with comments stripped first so
+   the prose that documents the property does not satisfy the check.
+
+The suites were mutation-tested: leaking the raw URL to the request hook,
+making `post()` issue a real request, misclassifying an asset blocker, and
+relaying Meta's raw error body were each introduced deliberately and each
+turned the suites red.
+
+### Two misdiagnoses found by running it
+
+Both were found by executing the checker rather than by reading it, and both
+were the same failure class — a network condition reported as a Meta
+configuration problem, sending an operator to fix something that was not broken.
+
+1. **A transport failure was reported as a missing asset assignment.** With no
+   route to Meta, every check fell through to "not visible to this System User
+   → Business Settings". Now class A, saying explicitly that nothing about the
+   Meta setup can be concluded from the run.
+
+2. **A proxy's `403` was reported as a missing permission** — and its
+   recommended action was App Review, which is weeks. Every genuine Graph
+   application error carries a numeric `code`; an auth failure is 190 or 200,
+   never 0. A 401/403/407 with **no** Graph code did not come from Graph's
+   application layer at all. Now class A and named as a likely egress filter.
+   A test asserts that a Graph-*coded* 403 still lands in class B, so the fix
+   did not simply move the misdiagnosis.
+
+### What L0 does not tell you
+
+It reads configuration. It does **not** prove a post would succeed: Meta can
+accept a token, grant a scope, and still refuse a publish for reasons only a
+real container reveals — most likely that `image_url` is not publicly fetchable
+by Meta's servers (§5, §11). That is what L1 exists to find out, and L1 is not
+built.

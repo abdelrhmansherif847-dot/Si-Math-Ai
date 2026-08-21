@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+// Repo-wide gate for the Meta marketing integration.
+//
+// tests/meta-isolation.test.mjs asserts the boundaries of the two Meta modules
+// by executing them. This gate is the other half: it scans the WHOLE tree for
+// things no single module can check — a credential committed anywhere, a Graph
+// call made outside the adapter, an unpinned API version.
+//
+// Auto-discovered by tests/run-all.mjs (every scripts/validate-*.mjs is), so it
+// runs in CI with no workflow change. Plain Node, no TypeScript import, so it
+// needs no type-stripping flag.
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, extname, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const SKIP_DIRS = new Set(['.git', 'node_modules', '.design-sync', 'logs', '.ds-sync', 'ds-bundle']);
+const SCAN_EXT = new Set(['.ts', '.js', '.mjs', '.sh', '.json', '.html', '.sql', '.yml', '.toml', '.txt']);
+
+/** The adapter is the ONLY module permitted to CALL the Graph host. Anything
+ *  else doing so is a second place for credentials and version pinning to live
+ *  — which is how the first one stops being the source of truth. */
+const GRAPH_HOST_ALLOWED = new Set([
+  'supabase/functions/_shared/meta-graph.core.ts',
+]);
+
+/** Files that may NAME the host without calling it, and why each is not the
+ *  risk this rule guards against:
+ *
+ *    this file          — the rule has to quote the string it matches on.
+ *    tests/meta-*       — the suites assert on the url the adapter BUILDS.
+ *                         A test naming the host is the enforcement, not a
+ *                         second caller; deleting these assertions is how the
+ *                         pinning check stops being real.
+ *
+ *  Kept as an explicit list rather than a `tests/` wildcard, so a new file
+ *  that starts calling Graph from the test tree still trips the gate. */
+const GRAPH_HOST_EXEMPT = new Set([
+  'scripts/validate-meta-source.mjs',
+  'tests/meta-graph.test.mjs',
+  'tests/meta-isolation.test.mjs',
+]);
+
+/** Files allowed to contain the literal string of a Graph host in PROSE.
+ *  Documentation legitimately quotes endpoints while explaining them. */
+const PROSE_EXT = new Set(['.md']);
+
+const files = [];
+(function walk(dir) {
+  for (const name of readdirSync(dir)) {
+    if (SKIP_DIRS.has(name)) continue;
+    const full = resolve(dir, name);
+    if (statSync(full).isDirectory()) walk(full);
+    else if (SCAN_EXT.has(extname(name))) files.push(full);
+  }
+})(REPO);
+
+const failures = [];
+const fail = (msg) => failures.push(msg);
+
+// ── 1 · no credential may be committed, anywhere ───────────────────────────
+// Real Facebook tokens are ~150+ characters. The threshold is set well above
+// any test fixture so the gate catches a genuine paste without going red on
+// the deliberately-short stand-ins the suites use.
+const TOKEN_RE = /\bEAA[A-Za-z0-9_-]{80,}/;
+// A System User token pasted into a shell export is the likeliest accident.
+const EXPORT_RE = /\b(META_APP_SECRET|META_SYSTEM_USER_TOKEN|META_ADS_TOKEN)\s*=\s*["']?[A-Za-z0-9_-]{16,}/;
+
+for (const f of files) {
+  const rel = relative(REPO, f).replace(/\\/g, '/');
+  const src = readFileSync(f, 'utf8');
+
+  if (TOKEN_RE.test(src)) fail(`${rel}: contains a Facebook-token-shaped literal`);
+  if (EXPORT_RE.test(src)) fail(`${rel}: assigns a value to a Meta secret env var`);
+
+  // ── 2 · Graph calls live in the adapter only ─────────────────────────────
+  // Matched as a URL (`https://graph.facebook.com`), not as a bare hostname.
+  // The risk this rule guards against is a second module CALLING Graph; a
+  // module that names the host in an operator-facing sentence — "confirm this
+  // machine can reach graph.facebook.com" — is help, not a call. Matching the
+  // bare hostname flagged exactly that sentence, which would have pushed the
+  // useful half of a diagnostic message out of the code to satisfy a lint.
+  const hostExempt = GRAPH_HOST_ALLOWED.has(rel) || GRAPH_HOST_EXEMPT.has(rel) || PROSE_EXT.has(extname(f));
+  if (/https?:\/\/graph\.facebook\.com/.test(src) && !hostExempt) {
+    fail(`${rel}: references graph.facebook.com outside the adapter ` +
+      `(only ${[...GRAPH_HOST_ALLOWED].join(', ')} may)`);
+  }
+
+  // ── 3 · the API version is pinned from the environment, never inline ─────
+  // A hardcoded version is a silent behaviour change on the day Meta sunsets
+  // it. Prose may name a version; code may not embed one in a URL.
+  if (!hostExempt && /https?:\/\/graph\.facebook\.com\/v\d+\.\d+/.test(src)) {
+    fail(`${rel}: hardcodes a Graph API version in a URL — build it from META_GRAPH_VERSION`);
+  }
+}
+
+// ── 4 · no committed .env ──────────────────────────────────────────────────
+for (const name of ['.env', '.env.local', 'supabase/.env']) {
+  try {
+    statSync(resolve(REPO, name));
+    fail(`${name} exists in the tree — Meta secrets belong in \`supabase secrets set\`, not a file`);
+  } catch { /* absent, which is correct */ }
+}
+
+// ── 5 · the L0 checker stays read-only ─────────────────────────────────────
+// Duplicated deliberately from the isolation suite. That suite proves it by
+// execution; this proves it by inspection, and the two fail independently.
+const L0 = [
+  'supabase/functions/_shared/meta-connection.core.ts',
+  'scripts/meta-connection-check.mjs',
+];
+for (const rel of L0) {
+  const src = readFileSync(resolve(REPO, rel), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+  if (/method\s*:\s*['"](POST|PUT|PATCH|DELETE)['"]/.test(src)) {
+    fail(`${rel}: names a write HTTP method — L0 is read-only`);
+  }
+  if (/\.(post|del)\s*\(/.test(src)) {
+    fail(`${rel}: calls a write method on the client — L0 is read-only`);
+  }
+  for (const needle of ['media_publish', 'execution_options', 'adcreatives']) {
+    if (src.includes(needle)) fail(`${rel}: references ${needle} — L0 publishes and creates nothing`);
+  }
+}
+
+// ── 6 · the spec exists and stays in step ──────────────────────────────────
+const SPEC = 'docs/engineering/meta-marketing-integration.md';
+try {
+  const spec = readFileSync(resolve(REPO, SPEC), 'utf8');
+  for (const name of ['META_GRAPH_VERSION', 'META_SYSTEM_USER_TOKEN', 'appsecret_proof']) {
+    if (!spec.includes(name)) fail(`${SPEC}: no longer documents ${name}`);
+  }
+} catch {
+  fail(`${SPEC} is missing — the integration's specification must stay with the code`);
+}
+
+console.log(`  scanned ${files.length} files`);
+if (failures.length) {
+  console.log(`\n  FAIL — ${failures.length} problem(s):`);
+  for (const f of failures) console.log(`    • ${f}`);
+  process.exit(1);
+}
+console.log('  PASS — no committed credential, no Graph call outside the adapter, L0 read-only');
