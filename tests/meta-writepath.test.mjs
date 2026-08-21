@@ -568,6 +568,28 @@ t.section('5d · sandbox write runner');
   t.is('normalizeAccountId maps null to empty', ADS.normalizeAccountId(null), '');
 }
 
+{
+  // The comparison script exists to RESOLVE the live-account question, so it
+  // must be incapable of changing anything while it does.
+  const CMP = resolve(REPO, 'scripts/meta-account-compare.mjs');
+  const src = exec(readFileSync(CMP, 'utf8'));
+  t.ok('it builds a readOnly client', /readOnly:\s*true/.test(src));
+  t.ok('it never writes', !/\.(write|post|del)\s*\(/.test(src));
+  t.ok('it grants no capabilities', !/capabilities:/.test(src));
+  t.ok('it refuses any non-GET before sending', /refused \$\{m\}|refused \$\{/.test(src));
+  t.ok('it prints META_AD_ACCOUNT_ID rather than assuming it',
+    /META_AD_ACCOUNT_ID = \$\{configured/.test(src));
+  t.ok('it decides ownership with the tested pure function',
+    /ADS\.isBusinessOwned\(id, owned\)/.test(src));
+
+  const noArgs = spawnSync(process.execPath, [CMP], {
+    cwd: REPO, encoding: 'utf8',
+    env: { ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
+      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0' },
+  });
+  t.is('it refuses with no account ids', noArgs.status, 2);
+}
+
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════
 t.section('6 · total network writes across this entire suite');
 
