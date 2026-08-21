@@ -178,6 +178,16 @@ button{font-family:inherit;cursor:pointer}
 .btn-google:hover{transform:translateY(-2px);border-color:var(--cyan-border);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .btn-google .g-ico{width:18px;height:18px;flex-shrink:0}
 
+/* Sign in with Apple. Apple's Human Interface Guidelines require the mark and
+   the wording "Continue with Apple" (or "Sign in with Apple") verbatim, and a
+   button that reads as a real button — hence the same .btn geometry as the
+   primary action rather than a link. White-on-black is the variant Apple
+   specifies for dark backgrounds. */
+.btn-apple{background:#fff;color:#000;border:1px solid #fff;font-weight:700}
+.btn-apple:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,255,255,.18)}
+.btn-apple:disabled{cursor:default;transform:none;box-shadow:none}
+.btn-apple .apple-ico{width:18px;height:18px;flex-shrink:0;margin-top:-2px}
+
 /* bottom */
 .bottom{text-align:center;margin-top:var(--space-8);position:relative;z-index:1}
 .bottom .q{color:var(--text-400);font-size:14px;margin-bottom:20px}
@@ -290,6 +300,10 @@ button{font-family:inherit;cursor:pointer}
         </button>
 
       </form>
+
+      <!-- Sign in with Apple mounts here. Empty, and stays empty, until
+           auth-apple.js has ENABLED flipped on — see that file's header. -->
+      <div id="appleMount"></div>
       </div>
     </div>
 
@@ -349,11 +363,46 @@ button{font-family:inherit;cursor:pointer}
       </div>
     </div>
 
+    <!-- HIDE MY EMAIL INTERSTITIAL (hidden unless Apple returned a relay address)
+
+         Apple lets a student hide their real address behind a per-app relay.
+         Supabase links an Apple identity to an existing account by matching the
+         email Apple reports, so a relay address matches nothing and a brand new
+         user id is created — a second account with none of the first one's
+         credits, chat history, question records, weakness reports or focus
+         plans. We cannot tell from the relay address whether this person already
+         had an account, so we ask instead of guessing. Nothing here deletes or
+         merges anything: the only actions are "carry on" and "sign out". -->
+    <div id="relayPanel" style="display:none">
+      <div class="welcome" style="margin-bottom:var(--space-6)">
+        <div class="eyebrow">One quick check</div>
+        <h1 style="font-size:clamp(22px,6vw,30px)">Do you already have an account?</h1>
+        <p>You signed in with Apple using <strong>Hide My Email</strong>, so we can't tell whether this is your first visit.</p>
+      </div>
+      <div class="card" style="margin-bottom:var(--space-5)">
+        <p style="font-size:14px;line-height:1.6;color:var(--text-300);margin:0">
+          If you already study with Si Math AI, continuing here would start a
+          <strong>second, empty account</strong> — your credits, chat history and
+          progress would stay on the first one.
+        </p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="dw-btn dw-btn-primary" id="relayNew">I'm new here — continue</button>
+        <button class="dw-btn dw-btn-ghost" id="relayExisting">I already have an account</button>
+      </div>
+      <p id="relayHelp" style="display:none;margin-top:18px;font-size:13.5px;line-height:1.65;color:var(--text-400)">
+        Signed out. Log in with the email and password you already use. To sign in
+        with Apple from now on, use <strong>Share My Email</strong> when Apple asks,
+        and choose the same address as your account.
+      </p>
+    </div>
+
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="plan-catalog.js"></script>
+<script src="auth-apple.js"></script>
 <script>
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
@@ -455,9 +504,20 @@ button{font-family:inherit;cursor:pointer}
     document.body.style.visibility='visible';
   }
 
-  async function routeAfterAuth(userId) {
+  async function routeAfterAuth(userId, user) {
     try {
       var{data:profile}=await supabaseClient.from('profiles').select('onboarding_completed,plan_code').eq('id',userId).single();
+
+      // Apple's Hide My Email produces an address that matches no existing
+      // account, so Supabase creates a new user rather than linking. Ask before
+      // that new, empty account becomes the one they use. Only fires for a relay
+      // address on an account that has not finished onboarding — an established
+      // Apple student is never interrupted. See auth-apple.js.
+      if (window.SiAuthApple && window.SiAuthApple.needsRelayLinkCheck(user, profile)) {
+        showRelayPanel();
+        return;
+      }
+
       var fp=buildFingerprint();
       var now=new Date().toISOString();
       var{data:existingDev}=await supabaseClient.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
@@ -521,7 +581,7 @@ button{font-family:inherit;cursor:pointer}
     try{
       var res=await supabaseClient.auth.getUser();
       var user=res.data&&res.data.user;
-      if(user){routeAfterAuth(user.id);return;}
+      if(user){routeAfterAuth(user.id,user);return;}
     }catch(_){}
   })();
 
@@ -565,7 +625,7 @@ button{font-family:inherit;cursor:pointer}
         }
         if(submitBtn){submitBtn.disabled=false;submitBtn.style.opacity='1';}
       }
-      else{routeAfterAuth(data.user.id);}
+      else{routeAfterAuth(data.user.id,data.user);}
     }catch(err){
       showErr(err.message||'Something went wrong. Please try again.');
       if(submitBtn){submitBtn.disabled=false;submitBtn.style.opacity='1';}
@@ -579,6 +639,54 @@ button{font-family:inherit;cursor:pointer}
   });
 
   async function logout(){await supabaseClient.auth.signOut();window.location.href='login.html';}
+
+  // ── Sign in with Apple ──────────────────────────────────────────────────────
+  // Every branch below is inert while auth-apple.js has ENABLED false: mount()
+  // returns without touching the DOM, and no OAuth return can occur because no
+  // student can start the flow.
+  function showRelayPanel(){
+    cardZone.style.display='none';
+    if(bottomEl)bottomEl.style.display='none';
+    document.getElementById('relayPanel').style.display='';
+    document.body.style.visibility='visible';
+  }
+  document.getElementById('relayNew').addEventListener('click',async function(){
+    // They say they are new, so this account is the right one. Resume the normal
+    // route, passing `null` for the user deliberately: that is what tells the
+    // guard in routeAfterAuth not to ask the same question a second time.
+    this.disabled=true;
+    var res=await supabaseClient.auth.getUser();
+    var u=res.data&&res.data.user;
+    document.getElementById('relayPanel').style.display='none';
+    cardZone.style.display='';
+    if(bottomEl)bottomEl.style.display='';
+    if(u)routeAfterAuth(u.id,null); else showLogin();
+  });
+  document.getElementById('relayExisting').addEventListener('click',async function(){
+    // Sign out and let them in through the account they already have. We do NOT
+    // delete the just-created Apple user: deleting an auth user is irreversible
+    // and it is not ours to decide. It stays empty and harmless, and an operator
+    // can attach the Apple identity to the real account later.
+    this.disabled=true;
+    await supabaseClient.auth.signOut();
+    document.getElementById('relayHelp').style.display='';
+    document.getElementById('relayNew').disabled=true;
+  });
+
+  (function mountApple(){
+    if(!window.SiAuthApple)return;
+    // Supabase reports a failed OAuth round-trip in the URL it sends us back to.
+    var oauthErr=window.SiAuthApple.errorFromUrl(window.location);
+    if(oauthErr){
+      showErr(window.SiAuthApple.friendlyError(oauthErr));
+      document.body.style.visibility='visible';
+    }
+    window.SiAuthApple.mount(
+      document.getElementById('appleMount'),
+      supabaseClient,
+      {redirectTo:window.SiAuthApple.redirectTarget('login.html',window.location),onError:showErr}
+    );
+  })();
 
   // ── Forgot Password ──────────────────────────────────────────────────────────
   var cardZone = document.querySelector('.card-zone');

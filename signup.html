@@ -185,6 +185,15 @@ button{font-family:inherit;cursor:pointer}
 .btn-google{background:var(--bg-elev-1);color:#fff;border:1px solid var(--border-mid);font-weight:600;margin-top:0}
 .btn-google:hover{transform:translateY(-2px);border-color:var(--cyan-border);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .btn-google .g-ico{width:18px;height:18px;flex-shrink:0}
+
+/* Sign in with Apple — same rules as login.html; Apple's Human Interface
+   Guidelines fix the mark and the wording, and specify white-on-black for
+   dark backgrounds. Kept byte-identical to login.html so the two pages
+   cannot drift apart visually. */
+.btn-apple{background:#fff;color:#000;border:1px solid #fff;font-weight:700}
+.btn-apple:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,255,255,.18)}
+.btn-apple:disabled{cursor:default;transform:none;box-shadow:none}
+.btn-apple .apple-ico{width:18px;height:18px;flex-shrink:0;margin-top:-2px}
 .btn-social{margin-top:10px}
 
 /* bottom */
@@ -299,6 +308,10 @@ button{font-family:inherit;cursor:pointer}
           </button>
 
         </form>
+
+        <!-- Sign in with Apple mounts here. Empty, and stays empty, until
+             auth-apple.js has ENABLED flipped on — see that file's header. -->
+        <div id="appleMount"></div>
       </div>
     </div>
 
@@ -318,6 +331,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="auth-apple.js"></script>
 <script>
   /* Reveal the page once web fonts are ready so the card doesn't reflow
      after the font swap (the layout-shift source on mobile/iPad).
@@ -448,6 +462,22 @@ button{font-family:inherit;cursor:pointer}
       if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
     }
   });
+
+  // ── Sign in with Apple ──────────────────────────────────────────────────────
+  // Inert while auth-apple.js has ENABLED false — mount() returns without
+  // touching the DOM. Apple returns to login.html, not here: once the round trip
+  // succeeds there is nothing left to sign up for, and login.html is the page
+  // that owns the device check and the Hide My Email guard.
+  if (window.SiAuthApple) {
+    window.SiAuthApple.mount(
+      document.getElementById('appleMount'),
+      supabaseClient,
+      {
+        redirectTo: window.SiAuthApple.redirectTarget('login.html', window.location),
+        onError: function (msg) { alert(msg); }
+      }
+    );
+  }
 </script>
 </body>
 </html>
