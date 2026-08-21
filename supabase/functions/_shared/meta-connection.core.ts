@@ -398,6 +398,38 @@ export async function runConnectionCheck(
     // 3 · token validity
     if (tokenOk) {
       push(ok('token.valid', 'System User token is valid', `type ${d.type ?? 'unknown'}`));
+
+      // WHICH KIND of token. This replaces an identity comparison that could
+      // never have been true — see the block at "/me" below. `type` is a
+      // property of the token itself, in one namespace, so it can actually be
+      // asserted on, and it rules out precisely what the owner said they did
+      // not want: a Graph API Explorer token or a personal login.
+      const tokenType = String(d.type ?? '').toUpperCase();
+      if (tokenType === 'SYSTEM_USER') {
+        push(ok('token.type', 'Token is a System User token',
+          'debug_token reports type SYSTEM_USER'));
+      } else if (tokenType === 'USER') {
+        // Meta has not always distinguished the two here. A generic USER type
+        // is NOT evidence of the wrong token, so it must not fail: combined
+        // with expires_at = 0 and a successful asset read it is a System User
+        // token. Reporting it as a failure would be the same false-negative
+        // this whole block exists to remove.
+        push(warn('token.type', 'Token is a System User token',
+          'debug_token reports the generic type USER — Meta does not always distinguish ' +
+          'a System User token here. Read it with the expiry check: a token that never ' +
+          'expires and reads the configured assets is a System User token.'));
+      } else if (!tokenType) {
+        push(warn('token.type', 'Token is a System User token', 'debug_token returned no type'));
+      } else {
+        push(bad('token.type', 'Token is a System User token',
+          `debug_token reports type ${tokenType}`, {
+            class: 'D',
+            reason: `The token is a ${tokenType} token, not a System User token.`,
+            action: 'Generate it from Business Settings → Users → System users → ' +
+              'Automation → Generate new token. A Page or app token cannot drive this ' +
+              'integration.',
+          }));
+      }
     } else {
       push(bad('token.valid', 'System User token is valid', 'debug_token reports is_valid=false', {
         class: 'A',
@@ -496,28 +528,82 @@ export async function runConnectionCheck(
     push(skip('scopes.granted', 'All required scopes granted', 'token could not be inspected'));
   }
 
-  // ══ 2 · /me — is this actually the System User we think it is ════════════
+  // ══ 2 · /me — the APP-SCOPED identity. Reported, never compared. ═════════
+  //
+  // THIS CHECK USED TO COMPARE `me.id` AGAINST META_SYSTEM_USER_ID AND FAIL ON
+  // A MISMATCH. That assertion was invalid and could never have gone green for
+  // a correctly configured System User token:
+  //
+  //   /me returns an APP-SCOPED id (an ASID) — unique to the (identity, app)
+  //   pair, and the default since Graph API v2.0. Business Settings displays
+  //   the BUSINESS-SCOPED System User id. They are different namespaces
+  //   describing the same identity, so they do not match and are not meant to.
+  //
+  // It fired on the first real run: debug_token reported type SYSTEM_USER with
+  // the right app_id, and the SAME token then read the configured Page and Ad
+  // Account successfully — which a token belonging to some other identity
+  // could not do. The evidence contradicted the assertion, so the assertion
+  // was wrong.
+  //
+  // The repo's rule is that a green check is only evidence if it could have
+  // gone red (docs/roadmap/verification-framework-audit.md). This is that rule
+  // read the other way: A RED CHECK IS ONLY EVIDENCE IF IT COULD HAVE GONE
+  // GREEN. This one could not, for any valid configuration.
+  //
+  // What replaced it is strictly stronger, because each part is comparable
+  // within one namespace: token.type above (is this a System User token),
+  // app.identity above (is it THIS app — app ids are global, not scoped),
+  // systemuser.in_business below (is META_SYSTEM_USER_ID a real System User
+  // here), and the asset reads (can it actually reach the Page and account).
   try {
     const me = await client.get<{ id?: string; name?: string }>('me', { fields: 'id,name' });
-    if (!cfg.systemUserId) {
-      push(warn('systemuser.identity', 'Token resolves to the configured System User',
-        `token resolves to id ${me.id ?? '?'} — META_SYSTEM_USER_ID unset, cannot compare`));
-    } else if (me.id === cfg.systemUserId) {
-      push(ok('systemuser.identity', 'Token resolves to the configured System User',
-        `id ${me.id} matches META_SYSTEM_USER_ID`));
-    } else {
-      push(bad('systemuser.identity', 'Token resolves to the configured System User',
-        `token resolves to id ${me.id ?? '?'}, expected ${cfg.systemUserId}`, {
-          class: 'D',
-          reason: 'The token belongs to a different identity than META_SYSTEM_USER_ID names.',
-          action: 'Either the token came from the wrong System User (or from a personal ' +
-            'login), or META_SYSTEM_USER_ID is wrong. Confirm in Business Settings → ' +
-            'Users → System users.',
-        }));
-    }
+    push(ok('systemuser.identity', 'Token resolves to an identity',
+      `app-scoped id ${me.id ?? '?'}${me.name ? ` (${me.name})` : ''}` +
+      (cfg.systemUserId
+        ? ` — the business-scoped id is ${cfg.systemUserId}; different namespaces, ` +
+          'not expected to match'
+        : '')));
   } catch (e) {
-    push(bad('systemuser.identity', 'Token resolves to the configured System User',
+    push(bad('systemuser.identity', 'Token resolves to an identity',
       `/me failed: ${errText(e)}`, classifyError(e, '/me')));
+  }
+
+  // ══ 2b · is META_SYSTEM_USER_ID a real System User in this business? ═════
+  // The configuration check the id comparison was reaching for, done in the
+  // namespace the id actually belongs to. Needs business_management, so a
+  // failure here is a WARN: it means "could not verify", never "wrong".
+  if (!cfg.businessId || !cfg.systemUserId) {
+    push(skip('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
+      'META_BUSINESS_ID or META_SYSTEM_USER_ID is not set'));
+  } else {
+    try {
+      const sus = await client.get<{
+        data?: Array<{ id?: string; name?: string }>; paging?: { next?: string };
+      }>(`${cfg.businessId}/system_users`, { fields: 'id,name', limit: '100' });
+      const rows = sus.data ?? [];
+      const hit = rows.find((r) => r.id === cfg.systemUserId);
+      if (hit) {
+        push(ok('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
+          `${hit.name ?? '(unnamed)'} — id ${hit.id}`));
+      } else if (sus.paging?.next) {
+        // More than 100 System Users and no match on page one proves nothing.
+        push(warn('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
+          `not among the first ${rows.length} System Users and more pages exist — ` +
+          'not verified either way'));
+      } else {
+        push(bad('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
+          `not among the ${rows.length} System Users of business ${cfg.businessId}`, {
+            class: 'D',
+            reason: 'META_SYSTEM_USER_ID does not name a System User in META_BUSINESS_ID.',
+            action: 'Confirm the id in Business Settings → Users → System users. Note this ' +
+              'is the BUSINESS-scoped id shown there, not the app-scoped id /me returns.',
+          }));
+      }
+    } catch (e) {
+      push(warn('systemuser.in_business', 'META_SYSTEM_USER_ID is a System User in this business',
+        `could not read the business System User list: ${errText(e)} — this needs ` +
+        'business_management and is not required for publishing'));
+    }
   }
 
   // ══ 3 · Facebook Page ════════════════════════════════════════════════════

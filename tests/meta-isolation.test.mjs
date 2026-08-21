@@ -73,13 +73,16 @@ const graphErr = (code, status = 400) =>
 
 const HEALTHY = {
   debug_token: () => res({ data: {
-    app_id: 'APP123', is_valid: true, expires_at: 0, type: 'USER', scopes: ALL_SCOPES,
+    app_id: 'APP123', is_valid: true, expires_at: 0, type: 'SYSTEM_USER', scopes: ALL_SCOPES,
   } }),
   me: () => res({ id: 'SU61593218806694', name: 'Automation' }),
   page: () => res({ id: 'PAGE1', name: 'Si Math', category: 'Education' }),
   igLink: () => res({ instagram_business_account: { id: 'IG1', username: 'simath' } }),
   ig: () => res({ id: 'IG1', username: 'simath', account_type: 'BUSINESS', media_count: 12 }),
   igLimit: () => res({ data: [{ quota_usage: 3, config: { quota_total: 50 } }] }),
+  systemUsers: () => res({ data: [
+    { id: 'SU61593218806694', name: 'Automation' },
+  ] }),
   adAccount: () => res({
     id: 'act_AD1', name: 'Si Math Ads', account_status: 1,
     currency: 'EGP', timezone_name: 'Africa/Cairo',
@@ -99,6 +102,7 @@ function route(url, fx) {
   if (path === 'PAGE1') return fields.includes('instagram_business_account') ? fx.igLink() : fx.page();
   if (path === 'IG1' || path === 'IGOTHER') return fx.ig();
   if (path.endsWith('/content_publishing_limit')) return fx.igLimit();
+  if (path.endsWith('/system_users')) return fx.systemUsers();
   if (path === 'act_AD1') return fx.adAccount();
   if (path.endsWith('/campaigns')) return fx.campaigns();
   return res({ error: { message: 'unrouted', code: 100 } }, 404);
@@ -401,10 +405,83 @@ t.section('4 · diagnosis — blockers are classified and actionable');
 }
 
 {
-  // A System User token that resolves to someone else.
-  const { report } = await run({ me: () => res({ id: 'SOMEONE_ELSE', name: 'Person' }) });
-  t.is('a wrong identity FAILS', find(report, 'systemuser.identity')?.status, 'FAIL');
-  t.is('and is class D', find(report, 'systemuser.identity')?.blocker?.class, 'D');
+  // ══ REGRESSION · the app-scoped id must never be compared ═══════════════
+  // The first real L0 run failed `systemuser.identity` because /me returned
+  // 122105760657440626 while META_SYSTEM_USER_ID was 61593218806694. Those are
+  // an APP-SCOPED id and a BUSINESS-SCOPED id: two namespaces for one
+  // identity. The old check compared them directly, so it could never have
+  // gone green for a correct token — a red result that carried no information.
+  //
+  // Fixtures below use the REAL ids from that run.
+  const APP_SCOPED = '122105760657440626';
+  const BUSINESS_SCOPED = 'SU61593218806694';
+
+  const { report } = await run({ me: () => res({ id: APP_SCOPED, name: 'Automation' }) });
+  const id = find(report, 'systemuser.identity');
+
+  t.is('an app-scoped /me id does NOT fail the identity check', id?.status, 'PASS');
+  t.ok('and raises no blocker', id?.blocker === null);
+  t.ok('the app-scoped id is still reported', id?.detail.includes(APP_SCOPED));
+  t.ok('and the report explains the two namespaces',
+    /different namespaces, not expected to match/.test(id?.detail ?? ''));
+
+  // The decisive evidence from the real run: the same token reads the
+  // configured assets. A token belonging to another identity could not.
+  t.is('the Page still passes on that same token', find(report, 'page.access')?.status, 'PASS');
+  t.is('the ad account still passes', find(report, 'adaccount.access')?.status, 'PASS');
+  t.is('the whole run is green', report.ok, true);
+  t.is('no class D blocker is invented', blockersOfClass(report, 'D').length, 0);
+
+  // What the comparison was reaching for, done in the right namespace.
+  t.is('META_SYSTEM_USER_ID is verified against the business list',
+    find(report, 'systemuser.in_business')?.status, 'PASS');
+  t.ok('and names the System User', /Automation/.test(find(report, 'systemuser.in_business')?.detail ?? ''));
+
+  // ...and it must still be able to FAIL, or the fix would just have deleted
+  // the diagnosis rather than relocating it.
+  const wrong = await run({ systemUsers: () => res({ data: [{ id: 'SOMEONE_ELSE', name: 'Other' }] }) });
+  const w = find(wrong.report, 'systemuser.in_business');
+  t.is('an id absent from the business list FAILS', w?.status, 'FAIL');
+  t.is('and is class D', w?.blocker?.class, 'D');
+  t.ok('and warns that the two id kinds differ',
+    /not the app-scoped id/.test(w?.blocker?.action ?? ''));
+
+  // A truncated first page proves nothing either way.
+  const paged = await run({ systemUsers: () => res({
+    data: [{ id: 'OTHER', name: 'X' }], paging: { next: 'https://next' },
+  }) });
+  t.is('an unmatched id with more pages is WARN, not FAIL',
+    find(paged.report, 'systemuser.in_business')?.status, 'WARN');
+
+  // Missing business_management must not manufacture a blocker.
+  const noPerm = await run({ systemUsers: () => graphErr(200, 403) });
+  t.is('an unreadable System User list is WARN',
+    find(noPerm.report, 'systemuser.in_business')?.status, 'WARN');
+  t.ok('and raises no blocker', find(noPerm.report, 'systemuser.in_business')?.blocker === null);
+}
+
+{
+  // ══ token.type — the assertion that replaced the invalid one ════════════
+  const sys = await run();
+  t.is('type SYSTEM_USER passes', find(sys.report, 'token.type')?.status, 'PASS');
+
+  // Meta has not always distinguished the two. A generic USER must NOT fail —
+  // that would reintroduce a false negative of exactly the kind just removed.
+  const generic = await run({ debug_token: () => res({ data: {
+    app_id: 'APP123', is_valid: true, expires_at: 0, type: 'USER', scopes: ALL_SCOPES,
+  } }) });
+  t.is('a generic USER type is WARN, not FAIL', find(generic.report, 'token.type')?.status, 'WARN');
+  t.ok('and raises no blocker', find(generic.report, 'token.type')?.blocker === null);
+  t.is('so the run is still green', generic.report.ok, true);
+
+  // A genuinely wrong KIND of token must still fail.
+  const page = await run({ debug_token: () => res({ data: {
+    app_id: 'APP123', is_valid: true, expires_at: 0, type: 'PAGE', scopes: ALL_SCOPES,
+  } }) });
+  t.is('a PAGE token FAILS', find(page.report, 'token.type')?.status, 'FAIL');
+  t.is('and is class D', find(page.report, 'token.type')?.blocker?.class, 'D');
+  t.ok('and says where to generate the right one',
+    /System users/.test(find(page.report, 'token.type')?.blocker?.action ?? ''));
 }
 
 {

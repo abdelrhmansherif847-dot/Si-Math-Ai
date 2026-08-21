@@ -780,14 +780,15 @@ Ambiguity is never resolved for the operator: with two Pages visible, both are
 listed and **no** `META_PAGE_ID` is suggested. Guessing is how the wrong Page
 gets published to.
 
-### Three misdiagnoses found by running it
+### Four misdiagnoses found by running it
 
-All three were found by executing the checker rather than by reading it, and
-all three were the same failure class — an unread or unreachable state reported
-as a Meta misconfiguration, sending an operator to fix something that was not
-broken. That this shape recurred three times in one module is the finding worth
-carrying forward: **"I could not read it" and "it is not there" are different
-answers, and every diagnostic must keep them apart.**
+All four were found by executing the checker rather than by reading it. The
+first three were one failure class — an unread or unreachable state reported as
+a Meta misconfiguration, sending an operator to fix something that was not
+broken. That this shape recurred three times in one module is worth carrying
+forward on its own: **"I could not read it" and "it is not there" are different
+answers, and every diagnostic must keep them apart.** The fourth is a different
+and worse class, and produced the standing rule at the end of this section.
 
 1. **A transport failure was reported as a missing asset assignment.** With no
    route to Meta, every check fell through to "not visible to this System User
@@ -808,6 +809,44 @@ answers, and every diagnostic must keep them apart.**
    nothing could be read says so explicitly. A test asserts that an
    empty-but-*successfully-read* list still raises its class C note, so the fix
    qualified the diagnosis rather than deleting it.
+
+4. **`systemuser.identity` compared two different id namespaces and could never
+   have passed.** Found by the owner in the first real L0 run, and the most
+   serious of the four, because the previous three failed *loudly on a broken
+   environment* while this one failed on a **correct** one.
+
+   `/me` returns an **app-scoped id** (an ASID — unique to the identity/app
+   pair, the default since Graph API v2.0). Business Settings displays the
+   **business-scoped** System User id. Two namespaces for one identity, so they
+   never match. The check compared them directly and reported class D, "the
+   token belongs to a different identity" — for a perfectly valid token.
+
+   The real run made the contradiction plain: `debug_token` returned
+   `type: SYSTEM_USER` with the correct `app_id`, and the *same token* then read
+   the configured Page and Ad Account successfully. A token belonging to another
+   identity could not have done that. Evidence beat assertion.
+
+   `/me`'s id is now reported, never compared. Three assertions replace it, each
+   comparable **within one namespace**: `token.type` (is this a System User
+   token — a property of the token itself), `app.identity` (app ids are global,
+   not scoped, so that comparison was always sound), and
+   `systemuser.in_business` (is `META_SYSTEM_USER_ID` in
+   `/{business-id}/system_users` — the id checked in the namespace it belongs
+   to). The asset reads carry the rest.
+
+   `token.type` treats a generic `USER` as WARN rather than FAIL: Meta has not
+   always distinguished the two, and failing there would reintroduce exactly the
+   false negative being removed.
+
+**The rule this produced.** `docs/roadmap/verification-framework-audit.md` says
+a green check is only evidence if it could have gone red. Finding 4 is that rule
+read the other way round, and it is now a standing rule for this repo:
+
+> **A red check is only evidence if it could have gone green.**
+
+A check that fails on a correct configuration is worse than no check. The first
+three findings sent an operator to fix a problem that did not exist; this one
+would have sent the owner to replace a System User that was right all along.
 
 ### What L0 does not tell you
 
