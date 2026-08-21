@@ -31,6 +31,22 @@ const exec = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
 
+/** Every key a campaign payload may carry, and nothing else.
+ *
+ *  An ALLOW-LIST, deliberately. A substring deny-list was tried first and
+ *  false-positived immediately: `is_adset_budget_sharing_enabled` contains
+ *  "adset", so a legitimate required field read as an ad-set creation field.
+ *  Worse, a deny-list only catches what someone remembered to forbid — an
+ *  allow-list catches every field nobody has considered yet, which is the one
+ *  that would slip through. Same reasoning as PROVIDER_REF_ALLOWED in
+ *  support-provider.core.ts.
+ *
+ *  Adding a key here is a decision: assume it reaches Meta, because it will. */
+const CAMPAIGN_KEYS_ALLOWED = [
+  'name', 'objective', 'status', 'special_ad_categories',
+  'is_adset_budget_sharing_enabled', 'execution_options', 'daily_budget',
+];
+
 const t = suite('meta-writepath');
 
 const ENV = {
@@ -364,10 +380,11 @@ t.section('5b · L1-1 runner');
   t.is('validate_only, and only validate_only', req.body.execution_options, ['validate_only']);
   t.is('status PAUSED', req.body.status, 'PAUSED');
   t.ok('no budget field at all', req.body.daily_budget === undefined);
-  t.is('the payload has exactly five keys', Object.keys(req.body).sort(),
-    ['execution_options', 'name', 'objective', 'special_ad_categories', 'status']);
-  t.ok('no ad set, ad or creative field is present',
-    !/adset|adcreative|creative|bid_amount|targeting/i.test(JSON.stringify(req.body)));
+  t.is('the payload has exactly six keys', Object.keys(req.body).sort(),
+    ['execution_options', 'is_adset_budget_sharing_enabled', 'name', 'objective',
+     'special_ad_categories', 'status']);
+  t.is('every payload key is on the allow-list',
+    Object.keys(req.body).filter((k) => !CAMPAIGN_KEYS_ALLOWED.includes(k)), []);
   t.is('it targets the campaigns edge only', req.path, 'act_1234567890123456/campaigns');
 }
 
@@ -606,6 +623,92 @@ t.section('5d · sandbox write runner');
       META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0' },
   });
   t.is('it refuses with no account ids', noArgs.status, 2);
+}
+
+// ══ 5e · is_adset_budget_sharing_enabled ═════════════════════════════════
+t.section('5e · is_adset_budget_sharing_enabled');
+
+{
+  // Meta rejected the sandbox create with code 100 / subcode 4834011:
+  //   "You must specify True or False in the field
+  //    is_adset_budget_sharing_enabled if you are not using campaign budget."
+  // Added from that evidence, hardcoded false — true opts into budget
+  // redistribution between ad sets, which would be a latent spend behaviour
+  // riding on an object whose whole purpose is to be inert.
+  const probe = ADS.buildCampaign({
+    adAccountId: 'act_1337142524853681',
+    name: 'Si Math — sandbox write probe',
+    objective: 'OUTCOME_TRAFFIC',
+    maxDailyBudget: 0,
+    validateOnly: false,
+  });
+
+  // 1 · present
+  t.ok('the payload contains is_adset_budget_sharing_enabled',
+    'is_adset_budget_sharing_enabled' in probe.body);
+
+  // 2 · a real boolean, never a string. Meta says "True or False"; a string
+  //     "false" is truthy in JS and would read as the opposite of intent to
+  //     anything reasoning about it on this side.
+  t.is('its type is boolean', typeof probe.body.is_adset_budget_sharing_enabled, 'boolean');
+  t.ok('it is not the string "false"', probe.body.is_adset_budget_sharing_enabled !== 'false');
+  t.ok('it is not the string "true"', probe.body.is_adset_budget_sharing_enabled !== 'true');
+
+  // 3 · the intended fixed value
+  t.is('its value is false', probe.body.is_adset_budget_sharing_enabled, false);
+
+  // ...and it is not caller-supplied, exactly like status. A boolean argument
+  // that changes money behaviour is one typo from changing it.
+  const forced = ADS.buildCampaign({
+    adAccountId: 'act_1', name: 'x', objective: 'OUTCOME_TRAFFIC', maxDailyBudget: 0,
+    is_adset_budget_sharing_enabled: true, isAdsetBudgetSharingEnabled: true,
+  });
+  t.is('a caller cannot force it true', forced.body.is_adset_budget_sharing_enabled, false);
+
+  // Present on every shape the builder produces, budgeted or not, validated or
+  // real — so no branch can silently omit it again.
+  const withBudget = ADS.buildCampaign({
+    adAccountId: 'act_1', name: 'x', objective: 'OUTCOME_TRAFFIC',
+    dailyBudget: 1000, maxDailyBudget: 5000,
+  });
+  t.is('still present when a campaign budget IS set',
+    withBudget.body.is_adset_budget_sharing_enabled, false);
+  const validated = ADS.buildCampaign({
+    adAccountId: 'act_1', name: 'x', objective: 'OUTCOME_TRAFFIC', maxDailyBudget: 0,
+  });
+  t.is('still present on the validate-only shape',
+    validated.body.is_adset_budget_sharing_enabled, false);
+
+  // Source-level: a literal, not an expression. 4 and 5 in the brief — the
+  // mutations that remove it or stringify it are proven to fail below.
+  const adsSrc = exec(readFileSync(
+    resolve(REPO, 'supabase/functions/_shared/meta-ads.core.ts'), 'utf8'));
+  t.ok('the source carries a boolean literal',
+    /is_adset_budget_sharing_enabled:\s*false,/.test(adsSrc));
+  t.ok('and never a quoted string',
+    !/is_adset_budget_sharing_enabled:\s*['"]/.test(adsSrc));
+  t.ok('and never a caller-supplied expression',
+    !/is_adset_budget_sharing_enabled:\s*args\./.test(adsSrc));
+
+  // 8 · nothing else crept in with it. The probe stays inert in every other
+  //     dimension: no budget, no ad set, no ad, no creative, no targeting.
+  t.ok('no budget field', probe.body.daily_budget === undefined &&
+    probe.body.lifetime_budget === undefined);
+  t.is('every payload key is on the allow-list',
+    Object.keys(probe.body).filter((k) => !CAMPAIGN_KEYS_ALLOWED.includes(k)), []);
+  // ...and the allow-list itself names nothing that creates an ad set, ad,
+  // creative or targeting spec. Asserted so widening it stays a decision.
+  t.is('the allow-list introduces no ad-object field',
+    CAMPAIGN_KEYS_ALLOWED.filter((k) => ['adset_id', 'adsets', 'creative', 'adcreative',
+      'targeting', 'bid_amount', 'bid_strategy', 'promoted_object'].includes(k)), []);
+  t.is('status is still PAUSED', probe.body.status, 'PAUSED');
+  t.is('it still targets the campaigns edge only', probe.path,
+    'act_1337142524853681/campaigns');
+
+  // No content-publishing endpoint entered the ads builder.
+  for (const n of ['/media', '/feed', 'media_publish', '/photos', '/videos', 'video_reels']) {
+    t.ok(`the ads builder references no ${n}`, !adsSrc.includes(n));
+  }
 }
 
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════

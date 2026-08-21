@@ -99,6 +99,35 @@ export function buildCampaign(args: {
       // Exam preparation is not a special category, so the empty list is the
       // correct declaration rather than a placeholder.
       special_ad_categories: [],
+      // REQUIRED, and hardcoded false. Not a parameter.
+      //
+      // Meta rejected a campaign create without it, and said exactly why:
+      //   code 100, subcode 4834011
+      //   "You must specify True or False in the field
+      //    is_adset_budget_sharing_enabled if you are not using campaign
+      //    budget. Passing in True will enable your ad sets to share 20% of
+      //    their budget to optimize overall performance."
+      //
+      // FALSE, because true is an opt-in to budget REDISTRIBUTION between ad
+      // sets. It has no effect on a campaign that has no ad sets — but the
+      // value persists on the campaign object and would govern any ad set
+      // added to it later. The probe's defining property is that it is inert
+      // in every dimension; embedding a latent spend behaviour in it would
+      // contradict that, and a setting nobody chose deliberately should not be
+      // the one that survives.
+      //
+      // Hardcoded rather than caller-supplied for the same reason as `status`
+      // above: the builder produces exactly one kind of campaign today, and a
+      // boolean argument that changes money behaviour is one typo from
+      // changing it. Making it configurable is a deliberate change with its
+      // own review, not a default.
+      //
+      // Sent unconditionally. Meta scopes the REQUIREMENT to "if you are not
+      // using campaign budget", and the probe never sets one — but false is
+      // inert on both branches, so sending it always avoids introducing a
+      // branch that has never been exercised against Meta. If a budgeted
+      // campaign is ever built, verify this field's behaviour there first.
+      is_adset_budget_sharing_enabled: false,
       ...(args.dailyBudget !== undefined ? { daily_budget: args.dailyBudget } : {}),
       ...(validateOnly ? { execution_options: ['validate_only'] } : {}),
     },
