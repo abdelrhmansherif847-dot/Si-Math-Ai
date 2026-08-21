@@ -223,10 +223,10 @@ t.section('4 · request builders');
 
 {
   const r = ADS.buildCampaign({
-    adAccountId: '3317656315040315', name: 'test',
+    adAccountId: '1234567890123456', name: 'test',
     objective: 'OUTCOME_TRAFFIC', maxDailyBudget: 5000,
   });
-  t.is('the ad account gets its act_ prefix', r.path, 'act_3317656315040315/campaigns');
+  t.is('the ad account gets its act_ prefix', r.path, 'act_1234567890123456/campaigns');
   t.is('status is PAUSED', r.body.status, 'PAUSED');
   t.is('validate_only is the DEFAULT', r.body.execution_options, ['validate_only']);
   t.is('special_ad_categories is declared', r.body.special_ad_categories, []);
@@ -356,7 +356,7 @@ t.section('5b · L1-1 runner');
 {
   // The payload the runner will send: inert in every dimension.
   const req = ADS.buildCampaign({
-    adAccountId: 'act_3317656315040315',
+    adAccountId: 'act_1234567890123456',
     name: 'Si Math — L1-1 validation probe',
     objective: 'OUTCOME_TRAFFIC',
     maxDailyBudget: 0,
@@ -368,7 +368,7 @@ t.section('5b · L1-1 runner');
     ['execution_options', 'name', 'objective', 'special_ad_categories', 'status']);
   t.ok('no ad set, ad or creative field is present',
     !/adset|adcreative|creative|bid_amount|targeting/i.test(JSON.stringify(req.body)));
-  t.is('it targets the campaigns edge only', req.path, 'act_3317656315040315/campaigns');
+  t.is('it targets the campaigns edge only', req.path, 'act_1234567890123456/campaigns');
 }
 
 {
@@ -430,15 +430,15 @@ t.section('5c · sandbox verifier');
 
   // THE GUARD THAT MATTERS: the live account must stay out of this entirely,
   // and a copy-paste slip is the likeliest way to break that.
-  const live = run(['act_3317656315040315'], { META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  const live = run(['act_2324508798297966'], { META_AD_ACCOUNT_ID: 'act_2324508798297966' });
   t.is('it REFUSES the live ad account', live.status, 2);
   t.ok('naming it as the live account', /LIVE Si Math Ads account/.test(live.stdout));
 
   // ...including when the caller omits the act_ prefix on one side only.
-  const bare = run(['3317656315040315'], { META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  const bare = run(['2324508798297966'], { META_AD_ACCOUNT_ID: 'act_2324508798297966' });
   t.is('the guard survives a missing act_ prefix', bare.status, 2);
 
-  const noArg = run([], { META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  const noArg = run([], { META_AD_ACCOUNT_ID: 'act_2324508798297966' });
   t.is('it refuses with no account id', noArg.status, 2);
   t.ok('printing usage', /usage:/.test(noArg.stdout));
 }
@@ -491,10 +491,15 @@ t.section('5d · sandbox write runner');
   t.is('with publishing enabled it refuses', pubOn.status, 2);
 
   // THE CONFIGURED-LIVE guard.
-  const live = run(['act_3317656315040315', '--approve-sandbox-write'],
-    { META_ENABLE_ADS: 'true', META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  const live = run(['act_2324508798297966', '--approve-sandbox-write'],
+    { META_ENABLE_ADS: 'true', META_AD_ACCOUNT_ID: 'act_2324508798297966' });
+  // The MESSAGE assertion is the one doing the work here. Exit code 2 is
+  // ambiguous — every guard in this runner aborts with it — so with the
+  // configured-live guard disabled the script simply falls through to the
+  // business-ownership guard and still exits 2. Verified by mutation: only
+  // the message check goes red. Do not drop it as redundant.
   t.is('it refuses META_AD_ACCOUNT_ID', live.status, 2);
-  t.ok('naming it', /is META_AD_ACCOUNT_ID/.test(live.stdout));
+  t.ok('naming it as the configured account', /is META_AD_ACCOUNT_ID/.test(live.stdout));
 
   // The decision must be made by the PURE function, not inline — an inline
   // `businessAccounts.includes(target)` could be neutered with `if (false && ...)`
@@ -527,27 +532,27 @@ t.section('5d · sandbox write runner');
   // isBusinessOwned — the guard that decides whether a write target is a LIVE
   // ad account. Its inputs come straight from Graph, so it is tested against
   // the shapes Graph actually returns rather than the shapes we hope for.
+  // Models what /{business-id}/owned_ad_accounts returns: the canonical LIVE
+  // account plus other business assets, in the shapes Graph actually uses.
   const accounts = [
-    { id: 'act_3317656315040315', name: 'A' },
-    { id: 2324508798297966, name: 'B' },        // numeric, as JSON may deliver it
-    { id: '  act_999  ', name: 'C' },           // padded
-    { id: '888', name: 'D' },                   // no act_ prefix
+    { id: 'act_2324508798297966', name: 'Si Math Ads' },   // the canonical LIVE account
+    { id: 4444444444444444, name: 'B' },                   // numeric, as JSON may deliver it
+    { id: '  act_999  ', name: 'C' },                      // padded
+    { id: '888', name: 'D' },                              // no act_ prefix
   ];
 
-  // BOTH ids that have been called "the live Si Math Ads account" must be
-  // caught, whichever one .env happens to hold.
-  t.is('the first disputed live id is refused',
-    ADS.isBusinessOwned('act_3317656315040315', accounts), true);
-  t.is('the second disputed live id is refused',
+  // The property that matters: any account the BUSINESS owns is refused as a
+  // write target, whatever META_AD_ACCOUNT_ID happens to say.
+  t.is('the canonical live account is refused',
     ADS.isBusinessOwned('act_2324508798297966', accounts), true);
 
   t.is('a numeric id from Graph still matches',
-    ADS.isBusinessOwned('act_2324508798297966', [{ id: 2324508798297966 }]), true);
+    ADS.isBusinessOwned('act_4444444444444444', accounts), true);
   t.is('a padded id still matches', ADS.isBusinessOwned('act_999', accounts), true);
   t.is('a missing act_ prefix on the account side still matches',
     ADS.isBusinessOwned('act_888', accounts), true);
   t.is('a missing act_ prefix on the target side still matches',
-    ADS.isBusinessOwned('3317656315040315', accounts), true);
+    ADS.isBusinessOwned('2324508798297966', accounts), true);
 
   t.is('the verified sandbox account is NOT business-owned',
     ADS.isBusinessOwned('act_1337142524853681', accounts), false);

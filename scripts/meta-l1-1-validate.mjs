@@ -1,6 +1,29 @@
 #!/usr/bin/env node
 // L1-1 — ONE real Meta request: a campaign payload validation.
 //
+// ⛔ SUPERSEDED — DO NOT RUN WITHOUT FRESH, EXPLICIT APPROVAL.
+//
+// This runner targets META_AD_ACCOUNT_ID, which is now confirmed by
+// read-only comparison against Meta to be the LIVE account:
+//
+//     act_2324508798297966  "Si Math Ads"  — business-owned, ACTIVE
+//
+// It was written when validate_only was assumed to make that safe. That
+// assumption was never confirmed: no Meta reference for
+// POST /act_<id>/campaigns at v26.0 could be found listing execution_options,
+// and Graph commonly IGNORES unrecognised parameters rather than rejecting
+// them — so if it is not honoured, this creates a real campaign in the live
+// account instead of validating one.
+//
+// The first real write was therefore moved to a Sandbox Ad Account, which is
+// safe structurally rather than by an unverified parameter:
+//
+//     scripts/meta-sandbox-write.mjs  →  act_1337142524853681 "Si Math Sandbox"
+//
+// This file is kept because it becomes correct the moment authoritative Meta
+// documentation confirms execution_options on this endpoint. Until then the
+// sandbox path is the one to use.
+//
 //   META_ENABLE_ADS=true node --env-file=.env \
 //     scripts/meta-l1-1-validate.mjs --approve-single-validate-only
 //

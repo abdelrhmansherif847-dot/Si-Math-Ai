@@ -712,6 +712,41 @@ name against Meta's own reference before writing the call.**
 
 ---
 
+## 14b. Canonical account ids (established 2026-08-21)
+
+Settled by `scripts/meta-account-compare.mjs`, which reads the answer from Meta
+rather than from configuration or memory. Recorded here because two different
+ids were described as "the live account" during this integration, and the
+guards protecting the live account are only as good as knowing which it is.
+
+| Role | Id | Name | Business-owned | In `.env` | Token access | Status |
+|---|---|---|---|---|---|---|
+| **LIVE** | `act_2324508798297966` | Si Math Ads | **YES** | yes | yes | ACTIVE |
+| **SANDBOX** | `act_1337142524853681` | Si Math Sandbox | no | no | yes | ACTIVE, spend 0 |
+
+**`act_3317656315040315` is not the live account, and never was.** It is not
+business-owned, is not configured, and the System User token cannot read it
+(code 200). Its provenance was traced rather than guessed: it appears in no
+file outside test fixtures written during this integration and in no commit
+predating it. **No Meta read ever returned it** — it entered the work through a
+message and was echoed from there into fixtures and instructions. It has since
+been removed from every one of them.
+
+**The L0 results were never affected.** `.env` has held
+`act_2324508798297966` throughout, so every `adaccount.access` and
+`adaccount.read` check ran against the correct live account. The wrong id lived
+only in this repository's test fixtures and in the instructions written from
+them.
+
+**Business ownership is the live/sandbox discriminator**, and it is what the
+write guard uses. A sandbox account is created under the App; every live
+account belongs to the Business Portfolio. `isBusinessOwned()` in
+`meta-ads.core.ts` implements it, normalising numeric ids, padded values and
+missing `act_` prefixes — a guard that silently fails to match is a guard that
+permits the write.
+
+---
+
 ## 15. L0 — what shipped (2026-08-21)
 
 ### Files
