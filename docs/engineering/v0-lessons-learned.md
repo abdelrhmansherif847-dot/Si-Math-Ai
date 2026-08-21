@@ -215,3 +215,62 @@ migration plus columns nothing writes is a table that can never have a row.
    nothing currently makes "the repo is ahead of production" visible.
 5. **`V0-T15` remains worth prioritising** — the forced-exploration fraction can
    still be set to 0, and v2 rates its removal as the risk to watch.
+
+---
+
+## 6. Auth findings carried forward (2026-08-21)
+
+Established during the Sign in with Apple audit, and preserved here because they
+are the kind of thing a future session will otherwise re-derive incorrectly.
+Full evidence in `apple-signin-audit.md` §3 and
+`gotrue-linking-harness/`, which re-runs any of it against real
+GoTrue and a real Postgres in a few minutes.
+
+### R9 — A client-side auth guard is damage limitation, never prevention
+
+The relay-email guard in `auth-apple.js` was originally described as preventing
+duplicate accounts. It does not. GoTrue commits the second `auth.users` row inside
+its own `GET /auth/v1/callback` request, before the browser is redirected back —
+measured in harness case F, which counts rows at the earliest instant any browser
+code could act and finds two. The guard stops the duplicate becoming the account
+the student *uses*. Preventing creation needs the server: `linkIdentity()` or a
+`before-user-created` hook.
+
+Generalise it: **anything that runs after a redirect cannot prevent what the
+redirect already did.**
+
+### R10 — Apple's Hide My Email creates a second account, and nothing stops it
+
+Apple reports `…@privaterelay.appleid.com`, which matches no existing user, so
+`DetermineAccountLinking` returns `CreateAccount`. Verified, harness case C. No
+Supabase setting changes this. The one path immune to it is `linkIdentity()` from
+a signed-in session, which attaches to the authenticated user and never consults
+the email at all (case G).
+
+### R11 — Linking an UNCONFIRMED account preserves the user_id but removes the password
+
+`RemoveUnconfirmedIdentities` runs whenever an OAuth identity is linked to an
+unconfirmed user. It destroys the other identities, sets `encrypted_password` to
+NULL, and overwrites `user_metadata`. Verified, harness case B. The `user_id`
+survives — so credits, chat history, question records, weakness reports and focus
+plans are all safe — but the student becomes OAuth-only.
+
+`profiles.full_name` is unaffected, because `handle_new_user()` fires on INSERT
+into `auth.users` only and linking performs no insert.
+
+### R12 — Email must work before OAuth becomes a login or recovery path
+
+R11's consequence. An OAuth-only student's sole route back to a password is
+`resetPasswordForEmail`. If email delivery is broken — as it is for iCloud today
+(`email-deliverability-audit.md`) — that route does not exist, and an expired
+Apple client secret (Apple forces rotation every 6 months) locks them out with no
+recovery. This is why Phase 1 fixes email before Phase 3 enables Apple.
+
+### R13 — Verify auth behaviour against the source, not the documentation
+
+The first version of the Apple audit reasoned from Supabase's documentation and
+got the account-linking story materially wrong — the Hide My Email case is not
+described there at all. GoTrue is open source: it can be cloned, pointed at a
+throwaway Postgres, and executed. That took under an hour and produced eight
+tests. Every claim in `apple-signin-audit.md` §3 now has one behind it, and each
+was inverted first to confirm it could fail (R8).

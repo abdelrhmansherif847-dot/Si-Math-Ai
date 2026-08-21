@@ -196,6 +196,72 @@ func (ts *ExternalTestSuite) TestSiMathAI_F_GuardCannotPreventCreation() {
 			"a client-side guard can prevent its USE, never its CREATION")
 }
 
+
+// ── G. Phase 2: linkIdentity() from Settings, with Hide My Email ─────────────
+// The claim Phase 2 rests on: a student who is ALREADY SIGNED IN and links Apple
+// from Settings keeps their user_id even when Apple hides the address. Verified
+// rather than assumed, because the same assumption was wrong for the login-page
+// flow (case C).
+//
+// linkIdentityToUser (internal/api/identity.go) attaches the new identity to
+// getTargetUser(ctx) — the authenticated user — and never consults the email for
+// matching. The email is touched only when the target user has none at all
+// (anonymous users), which is not our case.
+func (ts *ExternalTestSuite) TestSiMathAI_G_SettingsLinkSurvivesHideMyEmail() {
+	u, err := ts.createUser("", siStudentEmail, "Jumana", "", "")
+	require.NoError(ts.T(), err)
+	require.NoError(ts.T(), u.Confirm(ts.API.db))
+	before := u.ID
+
+	// The student is signed in: their user is the target of the link request.
+	r := appleCallback().WithContext(withTargetUser(appleCallback().Context(), u))
+
+	linked, err := ts.API.linkIdentityToUser(r, r.Context(), ts.API.db,
+		appleData(siRelayEmail, "apple-sub-G", true), "apple")
+	require.NoError(ts.T(), err)
+
+	require.Equal(ts.T(), before, linked.ID, "G: user_id preserved despite Hide My Email")
+	require.Equal(ts.T(), 1, countUsers(ts), "G: NO second account is created")
+	require.Equal(ts.T(), []string{"apple", "email"}, providersOf(ts, before.String()),
+		"G: Apple is added alongside the existing email identity")
+
+	reloaded, err := models.FindUserByID(ts.API.db, before)
+	require.NoError(ts.T(), err)
+	require.Equal(ts.T(), siStudentEmail, reloaded.GetEmail(),
+		"G: the account email is NOT replaced by the relay address")
+	require.NotNil(ts.T(), reloaded.EncryptedPassword,
+		"G: the password is NOT wiped — unlike the unconfirmed-link path in case B")
+}
+
+// ── H. The ordering constraint Phase 2 implies ───────────────────────────────
+// If a student has ALREADY forked via the login button, the same Apple sub is
+// bound to the orphan, and linking from Settings is refused rather than silently
+// moved. Nothing is corrupted — but it means Settings-linking must ship BEFORE
+// the public button, not after.
+func (ts *ExternalTestSuite) TestSiMathAI_H_AlreadyForkedRefusesSettingsLink() {
+	real, err := ts.createUser("", siStudentEmail, "Jumana", "", "")
+	require.NoError(ts.T(), err)
+	require.NoError(ts.T(), real.Confirm(ts.API.db))
+
+	// The fork happens first, via the login-page button.
+	_, orphan, err := ts.API.createAccountFromExternalIdentity(
+		ts.API.db, appleCallback(), appleData(siRelayEmail, "apple-sub-H", true), "apple", false)
+	require.NoError(ts.T(), err)
+	require.NotEqual(ts.T(), real.ID, orphan.ID)
+	require.Equal(ts.T(), 2, countUsers(ts))
+
+	// Now they try to link the same Apple ID from Settings on their real account.
+	r := appleCallback().WithContext(withTargetUser(appleCallback().Context(), real))
+	_, err = ts.API.linkIdentityToUser(r, r.Context(), ts.API.db,
+		appleData(siRelayEmail, "apple-sub-H", true), "apple")
+
+	require.Error(ts.T(), err, "H: refused — the Apple identity belongs to the orphan")
+	require.Contains(ts.T(), err.Error(), "already linked")
+	require.Equal(ts.T(), 2, countUsers(ts), "H: refusal changes nothing")
+	require.Equal(ts.T(), []string{"email"}, providersOf(ts, real.ID.String()),
+		"H: the real account is untouched by the failed attempt")
+}
+
 // Sanity: the suite is wired to a real database and these checks could fail.
 func TestSiMathAILinkingHarness(t *testing.T) {
 	api, config, err := setupAPIForTest()

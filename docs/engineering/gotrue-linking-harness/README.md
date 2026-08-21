@@ -1,7 +1,8 @@
 # GoTrue identity-linking harness
 
-Reproduces the five Sign in with Apple linking tests in
-`docs/engineering/apple-signin-audit.md` §3 against the **real** Supabase Auth
+Reproduces the Sign in with Apple linking tests in
+`docs/engineering/apple-signin-audit.md` §3 (cases A-F) and the two
+`linkIdentity()` cases behind `phase2-connected-accounts-design.md` (G, H) against the **real** Supabase Auth
 (GoTrue) source and a **real** Postgres, on a throwaway local database.
 Production is never contacted.
 
@@ -69,4 +70,6 @@ Pinned here so a future GoTrue version can be diffed against what was read:
 | Unconfirmed users still match, and still link | same file — `similarUsers` query filters on `is_sso_user = false` only |
 | The second user row is written here | `internal/api/external.go` — `CreateAccount` branch, `a.signupNewUser(tx, user)` |
 | Password wipe + identity destruction on an unconfirmed user | `internal/models/user.go` — `RemoveUnconfirmedIdentities` |
+| Manual linking attaches to the AUTHENTICATED user, ignoring email | `internal/api/identity.go` — `linkIdentityToUser`, `getTargetUser(ctx)` |
+| Manual linking is off by default | `internal/conf/configuration.go` — `ManualLinkingEnabled` |
 | Supabase sends `text/html` only, with no plain-text part | `internal/mailer/mailmeclient/mailmeclient.go` — `SetBody("text/html", body)` |
