@@ -216,6 +216,34 @@ export function redactSecrets(text: string, secrets: readonly string[]): string 
   return out;
 }
 
+/** Credential shapes that may appear in text we did not author.
+ *
+ *  redactSecrets() removes the secrets we KNOW. This removes the ones we do
+ *  not: Meta echoing a different token back, a proof in a quoted url, an
+ *  Authorization header in a relayed message. Both run — knowing a value is
+ *  not a precondition for removing it. */
+const CREDENTIAL_PATTERNS: RegExp[] = [
+  // Facebook access tokens. The EAA prefix is the reliable marker.
+  /\bEAA[A-Za-z0-9_-]{20,}/g,
+  // Credential-bearing query parameters wherever they are quoted back.
+  /\b(access_token|input_token|appsecret_proof|client_secret)=[^&\s"'\\]+/gi,
+  // An Authorization header, should one ever be relayed.
+  /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/gi,
+  // A bare 64-hex value is the shape of an appsecret_proof.
+  /\b[0-9a-f]{64}\b/g,
+];
+
+/** Make third-party text safe to print.
+ *
+ *  TWO INDEPENDENT LAYERS, and both matter. The value layer catches this
+ *  process's own secrets; the pattern layer catches credential-shaped text
+ *  whose value we never held. Either alone would be a gap. */
+export function scrubUpstreamText(text: unknown, secrets: readonly string[]): string {
+  let out = redactSecrets(typeof text === 'string' ? text : String(text ?? ''), secrets);
+  for (const re of CREDENTIAL_PATTERNS) out = out.replace(re, REDACTED);
+  return out;
+}
+
 // ── appsecret_proof ────────────────────────────────────────────────────────
 
 /** HMAC-SHA256 of the access token, keyed with the app secret, hex-encoded.
@@ -275,6 +303,51 @@ export function metaErrorMessage(status: number, code = 0): string {
   return 'meta_rejected_request';
 }
 
+/** What Meta actually said, scrubbed.
+ *
+ *  WHY THIS EXISTS. metaErrorMessage() maps every failure to a fixed sentence
+ *  so no upstream text can reach a report, a database row, or a log line by
+ *  accident. That is right for anything persisted — and it was applied as a
+ *  blanket rule, which left an operator staring at "meta_rejected_request
+ *  (code 100)" with no way to learn WHICH field Meta objected to. A diagnostic
+ *  that withholds the diagnosis is not a safety feature.
+ *
+ *  So the fixed sentence stays on `.message` — anything that logs an error the
+ *  ordinary way still cannot leak — and the real content moves here, scrubbed
+ *  through both layers of scrubUpstreamText(). Reading it is a deliberate act.
+ *
+ *  error_user_title / error_user_msg are included because Graph puts its most
+ *  human explanation there, and code 100 in particular is generic until you
+ *  read them. */
+export interface GraphErrorDetail {
+  message: string;
+  type: string;
+  code: number;
+  subcode: number;
+  userTitle: string;
+  userMessage: string;
+  fbtraceId: string;
+}
+
+/** Build a scrubbed detail from a Graph error body. */
+export function graphErrorDetail(
+  err: Record<string, unknown> | undefined,
+  secrets: readonly string[],
+): GraphErrorDetail {
+  const e = err ?? {};
+  const str = (v: unknown) => (v === undefined || v === null ? '' : scrubUpstreamText(v, secrets));
+  const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+  return {
+    message: str(e.message),
+    type: str(e.type),
+    code: num(e.code),
+    subcode: num(e.error_subcode),
+    userTitle: str(e.error_user_title),
+    userMessage: str(e.error_user_msg),
+    fbtraceId: str(e.fbtrace_id),
+  };
+}
+
 export class MetaError extends Error {
   readonly status: number;
   readonly code: number;
@@ -282,14 +355,33 @@ export class MetaError extends Error {
   /** Meta's trace id. Safe to log and the only thing worth quoting in a
    *  support case — it identifies the request without describing it. */
   readonly fbtraceId: string;
+  /** What Meta said, scrubbed. Absent when there was no Graph error body. */
+  readonly detail: GraphErrorDetail | null;
 
-  constructor(status: number, code = 0, subcode = 0, fbtraceId = '') {
+  constructor(status: number, code = 0, subcode = 0, fbtraceId = '', detail: GraphErrorDetail | null = null) {
     super(metaErrorMessage(status, code));
     this.name = 'MetaError';
     this.status = status;
     this.code = code;
     this.subcode = subcode;
     this.fbtraceId = fbtraceId;
+    this.detail = detail;
+  }
+
+  /** One line an operator can read, safe to print. Empty when Meta said
+   *  nothing beyond the code. */
+  describe(): string {
+    const d = this.detail;
+    if (!d) return '';
+    const bits = [
+      d.message,
+      d.userTitle && d.userTitle !== d.message ? `(${d.userTitle})` : '',
+      d.userMessage && d.userMessage !== d.message ? d.userMessage : '',
+      d.type ? `type ${d.type}` : '',
+      d.subcode ? `subcode ${d.subcode}` : '',
+      d.fbtraceId ? `fbtrace ${d.fbtraceId}` : '',
+    ].filter(Boolean);
+    return bits.join(' · ');
   }
 }
 
@@ -404,7 +496,10 @@ export interface MetaClient {
 }
 
 interface GraphErrorBody {
-  error?: { message?: string; code?: number; error_subcode?: number; fbtrace_id?: string };
+  error?: {
+    message?: string; type?: string; code?: number; error_subcode?: number;
+    error_user_title?: string; error_user_msg?: string; fbtrace_id?: string;
+  };
 }
 
 export function createMetaClient(env: MetaEnv, opts: MetaClientOptions = {}): MetaClient {
@@ -422,6 +517,24 @@ export function createMetaClient(env: MetaEnv, opts: MetaClientOptions = {}): Me
   // request would buy nothing.
   let proofPromise: Promise<string> | null = null;
   const proof = () => (proofPromise ??= appSecretProof(env.token, env.appSecret));
+
+  /** Every secret this client holds, for the value layer of the scrub. */
+  const ownSecrets = [env.token, env.appSecret].filter(Boolean);
+
+  /** The single place a Graph failure becomes a MetaError. It was duplicated
+   *  across the read and write paths, which is how the write path could have
+   *  drifted into relaying an unscrubbed body while the read path stayed
+   *  safe. */
+  function graphError(status: number, body: unknown): MetaError {
+    const e = (body as GraphErrorBody)?.error ?? {};
+    return new MetaError(
+      status,
+      typeof e.code === 'number' ? e.code : 0,
+      typeof e.error_subcode === 'number' ? e.error_subcode : 0,
+      typeof e.fbtrace_id === 'string' ? e.fbtrace_id : '',
+      graphErrorDetail(e as Record<string, unknown>, ownSecrets),
+    );
+  }
 
   function buildUrl(path: string, params: Record<string, string>): string {
     // A caller passing a leading slash and a caller not passing one must land
@@ -449,15 +562,7 @@ export function createMetaClient(env: MetaEnv, opts: MetaClientOptions = {}): Me
     let body: unknown = null;
     try { body = JSON.parse(text); } catch { body = null; }
 
-    if (!res.ok || (body as GraphErrorBody)?.error) {
-      const e = (body as GraphErrorBody)?.error ?? {};
-      throw new MetaError(
-        res.status,
-        typeof e.code === 'number' ? e.code : 0,
-        typeof e.error_subcode === 'number' ? e.error_subcode : 0,
-        typeof e.fbtrace_id === 'string' ? e.fbtrace_id : '',
-      );
-    }
+    if (!res.ok || (body as GraphErrorBody)?.error) throw graphError(res.status, body);
     return body as T;
   }
 
@@ -509,15 +614,7 @@ export function createMetaClient(env: MetaEnv, opts: MetaClientOptions = {}): Me
       const text = await res.text();
       let body: unknown = null;
       try { body = JSON.parse(text); } catch { body = null; }
-      if (!res.ok || (body as GraphErrorBody)?.error) {
-        const e = (body as GraphErrorBody)?.error ?? {};
-        throw new MetaError(
-          res.status,
-          typeof e.code === 'number' ? e.code : 0,
-          typeof e.error_subcode === 'number' ? e.error_subcode : 0,
-          typeof e.fbtrace_id === 'string' ? e.fbtrace_id : '',
-        );
-      }
+      if (!res.ok || (body as GraphErrorBody)?.error) throw graphError(res.status, body);
       return { sent: true, request: req, url: redacted, response: body };
     },
 

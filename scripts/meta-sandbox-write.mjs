@@ -203,8 +203,27 @@ try {
   say(`  Meta response: ${JSON.stringify(out.response)}`);
 } catch (e) {
   createErr = e;
-  say(`  Meta REJECTED: ${e.message}${e.code ? ` (code ${e.code})` : ''}` +
-      `${e.fbtraceId ? ` fbtrace ${e.fbtraceId}` : ''}`);
+  // The fixed sentence first — it is the stable, greppable classification.
+  say(`  Meta REJECTED: ${e.message}${e.code ? ` (code ${e.code})` : ''}`);
+  // Then what Meta actually said. Printing only the fixed sentence left the
+  // first real run reporting "meta_rejected_request (code 100)" and nothing
+  // else, which named the failure without diagnosing it. Both scrub layers
+  // have already run over every field below.
+  const d = e.detail ?? null;
+  if (d) {
+    say('  ── what Meta said (scrubbed) ──');
+    if (d.message) say(`    message         : ${d.message}`);
+    if (d.type) say(`    type            : ${d.type}`);
+    if (d.code) say(`    code            : ${d.code}`);
+    if (d.subcode) say(`    error_subcode   : ${d.subcode}`);
+    if (d.userTitle) say(`    error_user_title: ${d.userTitle}`);
+    if (d.userMessage) say(`    error_user_msg  : ${d.userMessage}`);
+    if (d.fbtraceId) say(`    fbtrace_id      : ${d.fbtraceId}`);
+    say('  Quote fbtrace_id to Meta support; it identifies the request without');
+    say('  describing it.');
+  } else {
+    say('  (Meta returned no error body — only an HTTP status)');
+  }
 }
 
 // ── verify + delete ────────────────────────────────────────────────────────

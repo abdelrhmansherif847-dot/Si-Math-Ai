@@ -472,6 +472,19 @@ t.section('5d · sandbox write runner');
   // The delete targets only the id Meta returned — never a search or a sweep.
   t.ok('the delete uses the captured id', /buildDeleteObject\(createdId/.test(src));
 
+  // IT MUST PRINT WHAT META SAID. The first real run reported
+  // "meta_rejected_request (code 100)" and nothing else, which named the
+  // failure without diagnosing it. Asserted at source because the printing is
+  // the deliverable — a mutation replacing `e.detail` with null escaped every
+  // other check in this suite.
+  t.ok('it reads the scrubbed error detail', /const d = e\.detail/.test(src));
+  t.ok('and does not hard-code it away', !/const d = null/.test(src));
+  for (const field of ['d.message', 'd.type', 'd.subcode', 'd.userTitle', 'd.userMessage', 'd.fbtraceId']) {
+    t.ok(`it prints ${field}`, src.includes(field));
+  }
+  t.ok('and says so when Meta returned no body at all',
+    /returned no error body/.test(src));
+
   const run = (args, env) => spawnSync(process.execPath, [SW, ...args], {
     cwd: REPO, encoding: 'utf8',
     env: {

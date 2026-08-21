@@ -235,6 +235,98 @@ t.section('error surfacing');
   t.ok('an error object in a 200 response still throws', err2 !== null);
 }
 
+// ══ 7b · the error DETAIL is surfaced, and scrubbed ═══════════════════════
+t.section('error detail');
+
+{
+  // THE REGRESSION FIXTURE. The first real sandbox write returned code 100 and
+  // the runner reported "meta_rejected_request (code 100)" and nothing else —
+  // the failure was named but not diagnosed. Modelled on that exact response,
+  // including its fbtrace id.
+  const CODE_100 = {
+    error: {
+      message: '(#100) Tried accessing nonexisting field on node type',
+      type: 'OAuthException',
+      code: 100,
+      error_subcode: 1487390,
+      error_user_title: 'Invalid Special Ad Category',
+      error_user_msg: 'You must provide special_ad_categories for this campaign.',
+      fbtrace_id: 'A-UvrB0-PuhQcJG_XjkQ3D_',
+    },
+  };
+
+  const client = G.createMetaClient(ENV, {
+    fetchImpl: async () => res(CODE_100, 400), readOnly: true,
+  });
+  let err = null;
+  try { await client.get('act_1/campaigns'); } catch (e) { err = e; }
+
+  t.ok('a code-100 rejection throws', err !== null);
+  t.is('the classification stays a fixed sentence', err?.message, 'meta_rejected_request');
+  t.is('the code is preserved', err?.code, 100);
+  t.is('the subcode is preserved', err?.subcode, 1487390);
+  t.is('the fbtrace id is preserved', err?.fbtraceId, 'A-UvrB0-PuhQcJG_XjkQ3D_');
+
+  // What was missing before: the actual reason.
+  t.ok('detail is present', !!err?.detail);
+  t.is('Meta\'s message is surfaced', err.detail.message,
+    '(#100) Tried accessing nonexisting field on node type');
+  t.is('the error type is surfaced', err.detail.type, 'OAuthException');
+  t.is('error_user_title is surfaced', err.detail.userTitle, 'Invalid Special Ad Category');
+  t.is('error_user_msg is surfaced', err.detail.userMessage,
+    'You must provide special_ad_categories for this campaign.');
+  t.ok('describe() reads as one line', /Invalid Special Ad Category/.test(err.describe()) &&
+    /fbtrace A-UvrB0-PuhQcJG_XjkQ3D_/.test(err.describe()));
+
+  // An error body with only a code still yields a usable, empty-ish detail.
+  const bare = G.createMetaClient(ENV, {
+    fetchImpl: async () => res({ error: { code: 100 } }, 400), readOnly: true,
+  });
+  let e2 = null;
+  try { await bare.get('x'); } catch (e) { e2 = e; }
+  t.is('a bare error body still yields a detail', typeof e2?.detail, 'object');
+  t.is('with empty strings rather than undefined', e2.detail.message, '');
+  t.is('and describe() is empty rather than noise', e2.describe(), '');
+}
+
+{
+  // SURFACING MUST NOT LEAK. Meta quoting credentials back is the exact reason
+  // the message was suppressed in the first place; the fix is scrubbing, not
+  // silence. Fed a body containing this client's own token, this client's app
+  // secret, a DIFFERENT token it has never seen, a proof-shaped hex value and
+  // a Bearer header — every one must be gone.
+  const OTHER = 'EAAsomeOtherTokenValueThatIsLongEnough123456';
+  const PROOF = 'a'.repeat(64);
+  const client = G.createMetaClient(ENV, {
+    readOnly: true,
+    fetchImpl: async () => res({ error: {
+      message: `Invalid OAuth token ${ENV.token} secret ${ENV.appSecret} ` +
+        `other ${OTHER} access_token=${OTHER} appsecret_proof=${PROOF} ` +
+        `Authorization: Bearer ${OTHER}`,
+      error_user_msg: `also here: ${ENV.token} and ${OTHER}`,
+      code: 190, fbtrace_id: 'Atrace',
+    } }, 400),
+  });
+  let err = null;
+  try { await client.get('me'); } catch (e) { err = e; }
+
+  const all = JSON.stringify(err.detail) + err.describe();
+  t.ok('this client\'s own token is gone', !all.includes(ENV.token));
+  t.ok('this client\'s app secret is gone', !all.includes(ENV.appSecret));
+  t.ok('a token it has NEVER held is gone', !all.includes(OTHER));
+  t.ok('a proof-shaped hex value is gone', !all.includes(PROOF));
+  t.ok('no Bearer header survives', !/Bearer\s+[A-Za-z0-9]/.test(all));
+  t.ok('and something readable remains', all.includes('[redacted]'));
+
+  // The pattern layer must work with no known secrets at all — the value layer
+  // is not a precondition for it.
+  t.ok('pattern scrubbing works with an empty secret list',
+    !G.scrubUpstreamText(`token ${OTHER} here`, []).includes(OTHER));
+  t.is('and plain text is left alone',
+    G.scrubUpstreamText('the objective field is invalid', []),
+    'the objective field is invalid');
+}
+
 // ══ 8 · the onRequest hook cannot leak ════════════════════════════════════
 t.section('onRequest hook');
 
