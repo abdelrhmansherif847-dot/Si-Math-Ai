@@ -443,6 +443,72 @@ t.section('5c · sandbox verifier');
   t.ok('printing usage', /usage:/.test(noArg.stdout));
 }
 
+// ══ 5d · the sandbox write runner ════════════════════════════════════════
+t.section('5d · sandbox write runner');
+
+{
+  const SW = resolve(REPO, 'scripts/meta-sandbox-write.mjs');
+  const raw = readFileSync(SW, 'utf8');
+  const a = raw.indexOf('// SELF-INSPECT-BEGIN');
+  const bIdx = raw.lastIndexOf('// SELF-INSPECT-END');
+  t.ok('it carries a self-inspection fence', a >= 0 && bIdx > a);
+  const src = exec(raw.slice(0, a) + raw.slice(bIdx));
+
+  for (const n of ['/media', '/feed', '/photos', '/videos', 'media_publish', 'video_reels']) {
+    t.ok(`it references no ${n}`, !src.includes(n));
+  }
+  t.ok('it never grants the publish capability', !/publish:\s*true/.test(src));
+  t.ok('it grants the ads capability only', /capabilities:\s*\{\s*ads:\s*true\s*\}/.test(src));
+  t.is('it performs EXACTLY two writes — one create, one delete',
+    (src.match(/writer\.write\s*\(/g) ?? []).length, 2);
+  t.ok('every verification read uses a readOnly client',
+    /const reader = createMetaClient\(read\.env, \{ readOnly: true/.test(src));
+
+  // It must NOT depend on the unverified parameter.
+  t.ok('it explicitly disables validate_only', /validateOnly:\s*false/.test(src));
+  t.ok('and refuses a payload that carries execution_options',
+    /execution_options !== undefined\) die/.test(src));
+
+  // The delete targets only the id Meta returned — never a search or a sweep.
+  t.ok('the delete uses the captured id', /buildDeleteObject\(createdId/.test(src));
+
+  const run = (args, env) => spawnSync(process.execPath, [SW, ...args], {
+    cwd: REPO, encoding: 'utf8',
+    env: {
+      ...process.env, META_APP_ID: '1', META_APP_SECRET: 'x',
+      META_SYSTEM_USER_TOKEN: 'y', META_GRAPH_VERSION: 'v26.0', ...env,
+    },
+  });
+
+  const noFlag = run(['act_1337142524853681'], { META_ENABLE_ADS: 'true' });
+  t.is('without the approval flag it exits 2', noFlag.status, 2);
+
+  const noSwitch = run(['act_1337142524853681', '--approve-sandbox-write'], {});
+  t.is('without META_ENABLE_ADS it exits 2', noSwitch.status, 2);
+
+  const pubOn = run(['act_1337142524853681', '--approve-sandbox-write'],
+    { META_ENABLE_ADS: 'true', META_ENABLE_PUBLISH: 'true' });
+  t.is('with publishing enabled it refuses', pubOn.status, 2);
+
+  // THE CONFIGURED-LIVE guard.
+  const live = run(['act_3317656315040315', '--approve-sandbox-write'],
+    { META_ENABLE_ADS: 'true', META_AD_ACCOUNT_ID: 'act_3317656315040315' });
+  t.is('it refuses META_AD_ACCOUNT_ID', live.status, 2);
+  t.ok('naming it', /is META_AD_ACCOUNT_ID/.test(live.stdout));
+
+  // THE GUARD THAT DOES NOT DEPEND ON .env BEING RIGHT: without a business id
+  // the API-derived live-account check cannot be evaluated, so it refuses
+  // rather than writing unguarded. Two different ids have been called "the
+  // live account" in this project, so a guard keyed only on .env is not enough.
+  const noBiz = run(['act_1337142524853681', '--approve-sandbox-write'],
+    { META_ENABLE_ADS: 'true', META_AD_ACCOUNT_ID: 'act_9' });
+  t.is('without META_BUSINESS_ID it refuses to write unguarded', noBiz.status, 2);
+  t.ok('explaining that the guard cannot be evaluated',
+    /live-account guard reads the business/.test(noBiz.stdout));
+  t.ok('and it got as far as passing self-inspection first',
+    /PASS  self-inspection/.test(noBiz.stdout));
+}
+
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════
 t.section('6 · total network writes across this entire suite');
 

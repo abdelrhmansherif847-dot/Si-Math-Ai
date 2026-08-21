@@ -209,6 +209,34 @@ for (const rel of L0) {
   }
 }
 
+// ── 5d · the sandbox write runner stays ads-only and bounded ───────────────
+{
+  const rel = 'scripts/meta-sandbox-write.mjs';
+  try {
+    const raw = readFileSync(resolve(REPO, rel), 'utf8');
+    const a = raw.indexOf('// SELF-INSPECT-BEGIN');
+    const b2 = raw.lastIndexOf('// SELF-INSPECT-END');
+    if (a < 0 || b2 <= a) fail(`${rel}: self-inspection fence is missing`);
+    const src = (a >= 0 && b2 > a ? raw.slice(0, a) + raw.slice(b2) : raw)
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+
+    const w = (src.match(/writer\.write\s*\(/g) ?? []).length;
+    if (w !== 2) fail(`${rel}: ${w} writes — it performs exactly one create and one delete`);
+    if (/publish:\s*true/.test(src)) fail(`${rel}: grants the publish capability — it is ads-only`);
+    for (const n of ['media_publish', '/media', '/feed', '/photos', '/videos']) {
+      if (src.includes(n)) fail(`${rel}: references ${n}`);
+    }
+    if (!/businessId/.test(src)) {
+      fail(`${rel}: no business-ownership guard — a live account must be refused even when ` +
+        'META_AD_ACCOUNT_ID names a different one');
+    }
+  } catch (e) {
+    if (e && e.code === 'ENOENT') fail(`${rel} is missing`);
+    else throw e;
+  }
+}
+
 // ── 6 · the spec exists and stays in step ──────────────────────────────────
 const SPEC = 'docs/engineering/meta-marketing-integration.md';
 try {
