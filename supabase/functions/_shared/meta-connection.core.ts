@@ -770,3 +770,211 @@ function finish(checks: CheckResult[]): ConnectionReport {
 
   return { checks, blockers, capabilities, counts, ok: counts.fail === 0 };
 }
+
+// ── asset discovery ────────────────────────────────────────────────────────
+// READ-ONLY, like everything else in this file. GET only.
+//
+// WHY THIS EXISTS, when the ids are all visible in Business Settings
+// -----------------------------------------------------------------
+// Because the UI answers a different question. Business Settings shows what
+// the BUSINESS owns; this shows what the SYSTEM USER can see. Those differ
+// exactly when an asset was never assigned — which is the single most likely
+// misconfiguration for this integration, and the one the spec predicts.
+//
+// An id copied from the UI for an unassigned asset looks perfectly valid, gets
+// pasted into META_AD_ACCOUNT_ID, and then fails as "not visible to this
+// System User" with no indication that the id itself was fine. Discovering
+// through the token means an id that appears here is, by construction, an id
+// the token can use.
+
+export interface DiscoveredPage {
+  id: string; name: string; category: string;
+  igId: string; igUsername: string;
+}
+
+export interface DiscoveredAdAccount {
+  id: string; name: string; status: string; currency: string;
+  /** Which edge produced it — an account reachable only via /me/adaccounts but
+   *  absent from the business's owned list is shared in from elsewhere, which
+   *  is worth seeing rather than flattening away. */
+  source: string;
+}
+
+export interface DiscoveryReport {
+  appId: string | null;
+  scopes: string[];
+  pages: DiscoveredPage[];
+  adAccounts: DiscoveredAdAccount[];
+  /** What could not be read, and what that means. Same four classes. */
+  notes: Array<{ class: BlockerClass; text: string }>;
+  /** Ready-to-paste env lines for anything unambiguous. */
+  suggested: Record<string, string>;
+}
+
+interface EdgeBody<T> { data?: T[]; paging?: { next?: string } }
+
+/** Enumerate what this System User's token can actually see.
+ *
+ *  Every edge is optional and failure-tolerant: a token without
+ *  business_management cannot read the business's owned lists but can still
+ *  read /me/accounts, and a partial answer is far more useful than a stack
+ *  trace. Each failure becomes a classified note rather than an exception. */
+export async function discoverAssets(
+  client: MetaClient,
+  cfg: { businessId?: string },
+): Promise<DiscoveryReport> {
+  const notes: DiscoveryReport['notes'] = [];
+  const pages: DiscoveredPage[] = [];
+  const adAccounts: DiscoveredAdAccount[] = [];
+  const seenAd = new Set<string>();
+  let appId: string | null = null;
+  let scopes: string[] = [];
+
+  // "Empty" and "unread" are different answers, and conflating them is how a
+  // network failure becomes "the asset was never assigned". These record that
+  // an edge actually ANSWERED — the emptiness conclusions below are gated on
+  // it. The same mistake was made twice before in this file (a transport
+  // failure filed as a missing assignment, a proxy 403 filed as a missing
+  // permission); this is the third instance of the same shape.
+  let pagesRead = false;
+  let adAccountsRead = false;
+
+  // Deduplicated by text. A single proxy outage otherwise emits one identical
+  // paragraph per edge, and five copies of the same sentence bury the one line
+  // that differs.
+  const seenNote = new Set<string>();
+  const addNote = (cls: BlockerClass, text: string) => {
+    if (seenNote.has(text)) return;
+    seenNote.add(text);
+    notes.push({ class: cls, text });
+  };
+  const note = (e: unknown, what: string) => {
+    const b = classifyError(e, what);
+    // The REASON is per-edge and the ACTION is shared, so dedupe on the action:
+    // one proxy failure yields one instruction, not one per endpoint.
+    addNote(b.class, b.action);
+  };
+
+  // ── the app, from the token itself ───────────────────────────────────────
+  try {
+    const d = await client.debugToken<{ data?: { app_id?: string; scopes?: string[] } }>();
+    appId = d.data?.app_id ?? null;
+    scopes = Array.isArray(d.data?.scopes) ? d.data.scopes : [];
+  } catch (e) {
+    note(e, '/debug_token');
+  }
+
+  // ── Pages, with their Instagram linkage in the same call ─────────────────
+  // The nested field is why this is one request rather than 1+N: the Instagram
+  // id that matters is the one the PAGE reports, and asking for it here means
+  // an operator never has to guess it.
+  try {
+    const r = await client.get<EdgeBody<{
+      id?: string; name?: string; category?: string;
+      instagram_business_account?: { id?: string; username?: string };
+    }>>('me/accounts', {
+      fields: 'id,name,category,instagram_business_account{id,username}',
+      limit: '100',
+    });
+    for (const p of r.data ?? []) {
+      pages.push({
+        id: p.id ?? '', name: p.name ?? '(unnamed)', category: p.category ?? '',
+        igId: p.instagram_business_account?.id ?? '',
+        igUsername: p.instagram_business_account?.username ?? '',
+      });
+    }
+    pagesRead = true;
+    if (r.paging?.next) {
+      addNote('D', 'More Pages exist than were listed (paging.next set). ' +
+        'Only the first 100 are shown.');
+    }
+  } catch (e) {
+    note(e, 'Pages (/me/accounts)');
+  }
+
+  // ── ad accounts, from every edge that can produce one ────────────────────
+  const addAccounts = (rows: Array<Record<string, unknown>>, source: string) => {
+    for (const a of rows) {
+      const id = String(a.id ?? '');
+      if (!id || seenAd.has(id)) continue;
+      seenAd.add(id);
+      const st = typeof a.account_status === 'number' ? a.account_status : 0;
+      adAccounts.push({
+        id,
+        name: String(a.name ?? '(unnamed)'),
+        status: AD_ACCOUNT_STATUS[st] ?? `UNKNOWN(${st})`,
+        currency: String(a.currency ?? ''),
+        source,
+      });
+    }
+  };
+
+  const AD_FIELDS = 'id,name,account_status,currency,timezone_name';
+
+  if (cfg.businessId) {
+    for (const [edge, label] of [
+      ['owned_ad_accounts', 'owned by the business'],
+      ['client_ad_accounts', 'shared with the business'],
+    ] as const) {
+      try {
+        const r = await client.get<EdgeBody<Record<string, unknown>>>(
+          `${cfg.businessId}/${edge}`, { fields: AD_FIELDS, limit: '100' },
+        );
+        addAccounts(r.data ?? [], label);
+        adAccountsRead = true;
+      } catch (e) {
+        note(e, `Ad accounts (${edge})`);
+      }
+    }
+  } else {
+    addNote('D', 'META_BUSINESS_ID is not set, so the business-owned ad account lists ' +
+      'were not read. Only accounts reachable via /me/adaccounts appear.');
+  }
+
+  // Always try the direct edge too: it catches an account assigned straight to
+  // the System User without going through a business list.
+  try {
+    const r = await client.get<EdgeBody<Record<string, unknown>>>(
+      'me/adaccounts', { fields: AD_FIELDS, limit: '100' },
+    );
+    addAccounts(r.data ?? [], 'assigned to this System User');
+    adAccountsRead = true;
+  } catch (e) {
+    note(e, 'Ad accounts (/me/adaccounts)');
+  }
+
+  // ── suggestions, only where there is no ambiguity ────────────────────────
+  // A single candidate is proposed; several are listed but never guessed
+  // between. Picking one for the operator is how the wrong Page gets published
+  // to, and the cost of asking is one line of output.
+  const suggested: Record<string, string> = {};
+  if (appId) suggested.META_APP_ID = appId;
+  if (pages.length === 1) {
+    suggested.META_PAGE_ID = pages[0].id;
+    if (pages[0].igId) suggested.META_IG_USER_ID = pages[0].igId;
+  }
+  if (adAccounts.length === 1) suggested.META_AD_ACCOUNT_ID = adAccounts[0].id;
+
+  // Every conclusion below is gated on the edge having ANSWERED. An unread
+  // edge supports no conclusion at all — see the comment on pagesRead.
+  if (pagesRead && !pages.length) {
+    addNote('C', 'No Page is visible to this System User. Business Settings → Accounts → ' +
+      'Pages → select the Page → Assign people → add the Automation System User.');
+  }
+  if (adAccountsRead && !adAccounts.length) {
+    addNote('C', 'No ad account is visible to this System User. Business Settings → ' +
+      'Accounts → Ad accounts → select the account → Assign people → add the Automation ' +
+      'System User with the "Manage campaigns" task. If no ad account exists yet, create ' +
+      'one first — ads cannot be checked until one does.');
+  }
+  if (pagesRead && pages.length && !pages.some((p) => p.igId)) {
+    addNote('C', 'No visible Page has a linked Instagram Professional account. Instagram ' +
+      'publishing is blocked until one is linked to the Page and assigned to the System User.');
+  }
+  if (!pagesRead && !adAccountsRead) {
+    addNote('A', 'Nothing could be read. This run says NOTHING about which assets are ' +
+      'assigned — resolve the errors above and re-run before drawing any conclusion.');
+  }
+
+  return { appId, scopes, pages, adAccounts, notes, suggested };
+}

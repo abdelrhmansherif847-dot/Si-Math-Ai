@@ -720,7 +720,7 @@ name against Meta's own reference before writing the call.**
 |---|---|
 | `supabase/functions/_shared/meta-graph.core.ts` | The adapter. The only module that knows Meta's HTTP shape. Env reader, `appSecretProof`, `redactUrl`/`redactSecrets`, error mapping, and a client whose `post()`/`del()` throw. |
 | `supabase/functions/_shared/meta-connection.core.ts` | The L0 checks. Pure — no env, no I/O, no database — so the suite executes these exact bytes. |
-| `scripts/meta-connection-check.mjs` | Operator CLI. Reads the environment, renders the report, sets the exit code. `--json`, `--verbose`. |
+| `scripts/meta-connection-check.mjs` | Operator CLI. Reads the environment, renders the report, sets the exit code. `--json`, `--verbose`, `--discover`. |
 | `scripts/validate-meta-source.mjs` | Repo-wide CI gate. Auto-discovered by `tests/run-all.mjs`. |
 | `tests/meta-graph.test.mjs` | 65 checks — adapter behaviour. |
 | `tests/meta-isolation.test.mjs` | 138 checks — the four boundaries. |
@@ -756,11 +756,38 @@ making `post()` issue a real request, misclassifying an asset blocker, and
 relaying Meta's raw error body were each introduced deliberately and each
 turned the suites red.
 
-### Two misdiagnoses found by running it
+### `--discover` — obtaining the asset ids
 
-Both were found by executing the checker rather than by reading it, and both
-were the same failure class — a network condition reported as a Meta
-configuration problem, sending an operator to fix something that was not broken.
+```bash
+node --env-file=.env scripts/meta-connection-check.mjs --discover
+```
+
+Enumerates what the System User's token can actually see — the Meta App (from
+`/debug_token`), Pages with their Instagram linkage, and ad accounts from the
+business-owned, business-client and direct edges — then prints ready-to-paste
+`.env` lines.
+
+**Why not just read the ids out of Business Settings.** Because the UI answers
+a different question: it shows what the *business owns*, and this shows what
+the *System User can see*. They differ exactly when an asset was never
+assigned — the misconfiguration this integration is most likely to hit. An id
+copied from the UI for an unassigned asset looks perfectly valid and then fails
+later as "not visible to this System User", with nothing pointing at the real
+cause. An id that appears in `--discover` is, by construction, one the token
+can use.
+
+Ambiguity is never resolved for the operator: with two Pages visible, both are
+listed and **no** `META_PAGE_ID` is suggested. Guessing is how the wrong Page
+gets published to.
+
+### Three misdiagnoses found by running it
+
+All three were found by executing the checker rather than by reading it, and
+all three were the same failure class — an unread or unreachable state reported
+as a Meta misconfiguration, sending an operator to fix something that was not
+broken. That this shape recurred three times in one module is the finding worth
+carrying forward: **"I could not read it" and "it is not there" are different
+answers, and every diagnostic must keep them apart.**
 
 1. **A transport failure was reported as a missing asset assignment.** With no
    route to Meta, every check fell through to "not visible to this System User
@@ -774,6 +801,13 @@ configuration problem, sending an operator to fix something that was not broken.
    application layer at all. Now class A and named as a likely egress filter.
    A test asserts that a Graph-*coded* 403 still lands in class B, so the fix
    did not simply move the misdiagnosis.
+
+3. **Discovery reported "no Page is visible → assign it" when every read had
+   failed.** Same shape again: an unread edge supports no conclusion. Emptiness
+   conclusions are now gated on the edge having answered, and a run where
+   nothing could be read says so explicitly. A test asserts that an
+   empty-but-*successfully-read* list still raises its class C note, so the fix
+   qualified the diagnosis rather than deleting it.
 
 ### What L0 does not tell you
 

@@ -1,8 +1,17 @@
 #!/usr/bin/env node
 // L0 — the read-only Meta connection check.
 //
-//   node scripts/meta-connection-check.mjs           human report
-//   node scripts/meta-connection-check.mjs --json    machine-readable
+//   node scripts/meta-connection-check.mjs             human report
+//   node scripts/meta-connection-check.mjs --discover  list visible assets
+//   node scripts/meta-connection-check.mjs --json      machine-readable
+//
+// --discover answers "what can this System User actually see", which is a
+// different question from "is what I configured correct". Use it to obtain
+// META_APP_ID / META_PAGE_ID / META_AD_ACCOUNT_ID / META_IG_USER_ID without
+// hunting in Business Settings — and, more usefully, without the risk of
+// copying an id for an asset that was never assigned to the System User.
+// It needs only META_APP_ID's siblings: the two secrets, the graph version,
+// and (for the business-owned ad account lists) META_BUSINESS_ID.
 //
 // READ-ONLY. Issues GET requests and nothing else. Publishes nothing, creates
 // no media container, calls no media_publish, creates no campaign, mutates no
@@ -53,11 +62,12 @@ const load = (rel) => import(pathToFileURL(resolve(REPO, rel)).href);
 
 const { readMetaEnv, createMetaClient, redactSecrets, SECRET_ENV } =
   await load('supabase/functions/_shared/meta-graph.core.ts');
-const { runConnectionCheck, BLOCKER_CLASS_LABEL } =
+const { runConnectionCheck, discoverAssets, BLOCKER_CLASS_LABEL } =
   await load('supabase/functions/_shared/meta-connection.core.ts');
 
 const JSON_OUT = process.argv.includes('--json');
 const VERBOSE = process.argv.includes('--verbose');
+const DISCOVER = process.argv.includes('--discover');
 
 // Every secret VALUE currently in the environment. Anything about to be
 // printed is passed through this, whatever produced it — an error message that
@@ -102,6 +112,73 @@ const client = createMetaClient(read.env, {
   // form, so this recorder cannot capture a token even by accident.
   onRequest: (method, redactedUrl) => requests.push({ method, url: redactedUrl }),
 });
+
+// ── discovery mode ─────────────────────────────────────────────────────────
+if (DISCOVER) {
+  let d;
+  try {
+    d = await discoverAssets(client, { businessId: read.env.businessId });
+  } catch (e) {
+    say(`\n  discovery could not complete: ${e?.message ?? e}\n`);
+    process.exit(2);
+  }
+
+  if (JSON_OUT) {
+    console.log(safe(JSON.stringify({ ...d, requests }, null, 2)));
+    process.exit(0);
+  }
+
+  say('\n═══════════════════════════════════════════════════════════════');
+  say(' Assets visible to this System User (READ-ONLY)');
+  say('═══════════════════════════════════════════════════════════════');
+  say(` System User : ${read.env.systemUserId || '(unset)'}`);
+  say(` Business    : ${read.env.businessId || '(META_BUSINESS_ID unset)'}`);
+
+  say('\n── Meta App ──');
+  say(d.appId ? `  ${d.appId}   (read from the token via /debug_token)`
+              : '  could not read — see notes below');
+  if (d.scopes.length) say(`  scopes: ${d.scopes.join(', ')}`);
+
+  say(`\n── Pages (${d.pages.length}) ──`);
+  if (!d.pages.length) say('  none visible');
+  for (const p of d.pages) {
+    say(`  ${p.id}  ${p.name}${p.category ? `  [${p.category}]` : ''}`);
+    say(p.igId ? `      instagram: ${p.igId} (@${p.igUsername})`
+               : '      instagram: NOT LINKED');
+  }
+
+  say(`\n── Ad accounts (${d.adAccounts.length}) ──`);
+  if (!d.adAccounts.length) say('  none visible');
+  for (const a of d.adAccounts) {
+    say(`  ${a.id}  ${a.name}  ${a.status}${a.currency ? `  ${a.currency}` : ''}`);
+    say(`      ${a.source}`);
+  }
+
+  if (d.notes.length) {
+    say('\n── notes ──');
+    for (const n of d.notes) say(`  [${n.class}] ${n.text}`);
+  }
+
+  const lines = Object.entries(d.suggested);
+  if (lines.length) {
+    say('\n── paste into .env ──');
+    for (const [k, v] of lines) say(`${k}=${v}`);
+    // Anything ambiguous is deliberately absent above: choosing between two
+    // Pages for an operator is how the wrong one gets published to.
+    const ambiguous = [
+      d.pages.length > 1 ? 'META_PAGE_ID (several Pages visible — pick one)' : null,
+      d.adAccounts.length > 1 ? 'META_AD_ACCOUNT_ID (several ad accounts visible — pick one)' : null,
+    ].filter(Boolean);
+    if (ambiguous.length) {
+      say('\n  not suggested, because more than one candidate exists:');
+      for (const a of ambiguous) say(`    ${a}`);
+    }
+  }
+
+  say('\n  Discovery makes no assertion that the setup is correct.');
+  say('  Run without --discover for the actual L0 checks.\n');
+  process.exit(0);
+}
 
 let report;
 try {

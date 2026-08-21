@@ -553,4 +553,167 @@ t.section('5 · a fully-configured account passes');
   t.ok('the ad account currency is reported', /EGP/.test(find(report, 'adaccount.access')?.detail ?? ''));
 }
 
+// ══ 6 · DISCOVERY — read-only, and concludes nothing it did not read ══════
+t.section('6 · asset discovery');
+
+const DISCOVERY_FX = {
+  debug_token: () => res({ data: { app_id: 'APP123', is_valid: true, scopes: ALL_SCOPES } }),
+  accounts: () => res({ data: [
+    { id: 'PAGE1', name: 'Si Math', category: 'Education',
+      instagram_business_account: { id: 'IG1', username: 'simath' } },
+  ] }),
+  ownedAds: () => res({ data: [
+    { id: 'act_AD1', name: 'Si Math Ads', account_status: 1, currency: 'EGP' },
+  ] }),
+  clientAds: () => res({ data: [] }),
+  meAds: () => res({ data: [
+    { id: 'act_AD1', name: 'Si Math Ads', account_status: 1, currency: 'EGP' },
+  ] }),
+};
+
+function routeDiscovery(url, fx) {
+  const u = new URL(url);
+  const path = u.pathname.replace(/^\/v\d+\.\d+\//, '');
+  if (path === 'debug_token') return fx.debug_token();
+  if (path === 'me/accounts') return fx.accounts();
+  if (path.endsWith('/owned_ad_accounts')) return fx.ownedAds();
+  if (path.endsWith('/client_ad_accounts')) return fx.clientAds();
+  if (path === 'me/adaccounts') return fx.meAds();
+  return res({ error: { message: 'unrouted', code: 100 } }, 404);
+}
+
+async function discover(overrides = {}, businessId = 'BIZ1') {
+  const fx = { ...DISCOVERY_FX, ...overrides };
+  const requests = [];
+  const client = G.createMetaClient(ENV, {
+    readOnly: true,
+    onRequest: (method, url) => requests.push({ method, url }),
+    fetchImpl: async (url, init) => {
+      requests.push({ rawMethod: init?.method ?? 'GET', rawUrl: url });
+      return routeDiscovery(url, fx);
+    },
+  });
+  return { d: await C.discoverAssets(client, { businessId }), requests };
+}
+
+{
+  const { d, requests } = await discover();
+
+  const methods = [...new Set(requests.filter((r) => r.rawMethod).map((r) => r.rawMethod))];
+  t.is('discovery issues only GETs', methods, ['GET']);
+  t.ok('discovery actually issued requests', requests.filter((r) => r.rawMethod).length >= 4);
+
+  t.is('the app id is read from the token', d.appId, 'APP123');
+  t.is('the Page is found', d.pages.map((p) => p.id), ['PAGE1']);
+  t.is('the Page\'s Instagram link comes with it', d.pages[0].igId, 'IG1');
+  t.is('the Instagram username comes with it', d.pages[0].igUsername, 'simath');
+  t.is('the ad account is found', d.adAccounts.map((a) => a.id), ['act_AD1']);
+  t.is('the ad account is not duplicated across edges', d.adAccounts.length, 1);
+  t.is('the ad account status is decoded', d.adAccounts[0].status, 'ACTIVE');
+
+  t.is('an unambiguous app id is suggested', d.suggested.META_APP_ID, 'APP123');
+  t.is('an unambiguous Page is suggested', d.suggested.META_PAGE_ID, 'PAGE1');
+  t.is('the Instagram id is suggested from the Page', d.suggested.META_IG_USER_ID, 'IG1');
+  t.is('an unambiguous ad account is suggested', d.suggested.META_AD_ACCOUNT_ID, 'act_AD1');
+  t.is('a healthy discovery raises no notes', d.notes, []);
+
+  const s = JSON.stringify(d);
+  t.ok('the discovery report carries no token', !s.includes(TOKEN));
+  t.ok('the discovery report carries no app secret', !s.includes(APP_SECRET));
+  t.ok('recorded discovery urls are redacted',
+    requests.filter((r) => r.url).every((r) => !r.url.includes(TOKEN)));
+}
+
+{
+  // THE GATING BUG, third instance of its shape in this file. When every edge
+  // fails, discovery must not conclude "no Page is assigned" — that is a
+  // network failure being reported as a Meta misconfiguration, and it sends an
+  // operator into Business Settings to fix something that is not broken.
+  const dead = () => ({ ok: false, status: 403, text: async () => 'Forbidden by proxy' });
+  const { d } = await discover({
+    debug_token: dead, accounts: dead, ownedAds: dead, clientAds: dead, meAds: dead,
+  });
+
+  t.is('nothing is discovered', [d.pages.length, d.adAccounts.length], [0, 0]);
+  t.ok('NO class C assignment note is raised',
+    d.notes.every((n) => n.class !== 'C'));
+  t.ok('and it says explicitly that nothing can be concluded',
+    d.notes.some((n) => /says NOTHING about which assets are assigned/.test(n.text)));
+
+  // Deduplicated: one proxy outage is one instruction, not one per endpoint.
+  const texts = d.notes.map((n) => n.text);
+  t.is('notes are deduplicated', texts.length, new Set(texts).size);
+  t.ok('and the five failing edges collapsed to a short list', d.notes.length <= 3);
+}
+
+{
+  // ...but a successful read that genuinely returns nothing MUST still raise
+  // the class C note. Without this, the gating fix above would simply have
+  // deleted the diagnosis instead of qualifying it.
+  const { d } = await discover({
+    accounts: () => res({ data: [] }),
+    ownedAds: () => res({ data: [] }),
+    meAds: () => res({ data: [] }),
+  });
+  t.ok('an empty-but-READ Page list still raises class C',
+    d.notes.some((n) => n.class === 'C' && /No Page is visible/.test(n.text)));
+  t.ok('an empty-but-READ ad account list still raises class C',
+    d.notes.some((n) => n.class === 'C' && /No ad account is visible/.test(n.text)));
+  t.ok('and no "nothing could be read" note is raised',
+    !d.notes.some((n) => /says NOTHING/.test(n.text)));
+}
+
+{
+  // A Page with no Instagram link is a distinct, real class C.
+  const { d } = await discover({
+    accounts: () => res({ data: [{ id: 'PAGE1', name: 'Si Math', category: 'Education' }] }),
+  });
+  t.ok('an unlinked Page raises the Instagram class C note',
+    d.notes.some((n) => n.class === 'C' && /No visible Page has a linked Instagram/.test(n.text)));
+  t.ok('and no META_IG_USER_ID is suggested', d.suggested.META_IG_USER_ID === undefined);
+  t.is('but the Page itself is still suggested', d.suggested.META_PAGE_ID, 'PAGE1');
+}
+
+{
+  // Ambiguity is never resolved for the operator. Guessing between two Pages
+  // is how the wrong one gets published to.
+  const { d } = await discover({
+    accounts: () => res({ data: [
+      { id: 'PAGE1', name: 'Si Math' }, { id: 'PAGE2', name: 'Si Math Test' },
+    ] }),
+    ownedAds: () => res({ data: [
+      { id: 'act_A', name: 'One', account_status: 1 },
+      { id: 'act_B', name: 'Two', account_status: 1 },
+    ] }),
+    meAds: () => res({ data: [] }),
+  });
+  t.is('both Pages are listed', d.pages.length, 2);
+  t.ok('but no META_PAGE_ID is suggested', d.suggested.META_PAGE_ID === undefined);
+  t.is('both ad accounts are listed', d.adAccounts.length, 2);
+  t.ok('and no META_AD_ACCOUNT_ID is suggested', d.suggested.META_AD_ACCOUNT_ID === undefined);
+  t.is('the app id is still suggested (it is unambiguous)', d.suggested.META_APP_ID, 'APP123');
+}
+
+{
+  // Without META_BUSINESS_ID the business-owned edges are not read, and the
+  // report must say so rather than implying the account does not exist.
+  const { d, requests } = await discover({}, '');
+  const paths = requests.filter((r) => r.rawUrl).map((r) => new URL(r.rawUrl).pathname);
+  t.ok('no business edge is called', !paths.some((p) => /owned_ad_accounts|client_ad_accounts/.test(p)));
+  t.ok('and the omission is stated', d.notes.some((n) => /META_BUSINESS_ID is not set/.test(n.text)));
+  t.is('the direct edge still finds the account', d.adAccounts.map((a) => a.id), ['act_AD1']);
+}
+
+{
+  // Partial permission: business_management missing, so the owned lists 403
+  // while /me/accounts works. A partial answer beats an exception.
+  const { d } = await discover({
+    ownedAds: () => graphErr(200, 403), clientAds: () => graphErr(200, 403),
+  });
+  t.is('the Page is still discovered', d.pages.map((p) => p.id), ['PAGE1']);
+  t.is('the ad account is still found via the direct edge', d.adAccounts.map((a) => a.id), ['act_AD1']);
+  t.ok('and the permission gap is noted as class B',
+    d.notes.some((n) => n.class === 'B'));
+}
+
 t.done();
