@@ -108,6 +108,43 @@ export function buildCampaign(args: {
   };
 }
 
+/** Normalise an ad account id for comparison.
+ *
+ *  Coerced and trimmed before the act_ prefix is applied, because `id` is only
+ *  ANNOTATED as a string — Graph is not obliged to honour that, and a numeric
+ *  id compared strictly against a string is a comparison that silently fails
+ *  while both values are identical. That exact bug already cost this project
+ *  one false diagnosis on the System User check; a repeat here would silently
+ *  disarm a guard protecting a live ad account. */
+export function normalizeAccountId(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  const t = String(v).trim();
+  if (!t) return '';
+  return t.startsWith('act_') ? t : `act_${t}`;
+}
+
+/** True when `target` is one of the ad accounts the Business Portfolio owns or
+ *  is a client of — which makes it a LIVE account, whatever any environment
+ *  variable says about which account is "the live one".
+ *
+ *  A sandbox account is created under the App and is not owned by the
+ *  business, so this separates the two without relying on configuration that
+ *  has already proven ambiguous.
+ *
+ *  Pure, so the guard it implements is unit-testable without a network and
+ *  cannot be silently neutered: an earlier version lived inline in the runner
+ *  and could be disabled with `if (false && ...)` while every check stayed
+ *  green. */
+export function isBusinessOwned(target: unknown, accounts: readonly unknown[]): boolean {
+  const t = normalizeAccountId(target);
+  if (!t) return false;
+  for (const a of accounts) {
+    const id = a && typeof a === 'object' ? (a as { id?: unknown }).id : a;
+    if (normalizeAccountId(id) === t) return true;
+  }
+  return false;
+}
+
 /** Read-side helper: the insights query string. Returned as params for
  *  client.get(), NOT as a WriteRequest — reading performance is not a write
  *  and must not travel through the write path. */

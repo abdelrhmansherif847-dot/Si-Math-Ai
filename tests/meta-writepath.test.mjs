@@ -496,6 +496,20 @@ t.section('5d · sandbox write runner');
   t.is('it refuses META_AD_ACCOUNT_ID', live.status, 2);
   t.ok('naming it', /is META_AD_ACCOUNT_ID/.test(live.stdout));
 
+  // The decision must be made by the PURE function, not inline — an inline
+  // `businessAccounts.includes(target)` could be neutered with `if (false && ...)`
+  // and every check stayed green. That gap was real and is closed here.
+  // ANCHORED to the exact guard form. A looser regex matching the call
+  // anywhere still passed against `if (false && ADS.isBusinessOwned(...))` —
+  // the guard was neutered and the test stayed green. Two mutation attempts
+  // escaped before this assertion was tight enough.
+  t.ok('the live-account decision is the sole condition of the guard',
+    /if \(ADS\.isBusinessOwned\(target, businessAccounts\)\) \{/.test(src));
+  t.ok('and is not short-circuited', !/&&\s*ADS\.isBusinessOwned/.test(src));
+  t.ok('and is not negated', !/!\s*ADS\.isBusinessOwned/.test(src));
+  t.ok('and is not an inline includes() on raw strings',
+    !/businessAccounts\.includes\(/.test(src));
+
   // THE GUARD THAT DOES NOT DEPEND ON .env BEING RIGHT: without a business id
   // the API-derived live-account check cannot be evaluated, so it refuses
   // rather than writing unguarded. Two different ids have been called "the
@@ -507,6 +521,51 @@ t.section('5d · sandbox write runner');
     /live-account guard reads the business/.test(noBiz.stdout));
   t.ok('and it got as far as passing self-inspection first',
     /PASS  self-inspection/.test(noBiz.stdout));
+}
+
+{
+  // isBusinessOwned — the guard that decides whether a write target is a LIVE
+  // ad account. Its inputs come straight from Graph, so it is tested against
+  // the shapes Graph actually returns rather than the shapes we hope for.
+  const accounts = [
+    { id: 'act_3317656315040315', name: 'A' },
+    { id: 2324508798297966, name: 'B' },        // numeric, as JSON may deliver it
+    { id: '  act_999  ', name: 'C' },           // padded
+    { id: '888', name: 'D' },                   // no act_ prefix
+  ];
+
+  // BOTH ids that have been called "the live Si Math Ads account" must be
+  // caught, whichever one .env happens to hold.
+  t.is('the first disputed live id is refused',
+    ADS.isBusinessOwned('act_3317656315040315', accounts), true);
+  t.is('the second disputed live id is refused',
+    ADS.isBusinessOwned('act_2324508798297966', accounts), true);
+
+  t.is('a numeric id from Graph still matches',
+    ADS.isBusinessOwned('act_2324508798297966', [{ id: 2324508798297966 }]), true);
+  t.is('a padded id still matches', ADS.isBusinessOwned('act_999', accounts), true);
+  t.is('a missing act_ prefix on the account side still matches',
+    ADS.isBusinessOwned('act_888', accounts), true);
+  t.is('a missing act_ prefix on the target side still matches',
+    ADS.isBusinessOwned('3317656315040315', accounts), true);
+
+  t.is('the verified sandbox account is NOT business-owned',
+    ADS.isBusinessOwned('act_1337142524853681', accounts), false);
+  t.is('an empty target matches nothing', ADS.isBusinessOwned('', accounts), false);
+  t.is('a null target matches nothing', ADS.isBusinessOwned(null, accounts), false);
+  t.is('an empty account list matches nothing',
+    ADS.isBusinessOwned('act_1', []), false);
+  t.is('accounts with no id are skipped',
+    ADS.isBusinessOwned('act_1', [{ name: 'no id' }, {}]), false);
+  t.is('a bare string account entry also works',
+    ADS.isBusinessOwned('act_5', ['act_5']), true);
+
+  t.is('normalizeAccountId adds the prefix', ADS.normalizeAccountId('123'), 'act_123');
+  t.is('normalizeAccountId keeps an existing prefix', ADS.normalizeAccountId('act_123'), 'act_123');
+  t.is('normalizeAccountId coerces a number', ADS.normalizeAccountId(123), 'act_123');
+  t.is('normalizeAccountId trims', ADS.normalizeAccountId('  act_123 '), 'act_123');
+  t.is('normalizeAccountId maps empty to empty', ADS.normalizeAccountId(''), '');
+  t.is('normalizeAccountId maps null to empty', ADS.normalizeAccountId(null), '');
 }
 
 // ══ 6 · the whole-run total ═══════════════════════════════════════════════

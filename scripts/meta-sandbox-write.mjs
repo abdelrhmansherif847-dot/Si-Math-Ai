@@ -141,16 +141,23 @@ let businessAccounts = [];
 try {
   for (const edge of ['owned_ad_accounts', 'client_ad_accounts']) {
     const r = await reader.get(`${read.env.businessId}/${edge}`, { fields: 'id,name', limit: '200' });
-    for (const row of r?.data ?? []) businessAccounts.push(String(row.id ?? '').trim());
+    for (const row of r?.data ?? []) businessAccounts.push(row);
   }
 } catch (e) {
   die(`could not read the business's ad accounts: ${e?.message ?? e}. The guard cannot be ` +
       'evaluated, so nothing is written. This needs business_management.');
 }
 say(`  business owns/clients ${businessAccounts.length} ad account(s)`);
-for (const id of businessAccounts) say(`    ${id}${id === target ? '   ← TARGET' : ''}`);
+for (const row of businessAccounts) {
+  const id = ADS.normalizeAccountId(row?.id);
+  say(`    ${id}${row?.name ? `  ${row.name}` : ''}${id === target ? '   ← TARGET' : ''}`);
+}
 
-if (businessAccounts.includes(target)) {
+// The decision is made by a PURE function in meta-ads.core.ts, unit-tested
+// against numeric ids, missing act_ prefixes and padded values. It used to be
+// an inline `businessAccounts.includes(target)` on raw strings, which both
+// missed those cases and could be neutered by an edit no test would catch.
+if (ADS.isBusinessOwned(target, businessAccounts)) {
   die(`${target} belongs to the Business Portfolio, which means it is a LIVE ad account. ` +
       'A sandbox account is created under the App and is not owned by the business. ' +
       'Refusing to write.');
