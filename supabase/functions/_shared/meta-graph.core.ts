@@ -87,6 +87,18 @@ export interface MetaEnv {
   adAccountId: string;
   businessId: string;
   systemUserId: string;
+  /** Capability switches. Both default to FALSE when unset.
+   *
+   *  NOTE THE INVERSION relative to ALLOWED_ORIGINS in _shared/cors.ts. There,
+   *  unset means permissive, because a fail-closed default would take the
+   *  tutor down for every student. Here, unset means INERT, because the
+   *  failure mode is a public post or real money. Different blast radius,
+   *  opposite default. Do not "fix" this to match cors.ts. */
+  enablePublish: boolean;
+  enableAds: boolean;
+  /** Hard ceiling on any daily budget, in the account's minor units. 0 = unset,
+   *  which the ads builder treats as "refuse every budget". */
+  adsMaxDailyBudget: number;
 }
 
 export interface MetaEnvRead {
@@ -128,8 +140,16 @@ export function readMetaEnv(get: (k: string) => string | undefined): MetaEnvRead
     return { env: null, missingRequired, missingAssets, versionError };
   }
 
+  // "true" only. Not "1", not "yes", not "TRUE ". A switch that opens the
+  // publish path deserves an unambiguous value, and a typo must fail closed.
+  const flag = (k: string) => get(k)?.trim() === 'true';
+  const budget = Number.parseInt(val('META_ADS_MAX_DAILY_BUDGET') || '0', 10);
+
   return {
     env: {
+      enablePublish: flag('META_ENABLE_PUBLISH'),
+      enableAds: flag('META_ENABLE_ADS'),
+      adsMaxDailyBudget: Number.isFinite(budget) && budget > 0 ? budget : 0,
       appId: val('META_APP_ID'),
       appSecret: val('META_APP_SECRET'),
       token: val('META_SYSTEM_USER_TOKEN'),
@@ -287,10 +307,65 @@ export class ReadOnlyViolation extends Error {
 
 export const GRAPH_HOST = 'https://graph.facebook.com';
 
+// ── the write contract ────────────────────────────────────────────────────
+//
+// EVERY write is a WriteRequest built by a pure function and handed to the
+// client. It is never assembled inside the client, and never assembled inline
+// at a call site. Two reasons:
+//
+//   1. A pure builder is exhaustively testable with no network anywhere near
+//      it, so "is the request correct" and "is it safe to send" are separate
+//      questions answered by separate tests.
+//   2. `capability` is a REQUIRED field. A write cannot be expressed without
+//      naming the switch that governs it, so no write can be added that
+//      silently escapes the gates.
+
+export type WriteCapability = 'publish' | 'ads';
+
+export interface WriteRequest {
+  method: 'POST' | 'DELETE';
+  /** Graph path, no leading slash, no version — the client adds both. */
+  path: string;
+  body: Record<string, unknown>;
+  /** Which env switch must be true for this to leave the process. */
+  capability: WriteCapability;
+  /** One line for the dry-run log. Must contain no secret. */
+  summary: string;
+}
+
+export interface WriteOutcome {
+  /** FALSE in dry run. The single field that answers "did this touch Meta". */
+  sent: boolean;
+  request: WriteRequest;
+  /** The url that was, or would have been, called. REDACTED. */
+  url: string;
+  /** Present only when sent === true. */
+  response?: unknown;
+}
+
+/** Raised when a write is attempted while its capability switch is off. */
+export class CapabilityDisabled extends Error {
+  readonly capability: WriteCapability;
+  constructor(capability: WriteCapability) {
+    super(`write refused: capability '${capability}' is not enabled`);
+    this.name = 'CapabilityDisabled';
+    this.capability = capability;
+  }
+}
+
 export interface MetaClientOptions {
   /** Injectable so the suites can drive the REAL client with a stub and assert
    *  on the exact requests made — no network, no app, no ad account. */
   fetchImpl?: typeof fetch;
+  /** Construct requests, validate them, log them — and DO NOT SEND.
+   *
+   *  DEFAULTS TO TRUE. A caller must opt in to sending writes, rather than opt
+   *  out of it. Every other default in this file is chosen the same way: the
+   *  state you get by forgetting to think about it is the state that cannot
+   *  cause a public post or a charge. */
+  dryRun?: boolean;
+  /** Which write capabilities this client may exercise. Absent = none. */
+  capabilities?: { publish?: boolean; ads?: boolean };
   /** When true, post() and del() throw instead of issuing a request. The L0
    *  checker constructs its client this way, which is what makes "read-only"
    *  a property of the code rather than a promise in a comment. */
@@ -301,6 +376,13 @@ export interface MetaClientOptions {
 
 export interface MetaClient {
   readonly readOnly: boolean;
+  readonly dryRun: boolean;
+  /** Gate check WITHOUT performing anything. Lets a caller — or a test — ask
+   *  "would this be refused" without constructing a send. */
+  canWrite(capability: WriteCapability): boolean;
+  /** The one entry point for every write. Runs the gates, then either returns
+   *  a dry-run outcome or sends. There is no other write path. */
+  write(req: WriteRequest): Promise<WriteOutcome>;
   get<T = Record<string, unknown>>(path: string, params?: Record<string, string>): Promise<T>;
   /** Inspect this client's OWN token via /debug_token.
    *
@@ -328,6 +410,12 @@ interface GraphErrorBody {
 export function createMetaClient(env: MetaEnv, opts: MetaClientOptions = {}): MetaClient {
   const doFetch = opts.fetchImpl ?? fetch;
   const readOnly = opts.readOnly === true;
+  // Fail closed: only an explicit `false` disables dry run.
+  const dryRun = opts.dryRun !== false;
+  const capabilities = {
+    publish: opts.capabilities?.publish === true,
+    ads: opts.capabilities?.ads === true,
+  };
 
   // Computed once per client and reused. It is a pure function of two values
   // that do not change for the client's lifetime, and recomputing an HMAC per
@@ -373,8 +461,65 @@ export function createMetaClient(env: MetaEnv, opts: MetaClientOptions = {}): Me
     return body as T;
   }
 
+  /** THE GATES, in order, all fail-closed.
+   *
+   *  1. readOnly       an L0 client can never write, whatever else is set.
+   *  2. capability     the env switch for THIS write must be true.
+   *
+   *  Dry run is deliberately NOT here: it is not an authorisation question but
+   *  a delivery one, and it is enforced at the send site below so that a
+   *  dry run still exercises every gate a real send would. */
+  function assertWritable(req: WriteRequest): void {
+    if (readOnly) throw new ReadOnlyViolation(req.method, req.path);
+    if (!capabilities[req.capability]) throw new CapabilityDisabled(req.capability);
+  }
+
   return {
     readOnly,
+    dryRun,
+
+    canWrite(capability: WriteCapability): boolean {
+      return !readOnly && capabilities[capability] === true;
+    },
+
+    async write(req: WriteRequest): Promise<WriteOutcome> {
+      assertWritable(req);
+
+      const url = buildUrl(req.path, {
+        access_token: env.token,
+        appsecret_proof: await proof(),
+      });
+      const redacted = redactUrl(url);
+
+      // THE DRY-RUN RETURN. Everything above ran; nothing below does. This is
+      // the line that makes "zero network writes" a property of the code
+      // rather than a promise in a comment, and tests count fetch calls across
+      // a whole run to prove it.
+      if (dryRun) {
+        opts.onRequest?.(`DRYRUN-${req.method}`, redacted);
+        return { sent: false, request: req, url: redacted };
+      }
+
+      opts.onRequest?.(req.method, redacted);
+      const res = await doFetch(url, {
+        method: req.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
+      });
+      const text = await res.text();
+      let body: unknown = null;
+      try { body = JSON.parse(text); } catch { body = null; }
+      if (!res.ok || (body as GraphErrorBody)?.error) {
+        const e = (body as GraphErrorBody)?.error ?? {};
+        throw new MetaError(
+          res.status,
+          typeof e.code === 'number' ? e.code : 0,
+          typeof e.error_subcode === 'number' ? e.error_subcode : 0,
+          typeof e.fbtrace_id === 'string' ? e.fbtrace_id : '',
+        );
+      }
+      return { sent: true, request: req, url: redacted, response: body };
+    },
 
     get<T = Record<string, unknown>>(path: string, params: Record<string, string> = {}) {
       return request<T>(path, params);

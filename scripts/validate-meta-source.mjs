@@ -146,6 +146,41 @@ for (const rel of L0) {
   }
 }
 
+// ── 5b · L1-0 stays a dry run, and cannot publish ──────────────────────────
+// L0's rules above keep the connection checker read-only. These keep the L1
+// dry-run runner incapable of sending, and keep the one irreversible,
+// externally-visible operation out of L1 entirely.
+{
+  const rel = 'scripts/meta-l1-check.mjs';
+  try {
+    const src = readFileSync(resolve(REPO, rel), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+    if (!/dryRun:\s*true/.test(src)) fail(`${rel}: does not hardcode dryRun: true`);
+    if (/media_publish/.test(src)) fail(`${rel}: references media_publish — L1 publishes nothing`);
+    if (/validateOnly:\s*false/.test(src)) fail(`${rel}: disables validate-only — L1 creates nothing`);
+    if (/process\.env\.META_DRY/.test(src)) {
+      fail(`${rel}: reads dry-run state from the environment — it must be hardcoded, so no ` +
+        'env edit can turn the dry run into a live writer');
+    }
+  } catch (e) {
+    if (e && e.code === 'ENOENT') fail(`${rel} is missing`);
+    else throw e;
+  }
+
+  // Ads must never accept a status parameter: PAUSED is the only status a
+  // builder may produce, and a parameter is one typo away from ACTIVE.
+  const adsRel = 'supabase/functions/_shared/meta-ads.core.ts';
+  try {
+    const ads = readFileSync(resolve(REPO, adsRel), 'utf8');
+    if (/status:\s*args\./.test(ads)) fail(`${adsRel}: status is caller-supplied — it must be a literal`);
+    if (!/status:\s*'PAUSED'/.test(ads)) fail(`${adsRel}: no literal PAUSED status found`);
+    if (/['"]ACTIVE['"]/.test(ads)) fail(`${adsRel}: names the ACTIVE status — going live is not a builder's job`);
+  } catch (e) {
+    if (!e || e.code !== 'ENOENT') throw e;
+  }
+}
+
 // ── 6 · the spec exists and stays in step ──────────────────────────────────
 const SPEC = 'docs/engineering/meta-marketing-integration.md';
 try {

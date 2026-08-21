@@ -530,24 +530,44 @@ export async function runConnectionCheck(
         }));
     }
 
-    // token expiry — the production-readiness question
+    // token expiry — a production-readiness item, NOT a token-type diagnosis.
+    //
+    // This check used to read a non-zero expires_at as proof of the WRONG KIND
+    // of token: "that is the signature of a user or long-lived user token, not
+    // a System User token". That inference was wrong, and it contradicted data
+    // returned by this very same debug_token call, which reports the type
+    // separately (see token.type above).
+    //
+    // A System User token MAY be issued with an expiry. The Business Settings
+    // generate-token dialog has a Token Expiration dropdown — Never or 60 days
+    // — and the API exposes the same choice as set_token_expires_in_60_days. So
+    // `type: SYSTEM_USER` together with a non-zero expires_at is not a
+    // contradiction: it is the right kind of token generated with the wrong
+    // dropdown setting.
+    //
+    // The severity was right and stays: the token really will stop working on
+    // that date. Only the explanation and the remedy change — the old action
+    // told the operator to do what they had already done.
     if (d.expires_at === 0) {
-      push(ok('token.expiry', 'Token is non-expiring (System User token)',
-        'expires_at = 0'));
+      push(ok('token.expiry', 'Token expiry', 'never expires (expires_at = 0)'));
     } else if (typeof d.expires_at === 'number') {
       const when = new Date(d.expires_at * 1000).toISOString();
-      push(warn('token.expiry', 'Token is non-expiring (System User token)',
-        `expires_at = ${d.expires_at} (${when})`, {
+      const days = Math.round((d.expires_at * 1000 - Date.now()) / 86_400_000);
+      push(warn('token.expiry', 'Token expiry',
+        `expires ${when} (in ~${days} day${days === 1 ? '' : 's'})`, {
           class: 'A',
-          reason: 'The token expires. That is the signature of a user or long-lived ' +
-            'user token, not a System User token — it will fail unattended on that date.',
-          action: 'Generate the token from Business Settings → Users → System users → ' +
-            `${cfg.systemUserId || 'Automation'} → Generate new token, not from Graph API ` +
-            'Explorer or a login flow.',
+          reason: `This token expires on ${when}, and unattended automation will stop ` +
+            'working that day. It does NOT mean the token is the wrong kind: a System ' +
+            'User token can be issued with a 60-day expiry, and this call reports the ' +
+            'token type separately — see the token.type check.',
+          action: 'Before production, regenerate THE SAME System User token with Token ' +
+            'Expiration set to Never: Business Settings → Users → System users → ' +
+            `${cfg.systemUserId || 'Automation'} → Generate new token → Token Expiration ` +
+            '= Never. The current token keeps working until the date above, so this is ' +
+            'scheduled work, not an outage.',
         }));
     } else {
-      push(warn('token.expiry', 'Token is non-expiring (System User token)',
-        'debug_token returned no expires_at'));
+      push(warn('token.expiry', 'Token expiry', 'debug_token returned no expires_at'));
     }
 
     // data_access_expires_at is a separate, quieter clock and expires even on

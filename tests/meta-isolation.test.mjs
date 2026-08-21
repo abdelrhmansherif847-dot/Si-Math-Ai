@@ -181,12 +181,30 @@ t.section('1 · write boundary — L0 cannot write');
   t.ok('the operator script constructs its client read-only',
     /readOnly\s*:\s*true/.test(SCRIPT_EXEC));
 
-  // The adapter is allowed to DEFINE post/del — they throw. It must not have
-  // a code path that issues one.
-  t.ok('the adapter issues no non-GET fetch',
-    !/method\s*:\s*['"](POST|DELETE|PUT|PATCH)['"]/.test(GRAPH_EXEC));
-  t.ok('the adapter\'s only fetch method is GET',
-    (GRAPH_EXEC.match(/method:\s*'GET'/g) ?? []).length >= 1);
+  // RETIRED, and why. This used to assert that the adapter contained no
+  // non-GET method literal at all. That was correct while the adapter was
+  // structurally incapable of writing; it is not the property to check now
+  // that L1-0 has given it a gated write path, and the old regex matched the
+  // WriteRequest TYPE DECLARATION (`method: 'POST' | 'DELETE'`) rather than
+  // any fetch. Deleting it outright would have removed the guarantee, so it is
+  // replaced by three narrower assertions that carry the same meaning: there
+  // is exactly ONE place a write can leave the adapter, it is gated, and dry
+  // run returns before it.
+  const writeFn = GRAPH_EXEC.slice(GRAPH_EXEC.indexOf('async write('));
+  const sendSite = writeFn.indexOf('method: req.method');
+  const gateSite = writeFn.indexOf('assertWritable(req)');
+  const dryReturn = writeFn.indexOf('if (dryRun)');
+
+  t.is('there is exactly ONE write send site in the adapter',
+    (GRAPH_EXEC.match(/method:\s*req\.method/g) ?? []).length, 1);
+  t.ok('the gate runs before it', gateSite >= 0 && gateSite < sendSite);
+  t.ok('and the dry-run return comes before it too',
+    dryReturn >= 0 && dryReturn < sendSite);
+  t.ok('the read path still uses GET', /method:\s*'GET'/.test(GRAPH_EXEC));
+
+  // The L0 connection checker must remain incapable of reaching that site.
+  t.ok('the L0 check module never calls client.write', !/client\.write\s*\(/.test(CHECK_EXEC));
+  t.ok('the L0 operator script never calls write', !/\.write\s*\(/.test(SCRIPT_EXEC));
 }
 
 // ══ 2 · CREDENTIAL BOUNDARY ═══════════════════════════════════════════════
