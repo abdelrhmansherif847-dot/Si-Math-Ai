@@ -62,9 +62,21 @@ The mail was filed, not consumed.
 | **DKIM** `resend._domainkey.si-math-ai.com` | ✅ verified | Resend API |
 | **SPF** `send.si-math-ai.com TXT v=spf1 include:amazonses.com ~all` | ✅ verified | Resend API |
 | **SPF MX** `send.si-math-ai.com → feedback-smtp.us-east-1.amazonses.com` | ✅ verified | Resend API |
-| **DMARC** `_dmarc.si-math-ai.com` | ⚠️ **NOT VERIFIED — could not be read** | — |
+| **DMARC** `_dmarc.si-math-ai.com` | ✅ **exists: `v=DMARC1; p=none;`** | Owner, from Namecheap, 2026-08-22 |
 
-**Be precise about the last row: I could not check it.** Outbound DNS is blocked
+**Resolved 2026-08-22.** The owner read the live zone in Namecheap: the record
+exists. All four records are correct, mail from `si-math-ai.com` is fully
+authenticated and DMARC-aligned, and **no DNS change should be made** — a second
+`_dmarc` TXT would make the policy ambiguous. This closes the authentication
+hypothesis: authentication was already correct throughout the period in which all
+three iCloud students failed to receive their confirmations. The remaining causes
+are sender reputation and message content — see
+`phase1-email-fix-runbook.md` §0a.
+
+The original caveat is kept below because it explains why the check was deferred
+to the owner rather than performed here.
+
+**At audit time I could not check it.** Outbound DNS is blocked
 from the audit environment — `dig`, and DNS-over-HTTPS to both Google and
 Cloudflare, were all refused by the network proxy. Resend's API lists only the
 three records it requires for verification, and DMARC is not one of them, so its

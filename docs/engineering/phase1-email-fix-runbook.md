@@ -17,7 +17,57 @@ the thing that is broken.
 
 ---
 
-## Step 1 — Read the three DNS records
+## 0a. Diagnosis after the DNS check (updated 2026-08-22)
+
+Step 1 eliminated the most likely cause, so the remaining ones are worth naming
+honestly, in order of how much they probably contribute:
+
+1. **The sending domain has almost no reputation.** `si-math-ai.com` was added to
+   Resend on 2026-06-18 and has sent **10 emails in total**. iCloud is unusually
+   strict with domains it has no history for, and 10 messages over two months is
+   indistinguishable from a domain that has just started sending. There is no
+   quick fix for this — it improves with consistent, wanted mail over time — and
+   at this volume conventional "warming" is not really available.
+2. **The link domain does not match the sender.** From is `si-math-ai.com`; the
+   only link points at `igvkyxkmjnkzscqgommj.supabase.co`. This is the largest
+   remaining *content* signal, and it is the one step 6 fixes.
+3. **The message body is three lines of bare HTML** with no preheader, no sender
+   identity, no context, and a single naked link — structurally very close to the
+   shape of a phishing template. Step 3 fixes this.
+4. **No `text/plain` part.** Supabase's mailer sends `text/html` only and cannot
+   be configured otherwise (`mailmeclient.go`). Resend derives one; how good that
+   derivation is depends on the HTML, which step 3 also addresses.
+5. **Shared IP pool.** Resend sends via shared Amazon SES IPs, so the domain's own
+   reputation carries more weight than it would on a dedicated IP.
+
+**Set expectations accordingly: step 3 alone may not be enough.** It addresses
+causes 2 (partly), 3 and 4, and it is cheap and reversible, which is why it goes
+first. But if cause 1 dominates, the honest answer is that placement improves
+gradually rather than at a stroke, and step 6 becomes the next lever.
+
+## Step 1 — Read the three DNS records ✅ DONE 2026-08-22
+
+**Checked in Namecheap. All four records are present and correct. No DNS change
+is needed, and none should be made** — a second `_dmarc` TXT record would make
+the policy ambiguous and receivers may then ignore DMARC entirely.
+
+| Record | Host | Live value | |
+|---|---|---|---|
+| DMARC | `_dmarc` | `v=DMARC1; p=none;` | ✅ **exists** |
+| DKIM | `resend._domainkey` | present | ✅ |
+| SPF (TXT) | `send` | `v=spf1 include:amazonses.com ~all` | ✅ |
+| SPF (MX) | `send`, priority 10 | Resend / Amazon SES feedback | ✅ |
+
+**This closes the authentication hypothesis.** Mail from `si-math-ai.com` is
+fully authenticated and DMARC-aligned, and it was already so while all three
+iCloud students failed to receive their confirmations. Whatever is filing those
+messages, it is not a missing DNS record. See §0a for where that leaves the
+diagnosis.
+
+The original instructions are kept below for the record.
+
+<details>
+<summary>Original step 1 instructions (superseded — do not act on these)</summary>
 
 Run these four commands. They read; they change nothing.
 
@@ -74,7 +124,22 @@ Two things that trip people up on every provider:
 Resend also shows the live state of the records it manages, at
 **Resend → Domains → si-math-ai.com**. Use that as the cross-check for DKIM/SPF.
 
-## Step 2 — Publish DMARC, only if step 1 came back empty
+</details>
+
+## Step 2 — Publish DMARC ❌ NOT NEEDED — a policy already exists
+
+`_dmarc` already holds `v=DMARC1; p=none;`. **Do not add a second record.** RFC
+7489 requires exactly one DMARC TXT record at `_dmarc`; two makes the policy
+ambiguous and well-behaved receivers discard both, which would turn a working
+setup into a broken one.
+
+Whether to tighten `p=none` → `p=quarantine` later is a separate decision, and
+not part of Phase 1. It would not help inbox placement for mail that already
+passes DMARC — it only tells receivers what to do with mail that *fails*. Revisit
+it once there is a `rua=` mailbox and a few weeks of reports.
+
+<details>
+<summary>Original step 2 instructions (superseded — do not act on these)</summary>
 
 If `dig +short TXT _dmarc.si-math-ai.com` printed **nothing**, add:
 
@@ -103,6 +168,8 @@ Notes that matter:
   `send.si-math-ai.com` (**relaxed** alignment, DMARC's default). DMARC will pass
   on DKIM the moment a policy exists.
 - Allow up to an hour for propagation. Re-run step 1 to confirm.
+
+</details>
 
 ## Step 3 — Apply the branded template
 
