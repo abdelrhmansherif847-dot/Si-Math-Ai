@@ -44,6 +44,29 @@ Subjects to set alongside them:
    Moving the link onto `si-math-ai.com` is a separate, larger change — see
    §5 of the deliverability audit — and must not be smuggled in with a copy edit.
 
+## Two things deliberately NOT changed
+
+**The authentication mechanism.** Both templates use `{{ .ConfirmationURL }}` exactly as the
+current Supabase flow expects. No `TokenHash`, no `confirm.html`, no `verifyOtp`, no
+custom-domain auth links. Same URL, same token, same redirect, same flow — which is what keeps
+this step reversible and keeps the iCloud delivery test that follows it interpretable.
+
+**The reset email's expiry wording.** It says "expires shortly" rather than a duration. The
+real value is Supabase's `mailer_otp_exp`, and it is not reachable from a database connection:
+the `auth` schema has no config table, and `auth.one_time_tokens` records creation time only —
+GoTrue computes expiry at verify time and never stores it. Reading it requires the Management
+API with an access token, or the dashboard under Authentication → Email. **Do not substitute a
+guessed number.** If someone reads the real value, the line can be made exact.
+
+## Editing these files
+
+Use a real editor or a Python replacement, **not `sed`**. An earlier `sed` substitution here
+contained `&mdash;`, and `&` is sed's metacharacter for the entire match: it duplicated a
+paragraph, leaked confirmation copy into the reset email, and left a bare `mdash;` rendering as
+text. The corruption was invisible in the diff and only surfaced when the visible text was
+extracted and read back. After any edit, extract the text and check tag balance rather than
+trusting the patch.
+
 ## Applying them
 
 Paste into the dashboard, or:
