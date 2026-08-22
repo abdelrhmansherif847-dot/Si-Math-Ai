@@ -8,3 +8,8 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Supabase mailer config snapshot taken by scripts/mailer-backup.sh.
+# Account configuration, not source — and the only copy of the pre-change
+# templates, so it must not be committed and must not be deleted casually.
+mailer-config-backup.json

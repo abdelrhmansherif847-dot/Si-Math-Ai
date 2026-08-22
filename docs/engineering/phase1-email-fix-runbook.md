@@ -281,3 +281,68 @@ in people's inboxes. Own change, own review. **Do not fold it into step 3.**
 - Does not delete the orphan or unconfirmed accounts.
 - Does not enable Apple, or change `ENABLED`.
 - Does not touch `handle_new_user()`, migrations, or any student data.
+
+---
+
+## Step 3a — Who runs the apply, and why not this session
+
+**Approval received 2026-08-22. The apply could not be performed from the agent
+session, and the reason is capability, not caution.**
+
+| Needed | Available here |
+|---|---|
+| A Supabase **personal access token** | ❌ `SUPABASE_ACCESS_TOKEN` is unset; no `~/.supabase`; the `supabase` CLI is not installed |
+| The Supabase **MCP** to change auth config | ❌ its surface is database, edge functions, branches, logs, docs and advisors — **no auth-config tool exists** |
+| Network reach to `api.supabase.com` | ❌ blocked by the environment's egress proxy (`HTTP 403` on CONNECT) |
+| Two fresh **iCloud mailboxes** | ❌ no mailbox access of any kind, and no way to click a link in someone's inbox or see whether it landed in Junk |
+
+Three of those four are absolute. So Phase 1's apply and delivery tests are an
+**owner-run** procedure. What this session could do instead is remove every piece
+of judgement from it: the three scripts below are written, and were exercised end
+to end against a mock Management API before being committed.
+
+### The scripts
+
+| Script | Does | Refuses to |
+|---|---|---|
+| `scripts/mailer-backup.sh` | Reads every live `mailer_*` key, writes `mailer-config-backup.json`, then runs seven checks proving the snapshot could restore | Overwrite an existing backup; succeed if any captured value is null |
+| `scripts/mailer-apply.sh` | PATCHes exactly four keys — two templates, two subjects — then reads the config back and verifies all four match | Run without a verified backup; ship a template whose `{{ .ConfirmationURL }}` count is not 2, or that mentions `TokenHash`, `verifyOtp` or `confirm.html` |
+| `scripts/mailer-restore.sh` | PATCHes every key from the backup and verifies the live template matches | Run without a backup, or report success if the live config still differs |
+
+`mailer-config-backup.json` is gitignored: it is account configuration, and the
+only copy of the pre-change templates.
+
+### Verified before commit
+
+Run against a local mock of `/v1/projects/{ref}/config/auth`:
+
+- apply without a backup → refused, nothing sent
+- backup → 7/7 checks pass, 6 `mailer_*` keys captured
+- backup a second time → refused rather than clobbering the first
+- apply → 4/4 read-back verifications pass, subjects and both templates live
+- restore → live config returns byte-for-byte to the stock default
+- a template switched to `TokenHash` → refused (`0 ConfirmationURL occurrences, expected 2`)
+- an empty template file → refused
+- a bad token → clean `HTTP 401`, "Nothing was changed", live config untouched
+
+### The three commands
+
+```bash
+export SUPABASE_ACCESS_TOKEN=...        # dashboard → Account → Access Tokens
+bash scripts/mailer-backup.sh           # step 1 + 2: back up and verify
+bash scripts/mailer-apply.sh            # step 3: apply the approved templates
+# if anything looks wrong at any point:
+bash scripts/mailer-restore.sh          # full rollback
+```
+
+### What this session can still do
+
+`C. Message inspection` is reachable from here — the Resend MCP is connected. Once
+the test sends exist, this session can read each message record, its delivery
+status, and the actual derived plain-text body, and compare that against the
+reconstruction rather than assuming it. Send the tests, then say so.
+
+Record results per provider and per flow — iCloud #1, iCloud #2, Gmail ×
+confirmation, password reset — and **inbox vs Junk for each**, since that is the
+measurement Phase 1 exists to make. Sent is not the same as delivered, and
+delivered is not the same as seen.
