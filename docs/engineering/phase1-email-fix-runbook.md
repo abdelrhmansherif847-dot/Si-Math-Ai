@@ -17,33 +17,53 @@ the thing that is broken.
 
 ---
 
-## 0a. Diagnosis after the DNS check (updated 2026-08-22)
+## 0. Approved order (owner, 2026-08-22)
 
-Step 1 eliminated the most likely cause, so the remaining ones are worth naming
-honestly, in order of how much they probably contribute:
+1. Review the branded template.
+2. Back up the current Supabase mailer / template configuration.
+3. Apply the approved template.
+4. Test with **two fresh, independent** iCloud addresses.
+5. Test confirmation placement and the full signup → confirmation → login flow.
+6. Test password-reset delivery and flow.
+7. Test Gmail for regressions.
+8. **Only if** iCloud delivery still fails or lands in Junk, investigate the
+   custom-domain `TokenHash → confirm.html → verifyOtp` flow.
 
-1. **The sending domain has almost no reputation.** `si-math-ai.com` was added to
-   Resend on 2026-06-18 and has sent **10 emails in total**. iCloud is unusually
-   strict with domains it has no history for, and 10 messages over two months is
-   indistinguishable from a domain that has just started sending. There is no
-   quick fix for this — it improves with consistent, wanted mail over time — and
-   at this volume conventional "warming" is not really available.
-2. **The link domain does not match the sender.** From is `si-math-ai.com`; the
-   only link points at `igvkyxkmjnkzscqgommj.supabase.co`. This is the largest
-   remaining *content* signal, and it is the one step 6 fixes.
-3. **The message body is three lines of bare HTML** with no preheader, no sender
-   identity, no context, and a single naked link — structurally very close to the
-   shape of a phishing template. Step 3 fixes this.
-4. **No `text/plain` part.** Supabase's mailer sends `text/html` only and cannot
-   be configured otherwise (`mailmeclient.go`). Resend derives one; how good that
-   derivation is depends on the HTML, which step 3 also addresses.
-5. **Shared IP pool.** Resend sends via shared Amazon SES IPs, so the domain's own
-   reputation carries more weight than it would on a dedicated IP.
+Not now, under any of the above: no `TokenHash` implementation, no DNS change,
+no Apple Sign In, no production change until step 1 is approved.
 
-**Set expectations accordingly: step 3 alone may not be enough.** It addresses
-causes 2 (partly), 3 and 4, and it is cheap and reversible, which is why it goes
-first. But if cause 1 dominates, the honest answer is that placement improves
-gradually rather than at a stroke, and step 6 becomes the next lever.
+## 0a. Open hypotheses after the DNS check (updated 2026-08-22)
+
+**None of the following is a finding. They are untested hypotheses**, listed so
+the test in step 4 has something to discriminate between. They are deliberately
+**not ranked** — there is no evidence yet that would justify an order, and an
+invented one would get quoted back later as though it were measured.
+
+Step 1 removed *one* candidate (a missing authentication record). What remains:
+
+- **Sender reputation.** `si-math-ai.com` was added to Resend on 2026-06-18, and
+  the Resend log returned **10 sends** when 25 were requested. A domain with
+  little history is generally treated more cautiously by large receivers. What
+  weight iCloud gives it here is **unknown** — this is an inference from low
+  volume, not a measurement of Apple's behaviour, and Apple publishes no
+  reputation signal we can read.
+- **Link domain does not match the sender.** From is `si-math-ai.com`; the only
+  link points at `igvkyxkmjnkzscqgommj.supabase.co`. Step 6 is what would fix it.
+- **Message body structure.** Three lines of bare HTML, no preheader, no sender
+  identity, no context, a single naked link. Step 3 addresses this.
+- **No `text/plain` part.** Supabase's mailer sends `text/html` only and cannot be
+  configured otherwise (`mailmeclient.go`); Resend derives one, and how good that
+  derivation is depends on the HTML. Step 3 also addresses this.
+- **Shared IP pool.** Resend sends via shared Amazon SES IPs. Whether this
+  contributes at all is unknown.
+- **Recipient-side filtering.** iCloud's Junk classification is partly
+  per-recipient and learned. Three students is a very small sample, and their
+  individual mailbox history is not observable to us.
+
+**Consequence for expectations: step 3 may or may not be sufficient, and we
+cannot say which in advance.** It is cheap, reversible, and addresses two of the
+hypotheses outright — that is the argument for doing it first, not a prediction
+that it will work. Step 4 is what turns any of this into evidence.
 
 ## Step 1 — Read the three DNS records ✅ DONE 2026-08-22
 
@@ -58,11 +78,21 @@ the policy ambiguous and receivers may then ignore DMARC entirely.
 | SPF (TXT) | `send` | `v=spf1 include:amazonses.com ~all` | ✅ |
 | SPF (MX) | `send`, priority 10 | Resend / Amazon SES feedback | ✅ |
 
-**This closes the authentication hypothesis.** Mail from `si-math-ai.com` is
-fully authenticated and DMARC-aligned, and it was already so while all three
-iCloud students failed to receive their confirmations. Whatever is filing those
-messages, it is not a missing DNS record. See §0a for where that leaves the
-diagnosis.
+**What this does and does not establish.** It establishes that the domain's
+authentication **configuration** looks correct, and that it was already in place
+while the three iCloud students failed to receive their confirmations — so a
+*missing record* is not the explanation.
+
+It does **not** establish why iCloud filed those messages. Two limits are worth
+being explicit about:
+
+- Configured is not the same as passing. Nobody has read an
+  `Authentication-Results` header from a message iCloud actually received. The
+  records are right; whether every send authenticates cleanly in practice is
+  untested.
+- Ruling out one cause does not identify another. Everything in §0a is a
+  **hypothesis**, and stays one until the iCloud test in step 4 produces
+  evidence.
 
 The original instructions are kept below for the record.
 

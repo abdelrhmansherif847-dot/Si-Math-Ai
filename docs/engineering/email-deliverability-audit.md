@@ -10,22 +10,33 @@ underlying defect Apple sign-in only routes around.
 
 ---
 
-## 0. Root cause, in one paragraph
+## 0. What is established, and what is still hypothesis
 
-The confirmation email reaches iCloud and is never seen. It is authenticated
-correctly, so it is not rejected — it is filed. Three properties of the message
-cause that, and all three come from the fact that **the project is running
-Supabase's stock default template, unmodified**: the only visible link points at
-`supabase.co` while the From address is `si-math-ai.com`; the body is three lines
-of bare HTML with no branding, no context and no sender identity; and Supabase's
-mailer sends a single `text/html` part with no plain-text alternative. Separately,
-the login flow turns a filtered email into a **hard lockout**, because
-`signInWithPassword` refuses with `email_not_confirmed` and the only recovery
-offered is a resend of the same unseen email — which rate-limits after two taps.
+**Established by measurement:** the confirmation email reaches iCloud's servers
+(Resend reports `delivered`) and is never opened (`email_confirmed_at` stays null
+for all three students, and Supabase confirms an account on a plain `GET` of the
+link — so nothing, not even a scanner, ever fetched it). The project runs
+Supabase's stock default template, unmodified: the rendered body is byte-identical
+to the documented default. SPF, DKIM and DMARC records all exist and are aligned
+by configuration.
 
-**The email problem is the root cause. Apple sign-in is a second door, not a
-fix.** Password reset, email change, and every future notification travel the
-same path.
+**Established by reading the code:** the login flow turns a filtered email into a
+**hard lockout** — `signInWithPassword` refuses with `email_not_confirmed`, and
+the only recovery offered is a resend of the same unseen email, which rate-limits
+after two taps.
+
+**NOT established — these are hypotheses:** *why* iCloud filed the message rather
+than delivering it to the inbox. Candidates include the link/sender domain
+mismatch, the bare-HTML body, the absent plain-text part, low sender reputation,
+the shared SES IP pool, and per-recipient learned filtering. Nothing here
+discriminates between them, and no `Authentication-Results` header from a message
+iCloud actually received has been read, so even "authentication passes in
+practice" is inferred from configuration rather than observed. The iCloud test in
+`phase1-email-fix-runbook.md` §4 is what would turn any of this into evidence.
+
+**What does follow regardless:** email is on the critical path for password reset,
+email change and every future notification, so Apple sign-in is a second door
+rather than a fix for it.
 
 ## 1. The template and the link, exactly as sent
 
@@ -65,12 +76,18 @@ The mail was filed, not consumed.
 | **DMARC** `_dmarc.si-math-ai.com` | ✅ **exists: `v=DMARC1; p=none;`** | Owner, from Namecheap, 2026-08-22 |
 
 **Resolved 2026-08-22.** The owner read the live zone in Namecheap: the record
-exists. All four records are correct, mail from `si-math-ai.com` is fully
-authenticated and DMARC-aligned, and **no DNS change should be made** — a second
-`_dmarc` TXT would make the policy ambiguous. This closes the authentication
-hypothesis: authentication was already correct throughout the period in which all
-three iCloud students failed to receive their confirmations. The remaining causes
-are sender reputation and message content — see
+exists. All four records are present and **no DNS change should be made** — a
+second `_dmarc` TXT would make the policy ambiguous and receivers may then ignore
+DMARC entirely.
+
+State this carefully. What is confirmed is that the **authentication
+configuration appears correct**, and that it was already in place while the three
+iCloud students failed to receive their confirmations — so a *missing record* is
+not the explanation. That is one candidate removed, not a cause identified. It is
+also configuration rather than observed behaviour: no `Authentication-Results`
+header from a message iCloud actually received has been read, so whether every
+send authenticates cleanly in practice is untested. Why iCloud filed those
+messages remains open — see the unranked hypotheses in
 `phase1-email-fix-runbook.md` §0a.
 
 The original caveat is kept below because it explains why the check was deferred
