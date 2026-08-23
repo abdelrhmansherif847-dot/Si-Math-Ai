@@ -403,6 +403,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="plan-catalog.js"></script>
 <script src="auth-apple.js"></script>
+<script src="auth-resend.js"></script>
 <script>
   const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
@@ -609,17 +610,11 @@ button{font-family:inherit;cursor:pointer}
       var{data,error}=await supabaseClient.auth.signInWithPassword({email,password});
       if(error){
         if(error.message&&(error.message.toLowerCase().includes('email not confirmed')||error.message.toLowerCase().includes('not confirmed'))){
-          var resendBtn=showErrWithAction('Your email address is not confirmed. Please check your inbox (and spam folder) for a confirmation link.','Resend email');
-          resendBtn?.addEventListener('click',async function(){
-            this.disabled=true;this.textContent='Sending…';
-            try{
-              var r=await supabaseClient.auth.resend({type:'signup',email:email,options:{emailRedirectTo:'https://www.si-math-ai.com/login.html'}});
-              this.textContent=r.error?'Failed — try again':'Sent! Check your inbox';
-              if(r.error)this.disabled=false;
-            }catch(_){
-              this.textContent='Failed — try again';this.disabled=false;
-            }
-          });
+          var resendBtn=showErrWithAction(
+            "Your email address isn't confirmed yet. Didn't receive the email? "
+            + 'Check your Inbox and your Spam or Junk folder, then resend it.',
+            'Resend email');
+          wireResend(resendBtn,email);
         } else {
           showErr(error.message);
         }
@@ -639,6 +634,80 @@ button{font-family:inherit;cursor:pointer}
   });
 
   async function logout(){await supabaseClient.auth.signOut();window.location.href='login.html';}
+
+  // ── Resend confirmation email ───────────────────────────────────────────────
+  // Supabase enforces a ~60s per-address email cooldown, and the SIGNUP email
+  // starts it — so the first resend a student tries is very often inside the
+  // window. The refusal carries the seconds remaining; this shows them instead
+  // of discarding them, and holds the button until the wait is actually over.
+  // Decision logic and the production evidence: auth-resend.js.
+  var _resendTimer=null;
+  function wireResend(btn,email){
+    if(!btn||!window.SiAuthResend)return;
+    var R=window.SiAuthResend, label=btn.textContent, busy=false;
+
+    function hold(seconds,then){
+      // One timer only. Without this guard a second wire-up would leave two
+      // intervals racing to write the same label, and the button could re-enable
+      // while the server is still refusing.
+      if(_resendTimer){clearInterval(_resendTimer);_resendTimer=null;}
+      var left=seconds;
+      btn.disabled=true;
+      btn.textContent=R.countdownLabel(left);
+      _resendTimer=setInterval(function(){
+        left--;
+        if(left<=0){
+          clearInterval(_resendTimer);_resendTimer=null;
+          btn.disabled=false;btn.textContent=then||label;
+        } else {
+          btn.textContent=R.countdownLabel(left);
+        }
+      },1000);
+    }
+
+    btn.addEventListener('click',async function(){
+      // Guard the in-flight window too: disabled alone loses a double-click that
+      // lands before the browser repaints.
+      if(busy||btn.disabled)return;
+      busy=true;btn.disabled=true;btn.textContent='Sending…';
+      var outcome;
+      try{
+        outcome=R.classify(await supabaseClient.auth.resend({
+          type:'signup',email:email,
+          options:{emailRedirectTo:'https://www.si-math-ai.com/login.html'}
+        }));
+      }catch(err){
+        // A thrown error (offline, DNS, CORS) is still a real outcome; classify
+        // it the same way so the student gets a sentence rather than nothing.
+        outcome=R.classify({error:err});
+      }
+      busy=false;
+      setResendNote(outcome.message,outcome.ok);
+      if(outcome.state==='sent'||outcome.state==='cooldown'){
+        hold(outcome.retryAfter);
+      } else if(outcome.state==='confirmed'){
+        btn.disabled=true;btn.textContent='Already confirmed';
+      } else {
+        btn.disabled=false;btn.textContent=label;
+      }
+    });
+  }
+
+  // A second line under the error text, so the outcome is a sentence the student
+  // can act on rather than a word crammed into the button.
+  function setResendNote(msg,ok){
+    var el=document.getElementById('loginErr');
+    if(!el)return;
+    var note=document.getElementById('resendNote');
+    if(!note){
+      note=document.createElement('div');
+      note.id='resendNote';
+      note.style.cssText='margin-top:8px;font-size:13px;line-height:1.5';
+      el.appendChild(note);
+    }
+    note.textContent=msg;
+    note.style.color=ok?'var(--green,#4ade80)':'var(--text-300,#cbd5e1)';
+  }
 
   // ── Sign in with Apple ──────────────────────────────────────────────────────
   // Every branch below is inert while auth-apple.js has ENABLED false: mount()

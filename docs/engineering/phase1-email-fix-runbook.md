@@ -1042,3 +1042,97 @@ Steps 4–7 of the approved order, unchanged and still outstanding:
 
 Everything before this point changed what we *send*. Only these steps establish
 whether it *arrives*.
+
+
+---
+
+## Step 3i — "Resend email" fixed: a rate limit shown, not swallowed
+
+Found during the successful iCloud signup test. Signup → Inbox → confirm → login
+all worked; the **Resend email** action on the unconfirmed-account screen did not
+reliably send anything.
+
+### Root cause, from the production auth log (2026-08-23)
+
+```
+04:05:48  POST /signup  200   confirmation email sent
+04:06:26  POST /resend  429   "you can only request this after 21 seconds"
+04:06:28  POST /resend  429   "after 19 seconds"
+04:06:30  POST /resend  429   "after 16 seconds"
+04:06:32  POST /resend  429   "after 15 seconds"
+04:06:33  POST /resend  429   "after 14 seconds"
+04:06:33  POST /resend  429   "after 13 seconds"
+04:06:37  POST /resend  429   "after 10 seconds"
+```
+
+Seven clicks in eleven seconds. Seven refusals. Zero emails.
+
+**Supabase enforces a per-address email cooldown of ~60 seconds, and the signup
+email itself starts the clock.** That is measured, not assumed: each response
+carries the seconds remaining, and every click-time plus seconds-remaining sums
+to **58–59 seconds after the signup**. A student's first resend attempt therefore
+lands inside the window almost every time.
+
+The request was being made correctly and Supabase was answering correctly. The
+defect was entirely in how the answer was handled: the UI printed
+`Failed — try again` and **re-enabled the button immediately** — an invitation to
+click again, into a window that was still closed. The response even contained the
+exact seconds remaining, and the code discarded it.
+
+### The fix
+
+Decision logic in `auth-resend.js` (UMD, testable); DOM glue in `login.html`.
+
+- A 429 is classified as **`cooldown`, not `error`** — because it is not a
+  failure. One was already sent.
+- The button holds for the **server's own number** (`Resend in 21s`, ticking
+  down) and becomes clickable exactly when the server would accept it. No
+  invented waits, no spurious 429s.
+- A successful send starts the full 60s cooldown, so the next click cannot earn
+  a refusal.
+- An in-flight guard (`busy || btn.disabled`) makes five rapid clicks produce
+  **one** request — `disabled` alone loses a double-click that lands before the
+  browser repaints.
+- Messages a student can act on: *"Confirmation email sent. Check your Inbox and
+  your Spam or Junk folder."* / *"An email was sent very recently. You can request
+  another in 21 seconds. Meanwhile, check your Spam or Junk folder."* The prompt
+  itself now reads *"Didn't receive the email? Check your Inbox and your Spam or
+  Junk folder, then resend it."*
+- A genuine failure still releases the button; already-confirmed keeps it down
+  and points at logging in.
+
+**Security preserved.** Nothing bypasses or weakens Supabase's limit — the fix
+respects it and makes it legible. No message distinguishes "no such account" from
+an ordinary failure, so the screen cannot be used to probe who is registered;
+that is pinned by test.
+
+### Tests — `tests/auth-resend.test.mjs`, 81 assertions
+
+All seven real 429 responses from the log are replayed by value. Beyond the pure
+logic, the page's **real** `wireResend` is sliced out of `login.html` and driven
+in a sandbox with a fake DOM and fake timers — the bug was a button re-enabled
+too early, and no amount of testing the classifier would have caught it.
+
+Covered: successful resend and its countdown; the 21-second cooldown; five rapid
+clicks producing one request; clicks during the countdown reaching the network
+zero times; a thrown network error; already-confirmed; and account-enumeration
+wording.
+
+Each guard was then sabotaged to confirm the suite fails:
+
+| Sabotage | Result |
+|---|---|
+| Re-enable the button on cooldown (the original bug) | 4 tests fail |
+| Remove the in-flight guard | 3 tests fail |
+| Leak "No account exists for that address" | 5 tests fail |
+
+### Supabase behaviour worth remembering
+
+- **~60s per-address email cooldown**, shared across `/signup` and `/resend`.
+  Sending one consumes the window for the other.
+- The 429 body carries the remaining seconds. **Use it** — it is the only
+  accurate number available to the client.
+- `resend` answers ambiguously for unknown addresses by design, so success is not
+  proof an email went anywhere. Never phrase it as proof.
+
+No mailer configuration, template, or Supabase setting was touched.
