@@ -239,3 +239,93 @@ it, neither of which this report assumes:
    the rollback has now been exercised in all three states.
 
 **Awaiting explicit Production approval. No phase beyond M1 has been started.**
+
+---
+
+# Addendum — Production Application, 2026-08-23
+
+**M1 is APPLIED to production.** Version `20260823043358`, name
+`mock_exam_integrity_events`. Approved after the owner reviewed and explicitly
+accepted the fidelity gap in §0 rather than upgrading the plan for one migration.
+
+## How it was applied
+
+The documented route (`docs/supabase-migrations.md`) is the Dashboard SQL Editor
+or `supabase db execute`. Neither was reachable: no CLI is installed and no
+database credentials are exposed to this session. `apply_migration` — the direct
+SQL call CLAUDE.md §3 names as the thing requiring approval — was used instead,
+which is the same class of operation as the Dashboard route and writes the same
+14-digit timestamp version the remote history has always used.
+
+**One difference between the applied bytes and the file, stated plainly.** The
+file is 38.9 KB, most of it reasoning. Hand-transcribing that into a tool
+parameter risked introducing an error into a production migration, so the
+**executable subset** was applied: all 17 DDL statements and all 7 `COMMENT ON`
+statements, byte-for-byte, with the `--` commentary omitted and the surrounding
+`begin;`/`commit;` dropped because `apply_migration` opens its own transaction.
+
+Nothing was lost that belongs in the database — the `COMMENT ON` statements carry
+the metadata principle, the fail-loud explanation and the `attempt_id` asymmetry
+into the catalog. The full file remains the reviewable record, which is exactly
+the role `docs/supabase-migrations.md` assigns to this directory: *"the file in
+this directory kept as the reviewable record of what was run."* Post-application
+verification (below) confirms the resulting schema matches the file.
+
+## Pre-flight
+
+Two greps returned counts that looked wrong and were checked before applying
+rather than after: `else 'low'` appeared twice and `original 14 columns` once.
+Both are commentary — the first explains the *rejected* alternative in the rev 4
+rationale, the second is the rev 3 changelog recording the 14→13 correction.
+**Zero executable occurrences of either.** The executable DDL was confirmed to be
+rev 4: `confidence` NOT NULL, exhaustive CASE, domain CHECK.
+
+## Verification results — all read-only, no row written to production
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Table, columns, constraints | ✅ 9 columns; `confidence` `is_generated=ALWAYS`, `is_nullable=NO`; 5 CHECKs + PK + FK |
+| 2 | `attempt_id` on `exam_practice_sessions` | ✅ nullable `YES`; events side `NO`; column count 13 → **14**; partial index present |
+| 3 | RLS + policies | ✅ enabled; exactly **2** policies; **0** UPDATE/DELETE policies; trigger `enabled=O` |
+| 4 | Grants / revokes | ✅ **`anon` holds 0 table privileges and 0 function EXECUTE grants**; `authenticated` = `INSERT,SELECT` only |
+| 5 | Confidence + metadata | ✅ see below |
+| 6 | Existing data intact | ✅ 21 sessions (16 scored), 11 mistakes, 13 MOCK_EXAM signals — **unchanged**; 0 integrity events |
+
+**Check 4 is the one that had to be verified rather than assumed.** `pg_default_acl`
+grants `arwdDxtm` on every new table to `anon` at creation; the migration's
+`revoke` is what removes it. Production confirms zero.
+
+**Check 5, non-destructively.** The generated expression was read from the
+catalog and the metadata validator called directly as the pure function it is —
+no INSERT anywhere:
+
+```
+CASE WHEN (event_type = ANY (ARRAY['copy','print','fullscreen_exit'])) THEN 'high'
+     WHEN (event_type = ANY (ARRAY['visibility_hidden','window_blur','context_menu'])) THEN 'low'
+     ELSE NULL END
+```
+
+Mapping: all six types classify correctly. An unmapped type evaluates to `NULL`
+— rejected by NOT NULL (23502), fail-loud intact in production. Validator:
+`{}`, `selection_length`, `hidden_ms`, `blurred_ms` → true; `user_agent`,
+a device fingerprint beside a valid key, copied text, a negative duration, a
+stringified number, a non-object → all false.
+
+## What is live, and what is not
+
+Live: the table, its constraints, its RLS, its append-only protections, and the
+`attempt_id` column. **No behaviour changed for any student** — nothing writes to
+this table yet, because the client code that would (P5 `exam-integrity.js`) is
+not written, and enforcement (M2) is neither approved nor written.
+
+`exam_integrity_events` has 0 rows and will stay at 0 until P5 ships.
+
+## Two observations, neither acted on
+
+1. **CLAUDE.md's migration counts were stale.** It recorded 141 applied; the
+   database reports **148**. Corrected to the measured figure, per that file's
+   own rule that reality wins.
+2. **The six support migrations (`20260815a`–`f`) are applied in production but
+   their file headers still read "⛔ PREPARED — NOT YET APPLIED."** The support
+   tables exist in `public`. Out of scope here and not touched, but their headers
+   are misleading to the next reader and worth a separate correction.

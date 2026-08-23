@@ -1,7 +1,29 @@
 -- =====================================================================
 -- Mock Exam v2 · M1 — Integrity Audit Foundation (append-only)
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-23, recorded as
+--         supabase_migrations.schema_migrations version 20260823043358
+--         (name: mock_exam_integrity_events). Applied at revision 4.
+--
+--         HOW IT WAS APPLIED, and the one thing that differs from these bytes:
+--         the executable subset of this file was applied — the 17 DDL statements
+--         and all 7 COMMENT ON statements, byte-for-byte — while the `--`
+--         commentary was not sent, and the surrounding begin;/commit; were
+--         omitted because the applying tool opens its own transaction. This file
+--         remains the reviewable record of what was run, which is exactly the
+--         role docs/supabase-migrations.md assigns to files in this directory.
+--         Post-application verification confirmed the resulting schema matches
+--         this file: 9 columns, 5 CHECK constraints, 2 RLS policies, the
+--         append-only trigger, and zero anon privileges.
+--
+--         ENVIRONMENTAL LIMITATION, DELIBERATELY LEFT VISIBLE:
+--         staging validation ran on PostgreSQL 16.13; production is 17.6. It
+--         also ran against a rebuilt harness carrying only this migration's
+--         dependencies, not a clone of the production schema — branching needs
+--         the Pro plan and the org is on free. The owner reviewed this gap and
+--         accepted it rather than upgrading the plan for one migration. Full
+--         reasoning: docs/roadmap/mock-exam-v2-m1-staging-validation.md.
+--
 --         Revision 4. ⚠️ THE FIRST REVISION THAT CHANGES DDL. `confidence`
 --         becomes NOT NULL, its CASE becomes exhaustive with no catch-all, and
 --         a domain CHECK closes the vocabulary — so an event_type added to the

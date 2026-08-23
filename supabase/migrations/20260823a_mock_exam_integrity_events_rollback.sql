@@ -1,7 +1,19 @@
 -- =====================================================================
 -- Mock Exam v2 · M1 ROLLBACK — undoes 20260823a_mock_exam_integrity_events.sql
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ⚠️ NOT APPLIED, AND MUST NOT BE RUN CASUALLY. This is the rollback
+--         for a migration that IS now live in production (applied 2026-08-23,
+--         version 20260823043358). Running it drops a live table. It lives here
+--         beside its migration, matching 20260804_streak_server_side_rollback.sql
+--         and 20260815z_support_rollback.sql; the CLI does not replay this
+--         directory (see docs/supabase-migrations.md), so its presence here is
+--         documentation, not scheduling.
+--
+--         Exercised for real during staging validation on 2026-08-23: it was
+--         observed REFUSING on a non-empty table, then proceeding under the
+--         explicit confirmation below, then running on an empty table with no
+--         flag — leaving every exam_practice_sessions row intact each time.
+--
 --         Revision 3. Written against forward-migration revision 4, and
 --         CORRECTED BY STAGING VALIDATION: section 3's checklist said to expect
 --         "the original 14 columns" on exam_practice_sessions. It has 13. The
