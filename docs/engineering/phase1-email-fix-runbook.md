@@ -456,3 +456,99 @@ bash scripts/mailer-apply.sh --dry-run     # read-only; send me the output
 **Do not run apply until the dry-run output has been reviewed.** It establishes
 exactly what the API currently holds for all four keys, which is the baseline the
 previous attempt never captured.
+
+
+---
+
+## Step 3c — Management API contract, checked against the published spec
+
+Requested after the dry-run confirmed all four values are still byte-identical to
+the pre-apply backup. **No production write was made for this investigation.**
+
+### Source
+
+Supabase publishes the Management API's OpenAPI document inside the `supabase/cli`
+repository: `packages/api/src/generated/openapi.json` (read at commit `44112f6`).
+That is generated from the live API, so it is the contract itself rather than
+prose about it. `api.supabase.com` is unreachable from this environment, so the
+spec in the repo is the closest available primary source.
+
+### Findings — three candidate explanations are eliminated
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Is `PATCH /v1/projects/{ref}/config/auth` the right endpoint? | **Yes** | Only `GET` and `PATCH` are defined on that path; `operationId` is `v1-update-auth-service-config` |
+| Are the four keys writable through it? | **Yes, all four** | All present in `UpdateAuthConfigBody` (234 properties), each `type: string, nullable: true` |
+| Is there a length, pattern or format constraint we violated? | **No** | None of the four declares `maxLength`, `minLength`, `pattern` or `format` |
+| Is a different payload shape expected? | **No** | Flat object of scalar keys; `required` is empty, so a partial body is valid |
+
+So *wrong endpoint*, *field not writable*, and *malformed payload* are ruled out.
+The request the script sent matches the published contract.
+
+### The finding that changes how we test
+
+**A `200` from this endpoint returns the complete `AuthConfigResponse` — 237
+properties, including all four of our keys.** Confirmed both in the spec and in
+Supabase's own recorded end-to-end fixture
+(`apps/cli-e2e/fixtures/recorded/PATCH_.../default.response.json`), whose body
+carries `mailer_templates_confirmation_content`, `mailer_subjects_confirmation`
+and the rest.
+
+The PATCH response is therefore the server's own statement of what it now holds.
+**The first attempt deleted it.** That single line is why a `200` with no
+persisted change could not be explained: the answer was in the file the script
+threw away.
+
+### Cause: still undetermined, and deliberately not guessed
+
+The contract is satisfied and the request was well-formed, so the remaining
+explanations concern behaviour, not shape. Unranked, with what would confirm each:
+
+| Hypothesis | Confirmed by |
+|---|---|
+| The server accepted and did not store — silent validation or a partial write | PATCH response shows the **old** value |
+| The write landed; the read-back was stale — caching, or config still propagating | PATCH response shows the **new** value while the GET shows the old |
+| Something in the local environment differed from the harness | Byte-level diff in the diagnostics |
+
+One caveat on the earlier rollback, worth recording because it affects how much
+that success proves: `mailer-restore.sh` verified that the live confirmation
+template matched the backup — but the confirmation template had never changed, so
+that check would have passed whether or not the restore wrote anything. It is a
+green check that could not have gone red (`verification-framework-audit.md`).
+Production being at baseline is well established by the later dry-run; the
+restore's own self-check simply is not the evidence for it.
+
+### Tooling change
+
+`scripts/mailer-apply.sh` now checks the **PATCH response body** for each key
+immediately, in addition to the later GET, and reconciles the two:
+
+- response shows the new value, GET does not → prints a note that this points at
+  a stale read rather than a rejected write, and says to re-run `--dry-run` in a
+  few minutes **before** rolling back, because the change may in fact be live.
+- response shows the old value → the server returned 200 and did not store it.
+  Definitive, and attributable to a single key because keys go one per request.
+
+GETs now also send `Cache-Control: no-cache` and `Pragma: no-cache`, which removes
+an intermediary cache as a variable at no cost.
+
+Harness: a mock with a `silent_ignore` mode (response echoes the old state) is
+correctly reported as `*** response says NOT stored` for every key; a `stale_read`
+mode (response shows new, GET lags) is correctly reported as
+`response confirms stored` plus the two-sources-disagree note. Both were exercised
+before commit.
+
+### Recommended next step — smallest possible experiment
+
+Any further evidence requires one write; there is no read-only way to observe a
+write. The cheapest is **one key, the trivially reversible one**:
+
+```bash
+export SUPABASE_ACCESS_TOKEN=...      # use a freshly rotated token
+bash scripts/mailer-apply.sh --dry-run
+```
+
+and then, only with approval, a single-key apply of `mailer_subjects_recovery` —
+a 30-byte ASCII string, the one key that demonstrably stored last time. The
+response body will then say plainly whether the server stores what it is sent.
+**Do not run the full four-key apply until that question is answered.**

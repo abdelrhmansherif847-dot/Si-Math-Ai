@@ -81,6 +81,10 @@ done
 
 mkdir -p "$DIAG_DIR"
 
+# Set when a PATCH returned 200 but its own response body reported a value other
+# than the one sent. Distinguishes "not stored" from "stored but read back stale".
+RESPONSE_DISAGREED=0
+
 sha() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum | cut -c1-16
   else shasum -a 256 | cut -c1-16; fi
@@ -111,7 +115,8 @@ api_get() {
   local out="$DIAG_DIR/get-$STAMP.json" code
   code=$(curl -sS -o "$out" -w '%{http_code}' \
     -X GET "$API/v1/projects/$PROJECT_REF/config/auth" \
-    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H "Cache-Control: no-cache" -H "Pragma: no-cache")
   redact <"$out" >"$out.tmp" && mv "$out.tmp" "$out"
   if [ "$code" != "200" ]; then
     echo "FAILED: GET returned HTTP $code" >&2
@@ -237,6 +242,35 @@ apply_keys() { # apply_keys <key>...
     echo "        Stopping. Backup at $BACKUP is untouched." >&2
     exit 1
   fi
+
+  # Check the PATCH RESPONSE itself, not only a later GET.
+  #
+  # Per Supabase's published OpenAPI spec, a 200 from this endpoint returns the
+  # full AuthConfigResponse — the server's own account of what it now holds. So
+  # the response is authoritative for "was this stored", and comparing it against
+  # a later GET separates two very different failures:
+  #
+  #   response has the NEW value, GET has the OLD  -> the write landed; the read
+  #                                                   is stale (caching or the
+  #                                                   config propagating).
+  #   response has the OLD value                   -> the server returned 200 and
+  #                                                   did not store it.
+  #
+  # The first attempt could not tell these apart, because it only did a GET.
+  for k in "$@"; do
+    local resp_val want_val
+    resp_val=$(jq -r --arg k "$k" '.[$k] // "<<ABSENT>>"' <"$out" 2>/dev/null || echo "<unparsable>")
+    want_val=$(intended_value "$k")
+    if [ "$resp_val" = "$want_val" ]; then
+      echo "        response confirms stored: $k"
+    elif [ "$resp_val" = "<<ABSENT>>" ] || [ "$resp_val" = "<unparsable>" ]; then
+      echo "        response does NOT include $k — cannot confirm from the response"
+    else
+      echo "        *** response says NOT stored: $k"
+      echo "            the server returned 200 but reports a different value."
+      RESPONSE_DISAGREED=1
+    fi
+  done
 }
 
 if [ "$MODE" = "batch" ]; then
@@ -260,6 +294,16 @@ for k in "${KEYS[@]}"; do
     fail=1
   fi
 done
+
+if [ "$fail" -ne 0 ] && [ "$RESPONSE_DISAGREED" -eq 0 ]; then
+  echo
+  echo "NOTE — the two sources of truth disagree:"
+  echo "  Every PATCH response reported the new value as stored, but the"
+  echo "  follow-up GET reports otherwise. That points at a stale or cached"
+  echo "  read, or config still propagating — NOT at a rejected write."
+  echo "  Re-run 'bash scripts/mailer-apply.sh --dry-run' in a few minutes"
+  echo "  before rolling back: the change may in fact be live."
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo >&2
