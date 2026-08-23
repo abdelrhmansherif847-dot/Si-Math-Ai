@@ -387,3 +387,346 @@ boundary stays exactly as it is: the Mock Exam emits `weakness_signals`, and
 4. **Automatic restriction, or Admin review?** This document recommends review;
    the specification says automatic. The user's call, but the risk is real.
 5. **Migration approval** — per file, per §3.
+
+---
+---
+
+# Addendum — Spec §8 (Desmos Calculator) and §9 (Exam Hall Ambient Sound)
+
+**Added:** 2026-08-23, same investigation, no code changed.
+Both sections asked for research and limitations *before* implementation. This is
+that research. §8 has a **hard legal blocker**; §9 has a content and
+accessibility decision. Neither is primarily an engineering problem.
+
+---
+
+## 7. §8 — Desmos calculator: the licensing finding
+
+### 7.1 The blocker, in Desmos's own words
+
+The caution in the specification — *"do not assume that embedding the Desmos
+website directly in an iframe is supported or permitted"* — is correct, and the
+restriction is broader than iframes. From the Desmos Terms of Service
+(last modified 2026-05-21), quoted verbatim:
+
+> "You agree to use the Desmos Tools only (a) as an end user, for your personal,
+> non-commercial use or (b) as a School, for academic use by you and your
+> Students in individual classes."
+
+> "You may not frame or mirror the Desmos Tools without our prior consent."
+
+> "Desmos does, pursuant to a separate written agreement, permit certain third
+> parties to integrate with the Desmos Tools for commercial use."
+
+> "Please contact partnerships@desmos.com for more information about entering
+> into a relationship with Desmos that would permit commercial use of the Desmos
+> Tools."
+
+**Si Math AI is a commercial platform.** It sells subscriptions in EGP, runs a
+credit economy, and has paid Founder tiers. It is neither "an end user for
+personal, non-commercial use" nor "a School … in individual classes". The Desmos
+API Terms are described as covering *"paid partnerships with publishers,
+assessment companies, educational institutions and other commercial partners."*
+
+**Therefore: shipping Desmos inside Si Math AI requires a signed partnership
+agreement with Desmos. There is no free or self-serve route for a commercial
+exam-prep product.** This is a business action — an email to
+partnerships@desmos.com — and it gates the entire feature. No amount of
+engineering removes it.
+
+Both routes are closed without the agreement:
+
+- **Iframing desmos.com** → explicitly prohibited ("may not frame or mirror").
+- **The JS API** (`https://www.desmos.com/api/v1.11/calculator.js?apiKey=…`,
+  keys issued at desmos.com/my-api) → the key is issued under the agreement.
+
+### 7.2 What the API gives you, once licensed
+
+- Constructors: `Desmos.GraphingCalculator`, `Desmos.ScientificCalculator`,
+  `Desmos.FourFunctionCalculator`, plus geometry/matrix/3D.
+- **Access to four-function, scientific and geometry is enabled per API key** —
+  readable at `Desmos.enabledFeatures`. Calling a constructor for a feature not
+  enabled on your key is an error, so the exam registry must degrade gracefully
+  rather than assume.
+- `.destroy()` frees listeners and resources — essential here, because the panel
+  will be opened and closed repeatedly inside a live exam.
+- **Partners may self-host the API bundle on their own servers** instead of
+  loading it from desmos.com. This matters a lot for us (§7.4).
+
+### 7.3 Fidelity — which exams this is actually faithful to
+
+The value of §8 is test-day realism, so faithfulness matters more than presence:
+
+| Exam | Real test-day calculator | On-screen Desmos faithful? |
+|---|---|---|
+| **DSAT** | Desmos **built into Bluebook** — graphing *and* scientific, full-featured, on every math question | ✅ **Yes, exactly** |
+| **ACT (online)** | Desmos graphing built into the online testing platform, Math section | ✅ **Yes** |
+| **ACT (paper)** | Student **brings their own** device; 4-function/scientific/graphing allowed, **CAS banned** (TI-89, TI-Nspire CAS, HP Prime CAS) | ⚠️ Partially — no on-screen calculator exists on test day |
+| **EST** | Student brings an approved calculator; **EST I Math Level 1 permits it in part 2 only**, EST II Math permits it throughout | ⚠️ Partially, and **not for all of EST I** |
+
+Two consequences for the exam registry:
+
+1. `calculator` cannot stay a single boolean. It needs at minimum
+   `{ allowed, provider, scope }` — because EST I allows a calculator in *part 2
+   only*, and today every config is flagged `calculator: true` unconditionally.
+2. ACT paper and EST are cases where showing a calculator is *less* realistic
+   than not showing one. The registry should be able to say "permitted on test
+   day, but you bring it" — which is a third state, not a boolean.
+
+### 7.4 The integrity tension nobody has named yet
+
+§4 exists to protect proprietary question content. §8 proposes loading a
+**third-party script with full DOM access into the exam page**. Those two goals
+are in direct tension: once questions exist (Phase 5), any script running inline
+in that document can read them.
+
+This is not an accusation about Desmos — it is a structural point about
+third-party scripts on a page whose stated purpose is content protection.
+
+**Recommended mitigation, available only under the partnership:** take the
+self-hosting option, serve the bundle from our own origin, and render the
+calculator inside a **sandboxed iframe we control** rather than inline in the
+exam DOM. That gives content isolation, removes a cross-origin dependency from
+the critical exam path, and works offline. Note this is *self-hosting the
+licensed API* — categorically different from "framing the Desmos Tools", which
+the ToS forbids.
+
+### 7.5 It also breaks this repo's SRI rule
+
+`CLAUDE.md` records that CDN dependencies are pinned with SRI via
+`scripts/pin-cdn-sri.sh`. Reading that script, it deliberately computes hashes
+**from the npm registry tarball**, because jsdelivr is a pass-through CDN and the
+tarball is the authoritative, independently-checkable source.
+
+The Desmos API **is not on npm.** It is served from `www.desmos.com` behind a
+query-string API key, and Desmos patches the `v1.x` file in place. So:
+
+- It **cannot be pinned by the existing method** (no tarball to hash).
+- A hash pinned against the live URL would **break when Desmos ships a patch**,
+  taking the calculator — and, if the script tag is blocking, possibly the exam
+  page — down with it.
+
+Self-hosting the bundle (§7.4) resolves this too: a file in our own repo or
+storage can be hashed and pinned like anything else. **Absent self-hosting, §8
+requires an explicit, documented exception to the SRI rule.** That is a decision
+for the user, not something to slip past a security gate.
+
+### 7.6 Recommended approach — build the socket, not the plug
+
+Do not block the whole feature on a legal negotiation, and do not ship an
+unlicensed integration. Split it:
+
+**Now (no license needed):**
+- Extend the Phase 1 exam registry with a calculator descriptor:
+  `calculator: { allowed: true, provider: 'desmos-graphing', scope: 'all' }`,
+  supporting `scope: 'section:2'` for EST I and `provider: 'byod'` for
+  bring-your-own exams.
+- Build `exam-calculator.js` — the **panel host and provider abstraction**: a
+  draggable/resizable in-exam panel, open/close, focus management, and a
+  provider interface (`mount`, `unmount`, `isAvailable`). Timer untouched;
+  answers untouched; the panel is pure UI.
+- Ship a **legally clean default provider** so the feature works on day one.
+  Candidates, all permissively licensed: `math.js` (Apache-2.0) for evaluation,
+  `JSXGraph` (LGPL) or `function-plot` (MIT) for plotting, `MathLive` (MIT) for
+  input. This gives a real scientific/graphing calculator — but see the honesty
+  note below.
+
+**When the agreement is signed:** register the `desmos` provider, prefer
+self-hosting, add the SRI pin, flip the registry config. **No rewrite** — that is
+the point of the abstraction.
+
+**Honesty note to carry into the product copy:** a non-Desmos calculator is *not*
+the DSAT experience. Different keystrokes, different regression behaviour,
+different graphing feel. For DSAT specifically, practising on a substitute builds
+partly-wrong muscle memory. Until the agreement exists, the honest options are a
+clearly-labelled "practice calculator (not the official DSAT tool)" or pointing
+students at the public desmos.com in their own tab — which is lawful (linking is
+not framing) but breaks the §8 UX requirement on purpose.
+
+### 7.7 A likely factual error found on the way
+
+`EXAM_CONFIGS` labels both EST entries `org: 'Emirates Standardized Test'`.
+Every Egyptian source consulted calls **EST the "Egyptian Scholastic Test"** — the
+SAT/ACT-equivalent used for admission to Egyptian universities. Given Si Math AI
+prices in EGP, supports Arabic, and targets Egyptian exam candidates, "Emirates"
+appears to be simply wrong, and it is **displayed to students on the exam card**.
+
+Flagging rather than fixing: it lives in a frozen file, and a correction to
+student-facing copy should be confirmed by the user, not assumed. If confirmed,
+this is a *correction*, which the documentation freeze explicitly permits.
+
+---
+
+## 8. §9 — Exam hall ambient sound
+
+### 8.1 Starting position
+
+There is **no audio anywhere in this project today.** No `.mp3`, `.ogg`, `.wav`
+or `.m4a` in the repository; `assets/` holds JS, CSS and one JPG. `.gitattributes`
+declares `*.png` and `*.jpg` binary and nothing else, so audio extensions need a
+binary declaration added or Git will treat them as text and corrupt them under
+`text=auto eol=lf`. Small thing, but it will bite on the first commit of an
+`.mp3` if missed.
+
+### 8.2 One audio bus, not two systems
+
+§3 (proctor announcements) and §9 (ambient) are both audio, and §9 requires
+ambient to **duck while announcements play**. Building them separately guarantees
+they will fight. Build one `exam-audio.js` bus:
+
+```
+exam-audio.js  (single AudioContext, unlocked by the Start Exam click)
+   ├── channel: announcement   priority — always audible
+   └── channel: ambient        background — ducked/paused during announcements
+```
+
+Design rules that fall out of the spec:
+
+- **Non-overlap by construction** — one ambient source node at a time. Not "check
+  whether something is playing", but structurally incapable of two.
+- **Ducking is the bus's job**, not the caller's. The ambient channel subscribes
+  to announcement start/end.
+- **One unlock point.** Browsers block audio before a user gesture; the "Start
+  Exam" click is that gesture, and it unlocks the shared context for both
+  channels. This is also why the calculator panel and ambient sound must not
+  each try to unlock separately.
+
+### 8.3 Scheduling with controlled randomness
+
+Spec: every 8–12 minutes, random pick, no consecutive repeat, never overlapping.
+
+- After each clip finishes, schedule the next at `now + uniform(8min, 12min)`.
+  Interval-from-completion, not from start, so a long clip cannot compress the gap.
+- Pick uniformly from the pool **excluding the previous clip id** — that is the
+  "no consecutive repeat" rule, and it is one line, not a shuffle bag.
+- If an announcement is playing or due within a few seconds, **defer** the ambient
+  clip rather than duck-then-play; announcements are the point, ambience is not.
+- On a 35-minute DSAT module that is roughly **3 clips per module** — deliberately
+  sparse, which matches "subtle" far better than a busy loop would.
+
+### 8.4 The timer must remain untouchable
+
+Same rule as §3: **audio observes the timer, never drives it.** Ambient
+scheduling runs on its own timeout, every entry point is wrapped so a decode
+failure, a blocked context, or a missing asset can only log — never throw into
+the tick path, never touch `s.timerSec`, never touch `saveTimerState()`. A silent
+exam is a working exam; a broken timer is a ruined attempt.
+
+### 8.5 Asset budget and delivery
+
+- **Preload on exam start**, decode once into `AudioBuffer`s, reuse for the whole
+  session. That is one network round per clip per exam, which answers the spec's
+  "avoid excessive network requests" without a service worker.
+- Keep the whole library **under ~500 KB**. Roughly 6–8 clips of 1–3 seconds at a
+  modest bitrate — mono is fine and halves the size; these are background textures,
+  not music.
+- `.mp3` alone is sufficient — universally supported across current browsers, and
+  a second format is bytes for no gain.
+- Serve from `assets/exam-ambience/`, static on Vercel, alongside everything else.
+
+### 8.6 Where the sounds come from — a content decision, again
+
+Exactly like the exam questions in §5–6, **this is a licensing question, not an
+engineering one.** Pencil-writing and page-turn recordings are owned by whoever
+recorded them. Three lawful routes:
+
+1. **CC0 / public domain** (e.g. Freesound CC0, Pixabay) — free, but each file's
+   licence must be individually verified and recorded, not assumed from the site.
+2. **Purchased royalty-free** — a clean paper trail, small cost.
+3. **Record them.** A pencil on paper and a page turn are trivially recordable in
+   a quiet room, they cost nothing, and the provenance is unimpeachable. For a
+   library this small this is genuinely the best option.
+
+Whichever route, record the source and licence per file in the repo, the way
+`pin-cdn-sri.sh` records where each pin came from.
+
+### 8.7 Accessibility — the part that needs care
+
+The specification names accessibility, correctly. The concerns are real:
+
+- **WCAG 2.1 SC 1.4.2 (Audio Control)** requires a mechanism to pause or stop any
+  audio that plays automatically for more than 3 seconds. A persistent, visible
+  mute control in the exam chrome satisfies this. A setting buried in
+  `settings.html` does **not** — it must be reachable *during* the exam.
+- **Screen-reader users:** ambient audio competes directly with speech output.
+  For these students it is not atmosphere, it is interference.
+- **ADHD, autism, sensory processing differences, auditory processing disorders,
+  anxiety:** background noise during a timed high-stakes task is actively harmful
+  for a meaningful share of students — plausibly a larger share among exam-prep
+  users than in the general population.
+
+**Recommendation:** default **off** globally; offer it prominently at exam start
+as an explicit "Realistic exam hall" choice; default it **on only when the
+student has chosen Realistic Simulation Mode**, which is a deliberate opt-in. Keep
+a persistent mute in the exam chrome regardless. This honours the spec's
+"realistic simulation may enable this by default" while making the default path
+safe for the students most at risk. It is also the cheaper mistake to undo — a
+student who wants ambience will turn it on; a student harmed by it may just lose
+the attempt.
+
+Setting is independent of the announcements setting, per the spec.
+
+### 8.8 Limitations to state plainly
+
+| Limitation | Effect |
+|---|---|
+| Autoplay policy | No audio before the Start click. Unlock there; never assume. |
+| Backgrounded tab | Mobile/desktop suspend audio and throttle timers when hidden. Ambience stops; that is acceptable, and it must not be read as an integrity event (§4 already logs `visibility_hidden` separately). |
+| iOS silent switch | Physical mute silences Web Audio on iOS regardless of app state. Nothing to be done — do not "fix" it by routing through a video element hack. |
+| Bluetooth latency | Ducking may be audibly late on some Bluetooth stacks. Prefer pausing ambience over cross-fading it. |
+| Battery | Continuous `AudioContext` costs a little power. Sparse clips + suspending the context between them keeps it negligible. |
+
+---
+
+## 9. Revised phase plan
+
+§8 and §9 slot into the existing plan rather than extending it sideways.
+
+| Phase | Adds | DB | Blocked on |
+|---|---|---|---|
+| 1 — Exam Registry | calculator descriptor `{allowed, provider, scope}`; announcement + ambience schedules per config | none | unfreeze `mock-exam.html` |
+| 2 — Modular DSAT + **audio bus** | `exam-audio.js` (both channels), `exam-proctor.js`, **§9 ambient scheduler** | none | ambient **asset licensing** |
+| 3 — Integrity | unchanged | 2 migrations | policy decision |
+| 4 — Saved Questions | unchanged | 1 migration | — |
+| **4.5 — Calculator panel** | `exam-calculator.js` host + provider abstraction + clean-licence default provider | none | — |
+| 5+ — Question bank | unchanged | ~5 migrations | content decision |
+| **— Desmos provider** | register provider, self-host, SRI pin, flip config | none | **signed Desmos partnership** |
+
+§9 lands inside Phase 2 because it shares the audio bus — building it later would
+mean building the bus twice. The calculator is 4.5 because the panel is
+independent of everything else and can ship whenever, while the *Desmos* provider
+is unscheduled by design: it is gated on a signature, not on engineering.
+
+## 10. Risk register — additions
+
+| # | Risk | Severity | Mitigation |
+|---|---|---|---|
+| R11 | Shipping Desmos without a partnership agreement | **Blocking / legal** | Provider abstraction; Desmos disabled until signed |
+| R12 | Desmos script unpinnable under the SRI rule | **High** | Self-host under the agreement, or an explicit documented exception |
+| R13 | Third-party script with DOM access on the page §4 exists to protect | **High** | Sandboxed same-origin iframe, self-hosted bundle |
+| R14 | A substitute calculator taught as if it were the DSAT tool | Medium | Label it plainly as a practice calculator |
+| R15 | Ambient audio harming students with sensory/attention differences | **High** | Default off; opt-in; persistent in-exam mute; WCAG 1.4.2 |
+| R16 | Ambient assets used without a verified licence | Medium | Record source + licence per file; recording them is cheapest |
+| R17 | Audio failure taking down the exam | **High** | Observer pattern; every audio path wrapped; silence is a valid state |
+| R18 | `calculator: true` on exams where it is not universally permitted | Medium | `scope` in the descriptor; EST I is part-2-only |
+| R19 | EST mislabelled "Emirates Standardized Test" to students | Low | Confirm with user, then correct |
+
+## 11. Decisions needed — updated
+
+Carried forward: unfreeze `mock-exam.html`? Project A only or A+B? Content source
+for a question bank? Automatic restriction or Admin review? Migration approval.
+
+New:
+
+6. **Will you contact partnerships@desmos.com?** Nothing Desmos-branded can ship
+   until that agreement exists. Everything else in §8 can be built now.
+7. **Interim calculator: clean-licence substitute, or none at all?** A substitute
+   is useful for ACT/EST practice but is not the DSAT tool, and mislabelling it
+   would teach the wrong muscle memory.
+8. **If the agreement lands: self-host the bundle?** Recommended — it satisfies
+   the SRI rule and the §4 isolation concern at once.
+9. **Ambient sounds: record, buy, or curate CC0?** Recording ~8 clips is the
+   cheapest and the only route with unimpeachable provenance.
+10. **Ambient default state?** This document recommends off globally, on only
+    inside an explicitly chosen Realistic Simulation Mode.
+11. **Is EST "Egyptian Scholastic Test"?** If yes, the exam card is wrong today.
