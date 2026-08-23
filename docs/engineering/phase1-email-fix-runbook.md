@@ -552,3 +552,92 @@ and then, only with approval, a single-key apply of `mailer_subjects_recovery` �
 a 30-byte ASCII string, the one key that demonstrably stored last time. The
 response body will then say plainly whether the server stores what it is sent.
 **Do not run the full four-key apply until that question is answered.**
+
+
+---
+
+## Step 3d — The single-key diagnostic experiment (approved, not yet run)
+
+Purpose: settle one question that no amount of reading can settle — **does this
+API store what it is sent?** Approved by the owner as a single-key experiment;
+this session did not execute it.
+
+### Why `mailer_subjects_recovery`
+
+- 30 bytes, pure ASCII. Nothing exotic to blame.
+- Trivially reversible from the backup.
+- It is the one key that appeared to store during the failed four-key attempt,
+  so if it now fails, that failure is new information; if it succeeds, the
+  difference lies in the other keys or in the batched request.
+
+### What the flag does
+
+`--only <key>` narrows the run to a single key, validated against the four
+approved keys — a typo or any other setting is refused rather than sent. It
+refuses to combine with `--batch`. Everything else is unchanged: the backup is
+still required, the `ConfirmationURL` and `TokenHash` guards still run, and
+`mailer-restore.sh` still reverts.
+
+Both observations are now reported **separately, every time**, pass or fail:
+
+```
+  --- mailer_subjects_recovery
+      sent           : 30 bytes  sha256:…
+      PATCH response : 30 bytes  sha256:…   MATCHES SENT
+      no-cache GET   : 19 bytes  sha256:…   DIFFERS FROM SENT
+      sent           = Reset your Si Math AI password
+      PATCH response = Reset your Si Math AI password
+      no-cache GET   = Reset your password
+```
+
+Values of 120 bytes or fewer print in full, because a hash is useless to read and
+these are short.
+
+### How to read the result
+
+| PATCH response | no-cache GET | Meaning |
+|---|---|---|
+| matches sent | matches sent | The API stores what it is sent. The four-key failure was about the other keys or the batched request. |
+| matches sent | differs | The write landed; the read is stale or the config is still propagating. **Do not roll back** — re-run `--dry-run` a few minutes later. |
+| differs | differs | The API returned 200 and did not store it. A genuine server-side rejection, now attributable to one key. |
+
+The verdict line reads the PATCH response before deciding its wording, so it can
+no longer say "did not store this key" about a write that the server itself
+confirmed.
+
+### Harness results before commit
+
+| Scenario | Expected | Result |
+|---|---|---|
+| `--only` with a key outside the four | refused, exit 2 | ✅ |
+| `--only` combined with `--batch` | refused | ✅ |
+| `--only … --dry-run` | read-only, reports the one key | ✅ |
+| Honest server | one PATCH containing exactly one key — verified from the mock's request log | ✅ `[["mailer_subjects_recovery"]]` |
+| Server silently not storing | both sources differ; verdict "did not store" | ✅ |
+| Server stores but GET lags | response matches, GET differs; verdict "write landed, read is stale" | ✅ |
+| Four-key run still works | 4 PASS, four single-key PATCHes | ✅ |
+| Backup missing | refused | ✅ |
+| Rollback | completes | ✅ |
+| Token in diagnostics | none | ✅ |
+
+### The commands
+
+Pull first — the response-preserving code is only in `796aa86` and later. The old
+copy deletes the evidence.
+
+```bash
+git pull origin claude/apple-signin-auth-wysnha
+export SUPABASE_ACCESS_TOKEN=...        # freshly rotated; never paste it into chat
+
+# 1. Read-only. Confirms exactly what will be targeted. No writes.
+bash scripts/mailer-apply.sh --only mailer_subjects_recovery --dry-run
+
+# 2. Only after reading the above: the single-key write.
+bash scripts/mailer-apply.sh --only mailer_subjects_recovery
+
+# 3. If needed:
+bash scripts/mailer-restore.sh
+```
+
+Step 2 sends **one** PATCH containing **one** key. The other three approved keys
+are not touched, and nothing else in the auth config is either.

@@ -42,14 +42,22 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docs/engineering/email-tem
 
 DRY_RUN=0
 MODE="sequential"
-for arg in "$@"; do
-  case "$arg" in
+ONLY=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --batch)   MODE="batch" ;;
-    *) echo "Unknown argument: $arg" >&2
-       echo "Usage: mailer-apply.sh [--dry-run] [--batch]" >&2; exit 2 ;;
+    --only)    ONLY="${2:-}"; shift
+               [ -n "$ONLY" ] || { echo "--only needs a key name" >&2; exit 2; } ;;
+    --only=*)  ONLY="${1#--only=}" ;;
+    *) echo "Unknown argument: $1" >&2
+       echo "Usage: mailer-apply.sh [--dry-run] [--batch] [--only <key>]" >&2; exit 2 ;;
   esac
+  shift
 done
+if [ -n "$ONLY" ] && [ "$MODE" = "batch" ]; then
+  echo "REFUSING: --only and --batch are contradictory." >&2; exit 2
+fi
 
 : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN is not set.}"
 
@@ -104,10 +112,26 @@ intended_value() {
   esac
 }
 
-KEYS=(mailer_templates_confirmation_content
-      mailer_templates_recovery_content
-      mailer_subjects_confirmation
-      mailer_subjects_recovery)
+ALL_KEYS=(mailer_templates_confirmation_content
+          mailer_templates_recovery_content
+          mailer_subjects_confirmation
+          mailer_subjects_recovery)
+
+# --only narrows the run to a single key, for the approved diagnostic
+# experiment. It is validated against ALL_KEYS, so it can never widen scope or
+# reach a setting outside the four that were reviewed — a typo is refused rather
+# than silently sent to the API.
+KEYS=("${ALL_KEYS[@]}")
+if [ -n "$ONLY" ]; then
+  ok=0
+  for k in "${ALL_KEYS[@]}"; do [ "$k" = "$ONLY" ] && ok=1; done
+  if [ "$ok" -ne 1 ]; then
+    echo "REFUSING: --only $ONLY is not one of the four approved keys:" >&2
+    printf '  %s\n' "${ALL_KEYS[@]}" >&2
+    exit 2
+  fi
+  KEYS=("$ONLY")
+fi
 
 STAMP=0
 api_get() {
@@ -142,8 +166,18 @@ diagnose() { # diagnose <key> <live-value> <intended-value>
   if [ -s "$BACKUP" ]; then
     old=$(jq -r --arg k "$key" '.[$k] // ""' <"$BACKUP")
     if [ "$live" = "$old" ]; then
-      echo "        verdict   : UNCHANGED — still byte-identical to the pre-apply backup."
-      echo "                    The API accepted the request but did not store this key."
+      echo "        verdict   : UNCHANGED — the GET still returns the pre-apply value."
+      # The GET alone cannot say WHY. If the PATCH response already reported the
+      # new value, the write landed and it is the read that is behind; saying
+      # "did not store" there would contradict the server's own answer.
+      if [ -f "$DIAG_DIR/respval-$key.txt" ] &&
+         [ "$(cat "$DIAG_DIR/respval-$key.txt")" = "$want" ]; then
+        echo "                    But the PATCH response DID report the new value, so the"
+        echo "                    write landed and this read is stale. Do not roll back yet."
+      else
+        echo "                    The PATCH response reported the old value too, so the API"
+        echo "                    accepted the request and did not store this key."
+      fi
     elif [ "$live" = "$want" ]; then
       echo "        verdict   : matches intended"
     else
@@ -184,6 +218,11 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "Mode    : DRY RUN — no writes"
 else
   echo "Mode    : apply ($MODE)"
+fi
+if [ -n "$ONLY" ]; then
+  echo "Scope   : SINGLE KEY — $ONLY"
+else
+  echo "Scope   : all four approved keys"
 fi
 echo "Diags   : $DIAG_DIR/"
 echo
@@ -261,6 +300,8 @@ apply_keys() { # apply_keys <key>...
     local resp_val want_val
     resp_val=$(jq -r --arg k "$k" '.[$k] // "<<ABSENT>>"' <"$out" 2>/dev/null || echo "<unparsable>")
     want_val=$(intended_value "$k")
+    # Keep the response's value so the final report can show it beside the GET.
+    printf '%s' "$resp_val" >"$DIAG_DIR/respval-$k.txt"
     if [ "$resp_val" = "$want_val" ]; then
       echo "        response confirms stored: $k"
     elif [ "$resp_val" = "<<ABSENT>>" ] || [ "$resp_val" = "<unparsable>" ]; then
@@ -280,12 +321,28 @@ else
 fi
 
 echo
-echo "Reading the config back to verify ..."
+echo "Reading the config back with a no-cache GET ..."
 after=$(api_get)
 fail=0
 for k in "${KEYS[@]}"; do
   live=$(printf '%s' "$after" | jq -r --arg k "$k" '.[$k] // ""')
   want=$(intended_value "$k")
+  resp=""
+  [ -f "$DIAG_DIR/respval-$k.txt" ] && resp=$(cat "$DIAG_DIR/respval-$k.txt")
+
+  # The two sources are reported SEPARATELY and always, pass or fail. They are
+  # different observations of the same write, and conflating them is what made
+  # the first attempt uninterpretable.
+  echo "  --- $k"
+  echo "      sent           : $(printf '%s' "$want" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$want" | sha)"
+  echo "      PATCH response : $(printf '%s' "$resp" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$resp" | sha)$([ "$resp" = "$want" ] && echo '   MATCHES SENT' || echo '   DIFFERS FROM SENT')"
+  echo "      no-cache GET   : $(printf '%s' "$live" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$live" | sha)$([ "$live" = "$want" ] && echo '   MATCHES SENT' || echo '   DIFFERS FROM SENT')"
+  # Short values are safe to print in full and are far easier to read than a hash.
+  if [ "$(printf '%s' "$want" | wc -c | tr -d ' ')" -le 120 ]; then
+    echo "      sent           = $(printf '%s' "$want" | cat -v)"
+    echo "      PATCH response = $(printf '%s' "$resp" | cat -v)"
+    echo "      no-cache GET   = $(printf '%s' "$live" | cat -v)"
+  fi
   if [ "$live" = "$want" ]; then
     echo "  PASS  $k"
   else
@@ -293,6 +350,7 @@ for k in "${KEYS[@]}"; do
     diagnose "$k" "$live" "$want"
     fail=1
   fi
+  echo
 done
 
 if [ "$fail" -ne 0 ] && [ "$RESPONSE_DISAGREED" -eq 0 ]; then
@@ -314,5 +372,12 @@ if [ "$fail" -ne 0 ]; then
 fi
 
 echo
-echo "All four keys verified live. Next: the delivery tests in"
-echo "docs/engineering/phase1-email-fix-runbook.md §4."
+if [ -n "$ONLY" ]; then
+  echo "$ONLY verified live by BOTH the PATCH response and the no-cache GET."
+  echo "This was a single-key diagnostic, not the rollout. The other three"
+  echo "approved keys are untouched. Roll this one back with:"
+  echo "  bash scripts/mailer-restore.sh"
+else
+  echo "All four keys verified live. Next: the delivery tests in"
+  echo "docs/engineering/phase1-email-fix-runbook.md §4."
+fi
