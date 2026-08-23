@@ -383,6 +383,7 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 <script src="assets/streak.js"></script>
 <script src="exam-registry.js"></script>
 <script src="exam-audio.js"></script>
+<script src="exam-calculator.js"></script>
 
 <script>
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
@@ -677,6 +678,24 @@ function render() {
 
 // ─── SELECT ───────────────────────────────────────────────────────────────────
 const CALC_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>`;
+
+// P4: the calculator badge, driven by the REGISTRY's policy instead of the
+// hardcoded "Calculator Allowed" it replaced — which was rendered for every
+// exam unconditionally, telling an EST Math 1 student a calculator was allowed
+// when the real policy is part 2 only. The registry's `note` becomes the
+// tooltip, so the fuller test-day facts travel with the badge.
+//
+// No provider is registered, so `describe().inApp` is false for every exam and
+// NO calculator button is rendered anywhere. That is the policy: the UI must
+// never imply an in-app calculator that does not exist.
+function calcBadge(code) {
+  const d = window.SiExamCalculator?.describe(code);
+  if (!d || !d.show) return '';
+  const warn = d.tone === 'warn'
+    ? ' style="background:var(--amber-soft);border-color:var(--amber-border);color:var(--amber)"'
+    : '';
+  return `<span class="calc-badge"${warn} title="${esc(d.detail)}">${CALC_ICON}${esc(d.text)}</span>`;
+}
 const CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
 function htmlSelect() {
@@ -703,7 +722,7 @@ function htmlSelect() {
     <div class="exam-name">SAT Math</div>
     <div class="exam-org">College Board · Digital SAT</div>
     <div class="sat-module-group">${satModsHtml}</div>
-    <div class="calc-badge">${CALC_ICON}Calculator Allowed</div>
+    ${calcBadge(selCode && satMods.includes(selCode) ? selCode : 'SAT_FULL')}
   </div>`;
 
   // Standard exam cards
@@ -725,7 +744,7 @@ function htmlSelect() {
           Duration: <b>${cfg.duration} min</b>
         </div>
       </div>
-      <div class="calc-badge">${CALC_ICON}Calculator Allowed</div>
+      ${calcBadge(code)}
     </div>`;
   }).join('');
 
@@ -959,7 +978,7 @@ function htmlTimer() {
         <div class="timer-progress-bar" id="timerBar" style="width:${pct}%"></div>
       </div>
       <div style="text-align:center;margin-bottom:14px">
-        <span class="calc-badge">${CALC_ICON}Calculator Allowed</span>
+        ${calcBadge(s.exam.code)}
       </div>
       <div class="timer-controls">
         <button class="btn-pause${s.timerRunning ? '' : ' paused-state'}" id="btnPause">
