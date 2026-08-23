@@ -2,6 +2,13 @@
 -- Mock Exam v2 · M1 — Integrity Audit Foundation (append-only)
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+--         Revision 4. ⚠️ THE FIRST REVISION THAT CHANGES DDL. `confidence`
+--         becomes NOT NULL, its CASE becomes exhaustive with no catch-all, and
+--         a domain CHECK closes the vocabulary — so an event_type added to the
+--         CHECK without being classified can no longer be recorded at all.
+--         Approved deliberately: see "FAIL-LOUD CLASSIFICATION" below.
+--         Revisions 1-3 are otherwise unchanged.
+--
 --         Revision 3. DOCUMENTATION ONLY, like revision 2 — no DDL,
 --         constraint, policy or grant differs from revision 1. Revision 3
 --         corrects an immutability claim that was stronger than PostgreSQL
@@ -44,7 +51,7 @@
 -- an automatic ban. See docs/roadmap/mock-exam-v2-investigation.md §3.
 --
 -- =====================================================================
--- THREE DESIGN CHANGES FROM THE APPROVED PLAN, AND WHY
+-- FOUR DESIGN CHANGES FROM THE APPROVED PLAN, AND WHY
 -- =====================================================================
 -- The plan sketched columns that writing the thing properly showed to be wrong.
 -- Each change makes the table MORE append-only, not less.
@@ -75,6 +82,29 @@
 --    review) live in system_settings, which is admin-editable through
 --    admin-actions → update_system_setting. Classification is structural;
 --    thresholds are policy. They are stored differently on purpose.
+--
+-- 4. FAIL-LOUD CLASSIFICATION (revision 4). The mapping originally ended in
+--    `else 'low'`. That is a SAFE default — a new event type could never
+--    accidentally strike a student — but it is a SILENT one: widen the
+--    event_type CHECK without touching the mapping and the new detector's
+--    events are filed as low confidence forever, unable to contribute to
+--    enforcement, with nothing anywhere reporting that it happened. The
+--    security feature would fail open, quietly, which is the worst way to fail.
+--
+--    So there is no default now. Both branches are exhaustive, `confidence` is
+--    NOT NULL, and an unclassified type yields NULL and is rejected outright
+--    with SQLSTATE 23502.
+--
+--    The rejected alternatives, for the record: `else 'high'` would be
+--    fail-aggressive — an unclassified event striking students is worse than
+--    one being ignored. Keeping `else 'low'` and relying on a code-review
+--    convention would be relying on someone remembering. The principle adopted
+--    instead is simply: IF THE SYSTEM DOES NOT UNDERSTAND AN EVENT, IT MUST NOT
+--    RECORD IT AS THOUGH IT DID.
+--
+--    Note what this does NOT do — it cannot make an unknown type strike anyone.
+--    The row never exists, so there is nothing for M2 to count. Fail-loud here
+--    means "refuse to store", never "escalate".
 --
 -- =====================================================================
 -- TWO COLUMNS ARE CALLED attempt_id. THEY HAVE DIFFERENT NULLABILITY.
@@ -266,17 +296,36 @@ create table public.exam_integrity_events (
   event_type   text        not null,
 
   -- DERIVED, never supplied. See design change 3 in the header.
-  -- ⚠️ PAIRED WITH exam_integrity_events_event_type_check BELOW. These two
-  -- lists must be reviewed together in any migration that adds an event type:
-  -- this mapping does not update itself, and an unmapped type silently becomes
-  -- 'low'. The `else` is a deliberate fail-SAFE (a new type cannot accidentally
-  -- start striking students) but it is NOT fail-LOUD, which is the trade-off to
-  -- re-examine if the type list ever grows.
-  confidence   text        generated always as (
+  --
+  -- ⚠️ FAIL-LOUD. Both lists are exhaustive and there is NO catch-all branch.
+  -- An event_type that appears in the CHECK below but in NEITHER list here
+  -- produces NULL, which the NOT NULL rejects — so the INSERT fails outright
+  -- with SQLSTATE 23502 instead of the event being quietly filed as 'low'.
+  --
+  -- IF YOU ARE READING THIS BECAUSE OF A 23502 ON `confidence`: you added an
+  -- event_type to exam_integrity_events_event_type_check without classifying it
+  -- here. Decide, explicitly, whether it is high or low confidence and add it to
+  -- the matching branch. That decision is the whole point of the failure.
+  --
+  -- WHY FAIL-LOUD RATHER THAN A SAFE DEFAULT: a silent 'low' is a security event
+  -- that can never contribute to enforcement, and nobody would ever notice —
+  -- the feature fails open and quietly. A silent 'high' would be worse still,
+  -- striking students over an event nobody classified. Neither default is
+  -- acceptable for a security classification, so there is no default. If the
+  -- system does not understand an event, it refuses to record it as though it
+  -- did.
+  --
+  -- Note the failure is contained: it can only be reached by a migration that
+  -- widens the event_type domain, so it surfaces in development and staging,
+  -- never on a student's first encounter with a new detector.
+  confidence   text        not null
+                           generated always as (
                              case
                                when event_type in ('copy', 'print', 'fullscreen_exit')
                                  then 'high'
-                               else 'low'
+                               when event_type in ('visibility_hidden', 'window_blur', 'context_menu')
+                                 then 'low'
+                               else null   -- deliberately unmapped -> NOT NULL rejects the row
                              end
                            ) stored,
 
@@ -295,13 +344,15 @@ create table public.exam_integrity_events (
 
   constraint exam_integrity_events_event_type_check check (
     event_type in (
-      -- ⚠️ ADDING A TYPE HERE IS HALF A CHANGE. The generated `confidence`
-      -- column above maps event_type -> high/low, and it does NOT update
-      -- itself. A new type added to this CHECK but not to that mapping falls
-      -- through its `else` and is silently classified LOW — meaning a security
-      -- event that can never contribute to enforcement, failing open and
-      -- quietly. Any migration touching this list MUST review the mapping in
-      -- the same migration. See the note on the confidence column.
+      -- ⚠️ ADDING A TYPE HERE IS HALF A CHANGE, AND THE DATABASE ENFORCES THAT.
+      -- The generated `confidence` column above maps event_type -> high/low and
+      -- does NOT update itself. Since rev 4 that mapping has no catch-all: a
+      -- type added to this list and not to that one yields NULL, and the NOT
+      -- NULL on `confidence` rejects every insert of it with SQLSTATE 23502.
+      --
+      -- So this is not a convention a reviewer has to remember. Widen this list
+      -- alone and the new event type cannot be recorded at all — loudly, in
+      -- development, before any student ever triggers it.
       --
       -- HIGH confidence: deliberate, unambiguous, reliably detectable.
       'copy',
@@ -314,6 +365,15 @@ create table public.exam_integrity_events (
       'window_blur',
       'context_menu'
     )
+  ),
+
+  -- Second half of the fail-loud pair. NOT NULL catches an UNMAPPED type; this
+  -- catches a MIS-mapped one — a future edit that classifies something as
+  -- 'medium', or simply misspells 'high'. A CHECK alone could not do the first
+  -- job, because a CHECK evaluating to NULL passes; NOT NULL alone could not do
+  -- the second. Together the vocabulary is closed.
+  constraint exam_integrity_events_confidence_domain_check check (
+    confidence in ('high', 'low')
   ),
 
   constraint exam_integrity_events_exam_code_check check (
@@ -346,9 +406,13 @@ comment on column public.exam_integrity_events.attempt_id is
 
 comment on column public.exam_integrity_events.confidence is
   'GENERATED from event_type — never client-supplied, so it cannot be '
-  'mislabelled to dodge or manufacture enforcement. high = copy/print/'
-  'fullscreen_exit; low = everything else. Changing this mapping is a schema '
-  'change on purpose; strike THRESHOLDS live in system_settings instead.';
+  'mislabelled to dodge or manufacture enforcement. high = copy, print, '
+  'fullscreen_exit; low = visibility_hidden, window_blur, context_menu. '
+  'FAIL-LOUD: both lists are exhaustive with no catch-all, so an event_type '
+  'added to the CHECK but left unclassified yields NULL and is rejected by NOT '
+  'NULL (23502) rather than defaulting. A 23502 here means someone widened the '
+  'event_type domain without classifying the new type. Changing this mapping is '
+  'a schema change on purpose; strike THRESHOLDS live in system_settings.';
 
 comment on column public.exam_integrity_events.elapsed_ms is
   'Milliseconds from exam start. Preferred over a client wall-clock timestamp: '
@@ -607,22 +671,45 @@ commit;
 --      select event_type, confidence from public.exam_integrity_events;
 --      -- expect: copy -> high, visibility_hidden -> low
 --
--- 3. metadata whitelist bites:
+-- 3. FAIL-LOUD classification — the rev 4 behaviour, and the one check that
+--    would have silently passed before it:
+--      -- a) both mapped branches resolve
+--      select event_type, confidence from public.exam_integrity_events;
+--      -- expect: copy -> high, window_blur -> low
+--
+--      -- b) an unmapped type cannot be recorded. Simulate a careless future
+--      --    migration IN A TRANSACTION YOU ROLL BACK:
+--      begin;
+--        alter table public.exam_integrity_events
+--          drop constraint exam_integrity_events_event_type_check;
+--        alter table public.exam_integrity_events
+--          add constraint exam_integrity_events_event_type_check
+--          check (event_type in ('copy','print','fullscreen_exit',
+--                                'visibility_hidden','window_blur','context_menu',
+--                                'screenshot_attempt'));
+--        insert into public.exam_integrity_events
+--          (user_id, attempt_id, exam_code, event_type)
+--          values ('<id>', gen_random_uuid(), 'SAT_FULL', 'screenshot_attempt');
+--        -- EXPECT: ERROR 23502 null value in column "confidence" ... not-null
+--        -- If this INSERT SUCCEEDS, fail-loud is broken — do not ship.
+--      rollback;
+--
+-- 4. metadata whitelist bites:
 --      ... metadata => '{"user_agent":"x"}'   -- expect: CHECK violation 23514
 --      ... metadata => '{"hidden_ms":-1}'     -- expect: CHECK violation 23514
 --      ... metadata => '{"hidden_ms":4200}'   -- expect: ok
 --
--- 4. anon holds no privileges:
+-- 5. anon holds no privileges:
 --      select grantee, privilege_type from information_schema.role_table_grants
 --       where table_name = 'exam_integrity_events';
 --      -- expect: NO anon rows; authenticated has INSERT and SELECT only
 --
--- 5. The save flow still works — the point of the whole linkage:
+-- 6. The save flow still works — the point of the whole linkage:
 --      insert into public.exam_practice_sessions (user_id, exam_type, attempt_id)
 --        values ('<id>', 'SAT_FULL', '<same attempt_id>');
 --      -- expect: ok, and joining the two on attempt_id returns the events
 --
--- 6. Cascade still deletes (proves §6's open door is really open):
+-- 7. Cascade still deletes (proves §6's open door is really open):
 --      -- on a disposable test account only:
 --      delete from auth.users where id = '<test id>';
 --      -- expect: ok, and its integrity events are gone with it

@@ -2,8 +2,21 @@
 -- Mock Exam v2 · M1 ROLLBACK — undoes 20260823a_mock_exam_integrity_events.sql
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 1. Written against the forward migration, whose revision 2
---         changed documentation only — no DDL this file must undo differs.
+--         Revision 2. Written against forward-migration revision 4.
+--
+--         Rev 4 changed the forward DDL for the first time (confidence became
+--         NOT NULL, its mapping exhaustive, plus a domain CHECK). NOTHING IN
+--         THIS FILE NEEDED TO CHANGE AS A RESULT, and that is worth stating
+--         rather than leaving as a silent non-event: all three additions live
+--         INSIDE exam_integrity_events, and `drop table` removes a table's
+--         columns, constraints and generated expressions with it. There is no
+--         new standalone object — no separate constraint on a pre-existing
+--         table, no new function, no new index outside the dropped table — for
+--         this rollback to undo.
+--
+--         The one statement here that touches a pre-existing production table is
+--         still section 3's column drop on exam_practice_sessions, and rev 4 did
+--         not alter that column.
 --
 -- Shipped WITH the forward migration rather than promised by it. A rollback
 -- composed at the moment something has gone wrong is not a rollback.
