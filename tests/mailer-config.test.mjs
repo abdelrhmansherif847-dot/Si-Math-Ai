@@ -12,9 +12,9 @@
 // scripts/mailer-apply.sh. HTML entities are the ASCII-safe way to get typography
 // into an email body: &mdash; and &middot; render correctly and are themselves
 // ASCII.
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { suite } from './_assert.mjs';
-import { read } from './_source.mjs';
+import { REPO, read } from './_source.mjs';
 
 const t = suite('mailer-config');
 
@@ -83,4 +83,64 @@ t.ok('the ConfirmationURL counter would notice a TokenHash swap',
 t.ok('the reply detector would fire on the wording that was removed',
   /reply to this email/i.test('Need help? Reply to this email.'));
 
-t.done();
+t.section('The stored-value comparison distinguishes formatting from content');
+// Supabase stores these values with CRLF line endings. Measured 2026-08-22: a
+// 3376-byte template came back as 3423 bytes from both the PATCH response and an
+// independent no-cache GET, first difference at byte 154 — the template's first
+// newline — and 3423 - 3376 = 47, exactly its LF count. Every LF gained a CR.
+//
+// So byte-exact equality is the wrong success test: it can never pass, and
+// treating it as failure would make the rollout impossible to complete. But a
+// real content change must not hide behind "it's only line endings" either.
+//
+// This runs the shell script's OWN comparison functions via --self-test, with no
+// token, no network and no files, rather than reimplementing them here — a
+// reimplementation can agree with itself while production disagrees.
+const selfTest = spawnSync('bash', ['scripts/mailer-apply.sh', '--self-test'], {
+  cwd: REPO, encoding: 'utf8', env: { ...process.env, SUPABASE_ACCESS_TOKEN: undefined },
+});
+t.is('mailer-apply.sh --self-test exits 0', selfTest.status, 0);
+const out = (selfTest.stdout || '') + (selfTest.stderr || '');
+t.ok('self-test needs no token and no network', !/SUPABASE_ACCESS_TOKEN is not set/.test(out));
+for (const expected of [
+  'identical values are EXACT',
+  'LF -> CRLF is NORMALIZED, not a content change',
+  'lone CR is normalized to LF',
+  'a real word change is TRANSFORMED',
+  'content change PLUS CRLF is still TRANSFORMED',
+  'truncation is TRANSFORMED',
+  'empty stored value is TRANSFORMED',
+  'the em dash corruption is TRANSFORMED',
+]) {
+  t.ok(`self-test covers: ${expected}`, out.includes(`PASS  ${expected}`));
+}
+t.ok('self-test reports overall success', out.includes('self-test OK'));
+
+// The verifier must actually USE the three verdicts, not merely define them.
+const apply = read('scripts/mailer-apply.sh');
+for (const verdict of ['MATCHES SENT EXACTLY',
+                       'MATCHES AFTER LINE-ENDING NORMALIZATION',
+                       'CONTENT TRANSFORMED']) {
+  t.ok(`verdict wired in: ${verdict}`, apply.includes(verdict));
+}
+t.ok('a NORMALIZED result still prints the raw byte hashes for audit',
+  /normalized     : sent sha256/.test(apply));
+t.ok('only CONTENT TRANSFORMED fails the run',
+  /content differs beyond line endings[\s\S]{0,200}fail=1/.test(apply));
+
+t.section('The self-test could go red');
+// Break the classifier in a copy and confirm --self-test notices. Without this,
+// "self-test OK" proves only that the script printed those words.
+import('node:fs').then(() => {});
+const broken = apply.replace(
+  "  elif [ \"$(norm_eol \"$1\")\" = \"$(norm_eol \"$2\")\" ]; then\n    echo NORMALIZED",
+  "  elif false; then\n    echo NORMALIZED");
+t.ok('the sabotage actually changed the script', broken !== apply);
+const tmp = `${REPO}/.selftest-sabotage.sh`;
+import('node:fs').then(({ writeFileSync, unlinkSync }) => {
+  writeFileSync(tmp, broken);
+  const r = spawnSync('bash', [tmp, '--self-test'], { cwd: REPO, encoding: 'utf8' });
+  unlinkSync(tmp);
+  t.ok('a broken classifier makes --self-test fail', r.status !== 0);
+  t.done();
+});

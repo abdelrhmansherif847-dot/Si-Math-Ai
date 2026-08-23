@@ -852,3 +852,119 @@ Expect all three of sent / PATCH response / no-cache GET to agree, with hex
 `... 20 2d 20 ...` where the em dash used to be. That both fixes the corrupted
 value and confirms the diagnosis. If it agrees, the two remaining template keys
 can go in the same single-key manner and Phase 1 step 3 is complete.
+
+
+---
+
+## Step 3g — The confirmation template DID store; the verifier was too strict
+
+**Result (owner-run):** `--only mailer_templates_confirmation_content` returned
+HTTP 200. The PATCH response and an independent no-cache GET are **identical to
+each other** at 3423 bytes, against 3376 sent, first difference at byte 154:
+`</div>\n<table` stored as `</div>\r\n<table`.
+
+### The arithmetic settles it
+
+| | |
+|---|---|
+| Bytes sent | 3376 |
+| LF characters in the template | **47** |
+| 3376 + 47 | **3423** — exactly what came back |
+| First difference at byte 154 | the template's **first newline** |
+
+Every LF gained a CR. **Supabase canonicalises these values to CRLF line
+endings.** The template was stored, with its content intact; only the line-ending
+style changed. This is not the em dash case — there a character was *replaced*
+with U+FFFD and information was lost. Here nothing is lost.
+
+That the PATCH response and the GET agree byte-for-byte is the other half of the
+evidence: the value is stable on the server, not mid-propagation.
+
+### What was wrong with the verifier
+
+It treated any byte difference as `TRANSFORMED`. That conflates two unlike things,
+and it is unworkable as a success test: a byte-exact comparison against a server
+that always adds CRLF **can never pass**, so the rollout could never be completed
+and every future dry-run would report the templates as pending forever.
+
+The opposite mistake would be worse: relaxing the comparison until a genuine
+content change slips through. So the fix is three outcomes, not two.
+
+### The fix
+
+`norm_eol()` converts CRLF and lone CR to LF; `classify()` returns one of:
+
+| Verdict | Meaning | Run result |
+|---|---|---|
+| `MATCHES SENT EXACTLY` | byte-for-byte | PASS |
+| `MATCHES AFTER LINE-ENDING NORMALIZATION` | content identical, CRLF only | PASS |
+| `CONTENT TRANSFORMED` | a real difference | **FAIL** |
+
+The **raw byte counts and sha256 are still printed** for every field, and a
+NORMALIZED result additionally prints the normalized hashes of both sides plus
+the CR counts, so the verdict can be audited instead of trusted:
+
+```
+sent           : 3376 bytes  sha256:1abe3d59884e7dd5
+PATCH response : 3423 bytes  sha256:6838fe6aa2d75dbb   MATCHES AFTER LINE-ENDING NORMALIZATION
+no-cache GET   : 3423 bytes  sha256:6838fe6aa2d75dbb   MATCHES AFTER LINE-ENDING NORMALIZATION
+normalized     : sent sha256:1abe3d59884e7dd5  stored sha256:1abe3d59884e7dd5
+line endings   : sent has 0 CR bytes, stored has 47
+```
+
+Normalization is applied consistently in the dry-run comparison, the immediate
+PATCH-response check, and the backup comparison inside `diagnose` — otherwise a
+value the server already holds as CRLF would read as a pending change in one
+place and as settled in another.
+
+### Tests
+
+`--self-test` runs the real `classify()` with no token, no network and no files,
+so CI exercises the shipped function rather than a reimplementation of it. Ten
+cases, including the two that matter most:
+
+- `LF -> CRLF is NORMALIZED, not a content change`
+- **`content change PLUS CRLF is still TRANSFORMED`** — a real edit must not hide
+  behind normalization
+- plus truncation, an added line, an empty value, a lone CR, and the em dash
+  corruption from §3f.
+
+`tests/mailer-config.test.mjs` (now 37 assertions) spawns that self-test, checks
+each case is present, checks all three verdicts are actually wired into the
+verifier rather than merely defined, and then **sabotages a copy of the classifier
+and confirms `--self-test` fails** — so "self-test OK" is evidence rather than a
+string the script happens to print.
+
+Harness against a mock reproducing the real behaviour: a CRLF-rewriting server
+now PASSes with 3376 → 3423 and 47 CR bytes, matching production exactly; a
+dry-run afterwards reports `ALREADY SET … (server holds it with CRLF line
+endings)`; and a server that ALSO changes one word still FAILs, pinpointed to
+byte 118.
+
+### Current production state
+
+| Key | State |
+|---|---|
+| `mailer_subjects_recovery` | correct |
+| `mailer_subjects_confirmation` | still the em-dash-corrupted value from §3f |
+| `mailer_templates_confirmation_content` | **correct content, CRLF line endings** |
+| `mailer_templates_recovery_content` | stock default, untouched |
+
+No rollback, and the recovery template not applied, per instruction.
+
+### Next
+
+```bash
+git pull origin claude/apple-signin-auth-wysnha
+export SUPABASE_ACCESS_TOKEN=...
+
+# Re-verify the confirmation template — should now report ALREADY SET.
+bash scripts/mailer-apply.sh --only mailer_templates_confirmation_content --dry-run
+
+# Then the ASCII subject fix from §3f, and last the recovery template.
+bash scripts/mailer-apply.sh --only mailer_subjects_confirmation --dry-run
+```
+
+The dry-run on the confirmation template is a free check of this whole change: if
+it now says `ALREADY SET`, the normalization is right and nothing was written to
+find that out.

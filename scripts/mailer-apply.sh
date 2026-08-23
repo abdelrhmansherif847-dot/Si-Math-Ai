@@ -45,13 +45,14 @@ MODE="sequential"
 ONLY=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --dry-run) DRY_RUN=1 ;;
+    --dry-run)   DRY_RUN=1 ;;
+    --self-test) SELF_TEST=1 ;;
     --batch)   MODE="batch" ;;
     --only)    ONLY="${2:-}"; shift
                [ -n "$ONLY" ] || { echo "--only needs a key name" >&2; exit 2; } ;;
     --only=*)  ONLY="${1#--only=}" ;;
     *) echo "Unknown argument: $1" >&2
-       echo "Usage: mailer-apply.sh [--dry-run] [--batch] [--only <key>]" >&2; exit 2 ;;
+       echo "Usage: mailer-apply.sh [--dry-run] [--batch] [--only <key>] [--self-test]" >&2; exit 2 ;;
   esac
   shift
 done
@@ -59,12 +60,90 @@ if [ -n "$ONLY" ] && [ "$MODE" = "batch" ]; then
   echo "REFUSING: --only and --batch are contradictory." >&2; exit 2
 fi
 
-: "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN is not set.}"
 
 CONF="$DIR/confirmation.html"
 REC="$DIR/recovery.html"
 SUBJ_CONF="Confirm your email to start studying - Si Math AI"
 SUBJ_REC="Reset your Si Math AI password"
+
+# ── Line-ending normalisation ────────────────────────────────────────────────
+# Supabase stores these values with CRLF line endings. Measured 2026-08-22: a
+# 3376-byte template came back as 3423 bytes from both the PATCH response and an
+# independent no-cache GET, with the first difference at byte 154 — the template's
+# first newline — and 3423 - 3376 = 47, exactly the number of LF characters in it.
+# Every LF gained a CR. The content was stored; only its line-ending style
+# changed.
+#
+# So a byte-exact comparison is the wrong success test: it can never pass, and
+# treating it as failure would make the rollout impossible to complete. But it is
+# still the right DIAGNOSTIC, because a real content change must not hide behind
+# "it's just line endings". Hence three outcomes rather than two, and the raw
+# hashes are always printed alongside.
+#
+# CRLF -> LF via sed (sed is line-oriented, so a CR sits at end of line), then any
+# remaining lone CR -> LF via tr. Portable on GNU and BSD.
+norm_eol() { printf '%s' "$1" | sed 's/\r$//' | tr '\r' '\n'; }
+
+# EXACT | NORMALIZED | TRANSFORMED
+classify() { # classify <sent> <stored>
+  if [ "$1" = "$2" ]; then
+    echo EXACT
+  elif [ "$(norm_eol "$1")" = "$(norm_eol "$2")" ]; then
+    echo NORMALIZED
+  else
+    echo TRANSFORMED
+  fi
+}
+
+verdict_text() {
+  case "$1" in
+    EXACT)       echo "MATCHES SENT EXACTLY" ;;
+    NORMALIZED)  echo "MATCHES AFTER LINE-ENDING NORMALIZATION" ;;
+    TRANSFORMED) echo "CONTENT TRANSFORMED" ;;
+  esac
+}
+
+crlf_count() { printf '%s' "$1" | tr -cd '\r' | wc -c | tr -d ' '; }
+
+# ── Self-test ────────────────────────────────────────────────────────────────
+# Exercises the comparison logic with no token, no network and no files, so CI
+# can run the REAL shipped functions rather than a paraphrase of them.
+if [ "${SELF_TEST:-0}" = "1" ]; then
+  st_fail=0
+  st() { # st <label> <expected> <sent> <stored>
+    got=$(classify "$3" "$4")
+    if [ "$got" = "$2" ]; then echo "  PASS  $1"
+    else echo "  FAIL  $1 (expected $2, got $got)"; st_fail=1; fi
+  }
+  printf -v LF   'a\nb\nc'
+  printf -v CRLF 'a\r\nb\r\nc'
+  printf -v CR   'a\rb\rc'
+  st "identical values are EXACT"                    EXACT       "$LF"   "$LF"
+  st "LF -> CRLF is NORMALIZED, not a content change" NORMALIZED "$LF"   "$CRLF"
+  st "CRLF -> LF is NORMALIZED in the other direction" NORMALIZED "$CRLF" "$LF"
+  st "lone CR is normalized to LF"                   NORMALIZED  "$LF"   "$CR"
+  st "a real word change is TRANSFORMED"             TRANSFORMED "$LF"   "a
+X
+c"
+  # The case that matters most: a real edit must not hide behind normalisation.
+  st "content change PLUS CRLF is still TRANSFORMED" TRANSFORMED "$LF"   "a\r\nX\r\nc"
+  st "truncation is TRANSFORMED"                     TRANSFORMED "$LF"   "a
+b"
+  st "an added trailing line is TRANSFORMED"         TRANSFORMED "$LF"   "a
+b
+c
+d"
+  st "empty stored value is TRANSFORMED"             TRANSFORMED "$LF"   ""
+  st "the em dash corruption is TRANSFORMED"         TRANSFORMED \
+     "start studying \xe2\x80\x94 x" "start studying \xef\xbf\xbd x"
+  echo "  crlf_count of a 2-CRLF value = $(crlf_count "$CRLF") (want 2)"
+  [ "$(crlf_count "$CRLF")" = "2" ] || st_fail=1
+  [ "$st_fail" -eq 0 ] && echo "self-test OK" || echo "self-test FAILED"
+  exit "$st_fail"
+fi
+
+: "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN is not set.}"
+
 
 # ── Preconditions (protections carried over unchanged) ───────────────────────
 if [ "$DRY_RUN" -eq 0 ]; then
@@ -205,7 +284,9 @@ diagnose() { # diagnose <key> <live-value> <intended-value>
   # neither the old nor the intended value, the API rewrote it.
   if [ -s "$BACKUP" ]; then
     old=$(jq -r --arg k "$key" '.[$k] // ""' <"$BACKUP")
-    if [ "$live" = "$old" ]; then
+    # Compare against the backup with the same normalisation, or a pre-apply
+    # value the server had already stored as CRLF would look like a change.
+    if [ "$(norm_eol "$live")" = "$(norm_eol "$old")" ]; then
       echo "        verdict   : UNCHANGED — the GET still returns the pre-apply value."
       # The GET alone cannot say WHY. If the PATCH response already reported the
       # new value, the write landed and it is the read that is behind; saying
@@ -274,13 +355,15 @@ if [ "$DRY_RUN" -eq 1 ]; then
   for k in "${KEYS[@]}"; do
     live=$(printf '%s' "$now" | jq -r --arg k "$k" '.[$k] // ""')
     want=$(intended_value "$k")
-    if [ "$live" = "$want" ]; then
-      echo "  ALREADY SET   $k"
-    else
-      echo "  WOULD CHANGE  $k"
-      diagnose "$k" "$live" "$want"
-      differs=1
-    fi
+    cls=$(classify "$want" "$live")
+    case "$cls" in
+      EXACT)      echo "  ALREADY SET   $k" ;;
+      NORMALIZED) echo "  ALREADY SET   $k  (server holds it with CRLF line endings;"
+                  echo "                content is identical after normalization)" ;;
+      *)          echo "  WOULD CHANGE  $k"
+                  diagnose "$k" "$live" "$want"
+                  differs=1 ;;
+    esac
     echo
   done
   if [ "$differs" -eq 0 ]; then
@@ -342,8 +425,8 @@ apply_keys() { # apply_keys <key>...
     want_val=$(intended_value "$k")
     # Keep the response's value so the final report can show it beside the GET.
     printf '%s' "$resp_val" >"$DIAG_DIR/respval-$k.txt"
-    if [ "$resp_val" = "$want_val" ]; then
-      echo "        response confirms stored: $k"
+    if [ "$(norm_eol "$resp_val")" = "$(norm_eol "$want_val")" ]; then
+      echo "        response confirms stored: $k$([ "$resp_val" = "$want_val" ] || echo ' (CRLF line endings)')"
     elif [ "$resp_val" = "<<ABSENT>>" ] || [ "$resp_val" = "<unparsable>" ]; then
       echo "        response does NOT include $k — cannot confirm from the response"
     else
@@ -375,8 +458,16 @@ for k in "${KEYS[@]}"; do
   # the first attempt uninterpretable.
   echo "  --- $k"
   echo "      sent           : $(printf '%s' "$want" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$want" | sha)"
-  echo "      PATCH response : $(printf '%s' "$resp" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$resp" | sha)$([ "$resp" = "$want" ] && echo '   MATCHES SENT' || echo '   DIFFERS FROM SENT')"
-  echo "      no-cache GET   : $(printf '%s' "$live" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$live" | sha)$([ "$live" = "$want" ] && echo '   MATCHES SENT' || echo '   DIFFERS FROM SENT')"
+  cls_resp=$(classify "$want" "$resp")
+  cls_live=$(classify "$want" "$live")
+  echo "      PATCH response : $(printf '%s' "$resp" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$resp" | sha)   $(verdict_text "$cls_resp")"
+  echo "      no-cache GET   : $(printf '%s' "$live" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$live" | sha)   $(verdict_text "$cls_live")"
+  # Raw hashes above are the byte-exact record. These are the semantic ones, so a
+  # NORMALIZED verdict can be audited rather than taken on trust.
+  if [ "$cls_live" = "NORMALIZED" ] || [ "$cls_resp" = "NORMALIZED" ]; then
+    echo "      normalized     : sent sha256:$(norm_eol "$want" | sha)  stored sha256:$(norm_eol "$live" | sha)"
+    echo "      line endings   : sent has $(crlf_count "$want") CR bytes, stored has $(crlf_count "$live")"
+  fi
   # Short values print in full, and in hex.
   #
   # cat -v alone is ambiguous: it renders the UTF-8 em dash as M-bM-^@M-^T and the
@@ -391,13 +482,19 @@ for k in "${KEYS[@]}"; do
     echo "      response  hex  = $(printf '%s' "$resp" | od -An -tx1 | tr -s ' \n' ' ')"
     echo "      GET       hex  = $(printf '%s' "$live" | od -An -tx1 | tr -s ' \n' ' ')"
   fi
-  if [ "$live" = "$want" ]; then
-    echo "  PASS  $k"
-  else
-    echo "  FAIL  $k"
-    diagnose "$k" "$live" "$want"
-    fail=1
-  fi
+  case "$cls_live" in
+    EXACT)
+      echo "  PASS  $k  — stored byte-for-byte" ;;
+    NORMALIZED)
+      # Not a defect. The server canonicalises line endings; the content is
+      # identical. Treating this as failure would make the rollout impossible to
+      # ever complete, and the normalized hashes above show it is safe.
+      echo "  PASS  $k  — stored with CRLF line endings, content identical" ;;
+    *)
+      echo "  FAIL  $k  — content differs beyond line endings"
+      diagnose "$k" "$live" "$want"
+      fail=1 ;;
+  esac
   echo
 done
 
