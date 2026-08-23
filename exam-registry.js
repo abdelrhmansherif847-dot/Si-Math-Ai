@@ -109,6 +109,7 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      integrity: { log: true },
     },
 
     {
@@ -142,6 +143,7 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      integrity: { log: true },
     },
 
     {
@@ -192,6 +194,7 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      integrity: { log: true },
     },
 
     {
@@ -227,6 +230,7 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      integrity: { log: true },
     },
 
     {
@@ -256,6 +260,7 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      integrity: { log: true },
     },
 
     {
@@ -286,6 +291,7 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      integrity: { log: true },
     },
 
     {
@@ -315,6 +321,15 @@
         timeUp: true,
       },
       ambience: { eligible: true },
+      // INTEGRITY POLICY — an exam-mode decision, not a technical assumption.
+      // The Practice Timer is a free pacing tool for homework and drills, not a
+      // mock exam sitting: monitoring a student's tab switches during their own
+      // homework would be surveillance without a fairness purpose, and the
+      // disclosure shown to students says recording happens "while an exam is
+      // running". That is why log is false HERE, for THIS mode — not because
+      // anything named "practice" is inherently exempt. A future practice mode
+      // with real exam stakes would set its own policy explicitly.
+      integrity: { log: false },
     },
   ];
 
@@ -575,6 +590,20 @@
     return !!(c && c.allowed && c.provider);
   }
 
+  // ── Integrity logging policy ───────────────────────────────────────────────
+  //
+  // Whether P5's integrity detection runs for an exam is REGISTRY POLICY, held
+  // as data on each exam entry — never a hardcoded exception in client code.
+  //
+  // FAIL-CLOSED: an exam whose entry carries no `integrity` field, or any value
+  // other than `log: true`, is NOT logged. For a privacy-sensitive feature the
+  // safe default for an unconfigured exam is silence, and a new exam must opt
+  // IN to monitoring deliberately, in review, as data.
+  function integrityLoggingEnabled(code) {
+    var e = get(code);
+    return !!(e && e.integrity && e.integrity.log === true);
+  }
+
   // ── Compatibility view ─────────────────────────────────────────────────────
   //
   // Reproduces the exact shape mock-exam.html's `EXAM_CONFIGS` literal has
@@ -771,6 +800,7 @@
     buildAnnouncementSchedule: buildAnnouncementSchedule,
     scheduleFor: scheduleFor,
 
+    integrityLoggingEnabled: integrityLoggingEnabled,
     calculatorPolicy: calculatorPolicy,
     hasRenderableCalculator: hasRenderableCalculator,
 

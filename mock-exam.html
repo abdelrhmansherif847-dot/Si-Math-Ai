@@ -383,6 +383,7 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 <script src="assets/streak.js"></script>
 <script src="exam-registry.js"></script>
 <script src="exam-audio.js"></script>
+<script src="exam-integrity.js"></script>
 <script src="exam-calculator.js"></script>
 
 <script>
@@ -442,6 +443,12 @@ const s = {
   // rendered anywhere, because naming a path would imply a measurement we are
   // not making. null for every non-adaptive exam.
   moduleVariantId: null,
+  // P5: integrity plumbing. attemptId is the client-minted uuid M1's schema has
+  // been waiting for since it was applied — it joins integrity events to the
+  // session row doSave eventually writes. userId is captured once at start so
+  // event handlers never need an awaited auth round-trip.
+  attemptId: null,
+  userId: null,
   score: '', correct: '', wrong: '', omitted: '',
   mistakeRows: [],
   sessionId: null,
@@ -538,6 +545,7 @@ function saveTimerState() {
       modulePlan:        s.modulePlan,
       moduleOrdinal:     s.moduleOrdinal,
       moduleVariantId:   s.moduleVariantId,
+      attemptId:         s.attemptId,
       moduleStartedAt:   s.moduleStartedAt,
       phase:             s.view === 'TRANSITION' ? 'TRANSITION' : 'MODULE',
       examCode:          s.exam.code,
@@ -581,6 +589,11 @@ function restoreTimerState() {
     s.moduleOrdinal   = _R.ordinal;
     s.moduleStartedAt = saved.moduleStartedAt || null;
     s.moduleVariantId = saved.moduleVariantId || null;
+    // P5: keep the attempt identity across a refresh so events before and after
+    // it join to the same attempt. A legacy blob (pre-P5) has none — mint fresh;
+    // its earlier period logged nothing anyway, since older builds had no
+    // detection.
+    s.attemptId       = saved.attemptId || makeTabId();
 
     if (_R.phase === 'TRANSITION') {
       // No clock runs on the boundary screen: nothing to drift, nothing to
@@ -625,6 +638,49 @@ try {
   });
 } catch (_) {}
 
+// P5: same ownership predicate as the audio bus, injected the same way. Kept as
+// a separate configure call so neither module depends on the other existing.
+try {
+  window.SiExamIntegrity?.configure({
+    owns: function () {
+      var o = readActiveTab();
+      return !!(o && s.tabId && o.tabId === s.tabId);
+    }
+  });
+} catch (_) {}
+
+// P5: start integrity detection for the current attempt — IF the registry's
+// policy says this exam is subject to it at all. The policy is data on the exam
+// entry (integrityLoggingEnabled), never a hardcoded code check here, so what
+// is and is not monitored stays reviewable in one place. PRACTICE is excluded
+// there by explicit policy.
+//
+// Detection is scoped to the TIMER view: render() ends it on any other view,
+// so nothing is recorded on the transition screen, the results form, or after
+// the exam — the student between modules is free to move without the system
+// manufacturing noise.
+function startIntegrityForAttempt() {
+  try {
+    if (!s.exam || s.view !== 'TIMER') return;
+    if (!window.SiExamIntegrity || !window.SiExamRegistry.integrityLoggingEnabled(s.exam.code)) return;
+    if (!s.attemptId) s.attemptId = makeTabId();   // v4 mint, same helper as tab ids
+    var go = function (uid) {
+      try {
+        window.SiExamIntegrity?.begin({
+          sb: sb, userId: uid, attemptId: s.attemptId,
+          examCode: s.exam.code, examStartedAt: s.examStartedAt,
+        });
+      } catch (_) {}
+    };
+    if (s.userId) { go(s.userId); return; }
+    // Restore path: no click fetched the user. Resolve identity in the
+    // background and begin then — never blocking, never awaited by the caller.
+    getCurrentUser().then(function (u) {
+      if (u && u.id) { s.userId = u.id; if (s.view === 'TIMER') go(u.id); }
+    }, function () {});
+  } catch (_) {}
+}
+
 // Arm the current block's announcements from the REGISTRY's schedule.
 // s.timerTotal is the running block's own length, which is what makes this
 // correct for a DSAT module, a single-block exam, a dynamic Practice session and
@@ -664,6 +720,10 @@ function render() {
   // the module boundary, or a sibling tab could claim it during the 15s stale
   // window while the student is reading the transition screen.
   if (s.view !== 'TIMER' && s.view !== 'TRANSITION') stopHeartbeat();
+  // P5: detection runs only while the TIMER view is live. Leaving it — for the
+  // transition screen, the results form, or the end of the exam — ends
+  // detection and discards any half-measured blur/hidden duration.
+  if (s.view !== 'TIMER') { try { window.SiExamIntegrity?.end(); } catch (_) {} }
   const pc = document.getElementById('pageContent');
   switch (s.view) {
     case 'SELECT':   pc.innerHTML = htmlSelect();   afterSelect();   break;
@@ -776,6 +836,18 @@ function htmlSelect() {
     ${stdCards}
     ${practiceCard}
   </div>
+  ${(function () {
+    // P5 / G6: the integrity disclosure, rendered from the module's NOTICE so
+    // the approved wording has exactly one source. Shown BEFORE the Start
+    // click that begins any detection. If the module failed to load there is
+    // nothing to disclose — because nothing will be recorded.
+    const N = window.SiExamIntegrity?.NOTICE;
+    if (!N) return '';
+    return '<div style="max-width:820px;margin:26px auto 0;padding:16px 18px;border:1px solid var(--border-soft,#26334d);border-radius:14px;background:rgba(12,20,40,.55)">'
+      + '<div style="font-family:Manrope,sans-serif;font-weight:700;font-size:13.5px;color:var(--text-100,#fff);margin-bottom:8px">\uD83D\uDD12 ' + N.title + '</div>'
+      + N.paragraphs.map(p => '<div style="font-size:12.5px;line-height:1.6;color:var(--text-300,#a8bcd9);margin-bottom:6px">' + p + '</div>').join('')
+      + '</div>';
+  })()}
   <div class="exam-start-bar">
     <button class="cta-primary" id="btnStart" ${s.exam ? '' : 'disabled'}>
       <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -840,6 +912,7 @@ function afterSelect() {
 
     const user = await getCurrentUser();
     if (!user) { window.location.href = 'login.html'; return; }
+    s.userId = user.id;   // P5: held so event handlers never await auth
 
     // Device guard (non-admin only)
     try {
@@ -899,6 +972,7 @@ function afterSelect() {
     s.timerRunning  = true;
     const _nowIso     = new Date().toISOString();
     s.examStartedAt   = _nowIso;   // once, for the whole sitting
+    s.attemptId       = makeTabId();   // P5: one attempt id for the whole sitting
     s.moduleStartedAt = _nowIso;   // module 1 begins now
     s.view = 'TIMER';
     render();
@@ -1068,6 +1142,7 @@ function updateTimerDOM() {
 
 function afterTimer() {
   armExamAudio();          // P3: no-op when this block is already armed
+  startIntegrityForAttempt();  // P5: no-op when this attempt is already active
   if (s.timerRunning) {
     s.timerInterval = setInterval(tickTimer, 1000);
   }
@@ -1481,7 +1556,10 @@ async function doSave() {
                           ?? Math.round(s.timerTotal / 60),
         started_at: s.examStartedAt,
         ended_at: s.endedAt || new Date().toISOString(),
-        idempotency_key: idempotencyKey
+        idempotency_key: idempotencyKey,
+        // P5: joins this session to its integrity events (M1's attempt linkage,
+        // nullable by design). Save semantics are otherwise untouched.
+        attempt_id: s.attemptId || null
       })
       .select('id')
       .single();
@@ -1739,7 +1817,7 @@ function afterSuccess() {
       view: 'SELECT', exam: null, timerSec: 0, timerTotal: 0,
       timerRunning: false, timerInterval: null, endedAt: null,
       examStartedAt: null, moduleStartedAt: null, modulePlan: null, moduleOrdinal: 1,
-      moduleVariantId: null,
+      moduleVariantId: null, attemptId: null, userId: null,
       score: '', correct: '', wrong: '', omitted: '',
       mistakeRows: [], sessionId: null, successData: null
     });
