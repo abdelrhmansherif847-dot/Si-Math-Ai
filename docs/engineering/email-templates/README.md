@@ -18,7 +18,7 @@ which explains why the stock templates were getting filtered by iCloud.
 
 Subjects to set alongside them:
 
-- `mailer_subjects_confirmation`: `Confirm your email to start studying — Si Math AI`
+- `mailer_subjects_confirmation`: `Confirm your email to start studying - Si Math AI`
 - `mailer_subjects_recovery`: `Reset your Si Math AI password`
 
 ## Rules these files follow, and why
@@ -82,7 +82,7 @@ curl -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
         --arg r "$(cat recovery.html)" \
         '{mailer_templates_confirmation_content:$c,
           mailer_templates_recovery_content:$r,
-          mailer_subjects_confirmation:"Confirm your email to start studying — Si Math AI",
+          mailer_subjects_confirmation:"Confirm your email to start studying - Si Math AI",
           mailer_subjects_recovery:"Reset your Si Math AI password"}')"
 ```
 

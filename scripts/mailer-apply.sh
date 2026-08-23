@@ -63,7 +63,7 @@ fi
 
 CONF="$DIR/confirmation.html"
 REC="$DIR/recovery.html"
-SUBJ_CONF="Confirm your email to start studying — Si Math AI"
+SUBJ_CONF="Confirm your email to start studying - Si Math AI"
 SUBJ_REC="Reset your Si Math AI password"
 
 # ── Preconditions (protections carried over unchanged) ───────────────────────
@@ -88,6 +88,42 @@ for f in "$CONF" "$REC"; do
 done
 
 mkdir -p "$DIAG_DIR"
+
+# ── Non-ASCII guard (added 2026-08-22, from a production finding) ────────────
+# This API corrupts non-ASCII input on this path. Measured, not suspected: a
+# single-key apply of mailer_subjects_confirmation returned HTTP 200, and both
+# the PATCH response and an independent no-cache GET showed the em dash U+2014
+# stored as U+FFFD, the replacement character. The write succeeded; the bytes did
+# not survive it.
+#
+# So refuse to send any value containing a byte above 0x7F. Silent corruption in
+# a student-facing subject line is worse than a refusal here, and every value we
+# need is expressible in ASCII — HTML entities (&mdash; &middot;) render correctly
+# in email and are themselves ASCII.
+#
+# If this ever needs lifting, lift it with new evidence that the path is fixed,
+# not by deleting the check.
+assert_ascii() { # assert_ascii <label> <value>
+  # Detect with tr, not grep. A bracket expression like [^\x00-\x7F] is NOT a
+  # byte range to grep — POSIX grep reads those six characters literally, so the
+  # class matches nearly everything and the guard fires on pure ASCII. Caught in
+  # the harness: it refused "…studying - Si Math AI", which contains no byte
+  # above 0x7f. tr understands octal ranges portably, on GNU and BSD alike.
+  if [ "$(printf '%s' "$2" | LC_ALL=C tr -d '\000-\177' | wc -c | tr -d ' ')" != "0" ]; then
+    echo "REFUSING: $1 contains non-ASCII bytes." >&2
+    echo "  This API stores non-ASCII on this path as U+FFFD (verified in production)." >&2
+    # Print the value and its full hex rather than trying to excerpt the
+    # offending run: a byte-range grep cannot cleanly isolate multibyte
+    # characters, and these values are short enough to read whole.
+    echo "  value : $(printf '%s' "$2" | cat -v)" >&2
+    echo "  hex   : $(printf '%s' "$2" | od -An -tx1 | tr -s ' \n' ' ')" >&2
+    echo "  (e2 80 94 is U+2014 EM DASH; ef bf bd is U+FFFD REPLACEMENT CHARACTER)" >&2
+    echo "  Use an ASCII equivalent, or an HTML entity inside template bodies." >&2
+    exit 1
+  fi
+}
+
+
 
 # Set when a PATCH returned 200 but its own response body reported a value other
 # than the one sent. Distinguishes "not stored" from "stored but read back stale".
@@ -132,6 +168,10 @@ if [ -n "$ONLY" ]; then
   fi
   KEYS=("$ONLY")
 fi
+
+# Every value that could be sent this run must be ASCII. Checked after --only
+# narrowing so the message names only keys actually in play.
+for _k in "${KEYS[@]}"; do assert_ascii "$_k" "$(intended_value "$_k")"; done
 
 STAMP=0
 api_get() {
@@ -337,11 +377,19 @@ for k in "${KEYS[@]}"; do
   echo "      sent           : $(printf '%s' "$want" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$want" | sha)"
   echo "      PATCH response : $(printf '%s' "$resp" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$resp" | sha)$([ "$resp" = "$want" ] && echo '   MATCHES SENT' || echo '   DIFFERS FROM SENT')"
   echo "      no-cache GET   : $(printf '%s' "$live" | wc -c | tr -d ' ') bytes  sha256:$(printf '%s' "$live" | sha)$([ "$live" = "$want" ] && echo '   MATCHES SENT' || echo '   DIFFERS FROM SENT')"
-  # Short values are safe to print in full and are far easier to read than a hash.
+  # Short values print in full, and in hex.
+  #
+  # cat -v alone is ambiguous: it renders the UTF-8 em dash as M-bM-^@M-^T and the
+  # replacement character as M-oM-?M-=, which look equally like line noise. The hex
+  # makes the distinction unarguable — e2 80 94 is U+2014, ef bf bd is U+FFFD,
+  # i.e. the server replaced the character rather than storing it.
   if [ "$(printf '%s' "$want" | wc -c | tr -d ' ')" -le 120 ]; then
     echo "      sent           = $(printf '%s' "$want" | cat -v)"
     echo "      PATCH response = $(printf '%s' "$resp" | cat -v)"
     echo "      no-cache GET   = $(printf '%s' "$live" | cat -v)"
+    echo "      sent      hex  = $(printf '%s' "$want" | od -An -tx1 | tr -s ' \n' ' ')"
+    echo "      response  hex  = $(printf '%s' "$resp" | od -An -tx1 | tr -s ' \n' ' ')"
+    echo "      GET       hex  = $(printf '%s' "$live" | od -An -tx1 | tr -s ' \n' ' ')"
   fi
   if [ "$live" = "$want" ]; then
     echo "  PASS  $k"

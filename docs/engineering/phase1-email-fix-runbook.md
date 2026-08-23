@@ -747,3 +747,108 @@ bash scripts/mailer-apply.sh --only mailer_subjects_confirmation
 **Do not roll back yet.** The current state is the control for the comparison,
 and `mailer-restore.sh` reverts every captured key at once, which would discard
 it.
+
+
+---
+
+## Step 3f — CAUSE FOUND: the API replaces non-ASCII characters
+
+**Result (owner-run):** `--only mailer_subjects_confirmation` returned HTTP 200,
+and both the PATCH response and an independent no-cache GET show the value
+**stored with the em dash `U+2014` replaced by `U+FFFD`**, the Unicode
+replacement character:
+
+```
+sent           = ... studying — Si Math AI      (e2 80 94)
+PATCH response = ... studying ? Si Math AI      (ef bf bd)
+no-cache GET   = ... studying ? Si Math AI      (ef bf bd)
+```
+
+### What this settles
+
+- **The write path works.** Two independent observations agree that the server
+  stored the value it was sent — it simply transformed a character on the way in.
+- **Batching was not the cause**, and neither was field size or the endpoint.
+- **The confound in §3e is resolved.** Key 4 succeeded in the failed batch because
+  it was pure ASCII, not because it was last. "Last key wins" was a coincidence,
+  and it is now retired rather than left in the record as a half-truth.
+- A student would have received a subject line reading
+  `start studying <?> Si Math AI`. Worth stating plainly: this was a
+  student-visible defect, caught by reading a diff.
+
+The two templates were never affected — both are pure ASCII, because they express
+typography as HTML entities (`&mdash;`, `&middot;`) rather than literal
+characters. That was luck rather than design; it is now a rule.
+
+### The change
+
+The approved confirmation subject becomes, with an ASCII hyphen:
+
+```
+Confirm your email to start studying - Si Math AI
+```
+
+Nothing else changed. Templates untouched, no other mailer setting, no auth flow,
+no DNS, no rollback.
+
+### Two guards, because one is not enough
+
+**Run time** — `scripts/mailer-apply.sh` now refuses to send any value containing
+a byte above `0x7F`, printing the value and its full hex with a legend
+(`e2 80 94` = em dash, `ef bf bd` = replacement character). It runs after
+`--only` narrowing, so it covers exactly the keys in play.
+
+**CI** — `tests/mailer-config.test.mjs`, 19 assertions: both templates pure ASCII,
+both subject literals extracted from the real script and checked, the hyphen form
+pinned exactly, the run-time guard present and invoked, the `ConfirmationURL`
+count still 2 per template, no reply invitation. Each detector is then shown to
+fire on the exact defect it was written for, so none of it can pass vacuously.
+
+CI catches a bad commit; the run-time check catches a value edited locally and
+applied without committing. Both are wanted.
+
+### A bug in the guard itself, found by testing it
+
+The first version detected non-ASCII with `grep -q '[^\x00-\x7F]'`. POSIX grep
+does **not** read `\x00` as a byte in a bracket expression — it reads those six
+characters literally, so the class matches nearly everything. The guard refused
+`Confirm your email to start studying - Si Math AI`, which contains no byte above
+`0x7f`, and would have blocked every legitimate apply.
+
+Replaced with `tr -d '\000-\177'`, which understands octal ranges portably on
+GNU and BSD, and verified in both directions: pure ASCII leaves 0 bytes, an em
+dash leaves 3.
+
+Recorded because it is the second time in this workstream that a *checker* was
+the broken thing — the earlier one matched `differ: byte` when `cmp` prints
+`differ: char`. A check that cannot fail is worse than no check, because it is
+trusted.
+
+### Current production state
+
+| Key | Live value |
+|---|---|
+| `mailer_subjects_recovery` | `Reset your Si Math AI password` — new, correct |
+| `mailer_subjects_confirmation` | new text but **corrupted**: em dash stored as `U+FFFD` |
+| `mailer_templates_confirmation_content` | stock default, untouched |
+| `mailer_templates_recovery_content` | stock default, untouched |
+
+**Still no rollback**, per the owner's instruction. The corrupted subject is
+overwritten by the next apply of that key, so it needs no separate cleanup — but
+until then, a confirmation email would carry a subject with a replacement
+character in it. No confirmation email has been sent since the change.
+
+### Next step, awaiting approval
+
+```bash
+git pull origin claude/apple-signin-auth-wysnha
+export SUPABASE_ACCESS_TOKEN=...
+
+bash scripts/mailer-apply.sh --only mailer_subjects_confirmation --dry-run
+bash scripts/mailer-apply.sh --only mailer_subjects_confirmation
+```
+
+Expect all three of sent / PATCH response / no-cache GET to agree, with hex
+`... 20 2d 20 ...` where the em dash used to be. That both fixes the corrupted
+value and confirms the diagnosis. If it agrees, the two remaining template keys
+can go in the same single-key manner and Phase 1 step 3 is complete.
