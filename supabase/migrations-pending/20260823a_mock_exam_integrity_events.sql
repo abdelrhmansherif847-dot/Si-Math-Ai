@@ -2,7 +2,12 @@
 -- Mock Exam v2 · M1 — Integrity Audit Foundation (append-only)
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 1.
+--         Revision 2. Revision 2 is DOCUMENTATION ONLY — no DDL, no constraint,
+--         no policy and no grant differs from revision 1. It resolves an
+--         ambiguity review caught (two columns named attempt_id with different
+--         nullability, described as if one rule covered both) and states the
+--         governing principle for metadata beside the validator that enforces
+--         it, and inside the column COMMENT so it reaches the database too.
 -- DEPENDS ON: nothing. First migration of the Mock Exam v2 series.
 -- FOLLOWED BY: M2 (mock_exam_restrictions + pending-review flagging).
 --              M2 is NOT approved and is NOT written.
@@ -66,6 +71,48 @@
 --    thresholds are policy. They are stored differently on purpose.
 --
 -- =====================================================================
+-- TWO COLUMNS ARE CALLED attempt_id. THEY HAVE DIFFERENT NULLABILITY.
+-- =====================================================================
+-- This migration creates a column of that name on each of two tables, and they
+-- are NOT interchangeable. Stating it once, plainly, because describing them
+-- together as "attempt_id" is how a reviewer ends up believing one rule applies
+-- to both:
+--
+--   exam_integrity_events.attempt_id      uuid NOT NULL
+--   exam_practice_sessions.attempt_id     uuid NULL
+--
+-- WHY THE EVENT COLUMN IS NOT NULL
+-- --------------------------------
+-- An integrity event exists only because an exam was being sat. An event with no
+-- attempt is not a weaker record, it is an unreviewable one: it cannot be placed
+-- in a session, cannot be ordered against other events, and cannot be shown to an
+-- Admin as part of any coherent picture. There is also never a moment when the
+-- client has an event but no attempt_id — the id is minted at exam start, before
+-- any event can occur, so a null here could only ever mean a bug. NOT NULL turns
+-- that bug into a rejected insert instead of a row nobody can act on.
+--
+-- WHY THE SESSION COLUMN IS NULL-ABLE
+-- -----------------------------------
+-- The session row is written at the END of the flow by doSave(), and four
+-- distinct situations produce a session with no attempt_id — all of them normal:
+--   * every exam_practice_sessions row that already exists predates this column;
+--   * a client running an older cached build saves without one;
+--   * the 23505 idempotency-recovery path adopts an already-committed winner row
+--     rather than writing a new one;
+--   * and any future save path that has no attempt in hand.
+-- A NOT NULL here would mean inventing values for historical rows and would give
+-- an audit feature the power to break a student's save. It gets neither.
+--
+-- THE ASYMMETRY IS THE DESIGN, NOT A COMPROMISE
+-- ---------------------------------------------
+-- Read together the two rules say: every event belongs to an attempt, but not
+-- every attempt produces a saved session. That is simply true of exams — a
+-- student can abandon one at any point, and an attempt abandoned immediately
+-- after a copy event is exactly the shape review most cares about. The linkage
+-- therefore has to tolerate one side being absent forever, while the other side
+-- is never absent at all.
+--
+-- =====================================================================
 -- ATOMICITY
 -- =====================================================================
 -- `begin;` is the first executable statement and `commit;` the last, with
@@ -104,6 +151,20 @@ begin;
 -- 1. METADATA VALIDATOR — the bound that keeps metadata from becoming a
 --    dumping ground
 -- =====================================================================
+-- ---------------------------------------------------------------------
+-- THE GOVERNING PRINCIPLE
+--
+--   Metadata must describe the security event itself and must never be
+--   sufficient to reconstruct student activity, exam content, copied
+--   content, or a device fingerprint.
+--
+-- Every key below is admissible only because it survives that test, and any
+-- future key must be argued against it before it is added. The test is
+-- deliberately about SUFFICIENCY, not intent: a field that is innocuous alone
+-- but that combines with the others to rebuild a picture of what the student
+-- did fails it just as surely as storing the text outright.
+-- ---------------------------------------------------------------------
+--
 -- A free jsonb column on a client-written table is an open invitation to
 -- accumulate whatever the frontend happens to have lying around. This function
 -- is the CHECK that stops that, and it is deliberately a whitelist: a key that
@@ -256,9 +317,12 @@ comment on table public.exam_integrity_events is
   'M2 and routes to human review. No student-readable path by design.';
 
 comment on column public.exam_integrity_events.attempt_id is
-  'Client-minted uuid identifying one exam attempt, generated at exam start and '
-  'held in the timer state so it survives a refresh. Joins to '
-  'exam_practice_sessions.attempt_id once (and if) the exam is saved.';
+  'NOT NULL. Client-minted uuid identifying one exam attempt, generated at exam '
+  'start and held in the timer state so it survives a refresh. Every event '
+  'belongs to an attempt — one without is unreviewable, and since the id is '
+  'minted before any event can occur, a null could only mean a bug. Joins to '
+  'exam_practice_sessions.attempt_id, which is NULLABLE, because not every '
+  'attempt produces a saved session.';
 
 comment on column public.exam_integrity_events.confidence is
   'GENERATED from event_type — never client-supplied, so it cannot be '
@@ -271,6 +335,9 @@ comment on column public.exam_integrity_events.elapsed_ms is
   'it answers when-in-the-exam without leaking the device clock or timezone.';
 
 comment on column public.exam_integrity_events.metadata is
+  'PRINCIPLE: metadata must describe the security event itself and must never be '
+  'sufficient to reconstruct student activity, exam content, copied content, or '
+  'a device fingerprint. '
   'Bounded by exam_integrity_metadata_ok(): only selection_length, hidden_ms '
   'and blurred_ms, all non-negative numbers, 256 bytes max. Never keystrokes, '
   'clipboard or selected text, screen content, user agent, IP, or the device '
@@ -385,7 +452,8 @@ revoke all on function public.exam_integrity_events_no_update() from anon;
 -- immortal, and it should not.
 
 -- =====================================================================
--- 7. THE ATTEMPT LINKAGE — why it exists and why it is nullable
+-- 7. THE LINKAGE COLUMN ON exam_practice_sessions (NULLABLE — see the header
+--    block "TWO COLUMNS ARE CALLED attempt_id")
 -- =====================================================================
 -- THE PROBLEM THIS SOLVES, which is a real property of the existing code:
 -- mock-exam.html INSERTs its exam_practice_sessions row inside doSave(), at the
@@ -405,7 +473,7 @@ revoke all on function public.exam_integrity_events_no_update() from anon;
 --
 -- Nothing is ever backfilled, which is what keeps §6 true.
 --
--- WHY NULLABLE, and it must be all four:
+-- WHY *THIS* COLUMN IS NULLABLE (the events column is NOT NULL — they differ):
 --   * Every exam_practice_sessions row that already exists predates this column.
 --     A NOT NULL would require inventing values for historical rows.
 --   * A client running an older cached build saves without one.

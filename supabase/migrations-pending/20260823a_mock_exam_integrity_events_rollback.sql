@@ -2,7 +2,8 @@
 -- Mock Exam v2 · M1 ROLLBACK — undoes 20260823a_mock_exam_integrity_events.sql
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 1. Written against revision 1 of the forward migration.
+--         Revision 1. Written against the forward migration, whose revision 2
+--         changed documentation only — no DDL this file must undo differs.
 --
 -- Shipped WITH the forward migration rather than promised by it. A rollback
 -- composed at the moment something has gone wrong is not a rollback.
