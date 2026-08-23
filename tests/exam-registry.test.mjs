@@ -1,15 +1,15 @@
-// exam-registry.js — exams as data, and the guard that makes Phase 1b safe.
+// exam-registry.js — exams as data, and the guard around the migration to it.
 //
-// Mock Exam v2, Phase 1a. The registry is not consumed by anything yet:
-// mock-exam.html still carries its own EXAM_CONFIGS literal and is untouched.
-// That makes the central question of this suite a comparison, not a behaviour
-// check — does compat() reproduce, field for field, what production runs today?
+// Mock Exam v2, Phase 1b complete. exam-registry.js is now THE single source of
+// truth for every exam, and mock-exam.html consumes it through compat(); the
+// literal that page used to carry is gone, so there is no second copy to drift.
 //
-// So the drift guard below EXTRACTS THE REAL LITERAL from mock-exam.html and
-// diffs it against the registry, the same way constants-drift.test.mjs holds the
-// rank ladder's frozen copy in line. It is the reason Phase 1b can delete that
-// literal without reading all 101 KB of the page: if the two ever disagree by
-// anything other than the one approved correction, this goes red.
+// Through Phase 1a this suite answered its central question by diffing the
+// registry against the real literal extracted from mock-exam.html. Phase 1b
+// deleted that literal, so the comparison baseline is PINNED BELOW instead —
+// a frozen snapshot of the pre-migration configuration, kept only to catch an
+// unintended regression. See the block above SHIPPED: it is a historical
+// artefact, not an authority.
 //
 // Every assertion here could fail. Per docs/roadmap/verification-framework-audit.md:
 // a green check is only evidence if it could have gone red. There are no
@@ -24,16 +24,36 @@ const root = {};
 evalSnippet(read('exam-registry.js'), { globalThis: root, window: root }, []);
 const R = root.SiExamRegistry;
 
-// ── Extract the REAL literal that ships in mock-exam.html today ────────────
+// ── HISTORICAL MIGRATION BASELINE — NOT A SOURCE OF TRUTH ──────────────────
+//
+// After Phase 1b the architecture is:
+//
+//     exam-registry.js  →  the single source of truth for every exam
+//
+// This table is NOT a second one. It is a frozen snapshot of the EXAM_CONFIGS
+// literal exactly as mock-exam.html shipped it before Phase 1b deleted that
+// literal, and it exists for one purpose: to detect an UNINTENDED behavioural
+// or configuration regression introduced by the migration. It answers "did
+// moving exams into the registry silently change anything a student sees?" —
+// nothing more.
+//
+// It is therefore historical and does not track the product. A deliberate,
+// approved change to an exam belongs in exam-registry.js; this snapshot then
+// records the divergence from the pre-migration state, which is exactly what
+// the APPROVED_DIFFS list below is for. Do not "update the baseline to match"
+// as a way of making this suite pass — that inverts the guard and turns a
+// regression into a silent edit. Add the intended change to APPROVED_DIFFS,
+// where it is visible and reviewable.
 const pageSrc = read('mock-exam.html');
-const literalMatch = pageSrc.match(/const EXAM_CONFIGS = \{[\s\S]*?\n\};/);
-if (!literalMatch) {
-  // A silent miss would make every comparison below pass vacuously against an
-  // empty object — the exact failure mode _source.mjs warns about.
-  console.log('  FAIL  could not extract EXAM_CONFIGS from mock-exam.html');
-  process.exit(1);
-}
-const { EXAM_CONFIGS: SHIPPED } = evalSnippet(literalMatch[0], {}, ['EXAM_CONFIGS']);
+const SHIPPED = {
+  SAT_MODULE_1: {"code":"SAT_MODULE_1","examType":"SAT","displayName":"SAT Math — Module 1","shortName":"Module 1","org":"College Board · Digital SAT","duration":35,"questions":22,"calculator":true,"scoreMin":200,"scoreMax":800},
+  SAT_MODULE_2: {"code":"SAT_MODULE_2","examType":"SAT","displayName":"SAT Math — Module 2","shortName":"Module 2","org":"College Board · Digital SAT","duration":35,"questions":22,"calculator":true,"scoreMin":200,"scoreMax":800},
+  SAT_FULL: {"code":"SAT_FULL","examType":"SAT","displayName":"Full SAT Math","shortName":"Full SAT","org":"College Board · Digital SAT (Both Modules)","duration":70,"questions":44,"calculator":true,"scoreMin":200,"scoreMax":800},
+  EST_MATH_1: {"code":"EST_MATH_1","examType":"EST","displayName":"EST Math 1","shortName":"EST Math 1","org":"Emirates Standardized Test","duration":75,"questions":50,"calculator":true,"scoreMin":200,"scoreMax":800},
+  EST_MATH_2_L1: {"code":"EST_MATH_2_L1","examType":"EST","displayName":"EST Math 2 — Level 1","shortName":"EST Math 2 L1","org":"Emirates Standardized Test","duration":60,"questions":40,"calculator":true,"scoreMin":200,"scoreMax":800},
+  ACT_MATH: {"code":"ACT_MATH","examType":"ACT","displayName":"ACT Math","shortName":"ACT Math","org":"ACT Inc.","duration":50,"questions":45,"calculator":true,"scoreMin":1,"scoreMax":36},
+  PRACTICE: {"code":"PRACTICE","examType":"PRACTICE","displayName":"Practice Timer","shortName":"Practice","org":"General Practice & Drills","duration":null,"questions":null,"calculator":true,"scoreMin":0,"scoreMax":9999},
+};
 
 // The one correction approved for this project: EST is the Egyptian Scholastic
 // Test, not the "Emirates Standardized Test". Student-facing copy on the exam
@@ -239,10 +259,18 @@ t.is('a stray write to a config leaves it unchanged', R.get('SAT_FULL').scoreMax
 t.ok('compat() returns a stable reference', R.compat() === R.compat());
 t.ok('compat entries are stable too', R.compat().PRACTICE === R.compat().PRACTICE);
 
-t.section('Phase 1a contract: nothing consumes the registry yet');
-t.ok('mock-exam.html does not load exam-registry.js (Phase 1b does that)',
-  !pageSrc.includes('exam-registry.js'));
-t.ok('mock-exam.html still owns its literal, unmodified',
-  pageSrc.includes('const EXAM_CONFIGS = {'));
+t.section('Phase 1b: the page consumes the registry and owns no second copy');
+t.ok('mock-exam.html loads exam-registry.js',
+  pageSrc.includes('<script src="exam-registry.js"></script>'));
+t.ok('the registry loads before the inline script that uses it',
+  pageSrc.indexOf('<script src="exam-registry.js"') < pageSrc.indexOf('window.SiExamRegistry.compat()'));
+t.ok('the registry tag is neither deferred nor async',
+  !/<script src="exam-registry\.js"[^>]*(defer|async)/.test(pageSrc));
+t.ok('the duplicate literal is GONE — one source of truth',
+  !pageSrc.includes('const EXAM_CONFIGS = {'));
+t.ok('EXAM_CONFIGS is assigned from the compat view',
+  pageSrc.includes('const EXAM_CONFIGS = window.SiExamRegistry.compat();'));
+t.ok('a missing registry is guarded like a missing SDK',
+  pageSrc.includes('!window.SiExamRegistry'));
 
 t.done();

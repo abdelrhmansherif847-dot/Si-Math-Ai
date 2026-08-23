@@ -381,12 +381,13 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 <script src="mastery-updater.js"></script>
 <script src="exam-mistakes-logger.js"></script>
 <script src="assets/streak.js"></script>
+<script src="exam-registry.js"></script>
 
 <script>
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 const SB_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SB_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
-if (!window.supabase) { document.getElementById('pageContent').innerHTML = '<div style="padding:60px 20px;text-align:center;color:#f87171"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;margin-bottom:8px">Failed to load — refresh the page</div><a href="dashboard.html" style="color:#38bdf8;text-decoration:underline">Back to Dashboard</a></div>'; throw new Error('Supabase SDK not loaded'); }
+if (!window.supabase || !window.SiExamRegistry) { document.getElementById('pageContent').innerHTML = '<div style="padding:60px 20px;text-align:center;color:#f87171"><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:17px;font-weight:600;margin-bottom:8px">Failed to load — refresh the page</div><a href="dashboard.html" style="color:#38bdf8;text-decoration:underline">Back to Dashboard</a></div>'; throw new Error(window.supabase ? 'Exam registry not loaded' : 'Supabase SDK not loaded'); }
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 async function getCurrentUser() {
@@ -398,15 +399,10 @@ async function getCurrentUser() {
 }
 
 // ─── EXAM CONFIGS ─────────────────────────────────────────────────────────────
-const EXAM_CONFIGS = {
-  SAT_MODULE_1:  { code:'SAT_MODULE_1',  examType:'SAT',      displayName:'SAT Math — Module 1',     shortName:'Module 1',     org:'College Board · Digital SAT',              duration:35,  questions:22, calculator:true, scoreMin:200, scoreMax:800  },
-  SAT_MODULE_2:  { code:'SAT_MODULE_2',  examType:'SAT',      displayName:'SAT Math — Module 2',     shortName:'Module 2',     org:'College Board · Digital SAT',              duration:35,  questions:22, calculator:true, scoreMin:200, scoreMax:800  },
-  SAT_FULL:      { code:'SAT_FULL',      examType:'SAT',      displayName:'Full SAT Math',            shortName:'Full SAT',     org:'College Board · Digital SAT (Both Modules)',duration:70,  questions:44, calculator:true, scoreMin:200, scoreMax:800  },
-  EST_MATH_1:    { code:'EST_MATH_1',    examType:'EST',      displayName:'EST Math 1',               shortName:'EST Math 1',   org:'Emirates Standardized Test',               duration:75,  questions:50, calculator:true, scoreMin:200, scoreMax:800  },
-  EST_MATH_2_L1: { code:'EST_MATH_2_L1', examType:'EST',     displayName:'EST Math 2 — Level 1',    shortName:'EST Math 2 L1',org:'Emirates Standardized Test',               duration:60,  questions:40, calculator:true, scoreMin:200, scoreMax:800  },
-  ACT_MATH:      { code:'ACT_MATH',      examType:'ACT',      displayName:'ACT Math',                 shortName:'ACT Math',     org:'ACT Inc.',                                 duration:50,  questions:45, calculator:true, scoreMin:1,   scoreMax:36   },
-  PRACTICE:      { code:'PRACTICE',      examType:'PRACTICE', displayName:'Practice Timer',           shortName:'Practice',     org:'General Practice & Drills',                duration:null,questions:null,calculator:true, scoreMin:0,   scoreMax:9999 }
-};
+// Exams are DATA: exam-registry.js is the single source of truth for exam
+// identity, timing, module structure and calculator policy. compat() returns
+// the exact shape this literal had, so every reader below is unchanged.
+const EXAM_CONFIGS = window.SiExamRegistry.compat();
 
 const RANK_THRESHOLDS = [
   { name: 'Elite Scholar', min: 2500 }, { name: 'Master', min: 1500 },
