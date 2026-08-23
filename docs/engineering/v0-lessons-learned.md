@@ -274,3 +274,60 @@ described there at all. GoTrue is open source: it can be cloned, pointed at a
 throwaway Postgres, and executed. That took under an hour and produced eight
 tests. Every claim in `apple-signin-audit.md` §3 now has one behind it, and each
 was inverted first to confirm it could fail (R8).
+
+
+## 7. Supabase Management API findings (2026-08-22)
+
+From the mailer template rollout. Both cost a production write to learn, and both
+are enforced in `scripts/mailer-apply.sh` at run time and in
+`tests/mailer-config.test.mjs` in CI. Full narrative:
+`phase1-email-fix-runbook.md` §3f–§3h.
+
+### R14 — Values sent to `config/auth` must be ASCII; non-ASCII is replaced
+
+A single-key apply of `mailer_subjects_confirmation` returned HTTP 200, and both
+the PATCH response and an independent no-cache GET showed the em dash `U+2014`
+(`e2 80 94`) stored as `U+FFFD` (`ef bf bd`). The write succeeded; the character
+did not survive it. A student would have received `start studying <?> Si Math AI`.
+
+Keep every approved mailer value ASCII. HTML entities (`&mdash;`, `&middot;`)
+render correctly in email and are themselves ASCII; subject lines have no entity
+escape, so they need plain ASCII punctuation.
+
+Generalise it: **a 200 does not mean the bytes you sent are the bytes now
+stored.** Read the value back before believing it.
+
+### R15 — Template line endings are canonicalised to CRLF; normalise, but not blindly
+
+Supabase rewrites `\n` to `\r\n` in template content. A 3376-byte template came
+back as 3423 bytes; it contains exactly 47 LF characters, and 3376 + 47 = 3423.
+The recovery template reproduced it independently: 3396 + 47 = 3443. Content is
+unaltered — only line-ending style.
+
+A byte-exact comparison is therefore the wrong success test: against a server that
+always adds CRLF it can never pass, so a rollout gated on it could never complete.
+Relaxing the comparison until a real change slips through would be worse. The
+answer is three outcomes rather than two — exact, equal-after-normalisation, and
+genuinely different — with the raw hashes still printed so the middle verdict can
+be audited.
+
+The test that matters is the negative one: *a content change plus CRLF must still
+report as changed.* Write that test first; without it, normalisation is just a way
+to make failures disappear.
+
+### R16 — Two checkers in this workstream were themselves the broken thing
+
+Worth its own entry, because it happened twice in one week and neither was caught
+by reading the code.
+
+- A diff routine matched `differ: byte N`; GNU and BSD `cmp` both print
+  `differ: char N`. It never found an offset and reported every mismatch as a
+  truncation.
+- An ASCII guard used `grep -q '[^\x00-\x7F]'`. POSIX grep reads those six
+  characters literally rather than as a byte range, so the class matched nearly
+  everything — it refused a pure-ASCII string and would have blocked every
+  legitimate apply.
+
+Both were found only by running the checker against a case it was supposed to
+catch **and** a case it was supposed to pass. A verifier is code, and needs the
+same could-it-go-red discipline as anything else (R8).

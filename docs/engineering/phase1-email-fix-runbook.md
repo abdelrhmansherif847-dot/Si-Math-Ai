@@ -824,9 +824,9 @@ the broken thing — the earlier one matched `differ: byte` when `cmp` prints
 `differ: char`. A check that cannot fail is worse than no check, because it is
 trusted.
 
-### Current production state
+### Production state *at the time of §3f* (superseded — see §3h)
 
-| Key | Live value |
+| Key | Value then |
 |---|---|
 | `mailer_subjects_recovery` | `Reset your Si Math AI password` — new, correct |
 | `mailer_subjects_confirmation` | new text but **corrupted**: em dash stored as `U+FFFD` |
@@ -941,9 +941,9 @@ dry-run afterwards reports `ALREADY SET … (server holds it with CRLF line
 endings)`; and a server that ALSO changes one word still FAILs, pinpointed to
 byte 118.
 
-### Current production state
+### Production state *at the time of §3g* (superseded — see §3h)
 
-| Key | State |
+| Key | State then |
 |---|---|
 | `mailer_subjects_recovery` | correct |
 | `mailer_subjects_confirmation` | still the em-dash-corrupted value from §3f |
@@ -968,3 +968,77 @@ bash scripts/mailer-apply.sh --only mailer_subjects_confirmation --dry-run
 The dry-run on the confirmation template is a free check of this whole change: if
 it now says `ALREADY SET`, the normalization is right and nothing was written to
 find that out.
+
+
+---
+
+## Step 3h — ROLLOUT COMPLETE. All four keys live and verified.
+
+**Reported by the owner, 2026-08-22, from the tooling's own output.** Recorded
+here as the authoritative final state; the production-state tables in §3f and §3g
+are snapshots from earlier in the sequence and are marked superseded.
+
+| Key | State | Evidence |
+|---|---|---|
+| `mailer_subjects_confirmation` | ✅ live | PATCH response + no-cache GET |
+| `mailer_subjects_recovery` | ✅ live | PATCH response + no-cache GET |
+| `mailer_templates_confirmation_content` | ✅ live | both, `MATCHES AFTER LINE-ENDING NORMALIZATION` (3376 → 3423) |
+| `mailer_templates_recovery_content` | ✅ live | both, `MATCHES AFTER LINE-ENDING NORMALIZATION` (3396 → 3443) |
+
+The recovery template's arithmetic corroborates the CRLF finding independently:
+3443 − 3396 = 47, and that template also contains exactly 47 LF characters.
+
+**Provenance, stated plainly:** this session has no access to
+`api.supabase.com` — it is blocked by the environment's egress proxy — and holds
+no Supabase token. Every line above rests on output the owner ran and reported.
+It is not an independent verification, and should not be quoted as one. What this
+session *can* attest to is that the tooling which produced that output is itself
+tested: `--self-test` exercises the real comparison functions, and a sabotaged
+copy of the classifier makes it fail.
+
+### What the rollout established about this API
+
+Three behaviours, each learned from a production write, each now enforced in code
+and in CI:
+
+1. **Non-ASCII is replaced.** `U+2014` was stored as `U+FFFD`. Every approved
+   value must be ASCII; bodies use HTML entities, subjects use ASCII punctuation.
+2. **LF is canonicalised to CRLF** in template content. Content survives intact;
+   only line-ending style changes. Verification normalises line endings and still
+   fails on a real content difference.
+3. **HTTP 200 is not evidence.** The required evidence is the PATCH response body
+   (which returns the full `AuthConfigResponse`) *plus* an independent no-cache
+   GET. A 200 accompanied neither of the two failures in this sequence.
+
+### Rollback is now gated, not removed
+
+`scripts/mailer-restore.sh` would revert all four keys to Supabase's stock
+defaults. Earlier sections of this runbook still legitimately say "roll back
+with `mailer-restore.sh`", so a future reader could reach for it in good faith.
+
+It now carries `ROLLOUT_FINAL=1`, and while that is set it requires **both** the
+`--revert-verified-rollout` flag **and** the phrase `REVERT VERIFIED ROLLOUT`
+typed at a terminal (or set in `MAILER_ROLLBACK_CONFIRM` for automation). Neither
+alone is enough. When a new rollout begins, set `ROLLOUT_FINAL=0` in a reviewed
+commit and it behaves as an ordinary safety net again — the same idiom as
+`SiAuthApple.ENABLED`.
+
+Its verification was also fixed: it now checks **every** key captured in the
+backup, with CRLF normalised. The old version compared only the confirmation
+template, which during the first failed rollout had never changed — so it passed
+whether or not the restore had written anything.
+
+### Next: the measurement Phase 1 exists for
+
+Steps 4–7 of the approved order, unchanged and still outstanding:
+
+- two **fresh, independent** iCloud addresses, plus one Gmail
+- **Inbox or Junk** — recorded per address, this is the actual result
+- full signup → confirmation → login → onboarding → dashboard
+- password reset delivery and the complete reset flow
+- Gmail regression check
+- inspect the real Resend message records, including the derived plain-text body,
+  which replaces the reconstruction in §6 with observed output
+
+Everything before this point changed what we *send*. Only these steps establish
+whether it *arrives*.

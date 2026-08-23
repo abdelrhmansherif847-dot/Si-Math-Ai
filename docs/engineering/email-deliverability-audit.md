@@ -200,9 +200,15 @@ prefetch hazard, and is strictly worse than the above.
 
 ## 6. The improved templates
 
-Written, reviewed, **not applied**: `docs/engineering/email-templates/`
-(`confirmation.html`, `recovery.html`, and a `README.md` covering the rules they
-follow and how to apply and roll them back).
+**Applied and verified in production on 2026-08-22.** Source of truth remains
+`docs/engineering/email-templates/` (`confirmation.html`, `recovery.html`, and a
+`README.md` covering the rules they follow and how to apply and roll them back).
+
+Two API behaviours were discovered during the rollout and are recorded in
+`phase1-email-fix-runbook.md` §3f and §3g: this Management API path **replaces
+non-ASCII characters** with `U+FFFD`, so every value must be ASCII; and it
+**canonicalises template line endings to CRLF**, which verification treats as
+equivalent without letting a real content change hide behind it.
 
 They keep `{{ .ConfirmationURL }}`, so **behaviour is unchanged** — same link,
 same mechanism, same everything. Only the message around it changes: a real
