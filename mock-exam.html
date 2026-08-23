@@ -382,6 +382,7 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 <script src="exam-mistakes-logger.js"></script>
 <script src="assets/streak.js"></script>
 <script src="exam-registry.js"></script>
+<script src="exam-audio.js"></script>
 
 <script>
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
@@ -610,6 +611,32 @@ function restoreTimerState() {
   } catch(e) { clearTimerState(); return false; }
 }
 
+// ─── P3: AUDIO ───────────────────────────────────────────────────────────────
+// The bus is told how to ask "do I own this sitting?" and nothing else. It reads
+// no storage key of its own, and it is consulted only when an announcement is
+// actually due — never on the 1 Hz tick path.
+try {
+  window.SiExamAudio?.configure({
+    owns: function () {
+      var o = readActiveTab();
+      return !!(o && s.tabId && o.tabId === s.tabId);
+    }
+  });
+} catch (_) {}
+
+// Arm the current block's announcements from the REGISTRY's schedule.
+// s.timerTotal is the running block's own length, which is what makes this
+// correct for a DSAT module, a single-block exam, a dynamic Practice session and
+// a legacy 70-minute blob alike — the registry supplies the marks, the block
+// supplies the length, and this page invents neither.
+function armExamAudio() {
+  try {
+    if (!s.exam || s.view !== 'TIMER') return;
+    var sched = window.SiExamRegistry.scheduleFor(s.exam.code, s.moduleOrdinal, s.timerTotal);
+    window.SiExamAudio?.armBlock(s.examStartedAt, s.moduleOrdinal, sched, s.timerSec);
+  } catch (_) {}
+}
+
 // ─── STEP INDICATOR ──────────────────────────────────────────────────────────
 // TRANSITION shares TIMER's step so the progress dots do not jump backwards
 // at a module boundary — the student is still sitting the exam.
@@ -787,6 +814,11 @@ function afterSelect() {
     const btn = document.getElementById('btnStart');
     if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
 
+    // P3: prime speech HERE — the last synchronous moment of a real gesture.
+    // Eight awaited round-trips follow before the exam starts, and the gesture
+    // is long dead by then; iOS in particular will refuse to speak later.
+    try { window.SiExamAudio?.unlock(); } catch (_) {}
+
     const user = await getCurrentUser();
     if (!user) { window.location.href = 'login.html'; return; }
 
@@ -956,6 +988,9 @@ function finishCurrentModule(afterMs) {
   s.timerRunning = false;
   s.pausedAt     = null;
   clearInterval(s.timerInterval);
+  // P3: a block is over — cut any sentence still in flight and forget its marks
+  // so the next block arms cleanly. Cannot affect the routing below.
+  try { window.SiExamAudio?.cancel(); window.SiExamAudio?.disarm(); } catch (_) {}
 
   const _go = (fn) => { if (afterMs) setTimeout(fn, afterMs); else fn(); };
 
@@ -989,6 +1024,9 @@ function tickTimer() {
   }
   saveTimerState();
   updateTimerDOM();
+  // P3: observational only. The bus never throws, and this guard makes that
+  // guarantee belt-and-braces — an audio fault must never cost a tick.
+  try { window.SiExamAudio?.announceIfDue(s.timerSec); } catch (_) {}
 }
 
 function updateTimerDOM() {
@@ -1010,6 +1048,7 @@ function updateTimerDOM() {
 }
 
 function afterTimer() {
+  armExamAudio();          // P3: no-op when this block is already armed
   if (s.timerRunning) {
     s.timerInterval = setInterval(tickTimer, 1000);
   }
@@ -1742,6 +1781,7 @@ document.getElementById('overlay')?.addEventListener('click', () => {
         </div>`;
     }
     document.getElementById('btnTakeOver')?.addEventListener('click', () => {
+      try { window.SiExamAudio?.unlock(); } catch (_) {}   // P3: real gesture
       if (!s.tabId) s.tabId = makeTabId();
       claimActiveTab();       // write our tabId — sibling storage-event fires
       console.info('[mock-exam] tab take-over', { from: owner.tabId, to: s.tabId, examCode: s.exam.code });
@@ -1797,6 +1837,7 @@ function _finishRestore(restored) {
         </div>`;
     }
     document.getElementById('btnResumePaused')?.addEventListener('click', () => {
+      try { window.SiExamAudio?.unlock(); } catch (_) {}   // P3: real gesture
       s.timerRunning = true;
       s.pausedAt = null;
       s.view = 'TIMER';
@@ -1855,6 +1896,7 @@ window.addEventListener('storage', function(e) {
     'padding:4px 12px;cursor:pointer;font-size:13px">Take Back</button>';
   document.body.prepend(banner);
   document.getElementById('btnReclaimTab')?.addEventListener('click', function() {
+      try { window.SiExamAudio?.unlock(); } catch (_) {}   // P3: real gesture
     if (!s.tabId) s.tabId = makeTabId();
     claimActiveTab();
     console.info('[mock-exam] tab reclaim', { tabId: s.tabId });
