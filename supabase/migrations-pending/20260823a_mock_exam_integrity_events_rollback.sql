@@ -2,6 +2,16 @@
 -- Mock Exam v2 · M1 ROLLBACK — undoes 20260823a_mock_exam_integrity_events.sql
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+--         Revision 3. Written against forward-migration revision 4, and
+--         CORRECTED BY STAGING VALIDATION: section 3's checklist said to expect
+--         "the original 14 columns" on exam_practice_sessions. It has 13. The
+--         14 came from miscounting an earlier privileges query, whose row set
+--         included one table-level grant row alongside the 13 per-column rows.
+--         Harmless in itself, but a checklist with a wrong expected value is
+--         worse than no checklist — it trains the operator to wave through a
+--         mismatch. Found by running the rollback for real; see
+--         docs/roadmap/mock-exam-v2-m1-staging-validation.md.
+--
 --         Revision 2. Written against forward-migration revision 4.
 --
 --         Rev 4 changed the forward DDL for the first time (confidence became
@@ -176,7 +186,7 @@ commit;
 --      select column_name from information_schema.columns
 --       where table_schema='public' and table_name='exam_practice_sessions'
 --       order by ordinal_position;
---      -- expect: the original 14 columns, no attempt_id
+--      -- expect: the original 13 columns, no attempt_id
 --
 -- 4. NO SESSION WAS LOST — the assertion that matters most here:
 --      select count(*) from public.exam_practice_sessions;
