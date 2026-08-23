@@ -13,6 +13,7 @@ set -euo pipefail
 
 PROJECT_REF="${PROJECT_REF:-igvkyxkmjnkzscqgommj}"
 OUT="${OUT:-mailer-config-backup.json}"
+API="${API:-https://api.supabase.com}"
 
 : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN is not set. Create one at https://supabase.com/dashboard/account/tokens}"
 
@@ -25,7 +26,7 @@ fi
 
 echo "Reading live auth config for project $PROJECT_REF ..."
 http=$(curl -sS -o /tmp/mailer-raw.json -w '%{http_code}' \
-  -X GET "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+  -X GET "$API/v1/projects/$PROJECT_REF/config/auth" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")
 
 if [ "$http" != "200" ]; then

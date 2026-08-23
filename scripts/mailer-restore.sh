@@ -12,6 +12,7 @@ set -euo pipefail
 
 PROJECT_REF="${PROJECT_REF:-igvkyxkmjnkzscqgommj}"
 BACKUP="${BACKUP:-mailer-config-backup.json}"
+API="${API:-https://api.supabase.com}"
 
 : "${SUPABASE_ACCESS_TOKEN:?SUPABASE_ACCESS_TOKEN is not set.}"
 [ -s "$BACKUP" ] || { echo "REFUSING: no backup at $BACKUP — nothing to restore from." >&2; exit 1; }
@@ -19,7 +20,7 @@ BACKUP="${BACKUP:-mailer-config-backup.json}"
 
 echo "Restoring $(jq -r 'keys | length' <"$BACKUP") mailer_* keys to project $PROJECT_REF ..."
 http=$(curl -sS -o /tmp/mailer-restore.json -w '%{http_code}' \
-  -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+  -X PATCH "$API/v1/projects/$PROJECT_REF/config/auth" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   --data-binary @"$BACKUP")
@@ -32,7 +33,7 @@ if [ "$http" != "200" ]; then
 fi
 rm -f /tmp/mailer-restore.json
 
-curl -sS -X GET "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+curl -sS -X GET "$API/v1/projects/$PROJECT_REF/config/auth" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" >/tmp/mailer-check.json
 if [ "$(jq -r '.mailer_templates_confirmation_content' </tmp/mailer-check.json)" \
    = "$(jq -r '.mailer_templates_confirmation_content' <"$BACKUP")" ]; then

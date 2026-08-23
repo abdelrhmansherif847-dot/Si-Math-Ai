@@ -13,3 +13,6 @@ ds-bundle/
 # Account configuration, not source — and the only copy of the pre-change
 # templates, so it must not be committed and must not be deleted casually.
 mailer-config-backup.json
+
+# Token-redacted API responses written by scripts/mailer-apply.sh for debugging.
+mailer-diagnostics/

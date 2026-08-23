@@ -346,3 +346,113 @@ Record results per provider and per flow — iCloud #1, iCloud #2, Gmail ×
 confirmation, password reset — and **inbox vs Junk for each**, since that is the
 measurement Phase 1 exists to make. Sent is not the same as delivered, and
 delivered is not the same as seen.
+
+
+---
+
+## Step 3b — First apply attempt FAILED and was rolled back (2026-08-22)
+
+**Production is at the pre-change baseline. Nothing is half-applied.**
+
+### What happened
+
+The owner ran backup (verified), then apply. The PATCH returned **HTTP 200**, and
+read-back verification then failed on three of the four keys:
+
+| Key | Read-back |
+|---|---|
+| `mailer_templates_confirmation_content` | ❌ FAIL |
+| `mailer_templates_recovery_content` | ❌ FAIL |
+| `mailer_subjects_confirmation` | ❌ FAIL |
+| `mailer_subjects_recovery` | ✅ PASS |
+
+`mailer-restore.sh` then completed successfully; the live confirmation template
+matches the backup. Owner-reported live state after rollback: confirmation
+subject `Confirm your email address`, recovery subject `Reset your password`,
+confirmation template 184 chars, recovery template 254 chars — consistent with
+Supabase's documented stock defaults (181 and 249 plus inter-tag whitespace).
+
+### Diagnosis: unknown, and the tooling is why
+
+**The cause cannot be determined from the evidence that exists**, because the
+first version of `mailer-apply.sh` deleted `/tmp/mailer-apply.json` immediately
+after reading the status code. The response body — the one artifact that would
+say what the API did — was destroyed by the script that needed it. That is the
+defect fixed here.
+
+One hypothesis was formed and **falsified before being reported**: that the
+failures correlated with non-ASCII content. They do not. Measured:
+
+| Key | Non-ASCII | Result |
+|---|---|---|
+| `mailer_templates_confirmation_content` | none — pure ASCII | FAIL |
+| `mailer_templates_recovery_content` | none — pure ASCII | FAIL |
+| `mailer_subjects_confirmation` | `U+2014` em dash | FAIL |
+| `mailer_subjects_recovery` | none — pure ASCII | PASS |
+
+Two pure-ASCII values failed, so encoding does not explain it. The templates use
+`&mdash;` and `&middot;` entities rather than literal characters.
+
+Hypotheses that remain consistent with the evidence, **unranked and untested**:
+
+- The API accepted the request and silently stored only some keys (size limit,
+  validation, or a partial write).
+- The API stored the values but rewrote them (sanitising, escaping, whitespace).
+- Something in the owner's local environment differed from the mock harness this
+  session tested against — locale, `jq`, `curl`, or shell version.
+
+Note the last one is live: the identical payload round-tripped correctly through
+a mock in this session's environment, so the pipeline itself is not inherently
+broken.
+
+### What changed in the tooling
+
+`scripts/mailer-apply.sh` was rewritten so the next attempt is conclusive:
+
+1. **`--dry-run`** — a GET-only comparison of live against intended, per key.
+   Zero writes. Run this first; it may answer the question without a PATCH.
+2. **One key per PATCH, verified individually** (`--batch` keeps the old
+   behaviour). A partial acceptance becomes attributable to a specific key.
+3. **Every response body is preserved**, token-redacted, under
+   `mailer-diagnostics/`.
+4. **Byte-level diagnostics on failure**: intended vs live byte count and
+   sha256, the first differing byte with 48 bytes of `cat -v` context, and —
+   the decisive one — a **verdict** comparing the live value against the
+   pre-apply backup:
+   - `UNCHANGED` → the API returned 200 and did not store the key.
+   - `TRANSFORMED` → the API stored something different from both old and new.
+5. `API` is now overridable in all three scripts, so they can be exercised
+   against a local mock before ever pointing at production.
+
+Scope, protections and the four keys are unchanged. A bug was also fixed in the
+diff logic itself: it matched `differ: byte N`, but GNU and BSD `cmp` both print
+`differ: char N`, so it had never found an offset and reported every mismatch as
+a truncation.
+
+### Harness results
+
+Against a local mock of `/v1/projects/{ref}/config/auth` with switchable
+behaviour:
+
+| Scenario | Expected | Result |
+|---|---|---|
+| Mock stores only 1 of 4 keys — **the production symptom** | 3 FAIL / 1 PASS, verdict `UNCHANGED` | ✅ reproduced, verdict correct |
+| Mock rewrites the em dash | `TRANSFORMED`, diff at the exact byte | ✅ byte 38, shows `M-bM-^@M-^T` → `--` |
+| Mock truncates at 200 bytes | `TRANSFORMED`, reported as prefix | ✅ |
+| Honest mock | 4/4 PASS, then dry-run reports all `ALREADY SET` | ✅ |
+| Rollback after apply | live returns to baseline | ✅ |
+| No backup present | refused | ✅ |
+| Template switched to `TokenHash` | refused, in apply **and** dry-run | ✅ |
+| Bad token | clean HTTP 401, stops, backup untouched | ✅ |
+| Token in any saved diagnostics file | none | ✅ |
+
+### The next attempt
+
+```bash
+export SUPABASE_ACCESS_TOKEN=...
+bash scripts/mailer-apply.sh --dry-run     # read-only; send me the output
+```
+
+**Do not run apply until the dry-run output has been reviewed.** It establishes
+exactly what the API currently holds for all four keys, which is the baseline the
+previous attempt never captured.
