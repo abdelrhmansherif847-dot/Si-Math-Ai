@@ -1,6 +1,6 @@
 # P2 Adaptive — where the decision lives, and what it can decide with
 
-**Status:** PROPOSAL — no code changed. Awaiting review.
+**Status:** ✅ ACCEPTED and IMPLEMENTED as Option C (`b1bb7d5`). P2 is closed.
 **Date:** 2026-08-23 · **Scope:** `SAT_FULL` only.
 
 ---
@@ -210,3 +210,59 @@ architecture.
 4. **Should the transition screen say which path was chosen?** Recommend **no**
    for now — naming it makes the boundary evaluative, which decision 4 ruled out,
    and on an estimated threshold it would be asserting more confidence than we have.
+
+---
+
+# Closure — accepted 2026-08-23
+
+Option C was approved and implemented. The agreed description, to be used
+verbatim wherever this is written up:
+
+> **DSAT is adaptive-ready, not yet adaptively routed.**
+> The architecture supports Module 2 variants exclusively for `SAT_FULL`, but no
+> performance-based routing occurs until Si Math has a legitimate measured
+> Module 1 performance signal and an explicitly approved routing policy.
+
+## Why the wording matters more than it looks
+
+In six months the `variants` array will still be sitting in `exam-registry.js`,
+and its presence will read as evidence that the College Board algorithm was
+implemented. It was not. Nothing routes anyone anywhere, and the words above are
+the only thing standing between that array and a false assumption. The same
+paragraph is reproduced in the source file itself, because a reader who is about
+to edit the selector lands there, not here.
+
+## The four gates that must be passed before adaptive routing goes live
+
+**A measured signal arriving with the Question Spine is a precondition, not a
+decision.** `source: 'measured'` becoming available does not switch this on.
+Each of these is a separate call, and none is answered by having data:
+
+1. **What exactly is the performance metric?** A raw correct count, or something
+   weighted by item difficulty? Module 1 is mixed-difficulty by design, so a raw
+   count treats a hard item and an easy one as identical evidence.
+2. **How is Module 1 calibrated?** Routing on an uncalibrated form measures our
+   question-writing rather than the student.
+3. **Is there a threshold or routing model we can defend?** College Board
+   publishes none. Ours would be an approximation and has to be argued on its own
+   merits, never on borrowed authority.
+4. **How do we prevent it being presented as the College Board algorithm?** If it
+   is our approximation, students must not be told otherwise — including by
+   implication, which is why no path is named on screen today.
+
+Until all four are settled, the default path is the correct behaviour, not a
+limitation.
+
+## P2 final scope
+
+| | |
+|---|---|
+| Module state machine | ✅ complete — module vs exam termination separated |
+| DSAT two-module timing | ✅ complete — 22q/35min × 2, no leakage |
+| Transition screen | ✅ complete — manual, uncapped, timing only |
+| Persistence + legacy blobs | ✅ complete |
+| `duration_minutes` correction | ✅ complete — SAT_FULL saves 70 |
+| Adaptive architecture | ✅ complete — gated, inert, no threshold |
+| Adaptive **routing** | ⛔ **not implemented, by decision** |
+
+**P2 is closed. No further modification without a new authorisation.**

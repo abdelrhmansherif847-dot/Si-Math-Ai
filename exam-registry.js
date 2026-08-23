@@ -324,6 +324,38 @@
 
   // ── Adaptive routing — gated, and currently inert ──────────────────────────
   //
+  //   ┌───────────────────────────────────────────────────────────────────┐
+  //   │  DSAT IS ADAPTIVE-READY, NOT YET ADAPTIVELY ROUTED.               │
+  //   │                                                                   │
+  //   │  The architecture supports Module 2 variants exclusively for      │
+  //   │  SAT_FULL, but NO performance-based routing occurs until Si Math  │
+  //   │  has a legitimate measured Module 1 performance signal AND an     │
+  //   │  explicitly approved routing policy.                              │
+  //   └───────────────────────────────────────────────────────────────────┘
+  //
+  // That box exists because months from now the presence of `variants` below
+  // will look like evidence that the College Board algorithm was implemented
+  // here. It was not. Nothing in this file routes anyone anywhere.
+  //
+  // WHEN A MEASURED SIGNAL ARRIVES, THAT IS NOT AUTHORISATION TO SWITCH THIS ON.
+  // `source: 'measured'` becoming available with the Question Spine is a
+  // precondition, not a decision. Four questions must be answered first, each
+  // deliberately, and none of them is answered by having data:
+  //
+  //   1. What exactly is the performance metric? Raw correct count, or something
+  //      weighted by item difficulty? Module 1 is mixed-difficulty by design, so
+  //      a raw count treats a hard item and an easy one as the same evidence.
+  //   2. How is Module 1 calibrated? Routing on an uncalibrated form means the
+  //      threshold measures our question-writing, not the student.
+  //   3. Is there a threshold or routing model we can actually defend? College
+  //      Board publishes none, so ours would be an approximation and has to be
+  //      argued on its own merits rather than borrowed authority.
+  //   4. How do we stop the result being presented to a student as the College
+  //      Board algorithm when it is our approximation of it?
+  //
+  // Until all four are settled, the branches below return the default path on
+  // purpose, and that is the correct behaviour rather than a limitation.
+  //
   // WHAT THE REAL DSAT DOES: multistage adaptive testing at the MODULE level.
   // Module 1 is mixed difficulty and identical for everyone; only Module 2
   // adapts, between two forms, and the lower path carries a real score
