@@ -278,4 +278,106 @@ t.section('Page wiring is present');
       slice(src, 'function htmlTransition() {', 'function afterTransition() {', 'transition view')));
 }
 
+t.section('Adaptive routing — gated to SAT_FULL, and deliberately inert');
+
+{
+  const { R } = makeEnv();
+  const PERF_NONE = { source: 'unavailable', correct: null, total: null };
+
+  t.is('the whitelist contains exactly one exam', R.ADAPTIVE_EXAM_CODES, ['SAT_FULL']);
+  t.ok('only SAT_FULL is adaptive',
+    R.EXAM_CODES.filter(c => R.isAdaptiveExam(c)).join() === 'SAT_FULL');
+
+  // Every other exam must come back not_adaptive with no variant at all.
+  let clean = true;
+  for (const code of R.EXAM_CODES.filter(c => c !== 'SAT_FULL')) {
+    const sel = R.selectNextModule(code, R.buildModulePlan(code, 20), 1, PERF_NONE);
+    if (sel.reason !== 'not_adaptive' || sel.variantId !== null) clean = false;
+  }
+  t.ok('every non-SAT_FULL exam returns not_adaptive with variantId null', clean);
+  t.ok('and none of their plans carries variants at all',
+    R.EXAM_CODES.filter(c => c !== 'SAT_FULL')
+      .every(c => R.buildModulePlan(c, 20).every(m => m.variants === undefined)));
+
+  // SAT_FULL: the socket exists, the plug does not.
+  const plan = R.buildModulePlan('SAT_FULL');
+  t.is('SAT_FULL module 2 declares two variants', plan[1].variants.map(v => v.id), ['standard', 'advanced']);
+  const sel = R.selectNextModule('SAT_FULL', plan, 1, PERF_NONE);
+  t.is('with no performance it takes the standard path', sel.variantId, 'standard');
+  t.is('and says exactly why', sel.reason, 'no_performance_source');
+  t.is('the module returned is the real module 2', sel.module.ordinal, 2);
+
+  // The promise that matters: a measured signal must NOT be routed on a guess.
+  const measured = R.selectNextModule('SAT_FULL', plan, 1, { source: 'measured', correct: 21, total: 22 });
+  t.is('even a strong MEASURED signal still takes the default path', measured.variantId, 'standard');
+  t.is('because no threshold is approved yet', measured.reason, 'no_approved_threshold');
+  const weak = R.selectNextModule('SAT_FULL', plan, 1, { source: 'measured', correct: 2, total: 22 });
+  t.is('a weak measured signal is not routed down either', weak.variantId, 'standard');
+
+  // A null/absent performance object must never be read as "scored zero".
+  t.is('a missing performance object is treated as unknown, not as zero',
+    R.selectNextModule('SAT_FULL', plan, 1, null).reason, 'no_performance_source');
+  t.is('and so is a bare zero with no source',
+    R.selectNextModule('SAT_FULL', plan, 1, { correct: 0 }).reason, 'no_performance_source');
+
+  // No invented threshold anywhere in the shipped file.
+  const reg = read('exam-registry.js');
+  t.ok('no percentage threshold constant is hardcoded',
+    !/0\.7\b|\b70\s*\/\s*100|threshold\s*[:=]\s*[0-9]/.test(reg));
+  t.ok('variants carry NO student-facing label, so no screen can leak the path',
+    plan[1].variants.every(v => !('label' in v)));
+}
+
+t.section('Adaptive changes no timing, and no P2 invariant');
+
+{
+  const { env, api, R, store, S } = makeEnv();
+  const plan = R.buildModulePlan('SAT_FULL');
+
+  t.is('both module 2 variants share one duration — routing is not a new clock',
+    [plan[1].durationSec, R.moduleStartState(plan, 2).timerSec], [2100, 2100]);
+  t.is('module 2 still 22 questions either way', plan[1].questions, 22);
+  t.is('the sitting total is still 70 minutes', R.totalDurationMinutes('SAT_FULL'), 70);
+
+  // The boundary behaviour tested earlier must be completely unmoved by adaptive.
+  const s = startSitting(S, R, 'SAT_FULL', 0, env.EXAM_CONFIGS);
+  s.timerSec = 0;
+  api.finishCurrentModule(0);
+  t.is('boundary still goes to TRANSITION', s.view, 'TRANSITION');
+  t.is('endedAt still not stamped', s.endedAt, null);
+  t.ok('state still not cleared', store['simath_mock_timer'] != null);
+  t.ok('finishCurrentModule never mentions adaptivity',
+    !/selectNextModule|variant|adaptive/i.test(
+      slice(read('mock-exam.html'), 'function finishCurrentModule(afterMs) {', 'function tickTimer() {', 'fcm')));
+}
+
+t.section('Nothing student-visible changed, and no pipeline was touched');
+
+{
+  const src = read('mock-exam.html');
+  const transition = slice(src, 'function htmlTransition() {', 'function afterTransition() {', 'tv');
+  t.ok('the transition screen never names a path',
+    !/variant|standard|advanced|adaptive|harder|easier/i.test(transition));
+  // The property that matters is "never rendered", not a count of mentions —
+  // counting occurrences would break on an unrelated edit while a real leak
+  // through a template literal would slip past it.
+  t.ok('the variant never appears inside a template interpolation',
+    !/\$\{[^}]*moduleVariantId/.test(src));
+  t.ok('no html*() view function references it',
+    ['htmlSelect', 'htmlTimer', 'htmlTransition', 'htmlResults', 'htmlMistakes', 'htmlSuccess']
+      .every(fn => {
+        const body = src.slice(src.indexOf(`function ${fn}(`));
+        return !body.slice(0, body.indexOf('\nfunction ')).includes('moduleVariantId');
+      }));
+  t.ok('selectNextModule is called from exactly one place',
+    (src.match(/selectNextModule\(/g) || []).length === 1);
+
+  // The save/mistakes/analyzer surface must be untouched by this change.
+  t.ok('exam_type is still the exam code, not a variant', /exam_type: s\.exam\.code/.test(src));
+  t.ok('duration still comes from the sitting total',
+    /duration_minutes: window\.SiExamRegistry\.totalDurationMinutes/.test(src));
+  t.ok('ExamMistakesLogger call is unchanged',
+    /window\.ExamMistakesLogger\.process\(sb, user\.id, sessionId, validMistakes, sessionStats\)/.test(src));
+}
+
 t.done();

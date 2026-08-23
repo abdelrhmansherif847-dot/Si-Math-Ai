@@ -436,6 +436,10 @@ const s = {
   // exam on precisely the code path it used before P2.
   modulePlan: null,
   moduleOrdinal: 1,
+  // Which Module 2 form the adaptive selector chose. INTERNAL ONLY — never
+  // rendered anywhere, because naming a path would imply a measurement we are
+  // not making. null for every non-adaptive exam.
+  moduleVariantId: null,
   score: '', correct: '', wrong: '', omitted: '',
   mistakeRows: [],
   sessionId: null,
@@ -531,6 +535,7 @@ function saveTimerState() {
       v:                 2,
       modulePlan:        s.modulePlan,
       moduleOrdinal:     s.moduleOrdinal,
+      moduleVariantId:   s.moduleVariantId,
       moduleStartedAt:   s.moduleStartedAt,
       phase:             s.view === 'TRANSITION' ? 'TRANSITION' : 'MODULE',
       examCode:          s.exam.code,
@@ -573,6 +578,7 @@ function restoreTimerState() {
     s.modulePlan      = _R.plan;
     s.moduleOrdinal   = _R.ordinal;
     s.moduleStartedAt = saved.moduleStartedAt || null;
+    s.moduleVariantId = saved.moduleVariantId || null;
 
     if (_R.phase === 'TRANSITION') {
       // No clock runs on the boundary screen: nothing to drift, nothing to
@@ -1094,8 +1100,20 @@ function afterTransition() {
   startHeartbeat();
 
   document.getElementById('btnBeginModule')?.addEventListener('click', () => {
-    const next = window.SiExamRegistry.nextModule(s.modulePlan || [], s.moduleOrdinal);
+    // The ONE call site for adaptive routing. finishCurrentModule() stays
+    // completely ignorant of it — it still only asks whether a module was the
+    // last one, which is why every P2 invariant is unaffected.
+    //
+    // Performance is declared 'unavailable' because it genuinely is: nothing in
+    // the page captures answers, so the selector is told the truth rather than
+    // handed a zero that would route every student down. Phase 6 replaces this
+    // literal with a measured signal and nothing else here changes.
+    const _sel = window.SiExamRegistry.selectNextModule(
+      s.exam.code, s.modulePlan || [], s.moduleOrdinal,
+      { source: 'unavailable', correct: null, total: null });
+    const next = _sel.module;
     if (!next) { finishCurrentModule(0); return; }   // defensive: no next => end
+    s.moduleVariantId = _sel.variantId;
 
     // The clock comes from the registry, not from whatever is left on screen.
     // Routing it through moduleStartState() is what makes "no leakage" a rule a
@@ -1663,6 +1681,7 @@ function afterSuccess() {
       view: 'SELECT', exam: null, timerSec: 0, timerTotal: 0,
       timerRunning: false, timerInterval: null, endedAt: null,
       examStartedAt: null, moduleStartedAt: null, modulePlan: null, moduleOrdinal: 1,
+      moduleVariantId: null,
       score: '', correct: '', wrong: '', omitted: '',
       mistakeRows: [], sessionId: null, successData: null
     });

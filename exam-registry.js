@@ -160,7 +160,17 @@
       // Totals stay 44 questions / 70 minutes either way — derived, not typed.
       modules: [
         { ordinal: 1, label: 'Module 1', questions: 22, durationMinutes: 35 },
-        { ordinal: 2, label: 'Module 2', questions: 22, durationMinutes: 35 },
+        // ADAPTIVE SLOT. On test day the Digital SAT routes every student to one
+        // of two Module 2 forms based on Module 1. Both are 22 questions and 35
+        // minutes, which is why routing changes NO timing — the timer state
+        // machine is untouched by any of this.
+        //
+        // Note there is deliberately NO per-variant `label`. The module's own
+        // label ('Module 2') is what a student sees either way, so no screen can
+        // leak which path was taken. That matters doubly while routing is inert:
+        // naming a path would imply a measurement we are not making.
+        { ordinal: 2, label: 'Module 2', questions: 22, durationMinutes: 35,
+          variants: [{ id: 'standard' }, { id: 'advanced' }] },
       ],
       calculator: {
         allowed: true, scope: 'exam', byod: false, provider: null,
@@ -311,6 +321,85 @@
   // Practice pacing target. mock-exam.html holds the same 1.5 today; this is
   // where it belongs, and Phase 1b removes the duplicate.
   var PRACTICE_MINUTES_PER_QUESTION = 1.5;
+
+  // ── Adaptive routing — gated, and currently inert ──────────────────────────
+  //
+  // WHAT THE REAL DSAT DOES: multistage adaptive testing at the MODULE level.
+  // Module 1 is mixed difficulty and identical for everyone; only Module 2
+  // adapts, between two forms, and the lower path carries a real score
+  // consequence.
+  //
+  // WHAT COLLEGE BOARD DOES NOT PUBLISH: the routing threshold. The widely
+  // repeated "about 70% of Module 1 correct routes up" is reverse-engineered by
+  // tutors, not an official rule. So this file implements NO threshold. Inventing
+  // one and running it would mean telling students we had applied the College
+  // Board algorithm when we had applied a guess.
+  //
+  // WHAT SI MATH AI CANNOT MEASURE YET: anything. The Mock Exam delivers no
+  // questions and captures no answers, so at the moment routing must happen the
+  // platform knows only how much time was used — which is not performance. The
+  // Question Engine (Phase 6) is what changes that.
+  //
+  // So the socket is built and the plug is not. `selectNextModule` accepts a
+  // performance signal in its final shape and, today, always returns the default
+  // path. When a measured signal and an approved threshold both exist, ONE
+  // branch below changes and nothing else does.
+
+  // THE WHITELIST. Adaptive is opt-in per exam code, never opt-out. An exam added
+  // to this file in future is non-adaptive unless someone edits this line on
+  // purpose — which is the entire point of it being a list of codes rather than
+  // a property on a module.
+  var ADAPTIVE_EXAM_CODES = ['SAT_FULL'];
+
+  function isAdaptiveExam(code) {
+    return ADAPTIVE_EXAM_CODES.indexOf(code) !== -1;
+  }
+
+  /** The variant a module falls back to. First declared wins; never null-ish. */
+  function defaultVariantId(mod) {
+    return (mod && mod.variants && mod.variants.length) ? mod.variants[0].id : null;
+  }
+
+  /**
+   * Which module runs next, and on which variant.
+   *
+   * `performance` describes Module 1 as {source, correct, total}, where source is
+   * 'unavailable' | 'self_reported' | 'measured'. It is an OBJECT rather than a
+   * bare count on purpose: a bare number cannot distinguish "we do not know" from
+   * "they scored zero", and a null coerced to 0 would route every student down —
+   * silently, and in the punishing direction.
+   *
+   * Returns {module, variantId, reason}. `reason` is diagnostic, never shown to a
+   * student.
+   */
+  function selectNextModule(examCode, plan, currentOrdinal, performance) {
+    var next = nextModule(plan, currentOrdinal);
+
+    // ── THE GATE ── first statement, whitelist, no exceptions.
+    if (!isAdaptiveExam(examCode)) {
+      return { module: next, variantId: null, reason: 'not_adaptive' };
+    }
+    if (!next || !next.variants || !next.variants.length) {
+      return { module: next, variantId: null, reason: 'no_variants' };
+    }
+
+    var perf = performance || { source: 'unavailable' };
+    var known = (perf.source === 'measured' || perf.source === 'self_reported')
+                && typeof perf.correct === 'number' && perf.correct >= 0;
+
+    if (!known) {
+      // No evidence. Take the standard path — never route a student down on
+      // nothing. The asymmetry is deliberate: wrongly routing a strong student
+      // down caps their practice score and teaches them something false, while
+      // wrongly routing a weaker student up costs only a harder module.
+      return { module: next, variantId: defaultVariantId(next), reason: 'no_performance_source' };
+    }
+
+    // A real signal exists — and still no approved threshold to apply to it.
+    // This branch is where routing will live once a number is agreed; until then
+    // it must behave exactly like the branch above rather than guess.
+    return { module: next, variantId: defaultVariantId(next), reason: 'no_approved_threshold' };
+  }
 
   // ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -527,12 +616,16 @@
     }
 
     return e.modules.map(function (m) {
-      return {
+      var block = {
         ordinal: m.ordinal,
         label: m.label,
         questions: m.questions,
         durationSec: m.durationMinutes * 60,
       };
+      // Only carried when the module actually has them, so every other exam's
+      // plan is byte-identical to what it was before adaptive existed.
+      if (m.variants) block.variants = m.variants;
+      return block;
     });
   }
 
@@ -654,6 +747,9 @@
     isLastModule: isLastModule,
     nextModule: nextModule,
     moduleStartState: moduleStartState,
+    ADAPTIVE_EXAM_CODES: ADAPTIVE_EXAM_CODES,
+    isAdaptiveExam: isAdaptiveExam,
+    selectNextModule: selectNextModule,
     restoreModulePlan: restoreModulePlan,
 
     compat: compat,
