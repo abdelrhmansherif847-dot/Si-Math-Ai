@@ -201,3 +201,39 @@ The single highest-severity open item from that audit is **AUD-1**, which is not
 infrastructure: one canonical subtopic (`STA_004 Stem-and-Leaf Plots`) cannot be
 written to the database at all, because the alias table is missing the exact key
 its own display name normalises to. The fix is one line in a frozen file.
+
+---
+
+## INF-SUPPORT-HEADERS — six applied migrations still labelled PREPARED
+
+**Found:** 2026-08-23, during Mock Exam v2 M1 production verification.
+**Severity:** documentation / repository integrity. **No production defect.**
+**Deliberately out of scope** for the Mock Exam roadmap — recorded here so it is
+not folded into a feature phase.
+
+`supabase/migrations/20260815a` … `20260815f` (the Help & Support chain) carry
+headers reading:
+
+```
+-- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+```
+
+**They are applied.** The support tables (`support_tickets`, `support_messages`,
+`support_attachments`, `support_meetings`, `support_meeting_slots`,
+`support_articles`) all exist in `public`, and the database reports 148 applied
+migrations against 87 files.
+
+Why it matters: this repository's own rule is that the database is the source of
+truth for what is applied and the files are the reviewable record of what was
+run. A file that says "not yet applied" about live schema inverts that, and the
+next person reading the chain could reasonably conclude the support system is
+unshipped — or, worse, try to apply it again.
+
+**Fix:** a documentation-only pass updating the six headers to `✅ APPLIED`, with
+the applied version from `supabase_migrations.schema_migrations`, matching the
+convention M1 now uses. Also worth checking `20260815z_support_rollback.sql`,
+which describes itself as PREPARED while being the rollback for live schema —
+the same warning M1's rollback now carries would apply.
+
+**Do not bundle this into a Mock Exam phase.**
+

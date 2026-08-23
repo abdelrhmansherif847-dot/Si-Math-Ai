@@ -34,7 +34,10 @@ evidence and nothing else.
 Seven phases. Ordered by dependency, not by value — several can ship out of order
 (§5).
 
-### Phase 1 — Exam Registry (config as data)
+### Phase 1 — Exam Registry (config as data) ✅ COMPLETE
+
+> Landed 2026-08-23. P1a `exam-registry.js` + suite; P1b the three-hunk
+> `mock-exam.html` swap. 48/48 green.
 
 The foundation everything else reads. A dependency-free module usable in the
 browser and in Node under CI, following the established `taxonomy-compat.js`
@@ -402,7 +405,7 @@ session never blocks the release.
 
 | Gate | What is being asked | Blocks |
 |---|---|---|
-| **G1** | Approve **Migration 1** (`exam_integrity_events` + additive `attempt_id` column) | P5 |
+| ~~**G1**~~ | ~~Approve **Migration 1**~~ — ✅ **CLOSED.** Applied to production 2026-08-23 as version `20260823043358`, verified read-only, staging-validated first. See `mock-exam-v2-m1-staging-validation.md`. Do not revisit as part of a later phase unless a genuine defect appears | ~~P5~~ |
 | **G2** | Approve **Migration 2** (`mock_exam_restrictions` + enforcement trigger) | P5 |
 | **G3** | Approve **Migration 3** (question engine spine) | P6, then P7 |
 | **G4** | Approve **Migration 4** (`saved_questions`) | P7 |
