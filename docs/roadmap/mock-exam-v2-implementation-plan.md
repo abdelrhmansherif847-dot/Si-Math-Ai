@@ -171,7 +171,42 @@ rewrite. That is the entire point.
 The panel never touches timer state, answer state, session state, integrity
 logging, or the analyzer feed — it is pure UI over a provider.
 
-### Phase 5 — Integrity events and Mock-Exam-scoped restriction
+### Phase 5 — Integrity DETECTION ✅ COMPLETE (restriction/enforcement NOT built)
+
+> Closed 2026-08-23 at `c2d0c09`, accepted with no further changes. Shipped:
+> `exam-integrity.js` — the first writer of the `exam_integrity_events` table M1
+> applied to production — plus the G6 disclosure rendered from the module's own
+> constant on the selection screen, registry-held policy
+> (`integrityLoggingEnabled`, fail-closed, PRACTICE excluded as an exam-mode
+> decision), and the `attempt_id` plumbing M1 had been waiting for.
+>
+> **What P5 is, stated precisely: detection and append-only recording ONLY.**
+> No warning, pause, termination, scoring, flagging or penalty exists anywhere
+> in it, and the boundary is structural rather than promised — the module holds
+> zero references to timer, view, module state, the analyzer or the save
+> pipeline, asserted by tests and verified by mutation. The database remains
+> the sole authority on `confidence`. Detection is TIMER-scoped (nothing logs
+> between modules), durations are measured on return, the 5s debounce and
+> 25-per-load cap are storm protection that cannot affect the exam, and
+> `fullscreen_exit` stays dormant with no fullscreen UX added.
+>
+> **Pre-P6 context, carried in the module header:** rows written before the
+> Question Spine exists must not later be read as evidence of copying
+> exam-question content — no question content was on screen to copy.
+>
+> **The original scope below split in two.** The DETECTION half is done. The
+> RESTRICTION half — `mock_exam_restrictions`, M2's pending-review trigger, the
+> admin surface, warnings — was never part of shipped P5 and remains gated on
+> M2's own approval. Nothing enforces anything today.
+>
+> **Deployment decision, recorded 2026-08-23:** P5 stays intact on the feature
+> branch — no branch surgery, no commit splitting for hypothetical futures. The
+> merge to `main` will be reviewed later as ONE release decision, at which point
+> the fact that merging auto-deploys the site (and therefore switches detection
+> on, with the G6 notice, in the same deploy) is weighed deliberately. Preserve
+> the commit history unless a concrete release requirement forces a change.
+
+### Phase 5 (original scope, partially superseded above) — Integrity events and Mock-Exam-scoped restriction
 
 `exam-integrity.js` — detectors classified by confidence:
 
