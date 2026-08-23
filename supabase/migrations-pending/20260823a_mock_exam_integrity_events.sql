@@ -2,7 +2,13 @@
 -- Mock Exam v2 · M1 — Integrity Audit Foundation (append-only)
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 2. Revision 2 is DOCUMENTATION ONLY — no DDL, no constraint,
+--         Revision 3. DOCUMENTATION ONLY, like revision 2 — no DDL,
+--         constraint, policy or grant differs from revision 1. Revision 3
+--         corrects an immutability claim that was stronger than PostgreSQL
+--         supports (see "WHAT APPEND-ONLY MEANS HERE"), and cross-references
+--         the event_type CHECK and the confidence mapping so neither can be
+--         edited without the other being seen.
+--         Revision 2 was DOCUMENTATION ONLY — no DDL, no constraint,
 --         no policy and no grant differs from revision 1. It resolves an
 --         ambiguity review caught (two columns named attempt_id with different
 --         nullability, described as if one rule covered both) and states the
@@ -260,6 +266,12 @@ create table public.exam_integrity_events (
   event_type   text        not null,
 
   -- DERIVED, never supplied. See design change 3 in the header.
+  -- ⚠️ PAIRED WITH exam_integrity_events_event_type_check BELOW. These two
+  -- lists must be reviewed together in any migration that adds an event type:
+  -- this mapping does not update itself, and an unmapped type silently becomes
+  -- 'low'. The `else` is a deliberate fail-SAFE (a new type cannot accidentally
+  -- start striking students) but it is NOT fail-LOUD, which is the trade-off to
+  -- re-examine if the type list ever grows.
   confidence   text        generated always as (
                              case
                                when event_type in ('copy', 'print', 'fullscreen_exit')
@@ -283,6 +295,14 @@ create table public.exam_integrity_events (
 
   constraint exam_integrity_events_event_type_check check (
     event_type in (
+      -- ⚠️ ADDING A TYPE HERE IS HALF A CHANGE. The generated `confidence`
+      -- column above maps event_type -> high/low, and it does NOT update
+      -- itself. A new type added to this CHECK but not to that mapping falls
+      -- through its `else` and is silently classified LOW — meaning a security
+      -- event that can never contribute to enforcement, failing open and
+      -- quietly. Any migration touching this list MUST review the mapping in
+      -- the same migration. See the note on the confidence column.
+      --
       -- HIGH confidence: deliberate, unambiguous, reliably detectable.
       'copy',
       'print',
@@ -447,9 +467,69 @@ revoke all on function public.exam_integrity_events_no_update() from anon;
 --   3. Retention pruning. Behavioural event logs should not be kept forever.
 --
 -- So DELETE is closed to every client (no policy, no privilege) and open to
--- service_role. "Append-only" here means precisely: no actor can ever ALTER a
--- recorded event, and no client can remove one. It does not mean the rows are
--- immortal, and it should not.
+-- service_role.
+--
+-- =====================================================================
+-- WHAT "APPEND-ONLY" MEANS HERE — AND WHAT IT DOES NOT
+-- =====================================================================
+-- Revision 2 of this file said "no actor can ever ALTER a recorded event".
+-- That was STRONGER THAN THE POSTGRESQL PRIVILEGE MODEL SUPPORTS, and review
+-- was right to catch it. The accurate claim:
+--
+--   No application or client path can update or delete an integrity event.
+--   Privileged database administration can still perform exceptional
+--   maintenance if explicitly authorised.
+--
+-- This is protection against ordinary application and backend mistakes. It is
+-- NOT cryptographic immutability, and nothing here should be described to an
+-- Admin, a student, or an auditor as if it were.
+--
+-- WHO CAN UPDATE A ROW, verified against this database on 2026-08-23 rather
+-- than assumed:
+--
+--   anon                  NO. No RLS policy and no privilege — blocked twice.
+--   authenticated         NO. No UPDATE policy and no UPDATE grant — blocked
+--                         twice, before any column is considered.
+--   service_role          NO — and this one is worth stating precisely, because
+--                         it is the role Edge Functions and admin-actions run
+--                         as, i.e. the realistic accident. It has BYPASSRLS, so
+--                         RLS does not stop it, but triggers fire for it like
+--                         any other role. It cannot disable the trigger: it is
+--                         NOT the table owner and NOT a member of postgres —
+--                         the membership runs the other way, postgres is a
+--                         member of service_role. It cannot use replica mode
+--                         either: session_replication_role has
+--                         context = 'superuser', service_role is not one, and
+--                         pg_parameter_acl is empty so no SET grant exists.
+--   postgres              YES, BUT ONLY DELIBERATELY. It runs migrations and
+--                         owns the table (51 public tables today), and an owner
+--                         may ALTER TABLE ... DISABLE TRIGGER or DROP TRIGGER.
+--                         The trigger cannot be a boundary against the role
+--                         that is allowed to remove it. Note postgres is NOT a
+--                         superuser here (rolsuper = false), so it cannot take
+--                         the replica-mode route — it has to issue explicit
+--                         DDL, which is visible and auditable.
+--   supabase_admin        YES. The platform superuser. Outside anything this
+--                         migration can constrain, by definition.
+--
+-- The practical reading: the trigger's job is to stop a backend script or an
+-- Edge Function from rewriting history by mistake, and it does that completely.
+-- Changing a recorded event requires a deliberate, privileged DDL act by a
+-- human with owner or superuser rights — which is exactly the "exceptional
+-- maintenance if explicitly authorised" case, and should leave a trail of its
+-- own outside this table.
+--
+-- ON HARDENING FURTHER, AND WHY THIS FILE DOES NOT:
+-- ALTER TABLE ... ENABLE ALWAYS TRIGGER would make the trigger fire even under
+-- session_replication_role = 'replica'. It is not included, because it would
+-- close a door only supabase_admin can open, and supabase_admin can equally
+-- drop the trigger. It would buy protection against an accidental replica-mode
+-- session and nothing more, so it is recorded here as an option rather than
+-- adopted as security theatre.
+--
+-- What this table DOES guarantee, and what actually matters for review:
+-- no student can alter their own record, no student can delete one, and no
+-- application code path can do either on their behalf.
 
 -- =====================================================================
 -- 7. THE LINKAGE COLUMN ON exam_practice_sessions (NULLABLE — see the header
