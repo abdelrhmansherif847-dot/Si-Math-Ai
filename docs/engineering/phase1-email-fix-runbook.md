@@ -641,3 +641,109 @@ bash scripts/mailer-restore.sh
 
 Step 2 sends **one** PATCH containing **one** key. The other three approved keys
 are not touched, and nothing else in the auth config is either.
+
+
+---
+
+## Step 3e — Single-key experiment RESULT, and what it does and does not prove
+
+**Result (owner-run):** `--only mailer_subjects_recovery` succeeded. The PATCH
+response and an independent no-cache GET both return the sent value.
+
+### What is now established
+
+- The endpoint works, the auth token has sufficient scope, and **this API does
+  store a `mailer_*` value it is sent.** "Supabase rejects mailer fields" is dead.
+- The tooling reports truthfully: two independent observations agreed, and the
+  same instrument reported disagreement correctly in the harness.
+
+### Current production state — a deliberate, live inconsistency
+
+`mailer_subjects_recovery` is now `Reset your Si Math AI password`, while the
+**recovery template body is still the stock default**. So a password-reset email
+would carry the new subject over the old body. Kept on purpose: it is the
+control state for the next comparison.
+
+Two reasons this is acceptable rather than sloppy, both worth checking rather
+than assuming: the mismatch is cosmetic, and the Resend log contains **no
+password-reset email ever sent** for this project, so the odds of a student
+meeting this state are low. It is still a live inconsistency and should not be
+left indefinitely.
+
+### The pattern in the failed batch — stated with its confound
+
+Recovered from `c04c011`, the object sent in the failed attempt was, in order:
+
+| # | Key | Stored? |
+|---|---|---|
+| 1 | `mailer_templates_confirmation_content` | ❌ |
+| 2 | `mailer_templates_recovery_content` | ❌ |
+| 3 | `mailer_subjects_confirmation` | ❌ |
+| 4 | `mailer_subjects_recovery` | ✅ |
+
+**The only key that stored was the last one in the object.** That is suggestive,
+and it is exactly the kind of pattern worth being careful about, because two
+explanations are **confounded** here — key 4 is simultaneously:
+
+- the **last** key in the object, and
+- the only **short, pure-ASCII subject** in the payload.
+
+The other short subject, `mailer_subjects_confirmation`, differs from it in one
+material way: it contains an em dash, `U+2014`. So "position/batching" and "the
+value itself" both predict the observed outcome, and this experiment cannot
+separate them. n = 1.
+
+Recorded so a later reader does not mistake the pattern for a conclusion.
+
+### The next experiment, and why it is the right one
+
+**`--only mailer_subjects_confirmation`.** One key, 51 bytes, fully reversible,
+and it breaks the confound: it is the same *kind* of field as the key that
+already succeeded, at the same size scale, differing essentially in the em dash —
+while also moving from position 3 to being the only key in the request.
+
+| Result | What it means | Next |
+|---|---|---|
+| **PASS** | Subjects write fine on their own. Position/batching is implicated; the em dash is exonerated. | Test one template solo |
+| **FAIL** | The value itself is rejected, independent of batching. The em dash is the prime suspect. | Retry the same key with an ASCII hyphen |
+
+If it FAILS, the immediate follow-up is the identical subject with a plain
+hyphen — `Confirm your email to start studying - Si Math AI` — which would settle
+the em dash conclusively. That is a copy change and needs approval before it is
+sent.
+
+### After that: the template test
+
+`--only mailer_templates_recovery_content` — a 3.4 KB field, the other dimension
+the failed batch varied. Together the two experiments partition the space:
+
+| Subject solo | Template solo | Conclusion |
+|---|---|---|
+| pass | pass | Both fine alone → **batching** was the cause |
+| fail | pass | The confirmation subject's **value** was the cause |
+| pass | fail | **Template fields** (size or HTML) were the cause |
+| fail | fail | Two independent causes |
+
+Whichever branch we land on, the four-key rollout is then either safe as one
+batch, or is performed one key at a time — which the tooling already supports and
+which costs nothing but four requests.
+
+### Command for the next step (needs approval before step 2)
+
+No code change is required; `--only` already validates against the four approved
+keys.
+
+```bash
+git pull origin claude/apple-signin-auth-wysnha
+export SUPABASE_ACCESS_TOKEN=...
+
+# read-only
+bash scripts/mailer-apply.sh --only mailer_subjects_confirmation --dry-run
+
+# single-key write — only with explicit approval
+bash scripts/mailer-apply.sh --only mailer_subjects_confirmation
+```
+
+**Do not roll back yet.** The current state is the control for the comparison,
+and `mailer-restore.sh` reverts every captured key at once, which would discard
+it.
