@@ -73,7 +73,59 @@ holds the old shape. The restore path gets a schema version and falls back to
 single-module behaviour for an unversioned blob, rather than throwing away a live
 attempt.
 
-### Phase 3 — Audio: one bus, two channels
+### Phase 3 — Audio ✅ COMPLETE (proctor announcements; ambient deferred)
+
+> Closed 2026-08-23 at `4c3b6c5`. Shipped: `exam-audio.js` plus a 42-line
+> integration in `mock-exam.html`, giving the announcement schedule P1 built its
+> first real consumer — it had **zero callers** until now.
+>
+> **What shipped, and what deliberately did not.** The design below proposed one
+> `AudioContext` with an announcement channel and a ducked ambient channel. On
+> review that was cut to what P3 actually needs: `speechSynthesis` directly, no
+> `AudioContext`, no prerecorded assets, no `.gitattributes` change. A context
+> would have bought gain nodes, ducking and buffer scheduling for a phase that
+> plays no buffers and has nothing to duck against. **Ambient audio is not
+> implemented** — the channel exists as an inert stub with no assets, no timers
+> and no controls, so a later phase has somewhere to land without reshaping the
+> bus.
+>
+> No new sounds were invented. The only audio is the registry's own announcement
+> marks, and the registry remains the sole owner of timing — `exam-audio.js`
+> contains no second-based constant and `mock-exam.html` defines no marks.
+>
+> Unlock happens in the **synchronous head** of the Start handler, which the
+> investigation showed is the only viable point: that handler is `async` and runs
+> eight awaited round-trips before the exam begins, so the gesture is long dead
+> by the time the exam starts. A running restore shows no dialog, has no gesture,
+> and therefore **stays silent by decision** — audio is an enhancement and must
+> never gate an attempt.
+
+### AUDIO PREFERENCE UI — a separate future enhancement, NOT unfinished P3
+
+**P3 is complete. This is not a remnant of it.**
+
+`exam-audio.js` honours `localStorage['simath_exam_announcements'] = 'off'` and
+falls fully silent when it is set. **Nothing currently writes that key**, and
+announcements therefore **default ON**.
+
+That was a deliberate scope decision, not an oversight: adding the control means
+opening `settings.html`, which would turn an audio-bus phase into a settings/UI
+phase and blur a boundary this roadmap has kept clean throughout. The capability
+is built and the integration point is stable, so the control is a small addition
+*on top of a finished bus* rather than a change *to* it.
+
+**The consequence, stated plainly so it is a known state rather than a
+discovery:** until that enhancement ships, a student who does not want spoken
+announcements during their exam has no way to turn them off. That is acceptable
+for a proctor-realism feature that is on by default by design, but it should not
+sit unaddressed indefinitely.
+
+Scope when it is taken up: a toggle in `settings.html` writing that one key.
+Nothing in `exam-audio.js` or `mock-exam.html` needs to change.
+
+---
+
+### Phase 3 (original design, superseded above) — Audio: one bus, two channels
 
 ```
 exam-audio.js — one AudioContext, unlocked by the single Start Exam gesture

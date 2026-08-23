@@ -35,9 +35,19 @@
 (function (root) {
   'use strict';
 
-  // Student preference. Announcements default ON because realistic simulation is
-  // the point of the feature; the key is honoured if something sets it, and P3
-  // ships no UI that does (see the P3 report's open items).
+  // Student preference — a STABLE INTEGRATION POINT, not an unfinished edge.
+  //
+  // Set this to 'off' and every announcement falls silent. Nothing in the
+  // product writes it today, so announcements default ON, and that is a recorded
+  // decision rather than an omission: the control belongs in settings.html, and
+  // opening settings.html would have turned an audio-bus phase into a settings
+  // phase. See "AUDIO PREFERENCE UI" in
+  // docs/roadmap/mock-exam-v2-implementation-plan.md — it is a separate
+  // enhancement on top of a finished bus, and when it is built NOTHING in this
+  // file needs to change.
+  //
+  // Known consequence in the meantime: a student who does not want spoken
+  // announcements cannot turn them off.
   var PREF_KEY = 'simath_exam_announcements';
 
   // ── The words ──────────────────────────────────────────────────────────────
