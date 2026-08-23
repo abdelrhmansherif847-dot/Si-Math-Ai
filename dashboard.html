@@ -1589,8 +1589,16 @@ var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 var CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
-async function deviceGuard(sb, userId) {
-  var{data:_ap}=await sb.from('profiles').select('is_admin').eq('id',userId).single();
+// `profileP` is the shared profiles.select('*') promise started by the caller.
+// The guard used to run its own select('is_admin'), which meant the dashboard
+// fetched the same row twice — once here and once in the Promise.all below
+// (observed 2026-08-23 as ?select=is_admin followed by ?select=*). '*' is a
+// superset, so one fetch serves both and the guard no longer adds a round trip
+// of its own. Authorization is unchanged: the same is_admin value, read from the
+// same row, still short-circuits the guard.
+async function deviceGuard(sb, userId, profileP) {
+  var _apRes = await profileP;
+  var _ap = _apRes && _apRes.data;
   if(_ap&&_ap.is_admin)return true;
   function _d2(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(16).padStart(8,'0');}
   var tz=(typeof Intl!=='undefined')?(Intl.DateTimeFormat().resolvedOptions().timeZone||''):'';
@@ -1615,7 +1623,20 @@ async function loadDashboard() {
   var authRes = await sb.auth.getUser();
   var user = authRes.data && authRes.data.user;
   if (!user) { window.location.href = 'login.html'; return; }
-  if (!(await deviceGuard(sb, user.id))) return;
+  // Started before the guard so the row is already in flight while the device
+  // lookups run, and reused by the Promise.all below — one fetch, not two.
+  // Promise.resolve() is required for correctness here, not just speed. A
+  // supabase-js builder is a lazy thenable that fires its request inside
+  // .then(), so awaiting the same builder twice — once in deviceGuard, once in
+  // the Promise.all below — would send the query TWICE and reinstate the
+  // duplicate fetch this change removes. Resolving it once produces a real
+  // promise that both consumers share.
+  var profileP = Promise.resolve(sb.from('profiles').select('*').eq('id', user.id).single());
+  // A rejected promise nobody has awaited yet is an unhandled rejection in some
+  // browsers; the guard and the Promise.all both consume it, but attach a no-op
+  // catch so a transient failure cannot surface as a console error before then.
+  profileP.catch(function(){});
+  if (!(await deviceGuard(sb, user.id, profileP))) return;
 
   /* Pick the first alphanumeric initial — robust against leading
      whitespace or non-letter characters in a profile name. We do NOT
@@ -1655,7 +1676,7 @@ async function loadDashboard() {
   var needHeatmapFallback = !(streakRes && Array.isArray(streakRes.active_days) && !streakRes.skipped);
 
   var results = await Promise.all([
-    sb.from('profiles').select('*').eq('id', user.id).single(),
+    profileP,
     sb.from('exam_practice_sessions').select('score,created_at,exam_type').eq('user_id', user.id).order('created_at', {ascending:false}).limit(50),
     sb.from('weakness_reports').select('topic,subtopic,priority_rank,weakness_score,mastery_score,last_signal_at,recent7_count').eq('user_id', user.id).order('priority_rank', {ascending:true}).limit(50),
     sb.from('achievements').select('achievement_key,earned_at').eq('user_id', user.id).order('earned_at', {ascending:false}).limit(6),

@@ -507,7 +507,39 @@ button{font-family:inherit;cursor:pointer}
 
   async function routeAfterAuth(userId, user) {
     try {
-      var{data:profile}=await supabaseClient.from('profiles').select('onboarding_completed,plan_code').eq('id',userId).single();
+      // The profile read and the device lookup are independent, so they go out
+      // together instead of one after the other. Measured on a real login
+      // (2026-08-23 04:20:22): profiles took 598ms and the device lookups 404ms
+      // back to back. Only the READ is parallelised — every write below still
+      // happens after the relay guard has had its say, so an early return
+      // cannot leave a device registered for an account we are about to sign
+      // out of.
+      var fp=buildFingerprint();
+      // One query instead of four. The chain used to probe the current
+      // fingerprint and then each legacy formula in turn, four sequential round
+      // trips costing ~400ms. They are all lookups on the same table for the
+      // same user, so `.in()` fetches them together and priority is applied
+      // locally — identical outcome, one trip.
+      var fpCurrent=fp;
+      var migFps=[buildFingerprintV2(),buildFingerprintV2Swapped(),buildFingerprintLegacy()];
+      // Order matters and must be preserved: current, then v2, then v2 swapped
+      // (the iPad orientation fix), then legacy. De-duplicated because the
+      // formulas coincide on some devices, and a repeated value in `.in()` is
+      // wasted breadth.
+      var fpChain=[fpCurrent].concat(migFps).filter(function(v,i,a){return a.indexOf(v)===i;});
+
+      // Promise.resolve() is load-bearing, not decoration. A supabase-js query
+      // builder is a LAZY thenable: PostgrestBuilder fires the request inside
+      // .then(), not when the builder is constructed. Assigning one to a
+      // variable sends nothing, so `var a=..., b=...; await a; await b;` is
+      // still two sequential round trips — exactly the thing this change exists
+      // to remove. Promise.resolve() calls .then() immediately, which starts
+      // both requests here and lets them overlap. It is also harmless if a
+      // future SDK makes builders eager.
+      var _profileP=Promise.resolve(supabaseClient.from('profiles').select('onboarding_completed,plan_code').eq('id',userId).single());
+      var _devicesP=Promise.resolve(supabaseClient.from('user_devices').select('id,device_fingerprint').eq('user_id',userId).in('device_fingerprint',fpChain).eq('is_active',true));
+
+      var{data:profile}=await _profileP;
 
       // Apple's Hide My Email produces an address that matches no existing
       // account, so Supabase creates a new user rather than linking. Ask before
@@ -519,17 +551,17 @@ button{font-family:inherit;cursor:pointer}
         return;
       }
 
-      var fp=buildFingerprint();
       var now=new Date().toISOString();
-      var{data:existingDev}=await supabaseClient.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',fp).eq('is_active',true).maybeSingle();
+      var{data:devRows}=await _devicesP;
+      var byFp={};
+      (devRows||[]).forEach(function(r){ if(!byFp[r.device_fingerprint]) byFp[r.device_fingerprint]=r; });
+      var existingDev=byFp[fpCurrent]||null;
       if(existingDev){
         await supabaseClient.from('user_devices').update({last_seen:now,last_active:now}).eq('id',existingDev.id);
       } else {
-        // Migration chain: v2 current orientation → v2 swapped orientation (iPad fix) → legacy (with platform)
-        var migFps=[buildFingerprintV2(),buildFingerprintV2Swapped(),buildFingerprintLegacy()];
         var migrated=false;
         for(var _mi=0;_mi<migFps.length;_mi++){
-          var{data:migDev}=await supabaseClient.from('user_devices').select('id').eq('user_id',userId).eq('device_fingerprint',migFps[_mi]).eq('is_active',true).maybeSingle();
+          var migDev=byFp[migFps[_mi]];
           if(migDev){
             await supabaseClient.from('user_devices').update({device_fingerprint:fp,last_seen:now,last_active:now}).eq('id',migDev.id);
             migrated=true; break;
