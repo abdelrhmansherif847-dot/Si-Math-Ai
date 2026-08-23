@@ -147,7 +147,7 @@ student impact during exam-prep windows.
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **87 files** in `supabase/migrations/`, **148 applied** in the database (Mock Exam v2 M1 `exam_integrity_events` applied 2026-08-23 as version `20260823043358`) |
 | Static site | 46 root `*.html` pages on Vercel |
-| CI | `node tests/run-all.mjs` — **48 checks** |
+| CI | `node tests/run-all.mjs` — **49 checks** |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;

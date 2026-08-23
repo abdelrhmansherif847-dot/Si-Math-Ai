@@ -422,8 +422,20 @@ const s = {
   timerTotal: 0,
   timerRunning: false,
   timerInterval: null,
-  startedAt: null,
+  // P2: TWO timestamps, deliberately distinct.
+  //   examStartedAt  — the sitting. Stamped ONCE, at module 1's start, and it
+  //                    is this that becomes exam_practice_sessions.started_at.
+  //   moduleStartedAt — the block currently running. Re-stamped at each module
+  //                    start, and null while the transition screen is showing,
+  //                    because module 2 has not begun until the student says so.
+  examStartedAt: null,
+  moduleStartedAt: null,
   endedAt: null,
+  // P2: the frozen shape of this sitting — [{ordinal,label,questions,durationSec}].
+  // One entry for every exam except SAT_FULL, which is what keeps every other
+  // exam on precisely the code path it used before P2.
+  modulePlan: null,
+  moduleOrdinal: 1,
   score: '', correct: '', wrong: '', omitted: '',
   mistakeRows: [],
   sessionId: null,
@@ -511,13 +523,20 @@ function stopHeartbeat() {
 // (number|null). Old rows missing these fields default to running + no pause.
 
 function saveTimerState() {
-  if (s.view !== 'TIMER' || !s.exam) return;
+  // P2: TRANSITION must persist too. Without this a refresh on the boundary
+  // screen loses the whole sitting — the single likeliest bug in this phase.
+  if ((s.view !== 'TIMER' && s.view !== 'TRANSITION') || !s.exam) return;
   try {
     localStorage.setItem(TIMER_KEY, JSON.stringify({
+      v:                 2,
+      modulePlan:        s.modulePlan,
+      moduleOrdinal:     s.moduleOrdinal,
+      moduleStartedAt:   s.moduleStartedAt,
+      phase:             s.view === 'TRANSITION' ? 'TRANSITION' : 'MODULE',
       examCode:          s.exam.code,
       timerTotal:        s.timerTotal,
       timerSec:          s.timerSec,
-      startedAt:         s.startedAt,
+      startedAt:         s.examStartedAt,
       practiceQuestions: s.practiceQuestions,
       savedAt:           Date.now(),
       timerRunning:      s.timerRunning,    // ME-P3a
@@ -543,8 +562,27 @@ function restoreTimerState() {
 
     s.exam              = cfg;
     s.timerTotal        = saved.timerTotal;
-    s.startedAt         = saved.startedAt;
+    s.examStartedAt     = saved.startedAt;
     s.practiceQuestions = saved.practiceQuestions || 0;
+
+    // P2: recover the plan. A pre-P2 blob has no `v` and gets a one-block plan
+    // built from its own timerTotal, so a student already sitting the old
+    // 70-minute Full SAT finishes the exam they started rather than being
+    // teleported into a module structure that did not exist at the time.
+    var _R = window.SiExamRegistry.restoreModulePlan(saved, cfg);
+    s.modulePlan      = _R.plan;
+    s.moduleOrdinal   = _R.ordinal;
+    s.moduleStartedAt = saved.moduleStartedAt || null;
+
+    if (_R.phase === 'TRANSITION') {
+      // No clock runs on the boundary screen: nothing to drift, nothing to
+      // expire. Restore exactly where the student was — never auto-start the
+      // next module, never fall back to the previous one, never end the exam.
+      s.timerRunning = false;
+      s.pausedAt     = null;
+      s.view         = 'TRANSITION';
+      return 'transition';
+    }
 
     // P3a: honour the persisted pause flag (default: running for legacy rows).
     const wasRunning = saved.timerRunning !== false;
@@ -567,7 +605,9 @@ function restoreTimerState() {
 }
 
 // ─── STEP INDICATOR ──────────────────────────────────────────────────────────
-const VIEW_STEP = { SELECT: 0, TIMER: 1, RESULTS: 2, MISTAKES: 3, SAVING: 4, SUCCESS: 4 };
+// TRANSITION shares TIMER's step so the progress dots do not jump backwards
+// at a module boundary — the student is still sitting the exam.
+const VIEW_STEP = { SELECT: 0, TIMER: 1, TRANSITION: 1, RESULTS: 2, MISTAKES: 3, SAVING: 4, SUCCESS: 4 };
 
 function updateSteps() {
   const idx = VIEW_STEP[s.view] ?? 0;
@@ -586,11 +626,15 @@ function render() {
   clearInterval(s.timerInterval);
   // ME-P3b: stop heartbeat on every render; afterTimer() re-starts it when
   // the TIMER view is entered. This prevents interval leaks across view changes.
-  if (s.view !== 'TIMER') stopHeartbeat();
+  // P2: TRANSITION keeps the heartbeat. Ownership of the sitting must survive
+  // the module boundary, or a sibling tab could claim it during the 15s stale
+  // window while the student is reading the transition screen.
+  if (s.view !== 'TIMER' && s.view !== 'TRANSITION') stopHeartbeat();
   const pc = document.getElementById('pageContent');
   switch (s.view) {
     case 'SELECT':   pc.innerHTML = htmlSelect();   afterSelect();   break;
     case 'TIMER':    pc.innerHTML = htmlTimer();    afterTimer();    break;
+    case 'TRANSITION': pc.innerHTML = htmlTransition(); afterTransition(); break;
     case 'RESULTS':  pc.innerHTML = htmlResults();  afterResults();  break;
     case 'MISTAKES': pc.innerHTML = htmlMistakes(); afterMistakes(); break;
     case 'SAVING':   pc.innerHTML = htmlSaving();                    break;
@@ -786,12 +830,19 @@ function afterSelect() {
       }
     } catch(_) {}
 
-    s.timerTotal = s.exam.code === 'PRACTICE'
-      ? Math.ceil(s.practiceQuestions * 1.5) * 60
-      : s.exam.duration * 60;
-    s.timerSec = s.timerTotal;
-    s.timerRunning = true;
-    s.startedAt = new Date().toISOString();
+    // P2: the sitting's shape is frozen here. For every exam but SAT_FULL this
+    // is a one-entry plan whose durationSec equals what s.timerTotal was set to
+    // before P2 — PRACTICE included, since practiceDurationMinutes() is the same
+    // Math.ceil(q * 1.5) this line used to compute inline.
+    const _plan = window.SiExamRegistry.buildModulePlan(s.exam.code, s.practiceQuestions);
+    s.modulePlan    = _plan;
+    s.moduleOrdinal = _plan[0].ordinal;
+    s.timerTotal    = _plan[0].durationSec;
+    s.timerSec      = s.timerTotal;
+    s.timerRunning  = true;
+    const _nowIso     = new Date().toISOString();
+    s.examStartedAt   = _nowIso;   // once, for the whole sitting
+    s.moduleStartedAt = _nowIso;   // module 1 begins now
     s.view = 'TIMER';
     render();
   });
@@ -837,13 +888,19 @@ function htmlTimer() {
     : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
   const totalMin = Math.round(s.timerTotal / 60);
-  const qCount = s.exam.code === 'PRACTICE' ? s.practiceQuestions : s.exam.questions;
+  // P2: question count and progress are MODULE-scoped. Showing 44 while a
+  // 22-question module runs would be actively misleading about pacing.
+  const _plan  = s.modulePlan || [];
+  const _mod   = window.SiExamRegistry.moduleAt(_plan, s.moduleOrdinal);
+  const _prog  = _plan.length > 1 ? `Module ${s.moduleOrdinal} of ${_plan.length}` : '';
+  const qCount = _mod ? _mod.questions
+                      : (s.exam.code === 'PRACTICE' ? s.practiceQuestions : s.exam.questions);
 
   return `
   <div class="timer-wrapper">
     <div class="timer-card ${cls}" id="timerCard">
       <div class="timer-exam-label">${s.exam.displayName}</div>
-      <div class="timer-exam-org">${s.exam.org}</div>
+      <div class="timer-exam-org">${_prog ? esc(_prog) + ' · ' : ''}${s.exam.org}</div>
       <div class="timer-display" id="timerDisplay">${fmtSec(s.timerSec)}</div>
       <div class="timer-info-row">
         <div class="timer-info-item">
@@ -872,11 +929,47 @@ function htmlTimer() {
         </button>
         <button class="btn-end" id="btnEnd">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          End Exam
+          ${window.SiExamRegistry.isLastModule(s.modulePlan || [], s.moduleOrdinal) ? 'End Exam' : 'End Module'}
         </button>
       </div>
     </div>
   </div>`;
+}
+
+// P2 — THE ONE PLACE that decides whether a stopped clock ends the MODULE or
+// ends the EXAM. Before P2 those five terminal side effects (stop heartbeat,
+// release tab ownership, clear persisted state, stamp endedAt, go to RESULTS)
+// were inlined at both exit points and were unconditionally correct, because
+// there was only ever one block. Now they are correct only for the last one:
+// firing them at a module boundary would let a sibling tab claim the sitting,
+// lose the exam on a refresh, and record a finish time 35 minutes early.
+function finishCurrentModule(afterMs) {
+  const _plan = s.modulePlan || [];
+  const _last = window.SiExamRegistry.isLastModule(_plan, s.moduleOrdinal);
+
+  s.timerRunning = false;
+  s.pausedAt     = null;
+  clearInterval(s.timerInterval);
+
+  const _go = (fn) => { if (afterMs) setTimeout(fn, afterMs); else fn(); };
+
+  if (_last) {
+    // EXAM over. All five terminal effects, together, only here.
+    stopHeartbeat();
+    releaseActiveTab();
+    clearTimerState();
+    s.endedAt = new Date().toISOString();
+    _go(() => { s.view = 'RESULTS'; render(); });
+    return;
+  }
+
+  // MODULE over. Ownership kept, persisted state kept, endedAt NOT stamped —
+  // the sitting is still running. moduleStartedAt is cleared because the next
+  // module has not begun: it begins when the student presses Begin.
+  s.moduleStartedAt = null;
+  s.view = 'TRANSITION';
+  saveTimerState();
+  _go(() => render());
 }
 
 function tickTimer() {
@@ -884,14 +977,8 @@ function tickTimer() {
   s.timerSec--;
   if (s.timerSec <= 0) {
     s.timerSec = 0;
-    s.timerRunning = false;
-    s.pausedAt = null;
-    clearInterval(s.timerInterval);
-    stopHeartbeat();              // ME-P3b
-    releaseActiveTab();           // ME-P3b
-    clearTimerState();
     updateTimerDOM();
-    setTimeout(() => { s.endedAt = new Date().toISOString(); s.view = 'RESULTS'; render(); }, 900);
+    finishCurrentModule(900);     // P2: routes to TRANSITION or RESULTS
     return;
   }
   saveTimerState();
@@ -951,13 +1038,77 @@ function afterTimer() {
   });
 
   document.getElementById('btnEnd')?.addEventListener('click', () => {
-    clearInterval(s.timerInterval);
-    stopHeartbeat();
-    releaseActiveTab();           // ME-P3b: relinquish tab ownership on intentional end
-    s.timerRunning = false;
-    s.pausedAt = null;
-    s.endedAt = new Date().toISOString();
-    s.view = 'RESULTS';
+    finishCurrentModule(0);       // P2: same routing as expiry
+  });
+}
+
+// ─── TRANSITION (P2) ─────────────────────────────────────────────────────────
+// The boundary between two separately-timed modules.
+//
+// Deliberately NOT called a break. The Digital SAT's 10-minute break sits
+// between Reading/Writing and Math; the two Math modules advance directly. A
+// screen labelled "break" would teach an exam structure that does not exist.
+//
+// Shows TIMING ONLY — no score, no answers, no evaluation of any kind. The
+// platform does not know how the student did, and implying otherwise here would
+// be inventing feedback.
+function htmlTransition() {
+  const plan  = s.modulePlan || [];
+  const done  = window.SiExamRegistry.moduleAt(plan, s.moduleOrdinal);
+  const next  = window.SiExamRegistry.nextModule(plan, s.moduleOrdinal);
+  const doneLabel = done ? done.label : 'This module';
+  const nextLabel = next ? next.label : 'the next module';
+  const nextMin   = next ? Math.round(next.durationSec / 60) : 0;
+  const nextQ     = next ? next.questions : null;
+
+  // Remaining time is the honest figure: it is what the clock actually held.
+  const timingLine = s.timerSec > 0
+    ? `${esc(doneLabel)} finished with <b style="color:var(--text-100)">${fmtSec(s.timerSec)}</b> remaining.`
+    : `${esc(doneLabel)} used its full <b style="color:var(--text-100)">${Math.round((done ? done.durationSec : 0) / 60)} minutes</b>.`;
+
+  return `
+  <div class="saving-center">
+    <div style="font-size:42px">📘</div>
+    <div class="saving-title">${esc(doneLabel)} Complete</div>
+    <div class="saving-sub">
+      ${timingLine}<br>
+      Take a moment to prepare. This screen is not timed and does not use any of
+      ${esc(nextLabel)}'s ${nextMin} minutes.
+    </div>
+    <div style="margin:22px 0 6px">
+      <span class="calc-badge">${esc(nextLabel)}${nextQ ? ' · ' + nextQ + ' questions' : ''} · ${nextMin} min</span>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:14px">
+      <button class="cta-primary" id="btnBeginModule">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Begin ${esc(nextLabel)}
+      </button>
+    </div>
+  </div>`;
+}
+
+function afterTransition() {
+  // Ownership must persist across the boundary, so the heartbeat keeps running
+  // here exactly as it does during a module.
+  if (!s.tabId) s.tabId = makeTabId();
+  startHeartbeat();
+
+  document.getElementById('btnBeginModule')?.addEventListener('click', () => {
+    const next = window.SiExamRegistry.nextModule(s.modulePlan || [], s.moduleOrdinal);
+    if (!next) { finishCurrentModule(0); return; }   // defensive: no next => end
+
+    // The clock comes from the registry, not from whatever is left on screen.
+    // Routing it through moduleStartState() is what makes "no leakage" a rule a
+    // test can hold rather than a line someone could quietly edit.
+    const _st = window.SiExamRegistry.moduleStartState(s.modulePlan || [], next.ordinal);
+    s.moduleOrdinal   = _st.moduleOrdinal;
+    s.timerTotal      = _st.timerTotal;
+    s.timerSec        = _st.timerSec;
+    s.timerRunning    = true;
+    s.pausedAt        = null;
+    s.moduleStartedAt = new Date().toISOString();   // module timing starts HERE
+    s.view = 'TIMER';
+    saveTimerState();
     render();
   });
 }
@@ -1246,8 +1397,13 @@ async function doSave() {
         correct_answers: s.correct ? parseInt(s.correct) : null,
         wrong_answers: s.wrong ? parseInt(s.wrong) : null,
         omitted_answers: s.omitted ? parseInt(s.omitted) : null,
-        duration_minutes: Math.round(s.timerTotal / 60),
-        started_at: s.startedAt,
+        // P2 — REQUIRED CORRECTNESS FIX. s.timerTotal now means "the current
+        // module", so a completed SAT_FULL would have written 35 here instead
+        // of 70. The registry total is the sitting's real length; PRACTICE is
+        // dynamic so the registry returns null and the old expression stands.
+        duration_minutes: window.SiExamRegistry.totalDurationMinutes(s.exam.code)
+                          ?? Math.round(s.timerTotal / 60),
+        started_at: s.examStartedAt,
         ended_at: s.endedAt || new Date().toISOString(),
         idempotency_key: idempotencyKey
       })
@@ -1505,7 +1661,8 @@ function afterSuccess() {
     clearInterval(s.timerInterval);
     Object.assign(s, {
       view: 'SELECT', exam: null, timerSec: 0, timerTotal: 0,
-      timerRunning: false, timerInterval: null, startedAt: null, endedAt: null,
+      timerRunning: false, timerInterval: null, endedAt: null,
+      examStartedAt: null, moduleStartedAt: null, modulePlan: null, moduleOrdinal: 1,
       score: '', correct: '', wrong: '', omitted: '',
       mistakeRows: [], sessionId: null, successData: null
     });
@@ -1586,6 +1743,15 @@ document.getElementById('overlay')?.addEventListener('click', () => {
 
 // Completes the restore after any ownership checks have passed.
 function _finishRestore(restored) {
+  // P2: a sitting paused at a module boundary comes back to that boundary —
+  // never auto-started into the next module, never rewound into the previous
+  // one, and never ended just because the page reloaded.
+  if (restored === 'transition') {
+    s.view = 'TRANSITION';
+    render();
+    return;
+  }
+
   if (restored === 'paused') {
     // P3a: show pause-restore confirmation dialog.
     const mins   = Math.floor(s.timerSec / 60);

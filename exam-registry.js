@@ -491,6 +491,142 @@
     return COMPAT;
   }
 
+
+  // ── Module plans — the state machine's decisions, as pure functions ────────
+  //
+  // P2 puts these here rather than in mock-exam.html for the same reason P1 put
+  // the exam table here: a pure function is testable without a DOM, a localStorage
+  // or a running timer. mock-exam.html is left holding wiring only.
+  //
+  // A PLAN is the frozen shape of one sitting: what blocks run, in what order,
+  // each with its own clock. Every exam has one, including single-block exams —
+  // a one-entry plan is what keeps every non-DSAT exam on exactly the code path
+  // it uses today.
+
+  /**
+   * The plan for one sitting of `code`.
+   *
+   * Fixed exams read their modules from the table above. A dynamic exam
+   * (Practice Timer) has no modules until the student says how many questions,
+   * so its single block is built from that.
+   *
+   * Returns [] for an unknown code — never null, so callers can `.length` it.
+   */
+  function buildModulePlan(code, practiceQuestions) {
+    var e = get(code);
+    if (!e) return [];
+
+    if (e.modules === null) {
+      var q = Math.max(0, parseInt(practiceQuestions, 10) || 0);
+      return [{
+        ordinal: 1,
+        label: e.shortName,
+        questions: q || null,
+        durationSec: practiceDurationMinutes(q) * 60,
+      }];
+    }
+
+    return e.modules.map(function (m) {
+      return {
+        ordinal: m.ordinal,
+        label: m.label,
+        questions: m.questions,
+        durationSec: m.durationMinutes * 60,
+      };
+    });
+  }
+
+  /** One block of a plan, or null. */
+  function moduleAt(plan, ordinal) {
+    if (!plan || !plan.length) return null;
+    for (var i = 0; i < plan.length; i++) if (plan[i].ordinal === ordinal) return plan[i];
+    return null;
+  }
+
+  /**
+   * Is this the last block?
+   *
+   * The single most consequential question in the timer: a true answer ends the
+   * EXAM (stamp endedAt, clear persisted state, release tab ownership), a false
+   * one ends only a MODULE (keep all three). Unknown ordinals answer `true`,
+   * so a corrupted plan ends the exam rather than stranding a student in a
+   * transition they can never leave.
+   */
+  function isLastModule(plan, ordinal) {
+    if (!plan || !plan.length) return true;
+    var last = plan[plan.length - 1];
+    return ordinal >= last.ordinal;
+  }
+
+  /** The block after `ordinal`, or null when there is none. */
+  function nextModule(plan, ordinal) {
+    if (isLastModule(plan, ordinal)) return null;
+    for (var i = 0; i < plan.length; i++) if (plan[i].ordinal > ordinal) return plan[i];
+    return null;
+  }
+
+  /**
+   * The clock a module starts with.
+   *
+   * ALWAYS that module's own full duration — never whatever the previous block
+   * had left on it. That "never" IS the no-leakage rule: on test day, finishing
+   * module 1 early buys you nothing in module 2.
+   *
+   * It lives here as a function rather than as a line inside a click handler so
+   * a test can hold it directly. A handler that needs a DOM cannot be unit
+   * tested, and a test that re-implements what the handler does would pass while
+   * the handler leaked — which is the exact failure this repository's
+   * tests/_source.mjs warns about.
+   */
+  function moduleStartState(plan, ordinal) {
+    var m = moduleAt(plan, ordinal);
+    if (!m) return null;
+    return { moduleOrdinal: m.ordinal, timerTotal: m.durationSec, timerSec: m.durationSec };
+  }
+
+  /**
+   * Recover {plan, ordinal, phase} from a persisted timer blob.
+   *
+   * THE LEGACY RULE: a blob written before P2 has no `v` and no plan. It is
+   * given a ONE-BLOCK plan built from its own recorded timerTotal, so a student
+   * who began a 70-minute Full SAT before this shipped finishes the 70-minute
+   * exam they started. They are never teleported mid-sitting into a two-module
+   * structure that did not exist when they began.
+   *
+   * `phase` is 'MODULE' or 'TRANSITION'. Anything unrecognised resolves to
+   * 'MODULE': the failure mode of guessing wrong there is a student sent back to
+   * a running clock, which is recoverable, rather than parked on a transition
+   * screen for an exam that has already finished, which is not.
+   */
+  function restoreModulePlan(saved, cfg) {
+    var legacy = {
+      plan: [{
+        ordinal: 1,
+        label: (cfg && cfg.shortName) || 'Exam',
+        questions: (cfg && cfg.questions) || null,
+        durationSec: (saved && saved.timerTotal) || 0,
+      }],
+      ordinal: 1,
+      phase: 'MODULE',
+      legacy: true,
+    };
+    if (!saved || saved.v !== 2) return legacy;
+    if (!Array.isArray(saved.modulePlan) || saved.modulePlan.length === 0) return legacy;
+
+    var ordinal = parseInt(saved.moduleOrdinal, 10);
+    if (!(ordinal > 0)) ordinal = saved.modulePlan[0].ordinal;
+    // An ordinal naming no block in the plan cannot be honoured; fall back to
+    // the first rather than leaving the timer pointing at nothing.
+    if (!moduleAt(saved.modulePlan, ordinal)) ordinal = saved.modulePlan[0].ordinal;
+
+    return {
+      plan: saved.modulePlan,
+      ordinal: ordinal,
+      phase: saved.phase === 'TRANSITION' ? 'TRANSITION' : 'MODULE',
+      legacy: false,
+    };
+  }
+
   root.SiExamRegistry = {
     EXAMS: EXAMS,
     EXAM_CODES: EXAMS.map(function (e) { return e.code; }),
@@ -512,6 +648,13 @@
 
     calculatorPolicy: calculatorPolicy,
     hasRenderableCalculator: hasRenderableCalculator,
+
+    buildModulePlan: buildModulePlan,
+    moduleAt: moduleAt,
+    isLastModule: isLastModule,
+    nextModule: nextModule,
+    moduleStartState: moduleStartState,
+    restoreModulePlan: restoreModulePlan,
 
     compat: compat,
   };
