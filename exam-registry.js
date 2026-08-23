@@ -1,0 +1,518 @@
+// Exam Registry — the single source of truth for what a mock exam IS.
+//
+// Mock Exam v2, Phase 1a. See docs/roadmap/mock-exam-v2-implementation-plan.md.
+//
+// WHY THIS FILE EXISTS
+// --------------------
+// Every exam configuration lived as one object literal inside mock-exam.html, a
+// ~101 KB page that was frozen. Adding an exam, correcting a name, or teaching
+// the timer about DSAT's two modules all meant editing that file. The numbers in
+// it were right; the place they lived was not.
+//
+// Moving them here buys three things the literal could not:
+//
+//   1. Exams become DATA. A new exam is a new entry, not a code change.
+//   2. Totals are DERIVED. `duration` and `questions` are computed from the
+//      module list, so a two-module exam cannot claim a total that disagrees
+//      with its parts — a whole class of drift that simply cannot occur now.
+//   3. Policies get room to be honest. `calculator: true` could not express
+//      "permitted, but only in part 2, and you bring your own device". The
+//      calculator descriptor can.
+//
+// PHASE 1a CONTRACT: NOTHING CONSUMES THIS YET.
+// mock-exam.html is untouched in this phase. `compat()` exists so that when it
+// IS wired up (Phase 1b), the diff in that file is: delete one object literal,
+// add one script tag. tests/exam-registry.test.mjs reads the real literal out of
+// mock-exam.html and asserts compat() reproduces it field-for-field, with the
+// one approved exception recorded below. That test is what makes the swap safe.
+//
+// THE ONE APPROVED DIFFERENCE FROM TODAY'S PRODUCTION VALUES
+// ----------------------------------------------------------
+// EST was labelled "Emirates Standardized Test". EST is the *Egyptian Scholastic
+// Test* — the SAT/ACT-equivalent used for admission to Egyptian universities,
+// which is what Si Math AI's students actually sit. The old string was shown to
+// students on the exam card. Corrected here, once, at the source.
+//
+// NOT A BUILD ARTEFACT. Authored by hand; no generator, no sync step. Unlike
+// taxonomy.js there is no second copy to drift from.
+(function (root) {
+  'use strict';
+
+  // ── Calculator policy vocabulary ───────────────────────────────────────────
+  //
+  // `allowed`  — may a calculator be used at all.
+  // `scope`    — 'exam'    permitted throughout
+  //              'partial' permitted for part of the exam only (see `note`)
+  //              'none'    not permitted
+  // `byod`     — true when test day has NO on-screen calculator and the student
+  //              brings their own approved device. This is the distinction a
+  //              boolean could not carry: "a calculator is allowed" and "we
+  //              should show you one" are different claims.
+  // `provider` — which calculator Si Math AI itself renders. **null is a valid,
+  //              supported state and the current state of every exam.** Desmos
+  //              is separately licensed and MUST NOT be embedded, iframed,
+  //              framed or mirrored without a written agreement, and no other
+  //              calculator may be presented as a Desmos or DSAT equivalent.
+  //              Phase 4 builds the socket; it registers no providers.
+  // `note`     — factual, student-facing-ready description of the real test-day
+  //              experience. Honesty is the product requirement here: a student
+  //              practising against the wrong calculator builds wrong habits.
+  var CALC_SCOPES = ['exam', 'partial', 'none'];
+
+  // ── Ambience default ───────────────────────────────────────────────────────
+  // OFF. Ambient exam-hall sound is opt-in through an explicitly chosen
+  // "Realistic Exam Environment", never a default imposed on every student.
+  // Background noise during a timed high-stakes task is actively harmful for
+  // students with ADHD, autism, sensory or auditory processing differences, and
+  // it competes directly with screen-reader speech. Encoded as data so the
+  // decision cannot be quietly reversed by a UI edit.
+  var DEFAULT_AMBIENCE_ENABLED = false;
+
+  // Below this, a halfway announcement is noise rather than information — on a
+  // 6-minute practice block "three minutes remaining" already says it.
+  var HALFWAY_MIN_SEC = 600;
+
+  // ── The exams ──────────────────────────────────────────────────────────────
+  //
+  // `modules` is always an array for a fixed-length exam, even when there is
+  // only one. A single shape means the timer state machine never branches on
+  // "is this the modular one" — it walks a list of length 1 or 2.
+  //
+  // `modules: null` marks a DYNAMIC exam whose length comes from student input
+  // at start time (Practice Timer: questions × 1.5 min). Totals are unknowable
+  // until then, which is exactly why production reports them as null.
+  var EXAMS = [
+    {
+      code: 'SAT_MODULE_1',
+      examType: 'SAT',
+      displayName: 'SAT Math — Module 1',
+      shortName: 'Module 1',
+      org: 'College Board · Digital SAT',
+      scoreMin: 200,
+      scoreMax: 800,
+      modules: [
+        { ordinal: 1, label: 'Module 1', questions: 22, durationMinutes: 35 },
+      ],
+      calculator: {
+        allowed: true, scope: 'exam', byod: false, provider: null,
+        note: 'The Digital SAT provides a built-in Desmos calculator inside Bluebook, '
+            + 'available on every Math question. Si Math AI does not include it.',
+      },
+      announcements: {
+        perModule: true,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+
+    {
+      code: 'SAT_MODULE_2',
+      examType: 'SAT',
+      displayName: 'SAT Math — Module 2',
+      shortName: 'Module 2',
+      org: 'College Board · Digital SAT',
+      scoreMin: 200,
+      scoreMax: 800,
+      // Ordinal 1: this is a standalone practice session that happens to drill
+      // Module 2's content. Ordinal is a position WITHIN THIS SESSION, not a
+      // position within the real exam — otherwise a one-module session would
+      // start at index 2 and every loop would need a special case.
+      modules: [
+        { ordinal: 1, label: 'Module 2', questions: 22, durationMinutes: 35 },
+      ],
+      calculator: {
+        allowed: true, scope: 'exam', byod: false, provider: null,
+        note: 'The Digital SAT provides a built-in Desmos calculator inside Bluebook, '
+            + 'available on every Math question. Si Math AI does not include it.',
+      },
+      announcements: {
+        perModule: true,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+
+    {
+      code: 'SAT_FULL',
+      examType: 'SAT',
+      displayName: 'Full SAT Math',
+      shortName: 'Full SAT',
+      org: 'College Board · Digital SAT (Both Modules)',
+      scoreMin: 200,
+      scoreMax: 800,
+      // The real Digital SAT Math section is two SEPARATELY TIMED 35-minute
+      // modules, not one 70-minute block. Production currently runs it as a
+      // single countdown; Phase 2 teaches the timer to walk this list. The data
+      // is correct here first so Phase 2 is a state-machine change only.
+      //
+      // Totals stay 44 questions / 70 minutes either way — derived, not typed.
+      modules: [
+        { ordinal: 1, label: 'Module 1', questions: 22, durationMinutes: 35 },
+        { ordinal: 2, label: 'Module 2', questions: 22, durationMinutes: 35 },
+      ],
+      calculator: {
+        allowed: true, scope: 'exam', byod: false, provider: null,
+        note: 'The Digital SAT provides a built-in Desmos calculator inside Bluebook, '
+            + 'available on every Math question. Si Math AI does not include it.',
+      },
+      announcements: {
+        // Per module: on a two-module exam, "three minutes remaining" has to
+        // mean three minutes of THIS module. A session-level schedule would
+        // announce it once, 38 minutes into a 70-minute session, which is wrong
+        // twice over.
+        perModule: true,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+
+    {
+      code: 'EST_MATH_1',
+      examType: 'EST',
+      displayName: 'EST Math 1',
+      shortName: 'EST Math 1',
+      org: 'Egyptian Scholastic Test (EST)',
+      scoreMin: 200,
+      scoreMax: 800,
+      modules: [
+        { ordinal: 1, label: 'EST Math 1', questions: 50, durationMinutes: 75 },
+      ],
+      calculator: {
+        // 'partial', not 'exam': EST Math 1 permits a calculator in part 2 only.
+        // The part boundary is NOT modelled as two modules here, deliberately —
+        // doing so would change production timer behaviour, and the exact split
+        // has not been verified against an authoritative EST source. Recording
+        // the policy honestly costs nothing; inventing a boundary would not.
+        allowed: true, scope: 'partial', byod: true, provider: null,
+        note: 'EST Math 1 permits a calculator in part 2 only. Students bring their own '
+            + 'approved calculator on test day. The part boundary is not modelled yet.',
+      },
+      announcements: {
+        perModule: false,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 600, key: 'ten_minutes' },
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+
+    {
+      code: 'EST_MATH_2_L1',
+      examType: 'EST',
+      displayName: 'EST Math 2 — Level 1',
+      shortName: 'EST Math 2 L1',
+      org: 'Egyptian Scholastic Test (EST)',
+      scoreMin: 200,
+      scoreMax: 800,
+      modules: [
+        { ordinal: 1, label: 'EST Math 2 — Level 1', questions: 40, durationMinutes: 60 },
+      ],
+      calculator: {
+        allowed: true, scope: 'exam', byod: true, provider: null,
+        note: 'Students bring their own approved calculator on test day.',
+      },
+      announcements: {
+        perModule: false,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 600, key: 'ten_minutes' },
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+
+    {
+      code: 'ACT_MATH',
+      examType: 'ACT',
+      displayName: 'ACT Math',
+      shortName: 'ACT Math',
+      org: 'ACT Inc.',
+      scoreMin: 1,
+      scoreMax: 36,
+      modules: [
+        { ordinal: 1, label: 'ACT Math', questions: 45, durationMinutes: 50 },
+      ],
+      calculator: {
+        allowed: true, scope: 'exam', byod: true, provider: null,
+        note: 'The ACT permits 4-function, scientific and graphing calculators but bans '
+            + 'CAS models. On paper the student brings their own; the online ACT provides '
+            + 'a built-in Desmos calculator.',
+      },
+      announcements: {
+        perModule: false,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+
+    {
+      code: 'PRACTICE',
+      examType: 'PRACTICE',
+      displayName: 'Practice Timer',
+      shortName: 'Practice',
+      org: 'General Practice & Drills',
+      scoreMin: 0,
+      scoreMax: 9999,
+      // Dynamic: length is questions × PRACTICE_MINUTES_PER_QUESTION, and the
+      // question count comes from the student at start time. Totals are null
+      // until then — which is what production already reports.
+      modules: null,
+      calculator: {
+        allowed: true, scope: 'exam', byod: true, provider: null,
+        note: '',
+      },
+      announcements: {
+        perModule: false,
+        halfway: true,
+        marks: [
+          { atRemainingSec: 300, key: 'five_minutes' },
+          { atRemainingSec: 180, key: 'three_minutes' },
+          { atRemainingSec: 60,  key: 'one_minute' },
+        ],
+        timeUp: true,
+      },
+      ambience: { eligible: true },
+    },
+  ];
+
+  // Practice pacing target. mock-exam.html holds the same 1.5 today; this is
+  // where it belongs, and Phase 1b removes the duplicate.
+  var PRACTICE_MINUTES_PER_QUESTION = 1.5;
+
+  // ── Internal helpers ───────────────────────────────────────────────────────
+
+  function deepFreeze(o) {
+    if (!o || typeof o !== 'object' || Object.isFrozen(o)) return o;
+    Object.getOwnPropertyNames(o).forEach(function (k) { deepFreeze(o[k]); });
+    return Object.freeze(o);
+  }
+
+  // The canonical table is frozen: it is shared by every consumer on the page,
+  // and a stray write to one page's copy of an exam config would silently
+  // change another's. (`compat()` is deliberately NOT frozen — see below.)
+  deepFreeze(EXAMS);
+
+  var BY_CODE = {};
+  EXAMS.forEach(function (e) { BY_CODE[e.code] = e; });
+
+  function get(code) {
+    return BY_CODE[code] || null;
+  }
+
+  function isDynamic(code) {
+    var e = get(code);
+    return !!e && e.modules === null;
+  }
+
+  function sum(list, field) {
+    var n = 0;
+    for (var i = 0; i < list.length; i++) n += list[i][field];
+    return n;
+  }
+
+  /** Total questions, or null for a dynamic exam. DERIVED from the modules. */
+  function totalQuestions(code) {
+    var e = get(code);
+    if (!e) return null;
+    return e.modules === null ? null : sum(e.modules, 'questions');
+  }
+
+  /** Total minutes, or null for a dynamic exam. DERIVED from the modules. */
+  function totalDurationMinutes(code) {
+    var e = get(code);
+    if (!e) return null;
+    return e.modules === null ? null : sum(e.modules, 'durationMinutes');
+  }
+
+  /** Minutes a dynamic exam runs for, given the student's question count. */
+  function practiceDurationMinutes(questionCount) {
+    var q = Math.max(0, parseInt(questionCount, 10) || 0);
+    return Math.ceil(q * PRACTICE_MINUTES_PER_QUESTION);
+  }
+
+  // ── Announcement schedules ─────────────────────────────────────────────────
+  //
+  // Built from policy rather than typed out per exam, because a typed schedule
+  // goes stale the moment a duration changes, and because the interesting rules
+  // are conditional: a mark that is not INSIDE the block must not fire.
+  //
+  // "Five minutes remaining" on a five-minute block would fire at t=0, before
+  // the student has read a question. `atRemainingSec < durationSec` is a strict
+  // comparison for exactly that reason.
+  //
+  // Returns entries ordered as the student meets them (most remaining first).
+  function buildAnnouncementSchedule(durationSec, ann) {
+    if (!ann || !(durationSec > 0)) return [];
+    var out = [];
+    var seen = {};
+
+    function push(atRemainingSec, key) {
+      if (seen[atRemainingSec]) return;      // a halfway/mark collision is one announcement
+      seen[atRemainingSec] = true;
+      out.push({ atRemainingSec: atRemainingSec, key: key });
+    }
+
+    var marks = ann.marks || [];
+    for (var i = 0; i < marks.length; i++) {
+      if (marks[i].atRemainingSec < durationSec) push(marks[i].atRemainingSec, marks[i].key);
+    }
+
+    // Halfway is added AFTER the marks so that when it lands on one, the mark's
+    // more specific wording wins ("five minutes remaining" beats "halfway").
+    if (ann.halfway && durationSec >= HALFWAY_MIN_SEC) {
+      push(Math.floor(durationSec / 2), 'halfway');
+    }
+
+    if (ann.timeUp) push(0, 'time_up');
+
+    out.sort(function (a, b) { return b.atRemainingSec - a.atRemainingSec; });
+    return out;
+  }
+
+  /**
+   * The schedule for one block of an exam.
+   *
+   * `moduleOrdinal` selects the module on a per-module exam (DSAT). For a
+   * session-level exam the whole session is one block. For a dynamic exam pass
+   * `durationSecOverride`, since its length is not known until the student says.
+   */
+  function scheduleFor(code, moduleOrdinal, durationSecOverride) {
+    var e = get(code);
+    if (!e) return [];
+
+    if (durationSecOverride != null) {
+      return buildAnnouncementSchedule(durationSecOverride, e.announcements);
+    }
+    if (e.modules === null) return [];       // dynamic: caller must supply the duration
+
+    var durationSec;
+    if (e.announcements && e.announcements.perModule) {
+      var m = modulesOf(code).filter(function (x) { return x.ordinal === (moduleOrdinal || 1); })[0];
+      if (!m) return [];
+      durationSec = m.durationMinutes * 60;
+    } else {
+      durationSec = totalDurationMinutes(code) * 60;
+    }
+    return buildAnnouncementSchedule(durationSec, e.announcements);
+  }
+
+  /** The module list, always an array — empty for a dynamic exam. */
+  function modulesOf(code) {
+    var e = get(code);
+    if (!e || e.modules === null) return [];
+    return e.modules;
+  }
+
+  /** The calculator descriptor, or null for an unknown code. */
+  function calculatorPolicy(code) {
+    var e = get(code);
+    return e ? e.calculator : null;
+  }
+
+  /**
+   * Does Si Math AI itself render a calculator for this exam?
+   *
+   * False for every exam today and that is CORRECT, not a gap: no calculator
+   * provider is licensed. Phase 4's panel asks this question; when the answer is
+   * false it shows `calculator.note` instead of a calculator.
+   */
+  function hasRenderableCalculator(code) {
+    var c = calculatorPolicy(code);
+    return !!(c && c.allowed && c.provider);
+  }
+
+  // ── Compatibility view ─────────────────────────────────────────────────────
+  //
+  // Reproduces the exact shape mock-exam.html's `EXAM_CONFIGS` literal has
+  // today, so Phase 1b is a two-line swap in the one unfrozen file rather than a
+  // refactor of a 101 KB page.
+  //
+  // Built ONCE and returned by reference on every call, because the literal it
+  // replaces is a single `const`: `EXAM_CONFIGS.PRACTICE` is read repeatedly and
+  // assigned to `s.exam`, so handing back a fresh object each time would change
+  // object identity where production has stability. Nothing mutates these (the
+  // page only ever reads fields off `s.exam`), which is why the compat table is
+  // the one structure here left unfrozen — matching the mutable literal exactly
+  // rather than tightening behaviour under a compatibility shim.
+  //
+  // `duration` and `questions` are DERIVED. Every other field is verbatim.
+  var COMPAT = null;
+
+  function compat() {
+    if (COMPAT) return COMPAT;
+    COMPAT = {};
+    EXAMS.forEach(function (e) {
+      COMPAT[e.code] = {
+        code: e.code,
+        examType: e.examType,
+        displayName: e.displayName,
+        shortName: e.shortName,
+        org: e.org,
+        duration: totalDurationMinutes(e.code),
+        questions: totalQuestions(e.code),
+        calculator: e.calculator.allowed,
+        scoreMin: e.scoreMin,
+        scoreMax: e.scoreMax,
+      };
+    });
+    return COMPAT;
+  }
+
+  root.SiExamRegistry = {
+    EXAMS: EXAMS,
+    EXAM_CODES: EXAMS.map(function (e) { return e.code; }),
+    CALC_SCOPES: CALC_SCOPES,
+    DEFAULT_AMBIENCE_ENABLED: DEFAULT_AMBIENCE_ENABLED,
+    HALFWAY_MIN_SEC: HALFWAY_MIN_SEC,
+    PRACTICE_MINUTES_PER_QUESTION: PRACTICE_MINUTES_PER_QUESTION,
+
+    get: get,
+    all: function () { return EXAMS; },
+    isDynamic: isDynamic,
+    modulesOf: modulesOf,
+    totalQuestions: totalQuestions,
+    totalDurationMinutes: totalDurationMinutes,
+    practiceDurationMinutes: practiceDurationMinutes,
+
+    buildAnnouncementSchedule: buildAnnouncementSchedule,
+    scheduleFor: scheduleFor,
+
+    calculatorPolicy: calculatorPolicy,
+    hasRenderableCalculator: hasRenderableCalculator,
+
+    compat: compat,
+  };
+}(typeof globalThis !== 'undefined' ? globalThis : this));
