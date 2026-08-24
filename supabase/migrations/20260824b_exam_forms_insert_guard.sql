@@ -1,8 +1,15 @@
 -- =====================================================================
 -- Mock Exam v2 · B1 — close the INSERT path to status='published'
 -- =====================================================================
--- STATUS: ⚠️ PREPARED, NOT APPLIED. Awaiting individual approval, per the
---         repo rule that writing a migration file is not applying it.
+-- STATUS: ✅ APPLIED to production 2026-08-24, after explicit approval, as
+--         version 20260824015733 (name: exam_forms_insert_guard).
+--
+--         Verified live on PostgreSQL 17.6 immediately afterwards — which
+--         also closed the one caveat carried into the apply, that the harness
+--         ran on 16.13. Both refusals produce 42501 in production, an ordinary
+--         draft is still accepted, and the probe left ZERO rows behind, so no
+--         form code was consumed by verifying. The publish_exam_form ACL was
+--         captured before and after and is byte-identical: B5 untouched.
 --
 -- SCOPE: this file fixes B1 and ONLY B1. The PUBLIC EXECUTE grant on
 --        publish_exam_form (finding B5) is a separate, separately reviewed

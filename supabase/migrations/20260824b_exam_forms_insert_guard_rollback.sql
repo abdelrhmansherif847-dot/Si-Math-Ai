@@ -1,9 +1,16 @@
 -- =====================================================================
 -- Mock Exam v2 · B1 ROLLBACK — undoes 20260824b_exam_forms_insert_guard.sql
 -- =====================================================================
--- STATUS: ⚠️ NOT APPLIED. Shipped WITH the forward migration, per the M1 rule
---         that a rollback composed at the moment something has gone wrong is
---         not a rollback.
+-- STATUS: ⚠️ NOT APPLIED, AND THE FORWARD MIGRATION IS NOW LIVE. Shipped WITH
+--         the forward migration, per the M1 rule that a rollback composed at
+--         the moment something has gone wrong is not a rollback.
+--
+--         The forward file was applied to production 2026-08-24 as version
+--         20260824015733. Running this therefore changes live behaviour: it
+--         reopens the INSERT bypass described below. Exercised on the harness
+--         2026-08-24 — observed dropping both objects, leaving data and M3's
+--         five functions intact, restoring the defect, and the forward file
+--         re-applying cleanly afterwards.
 --
 -- Revision 1, written against forward-migration revision 1.
 --
