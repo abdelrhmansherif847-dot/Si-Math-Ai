@@ -1,0 +1,152 @@
+-- =====================================================================
+-- Mock Exam v2 · B5 — revoke PUBLIC EXECUTE on publish_exam_form
+-- =====================================================================
+-- STATUS: ⚠️ PREPARED, NOT APPLIED. Awaiting individual approval, per the
+--         repo rule that writing a migration file is not applying it.
+--
+-- SCOPE: one REVOKE on one function. This file changes no schema, no
+--        lifecycle behaviour, no policy, and no other object's privileges.
+--        It does not touch B1 (20260824b), M3's tables, triggers or guards,
+--        and it deliberately leaves the other nineteen PUBLIC-executable
+--        functions alone — see "WHAT THIS FILE DOES NOT FIX" below.
+--
+-- =====================================================================
+-- WHAT IS WRONG TODAY
+-- =====================================================================
+-- publish_exam_form is the gate that decides whether an authored form may
+-- become a published exam. M3 intended it to be operator-only and wrote:
+--
+--     revoke all on function public.publish_exam_form(uuid, jsonb) from anon;
+--     revoke all on function public.publish_exam_form(uuid, jsonb) from authenticated;
+--
+-- Both statements executed. Neither changed who can call the function. Its
+-- ACL in production reads (verified 2026-08-24):
+--
+--     {=X/postgres, postgres=X/postgres, service_role=X/postgres}
+--      ^^^^^^^^^^^ this leading "=X" is a grant to PUBLIC
+--
+-- and has_function_privilege() returns TRUE for both anon and authenticated.
+--
+-- WHY THE REVOKES DID NOTHING. This database carries TWO overlapping defaults
+-- on a newly created function:
+--
+--   Supabase's pg_default_acl for functions in public
+--        -> EXECUTE to anon, authenticated, service_role  (explicit grants)
+--   PostgreSQL's own CREATE FUNCTION behaviour
+--        -> EXECUTE to PUBLIC                              (implicit grant)
+--
+-- M3 knew about the first — its header reasons carefully about the same trap
+-- for TABLES — and revoked those explicit grants successfully. But revoking a
+-- role's own grant does nothing about a grant it additionally holds through
+-- PUBLIC. The evidence is visible in the ACL above: "authenticated=X" is
+-- absent (the revoke worked) while "=X" remains (PUBLIC was never named).
+--
+-- The contrast case in the same database proves the correct pattern exists
+-- here already: has_role_at_least has no "=X" entry and anon cannot execute it.
+--
+-- =====================================================================
+-- IS IT EXPLOITABLE? NO — AND THAT IS NOT WHY THIS IS BEING FIXED
+-- =====================================================================
+-- Verified against production, read-only:
+--
+--   anon           -> no SELECT grant on exam_forms at all, so the function's
+--                     first statement fails immediately.
+--   authenticated  -> SELECT ... FOR UPDATE requires the UPDATE privilege,
+--                     which only service_role and postgres hold. The very
+--                     first statement of the body raises 42501 for EVERY
+--                     authenticated caller, admin included. Measured, not
+--                     assumed: `select ... for update` as authenticated
+--                     returns "permission denied for table exam_forms".
+--   a student      -> additionally sees zero rows: RLS on all three spine
+--                     tables admits only has_role_at_least('admin').
+--
+-- So nothing is currently exposed. What makes this worth a migration is WHICH
+-- control is holding the line. It is not the EXECUTE revoke M3 wrote — that
+-- one is inert. It is the table-level UPDATE privilege, one layer further in,
+-- and exactly the privilege an authoring UI phase would plausibly relax. The
+-- day anyone runs `grant update on exam_forms to authenticated`, publishing
+-- becomes callable by every logged-in student, and the line in M3 that looks
+-- like it prevents that will still not prevent it.
+--
+-- Fixing it now also removes a live REST surface: functions in the exposed
+-- schema are reachable at /rest/v1/rpc/<name> by any role holding EXECUTE, so
+-- today the gate is callable by anonymous internet traffic even though every
+-- such call fails closed.
+--
+-- =====================================================================
+-- WHAT THIS FILE DOES NOT FIX (deliberately)
+-- =====================================================================
+-- Twenty functions in `public` are PUBLIC-executable. publish_exam_form is
+-- the only one being changed here, because it is the only one where PUBLIC is
+-- the SOLE path for anon and authenticated — every other one also carries an
+-- explicit `authenticated=X` grant, so revoking PUBLIC there would change a
+-- different set of callers and is a different decision with a different blast
+-- radius. Of the remaining nineteen:
+--
+--   14 are trigger functions  -> PostgreSQL refuses direct invocation
+--    5 are pure helpers       -> immutable, no data access, no side effects
+--
+-- publish_exam_form is the ONLY directly-callable, volatile, side-effecting
+-- one in the set. Auditing the other nineteen is worth doing; it is not this
+-- migration, and bundling it would give one review two blast radii.
+--
+-- =====================================================================
+-- REGRESSION SURFACE: NONE FOUND
+-- =====================================================================
+--   • postgres and service_role hold EXPLICIT grants (postgres=X,
+--     service_role=X) and therefore keep EXECUTE after this revoke. They are
+--     the only legitimate callers: publishing is an operator action.
+--   • No client, Edge Function, or script calls publish_exam_form — grepped
+--     across *.js, *.html, *.ts, *.mjs; every hit is documentation text in
+--     scripts/gen-exam-expectation.mjs, scripts/preflight-exam-form.mjs and
+--     their two test suites.
+--   • No database object depends on it: it is called by nothing, and no
+--     trigger, policy, view or constraint references it.
+--   • public.exam_forms holds 0 rows, so no publication is in flight.
+--
+-- ATOMICITY: begin; first, commit; last, nothing after — the M1/M3/B1 shape.
+-- =====================================================================
+
+begin;
+
+-- PUBLIC is named explicitly. That is the entire fix, and it is the word M3
+-- was missing. anon and authenticated are NOT re-revoked here: neither holds
+-- an explicit grant any more (M3's revokes removed those and they were never
+-- re-granted), so naming them would be a no-op that implies otherwise.
+revoke all on function public.publish_exam_form(uuid, jsonb) from public;
+
+commit;
+
+-- =====================================================================
+-- VERIFICATION — run AFTER applying; every line should report as noted
+-- =====================================================================
+-- 1. The PUBLIC entry is gone and the two legitimate callers remain:
+--      select p.proname, p.proacl::text,
+--             has_function_privilege('authenticated', p.oid, 'EXECUTE') as authd,
+--             has_function_privilege('anon',          p.oid, 'EXECUTE') as anon,
+--             has_function_privilege('service_role',  p.oid, 'EXECUTE') as svc
+--        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+--       where n.nspname='public' and p.proname='publish_exam_form';
+--    -- proacl = {postgres=X/postgres,service_role=X/postgres}
+--    -- authd = false, anon = false, svc = TRUE
+--    -- (p.oid must be qualified — the join makes a bare `oid` ambiguous.)
+--
+-- 2. Nothing else about the function moved:
+--      select prosecdef, provolatile, pg_get_function_identity_arguments(oid)
+--        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+--       where n.nspname='public' and proname='publish_exam_form';
+--    -- prosecdef = false (SECURITY INVOKER, unchanged)
+--    -- provolatile = 'v', args = "p_form_id uuid, p_expected jsonb"
+--
+-- 3. B1 and M3 are untouched:
+--      select t.tgname from pg_trigger t join pg_class c on c.oid=t.tgrelid
+--       where not t.tgisinternal and c.relname='exam_forms' order by 1;
+--    -- exam_forms_guard_row, exam_forms_insert_guard_row   (both present)
+--      select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+--       where n.nspname='public' and proname in
+--       ('publish_exam_form','exam_content_frozen_guard','exam_forms_guard',
+--        'exam_questions_touch','exam_question_choices_ok');   -- 5
+--
+-- 4. service_role can still publish. Exercised on the harness rather than in
+--    production, because publishing in production would create a permanent,
+--    immutable form. See the B5 validation report.

@@ -1,0 +1,81 @@
+-- =====================================================================
+-- Mock Exam v2 · B5 ROLLBACK — undoes
+--   20260824c_publish_exam_form_revoke_public.sql
+-- =====================================================================
+-- STATUS: ⚠️ NOT APPLIED. Shipped WITH the forward migration, per the M1 rule
+--         that a rollback composed at the moment something has gone wrong is
+--         not a rollback.
+--
+-- Revision 1, written against forward-migration revision 1.
+--
+-- =====================================================================
+-- READ THIS BEFORE RUNNING: THIS RE-OPENS A SECURITY FINDING
+-- =====================================================================
+-- This destroys no data — it drops no object and touches no row. What it
+-- restores is the defect: EXECUTE on the publication gate, granted to PUBLIC,
+-- which means every anonymous and authenticated caller regains the ability to
+-- invoke publish_exam_form, including over the REST endpoint at
+-- /rest/v1/rpc/publish_exam_form.
+--
+-- Those calls fail closed TODAY, because the table-level UPDATE privilege
+-- stops them one layer further in (SELECT ... FOR UPDATE on exam_forms
+-- requires UPDATE, which only service_role and postgres hold). That is the
+-- only reason the finding was not a live vulnerability. If this rollback is
+-- ever run AFTER an authoring UI has granted authenticated any write access
+-- to exam_forms, the combination is immediately exploitable.
+--
+-- So: do not run this to unblock a caller. If some legitimate role needs to
+-- publish, grant EXECUTE to THAT ROLE in a reviewed change —
+--
+--     grant execute on function public.publish_exam_form(uuid, jsonb) to <role>;
+--
+-- which is narrow and auditable. Restoring the grant to PUBLIC is not.
+--
+-- THE ONE CASE THIS IS FOR: the forward migration is applied and something
+-- unforeseen turns out to have depended on the PUBLIC grant, and must be
+-- unblocked before the proper narrow grant can be reviewed.
+--
+-- WHY `grant ... to public` AND NOT `to anon, authenticated`: the forward file
+-- removed exactly one ACL entry, the PUBLIC one, so restoring that same entry
+-- is the minimal inverse. Granting per-role instead would leave the ACL in a
+-- state the database has never actually been in.
+--
+-- ONE THING TO EXPECT, verified on the harness: the restored ACL is
+-- PRIVILEGE-identical to the pre-B5 state but not STRING-identical, because
+-- PostgreSQL appends the re-granted entry rather than restoring its original
+-- position:
+--
+--   before B5        {=X/postgres, postgres=X/postgres, service_role=X/postgres}
+--   after rollback   {postgres=X/postgres, service_role=X/postgres, =X/postgres}
+--
+-- Entry order in an aclitem[] carries no meaning — has_function_privilege()
+-- returns the same answers either way — so verify with the privilege checks
+-- below, never by string-comparing proacl.
+-- =====================================================================
+
+begin;
+
+grant execute on function public.publish_exam_form(uuid, jsonb) to public;
+
+commit;
+
+-- =====================================================================
+-- VERIFICATION — run AFTER rolling back
+-- =====================================================================
+-- 1. The ACL is back to exactly its pre-B5 state:
+--      select p.proname, p.proacl::text,
+--             has_function_privilege('authenticated', p.oid, 'EXECUTE') as authd,
+--             has_function_privilege('anon',          p.oid, 'EXECUTE') as anon
+--        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+--       where n.nspname='public' and p.proname='publish_exam_form';
+--    -- proacl contains an "=X/postgres" entry again, though LAST rather than
+--    --   first: {postgres=X/postgres,service_role=X/postgres,=X/postgres}.
+--    --   Order is not significant; do not compare this string to the pre-B5
+--    --   one, compare the privileges.
+--    -- authd = true, anon = true   <-- the finding is live again
+--
+-- 2. Nothing else moved — B1's trigger and M3's five functions are intact:
+--      select t.tgname from pg_trigger t join pg_class c on c.oid=t.tgrelid
+--       where not t.tgisinternal and c.relname='exam_forms' order by 1;
+--    -- exam_forms_guard_row, exam_forms_insert_guard_row
+--      select count(*) from public.exam_forms;   -- unchanged by this file
