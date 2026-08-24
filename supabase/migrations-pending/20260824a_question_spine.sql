@@ -2,7 +2,13 @@
 -- Mock Exam v2 · M3 — Question Spine (content architecture only)
 -- =====================================================================
 -- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 1. Drafted against the P6 design approved 2026-08-24,
+--         Revision 2. Fixes five RAISE format strings in publish_exam_form()
+--         whose '%%%' pattern left more arguments than placeholders — caught by
+--         the validation harness at compile time, before anything else ran (the
+--         file's begin/commit atomicity held: zero objects were created by the
+--         failed rev 1 apply). Message formatting only; no check, constraint,
+--         grant or behaviour differs from revision 1.
+--         Revision 1 was drafted against the P6 design approved 2026-08-24,
 --         all four explicit points YES and two clarifications locked.
 -- DEPENDS ON: taxonomy_topics / taxonomy_subtopics (live, 5 + 33 rows,
 --         text ids, version 1 — verified in production before drafting).
@@ -568,40 +574,33 @@ begin
   for sec in select * from public.exam_form_sections where form_id = p_form_id loop
     select count(*) into v_n from public.exam_questions q where q.section_id = sec.id;
     if v_n <> sec.question_count then
-      raise exception 'publish: form % section % (ordinal %%%) holds % question rows; question_count is %',
-        v_form.code, sec.id, sec.ordinal,
-        case when sec.variant_id is null then '' else ' / ' || sec.variant_id end,
-        v_n, sec.question_count;
+      raise exception 'publish: form % ordinal % variant % holds % question rows; question_count is %',
+        v_form.code, sec.ordinal, coalesce(sec.variant_id, '(none)'), v_n, sec.question_count;
     end if;
     select count(*) into v_n from public.exam_questions q
      where q.section_id = sec.id and q.status <> 'approved';
     if v_n > 0 then
-      raise exception 'publish: form % ordinal %%% contains % non-approved question(s)',
-        v_form.code, sec.ordinal,
-        case when sec.variant_id is null then '' else ' / ' || sec.variant_id end, v_n;
+      raise exception 'publish: form % ordinal % variant % contains % non-approved question(s)',
+        v_form.code, sec.ordinal, coalesce(sec.variant_id, '(none)'), v_n;
     end if;
     select count(distinct q.ordinal) into v_n from public.exam_questions q
      where q.section_id = sec.id and q.ordinal between 1 and sec.question_count;
     if v_n <> sec.question_count then
-      raise exception 'publish: form % ordinal %%% question ordinals are not contiguous 1..%',
-        v_form.code, sec.ordinal,
-        case when sec.variant_id is null then '' else ' / ' || sec.variant_id end,
-        sec.question_count;
+      raise exception 'publish: form % ordinal % variant % question ordinals are not contiguous 1..%',
+        v_form.code, sec.ordinal, coalesce(sec.variant_id, '(none)'), sec.question_count;
     end if;
     select count(*) into v_n from public.exam_questions q
      where q.section_id = sec.id and q.difficulty is null;
     if v_n > 0 then
-      raise exception 'publish: form % ordinal %%% has % question(s) without difficulty (required at publish)',
-        v_form.code, sec.ordinal,
-        case when sec.variant_id is null then '' else ' / ' || sec.variant_id end, v_n;
+      raise exception 'publish: form % ordinal % variant % has % question(s) without difficulty (required at publish)',
+        v_form.code, sec.ordinal, coalesce(sec.variant_id, '(none)'), v_n;
     end if;
     select count(*) into v_n from public.exam_questions q
      where q.section_id = sec.id
        and (q.originality_attested_at is null or q.originality_attested_by is null);
     if v_n > 0 then
-      raise exception 'publish: form % ordinal %%% has % question(s) without originality attestation',
-        v_form.code, sec.ordinal,
-        case when sec.variant_id is null then '' else ' / ' || sec.variant_id end, v_n;
+      raise exception 'publish: form % ordinal % variant % has % question(s) without originality attestation',
+        v_form.code, sec.ordinal, coalesce(sec.variant_id, '(none)'), v_n;
     end if;
   end loop;
 
