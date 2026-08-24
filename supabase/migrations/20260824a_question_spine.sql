@@ -1,8 +1,22 @@
 -- =====================================================================
 -- Mock Exam v2 · M3 — Question Spine (content architecture only)
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 2. Fixes five RAISE format strings in publish_exam_form()
+-- STATUS: ✅ APPLIED to igvkyxkmjnkzscqgommj on 2026-08-24, recorded as
+--         supabase_migrations.schema_migrations version 20260824005242
+--         (name: question_spine). Applied at revision 2 via apply_migration —
+--         the executable subset of this file (43 statements: 3 tables, 5
+--         functions, 4 triggers, 4 indexes, 3 policies, 8 COMMENT ONs, all
+--         grants/revokes), statement-parity-verified against these bytes, with
+--         the surrounding begin;/commit; omitted because the applying tool
+--         opens its own transaction. Post-apply verification: 17/17 structural
+--         checks green, taxonomy data unchanged (5/33), 0 spine rows, all
+--         neighbour tables untouched, and the choices validator probed as a
+--         pure function on production. Full adversarial validation ran first on
+--         the local harness (PG 16.13 vs production 17.6 — same recorded
+--         limitation as M1): every gate failure class, the immutability matrix,
+--         role-aware RLS, and rollback refuse→proceed→re-apply.
+--
+--         Revision 2 (applied). Fixes five RAISE format strings in publish_exam_form()
 --         whose '%%%' pattern left more arguments than placeholders — caught by
 --         the validation harness at compile time, before anything else ran (the
 --         file's begin/commit atomicity held: zero objects were created by the

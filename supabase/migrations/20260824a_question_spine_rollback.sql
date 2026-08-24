@@ -1,8 +1,17 @@
 -- =====================================================================
 -- Mock Exam v2 · M3 ROLLBACK — undoes 20260824a_question_spine.sql
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 1, written against forward-migration revision 1.
+-- STATUS: ⚠️ NOT APPLIED, AND MUST NOT BE RUN CASUALLY. This is the rollback
+--         for a migration that IS live in production (applied 2026-08-24,
+--         version 20260824005242). Running it drops the Question Spine —
+--         including any published forms, which are the historical record of
+--         what students were examined against. Exercised on the harness
+--         2026-08-24: observed REFUSING on live data (published forms counted
+--         separately in the message), proceeding under the explicit flag with
+--         taxonomy intact, and the forward migration re-applying cleanly after.
+--
+--         Revision 1, written against forward-migration revision 1; no DDL it
+--         must undo changed in revision 2 (message formatting only).
 --
 -- Shipped WITH the forward migration, per the M1 rule: a rollback composed at
 -- the moment something has gone wrong is not a rollback.
