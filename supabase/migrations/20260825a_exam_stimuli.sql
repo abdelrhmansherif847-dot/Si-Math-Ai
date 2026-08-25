@@ -309,10 +309,11 @@ alter table public.exam_questions
 
 comment on column public.exam_questions.stimulus_id is
   'Optional stimulus. Several questions may reference ONE stimulus — that is '
-  'how a shared passage is modelled. The publish gate enforces that the '
-  'stimulus belongs to the same form (exam_questions carries no form_id, so '
-  'a composite FK is unavailable; this is a cross-row rule, like variant '
-  'mixing, and lives in the gate by the same reasoning).';
+  'how a shared passage is modelled. A reference may not cross forms: '
+  'exam_questions carries no form_id so a composite FK is unavailable, and '
+  'the guarantee is made instead by the exam_questions_stimulus_same_form '
+  'trigger at write time, which makes a wrong reference unstorable rather '
+  'than merely unpublishable. publish_exam_form() is not involved.';
 
 -- =====================================================================
 -- 4. CHOICES MAY CARRY A NATIVE VISUAL — NEVER AN IMAGE
