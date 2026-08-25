@@ -67,8 +67,13 @@
 --     row ever needs back-filling.
 --   * No renderer. Rendering is delivery-phase work and belongs in _shared/
 --     so preview and delivery cannot draw the same question two ways.
---   * No geometry description language. If figures prove repetitive in real
---     use, a native renderer gets built then, on evidence.
+--   * No geometry description language, and no free-form figure spec either.
+--     kind='figure' accepts ONLY the SVG exception (media + hash + written
+--     reason); a spec is refused outright. Accepting arbitrary JSON under
+--     kind='figure' would be a hole in the schema, not a capability: it has
+--     no contract, no guaranteed renderer, and publication would freeze it
+--     forever. A native figure system becomes its own capability once real
+--     cases show what it must express.
 --
 -- ATOMICITY: begin; first, commit; last, nothing after — the M1/M3/B1/B5 shape.
 -- =====================================================================
@@ -186,11 +191,19 @@ as $$
             and not exists (select 1 from jsonb_array_elements(s -> 'points') p
                              where jsonb_typeof(p) <> 'number')))
 
-    -- FIGURE: when native, the spec is an SVG-ready vector description whose
-    -- internals are intentionally NOT modelled yet. Storing it as an object is
-    -- all this file commits to; inventing a geometry language before real use
-    -- would be exactly the overengineering we refused.
-    when k = 'figure' then true
+    -- FIGURE: there is NO native figure spec in M4, so nothing can satisfy
+    -- this branch. We refused to invent a geometry description language on
+    -- speculation — and the consequence must be faced rather than papered
+    -- over: if no contract exists, the database must not accept content
+    -- claiming to meet one. An open spec here would let arbitrary JSON in
+    -- under a respectable name and then FREEZE it at publication, with no
+    -- agreed meaning and no renderer guaranteed to draw it.
+    --
+    -- So kind='figure' is the SVG exception path only (the shape CHECK
+    -- requires media_ref and forbids spec), and this branch returns false so
+    -- a direct call cannot smuggle one in either. A real native figure system
+    -- becomes its own capability once actual cases show what it must express.
+    when k = 'figure' then false
 
     else false
   end), false);
@@ -247,8 +260,10 @@ create table public.exam_stimuli (
           and body is not null and spec is null and media_ref is null)
     or (kind in ('table','chart','plot','number_line')
           and spec is not null and body is null and media_ref is null)
+    -- figure is the EXCEPTION PATH ONLY: media required, spec forbidden.
+    -- See the validator's figure branch for why there is no native spec.
     or (kind = 'figure'
-          and (spec is not null or media_ref is not null))
+          and media_ref is not null and spec is null and body is null)
   ),
 
   constraint exam_stimuli_spec_check check (spec is null or public.exam_stimulus_spec_ok(kind, spec)),
@@ -270,8 +285,9 @@ comment on table public.exam_stimuli is
   'Structured stimuli for exam questions: shared passages/graphs/tables, '
   'single-question figures, and displayed equations. Standard visuals are '
   'NATIVE structured data (spec) — table, chart, plot and number_line are '
-  'constrained so they can never be an image. Only kind=figure may take the '
-  'SVG exception, and only with a hash and a written reason.';
+  'constrained so they can never be an image. kind=figure is the SVG exception '
+  'path ONLY — media with a hash and a written reason; a free-form spec is '
+  'refused, because content with no contract must not become immutable.';
 
 comment on column public.exam_stimuli.spec is
   'Semantic structured content, validated by exam_stimulus_spec_ok(). An '
