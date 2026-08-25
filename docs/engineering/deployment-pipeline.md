@@ -118,9 +118,17 @@ Three hard constraints, each written in blood:
    live immediately. Post-deploy verification is manual, per `DEPLOY.md §6`.
 
 **Two version axes, never one number.** `AI_TUTOR_VERSION` is a constant in the
-source (`v95` in `main`). The *platform version* is Supabase's deploy counter
-(`133` live). They move independently. The only unambiguous identity for what is
-running is **platform version + bundle sha256**.
+source. The *platform version* is Supabase's deploy counter. They move
+independently. The only unambiguous identity for what is running is **platform
+version + bundle sha256**.
+
+Read 2026-08-25: source `v101`, platform version `145`, bundle sha256
+`efedd0f8…`, and the deployed source's own constant confirmed as `'v101'` by
+`get_edge_function` — so the two axes happen to agree today. **These figures are
+a dated observation, not a fact this document can keep true.** They read `v95` /
+`133` here until 2026-08-25, six source versions and twelve deploys behind, for
+the same reason every other copy of them goes stale: nothing updates a number in
+a file when a deploy happens.
 
 ### 3.3 Migrations — manual and individually approved
 
@@ -129,8 +137,9 @@ runs `apply_migration`, and `CLAUDE.md §3` requires that each one be approved o
 its own. The repo convention is PREPARED → reviewed → approved → APPLIED, with a
 release report and a closeout.
 
-**The file count and the applied count differ**: 68 files in the repo, 131
-migrations applied in the database. Early migrations were applied without a
+**The file count and the applied count differ**: 95 files in the repo, 152
+migrations applied in the database (counted 2026-08-25; this read 68 / 131
+until then). Early migrations were applied without a
 committed file. `scripts/check-migration-parity.sh` exists for this. Never treat
 the directory listing as the applied state — query
 `supabase_migrations.schema_migrations`.
@@ -203,13 +212,21 @@ mechanism is either a Vercel deploy-approval setting or a CI gate on those paths
 
 ### 5.3 The repository is routinely ahead of production
 
-`main` and the deployed `ai-tutor` are in sync as of 2026-08-02 (v96 / platform
-version 135), and that is the unusual state, not the normal one — merging
-publishes the site automatically while nothing publishes the function. Nothing in
-the repository or on any dashboard makes the difference visible: you have to
-compare the source against the live platform version and sha256 by hand, which
-is how the v96 deploy was confirmed and how CLAUDE.md was found recording a
-platform version one deploy stale.
+`main` and the deployed `ai-tutor` are in sync as of 2026-08-25 (v101 / platform
+version 145, all four bundle files sha256-identical to `main`), as they were on
+2026-08-02 (v96 / platform version 135). **That is the unusual state, not the
+normal one** — merging publishes the site automatically while nothing publishes
+the function. Nothing in the repository or on any dashboard makes the difference
+visible: you have to compare the source against the live platform version and
+sha256 by hand.
+
+The 2026-08-25 check is the sharper argument for the recommendation below.
+`CLAUDE.md` had recorded, in writing, that v101 was merged-but-undeployed. It had
+in fact been deployed on 2026-08-15, an hour after the merge, and the note stood
+for ten days. **A session that trusted it and redeployed from a branch predating
+v101 would have reverted a live fix.** The same file had been wrong in the
+opposite direction three weeks earlier. Reading the repository cannot answer
+"is it live?" in either direction.
 
 **Recommendation:** a small CI or dashboard check that compares the deployed
 bundle identity against `main` and reports the drift. Until it exists, treat

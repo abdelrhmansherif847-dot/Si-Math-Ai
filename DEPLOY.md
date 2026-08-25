@@ -59,7 +59,9 @@ Re-run `scripts/check-migration-parity.sh`. Must exit 0.
 > `mcp__Supabase__deploy_edge_function` **MUST NOT be used for `ai-tutor`
 > under any circumstances in any Claude Code session.**
 >
-> Reason: `ai-tutor/index.ts` is ~55 KB. The inline MCP deploy path has
+> Reason: `ai-tutor/index.ts` is **291,876 bytes / 5,122 lines** (measured
+> 2026-08-25; this line read "~55 KB" until then, which understated it more
+> than five-fold). The inline MCP deploy path has
 > produced two truncated-stub incidents (2026-06-17 ×2). In both cases a
 > partial or placeholder file was deployed, the `serve()` handler was absent,
 > and every student request returned 500 for the duration.
@@ -215,16 +217,22 @@ After deploy, on production:
    - HTTP 200, non-empty `answer`.
    - Response JSON includes `idempotency_recovered: false`, `degraded: false`,
      and a `version` equal to `AI_TUTOR_VERSION` in
-     `supabase/functions/ai-tutor/index.ts` — **`'v98'` for the next deploy**.
-     (This line read `'v65'` until 2026-07-31, 27 versions stale, then `'v92'`
-     while v93 was already committed, then `'v95'` while v96 was live and v98
-     committed; a smoke test that expects the wrong version either fails a good
-     deploy or gets waved through. Re-read the constant rather than trusting
-     this sentence.)
-   - **v98 ships two source versions in one deploy.** v97 (L3 Shadow routing)
-     and v98 (conversational-turn demotion) were developed together and must
-     land together: v97 alone silences the symptom that made v98's defect
-     visible. Only `AI_TUTOR_VERSION = 'v98'` appears on the wire.
+     `supabase/functions/ai-tutor/index.ts`. **Read that constant; do not trust
+     a version written here.** This sentence has been wrong four times — `'v65'`
+     until 2026-07-31 (27 versions stale), then `'v92'` while v93 was committed,
+     then `'v95'` while v96 was live, then `'v98'` while v101 had been live for
+     ten days. A smoke test that expects the wrong version either fails a good
+     deploy or waves a bad one through, so the instruction is the process, not
+     the number.
+     For orientation only, measured 2026-08-25: production returns `'v101'` at
+     platform version 145.
+   - *(Historical, kept because the reasoning generalises.)* **v98 shipped two
+     source versions in one deploy.** v97 (L3 Shadow routing) and v98
+     (conversational-turn demotion) were developed together and had to land
+     together: v97 alone silences the symptom that made v98's defect visible.
+     Only one `AI_TUTOR_VERSION` ever appears on the wire, so when a deploy
+     carries more than one logical change, the constant names the last of them
+     and the release report is the only place the rest are recorded.
    - Edge Function logs include no `[ai-tutor] unhandled-error` tags.
 3. Confirm a new `question_records` row exists with a non-null
    `client_request_id`.

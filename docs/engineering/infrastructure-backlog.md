@@ -206,6 +206,23 @@ its own display name normalises to. The fix is one line in a frozen file.
 
 ## INF-SUPPORT-HEADERS — six applied migrations still labelled PREPARED
 
+**Status:** ✅ **DONE 2026-08-25.** Closed larger than it was raised: the six
+migration headers and the rollback were corrected on 2026-08-25 (`7a7db69`), and
+later the same day the same falsehood was found in four more records the
+original item did not know about — `support-actions/index.ts` ("⛔ PREPARED — NOT DEPLOYED"),
+`_shared/support-provider.core.ts`, `_shared/support-zoom.core.ts`, and
+`docs/engineering/support-system.md` ("Status as of 2026-08-16: NOTHING IS
+LIVE"). All are corrected. Verified live the same day: `support-actions` is
+ACTIVE at platform version 1 since 2026-08-16T16:58:38Z, the six forwards are
+applied as versions `20260816150725` … `20260816155449`, and the four support
+tables exist.
+
+**No redeploy was performed** — the Edge Function corrections are comment-only,
+proven so four ways (see the commit), and the deliberate consequence is that the
+tree's comments are ahead of the deployed bundle. That is recorded in the
+function's own header and in `CLAUDE.md`'s Edge Functions row so it cannot later
+be misread as a pending code change.
+
 **Found:** 2026-08-23, during Mock Exam v2 M1 production verification.
 **Severity:** documentation / repository integrity. **No production defect.**
 **Deliberately out of scope** for the Mock Exam roadmap — recorded here so it is
@@ -220,8 +237,9 @@ headers reading:
 
 **They are applied.** The support tables (`support_tickets`, `support_messages`,
 `support_attachments`, `support_meetings`, `support_meeting_slots`,
-`support_articles`) all exist in `public`, and the database reports 148 applied
-migrations against 87 files.
+`support_articles`) all exist in `public`. At the time this item was raised the
+database reported 148 applied migrations against 87 files; on 2026-08-25 it is
+152 against 95.
 
 Why it matters: this repository's own rule is that the database is the source of
 truth for what is applied and the files are the reviewable record of what was
@@ -229,11 +247,20 @@ run. A file that says "not yet applied" about live schema inverts that, and the
 next person reading the chain could reasonably conclude the support system is
 unshipped — or, worse, try to apply it again.
 
-**Fix:** a documentation-only pass updating the six headers to `✅ APPLIED`, with
-the applied version from `supabase_migrations.schema_migrations`, matching the
-convention M1 now uses. Also worth checking `20260815z_support_rollback.sql`,
-which describes itself as PREPARED while being the rollback for live schema —
-the same warning M1's rollback now carries would apply.
+**Fix, as carried out:** a documentation-only pass updating the six headers to
+`✅ APPLIED` with the applied version from `supabase_migrations.schema_migrations`,
+matching the convention M1 uses; `20260815z_support_rollback.sql` given the
+warning M1's rollback carries, since it is the rollback for live schema and now
+destroys data rather than undoing something that never ran; and the four
+additional records above.
 
-**Do not bundle this into a Mock Exam phase.**
+**It was not bundled into a Mock Exam phase**, as required.
+
+**What this item did not anticipate, and the reason it is worth reading after
+closure:** the original scope was six migration files. The same false claim had
+propagated into an Edge Function's own source and into the architecture record
+that describes the system — and the repository then *contradicted itself*, with
+the migration files saying APPLIED and the function importing them saying they
+were not. A stale status does not stay in the file where it was written. When
+one is found, the question is where else the same sentence was copied.
 
