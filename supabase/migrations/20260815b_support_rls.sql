@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Help & Support · 2 of 6 — read/write helpers and every RLS policy
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to production as version 20260816151716 (name: support_rls).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED —
+--         awaiting owner approval" while the support system was live
+--         in production. The 20260815 filename prefix is the drafting
+--         date; the version above is the apply.
 --         Revision 4. Revision 2 reconciled this file against the APPROVED
 --         revision 4 of 20260815a_support_enums_tables.sql; revision 3 closed
 --         the attachment lifecycle bypass found in review — see section 7,

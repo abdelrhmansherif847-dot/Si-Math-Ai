@@ -1,8 +1,12 @@
 -- =====================================================================
 -- Phase 7 · M1 — owner_cost_reprice: refusal contract + scenario grammar
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval of the
---         M1 engineering review (docs/roadmap/phase-7-m1-engineering-review.md).
+-- STATUS: ✅ APPLIED to production as version 20260801205515
+--         (name: aiecon_p7_m1_reprice_refusal_contract).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED — awaiting
+--         owner approval" while public.owner_cost_reprice was live. NOTE that
+--         20260801211727 (aiecon_p7_m1_fix_reprice_anon_revoke) was applied
+--         after it, so this file alone is not the current state.
 --
 -- WHY THIS EXISTS
 -- ---------------

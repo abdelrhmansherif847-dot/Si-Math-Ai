@@ -1,7 +1,13 @@
 -- =====================================================================
 -- Help & Support · ROLLBACK — undoes 20260815a … 20260815f
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ⚠️ NOT APPLIED, AND THE SIX FORWARD MIGRATIONS ARE NOW LIVE.
+--         Corrected 2026-08-25. This file is correctly unapplied, but its
+--         header previously read as though the whole chain were still
+--         awaiting approval. The forwards shipped as versions 20260816150725
+--         through 20260816155449, so running this now DESTROYS a live support
+--         system and its data — it is no longer a cheap undo of something
+--         that never ran.
 --         Revision 3. Written against the APPROVED chain:
 --           20260815a rev 4 · 20260815b rev 4 · 20260815c rev 3
 --           20260815d rev 5 · 20260815e rev 2 · 20260815f rev 2

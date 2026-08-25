@@ -1,7 +1,12 @@
 -- ===========================================================================
 -- Truth System v2 — V0-T06: public.verification_decisions (the decision log)
 -- ===========================================================================
--- STATUS: ⏳ PREPARED. **NOT APPLIED.**
+-- STATUS: ✅ APPLIED to production as version 20260802041701
+--         (name: tsv2_v0_verification_decisions).
+--         Corrected 2026-08-25: this file said "NOT APPLIED" while the
+--         verification_decisions table, its sequence and its four indexes were
+--         all live. The note below records the approval rule that governed it
+--         BEFORE it was applied; it is not a claim about current state.
 --         Per CLAUDE.md §3 every migration is approved individually before
 --         apply_migration is called. Approval to *implement* V0 is not approval
 --         to apply this file to production. It applies on a separate go.

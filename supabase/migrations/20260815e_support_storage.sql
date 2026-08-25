@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Help & Support · 5 of 6 — screenshot attachment storage
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to production as version 20260816154037 (name: support_storage).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED —
+--         awaiting owner approval" while the support system was live
+--         in production. The 20260815 filename prefix is the drafting
+--         date; the version above is the apply.
 --         Revision 2, reconciled against APPROVED 20260815a rev 4,
 --         20260815b rev 4, 20260815c rev 3 and 20260815d rev 4.
 -- DEPENDS ON: 20260815a — support_attachments, whose storage_path points here

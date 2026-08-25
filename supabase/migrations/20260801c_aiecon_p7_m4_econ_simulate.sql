@@ -1,8 +1,10 @@
 -- =====================================================================
 -- Phase 7 · M4 — public.owner_econ_simulate(): cost-side simulator
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval of the
---         M4 engineering review (docs/roadmap/phase-7-m4-engineering-review.md).
+-- STATUS: ✅ APPLIED to production as version 20260801221950
+--         (name: aiecon_p7_m4_econ_simulate).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED — awaiting
+--         owner approval" while public.owner_econ_simulate was live.
 --
 -- OWNER RULINGS THIS IMPLEMENTS (2026-08-01)
 -- ------------------------------------------

@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Help & Support · 3 of 6 — the ticket-touch trigger
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to production as version 20260816152054 (name: support_trigger).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED —
+--         awaiting owner approval" while the support system was live
+--         in production. The 20260815 filename prefix is the drafting
+--         date; the version above is the apply.
 --         Revision 3. Revision 2 reconciled this file against the APPROVED
 --         revision 4 of 20260815a and the approved 20260815b; revision 3 makes
 --         last_message_at monotonic — see LAST_MESSAGE_AT below.

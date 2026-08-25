@@ -24,6 +24,7 @@
 // real function a payload containing every forbidden key and assert each is
 // absent, rather than asserting that a clean payload stays clean.
 
+import { createHash } from 'node:crypto';
 import { suite } from './_assert.mjs';
 import { read, importTS } from './_source.mjs';
 
@@ -285,11 +286,42 @@ t.ok('the support bucket is separate from payment-proofs',
 // Not a boundary, but the properties the review established, so that a later
 // edit to a PREPARED migration cannot quietly undo one.
 
-t.ok('all six migrations are still marked PREPARED — NOT YET APPLIED',
-  Object.values(MIG).every((m) => /STATUS: ⛔ PREPARED — NOT YET APPLIED/.test(m)));
+// These six are APPLIED. Until 2026-08-25 this suite asserted they were
+// "still marked PREPARED — NOT YET APPLIED" — and passed, for weeks, while
+// the support system was live in production. The assertion did not merely
+// fail to notice the drift: it PINNED it, so anyone correcting the labels was
+// told by CI that they were wrong. A check that enforces a false statement is
+// worse than no check.
+//
+// The invariant that actually matters now is the opposite one. A PREPARED
+// migration may be edited freely; an APPLIED one may not, because the file
+// would then describe something other than what ran. So each header must name
+// its applied version, and the executable SQL is pinned by hash.
+const APPLIED = {
+  a: ['20260816150725', '9f1ffb65c243d4336d2c3d9767a2b045'],
+  b: ['20260816151716', '96a30ccff4e52fda9475c42771b5e6c7'],
+  c: ['20260816152054', 'dc987ca427ddb1bdee177bde5edea81b'],
+  d: ['20260816152845', '69dc3074f0aed9a430e6f4d720cc6bfb'],
+  e: ['20260816154037', 'b3d12ba66221c5d37d588f6e1c3dae35'],
+  f: ['20260816155449', 'c9fc44d8f59636106ecbd17e8276a175'],
+};
 
-t.ok('the rollback exists and is also PREPARED',
-  /STATUS: ⛔ PREPARED — NOT YET APPLIED/.test(read('supabase/migrations/20260815z_support_rollback.sql')));
+for (const [k, [version, md5]] of Object.entries(APPLIED)) {
+  t.ok(`migration ${k} is marked APPLIED as version ${version}`,
+    new RegExp(`STATUS: ✅ APPLIED to production as version ${version}`).test(MIG[k]));
+  t.is(`migration ${k}'s executable SQL is unchanged since it was applied`,
+    createHash('md5').update(
+      MIG[k].split('\n').filter((l) => l.trim() && !l.trim().startsWith('--')).join('\n')
+    ).digest('hex'), md5);
+}
+
+// The rollback is genuinely unapplied — but it undoes six LIVE migrations, so
+// its header must not read like a cheap undo of something that never ran.
+const ROLLBACK = read('supabase/migrations/20260815z_support_rollback.sql');
+t.ok('the rollback exists and is still unapplied',
+  /STATUS: ⚠️ NOT APPLIED/.test(ROLLBACK));
+t.ok('the rollback says the forwards are live, so its cost is visible',
+  /THE SIX FORWARD MIGRATIONS ARE NOW LIVE/.test(ROLLBACK));
 
 t.ok('the meeting cap is enforced under an advisory lock on BOTH booking doors',
   /pg_advisory_xact_lock\(20260815, hashtext/.test(EXEC.d) &&

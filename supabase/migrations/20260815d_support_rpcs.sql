@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Help & Support · 4 of 6 — the RPC boundary
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to production as version 20260816152845 (name: support_rpcs).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED —
+--         awaiting owner approval" while the support system was live
+--         in production. The 20260815 filename prefix is the drafting
+--         date; the version above is the apply.
 --         Revision 6. Revision 2 reconciled this file against APPROVED
 --         20260815a rev 4, 20260815b rev 4 and 20260815c rev 3; revision 3
 --         made the per-student meeting ceiling race-safe and applied it to

@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Help & Support · 1 of 6 — enums, tables, constraints, indexes, invariants
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to production as version 20260816150725 (name: support_enums_tables).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED —
+--         awaiting owner approval" while the support system was live
+--         in production. The 20260815 filename prefix is the drafting
+--         date; the version above is the apply.
 --         Spec: docs/engineering/support-system.md (to be written).
 --         Revision 4, answering owner review of revision 3.
 --

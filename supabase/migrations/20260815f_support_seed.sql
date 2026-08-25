@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Help & Support · 6 of 6 — starter articles and policy settings
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
+-- STATUS: ✅ APPLIED to production as version 20260816155449 (name: support_seed).
+--         Corrected 2026-08-25: this file said "NOT YET APPLIED —
+--         awaiting owner approval" while the support system was live
+--         in production. The 20260815 filename prefix is the drafting
+--         date; the version above is the apply.
 --         Revision 2, reconciled against APPROVED 20260815a rev 4,
 --         20260815b rev 4, 20260815c rev 3, 20260815d rev 5 and
 --         20260815e rev 2.
