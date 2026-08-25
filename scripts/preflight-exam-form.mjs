@@ -26,13 +26,25 @@
  * change, the checks below must change with them — see §8 of
  * supabase/migrations/20260824a_question_spine.sql.
  *
- * ONE CHECK THE GATE DOES NOT MAKE
- * --------------------------------
- * `explanation` is reported as a WARNING. The gate is genuinely silent about
- * it: a form of fifty questions with no explanations publishes cleanly. Making
- * explanations mandatory is an operational standard for Si Math AI, and
- * enforcing it here keeps that standard visible without quietly changing the
- * M3 contract through the back door. WARNINGs never make a form ineligible.
+ * THE CHECKS THE GATE DOES NOT MAKE
+ * ---------------------------------
+ * Three findings are WARNINGs, and none of them affects eligibility.
+ *
+ * `explanation` — the gate is genuinely silent about it: a form of fifty
+ * questions with no explanations publishes cleanly. Making explanations
+ * mandatory is an operational standard for Si Math AI, and enforcing it here
+ * keeps that standard visible without quietly changing the M3 contract
+ * through the back door.
+ *
+ * `stimulus-orphan` — M4 deliberately left this out of publish_exam_form():
+ * a stimulus no question references is untidiness, not a hazard, and keeping
+ * it out of the gate meant a security-critical function stayed untouched.
+ * This is where that decision gets paid for.
+ *
+ * `stimulus-media-exception` — every use of the SVG escape hatch is printed
+ * with its written reason. The exception is only narrow while someone is
+ * actually reading the reasons; unread, it quietly becomes the way visuals
+ * get done.
  *
  * The repo has no package.json and no Postgres driver, so this emits SQL rather
  * than running it — the same shape as scripts/gen-registry-seed.mjs.
@@ -46,9 +58,9 @@ const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
  * The SOURCE half of the query: where the facts come from.
  *
  * Split from the checks below on purpose. Everything after this reads only
- * params / form / expected_modules / slots / sect / qs, never a table directly,
- * so tests/exam-preflight.test.mjs can swap synthetic rows in for these six and
- * exercise the REAL check SQL rather than a paraphrase of it. That is the same
+ * params / form / expected_modules / slots / sect / qs / stim, never a table
+ * directly, so tests/exam-preflight.test.mjs can swap synthetic rows in for
+ * these seven and exercise the REAL check SQL rather than a paraphrase of it. That is the same
  * reasoning behind tests/_source.mjs: a test that re-implements the code under
  * test can agree with itself while production is wrong.
  */
@@ -85,11 +97,14 @@ qs as (
   select x.*, s.ordinal as sec_ordinal, s.variant_id as sec_variant,
          s.question_count
     from public.exam_questions x join sect s on s.id = x.section_id
+),
+stim as (
+  select st.* from public.exam_stimuli st join form f on f.id = st.form_id
 )`;
 }
 
 /**
- * The CHECK half: every rule, as a pure function of the six source CTEs above.
+ * The CHECK half: every rule, as a pure function of the seven source CTEs above.
  * A constant, so the CI suite runs these exact bytes against synthetic data.
  */
 export const CHECKS_SQL = `,
@@ -204,6 +219,29 @@ findings as (
          'question ' || x.ordinal || ' (section ordinal ' || x.sec_ordinal
            || ') has no explanation — Si Math AI standard; publish_exam_form() does not check this'
     from qs x where x.explanation is null or btrim(x.explanation) = ''
+
+  -- A stimulus no question references shows the student nothing. The publish
+  -- gate deliberately does not refuse it: it is untidiness, not a hazard, and
+  -- keeping it out of the gate left a security-critical function untouched.
+  -- Surfacing it here is where that decision gets paid for.
+  union all
+  select 'WARNING', 'stimulus-orphan', 16,
+         'stimulus ' || st.kind || coalesce(' (' || st.label || ')', '')
+           || ' is referenced by no question in this form'
+    from stim st
+   where not exists (select 1 from qs x where x.stimulus_id = st.id)
+
+  -- The SVG exception is meant to be rare and justified. Printing every use
+  -- with its written reason puts the reviewer in a position to judge whether
+  -- it really could not have been native — which is the only thing standing
+  -- between "narrow exception" and "the way we do visuals now".
+  union all
+  select 'WARNING', 'stimulus-media-exception', 17,
+         'figure' || coalesce(' (' || st.label || ')', '')
+           || ' uses the SVG exception rather than a native visual — stated reason: '
+           || st.media_reason
+    from stim st
+   where st.media_ref is not null
 )
 select r.severity, r.check_name, r.detail
   from (

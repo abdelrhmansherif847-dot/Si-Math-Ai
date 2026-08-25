@@ -72,7 +72,8 @@ t.section('The checks read the CTEs, never the tables');
 // public.exam_questions directly, the harness would silently measure the real
 // (empty) table instead of the scenario, and every scenario would look clean.
 // Two checks did exactly that before this suite existed.
-for (const tbl of ['public.exam_forms', 'public.exam_form_sections', 'public.exam_questions']) {
+for (const tbl of ['public.exam_forms', 'public.exam_form_sections',
+                   'public.exam_questions', 'public.exam_stimuli']) {
   t.ok(`the checks half never touches ${tbl}`, !CHECKS_SQL.includes(tbl));
   t.ok(`the source half does touch ${tbl}`, sourceCTEs('X', 'EST_MATH_1').includes(tbl));
 }
@@ -118,18 +119,26 @@ const EXPECTED_CHECKS = [
   'question-count', 'question-ordinal-missing', 'question-ordinal-range',
   'question-status', 'question-difficulty', 'question-attestation',
   'question-explanation',
+  'stimulus-orphan', 'stimulus-media-exception',
 ];
 for (const c of EXPECTED_CHECKS) {
   t.ok(`the ${c} check is present`, CHECKS_SQL.includes(`'${c}'`));
 }
 
-// Exactly one check may be a WARNING. The gate is genuinely silent about
-// explanations, so flagging one as an ERROR would make the pre-flight refuse a
-// form the database would accept — changing the M3 contract from the outside.
+// The WARNING set is pinned exactly. Each of these is something the database
+// accepts and Si Math AI does not want: promoting any to ERROR would make the
+// pre-flight refuse a form the gate would take, which is changing the M3 and
+// M4 contracts from the outside. Adding one silently is just as wrong.
 const warningChecks = [...CHECKS_SQL.matchAll(/'WARNING',\s*'([a-z-]+)'/g)].map((m) => m[1]);
-t.is('explanation is the only WARNING', warningChecks, ['question-explanation']);
-t.ok('explanation is never raised as an ERROR',
-  !/'ERROR',\s*'question-explanation'/.test(CHECKS_SQL));
+t.is('the WARNING set is exactly these three', warningChecks.sort(),
+  ['question-explanation', 'stimulus-media-exception', 'stimulus-orphan']);
+for (const w of ['question-explanation', 'stimulus-orphan', 'stimulus-media-exception']) {
+  t.ok(`${w} is never raised as an ERROR`,
+    !new RegExp(`'ERROR',\\s*'${w}'`).test(CHECKS_SQL));
+}
+// The media exception is only narrow while someone reads the reasons.
+t.ok('the media-exception warning prints the stated reason',
+  CHECKS_SQL.includes('st.media_reason'));
 t.ok('the WARNING says plainly that the gate does not enforce it',
   CHECKS_SQL.includes('publish_exam_form() does not check this'));
 
