@@ -1,8 +1,21 @@
 -- =====================================================================
 -- Mock Exam v2 · M4 — Assessment Capabilities: structured stimuli
 -- =====================================================================
--- STATUS: PREPARED, NOT APPLIED. Awaiting individual approval, per the repo
---         rule that writing a migration file is not applying it.
+-- STATUS: APPLIED to production 2026-08-25, after explicit approval, as
+--         version 20260825221601 (name: exam_stimuli). Revision 2 — the
+--         revision that closed kind='figure' to the SVG exception path.
+--
+--         Verified live on PostgreSQL 17.6 immediately afterwards. The four
+--         native kinds validate, seven missing-key cases fail closed, every
+--         figure spec is refused, and the CHECK constraints bite: a table
+--         carrying media, a figure with a free-form spec and a figure as
+--         raster all returned 23514, while a native chart spec, a text body
+--         and the SVG exception were accepted. The behavioural probe ran
+--         inside a subtransaction that always rolls back and left ZERO rows.
+--
+--         publish_exam_form was captured before and after: its body md5 is
+--         byte-identical (098d05724e2f2a34a7c17cb8c68ded3d) and its ACL
+--         unchanged. B1's two triggers on exam_forms survive.
 --
 -- SCOPE: one new table, one new column, one new validator, two widened
 --        functions, and the publish gate extended to cover them. The Core is

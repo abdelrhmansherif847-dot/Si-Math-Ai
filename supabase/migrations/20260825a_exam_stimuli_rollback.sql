@@ -1,9 +1,16 @@
 -- =====================================================================
 -- Mock Exam v2 · M4 ROLLBACK — undoes 20260825a_exam_stimuli.sql
 -- =====================================================================
--- STATUS: NOT APPLIED. Shipped WITH the forward migration, per the M1 rule
---         that a rollback composed at the moment something has gone wrong is
---         not a rollback.
+-- STATUS: NOT APPLIED, AND THE FORWARD MIGRATION IS NOW LIVE. Shipped WITH
+--         the forward migration, per the M1 rule that a rollback composed at
+--         the moment something has gone wrong is not a rollback.
+--
+--         The forward file was applied to production 2026-08-25 as version
+--         20260825221601. Running this therefore changes live behaviour.
+--         Exercised on the harness: it refused with live data and reported
+--         exact counts, proceeded under the declared flag, left M3's five
+--         functions and B1's triggers intact with spine content preserved,
+--         and the forward file re-applied cleanly afterwards.
 --
 -- Revision 1, written against forward-migration revision 1.
 --
