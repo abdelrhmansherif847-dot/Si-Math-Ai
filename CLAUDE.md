@@ -16,12 +16,14 @@ The inline deploy path has caused two production outages (2026-06-17) by
 deploying a truncated stub instead of the real function. Students received 500
 errors for the duration.
 
-`supabase/functions/ai-tutor/index.ts` is **~233 KB / 4,240 lines** (measured
-2026-08-02, after v96). An earlier version of this file said "~55 KB" — the
-function has grown four-fold since, which makes this prohibition *more* binding,
-not less. (The same entry previously read "~274 KB / 4,943 lines", which did not
-match the file it described; the rule stands either way, and the point is the
-order of magnitude, not the digits.)
+`supabase/functions/ai-tutor/index.ts` is **291,876 bytes / 5,122 lines**
+(measured 2026-08-25, at v101, and byte-identical to what production is running
+— see the Live system table). An earlier version of this file said "~55 KB" —
+the function has grown five-fold since, which makes this prohibition *more*
+binding, not less. This entry has been wrong twice: it read "~274 KB / 4,943
+lines" and then "~233 KB / 4,240 lines", and neither matched the file it
+described. The rule stands either way, and the point is the order of magnitude,
+not the digits.
 
 `ai-tutor` is also a **multi-file bundle** since v83: `index.ts` imports from
 `_shared/`. Any deploy path that ships only `index.ts` produces a function that
@@ -55,7 +57,7 @@ in `supabase/migrations/` is inert until someone runs it.
 
 ### 4. All development goes to the feature branch
 
-Active branch: `claude/si-math-migration-strategy-dnrteg`
+Active branch: `claude/mock-exam-enhancement-nnwb48`
 
 Never push to `main` directly. Never push to a different branch without
 explicit permission.
@@ -127,26 +129,26 @@ Si Math AI is a live Egyptian exam-prep platform (SAT / EST / ACT). The AI
 tutor "Zero" is used by real students. Production incidents have direct
 student impact during exam-prep windows.
 
-### Live system (verified 2026-08-03T20:10Z)
+### Live system (baseline 2026-08-03T20:10Z · Edge Function and static-site rows re-verified 2026-08-25T23:20Z)
 
 | | |
 |---|---|
 | Supabase project | `igvkyxkmjnkzscqgommj` |
-| Edge Functions | `ai-tutor` (platform version **144**, ACTIVE, deployed 2026-08-13T20:38:11Z) · `admin-actions` (platform version **16**, ACTIVE) — read from `list_edge_functions` on 2026-08-15 |
-| `ai-tutor` source version in `main` | `AI_TUTOR_VERSION = 'v101'` (merged 2026-08-15, commit `eebdce5`). **UNDEPLOYED as of that merge** — the merge is a repository event and does not touch the Edge Function. v101 makes Zero's identity answer a fixed string the server returns verbatim instead of a model generation, and adds the name / reversed-word-order patterns (`what's your name`, `اسمك إيه؟`, `مين أنت؟`, `esmak eh`) that `isIdentityQuestion()` did not match at all before it. **Which source version platform 144 is actually running was never verified** — only the platform version and the sha below were read. Do not infer it from this table |
+| Edge Functions | Three, all ACTIVE, read from `list_edge_functions` 2026-08-25T23:20Z: `ai-tutor` (platform version **145**, updated 2026-08-15T21:03:56Z) · `admin-actions` (platform version **16**, updated 2026-07-28T13:49:12Z) · `support-actions` (platform version **1**, created and updated 2026-08-16T16:58:38Z). All three have `verify_jwt = true` |
+| `ai-tutor` source version LIVE | `AI_TUTOR_VERSION = 'v101'` — **measured, not inferred.** The deployed source was read with `get_edge_function` on 2026-08-25 and its constant is `'v101'`. v101 makes Zero's identity answer a fixed string the server returns verbatim instead of a model generation, and adds the name / reversed-word-order patterns (`what's your name`, `اسمك إيه؟`, `مين أنت؟`, `esmak eh`) that `isIdentityQuestion()` did not match at all before it. It was merged to `main` at `eebdce5` on 2026-08-15 and deployed the same day at 21:03:56Z — the deploy was a separate manual act, as always |
 | `daily_limit` semantics | **A maximum per day, never a free allowance.** PAID plans: two INDEPENDENT checks — the operation's `credit_costs` price is charged from message #1, AND the request is refused at `daily_limit` whatever the balance (`20260802192644`). ZERO-PRICE tier only (`amount_egp = 0 AND credits_granted = 0`): `daily_limit` IS the free allowance, and purchased credits carry the student past it |
 | FREE plan daily limit | **15/day** (`plan_definitions.FREE.daily_limit`). Enforced by `consume_credits`, charged by the `ai-tutor` entitlement gate from v96 onward — **before v96 nothing server-side enforced it**; see `docs/engineering/free-quota-enforcement-investigation.md` |
 | Quota gate | **LIVE.** `ai-tutor` v96 charges `consume_credits` before any provider call and fails closed. Both supporting migrations are applied. Full trace and verification: `docs/engineering/free-quota-enforcement-investigation.md` |
 | `consume_credits` | 8 args since `20260802173710` — `p_client_request_id` (DEFAULT NULL) makes one logical send charge once. Seven-argument callers still resolve |
 | `subscriptions.plan_type` | A legacy CATEGORY column, not a plan code, and read by nothing — `plan_code` on the same row is authoritative. `subscriptions_plan_type_check` permits six values only, so every writer maps through `legacy_plan_type()` (`20260802184704`). Never write a raw `plan_code` into it |
 | `refund_ai_credit` | **service_role only** since `20260802174206`. It DELETEs the `ai_usage_logs` row `consume_credits` counts, so a client-callable refund is a client-callable quota reset |
-| `ai-tutor` deployed bundle | `ezbr_sha256` `2c91aa15a8138064833e73c405522f66448bafac41c01c082bec79313d002d55`, platform version 144, deployed 2026-08-13T20:38:11Z (read 2026-08-15). The four-file shape is unchanged: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}`. **The bundle was NOT compared against the tree this time** — the sha is recorded so the next session can tell whether anything moved, not as proof of parity. **Re-read this row from `list_edge_functions` rather than trusting it.** It has now been found stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), and on 2026-08-03 it overstated the gap (it said v97/v98 were unshipped for the ~30 minutes between the deploy and this correction) |
+| `ai-tutor` deployed bundle | `ezbr_sha256` `efedd0f8ff4d306040031c0f6adef4dd6a6f9803235e53f1d966a5d09db67aa8`, platform version 145, updated 2026-08-15T21:03:56Z (read 2026-08-25). Four files, unchanged in shape: `index.ts` + `_shared/{telemetry.core.ts, verification.core.ts, taxonomy.core.js}`. **Compared byte-for-byte against the tree on 2026-08-25: all four sha256-identical** to `origin/main` and to `claude/mock-exam-enhancement-nnwb48`, which do not differ in these paths. **Re-read this row from `list_edge_functions` rather than trusting it.** It has been stale in BOTH directions: on 2026-08-02 it understated the version (133 while 134 ran), on 2026-08-03 it overstated the gap, and on 2026-08-25 it was found still on 144 with a sha production had not used for ten days |
 | L3 Shadow pipeline | `l3-shadow-v3` |
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **95 files** in `supabase/migrations/`, **152 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`; B5 `publish_exam_form_revoke_public` applied 2026-08-25 as version `20260825141519`; M4 `exam_stimuli` applied 2026-08-25 as version `20260825221601`) |
-| Static site | 46 root `*.html` pages on Vercel |
+| Static site | **48** root `*.html` pages on Vercel (counted 2026-08-25; `support.html` and `admin-support.html` were the two added since the 46 figure) |
 | CI | `node tests/run-all.mjs` — **54 checks** |
 
 **Source version and platform version are different axes and must never be
@@ -156,30 +158,36 @@ recorded "v69 / platform version 78" as if the two moved together; they do not.
 The only unambiguous identity for what is *running* is the platform version plus
 the bundle sha256.
 
-**`main` and the deployed function are NOT in sync as of 2026-08-15.** `main`
-carries v101, merged at `eebdce5`, and no Edge Function deploy was performed with
-that merge — so whatever platform version 144 contains, it does not contain v101.
-What production IS running was not verified: the last byte-for-byte comparison in
-this file was 2026-08-03 (v98 at platform version 136), the counter has since
-moved to 144, and no session has recorded a comparison since. Treat the gap as
-known and its size as unknown. Being in sync was **the exception, not the rule**
-anyway — the repo is
-*routinely* ahead of production, because
-merging deploys the site automatically and nothing deploys the Edge Function.
-Phase V0 sat merged-but-undeployed for exactly this reason until v96 shipped
-with it, and v97/v98 sat that way for about six hours on 2026-08-03.
-**Never infer "live" from "merged"** — compare the platform version and bundle
-sha256, which is a query, not a read.
+**`main` and the deployed function ARE in sync as of 2026-08-25.** Measured, not
+assumed: platform version 145's four files are sha256-identical to `origin/main`
+and to the active branch, and the deployed source's own constant reads
+`AI_TUTOR_VERSION = 'v101'`. The deploy landed 2026-08-15T21:03:56Z, about an
+hour after the `eebdce5` merge.
 
-That cuts both ways, and this file has now been wrong in both directions within
-24 hours. On 2026-08-03 at 19:33 it recorded v97/v98 as unshipped; they were
-deployed five minutes later and the row was not updated, so a session reading it
-at 20:00 would have concluded a deploy was still owed and could have redeployed
-from a branch that did not contain them — which would have *reverted* v97/v98 in
-production. **Before deploying anything, check whether the deploy you are about
-to perform is already done, and whether your working tree is behind `main`.**
+That sentence replaces one asserting the exact opposite — "NOT in sync … it does
+not contain v101" — written on the very day the deploy landed and left standing
+for ten days while production ran v101 the whole time. **A session that trusted
+it and redeployed from a branch predating v101 would have reverted a live fix.**
+The same failure had already happened on 2026-08-03 in the other direction:
+v97/v98 were recorded as unshipped, were deployed five minutes later, and the row
+was never updated, so a session reading it at 20:00 would have concluded a deploy
+was still owed.
 
-**The migration file count and the applied count differ** (73 vs 137): early
+The lesson is not that a row was wrong. It is that **this row cannot be trusted
+by reading it** — in either direction. Being in sync is **the exception, not the
+rule**: the repo is *routinely* ahead of production, because merging deploys the
+site automatically and nothing deploys the Edge Function. Phase V0 sat
+merged-but-undeployed for exactly this reason until v96 shipped with it.
+
+**Never infer "live" from "merged", and never infer "not live" from this file.**
+Both are a query, not a read: `list_edge_functions` gives the platform version
+and bundle sha256, `get_edge_function` gives the deployed source itself (its
+result is large enough that the harness spills it to a file — grep that file
+rather than reading it). **Before deploying anything, check whether the deploy
+you are about to perform is already done, and whether your working tree is behind
+`main`.**
+
+**The migration file count and the applied count differ** (95 vs 152): early
 migrations were applied without a committed file. `scripts/check-migration-parity.sh`
 exists for this. Do not treat the file list as the applied list.
 
