@@ -61,8 +61,9 @@ to the served paths. Not decided.
 
 **Problem.** Nothing makes it visible whether the repository is ahead of
 production. The only way to know is to compare the live platform version and
-bundle sha256 against the source by hand. The same applies to migrations: 73
-files in the repo, 137 applied in the database, and the two counts drift
+bundle sha256 against the source by hand. The same applies to migrations: 95
+files in the repo, 152 applied in the database (2026-08-25; this read 73 / 137
+when the item was raised, which is itself the point), and the two counts drift
 independently.
 
 **Demonstrated again on 2026-08-02.** `main` and the deployed `ai-tutor` are in
@@ -74,6 +75,21 @@ item removes.
 
 "Is it live?" is currently a question you can only answer by querying, and
 nothing prompts you to ask it.
+
+**Demonstrated with teeth on 2026-08-25, and this is now the strongest case for
+scheduling it.** `CLAUDE.md` stated in writing that `main` and production were
+**NOT** in sync and that platform version 144 "does not contain v101". Production
+had been running v101 since 2026-08-15T21:03:56Z — an hour after the merge the
+note called undeployed — and the claim stood for ten days. **A session that
+trusted it and redeployed from a branch predating v101 would have reverted a live
+fix in the tutor students use.** The same file had been wrong in the opposite
+direction three weeks earlier, on 2026-08-03.
+
+That is the difference from the 2026-08-02 demonstration above, and it is why
+this item is not merely tidy-up: a drift check that only catches "the repo is
+ahead" would not have caught this one. **The check must report the comparison in
+both directions**, and must be trusted over any sentence written in a file —
+including this one.
 
 **Sketch, not a design.** A check that reports, without failing a build:
 

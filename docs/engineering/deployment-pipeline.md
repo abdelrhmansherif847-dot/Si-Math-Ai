@@ -21,7 +21,7 @@ nothing at all.
 
 | Surface | Trigger | Automatic? | Approval gate |
 |---|---|---|---|
-| **Static site** (46 root `*.html`, `assets/`, root `*.js`) | push/merge to `main` | ✅ **yes** | none |
+| **Static site** (48 root `*.html`, `assets/`, root `*.js`) | push/merge to `main` | ✅ **yes** | none |
 | **Edge Functions** (`ai-tutor`, `admin-actions`) | manual CLI | ❌ no | `DEPLOY.md §4` + explicit approval |
 | **Database migrations** | manual | ❌ no | `CLAUDE.md §3`, individually approved |
 
