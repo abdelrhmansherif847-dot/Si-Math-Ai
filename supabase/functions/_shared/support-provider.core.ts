@@ -1,6 +1,9 @@
 // Help & Support — the meeting-provider contract.
 //
-// PREPARED. Depends on migrations 20260815a–20260815f, which are NOT applied.
+// LIVE. Shipped inside the support-actions bundle, deployed 2026-08-16
+// (platform version 1). Migrations 20260815a–20260815f are applied, as versions
+// 20260816150725 … 20260816155449. (This line read "PREPARED … NOT applied"
+// until 2026-08-25; see the STATUS block in support-actions/index.ts.)
 // Nothing in this file talks to a database; it is pure logic so that
 // tests/support-isolation.test.mjs can execute the REAL shipped source rather
 // than a paraphrase of it.

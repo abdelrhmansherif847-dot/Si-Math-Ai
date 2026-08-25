@@ -1,11 +1,30 @@
 // =====================================================================
 // support-actions — the meeting-provisioning boundary for Help & Support
 // =====================================================================
-// STATUS: ⛔ PREPARED — NOT DEPLOYED, and it cannot usefully be deployed yet:
-//         it reads support_meetings, support_meeting_slots and system_settings,
-//         none of which exist until migrations 20260815a–20260815f are applied.
-//         Migration A is not approved. Deploying this early is harmless (every
-//         action returns schema_not_ready) but pointless.
+// STATUS: ✅ LIVE. Deployed to production 2026-08-16T16:58:38Z, ACTIVE at
+//         platform version 1 (read from list_edge_functions 2026-08-25).
+//
+//         Its whole dependency chain is applied: migrations 20260815a–20260815f
+//         are in the database as versions 20260816150725 … 20260816155449, and
+//         support_meetings, support_meeting_slots, support_tickets and
+//         system_settings all exist (verified 2026-08-25). The schema_not_ready
+//         path below is now a guard for a fresh environment, not a description
+//         of production.
+//
+//         THIS HEADER SAID THE OPPOSITE UNTIL 2026-08-25 — "⛔ PREPARED — NOT
+//         DEPLOYED … Migration A is not approved" — nine days after the deploy,
+//         and after a separate session had already corrected the six migration
+//         files to ✅ APPLIED. A repository that contradicts itself about what
+//         is live is worse than one that says nothing: the migration files and
+//         this function disagreed, and only one of them could be right.
+//
+//         COMMENTS ARE AHEAD OF THE DEPLOYED BUNDLE, BY DECISION. This
+//         correction is comment-only. The executable source is unchanged, and
+//         NO redeploy was performed — a production deploy to change a comment
+//         costs more risk than the divergence it removes. The consequence, and
+//         it is deliberate: a byte-for-byte comparison of this bundle against
+//         the tree will now differ, in the comments and nowhere else. Do not
+//         read that divergence as a pending code change.
 //
 // DEPLOY: DEPLOY.md §4, same manual CLI path as every other function. Nothing
 //         deploys an Edge Function automatically.

@@ -1,6 +1,13 @@
 // Help & Support — the Zoom adapter.
 //
-// PREPARED. Depends on migrations 20260815a–20260815f, which are NOT applied.
+// LIVE. Shipped inside the support-actions bundle, deployed 2026-08-16
+// (platform version 1). Migrations 20260815a–20260815f are applied, as versions
+// 20260816150725 … 20260816155449. (This line read "PREPARED … NOT applied"
+// until 2026-08-25; see the STATUS block in support-actions/index.ts.)
+//
+// Whether Zoom itself is CONFIGURED is a separate question this file cannot
+// answer: readZoomEnv() returns null when the four secrets are unset, and the
+// caller then degrades to "the link is pending" rather than failing a booking.
 //
 // The ONLY file in this repository that knows Zoom exists. It implements
 // MeetingProvider from support-provider.core.ts and nothing else imports it by

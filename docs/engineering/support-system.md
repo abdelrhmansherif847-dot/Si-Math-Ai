@@ -1,10 +1,21 @@
 # Help & Support — architecture record
 
-**Status as of 2026-08-16: NOTHING IS LIVE.** Seven migration files sit in
-`supabase/migrations/` marked `⛔ PREPARED — NOT YET APPLIED`, the Edge Function
-has never been deployed, and both pages ship in a designed "not applied yet"
-state. Migration A has not been approved for execution and is a separate
-decision from any of the preservation commits.
+**Status as of 2026-08-25: LIVE.** The six forward migrations were applied on
+2026-08-16 as versions `20260816150725` … `20260816155449`; `support-actions`
+was deployed the same day and is ACTIVE at platform version 1
+(2026-08-16T16:58:38Z); `support_meetings`, `support_meeting_slots`,
+`support_tickets` and `system_settings` all exist. Both pages therefore run
+against a real schema rather than the designed "not applied yet" state they
+were built to degrade into. The seventh file, `20260815z`, is the ROLLBACK: it
+is correctly unapplied and must stay that way — running it now destroys a live
+support system and its data.
+
+This banner read **"Status as of 2026-08-16: NOTHING IS LIVE"** until
+2026-08-25 — nine days after everything went live, and after the six migration
+files themselves had already been corrected to ✅ APPLIED. It is corrected in
+place, with its own failure recorded, because that failure is the lesson: a
+record asserting that a live system was never built is more dangerous than no
+record at all.
 
 This is an internal engineering record, not public documentation. It is not
 covered by the knowledge-layer freeze (`CLAUDE.md` §5), which governs the public
@@ -69,12 +80,12 @@ learning profile — not by convention, but because no path exists.
 |---|---:|---|
 | `support.html` | 1167 | Student page. Help centre, tickets, thread, escalation booking |
 | `admin-support.html` | 1002 | Agent page. Queue, thread, meeting slots, article editor |
-| `supabase/functions/support-actions/index.ts` | — | Provisioning boundary. Never deployed |
+| `supabase/functions/support-actions/index.ts` | — | Provisioning boundary. **LIVE**, platform version 1 |
 | `supabase/functions/_shared/support-provider.core.ts` | — | Provider contract + `redactProviderRef` |
 | `supabase/functions/_shared/support-zoom.core.ts` | — | The only file that knows Zoom exists |
-| `tests/support-isolation.test.mjs` | — | 121 checks across six boundaries |
-| `supabase/migrations/20260815{a..f}` | 2903 | The chain. PREPARED |
-| `supabase/migrations/20260815z_support_rollback.sql` | 872 | Undoes the chain. PREPARED |
+| `tests/support-isolation.test.mjs` | — | 139 checks across seven boundaries |
+| `supabase/migrations/20260815{a..f}` | 2903 | The chain. **APPLIED** 2026-08-16 |
+| `supabase/migrations/20260815z_support_rollback.sql` | 872 | Undoes the chain. Correctly **unapplied** — now destructive |
 
 ---
 
@@ -405,8 +416,10 @@ depends on what it would drop. It has never been run against production.
 
 ## 12. Test coverage
 
-`tests/support-isolation.test.mjs` — **121 checks**, auto-discovered by
-`node tests/run-all.mjs`.
+`tests/support-isolation.test.mjs` — **139 checks**, auto-discovered by
+`node tests/run-all.mjs`. The per-boundary counts below were measured by running
+the suite on 2026-08-25, not tallied by hand; the table previously summed to 121
+and had drifted in five of its seven rows.
 
 One earlier check was **deleted rather than repaired**: it read `A === G - (G - A)`,
 which reduces to `A === A` and could never have failed. A check that cannot go
@@ -416,12 +429,12 @@ about this — and the nine per-function guards that replaced it each can.
 | Boundary | Checks | Method |
 |---|---:|---|
 | Academic | 15 | twelve academic table names absent from executable SQL; no FK; function untouched |
-| Zero | 21 | ten AI-marker **tripwires** (grep, not proof — a differently-named provider would pass); `sender_role` enum; single `'agent'` writer |
-| Tenant | 21 | RLS predicates; **no student UPDATE policy**; exact ticket-policy list; nine `support_require_agent()` guards |
-| Credential | 25 | **executes the real `redactProviderRef`** against a realistic Zoom payload |
+| Zero | 22 | ten AI-marker **tripwires** (grep, not proof — a differently-named provider would pass); `sender_role` enum; single `'agent'` writer |
+| Tenant | 20 | RLS predicates; **no student UPDATE policy**; exact ticket-policy list; nine `support_require_agent()` guards |
+| Credential | 31 | **executes the real `redactProviderRef`** against a realistic Zoom payload |
 | Storage | 8 | two-segment requirement; owner segment; shared lifecycle predicate; no UPDATE policy |
-| Chain invariants | 14 | all seven still PREPARED; advisory lock on both doors; no `pg_exception_constraint`; settings ship unset |
-| Meeting lifecycle | 17 | one per defect found in review: provisioning is wired, release is awaited and conditional, cancel releases, no JSON-path filter, owner-or-agent release, waiting room on, host-overlap refused, link redraws, `raw` spread first |
+| Chain invariants | 19 | each forward migration recorded **APPLIED** with its production version, and its executable SQL md5 pinned so an edit after the fact cannot pass silently; the rollback correctly unapplied; advisory lock on both doors; no `pg_exception_constraint`; settings ship unset |
+| Meeting lifecycle | 24 | one per defect found in review: provisioning is wired, release is awaited and conditional, cancel releases, no JSON-path filter, owner-or-agent release, waiting room on, host-overlap refused, link redraws, `raw` spread first |
 
 The credential checks are the ones designed hardest to be falsifiable: the
 payload contains `start_url` with a host token, `access_token`,
