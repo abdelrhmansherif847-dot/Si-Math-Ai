@@ -145,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **91 files** in `supabase/migrations/`, **150 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`) |
+| Migrations | **93 files** in `supabase/migrations/`, **151 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`; B5 `publish_exam_form_revoke_public` applied 2026-08-25 as version `20260825141519`) |
 | Static site | 46 root `*.html` pages on Vercel |
 | CI | `node tests/run-all.mjs` — **54 checks** |
 

@@ -1,8 +1,26 @@
 -- =====================================================================
 -- Mock Exam v2 · B5 — revoke PUBLIC EXECUTE on publish_exam_form
 -- =====================================================================
--- STATUS: ⚠️ PREPARED, NOT APPLIED. Awaiting individual approval, per the
---         repo rule that writing a migration file is not applying it.
+-- STATUS: ✅ APPLIED to production 2026-08-25, after explicit approval, as
+--         version 20260825141519 (name: publish_exam_form_revoke_public).
+--         The 20260824c filename prefix is the drafting date; the version
+--         above is the apply.
+--
+--         Verified live afterwards. The ACL is now
+--         {postgres=X/postgres,service_role=X/postgres}: anon and
+--         authenticated EXECUTE = false, service_role and postgres = true,
+--         and the function is otherwise unchanged (still SECURITY INVOKER,
+--         volatile, same signature). B1's two triggers and M3's five
+--         functions are intact and the spine still holds 0/0/0 rows.
+--
+--         The boundary demonstrably moved, measured on production PG 17.6
+--         without authoring anything — calling the gate with a non-existent
+--         form id creates nothing but reveals where the caller stops:
+--           service_role   -> P0001 "publish: no form with id ..."  (body ran)
+--           authenticated  -> 42501 "permission denied for function"
+--           anon           -> 42501 "permission denied for function"
+--         Before this migration, authenticated reached the body and failed
+--         deeper, at "permission denied for table exam_forms".
 --
 -- SCOPE: one REVOKE on one function. This file changes no schema, no
 --        lifecycle behaviour, no policy, and no other object's privileges.

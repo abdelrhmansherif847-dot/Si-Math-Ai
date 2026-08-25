@@ -2,9 +2,16 @@
 -- Mock Exam v2 · B5 ROLLBACK — undoes
 --   20260824c_publish_exam_form_revoke_public.sql
 -- =====================================================================
--- STATUS: ⚠️ NOT APPLIED. Shipped WITH the forward migration, per the M1 rule
---         that a rollback composed at the moment something has gone wrong is
---         not a rollback.
+-- STATUS: ⚠️ NOT APPLIED, AND THE FORWARD MIGRATION IS NOW LIVE. Shipped WITH
+--         the forward migration, per the M1 rule that a rollback composed at
+--         the moment something has gone wrong is not a rollback.
+--
+--         The forward file was applied to production 2026-08-25 as version
+--         20260825141519. Running this therefore changes live behaviour: it
+--         re-grants EXECUTE on the publication gate to PUBLIC. Exercised on
+--         the harness — observed restoring the grant, leaving data and
+--         neighbouring objects intact, and the forward file re-applying
+--         cleanly afterwards.
 --
 -- Revision 1, written against forward-migration revision 1.
 --
