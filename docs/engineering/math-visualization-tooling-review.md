@@ -608,3 +608,52 @@ The tooling decision is unchanged, but its justification is now the right kind.
 codebase. And one addition — JSXGraph is worth keeping as an **authoring-time
 cross-check** for constructed geometry, where its exact primitives can verify
 coordinates an author computed by hand. Not shipped, not a dependency.
+
+---
+
+## 14. Renderer decision — CLOSED
+
+**Decided 2026-08-26. The production renderer is the improved custom SVG
+system, `exam-stimulus.js`.**
+
+The wording matters, because "custom SVG" no longer means what it meant when
+this review opened. It means the system as it stands after the art-direction
+work: **inked data with hue reserved for two or more series, tick marks on both
+axes, the two-tier grid, the 1 → 1.6 → 2.9 weight hierarchy, numerals in the
+text face, the canvas taking the shape the mathematics asks for, and the
+stimulus sharing a left edge with its question.** Reverting to the figures this
+review started with would not satisfy this decision.
+
+It was chosen because it won a fair comparison against real alternatives on
+real specs (§13), and because it preserves the exam semantics exactly — not
+because custom code was preferred in advance, and not on bundle size.
+
+### What is closed and what is not
+
+| | |
+|---|---|
+| **Closed** | the renderer technology decision |
+| **Not closed** | the student-facing visual experience, and the exam surface |
+
+The visual layer stays open until the owner sits the updated exam and judges
+the whole thing — question, figure, table and navigation together — rather than
+isolated plates or comparison screenshots. That judgement is what closes it.
+
+### Pre-flight before that sitting
+
+All 66 questions were walked on **all four candidate surfaces**: 12/12 checks
+each, no JS errors, no contrast failure, no label overlap, no unequal-scaled
+plane, no scatter joined, no authoring text leaking into a prompt. The notation
+screen was checked separately on two surfaces — 16 constructs, no contrast
+failure, no horizontal scroll.
+
+KaTeX remains **unverified**: this container's proxy blocks the CDN, so the
+typeset output has never been seen here. That is the one thing the sitting has
+to confirm.
+
+### Sequence from here
+
+```
+  sit the exam  →  lock the visual layer  →  migration
+     →  approval  →  apply  →  content insert  →  wiring
+```
