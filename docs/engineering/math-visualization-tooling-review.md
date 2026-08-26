@@ -530,3 +530,81 @@ than in an isolated figure:
   other sans was the inconsistency.
 * **Figure width 520 → 450.** At 520 a square-ish coordinate plane came out
   520 px tall and towered over the question it belonged to.
+
+---
+
+## 13. The libraries, actually prototyped
+
+§3 evaluated the tools on their properties. This section evaluates them on
+their **output**, which is the only standard that matters, because the student
+does not see the architecture.
+
+The npm registry is reachable from this container even though the CDN is not,
+so JSXGraph (1.0 MB), Chart.js (209 KB) and D3 (280 KB) were fetched, inlined
+into a local page, and pointed at the **same real exam specs** the preview
+uses. Each library was configured toward the Si Math AI system — inked data,
+our grid, our type, drag and zoom and tooltips off — because comparing our art
+direction against a library's defaults would prove nothing.
+
+`scripts/build-renderer-eval.py` rebuilds the page.
+
+### Function graph — ours is clearly better, on the case a maths library should win
+
+JSXGraph draws a curve given as sampled points by **joining them with straight
+lines**. The result has a visible corner at every turning point and a sharp V
+at the minimum — it asserts non-differentiability the function does not have.
+That is precisely the defect our centripetal interpolation exists to prevent.
+
+It has no way to do better without the formula, and our spec stores samples,
+not formulas. **The library loses the case it was brought in for.**
+
+### Circle — indistinguishable, and its axis choice is worse
+
+This was the one place JSXGraph should have won outright: a true circle
+primitive against twelve sampled points. Side by side at exam size, **they
+cannot be told apart.** The theoretical advantage does not survive contact with
+the size a student actually sees.
+
+JSXGraph also chose 0.5 steps for the axis where ours chose 1. A student
+counting a radius wants unit steps.
+
+### Coordinate geometry — very close
+
+Honestly close. JSXGraph's axes carry slightly more confident arrowheads. Ours
+carries more of the exam-figure vocabulary: tick marks on both axes, the
+two-tier grid, and axis names at the tips. Neither is embarrassing beside the
+other.
+
+### Scatter and bar — a tie on looks, decided by everything else
+
+Chart.js, configured, produces a perfectly respectable scatter. On appearance
+it is a tie.
+
+But it had to be **explicitly told not to crop the declared window**: left to
+itself it drew x from 1 to 7 when the spec declares 0 to 9, quietly changing
+what a student can read off the figure. That is the tool deciding the
+mathematics — the first non-negotiable — and it is the default behaviour.
+
+And it is canvas: no DOM to style, so no CSS theming and no four surfaces from
+one renderer; raster, so no crisp scaling; and nothing in the accessibility
+tree.
+
+### Number line — no candidate models it at all
+
+Not one of the libraries has a concept of an open versus a closed endpoint,
+which is the entire content of those questions.
+
+### Verdict
+
+**Custom SVG for production, across every figure family** — now earned by
+output rather than asserted from bundle size. The comparison was run properly
+and the libraries did not win: one is worse on the case it should own, one is
+indistinguishable, one is a tie that loses on architecture, and none covers the
+number line.
+
+The tooling decision is unchanged, but its justification is now the right kind.
+
+**What still stands from §5:** GeoGebra as a human authoring aid, outside the
+codebase. And one addition — JSXGraph is worth keeping as an **authoring-time
+cross-check** for constructed geometry, where its exact primitives can verify
+coordinates an author computed by hand. Not shipped, not a dependency.
