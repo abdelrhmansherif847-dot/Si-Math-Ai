@@ -191,6 +191,51 @@ here** — whether to backfill the files is the owner's call.
 
 ---
 
+## Note: applied migrations whose committed file carries no status
+
+**Observed 2026-08-25**, from a full sweep: every file in
+`supabase/migrations/` had its STATUS header cross-checked against
+`supabase_migrations.schema_migrations`.
+
+**The headline result is a clean one, and is recorded because an absence of
+findings is only worth anything if someone actually looked.** No migration file
+falsely claims to be unapplied. The six that say `NOT APPLIED` are all
+rollbacks, correctly unapplied. **There is no unapplied DDL sitting in this
+repository.**
+
+Four files, however, carry **no STATUS header at all** and no applied migration
+of a matching name, so their state cannot be read from the repository:
+
+| File | How it was settled |
+|---|---|
+| `20260614_weakness_report_severity.sql` | `weakness_reports.severity_band` exists |
+| `20260614_weakness_report_trend.sql` | `weakness_reports.trend` exists |
+| `20260614_weakness_report_recency.sql` | `last_signal_at`, `recent7_count`, `recent14_count` all exist |
+| `20260727_sec04_knowledge_base_write_lockdown.sql` | all six `zk_*` policies exist in `pg_policies` |
+
+All four are therefore **live**, established by querying the objects rather than
+by matching names — which is the only method that works here, since early
+migrations were applied under names that do not match their filenames (three
+more files looked unapplied for exactly that reason and are not defects:
+`sec08a_rpc_grant_hygiene` ran as `…_revoke_anon_execute`,
+`sec08b_revoke_truncate_grants` as `…_trigger_references`, and
+`founder_restructure_annual` as `…_50_spots`).
+
+Why it is worth writing down even though nothing is broken: a reader of these
+four files cannot tell whether they are live, and `sec04_knowledge_base_write_lockdown`
+is a CRITICAL security migration. The failure mode is not a wrong claim but an
+absent one — which INFRA-3's drift check would answer directly, and is another
+argument for scheduling it.
+
+**No action taken, and none proposed here.** Adding headers would mean editing
+migration files that have already been applied. Even a comment-only edit changes
+the historical record of an executable migration, which is a different kind of
+act from correcting documentation or a source comment, and it is the owner's
+decision — deliberately taken in advance rather than discovered mid-task. The
+files are untouched.
+
+---
+
 ## Note: platform audit, 2026-08-03
 
 An end-to-end QA pass over all 46 pages, the shared client modules, both Edge
