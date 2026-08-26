@@ -164,6 +164,67 @@ a specific error.
 
 ---
 
+## 4a. The routing threshold — Module 1 to Module 2
+
+**Decision, owner, 2026-08-25. Version 1.**
+
+> **17 or more of 22 → Module 2 `advanced`. 16 or fewer → `standard`.**
+
+**This is Si Math AI's rule for Si Math AI's exam. It is NOT a claim about how
+the College Board routes the real Digital SAT**, whose rule is not published. It
+belongs in the same category as §6's register: ours, and labelled as ours.
+
+### Why 17, and not 80%
+
+80% of 22 is 17.6 questions, which is not a score anyone can get. Any percentage
+has to be rounded to a question boundary, so the boundary is the real decision
+and the percentage is decoration: 17/22 is 77.3%, 18/22 is 81.8%.
+
+**17 is not a compromise between them. It is the only score with a property
+worth having**, and the property comes from Module 1's own composition — 6 easy,
+10 medium, 6 hard:
+
+| | |
+|---|---|
+| Highest score reachable **without solving a single hard item** | 6 + 10 = **16** |
+| So a score of **17** guarantees | at least **one** stretch item solved |
+| A score of **18** would require | at least **two** |
+
+At 16 a student may have answered every routine question and nothing beyond
+them. At 17 they cannot have. **The threshold is the point where "this student
+did something beyond the routine" stops being an inference and becomes a fact.**
+
+That also answers the objection to 18 directly: it does not ask for evidence of
+capability, it asks for two pieces of it, and turns the advanced route into a
+reward for near-perfection. A strong student who makes five ordinary mistakes
+should not be routed away from the harder material.
+
+**This derivation is specific to a 22-item module of 6/10/6.** If Module 1's
+difficulty mix ever changes, the threshold must be re-derived, not carried over.
+
+### What this does NOT do
+
+- **It cannot run.** Nothing scores Module 1 — the platform captures no answers
+  and computes no score (see `mock-exam.html`: *"no score, no answers, no
+  evaluation of any kind"*). This is a decision recorded ahead of the machinery
+  that would apply it, not a behaviour.
+- **It is not calibrated.** No student has sat this exam. 17 is a defensible
+  starting point, not an empirical finding, and it is the first thing to
+  re-examine once there is real performance data: do students at 16–17 actually
+  do better on one route than the other?
+- **It is not the long-term design.** Module 1 was built with mechanisms and
+  difficulty deliberately varied, so treating its 22 items as interchangeable
+  marks is a simplification we accept for v1 and should outgrow. The intended
+  direction is routing on a **performance profile**: a student at 16 who solved
+  the hard items and slipped on easy ones is not the same student as one at 17
+  who cleared the routine and nothing else. That is what §3's mechanisms make
+  possible later, and it is the reason for recording them at authoring time.
+- **The student never sees it.** They finish Module 1 and the next module opens.
+  No threshold is displayed, and no route is named — the registry already
+  withholds per-variant labels for the same reason.
+
+---
+
 ## 5. Coverage, identical in all three sections
 
 22 questions per section, mapped to the live taxonomy:
