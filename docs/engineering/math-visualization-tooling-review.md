@@ -684,32 +684,117 @@ looking at Desmos-styled graphs continuously, which makes that visual language
 a concrete reference standard rather than a matter of taste — and it is
 markedly different from what the renderer produces today.
 
-### Four directions, not four adjustments
+### Judged by figure family, not by one global direction
 
-`scripts/build-figure-directions.py` builds an exploration page. Each direction
-makes a **different bet about what carries a figure**:
+`scripts/build-figure-directions.py` builds the exploration page. It does **not**
+ask for one look. Each mathematical object is a separate decision, because each
+one has a different job on screen:
 
-| | the bet |
+| family | the job |
 |---|---|
-| **A · Plate** | the frame contains it, so the grid can whisper and the internal whitespace reads as deliberate |
-| **B · Open** | no grid, no frame — whitespace carries the composition and the curve is the entire figure |
-| **C · Squared paper** | a fine half-unit grid under a heavier unit rule; dense, and the figure must be bold to sit on it |
-| **D · Screen-native** | light grid, thin axes, the figure in a strong hue — the language beside Desmos all exam |
+| **Function graphs** | read shape and read values. The curve is the subject; the only family where the Desmos comparison genuinely applies |
+| **Coordinate geometry** | count lengths and read positions. The grid is an *instrument the student uses*, which is the opposite of what a function graph wants |
+| **Scatter / statistical** | judge a trend and locate one observation. Axes measure different quantities, so nothing is squared and the grid can only be a locating aid |
+| **Number lines** | read one endpoint and decide open or closed. That distinction *is* the question |
+| **Tables** | find one value fast and be certain which row and column it belongs to, under time |
 
-And five for tables, rethought rather than adjusted: **ruled** (today),
-**boxed** (what most real exam papers use), **banded**, **typographic** (no
-rules at all), **panel**.
+The three plane families are shown through four treatments of frame, grid and
+ink — **Plate**, **Open**, **Squared paper**, **Screen-native**. Number lines get
+**their own four**, because frame and grid mean nothing on a number line: they
+differ in how many values are named, how loud the endpoint is, and whether the
+interval rides on the axis or sits above it as its own object. Tables get seven
+structures, **three of them executions of Boxed**, at four columns rather than
+three — the previous page under-showed the structure most real exam papers use.
 
-An exploration renderer (`scripts/explore-render.js`) carries two structural
-options production does not have — `gridMode` and `frame` — so these are
-genuinely different languages rather than one language recoloured. **The
-production renderer is untouched.**
+The shared fundamentals — typeface, numeral style, tick treatment, label
+placement, card and spacing — are held constant across every panel, so a mix
+across families still reads as one exam.
+
+### What looking at the output found
+
+Every one of these passed the geometry tests and was invisible to them. All were
+caught by rendering the page and reading it, then confirmed by measurement.
+
+**1 · The two-tier grid never worked.** The rule was "the minor rule stays quiet
+and the major rule, every fifth unit, carries the 3:1 contrast." But `niceStep`
+holds the gridline count between **6 and 9 at every span from 4 to 1000** — by
+design, so a student can count the divisions. Every fifth of 6–9 lines is one or
+two lines, and one of those is usually hidden under the axis. So the "tier" was a
+**single heavy line drawn through the figure**, which reads as part of the
+drawing, not as a grid. The existing invariant — *majors fall exactly every fifth
+gridline* — was true the whole time and told us nothing, because it checked
+placement and never asked whether there were enough of them to perceive.
+
+The tier is not wrong; it is **inseparable from grid density**, and a coarse grid
+cannot carry it. It now engages only where it can be perceived, which in practice
+means `gridMode: 'fine'` — half-steps under unit lines, 32 fine against 17 unit
+in the geometry panel. Everywhere else the grid is uniform.
+
+*The open consequence:* with no major tier, no gridline clears 3:1 — measured at
+**1.21–1.38:1** across the three grid-bearing directions. The numerals and ticks
+carry every value, so nothing is unreadable, but the earlier claim that gridlines
+meet the non-text floor no longer holds and should not be repeated. Whether the
+grid gets darker is a per-family question: for coordinate geometry, where the
+grid *is* the instrument, only the dense treatment is genuinely countable.
+
+**2 · A frame around the plot window cannot hold a plane.** Framing the window
+while the axes run through the interior put the numerals outside their own frame,
+clipped the leftmost label against it, dropped a gridline 4.9px short of it and
+let the axis arrow puncture it — four defects, one cause. A plate bounds the
+**whole figure, its labels included**. Now checked: nothing may fall outside the
+border and no gridline may hug it.
+
+**3 · Arrowheads on a data frame are a false claim.** An arrowhead says the axis
+continues past the edge. That is true of a coordinate plane and false of a
+bounded scale — weeks 0 to 9, books 10 to 36. The scatter drew them anyway,
+because the test for an axis was *"does the window contain the origin"* rather
+than *"is this a plane"*, and its weeks happen to start at zero. Arrowheads now
+belong to the plane and nowhere else.
+
+**4 · Figure numerals were set with the keyboard hyphen.** On a figure the
+difference from U+2212 is visible: a hyphen is short, high, and reads as
+punctuation. The tables already used a real minus; the figures did not.
+
+**5 · A colour defined in one theme only is an invisible figure.** The first draft
+of the number lines hard-coded near-black inks, which vanished on a dark card —
+axis 1.44:1, numerals 2.11:1, interval **1.06:1**. Every direction's ink is now
+generated from a `(light, dark)` table, and the build **fails** if a token is
+referenced without being defined or is defined in only one theme.
+
+**6 · A band nobody can see is not a band.** The dark zebra tint measured
+Δluminance 0.0000 against its neighbour — `grid + zebra` rendered identically to
+plain `Boxed`, which would have made that panel a wasted choice. Banding is now
+measured on the two rows rather than asserted from the stylesheet.
+
+Two of the checks written to catch this were themselves wrong and were corrected:
+the contrast helper measured translucent tints as opaque (`rgba(15,92,140,.09)`
+read as a dark navy), and a `tickMode` passed to `drawPlot` did nothing at all,
+so the Open direction was described as naming fewer values while naming exactly
+as many as the other three. **The description was changed to match the drawing,
+not the reverse.**
+
+### Verification
+
+`scripts/check-figure-directions.cjs` drives the page in headless Chromium —
+**230 checks, both themes.** It is a manual harness, not part of `tests/run-all.mjs`:
+it needs a browser, and the repo deliberately has no package.json.
+
+Four mutations were introduced on purpose to confirm the checks can go red:
+dimming the plate gridline back to its old value, flipping the number-line
+endpoint semantics, removing the lift from the band direction, and deleting one
+ink token. Each was caught.
 
 ### The rule for what happens next
 
-Pick a direction, not a detail. Details come after, and only inside whichever
-bet is taken. The directions need not split cleanly by family — geometry may
-want squared paper while a scatter wants open — provided type, tick treatment
-and ink stay common so it still reads as one system.
+React **per family**. There is no requirement that the answer be the same in all
+five, and good reason to think it will not be. What must stay common is the
+fundamentals — type, numerals, ticks, label placement, spacing, the card. Those
+are already constant across every panel, which is why a mix does not look like a
+mix.
 
-**Nothing is locked.**
+The next artefact is not a patch: it is a **figure-family design system** — the
+chosen treatment per mathematical object, plus the shared layer written down as
+rules the renderer enforces.
+
+**Nothing is locked. The production renderer is untouched, no migration exists,
+and no content has been inserted.**

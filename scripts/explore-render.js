@@ -65,7 +65,10 @@ function niceStep(span, target) {
   const raw = span / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
   return [1, 2, 2.5, 5, 10].map(m => m * p).find(c => c >= raw) || p;
 }
-const fmt = v => String(+(+v).toFixed(4));
+// U+2212 MINUS SIGN, not the hyphen a keyboard gives you. On a figure the
+// difference is visible: a hyphen is short, high and reads as punctuation,
+// where a minus matches the numerals' width and sits on their centre line.
+const fmt = v => String(+(+v).toFixed(4)).replace('-', '\u2212');
 
 /* ---------------------------------------------------------------- geometry */
 /* CENTRIPETAL Catmull-Rom through sampled points, as cubic Beziers.
@@ -209,8 +212,30 @@ function drawPlot(spec, opts) {
   // So the minor rule stays quiet and the MAJOR rule, every fifth unit, carries
   // the contrast. A student counting a radius counts from a major line, which
   // is what ruled paper has always done.
-  const major = v => Math.abs(v / (5 * sx) - Math.round(v / (5 * sx))) < 1e-9;
-  const majorY = v => Math.abs(v / (5 * sy) - Math.round(v / (5 * sy))) < 1e-9;
+  //
+  // But a rhythm needs enough beats to be heard, and this one never had them.
+  // niceStep holds the gridline count between 6 and 9 at EVERY span from 4 to
+  // 1000 — deliberately, so a student can count the divisions. Every fifth of
+  // 6-9 lines is one or two lines. Measured on this page: every plane family
+  // had exactly two majors per axis, one of them hidden under the axis itself,
+  // so the other read as a heavy stray line drawn through the figure.
+  //
+  // The tier is not wrong; it is inseparable from grid DENSITY, and a coarse
+  // grid cannot carry it. So it engages only where it can be perceived — which
+  // in practice means gridMode 'fine', where half-steps under the unit lines
+  // give a genuinely dense two-tier grid. Everywhere else the grid is uniform,
+  // and how loud it is becomes a question for the stylesheet, not the geometry.
+  const isMajor = (v, step) => Math.abs(v / (5 * step) - Math.round(v / (5 * step))) < 1e-9;
+  const countMajors = (lo, hi, step) => {
+    let n = 0;
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) if (isMajor(v, step)) n++;
+    return n;
+  };
+  const TIER_MIN = 3;
+  const tierX = countMajors(x0, x1, sx) >= TIER_MIN;
+  const tierY = countMajors(y0, y1, sy) >= TIER_MIN;
+  const major = v => tierX && isMajor(v, sx);
+  const majorY = v => tierY && isMajor(v, sy);
   const mode = opts.gridMode || 'major';
   const grid = el('g', { class: 'sx-grid' });
   if (mode === 'fine') {                       // squared-paper: half-unit minor
@@ -229,15 +254,28 @@ function drawPlot(spec, opts) {
                                     x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   }
   s.appendChild(grid);
+  // The frame is the PLATE BORDER, not the plot window. Framing the window
+  // while the axes run through the interior puts the numerals outside their own
+  // frame, clips the leftmost label against it, drops a gridline a few pixels
+  // short of it and lets the axis arrow puncture it — all four were visible at
+  // exam size. A plate bounds the whole figure, its labels included.
   if (opts.frame) s.appendChild(el('rect', { class: 'sx-frame',
-    x: PAD.l, y: PAD.t, width: W - PAD.l - PAD.r, height: H - PAD.t - PAD.b }));
+    x: 1, y: 1, width: W - 2, height: H - 2 }));
 
   const ax = el('g', { class: 'sx-axis' });
   const showX = y0 <= 0 && y1 >= 0, showY = x0 <= 0 && x1 >= 0;
-  if (showX) ax.appendChild(el('line', { x1: PAD.l, y1: Y(0), x2: W - PAD.r, y2: Y(0),
-                                         'marker-start': 'url(#sx-ar)', 'marker-end': 'url(#sx-ar)' }));
-  if (showY) ax.appendChild(el('line', { x1: X(0), y1: H - PAD.b, x2: X(0), y2: PAD.t,
-                                         'marker-start': 'url(#sx-ar)', 'marker-end': 'url(#sx-ar)' }));
+  // An arrowhead is a claim that the axis carries on past the edge of the
+  // figure. That is true of a coordinate plane and false of a data frame, whose
+  // axes are bounded SCALES — weeks 0 to 9, books 10 to 36. The scatter drew
+  // arrows anyway, because its weeks happen to start at zero and the test for
+  // an axis was "does the window contain the origin" rather than "is this a
+  // plane". Arrowheads now belong to the plane, and nowhere else.
+  const arrows = opts.aspect === 'plane'
+    ? { 'marker-start': 'url(#sx-ar)', 'marker-end': 'url(#sx-ar)' } : {};
+  if (showX) ax.appendChild(el('line', Object.assign(
+    { x1: PAD.l, y1: Y(0), x2: W - PAD.r, y2: Y(0) }, arrows)));
+  if (showY) ax.appendChild(el('line', Object.assign(
+    { x1: X(0), y1: H - PAD.b, x2: X(0), y2: PAD.t }, arrows)));
   if (!showX) ax.appendChild(el('line', { x1: PAD.l, y1: H - PAD.b, x2: W - PAD.r, y2: H - PAD.b }));
   if (!showY) ax.appendChild(el('line', { x1: PAD.l, y1: PAD.t, x2: PAD.l, y2: H - PAD.b }));
   s.appendChild(ax);
@@ -323,7 +361,13 @@ function drawPlot(spec, opts) {
 /* ------------------------------------------------------------ NUMBER LINE */
 function drawNumberLine(spec, opts) {
   opts = opts || {};
-  const W = opts.width || 560, H = 96, M = 40, y = 44;
+  // A number line has its own design axes, and they are not the plane's. What
+  // varies is how many values are named, how loud the endpoint is, and whether
+  // the interval rides ON the axis or sits as a separate band ABOVE it.
+  const W = opts.width || 560, H = opts.height || 96, M = 40;
+  const lift = opts.segLift || 0;             // px the interval sits above the axis
+  const y = opts.axisY || (lift ? H - 52 : 44);
+  const ER = opts.endpointR || 6.5;
   const X = v => M + ((v - spec.min) / (spec.max - spec.min)) * (W - 2 * M);
   const s = svgRoot(W, H);
   arrowDefs(s, 'sx-ar-nl');
@@ -334,26 +378,48 @@ function drawNumberLine(spec, opts) {
 
   const tk = el('g', { class: 'sx-tick' });
   const step = niceStep(spec.max - spec.min, 12);
+  const mode = opts.tickMode || 'all';
+  // Which values a number line names is a DESIGN decision, not a fixed one:
+  // every integer (a ruler), only the values that matter (minimal), or a fine
+  // ruler with unlabelled halves between the integers.
+  if (mode === 'fine') {
+    for (let v = Math.ceil(spec.min / (step/2)) * (step/2); v <= spec.max + 1e-9; v += step/2)
+      tk.appendChild(el('line', { x1: X(v), y1: y - 3.5, x2: X(v), y2: y + 3.5, class: 'sx-nl-minor' }));
+  }
+  const named = mode === 'ends'
+    ? [spec.min, spec.max].concat((spec.segments||[]).flatMap(g => [g.from, g.to]))
+                          .concat(spec.points||[])
+    : null;
   for (let v = Math.ceil(spec.min / step) * step; v <= spec.max + 1e-9; v += step) {
     tk.appendChild(el('line', { x1: X(v), y1: y - 6, x2: X(v), y2: y + 6, class: 'sx-nl-tick' }));
+    if (named && !named.some(n => Math.abs(n - v) < 1e-9)) continue;
     tk.appendChild(el('text', { x: X(v), y: y + 26, 'text-anchor': 'middle' }, fmt(v)));
   }
   s.appendChild(tk);
 
   const g = el('g', { class: 'sx-series sx-s1' });
+  const sy = y - lift;
   (spec.segments || []).forEach(sg => {
     const unboundedR = sg.to >= spec.max, unboundedL = sg.from <= spec.min;
-    g.appendChild(el('line', { class: 'sx-nl-seg', x1: X(sg.from), y1: y, x2: X(sg.to), y2: y,
+    g.appendChild(el('line', { class: 'sx-nl-seg', x1: X(sg.from), y1: sy, x2: X(sg.to), y2: sy,
       'marker-end': unboundedR ? 'url(#sx-ar-nl)' : null,
       'marker-start': unboundedL ? 'url(#sx-ar-nl)' : null }));
+    // When the interval is lifted off the axis it stops being self-locating, so
+    // a drop line ties each endpoint back to the value it actually names.
+    if (lift) {
+      if (!unboundedL) g.appendChild(el('line', { class: 'sx-nl-drop',
+        x1: X(sg.from), y1: sy, x2: X(sg.from), y2: y }));
+      if (!unboundedR) g.appendChild(el('line', { class: 'sx-nl-drop',
+        x1: X(sg.to), y1: sy, x2: X(sg.to), y2: y }));
+    }
     // open vs closed is SEMANTIC — it is the difference between < and <=
-    if (!unboundedL) g.appendChild(el('circle', { cx: X(sg.from), cy: y, r: 6.5,
+    if (!unboundedL) g.appendChild(el('circle', { cx: X(sg.from), cy: sy, r: ER,
       class: 'sx-endpoint ' + (sg.fromClosed ? 'sx-closed' : 'sx-open') }));
-    if (!unboundedR) g.appendChild(el('circle', { cx: X(sg.to), cy: y, r: 6.5,
+    if (!unboundedR) g.appendChild(el('circle', { cx: X(sg.to), cy: sy, r: ER,
       class: 'sx-endpoint ' + (sg.toClosed ? 'sx-closed' : 'sx-open') }));
   });
   (spec.points || []).forEach(v =>
-    g.appendChild(el('circle', { cx: X(v), cy: y, r: 6.5, class: 'sx-endpoint sx-closed' })));
+    g.appendChild(el('circle', { cx: X(v), cy: sy, r: ER, class: 'sx-endpoint sx-closed' })));
   s.appendChild(g);
   return s;
 }
