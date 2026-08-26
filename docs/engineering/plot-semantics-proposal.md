@@ -1,176 +1,213 @@
-# The plot spec cannot say what a figure is — a proposal
+# Plot semantics — vocabulary and invariants review
 
-**Status: PROPOSED. No migration file has been written and nothing has been
-applied.** Per the repo convention a migration is authored only after the design
-is approved, and applied only after the file itself is approved.
-Written 2026-08-26.
+**Status: UNDER REVIEW. No migration file has been written and nothing has been
+applied.** Revision 2, 2026-08-26. Revision 1 proposed four additions; this
+revision is the vocabulary-and-invariants review that was asked for before any
+of it is frozen, and it **changes two of the four**.
+
+> The first migration here is not a technical change. It becomes the language
+> every figure on the platform is described in, for EST and ACT as much as for
+> the DSAT items that happen to exist today. It is worth reviewing twice.
 
 ---
 
-## 1. The gap, stated exactly
+## 1. The principle that decides what goes in
 
-`exam_stimulus_spec_ok`'s `plot` branch validates *where* the points are. It has
-no way to record *what they are*. These three specs are byte-identical in the
-database and mean entirely different things to a student:
+The whole change is cheap **only because every Spine table is empty** (measured
+2026-08-26: forms, sections, questions, stimuli and published forms all zero).
+But "cheap now" is not a reason to put everything in now. The M4 migration
+already set the test, when it deferred `accepted_answers`:
 
-```jsonc
-{"curves":[{"points":[[1,90],[2,84],[3,79]]}]}   // a scatter of observations
-{"curves":[{"points":[[1,90],[2,84],[3,79]]}]}   // samples of a smooth curve
-{"curves":[{"points":[[1,90],[2,84],[3,79]]}]}   // vertices of a polygon
-```
+> Deferring is safe and was checked: adding a nullable column later is a plain
+> ALTER, published MCQ rows would correctly hold NULL, and no SPR question can
+> exist before the column does, so no published row ever needs back-filling.
 
-The same silence covers whether the plane is **metric** — one pixel per unit on
-both axes, so a circle is round, a right angle is square and a slope reads true
-— or a **data plot** whose axes measure different quantities, where squaring the
-scales would be meaningless.
+Applied here, that test draws a clean line:
 
-Both were found by rendering figures and looking at them, not by reasoning:
-a scatter drawn joined, a parabola drawn as a V, a circle drawn as an ellipse.
-See `student-facing-rendering-validation.md` §3.
+| | goes in now | can wait |
+|---|---|---|
+| **Required keys** | ✅ — a required key cannot be added later without a back-fill, and a published form freezes the old shape forever | |
+| **Optional keys with a consumer today** | ✅ — the figures exist and the validation can actually be exercised | |
+| **Optional keys with no consumer yet** | | ✅ — adding one later is a function replacement, and absent correctly means "not that kind of figure" |
 
-## 2. Why `display` is the wrong home
+So the first migration freezes as little as possible: **the two required keys,
+plus the optional ones we can exercise against real figures today.** Everything
+else is listed in §7 with the reason it can wait, so deferring is a recorded
+decision rather than an oversight.
 
-The M4 migration draws the line itself, and its own worked example decides this
-case:
+## 2. `frame` — three values, not two
 
-> number-line closed/open endpoints → SEMANTIC. They encode `<` versus `<=`.
+**Changed from revision 1.** Revision 1 had `plane` and `data`. Reviewing
+against EST and ACT rather than the DSAT set shows that collapses two different
+things.
 
-A rendering choice that changes what the figure *asserts* is semantic. Joining a
-scatter asserts a functional relationship that does not exist. Squaring a data
-plot asserts a geometry that is not there. Neither is presentation.
-
-And `display` is documented as *"hints the renderer MAY honour"*. Putting these
-there would leave a conforming renderer free to invert a figure's meaning. That
-is not a loose contract; it is no contract.
-
-## 3. The third option, and why it fails
-
-The specimen renderer currently carries both decisions in a table beside the
-spec, keyed by item. It is honest for one renderer and it is exactly what the
-M4 migration set out to prevent:
-
-> Rendering is delivery-phase work and belongs in `_shared/` so preview and
-> delivery cannot draw the same question two ways.
-
-Two renderers with two copies of that table is the drift the whole `_shared/`
-pattern exists to stop. The table is a stopgap with a known expiry, not a design.
-
-## 4. Proposed shape
-
-Four additions to the `plot` semantic core. Everything else stays where it is.
-
-| Key | Required | Values | Why semantic |
+| value | axes | scale | drawn as |
 |---|---|---|---|
-| `frame` | yes | `plane` · `data` | `plane` guarantees equal axis scales. Without it a circle is an ellipse and the radius reads wrong. |
-| `curves[].figure` | yes | `scatter` · `curve` · `polygon` | Whether the points are observations, samples of a continuous curve, or vertices. Changes what the figure asserts. |
-| `curves[].closed` | no (default false) | boolean | A *smooth* closed curve cannot express closure by repeating its first sample: the interpolation still has to wrap, and the duplicate distorts the tangent. Repeating the vertex works for a polygon and not for a circle. |
-| `curves[].pointLabels` | no | array of strings, one per point (`""` = unlabelled) | The prompt says "points A and B". If the renderer drops the names the question is unanswerable. |
+| `plane` | both are pure number, and **distance is meaningful** | **must be equal on both axes** | axes crossing at an origin, arrowheads, square grid |
+| `graph` | both are pure number, distance is *not* compared | free | axes crossing at an origin, arrowheads |
+| `data` | axes measure **different quantities** | free | axes at the edges, quantity names, no arrowheads |
 
-`expr`-based curves are constrained to `figure = 'curve'` — an expression cannot
-be a scatter or a polygon.
+The `plane`/`graph` split is not cosmetic. A circle, a right angle, a distance
+or a congruence is only readable when one unit of *x* is one unit of *y* — that
+is what `plane` guarantees. A function graph asks for none of that: it is read
+by *value*, and forcing equal scales on a function with **y** ∈ [−20, 20] over
+**x** ∈ [0, 5] crushes it into a vertical smear.
 
-Deliberately **not** promoted, because none of them change meaning: dash
-patterns, mark sizes, grid density, colour, legend placement. Those stay in
-`display`, which is the right home for them.
+Revision 1 would have forced every function graph into `plane`. That worked on
+the DSAT set only because those particular ranges happened to be similar — which
+is exactly the accident this review exists to catch.
 
-## 5. The validator change, in full
+**Required.** A plot that does not say whether distance is meaningful cannot be
+drawn correctly by any renderer, now or later.
 
-Replacing the `plot` branch of `exam_stimulus_spec_ok`. Additions marked `-- NEW`.
+## 3. `curves[].figure` — a closed vocabulary of three
 
-```sql
-when k = 'plot' then
-  s ?& array['xRange','yRange','curves','frame']                        -- NEW: frame
-  and (s ->> 'frame') in ('plane', 'data')                              -- NEW
-  and jsonb_typeof(s -> 'xRange') = 'array' and jsonb_array_length(s -> 'xRange') = 2
-  and jsonb_typeof(s -> 'yRange') = 'array' and jsonb_array_length(s -> 'yRange') = 2
-  and not exists (select 1 from jsonb_array_elements(s -> 'xRange' || s -> 'yRange') n
-                   where jsonb_typeof(n) <> 'number')
-  and ((s -> 'xRange' ->> 0)::numeric < (s -> 'xRange' ->> 1)::numeric)
-  and ((s -> 'yRange' ->> 0)::numeric < (s -> 'yRange' ->> 1)::numeric)
-  and jsonb_typeof(s -> 'curves') = 'array'
-  and jsonb_array_length(s -> 'curves') >= 1
-  and not exists (
-        select 1 from jsonb_array_elements(s -> 'curves') c
-         where jsonb_typeof(c) <> 'object'
-            or not ((jsonb_typeof(c -> 'expr') = 'string')
-                    or (jsonb_typeof(c -> 'points') = 'array'
-                        and jsonb_array_length(c -> 'points') >= 2))
-            -- NEW: every curve declares what it is
-            or (c ->> 'figure') is null
-            or (c ->> 'figure') not in ('scatter','curve','polygon')
-            -- NEW: an expression can only be a curve
-            or (jsonb_typeof(c -> 'expr') = 'string' and (c ->> 'figure') <> 'curve')
-            -- NEW: closure is meaningless for a scatter
-            or (c ? 'closed' and jsonb_typeof(c -> 'closed') <> 'boolean')
-            or ((c ->> 'figure') = 'scatter' and (c ->> 'closed')::boolean is true)
-            -- NEW: a label per point, "" where a point is unnamed
-            or (c ? 'pointLabels' and (
-                  jsonb_typeof(c -> 'pointLabels') <> 'array'
-                  or jsonb_typeof(c -> 'points') <> 'array'
-                  or jsonb_array_length(c -> 'pointLabels') <> jsonb_array_length(c -> 'points')
-                  or exists (select 1 from jsonb_array_elements(c -> 'pointLabels') l
-                              where jsonb_typeof(l) <> 'string'))))
-  and (not (s ? 'xLabel') or jsonb_typeof(s -> 'xLabel') = 'string')
-  and (not (s ? 'yLabel') or jsonb_typeof(s -> 'yLabel') = 'string')
-```
+| value | what the points are | joined |
+|---|---|---|
+| `scatter` | individual marks | never |
+| `curve` | samples of a continuous curve | smoothly |
+| `polygon` | vertices | with straight segments |
 
-Note the NULL trap the M4 file already warns about: `jsonb_typeof()` of an
-absent key is NULL, not a mismatch, so the required keys are caught by the
-`?&` presence guard and by the explicit `is null` test above — never by a type
-comparison alone.
+**Why these three are complete, and why the list can be closed.** The vocabulary
+names *how the points connect*, not *what shape they make*. Connection has
+exactly three states — unjoined, joined smoothly, joined straight — and every
+figure any of the three exams can pose is one of them:
 
-## 6. Blast radius — two call sites, not one
-
-`exam_stimulus_spec_ok` is called from:
-
-1. the `exam_stimuli` shape CHECK, and
-2. inside `exam_question_choices_ok`, which validates a per-choice
-   `{visual:{kind,spec}}` — the pattern EST uses for four coordinate planes
-   offered *as the four answer choices*.
-
-Tightening the plot branch therefore also tightens choice-level visuals. That is
-correct and intended: a coordinate plane used as an answer choice needs to say
-what it is at least as badly as one used as a stimulus.
-
-`publish_exam_form()` is unaffected in shape — it calls the same helper.
-
-## 7. Cost: free today, not free later
-
-Measured against production on 2026-08-26, before any content was inserted:
-
-| table | rows |
+| figure | reading |
 |---|---|
-| `exam_forms` | **0** |
-| `exam_form_sections` | **0** |
-| `exam_questions` | **0** |
-| `exam_stimuli` | **0** |
-| published forms | **0** |
+| circle, ellipse, arc, parabola, any conic | `curve` |
+| triangle, quadrilateral, any polygon, a segment, a path | `polygon` |
+| scatter, a plotted point, a set of named points | `scatter` |
 
-**There is nothing to back-fill and nothing frozen.** Adding *required* keys is
-a plain `create or replace function` plus a re-validating CHECK, and no existing
-row can fail it because no existing row exists.
+**This is the reason not to put shape names in the vocabulary.** `circle`,
+`triangle`, `parabola` is an open list — the next exam brings a sector, an
+annulus, an arc, a piecewise path — and an open list in a frozen spec is a
+vocabulary that is wrong the first time it meets a figure nobody anticipated.
+It also duplicates information the points already carry, and duplication is
+where contradiction comes from: `figure: "circle"` with four points, or with
+`closed: false`, is representable nonsense.
 
-The moment the first form is inserted this stops being true, and a published
-form makes it permanent: publication freezes a spec forever, and a published
-plot spec written under the current shape can never afterwards say what its own
-figure is.
+Naming the connection instead makes the enumeration **complete rather than
+merely current**, and the shape stays where it already is — in the points.
 
-## 8. Consequence for sequencing
+**Required.** This is the key the whole review exists for; a curve that does not
+say how it is read leaves the renderer guessing, which is the defect being fixed.
 
-This inverts one step of the plan. The DSAT content insert was to come first;
-it should now come second:
+## 4. `curves[].closed` — a sibling key, with the contradictions rejected
 
-```
-  schema decision  →  migration approved and applied  →  DSAT insert  →  wiring
-```
+The question raised in review: does `closed` belong beside `figure` or inside it?
 
-Inserting 66 items first would mean writing every plot spec twice — once under
-the current shape, once after — or accepting a back-fill that today costs
-nothing.
+**Folding it in was considered and rejected.** A vocabulary of
+`{scatter, curve, closed_curve, polygon, closed_polygon}` does make the illegal
+state unrepresentable rather than merely rejected, which is the stronger
+guarantee. It stops scaling the moment a second orthogonal property arrives:
+adding extent (§7) would multiply the list to fifteen values, and each further
+property multiplies it again. That is how a vocabulary becomes unusable.
 
-## 9. What is being asked for
+**Kept as a sibling, with the contradictions rejected by the validator instead.**
+The model then cannot *store* a contradictory figure, which is the guarantee
+that was actually asked for:
 
-A decision on §4, nothing more. On approval the next step is a migration file
-carrying the §5 body, its rollback, and a behavioural probe in a subtransaction
-that always rolls back — the M1/M3/B1/B5/M4 shape — presented for a second,
+* `closed` is **forbidden** when `figure = 'scatter'` — absent, not merely false.
+  A scatter has no closure to assert either way.
+* `closed` is **forbidden** alongside `expr` — an expression has no endpoints.
+* `closed: true` requires **at least three points**. A closed two-point path is
+  degenerate.
+
+## 5. `curves[].pointLabels` — unchanged
+
+An array of strings, one per point, `""` where a point is unnamed. Semantic
+because the prompt says "points *A* and *B*": a renderer that drops the names
+leaves the question unanswerable. Forbidden alongside `expr` — an expression has
+no enumerable points to name.
+
+## 6. Two limits in the *current* validator that this review found
+
+Neither is part of the four additions. Both are existing rules that block real
+EST and ACT figures, and both are cheapest to fix in the same migration.
+
+1. **`points` must have length ≥ 2, so a single point cannot exist.**
+   "Point *P* is at (3, 4)" is an ordinary coordinate-geometry item and it
+   cannot be represented at all today. The rule should depend on the figure: a
+   **path** (`curve`, `polygon`) needs ≥ 2; a **`scatter`** needs ≥ 1.
+
+2. **`dashed` was filed under `display` in revision 1, and that is wrong for one
+   role.** As decoration it is presentation. As the *boundary of a region* it
+   carries strict-versus-inclusive — the same distinction the M4 migration
+   already ruled semantic for number-line endpoints. Since no item in any of the
+   three exams needs a shaded region yet, this is deferred with the rest of
+   §7 rather than guessed at now — but it is recorded so the eventual region
+   work does not quietly put meaning in a hint.
+
+## 7. Deliberately deferred, with the test that justifies it
+
+Each of these is a real figure property that EST or ACT can pose. Each is
+**optional**, so adding it later is a `create or replace function` with no
+back-fill and no published row needing rewriting — and absent correctly means
+"not that kind of figure". None has a consumer in the current corpus, so its
+validation could not be exercised against a real figure today.
+
+| deferred | what it would express | why not now |
+|---|---|---|
+| `extends` | segment vs ray vs line — whether the path continues past the visible window | no item in the corpus distinguishes them; adding it later is optional-key cheap |
+| region fill + boundary strictness | "the shaded region represents…", solid vs dashed boundary for ≤ vs < | no region item exists yet; guessing the shape now would freeze an unexercised contract |
+| box plot, stem-and-leaf as a figure | five-number summaries drawn as a figure | these are a new `kind`, not a `plot` figure — a separate capability, out of scope |
+
+## 8. The full invariant set
+
+Every rule the validator enforces on a plot, and what each one rejects. A rule
+that cannot reject anything is not a rule.
+
+| # | invariant | rejects |
+|---|---|---|
+| P1 | `frame` present and in `('plane','graph','data')` | a plot that does not say whether distance is meaningful |
+| P2 | every curve has `figure`, in `('scatter','curve','polygon')` | a figure the renderer would have to guess at |
+| P3 | `expr` present ⇒ `figure = 'curve'` | an expression declared a scatter or a polygon |
+| P4 | `expr` present ⇒ no `closed`, no `pointLabels` | closure or names on something with no enumerable points |
+| P5 | `figure = 'scatter'` ⇒ no `closed` | a closed scatter |
+| P6 | `closed` present ⇒ boolean | a string or number standing in for a truth value |
+| P7 | `closed = true` ⇒ ≥ 3 points | a degenerate closed two-point path |
+| P8 | `figure = 'scatter'` ⇒ ≥ 1 point; `curve`/`polygon` ⇒ ≥ 2 | an empty scatter, a one-point path — **and it unblocks the single named point that is impossible today** |
+| P9 | `pointLabels` ⇒ array of strings, length equal to `points` | a label count that does not match the figure |
+| P10 | existing range rules unchanged | (as today) |
+
+### Legal and illegal combinations, exhaustively
+
+| `figure` | `expr` | `points` | `closed` | `pointLabels` | |
+|---|---|---|---|---|---|
+| `scatter` | — | ≥ 1 | absent | optional | ✅ |
+| `curve` | — | ≥ 2 | absent / `false` | optional | ✅ |
+| `curve` | — | ≥ 3 | `true` | optional | ✅ |
+| `curve` | string | — | absent | absent | ✅ |
+| `polygon` | — | ≥ 2 | absent / `false` | optional | ✅ |
+| `polygon` | — | ≥ 3 | `true` | optional | ✅ |
+| `scatter` | — | ≥ 1 | **`true` or `false`** | | ❌ P5 — a scatter has no closure |
+| `scatter` \| `polygon` | **string** | | | | ❌ P3 — an expression is a curve |
+| `curve` | string | | **any** | | ❌ P4 — no endpoints to close |
+| any | — | **2** | **`true`** | | ❌ P7 — degenerate |
+| any | — | ≥ 1 | | **length ≠ points** | ❌ P9 |
+| **absent** | | | | | ❌ P2 — the defect being fixed |
+
+## 9. Blast radius — unchanged from revision 1
+
+`exam_stimulus_spec_ok` has two call sites: the `exam_stimuli` shape CHECK, and
+`exam_question_choices_ok`, which validates a per-choice `{visual:{kind,spec}}` —
+the pattern EST uses for four coordinate planes offered *as the four answer
+choices*. Tightening the plot branch tightens both, which is intended: a plane
+used as an answer choice needs to say what it is at least as badly as one used
+as a stimulus.
+
+## 10. What is being asked for
+
+A decision on §2 through §6 — the vocabulary, the invariants, and the two
+existing-validator fixes. Only after that is a migration written, carrying the
+§8 invariants, its rollback, and a behavioural probe in a subtransaction that
+always rolls back — the M1/M3/B1/B5/M4 shape — and presented for a second,
 separate approval before anything is applied.
+
+**Sequence, as agreed:**
+
+```
+  vocabulary review  →  migration proposal  →  separate approval
+      →  apply  →  DSAT insert  →  renderer wiring
+```
