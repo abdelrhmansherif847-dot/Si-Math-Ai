@@ -183,9 +183,13 @@ An L3 run is a row carrying `verification_meta.pipeline_version`. This is broade
 
 ### Detector v2 Shadow Monitor
 
-Detector v2 has never run in production: zero rows carry `v2_tier` and there is no
-`difficulty_detector_v2_enabled` row in `system_settings`. The page states **"Not deployed"** rather
-than showing a progress bar implying collection is under way.
+Detector v2 has essentially never run in production. **Re-measured 2026-08-25:
+exactly one** `question_records` row of 1,428 carries `v2_tier`, created 2026-08-13 —
+so "zero rows", as this said until then, is no longer literally true, and "has *never* run"
+is now "ran once and has not run since". The distinction matters only because it is the
+difference between *not wired up* and *wired up and idle*; the panel's behaviour is
+unaffected. The page states **"Not deployed"** rather than showing a progress bar implying
+collection is under way, which remains the right presentation for a single row.
 
 | DOM id | Label | Query / formula | Status |
 |---|---|---|---|

@@ -1,7 +1,40 @@
 # Mock Exam v2 — Implementation Plan (approved scope)
 
-**Status:** PLAN — awaiting per-migration approval. No code written, no migration
-created, no migration applied.
+**Status:** ⚠️ **PARTLY EXECUTED — this plan is no longer a forecast. Read the
+status block below before deciding what to do next.**
+
+This line read *"PLAN — awaiting per-migration approval. No code written, no
+migration created, no migration applied"* until 2026-08-25, by which point five
+migrations were applied to production and four modules had shipped. That is the
+most misleading thing this repository could have said to a session about to
+resume the work, so it is corrected here rather than in a closeout nobody opens.
+
+**Applied to production** (verified against `supabase_migrations.schema_migrations`
+2026-08-25 — NOT in `supabase/migrations-pending/`, which holds three unrelated
+files):
+
+| Phase | Migration | Applied as |
+|---|---|---|
+| M1 | `mock_exam_integrity_events` | `20260823043358` |
+| M3 | `question_spine` | `20260824005242` |
+| B1 | `exam_forms_insert_guard` | `20260824015733` |
+| B5 | `publish_exam_form_revoke_public` | `20260825141519` |
+| M4 | `exam_stimuli` | `20260825221601` |
+
+**Shipped modules:** `exam-registry.js`, `exam-audio.js`, `exam-calculator.js`,
+`exam-integrity.js`, with `exam-registry`, `exam-audio`, `exam-calculator`,
+`exam-integrity` and `exam-timer-modules` suites, plus `exam-expectation` and
+`exam-preflight` which this plan did not forecast.
+
+**Where reality diverged from §4 below, and it is a divergence not an omission:**
+the proctor shipped *inside* `exam-audio.js` (`4c3b6c5`) rather than as a
+separate `exam-proctor.js`. **`exam-ambience.js`, its suite and the ambience
+assets do not exist.** P2 shipped (`987ce21`, `9820c24`) and P3 shipped
+(`4c3b6c5`).
+
+**Not started, and parked by explicit owner decision:** the EST experience
+question, diagnosis metadata, question authoring, the stimulus renderer, and
+delivery. Do not restart any of those from this plan.
 **Branch:** `claude/mock-exam-enhancement-nnwb48`
 **Date:** 2026-08-23
 **Supersedes nothing.** Companion to `mock-exam-v2-investigation.md`, which holds
@@ -449,8 +482,12 @@ could have gone red.* Each suite asserts real behaviour — schedule boundaries,
 no-consecutive-repeat, confidence classification, the module state machine —
 never mere presence.
 
-**PREPARED migrations** (unapplied, in `supabase/migrations-pending/`): four
-`.sql` files plus four `*_rollback.sql`.
+**PREPARED migrations** — *this was the plan's forecast and it is not what
+happened.* Five migrations were written directly into `supabase/migrations/`
+and applied; see the status block at the top of this document for the list and
+their production versions. `supabase/migrations-pending/` contains three
+unrelated files and no Mock Exam migration. Each rollback was shipped alongside
+its forward file and none has been run.
 
 **Documents:** `docs/roadmap/mock-exam-v2-desmos-partnership-brief.md` (§7 below).
 

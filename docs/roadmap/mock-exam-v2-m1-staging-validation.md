@@ -2,7 +2,10 @@
 
 **Date:** 2026-08-23 · **Migration:** `20260823a_mock_exam_integrity_events.sql` rev 4
 **Verdict:** all checks passed · **one documentation defect found and fixed**
-**M1 remains PREPARED and unapplied. Production was not touched.**
+**M1 remains PREPARED and unapplied. Production was not touched.** — *true when
+this validation ran, and no longer true.* **M1 was applied to production on
+2026-08-23 as version `20260823043358`** (corrected 2026-08-25). Everything below
+is the staging validation as performed, kept as written.
 
 ---
 
@@ -238,7 +241,12 @@ it, neither of which this report assumes:
    nullable column, its dependencies were verified present in production, and
    the rollback has now been exercised in all three states.
 
-**Awaiting explicit Production approval. No phase beyond M1 has been started.**
+~~**Awaiting explicit Production approval. No phase beyond M1 has been
+started.**~~ **Superseded 2026-08-25.** M1 was approved and applied
+(`20260823043358`), and M3, B1, B5 and M4 have since been applied as well, with
+P2 and P3 shipped. The current state of the programme is in the status block at
+the top of `mock-exam-v2-implementation-plan.md`; do not read this line as the
+present position.
 
 ---
 

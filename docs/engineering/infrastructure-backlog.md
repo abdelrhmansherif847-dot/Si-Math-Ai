@@ -191,6 +191,39 @@ here** — whether to backfill the files is the owner's call.
 
 ---
 
+## INF-CORS-VERIFY — `ALLOWED_ORIGINS` state is unknown, and only checkable by hand
+
+**Status:** `MANUAL VERIFICATION` — not engineering work. Owner action, ~2 minutes.
+
+**What is unknown.** Whether the `ALLOWED_ORIGINS` secret is set on the Supabase
+project. Until it is, `_shared/cors.ts` and `ai-tutor`'s inline copy both keep
+**permissive** behaviour by design and accept every origin — the opt-in default
+documented in `DEPLOY.md` §4.1, chosen so that deploying without the secret
+cannot take the platform down. So "unset" is not an outage; it is the CORS
+protection SEC-03 added being inert.
+
+**Why it is not an engineering task.** It cannot be established from this
+repository or from the engineering environment: it is a platform secret,
+outbound network access to the project is blocked by policy here, and the
+functions' cold-start warning (`WARNING: ALLOWED_ORIGINS unset`) is not present
+in the log sources this environment exposes. Attempting to work around any of
+that would be worse than asking.
+
+**How to settle it, either way:**
+1. Supabase Dashboard → Project Settings → Edge Functions → Secrets, and look
+   for `ALLOWED_ORIGINS`; or
+2. run `scripts/verify-cors.sh` against production, which is what it exists for.
+
+**Then record the answer** in `SECURITY.md` §9's release-blocker checklist, where
+it is currently marked **status unknown** rather than done — deliberately, since
+a guess about whether CORS enforcement is live is exactly what that file must not
+contain.
+
+**Raised** 2026-08-25, from the SEC-04 status correction: two of that checklist's
+three release blockers were verified closed, and this is the third.
+
+---
+
 ## Note: applied migrations whose committed file carries no status
 
 **Observed 2026-08-25**, from a full sweep: every file in

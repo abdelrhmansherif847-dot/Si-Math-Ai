@@ -1,6 +1,14 @@
 # P2 — DSAT Module State Machine: investigation and design
 
-**Status:** DESIGN — no code written. Awaiting review.
+**Status:** ✅ **IMPLEMENTED.** P2 shipped — `987ce21` separated "module ended"
+from "exam ended", `9820c24` closed the phase as adaptive-ready-but-not-adaptively-routed,
+and `mock-exam.html`'s `finishCurrentModule()` carries the routing;
+`tests/exam-timer-modules.test.mjs` covers it (102 checks).
+
+This line read *"DESIGN — no code written. Awaiting review"* until 2026-08-25,
+while its own companion `mock-exam-v2-p2-adaptive-proposal.md` said "P2 is
+closed" — two documents in one roadmap disagreeing about whether the phase had
+happened. The design below is kept as written.
 **Date:** 2026-08-23 · **Depends on:** P1 (complete), M1 (applied, unrelated)
 **Database changes: NONE.** P2 needs no migration.
 
