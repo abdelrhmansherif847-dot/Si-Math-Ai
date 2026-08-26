@@ -2,6 +2,11 @@
 
 **Review only. No migration prepared yet, no code applied.** Awaiting approval.
 
+> **Resolved since — note added 2026-08-25; the status line above is kept as
+> written, because it was true when written.** The migration was written, approved and
+> applied: `aiecon_p7_m2d_restore_layer_boundary`, production version
+> `20260801185207`.
+
 Fixes the two Economics regressions M2 introduced. **Neither fix touches a
 verification check** — the architecture is restored, the tests stay as they are.
 

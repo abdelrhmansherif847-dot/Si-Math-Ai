@@ -181,11 +181,15 @@ rendered number, but noted as the remaining consumer of the raw column.)
 * **Second device — the one limit.** Two devices reporting DIFFERENT zones can
   still split days differently near a boundary. Closing that needs the student's
   zone stored rather than read from the device:
-  `supabase/migrations/20260804_profiles_timezone.sql` is **PREPARED, NOT
-  APPLIED** and needs approval. The client half is deliberately unshipped, since
-  writing a column that does not exist would fail the `profiles-write-grants`
-  gate. Until then the device zone is stable for any student who is not
-  travelling, which is the case on any given day.
+  the student's zone had to be stored on the profile. **Closed — corrected
+  2026-08-25.** This paragraph named
+  `supabase/migrations/20260804_profiles_timezone.sql` as "PREPARED, NOT APPLIED
+  and needs approval". No such file was ever written: the column was folded into
+  `20260804_streak_server_side.sql` §2, applied to production 2026-08-04 as
+  version `20260804130052`. `profiles.timezone` exists, verified 2026-08-25. So
+  the record pointed at a file that does not exist and described a limitation
+  that no longer holds — the reasoning is kept because it is what the migration
+  acted on, but the status was wrong in both halves.
 
 ---
 

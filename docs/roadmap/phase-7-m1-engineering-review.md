@@ -2,6 +2,10 @@
 
 **Migration prepared, nothing applied.** Awaiting approval.
 
+> **Resolved since — note added 2026-08-25; the status line above is kept as
+> written, because it was true when written.** It was approved and applied:
+> `aiecon_p7_m1_reprice_refusal_contract`, production version `20260801205515`.
+
 `supabase/migrations/20260801_aiecon_p7_m1_reprice_refusal_contract.sql`
 
 | | |

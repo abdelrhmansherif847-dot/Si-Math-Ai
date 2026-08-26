@@ -4,6 +4,12 @@
 and unapplied. No database object was created or modified. No release gate has
 begun. `main` untouched.
 
+> **Resolved since — note added 2026-08-25; the status line above is kept as
+> written, because it was true when written.** Both were applied:
+> `aiecon_p7_m2a_platform_cost_entries` (`20260801182954`) and
+> `aiecon_p7_m2b_net_profit` (`20260801183045`). `public.platform_cost_entries`
+> exists in production, verified 2026-08-25.
+
 Branch `claude/phase7-simulator-breakeven`.
 
 | | |

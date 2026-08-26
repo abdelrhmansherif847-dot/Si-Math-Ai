@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| **Subject** | `ai_model_calls` (migration, not applied) + `ai-tutor` v90 (not deployed) |
+| **Subject** | `ai_model_calls` (migration, not applied *at review time* — applied as `20260729003050`) + `ai-tutor` v90 (not deployed *at review time* — v101 is live at platform version 145). Parentheticals updated 2026-08-25; the review's own "nothing applied, nothing deployed" lead is about this document and stays true |
 | **Question** | Is this telemetry financially trustworthy as a single source of truth? |
 | **Verdict** | **Unqualified approval** — see **§11.6**. The original verdict (§10) was a qualified yes; F1, F2, F3, F5 and F6 were approved and implemented on 2026-07-28, closing every reservation |
 | **Date** | 2026-07-28 |

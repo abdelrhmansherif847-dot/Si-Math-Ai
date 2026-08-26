@@ -76,9 +76,9 @@ Phase 7 is less greenfield than the roadmap implies. Measured:
 | `econ.v_breakeven_inputs` | **exists** — 14 monthly rows, and **already carries a `platform_cost_egp` column** |
 | `econ.v_revenue_recognized_daily` | exists — 444 rows |
 | `cost_engine.v_cost_by_student` | exists — 3 rows |
-| `platform_cost_entries` | **does not exist** |
-| `owner_econ_simulate()` | **does not exist** |
-| `owner_econ_breakeven()` | **does not exist** |
+| `platform_cost_entries` | **did not exist** at investigation time — created by `aiecon_p7_m2a_platform_cost_entries` (`20260801182954`); exists 2026-08-25 |
+| `owner_econ_simulate()` | **did not exist** at investigation time — created by `aiecon_p7_m4_econ_simulate` (`20260801221950`); exists 2026-08-25 |
+| `owner_econ_breakeven()` | **does not exist** — still absent, re-verified 2026-08-25 |
 | Sections 10–11 in `admin.html` | **do not exist** |
 
 Phase 5 clearly anticipated Phase 7: `v_breakeven_inputs` already has the shape

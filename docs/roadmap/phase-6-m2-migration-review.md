@@ -5,6 +5,12 @@
 `public.owner_econ_pnl_summary(date,date)`. Nothing applied; every claim below
 is measured, not asserted.
 
+> **Resolved since — note added 2026-08-25; the status line above is kept as
+> written, because it was true when written.** It was applied: `aiecon_p6_m2_pnl_summary`,
+> production version `20260801103847`, and `public.owner_econ_pnl_summary`
+> exists in production (verified 2026-08-25) — so the "does not exist in
+> production yet" finding below is resolved, not outstanding.
+
 ---
 
 ## 1. Backward compatibility — CONFIRMED, by digest

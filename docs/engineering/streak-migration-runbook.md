@@ -1,6 +1,16 @@
 # Migration review package — server-side streak
 
-For `supabase/migrations/20260804_streak_server_side.sql`. **Not yet applied.**
+For `supabase/migrations/20260804_streak_server_side.sql`. **✅ APPLIED to
+production 2026-08-04 as version `20260804130052`**, with its follow-up
+`streak_server_side_revoke_anon` (`20260804130603`). Verified 2026-08-25:
+`recompute_streak()` and `profiles.timezone` both exist in production.
+
+This line read "**Not yet applied**" until 2026-08-25 — while the migration's own
+header had said `APPLIED 2026-08-04` the whole time. A runbook is the document
+someone opens in order to *act*, which makes a stale status here worse than in a
+record that is only read: the action it invited was to apply a migration that had
+already run. Everything below is the pre-apply review package, kept as written.
+
 Baseline captured from production 2026-08-04, immediately before review.
 
 Companion documents: `streak-postgres-review.md` (the nine-area implementation

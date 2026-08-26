@@ -2,6 +2,14 @@
 
 **Status: DESIGN FROZEN, 2026-07-30. Approved, deliberately NOT applied.**
 
+> **Resolved since — note added 2026-08-25; the status line above is kept as
+> written, because it was true when written.** The table shipped, on the same day this
+> design was frozen: `ai_tutor_failures` (`20260730231948`) and
+> `ai_tutor_failures_grant_hardening` (`20260730233258`) are both applied to
+> production. This note establishes that "deliberately NOT applied" is no longer
+> true **of the table**; it does not claim every element of §4a shipped with it,
+> which was not checked.
+
 The design phase is closed. The next review begins only when there is an implementation PR, and it
 is **evidence-driven against §4a** — not a reopening of the architecture below.
 

@@ -180,8 +180,10 @@ the application ignores it, or the reverse. That is guaranteed by the client
 shipping **first and inert**:
 
 * **Before the migration** — `recompute_streak` does not exist, the RPC returns
-  PGRST202, and the wrapper runs the in-browser path. Behaviour is exactly what
-  is in production today. This is the state the branch is in right now.
+  PGRST202, and the wrapper runs the in-browser path. (This was the branch's
+  state when this was written. **It is no longer:** the migration was applied
+  2026-08-04 as version `20260804130052` and `recompute_streak` exists, so
+  production is in the *after* state below. Corrected 2026-08-25.)
 * **After the migration** — the RPC answers and is used; the browser path becomes
   dead code that still works.
 * **On rollback** — the grants are restored *first*, then the function dropped;

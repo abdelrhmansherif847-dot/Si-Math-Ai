@@ -2,6 +2,11 @@
 
 **Migration prepared, nothing applied.** Awaiting approval.
 
+> **Resolved since — note added 2026-08-25; the status line above is kept as
+> written, because it was true when written.** It was approved and applied:
+> `aiecon_p7_m4_econ_simulate`, production version `20260801221950`, and
+> `public.owner_econ_simulate` exists in production (verified 2026-08-25).
+
 `supabase/migrations/20260801c_aiecon_p7_m4_econ_simulate.sql`
 
 | | |

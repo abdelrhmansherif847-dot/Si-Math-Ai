@@ -35,12 +35,15 @@
  *     a real 2-day streak was recomputed as 1.
  *
  * resolveTimeZone() picks, in order:
- *   1. an explicitly supplied IANA zone — where a stored per-profile timezone
- *      plugs in (see the PREPARED migration adding profiles.timezone). Once
- *      that column exists and is populated, every device computes the same
- *      split for a student even if they travel, restoring the cross-device
- *      determinism the Cairo pin reached for WITHOUT moving the boundary off
- *      midnight.
+ *   1. an explicitly supplied IANA zone — where the stored per-profile
+ *      timezone plugs in. `profiles.timezone` EXISTS: it was applied to
+ *      production on 2026-08-04 as version 20260804130052, and dashboard.html
+ *      already reads it. (This comment said "the PREPARED migration adding
+ *      profiles.timezone" until 2026-08-25, three weeks after it was applied.)
+ *      For any student whose row carries a value, every device computes the
+ *      same split even if they travel, restoring the cross-device determinism
+ *      the Cairo pin reached for WITHOUT moving the boundary off midnight. For
+ *      a row where it is null, resolution falls to 2.
  *   2. the device's own zone — the student's local midnight today.
  *   3. Africa/Cairo, only if the runtime cannot name a zone at all.
  *
