@@ -133,15 +133,50 @@ function arrowDefs(s, id) {
 function drawPlot(spec, opts) {
   opts = opts || {};
   const figures = opts.figures || [];
-  const W = opts.width || 520, H = opts.height || 400;
+  const W = opts.width || 520;
   const PAD = { l: 46, r: 20, t: 18, b: 42 };
-  const iw = W - PAD.l - PAD.r, ih = H - PAD.t - PAD.b;
-
+  const iw = W - PAD.l - PAD.r;
   let [x0, x1] = spec.xRange, [y0, y1] = spec.yRange;
+  let H, ih;
+
   if (opts.aspect === 'plane') {
-    const k = Math.min(iw / (x1 - x0), ih / (y1 - y0));
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, wx = iw / k, wy = ih / k;
-    x0 = cx - wx / 2; x1 = cx + wx / 2; y0 = cy - wy / 2; y1 = cy + wy / 2;
+    // Equal scales are non-negotiable. HOW they are obtained is a composition
+    // decision, and the first version got it wrong: it fixed the canvas and
+    // widened the WINDOW to match, which padded every figure out with empty
+    // grid — a big plate with small mathematics in the middle of it.
+    //
+    // The canvas takes the shape the mathematics asks for instead. The declared
+    // window is honoured exactly, and the plate is as tall as that window needs
+    // at the width available. A wide figure gets a wide plate, a square one a
+    // square plate, and nothing is padded.
+    const k = iw / (x1 - x0);
+    const want = (y1 - y0) * k;
+    // A genuinely tall figure gets a tall plate. Capping this low forces the
+    // OTHER axis to widen, which is what pads a figure out with empty grid —
+    // the cap was the cause, not the symptom.
+    const maxIh = (opts.maxHeight || 560) - PAD.t - PAD.b;
+    const minIh = 190;
+    if (want > maxIh) {
+      // taller than a plate should be: fit the height and widen x, which adds
+      // context rather than distorting anything
+      const k2 = maxIh / (y1 - y0), wx = iw / k2, cx = (x0 + x1) / 2;
+      x0 = cx - wx / 2; x1 = cx + wx / 2;
+      ih = maxIh;
+    } else if (want < minIh) {
+      // flatter than a plate should be: widen y for the same reason
+      const extra = minIh / k - (y1 - y0), cy = (y0 + y1) / 2;
+      y0 = cy - ((y1 - y0) + extra) / 2; y1 = cy + ((y1 - y0) + extra) / 2;
+      ih = minIh;
+    } else {
+      ih = want;
+    }
+    // NOT rounded. Rounding the canvas height re-derives a y scale a fraction
+    // different from x, and equal scaling is the one thing this branch exists
+    // to guarantee — the geometry test catches it at 0.01 px.
+    H = ih + PAD.t + PAD.b;
+  } else {
+    H = opts.height || 340;
+    ih = H - PAD.t - PAD.b;
   }
   const X = v => PAD.l + ((v - x0) / (x1 - x0)) * iw;
   const Y = v => H - PAD.b - ((v - y0) / (y1 - y0)) * ih;
@@ -371,7 +406,10 @@ function drawTable(spec) {
   const thead = document.createElement('thead'), hr = document.createElement('tr');
   spec.headers.forEach((h, c) => {
     const th = document.createElement('th');
-    th.textContent = h; th.className = numeric[c] ? 'sx-num' : '';
+    th.textContent = h;
+    // the header is TEXT even above a numeric column — it takes the alignment
+    // of its column, never its typeface
+    th.className = numeric[c] ? 'sx-th-num' : '';
     hr.appendChild(th);
   });
   thead.appendChild(hr); t.appendChild(thead);

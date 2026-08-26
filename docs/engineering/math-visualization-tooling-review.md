@@ -367,3 +367,69 @@ This is a correction to the instruction, made because the evidence contradicts
 it. The principle it was protecting — *beauty never precedes mathematical
 meaning in an exam* — is served better by refusing to let the renderer decide at
 all than by having it decide on a metric that cannot tell the cases apart.
+
+---
+
+## 11. Student-facing exam UI and math art direction
+
+A pass on what the student actually looks at, prompted by opening the preview
+and finding that the chrome read as a product while the exam body read as a
+prototype. Four things were wrong, and three of them were bugs rather than
+taste.
+
+### The navigation was never styled at all
+
+The stylesheet targeted `nav` while the element is `<div class="nav">`. The
+selector matched nothing, so the entire navigation rendered as an unstyled
+block at the top left of the page — which is exactly how it looked. One
+character of specificity, and it made the exam look unfinished.
+
+Rebuilt as one persistent system: **Back · question map · Next**, fixed at the
+bottom of the viewport, in a three-column grid so nothing shifts between
+questions. Back and Next are the two controls a student reaches for under time,
+so they are large and flank the map rather than being hunted for. The map is a
+single scrolling row with the current question brought into view, and it
+re-flows to two rows only below 640 px.
+
+### A table was three nested boxes
+
+Card, then a bordered stimulus box, then the table — and the table itself
+stretched to fill a container far wider than its content, with the row labels
+centred and the *headers* of numeric columns rendered in the monospace face
+meant for their values.
+
+The exam table presentation now follows the content: **width is auto**, text
+columns read left, numeric columns align right in tabular figures so a column
+can be compared down its length by eye, the header is the only strong rule, and
+there is no box. A header is text even above a numeric column.
+
+### Bold that wrapped an expression came out as asterisks
+
+`the **$x$-coordinate**` splits into three runs at the maths delimiters, so the
+opening and closing `**` landed in different runs, matched nothing, and both
+appeared literally in the question. Bold is now tracked across the runs.
+
+### The plate was padding the mathematics out
+
+Equal axis scales are non-negotiable, but *how* they were obtained was a
+composition decision made badly: the canvas was fixed and the **window** was
+widened to match, so every figure sat in the middle of a plate with empty grid
+around it. The canvas now takes the shape the mathematics asks for — the
+declared window is honoured exactly and the plate is as tall as that window
+needs. Nothing is padded.
+
+### Two authoring findings this produced
+
+1. **A window should fit its figure.** On a `plane`, slack in one axis is
+   multiplied into the other: a *y* range a third too generous forces the *x*
+   range wider to keep the scales equal, and the figure ends up small in the
+   middle of a large plate. Loose windows cost twice.
+
+2. **The first real instance of the deferred `extends` gap.** An item whose
+   prompt reads "the graph shows two lines" is stored as two short `polygon`
+   segments, so the drawing shows two segments that stop in mid-air. It is not
+   wrong — P10 is satisfied, they do not touch the boundary — but the figure
+   says *segment* where the prompt says *line*. Under the agreed rule this
+   figure either gets re-authored so the wording matches what the language can
+   say, or it waits for `extends`. **It is not approximated, and it should be
+   settled before the 66 are inserted.**
