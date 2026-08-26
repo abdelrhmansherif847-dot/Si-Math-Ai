@@ -133,7 +133,7 @@ function arrowDefs(s, id) {
 function drawPlot(spec, opts) {
   opts = opts || {};
   const figures = opts.figures || [];
-  const W = opts.width || 520;
+  const W = opts.width || 450;
   const PAD = { l: 46, r: 20, t: 18, b: 42 };
   const iw = W - PAD.l - PAD.r;
   let [x0, x1] = spec.xRange, [y0, y1] = spec.yRange;
@@ -154,7 +154,7 @@ function drawPlot(spec, opts) {
     // A genuinely tall figure gets a tall plate. Capping this low forces the
     // OTHER axis to widen, which is what pads a figure out with empty grid —
     // the cap was the cause, not the symptom.
-    const maxIh = (opts.maxHeight || 560) - PAD.t - PAD.b;
+    const maxIh = (opts.maxHeight || 470) - PAD.t - PAD.b;
     const minIh = 190;
     if (want > maxIh) {
       // taller than a plate should be: fit the height and widen x, which adds

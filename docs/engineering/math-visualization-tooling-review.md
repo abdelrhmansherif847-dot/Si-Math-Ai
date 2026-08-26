@@ -505,3 +505,28 @@ convention itself: ink data, black axes with arrowheads and tick marks, a quiet
 neutral grid, numerals in the text face. The production decision is unchanged —
 custom SVG — but §5's conclusion now has to be defended by the output rather
 than by bundle size, which is the right standard.
+
+### The reference, corrected
+
+Printed assessment is the reference for the **mathematical visual language** —
+ink data, marked axes, a quiet grid, numerals in the text face. It is not a
+requirement to imitate paper. This is a digital-first exam, so where the two
+pull apart, clarity and comfort on screen win. Checked against the choices
+made: none of them are paper-imitation. Ink on white is high contrast because
+thin lines need it on a screen; a quiet grid is *less* visual noise, not more;
+the text face is the more screen-native choice of the two, not the less.
+
+### Composition, after seeing the plates in place
+
+Three further things, all visible only in the real question composition rather
+than in an isolated figure:
+
+* **One left edge.** A stimulus centred in the card starts about 150 px right
+  of where the prompt starts, which is what made it read as an object parked
+  above the question. Figure, prompt and options now share a left edge, and the
+  question reads as one piece.
+* **Table values in the text face.** Mono was reversed for figure numerals and
+  the same reasoning applies to a table of values; having one mono and the
+  other sans was the inconsistency.
+* **Figure width 520 → 450.** At 520 a square-ish coordinate plane came out
+  520 px tall and towered over the question it belonged to.
