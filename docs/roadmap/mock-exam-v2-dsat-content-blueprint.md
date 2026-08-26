@@ -1,6 +1,25 @@
 # Digital SAT — content blueprint
 
-**Status:** DESIGN, agreed with the owner 2026-08-25. **No questions authored.**
+**Status:** 🔒 **LOCKED — owner, 2026-08-25.** Content, blueprint, fairness
+contract, whole-exam review and the routing decision are closed as a design.
+
+**What "locked" means here, in the owner's words:** not that no question will
+ever change, but that **nothing changes after this without a stated reason** — a
+bug, a real quality problem, or future performance data. It is not reopened to
+try something different.
+
+**What is locked, and where it lives — these are not the same place:**
+
+| | Where | Locked by |
+|---|---|---|
+| Blueprint, fairness contract, mechanisms, routing threshold | this repository | git |
+| The whole-exam review and its findings | this repository | git |
+| **The 66 authored items** | **nowhere durable yet** | **nothing** |
+
+The items cannot go in this repository — it is public, and exam content with
+answer keys must never enter it. They are currently held only in a session
+scratchpad, which is ephemeral. **Until they are written to the Spine's draft
+state, the lock covers the design and not the content it describes.** See §9.
 **Scope:** what a DSAT form contains and why. Nothing here builds delivery,
 scoring, or any part of the exam experience.
 
@@ -304,3 +323,33 @@ throwaway database. What is missing is the content, not the machinery.
 Experience work — the paper feel, timing pressure, sound, the psychological
 simulation — begins only after DSAT, EST and ACT all stand on a proven
 foundation. **Fidelity first, then the cleverness on top of it.**
+
+---
+
+## 9. Where the content has to live, and why it is not there yet
+
+**The 66 items exist in one place: an ephemeral scratchpad in a single session's
+container.** They are not in this repository and must never be — it is public,
+and the items carry answer keys. They are not in the database either.
+
+That makes the lock in the header partly nominal today. A design is locked in
+git; the content it describes would have to be rewritten from scratch if the
+container were reclaimed.
+
+**The designed home is the Spine's draft state**, which is what M3 and M4 were
+built for and what `docs/roadmap/` records as the authoring workflow. Writing
+them there is:
+
+- **private** — RLS admits no student, and no client code reads the Spine at all
+- **mutable** — a draft can be edited, unlike a published form
+- **reversible** — a draft can be deleted; only `publish_exam_form()` is one-way
+- **already proven** — `scripts/verify-spine-pipeline.sh SAT_FULL` takes exactly
+  this shape of form through migrations, pre-flight, publish and immutability
+
+Publishing is a separate decision and is not implied by storing drafts. The
+pre-flight exists so that the irreversible call is made deliberately, and the
+gate refuses a draft form in any case.
+
+**Open for the owner:** whether to write the 66 into the Spine as `draft` now.
+Until that happens, "DSAT content is locked" describes a design whose content is
+one container reclamation away from being lost.
