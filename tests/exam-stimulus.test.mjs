@@ -149,6 +149,44 @@ t.section('the axis numerals are the instrument');
        ticks.children.filter(e => e.textContent === '0').length <= 1);
 }
 
+t.section('the grid is countable, not merely present');
+{
+  // The invariant is "every fifth GRIDLINE", not "every fifth unit" — the step
+  // is 1 on a tight range and 2 or 2.5 on a wide one, and the ruling has to
+  // hold either way. The first version of this check assumed a step of 1 and
+  // failed on a range where the renderer had correctly chosen 2.5.
+  for (const [xr, yr] of [[[-1, 7], [-1, 5]], [[-11, 11], [-8, 8]], [[0, 30], [0, 20]]]) {
+    const svg = plane({ xRange: xr, yRange: yr, curves: [{ points: [[0, 0], [1, 1]] }] },
+                      [{ mode: 'polygon' }]);
+    const V = withClass(svg, 'sx-grid')[0].children
+      .filter(l => l.getAttribute('x1') === l.getAttribute('x2'))
+      .sort((a, b) => +a.getAttribute('x1') - +b.getAttribute('x1'));
+    const at = V.map((l, i) => ((l.getAttribute('class') || '') === 'sx-major' ? i : -1))
+                .filter(i => i >= 0);
+    const gaps = at.slice(1).map((v, i) => v - at[i]);
+    t.ok(`x∈[${xr}] — majors fall exactly every fifth gridline`,
+         at.length > 0 && gaps.every(g => g === 5), `${V.length} lines, majors at ${at}`);
+    t.ok(`x∈[${xr}] — the minor rule stays the majority`, at.length * 3 < V.length);
+  }
+}
+{
+  const svg = plane({ xRange: [-1, 7], yRange: [-1, 5],
+                      curves: [{ points: [[0, 0], [1, 1]] }] }, [{ mode: 'polygon' }]);
+  const tickX = withClass(svg, 'sx-tick')[0].children
+    .filter(e => e.attrs['text-anchor'] === 'middle').map(e => +e.getAttribute('x'));
+  const originX = +withClass(svg, 'sx-axis')[0].children
+    .filter(l => l.getAttribute('x1') === l.getAttribute('x2'))
+    .map(l => +l.getAttribute('x1'))[0];
+  const majorX = withClass(svg, 'sx-grid')[0].children
+    .filter(l => (l.getAttribute('class') || '') === 'sx-major'
+              && l.getAttribute('x1') === l.getAttribute('x2'))
+    .map(l => +l.getAttribute('x1'))
+    .filter(x => Math.abs(x - originX) > 0.51);   // the origin is the axis, not a ruled line
+  t.ok('every major rule away from the origin carries a numeral',
+       majorX.length > 0 && majorX.every(x => tickX.some(t => Math.abs(t - x) < 0.51)),
+       `majors ${majorX}, numerals ${tickX}`);
+}
+
 t.section('a number line says < or ≤ and nothing vaguer');
 {
   const nl = R.drawNumberLine({ min: -6, max: 6,

@@ -38,7 +38,7 @@ CSS = r"""
   --ink:#0f1b2d;    --ink-2:#46586f;  --ink-3:#5f7288;
   --rule:#dde5ee;
   --s1:#1e63b8;     --s2:#b0530b;     --s3:#7c3aed;
-  --grid-line:#ccd8e5;
+  --grid-line:#ccd8e5;  --grid-major:#7897ba;
   --axis-line:#5b6f88;
   --tag-bg:rgba(30,99,184,.10); --tag-ink:#17518f;
   --flag-bg:rgba(176,83,11,.10); --flag-ink:#8c4109; --flag-rule:rgba(176,83,11,.34);
@@ -51,7 +51,7 @@ CSS = r"""
     --ink:#eaf2fd;    --ink-2:#a8bcd9;  --ink-3:#7a90b2;
     --rule:#1e2b45;
     --s1:#3d8fd4;     --s2:#b8801d;     --s3:#8a5fd8;
-    --grid-line:#253554;
+    --grid-line:#253554;  --grid-major:#44629b;
     --axis-line:#6d84a4;
     --tag-bg:rgba(61,143,212,.14); --tag-ink:#8cc3ee;
     --flag-bg:rgba(184,128,29,.13); --flag-ink:#dda94a; --flag-rule:rgba(184,128,29,.38);
@@ -64,7 +64,7 @@ CSS = r"""
   --ink:#eaf2fd;    --ink-2:#a8bcd9;  --ink-3:#7a90b2;
   --rule:#1e2b45;
   --s1:#3d8fd4;     --s2:#b8801d;     --s3:#8a5fd8;
-  --grid-line:#253554;
+  --grid-line:#253554;  --grid-major:#44629b;
   --axis-line:#6d84a4;
   --tag-bg:rgba(61,143,212,.14); --tag-ink:#8cc3ee;
   --flag-bg:rgba(184,128,29,.13); --flag-ink:#dda94a; --flag-rule:rgba(184,128,29,.38);
@@ -73,13 +73,25 @@ CSS = r"""
 .pin-paper{
   --plate:#ffffff; --plate-rule:#dde5ee; --ink:#0f1b2d; --ink-2:#46586f; --ink-3:#5f7288;
   --rule:#dde5ee; --s1:#1e63b8; --s2:#b0530b; --s3:#7c3aed;
-  --grid-line:#ccd8e5; --axis-line:#5b6f88;
+  --grid-line:#ccd8e5; --grid-major:#7897ba; --axis-line:#5b6f88;
   --tag-bg:rgba(30,99,184,.10); --tag-ink:#17518f;
+}
+.pin-soft{
+  --plate:#f4f6f9; --plate-rule:#d7dfea; --ink:#16202e; --ink-2:#43556c; --ink-3:#596c83;
+  --rule:#d7dfea; --s1:#1d5fb0; --s2:#a8500a; --s3:#7736e6;
+  --grid-line:#c7d2e0; --grid-major:#7590b3; --axis-line:#586c85;
+  --tag-bg:rgba(29,95,176,.10); --tag-ink:#17518f;
+}
+.pin-lifted{
+  --plate:#1b2333; --plate-rule:#2f3b52; --ink:#e8eef8; --ink-2:#b3c4dc; --ink-3:#9db0ca;
+  --rule:#2f3b52; --s1:#5aa2de; --s2:#c98d24; --s3:#9a75e0;
+  --grid-line:#39465f; --grid-major:#5a6e95; --axis-line:#7e93b3;
+  --tag-bg:rgba(90,162,222,.15); --tag-ink:#9fcaeb;
 }
 .pin-night{
   --plate:#0c1428; --plate-rule:#1e2b45; --ink:#eaf2fd; --ink-2:#a8bcd9; --ink-3:#7a90b2;
   --rule:#1e2b45; --s1:#3d8fd4; --s2:#b8801d; --s3:#8a5fd8;
-  --grid-line:#253554; --axis-line:#6d84a4;
+  --grid-line:#253554; --grid-major:#44629b; --axis-line:#6d84a4;
   --tag-bg:rgba(61,143,212,.16); --tag-ink:#8cc3ee;
 }
 
@@ -135,6 +147,7 @@ p{margin:0 0 14px}
    Geometry comes from the renderer; every appearance decision is here. */
 .sx{display:block;font-family:'JetBrains Mono',ui-monospace,monospace}
 .sx-grid line{stroke:var(--grid-line);stroke-width:1}
+.sx-grid line.sx-major{stroke:var(--grid-major);stroke-width:1}
 .sx-axis line{stroke:var(--axis-line);stroke-width:1.75;stroke-linecap:round}
 .sx-axis-base{stroke:var(--axis-line);stroke-width:1.5}
 .sx-arrow{fill:var(--axis-line)}
@@ -171,6 +184,17 @@ p{margin:0 0 14px}
          font-family:'JetBrains Mono',ui-monospace,monospace}
 
 /* ============================================================ SURFACES */
+.cands{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:760px){.cands{grid-template-columns:1fr}}
+.cand{border:1px solid var(--plate-rule);border-radius:4px;overflow:hidden;
+      background:var(--plate);box-shadow:var(--plate-shadow)}
+.cand-head{padding:14px 20px;border-bottom:1px solid var(--rule);
+           font-family:'Manrope',sans-serif;font-size:14px;color:var(--ink);
+           display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.cand-head b{font-weight:700}
+.cand-head span{font-weight:400;font-size:12.5px;color:var(--ink-3);flex-basis:100%}
+.cand .plate-fig{padding:16px 12px}
+.cand-tab{border-top:1px solid var(--rule);padding-top:18px!important}
 .surfaces{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media (max-width:720px){.surfaces{grid-template-columns:1fr}}
 .surface{border-radius:4px;border:1px solid var(--plate-rule);overflow:hidden;
@@ -228,6 +252,28 @@ GROUPS = [
    ['nl1','nl2','nl3']),
 ]
 
+CANDIDATES = [
+ ('pin-paper',  'Paper',            '#ffffff', 'The literal reference. Maximum emitted light.',
+  '100.0%', '17.28', '4.94', '1.45', '3.03', '5.95'),
+ ('pin-soft',   'Paper, softened',  '#f4f6f9', 'Same contrast, less light. The tuned light surface.',
+  '92.0%',  '15.15', '4.98', '1.41', '3.03', '5.85'),
+ ('pin-lifted', 'Night, lifted',    '#1b2333', 'Dark without near-black halation. The tuned dark surface.',
+  '1.7%',   '13.50', '7.11', '1.66', '3.07', '5.74'),
+ ('pin-night',  'Night',            '#0c1428', "The product's own card. Least emitted light.",
+  '0.7%',   '16.24', '5.64', '1.50', '3.02', '5.30'),
+]
+cand_cards = ''.join(
+  f"""<div class="cand {cls}">
+        <div class="cand-head"><b>{name}</b> <code>{hexv}</code><span>{note}</span></div>
+        <div class="plate-fig" id="cand-{cls}"></div>
+        <div class="plate-fig cand-tab" id="candt-{cls}"></div>
+      </div>"""
+  for cls, name, hexv, note, *_ in CANDIDATES)
+cand_rows = ''.join(
+  f"<tr><td>{name} <code>{hexv}</code></td><td>{em}</td><td>{ink}</td><td>{num}</td>"
+  f"<td>{mi}</td><td>{ma}</td><td>{st}</td></tr>"
+  for cls, name, hexv, note, em, ink, num, mi, ma, st in CANDIDATES)
+
 by_id = {s['id']: s for s in SPECIMENS}
 sections = []
 for title, sub, ids in GROUPS:
@@ -240,7 +286,8 @@ for title, sub, ids in GROUPS:
   </section>""")
 
 ANATOMY = [
- ('Grid', '1 px, unit pitch, always countable', 'On an analytics chart the grid is decoration and fades away. Here a student counts squares to read a radius, so it stays legible.'),
+ ('Grid', 'two-tier: 1 px minor at unit pitch, a major rule every fifth line at 3:1',
+  'On an analytics chart the grid is decoration and fades away. Here a student counts squares to read a radius. A single-weight hairline measured 1.41–1.66:1 on every candidate surface — under the 3:1 floor for graphics a reader needs — and raising the whole grid to 3:1 makes it compete with the figure. Ruled paper solved this a long time ago.'),
  ('Axis', '1.75 px, arrowheads on both ends', 'Arrowheads say the line continues — a mathematical statement, not an ornament.'),
  ('Tick numerals', "JetBrains Mono 11.5 px, tabular", 'Numerals on an axis are measurements. Mono keeps them aligned and reads as an instrument.'),
  ('Curve', '2.5 px, round cap and join, Catmull-Rom through the samples', 'A sampled curve is a curve. Straight-joining turns a parabola into a V.'),
@@ -249,7 +296,7 @@ ANATOMY = [
  ('Point label', 'Manrope 800 14 px, surface painted around the glyph', 'A name the prompt refers to must survive whatever is underneath it.'),
  ('Number line', '2.25 px rule, 6 px segment, endpoint r 6.5 at 2.5 px', 'Sized so the open/closed distinction is unmissable at a glance.'),
  ('Bar', '4 px radius at the data end only, square at the baseline, 2 px gap', 'A rounded baseline would lie about where zero is.'),
- ('Series colour', '<code>--s1 #1e63b8</code> · <code>--s2 #b0530b</code> · <code>--s3 #7c3aed</code>', 'Validated: passes the lightness band, chroma floor, colour-vision separation (worst adjacent pair ΔE 24.0 protan) and contrast. The night set is validated separately against <code>#0c1428</code>, not flipped.'),
+ ('Series colour', '<code>--s1 #1e63b8</code> · <code>--s2 #b0530b</code> · <code>--s3 #7c3aed</code>', 'Validated: passes the lightness band, chroma floor, colour-vision separation (worst adjacent pair ΔE 24.0 protan) and contrast. Each candidate surface gets its own set, validated against that surface — never flipped from another one.'),
  ('Type', "Manrope · DM Sans · JetBrains Mono", "The product's own three faces. Nothing new was introduced for figures."),
 ]
 anatomy_rows = ''.join(
@@ -285,18 +332,53 @@ HTML = f"""<title>Math Stimulus Plates</title>
 
   <section>
     <h2>Which surface the exam is sat on</h2>
-    <p class="sec-sub">The same figure, on the two surfaces the product already owns. This is a
-      decision, not a default — and it is the one thing on this page that has to be settled before
-      the renderer is built, because every other value is tuned against it.</p>
-    <div class="surfaces">
-      <div class="surface pin-paper">
-        <div class="surface-name">Paper <span>— what the real Digital SAT uses</span></div>
-        <div class="plate-fig" id="fig-cmp-light"></div>
-      </div>
-      <div class="surface pin-night">
-        <div class="surface-name">Night <span>— the product's own card, <code>#0c1428</code></span></div>
-        <div class="plate-fig" id="fig-cmp-dark"></div>
-      </div>
+    <p class="sec-sub">Not locked. The DSAT is a screen exam, so this is a
+      screen-first assessment question — which surface a student can read
+      mathematics on for a full 35-minute module — and not a choice between a
+      brand identity and a paper metaphor.</p>
+
+    <div class="rule-card" style="margin-bottom:26px">
+      <p><strong>A screen emits; paper reflects.</strong> A white panel in an
+      ordinary room puts out several times the light the paper on the desk beside
+      it reflects. That is the fatigue driver, and contrast ratio does not measure
+      it at all — pure white and a softened white can have identical contrast and
+      feel completely different after half an hour.</p>
+      <p><strong>Thin light strokes on near-black bloom.</strong> Halation is
+      worst for exactly this content: hairline axes, 1&nbsp;px grids, small
+      numerals. It affects a large minority of readers, astigmatism especially.</p>
+      <p>Which is why there are four candidates below and not two. <strong>Paper
+      and Night are the extremes of their families</strong> — the most and least
+      light a surface can emit. The two inboard candidates are the tuned member
+      of each. The exam may well want one of those rather than either pole.</p>
+    </div>
+
+    <div class="cands">{cand_cards}</div>
+
+    <div class="spec-scroll" style="margin-top:26px">
+      <table class="spec">
+        <thead><tr><th>Surface</th><th>Emitted</th><th>Body ink</th>
+          <th>Axis numerals</th><th>Minor rule</th><th>Major rule</th><th>Plot stroke</th></tr></thead>
+        <tbody>{cand_rows}</tbody>
+      </table>
+    </div>
+    <p class="sec-sub" style="margin-top:14px;font-size:15px">
+      <strong>Emitted</strong> is the share of full white the panel puts out across
+      the reading area — the fatigue proxy. Everything else is a contrast ratio
+      against that surface. Text floor is 4.5:1; the floor for graphics a reader
+      needs is 3:1.</p>
+
+    <div class="open" style="margin-top:26px">
+      <p class="badge">Found while measuring · fixed</p>
+      <h3>The grid was decoration, on all four</h3>
+      <p>A single-weight hairline grid measures <strong>1.41–1.66:1</strong> on
+      every candidate — well under the 3:1 floor for graphical information a
+      reader needs. On a coordinate plane the grid is not decoration: it is the
+      instrument a student counts a radius with.</p>
+      <p>Raising the whole grid to 3:1 makes it loud enough to compete with the
+      figure drawn on it. So the ruling is now two-tier, the way graph paper has
+      always been ruled — a quiet minor rule, and a <strong>major rule every
+      fifth line carrying the contrast</strong>. Every figure above and below is
+      drawn that way.</p>
     </div>
   </section>
 {''.join(sections)}
@@ -347,9 +429,14 @@ for (const sp of SPECIMENS) {{
   if (host) host.appendChild(renderStimulus(sp.kind, sp.spec, sp.opts || {{}}));
 }}
 const circleSp = SPECIMENS.find(s => s.id === 'circle');
-for (const id of ['fig-cmp-light', 'fig-cmp-dark'])
-  document.getElementById(id).appendChild(
-    renderStimulus('plot', circleSp.spec, Object.assign({{}}, circleSp.opts, {{width: 420, height: 340}})));
+const tableSp  = SPECIMENS.find(s => s.id === 'table');
+for (const cls of ['pin-paper','pin-soft','pin-lifted','pin-night']) {{
+  document.getElementById('cand-' + cls).appendChild(renderStimulus(
+    'plot', circleSp.spec, Object.assign({{}}, circleSp.opts, {{width: 400, height: 320}})));
+  // a table too: fatigue shows up in numerals long before it shows in a curve
+  document.getElementById('candt-' + cls).appendChild(
+    renderStimulus('table', tableSp.spec, {{}}));
+}}
 </script>
 """
 io.open(os.path.join(REPO, 'stimulus-plates.html'), 'w', encoding='utf-8').write(HTML)

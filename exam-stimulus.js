@@ -124,11 +124,25 @@ function drawPlot(spec, opts) {
   arrowDefs(s, 'sx-ar');
   if (opts.title) s.appendChild(el('title', {}, opts.title));
 
+  // TWO-TIER GRID, the way graph paper is actually ruled.
+  //
+  // A single-weight grid cannot be both calm and countable. Measured against
+  // every candidate surface, a hairline grid sits at 1.4–1.7:1 — below the 3:1
+  // floor for graphical information a reader needs — while a grid raised to 3:1
+  // throughout is loud enough to compete with the figure drawn on it.
+  //
+  // So the minor rule stays quiet and the MAJOR rule, every fifth unit, carries
+  // the contrast. A student counting a radius counts from a major line, which
+  // is what ruled paper has always done.
+  const major = v => Math.abs(v / (5 * sx) - Math.round(v / (5 * sx))) < 1e-9;
+  const majorY = v => Math.abs(v / (5 * sy) - Math.round(v / (5 * sy))) < 1e-9;
   const grid = el('g', { class: 'sx-grid' });
   for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx)
-    grid.appendChild(el('line', { x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
+    grid.appendChild(el('line', { class: major(v) ? 'sx-major' : null,
+                                  x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
   for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy)
-    grid.appendChild(el('line', { x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
+    grid.appendChild(el('line', { class: majorY(v) ? 'sx-major' : null,
+                                  x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   s.appendChild(grid);
 
   const ax = el('g', { class: 'sx-axis' });
