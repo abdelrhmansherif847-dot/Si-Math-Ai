@@ -313,3 +313,57 @@ Approved 2026-08-26 and recorded here because they constrain content, not code.
 
 4. **No more than three curves in a figure** until a colour rule exists; the
    renderer cycles three series colours.
+
+---
+
+## 10. The render-time smoothing fallback — attempted, and it cannot be built
+
+The instruction was: smooth only when a safety test proves the smoothing does
+not change the reading, and otherwise draw the figure explicitly rather than let
+the renderer guess. **The principle is right. The mechanism does not exist, and
+the measurements say so.**
+
+Two candidate metrics were tested against cases whose correctness is known:
+
+| case | max turning angle | deviation from polyline | truth |
+|---|---:|---:|---|
+| circle, 8 samples | 45° | 25.5 px | smoothing **recovers** the shape |
+| circle, 12 samples | 30° | 18.0 px | correct |
+| parabola, 20 samples | 29° | 1.4 px | correct |
+| parabola, 10 samples | 49° | 6.8 px | correct |
+| parabola, 6 samples | 64° | 25.2 px | marginal |
+| parabola, 4 samples | 74° | 79.7 px | smoothing **invents** the shape |
+
+* **Deviation from the polyline does not separate them.** A circle sampled
+  perfectly well deviates 25.5 px; a parabola sampled badly deviates 25.2 px.
+  The metric measures **curvature**, not error.
+* **Overshoot beyond the sample band is not sound either.** A genuine extremum
+  between two samples legitimately leaves the bracket — a real parabola does
+  exactly that at its vertex.
+* **Turning angle separates better but not cleanly** (45° correct against 49°
+  also correct), because the angle depends on how much true curvature lies
+  between samples — which is precisely what the spec does not carry.
+
+**The information is not in the points.** No local metric can distinguish
+"sampled adequately" from "sampled sparsely" without knowing the function.
+
+And the proposed fallback would not be safe anyway: **a polyline is not the
+conservative choice**, it is a different wrong claim — it asserts corners the
+function does not have. Ugly is not the same as honest.
+
+### What is sound instead
+
+1. **The renderer does not decide.** It smooths what is declared a `curve`,
+   because deciding would mean guessing with a metric that does not work.
+2. **The author is responsible for sampling density**, and the rule is written
+   down in §9.2 with the numbers behind it.
+3. **An authoring-time warning, labelled a heuristic and not a gate:** flag any
+   `curve` whose maximum turning angle between consecutive chords exceeds 60°.
+   That catches the realistic mistake (parabola at 4 and 6 samples) without
+   firing on legitimate figures (circle at 8, parabola at 10). It warns a human;
+   it never silently changes a rendering.
+
+This is a correction to the instruction, made because the evidence contradicts
+it. The principle it was protecting — *beauty never precedes mathematical
+meaning in an exam* — is served better by refusing to let the renderer decide at
+all than by having it decide on a metric that cannot tell the cases apart.

@@ -1,4 +1,10 @@
-"""Builds the Plot Spec Dictionary — the complete figure language on one page."""
+"""Builds the Plot Spec Dictionary — Math Figure Language v1, freeze candidate.
+
+Everything on the page is settled. Nothing is proposed, nothing is open: each
+property is stated with its permitted values, each refusal is numbered, each
+deferral is marked DEFERRED with its reason, and what cannot be represented at
+all is named. If this page reads clean, it is the language.
+"""
 import io, os, json
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -302,16 +308,18 @@ deferred = ''.join(f'<tr><td class="k">{n}</td><td>{w}</td><td>{y}</td></tr>'
 examples = ''.join(f'<div class="card"><div class="ex-h">{t}</div><pre>{c}</pre></div>'
                    for t, c in EXAMPLES)
 
-HTML = f"""<title>Plot Spec Dictionary</title>
+HTML = f"""<title>Math Figure Language</title>
 {CSS}
 <div class="wrap">
   <header class="mast">
-    <p class="kicker">Si Math AI · the figure language · proposed, nothing applied</p>
+    <p class="kicker">Si Math AI · v1 · freeze candidate</p>
     <h1>Everything a figure is allowed to say</h1>
-    <p class="lede">The complete vocabulary, on one page — every property, its permitted values,
-      what it means mathematically, and what the validator will refuse.</p>
-    <p class="lede">This is what the migration would freeze. It outlives DSAT: every EST and ACT
-      figure will be described in it too.</p>
+    <p class="lede">The complete language, on one page. Every property with its permitted values
+      and its mathematical meaning, every refusal numbered, every deferral marked, and everything
+      that cannot be represented at all named as such.</p>
+    <p class="lede"><b>Nothing here is open.</b> This is what v1 is; the migration carries exactly
+      this and nothing more. It will describe every EST and ACT figure, not only the DSAT ones
+      that exist today.</p>
   </header>
 
   <h2>The four stimulus kinds</h2>
@@ -366,16 +374,42 @@ HTML = f"""<title>Plot Spec Dictionary</title>
       <tr><td class="k">asymptote / discontinuity</td><td>⚠️ <b>the one genuine hole.</b> Correct as one curve per branch; also storable as a single curve that draws a false vertical through the asymptote. Undecidable at the CHECK level — mitigated by an authoring preflight, not by the schema</td></tr>
     </tbody></table></div>
 
+  <h2>Binding on content, not on code</h2>
+  <p class="h2sub">Four rules the schema cannot enforce and an author must. They exist because the
+    alternative is letting the renderer decide something only the author knows.</p>
+  <div class="card"><table>
+    <thead><tr><th>rule</th><th>why</th></tr></thead>
+    <tbody>
+      <tr><td class="k">A curve entry is <b>one continuous branch</b></td>
+        <td>A discontinuity is never encoded by hoping the renderer infers a gap from point
+          positions. Split the branches into separate entries — or, if the figure needs something
+          this language cannot state, <b>stop authoring it</b> until the language is extended.
+          It is not approximated.</td></tr>
+      <tr><td class="k">Sample a curve densely</td>
+        <td>Polyline, uniform and centripetal interpolation disagree by <b>84&nbsp;px at four
+          samples and 2&nbsp;px at twenty</b>. Below about ten, the renderer is choosing the shape
+          and a student reads it instead of the author's function.</td></tr>
+      <tr><td class="k">Figure labels carry no notation</td>
+        <td>SVG text cannot render KaTeX. Labels are <code>x</code>, <code>y</code>,
+          "Time (minutes)". Notation lives in the prompt, the options or a table cell.</td></tr>
+      <tr><td class="k">At most three curves in a figure</td>
+        <td>The renderer cycles three series colours. A fourth needs a colour rule first.</td></tr>
+    </tbody></table></div>
+
   <div class="ask">
-    <h3>What approving this means</h3>
-    <p>That the language above is the one worth freezing — three <code>frame</code> values, three
-      <code>figure</code> values, <code>closed</code> as an independent property with its
-      contradictions refused, <code>pointLabels</code> in the semantic core, and the minimum
-      point count made to depend on the figure so a single named point becomes possible.</p>
-    <p>On approval the migration gets written to carry exactly these nine refusals, with its
-      rollback and a behavioural probe inside a subtransaction that always rolls back — and comes
-      back for a second, separate approval before anything is applied.</p>
+    <h3>Math Figure Language v1</h3>
+    <p>Three <code>frame</code> values. Three <code>figure</code> values. <code>closed</code> as an
+      independent property whose contradictions are refused rather than merely discouraged.
+      <code>pointLabels</code> in the semantic core. A minimum point count that depends on the
+      figure, so a single named point becomes possible. Ten numbered refusals.</p>
+    <p>One hole is known and accepted: a discontinuity encoded as a single curve stores cleanly and
+      draws a false vertical. It is undecidable at the CHECK level, so it is held by the authoring
+      rule above rather than by the schema — <b>recorded, not hidden</b>.</p>
+    <p>Everything deferred is deferred on the same test: it is optional, so adding it later is a
+      function replacement with nothing to back-fill, and its absence correctly means
+      "not that kind of figure".</p>
   </div>
+</div>
 </div>
 """
 io.open(os.path.join(REPO, 'plot-spec-dictionary.html'), 'w', encoding='utf-8').write(HTML)

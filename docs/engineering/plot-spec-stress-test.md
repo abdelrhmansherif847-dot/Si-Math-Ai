@@ -131,6 +131,28 @@ schema prevents it.
 **This is the one case that stays in the dangerous middle**, and it should be
 approved knowingly rather than discovered later.
 
+#### The authoring gate, stated exactly
+
+"Authoring preflight" is too vague to rely on, so the rule is written in full
+and is binding on content:
+
+> **A curve entry represents one continuous branch only. A discontinuity must
+> never be encoded by relying on the renderer to infer a gap from point
+> positions.**
+
+Which leaves an author exactly two options and no third:
+
+1. **Split the branches explicitly** into separate `curve` entries — one per
+   continuous piece.
+2. **Stop authoring that figure.** If the question needs an asymptote, a
+   removable discontinuity, or anything else the current vocabulary cannot
+   state, authoring halts until the vocabulary is extended. It is not
+   approximated.
+
+This deliberately does not ask the validator to infer calculus from a list of
+points, and equally does not let an author put every branch in one curve and
+hope the drawing comes out right.
+
 ---
 
 ## What the stress test changes
