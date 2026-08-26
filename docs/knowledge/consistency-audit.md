@@ -265,7 +265,7 @@ The governance rule and its shipping checklist are in `knowledge-base.md` §14.
 
 ---
 
-## C-13 · Exam format claims may predate the current exams — OPEN (owner action, priority)
+## C-13 · Exam format claims predated the current exams — ✅ RESOLVED 2026-08-25
 
 **Found while building the educational guides.** The site states two exam format
 facts in several places:
@@ -289,12 +289,37 @@ an exam format that no longer exists undermines exactly the authority this work
 was commissioned to build — and an AI system quoting it will repeat the error
 confidently.
 
-**Action required:**
+**Resolution, 2026-08-25.** All three steps are done.
 
-1. Confirm the current SAT Math calculator policy and the current ACT Math
-   section format from the official boards.
-2. Correct every occurrence listed above.
-3. Re-run `node scripts/validate-knowledge-layer.mjs`.
+1. **Confirmed by the owner**, who is the authority on the versions Si Math AI
+   targets and supplied an `act.org` citation for the ACT calculator policy and
+   the 45-questions-in-50-minutes Enhanced ACT Math format. The build
+   environment still cannot reach external sites — that limit did not go away,
+   the verification simply came from someone who could.
+2. **Every occurrence corrected**, 19 across 7 files: `index.html`,
+   `how-it-works.html`, `faq.html` (via its source — see below), `llms-full.txt`
+   and `knowledge-base.md`, which was corrected FIRST as the authority the
+   others derive from.
+3. `validate-knowledge-layer.mjs` green, full suite 54/54.
+
+**What replaced them:** the SAT is described by its actual structure — the
+Digital SAT's two-module adaptive format — rather than by a calculator policy,
+because "a calculator throughout" is not a feature, it is just the format. The
+ACT reads 45 questions in 50 minutes, which is also what `exam-registry.js` has
+always run.
+
+**The sharpest form of the defect, worth recording:** `index.html` promised
+students "60 questions, 60 minutes" while `exam-registry.js` ran the ACT mock at
+45 questions in 50 minutes. The marketing site and the exam engine described
+different exams, and a student could read one and sit the other.
+
+**A trap for the next person.** `faq.html` is GENERATED from
+`docs/knowledge/faq-data.mjs` by `scripts/build-faq.mjs`. Editing the page
+directly passes a visual review and fails
+`validate-knowledge-layer.mjs`'s sync check — which is exactly what happened
+here, and is the gate working. Correct the source and regenerate. Each claim
+also appears twice per answer, in schema.org JSON-LD and in visible copy; both
+were replaced in one operation so they cannot drift apart.
 
 **Mitigated in the meantime.** The twelve new educational guides carry **no exam
 format specifics at all** — no question counts, no section timings, no

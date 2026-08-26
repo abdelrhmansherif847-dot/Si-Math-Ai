@@ -426,11 +426,11 @@ export const CATEGORIES = [
     items: [
       {
         q: 'Does Si Math AI support the SAT?',
-        a: '<p>Yes. SAT Math is covered across all four College Board content domains, with both calculator and no-calculator practice: Algebra &amp; Linear Equations, Advanced Math &amp; Functions, Problem Solving &amp; Data, and Geometry &amp; Trigonometry.</p>',
+        a: '<p>Yes. SAT Math is covered across all four College Board content domains, in the Digital SAT\'s two-module adaptive format: Algebra &amp; Linear Equations, Advanced Math &amp; Functions, Problem Solving &amp; Data, and Geometry &amp; Trigonometry.</p>',
       },
       {
         q: 'Does Si Math AI support the ACT?',
-        a: '<p>Yes. ACT Math is covered in its real format — 60 questions in 60 minutes — with speed-focused drilling across Pre-Algebra &amp; Algebra, Coordinate &amp; Plane Geometry, Trigonometry, and Statistics &amp; Probability.</p>',
+        a: '<p>Yes. ACT Math is covered in its real format — 45 questions in 50 minutes — with speed-focused drilling across Pre-Algebra &amp; Algebra, Coordinate &amp; Plane Geometry, Trigonometry, and Statistics &amp; Probability.</p>',
       },
       {
         q: 'Does Si Math AI support the EST?',
@@ -442,7 +442,7 @@ export const CATEGORIES = [
       },
       {
         q: 'What is the difference between SAT, ACT and EST mathematics?',
-        a: '<p>They differ in content weighting, timing pressure, calculator policy and question style. The ACT\'s 60-questions-in-60-minutes format makes pacing the dominant constraint; the SAT weights algebra and data analysis heavily and splits calculator and no-calculator work; the EST has its own structure and is the exam most relevant to Egyptian university admission.</p><p>The same topic is therefore taught differently depending on which exam you are preparing for.</p>',
+        a: '<p>They differ in content weighting, timing pressure, calculator policy and question style. The ACT\'s 45-questions-in-50-minutes format makes pacing the dominant constraint; the SAT weights algebra and data analysis heavily and routes every student through a second module matched to how the first went; the EST has its own structure and is the exam most relevant to Egyptian university admission.</p><p>The same topic is therefore taught differently depending on which exam you are preparing for.</p>',
       },
       {
         q: 'Does Si Math AI cover the non-mathematics sections?',
@@ -450,7 +450,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Does it cover the digital SAT?',
-        a: '<p>Si Math AI covers SAT Mathematics across the four College Board content domains, with both calculator and no-calculator practice. For the current format specifics of any exam sitting, always check the official College Board information as well — exam formats are set by the boards, not by us.</p>',
+        a: '<p>Si Math AI covers SAT Mathematics across the four College Board content domains, in the Digital SAT\'s two-module adaptive format. For the current format specifics of any exam sitting, always check the official College Board information as well — exam formats are set by the boards, not by us.</p>',
       },
       {
         q: 'Is Si Math AI affiliated with the College Board, ACT, or the EST?',

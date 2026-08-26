@@ -209,14 +209,20 @@
         { ordinal: 1, label: 'EST Math 1', questions: 50, durationMinutes: 75 },
       ],
       calculator: {
-        // 'partial', not 'exam': EST Math 1 permits a calculator in part 2 only.
-        // The part boundary is NOT modelled as two modules here, deliberately —
-        // doing so would change production timer behaviour, and the exact split
-        // has not been verified against an authoritative EST source. Recording
-        // the policy honestly costs nothing; inventing a boundary would not.
-        allowed: true, scope: 'partial', byod: true, provider: null,
-        note: 'EST Math 1 permits a calculator in part 2 only. Students bring their own '
-            + 'approved calculator on test day. The part boundary is not modelled yet.',
+        // 'exam', on the owner's authority (2026-08-25): for the EST version
+        // Si Math AI targets, a calculator is available throughout the Math
+        // section, so there is no part boundary to model and no calculator-off
+        // content.
+        //
+        // This read 'partial' until then, from an older published description
+        // saying a calculator was permitted in part 2 only — and the badge told
+        // students about "designated portions" accordingly. The owner confirmed
+        // the current official position differs. Recorded here as a decision
+        // with a date rather than silently flipped, because the previous value
+        // was also recorded honestly and was simply overtaken.
+        allowed: true, scope: 'exam', byod: true, provider: null,
+        note: 'A calculator is permitted throughout EST Math 1. Students bring their own '
+            + 'approved calculator on test day.',
       },
       announcements: {
         perModule: false,

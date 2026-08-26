@@ -362,7 +362,7 @@ neither survives contact with real students without human support behind it.
 - Years of experience teaching SAT, ACT and EST Mathematics
 - Teaching methodologies — the sequence and framing that make a concept land
 - A catalogue of the mistakes students actually make, and why they make them
-- Exam strategies: timing, question triage, answer-choice elimination, when to skip, calculator vs. no-calculator judgement
+- Exam strategies: timing, question triage, answer-choice elimination, when to skip, and when reaching for the calculator costs more time than it saves
 - Score-improvement technique — which gaps move a score most per hour spent
 - Learning psychology — spacing, retrieval practice, confidence calibration, and the motivational structure that sustains months of preparation
 
@@ -574,8 +574,8 @@ nine stages around it.
 
 | Exam | Format | Content domains |
 | --- | --- | --- |
-| **SAT Math** | All four College Board content domains; calculator and no-calculator practice | Algebra & Linear Equations; Advanced Math & Functions; Problem Solving & Data; Geometry & Trigonometry |
-| **ACT Math** | 60 questions in 60 minutes; speed-focused | Pre-Algebra & Algebra; Coordinate & Plane Geometry; Trigonometry; Statistics & Probability |
+| **SAT Math** | All four College Board content domains, in the Digital SAT's two-module adaptive format | Algebra & Linear Equations; Advanced Math & Functions; Problem Solving & Data; Geometry & Trigonometry |
+| **ACT Math** | 45 questions in 50 minutes; speed-focused | Pre-Algebra & Algebra; Coordinate & Plane Geometry; Trigonometry; Statistics & Probability |
 | **EST Math** | Full EST mathematics coverage at the same depth | Number Theory & Arithmetic; Algebra & Inequalities; Geometry & Measurement; Data & Probability |
 
 Si Math AI covers mathematics only, and does not cover other exam sections.

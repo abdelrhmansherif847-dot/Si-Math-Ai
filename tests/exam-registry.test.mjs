@@ -218,8 +218,13 @@ t.ok('every scope is from the declared vocabulary',
 t.ok('compat.calculator tracks policy.allowed for every exam',
   R.EXAM_CODES.every(c => compat[c].calculator === R.calculatorPolicy(c).allowed));
 
-// The case the old boolean could not express.
-t.is('EST_MATH_1 is partial-scope (part 2 only)', R.calculatorPolicy('EST_MATH_1').scope, 'partial');
+// Every targeted exam allows a calculator for the whole section, so `scope`
+// no longer distinguishes them and `byod` is the axis that does. Asserted per
+// exam rather than as a blanket rule: a future exam that is genuinely partial
+// must fail this and be thought about, not absorbed silently.
+t.ok('every exam allows a calculator for the whole section',
+  R.EXAM_CODES.every(c => R.calculatorPolicy(c).scope === 'exam'));
+t.is('EST_MATH_1 allows a calculator throughout', R.calculatorPolicy('EST_MATH_1').scope, 'exam');
 t.ok('EST_MATH_1 is bring-your-own', R.calculatorPolicy('EST_MATH_1').byod === true);
 t.ok('DSAT is not bring-your-own (test day provides one)',
   ['SAT_MODULE_1', 'SAT_MODULE_2', 'SAT_FULL'].every(c => R.calculatorPolicy(c).byod === false));

@@ -764,7 +764,7 @@ Every explanation of Si Math AI resolves to these three pillars, in this order.
 - Teaching methodologies — the sequence and framing that make a concept land.
 - A catalogue of the mistakes students actually make, and why they make them.
 - Exam strategies: timing, question triage, answer-choice elimination, when to
-  skip, calculator vs. no-calculator judgement.
+  skip, and when reaching for the calculator costs more time than it saves.
 - Score-improvement technique — which gaps move a score most per hour spent.
 - Learning psychology — spacing, retrieval practice, confidence calibration,
   and the motivational structure that keeps a student returning.
@@ -868,8 +868,8 @@ and its scope guard declines out-of-scope requests).
 
 | Exam | Coverage |
 | --- | --- |
-| **SAT Math** | All four College Board content domains; calculator and no-calculator practice. |
-| **ACT Math** | 60 questions in 60 minutes; speed-focused drilling. |
+| **SAT Math** | All four College Board content domains, in the Digital SAT's two-module adaptive format. |
+| **ACT Math** | 45 questions in 50 minutes; speed-focused drilling. |
 | **EST Math** | Full EST mathematics coverage at the same depth. |
 
 **Parity rule.** Si Math AI covers three examinations and names three wherever

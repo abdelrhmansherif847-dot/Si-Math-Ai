@@ -50,9 +50,8 @@ t.section('Policy → copy: the registry is the source, per exam');
   // from the live registry — not a re-declaration of the policy table.
   t.is('DSAT: provided on test day (byod:false)', C.describe('SAT_FULL').state, 'provided');
   t.is('DSAT text', C.describe('SAT_FULL').text, 'Calculator provided on test day');
-  t.is('EST Math 1: partial', C.describe('EST_MATH_1').state, 'partial');
-  t.is('EST Math 1 text is the honest qualified one',
-    C.describe('EST_MATH_1').text, 'Calculator permitted during designated portions');
+  t.is('EST Math 1: bring your own', C.describe('EST_MATH_1').state, 'byod');
+  t.is('EST Math 1 text', C.describe('EST_MATH_1').text, 'Calculator allowed — bring your own');
   t.is('EST Math 2 L1: bring your own', C.describe('EST_MATH_2_L1').state, 'byod');
   t.is('ACT: bring your own', C.describe('ACT_MATH').state, 'byod');
   t.is('PRACTICE: byod', C.describe('PRACTICE').state, 'byod');
@@ -69,17 +68,24 @@ t.section('Policy → copy: the registry is the source, per exam');
     R.EXAM_CODES.every(c => C.describe(c).tone === 'info'));
 }
 
-t.section('The partial state claims no live enforcement');
+t.section('No badge claims live enforcement, for any exam');
 
 {
-  const { C } = makeCalc();
-  const d = C.describe('EST_MATH_1');
-  // The system has no section model. The wording must not pretend it knows
-  // which portion is running or that anything is being enforced.
-  t.ok('no "now"/"currently"/"this section" claim in the partial text',
-    !/\bnow\b|currently|this section|enabled|disabled/i.test(d.text));
-  t.ok('the registry note carries the specifics (part 2, BYOD)',
-    /part 2/i.test(d.detail) && /bring their own/i.test(d.detail));
+  const { C, R } = makeCalc();
+  // The system has no section model and enforces nothing. No badge may pretend
+  // it knows which portion is running or that a rule is being applied. This was
+  // written for the one exam that used to be 'partial'; it is asserted across
+  // every exam now, which is strictly stronger and survives the policy change
+  // that made the original target disappear.
+  t.ok('no exam badge claims live enforcement', R.EXAM_CODES.every((c) => {
+    const d = C.describe(c);
+    return d && !/\bnow\b|currently|this section|enabled|disabled/i.test(d.text);
+  }));
+  // The correctness this replaced: EST Math 1's note told students a calculator
+  // was permitted in part 2 only. It no longer may.
+  const est = C.describe('EST_MATH_1');
+  t.ok('EST Math 1 no longer claims a part-2-only calculator', !/part 2/i.test(est.detail));
+  t.ok('EST Math 1 still says the student brings their own', /bring their own/i.test(est.detail));
 }
 
 t.section('The three badges are registry-driven — the hardcoded copy is gone');
