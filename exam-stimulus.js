@@ -184,14 +184,23 @@ function drawPlot(spec, opts) {
   if (!showY) ax.appendChild(el('line', { x1: PAD.l, y1: PAD.t, x2: PAD.l, y2: H - PAD.b }));
   s.appendChild(ax);
 
+  // The axis tip labels (x and y) sit at the ends of the axes, and the OUTERMOST
+  // numeral wants the same few pixels. Nudging the label never fully resolved it
+  // — it collided on seven of the sixty-six figures. So the label wins and the
+  // numeral it displaces is dropped: that numeral sits at the edge of the
+  // widened window and is usually outside the range the author declared, which
+  // makes it the least useful one on the axis.
+  const tipX = opts.aspect === 'plane' && spec.xLabel, tipY = opts.aspect === 'plane' && spec.yLabel;
   const tk = el('g', { class: 'sx-tick' });
   for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
     if (showY && Math.abs(v) < 1e-9) continue;                  // no 0 twice at the origin
+    if (tipX && X(v) > W - PAD.r - 22) continue;                // reserved for the x tip
     tk.appendChild(el('text', { x: X(v), y: (showX ? Y(0) : H - PAD.b) + 17,
                                 'text-anchor': 'middle' }, fmt(v)));
   }
   for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) {
     if (Math.abs(v) < 1e-9 && showX && showY) continue;
+    if (tipY && Y(v) < PAD.t + 20) continue;                    // reserved for the y tip
     tk.appendChild(el('text', { x: (showY ? X(0) : PAD.l) - 9, y: Y(v) + 4,
                                 'text-anchor': 'end' }, fmt(v)));
   }
@@ -224,12 +233,15 @@ function drawPlot(spec, opts) {
   s.appendChild(tk);
 
   if (opts.aspect === 'plane') {
+    // At the axis TIP, and on the side the numerals are not on. The numerals sit
+    // below the x-axis and left of the y-axis, so the labels go above and right —
+    // the textbook placement, and the only one that cannot collide with them.
     if (spec.xLabel) s.appendChild(el('text', {
-      x: W - PAD.r + 2, y: (showX ? Y(0) : H - PAD.b) + 20,
+      x: W - PAD.r + 4, y: (showX ? Y(0) : H - PAD.b) - 9,
       'text-anchor': 'end', class: 'sx-axis-title sx-axis-tip' }, spec.xLabel));
     if (spec.yLabel) s.appendChild(el('text', {
-      x: (showY ? X(0) : PAD.l) - 10, y: PAD.t + 2,
-      'text-anchor': 'end', class: 'sx-axis-title sx-axis-tip' }, spec.yLabel));
+      x: (showY ? X(0) : PAD.l) + 11, y: PAD.t + 3,
+      'text-anchor': 'start', class: 'sx-axis-title sx-axis-tip' }, spec.yLabel));
   } else {
     if (spec.xLabel) s.appendChild(el('text', { x: PAD.l + iw / 2, y: H - 8,
       'text-anchor': 'middle', class: 'sx-axis-title' }, spec.xLabel));
