@@ -433,3 +433,75 @@ needs. Nothing is padded.
    figure either gets re-authored so the wording matches what the language can
    say, or it waits for `extends`. **It is not approximated, and it should be
    settled before the 66 are inserted.**
+
+---
+
+## 12. The figure visual system — a real art-direction pass
+
+The previous pass fixed layout and was told, correctly, that it had answered a
+different question. Isolating a single figure on white made the problem
+obvious in one look: **it was a dashboard chart, not an exam figure.**
+
+Four decisions carry almost all of the difference. None is about layout.
+
+### 1. Ink, not hue
+
+A lone triangle drawn in the brand blue reads as decoration. Drawn in
+near-black it reads as a figure in an exam. **Colour is for telling things
+apart, and one figure has nothing to be told apart from** — so hue is now spent
+only where a plot carries two or more curves, and then it is the validated
+categorical set. The renderer marks a single-curve plot `sx-solo` and the
+stylesheet inks it.
+
+This is the same principle the data-viz rule states for legends ("a single
+series needs no legend — the title names it"), carried through to colour.
+
+### 2. Tick marks
+
+There were none. Without them the numerals are captions floating beside a
+background grid; with them they are readings off a measured axis. This is the
+single change that most separated the output from a printed figure, and it was
+absent entirely.
+
+### 3. A real weight hierarchy
+
+Grid 1 → axis 1.75 → figure 2.5 is barely a hierarchy, so the grid and the
+figure competed for the eye. Now grid 1 → axis 1.6 → **figure 2.9**, with the
+axes in ink rather than a mid grey, so the data is unambiguously the loudest
+thing on the plate and the grid is unambiguously the substrate.
+
+### 4. Sans numerals, not mono
+
+An earlier decision recorded in §9 was wrong: *"numerals on an axis are
+measurements, so mono reads as an instrument."* On a plate it reads as a data
+readout. A printed figure sets its numerals in the text face, tabular so the
+y-axis column still aligns, and in ink rather than a soft grey.
+
+### What the pass cost, and how it was caught
+
+Quieting the grid to a neutral dropped the **major** rule to 2.56:1 and 2.53:1
+on the two light surfaces — under the 3:1 floor for graphical information a
+reader needs, which §11 had only just established. Caught by measuring rather
+than by eye, and corrected to a neutral that clears the floor on all four
+surfaces (3.10 – 3.43:1) while still being quieter than the blue-tinted grid it
+replaced.
+
+Final figure contrast, measured on every surface:
+
+| surface | figure | minor rule | major rule |
+|---|---:|---:|---:|
+| Paper | 17.9:1 | 1.43:1 | 3.36:1 |
+| Softened | 16.2:1 | 1.36:1 | 3.10:1 |
+| Lifted | 14.0:1 | 1.42:1 | 3.43:1 |
+| Night | 16.7:1 | 1.37:1 | 3.34:1 |
+
+### On using a maths tool as a reference
+
+The container's proxy blocks the CDN, so **no JSXGraph or GeoGebra reference
+could be rendered here to compare against** — that is a limitation of this
+environment, not a judgement about the tools, and it is stated rather than
+worked around. The benchmark used instead was the printed-assessment figure
+convention itself: ink data, black axes with arrowheads and tick marks, a quiet
+neutral grid, numerals in the text face. The production decision is unchanged —
+custom SVG — but §5's conclusion now has to be defended by the output rather
+than by bundle size, which is the right standard.

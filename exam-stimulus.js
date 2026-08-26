@@ -185,6 +185,12 @@ function drawPlot(spec, opts) {
   if (opts.aspect === 'plane') sx = sy = Math.min(sx, sy);  // a square grid, countable
 
   const s = svgRoot(W, H);
+  // COLOUR IS FOR TELLING THINGS APART, and one figure has nothing to be told
+  // apart from. A lone circle or triangle drawn in the brand hue reads as a
+  // chart; drawn in ink it reads as a figure in an exam. Hue is spent only
+  // where there are two or more curves, and then it is the validated
+  // categorical set.
+  if (spec.curves.length === 1) s.setAttribute('class', 'sx sx-solo');
   arrowDefs(s, 'sx-ar');
   if (opts.title) s.appendChild(el('title', {}, opts.title));
 
@@ -227,17 +233,25 @@ function drawPlot(spec, opts) {
   // makes it the least useful one on the axis.
   const tipX = opts.aspect === 'plane' && spec.xLabel, tipY = opts.aspect === 'plane' && spec.yLabel;
   const tk = el('g', { class: 'sx-tick' });
+  const axY = showX ? Y(0) : H - PAD.b;      // where the x numerals hang
+  const axX = showY ? X(0) : PAD.l;          // where the y numerals sit
   for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
-    if (showY && Math.abs(v) < 1e-9) continue;                  // no 0 twice at the origin
+    if (Math.abs(v) < 1e-9 && showY) continue;                  // no 0 twice at the origin
+    // A TICK MARK, then the numeral. Without the tick the numeral is a caption
+    // floating beside a background grid; with it, it is a reading off a
+    // measured axis — which is the single thing that most separated this from
+    // a printed exam figure.
+    tk.appendChild(el('line', { class: 'sx-tickmark',
+      x1: X(v), y1: axY - 4.5, x2: X(v), y2: axY + 4.5 }));
     if (tipX && X(v) > W - PAD.r - 22) continue;                // reserved for the x tip
-    tk.appendChild(el('text', { x: X(v), y: (showX ? Y(0) : H - PAD.b) + 17,
-                                'text-anchor': 'middle' }, fmt(v)));
+    tk.appendChild(el('text', { x: X(v), y: axY + 19, 'text-anchor': 'middle' }, fmt(v)));
   }
   for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) {
     if (Math.abs(v) < 1e-9 && showX && showY) continue;
+    tk.appendChild(el('line', { class: 'sx-tickmark',
+      x1: axX - 4.5, y1: Y(v), x2: axX + 4.5, y2: Y(v) }));
     if (tipY && Y(v) < PAD.t + 20) continue;                    // reserved for the y tip
-    tk.appendChild(el('text', { x: (showY ? X(0) : PAD.l) - 9, y: Y(v) + 4,
-                                'text-anchor': 'end' }, fmt(v)));
+    tk.appendChild(el('text', { x: axX - 10, y: Y(v) + 4.5, 'text-anchor': 'end' }, fmt(v)));
   }
   // tk is appended AFTER the series, below — an axis numeral must never be
   // crossed out by the figure it is there to measure.
