@@ -657,3 +657,59 @@ to confirm.
   sit the exam  →  lock the visual layer  →  migration
      →  approval  →  apply  →  content insert  →  wiring
 ```
+
+---
+
+## 15. The visual layer is NOT closed — back to design directions
+
+The renderer comparison answered which technology to use. **It did not prove
+the visual design is good**, and the owner's reaction after sitting the exam was
+that the figures and tables still look bad. That reaction outranks every green
+check in this repository: the student sees the figure, not the test suite.
+
+Several rounds of adjusting line weights, grids, colours, alignment, typography
+and sizing have not fixed it, which is the signal that the problem is not
+another five-pixel change. So this stops being an iteration and goes back to
+the design level.
+
+### What could and could not be done
+
+**Could not:** study high-quality examples visually. This container can search
+text but cannot see images, so any claim to have "studied" real assessment
+figures would be false. It is not made.
+
+**One genuinely useful finding did come out of searching:** the Digital SAT
+ships **Desmos on every math question**. A student sitting the real exam is
+looking at Desmos-styled graphs continuously, which makes that visual language
+a concrete reference standard rather than a matter of taste — and it is
+markedly different from what the renderer produces today.
+
+### Four directions, not four adjustments
+
+`scripts/build-figure-directions.py` builds an exploration page. Each direction
+makes a **different bet about what carries a figure**:
+
+| | the bet |
+|---|---|
+| **A · Plate** | the frame contains it, so the grid can whisper and the internal whitespace reads as deliberate |
+| **B · Open** | no grid, no frame — whitespace carries the composition and the curve is the entire figure |
+| **C · Squared paper** | a fine half-unit grid under a heavier unit rule; dense, and the figure must be bold to sit on it |
+| **D · Screen-native** | light grid, thin axes, the figure in a strong hue — the language beside Desmos all exam |
+
+And five for tables, rethought rather than adjusted: **ruled** (today),
+**boxed** (what most real exam papers use), **banded**, **typographic** (no
+rules at all), **panel**.
+
+An exploration renderer (`scripts/explore-render.js`) carries two structural
+options production does not have — `gridMode` and `frame` — so these are
+genuinely different languages rather than one language recoloured. **The
+production renderer is untouched.**
+
+### The rule for what happens next
+
+Pick a direction, not a detail. Details come after, and only inside whichever
+bet is taken. The directions need not split cleanly by family — geometry may
+want squared paper while a scatter wants open — provided type, tick treatment
+and ink stay common so it still reads as one system.
+
+**Nothing is locked.**
