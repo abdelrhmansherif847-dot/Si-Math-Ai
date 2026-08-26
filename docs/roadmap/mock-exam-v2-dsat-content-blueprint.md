@@ -89,6 +89,53 @@ depends on it.
 
 ---
 
+## 3a. Representation is a mechanism, not decoration
+
+Added 2026-08-25, on the owner's direction, after Module 1 review.
+
+**Two rules, and the second is the one that is easy to fail.**
+
+1. **Every visual must be load-bearing.** Remove it and the question must die.
+   A chart a student can ignore because the number is also in the prompt is
+   decoration, and decoration in an exam is worse than plain text — it costs
+   reading time and returns nothing.
+2. **Each representation must test a different way of thinking, not re-skin a
+   question.** Turning "read a value from a table" into "read a value from a bar
+   chart" adds variety to the page and nothing to the measurement. The
+   representation has to be *why* the item is hard, or it is a costume.
+
+That second rule is what makes the register below a register of *purposes*
+rather than a list of shapes:
+
+| Representation | What only it can ask |
+|---|---|
+| `table` | compare rows; infer a **relationship or a missing entry**, not read a cell |
+| `chart` · bar | compare series across categories — where difference and ratio diverge |
+| `chart` · line | change over time; rate, not level |
+| `plot` · function | zeros, vertex, maximum, intervals; **comparing two functions**; transformation read as a picture |
+| `plot` · scatter | trend and prediction, where no formula is given |
+| `plot` · coordinate | distance, geometry reached through coordinates |
+| `number_line` | strictness — open versus closed — visible nowhere else |
+
+**Five types in a module is a floor, not a ceiling.** Module 1 reached five and
+that was the beginning of the standard, not the target.
+
+**The fairness contract of §2 extends to representation.** `standard` and
+`advanced` carry the same *kinds* of representation in similar proportion. What
+differs is the depth of reading: `standard` recovers a value from the table,
+`advanced` infers the rate that generated it. The same chart, a different
+question of the student. One route must never be "the graphs one" and the other
+"the algebra one".
+
+**Currently unavailable, and why:**
+
+| Wanted | Blocked by |
+|---|---|
+| Pie charts | `exam_stimulus_spec_ok` permits `chartType` of `bar` or `line` only. Widening it is a migration and a decision, not a workaround |
+| Geometry diagrams — angles in a figure | `kind = 'figure'` is closed to the SVG media path by design, and the storage bucket does not exist. Owner decision 2026-08-25: cover geometry through coordinate plots and text for now, and close this gap deliberately later |
+
+---
+
 ## 4. The three sections
 
 Question counts are fixed by the registry (22 each). Difficulty spreads below
