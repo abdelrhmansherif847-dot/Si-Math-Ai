@@ -132,6 +132,8 @@ REFUSALS = [
  ('P7', '<code>closed = true</code> ⇒ ≥ 3 points', 'a degenerate closed two-point path'),
  ('P8', '<code>scatter</code> ⇒ ≥ 1 point · path ⇒ ≥ 2', 'an empty scatter, a one-point path'),
  ('P9', '<code>pointLabels</code> length = <code>points</code> length, all strings', 'labels that do not match the figure'),
+ ('P10', 'a two-point <code>polygon</code> may not end on the visible boundary',
+  'a segment drawn edge to edge, which is indistinguishable from a line — see the stress test'),
 ]
 
 DEFERRED = [
@@ -346,6 +348,23 @@ HTML = f"""<title>Plot Spec Dictionary</title>
   <div class="card"><table>
     <thead><tr><th>deferred</th><th>would express</th><th>why it waits</th></tr></thead>
     <tbody>{deferred}</tbody></table></div>
+
+  <h2>Stressed against figures we do not have</h2>
+  <p class="h2sub">The vocabulary was written from the figures that exist. This is it tested
+    against nine that do not — every case landing in exactly one bucket, with no case left
+    representable-but-ambiguous except one, which is named.</p>
+  <div class="card"><table>
+    <thead><tr><th>case</th><th>verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="k">a single named point</td><td>✅ representable — <b>only because of the P8 change</b></td></tr>
+      <tr><td class="k">a line both ways · a ray · a segment</td><td>⏸ deferred — and <b>no longer fakeable</b>, because P10 refuses a segment drawn edge to edge</td></tr>
+      <tr><td class="k">open/closed boundary, number line</td><td>✅ representable today</td></tr>
+      <tr><td class="k">open/closed boundary of a region</td><td>⏸ deferred with regions; strictness will never be carried by <code>display</code></td></tr>
+      <tr><td class="k">region / shading</td><td>⛔ cannot be expressed at all — so it cannot be got wrong</td></tr>
+      <tr><td class="k">several curves in one figure</td><td>✅ representable — the renderer cycles three series colours, so a fourth needs a rule</td></tr>
+      <tr><td class="k">a circle with a labelled centre</td><td>✅ representable — needs single-point <b>and</b> multi-curve together</td></tr>
+      <tr><td class="k">asymptote / discontinuity</td><td>⚠️ <b>the one genuine hole.</b> Correct as one curve per branch; also storable as a single curve that draws a false vertical through the asymptote. Undecidable at the CHECK level — mitigated by an authoring preflight, not by the schema</td></tr>
+    </tbody></table></div>
 
   <div class="ask">
     <h3>What approving this means</h3>

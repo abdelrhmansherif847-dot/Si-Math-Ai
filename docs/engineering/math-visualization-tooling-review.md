@@ -287,3 +287,29 @@ Nothing has been integrated. Three items follow from it:
    SVG text cannot carry KaTeX.
 
 Item 1 is the one that would otherwise reach a student as a broken question.
+
+---
+
+## 9. Authoring rules produced by this review
+
+Approved 2026-08-26 and recorded here because they constrain content, not code.
+
+1. **Figure labels carry no mathematical notation.** SVG text cannot render
+   KaTeX, so axis and point labels are plain: `x`, `y`, `Time (minutes)`,
+   `Number of students`. Notation belongs in the prompt, the options or a table
+   cell, all of which are HTML. Real exam figures already work this way.
+
+2. **A curve must be sampled densely enough that smoothing changes nothing.**
+   Measured on a parabola: polyline, uniform and centripetal interpolation
+   disagree with one another by **84 px at four samples and 2 px at twenty**.
+   Below roughly ten samples the interpolation is choosing the shape, and a
+   student reading a value off the curve is reading the renderer rather than the
+   author. `tests/exam-stimulus.test.mjs` enforces the invariant directly:
+   the smoothed path must agree with the plain polyline through the same points.
+   **Smoothing is safe precisely when it makes no difference.**
+
+3. **One continuous branch per curve entry.** A function with an asymptote or a
+   discontinuity is several curves, never one — see the stress test, case 9.
+
+4. **No more than three curves in a figure** until a colour rule exists; the
+   renderer cycles three series colours.

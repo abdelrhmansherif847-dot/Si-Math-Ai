@@ -119,6 +119,67 @@ t.section('a figure is drawn as what it is, never as what it might be');
        withClass(named, 'sx-label').map(e => e.textContent), ['A', 'B']);
 }
 
+t.section('smoothing must not be the thing that decides the shape');
+{
+  // A student reads values off a drawn curve. If the smoothing moves the curve
+  // far from the plain polyline through the same samples, then the RENDERER is
+  // choosing the shape, not the author — and the student is reading this
+  // function rather than the intended one.
+  //
+  // Measured on a parabola: polyline and smoothed disagree by 84 px at four
+  // samples and by 2 px at twenty. So the safeguard is sampling density, and
+  // the check is that smoothing is REDUNDANT: safe precisely when it makes no
+  // difference.
+  const PXU = 432 / 6;                       // px per figure unit at exam size
+  const bez = (p0, p1, p2, p3, t) => {
+    const u = 1 - t;
+    return [u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0],
+            u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1]];
+  };
+  /** Walk the rendered path's cubic segments back out of the `d` attribute. */
+  function walk(d) {
+    const nums = d.match(/-?\d+(\.\d+)?(e-?\d+)?/g).map(Number);
+    const out = [[nums[0], nums[1]]];
+    let i = 2, cur = out[0];
+    while (i + 5 < nums.length + 1 && i + 5 <= nums.length) {
+      const c1 = [nums[i], nums[i+1]], c2 = [nums[i+2], nums[i+3]], p = [nums[i+4], nums[i+5]];
+      for (let k = 1; k <= 24; k++) out.push(bez(cur, c1, c2, p, k / 24));
+      cur = p; i += 6;
+    }
+    return out;
+  }
+  const worstGap = pts => {
+    const svg = plane({ xRange: [-2, 4], yRange: [-5, 5], curves: [{ points: pts }] },
+                      [{ mode: 'curve' }]);
+    const poly = plane({ xRange: [-2, 4], yRange: [-5, 5], curves: [{ points: pts }] },
+                       [{ mode: 'polygon' }]);
+    const curve = walk(withClass(svg, 'sx-curve')[0].getAttribute('d'));
+    const straight = withClass(poly, 'sx-curve')[0].getAttribute('d')
+      .split(/[ML]/).filter(Boolean).map(s => s.split(',').map(Number));
+    let worst = 0;
+    for (const [x, y] of curve) {
+      let best = Infinity;
+      for (let i = 0; i < straight.length - 1; i++) {
+        const [ax, ay] = straight[i], [bx, by] = straight[i + 1];
+        if (x < Math.min(ax, bx) - 0.5 || x > Math.max(ax, bx) + 0.5) continue;
+        const t = bx === ax ? 0 : (x - ax) / (bx - ax);
+        best = Math.min(best, Math.abs(y - (ay + (by - ay) * t)));
+      }
+      if (best < Infinity) worst = Math.max(worst, best);
+    }
+    return worst;
+  };
+  const parab = n => Array.from({ length: n }, (_, i) => {
+    const x = -1.6 + i * (5.2 / (n - 1));
+    return [+x.toFixed(4), +(x * x - 2 * x - 3).toFixed(4)];
+  });
+  const sparse = worstGap(parab(4)), dense = worstGap(parab(20));
+  t.ok('a densely sampled curve is drawn where its samples already say it is',
+       dense < 4, `${dense.toFixed(1)} px from the polyline`);
+  t.ok('and a sparsely sampled one is not — the check can go red',
+       sparse > dense * 3, `4 samples: ${sparse.toFixed(1)} px vs 20 samples: ${dense.toFixed(1)} px`);
+}
+
 t.section('a closed figure closes');
 {
   const ring = [[3, 0], [0, 3], [-3, 0], [0, -3]];
