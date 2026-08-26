@@ -50,10 +50,39 @@ critical findings: a platform where any user can become an administrator, and
 where any user can author the AI's system prompt, has no meaningful trust
 boundary at all.
 
-The "after" score is held below 95 by exactly three things: **SEC-04's database
-half is not yet applied** (the application-layer defence is live in code, so the
-finding is mitigated but not closed), bot protection is not yet enabled, and the
-CSP still requires `'unsafe-inline'`. The CDN supply chain — the largest
+The "after" score was held below 95 by exactly three things at the time of
+writing: **SEC-04's database half not yet applied** (the application-layer
+defence was already live in code, so the finding was mitigated but not closed),
+bot protection not yet enabled, and the CSP still requiring `'unsafe-inline'`.
+**The first of those is now closed — see the status correction below.** The
+score itself has not been recalculated.
+
+> **Status correction, 2026-08-25 — read this before acting on §8 or §9.** Two of
+> the three release blockers below are **provably closed**, and this report said
+> otherwise for weeks:
+>
+> * **SEC-04's database half IS applied.** Verified against production
+>   2026-08-25, every part of
+>   `20260727_sec04_knowledge_base_write_lockdown.sql` matching the migration
+>   exactly: all six `zk_*` policies exist, `anon` holds **zero** write grants on
+>   the three knowledge-base tables, `authenticated` holds INSERT/UPDATE/DELETE
+>   (9 grants) and **no** TRUNCATE/TRIGGER/REFERENCES, and RLS is enabled on all
+>   three. That migration file carries no STATUS header, which is why nothing in
+>   the repository contradicted this report.
+> * **`ai-tutor` v89 is long deployed.** Production runs `AI_TUTOR_VERSION =
+>   'v101'` at platform version 145, read from the deployed source 2026-08-25 —
+>   twelve source versions past v89.
+> * **`ALLOWED_ORIGINS` could NOT be verified** from the engineering environment:
+>   it is a platform secret, outbound network access to the project is blocked by
+>   policy, and the Edge Function's cold-start warning is not present in the log
+>   sources available here. It is recorded as **unknown**, not as done.
+>
+> **The numeric scores below were deliberately NOT recomputed.** Re-scoring a
+> security report is a judgement call, not a fact correction, and inventing a
+> number would be worse than leaving a stale one that is now labelled. The
+> findings and their evidence are untouched; only the applied/not-applied status
+> is corrected.
+ The CDN supply chain — the largest
 outstanding item in the first report — is now fully resolved with verified
 hashes.
 
@@ -62,7 +91,7 @@ hashes.
 | ID | Severity | Finding | Status |
 |----|----------|---------|--------|
 | SEC-01 | **Critical** | Any user can self-grant admin, credits, subscription | ✅ **Fixed in production, verified** |
-| SEC-04 | **Critical** | Any user can author the AI system prompt for every student | ⚠️ **Code defence live; migration NOT applied** |
+| SEC-04 | **Critical** | Any user can author the AI system prompt for every student | ✅ **CLOSED** — code defence live *and* migration applied; verified in production 2026-08-25 |
 | SEC-02 | **High** | `session_id` not ownership-checked → cross-tenant read | ✅ Fixed in code (v88) |
 | SEC-03 | **High** | No security headers or CSP on any route | ✅ Fixed (`vercel.json`) |
 | SEC-05 | Medium | Upload extension + Content-Type attacker-controlled | ✅ Fixed (`manual-payment.html`) |
@@ -984,12 +1013,13 @@ endpoint from the set reachable by simple-request forgery.
 
 Ordered by value per unit of effort.
 
-1. **Apply the SEC-04 migration.** The only Critical finding not fully closed.
-   `supabase db push --linked`, or paste into the Dashboard SQL Editor. ~5 min.
-2. **Deploy `ai-tutor` v89** (`DEPLOY.md` §4, Path B — the CLI, because the
-   function is a multi-file bundle). Carries SEC-02, SEC-04's code defence, and
-   the whole v88 admission layer. Nothing in the Edge Function is live until
-   this happens.
+1. ~~**Apply the SEC-04 migration.**~~ **DONE — verified in production
+   2026-08-25.** Do not re-apply it; every object it creates already exists.
+2. ~~**Deploy `ai-tutor` v89**~~ **DONE.** Production runs v101 at platform
+   version 145 (read 2026-08-25), so SEC-02, SEC-04's code defence and the whole
+   v88 admission layer are live. The original text follows, since the reasoning
+   still applies to any future deploy: (`DEPLOY.md` §4, Path B — the CLI, because
+   the function is a multi-file bundle.)
 3. **Set `ALLOWED_ORIGINS`** (`DEPLOY.md` §4.1), then run
    `./scripts/verify-cors.sh` with `PROD_ORIGIN` and `TEST_JWT`. ~10 min.
 4. **Set `ZERO_PERSONALITY_SHA256`.** Full closure on SEC-04's highest-value
@@ -1065,8 +1095,10 @@ read `PASS`.
 
 **Verdict: approved for production release, conditional on items 1–3 of §8.**
 
-Those three — apply the SEC-04 migration, deploy v89, set `ALLOWED_ORIGINS` —
-take about twenty minutes together and are release blockers, not follow-ups.
+Those three were: apply the SEC-04 migration, deploy v89, set
+`ALLOWED_ORIGINS`. **As of 2026-08-25 the first two are verified done and the
+third is unverified from the engineering environment** — see the status
+correction in §1. They were release blockers, not follow-ups.
 Until they are done, one Critical finding remains partially open and none of the
 Edge Function hardening is running in production.
 
@@ -1134,9 +1166,10 @@ retrieval source, including RAG over student-supplied documents.
 - [x] `profiles` column-level write allow-list (SEC-01) — verified
 
 **Release blockers**
-- [ ] Apply the SEC-04 migration
-- [ ] Deploy `ai-tutor` v89 (DEPLOY.md §4 Path B)
-- [ ] Set `ALLOWED_ORIGINS`, then run `verify-cors.sh`
+- [x] Apply the SEC-04 migration — **verified applied in production 2026-08-25**
+- [x] Deploy `ai-tutor` v89 (DEPLOY.md §4 Path B) — **v101 live at platform version 145**
+- [ ] Set `ALLOWED_ORIGINS`, then run `verify-cors.sh` — **status unknown**: a
+      platform secret, not verifiable from the engineering environment
 
 **Needs a decision or an account action**
 - [ ] Set `ZERO_PERSONALITY_SHA256`
@@ -1160,7 +1193,7 @@ retrieval source, including RAG over student-supplied documents.
 | File | Change |
 |------|--------|
 | `supabase/migrations/20260727_profiles_column_privilege_hardening.sql` | **Applied.** SEC-01 |
-| `supabase/migrations/20260727_sec04_knowledge_base_write_lockdown.sql` | **Ready — NOT applied.** SEC-04 |
+| `supabase/migrations/20260727_sec04_knowledge_base_write_lockdown.sql` | **APPLIED** — verified in production 2026-08-25. SEC-04 |
 | `supabase/migrations-pending/20260727_sec08_rpc_grant_hygiene.sql` | Staged. SEC-08 |
 | `docs/supabase-migrations.md` | **New.** Why `db push` cannot work here |
 | `supabase/functions/ai-tutor/index.ts` | v87 → v89: admission control, SEC-02, SEC-04 defence |
