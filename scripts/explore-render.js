@@ -767,6 +767,9 @@ function renderForQuestion(question, stimulus) {
   if (!question) throw new Error('renderForQuestion: a question is required');
   if (!stimulus) throw new Error('renderForQuestion: a stimulus is required');
   const kind = stimulus.kind, spec = stimulus.spec;
+  if (kind === 'plot' && !(spec && Array.isArray(spec.figures) && spec.figures.length))
+    throw new Error('renderForQuestion: plot ' + (stimulus.id || '?') +
+      ' has no figures[] — how each curve is drawn is authored, never guessed');
   const need = needsReading(kind, spec);
 
   // The same refusal the database makes, made again here. A payload that
@@ -792,7 +795,11 @@ function renderForQuestion(question, stimulus) {
       axes: spec.frame === 'data' ? 'data' : 'plane',
       originLabel: spec.frame === 'plane' ? 'O' : null,
       width: 560, height: 300, maxHeight: 470,
-      figures: spec.figures || [{ mode: 'curve' }],
+      // NO FALLBACK. `figures` says whether these points are a parabola or a
+      // scatterplot, and defaulting to 'curve' would draw a continuous
+      // relationship the data never claimed. A spec without it is a content
+      // bug, and after 20260827b the database will not store one.
+      figures: spec.figures,
     });
   throw new Error('renderForQuestion: unsupported kind ' + kind);
 }

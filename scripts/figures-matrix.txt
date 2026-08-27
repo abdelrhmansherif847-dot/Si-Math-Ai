@@ -1,0 +1,21 @@
+plane | curve   |                     | true
+plane | polygon |                     | true
+plane | points  |                     | true
+plane | scatter |                     | false
+graph | curve   |                     | true
+graph | polygon |                     | true
+graph | points  |                     | true
+graph | scatter |                     | false
+data  | curve   |                     | true
+data  | scatter |                     | true
+data  | polygon |                     | false
+data  | points  |                     | false
+plane | wobbly  |                     | false
+graph | curve   | ,"closed":true      | true
+graph | polygon | ,"closed":true      | false
+plane | polygon | ,"vertices":true    | true
+graph | curve   | ,"vertices":true    | false
+graph | curve   | ,"dashed":true      | true
+graph | curve   | ,"closed":"yes"     | false
+graph | curve   | ,"tension":0.5      | false
+graph | curve   | ,"label":["A"]      | false

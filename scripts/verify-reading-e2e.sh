@@ -36,11 +36,11 @@ sed -n "/^cat > \"\$TMP\/setup.sql\" <<'SETUPSQL'\$/,/^SETUPSQL\$/p" "$REPO/scri
 $PSQL -q -f "$TMP/setup.sql" >/dev/null 2>&1
 for m in 20260824a_question_spine 20260824b_exam_forms_insert_guard \
          20260824c_publish_exam_form_revoke_public 20260825a_exam_stimuli \
-         20260827a_stimulus_reading; do
+         20260827a_stimulus_reading 20260827b_plot_figures; do
   $PSQL -d spine -v ON_ERROR_STOP=1 -q -f "$REPO/supabase/migrations/$m.sql" >/dev/null 2>&1 \
     || { no "migration $m applies"; exit 1; }
 done
-ok "a Spine database with the PREPARED migration applied"
+ok "a Spine database with both migrations applied (20260827a + PREPARED b)"
 
 $PSQL -d spine -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<'SQL'
 set role service_role;
@@ -52,6 +52,7 @@ select f.id, 'plot', 'shared-cubic', jsonb_build_object(
   'frame','graph',
   'xRange', jsonb_build_array(-0.7, 4.7), 'yRange', jsonb_build_array(-1.6, 5),
   'xLabel','x','yLabel','y',
+  'figures', jsonb_build_array(jsonb_build_object('mode','curve')),
   'curves', jsonb_build_array(jsonb_build_object('points',
     (select jsonb_agg(jsonb_build_array(round(x::numeric,2),
        round((x*x*x/3 - 2*x*x + 3*x + 1)::numeric, 3)))
