@@ -23,3 +23,6 @@ exam-composition.html
 shots2/
 figure-system.html
 shots3/
+shots4/
+e2e-preview*.html
+e2e-payload*.json

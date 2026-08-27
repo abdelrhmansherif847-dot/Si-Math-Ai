@@ -642,9 +642,14 @@ function drawChart(spec, opts) {
   const band = iw / n, X = i => PAD.l + band * (i + 0.5);
 
   const s = svgRoot(W, H);
+  // A chart is always measured data, so its reference lines follow the same
+  // rule the data family follows on a plot: they appear when the question asks
+  // for a value, and not when it asks about a trend.
+  const chartPlan = opts.reading ? gridPlan('data', opts.reading, 1) : { mode: 'rules' };
   const grid = el('g', { class: 'sx-grid' });
-  for (let v = lo; v <= top + 1e-9; v += step)
-    grid.appendChild(el('line', { x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
+  if (chartPlan.mode !== 'none')
+    for (let v = lo; v <= top + 1e-9; v += step)
+      grid.appendChild(el('line', { x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   s.appendChild(grid);
 
   const tk = el('g', { class: 'sx-tick' });
@@ -738,7 +743,69 @@ function drawTable(spec) {
   return wrap;
 }
 
+/* Does this stimulus render differently depending on what the question asks?
+ * The JS mirror of exam_stimulus_needs_reading(kind, spec). The two are kept
+ * deliberately identical: the database decides what may be STORED, this decides
+ * what may be DRAWN, and a disagreement would mean a row that validates and
+ * cannot be rendered, or the reverse. */
+function needsReading(kind, spec) {
+  return kind === 'chart'
+      || (kind === 'plot' && ['graph', 'data'].indexOf((spec || {}).frame) !== -1);
+}
+
+/* THE ONLY ENTRY POINT CONTENT GOES THROUGH.
+ *
+ * It takes a QUESTION and its stimulus, never a stimulus alone, because for
+ * three of the five families the variant is not a property of the figure. One
+ * stimulus row referenced by two questions — "how many turning points?" and
+ * "what is f(3)?" — must produce two different figures, and it can only do that
+ * if the question is an input.
+ *
+ * So the path is  Question + Stimulus -> Figure,  and renderStimulus() below
+ * refuses the cases where a stimulus alone is not enough. */
+function renderForQuestion(question, stimulus) {
+  if (!question) throw new Error('renderForQuestion: a question is required');
+  if (!stimulus) throw new Error('renderForQuestion: a stimulus is required');
+  const kind = stimulus.kind, spec = stimulus.spec;
+  const need = needsReading(kind, spec);
+
+  // The same refusal the database makes, made again here. A payload that
+  // reached the browser without it has come from somewhere the constraint does
+  // not cover, and drawing a guess would hide that.
+  if (need && !question.reading)
+    throw new Error('renderForQuestion: stimulus ' + (stimulus.id || '?') +
+      ' renders by reading, but question ' + (question.id || '?') + ' carries none');
+  if (!need && question.reading)
+    throw new Error('renderForQuestion: question ' + (question.id || '?') +
+      ' carries reading="' + question.reading + '" for a stimulus that does not render by it');
+
+  if (kind === 'table') return drawTable(spec);
+  if (kind === 'number_line')
+    return drawNumberLine(spec, { tickMode: 'auto', endpointR: 9, width: 560 });
+  if (kind === 'chart')
+    return drawChart(spec, { reading: question.reading, width: 560, height: 300 });
+  if (kind === 'plot')
+    return drawPlot(spec, {
+      frame: spec.frame,
+      reading: question.reading,
+      aspect: spec.frame === 'plane' ? 'plane' : 'data',
+      axes: spec.frame === 'data' ? 'data' : 'plane',
+      originLabel: spec.frame === 'plane' ? 'O' : null,
+      width: 560, height: 300, maxHeight: 470,
+      figures: spec.figures || [{ mode: 'curve' }],
+    });
+  throw new Error('renderForQuestion: unsupported kind ' + kind);
+}
+
+/* The stimulus-only path, now CLOSED for the families whose variant depends on
+ * the question. It was the whole bug: it let a figure be drawn from a stimulus
+ * with no idea what was being asked, and would have quietly produced one
+ * treatment for two questions that need different ones. */
 function renderStimulus(kind, spec, opts) {
+  if (needsReading(kind, spec) && !(opts && opts.reading))
+    throw new Error('renderStimulus: ' + kind + (spec && spec.frame ? '/' + spec.frame : '') +
+      ' renders by the question, so it cannot be drawn from a stimulus alone — ' +
+      'use renderForQuestion(question, stimulus)');
   if (kind === 'table') return drawTable(spec);
   if (kind === 'chart') return drawChart(spec, opts);
   if (kind === 'number_line') return drawNumberLine(spec, opts);
@@ -747,6 +814,8 @@ function renderStimulus(kind, spec, opts) {
 }
 
   root.SiExplore = {
+    renderForQuestion: renderForQuestion,
+    needsReading: needsReading,
     renderStimulus: renderStimulus,
     resolutionOf: resolutionOf,
     gridPlan: gridPlan,

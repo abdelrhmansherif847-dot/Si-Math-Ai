@@ -235,6 +235,68 @@ afterwards, and the harness checks it.
 
 ---
 
+## 6. End-to-end: the render path is Question + Stimulus → Figure
+
+The last gate, and the one that mattered most: **does the `reading` on a
+question actually reach the renderer, or does the figure still come from the
+stimulus alone?**
+
+`scripts/verify-reading-e2e.sh` — **7 stages, 24 browser checks** — proves it
+with a real database rather than a unit test passing values by hand.
+
+It builds a Spine database with the PREPARED migration applied, stores **one**
+`exam_stimuli` row referenced by **two** `exam_questions` rows, exports exactly
+the payload a client would fetch, and renders both questions in headless
+Chromium through `renderForQuestion(question, question.stimulus)`.
+
+```
+stimulus 337f759d…  kind=plot  spec.frame="graph"  27 points   ← ONE row
+  Q14  "How many turning points does the graph have?"  reading = "shape"
+  Q15  "What is the value of f(3)?"                     reading = "value"
+```
+
+Result: **Q14 renders with no grid, Q15 renders with a grid**, from a
+byte-identical spec. The curve path is character-for-character the same in both
+(2925 chars) — only the scaffolding changed.
+
+### The swap test, which is what actually settles it
+
+Two figures differing proves nothing on its own; the page could be branching on
+the question number. So the harness then runs
+
+```sql
+update public.exam_questions
+   set reading = case reading when 'shape' then 'value' else 'shape' end
+ where stimulus_id = (select id from public.exam_stimuli where label='shared-cubic');
+```
+
+re-exports, re-renders, and checks again. The stimulus row is untouched — same
+id, same spec — and the figures **swap**:
+
+```
+Q14: shape/no-grid  →  value/grid
+Q15: value/grid     →  shape/no-grid
+```
+
+The figure follows the question row. Nothing else moved.
+
+### The old path is closed, not merely unused
+
+`renderStimulus(kind, spec)` took a stimulus alone. That was the bug: it would
+have drawn one treatment for two questions needing different ones, silently. It
+now **throws** for the families whose variant depends on the question:
+
+```
+renderStimulus: plot/graph renders by the question, so it cannot be drawn
+from a stimulus alone — use renderForQuestion(question, stimulus)
+```
+
+`renderForQuestion` makes the same refusals the database makes — a missing
+`reading` where one is needed, or a `reading` where none applies, both throw
+rather than drawing a default. The database decides what may be **stored**;
+`needsReading()` in the renderer decides what may be **drawn**, and the two are
+written to be identical so a row cannot validate and then fail to render.
+
 ## What this costs the content
 
 The 66 authored DSAT items are not inserted yet. Every plot among them will need
