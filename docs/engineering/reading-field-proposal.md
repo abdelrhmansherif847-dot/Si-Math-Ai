@@ -374,3 +374,81 @@ it is drawn.**
 
 Applying this. Nothing here is applied, `apply_migration` has not been called,
 the production renderer is still unwired, and no content has been inserted.
+
+---
+
+## 8. Authoring the 66 items — what the content found
+
+**Status: authored and checked, NOT inserted.** The dataset and its checker live
+in the scratchpad, never the public repository: they carry exam stems.
+
+The 66 items resolve to **23 distinct stimuli** — 11 plots, 6 tables, 3 charts,
+3 number lines — of which **4 are shared by two questions each**.
+
+| | |
+|---|---|
+| plots given a `frame` | 11 (`plane` 5, `graph` 4, `data` 2) |
+| questions given a `reading` | 12 (`value` 11, `shape` 1) |
+| shared stimuli | 4 |
+| judgement calls surfaced | 3 |
+
+Every decision carries the phrase that settles it, and `authcheck.py` restates
+the live database's rules and applies them to all 66 before any insert, so an
+insert cannot fail halfway. It reports **AUTHORING COMPLETE — every rule
+satisfied**.
+
+### The design's own case turned up in the real content
+
+`M2S:9` and `M2A:9` share **one** scatterplot:
+
+* M2S:9 — *"Which best describes the relationship between weeks of practice and
+  errors per test?"* → `reading = shape`
+* M2A:9 — *"A line of best fit is drawn through the points. Which is closest to
+  its slope?"* → `reading = value`
+
+One stimulus row, two questions, two different readings. This is precisely why
+`reading` sits on `exam_questions` rather than on `exam_stimuli`, and it was not
+a hypothetical — it is item 9 of the second module.
+
+### FINDING · `figures[]` is still outside the spec
+
+The curve modes — scatter, curve, polygon, points, `closed`, and the point
+labels — have **never** been part of `exam_stimuli.spec`. They live in a
+build-time table in the preview generator, whose own comment reads: *"the second
+decision the spec cannot carry."* The applied migration carried the first half
+(`frame`); this is the other half, and it was invisible until the content was
+mapped onto the schema.
+
+**The insert is not blocked.** `exam_stimulus_spec_ok` permits extra keys, so
+`figures` stores. But it stores **unvalidated**, a wrong mode is therefore
+storable, and publishing a form freezes it. Without it the renderer falls back
+to `[{mode:'curve'}]` — which would draw all three scatterplots as continuous
+curves.
+
+**Recommendation: one small follow-up migration before the insert**, validating
+`figures[]` on `kind='plot'`. It is the same argument that made `frame` worth
+doing before content rather than after, and the Spine is still empty. Requires
+its own approval.
+
+### Three judgement calls, surfaced rather than smoothed over
+
+* **M1:9** — two straight lines, and the question wants only an x-coordinate.
+  Drawn today with equal scales so the slopes read true, but nothing in the
+  question depends on that. Taken as `graph`; `plane` is defensible. Also the
+  item whose stem says *"two lines"* while the spec stores two short segments.
+* **M1:4** — *"for how many values of x does f(x) = 2"*. A count sounds like
+  shape, but the count cannot be made without locating y = 2. Taken as `value`.
+* **M2A:21** — *"which equation represents the parabola"*. Matching an equation
+  is shape-like, but the candidates differ by values that must be read off.
+  Taken as `value`.
+
+### Verified visually
+
+`vauth.cjs` — 12 checks, both themes — renders all 23 stimuli through
+`renderForQuestion()` and confirms the authored values took effect: the
+scatterplots draw as **points, not curves** (which is what proves `figures[]`
+reached the renderer), the geometry figure keeps its grid, and the shape-read
+scatter has no reference lines.
+
+Nothing is inserted: `exam_forms`, `exam_form_sections`, `exam_questions` and
+`exam_stimuli` are all still empty.
