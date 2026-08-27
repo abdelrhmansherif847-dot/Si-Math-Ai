@@ -465,6 +465,26 @@ screenshot of a licensed third-party product.
 The key never touches disk: the page is served from memory, and the key is
 redacted from the output.
 
+### Step 3b — the verification override, and why it exists
+
+Activation is circular: you cannot check the calculator works without showing
+it, and you must not show students an unverified calculator. So the deployed
+exam page accepts **`?desmos-check=1`**, which renders the launcher for whoever
+typed it and changes nothing for anyone else.
+
+```
+https://www.si-math-ai.com/mock-exam.html?desmos-check=1
+```
+
+It is exactly one thing — the control appears. It takes no second opinion on
+whether a calculator is allowed, reads nothing from the provider registry, and
+matches the flag exactly (`?desmos-check=0` and any other value do nothing).
+`tests/exam-calculator.test.mjs` asserts all three, each mutation-tested red.
+
+Deployed mode of the activation test drives this URL. Nothing needs to be named
+in `exam-registry.js` first, so the CI gate in step 4 stays absolute rather than
+having to be relaxed for its own verification.
+
 ### Step 4 — record it, then let a student near it
 
 Only after step 3 is fully green. The test prints the two lines to paste into

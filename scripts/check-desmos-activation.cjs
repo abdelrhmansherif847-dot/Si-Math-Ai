@@ -46,7 +46,7 @@ const VERSION = (process.env.DESMOS_API_VERSION || '').trim();
 
 // ── two modes ────────────────────────────────────────────────────────────────
 //
-//   deployed  DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html
+//   deployed  DESMOS_ACTIVATION_URL="…/mock-exam.html?desmos-check=1"
 //             Drives the REAL page as a student would: opens the calculator
 //             from the real launcher, with the key the deployed /api/desmos-config
 //             supplies. No key is needed locally, and none is handled here.
@@ -63,7 +63,7 @@ if (!URL_MODE && (!KEY || !TIER)) {
   console.error('  DEPLOYED mode — the activation milestone. Drives the live page as a');
   console.error('  student does; the key comes from the deployed /api/desmos-config and');
   console.error('  is never handled here:\n');
-  console.error('    DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html \\');
+  console.error('    DESMOS_ACTIVATION_URL="https://www.si-math-ai.com/mock-exam.html?desmos-check=1" \\');
   console.error('      node scripts/check-desmos-activation.cjs\n');
   console.error('  LOCAL mode — mounts the provider on a synthetic page, to isolate a');
   console.error('  failure before deploying. Not the milestone:\n');
@@ -274,7 +274,7 @@ function report({ fails, pass, deployed = true }) {
     console.log('\nThis was LOCAL mode: the provider mounts. It is not the activation');
     console.log('milestone, because no student flow was exercised. Re-run against the');
     console.log('deployed page before recording anything:\n');
-    console.log('  DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html \\');
+    console.log('  DESMOS_ACTIVATION_URL="https://www.si-math-ai.com/mock-exam.html?desmos-check=1" \\');
     console.log('    node scripts/check-desmos-activation.cjs');
     return;
   }
