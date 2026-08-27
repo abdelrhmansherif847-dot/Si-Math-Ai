@@ -358,3 +358,23 @@ the migration files saying APPLIED and the function importing them saying they
 were not. A stale status does not stay in the file where it was written. When
 one is found, the question is where else the same sentence was copied.
 
+
+## INF-n · `search_path` is mutable on all 13 Spine functions
+
+`get_advisors(security)` reports `function_search_path_mutable` for every
+function in the Question Spine — `exam_stimulus_spec_ok`, `publish_exam_form`,
+`exam_content_frozen_guard`, `exam_question_stimulus_same_form`,
+`exam_questions_touch`, `exam_forms_guard`, `exam_forms_insert_guard`,
+`exam_question_choices_ok`, `exam_integrity_metadata_ok`,
+`exam_integrity_events_no_update`, and the three added by
+`20260827a_stimulus_reading`.
+
+**Severity: low, and worth stating precisely.** The escalation this lint exists
+to catch requires `SECURITY DEFINER`; all thirteen are `SECURITY INVOKER` and
+none is granted to `anon`, `authenticated` or `public`. So this is hygiene
+rather than an exposure.
+
+**Why it is here rather than fixed.** It predates the migration that surfaced
+it, it affects all thirteen equally, and the fix (`set search_path = ''` with
+schema-qualified references throughout) touches every one of them. That belongs
+in its own reviewed migration, not appended to an approved one.

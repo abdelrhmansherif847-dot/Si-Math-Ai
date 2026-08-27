@@ -147,7 +147,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **97 files** in `supabase/migrations/`, **152 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`; B5 `publish_exam_form_revoke_public` applied 2026-08-25 as version `20260825141519`; M4 `exam_stimuli` applied 2026-08-25 as version `20260825221601`. `20260827a_stimulus_reading` and its rollback are **PREPARED, NOT APPLIED** — see `docs/engineering/reading-field-proposal.md`) |
+| Migrations | **97 files** in `supabase/migrations/`, **153 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`; B5 `publish_exam_form_revoke_public` applied 2026-08-25 as version `20260825141519`; M4 `exam_stimuli` applied 2026-08-25 as version `20260825221601`. `20260827a_stimulus_reading` applied 2026-08-27 as version `20260827135710` — adds `spec.frame` to plots and `exam_questions.reading`; see `docs/engineering/reading-field-proposal.md`) |
 | Static site | **48** root `*.html` pages on Vercel (counted 2026-08-25; `support.html` and `admin-support.html` were the two added since the 46 figure) |
 | CI | `node tests/run-all.mjs` — **54 checks** |
 

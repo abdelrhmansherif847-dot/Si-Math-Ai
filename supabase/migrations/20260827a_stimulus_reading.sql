@@ -1,6 +1,6 @@
 -- =====================================================================
--- PREPARED — NOT APPLIED.  Reviewed and approved individually before
--- apply_migration is called.  See docs/engineering/reading-field-proposal.md
+-- APPLIED 2026-08-27 as version 20260827135710, after individual approval.
+-- Live verification before and after: docs/engineering/reading-field-proposal.md §7
 -- =====================================================================
 --
 -- WHAT THIS IS FOR

@@ -1,7 +1,7 @@
 # `frame` and `reading` — a PREPARED migration, for review
 
-**Status: PREPARED. Not applied.** `apply_migration` has not been called and
-will not be until this document is reviewed and the change explicitly approved.
+**Status: APPLIED 2026-08-27** as version `20260827135710`, after individual
+approval. Verified live before and after — see §7.
 
 Files: `supabase/migrations/20260827a_stimulus_reading.sql` and its rollback.
 Proof harness: `scripts/verify-reading.sh` — **37 checks, all passing** against
@@ -296,6 +296,71 @@ from a stimulus alone — use renderForQuestion(question, stimulus)
 rather than drawing a default. The database decides what may be **stored**;
 `needsReading()` in the renderer decides what may be **drawn**, and the two are
 written to be identical so a row cannot validate and then fail to render.
+
+## 7. Applied — the live verification
+
+### Before
+
+Measured on `igvkyxkmjnkzscqgommj` immediately before `apply_migration`:
+
+```
+exam_forms 0 · exam_form_sections 0 · exam_questions 0 · exam_stimuli 0
+exam_questions.reading            absent
+exam_stimulus_needs_reading       absent
+the two new triggers              absent
+"frame" in exam_stimulus_spec_ok  absent
+exam_stimulus_spec_ok md5         9579b190f89326b28e6055614dc5c47d
+latest applied migration          20260825221601
+```
+
+### After
+
+```
+exam_questions.reading            text, nullable
+exam_questions_reading_check      CHECK (reading IS NULL OR reading = ANY (ARRAY['shape','value']))
+triggers                          exam_questions_reading_applies, exam_stimuli_reading_still_valid
+"frame" in exam_stimulus_spec_ok  present
+exam_stimulus_spec_ok md5         3de6adeabf0ad9d2bc2857f3565acaa4   (changed — the function was replaced)
+latest applied migration          20260827135710      · 153 applied in total
+rows                              still 0 / 0 / 0 / 0
+```
+
+### The pure functions, called directly on the live database
+
+| call | result |
+|---|---|
+| `exam_stimulus_spec_ok('plot', …)` without `frame` | `false` |
+| `…` with `frame:"wobbly"` | `false` |
+| `…` with `frame:"plane"` / `"graph"` | `true` |
+| `exam_stimulus_spec_ok('table', …)` | `true` — unaffected |
+| `exam_stimulus_needs_reading` for `plot/plane` | `false` |
+| `…` for `plot/graph`, `plot/data`, `chart` | `true` |
+| `…` for `number_line`, `table` | `false` |
+
+Exactly the matrix in §5.
+
+### The triggers, exercised live and rolled back
+
+The nine-case enforcement matrix was run against the live database inside an
+explicit transaction, and **all nine matched**: `graph` without a reading
+refused, with one stored; `plane` with a reading refused, without one stored;
+`number_line` and no-stimulus likewise. The transaction was rolled back and the
+tables re-counted afterwards — **0 forms, 0 sections, 0 questions, 0 stimuli, 0
+probe rows of any kind**. Nothing was left behind.
+
+### Advisors
+
+`get_advisors(security)` returns 116 notices, none of them new in kind. The
+three functions this migration added each raise `function_search_path_mutable`
+— and so do the ten Spine functions that were already there, including
+`exam_stimulus_spec_ok` and `publish_exam_form`. All three are **SECURITY
+INVOKER** with no grant to `anon`, `authenticated` or `public`, so the
+escalation this lint exists to catch does not apply; it is hygiene, and it is
+Spine-wide rather than something this change introduced.
+
+**Logged as follow-up**, not fixed here: setting `search_path` on all 13 Spine
+functions is its own migration and deserves its own approval rather than being
+smuggled in alongside an approved one.
 
 ## What this costs the content
 
