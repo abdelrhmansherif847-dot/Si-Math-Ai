@@ -864,6 +864,69 @@ each caught.
 `scripts/check-exam-composition.cjs` — **98 checks, both themes**, headless
 Chromium. Manual, like the directions harness: it needs a browser.
 
+### DECIDED · Data charts and scatterplots follow Screen-native
+
+**The first family decision.** These figures are *measured data*, not coordinate
+geometry, so they no longer inherit the plane's visual language. On a digital
+test the screen is part of what the figure means, rather than decoration applied
+on top of it — which is why this is the one family where the screen-native
+direction is a fit and not a default.
+
+**Taken from the direction:** clean screen-first composition; data-led hierarchy
+(the observations are the heaviest, most saturated thing in the figure);
+restrained, validated colour; horizontal reference lines only; no
+coordinate-plane conventions — no arrowheads, no equal-scale grid, no origin;
+axis titles set the way a modern chart sets them, the y title upright above its
+own axis rather than rotated up the side.
+
+**Deliberately refused — screen-native is not dashboard:**
+
+| refused | why |
+|---|---|
+| Legend | A legend is a lookup, and a lookup under time is what a figure exists to remove. Series name themselves at their own end. |
+| Tooltip / hover | On a dashboard a tooltip reveals the value. On an exam that is the answer. |
+| Card, panel, shadow | The figure sits *in* the question, not in a widget the question contains. |
+| Decorative fill or gradient | Nothing carries meaning the data did not give it. |
+
+The decision covers the **family**, not the one scatter that prompted it, so the
+study also carries a scatter with a line of best fit, a bar chart, and a
+two-series line chart in the same language.
+
+**Colour was computed, not chosen.** Slots 1–2 of the validated categorical
+palette, checked against the real exam surfaces (`#ffffff` / `#161d25`) in both
+themes with `--pairs all`: lightness band, chroma floor, colour-vision
+separation and 3:1 contrast all pass — worst all-pairs CVD ΔE 24.7 light / 26.8
+dark, normal-vision ΔE 33.6 / 31.8.
+
+**Two published dataviz defaults were overridden, on purpose.** The house
+guidance requires a legend for ≥2 series and ships a hover tooltip by default.
+Neither survives an exam: the tooltip *is* the answer, and the legend is a
+lookup. The requirement underneath the legend rule — identity must never rest on
+colour alone — is met instead by **direct labels on the series**, which the same
+guidance endorses for ≤4 series. The tooltip rule is simply refused, and a check
+enforces that the page carries no interactivity at all.
+
+**Explicitly not applied to the other four families.** A coordinate plane and a
+scatterplot want opposite things; that is the entire reason for deciding one
+family at a time. A check resolves the data hue and the figure ink through the
+browser and fails if a plane, a geometry figure or a number line has drifted onto
+the data colour.
+
+Defects this decision surfaced:
+
+- **The clip ate the annotation.** Direct labels were appended to the clipped
+  series group, so *"Line of best fit"* rendered as *"Li"* while the DOM
+  reported the full string. The clip bounds the drawing; a label naming the
+  drawing is annotation and now sits on the root. Checked by geometry, not by
+  reading `textContent`.
+- **Padding did not follow content.** A y title set upright needs a line above
+  the plot and a self-naming series needs room to its right; both are now
+  derived from what the figure actually carries.
+
+`scripts/check-exam-composition.cjs` — **176 checks, both themes.** Three
+mutations confirm the decision's guards can fail: labels returned to the clipped
+group, a legend restored, and the data hue forced onto the other families.
+
 ### The rule for what happens next
 
 React **per family**. There is no requirement that the answer be the same in all

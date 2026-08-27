@@ -99,6 +99,67 @@ FIGS = {
               opts=dict(width=560, endpointR=8.5, height=104))),
 }
 
+# ── the rest of the data family, in the same decided language ────────────────
+# "Data charts and scatter plots" is one family, so the decision has to hold for
+# more than the one scatter that prompted it.
+DATA_FIGS = {
+ 'fit': dict(kind='plot',
+   caption='Scatter with a line of best fit &mdash; the commonest data figure on the test. '
+           'The fit names itself where it ends, so no legend is needed.',
+   spec=dict(xRange=[0, 9], yRange=[0, 160],
+     xLabel='Practice tests completed', yLabel='Score gain',
+     curves=[dict(points=[[1,40],[2,60],[3,50],[4,90],[5,110],[6,100],[7,140],[8,150]]),
+             dict(points=[[0.5, 32], [8.5, 152]])]),
+   opts=dict(aspect='data', gridMode='rules', width=520, height=300,
+     figures=[dict(mode='scatter'), dict(mode='curve', name='Line of best fit')])),
+ 'bar': dict(kind='chart',
+   caption='A bar chart. Rounded data-ends anchored to the baseline, a 2px gap between '
+           'bars, and reference lines only across.',
+   spec=dict(chartType='bar', categories=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+     xLabel='Day', yLabel='Questions answered',
+     series=[dict(name='', values=[18, 24, 21, 32, 28])]),
+   opts=dict(width=520, height=290)),
+ 'line': dict(kind='chart',
+   caption='Two series, told apart by a label at the end of each line rather than by a '
+           'legend the student has to look up.',
+   spec=dict(chartType='line', categories=['1', '2', '3', '4', '5', '6'],
+     xLabel='Week', yLabel='Average score',
+     series=[dict(name='Class A', values=[62, 68, 71, 74, 79, 83]),
+             dict(name='Class B', values=[58, 61, 67, 66, 72, 75])]),
+   opts=dict(width=520, height=290)),
+}
+
+TOOK = [
+ ('Clean screen-first composition',
+  'The figure is sized for a screen and given room, not squeezed to imitate a printed plate.'),
+ ('Data-led hierarchy',
+  'The observations are the heaviest, most saturated thing in the figure. Everything else '
+  'recedes behind them.'),
+ ('Restrained, validated colour',
+  'Two slots from a palette checked against the real exam surface in both themes &mdash; '
+  'lightness band, chroma floor, colour-vision separation and contrast all pass.'),
+ ('Horizontal reference lines only',
+  'A value is read by tracking left to the axis, so verticals add ink without adding a '
+  'reading. They are gone.'),
+ ('No coordinate-plane conventions',
+  'No arrowheads, no equal-scale grid, no origin. These axes are a range of measured data, '
+  'and they say so.'),
+ ('Modern axis labels',
+  'The y title reads left-to-right above its own axis instead of rotated up the side, and '
+  'says what is measured rather than abbreviating it.'),
+]
+REFUSED = [
+ ('No legend', 'A legend is a lookup, and a lookup under time is exactly what a figure exists '
+  'to remove. Series name themselves at their own end &mdash; which still keeps identity off '
+  'colour alone.'),
+ ('No tooltip or hover', 'On a dashboard a tooltip reveals the value. On an exam that is the '
+  'answer. The figure is inert, and a test enforces it.'),
+ ('No card, panel or shadow', 'The figure sits directly in the question. Chrome around it '
+  'would make it a widget the question contains rather than part of the question.'),
+ ('No decorative fills or gradients', 'Nothing in the figure carries meaning it was not given '
+  'by the data.'),
+]
+
 # ── what each recomposition changes, and what it costs ────────────────────────
 NOTES = {
  'fn': ("Equal scales are dropped. Nothing on a function graph requires them — only "
@@ -115,13 +176,14 @@ NOTES = {
          "counting 6 across and 8 up is literally counting squares.",
          "The cost: the window has to be trimmed to keep the grid on the unit &mdash; a "
          "wider one silently steps to 2 and the squares stop matching the numerals."),
- 'stat': ("Vertical gridlines are removed. A value is read off a chart by tracking left "
-          "to the axis, so verticals add ink without adding a reading. The axis titles say "
-          "what is actually measured rather than abbreviating it, the points are large "
-          "enough to read individually, and the window starts at zero on both axes so no "
-          "gain is visually exaggerated.",
-          "The cost: nothing much. This one was closest to right already; it was mostly "
-          "too small and mislabelled."),
+ 'stat': ("This family is <b>decided</b>. These figures are measured data, not coordinate "
+          "geometry, so they no longer inherit the plane's language: no arrowheads, no "
+          "equal-scale grid, no origin. Reference lines run only across, because that is the "
+          "direction a value is read in. The observations carry a validated hue and are the "
+          "heaviest thing in the figure; the scaffolding recedes behind them.",
+          "The cost: this is the one family where colour carries meaning, so it is also the "
+          "one that has to survive a colour-vision check &mdash; which is why the palette was "
+          "validated rather than chosen."),
  'nl': ("A number line is a strip, so it is given the strip's natural shape: the full "
         "width of the text, one line high. The endpoint is the largest mark in the figure, "
         "because open-versus-closed <i>is</i> the question — every choice differs only in "
@@ -149,6 +211,10 @@ CSS = r"""
   --fig-ink:#111820; --fig-axis:#3b4756; --fig-num:#2a3644;
   --fig-grid:#dbe2ea; --fig-fine:#eaeff4; --fig-frame:#c3ccd6;
   --t-rule:#8592a0; --t-outer:#2b3743;
+  /* Data series. Slots 1-2 of the validated categorical palette, checked
+     against THIS surface (#ffffff / #161d25) in both themes: lightness band,
+     chroma floor, all-pairs colour-vision separation and 3:1 contrast all pass. */
+  --data-1:#2a78d6; --data-2:#eb6834;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --page:#080c11; --card:#131920; --rule:#26313d; --ink:#eef3f9; --ink-2:#aebccc;
@@ -160,6 +226,7 @@ CSS = r"""
   --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
   --fig-grid:#28323e; --fig-fine:#1d252e; --fig-frame:#3c4956;
   --t-rule:#7b8896; --t-outer:#9fadbb;
+  --data-1:#3987e5; --data-2:#d95926;
 }}
 :root[data-theme="dark"]{
   --page:#080c11; --card:#131920; --rule:#26313d; --ink:#eef3f9; --ink-2:#aebccc;
@@ -171,6 +238,7 @@ CSS = r"""
   --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
   --fig-grid:#28323e; --fig-fine:#1d252e; --fig-frame:#3c4956;
   --t-rule:#7b8896; --t-outer:#9fadbb;
+  --data-1:#3987e5; --data-2:#d95926;
 }
 *{box-sizing:border-box}
 body{margin:0;background-color:var(--page);color:var(--ink);
@@ -267,6 +335,42 @@ h2{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:30px;letter-
 .new .sx-nl-seg{stroke-width:6}
 .new .sx-endpoint{stroke-width:3.2}
 
+/* ═════════ the decided data family ═════════
+   Colour is spent here and nowhere else: on this family the data IS the
+   subject, so the observations carry hue and the scaffolding stays ink. */
+.data .sx-series,.data .sx-s1{color:var(--data-1)}
+.data .sx-s2{color:var(--data-2)}
+.data .sx-point{stroke:var(--exam);stroke-width:2;r:5}
+.data .sx-curve{stroke-width:2.2}
+.data .sx-bar{fill:currentColor}
+.data .sx-grid line{stroke:var(--fig-grid)}
+.data .sx-axis-base{stroke:var(--fig-axis);stroke-width:1.2}
+/* text wears text ink, never the series colour; the mark beside it carries
+   the identity */
+.sx-direct{fill:var(--fig-num);font-family:'DM Sans',sans-serif;font-size:12.5px;
+  font-weight:600;paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
+.sx-ylab{font-weight:600}
+
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:20px;margin:0 0 8px}
+.dfig{margin:0;background:var(--exam);border:1px solid var(--rule);border-radius:5px;
+  box-shadow:var(--shadow);padding:22px 24px 18px;display:flex;flex-direction:column;gap:14px}
+.dfb{overflow-x:auto}
+.dfig figcaption{font-size:13.5px;color:var(--ink-3);line-height:1.55;margin-top:auto}
+h3.minor{font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin:38px 0 10px}
+.bnd{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:18px}
+.bnd>div{background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:20px 24px}
+.bnd h4{margin:0 0 14px;font-size:14.5px}
+.bnd .took h4{color:var(--good)}.bnd .ref h4{color:var(--bad)}
+.bnd ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px}
+.bnd li b{display:block;font-size:14px;margin-bottom:3px}
+.bnd li span{font-size:13.5px;color:var(--ink-3);line-height:1.55}
+.chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:4px 9px;border-radius:3px;vertical-align:middle;
+  color:var(--good);background:var(--good-soft);margin-left:8px}
+.chip.open{color:var(--ink-3);background:var(--accent-soft)}
+.tag.done{color:var(--good);background:var(--good-soft)}
+
 /* ═════════ tables ═════════ */
 table{border-collapse:collapse;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums}
 th,td{white-space:nowrap}
@@ -301,7 +405,8 @@ def table_html(cls):
 
 def question(fam, which, n, mid=False):
     q = Q[fam]
-    fig = (f'<div class="figbox{" mid" if mid else ""}" id="fig-{fam}-{which}"></div>'
+    cls = ' data' if (fam == 'stat' and which == 'fixed') else ''
+    fig = (f'<div class="figbox{" mid" if mid else ""}{cls}" id="fig-{fam}-{which}"></div>'
            if fam != 'tbl' else
            f'<div class="figbox{" mid" if mid else ""}">'
            f'{table_html("t-now" if which == "today" else "t-new")}</div>')
@@ -309,14 +414,32 @@ def question(fam, which, n, mid=False):
             f'<p class="qn">Question {n}</p>'
             f'<p class="stem">{q["stem"]}</p>{fig}{opts_html(fam)}</div>')
 
-def pair(fam, n):
+def pair(fam, n, decided=False):
     now, new = NOTES[fam]
+    tag = ('<span class="tag done">&#10003;&ensp;Decided &middot; Screen-native</span>'
+           if decided else '<span class="tag new">Recomposed</span>')
     return (f'<div class="pair">'
             f'<div class="col"><span class="tag now">As it renders today</span>'
             f'{question(fam, "today", n, mid=True)}</div>'
-            f'<div class="col"><span class="tag new">Recomposed</span>'
-            f'{question(fam, "fixed", n)}</div></div>'
+            f'<div class="col">{tag}{question(fam, "fixed", n)}</div></div>'
             f'<div class="why"><p>{now}</p><p class="cost">{new}</p></div>')
+
+def data_family():
+    figs = ''.join(
+      f'<figure class="dfig"><div class="dfb data" id="dat-{k}"></div>'
+      f'<figcaption>{v["caption"]}</figcaption></figure>'
+      for k, v in DATA_FIGS.items())
+    took = ''.join(f'<li><b>{t}</b><span>{d}</span></li>' for t, d in TOOK)
+    ref  = ''.join(f'<li><b>{t}</b><span>{d}</span></li>' for t, d in REFUSED)
+    return (f'<h3 class="minor">The rest of the family, in the same language</h3>'
+            f'<p class="note">The decision is for <b>data charts and scatterplots</b>, not for '
+            f'one scatter, so it has to hold for a fit line, a bar chart and two series at '
+            f'once.</p>'
+            f'<div class="dgrid">{figs}</div>'
+            f'<h3 class="minor">Screen-native, not dashboard</h3>'
+            f'<div class="bnd"><div class="took"><h4>Taken from the direction</h4>'
+            f'<ul>{took}</ul></div>'
+            f'<div class="ref"><h4>Deliberately refused</h4><ul>{ref}</ul></div></div>')
 
 FAULTS = [
  ('The window is not composed',
@@ -348,35 +471,38 @@ BODY = f"""
 </section>
 
 <section class="fam">
-  <h2>Function graphs</h2>
+  <h2>Function graphs <span class="chip open">Still open</span></h2>
   <p class="sub"><b>The job:</b> read shape and read values off a curve. Nothing here needs an
     <i>x</i> unit to be the same length as a <i>y</i> unit.</p>
   {pair('fn', 14)}
 </section>
 
 <section class="fam">
-  <h2>Coordinate geometry</h2>
+  <h2>Coordinate geometry <span class="chip open">Still open</span></h2>
   <p class="sub"><b>The job:</b> count lengths and identify named points. Here equal scales are
     mandatory and the grid is an instrument, not background — the opposite of the family above.</p>
   {pair('geo', 7)}
 </section>
 
-<section class="fam">
-  <h2>Data and scatterplots</h2>
+<section class="fam" id="data">
+  <h2>Data and scatterplots <span class="chip">Decided</span></h2>
   <p class="sub"><b>The job:</b> locate one observation among several. Different quantities on the
-    two axes, so nothing is squared and there is no coordinate plane to draw.</p>
-  {pair('stat', 21)}
+    two axes, so nothing is squared and there is no coordinate plane to draw. <b>This family
+    follows the Screen-native direction</b> &mdash; these figures are measured data, and on a
+    digital test the screen is part of what the figure means rather than decoration on top of it.</p>
+  {pair('stat', 21, decided=True)}
+  {data_family()}
 </section>
 
 <section class="fam">
-  <h2>Number lines</h2>
+  <h2>Number lines <span class="chip open">Still open</span></h2>
   <p class="sub"><b>The job:</b> read one endpoint and decide open or closed. Every answer choice
     here differs <i>only</i> in that, which is as literal as a figure's job ever gets.</p>
   {pair('nl', 3)}
 </section>
 
 <section class="fam">
-  <h2>Tables</h2>
+  <h2>Tables <span class="chip open">Still open</span></h2>
   <p class="sub"><b>The job:</b> find one cell fast and be certain of its row and its column, under
     time. A two-way table with a totals row is where that actually gets tested.</p>
   {pair('tbl', 18)}
@@ -416,7 +542,9 @@ HTML = f"""<title>Stimulus Composition Study</title>
 <script>{R}</script>
 <script>
 const FIGS = {json.dumps(FIGS)};
-const {{drawPlot, drawNumberLine}} = globalThis.SiExplore;
+const DATA = {json.dumps({k: {'kind': v['kind'], 'spec': v['spec'], 'opts': v['opts']}
+                          for k, v in DATA_FIGS.items()})};
+const {{drawPlot, drawNumberLine, drawChart}} = globalThis.SiExplore;
 for (const fam of Object.keys(FIGS)) {{
   for (const which of ['today', 'fixed']) {{
     const f = FIGS[fam][which];
@@ -424,6 +552,12 @@ for (const fam of Object.keys(FIGS)) {{
     if (!host) throw new Error('missing host fig-' + fam + '-' + which);
     host.appendChild(fam === 'nl' ? drawNumberLine(f.spec, f.opts) : drawPlot(f.spec, f.opts));
   }}
+}}
+for (const k of Object.keys(DATA)) {{
+  const d = DATA[k];
+  const host = document.getElementById('dat-' + k);
+  if (!host) throw new Error('missing host dat-' + k);
+  host.appendChild(d.kind === 'chart' ? drawChart(d.spec, d.opts) : drawPlot(d.spec, d.opts));
 }}
 </script>
 """

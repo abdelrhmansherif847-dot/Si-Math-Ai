@@ -238,10 +238,98 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
        v.rayUnits==='userSpaceOnUse', String(v.rayUnits));
   }
 
+  // ═══ the Screen-native decision for the data family ═══════════════════════
+  const dataFigs = await p.evaluate(()=>{
+    const ids=['fig-stat-fixed','dat-fit','dat-bar','dat-line'];
+    const o={};
+    for (const id of ids) {
+      const host=document.getElementById(id), svg=host.querySelector('svg');
+      const g=[...svg.querySelectorAll('.sx-grid line')];
+      const pt=svg.querySelector('.sx-point');
+      o[id]={
+        verticals:g.filter(l=>l.getAttribute('x1')===l.getAttribute('x2')).length,
+        horizontals:g.filter(l=>l.getAttribute('y1')===l.getAttribute('y2')).length,
+        arrows:[...svg.querySelectorAll('line')].filter(l=>l.getAttribute('marker-end')||l.getAttribute('marker-start')).length,
+        legend:svg.querySelectorAll('.sx-legend,.sx-swatch').length,
+        titles:svg.querySelectorAll('title,desc').length,
+        bgRect:[...svg.querySelectorAll('rect')].filter(r=>!r.closest('clipPath')&&!r.classList.contains('sx-bar')).length,
+        direct:[...svg.querySelectorAll('.sx-direct')].map(t=>t.textContent),
+        ylabUpright:(()=>{const t=svg.querySelector('.sx-ylab');
+          return t? !(t.getAttribute('transform')||'').includes('rotate') : null;})(),
+        ptR: pt? +getComputedStyle(pt).r.replace('px','')||+pt.getAttribute('r') : null,
+        ink: getComputedStyle(svg.querySelector('.sx-series')).color,
+      };
+    }
+    return o;
+  });
+  const exam2 = await p.evaluate(()=>getComputedStyle(document.querySelector('.q')).backgroundColor);
+  for (const [id,v] of Object.entries(dataFigs)) {
+    ok(`[${theme}] ${id}: reference lines run across only`,
+       v.verticals===0 && v.horizontals>=3, `${v.verticals}V / ${v.horizontals}H`);
+    ok(`[${theme}] ${id}: no coordinate-plane arrowheads`, v.arrows===0, 'arrows '+v.arrows);
+    ok(`[${theme}] ${id}: no legend`, v.legend===0, 'legend nodes '+v.legend);
+    ok(`[${theme}] ${id}: no native tooltip source`, v.titles===0, '<title>/<desc> '+v.titles);
+    ok(`[${theme}] ${id}: no panel or card inside the figure`, v.bgRect===0, 'rects '+v.bgRect);
+    ok(`[${theme}] ${id}: the data carries the validated hue`, cr(v.ink, exam2)>=3,
+       v.ink+' '+cr(v.ink, exam2).toFixed(2)+':1');
+    if (v.ptR!==null) ok(`[${theme}] ${id}: markers are at least 8px across`, v.ptR*2>=8,
+       (v.ptR*2)+'px');
+    if (v.ylabUpright!==null) ok(`[${theme}] ${id}: the y title is not rotated`, v.ylabUpright);
+  }
+  ok(`[${theme}] two series are told apart by direct labels, not a legend`,
+     dataFigs['dat-line'].direct.sort().join('/')==='Class A/Class B',
+     dataFigs['dat-line'].direct.join(','));
+  ok(`[${theme}] the fit line names itself`,
+     dataFigs['dat-fit'].direct.join('')==='Line of best fit', dataFigs['dat-fit'].direct.join(','));
+
+  // ...and the label is actually READABLE: not clipped by the window and not
+  // running off the figure. The DOM said "Line of best fit" while the screen
+  // showed "Li".
+  const labelsVisible = await p.evaluate(()=>{
+    const bad=[];
+    for (const t of document.querySelectorAll('.sx-direct')) {
+      const svg=t.closest('svg'), b=t.getBBox(), sb=svg.viewBox.baseVal;
+      if (t.closest('[clip-path]')) bad.push(t.textContent+': inside a clipped group');
+      if (b.x + b.width > sb.width + 0.5) bad.push(t.textContent+': runs off the figure');
+    }
+    return bad;
+  });
+  ok(`[${theme}] every direct label is fully visible`, labelsVisible.length===0,
+     labelsVisible.join(' | '));
+
+  // the decision is NOT forced onto the other families. Both colours are
+  // resolved by the browser so an rgb() string is never compared to a hex one.
+  const notForced = await p.evaluate(()=>{
+    const probe=document.createElement('span');
+    probe.style.display='none'; document.body.appendChild(probe);
+    const resolve=v=>{probe.style.color=v; return getComputedStyle(probe).color;};
+    const ink=resolve('var(--fig-ink)'), hue=resolve('var(--data-1)');
+    const o={ink, hue, fams:{}};
+    for (const id of ['fig-fn-fixed','fig-geo-fixed','fig-nl-fixed'])
+      o.fams[id]=getComputedStyle(document.querySelector('#'+id+' .sx-series')).color;
+    probe.remove();
+    return o;
+  });
+  ok(`[${theme}] the data hue and the figure ink are actually different colours`,
+     notForced.ink !== notForced.hue, notForced.ink+' vs '+notForced.hue);
+  for (const [id,c] of Object.entries(notForced.fams))
+    ok(`[${theme}] ${id} is untouched by the data decision — still ink, not hue`,
+       c === notForced.ink && c !== notForced.hue, c);
+
+  // the whole page is inert: no interactivity anywhere, in code not prose
+  const inert = await p.evaluate(()=>{
+    const src=[...document.querySelectorAll('script')].map(s=>s.textContent).join('\n')
+      .replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*\/\/.*$/gm,'');
+    return {code:/addEventListener|onmouse|mouseover|tooltip|onclick/i.test(src),
+            attrs:document.querySelectorAll('[onclick],[onmouseover],[title]').length};
+  });
+  ok(`[${theme}] the page carries no interactivity`, !inert.code && inert.attrs===0,
+     JSON.stringify(inert));
+
   const sc = await p.evaluate(()=>[document.documentElement.scrollWidth,document.documentElement.clientWidth]);
   ok(`[${theme}] page does not scroll sideways`, sc[0]<=sc[1]+1, sc.join(' vs '));
 
-  const names=['0-faults','1-function','2-geometry','3-scatter','4-numberline','5-tables'];
+  const names=['0-faults','1-function','2-geometry','3-data','4-numberline','5-tables'];
   const secs=await p.$$('section.fam');
   for (let i=0;i<secs.length;i++)
     await secs[i].screenshot({path:path.join(OUT,names[i]+(theme==='dark'?'-dark':'')+'.png')});

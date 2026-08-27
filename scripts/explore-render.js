@@ -154,7 +154,14 @@ function drawPlot(spec, opts) {
   opts = opts || {};
   const figures = opts.figures || [];
   const W = opts.width || 450;
+  // Padding follows what the figure actually carries: a y title set upright
+  // needs a line above the plot, and a series that names itself at its own end
+  // needs room to the right or the label is clipped.
+  const named = (opts.figures || []).filter(f => f.name);
   const PAD = { l: 46, r: 20, t: 18, b: 42 };
+  if (opts.aspect !== 'plane' && spec.yLabel) PAD.t = 36;
+  if (named.length) PAD.r = Math.max(PAD.r,
+    12 + Math.max(...named.map(f => f.name.length)) * 7.2);
   const iw = W - PAD.l - PAD.r;
   let [x0, x1] = spec.xRange, [y0, y1] = spec.yRange;
   let H, ih;
@@ -388,6 +395,17 @@ function drawPlot(spec, opts) {
     // which. Without it the student has to map the prose onto the picture
     // themselves, which is work the figure exists to remove. Each label is
     // pushed OUTWARD from the figure's centroid so it never lands inside it.
+    // A series that names itself at its own end needs no legend box. Identity
+    // is still not carried by colour alone — the label sits ON the mark — and
+    // on an exam a legend is chrome that costs reading time.
+    if (f.name && pts.length) {
+      const last = pts[pts.length - 1];
+      // Appended to the ROOT, not to the clipped series group. The clip bounds
+      // the drawing; a label that names the drawing is annotation, and clipping
+      // it turned "Line of best fit" into "Li".
+      s.appendChild(el('text', { x: X(last[0]) + 9, y: Y(last[1]) + 4,
+                                 class: 'sx-direct', 'text-anchor': 'start' }, f.name));
+    }
     if (f.labels && (f.mode === 'points' || f.mode === 'polygon')) {
       const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
       const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
@@ -440,13 +458,13 @@ function drawPlot(spec, opts) {
       x: (showY ? X(0) : PAD.l) + 11, y: PAD.t + 3,
       'text-anchor': 'start', class: 'sx-axis-title sx-axis-tip' }, spec.yLabel));
   } else {
+    // A data frame's titles say what is measured, and the y title reads
+    // left-to-right above its own axis rather than rotated up the side.
+    // Rotated type is slower to read and saves no room on a short figure.
     if (spec.xLabel) s.appendChild(el('text', { x: PAD.l + iw / 2, y: H - 8,
       'text-anchor': 'middle', class: 'sx-axis-title' }, spec.xLabel));
-    if (spec.yLabel) {
-      const t = el('text', { x: 0, y: 0, 'text-anchor': 'middle', class: 'sx-axis-title' }, spec.yLabel);
-      t.setAttribute('transform', `translate(14, ${PAD.t + ih / 2}) rotate(-90)`);
-      s.appendChild(t);
-    }
+    if (spec.yLabel) s.appendChild(el('text', { x: PAD.l - 10, y: PAD.t - 8,
+      'text-anchor': 'start', class: 'sx-axis-title sx-ylab' }, spec.yLabel));
   }
   return s;
 }
@@ -527,7 +545,10 @@ function drawNumberLine(spec, opts) {
 function drawChart(spec, opts) {
   opts = opts || {};
   const W = opts.width || 520, H = opts.height || 340;
-  const PAD = { l: 52, r: 18, t: 20, b: spec.series.length > 1 ? 58 : 44 };
+  const named = spec.series.filter(x => x.name);
+  const PAD = { l: 52, r: 18, t: spec.yLabel ? 36 : 20, b: spec.xLabel ? 46 : 30 };
+  if (spec.chartType !== 'bar' && named.length > 1) PAD.r = Math.max(PAD.r,
+    12 + Math.max(...named.map(x => x.name.length)) * 7.2);
   const iw = W - PAD.l - PAD.r, ih = H - PAD.t - PAD.b;
   const vals = spec.series.flatMap(s => s.values);
   const lo = Math.min(0, ...vals), hi = Math.max(...vals);
@@ -571,23 +592,27 @@ function drawChart(spec, opts) {
     s.appendChild(g);
   });
 
-  // identity is never colour alone: >= 2 series always carry a keyed legend
+  // Identity is never colour alone. On an exam it is carried by a DIRECT LABEL
+  // on the series itself rather than a legend box: a legend costs a lookup, and
+  // a lookup under time is exactly what a figure is supposed to remove.
   if (spec.series.length > 1) {
-    const lg = el('g', { class: 'sx-legend' });
-    let x = PAD.l;
     spec.series.forEach((ser, si) => {
-      lg.appendChild(el('rect', { x, y: H - 20, width: 11, height: 11, rx: 3,
-                                  class: 'sx-swatch sx-s' + ((si % 3) + 1) }));
-      const t = el('text', { x: x + 17, y: H - 11 }, ser.name);
-      lg.appendChild(t); x += 17 + ser.name.length * 7.1 + 20;
+      if (!ser.name) return;
+      const i = ser.values.length - 1, v = ser.values[i];
+      const at = spec.chartType === 'bar'
+        ? [X(i) + (si - (spec.series.length - 1) / 2) * 24, Y(v) - 9]
+        : [X(i) + 9, Y(v) + 4];
+      s.appendChild(el('text', { x: at[0], y: at[1], class: 'sx-direct',
+        'text-anchor': spec.chartType === 'bar' ? 'middle' : 'start' }, ser.name));
     });
-    s.appendChild(lg);
   }
-  if (spec.yLabel) {
-    const t = el('text', { class: 'sx-axis-title', 'text-anchor': 'middle' }, spec.yLabel);
-    t.setAttribute('transform', `translate(14, ${PAD.t + ih / 2}) rotate(-90)`);
-    s.appendChild(t);
-  }
+  // The y title reads left-to-right above its own axis, not rotated up the
+  // side. Rotated type is slower to read and, on a short exam figure, there is
+  // no room it saves.
+  if (spec.yLabel) s.appendChild(el('text', { x: PAD.l - 10, y: PAD.t - 8,
+    'text-anchor': 'start', class: 'sx-axis-title sx-ylab' }, spec.yLabel));
+  if (spec.xLabel) s.appendChild(el('text', { x: PAD.l + iw / 2, y: H - 6,
+    'text-anchor': 'middle', class: 'sx-axis-title' }, spec.xLabel));
   return s;
 }
 
