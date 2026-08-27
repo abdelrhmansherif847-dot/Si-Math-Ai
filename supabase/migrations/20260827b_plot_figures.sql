@@ -1,6 +1,6 @@
 -- =====================================================================
--- PREPARED — NOT APPLIED.  Reviewed and approved individually before
--- apply_migration is called.  See docs/engineering/figures-field-proposal.md
+-- APPLIED 2026-08-27 as version 20260827154657, after individual approval.
+-- Live verification: docs/engineering/figures-field-proposal.md
 -- =====================================================================
 --
 -- The other half of the decision the spec could not carry.

@@ -1,6 +1,7 @@
 # `figures[]` — a PREPARED migration, for review
 
-**Status: PREPARED. Not applied.** `apply_migration` has not been called.
+**Status: APPLIED 2026-08-27** as version `20260827154657`, after individual
+approval. 154 migrations applied. Verified live before and after.
 
 Files: `supabase/migrations/20260827b_plot_figures.sql` and its rollback.
 Proof: `scripts/verify-figures.sh` — **40 checks**, plus 4 renderer checks and
@@ -107,12 +108,40 @@ this is the cheapest moment the change will ever have.
 
 ---
 
-## Two content defects this surfaced — both must close before publication
+## Applied — the live verification
+
+| | before | after |
+|---|---|---|
+| `exam_stimuli` / `exam_questions` rows | 0 / 0 | **0 / 0** |
+| `exam_plot_figures_ok`, `exam_plot_frame_mode_ok` | absent | both present |
+| `exam_stimulus_spec_ok` md5 | `3de6adea…` | **`5c20cf6c…`** |
+| latest migration | `20260827135710` | `20260827154657` (154 applied) |
+
+Called live: a plot with no `figures` → `false`; `graph`+`curve` → `true`;
+`plane`+`scatter` → `false`; `data`+`polygon` → `false`; `data`+`scatter` →
+`true`; unknown mode → `false`; unknown key (`tension`) → `false`;
+`data`+`curve` (the fit line) → `true`; tables untouched. All 24 authored specs
+validate.
+
+### A drift I introduced, recorded rather than hidden
+
+`pg_get_functiondef` md5s differ between the repository file and production for
+two of the three functions. **The executable logic is byte-identical** — with
+comments and whitespace stripped, both sides give `45eab35e…` and `31d37afe…`
+at identical lengths (1518 and 3810 characters). Raw lengths differ (2806 vs
+1897; 5090 vs 5042) because I trimmed inline comments while composing the
+`apply_migration` call instead of passing the file body verbatim.
+
+Harmless, and avoidable: **pass the migration file's body unedited.** Recorded
+so a future session comparing deployed against tree finds the answer instead of
+re-deriving it, as `support-actions` already requires.
+
+## Two content defects this surfaced — both now FIXED
 
 Neither is a schema problem. Both are cases where **the stem says one thing and
 the mathematics stored says another**, which no amount of design can paper over.
 
-### CONTENT-1 · M2A:9 — the line of best fit does not exist
+### CONTENT-1 · M2A:9 — FIXED, the fit line is now drawn
 
 > *"A line of best fit **is drawn** through the points. Which is closest to its
 > slope?"*
@@ -120,19 +149,29 @@ the mathematics stored says another**, which no amount of design can paper over.
 The spec contains **only the six observations**. There is no fit line in the
 figure. The student is asked for the slope of a line that was never drawn.
 
-Fixing it means adding a second curve — `{mode:'curve', dashed:true}` on a
-`data` frame, which the vocabulary above already permits — and authoring its two
-endpoints. It cannot ship as it stands.
+**Fixed** by adding the actual least-squares fit as a second curve:
+`y = −6.057x + 96.200`, drawn from (0.5, 93.17) to (6.5, 56.83) as
+`{mode:'curve', dashed:true}` on the `data` frame — the one combination the
+migration allows for exactly this. The key was already right: the true slope is
+−6.057 and choice C is −6.
 
-### CONTENT-2 · M1:9 — "two lines" that are segments
+**Consequence, stated plainly.** M2S:9 and M2A:9 were one of the four shared
+stimuli, and the one I cited as proof that `reading` belongs on the question —
+`shape` for the relationship, `value` for the slope. Now that M2A:9 has a fit
+line the two specs differ, so **they are no longer the same stimulus**, and that
+shape/value split is no longer present in the content. Three shared stimuli
+remain, all with matching readings.
+
+The architecture is unchanged and still right — it costs nothing and covers the
+case — but I should stop citing the content as proving it, because after this
+fix it does not.
+
+### CONTENT-2 · M1:9 — FIXED, the stem now says what the figure shows
 
 > *"The graph shows **two lines**. What is the x-coordinate of the point where
 > they intersect?"*
 
 The spec stores two five-point polylines spanning x ∈ [−1, 3] and [0, 4] inside
 a window of [−2, 6]. They stop short of both edges, so they read as **segments**,
-not lines. Either the points extend to the window edge or the stem says
-"segments".
-
-Logged rather than fixed here: this is authoring, and it is the owner's call
-which way each one resolves.
+not lines. **Fixed** by changing the wording rather than stretching the geometry: the stem
+now reads *"The graph shows two line segments."*
