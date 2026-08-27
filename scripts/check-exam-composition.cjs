@@ -251,7 +251,7 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
         horizontals:g.filter(l=>l.getAttribute('y1')===l.getAttribute('y2')).length,
         arrows:[...svg.querySelectorAll('line')].filter(l=>l.getAttribute('marker-end')||l.getAttribute('marker-start')).length,
         legend:svg.querySelectorAll('.sx-legend,.sx-swatch').length,
-        titles:svg.querySelectorAll('title,desc').length,
+        titles:svg.querySelectorAll('title,desc').length,  // scoped: svg is the root here
         bgRect:[...svg.querySelectorAll('rect')].filter(r=>!r.closest('clipPath')&&!r.classList.contains('sx-bar')).length,
         direct:[...svg.querySelectorAll('.sx-direct')].map(t=>t.textContent),
         ylabUpright:(()=>{const t=svg.querySelector('.sx-ylab');

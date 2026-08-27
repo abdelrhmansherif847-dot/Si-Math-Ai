@@ -253,18 +253,29 @@ const cr = (a, b) => { const B = over(parse(b), { r:255, g:255, b:255, a:1 });
       }
       // the dense mode: half-steps under unit lines. THIS tier has the beats.
       const paper = document.querySelector('#f-geo-paper svg');
-      const pg = [...paper.querySelectorAll('.sx-grid line')];
+      const at = (sel, a) => [...paper.querySelectorAll(sel)]
+        .filter(l => l.getAttribute(a[0]) === l.getAttribute(a[1]))
+        .map(l => +l.getAttribute(a[0])).sort((m, n) => m - n);
+      const unit = at('.sx-grid line:not(.sx-fine)', ['x1', 'x2']);
+      const fine = at('.sx-grid line.sx-fine', ['x1', 'x2']);
+      let gaps = 0, filled = 0, dup = 0;
+      for (let i = 1; i < unit.length; i++) {
+        gaps++;
+        if (fine.some(f => f > unit[i - 1] + .5 && f < unit[i] - .5)) filled++;
+      }
+      for (const f of fine) if (unit.some(u => Math.abs(u - f) < .5)) dup++;
       return { coarse: Math.max(...[8, 40, 200].map(count)), live,
-               fine: pg.filter(l => /sx-fine/.test(l.getAttribute('class') || '')).length,
-               unit: pg.filter(l => !/sx-fine/.test(l.getAttribute('class') || '')).length };
+               gaps, filled, dup, unit: unit.length, fine: fine.length };
     });
     ok(`[${theme}] no lone major line on any axis`,
        !tiers.live.some(s => s.endsWith(':1') || s.endsWith(':2')), tiers.live.join(','));
     ok(`[${theme}] the every-fifth tier stays off on a coarse grid`, tiers.coarse === 0,
        'majors ' + tiers.coarse);
-    ok(`[${theme}] the dense mode still gives a real two-tier grid`,
-       tiers.fine > tiers.unit && tiers.fine + tiers.unit >= 40,
-       `${tiers.fine} fine vs ${tiers.unit} unit, ${tiers.fine + tiers.unit} total`);
+    ok(`[${theme}] the dense mode puts a fine line between every pair of unit lines`,
+       tiers.gaps > 4 && tiers.filled === tiers.gaps,
+       `${tiers.filled}/${tiers.gaps} gaps filled`);
+    ok(`[${theme}] and never draws a fine line on top of a unit line`,
+       tiers.dup === 0, tiers.dup + ' duplicated');
 
     // ── an arrowhead claims the axis continues; only a plane's does
     const arrows = await page.evaluate(() => {

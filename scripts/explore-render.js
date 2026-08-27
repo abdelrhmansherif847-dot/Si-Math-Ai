@@ -65,6 +65,49 @@ function niceStep(span, target) {
   const raw = span / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
   return [1, 2, 2.5, 5, 10].map(m => m * p).find(c => c >= raw) || p;
 }
+/* The RESOLUTION of a set of values: the coarsest step on which every one of
+ * them lands exactly. This is the derived half of the family variant system —
+ * a number line's minor ticks and a geometry figure's grid are both this
+ * number, computed from the mathematics rather than chosen per figure.
+ *
+ * An endpoint at -2.5 makes the resolution 1/2, and the figure grows half-step
+ * ticks so the endpoint sits ON one. An endpoint at -2 leaves it 1, and no
+ * minor ticks appear. Nobody decides that; the spec already contains it. */
+const STEPS = [1, 1 / 2, 1 / 4, 1 / 5, 1 / 10];
+function resolutionOf(values) {
+  const vs = values.filter(v => typeof v === 'number' && isFinite(v));
+  for (const st of STEPS)
+    if (vs.every(v => Math.abs(v / st - Math.round(v / st)) < 1e-9)) return st;
+  return STEPS[STEPS.length - 1];
+}
+
+/* THE VARIANT RULE, in one place.
+ *
+ * Each family has a fixed grammar and one axis of variation, and the variant is
+ * COMPUTED rather than picked per figure. Two inputs decide everything:
+ *
+ *   role     — which family this is. Fixed by what the object IS.
+ *   reading  — 'shape' or 'value'. AUTHORED, because it is a property of the
+ *              question, not of the figure: whether the student must read a
+ *              number off the picture or only judge its shape. Nothing in the
+ *              geometry can tell you which, so the spec has to carry it.
+ *
+ * and one derived number, resolutionOf(), for how fine the marks must be.
+ *
+ *   geometry — the grid is the measuring instrument, so it is always present,
+ *              at the resolution of the figure's own vertices.
+ *   function — the curve is the subject. A grid appears only when the question
+ *              asks for a value off it.
+ *   data     — the same question, answered with horizontal rules only, because
+ *              a value on a chart is read by tracking left to the axis.
+ */
+function gridPlan(role, reading, res) {
+  if (role === 'geometry') return { mode: 'major', sub: res < 1 ? res : 0 };
+  if (role === 'function') return { mode: reading === 'value' ? 'major' : 'none', sub: 0 };
+  if (role === 'data')     return { mode: reading === 'value' ? 'rules' : 'none', sub: 0 };
+  return { mode: 'major', sub: 0 };
+}
+
 // U+2212 MINUS SIGN, not the hyphen a keyboard gives you. On a figure the
 // difference is visible: a hyphen is short, high and reads as punctuation,
 // where a minus matches the numerals' width and sits on their centre line.
@@ -266,14 +309,27 @@ function drawPlot(spec, opts) {
   const tierY = countMajors(y0, y1, sy) >= TIER_MIN;
   const major = v => tierX && isMajor(v, sx);
   const majorY = v => tierY && isMajor(v, sy);
-  const mode = opts.gridMode || 'major';
+  // The family's rule decides the grid; gridMode stays available so the
+  // exploration pages can still show a treatment the rule would not pick.
+  const plan = opts.role
+    ? gridPlan(opts.role, opts.reading,
+               resolutionOf((spec.curves || []).flatMap(c => c.points.flat())))
+    : { mode: opts.gridMode || 'major', sub: opts.gridMode === 'fine' ? 0.5 : 0 };
+  const mode = plan.mode;
   const grid = el('g', { class: 'sx-grid' });
-  if (mode === 'fine') {                       // squared-paper: half-unit minor
-    const hx = sx / 2, hy = sy / 2;
-    for (let v = Math.ceil(x0 / hx) * hx; v <= x1 + 1e-9; v += hx)
-      grid.appendChild(el('line', { class: 'sx-fine', x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
-    for (let v = Math.ceil(y0 / hy) * hy; v <= y1 + 1e-9; v += hy)
-      grid.appendChild(el('line', { class: 'sx-fine', x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
+  // Sub-unit gridlines. Under the family rule the step is the figure's own
+  // RESOLUTION: a triangle on integer vertices gets a plain unit grid, one with
+  // a vertex at 2.5 grows half-unit lines so that vertex sits on a crossing.
+  // The legacy 'fine' treatment keeps its fixed half-step so the exploration
+  // pages still show what they showed.
+  const sub = mode === 'fine' ? sx / 2 : plan.sub;
+  if (sub > 0 && sub < sx) {
+    for (let v = Math.ceil(x0 / sub) * sub; v <= x1 + 1e-9; v += sub)
+      if (Math.abs(v / sx - Math.round(v / sx)) > 1e-9)
+        grid.appendChild(el('line', { class: 'sx-fine', x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
+    for (let v = Math.ceil(y0 / sub) * sub; v <= y1 + 1e-9; v += sub)
+      if (Math.abs(v / sy - Math.round(v / sy)) > 1e-9)
+        grid.appendChild(el('line', { class: 'sx-fine', x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   }
   if (mode !== 'none') {
     // 'rules' is the statistical convention: horizontal rules only. A value is
@@ -495,23 +551,40 @@ function drawNumberLine(spec, opts) {
 
   const tk = el('g', { class: 'sx-tick' });
   const step = niceStep(spec.max - spec.min, 12);
-  const mode = opts.tickMode || 'all';
+  let mode = opts.tickMode || 'all';
+  // The family's grammar is endpoint-first: name only what the question turns
+  // on. Its one variant is tick DENSITY, and that is derived, not chosen.
+  const marked = [].concat((spec.segments || []).flatMap(g => [g.from, g.to]),
+                           spec.points || []);
+  const res = resolutionOf(marked);
+  if (mode === 'auto') mode = res < 1 ? 'autofine' : 'ends';
   // Which values a number line names is a DESIGN decision, not a fixed one:
   // every integer (a ruler), only the values that matter (minimal), or a fine
   // ruler with unlabelled halves between the integers.
-  if (mode === 'fine') {
-    for (let v = Math.ceil(spec.min / (step/2)) * (step/2); v <= spec.max + 1e-9; v += step/2)
-      tk.appendChild(el('line', { x1: X(v), y1: y - 3.5, x2: X(v), y2: y + 3.5, class: 'sx-nl-minor' }));
+  if (mode === 'fine' || mode === 'autofine') {
+    const ms = mode === 'autofine' ? res * step : step / 2;
+    for (let v = Math.ceil(spec.min / ms) * ms; v <= spec.max + 1e-9; v += ms)
+      if (Math.abs(v / step - Math.round(v / step)) > 1e-9)
+        tk.appendChild(el('line', { x1: X(v), y1: y - 3.5, x2: X(v), y2: y + 3.5, class: 'sx-nl-minor' }));
   }
-  const named = mode === 'ends'
+  const named = (mode === 'ends' || mode === 'autofine')
     ? [spec.min, spec.max].concat((spec.segments||[]).flatMap(g => [g.from, g.to]))
                           .concat(spec.points||[])
     : null;
+  const drawn = [];
   for (let v = Math.ceil(spec.min / step) * step; v <= spec.max + 1e-9; v += step) {
     tk.appendChild(el('line', { x1: X(v), y1: y - 6, x2: X(v), y2: y + 6, class: 'sx-nl-tick' }));
     if (named && !named.some(n => Math.abs(n - v) < 1e-9)) continue;
     tk.appendChild(el('text', { x: X(v), y: y + 26, 'text-anchor': 'middle' }, fmt(v)));
+    drawn.push(v);
   }
+  // A marked value off the major step — an endpoint at -2.5 — would otherwise
+  // be a dot the student cannot put a number to.
+  if (named) for (const v of marked)
+    if (v > spec.min && v < spec.max && !drawn.some(d => Math.abs(d - v) < 1e-9)) {
+      tk.appendChild(el('line', { x1: X(v), y1: y - 6, x2: X(v), y2: y + 6, class: 'sx-nl-tick' }));
+      tk.appendChild(el('text', { x: X(v), y: y + 26, 'text-anchor': 'middle' }, fmt(v)));
+    }
   s.appendChild(tk);
 
   const g = el('g', { class: 'sx-series sx-s1' });
@@ -664,6 +737,8 @@ function renderStimulus(kind, spec, opts) {
 
   root.SiExplore = {
     renderStimulus: renderStimulus,
+    resolutionOf: resolutionOf,
+    gridPlan: gridPlan,
     drawPlot: drawPlot,
     drawChart: drawChart,
     drawTable: drawTable,

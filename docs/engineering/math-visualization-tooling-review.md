@@ -927,6 +927,87 @@ Defects this decision surfaced:
 mutations confirm the decision's guards can fail: labels returned to the clipped
 group, a legend restored, and the data hue forced onto the other families.
 
+### DECIDED · All five families — and the system is a grammar, not five looks
+
+Every family is now chosen:
+
+| Family | Decision |
+|---|---|
+| Data & scatterplots | **Screen-native** |
+| Tables | **Boxed — header band** (Panel and Typographic refused) |
+| Number lines | **Statement**, with adaptive tick density |
+| Coordinate geometry | **Squared paper** |
+| Function graphs | **Open**, with a grid only when the question needs one |
+
+The decisive instruction was not the list. It was this: *each family should have a
+fixed **grammar**, with variants tied to the job of the question* — so the system
+reads as designed for mathematics rather than as five looks handed out to five
+kinds of picture.
+
+`scripts/build-figure-system.py` implements exactly that. **Two inputs compute
+every variant on the page; none is hand-set.**
+
+**Rule one — `reading`, authored.** Does the student have to get a *number* off
+the figure, or only judge its *shape*? Nothing in the geometry can answer that:
+two questions can share one graph and want different treatments. So it is a
+property of the question, and the spec has to carry it. It turns the grid on a
+function graph on and off, and the reference lines on a chart.
+
+**Rule two — `resolutionOf()`, derived.** The coarsest step on which every marked
+value lands exactly — 1, ½, ¼, ⅕ or ⅒. Nobody chooses it; it is already in the
+spec. An endpoint at −2.5 makes it ½, and the figure grows half-step marks so
+that endpoint sits on one. It sets tick density on a number line and grid density
+in coordinate geometry.
+
+```
+gridPlan(role, reading, res)
+  geometry → always a grid, at the figure's own resolution   (the instrument)
+  function → grid iff reading === 'value'                    (the curve is the subject)
+  data     → horizontal rules iff reading === 'value'        (a value is read leftwards)
+```
+
+Geometry deliberately ignores `reading`: its grid *is* the measuring instrument,
+so it is never optional. A mutation that makes geometry obey `reading` like the
+others fails the suite.
+
+### What the schema now needs
+
+**`reading` is a missing field.** `exam_stimuli` has no way to record it and
+`exam_stimulus_spec_ok` would reject it. That is a migration change, and it is
+far cheaper to know now — the Spine is still empty — than after content is
+inserted. Everything else the system needs is already derivable from values the
+spec holds.
+
+### The grid earned its contrast
+
+The grid sat at **1.25:1** — drawn, and invisible; the geometry panel showed
+twenty gridlines and looked like it had none. That was defensible while every
+figure carried a grid whether it needed one or not. Under the variant rule a grid
+appears *only* when the question needs it, so **every grid is now information the
+reader must perceive**, and it clears 3:1 (3.36 light / 3.71 dark) with the
+sub-unit tier kept quieter beneath it. Lifting it obliged the numerals to carry a
+halo, or the lines run through them.
+
+This closes, in the right direction, the open question left when the every-fifth
+tier was removed: the answer was not a darker grid everywhere, it was **fewer
+grids, each dark enough to count.**
+
+### Verification
+
+`scripts/check-figure-system.cjs` — **96 checks, both themes.** They assert the
+rules *fire*, not that they exist: `reading: shape` draws no grid and
+`reading: value` draws one; integer vertices give a unit grid while a vertex at
+7.5 grows half-unit lines; an integer endpoint gives no minor ticks while −2.5
+grows them *and* gets named though it is off the major step.
+
+Three mutations confirm the suite can go red: `reading` stopped from turning the
+grid on, `resolutionOf()` pinned to 1, and geometry made to obey `reading`. Each
+fails in exactly the places the rule claims to govern.
+
+One check was too broad and was corrected: an unscoped `title` selector matched
+the page's own `<title>` in the head and reported a tooltip source that did not
+exist. A tooltip source is a `<title>` *inside* an `svg`.
+
 ### The rule for what happens next
 
 React **per family**. There is no requirement that the answer be the same in all
