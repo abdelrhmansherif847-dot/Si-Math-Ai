@@ -28,3 +28,7 @@ e2e-preview*.html
 e2e-payload*.json
 exam-ui-preview.html
 shots5/
+
+# Written by scripts/check-desmos-activation.cjs during a live activation run.
+# Never committed: it is a screenshot of a licensed third-party calculator.
+scripts/desmos-activation.png

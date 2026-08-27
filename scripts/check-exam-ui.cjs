@@ -104,24 +104,30 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   await p.click('#zgopen'); await p.waitForTimeout(300);
   const shots={};
   for (const id of ['desmos','desmos-cfg','zero-graph']) {
-    await p.evaluate(i=>globalThis.__show(i), id); await p.waitForTimeout(300);
+    await p.evaluate(i=>globalThis.__show(i), id);
+    // 'desmos-cfg' really attempts to load desmos.com and really fails here, so
+    // wait for the outcome rather than a fixed beat.
+    await p.waitForFunction(()=>{const m=document.querySelector('.xw-mount');
+      return m && m.querySelector('.xw-gate,.xw-err,svg');}, null, {timeout:20000});
     shots[id]=await p.evaluate(()=>{
-      const panel=document.getElementById('zgpanel'), mount=document.getElementById('zgmount');
-      const head=document.querySelector('.zg-head');
+      const panel=document.querySelector('.xw-panel'), mount=document.querySelector('.xw-mount');
+      const head=document.querySelector('.xw-head');
       const box=e=>{const r=e.getBoundingClientRect();return [Math.round(r.x),Math.round(r.y),
         Math.round(r.width),Math.round(r.height)];};
       return {
-        // chrome geometry + markup, minus the one line that is meant to differ
-        chrome: head.innerHTML.replace(/<p id="zgsub">[^<]*<\/p>/,''),
+        // chrome markup + geometry, minus the one line that is meant to differ
+        chrome: head.innerHTML.replace(/<p class="xw-sub">[^<]*<\/p>/,''),
         headBox: box(head), mountBox: box(mount), panelBox: box(panel),
-        closeText: document.querySelector('.zg-close').textContent,
-        title: document.getElementById('zgtitle').textContent,
-        sub: document.getElementById('zgsub').textContent,
+        closeText: document.querySelector('.xw-close').textContent,
+        title: document.getElementById('xw-title').textContent,
+        sub: document.querySelector('.xw-sub').textContent,
         zeroInHead: head.querySelectorAll('.zg-mark').length,
         zeroInMount: mount.querySelectorAll('.zg-mark,.zg-zero').length,
         mountText: mount.innerText,
         mountHasSvg: !!mount.querySelector('svg'),
         curves: mount.querySelectorAll('.sx-curve').length,
+        fallbackBtn: !!mount.querySelector('.xw-fb'),
+        activeProvider: globalThis.__ws.providerId(),
       };
     });
   }
@@ -139,7 +145,7 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   ok(`[${theme}] the title is the tool's job, never the vendor's name`,
      base.title==='Graphing Calculator', base.title);
 
-  // ── ZERO'S PLACEMENT, which the brief made a rule
+  // ── ZERO'S PLACEMENT — API Terms §5.b(iii), enforced rather than promised
   ok(`[${theme}] Zero is in OUR header in every state`,
      Object.values(shots).every(s=>s.zeroInHead===1),
      Object.entries(shots).map(([k,v])=>k+'='+v.zeroInHead).join(' '));
@@ -150,16 +156,39 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   // ── WHAT EACH STATE ACTUALLY SHOWS
   ok(`[${theme}] unlicensed: nothing mounts, and the reason is the missing key`,
      /no-key/.test(shots['desmos'].mountText) && !shots['desmos'].mountHasSvg
-     && /SI_DESMOS_CONFIG/.test(shots['desmos'].mountText),
-     shots['desmos'].mountText.slice(0,90).replace(/\n/g,' '));
-  ok(`[${theme}] licensed: the region is reserved for Desmos, undrawn-on by us`,
-     /mounts here/.test(shots['desmos-cfg'].mountText)
-     && /never been rendered/.test(shots['desmos-cfg'].mountText)
-     && shots['desmos-cfg'].curves===0,
-     shots['desmos-cfg'].mountText.slice(0,70).replace(/\n/g,' '));
+     && /API key/i.test(shots['desmos'].mountText),
+     shots['desmos'].mountText.slice(0,80).replace(/\n/g,' '));
+  ok(`[${theme}] a key set: it really tries, really fails here, and says so plainly`,
+     /did not open/i.test(shots['desmos-cfg'].mountText)
+     && !shots['desmos-cfg'].mountHasSvg,
+     shots['desmos-cfg'].mountText.slice(0,80).replace(/\n/g,' '));
   ok(`[${theme}] Zero Graph: plots through the exam's own figure renderer`,
      shots['zero-graph'].mountHasSvg && shots['zero-graph'].curves===1,
      `svg=${shots['zero-graph'].mountHasSvg} curves=${shots['zero-graph'].curves}`);
+
+  // ── THE FALLBACK IS OFFERED, NEVER TAKEN
+  //
+  // A student who reaches for a graphing calculator must not be handed a
+  // different one without being asked. So after the failure the active provider
+  // is STILL the one that failed, and only a click changes it.
+  await p.evaluate(()=>globalThis.__show('desmos-cfg'));
+  await p.waitForSelector('.xw-err', {timeout:20000});
+  const fb0 = await p.evaluate(()=>({
+    offered: !!document.querySelector('.xw-fb'),
+    label: (document.querySelector('.xw-fb')||{}).textContent,
+    stillDesmos: globalThis.__ws.providerId()==='desmos',
+    drew: !!document.querySelector('.xw-mount svg'),
+    warns: /not the same calculator/i.test(document.querySelector('.xw-mount').innerText)}));
+  ok(`[${theme}] a failure offers the built-in tool by name`,
+     fb0.offered && /Zero Graph/.test(fb0.label||''), fb0.label);
+  ok(`[${theme}] but does NOT switch on its own`,
+     fb0.stillDesmos && !fb0.drew, `provider=${fb0.stillDesmos} drew=${fb0.drew}`);
+  ok(`[${theme}] and warns that it is a different calculator`, fb0.warns);
+  await p.click('.xw-fb'); await p.waitForTimeout(300);
+  const fb1 = await p.evaluate(()=>({now:globalThis.__ws.providerId(),
+    drew:!!document.querySelector('.xw-mount svg')}));
+  ok(`[${theme}] one click does switch it`,
+     fb1.now==='zero-graph' && fb1.drew, JSON.stringify(fb1));
 
   // ── NO CLAIM OF A RELATIONSHIP, anywhere a student could read one
   const claim = await p.evaluate(()=>{
@@ -173,10 +202,12 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   ok(`[${theme}] nothing claims a partnership, sponsorship or co-branding`,
      !claim.hit && claim.labels.length===0, claim.hit||claim.labels.join('|'));
 
-  // ── QUIET, and contrast on the exam surface
   await p.keyboard.press('Escape'); await p.waitForTimeout(250);
   ok(`[${theme}] Escape closes the workspace`,
-     await p.evaluate(()=>!document.getElementById('zgpanel').classList.contains('is-open')));
+     await p.evaluate(()=>!globalThis.__ws.isOpen()));
+
+  // ── QUIET, and contrast on the exam surface
+  await p.keyboard.press('Escape'); await p.waitForTimeout(250);
   const quiet = await p.evaluate(()=>({
     anim:[...document.querySelectorAll('.bar *,.qcard *')]
       .filter(e=>{const a=getComputedStyle(e).animationName; return a && a!=='none';}).length,
@@ -196,20 +227,23 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
     await p.evaluate(()=>globalThis.__nav.setOpen(true)); await p.waitForTimeout(200);
     await p.screenshot({path:path.join(OUT,'2-navigator.png')});
     await p.evaluate(()=>{globalThis.__nav.setOpen(false);globalThis.__open(true);
-      globalThis.__show('desmos');}); await p.waitForTimeout(320);
+      globalThis.__show('desmos');});
+    await p.waitForSelector('.xw-gate',{timeout:20000});
     await p.screenshot({path:path.join(OUT,'3-desmos-gated.png')});
-    await p.evaluate(()=>globalThis.__show('desmos-cfg')); await p.waitForTimeout(320);
-    await p.screenshot({path:path.join(OUT,'4-desmos-licensed.png')});
-    await p.evaluate(()=>globalThis.__show('zero-graph')); await p.waitForTimeout(320);
+    await p.evaluate(()=>globalThis.__show('desmos-cfg'));
+    await p.waitForSelector('.xw-err',{timeout:20000});
+    await p.screenshot({path:path.join(OUT,'4-desmos-failed.png')});
+    await p.evaluate(()=>globalThis.__show('zero-graph')); await p.waitForTimeout(400);
     await p.screenshot({path:path.join(OUT,'5-zero-graph.png')});
     await p.evaluate(()=>{globalThis.__open(false);globalThis.__timer.setHidden(true);});
     await p.waitForTimeout(200);
     await p.screenshot({path:path.join(OUT,'6-timer-hidden.png'),clip:{x:0,y:0,width:1280,height:220}});
   } else {
     await p.evaluate(()=>{globalThis.__open(true);globalThis.__show('zero-graph');});
-    await p.waitForTimeout(320);
+    await p.waitForTimeout(400);
     await p.screenshot({path:path.join(OUT,'7-dark-zero-graph.png')});
-    await p.evaluate(()=>globalThis.__show('desmos')); await p.waitForTimeout(320);
+    await p.evaluate(()=>globalThis.__show('desmos'));
+    await p.waitForSelector('.xw-gate',{timeout:20000});
     await p.screenshot({path:path.join(OUT,'8-dark-desmos-gated.png')});
   }
   await ctx.close();

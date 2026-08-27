@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+// Desmos activation gate — "not production-proven" made structural.
+//
+// WHY THIS FILE EXISTS
+// --------------------
+// The Desmos integration is written against documented behaviour and has never
+// been run against the real API: www.desmos.com is unreachable from the
+// environment it was built in, and no key exists. A promise not to treat it as
+// proven is worth nothing across sessions and people, so the promise is a check
+// instead.
+//
+// It is a gate, not a test of Desmos. Three things it will not let happen:
+//
+//   1. An exam naming a calculator provider while the record still says the
+//      integration is unproven. Naming a provider is the last of the three
+//      gates in exam-calculator.js and the only one a student can feel.
+//   2. The record claiming ACTIVATED without evidence a human could check —
+//      a date, the API version that was mounted, and the tier of the key.
+//   3. An API key reaching this repository, which is PUBLIC. Desmos API Terms
+//      §5.c requires reasonable efforts to keep it confidential; a key in a
+//      public git history is the opposite of that, and unlike the other two
+//      this one cannot be undone by a revert.
+//
+// Every one of these can go red. #1 goes red the moment someone edits
+// exam-registry.js ahead of the activation test; #3 goes red on a committed key.
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, dirname, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
+const RECORD = 'docs/engineering/desmos-integration.md';
+const fails = [];
+const read = p => readFileSync(join(REPO, p), 'utf8');
+
+// ── 1. the record's own status ────────────────────────────────────────────────
+//
+// The marker lives in the record's HEADER — the first few lines — and nowhere
+// else. That is not fussiness: the runbook further down quotes the marker as an
+// example of what to write, and an earlier version of this check happily read
+// that example instead of the real one. A mutation test caught it. Restricting
+// the parse to the header makes the example inert, and the field formats below
+// reject its placeholders on their own merits.
+const record = read(RECORD);
+const HEADER = record.split('\n').slice(0, 10).join('\n');
+const MARKER = /^<!--\s*desmos-activation:\s*(UNPROVEN|ACTIVATED)\s*-->$/m;
+const m = HEADER.match(MARKER);
+if (!m) {
+  fails.push(`${RECORD} carries no activation marker in its first 10 lines. ` +
+             `Expected "<!-- desmos-activation: UNPROVEN -->" or "... ACTIVATED -->".`);
+}
+const status = m ? m[1] : 'UNPROVEN';
+
+// ── 2. ACTIVATED must come with evidence, and the evidence must be real ──────
+//
+// Every field is format-checked. A copied-and-not-filled-in template is the
+// realistic failure here, not a missing line, so "YYYY-MM-DD" must fail exactly
+// as hard as an absent date.
+if (status === 'ACTIVATED') {
+  const ev = HEADER.match(/^<!--\s*desmos-evidence:\s*(.+?)\s*-->$/m);
+  const fields = ev ? Object.fromEntries(
+    ev[1].split(';').map(s => s.split('=').map(x => x.trim())).filter(p => p.length === 2)) : {};
+  const SHAPE = {
+    date: /^\d{4}-\d{2}-\d{2}$/,
+    apiVersion: /^v\d+\.\d+$/,
+    tier: /^(commercial|trial)$/,
+    checkedBy: /^(?!name$|<)[^<>]{2,}$/,
+  };
+  if (!ev) {
+    fails.push(`${RECORD} says ACTIVATED but carries no desmos-evidence line in its ` +
+               `first 10 lines. Expected: <!-- desmos-evidence: date=YYYY-MM-DD; ` +
+               `apiVersion=vX.Y; tier=commercial; checkedBy=name -->`);
+  } else {
+    for (const [k, re] of Object.entries(SHAPE)) {
+      if (!fields[k]) {
+        fails.push(`${RECORD} evidence has no "${k}".`);
+      } else if (!re.test(fields[k])) {
+        fails.push(`${RECORD} evidence field ${k}="${fields[k]}" is not a filled-in value ` +
+                   `(expected ${re}). The activation test prints the line to paste; ` +
+                   `paste its output rather than the template.`);
+      }
+    }
+  }
+}
+
+// ── 3. no exam may name a provider before the record says ACTIVATED ──────────
+const registry = read('exam-registry.js');
+const named = [...registry.matchAll(/provider:\s*(?!null)('([^']*)'|"([^"]*)")/g)]
+  .map(x => x[2] ?? x[3]);
+if (named.length && status !== 'ACTIVATED') {
+  fails.push(`exam-registry.js names calculator provider(s) [${[...new Set(named)].join(', ')}] ` +
+             `while ${RECORD} says ${status}. Naming a provider is what makes a calculator ` +
+             `reach a student. Run scripts/check-desmos-activation.cjs against a real key ` +
+             `first, record the result, then name the provider.`);
+}
+
+// ── 4. no API key in a public repository ─────────────────────────────────────
+//
+// The preview deliberately sets a placeholder so the licensed path can be seen;
+// it is allowed by name, and nothing else is.
+const PLACEHOLDER = 'PREVIEW-NOT-A-REAL-KEY';
+const SKIP_DIRS = new Set(['.git', 'node_modules', '__pycache__', 'shots', 'shots2',
+  'shots3', 'shots4', 'shots5', 'pgdata', '.design-sync', 'windows']);
+const EXT = new Set(['.js', '.mjs', '.cjs', '.html', '.json', '.py', '.sh', '.md', '.ts']);
+function* walk(dir) {
+  for (const e of readdirSync(dir)) {
+    if (SKIP_DIRS.has(e)) continue;
+    const p = join(dir, e);
+    if (statSync(p).isDirectory()) yield* walk(p);
+    else if (EXT.has(extname(e))) yield p;
+  }
+}
+const KEY_RE = /apiKey\s*:\s*['"]([^'"]{6,})['"]/g;
+for (const file of walk(REPO)) {
+  const rel = file.slice(REPO.length + 1);
+  let txt;
+  try { txt = readFileSync(file, 'utf8'); } catch { continue; }
+  if (!txt.includes('apiKey')) continue;
+  for (const hit of txt.matchAll(KEY_RE)) {
+    const val = hit[1];
+    if (val === PLACEHOLDER) continue;
+    // config().apiKey reads and template interpolations are not literals.
+    if (/^[<{$]/.test(val) || val.includes('${')) continue;
+    fails.push(`${rel} contains a literal apiKey "${val.slice(0, 6)}…". This repository is ` +
+               `PUBLIC. Desmos API Terms §5.c requires the key to be kept confidential — ` +
+               `it belongs in SI_DESMOS_CONFIG at deploy time, never in a source file.`);
+  }
+}
+
+if (fails.length) {
+  console.error('validate-desmos-activation: FAIL');
+  for (const f of fails) console.error('  • ' + f);
+  process.exit(1);
+}
+console.log(`validate-desmos-activation: OK (status ${status}, ` +
+            `${named.length} exam(s) naming a provider)`);

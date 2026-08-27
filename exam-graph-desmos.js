@@ -48,8 +48,24 @@
 (function (root) {
   'use strict';
 
-  var API_VERSION = 'v1.11';
+  // The version is a CONFIG value with a default, not a hard-coded constant.
+  //
+  // §5.d obliges us to take Updates within 60 days of their release, and Desmos
+  // ships them as new versioned URLs. Making this configurable means a version
+  // bump is a deploy-time change rather than a code change and a review cycle.
+  //
+  // v1.11 is what this repository has recorded. Search results seen 2026-08-27
+  // title the docs page "Desmos API v1.12 documentation", so the default here
+  // may already be one release behind — but www.desmos.com is blocked from the
+  // environment this was written in, so it could not be confirmed, and a guess
+  // in a URL is worse than a stale default that the runbook forces you to check.
+  // ACTIVATION STEP: read the current version off the docs page and set it.
+  var DEFAULT_API_VERSION = 'v1.11';
   var SCRIPT_ID = 'si-desmos-api';
+
+  // A student is in a timed exam. A script that never resolves is worse than one
+  // that fails, because failure at least lets us say something useful.
+  var LOAD_TIMEOUT_MS = 12000;
 
   // Configuration is READ, never hard-coded. A key committed to a public
   // repository is a key published, whatever §5.c says about confidentiality.
@@ -57,6 +73,19 @@
     try { return (root.SI_DESMOS_CONFIG || {}); } catch (e) { return {}; }
   }
   function apiKey() { return String(config().apiKey || '').trim(); }
+  function apiVersion() { return String(config().apiVersion || DEFAULT_API_VERSION).trim(); }
+
+  /**
+   * Which Desmos products this key is licensed for.
+   *
+   * Access to four-function, scientific, geometry and 3D is enabled PER KEY, and
+   * calling a constructor for a product the key does not carry is an error. So
+   * this is read rather than assumed, and `mount` checks it before constructing.
+   * Empty until the script has loaded.
+   */
+  function features() {
+    try { return (root.Desmos && root.Desmos.enabledFeatures) || null; } catch (e) { return null; }
+  }
 
   /**
    * Why this provider is or is not available, in a form the UI can show a
@@ -86,25 +115,51 @@
     return { ready: true, state: c.tier, detail: 'Desmos Graphing Calculator, ' + c.tier + ' tier.' };
   }
 
+  // One in-flight load, shared. The panel is opened and closed repeatedly during
+  // an exam and must not append a second <script> each time.
+  var loading = null;
+
+  function scriptUrl() {
+    // Desmos's own origin, their own script, our key. Nothing is copied here.
+    return 'https://www.desmos.com/api/' + apiVersion() +
+           '/calculator.js?apiKey=' + encodeURIComponent(apiKey());
+  }
+
   function loadScript() {
-    return new Promise(function (resolve, reject) {
-      if (root.Desmos) return resolve(root.Desmos);
-      var existing = document.getElementById(SCRIPT_ID);
-      if (existing) {
-        existing.addEventListener('load', function () { resolve(root.Desmos); });
-        existing.addEventListener('error', function () { reject(new Error('load failed')); });
-        return;
+    if (root.Desmos) return Promise.resolve(root.Desmos);
+    if (loading) return loading;
+    loading = new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true; loading = null;
+        reject(new Error('The graphing calculator did not load in time.'));
+      }, LOAD_TIMEOUT_MS);
+      function done(err) {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (err) { loading = null; return reject(err); }
+        if (!root.Desmos) { loading = null;
+          return reject(new Error('The graphing calculator loaded but did not start.')); }
+        resolve(root.Desmos);
       }
-      var s = document.createElement('script');
-      s.id = SCRIPT_ID;
-      // Desmos's own origin, their own script, our key. Nothing is copied here.
-      s.src = 'https://www.desmos.com/api/' + API_VERSION +
-              '/calculator.js?apiKey=' + encodeURIComponent(apiKey());
-      s.async = true;
-      s.onload = function () { resolve(root.Desmos); };
-      s.onerror = function () { reject(new Error('The Desmos API could not be reached.')); };
-      document.head.appendChild(s);
+      var s = document.getElementById(SCRIPT_ID);
+      if (!s) {
+        s = document.createElement('script');
+        s.id = SCRIPT_ID;
+        s.src = scriptUrl();
+        s.async = true;
+        document.head.appendChild(s);
+      }
+      s.addEventListener('load', function () { done(null); });
+      // An error here is usually one of three things, and the activation runbook
+      // says to check them in this order: our own Content-Security-Policy does
+      // not allow www.desmos.com, the key is wrong, or the network is down.
+      s.addEventListener('error', function () {
+        done(new Error('The graphing calculator could not be reached.'));
+      });
     });
+    return loading;
   }
 
   var instance = null;
@@ -118,8 +173,12 @@
     var st = status();
     if (!st.ready) return Promise.reject(new Error(st.detail));
     return loadScript().then(function (Desmos) {
-      if (!Desmos || !Desmos.GraphingCalculator)
-        throw new Error('The Desmos API loaded without a graphing calculator.');
+      if (!Desmos.GraphingCalculator)
+        throw new Error('This API key does not include the graphing calculator.');
+      // Mounting into a zero-height element yields an invisible calculator that
+      // reports no error. Catch it here rather than in a support ticket.
+      if (elm && elm.getBoundingClientRect && !elm.getBoundingClientRect().height)
+        throw new Error('The calculator area has no height.');
       // Exam-appropriate options. Nothing here restyles the calculator; these
       // are its own documented settings.
       instance = Desmos.GraphingCalculator(elm, {
@@ -143,7 +202,10 @@
     // The name is used to IDENTIFY the tool inside the product, which §6.b
     // licenses. It is not used in marketing, which §6.b does not.
     displayName: 'Desmos Graphing Calculator',
-    API_VERSION: API_VERSION,
+    DEFAULT_API_VERSION: DEFAULT_API_VERSION,
+    apiVersion: apiVersion,
+    features: features,
+    scriptUrl: scriptUrl,
     status: status,
     mount: mount,
     unmount: unmount,

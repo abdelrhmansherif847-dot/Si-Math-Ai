@@ -12,6 +12,7 @@ REPO = '/home/user/Si-Math-Ai/'
 CHROME = io.open(REPO + 'exam-chrome.js', encoding='utf-8').read()
 GRAPH  = io.open(REPO + 'exam-graph.js',  encoding='utf-8').read()
 CALC   = io.open(REPO + 'exam-calculator.js', encoding='utf-8').read()
+WORKSPACE = io.open(REPO + 'exam-workspace.js', encoding='utf-8').read()
 PDESMOS= io.open(REPO + 'exam-graph-desmos.js', encoding='utf-8').read()
 PZERO  = io.open(REPO + 'exam-graph-zero.js', encoding='utf-8').read()
 # The established Zero, inlined at its native 40px and displayed at 34px, which
@@ -106,7 +107,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   padding:5px 8px;border-radius:4px;font-size:12.5px;font-weight:600;color:var(--ink-3)}
 .xc-t-toggle:hover{background:var(--cyan-soft);color:var(--cyan)}
 .xc-t-toggle:focus-visible,.xc-n-toggle:focus-visible,.xc-q:focus-visible,.zg-open:focus-visible,
-.zg-close:focus-visible,.zg-plot:focus-visible,.zg-in:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.xw-close:focus-visible,.zg-plot:focus-visible,.zg-in:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
 /* ── NAVIGATOR ────────────────────────────────────────────────── */
 .xc-nav{position:relative}
@@ -148,56 +149,65 @@ button{font:inherit;color:inherit;cursor:pointer}
 .zg-open{display:inline-flex;align-items:center;gap:10px;background:var(--exam);
   border:1px solid var(--rule);border-radius:5px;padding:6px 14px 6px 8px;font-size:14px;font-weight:600}
 .zg-open:hover{border-color:var(--cyan-line);background:var(--cyan-soft)}
-.zg-mark{position:relative;width:30px;height:30px;flex:none}
-.zg-mark .plate{position:absolute;inset:4px 0 0 0;border-radius:5px;border:1.5px solid var(--cyan);
-  background:var(--cyan-soft)}
-.zg-mark .plate::before,.zg-mark .plate::after{content:'';position:absolute;background:var(--cyan-line)}
-.zg-mark .plate::before{left:0;right:0;top:52%;height:1px}
-.zg-mark .plate::after{top:0;bottom:0;left:38%;width:1px}
-.zg-mark .curve{position:absolute;inset:4px 0 0 0}
-/* Zero perches on the top-left corner of the plate, overlapping it, so the two
-   read as one object rather than an emoji parked next to an icon. */
-.zg-mark .zero{position:absolute;top:-3px;left:-4px;font-size:15px;line-height:1;
-  filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+/* The launcher's mark. Zero is a 40x40 raster displayed at 34px — the only
+   size the established artwork is crisp at. See exam-surface.md. */
+.zg-mark{width:38px;height:38px;flex:none;display:grid;place-items:center}
+.zg-zero{display:block;width:34px;height:34px}
 .zg-name{display:flex;flex-direction:column;line-height:1.15;text-align:left}
 .zg-name b{font-size:13.5px;font-weight:700}
 .zg-name span{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-3)}
 
-.zg-scrim{display:none;position:fixed;inset:0;background:rgba(8,12,17,.42);z-index:80}
-.zg-scrim.is-open{display:block}
-.zg-panel{position:fixed;right:0;top:0;bottom:0;width:min(620px,100%);background:var(--exam);
+/* ── the workspace: exam-workspace.js's own markup, styled once ───────────
+   Every rule here is provider-agnostic by construction. There is no
+   `.xw-panel--desmos`, and adding one would be the bug. */
+.xw-scrim{display:none;position:fixed;inset:0;background:rgba(8,12,17,.42);z-index:80}
+.xw-scrim.is-open{display:block}
+.xw-panel{position:fixed;right:0;top:0;bottom:0;width:min(620px,100%);background:var(--exam);
   border-left:1px solid var(--rule);z-index:90;display:none;flex-direction:column}
-.zg-panel.is-open{display:flex}
-.zg-head{display:flex;align-items:center;gap:12px;padding:18px 20px;
+.xw-panel.is-open{display:flex}
+/* Fixed band. Its height must not depend on which provider is active, or the
+   calculator region below it moves when the provider changes. */
+.xw-head{display:flex;align-items:center;gap:12px;padding:18px 20px;
   border-bottom:1px solid var(--rule);min-height:78px}
-.zg-head>div{min-width:0;flex:1}
-.zg-head .zg-mark{width:40px;height:40px}
-.zg-head .zg-mark .zero{font-size:20px;top:-5px;left:-6px}
-.zg-head h2{font-family:var(--font-display);font-weight:700;font-size:17px;margin:0}
-.zg-head p{margin:2px 0 0;font-size:12px;color:var(--ink-3);
+.xw-head>div{min-width:0;flex:1}
+.xw-head .zg-mark{width:44px;height:44px}
+.xw-head .zg-zero{width:40px;height:40px}
+.xw-head h2{font-family:var(--font-display);font-weight:700;font-size:17px;margin:0}
+/* The subtitle RESERVES its line even when empty. A gated provider has nothing
+   to say here, and letting the line collapse shrank the header by 4px and moved
+   the calculator region — the panel changing shape because of which provider is
+   active, which is the one thing this layout must never do. */
+.xw-sub{margin:2px 0 0;font-size:12px;line-height:1.6;min-height:19.2px;color:var(--ink-3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zg-close{margin-left:auto;background:none;border:1px solid var(--rule);border-radius:4px;
+.xw-close{margin-left:auto;background:none;border:1px solid var(--rule);border-radius:4px;
   padding:6px 10px;font-size:13px;color:var(--ink-3)}
-.zg-close:hover{border-color:var(--cyan-line);color:var(--cyan)}
-.zg-body{padding:18px 20px;overflow-y:auto;flex:1;display:flex;min-height:0}
-#zgmount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
-.zg-row{display:flex;gap:8px;margin:0 0 12px}
-.zg-in{flex:1;font-family:var(--font-mono);font-size:14.5px;padding:10px 12px;border-radius:4px;
-  border:1px solid #8792a0;background:var(--exam);color:var(--ink)}
-.zg-in:focus{border-color:var(--cyan);outline:none}
-.zg-plot{background:var(--cyan);border:1px solid var(--cyan);color:#fff;border-radius:4px;
-  padding:10px 18px;font-size:14px;font-weight:600}
-.zg-err{font-size:13.5px;color:var(--low);background:var(--low-soft);border-radius:4px;
-  padding:9px 12px;margin:0 0 12px}
-.zg-plate{border:1px solid var(--rule);border-radius:5px;padding:12px;display:flex;
-  justify-content:center;overflow:auto;min-height:200px;align-items:center}
-.zg-hint{font-size:12.5px;color:var(--ink-3);margin:12px 0 0;line-height:1.6}
-.zg-hint code{font-family:var(--font-mono);font-size:.92em;background:var(--cyan-soft);
-  color:var(--cyan);padding:1px 5px;border-radius:3px}
-.zg-zero{display:block;width:34px;height:34px;image-rendering:auto}
-.zg-head .zg-mark{width:44px;height:44px;display:grid;place-items:center}
-.zg-head .zg-zero{width:40px;height:40px}
+.xw-close:hover{border-color:var(--cyan-line);color:var(--cyan)}
+.xw-body{padding:18px 20px;overflow-y:auto;flex:1;display:flex;min-height:0}
+/* A STAGE of fixed size, not a box that grows to fit. Two reasons, and the
+   second is load-bearing: the workspace must not resize under the student, and
+   Desmos.GraphingCalculator() measures the element it is given — an auto-height
+   container mounts a calculator with no height. */
+.xw-mount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.xw-gate,.xw-err{border-radius:6px;padding:26px 28px;text-align:left;flex:1;
+  display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.xw-gate{border:1px dashed #8792a0}
+/* A failure mid-exam is told, not shouted. The red lives in the state chip and
+   a single edge rule; a full red wash across the panel is the wrong volume for
+   a student who has a clock running. */
+.xw-err{border:1px solid var(--rule);border-left:3px solid var(--low)}
+.xw-gate h3,.xw-err h3{margin:0 0 10px;font-size:15.5px}
+.xw-gate p,.xw-err p{margin:0 0 10px;font-size:14px;color:var(--ink-2);line-height:1.6;
+  max-width:52ch}
+.xw-state{display:inline-block;font-family:var(--font-mono);font-size:11px;
+  padding:3px 8px;border-radius:3px;margin:0 0 12px;background:var(--flag-soft);color:var(--flag)}
+.xw-state.xw-bad{background:var(--low-soft);color:var(--low)}
+.xw-fb-note{color:var(--ink-3)!important;font-size:13px!important}
+.xw-fb{background:none;border:1px solid var(--cyan);border-radius:4px;
+  padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--cyan)}
+.xw-fb:hover{background:var(--cyan-soft)}
+.xw-fb:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+/* Preview-only. Not in the student build — see the label it carries. */
 .zg-switch{display:flex;align-items:center;gap:6px;padding:10px 20px;
   border-bottom:1px solid var(--rule);background:var(--page)}
 .zg-switch span{font-family:var(--font-mono);font-size:10px;letter-spacing:.11em;
@@ -206,20 +216,6 @@ button{font:inherit;color:inherit;cursor:pointer}
   padding:5px 10px;font-size:12px;color:var(--ink-3)}
 .zg-switch button.on{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-soft);
   font-weight:600}
-.zg-gate{border:1px dashed #8792a0;border-radius:6px;padding:26px 28px;text-align:left;
-  flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
-.zg-gate h3{margin:0 0 10px;font-size:15.5px}
-.zg-gate p{margin:0 0 10px;font-size:14px;color:var(--ink-2);line-height:1.6}
-.zg-gate p:last-child{margin:0}
-.zg-gate .st{display:inline-block;font-family:var(--font-mono);font-size:11px;
-  padding:3px 8px;border-radius:3px;margin:0 0 12px;background:var(--flag-soft);color:var(--flag)}
-.zg-gate .st.ok{background:var(--cyan-soft);color:var(--cyan)}
-.zg-gate code{font-family:var(--font-mono);font-size:.9em;background:var(--cyan-soft);
-  color:var(--cyan);padding:1px 5px;border-radius:3px}
-.zg-res{border:1px solid var(--rule);border-radius:6px;flex:1;display:grid;
-  place-items:center;text-align:center;padding:26px;background:var(--page)}
-.zg-res b{display:block;font-size:14.5px;margin-bottom:8px}
-.zg-res span{font-size:13px;color:var(--ink-3);max-width:44ch;line-height:1.6;display:block}
 
 /* ── figures: the exam's own grammar, unchanged ───────────────── */
 .sx{display:block;margin:0}
@@ -271,28 +267,23 @@ HTML = f"""<title>Si Math Exam Surface</title>
   </div>
 </div>
 
-<div class="zg-scrim" id="zgscrim"></div>
-<aside class="zg-panel" id="zgpanel" role="dialog" aria-modal="false"
-       aria-label="Graphing calculator">
-  <!-- OUR header. Zero lives here. Below the rule, the provider owns the space. -->
-  <div class="zg-head">
-    {MARK}
-    <div><h2 id="zgtitle">Graphing Calculator</h2>
-         <p id="zgsub">Zero has this open for you.</p></div>
-    <button class="zg-close" id="zgclose" type="button">Close</button>
-  </div>
-  <div class="zg-switch" role="group" aria-label="Provider (review control, not in the student build)">
+<!-- The panel is built by exam-workspace.js, not written here. The only thing
+     the preview adds to it is the review-only provider switcher below. -->
+<div id="wsslot"></div>
+<template id="switch-tpl">
+  <div class="zg-switch" role="group"
+       aria-label="Provider (review control, not in the student build)">
     <span>Provider &middot; review only</span>
-    <button type="button" data-p="desmos" class="on">Desmos</button>
-    <button type="button" data-p="desmos-cfg">Desmos, configured</button>
+    <button type="button" data-p="desmos" class="on">No key</button>
+    <button type="button" data-p="desmos-cfg">Key set</button>
     <button type="button" data-p="zero-graph">Zero Graph</button>
   </div>
-  <div class="zg-body"><div id="zgmount"></div></div>
-</aside>
+</template>
 
 <script>{FIG}</script>
 <script>{CHROME}</script>
 <script>{CALC}</script>
+<script>{WORKSPACE}</script>
 <script>{GRAPH}</script>
 <script>{PZERO}</script>
 <script>{PDESMOS}</script>
@@ -313,90 +304,53 @@ const timer = Timer({{ remaining: 1043, total: 2100 }});
 document.getElementById('timeslot').appendChild(timer.el);
 globalThis.__nav = nav; globalThis.__timer = timer;
 
-// ── the workspace is PROVIDER-AGNOSTIC ────────────────────────────────────
-// It asks exam-calculator.js for a provider, reads its status, and mounts it.
-// It contains no branch on which provider it is, which is what stops the exam
-// UI being redesigned around whichever tool is active.
-const panel = document.getElementById('zgpanel'), scrim = document.getElementById('zgscrim');
-const mountEl = document.getElementById('zgmount');
-const titleEl = document.getElementById('zgtitle'), subEl = document.getElementById('zgsub');
-let activeId = 'desmos', active = null;
+// ── the workspace ─────────────────────────────────────────────────────────
+// Built by exam-workspace.js. The preview supplies the launcher, the mark and
+// the review-only switcher; the panel, the gate card, the error card and the
+// fallback offer are all shipped code.
+const {{ Workspace }} = globalThis.SiExamWorkspace;
 
-function providerFor(id) {{
-  if (id === 'zero-graph') return globalThis.SiExamGraphZero;
-  // 'desmos-cfg' is a PREVIEW-ONLY state: the same provider with a key present,
-  // so the gated and licensed paths can both be seen. It configures nothing real.
+const mark = () => {{
+  const t = document.createElement('template');
+  t.innerHTML = {json.dumps(MARK)};
+  return t.content.firstElementChild;
+}};
+
+const ws = Workspace({{ providerId: 'desmos', fallbackId: 'zero-graph',
+                        title: 'Graphing Calculator', mark: mark(), seed: 'x^2 - 3' }});
+document.body.appendChild(ws.scrim);
+document.body.appendChild(ws.el);
+
+// The switcher is spliced into the panel between our header and the mount
+// region. It exists so all three provider states can be reviewed side by side
+// and is NOT part of the student build.
+const sw = document.getElementById('switch-tpl').content.firstElementChild.cloneNode(true);
+ws.el.insertBefore(sw, ws.el.querySelector('.xw-body'));
+
+// 'desmos' and 'desmos-cfg' are the SAME provider under different configuration.
+// That is the point: the difference between gated and licensed is a config
+// value, not a code path.
+function show(id) {{
   if (id === 'desmos-cfg') {{
     globalThis.SI_DESMOS_CONFIG = {{ apiKey: 'PREVIEW-NOT-A-REAL-KEY',
-                                    tier: 'commercial', studentFacing: true }};
-    return globalThis.SiExamGraphDesmos;
+                                     tier: 'commercial', studentFacing: true }};
+  }} else {{
+    globalThis.SI_DESMOS_CONFIG = undefined;
   }}
-  globalThis.SI_DESMOS_CONFIG = undefined;
-  return globalThis.SiExamGraphDesmos;
+  sw.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.p === id));
+  ws.setProvider(id === 'zero-graph' ? 'zero-graph' : 'desmos');
+  globalThis.__switchId = id;
 }}
-
-function gate(st, prov) {{
-  const d = document.createElement('div'); d.className = 'zg-gate';
-  const badge = document.createElement('span');
-  badge.className = 'st'; badge.textContent = st.state;
-  d.appendChild(badge);
-  const h = document.createElement('h3');
-  h.textContent = prov.displayName + ' is not active';
-  d.appendChild(h);
-  const p1 = document.createElement('p'); p1.textContent = st.detail; d.appendChild(p1);
-  const p2 = document.createElement('p');
-  p2.innerHTML = 'The integration is built and wired. Activation needs a key in ' +
-    '<code>SI_DESMOS_CONFIG</code> and a tier declared under the API terms — ' +
-    '&sect;2.a trial for internal evaluation, or &sect;3.a self-serve paid plan / ' +
-    'Commercial Addendum for anything student-facing.';
-  d.appendChild(p2);
-  return d;
-}}
-
-function reserved(prov) {{
-  const d = document.createElement('div'); d.className = 'zg-res';
-  const inner = document.createElement('div');
-  const b = document.createElement('b'); b.textContent = prov.displayName + ' mounts here';
-  const s2 = document.createElement('span');
-  s2.textContent = 'With a licensed key this region is the official calculator, running from ' +
-    'Desmos\u2019s own script, presented as it comes. Nothing of ours is drawn over it. ' +
-    'It has never been rendered in this environment: desmos.com is blocked by the ' +
-    'egress proxy here and no key exists.';
-  inner.appendChild(b); inner.appendChild(s2); d.appendChild(inner);
-  return d;
-}}
-
-function show(id) {{
-  if (active && active.unmount) {{ try {{ active.unmount(); }} catch (e) {{}} }}
-  activeId = id;
-  const prov = providerFor(id);
-  active = prov;
-  mountEl.textContent = '';
-  const st = prov.status();
-  titleEl.textContent = 'Graphing Calculator';
-  subEl.textContent = st.ready ? st.detail : 'Zero has this open for you.';
-  document.querySelectorAll('.zg-switch button').forEach(b =>
-    b.classList.toggle('on', b.dataset.p === id));
-  if (!st.ready) {{ mountEl.appendChild(gate(st, prov)); return; }}
-  if (prov.id === 'desmos') {{ mountEl.appendChild(reserved(prov)); return; }}
-  prov.mount(mountEl, {{ seed: 'x^2 - 3' }}).catch(e => {{
-    const d = document.createElement('div'); d.className = 'zg-err';
-    d.textContent = e.message; mountEl.appendChild(d);
-  }});
-}}
-document.querySelectorAll('.zg-switch button').forEach(b =>
+sw.querySelectorAll('button').forEach(b =>
   b.addEventListener('click', () => show(b.dataset.p)));
 
-function open(v) {{
-  panel.classList.toggle('is-open', v); scrim.classList.toggle('is-open', v);
-  if (v) show(activeId);
-  else if (active && active.unmount) {{ try {{ active.unmount(); }} catch (e) {{}} }}
-}}
-document.getElementById('zgopen').addEventListener('click', () => open(true));
-document.getElementById('zgclose').addEventListener('click', () => open(false));
-scrim.addEventListener('click', () => open(false));
-document.addEventListener('keydown', e => {{ if (e.key === 'Escape') open(false); }});
-globalThis.__open = open; globalThis.__show = show;
+document.getElementById('zgopen').addEventListener('click', () => {{
+  show(globalThis.__switchId || 'desmos'); ws.open();
+}});
+
+globalThis.__ws = ws;
+globalThis.__open = v => v ? ws.open() : ws.close();
+globalThis.__show = show;
 globalThis.__providers = () => globalThis.SiExamCalculator.providerCount();
 </script>
 """

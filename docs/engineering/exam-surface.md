@@ -1,10 +1,11 @@
 # The student exam surface — navigator, timer, calculator
 
 Modules: `exam-chrome.js` (navigator + timer), `exam-calculator.js` (the provider
-socket, Phase 4), `exam-graph.js` (Zero Graph's evaluator), and two providers —
-`exam-graph-desmos.js` and `exam-graph-zero.js`.
+socket, Phase 4), `exam-workspace.js` (the calculator panel), `exam-graph.js`
+(Zero Graph's evaluator), and two providers — `exam-graph-desmos.js` and
+`exam-graph-zero.js`.
 Preview: `scripts/build-exam-ui-preview.py`.
-Verification: `scripts/check-exam-ui.cjs` — **74 checks, both themes**.
+Verification: `scripts/check-exam-ui.cjs` — **82 checks, both themes**.
 
 Built as reusable modules in the house pattern — root `*.js`, IIFE on
 `globalThis`, no build step, no dependencies. `mock-exam.html` is frozen and was
@@ -58,7 +59,9 @@ supplies it is a configuration decision, not a design one.
 
 `exam-calculator.js`'s provider socket — built in Phase 4 and empty ever since —
 is where both live. Nothing new was invented for this; two providers were
-registered into the socket that was waiting for them.
+registered into the socket that was waiting for them, and the panel that mounts
+them is `exam-workspace.js`, a shipped module rather than preview markup — which
+is what makes the failure path below shipped code too.
 
 * **`exam-graph-desmos.js`** — the official Desmos API, loaded from Desmos's own
   origin with our own key. Registered unconditionally, **inert without a key**.
@@ -108,6 +111,19 @@ with theirs outright. The provider's name appears beneath the title when one is
 licensed, which is what §6.b's trademark licence is *for*: identifying the tool
 inside the product. It appears in no marketing copy anywhere. A check sweeps the
 rendered text and every `alt`, `aria-label` and `title` for partnership language.
+
+### When it fails mid-exam
+
+The provider gets 12 seconds, then the workspace says *"The calculator did not
+open"* in the student's language, on a neutral surface with one red edge rule —
+not a red wash, which is the wrong volume for someone with a clock running.
+
+Zero Graph is then **offered as a button**, under a line saying plainly that it
+is not the same calculator. It never switches on its own. A student who reached
+for a graphing calculator and was quietly handed a different one has been misled
+at the worst possible moment, and the exam's record would say they used a tool
+they did not choose. The check asserts the offer appears, that the active
+provider is *still* the failed one until a click, and that one click switches it.
 
 ### Why in-panel, and not a second tab
 

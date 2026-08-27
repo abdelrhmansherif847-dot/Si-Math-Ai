@@ -1,5 +1,19 @@
 # Desmos — the official integration path
 
+<!-- desmos-activation: UNPROVEN -->
+
+> ## Status: **UNPROVEN**
+>
+> The integration is built, wired and gated. **The Desmos calculator has never
+> been mounted.** Everything below about how it behaves once a key exists is
+> written from the documented API, not from having run it.
+>
+> The marker above is machine-read by `scripts/validate-desmos-activation.mjs`,
+> which fails CI if any exam names a calculator provider while it still says
+> UNPROVEN. Flipping it to ACTIVATED requires an evidence line the same check
+> validates, field by field. **Do not flip it by hand because the code looks
+> right.**
+
 **Written 2026-08-27.** Supersedes the licensing conclusion in
 `docs/roadmap/mock-exam-v2-investigation.md` §7.1, which was wrong. Nothing here
 is inferred from the public website terms; every claim is quoted from the
@@ -285,3 +299,179 @@ Internal evaluation may begin **now**, without paying, under §2.a's 90-day
 trial — provided it is genuinely internal. The moment a student sees it, §3.a
 applies. `exam-graph-desmos.js` refuses to mount in that combination rather than
 leaving it to memory.
+
+---
+
+## 6. The activation runbook
+
+Everything below is prepared. None of it has been run. Work top to bottom; each
+step's failure mode is named, because the first three all *look* like "the key is
+wrong".
+
+### Step 0 — get the price, then the key
+
+The fee is **not published**. It is not on a pricing page, not in the API Terms,
+and not in any third-party listing — Capterra, G2, GetApp and SoftwareAdvice all
+carry Desmos's free consumer product and no API figures. §3.a says the
+self-service pathway "will describe (i) the fees", so the number exists behind
+sign-in, not in public.
+
+- Sign in at **`desmos.com/my-api`** and read the plans on the self-service
+  pathway. That is where the figure is.
+- If no self-service plan fits assessment use at our volume,
+  **partnerships@desmos.com** and a Commercial Addendum is the §3.a alternative.
+- Ask two things while you are there. Neither is answerable from the terms and
+  both change the deployment:
+  1. **Can the key be restricted to a domain?** A browser key is visible in the
+     page source by construction — see step 2 — so domain restriction is the
+     only thing that makes §5.c's "reasonable efforts" mean anything concrete.
+  2. **Which products does the plan enable?** Graphing, scientific, four-function,
+     geometry and 3D are per-key (§4.b). The activation test records whatever
+     comes back in `Desmos.enabledFeatures`.
+
+Read the **current API version** off `desmos.com/api` while you are signed in.
+This repository defaults to `v1.11`; search results dated 2026-08-27 title that
+page "Desmos API v1.12 documentation", which could not be confirmed from the
+environment this was written in. §5.d gives 60 days to take an Update.
+
+### Step 1 — open our own CSP to Desmos
+
+**This is the blocker nobody would have found until the first live attempt, and
+it is ours, not Desmos's.** `vercel.json` ships a strict Content-Security-Policy
+that does not list `https://www.desmos.com` in any directive. The API script
+would be refused by the browser before a line of Desmos code ran — and the
+symptom, a script that silently never loads, is indistinguishable from a bad key.
+
+`scripts/check-desmos-activation.cjs` refuses to start until this is fixed, and
+names the directives.
+
+Start with `script-src` only. Then run the activation test and **let it tell you
+the rest**: it listens for `securitypolicyviolation` and reports every directive
+the calculator actually needed. Add exactly those and no more. Do not widen the
+policy speculatively — an origin allowed for a resource nothing loads is a policy
+weakened for nothing.
+
+`frame-src 'none'` is already in the policy. That is what structurally prevents
+anyone iframing desmos.com, which the website terms forbid. Leave it alone.
+
+### Step 2 — configure the key, without putting it in this repository
+
+The provider reads `globalThis.SI_DESMOS_CONFIG`. It has no default key and no
+fallback key, so a missing config is an inert integration rather than a broken one.
+
+```js
+globalThis.SI_DESMOS_CONFIG = {
+  apiKey: '…',            // never a literal in a tracked file
+  tier: 'commercial',     // or 'trial' — see below
+  studentFacing: true,
+  apiVersion: 'v1.11',    // optional; overrides the built-in default
+};
+```
+
+**`tier` is not decoration.** With `tier: 'trial'` and `studentFacing: true` the
+provider **refuses to mount** — the 90-day trial is for internal evaluation
+(§2.a), and serving it to students is outside it. Set `trial` while evaluating
+internally; set `commercial` only once the plan is paid.
+
+**Be honest about what "confidential" can mean here.** §5.c requires reasonable
+efforts to keep the key confidential, and a key used by a browser is visible in
+the page source to anyone who looks. That is inherent to the product, not a
+mistake. Reasonable efforts are therefore: never in this **public** repository,
+and domain-restricted if Desmos supports it (step 0).
+`scripts/validate-desmos-activation.mjs` fails CI on a literal `apiKey` in any
+tracked file, so the first half is enforced rather than remembered.
+
+Injection is a deploy-time question this repository does not currently answer: it
+has no build step, and every page inlines its own config today (see the
+`SUPABASE_URL` constants). Pick one deliberately:
+
+| route | key in git | readable by anonymous visitors | cost |
+|---|---|---|---|
+| Inline in the exam page, like `SUPABASE_URL` | **yes — rejected** | yes | none |
+| Vercel env var + a one-line build command writing `desmos-config.js` | no | yes | introduces a build step this repo has avoided |
+| Served from an Edge Function to signed-in students only | no | **no** | one request in the exam's critical path |
+
+The third is the only one that also narrows *who* can read the key, and it fits
+where secrets already live. It is the recommendation — but it is a real decision
+with a real latency cost, and it has not been made.
+
+### Step 3 — run the activation test
+
+```
+DESMOS_API_KEY=<key> DESMOS_TIER=commercial \
+  node scripts/check-desmos-activation.cjs
+```
+
+It mounts the real calculator, under the real CSP read from `vercel.json`, and
+checks nine things: that the script came from Desmos's own origin, that nothing
+was CSP-blocked, that the API loaded, which products the key enables, that the
+region has real size, that **the calculator itself** is what is in it (our own
+error card does not count), that our chrome does not overlap it (§5.b(iii)), that
+`destroy()` empties the region, and that the page threw nothing.
+
+It writes `scripts/desmos-activation.png` — gitignored, because it is a
+screenshot of a licensed third-party product.
+
+The key never touches disk: the page is served from memory, and the key is
+redacted from the output.
+
+### Step 4 — record it, then let a student near it
+
+Only after step 3 is fully green. The test prints the two lines to paste into
+this file's header:
+
+```
+<!-- desmos-activation: ACTIVATED -->
+<!-- desmos-evidence: date=…; apiVersion=…; tier=…; checkedBy=… -->
+```
+
+`scripts/validate-desmos-activation.mjs` reads them in CI and **format-checks
+every field** — a template pasted without filling in fails exactly as hard as a
+missing line. Until the first says ACTIVATED, the same check fails the build if
+any exam in `exam-registry.js` names a calculator provider. That is the third
+gate from §3 made mechanical: no student sees the calculator on the strength of
+the code looking right.
+
+Then, and only then, set `provider: 'desmos'` on the exams where an on-screen
+calculator is faithful to test day. Per §7.3 of the investigation record that is
+**DSAT** and **ACT online** without qualification; ACT paper and EST I are
+partial and need the section model the Question Spine will bring.
+
+---
+
+## 7. What happens when it fails mid-exam
+
+A student in a timed exam who opens the calculator and gets nothing is a support
+incident and a fairness problem. Three things are built for it.
+
+**A timeout.** The provider gives the script 12 seconds. A hung request is worse
+than a failure, because a failure can at least say something.
+
+**A card, not a spinner.** `exam-workspace.js` says what went wrong in the
+student's language — *"The calculator did not open"* — on a neutral surface with
+a single red edge rule. Not a red wash: that is the wrong volume for someone with
+a clock running.
+
+**A fallback that is offered and never taken.** Zero Graph appears as a button
+reading *"Use Zero Graph instead"*, under a line saying plainly that it is **not
+the same calculator**. It never switches by itself. A student who reached for a
+graphing calculator and was quietly handed a different one with different
+capabilities has been misled at the worst possible moment — and the exam's own
+record would say they used a tool they did not choose.
+
+`scripts/check-exam-ui.cjs` asserts all three: that the offer appears, that the
+active provider is *still* the failed one until a click, and that one click does
+switch it.
+
+---
+
+## 8. What is still open
+
+| | |
+|---|---|
+| **The fee** | Not published anywhere. Read it at `desmos.com/my-api`. Step 0. |
+| **Domain-restricted keys** | Unknown whether Desmos supports them. Ask at step 0; it decides how much §5.c can actually be honoured. |
+| **The current API version** | Repo defaults to v1.11; v1.12 may exist. Confirm at step 0. |
+| **Key injection route** | Three options in step 2, recommendation given, decision not made. |
+| **Which CSP directives the calculator needs** | Only `script-src` is certain. The activation test discovers the rest. |
+| **Everything about how it renders** | Never seen. The mount path is documented-API-shaped and unexercised. |
