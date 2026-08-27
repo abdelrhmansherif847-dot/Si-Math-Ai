@@ -250,7 +250,7 @@ MARK = ('<span class="zg-mark" aria-hidden="true">'
 opts = ''.join('<li><span class="k">%s</span><span>%s</span></li>' % ('ABCD'[i], c)
                for i, c in enumerate(Q['choices']))
 
-HTML = f"""<title>Exam Surface Preview</title>
+HTML = f"""<title>Si Math Exam Surface</title>
 {CSS}
 <div class="shell">
   <div class="bar">
@@ -281,8 +281,8 @@ HTML = f"""<title>Exam Surface Preview</title>
          <p id="zgsub">Zero has this open for you.</p></div>
     <button class="zg-close" id="zgclose" type="button">Close</button>
   </div>
-  <div class="zg-switch" role="group" aria-label="Provider (preview only)">
-    <span>Provider</span>
+  <div class="zg-switch" role="group" aria-label="Provider (review control, not in the student build)">
+    <span>Provider &middot; review only</span>
     <button type="button" data-p="desmos" class="on">Desmos</button>
     <button type="button" data-p="desmos-cfg">Desmos, configured</button>
     <button type="button" data-p="zero-graph">Zero Graph</button>
