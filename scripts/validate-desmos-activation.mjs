@@ -126,6 +126,34 @@ for (const file of walk(REPO)) {
   }
 }
 
+// ── 5. the config endpoint must not log the key ──────────────────────────────
+//
+// /api/desmos-config is the one place the key is handled server-side, and
+// Vercel captures console output into function logs that outlive the request.
+// A well-meant `console.log('config', cfg)` added during a future debugging
+// session would put a live credential into a log store, where it is durable and
+// searchable — which is worse than the browser exposure, because the browser
+// exposure is at least inherent and known.
+const ENDPOINT = 'api/desmos-config.js';
+let endpoint = null;
+try { endpoint = read(ENDPOINT); } catch { /* reported below */ }
+if (!endpoint) {
+  fails.push(`${ENDPOINT} is missing. It is what supplies SI_DESMOS_CONFIG to the ` +
+             `page; without it the calculator is inert however the environment is set.`);
+} else {
+  const LOGGABLE = /\b(raw|cfg|out|apiKey)\b/;
+  for (const [i, line] of endpoint.split('\n').entries()) {
+    if (!/console\.\w+\s*\(/.test(line)) continue;
+    // The literal field NAME in a message is fine; a reference to the value is not.
+    const args = line.slice(line.indexOf('(') + 1).replace(/'[^']*'|"[^"]*"/g, '');
+    if (LOGGABLE.test(args)) {
+      fails.push(`${ENDPOINT}:${i + 1} passes a config value to console. Vercel keeps ` +
+                 `function logs; a key logged there is a durable, searchable credential. ` +
+                 `Log the field NAME, never the value.`);
+    }
+  }
+}
+
 if (fails.length) {
   console.error('validate-desmos-activation: FAIL');
   for (const f of fails) console.error('  • ' + f);

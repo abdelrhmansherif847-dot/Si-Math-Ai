@@ -44,17 +44,35 @@ const KEY = (process.env.DESMOS_API_KEY || '').trim();
 const TIER = (process.env.DESMOS_TIER || '').trim();
 const VERSION = (process.env.DESMOS_API_VERSION || '').trim();
 
-if (!KEY || !TIER) {
-  console.error('check-desmos-activation: NOT RUN — no credentials.\n');
-  console.error('  This test requires a real Desmos API key. It is the activation');
-  console.error('  milestone, and it has never been run.\n');
+// ── two modes ────────────────────────────────────────────────────────────────
+//
+//   deployed  DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html
+//             Drives the REAL page as a student would: opens the calculator
+//             from the real launcher, with the key the deployed /api/desmos-config
+//             supplies. No key is needed locally, and none is handled here.
+//             This is the end-to-end check.
+//
+//   local     DESMOS_API_KEY=… DESMOS_TIER=commercial
+//             Mounts the provider on a synthetic page under the CSP read from
+//             vercel.json. Useful before deploying, or to isolate a failure.
+//
+const URL_MODE = (process.env.DESMOS_ACTIVATION_URL || '').trim();
+
+if (!URL_MODE && (!KEY || !TIER)) {
+  console.error('check-desmos-activation: NOT RUN. It has never been run.\n');
+  console.error('  DEPLOYED mode — the activation milestone. Drives the live page as a');
+  console.error('  student does; the key comes from the deployed /api/desmos-config and');
+  console.error('  is never handled here:\n');
+  console.error('    DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html \\');
+  console.error('      node scripts/check-desmos-activation.cjs\n');
+  console.error('  LOCAL mode — mounts the provider on a synthetic page, to isolate a');
+  console.error('  failure before deploying. Not the milestone:\n');
   console.error('    DESMOS_API_KEY=<key> DESMOS_TIER=commercial \\');
   console.error('      node scripts/check-desmos-activation.cjs\n');
-  console.error('  Get a key at desmos.com/my-api. Use tier=commercial for anything');
-  console.error('  student-facing (API Terms §2.a/§3.a); tier=trial is internal only.');
+  console.error('  Either way, run it from a network that can reach www.desmos.com.');
   process.exit(2);
 }
-if (!['commercial', 'trial'].includes(TIER)) {
+if (!URL_MODE && !['commercial', 'trial'].includes(TIER)) {
   console.error(`check-desmos-activation: DESMOS_TIER must be "commercial" or "trial", got "${TIER}".`);
   process.exit(2);
 }
@@ -114,9 +132,165 @@ document.getElementById('slot').appendChild(ws.el);
 globalThis.__ws = ws; ws.open();
 </script>`;
 
+// ── deployed mode ────────────────────────────────────────────────────────────
+//
+// Drives the live page the way a student does. Nothing here knows the key; the
+// deployed /api/desmos-config supplies it to the browser, and this process never
+// reads it. The one assertion made about the key is that the endpoint returned
+// one — never its value, its length or any part of it.
+async function runDeployed({ ok, fails, pass }) {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  const errors = [], desmosReqs = [];
+  let configStatus = null, configShape = null;
+
+  page.on('response', async r => {
+    const u = r.url();
+    if (u.includes('/api/desmos-config')) {
+      configStatus = r.status();
+      try {
+        const body = await r.text();
+        // The body contains the key. It is parsed for SHAPE and immediately
+        // discarded; nothing about its value leaves this block.
+        const m = body.match(/globalThis\.SI_DESMOS_CONFIG\s*=\s*(\{[\s\S]*?\});/);
+        const cfg = m ? JSON.parse(m[1]) : null;
+        configShape = cfg ? {
+          hasKey: typeof cfg.apiKey === 'string' && cfg.apiKey.trim().length > 0,
+          tier: cfg.tier || null,
+          studentFacing: cfg.studentFacing === true,
+          apiVersion: cfg.apiVersion || '(provider default)',
+          fields: Object.keys(cfg).sort().join(','),
+        } : { hasKey: false, tier: null, studentFacing: false, fields: '' };
+      } catch (e) { configShape = null; }
+    }
+    if (u.includes('desmos.com')) desmosReqs.push({ url: u.split('?')[0], status: r.status() });
+  });
+  page.on('requestfailed', r => { if (r.url().includes('desmos.com'))
+    errors.push('request failed: ' + r.url().split('?')[0] + ' — ' + (r.failure() || {}).errorText); });
+  page.on('pageerror', e => errors.push('pageerror: ' + e));
+  page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+
+  await page.addInitScript(() => {
+    globalThis.__violations = [];
+    document.addEventListener('securitypolicyviolation', e => globalThis.__violations.push(
+      { directive: e.effectiveDirective, blocked: e.blockedURI }));
+  });
+
+  let resp = null;
+  try {
+    resp = await page.goto(URL_MODE, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  } catch (e) {
+    await browser.close();
+    console.error(`check-desmos-activation: could not reach ${URL_MODE}`);
+    console.error(`  ${(e && e.message ? e.message : e).split('\n')[0]}`);
+    console.error('  Run this from a network that can reach both the site and www.desmos.com.');
+    process.exit(2);
+  }
+  ok('the page loads', !!resp && resp.ok(), resp ? String(resp.status()) : 'no response');
+  await page.waitForTimeout(2000);
+
+  ok('/api/desmos-config responded', configStatus === 200, String(configStatus));
+  ok('it returned a key (value never read)', !!(configShape && configShape.hasKey),
+     configShape ? `fields=${configShape.fields}` : 'no parseable config');
+  ok('the tier is commercial (API Terms §3.a for student-facing use)',
+     !!configShape && configShape.tier === 'commercial',
+     configShape ? String(configShape.tier) : '—');
+  if (configShape) notes.push(`config: tier=${configShape.tier} studentFacing=${configShape.studentFacing} `
+    + `apiVersion=${configShape.apiVersion}`);
+
+  // ── open the calculator the way a student does ─────────────────────────────
+  const launcher = await page.$('[data-si-calculator-open]');
+  ok('the exam page offers a calculator control', !!launcher,
+     launcher ? '' : 'no [data-si-calculator-open] on the page — either the exam '
+                   + 'does not name a provider, or the launcher is not wired');
+  if (!launcher) { await browser.close(); return report({ fails, pass }); }
+
+  await launcher.click();
+  await page.waitForSelector('.xw-panel.is-open', { timeout: 15000 }).catch(() => {});
+  await page.waitForFunction(
+    () => globalThis.Desmos || document.querySelector('.xw-err,.xw-gate'),
+    null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(3000);
+
+  const st = await page.evaluate(() => {
+    const m = document.querySelector('.xw-mount');
+    const r = m ? m.getBoundingClientRect() : { width: 0, height: 0 };
+    const head = document.querySelector('.xw-head');
+    const hr = head ? head.getBoundingClientRect() : null;
+    return {
+      panelOpen: !!document.querySelector('.xw-panel.is-open'),
+      gate: (document.querySelector('.xw-gate') || {}).innerText || null,
+      err: (document.querySelector('.xw-err') || {}).innerText || null,
+      hasDesmos: !!globalThis.Desmos,
+      features: globalThis.Desmos ? globalThis.Desmos.enabledFeatures : null,
+      violations: globalThis.__violations || [],
+      w: Math.round(r.width), h: Math.round(r.height),
+      kids: m ? m.children.length : 0,
+      ours: !!(m && m.querySelector('.xw-err,.xw-gate')),
+      overlap: !!(hr && !(hr.bottom <= r.top || r.bottom <= hr.top)),
+      title: (document.getElementById('xw-title') || {}).textContent || null,
+      bodyText: document.body.innerText || '',
+    };
+  });
+
+  ok('the workspace opens over the question', st.panelOpen);
+  ok('the provider is not gated', !st.gate, st.gate && st.gate.replace(/\n/g, ' '));
+  ok('nothing was blocked by the Content-Security-Policy', st.violations.length === 0,
+     st.violations.map(v => v.directive + ' ← ' + v.blocked).join(' | '));
+  ok('the Desmos API loaded on the live page', st.hasDesmos,
+     st.err ? st.err.replace(/\n/g, ' ') : '');
+  ok('the graphing calculator is enabled on this key',
+     !!(st.features && st.features.GraphingCalculator), JSON.stringify(st.features));
+  ok('the calculator region has real size', st.w > 200 && st.h > 200, `${st.w}x${st.h}`);
+  ok('the calculator itself is what is in the region', st.kids > 0 && !st.ours,
+     st.ours ? 'our own card is there' : `${st.kids} child node(s)`);
+  ok('our chrome does not overlap it (§5.b(iii))', !st.overlap, `overlap=${st.overlap}`);
+  ok('the tool is named for its job, not the vendor',
+     st.title === 'Graphing Calculator', st.title);
+  ok('nothing claims a partnership',
+     !/(powered by|in partnership|zero ?[x×] ?desmos|endorsed|affiliat)/i.test(st.bodyText));
+  ok('served over https from Desmos’s own origin',
+     desmosReqs.length > 0 && desmosReqs.every(r => r.status < 400),
+     desmosReqs.map(r => r.status + ' ' + r.url).slice(0, 4).join(' | ') || 'no desmos requests');
+  ok('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+
+  const shot = path.join(__dirname, 'desmos-activation.png');
+  await page.screenshot({ path: shot, fullPage: false });
+  await browser.close();
+  console.log(`\nscreenshot: ${shot}`);
+  return report({ fails, pass });
+}
+
+function report({ fails, pass, deployed = true }) {
+  console.log([...pass, ...fails].join('\n'));
+  for (const n of notes) console.log('\nNOTE  ' + n);
+  if (fails.length) {
+    console.log(`\n${fails.length} FAILED, ${pass.length} passed — DO NOT mark the record ACTIVATED.`);
+    process.exit(1);
+  }
+  console.log(`\nALL ${pass.length} CHECKS PASSED.`);
+  if (!deployed) {
+    console.log('\nThis was LOCAL mode: the provider mounts. It is not the activation');
+    console.log('milestone, because no student flow was exercised. Re-run against the');
+    console.log('deployed page before recording anything:\n');
+    console.log('  DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html \\');
+    console.log('    node scripts/check-desmos-activation.cjs');
+    return;
+  }
+  console.log('\nRecord it. In docs/engineering/desmos-integration.md, replace the marker with:\n');
+  console.log('  <!-- desmos-activation: ACTIVATED -->');
+  console.log('  <!-- desmos-evidence: date=<YYYY-MM-DD>; apiVersion=<version used>; ' +
+              'tier=commercial; checkedBy=<who ran this> -->');
+}
+
+const notes = [];
+
 (async () => {
-  const fails = [], pass = [], notes = [];
+  const fails = [], pass = [];
   const ok = (n, c, d) => { (c ? pass : fails).push((c ? 'PASS  ' : 'FAIL  ') + n + (d ? '  — ' + d : '')); };
+
+  if (URL_MODE) return runDeployed({ ok, fails, pass });
 
   // ── 0. the CSP gate, before touching a browser ──────────────────────────────
   //
@@ -222,20 +396,10 @@ globalThis.__ws = ws; ws.open();
 
   await browser.close(); server.close();
 
-  console.log([...pass, ...fails].join('\n'));
-  for (const n of notes) console.log('\nNOTE  ' + n);
   console.log(`\nscreenshot: ${shot}`);
   console.log(`desmos requests: ${requests.length}`);
-
-  if (fails.length) {
-    console.log(`\n${fails.length} FAILED, ${pass.length} passed — DO NOT mark the record ACTIVATED.`);
-    process.exit(1);
-  }
-  console.log(`\nALL ${pass.length} CHECKS PASSED.`);
-  console.log('\nRecord it. In docs/engineering/desmos-integration.md, replace the marker with:\n');
-  console.log('  <!-- desmos-activation: ACTIVATED -->');
-  console.log(`  <!-- desmos-evidence: date=<YYYY-MM-DD>; apiVersion=${VERSION || '<the version used>'}; ` +
-              `tier=${TIER}; checkedBy=<who ran this> -->`);
-  console.log('\nThen, and only then, name the provider in exam-registry.js for the exams');
-  console.log('where an on-screen calculator is faithful to test day.');
+  // Local mode proves the provider mounts. It does NOT prove the student flow,
+  // so it deliberately does not print the ACTIVATED lines — only deployed mode
+  // does, because only deployed mode drove the page a student actually gets.
+  report({ fails, pass, deployed: false });
 })();

@@ -334,66 +334,88 @@ This repository defaults to `v1.11`; search results dated 2026-08-27 title that
 page "Desmos API v1.12 documentation", which could not be confirmed from the
 environment this was written in. §5.d gives 60 days to take an Update.
 
-### Step 1 — open our own CSP to Desmos
+### Step 1 — open our own CSP to Desmos — **done**
 
-**This is the blocker nobody would have found until the first live attempt, and
-it is ours, not Desmos's.** `vercel.json` ships a strict Content-Security-Policy
-that does not list `https://www.desmos.com` in any directive. The API script
-would be refused by the browser before a line of Desmos code ran — and the
+**This was the blocker nobody would have found until the first live attempt, and
+it was ours, not Desmos's.** `vercel.json` shipped a strict Content-Security-Policy
+that listed `https://www.desmos.com` in no directive at all. The API script would
+have been refused by the browser before a line of Desmos code ran — and the
 symptom, a script that silently never loads, is indistinguishable from a bad key.
 
-`scripts/check-desmos-activation.cjs` refuses to start until this is fixed, and
-names the directives.
+`https://www.desmos.com` is now allowed in five directives: `script-src`,
+`style-src`, `font-src`, `img-src`, `connect-src`. That is wider than the
+"add only what the test reports" rule this document used to state, and the
+reason is deliberate: the alternative was a first live activation in front of
+students with a calculator missing its fonts or images, and a single named
+origin across five directives is a bounded widening, not a hole.
 
-Start with `script-src` only. Then run the activation test and **let it tell you
-the rest**: it listens for `securitypolicyviolation` and reports every directive
-the calculator actually needed. Add exactly those and no more. Do not widen the
-policy speculatively — an origin allowed for a resource nothing loads is a policy
-weakened for nothing.
+**Narrow it afterwards.** The activation test reports every
+`securitypolicyviolation` it sees; once it has run green, drop the directives
+the calculator never used.
 
-`frame-src 'none'` is already in the policy. That is what structurally prevents
-anyone iframing desmos.com, which the website terms forbid. Leave it alone.
+**One CSP outcome would be a decision, not a fix.** If the test reports a
+`script-src` violation with a blocked URI of `eval`, the Desmos bundle needs
+`'unsafe-eval'` — which `scripts/verify-security-headers.sh` fails the build for,
+by design, because this codebase contains no `eval()`. Granting it would trade a
+standing security guarantee for the calculator. Do not do that silently.
+
+`frame-src 'none'` is untouched. That is what structurally prevents anyone
+iframing desmos.com, which the website terms forbid.
 
 ### Step 2 — configure the key, without putting it in this repository
 
-The provider reads `globalThis.SI_DESMOS_CONFIG`. It has no default key and no
-fallback key, so a missing config is an inert integration rather than a broken one.
+**Decided and built.** The three options this section used to list are resolved:
+the key is a **Vercel environment variable**, read at request time by a
+**zero-config serverless function** at `api/desmos-config.js`, which hands the
+page the object `exam-graph-desmos.js` already expects.
 
-```js
-globalThis.SI_DESMOS_CONFIG = {
-  apiKey: '…',            // never a literal in a tracked file
-  tier: 'commercial',     // or 'trial' — see below
-  studentFacing: true,
-  apiVersion: 'v1.11',    // optional; overrides the built-in default
-};
+| | |
+|---|---|
+| **Variable name** | `SI_DESMOS_CONFIG` |
+| **Value** | the configuration object, as compact JSON |
+| **Environments** | Production (and Preview, if you want it live on branch deploys) |
+
+```json
+{"apiKey":"<the key>","tier":"commercial","studentFacing":true}
 ```
 
-**`tier` is not decoration.** With `tier: 'trial'` and `studentFacing: true` the
-provider **refuses to mount** — the 90-day trial is for internal evaluation
-(§2.a), and serving it to students is outside it. Set `trial` while evaluating
-internally; set `commercial` only once the plan is paid.
+`apiVersion` is optional — add `,"apiVersion":"v1.12"` only once you have read
+the current version off `desmos.com/api`. Omitted, the provider uses its own
+default.
 
-**Be honest about what "confidential" can mean here.** §5.c requires reasonable
-efforts to keep the key confidential, and a key used by a browser is visible in
-the page source to anyone who looks. That is inherent to the product, not a
-mistake. Reasonable efforts are therefore: never in this **public** repository,
-and domain-restricted if Desmos supports it (step 0).
-`scripts/validate-desmos-activation.mjs` fails CI on a literal `apiKey` in any
-tracked file, so the first half is enforced rather than remembered.
+**The contract is not reshaped.** The environment variable *is* the
+configuration object. The endpoint parses it, checks it, and assigns it; it does
+not rename fields, invent a second spelling, or supply defaults the provider
+already supplies. A translation layer between the variable and the contract is a
+place for the two to drift apart silently, which is why there isn't one.
 
-Injection is a deploy-time question this repository does not currently answer: it
-has no build step, and every page inlines its own config today (see the
-`SUPABASE_URL` constants). Pick one deliberately:
+Why a function rather than a build step: this site is live. Adding a
+`buildCommand` to a project that is `framework: null` with no build command
+today changes how **every** file is deployed, and a mistake there breaks the
+whole site rather than the calculator. Vercel serves `/api` functions with zero
+configuration for static projects, so nothing about the existing deployment
+changes. `script-src 'self'` already covers it — the endpoint is same-origin.
 
-| route | key in git | readable by anonymous visitors | cost |
-|---|---|---|---|
-| Inline in the exam page, like `SUPABASE_URL` | **yes — rejected** | yes | none |
-| Vercel env var + a one-line build command writing `desmos-config.js` | no | yes | introduces a build step this repo has avoided |
-| Served from an Edge Function to signed-in students only | no | **no** | one request in the exam's critical path |
+What the endpoint refuses, each returning an inert config rather than a broken
+calculator: absent variable, unparseable JSON, a non-object, a missing or empty
+`apiKey`, a `tier` that is neither `commercial` nor `trial`, and — mirroring the
+client's own refusal — a `trial` key marked `studentFacing` (§2.a). Unknown
+fields are dropped and named in the log, because a typo'd field is otherwise
+silently ignored and the symptom is a calculator that will not start for no
+visible reason.
 
-The third is the only one that also narrows *who* can read the key, and it fits
-where secrets already live. It is the recommendation — but it is a real decision
-with a real latency cost, and it has not been made.
+**It never logs the key**, and `scripts/validate-desmos-activation.mjs` fails CI
+if a future edit passes any config value to `console`. Vercel keeps function
+logs; a key logged there is a durable, searchable credential — worse than the
+browser exposure, because the browser exposure is at least inherent and known.
+
+**Be honest about what "confidential" can mean here.** The endpoint is public,
+and the key it returns is visible to anyone who requests it. So is the key in the
+`calculator.js?apiKey=…` URL in any student's network tab. That is what a browser
+integration is, not a flaw in this design. §5.c's "reasonable efforts" are
+therefore: never in git (enforced), never in logs (enforced), and
+**domain-restricted at Desmos if they support it** — which is the control that
+actually binds, and the open question from step 0.
 
 ### Step 3 — run the activation test
 
@@ -402,12 +424,40 @@ DESMOS_API_KEY=<key> DESMOS_TIER=commercial \
   node scripts/check-desmos-activation.cjs
 ```
 
-It mounts the real calculator, under the real CSP read from `vercel.json`, and
-checks nine things: that the script came from Desmos's own origin, that nothing
-was CSP-blocked, that the API loaded, which products the key enables, that the
-region has real size, that **the calculator itself** is what is in it (our own
-error card does not count), that our chrome does not overlap it (§5.b(iii)), that
-`destroy()` empties the region, and that the page threw nothing.
+**Two modes, and only one of them is the milestone.**
+
+**Deployed mode — this is the activation milestone.** It drives the live page the
+way a student does: loads the exam, clicks the real launcher, and watches what
+happens. The key comes from the deployed endpoint and **this process never
+handles it** — the only assertion made about the key is that one came back, never
+its value, its length, or any part of it.
+
+```
+DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html \
+  node scripts/check-desmos-activation.cjs
+```
+
+Fourteen checks: the page loads, `/api/desmos-config` answered 200, it returned a
+key, the tier is `commercial`, the exam offers a calculator control, the
+workspace opens over the question, the provider is not gated, nothing was
+CSP-blocked, the Desmos API loaded, the graphing calculator is enabled on this
+key, the region has real size, **the calculator itself** is what is in it (our
+own error card does not count), our chrome does not overlap it (§5.b(iii)), the
+tool is named for its job rather than the vendor, nothing claims a partnership,
+every Desmos request returned under 400, and the page threw nothing.
+
+**Local mode — an isolation tool, not the milestone.** Mounts the provider on a
+synthetic page under the CSP read from `vercel.json`. Useful for separating "the
+key is wrong" from "the page is wrong" before deploying. It deliberately does
+**not** print the lines that mark the record ACTIVATED, because it exercised no
+student flow.
+
+```
+DESMOS_API_KEY=<key> DESMOS_TIER=commercial \
+  node scripts/check-desmos-activation.cjs
+```
+
+Run either from a network that can reach `www.desmos.com`.
 
 It writes `scripts/desmos-activation.png` — gitignored, because it is a
 screenshot of a licensed third-party product.
@@ -472,6 +522,7 @@ switch it.
 | **The fee** | Not published anywhere. Read it at `desmos.com/my-api`. Step 0. |
 | **Domain-restricted keys** | Unknown whether Desmos supports them. Ask at step 0; it decides how much §5.c can actually be honoured. |
 | **The current API version** | Repo defaults to v1.11; v1.12 may exist. Confirm at step 0. |
-| **Key injection route** | Three options in step 2, recommendation given, decision not made. |
-| **Which CSP directives the calculator needs** | Only `script-src` is certain. The activation test discovers the rest. |
+| **Key injection route** | **Decided and built** — `SI_DESMOS_CONFIG` as a Vercel environment variable, served by `api/desmos-config.js`. Step 2. |
+| **Which CSP directives the calculator needs** | Five are open to `www.desmos.com`; the activation test reports which were used, and the rest should then be closed. If it reports a blocked `eval`, that is a decision — see step 1. |
+| **The launcher in `mock-exam.html`** | The production exam page is a **frozen file** and does not load the workspace or render a calculator control. Wiring it is the last step, and needs an explicit unfreeze. |
 | **Everything about how it renders** | Never seen. The mount path is documented-API-shaped and unexercised. |
