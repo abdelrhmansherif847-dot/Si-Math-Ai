@@ -86,7 +86,10 @@ function resolutionOf(values) {
  * Each family has a fixed grammar and one axis of variation, and the variant is
  * COMPUTED rather than picked per figure. Two inputs decide everything:
  *
- *   role     — which family this is. Fixed by what the object IS.
+ *   frame    — which family this is. Fixed by what the object IS, and named
+ *              with the SAME vocabulary the spec uses (plane | graph | data),
+ *              so the renderer reads the stored field directly instead of
+ *              translating it through a second set of names.
  *   reading  — 'shape' or 'value'. AUTHORED, because it is a property of the
  *              question, not of the figure: whether the student must read a
  *              number off the picture or only judge its shape. Nothing in the
@@ -94,18 +97,22 @@ function resolutionOf(values) {
  *
  * and one derived number, resolutionOf(), for how fine the marks must be.
  *
- *   geometry — the grid is the measuring instrument, so it is always present,
- *              at the resolution of the figure's own vertices.
- *   function — the curve is the subject. A grid appears only when the question
- *              asks for a value off it.
- *   data     — the same question, answered with horizontal rules only, because
- *              a value on a chart is read by tracking left to the axis.
+ *   plane — coordinate geometry. The grid is the measuring instrument, so it
+ *           is always present, at the resolution of the figure's own vertices,
+ *           and `reading` does not enter into it.
+ *   graph — the graph of a function. The curve is the subject; a grid appears
+ *           only when the question asks for a value off it.
+ *   data  — measured data. The same question, answered with horizontal rules
+ *           only, because a value on a chart is read by tracking left.
  */
-function gridPlan(role, reading, res) {
-  if (role === 'geometry') return { mode: 'major', sub: res < 1 ? res : 0 };
-  if (role === 'function') return { mode: reading === 'value' ? 'major' : 'none', sub: 0 };
-  if (role === 'data')     return { mode: reading === 'value' ? 'rules' : 'none', sub: 0 };
-  return { mode: 'major', sub: 0 };
+function gridPlan(frame, reading, res) {
+  if (frame === 'plane') return { mode: 'major', sub: res < 1 ? res : 0 };
+  if (frame === 'graph') return { mode: reading === 'value' ? 'major' : 'none', sub: 0 };
+  if (frame === 'data')  return { mode: reading === 'value' ? 'rules' : 'none', sub: 0 };
+  // No silent default. A plot whose frame the spec did not declare is a bug in
+  // the content, not a figure to draw a guess for — and the database now makes
+  // such a row unstorable, so reaching here means something bypassed it.
+  throw new Error('gridPlan: unknown frame ' + JSON.stringify(frame));
 }
 
 // U+2212 MINUS SIGN, not the hyphen a keyboard gives you. On a figure the
@@ -311,8 +318,8 @@ function drawPlot(spec, opts) {
   const majorY = v => tierY && isMajor(v, sy);
   // The family's rule decides the grid; gridMode stays available so the
   // exploration pages can still show a treatment the rule would not pick.
-  const plan = opts.role
-    ? gridPlan(opts.role, opts.reading,
+  const plan = opts.frame
+    ? gridPlan(opts.frame, opts.reading,
                resolutionOf((spec.curves || []).flatMap(c => c.points.flat())))
     : { mode: opts.gridMode || 'major', sub: opts.gridMode === 'fine' ? 0.5 : 0 };
   const mode = plan.mode;
@@ -350,7 +357,11 @@ function drawPlot(spec, opts) {
   // frame, clips the leftmost label against it, drops a gridline a few pixels
   // short of it and lets the axis arrow puncture it — all four were visible at
   // exam size. A plate bounds the whole figure, its labels included.
-  if (opts.frame) s.appendChild(el('rect', { class: 'sx-frame',
+  // `plate`, not `frame`. `frame` is the SEMANTIC field the spec stores — what
+  // kind of plot this is — and the presentational boolean that draws a border
+  // does not get to keep the better name. This collision has now happened
+  // twice in both directions; naming the border for what it is ends it.
+  if (opts.plate) s.appendChild(el('rect', { class: 'sx-frame',
     x: 1, y: 1, width: W - 2, height: H - 2 }));
 
   const ax = el('g', { class: 'sx-axis' });

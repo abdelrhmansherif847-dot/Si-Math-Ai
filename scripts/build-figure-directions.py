@@ -43,20 +43,20 @@ PLANE_DIRS = [
  dict(id='plate',  name='A · Plate',
       legend='A bounded frame with real margin, the way a plate sits in a textbook. The frame does '
              'the containing, so the grid can whisper and the whitespace inside reads as deliberate.',
-      opts=dict(frame=True,  gridMode='major')),
+      opts=dict(plate=True,  gridMode='major')),
  dict(id='open',   name='B · Open',
       legend='No grid, no frame. Axes, ticks and numerals only. The figure is the entire composition '
              'and whitespace carries it — the most editorial of the four, and the only one where a '
              'value has to be read by tracking back to the axis.',
-      opts=dict(frame=False, gridMode='none')),
+      opts=dict(plate=False, gridMode='none')),
  dict(id='paper',  name='C · Squared paper',
       legend='A fine half-unit grid under a heavier unit rule: the squared paper a student actually '
              'works on. Dense with information, so the figure has to be bold to sit on top of it.',
-      opts=dict(frame=False, gridMode='fine')),
+      opts=dict(plate=False, gridMode='fine')),
  dict(id='screen', name='D · Screen-native',
       legend='Light grid, thin dark axes, figure in a strong hue rather than ink. The language a '
              'student already has on screen, because Desmos is open beside every question.',
-      opts=dict(frame=False, gridMode='major')),
+      opts=dict(plate=False, gridMode='major')),
 ]
 
 # What each direction does FOR THIS OBJECT — the sentence that actually helps a

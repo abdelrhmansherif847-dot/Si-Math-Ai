@@ -60,9 +60,9 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
       geoFineInt: fine(geoInt), geoFineHalf: fine(geoHalf),
       nlMinorInt: nlMinor('v-nl-0'), nlMinorHalf: nlMinor('v-nl-1'),
       nlNamedInt: nlNamed('v-nl-0'), nlNamedHalf: nlNamed('v-nl-1'),
-      planGeo: gridPlan('geometry','shape',0.5),
-      planFnShape: gridPlan('function','shape',1),
-      planFnValue: gridPlan('function','value',1),
+      planGeo: gridPlan('plane','shape',0.5),
+      planFnShape: gridPlan('graph','shape',1),
+      planFnValue: gridPlan('graph','value',1),
       planDataShape: gridPlan('data','shape',1),
     };
   });
