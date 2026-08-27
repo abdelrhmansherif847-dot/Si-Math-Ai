@@ -11,6 +11,13 @@ import io, json
 REPO = '/home/user/Si-Math-Ai/'
 CHROME = io.open(REPO + 'exam-chrome.js', encoding='utf-8').read()
 GRAPH  = io.open(REPO + 'exam-graph.js',  encoding='utf-8').read()
+CALC   = io.open(REPO + 'exam-calculator.js', encoding='utf-8').read()
+PDESMOS= io.open(REPO + 'exam-graph-desmos.js', encoding='utf-8').read()
+PZERO  = io.open(REPO + 'exam-graph-zero.js', encoding='utf-8').read()
+# The established Zero, inlined at its native 40px and displayed at 34px, which
+# is the only size this artwork is crisp at. See "A note on Zero's artwork" in
+# docs/engineering/exam-surface.md before reaching for a bigger one.
+ZERO_PNG = 'data:image/png;base64,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'
 FIG    = io.open('explore-render.js', encoding='utf-8').read()
 
 # One realistic question, in the decided grammar: a function graph, reading=value.
@@ -70,7 +77,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   color:var(--ink-3);font-weight:600}
 .bar-sp{flex:1}
 .qcard{background:var(--exam);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);
-  padding:34px 38px 36px;margin:26px 0 0;max-width:760px}
+  padding:34px 38px 36px;margin:26px auto 0;max-width:760px}
 .qn{font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-3);margin:0 0 16px}
 .stem{font-size:17.5px;line-height:1.55;margin:0 0 24px}
@@ -159,18 +166,22 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 .zg-scrim{display:none;position:fixed;inset:0;background:rgba(8,12,17,.42);z-index:80}
 .zg-scrim.is-open{display:block}
-.zg-panel{position:fixed;right:0;top:0;bottom:0;width:min(520px,100%);background:var(--exam);
+.zg-panel{position:fixed;right:0;top:0;bottom:0;width:min(620px,100%);background:var(--exam);
   border-left:1px solid var(--rule);z-index:90;display:none;flex-direction:column}
 .zg-panel.is-open{display:flex}
-.zg-head{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--rule)}
+.zg-head{display:flex;align-items:center;gap:12px;padding:18px 20px;
+  border-bottom:1px solid var(--rule);min-height:78px}
+.zg-head>div{min-width:0;flex:1}
 .zg-head .zg-mark{width:40px;height:40px}
 .zg-head .zg-mark .zero{font-size:20px;top:-5px;left:-6px}
 .zg-head h2{font-family:var(--font-display);font-weight:700;font-size:17px;margin:0}
-.zg-head p{margin:2px 0 0;font-size:12px;color:var(--ink-3)}
+.zg-head p{margin:2px 0 0;font-size:12px;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .zg-close{margin-left:auto;background:none;border:1px solid var(--rule);border-radius:4px;
   padding:6px 10px;font-size:13px;color:var(--ink-3)}
 .zg-close:hover{border-color:var(--cyan-line);color:var(--cyan)}
-.zg-body{padding:18px 20px;overflow-y:auto;flex:1}
+.zg-body{padding:18px 20px;overflow-y:auto;flex:1;display:flex;min-height:0}
+#zgmount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .zg-row{display:flex;gap:8px;margin:0 0 12px}
 .zg-in{flex:1;font-family:var(--font-mono);font-size:14.5px;padding:10px 12px;border-radius:4px;
   border:1px solid #8792a0;background:var(--exam);color:var(--ink)}
@@ -180,10 +191,35 @@ button{font:inherit;color:inherit;cursor:pointer}
 .zg-err{font-size:13.5px;color:var(--low);background:var(--low-soft);border-radius:4px;
   padding:9px 12px;margin:0 0 12px}
 .zg-plate{border:1px solid var(--rule);border-radius:5px;padding:12px;display:flex;
-  justify-content:center;overflow-x:auto;min-height:200px;align-items:center}
+  justify-content:center;overflow:auto;min-height:200px;align-items:center}
 .zg-hint{font-size:12.5px;color:var(--ink-3);margin:12px 0 0;line-height:1.6}
 .zg-hint code{font-family:var(--font-mono);font-size:.92em;background:var(--cyan-soft);
   color:var(--cyan);padding:1px 5px;border-radius:3px}
+.zg-zero{display:block;width:34px;height:34px;image-rendering:auto}
+.zg-head .zg-mark{width:44px;height:44px;display:grid;place-items:center}
+.zg-head .zg-zero{width:40px;height:40px}
+.zg-switch{display:flex;align-items:center;gap:6px;padding:10px 20px;
+  border-bottom:1px solid var(--rule);background:var(--page)}
+.zg-switch span{font-family:var(--font-mono);font-size:10px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin-right:4px}
+.zg-switch button{background:none;border:1px solid var(--rule);border-radius:4px;
+  padding:5px 10px;font-size:12px;color:var(--ink-3)}
+.zg-switch button.on{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-soft);
+  font-weight:600}
+.zg-gate{border:1px dashed #8792a0;border-radius:6px;padding:26px 28px;text-align:left;
+  flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.zg-gate h3{margin:0 0 10px;font-size:15.5px}
+.zg-gate p{margin:0 0 10px;font-size:14px;color:var(--ink-2);line-height:1.6}
+.zg-gate p:last-child{margin:0}
+.zg-gate .st{display:inline-block;font-family:var(--font-mono);font-size:11px;
+  padding:3px 8px;border-radius:3px;margin:0 0 12px;background:var(--flag-soft);color:var(--flag)}
+.zg-gate .st.ok{background:var(--cyan-soft);color:var(--cyan)}
+.zg-gate code{font-family:var(--font-mono);font-size:.9em;background:var(--cyan-soft);
+  color:var(--cyan);padding:1px 5px;border-radius:3px}
+.zg-res{border:1px solid var(--rule);border-radius:6px;flex:1;display:grid;
+  place-items:center;text-align:center;padding:26px;background:var(--page)}
+.zg-res b{display:block;font-size:14.5px;margin-bottom:8px}
+.zg-res span{font-size:13px;color:var(--ink-3);max-width:44ch;line-height:1.6;display:block}
 
 /* ── figures: the exam's own grammar, unchanged ───────────────── */
 .sx{display:block;margin:0}
@@ -204,12 +240,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 </style>
 """
 
+# Zero, at his native 40px where the established artwork is crisp. He belongs to
+# OUR chrome — the launcher and the workspace header — and never appears over a
+# provider's own surface.
 MARK = ('<span class="zg-mark" aria-hidden="true">'
-        '<span class="plate"></span>'
-        '<svg class="curve" viewBox="0 0 30 26"><path d="M2 22 C 9 22, 9 6, 16 6 S 24 12, 28 4" '
-        'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-        'style="color:var(--cyan)"/></svg>'
-        '<span class="zero">\U0001F409</span></span>')
+        '<img class="zg-zero" src="' + ZERO_PNG + '" alt="" width="34" height="34">'
+        '</span>')
 
 opts = ''.join('<li><span class="k">%s</span><span>%s</span></li>' % ('ABCD'[i], c)
                for i, c in enumerate(Q['choices']))
@@ -222,7 +258,7 @@ HTML = f"""<title>Exam Surface Preview</title>
     <span id="navslot"></span>
     <span class="bar-sp"></span>
     <button class="zg-open" id="zgopen" type="button" aria-haspopup="dialog">
-      {MARK}<span class="zg-name"><b>Zero Graph</b><span>Graphing workspace</span></span>
+      {MARK}<span class="zg-name"><b>Graphing Calculator</b><span>Open with Zero</span></span>
     </button>
     <span id="timeslot"></span>
   </div>
@@ -236,35 +272,35 @@ HTML = f"""<title>Exam Surface Preview</title>
 </div>
 
 <div class="zg-scrim" id="zgscrim"></div>
-<aside class="zg-panel" id="zgpanel" role="dialog" aria-modal="false" aria-label="Zero Graph">
+<aside class="zg-panel" id="zgpanel" role="dialog" aria-modal="false"
+       aria-label="Graphing calculator">
+  <!-- OUR header. Zero lives here. Below the rule, the provider owns the space. -->
   <div class="zg-head">
     {MARK}
-    <div><h2>Zero Graph</h2><p>Sketch a function. Your work stays yours.</p></div>
+    <div><h2 id="zgtitle">Graphing Calculator</h2>
+         <p id="zgsub">Zero has this open for you.</p></div>
     <button class="zg-close" id="zgclose" type="button">Close</button>
   </div>
-  <div class="zg-body">
-    <div class="zg-row">
-      <input class="zg-in" id="zgin" value="x^3/3 - 2x^2 + 3x + 1" spellcheck="false"
-             aria-label="Function of x to plot">
-      <button class="zg-plot" id="zgplot" type="button">Plot</button>
-    </div>
-    <div id="zgerr"></div>
-    <div class="zg-plate" id="zgplate"></div>
-    <p class="zg-hint">Type a function of <code>x</code>. Powers with <code>^</code>,
-      and <code>sin</code> <code>cos</code> <code>tan</code> <code>sqrt</code> <code>abs</code>
-      <code>ln</code> are available. Nothing you sketch here is submitted or marked.</p>
+  <div class="zg-switch" role="group" aria-label="Provider (preview only)">
+    <span>Provider</span>
+    <button type="button" data-p="desmos" class="on">Desmos</button>
+    <button type="button" data-p="desmos-cfg">Desmos, configured</button>
+    <button type="button" data-p="zero-graph">Zero Graph</button>
   </div>
+  <div class="zg-body"><div id="zgmount"></div></div>
 </aside>
 
 <script>{FIG}</script>
 <script>{CHROME}</script>
+<script>{CALC}</script>
 <script>{GRAPH}</script>
+<script>{PZERO}</script>
+<script>{PDESMOS}</script>
 <script>
 const Q = {json.dumps(Q)};
 const STATES = {json.dumps({str(k): v for k, v in STATES.items()})};
 const {{ renderForQuestion }} = globalThis.SiExplore;
 const {{ Timer, Navigator }} = globalThis.SiExamChrome;
-const G = globalThis.SiExamGraph;
 
 document.getElementById('fig').appendChild(
   renderForQuestion({{ id: 'q' + Q.n, reading: Q.reading }},
@@ -273,42 +309,95 @@ document.getElementById('fig').appendChild(
 const nav = Navigator({{ total: Q.total, current: Q.n, states: STATES,
   onJump: n => nav.setCurrent(n) }});
 document.getElementById('navslot').appendChild(nav.el);
-
 const timer = Timer({{ remaining: 1043, total: 2100 }});
 document.getElementById('timeslot').appendChild(timer.el);
 globalThis.__nav = nav; globalThis.__timer = timer;
 
-// ── Zero Graph ────────────────────────────────────────────────────
+// ── the workspace is PROVIDER-AGNOSTIC ────────────────────────────────────
+// It asks exam-calculator.js for a provider, reads its status, and mounts it.
+// It contains no branch on which provider it is, which is what stops the exam
+// UI being redesigned around whichever tool is active.
 const panel = document.getElementById('zgpanel'), scrim = document.getElementById('zgscrim');
-const plate = document.getElementById('zgplate'), errbox = document.getElementById('zgerr');
+const mountEl = document.getElementById('zgmount');
+const titleEl = document.getElementById('zgtitle'), subEl = document.getElementById('zgsub');
+let activeId = 'desmos', active = null;
+
+function providerFor(id) {{
+  if (id === 'zero-graph') return globalThis.SiExamGraphZero;
+  // 'desmos-cfg' is a PREVIEW-ONLY state: the same provider with a key present,
+  // so the gated and licensed paths can both be seen. It configures nothing real.
+  if (id === 'desmos-cfg') {{
+    globalThis.SI_DESMOS_CONFIG = {{ apiKey: 'PREVIEW-NOT-A-REAL-KEY',
+                                    tier: 'commercial', studentFacing: true }};
+    return globalThis.SiExamGraphDesmos;
+  }}
+  globalThis.SI_DESMOS_CONFIG = undefined;
+  return globalThis.SiExamGraphDesmos;
+}}
+
+function gate(st, prov) {{
+  const d = document.createElement('div'); d.className = 'zg-gate';
+  const badge = document.createElement('span');
+  badge.className = 'st'; badge.textContent = st.state;
+  d.appendChild(badge);
+  const h = document.createElement('h3');
+  h.textContent = prov.displayName + ' is not active';
+  d.appendChild(h);
+  const p1 = document.createElement('p'); p1.textContent = st.detail; d.appendChild(p1);
+  const p2 = document.createElement('p');
+  p2.innerHTML = 'The integration is built and wired. Activation needs a key in ' +
+    '<code>SI_DESMOS_CONFIG</code> and a tier declared under the API terms — ' +
+    '&sect;2.a trial for internal evaluation, or &sect;3.a self-serve paid plan / ' +
+    'Commercial Addendum for anything student-facing.';
+  d.appendChild(p2);
+  return d;
+}}
+
+function reserved(prov) {{
+  const d = document.createElement('div'); d.className = 'zg-res';
+  const inner = document.createElement('div');
+  const b = document.createElement('b'); b.textContent = prov.displayName + ' mounts here';
+  const s2 = document.createElement('span');
+  s2.textContent = 'With a licensed key this region is the official calculator, running from ' +
+    'Desmos\u2019s own script, presented as it comes. Nothing of ours is drawn over it. ' +
+    'It has never been rendered in this environment: desmos.com is blocked by the ' +
+    'egress proxy here and no key exists.';
+  inner.appendChild(b); inner.appendChild(s2); d.appendChild(inner);
+  return d;
+}}
+
+function show(id) {{
+  if (active && active.unmount) {{ try {{ active.unmount(); }} catch (e) {{}} }}
+  activeId = id;
+  const prov = providerFor(id);
+  active = prov;
+  mountEl.textContent = '';
+  const st = prov.status();
+  titleEl.textContent = 'Graphing Calculator';
+  subEl.textContent = st.ready ? st.detail : 'Zero has this open for you.';
+  document.querySelectorAll('.zg-switch button').forEach(b =>
+    b.classList.toggle('on', b.dataset.p === id));
+  if (!st.ready) {{ mountEl.appendChild(gate(st, prov)); return; }}
+  if (prov.id === 'desmos') {{ mountEl.appendChild(reserved(prov)); return; }}
+  prov.mount(mountEl, {{ seed: 'x^2 - 3' }}).catch(e => {{
+    const d = document.createElement('div'); d.className = 'zg-err';
+    d.textContent = e.message; mountEl.appendChild(d);
+  }});
+}}
+document.querySelectorAll('.zg-switch button').forEach(b =>
+  b.addEventListener('click', () => show(b.dataset.p)));
+
 function open(v) {{
   panel.classList.toggle('is-open', v); scrim.classList.toggle('is-open', v);
-  if (v) {{ document.getElementById('zgin').focus(); plot(); }}
+  if (v) show(activeId);
+  else if (active && active.unmount) {{ try {{ active.unmount(); }} catch (e) {{}} }}
 }}
 document.getElementById('zgopen').addEventListener('click', () => open(true));
 document.getElementById('zgclose').addEventListener('click', () => open(false));
 scrim.addEventListener('click', () => open(false));
 document.addEventListener('keydown', e => {{ if (e.key === 'Escape') open(false); }});
-function plot() {{
-  const src = document.getElementById('zgin').value;
-  errbox.textContent = '';
-  plate.textContent = '';
-  try {{
-    const spec = G.toSpec([G.compile(src)], [-4, 6], [-4, 8], 140);
-    if (!spec) throw new Error('Nothing lands inside the window');
-    // the STUDENT's sketch goes through the exam's own renderer, so it obeys
-    // the same grammar as the question's figure
-    plate.appendChild(renderForQuestion({{ id: 'zg', reading: 'value' }},
-                                        {{ id: 'zg', kind: 'plot', spec: spec }}));
-  }} catch (e) {{
-    const d = document.createElement('div');
-    d.className = 'zg-err'; d.textContent = e.message;
-    errbox.appendChild(d);
-  }}
-}}
-document.getElementById('zgplot').addEventListener('click', plot);
-document.getElementById('zgin').addEventListener('keydown', e => {{ if (e.key === 'Enter') plot(); }});
-globalThis.__plot = plot; globalThis.__open = open;
+globalThis.__open = open; globalThis.__show = show;
+globalThis.__providers = () => globalThis.SiExamCalculator.providerCount();
 </script>
 """
 io.open('exam-ui-preview.html', 'w', encoding='utf-8').write(HTML)

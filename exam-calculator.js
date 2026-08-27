@@ -25,12 +25,45 @@
 //
 // `provider: null` IS THE NORMAL STATE, NOT AN ERROR
 // ---------------------------------------------------
-// Every exam has `provider: null` today and will keep it until a written Desmos
-// agreement exists (see docs/roadmap/mock-exam-v2-investigation.md §7). Desmos
-// must not be embedded, iframed, framed or mirrored without one, and no other
-// calculator may be presented as a Desmos or DSAT equivalent. So the socket's
-// ordinary path is the one where nothing renders — the student is told the
-// test-day policy and offered no in-app tool, because there is none.
+// Every exam has `provider: null` today, and will until a licensed calculator
+// is both registered AND named by an exam's policy. So the socket's ordinary
+// path is the one where nothing renders — the student is told the test-day
+// policy and offered no in-app tool, because there is none.
+//
+// A CORRECTION, RECORDED RATHER THAN QUIETLY DROPPED
+// --------------------------------------------------
+// This comment used to say the socket would stay empty "until a written Desmos
+// agreement exists", citing mock-exam-v2-investigation.md §7. That was wrong,
+// and wrong in a way that mattered: §7 reasoned from the desmos.com WEBSITE
+// Terms of Service, which govern the public website and do prohibit framing and
+// mirroring it. Embedding is governed by a different document — the Desmos API
+// Terms of Service (v1.0, 11 July 2025) — which grants exactly the licence §7
+// concluded did not exist:
+//
+//   §5.a "Desmos Studio grants you a non-exclusive, revocable, non-transferable,
+//        non-sublicensable (except for use by your End Users of the
+//        Applications), limited license to: (i) access and use the Software
+//        Service solely for the purpose of incorporating Content into the
+//        Applications..."
+//
+//   §3.a "Prior to any use of the Software Services outside of the Trial Tier
+//        Usage Limits, including as part of any commercial Application, you
+//        agree to: (a) upgrade to an appropriate paid plan via our self-service
+//        pathway or (b) contact us via email to partnerships@desmos.com and
+//        enter into a written Commercial Addendum to these Terms."
+//
+// So a written agreement is ONE of two routes, not the only one, and a
+// self-service paid plan is the other. What still gates activation is a paid
+// API key, not a signature. Full record: docs/engineering/desmos-integration.md.
+//
+// The prohibitions that DO survive, and that this codebase honours:
+//   - the public website may not be framed or mirrored (website ToS) — so the
+//     integration loads the official API script, never desmos.com in an iframe;
+//   - §5.b(iii) forbids removing, altering or obscuring Desmos branding on the
+//     Software Service or Content — so nothing of ours is drawn over the
+//     calculator's own surface;
+//   - §6.b licenses the Marks to IDENTIFY the tool inside the product, and not
+//     for marketing or promotion without written consent.
 //
 // WHAT IT MUST NEVER BECOME
 // -------------------------
@@ -39,11 +72,13 @@
 (function (root) {
   'use strict';
 
-  // ── Provider registry — empty, and that is the point ───────────────────────
+  // ── Provider registry — starts empty, and stays the only way in ────────────
   //
-  // A provider would supply an in-app calculator. None is registered, none may
-  // be registered without a licence, and `count()` returning 0 is what the
-  // display logic reads to decide there is no button to show.
+  // A provider supplies an in-app calculator. The registry starts empty; a
+  // provider module registers itself when it loads. Registration is NOT the
+  // same as availability: `isInAppAvailable()` also requires the exam's own
+  // policy to name that provider, and no exam does. So a registered provider
+  // still shows a student nothing until an exam asks for it by name.
   var PROVIDERS = {};
 
   /**

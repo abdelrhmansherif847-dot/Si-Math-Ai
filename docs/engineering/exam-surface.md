@@ -1,8 +1,10 @@
-# The student exam surface — navigator, timer, Zero Graph
+# The student exam surface — navigator, timer, calculator
 
-Modules: `exam-chrome.js` (navigator + timer), `exam-graph.js` (the workspace).
+Modules: `exam-chrome.js` (navigator + timer), `exam-calculator.js` (the provider
+socket, Phase 4), `exam-graph.js` (Zero Graph's evaluator), and two providers —
+`exam-graph-desmos.js` and `exam-graph-zero.js`.
 Preview: `scripts/build-exam-ui-preview.py`.
-Verification: `scripts/check-exam-ui.cjs` — **62 checks, both themes**.
+Verification: `scripts/check-exam-ui.cjs` — **74 checks, both themes**.
 
 Built as reusable modules in the house pattern — root `*.js`, IIFE on
 `globalThis`, no build step, no dependencies. `mock-exam.html` is frozen and was
@@ -39,58 +41,95 @@ in peripheral vision is precisely the pressure the hide exists to relieve.
 
 ---
 
-## Zero Graph — and why it is not Desmos
+## The calculator — two providers on one socket
 
-The brief asked for a Desmos workspace co-branded as "Zero × Desmos". **That
-cannot ship**, and the block is already recorded in this repository — I did not
-discover it, I found it in our own code.
+> **Rewritten 2026-08-27.** This section previously said a Desmos integration
+> "cannot ship" without a signed partnership agreement, and concluded that a
+> first-party tool was "the only version of the brief that can ship". **That
+> conclusion rested on the wrong document** — the desmos.com *website* terms
+> rather than the *API* terms. The API terms grant an embedding licence and a
+> self-service paid route. The full record, with clause citations, is
+> `docs/engineering/desmos-integration.md`. What follows is the position after
+> reading the right document.
 
-`exam-calculator.js` says so in its header, and
-`docs/roadmap/mock-exam-v2-investigation.md` §7 quotes the Desmos Terms of
-Service verbatim:
+The exam offers **one tool with one job**: a *Graphing Calculator*, opened from
+the top bar, mounted in a panel beside the question the student is still on. Who
+supplies it is a configuration decision, not a design one.
 
-> "You agree to use the Desmos Tools only (a) as an end user, for your personal,
-> non-commercial use or (b) as a School, for academic use by you and your
-> Students in individual classes."
->
-> "You may not frame or mirror the Desmos Tools without our prior consent."
->
-> "Desmos does, pursuant to a separate written agreement, permit certain third
-> parties to integrate with the Desmos Tools for commercial use."
+`exam-calculator.js`'s provider socket — built in Phase 4 and empty ever since —
+is where both live. Nothing new was invented for this; two providers were
+registered into the socket that was waiting for them.
 
-Si Math AI sells subscriptions in EGP and runs a credit economy. It is neither
-an end user acting non-commercially nor a School. Both routes are closed without
-a signed agreement: iframing is explicitly prohibited, and the JS API key is
-issued **under** that agreement. This is a business action — an email to
-partnerships@desmos.com — and no amount of engineering removes it.
+* **`exam-graph-desmos.js`** — the official Desmos API, loaded from Desmos's own
+  origin with our own key. Registered unconditionally, **inert without a key**.
+  Four not-ready states, including one that refuses to serve the 90-day
+  evaluation trial to students, because that is outside API Terms §2.a and a
+  policy document cannot refuse to mount.
+* **`exam-graph-zero.js`** — Zero Graph, first-party, always available. It plots
+  through the exam's own figure renderer, so a student's sketch and the
+  question's figure obey one grammar. Its evaluator is shunting-yard to RPN,
+  **not `eval`**: this parses keystrokes in a page holding exam state, and
+  errors are written for a student mid-exam — *"sin( needs something inside
+  it"* — not for a developer.
 
-**Co-branding is a second, independent problem.** "Zero × Desmos" asserts a
-partnership that does not exist. That is a trademark question rather than a
-terms-of-service one, and it does not become true by being well designed. It
-would be a stronger claim than embedding, not a softer one.
+**Neither is offered to any student today.** `isInAppAvailable()` also requires
+the exam's own policy to name a provider, and every exam in `exam-registry.js`
+has `provider: null`. Registration is not availability, and that separation is
+deliberate: DSAT, ACT online, ACT paper and EST I have four different test-day
+realities, so naming a provider is a per-exam decision.
 
-### So the tool is first-party
+### What the abstraction has to guarantee, and how it is checked
 
-That is not a consolation prize. It is the only version of the brief that can
-ship — and the only one that can honestly read as **one merged tool**, because
-we own both halves. A first-party tool needs no permission to carry Zero's name.
+The point of a provider socket is that **the exam UI cannot tell which provider
+it is showing.** That is a claim about pixels, so it is measured:
 
-* **One name, one mark.** *Zero Graph*. Not two logos side by side.
-* **The mascot is the established Zero** — the dragon already used in chat and
-  on the dashboard, not a new character invented for this surface. It **perches
-  on the graph plate and overlaps it**, so the two read as one object. A check
-  measures the overlap rather than trusting the CSS.
-* **It plots through the exam's own renderer.** A student's sketch and the
-  question's figure are drawn by the same code under the same grammar, so they
-  look like one product instead of two.
-* **A safe evaluator, not `eval`.** Shunting-yard to RPN. This parses a
-  student's keystrokes in a page that also holds exam state; handing those to a
-  JS compiler is not a risk worth fifty saved lines. Errors are written for a
-  student mid-exam — *"sin( needs something inside it"* — not for a developer.
+* the panel, header and mount rectangles are compared across all three provider
+  states and are identical to the pixel;
+* the header's markup is diffed between states, minus the one subtitle line
+  meant to differ;
+* **Zero is counted in our header and counted inside the provider's region** —
+  one and zero, in every state.
 
-`exam-calculator.js`'s provider socket is **untouched**. If the Desmos agreement
-is ever signed, Desmos registers there and Zero Graph becomes the unlicensed
-fallback rather than something to unpick.
+That last one is not decoration. API Terms §5.b(iii) forbids removing, altering
+or obscuring Desmos's branding on the calculator, and the user's brief said the
+same thing independently. Zero belongs to **our** chrome — the launcher and the
+workspace header above the rule. Below the rule, the provider owns the space.
+
+Two of these checks were red before they were green: a ready provider's longer
+subtitle wrapped and grew the header, moving the calculator region 19px; and the
+mount region was auto-height, which would have mounted a Desmos calculator into
+a container with no height.
+
+### One name, and no claim of a relationship
+
+The tool is called **Graphing Calculator**. Not "Zero × Desmos" — that asserts a
+partnership that does not exist, and API Terms §6.b forbids combination marks
+with theirs outright. The provider's name appears beneath the title when one is
+licensed, which is what §6.b's trademark licence is *for*: identifying the tool
+inside the product. It appears in no marketing copy anywhere. A check sweeps the
+rendered text and every `alt`, `aria-label` and `title` for partnership language.
+
+### Why in-panel, and not a second tab
+
+`exam-integrity.js` records the exam tab being hidden or losing focus as an
+integrity event, with durations. Sending a student to a second tab would fire an
+integrity event on every legitimate use of a permitted tool. In-panel is the
+only model compatible with the integrity layer that already ships.
+
+### A note on Zero's artwork
+
+Zero appears here at **34px, from the 40×40 PNG that already ships**. That is the
+only size the established artwork is crisp at, and it is the reason the launcher
+mark is small rather than the confident illustrated dragon the brief pictured.
+
+I tried to solve that by hand-drawing a scalable vector Zero (`zero-mark.js`).
+**It did not work** — the result read as a seahorse rather than a dragon, the
+beard disappeared at small sizes, and the robe did not resolve. It was deleted
+rather than committed, because an off-model mascot in a public repository is
+worse than a small correct one.
+
+**A scalable Zero is an illustration commission, not an engineering task.** Until
+one exists, every surface should use the 40px raster at or below its native size.
 
 ## Quiet during the question
 

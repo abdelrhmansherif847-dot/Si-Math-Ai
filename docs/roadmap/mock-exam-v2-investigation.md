@@ -402,7 +402,36 @@ accessibility decision. Neither is primarily an engineering problem.
 
 ## 7. §8 — Desmos calculator: the licensing finding
 
+> ### ⚠️ CORRECTION, 2026-08-27 — §7.1's conclusion was wrong
+>
+> §7.1 below concludes: *"shipping Desmos inside Si Math AI requires a signed
+> partnership agreement with Desmos. There is no free or self-serve route for a
+> commercial exam-prep product."* **The second sentence is false, and the first
+> is only half right.**
+>
+> The error is a document mix-up, not a reading error. §7.1 quotes the
+> **desmos.com website Terms of Service**, which govern the public website — and
+> which do prohibit framing and mirroring it. Embedding via the API is governed
+> by a **different document**: the **Desmos API Terms of Service, v1.0, updated
+> 11 July 2025**, published at `github.com/desmosinc/policies/api-terms.md`.
+> Under those terms §3.a, a commercial application may *"upgrade to an
+> appropriate paid plan via our **self-service pathway**"* — which is exactly the
+> route §7.1 says does not exist. A written Commercial Addendum is the
+> alternative, not the prerequisite.
+>
+> The rest of §7 — the fidelity table, the API capability notes, the registry
+> consequences — stands, and §7.1's *prohibitions* stand too: the website still
+> may not be framed or mirrored, and API Terms §5.b(iii) forbids obscuring
+> Desmos branding on the calculator itself.
+>
+> **What actually gates the feature is a paid API key, not a signature.** The
+> current record, with the integration built against it, is
+> `docs/engineering/desmos-integration.md`. Read that instead of §7.1.
+
 ### 7.1 The blocker, in Desmos's own words
+
+> **Superseded in its conclusion — see the correction above.** Kept verbatim
+> because the reasoning is what went wrong, and deleting it would hide that.
 
 The caution in the specification — *"do not assume that embedding the Desmos
 website directly in an iframe is supported or permitted"* — is correct, and the
