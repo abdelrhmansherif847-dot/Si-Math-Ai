@@ -326,6 +326,10 @@ code{font-family:ui-monospace,monospace;font-size:.86em;background:var(--accent-
 
 /* ═══════════ number lines — one skeleton, four treatments of its own ═══════════ */
 .nl .sx-nl-seg{stroke:currentColor;stroke-linecap:butt}
+.n-ruler .sx-ray-arrow{fill:var(--nruler-ink)}
+.n-statement .sx-ray-arrow{fill:var(--nstatement-ink)}
+.n-fine .sx-ray-arrow{fill:var(--nfine-ink)}
+.n-band .sx-ray-arrow{fill:var(--nband-ink)}
 .nl .sx-endpoint{stroke:currentColor;stroke-width:2.4}
 .nl .sx-closed{fill:currentColor}
 .nl .sx-open{fill:var(--card)}

@@ -125,11 +125,23 @@ function label(x, y, text, cls) {
   const t = el('text', { x, y, class: 'sx-label ' + (cls || ''), 'paint-order': 'stroke' }, text);
   return t;
 }
-function arrowDefs(s, id) {
+function arrowDefs(s, id, fixed) {
   const defs = el('defs');
-  const m = el('marker', { id, viewBox: '0 0 10 10', refX: 8, refY: 5,
-                           markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
-  m.appendChild(el('path', { d: 'M0,1 L9,5 L0,9 z', class: 'sx-arrow' }));
+  // A marker scales with stroke-width by default. On a number line the axis is
+  // 1.4px and the ray is 6px, so the SAME marker came out four times larger on
+  // the ray — a huge triangle sitting on top of the axis's own small one, two
+  // arrowheads at one end. `fixed` pins the marker to user space so the ray's
+  // arrow is sized by the figure, not by how heavy the ray happens to be.
+  const attrs = { id, viewBox: '0 0 10 10', refX: 8, refY: 5,
+                  orient: 'auto-start-reverse' };
+  if (fixed) { attrs.markerUnits = 'userSpaceOnUse';
+               attrs.markerWidth = fixed; attrs.markerHeight = fixed; }
+  else { attrs.markerWidth = 6; attrs.markerHeight = 6; }
+  const m = el('marker', attrs);
+  // The terminal arrow of a ray belongs to the RAY, not to the axis it sits on,
+  // so it is a separate class rather than reusing the axis arrow's ink.
+  m.appendChild(el('path', { d: 'M0,1 L9,5 L0,9 z',
+                             class: fixed ? 'sx-arrow sx-ray-arrow' : 'sx-arrow' }));
   defs.appendChild(m); s.appendChild(defs);
 }
 
@@ -193,6 +205,17 @@ function drawPlot(spec, opts) {
   if (opts.aspect === 'plane') sx = sy = Math.min(sx, sy);  // a square grid, countable
 
   const s = svgRoot(W, H);
+  // A curve whose samples run past the declared window used to be drawn past
+  // the plate as well — the cubic exited the top of its own frame and kept
+  // going. The window is what the author declared, so it is also the boundary:
+  // the drawing is clipped to it. Scaffolding is not, because numerals and
+  // axis tips are placed in the padding on purpose.
+  const clipId = 'sx-clip-' + (drawPlot._n = (drawPlot._n || 0) + 1);
+  const defs = el('defs');
+  const cp = el('clipPath', { id: clipId });
+  cp.appendChild(el('rect', { x: PAD.l, y: PAD.t, width: iw, height: ih }));
+  defs.appendChild(cp);
+  s.appendChild(defs);
   // COLOUR IS FOR TELLING THINGS APART, and one figure has nothing to be told
   // apart from. A lone circle or triangle drawn in the brand hue reads as a
   // chart; drawn in ink it reads as a figure in an exam. Hue is spent only
@@ -246,6 +269,11 @@ function drawPlot(spec, opts) {
       grid.appendChild(el('line', { class: 'sx-fine', x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   }
   if (mode !== 'none') {
+    // 'rules' is the statistical convention: horizontal rules only. A value is
+    // read off a chart by tracking LEFT to the y-axis, so vertical gridlines
+    // add ink without adding a reading. A coordinate plane needs both, because
+    // a point there is located in two directions at once.
+    if (mode !== 'rules')
     for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx)
       grid.appendChild(el('line', { class: major(v) ? 'sx-major' : null,
                                     x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
@@ -270,7 +298,18 @@ function drawPlot(spec, opts) {
   // arrows anyway, because its weeks happen to start at zero and the test for
   // an axis was "does the window contain the origin" rather than "is this a
   // plane". Arrowheads now belong to the plane, and nowhere else.
-  const arrows = opts.aspect === 'plane'
+  //
+  // Whether the axes are a PLANE and whether the scales are EQUAL are two
+  // different properties, and tying them together was a bug: dropping equal
+  // scales on a function graph — which is correct, nothing there needs an x
+  // unit to equal a y unit — silently took its axis arrows with it, and a
+  // function graph's axes certainly do continue. `axes` says what the axes ARE;
+  // `aspect` says how they are SCALED. It defaults from aspect so callers that
+  // only ever needed one of them keep working.
+  // NOT `frame` — that name was already taken by the boolean that draws the
+  // plate border, and reusing it silently framed every figure that set it.
+  const isPlane = opts.axes ? opts.axes === 'plane' : opts.aspect === 'plane';
+  const arrows = isPlane
     ? { 'marker-start': 'url(#sx-ar)', 'marker-end': 'url(#sx-ar)' } : {};
   if (showX) ax.appendChild(el('line', Object.assign(
     { x1: PAD.l, y1: Y(0), x2: W - PAD.r, y2: Y(0) }, arrows)));
@@ -278,6 +317,10 @@ function drawPlot(spec, opts) {
     { x1: X(0), y1: H - PAD.b, x2: X(0), y2: PAD.t }, arrows)));
   if (!showX) ax.appendChild(el('line', { x1: PAD.l, y1: H - PAD.b, x2: W - PAD.r, y2: H - PAD.b }));
   if (!showY) ax.appendChild(el('line', { x1: PAD.l, y1: PAD.t, x2: PAD.l, y2: H - PAD.b }));
+  // The origin is named in almost every geometry stem ("triangle OAB", "the
+  // distance from O"). It sits in the one corner the numerals deliberately
+  // leave empty, so labelling it costs nothing.
+  const originAt = opts.originLabel && showX && showY ? [X(0), Y(0)] : null;
   s.appendChild(ax);
 
   // The axis tip labels (x and y) sit at the ends of the axes, and the OUTERMOST
@@ -286,10 +329,19 @@ function drawPlot(spec, opts) {
   // numeral it displaces is dropped: that numeral sits at the edge of the
   // widened window and is usually outside the range the author declared, which
   // makes it the least useful one on the axis.
-  const tipX = opts.aspect === 'plane' && spec.xLabel, tipY = opts.aspect === 'plane' && spec.yLabel;
+  const tipX = isPlane && spec.xLabel, tipY = isPlane && spec.yLabel;
   const tk = el('g', { class: 'sx-tick' });
   const axY = showX ? Y(0) : H - PAD.b;      // where the x numerals hang
   const axX = showY ? X(0) : PAD.l;          // where the y numerals sit
+  // Every numeral's box, so a vertex label can be placed somewhere else. A
+  // label dropped radially outward from the centroid lands in the numeral
+  // gutter whenever the vertex sits on an axis — which is most of them, since
+  // exam figures are drawn from the origin. Boxes are estimated from the font
+  // size rather than measured, because nothing is in the document yet.
+  const NUM = 12.5, LAB = 16;
+  const taken = [];
+  const box = (cx, cy, w, h) => ({ l: cx - w/2, r: cx + w/2, t: cy - h/2, b: cy + h/2 });
+  const hits = (a, b) => !(a.r < b.l || b.r < a.l || a.b < b.t || b.b < a.t);
   for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
     if (Math.abs(v) < 1e-9 && showY) continue;                  // no 0 twice at the origin
     // A TICK MARK, then the numeral. Without the tick the numeral is a caption
@@ -300,6 +352,7 @@ function drawPlot(spec, opts) {
       x1: X(v), y1: axY - 4.5, x2: X(v), y2: axY + 4.5 }));
     if (tipX && X(v) > W - PAD.r - 22) continue;                // reserved for the x tip
     tk.appendChild(el('text', { x: X(v), y: axY + 19, 'text-anchor': 'middle' }, fmt(v)));
+    taken.push(box(X(v), axY + 19 - NUM/3, fmt(v).length * NUM * .62, NUM));
   }
   for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) {
     if (Math.abs(v) < 1e-9 && showX && showY) continue;
@@ -307,6 +360,8 @@ function drawPlot(spec, opts) {
       x1: axX - 4.5, y1: Y(v), x2: axX + 4.5, y2: Y(v) }));
     if (tipY && Y(v) < PAD.t + 20) continue;                    // reserved for the y tip
     tk.appendChild(el('text', { x: axX - 10, y: Y(v) + 4.5, 'text-anchor': 'end' }, fmt(v)));
+    const w = fmt(v).length * NUM * .62;
+    taken.push(box(axX - 10 - w/2, Y(v), w, NUM));
   }
   // tk is appended AFTER the series, below — an axis numeral must never be
   // crossed out by the figure it is there to measure.
@@ -314,7 +369,8 @@ function drawPlot(spec, opts) {
   spec.curves.forEach((c, i) => {
     const f = figures[i];
     if (!f) throw new Error('drawPlot: curve ' + i + ' has no figure decision');
-    const g = el('g', { class: 'sx-series sx-s' + ((i % 3) + 1) });
+    const g = el('g', { class: 'sx-series sx-s' + ((i % 3) + 1),
+                        'clip-path': 'url(#' + clipId + ')' });
     const pts = c.points;
     if (f.mode === 'curve' || f.mode === 'polygon') {
       g.appendChild(el('path', {
@@ -328,15 +384,52 @@ function drawPlot(spec, opts) {
       pts.forEach(p => g.appendChild(el('circle', {
         class: 'sx-point' + (f.mode === 'points' ? ' sx-point-named' : ''),
         r: f.mode === 'points' ? 5.5 : 4.5, cx: X(p[0]), cy: Y(p[1]) })));
-    if (f.mode === 'points' && f.labels)
-      pts.forEach((p, j) => { if (f.labels[j])
-        g.appendChild(label(X(p[0]) + 10, Y(p[1]) - 9, f.labels[j])); });
+    // A stem that says "triangle OAB" needs a figure that says which vertex is
+    // which. Without it the student has to map the prose onto the picture
+    // themselves, which is work the figure exists to remove. Each label is
+    // pushed OUTWARD from the figure's centroid so it never lands inside it.
+    if (f.labels && (f.mode === 'points' || f.mode === 'polygon')) {
+      const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+      const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+      pts.forEach((p, j) => {
+        if (!f.labels[j]) return;
+        const px = X(p[0]), py = Y(p[1]);
+        const dx = px - X(cx), dy = py - Y(cy);
+        const want = Math.atan2(dy, dx);
+        const w = f.labels[j].length * LAB * .62;
+        // eight positions on a ring, tried in order of how close each is to
+        // straight out from the centre of the figure
+        const ring = [0, 1, -1, 2, -2, 3, -3, 4].map(k => want + k * Math.PI / 4);
+        let put = null;
+        for (const a of ring) {
+          const lx = px + Math.cos(a) * 17, ly = py + Math.sin(a) * 17;
+          const b = box(lx, ly, w + 3, LAB);
+          if (!taken.some(t => hits(b, t))) { put = [lx, ly]; break; }
+        }
+        if (!put) put = [px + Math.cos(want) * 17, py + Math.sin(want) * 17];
+        taken.push(box(put[0], put[1], w + 3, LAB));
+        g.appendChild(label(put[0], put[1] + LAB / 3, f.labels[j], 'sx-vertex'));
+      });
+    }
     s.appendChild(g);
   });
 
+  if (originAt) {
+    const w = opts.originLabel.length * LAB * .62;
+    let put = null;
+    for (const a of [Math.PI * 0.75, Math.PI * 1.25, Math.PI * 0.5, Math.PI]) {
+      const lx = originAt[0] + Math.cos(a) * 17, ly = originAt[1] - Math.sin(a) * 17;
+      const b = box(lx, ly, w + 3, LAB);
+      if (!taken.some(t => hits(b, t))) { put = [lx, ly]; break; }
+    }
+    if (!put) put = [originAt[0] - 14, originAt[1] + 16];
+    taken.push(box(put[0], put[1], w + 3, LAB));
+    originAt.push(label(put[0], put[1] + LAB / 3, opts.originLabel, 'sx-vertex'));
+  }
   s.appendChild(tk);
+  if (originAt && originAt[2]) s.appendChild(originAt[2]);
 
-  if (opts.aspect === 'plane') {
+  if (isPlane) {
     // At the axis TIP, and on the side the numerals are not on. The numerals sit
     // below the x-axis and left of the y-axis, so the labels go above and right —
     // the textbook placement, and the only one that cannot collide with them.
@@ -371,9 +464,15 @@ function drawNumberLine(spec, opts) {
   const X = v => M + ((v - spec.min) / (spec.max - spec.min)) * (W - 2 * M);
   const s = svgRoot(W, H);
   arrowDefs(s, 'sx-ar-nl');
+  arrowDefs(s, 'sx-ar-ray', 13);
+  // A ray that runs off the end of the line already says "continues", so the
+  // axis does not need to say it again two pixels further out.
+  const segs = spec.segments || [];
+  const openR = segs.some(g => g.to >= spec.max), openL = segs.some(g => g.from <= spec.min);
   const ax = el('g', { class: 'sx-axis sx-nl-axis' });
   ax.appendChild(el('line', { x1: M - 14, y1: y, x2: W - M + 14, y2: y,
-                              'marker-start': 'url(#sx-ar-nl)', 'marker-end': 'url(#sx-ar-nl)' }));
+    'marker-start': openL && !lift ? null : 'url(#sx-ar-nl)',
+    'marker-end': openR && !lift ? null : 'url(#sx-ar-nl)' }));
   s.appendChild(ax);
 
   const tk = el('g', { class: 'sx-tick' });
@@ -402,8 +501,8 @@ function drawNumberLine(spec, opts) {
   (spec.segments || []).forEach(sg => {
     const unboundedR = sg.to >= spec.max, unboundedL = sg.from <= spec.min;
     g.appendChild(el('line', { class: 'sx-nl-seg', x1: X(sg.from), y1: sy, x2: X(sg.to), y2: sy,
-      'marker-end': unboundedR ? 'url(#sx-ar-nl)' : null,
-      'marker-start': unboundedL ? 'url(#sx-ar-nl)' : null }));
+      'marker-end': unboundedR ? 'url(#sx-ar-ray)' : null,
+      'marker-start': unboundedL ? 'url(#sx-ar-ray)' : null }));
     // When the interval is lifted off the axis it stops being self-locating, so
     // a drop line ties each endpoint back to the value it actually names.
     if (lift) {

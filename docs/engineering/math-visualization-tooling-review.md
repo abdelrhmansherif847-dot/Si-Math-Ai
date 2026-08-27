@@ -784,6 +784,86 @@ dimming the plate gridline back to its old value, flipping the number-line
 endpoint semantics, removing the lift from the band direction, and deleting one
 ink token. Each was caught.
 
+### The plate was the wrong frame for the judgement
+
+Passing 230 geometry and contrast checks means the figures are not broken. It
+does not mean they are good, and it is not what the owner was reacting to. A
+student never sees a plate on a card; the Digital SAT puts a multiple-choice
+question in **one centred column with the choices below**, so the figure has to
+do its job in that composition, at that measure, against that text.
+
+`scripts/build-exam-composition.py` builds that page: every family as a whole
+question at true exam measure, first as the renderer draws it today and then
+recomposed, with what changed and what it cost. The questions are original and
+neutral; no authored item appears.
+
+### The five faults, none of which are CSS
+
+1. **The window is not composed.** It is derived from the data range plus
+   padding, so the figure takes whatever shape that produces. On the cubic that
+   was a tall plate whose upper half was empty.
+2. **The scaffolding outweighs the subject.** Arrowheads on four ends, italic
+   tips, a grid, ticks and numerals, against a 2.4px curve.
+3. **The figure does not name itself.** A stem says *triangle OAB* and the
+   figure names no vertex and no origin.
+4. **The figure floats**, centred in whatever box it is given, at a width
+   unrelated to the text it belongs to.
+5. **One language is forced on every object.** Equal scales and a coordinate
+   grid are right for geometry and wrong for a function graph and a scatterplot.
+
+### What is per family, and what is shared
+
+**Different on purpose:** whether scales are equal (mandatory for geometry,
+wrong for a function graph), whether there is a grid and how dense, whether the
+axes carry arrowheads, whether gridlines run both ways or only across, and how
+much of the measure the figure takes.
+
+**Identical across all five:** typeface and numeral style, tick treatment and
+numeral placement, figure ink, the space above and below a figure inside a
+question, stem and choice typography, and the measure of the column.
+
+### Defects the recomposition exposed
+
+- **`aspect` was doing three jobs.** It set scale equality, decided whether the
+  axes carry arrowheads, and chose between italic axis tips and chart-style axis
+  titles. Dropping equal scales on a function graph — correct — therefore also
+  removed its arrows and replaced its tips with floating titles. Split into
+  `axes` ('plane' | 'data', what the axes *are*) and `aspect` (how they are
+  *scaled*).
+- **The new option collided with an existing one.** `frame` was already the
+  boolean that draws the plate border, so reusing the name framed every figure
+  that set it. Renamed to `axes`.
+- **Nothing was clipped to the declared window.** The cubic exited the top of
+  its own plate and kept going. The series is now clipped to the window; the
+  scaffolding is not, because numerals sit in the padding deliberately.
+- **A vertex label placed radially lands in the numeral gutter**, because exam
+  figures put vertices on the axes. Labels now take the first clear position on
+  a ring of eight.
+- **The ray's arrowhead scaled with its stroke width.** At 6px against a 1.4px
+  axis it came out four times larger, sitting on top of the axis's own arrow —
+  two arrowheads at one end. The ray gets a fixed-size marker in the ray's ink,
+  and the axis arrow is dropped on any side a ray already terminates.
+- **A dense grid does not automatically mean a countable one.** Half-unit
+  gridlines under numerals every 2 make counting *harder*. The window is trimmed
+  so `niceStep` stays on 1 and one square means one unit — which is what the
+  question actually asks the student to count.
+
+### Two checks that were green and worthless
+
+- *"Grid spacing equals numeral spacing"* is true by construction: both derive
+  from `sx`. It stayed green when the window was widened until the step became
+  2. Replaced by reading the numeral **values** and requiring a step of one.
+- The ring-based label placement was **never exercised** — removing it changed
+  nothing, because this page's trimmed window happens not to collide. It is now
+  checked on a figure built to collide, which reports overlaps without it.
+
+Both were caught by mutating the page and finding that nothing went red. Three
+further mutations (naive label placement, a widened window, a removed clip) are
+each caught.
+
+`scripts/check-exam-composition.cjs` — **98 checks, both themes**, headless
+Chromium. Manual, like the directions harness: it needs a browser.
+
 ### The rule for what happens next
 
 React **per family**. There is no requirement that the answer be the same in all
