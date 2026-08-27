@@ -134,15 +134,22 @@ only model compatible with the integrity layer that already ships.
 
 ### A note on Zero's artwork
 
-Zero appears here at **34px, from the 40×40 PNG that already ships**. That is the
-only size the established artwork is crisp at, and it is the reason the launcher
-mark is small rather than the confident illustrated dragon the brief pictured.
+**Correction, 2026-08-27.** This section said Zero appears "from the 40×40 PNG
+that already ships". There is no such asset. Wiring the production page made
+that obvious: `dashboard.html` and `chat.html` draw Zero as the **dragon glyph
+in a tinted tile**, and the repository contains no Zero image file at all. The
+PNG was a scratchpad asset that had leaked into the preview build and into this
+description of it.
 
-I tried to solve that by hand-drawing a scalable vector Zero (`zero-mark.js`).
-**It did not work** — the result read as a seahorse rather than a dragon, the
-beard disappeared at small sizes, and the robe did not resolve. It was deleted
-rather than committed, because an off-model mascot in a public repository is
-worse than a small correct one.
+`mock-exam.html` therefore uses the treatment the site actually has — the glyph
+in a tile matching the dashboard's `zero-avatar`. Giving the exam a *different*
+Zero from the dashboard's would have been worse than a small one.
+
+I also tried a hand-drawn scalable vector Zero (`zero-mark.js`). **It did not
+work** — the result read as a seahorse rather than a dragon, the beard
+disappeared at small sizes, and the robe did not resolve. It was deleted rather
+than committed, because an off-model mascot in a public repository is worse than
+a correct small one.
 
 **A scalable Zero is an illustration commission, not an engineering task.** Until
 one exists, every surface should use the 40px raster at or below its native size.

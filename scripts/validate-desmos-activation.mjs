@@ -95,9 +95,10 @@ if (named.length && status !== 'ACTIVATED') {
 
 // ── 4. no API key in a public repository ─────────────────────────────────────
 //
-// The preview deliberately sets a placeholder so the licensed path can be seen;
-// it is allowed by name, and nothing else is.
-const PLACEHOLDER = 'PREVIEW-NOT-A-REAL-KEY';
+// Two checkers deliberately set a placeholder so the licensed path can be
+// exercised. They are allowed by a sentinel suffix that no real key would carry,
+// and nothing else is.
+const SENTINEL = /-NOT-A-REAL-KEY$/;
 const SKIP_DIRS = new Set(['.git', 'node_modules', '__pycache__', 'shots', 'shots2',
   'shots3', 'shots4', 'shots5', 'pgdata', '.design-sync', 'windows']);
 const EXT = new Set(['.js', '.mjs', '.cjs', '.html', '.json', '.py', '.sh', '.md', '.ts']);
@@ -117,7 +118,7 @@ for (const file of walk(REPO)) {
   if (!txt.includes('apiKey')) continue;
   for (const hit of txt.matchAll(KEY_RE)) {
     const val = hit[1];
-    if (val === PLACEHOLDER) continue;
+    if (SENTINEL.test(val)) continue;
     // config().apiKey reads and template interpolations are not literals.
     if (/^[<{$]/.test(val) || val.includes('${')) continue;
     fails.push(`${rel} contains a literal apiKey "${val.slice(0, 6)}…". This repository is ` +

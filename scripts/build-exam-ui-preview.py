@@ -189,8 +189,8 @@ button{font:inherit;color:inherit;cursor:pointer}
    Desmos.GraphingCalculator() measures the element it is given — an auto-height
    container mounts a calculator with no height. */
 .xw-mount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
-.xw-gate,.xw-err{border-radius:6px;padding:26px 28px;text-align:left;flex:1;
-  display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.xw-gate,.xw-err{border-radius:6px;padding:26px 28px;text-align:left;
+  flex:0 0 auto;margin:auto 0;display:flex;flex-direction:column;align-items:flex-start}
 .xw-gate{border:1px dashed #8792a0}
 /* A failure mid-exam is told, not shouted. The red lives in the state chip and
    a single edge rule; a full red wash across the panel is the wrong volume for

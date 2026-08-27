@@ -9,15 +9,38 @@
   'use strict';
   var host = null;
 
+  // Zero Graph needs TWO things, and until 2026-08-27 it only checked one.
+  //
+  // It reported ready whenever exam-graph.js was present, but it also draws
+  // through the figure renderer, and that renderer is not shipped on any page
+  // yet — exam-stimulus.js is marked DRAFT — NOT WIRED and speaks an older
+  // spec shape (opts.figures rather than spec.figures). So on the production
+  // exam page this provider would have reported READY and then thrown on mount,
+  // which is the worst of both: an offer that cannot be honoured.
+  //
+  // The check now names what is missing, and mock-exam.html passes no
+  // fallbackId as a result — a fallback that cannot draw is not a fallback.
+  function renderer() {
+    try { return (root.SiExplore && root.SiExplore.renderForQuestion) ? root.SiExplore : null; }
+    catch (e) { return null; }
+  }
+
   function status() {
-    var ok = !!(root.SiExamGraph && root.SiExamGraph.compile);
-    return ok ? { ready: true, state: 'first-party', detail: 'Zero Graph, built in.' }
-              : { ready: false, state: 'missing', detail: 'exam-graph.js is not loaded.' };
+    if (!(root.SiExamGraph && root.SiExamGraph.compile)) {
+      return { ready: false, state: 'missing', detail: 'exam-graph.js is not loaded.' };
+    }
+    if (!renderer()) {
+      return { ready: false, state: 'no-renderer',
+        detail: 'The figure renderer is not loaded on this page, so Zero Graph has ' +
+                'nothing to draw with.' };
+    }
+    return { ready: true, state: 'first-party', detail: 'Zero Graph, built in.' };
   }
 
   function mount(elm, opts) {
-    var G = root.SiExamGraph;
-    if (!G) return Promise.reject(new Error('exam-graph.js is not loaded.'));
+    var st = status();
+    if (!st.ready) return Promise.reject(new Error(st.detail));
+    var G = root.SiExamGraph, R = renderer();
     host = elm;
     elm.textContent = '';
     var row = document.createElement('div'); row.className = 'zg-row';
@@ -39,7 +62,7 @@
         if (!spec) throw new Error('Nothing lands inside the window');
         // the student's own sketch, through the exam's renderer, so it obeys
         // the same grammar as the question's figure
-        plate.appendChild(root.SiExplore.renderForQuestion(
+        plate.appendChild(R.renderForQuestion(
           { id: 'zg', reading: 'value' }, { id: 'zg', kind: 'plot', spec: spec }));
       } catch (e) {
         var d = document.createElement('div'); d.className = 'zg-err';
@@ -56,7 +79,7 @@
 
   root.SiExamGraphZero = {
     id: 'zero-graph', displayName: 'Zero Graph',
-    status: status, mount: mount, unmount: unmount,
+    status: status, mount: mount, unmount: unmount, _renderer: renderer,
   };
   try {
     if (root.SiExamCalculator && root.SiExamCalculator.registerProvider) {

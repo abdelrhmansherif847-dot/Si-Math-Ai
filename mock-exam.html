@@ -249,6 +249,59 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 /* CALCULATOR BADGE */
 .calc-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;background:var(--green-soft);border:1px solid var(--green-border);color:var(--green);font-size:11.5px;font-weight:600;margin-top:10px}
 .calc-badge svg{width:12px;height:12px}
+/* ── the calculator workspace (exam-workspace.js) ───────────────────────────
+   Provider-agnostic by construction: there is no rule here keyed to which
+   calculator is mounted, and adding one would be the bug. */
+.calc-open{display:inline-flex;align-items:center;gap:8px;margin-top:10px;
+  padding:8px 16px;border-radius:100px;background:var(--green-soft);
+  border:1px solid var(--green-border);color:var(--green);font-size:13px;
+  font-weight:600;cursor:pointer}
+.calc-open:hover{filter:brightness(1.15)}
+.calc-open svg{width:14px;height:14px}
+.xw-scrim{display:none;position:fixed;inset:0;background:rgba(5,10,20,.72);z-index:120}
+.xw-scrim.is-open{display:block}
+.xw-panel{position:fixed;right:0;top:0;bottom:0;width:min(620px,100%);z-index:130;
+  background:var(--bg-card,#0a1120);border-left:1px solid var(--border-soft);
+  display:none;flex-direction:column}
+.xw-panel.is-open{display:flex}
+/* Fixed band: the header's height must not depend on which provider is active,
+   or the calculator region below it moves when the provider changes. */
+.xw-head{display:flex;align-items:center;gap:12px;padding:16px 18px;min-height:76px;
+  border-bottom:1px solid var(--border-soft)}
+.xw-head>div{min-width:0;flex:1}
+.xw-head h2{margin:0;font-size:16px;font-weight:700;color:var(--text)}
+/* Reserves its line even when empty — a collapsing subtitle shrinks the header
+   and moves the calculator region. */
+.xw-sub{margin:2px 0 0;font-size:11.5px;line-height:1.6;min-height:18.4px;
+  color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xw-close{margin-left:auto;background:none;border:1px solid var(--border-soft);
+  border-radius:6px;padding:6px 12px;font-size:12.5px;color:var(--text-dim);cursor:pointer}
+.xw-close:hover{color:var(--text)}
+.xw-body{padding:16px 18px;flex:1;display:flex;min-height:0;overflow-y:auto}
+/* A stage of fixed size. Desmos.GraphingCalculator() measures the element it is
+   given: an auto-height container mounts a calculator with no height. */
+.xw-mount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.xw-gate,.xw-err{border-radius:8px;padding:22px 24px;flex:0 0 auto;margin:auto 0;
+  display:flex;flex-direction:column;align-items:flex-start}
+.xw-gate{border:1px dashed var(--border-soft)}
+/* Told, not shouted: a student mid-exam has a clock running. */
+.xw-err{border:1px solid var(--border-soft);border-left:3px solid var(--amber,#e0b062)}
+.xw-gate h3,.xw-err h3{margin:0 0 8px;font-size:15px;color:var(--text)}
+.xw-gate p,.xw-err p{margin:0 0 10px;font-size:13.5px;line-height:1.6;
+  color:var(--text-dim);max-width:52ch}
+.xw-state{display:inline-block;font-family:ui-monospace,monospace;font-size:10.5px;
+  padding:3px 8px;border-radius:4px;margin:0 0 10px;
+  background:var(--green-soft);color:var(--green)}
+.xw-state.xw-bad{background:var(--amber-soft,rgba(224,176,98,.14));color:var(--amber,#e0b062)}
+/* Zero, in the treatment dashboard.html and chat.html already use — the dragon
+   glyph in a tinted tile. There is no Zero image asset in this repository, and
+   inventing one here would give the exam a different Zero from the dashboard's.
+   It sits in OUR header and never over the calculator: Desmos API Terms
+   §5.b(iii) forbids obscuring their branding on the Software Service. */
+.xw-mark{width:38px;height:38px;flex:none;border-radius:11px;font-size:20px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(14,165,233,.1));
+  border:1.5px solid rgba(56,189,248,.4)}
 </style>
 </head>
 <body>
@@ -385,6 +438,16 @@ label{font-size:11px;color:var(--text-300);font-weight:500;display:block;margin-
 <script src="exam-audio.js"></script>
 <script src="exam-integrity.js"></script>
 <script src="exam-calculator.js"></script>
+<!-- The calculator, added 2026-08-27 under an explicit unfreeze of this file.
+     /api/desmos-config is a serverless function reading the SI_DESMOS_CONFIG
+     environment variable; it must execute before the provider reads its status,
+     and deferred scripts run in document order, so it goes first. With the
+     variable unset it emits an empty object and everything below stays inert. -->
+<script src="/api/desmos-config" defer></script>
+<script src="exam-workspace.js" defer></script>
+<script src="exam-graph.js" defer></script>
+<script src="exam-graph-zero.js" defer></script>
+<script src="exam-graph-desmos.js" defer></script>
 
 <script>
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
@@ -756,6 +819,77 @@ function calcBadge(code) {
     : '';
   return `<span class="calc-badge"${warn} title="${esc(d.detail)}">${CALC_ICON}${esc(d.text)}</span>`;
 }
+
+// ─── THE IN-APP CALCULATOR ───────────────────────────────────────────────────
+//
+// Added 2026-08-27 under an explicit unfreeze of this file. Everything about
+// whether it appears is decided elsewhere and read here:
+//
+//   describe().inApp  is true only when the exam's OWN policy names a provider
+//                     AND that provider is registered. Every exam in
+//                     exam-registry.js has provider: null today, so this is
+//                     false for every student, and no control renders.
+//
+// The verification override exists because that is a circular dependency at
+// activation time: you cannot check the calculator works without showing it, and
+// you should not show it to students before checking it works. ?desmos-check=1
+// opens the workspace for whoever typed it, changes nothing for anyone else,
+// and is what scripts/check-desmos-activation.cjs drives. See
+// docs/engineering/desmos-integration.md §6 step 3.
+function calcCheckMode() {
+  try { return new URLSearchParams(location.search).get('desmos-check') === '1'; }
+  catch (e) { return false; }
+}
+
+function calcAvailable(code) {
+  try {
+    // The override renders the control and nothing more. It does NOT reach into
+    // the provider registry to decide — whatever state the provider is in, the
+    // workspace already has a card for it, and a second availability path in
+    // this page would be a second place for "is a calculator allowed" to be
+    // answered.
+    if (calcCheckMode()) return true;
+    return !!window.SiExamCalculator?.describe(code)?.inApp;
+  } catch (e) { return false; }
+}
+
+function calcLauncher(code) {
+  if (!calcAvailable(code)) return '';
+  return `<button class="calc-open" type="button" data-si-calculator-open>`
+    + `${CALC_ICON}Graphing Calculator</button>`;
+}
+
+// One workspace per page, built the first time it is asked for. It is the
+// SHIPPED exam-workspace.js — this page adds no panel of its own, so the
+// provider abstraction it enforces is not something mock-exam.html can bypass.
+let _calcWs = null;
+function calcWorkspace() {
+  if (_calcWs) return _calcWs;
+  const W = window.SiExamWorkspace?.Workspace;
+  if (!W) return null;
+  const mark = document.createElement('span');
+  mark.className = 'xw-mark';
+  mark.setAttribute('aria-hidden', 'true');
+  mark.textContent = '\u{1F409}';
+  _calcWs = W({
+    providerId: 'desmos',
+    // NO fallbackId. Zero Graph needs the figure renderer, which no shipped
+    // page loads yet, so it reports state 'no-renderer' here — and a fallback
+    // that cannot draw is not a fallback. Pass it once the renderer ships.
+    fallbackId: null,
+    title: 'Graphing Calculator',
+    mark: mark,
+  });
+  document.body.appendChild(_calcWs.scrim);
+  document.body.appendChild(_calcWs.el);
+  return _calcWs;
+}
+
+function wireCalcLauncher() {
+  document.querySelector('[data-si-calculator-open]')?.addEventListener('click', () => {
+    calcWorkspace()?.open();
+  });
+}
 const CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
 function htmlSelect() {
@@ -1053,6 +1187,7 @@ function htmlTimer() {
       </div>
       <div style="text-align:center;margin-bottom:14px">
         ${calcBadge(s.exam.code)}
+        ${calcLauncher(s.exam.code)}
       </div>
       <div class="timer-controls">
         <button class="btn-pause${s.timerRunning ? '' : ' paused-state'}" id="btnPause">
@@ -1143,6 +1278,7 @@ function updateTimerDOM() {
 function afterTimer() {
   armExamAudio();          // P3: no-op when this block is already armed
   startIntegrityForAttempt();  // P5: no-op when this attempt is already active
+  wireCalcLauncher();      // no-op when no control rendered, which is every exam today
   if (s.timerRunning) {
     s.timerInterval = setInterval(tickTimer, 1000);
   }

@@ -33,13 +33,43 @@ t.section('Zero providers: the normal state, held everywhere');
   t.ok('describe() reports inApp:false for every exam',
     R.EXAM_CODES.every(c => C.describe(c).inApp === false));
 
-  // The page must render no calculator control of any kind.
+  // ── UPDATED 2026-08-27, when the calculator was wired in ────────────────
+  //
+  // This block used to assert that mock-exam.html contained no calculator
+  // control of any kind, by grepping for names like `btnCalc` and `calcModal`.
+  // That guarantee is deliberately gone: the page now renders a launcher and
+  // mounts the shipped workspace. Two of those three assertions would still
+  // have passed, purely because the new code happens to use different names —
+  // which is the vacuous-assertion failure this project audited for.
+  //
+  // What replaces them is what must actually stay true.
   const page = read('mock-exam.html');
-  t.ok('no calculator button exists in the page',
-    !/btnCalc|calculator-btn|openCalculator|id="calc/i.test(page));
-  t.ok('no calculator panel or modal exists in the page',
-    !/calcPanel|calculator-panel|calcModal/i.test(page));
-  t.ok('the page never calls mount()', !/SiExamCalculator[.?]*\.getProvider|\.mount\(/.test(page));
+
+  // 1. The launcher's visibility is decided by the POLICY, not by the page
+  //    having an opinion. `describe(code).inApp` is the only production path,
+  //    and it is false for every exam.
+  const avail = slice(page, 'function calcAvailable(code) {',
+                            'function calcLauncher(', 'calcAvailable');
+  t.ok('the launcher is gated on describe().inApp',
+    /describe\(code\)\?\.inApp/.test(avail));
+  t.ok('and on nothing else the page decides for itself',
+    !/EXAM_CODES|s\.exam|localStorage|isInAppAvailable/.test(avail));
+
+  // 2. The page never mounts a provider itself. It hands the job to
+  //    exam-workspace.js, which is where the provider abstraction is enforced;
+  //    a direct mount here would be the page routing around it.
+  t.ok('the page never mounts a provider itself', !/\.mount\(/.test(page));
+
+  // 3. The page never reaches into the provider registry. Two places answering
+  //    "is a calculator available" is two places for them to disagree.
+  t.ok('the page never reads the provider registry',
+    !/getProvider|providerCount/.test(page));
+
+  // 4. The verification override is narrow and named. It exists so activation
+  //    can be checked without showing students an unverified calculator; it must
+  //    stay an exact-match flag rather than any truthy query parameter.
+  t.ok('the verification override is an exact flag match',
+    /get\('desmos-check'\) === '1'/.test(page));
 }
 
 t.section('Policy → copy: the registry is the source, per exam');
@@ -135,8 +165,11 @@ t.section('The socket is optional — never a dependency of the exam lifecycle')
   const lines = page.split('\n').filter(l => l.includes('SiExamCalculator'));
   t.ok('every page call site tolerates the module being absent',
     lines.length > 0 && lines.every(l => l.includes('SiExamCalculator?.')));
+  // `(?<!!)` because a DOUBLE negation is a coercion, not a guard: `!!x?.y` is
+  // the tolerant form this rule wants, and matching it reported the opposite of
+  // the truth. Only a single `!` in front is a load guard.
   t.ok('the load guard does NOT require the calculator module',
-    !/!window\.SiExamCalculator/.test(page));
+    !/(?<!!)!window\.SiExamCalculator/.test(page));
 
   // The lifecycle knows nothing of it.
   for (const [fn, end] of [

@@ -524,5 +524,6 @@ switch it.
 | **The current API version** | Repo defaults to v1.11; v1.12 may exist. Confirm at step 0. |
 | **Key injection route** | **Decided and built** — `SI_DESMOS_CONFIG` as a Vercel environment variable, served by `api/desmos-config.js`. Step 2. |
 | **Which CSP directives the calculator needs** | Five are open to `www.desmos.com`; the activation test reports which were used, and the rest should then be closed. If it reports a blocked `eval`, that is a decision — see step 1. |
-| **The launcher in `mock-exam.html`** | The production exam page is a **frozen file** and does not load the workspace or render a calculator control. Wiring it is the last step, and needs an explicit unfreeze. |
+| **The launcher in `mock-exam.html`** | **Done** — the file was unfrozen 2026-08-27 and wired. No student is offered anything: the launcher is gated on `describe().inApp`, which is false for every exam. `scripts/check-exam-calculator-wiring.cjs` drives the real page and asserts it. |
+| **Zero Graph as the production fallback** | Not yet. It draws through the figure renderer, which no shipped page loads — `exam-stimulus.js` is DRAFT and speaks an older spec shape. It now reports `no-renderer` rather than claiming ready, and `mock-exam.html` passes no `fallbackId`. A fallback that cannot draw is not a fallback. |
 | **Everything about how it renders** | Never seen. The mount path is documented-API-shaped and unexercised. |
