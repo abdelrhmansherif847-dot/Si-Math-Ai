@@ -28,6 +28,12 @@ const CSP = JSON.parse(fs.readFileSync(path.join(REPO,'vercel.json'),'utf8')).he
   .flatMap(h=>h.headers||[]).find(h=>h.key==='Content-Security-Policy').value;
 const KEY = 'STUB-KEY-NOT-A-REAL-KEY';
 
+// The configuration the stub endpoint serves. Flipped between page loads so the
+// three states that matter right now are all exercised: the trial key the
+// account actually holds, the same key misused as student-facing, and the
+// commercial configuration that does not exist yet.
+let CFG = { apiKey: KEY, tier: 'trial', apiVersion: 'v1.12' };
+
 const STUB_DESMOS = `
 window.Desmos = {
   enabledFeatures: { GraphingCalculator: true, ScientificCalculator: true },
@@ -55,7 +61,7 @@ const srv = http.createServer((req,res)=>{
     const okAuth=/^Bearer \S+$/.test(a);
     res.writeHead(okAuth?200:401,{'Content-Type':'application/json','Cache-Control':'no-store, max-age=0, private','Content-Security-Policy':CSP});
     return res.end(JSON.stringify(okAuth
-      ? {note:'Desmos configuration, commercial tier.',config:{apiKey:KEY,tier:'commercial',studentFacing:true,apiVersion:'v1.12'}}
+      ? {note:'Desmos configuration, ' + CFG.tier + ' tier.', config: CFG}
       : {note:'Sign in to use the calculator.',config:{}}));
   }
   if (u==='/__s.js') return send('application/javascript',
@@ -112,7 +118,7 @@ const srv = http.createServer((req,res)=>{
   const ok = (n, c, d) => { (c ? pass : fails).push((c ? 'PASS  ' : 'FAIL  ') + n + (d ? '  — ' + d : '')); };
   const url = (r.script || '').replace(/apiKey=[^&]*/, 'apiKey=***');
 
-  ok('a signed-in page gets a configuration', /commercial tier/.test(r.sub), r.sub);
+  ok('a signed-in page gets a configuration', /trial tier/.test(r.sub), r.sub);
   ok('the configured apiVersion is what is requested',
      /\/api\/v1\.12\/calculator\.js/.test(url), url);
   ok('the script is requested from Desmos’s own origin and nowhere else',
@@ -134,6 +140,40 @@ const srv = http.createServer((req,res)=>{
   await page.waitForTimeout(400);
   const left = await page.evaluate(() => document.querySelector('.xw-mount').children.length);
   ok('closing the panel calls destroy() and empties the region', left === 0, String(left));
+
+  // ── the other two configurations ──────────────────────────────────────────
+  //
+  // The trial key mounted above, which is the state the account is actually in.
+  // These are the two neighbouring states, and the middle one is the whole
+  // reason §2.a is enforced in code rather than remembered.
+  async function reopen(cfg) {
+    CFG = cfg;
+    await page.goto('http://127.0.0.1:8742/mock-exam.html?desmos-check=1', { waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => { s.exam = window.SiExamRegistry.get('SAT_MODULE_1') || { code: 'SAT_MODULE_1' };
+      s.exam.code = 'SAT_MODULE_1'; s.timerTotal = 2100; s.timerSec = 1043; s.timerRunning = false;
+      s.modulePlan = []; s.moduleOrdinal = 1; s.view = 'TIMER'; render(); });
+    await page.waitForTimeout(300);
+    await page.click('[data-si-calculator-open]');
+    await page.waitForFunction(() => {
+      const m = document.querySelector('.xw-mount');
+      return m && (m.querySelector('[data-stub-desmos]') || m.querySelector('.xw-gate,.xw-err'));
+    }, null, { timeout: 20000 });
+    return page.evaluate(() => {
+      const m = document.querySelector('.xw-mount');
+      return { mounted: !!m.querySelector('[data-stub-desmos]'),
+               text: (m.innerText || '').replace(/\n/g, ' ') };
+    });
+  }
+
+  const misuse = await reopen({ apiKey: KEY, tier: 'trial', studentFacing: true, apiVersion: 'v1.12' });
+  ok('a trial key marked student-facing is REFUSED, not mounted (§2.a)',
+     !misuse.mounted && /trial-misuse|internal testing/i.test(misuse.text),
+     misuse.text.slice(0, 80));
+
+  const commercial = await reopen({ apiKey: KEY, tier: 'commercial', studentFacing: true, apiVersion: 'v1.12' });
+  ok('a commercial configuration mounts the calculator', commercial.mounted,
+     commercial.text.slice(0, 80));
 
   console.log([...pass, ...fails].join('\n'));
   console.log(`\nscreenshot: ${shot}`);

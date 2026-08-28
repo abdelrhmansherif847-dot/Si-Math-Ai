@@ -140,7 +140,7 @@ catch (e) {
 function readAuthorization() {
   try {
     var rec = fs.readFileSync(path.join(REPO, 'docs/engineering/desmos-integration.md'), 'utf8');
-    var head = rec.split('\n').slice(0, 14).join('\n');
+    var head = rec.split('\n').slice(0, 16).join('\n');
     var m = head.match(/^<!--\s*desmos-authorization:\s*(.+?)\s*-->$/m);
     if (!m) return {};
     return Object.fromEntries(m[1].split(';')
@@ -406,17 +406,21 @@ function report({ fails, pass, deployed = true }) {
     say('    node scripts/check-desmos-activation.cjs');
     return;
   }
-  if (!AUTH.plan) {
-    say('\nThe calculator rendered. That is HALF the milestone — the other half is the');
-    say('commercial authorisation, which no test can discover for you. Record it first');
-    say('(runbook step 3a), then re-run so the served API version can be checked');
-    say('against the approved one.');
-    return;
-  }
-  say('\nRecord it. In docs/engineering/desmos-integration.md, replace the marker with:\n');
-  say('  <!-- desmos-activation: ACTIVATED -->');
+  // The render is one of two axes. Recording it does NOT open the gate on its
+  // own, and saying so here is the difference between a finished integration and
+  // one that gets switched on because a test went green.
+  say('\nRecord the RENDER. In docs/engineering/desmos-integration.md\u2019s header:\n');
+  say('  <!-- desmos-activation: PROVEN -->');
   say('  <!-- desmos-evidence: date=<YYYY-MM-DD>; apiVersion=<version used>; ' +
-      'tier=commercial; checkedBy=<who ran this> -->');
+      'tier=<trial|commercial>; checkedBy=<who ran this> -->');
+  if (!AUTH.route) {
+    say('\nThat is HALF of what a student needs. The other half is');
+    say('  <!-- desmos-commercial: APPROVED -->  plus an authorisation line,');
+    say('and no test can discover it for you \u2014 API Terms \u00a72.a makes the trial');
+    say('internal-only, so a trial key proves the render and licenses nothing.');
+    say('Until it is recorded, no exam may name the provider and no student sees');
+    say('the calculator. Runbook step 3a.');
+  }
 }
 
 const notes = [];

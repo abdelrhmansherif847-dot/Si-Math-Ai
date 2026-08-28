@@ -54,13 +54,14 @@
   // ships them as new versioned URLs. Making this configurable means a version
   // bump is a deploy-time change rather than a code change and a review cycle.
   //
-  // v1.11 is what this repository has recorded. Search results seen 2026-08-27
-  // title the docs page "Desmos API v1.12 documentation", so the default here
-  // may already be one release behind — but www.desmos.com is blocked from the
-  // environment this was written in, so it could not be confirmed, and a guess
-  // in a URL is worse than a stale default that the runbook forces you to check.
-  // ACTIVATION STEP: read the current version off the docs page and set it.
-  var DEFAULT_API_VERSION = 'v1.11';
+  // v1.12, read off the official Quick Start from the Desmos API dashboard by
+  // the account owner on 2026-08-28. This was v1.11 until then, on the reasoning
+  // that a guessed URL which 404s is worse than a stale one — the guess is no
+  // longer needed. www.desmos.com is unreachable from the environment this file
+  // is maintained in, so the version is evidence supplied by whoever holds the
+  // account, and `apiVersion` in SI_DESMOS_CONFIG overrides it without a code
+  // change when §5.d's next 60-day window opens.
+  var DEFAULT_API_VERSION = 'v1.12';
   var SCRIPT_ID = 'si-desmos-api';
 
   // A student is in a timed exam. A script that never resolves is worse than one

@@ -63,11 +63,13 @@ registered into the socket that was waiting for them, and the panel that mounts
 them is `exam-workspace.js`, a shipped module rather than preview markup — which
 is what makes the failure path below shipped code too.
 
-* **`exam-graph-desmos.js`** — the official Desmos API, loaded from Desmos's own
-  origin with our own key. Registered unconditionally, **inert without a key**.
-  Four not-ready states, including one that refuses to serve the 90-day
-  evaluation trial to students, because that is outside API Terms §2.a and a
-  policy document cannot refuse to mount.
+* **`exam-graph-desmos.js`** — the official Desmos API, v1.12, loaded from
+  Desmos's own origin with our own key. Registered unconditionally, **inert
+  without a key**. Four not-ready states, including one that refuses to serve the
+  90-day evaluation trial to students — that is outside API Terms §2.a, and a
+  policy document cannot refuse to mount. It is not hypothetical: the account
+  currently holds a trial key, so that refusal is the live configuration's
+  guardrail rather than a future one.
 * **`exam-graph-zero.js`** — Zero Graph, first-party, always available. It plots
   through the exam's own figure renderer, so a student's sketch and the
   question's figure obey one grammar. Its evaluator is shunting-yard to RPN,

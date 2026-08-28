@@ -1,18 +1,28 @@
 # Desmos — the official integration path
 
 <!-- desmos-activation: UNPROVEN -->
+<!-- desmos-commercial: PENDING -->
 
-> ## Status: **UNPROVEN**
+> ## Status: render **UNPROVEN** · commercial **PENDING**
 >
-> The integration is built, wired and gated. **The Desmos calculator has never
-> been mounted.** Everything below about how it behaves once a key exists is
-> written from the documented API, not from having run it.
+> **Two markers, because these are two questions and they move independently.**
 >
-> The marker above is machine-read by `scripts/validate-desmos-activation.mjs`,
-> which fails CI if any exam names a calculator provider while it still says
-> UNPROVEN. Flipping it to ACTIVATED requires an evidence line the same check
-> validates, field by field. **Do not flip it by hand because the code looks
-> right.**
+> | marker | asks | today |
+> |---|---|---|
+> | `desmos-activation` | does the official calculator render? | **UNPROVEN** — it has never been mounted here |
+> | `desmos-commercial` | may a student be shown it? | **PENDING** — the account holds a 90-day trial key, and the Desmos dashboard says to contact them for commercial use |
+>
+> They used to be one marker, which could not express the situation we are
+> actually in: a trial key can legitimately prove the render — API Terms §2.a
+> permits *"internal testing to evaluate in preparation for commercial use"* —
+> while licensing nothing for students. Worse, the single marker accepted only
+> `permittedUse=commercial-production`, so the only way to record anything was to
+> claim a licence nobody had.
+>
+> `scripts/validate-desmos-activation.mjs` reads both and **fails CI if any exam
+> names a calculator provider unless both say yes**. Each requires its own
+> evidence line, field-checked. **Do not flip either by hand because the code
+> looks right.**
 
 **Written 2026-08-27.** Supersedes the licensing conclusion in
 `docs/roadmap/mock-exam-v2-investigation.md` §7.1, which was wrong. Nothing here
@@ -375,12 +385,31 @@ signed-in student opens the calculator**.
 | **Value** | the configuration object, as compact JSON |
 | **Environments** | Production and Preview |
 
+**Today, on the trial key:**
+
 ```json
-{"apiKey":"<the key>","tier":"commercial","studentFacing":true}
+{"apiKey":"<the key>","tier":"trial","apiVersion":"v1.12"}
 ```
 
-`apiVersion` is optional — add `,"apiVersion":"v1.12"` once you have read the
-current version off `desmos.com/api`. Omitted, the provider uses its own default.
+**`studentFacing` is deliberately absent.** With `tier:"trial"` and
+`studentFacing:true` both the endpoint and the provider refuse to mount — §2.a
+makes the trial internal-only. Omitted, the integration is fully testable through
+`?desmos-check=1` and reaches no student.
+
+**Once Desmos confirms commercial use** (step 3a), and not before:
+
+```json
+{"apiKey":"<the key>","tier":"commercial","studentFacing":true,"apiVersion":"v1.12"}
+```
+
+`apiVersion` matches the official Quick Start as read from the API dashboard on
+2026-08-28. The provider now defaults to `v1.12` too, so it may be omitted — but
+setting it explicitly is what lets CI compare it against the approved version.
+
+**Key rotation.** The key lives in exactly one place, so rotating it is editing
+the Vercel variable and redeploying. Nothing is cached (`no-store`), nothing is
+built into an asset, and nothing in this repository has ever held key material —
+verified against the full git history, not just the working tree.
 
 **The contract is not reshaped.** The environment variable *is* the configuration
 object. The endpoint parses it, checks it, and returns it; it does not rename
@@ -436,51 +465,55 @@ SI_SESSION_TOKEN=<supabase access token> \
 It then reports the tier, the version and **`apiKey=present`**. It never prints
 the key, its length, or any substring of it.
 
-### Step 3a — confirm the commercial authorisation
+### Step 3a — the commercial authorisation, when it arrives
 
-**A green activation test proves the calculator renders. It says nothing about
-whether we are licensed to render it to paying students.** That question lives in
-a Desmos account this repository cannot query, so the requirement is that it is
-written down — in a form the activation test can check the deployment against.
+**Not yet.** As of 2026-08-28 the account holds an **active 90-day trial key**,
+and the Desmos API dashboard says to **contact Desmos** to proceed with
+commercial use. So this step is open, and `desmos-commercial` stays `PENDING`.
 
-Confirm, from the Desmos account or the agreement itself:
+That is a partial correction to §1 of this document. §3.a does offer two routes —
+*"upgrade to an appropriate paid plan via our self-service pathway"* **or**
+contact `partnerships@desmos.com` for a Commercial Addendum — and I emphasised
+the self-serve one because it was the route the earlier record wrongly denied
+existed. **The dashboard, which is the operative surface, points at the second.**
+Whether the self-serve pathway is available for this use, volume or region is not
+something the terms settle and not something this repository can discover.
 
-1. **The plan covers commercial production use** by Si Math AI. Not a personal
-   key, not the §2.a 90-day trial. §2.a is explicit that *"Commercial use includes
-   any use of the API in an Application that is accessed by End Users in
-   production"* — one paying student makes it commercial.
-2. **Which API version the plan approves**, read off `desmos.com/api`. §5.d makes
-   this a compliance question rather than a preference: Updates ship as new
-   versioned URLs and must be adopted within 60 days.
-3. **Which products the key enables** — `Desmos.enabledFeatures`, per §4.b. The
-   activation test reports what comes back.
+**What the trial does and does not allow.** §2.a permits *"a 90 day trial for
+internal testing to evaluate in preparation for commercial use"*, and *"Commercial
+use includes any use of the API in an Application that is accessed by End Users
+in production"*. So during the trial:
 
-Then record it in this file's header:
+- **Testing the integration is fine** — that is precisely what the trial is for,
+  and it is what `?desmos-check=1` exists to make possible without exposing
+  anything to students.
+- **Students must not reach it.** No exam may name the provider, and CI refuses
+  it while `desmos-commercial` is `PENDING`. The provider itself refuses to mount
+  a `trial` key marked `studentFacing`, and so does the endpoint.
+
+When Desmos confirms, record it in this file's header:
 
 ```
-<!-- desmos-authorization: plan=<self-serve|commercial-addendum>; permittedUse=commercial-production; approvedApiVersion=<vX.Y>; confirmedBy=<who confirmed it>; confirmedOn=<YYYY-MM-DD>; source=<the plan page, invoice or agreement it was read from> -->
+<!-- desmos-commercial: APPROVED -->
+<!-- desmos-authorization: route=<self-serve|commercial-addendum>; approvedApiVersion=<vX.Y>; confirmedBy=<who confirmed it>; confirmedOn=<YYYY-MM-DD>; source=<the plan page, invoice or agreement it was read from> -->
 ```
 
 > **This line is an attestation, not a measurement.** Nothing in this repository
 > can ask Desmos whether we are licensed; CI checks only that the fields are
-> filled in and that the deployment matches them. `permittedUse` has exactly one
-> accepted value because serving students on anything else is outside §2.a — but
-> the check accepting it is not evidence that it is TRUE.
+> filled in and that the deployment matches them.
 >
 > **Write it only when you have read the authorisation.** `source` exists for
 > that reason: it should name the plan page, invoice or agreement the confirmation
 > came from, so a later reader can check the claim rather than inherit it. Writing
-> `commercial-production` because it is the value that makes CI pass would be
-> exactly the failure this whole file has been trying to avoid.
+> `APPROVED` because it is what makes CI pass would be exactly the failure this
+> whole file has been trying to avoid.
 
-`scripts/validate-desmos-activation.mjs` format-checks every field, refuses a
-`permittedUse` that is not `commercial-production`, and **fails if the version
-the activation test actually ran differs from the approved one**. The activation
-test reads the same line and compares it against the version the deployment
-served, so an environment quietly running an unapproved version is caught rather
-than assumed away.
-
-Without this line, an ACTIVATED record fails CI, and no exam may name a provider.
+`scripts/validate-desmos-activation.mjs` format-checks every field and **fails if
+the version the activation test actually ran differs from the approved one** —
+§5.d makes the version a compliance question rather than a preference. The
+activation test reads the same line and compares it against the version the
+deployment served, so an environment quietly running an unapproved version is
+caught rather than assumed away.
 
 ### Step 3 — run the activation test
 
@@ -625,15 +658,15 @@ switch it.
 | | |
 |---|---|
 | **The fee** | Not published anywhere. Read it at `desmos.com/my-api`. Step 0. |
-| **Domain-restricted keys** | Unknown whether Desmos supports them. Ask at step 0; it decides how much §5.c can actually be honoured. |
-| **The current API version** | **v1.12 exists** — `desmos.com/api/v1.12/docs`, confirmed 2026-08-28 from a source the owner supplied; unreachable from here. The provider still defaults to v1.11 (a versioned URL Desmos continues to serve) because a guessed URL that 404s is worse than a stale default. Set `apiVersion` in `SI_DESMOS_CONFIG` and record it as `approvedApiVersion`; CI then fails if the two disagree. §5.d gives 60 days. |
+| **Domain-restricted keys** | Unknown whether Desmos supports them. Worth asking in the same message as the commercial enquiry; it decides how much §5.c can actually be honoured. |
+| **The current API version** | **Settled: v1.12**, read off the official Quick Start in the API dashboard by the account holder, 2026-08-28. It is now the provider's default. |
 | **Key injection route** | **Decided and built** — `SI_DESMOS_CONFIG` as a Vercel environment variable, served by `api/desmos-config.js`. Step 2. |
 | **Which CSP directives the calculator needs** | Five are open to `www.desmos.com`; the activation test reports which were used, and the rest should then be closed. If it reports a blocked `eval`, that is a decision — see step 1. |
 | **The launcher in `mock-exam.html`** | **Done** — the file was unfrozen 2026-08-27 and wired. No student is offered anything: the launcher is gated on `describe().inApp`, which is false for every exam. `scripts/check-exam-calculator-wiring.cjs` drives the real page and asserts it. |
 | **Zero Graph as the production fallback** | Not yet. It draws through the figure renderer, which no shipped page loads — `exam-stimulus.js` is DRAFT and speaks an older spec shape. It now reports `no-renderer` rather than claiming ready, and `mock-exam.html` passes no `fallbackId`. A fallback that cannot draw is not a fallback. |
 | **Everything about how it renders** | Never seen. The mount path is documented-API-shaped and unexercised. |
 | **Server-side proxying of the bundle** | **Ruled out** by the owner, 2026-08-28: not to be done without an explicit arrangement with Desmos. `validate-desmos-activation.mjs` now fails CI if `api/desmos-config.js` so much as references desmos.com in code. §9. |
-| **Commercial authorisation** | Not yet recorded. Step 3a — and CI refuses an ACTIVATED record without it. |
+| **Commercial authorisation** | **The open item.** The dashboard says to contact Desmos; `desmos-commercial` is `PENDING` and CI refuses to let any exam name the provider until it is `APPROVED`. Step 3a. |
 
 ---
 
@@ -701,7 +734,7 @@ history, and only one of them is the milestone.
 |---|---|---|
 | `tests/run-all.mjs` | the socket, the gates, the frozen page holds no logic | **56 green** |
 | `check-exam-calculator-wiring.cjs` | the real exam page: no control for students, the override, the auth-gated fetch on click, no key in any served asset | **26 green** |
-| `check-calculator-mount-path.cjs` | the mount path, against a **Desmos-shaped stub** — config → script URL → `GraphingCalculator(ourElement)` → real size → `destroy()` | **12 green** |
+| `check-calculator-mount-path.cjs` | the mount path, against a **Desmos-shaped stub** — config → script URL → `GraphingCalculator(ourElement)` → real size → `destroy()`, across the trial / trial-misused / commercial configurations | **14 green** |
 | `check-exam-ui.cjs` | the exam surface and provider-agnostic workspace, both themes | **82 green** |
 | `check-desmos-config-endpoint.mjs` | a deployment's endpoint: 401 anonymous, no key in assets, and (with a session) that the variable arrived | **never run** — needs a reachable deployment |
 | the live Preview endpoint | that Vercel picked up `/api` with zero config, that it refuses anonymous callers, and that the widened CSP shipped | **verified 2026-08-28** — see below |

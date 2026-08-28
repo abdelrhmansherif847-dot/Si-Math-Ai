@@ -11,11 +11,13 @@
 //
 // It is a gate, not a test of Desmos. Three things it will not let happen:
 //
-//   1. An exam naming a calculator provider while the record still says the
-//      integration is unproven. Naming a provider is the last of the three
-//      gates in exam-calculator.js and the only one a student can feel.
-//   2. The record claiming ACTIVATED without evidence a human could check —
-//      a date, the API version that was mounted, and the tier of the key.
+//   1. An exam naming a calculator provider before BOTH of the record's two
+//      markers say yes: that it renders (desmos-activation) and that we are
+//      licensed to show it to students (desmos-commercial). Naming a provider is
+//      the last of the three gates in exam-calculator.js and the only one a
+//      student can feel.
+//   2. Either marker claiming more than it can show — PROVEN without evidence a
+//      human could check, APPROVED without a recorded authorisation.
 //   3. An API key reaching this repository, which is PUBLIC. Desmos API Terms
 //      §5.c requires reasonable efforts to keep it confidential; a key in a
 //      public git history is the opposite of that, and unlike the other two
@@ -41,21 +43,21 @@ const read = p => readFileSync(join(REPO, p), 'utf8');
 // the parse to the header makes the example inert, and the field formats below
 // reject its placeholders on their own merits.
 const record = read(RECORD);
-const HEADER = record.split('\n').slice(0, 10).join('\n');
-const MARKER = /^<!--\s*desmos-activation:\s*(UNPROVEN|ACTIVATED)\s*-->$/m;
+const HEADER = record.split('\n').slice(0, 16).join('\n');
+const MARKER = /^<!--\s*desmos-activation:\s*(UNPROVEN|PROVEN)\s*-->$/m;
 const m = HEADER.match(MARKER);
 if (!m) {
   fails.push(`${RECORD} carries no activation marker in its first 10 lines. ` +
-             `Expected "<!-- desmos-activation: UNPROVEN -->" or "... ACTIVATED -->".`);
+             `Expected "<!-- desmos-activation: UNPROVEN -->" or "... PROVEN -->".`);
 }
 const status = m ? m[1] : 'UNPROVEN';
 
-// ── 2. ACTIVATED must come with evidence, and the evidence must be real ──────
+// ── 2. PROVEN must come with evidence, and the evidence must be real ─────────
 //
 // Every field is format-checked. A copied-and-not-filled-in template is the
 // realistic failure here, not a missing line, so "YYYY-MM-DD" must fail exactly
 // as hard as an absent date.
-if (status === 'ACTIVATED') {
+if (status === 'PROVEN') {
   const ev = HEADER.match(/^<!--\s*desmos-evidence:\s*(.+?)\s*-->$/m);
   const fields = ev ? Object.fromEntries(
     ev[1].split(';').map(s => s.split('=').map(x => x.trim())).filter(p => p.length === 2)) : {};
@@ -66,7 +68,7 @@ if (status === 'ACTIVATED') {
     checkedBy: /^(?!name$|<)[^<>]{2,}$/,
   };
   if (!ev) {
-    fails.push(`${RECORD} says ACTIVATED but carries no desmos-evidence line in its ` +
+    fails.push(`${RECORD} says PROVEN but carries no desmos-evidence line in its ` +
                `first 10 lines. Expected: <!-- desmos-evidence: date=YYYY-MM-DD; ` +
                `apiVersion=vX.Y; tier=commercial; checkedBy=name -->`);
   } else {
@@ -82,21 +84,38 @@ if (status === 'ACTIVATED') {
   }
 }
 
-// ── 2b. COMMERCIAL AUTHORISATION — the half no test can discover ─────────────
+// ── 2b. COMMERCIAL AUTHORISATION — a SECOND axis, not the same one ───────────
 //
-// A green activation test proves the calculator renders. It says nothing about
-// whether we are licensed to render it to paying students, and that question
-// lives in a Desmos account this repository cannot query. So the requirement is
-// that somebody wrote the answer down, in a form the activation test can check
-// the deployment against.
+// This used to be one marker, and that conflated two independent questions:
 //
-// This is not paperwork for its own sake. `approvedApiVersion` is compared to
-// the version the deployment actually served — API Terms §5.d makes the version
-// a compliance question, not a preference — and `permittedUse` is what stops a
-// personal or trial key being pressed into commercial service under §2.a.
+//   does the calculator render?      desmos-activation:  UNPROVEN | PROVEN
+//   may students be shown it?        desmos-commercial:  PENDING  | APPROVED
+//
+// They move independently and for different reasons. On 2026-08-28 the owner
+// read their Desmos dashboard: an active 90-day TRIAL key, and an instruction to
+// contact Desmos for commercial use. So the integration can legitimately be
+// proven — mounted, rendered, checked — while commercial activation stays
+// pending, and the old single marker had no way to say that. Worse, it accepted
+// only permittedUse=commercial-production, which meant the sole way to record
+// anything at all was to claim a licence nobody had.
+//
+// API Terms §2.a permits the trial for "internal testing to evaluate in
+// preparation for commercial use", which is exactly what proving the render is.
+// §3.a is what students need, and nothing here can grant it.
+const COMMERCIAL = /^<!--\s*desmos-commercial:\s*(PENDING|APPROVED)\s*-->$/m;
+const cm = HEADER.match(COMMERCIAL);
+if (!cm) {
+  fails.push(`${RECORD} carries no commercial marker in its first 14 lines. Expected ` +
+             `"<!-- desmos-commercial: PENDING -->" or "... APPROVED -->".`);
+}
+const commercial = cm ? cm[1] : 'PENDING';
+
+// APPROVED must come with evidence, and every field is format-checked. A copied
+// template is the realistic failure, so "<vX.Y>" must fail as hard as an absent
+// field. `source` is required because it is what lets a later reader check the
+// claim rather than inherit it.
 const AUTH_SHAPE = {
-  plan: /^(self-serve|commercial-addendum)$/,
-  permittedUse: /^commercial-production$/,
+  route: /^(self-serve|commercial-addendum)$/,
   approvedApiVersion: /^v\d+\.\d+$/,
   confirmedBy: /^(?!name$|<)[^<>]{2,}$/,
   confirmedOn: /^\d{4}-\d{2}-\d{2}$/,
@@ -105,12 +124,12 @@ const AUTH_SHAPE = {
 const authLine = HEADER.match(/^<!--\s*desmos-authorization:\s*(.+?)\s*-->$/m);
 const auth = authLine ? Object.fromEntries(
   authLine[1].split(';').map(x => x.split('=').map(y => y.trim())).filter(p => p.length === 2)) : null;
-if (status === 'ACTIVATED') {
+if (commercial === 'APPROVED') {
   if (!auth) {
-    fails.push(`${RECORD} says ACTIVATED but records no commercial authorisation. ` +
-      `Expected in its header: <!-- desmos-authorization: plan=self-serve; ` +
-      `permittedUse=commercial-production; approvedApiVersion=vX.Y; confirmedBy=<name>; ` +
-      `confirmedOn=YYYY-MM-DD; source=<where this was confirmed> -->`);
+    fails.push(`${RECORD} says desmos-commercial: APPROVED but records no authorisation ` +
+      `line. Expected: <!-- desmos-authorization: route=<self-serve|commercial-addendum>; ` +
+      `approvedApiVersion=<vX.Y>; confirmedBy=<who>; confirmedOn=<YYYY-MM-DD>; ` +
+      `source=<what it was read from> -->`);
   } else {
     for (const [k, re] of Object.entries(AUTH_SHAPE)) {
       if (!auth[k]) fails.push(`${RECORD} authorisation has no "${k}".`);
@@ -119,17 +138,18 @@ if (status === 'ACTIVATED') {
                    `value (expected ${re}).`);
       }
     }
-    // The two records must agree with each other. A version approved in one and
-    // run in the other is exactly the drift both lines exist to prevent.
-    const evLine = HEADER.match(/^<!--\s*desmos-evidence:\s*(.+?)\s*-->$/m);
-    const ev = evLine ? Object.fromEntries(
-      evLine[1].split(';').map(x => x.split('=').map(y => y.trim())).filter(p => p.length === 2)) : {};
-    if (ev.apiVersion && auth.approvedApiVersion && ev.apiVersion !== auth.approvedApiVersion) {
-      fails.push(`${RECORD}: the activation ran API ${ev.apiVersion} but the approved ` +
-                 `version is ${auth.approvedApiVersion}. Re-run the activation test against ` +
-                 `the approved version, or update the approval.`);
-    }
   }
+}
+
+// Whichever axis they came from, an approved version and a run version that
+// disagree are the drift both lines exist to prevent.
+const evLine = HEADER.match(/^<!--\s*desmos-evidence:\s*(.+?)\s*-->$/m);
+const ev = evLine ? Object.fromEntries(
+  evLine[1].split(';').map(x => x.split('=').map(y => y.trim())).filter(p => p.length === 2)) : {};
+if (ev.apiVersion && auth && auth.approvedApiVersion && ev.apiVersion !== auth.approvedApiVersion) {
+  fails.push(`${RECORD}: the activation ran API ${ev.apiVersion} but the approved version ` +
+             `is ${auth.approvedApiVersion}. Re-run against the approved version, or ` +
+             `update the approval.`);
 }
 
 // ── 2c. NEVER proxy or self-host Desmos's bundle ─────────────────────────────
@@ -151,20 +171,33 @@ for (const f of ['api/desmos-config.js']) {
   }
 }
 
-// ── 3. no exam may name a provider before the record says ACTIVATED ──────────
+// ── 3. no exam may name a provider until BOTH axes are satisfied ─────────────
+//
+// Naming a provider in exam-registry.js is what makes a calculator reach a
+// student, and it needs both answers to be yes: it renders, and we are licensed
+// to show it to them. A trial key satisfies the first and not the second — API
+// Terms §2.a is explicit that the trial is "for internal testing", and §3.a that
+// "any use of the API in an Application that is accessed by End Users in
+// production" is commercial use.
 const registry = read('exam-registry.js');
 const named = [...registry.matchAll(/provider:\s*(?!null)('([^']*)'|"([^"]*)")/g)]
   .map(x => x[2] ?? x[3]);
-if (named.length && status === 'ACTIVATED' && !auth) {
-  fails.push(`exam-registry.js names a calculator provider and ${RECORD} says ACTIVATED, ` +
-             `but no commercial authorisation is recorded. Students must not be served a ` +
-             `calculator on a licence nobody has written down.`);
-}
-if (named.length && status !== 'ACTIVATED') {
-  fails.push(`exam-registry.js names calculator provider(s) [${[...new Set(named)].join(', ')}] ` +
-             `while ${RECORD} says ${status}. Naming a provider is what makes a calculator ` +
-             `reach a student. Run scripts/check-desmos-activation.cjs against a real key ` +
-             `first, record the result, then name the provider.`);
+if (named.length) {
+  const why = [];
+  if (status !== 'PROVEN') {
+    why.push(`${RECORD} says desmos-activation: ${status} — the calculator has not been ` +
+             `shown to render. Run scripts/check-desmos-activation.cjs in deployed mode.`);
+  }
+  if (commercial !== 'APPROVED') {
+    why.push(`${RECORD} says desmos-commercial: ${commercial} — no commercial licence is ` +
+             `recorded. API Terms §2.a: the trial tier is for internal testing, and serving ` +
+             `students is commercial use requiring §3.a.`);
+  }
+  if (why.length) {
+    fails.push(`exam-registry.js names calculator provider(s) ` +
+               `[${[...new Set(named)].join(', ')}], which is what puts a calculator in ` +
+               `front of a student. ` + why.join(' '));
+  }
 }
 
 // ── 4. no API key in a public repository ─────────────────────────────────────
@@ -234,5 +267,5 @@ if (fails.length) {
   for (const f of fails) console.error('  • ' + f);
   process.exit(1);
 }
-console.log(`validate-desmos-activation: OK (status ${status}, ` +
+console.log(`validate-desmos-activation: OK (render ${status}, commercial ${commercial}, ` +
             `${named.length} exam(s) naming a provider)`);
