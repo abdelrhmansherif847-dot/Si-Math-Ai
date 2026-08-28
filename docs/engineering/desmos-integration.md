@@ -436,6 +436,40 @@ SI_SESSION_TOKEN=<supabase access token> \
 It then reports the tier, the version and **`apiKey=present`**. It never prints
 the key, its length, or any substring of it.
 
+### Step 3a — confirm the commercial authorisation
+
+**A green activation test proves the calculator renders. It says nothing about
+whether we are licensed to render it to paying students.** That question lives in
+a Desmos account this repository cannot query, so the requirement is that it is
+written down — in a form the activation test can check the deployment against.
+
+Confirm, from the Desmos account or the agreement itself:
+
+1. **The plan covers commercial production use** by Si Math AI. Not a personal
+   key, not the §2.a 90-day trial. §2.a is explicit that *"Commercial use includes
+   any use of the API in an Application that is accessed by End Users in
+   production"* — one paying student makes it commercial.
+2. **Which API version the plan approves**, read off `desmos.com/api`. §5.d makes
+   this a compliance question rather than a preference: Updates ship as new
+   versioned URLs and must be adopted within 60 days.
+3. **Which products the key enables** — `Desmos.enabledFeatures`, per §4.b. The
+   activation test reports what comes back.
+
+Then record it in this file's header:
+
+```
+<!-- desmos-authorization: plan=self-serve; permittedUse=commercial-production; approvedApiVersion=vX.Y; confirmedBy=<name>; confirmedOn=YYYY-MM-DD; source=<where this was confirmed> -->
+```
+
+`scripts/validate-desmos-activation.mjs` format-checks every field, refuses a
+`permittedUse` that is not `commercial-production`, and **fails if the version
+the activation test actually ran differs from the approved one**. The activation
+test reads the same line and compares it against the version the deployment
+served — so an environment quietly running an unapproved version is caught rather
+than assumed away.
+
+Without this line, an ACTIVATED record fails CI, and no exam may name a provider.
+
 ### Step 3 — run the activation test
 
 ```
@@ -445,16 +479,27 @@ DESMOS_API_KEY=<key> DESMOS_TIER=commercial \
 
 **Two modes, and only one of them is the milestone.**
 
-**Deployed mode — this is the activation milestone.** It drives the live page the
-way a student does: loads the exam, clicks the real launcher, and watches what
-happens. The key comes from the deployed endpoint and **this process never
-handles it** — the only assertion made about the key is that one came back, never
-its value, its length, or any part of it.
+**Deployed mode — this is the activation milestone.** It drives the live page as
+a **signed-in student**: seeds the session, loads the exam, clicks the real
+launcher, and watches what happens.
 
 ```
-DESMOS_ACTIVATION_URL=https://www.si-math-ai.com/mock-exam.html \
+SI_SESSION_TOKEN=<access token> \
+DESMOS_ACTIVATION_URL="https://<preview>.vercel.app/mock-exam.html?desmos-check=1" \
   node scripts/check-desmos-activation.cjs
 ```
+
+A session is **required**, not optional: `/api/desmos-config` refuses anonymous
+callers by design, so an anonymous run would only prove that refusal works. Take
+the token from DevTools → Application → Local Storage → the `sb-*-auth-token`
+entry → `access_token`, on a signed-in browser on that deployment.
+
+**Both credentials are handled as credentials.** The session token and the API
+key are registered for redaction the moment they are seen, and every line this
+tool prints passes through that filter. The screenshot is checked before it is
+taken: if either value is rendered anywhere in the page's visible text, the
+capture is **skipped** and the check fails. A screenshot is a deliverable, and a
+deliverable must not become a way to publish a credential.
 
 Fourteen checks: the page loads, `/api/desmos-config` answered 200, it returned a
 key, the tier is `commercial`, the exam offers a calculator control, the
@@ -560,13 +605,14 @@ switch it.
 |---|---|
 | **The fee** | Not published anywhere. Read it at `desmos.com/my-api`. Step 0. |
 | **Domain-restricted keys** | Unknown whether Desmos supports them. Ask at step 0; it decides how much §5.c can actually be honoured. |
-| **The current API version** | Repo defaults to v1.11; v1.12 may exist. Confirm at step 0. |
+| **The current API version** | **v1.12 exists** — `desmos.com/api/v1.12/docs`, confirmed 2026-08-28 from a source the owner supplied; unreachable from here. The provider still defaults to v1.11 (a versioned URL Desmos continues to serve) because a guessed URL that 404s is worse than a stale default. Set `apiVersion` in `SI_DESMOS_CONFIG` and record it as `approvedApiVersion`; CI then fails if the two disagree. §5.d gives 60 days. |
 | **Key injection route** | **Decided and built** — `SI_DESMOS_CONFIG` as a Vercel environment variable, served by `api/desmos-config.js`. Step 2. |
 | **Which CSP directives the calculator needs** | Five are open to `www.desmos.com`; the activation test reports which were used, and the rest should then be closed. If it reports a blocked `eval`, that is a decision — see step 1. |
 | **The launcher in `mock-exam.html`** | **Done** — the file was unfrozen 2026-08-27 and wired. No student is offered anything: the launcher is gated on `describe().inApp`, which is false for every exam. `scripts/check-exam-calculator-wiring.cjs` drives the real page and asserts it. |
 | **Zero Graph as the production fallback** | Not yet. It draws through the figure renderer, which no shipped page loads — `exam-stimulus.js` is DRAFT and speaks an older spec shape. It now reports `no-renderer` rather than claiming ready, and `mock-exam.html` passes no `fallbackId`. A fallback that cannot draw is not a fallback. |
 | **Everything about how it renders** | Never seen. The mount path is documented-API-shaped and unexercised. |
-| **Server-side proxying of the bundle** | The only way the key becomes a true server secret, and legally uncertain. Not implemented; ask Desmos. §9. |
+| **Server-side proxying of the bundle** | **Ruled out** by the owner, 2026-08-28: not to be done without an explicit arrangement with Desmos. `validate-desmos-activation.mjs` now fails CI if `api/desmos-config.js` so much as references desmos.com in code. §9. |
+| **Commercial authorisation** | Not yet recorded. Step 3a — and CI refuses an ACTIVATED record without it. |
 
 ---
 
@@ -622,3 +668,29 @@ a basis for re-hosting a licensor's code, and the question costs one email.
 works from `si-math-ai.com` is worth more than any amount of hiding it in
 transit, because it makes a copied key useless. That is the first question in
 step 0, and it is still open.
+
+---
+
+## 10. What has actually been run
+
+Kept honest because "verified" has meant four different things in this document's
+history, and only one of them is the milestone.
+
+| | what it proves | state |
+|---|---|---|
+| `tests/run-all.mjs` | the socket, the gates, the frozen page holds no logic | **56 green** |
+| `check-exam-calculator-wiring.cjs` | the real exam page: no control for students, the override, the auth-gated fetch on click, no key in any served asset | **26 green** |
+| `check-calculator-mount-path.cjs` | the mount path, against a **Desmos-shaped stub** — config → script URL → `GraphingCalculator(ourElement)` → real size → `destroy()` | **12 green** |
+| `check-exam-ui.cjs` | the exam surface and provider-agnostic workspace, both themes | **82 green** |
+| `check-desmos-config-endpoint.mjs` | a deployment's endpoint: 401 anonymous, no key in assets, and (with a session) that the variable arrived | **never run** — needs a reachable deployment |
+| `check-desmos-activation.cjs` deployed | **the milestone**: the official calculator rendering for a signed-in student | **never run** — needs Desmos and a deployment |
+
+The third row is new and worth being precise about. It exercises everything on
+our side of the boundary that was previously unverifiable here — and **the stub
+is not Desmos**. It proves the mount path is correct, not that Desmos renders.
+
+Two things gate "ready for final UI review", and neither is a test result this
+environment can produce:
+
+1. **The commercial authorisation, recorded** (step 3a).
+2. **The live Preview render, captured** (step 3, deployed mode).

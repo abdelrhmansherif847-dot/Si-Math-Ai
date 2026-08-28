@@ -82,10 +82,84 @@ if (status === 'ACTIVATED') {
   }
 }
 
+// ── 2b. COMMERCIAL AUTHORISATION — the half no test can discover ─────────────
+//
+// A green activation test proves the calculator renders. It says nothing about
+// whether we are licensed to render it to paying students, and that question
+// lives in a Desmos account this repository cannot query. So the requirement is
+// that somebody wrote the answer down, in a form the activation test can check
+// the deployment against.
+//
+// This is not paperwork for its own sake. `approvedApiVersion` is compared to
+// the version the deployment actually served — API Terms §5.d makes the version
+// a compliance question, not a preference — and `permittedUse` is what stops a
+// personal or trial key being pressed into commercial service under §2.a.
+const AUTH_SHAPE = {
+  plan: /^(self-serve|commercial-addendum)$/,
+  permittedUse: /^commercial-production$/,
+  approvedApiVersion: /^v\d+\.\d+$/,
+  confirmedBy: /^(?!name$|<)[^<>]{2,}$/,
+  confirmedOn: /^\d{4}-\d{2}-\d{2}$/,
+  source: /^(?!<)[^<>]{4,}$/,
+};
+const authLine = HEADER.match(/^<!--\s*desmos-authorization:\s*(.+?)\s*-->$/m);
+const auth = authLine ? Object.fromEntries(
+  authLine[1].split(';').map(x => x.split('=').map(y => y.trim())).filter(p => p.length === 2)) : null;
+if (status === 'ACTIVATED') {
+  if (!auth) {
+    fails.push(`${RECORD} says ACTIVATED but records no commercial authorisation. ` +
+      `Expected in its header: <!-- desmos-authorization: plan=self-serve; ` +
+      `permittedUse=commercial-production; approvedApiVersion=vX.Y; confirmedBy=<name>; ` +
+      `confirmedOn=YYYY-MM-DD; source=<where this was confirmed> -->`);
+  } else {
+    for (const [k, re] of Object.entries(AUTH_SHAPE)) {
+      if (!auth[k]) fails.push(`${RECORD} authorisation has no "${k}".`);
+      else if (!re.test(auth[k])) {
+        fails.push(`${RECORD} authorisation field ${k}="${auth[k]}" is not a filled-in ` +
+                   `value (expected ${re}).`);
+      }
+    }
+    // The two records must agree with each other. A version approved in one and
+    // run in the other is exactly the drift both lines exist to prevent.
+    const evLine = HEADER.match(/^<!--\s*desmos-evidence:\s*(.+?)\s*-->$/m);
+    const ev = evLine ? Object.fromEntries(
+      evLine[1].split(';').map(x => x.split('=').map(y => y.trim())).filter(p => p.length === 2)) : {};
+    if (ev.apiVersion && auth.approvedApiVersion && ev.apiVersion !== auth.approvedApiVersion) {
+      fails.push(`${RECORD}: the activation ran API ${ev.apiVersion} but the approved ` +
+                 `version is ${auth.approvedApiVersion}. Re-run the activation test against ` +
+                 `the approved version, or update the approval.`);
+    }
+  }
+}
+
+// ── 2c. NEVER proxy or self-host Desmos's bundle ─────────────────────────────
+//
+// Re-serving a licensor's code from our origin is much closer to the mirroring
+// the desmos.com website terms prohibit than to the embedding API Terms §5.a
+// licenses, and §5.b(i) forbids distributing "the Software Service (or any part
+// thereof) other than as specifically authorized". It is also the one design
+// that would make the key a true server secret, which makes it a standing
+// temptation. So it is refused mechanically rather than remembered.
+for (const f of ['api/desmos-config.js']) {
+  let src;
+  try { src = read(f); } catch { continue; }
+  const code = src.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  if (/desmos\.com/.test(code)) {
+    fails.push(`${f} references desmos.com in code. A server-side fetch or proxy of ` +
+               `Desmos's bundle is not authorised — see desmos-integration.md §9. The ` +
+               `browser loads their script directly, from their origin.`);
+  }
+}
+
 // ── 3. no exam may name a provider before the record says ACTIVATED ──────────
 const registry = read('exam-registry.js');
 const named = [...registry.matchAll(/provider:\s*(?!null)('([^']*)'|"([^"]*)")/g)]
   .map(x => x[2] ?? x[3]);
+if (named.length && status === 'ACTIVATED' && !auth) {
+  fails.push(`exam-registry.js names a calculator provider and ${RECORD} says ACTIVATED, ` +
+             `but no commercial authorisation is recorded. Students must not be served a ` +
+             `calculator on a licence nobody has written down.`);
+}
 if (named.length && status !== 'ACTIVATED') {
   fails.push(`exam-registry.js names calculator provider(s) [${[...new Set(named)].join(', ')}] ` +
              `while ${RECORD} says ${status}. Naming a provider is what makes a calculator ` +

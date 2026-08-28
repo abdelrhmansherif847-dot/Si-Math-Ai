@@ -58,6 +58,29 @@ const VERSION = (process.env.DESMOS_API_VERSION || '').trim();
 //
 const URL_MODE = (process.env.DESMOS_ACTIVATION_URL || '').trim();
 
+// A Supabase access token from a signed-in browser on the target deployment:
+// DevTools → Application → Local Storage → the sb-*-auth-token entry.
+// Required in deployed mode, because /api/desmos-config refuses anonymous
+// callers by design.
+const SESSION = (process.env.SI_SESSION_TOKEN || '').trim();
+const SESSION_KEY = (process.env.SI_SESSION_KEY || 'sb-igvkyxkmjnkzscqgommj-auth-token').trim();
+
+// Everything this process prints goes through here. The API key and the session
+// token are both credentials, and a report that leaks one is worse than no
+// report. Belt and braces: nothing is SUPPOSED to reach the output, and this is
+// what makes "supposed to" not the only thing standing in the way.
+const SECRETS = [];
+function scrub(text) {
+  var out = String(text);
+  for (var i = 0; i < SECRETS.length; i++) {
+    if (SECRETS[i] && SECRETS[i].length >= 6) out = out.split(SECRETS[i]).join('[REDACTED]');
+  }
+  return out;
+}
+if (SESSION) SECRETS.push(SESSION);
+const say = (...a) => console.log(scrub(a.join(' ')));
+const warn = (...a) => console.error(scrub(a.join(' ')));
+
 if (!URL_MODE && (!KEY || !TIER)) {
   console.error('check-desmos-activation: NOT RUN. It has never been run.\n');
   console.error('  DEPLOYED mode — the activation milestone. Drives the live page as a');
@@ -77,6 +100,19 @@ if (!URL_MODE && !['commercial', 'trial'].includes(TIER)) {
   process.exit(2);
 }
 
+if (URL_MODE && !SESSION) {
+  warn('check-desmos-activation: deployed mode needs a signed-in session.\n');
+  warn('  /api/desmos-config refuses anonymous callers by design, so an anonymous run');
+  warn('  would only prove that refusal works. Supply a token:\n');
+  warn('    SI_SESSION_TOKEN=<access token> \\');
+  warn('    DESMOS_ACTIVATION_URL="<url>?desmos-check=1" \\');
+  warn('      node scripts/check-desmos-activation.cjs\n');
+  warn('  DevTools → Application → Local Storage → the sb-*-auth-token entry →');
+  warn('  access_token, from a signed-in browser on that deployment. It is never');
+  warn('  printed, written to disk, or captured in the screenshot.');
+  process.exit(2);
+}
+
 let chromium;
 try { ({ chromium } = require('playwright')); }
 catch (e) {
@@ -86,6 +122,26 @@ catch (e) {
   console.error('  and then, if the browser is missing:    npx playwright install chromium');
   process.exit(2);
 }
+
+// ── what we are AUTHORISED to run, read from the record ──────────────────────
+//
+// The commercial authorisation itself lives in a Desmos account and cannot be
+// queried from here. What CAN be checked is that somebody wrote it down, and
+// that the deployment matches what they wrote — the difference between "we
+// think we are licensed" and "here is the plan, the approved version, and who
+// confirmed it".
+function readAuthorization() {
+  try {
+    var rec = fs.readFileSync(path.join(REPO, 'docs/engineering/desmos-integration.md'), 'utf8');
+    var head = rec.split('\n').slice(0, 14).join('\n');
+    var m = head.match(/^<!--\s*desmos-authorization:\s*(.+?)\s*-->$/m);
+    if (!m) return {};
+    return Object.fromEntries(m[1].split(';')
+      .map(function (x) { return x.split('=').map(function (y) { return y.trim(); }); })
+      .filter(function (pr) { return pr.length === 2 && pr[1]; }));
+  } catch (e) { return {}; }
+}
+const AUTH = readAuthorization();
 
 // ── the site's own CSP, read from vercel.json rather than restated ────────────
 const vercel = JSON.parse(fs.readFileSync(path.join(REPO, 'vercel.json'), 'utf8'));
@@ -155,6 +211,10 @@ async function runDeployed({ ok, fails, pass }) {
         // discarded; nothing about its value leaves this block.
         const m = body.match(/globalThis\.SI_DESMOS_CONFIG\s*=\s*(\{[\s\S]*?\});/);
         const cfg = m ? JSON.parse(m[1]) : null;
+        // The value is registered for scrubbing and never used again. From
+        // here on, if it appears anywhere in this process's output it is
+        // replaced, whatever path put it there.
+        if (cfg && typeof cfg.apiKey === 'string' && cfg.apiKey.length >= 6) SECRETS.push(cfg.apiKey);
         configShape = cfg ? {
           hasKey: typeof cfg.apiKey === 'string' && cfg.apiKey.trim().length > 0,
           tier: cfg.tier || null,
@@ -176,6 +236,26 @@ async function runDeployed({ ok, fails, pass }) {
     document.addEventListener('securitypolicyviolation', e => globalThis.__violations.push(
       { directive: e.effectiveDirective, blocked: e.blockedURI }));
   });
+
+  // ── sign in ────────────────────────────────────────────────────────────────
+  //
+  // The calculator's configuration request is authenticated, so an anonymous
+  // browser gets 401 and a "sign in" card — which is correct behaviour and a
+  // useless test. Seed the session Supabase's client reads on startup.
+  //
+  // The token is a session credential and is treated like the API key: it is
+  // never printed, never written to a file, and never appears in a screenshot.
+  if (SESSION) {
+    await page.addInitScript(([key, tok]) => {
+      try {
+        localStorage.setItem(key, JSON.stringify({
+          access_token: tok, token_type: 'bearer', expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          refresh_token: 'placeholder', user: null,
+        }));
+      } catch (e) {}
+    }, [SESSION_KEY, SESSION]);
+  }
 
   let resp = null;
   try {
@@ -242,6 +322,23 @@ async function runDeployed({ ok, fails, pass }) {
      st.err ? st.err.replace(/\n/g, ' ') : '');
   ok('the graphing calculator is enabled on this key',
      !!(st.features && st.features.GraphingCalculator), JSON.stringify(st.features));
+
+  // ── is this the configuration we are authorised to run? ───────────────────
+  //
+  // The version actually SERVED, read off the script URL rather than off what
+  // we asked for — a deployment can carry an apiVersion the record never
+  // approved, and §5.d makes the version a compliance question rather than a
+  // preference.
+  const served = (desmosReqs.map(r => (r.url.match(/\/api\/(v[\d.]+)\//) || [])[1])
+    .filter(Boolean))[0] || null;
+  ok('the API version served is recorded', !!served, served || 'no versioned request seen');
+  if (AUTH.approvedApiVersion) {
+    ok(`the served version is the approved one (${AUTH.approvedApiVersion})`,
+       served === AUTH.approvedApiVersion, `served ${served}`);
+  } else {
+    notes.push('No approved API version recorded, so the served version could not be '
+      + 'checked against one. Fill in the desmos-authorization line — runbook step 3a.');
+  }
   ok('the calculator region has real size', st.w > 200 && st.h > 200, `${st.w}x${st.h}`);
   ok('the calculator itself is what is in the region', st.kids > 0 && !st.ours,
      st.ours ? 'our own card is there' : `${st.kids} child node(s)`);
@@ -255,33 +352,53 @@ async function runDeployed({ ok, fails, pass }) {
      desmosReqs.map(r => r.status + ' ' + r.url).slice(0, 4).join(' | ') || 'no desmos requests');
   ok('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
+  // The screenshot is a deliverable — it is the visual proof — so it must not
+  // become a way to publish a credential. Checked against the rendered text,
+  // not the DOM: an attribute nobody can see is not a leak, and a key printed
+  // into the page would be.
+  const visible = await page.evaluate(() => document.body.innerText || '');
+  const shown = SECRETS.filter(v => v && visible.includes(v));
+  ok('no credential is visible anywhere on the page', shown.length === 0,
+     shown.length ? 'a secret is rendered in the page text' : '');
+
   const shot = path.join(__dirname, 'desmos-activation.png');
-  await page.screenshot({ path: shot, fullPage: false });
+  if (shown.length === 0) {
+    await page.screenshot({ path: shot, fullPage: false });
+  }
   await browser.close();
-  console.log(`\nscreenshot: ${shot}`);
+  if (shown.length === 0) say(`\nscreenshot: ${shot}`);
+  else warn('\nscreenshot SKIPPED — a credential is rendered on the page.');
   return report({ fails, pass });
 }
 
 function report({ fails, pass, deployed = true }) {
-  console.log([...pass, ...fails].join('\n'));
-  for (const n of notes) console.log('\nNOTE  ' + n);
+  say([...pass, ...fails].join('\n'));
+  for (const n of notes) say('\nNOTE  ' + n);
   if (fails.length) {
-    console.log(`\n${fails.length} FAILED, ${pass.length} passed — DO NOT mark the record ACTIVATED.`);
+    say(`\n${fails.length} FAILED, ${pass.length} passed — DO NOT mark the record ACTIVATED.`);
     process.exit(1);
   }
-  console.log(`\nALL ${pass.length} CHECKS PASSED.`);
+  say(`\nALL ${pass.length} CHECKS PASSED.`);
   if (!deployed) {
-    console.log('\nThis was LOCAL mode: the provider mounts. It is not the activation');
-    console.log('milestone, because no student flow was exercised. Re-run against the');
-    console.log('deployed page before recording anything:\n');
-    console.log('  DESMOS_ACTIVATION_URL="https://www.si-math-ai.com/mock-exam.html?desmos-check=1" \\');
-    console.log('    node scripts/check-desmos-activation.cjs');
+    say('\nThis was LOCAL mode: the provider mounts. It is not the activation');
+    say('milestone, because no student flow was exercised. Re-run against the');
+    say('deployed page as a signed-in user before recording anything:\n');
+    say('  SI_SESSION_TOKEN=<access token> \\');
+    say('  DESMOS_ACTIVATION_URL="https://www.si-math-ai.com/mock-exam.html?desmos-check=1" \\');
+    say('    node scripts/check-desmos-activation.cjs');
     return;
   }
-  console.log('\nRecord it. In docs/engineering/desmos-integration.md, replace the marker with:\n');
-  console.log('  <!-- desmos-activation: ACTIVATED -->');
-  console.log('  <!-- desmos-evidence: date=<YYYY-MM-DD>; apiVersion=<version used>; ' +
-              'tier=commercial; checkedBy=<who ran this> -->');
+  if (!AUTH.plan) {
+    say('\nThe calculator rendered. That is HALF the milestone — the other half is the');
+    say('commercial authorisation, which no test can discover for you. Record it first');
+    say('(runbook step 3a), then re-run so the served API version can be checked');
+    say('against the approved one.');
+    return;
+  }
+  say('\nRecord it. In docs/engineering/desmos-integration.md, replace the marker with:\n');
+  say('  <!-- desmos-activation: ACTIVATED -->');
+  say('  <!-- desmos-evidence: date=<YYYY-MM-DD>; apiVersion=<version used>; ' +
+      'tier=commercial; checkedBy=<who ran this> -->');
 }
 
 const notes = [];
