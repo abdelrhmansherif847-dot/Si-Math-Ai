@@ -120,6 +120,18 @@
       ]);
     }
 
+    // A reason that comes from BEFORE any provider is consulted — the student is
+    // signed out, the configuration could not be fetched. Rendered in the same
+    // card as a provider's own gate, because to a student the distinction
+    // between "we could not get the key" and "the key is not set" is noise.
+    function messageCard(state, text) {
+      return card('xw-gate', [
+        el('span', { cls: 'xw-state', text: state }),
+        el('h3', { text: 'The calculator is not available' }),
+        el('p', { text: text }),
+      ]);
+    }
+
     function errorCard(message) {
       var kids = [
         el('span', { cls: 'xw-state xw-bad', text: 'unavailable' }),
@@ -191,6 +203,16 @@
       scrim: scrim,
       mountEl: mountEl,
       open: function () { setOpen(true); },
+      /**
+       * Replace the mount region with a plain explanation, for a reason that
+       * arises before a provider is asked — nobody is signed in, the config
+       * request failed. It unmounts whatever was there first, so it cannot
+       * leave a half-mounted provider behind it.
+       */
+      showMessage: function (state, text) {
+        clear();
+        mountEl.appendChild(messageCard(state || 'unavailable', text || ''));
+      },
       close: function () { setOpen(false); },
       isOpen: function () { return open; },
       setProvider: setProvider,

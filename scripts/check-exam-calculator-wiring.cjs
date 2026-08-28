@@ -24,6 +24,10 @@ const STUB = { apiKey: 'WIRING-CHECK-NOT-A-REAL-KEY', tier: 'commercial', studen
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
                 '.css': 'text/css; charset=utf-8', '.json': 'application/json' };
 
+// Every request the page makes for configuration, so the check can prove the
+// key is fetched on USE rather than on every exam page load.
+const configHits = [];
+
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   const send = (type, body, extra) => {
@@ -31,12 +35,26 @@ const server = http.createServer((req, res) => {
     res.end(body);
   };
   if (url === '/api/desmos-config') {
-    return send(TYPES['.js'], 'globalThis.SI_DESMOS_CONFIG = ' + JSON.stringify(STUB) + ';\n');
+    // Models the deployed endpoint's auth gate: a bearer token or nothing.
+    configHits.push({ auth: !!req.headers.authorization });
+    const j = (status, body) => {
+      res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8',
+                              'Cache-Control': 'no-store, max-age=0, private',
+                              'Content-Security-Policy': CSP });
+      res.end(JSON.stringify(body));
+    };
+    if (!/^Bearer \S+$/.test(req.headers.authorization || '')) {
+      return j(401, { note: 'Sign in to use the calculator.', config: {} });
+    }
+    return j(200, { note: 'Desmos configuration, commercial tier.', config: STUB });
   }
   // The Supabase CDN bundle is unreachable from this environment. A stub keeps
   // the page's own code running, which is what is under test here.
   if (url === '/__supabase-stub.js') {
-    return send(TYPES['.js'], 'globalThis.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),' +
+    // A signed-IN session, because the config fetch is authenticated and the
+    // signed-out path is checked separately below.
+    return send(TYPES['.js'], 'globalThis.supabase={createClient:()=>({auth:{' +
+      'getSession:async()=>({data:{session:{access_token:"stub-token"}}}),' +
       'getUser:async()=>({data:{user:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},' +
       'from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:null})})})}),' +
       'channel:()=>({on:()=>({subscribe(){}}),subscribe(){}}),removeChannel(){},rpc:async()=>({data:null})})};\n');
@@ -104,6 +122,23 @@ const server = http.createServer((req, res) => {
   ok('even though both providers are registered', plain.registered === 2, String(plain.registered));
   ok('no page errors', a.errs.length === 0, a.errs.slice(0, 2).join(' | '));
 
+  // ── 1b. THE SECRET IS NOT IN ANYTHING THE PAGE SERVES ─────────────────────
+  //
+  // The strongest form of "not exposed client-side" that a client-side API
+  // permits: the key is in no static asset the browser downloads. It reaches the
+  // browser only when a signed-in student opens the calculator, and only then.
+  const assets = await a.page.evaluate(() => [...document.querySelectorAll('script[src]')]
+    .map(e => e.getAttribute('src')).filter(u => /^[./]/.test(u)));
+  const leaks = [];
+  for (const u of ['/mock-exam.html', ...assets]) {
+    const r = await fetch(base + (u.startsWith('/') ? u : '/' + u));
+    if ((await r.text()).includes(STUB.apiKey)) leaks.push(u);
+  }
+  ok('the key is in no page or script the browser downloads',
+     leaks.length === 0, leaks.join(', '));
+  ok('and was not fetched at all — nobody opened the calculator',
+     configHits.length === 0, `${configHits.length} request(s)`);
+
   // ── 2. the verification override ──────────────────────────────────────────
   const b = await timerPage('?desmos-check=1');
   ok('?desmos-check=1 offers the control', await b.page.evaluate(
@@ -111,6 +146,12 @@ const server = http.createServer((req, res) => {
   const label = await b.page.evaluate(
     () => document.querySelector('[data-si-calculator-open]').textContent.trim());
   ok('named for its job, not the vendor', label === 'Graphing Calculator', label);
+  // The exam screen as a student meets it, before anything is opened.
+  await b.page.screenshot({ path: path.join(__dirname, 'shots5', 'exam-1-launcher.png'),
+                            clip: { x: 260, y: 0, width: 840, height: 820 } });
+
+  ok('the config is STILL not fetched merely by rendering the control',
+     configHits.length === 0, `${configHits.length} request(s)`);
 
   await b.page.click('[data-si-calculator-open]');
   await b.page.waitForSelector('.xw-panel.is-open', { timeout: 10000 });
@@ -129,6 +170,8 @@ const server = http.createServer((req, res) => {
       fallback: !!m.querySelector('.xw-fb'),
       script: (document.getElementById('si-desmos-api') || {}).src || null };
   });
+  ok('opening it fetches the config, once, with a bearer token',
+     configHits.length === 1 && configHits[0].auth === true, JSON.stringify(configHits));
   ok('the workspace opens', open.w > 200 && open.h > 200, `${open.w}x${open.h}`);
   ok('the tool is called Graphing Calculator', open.title === 'Graphing Calculator', open.title);
   ok('the provider is named in the subtitle, which §6.b licenses',
@@ -151,13 +194,36 @@ const server = http.createServer((req, res) => {
   // Auth is stubbed here, so a background user lookup can re-render the page
   // back to SELECT after the assertions. Put the exam screen back before the
   // shot so the picture shows the launcher where a student would meet it.
-  const shot = path.join(__dirname, 'shots5', 'mock-exam-calculator.png');
+  const shot = path.join(__dirname, 'shots5', 'exam-2-workspace.png');
   fs.mkdirSync(path.dirname(shot), { recursive: true });
   await b.page.evaluate(() => { if (s.view !== 'TIMER') { s.view = 'TIMER'; render(); } });
   await b.page.waitForTimeout(300);
   ok('the launcher is still on the exam screen behind the panel', await b.page.evaluate(
     () => document.querySelectorAll('[data-si-calculator-open]').length === 1));
   await b.page.screenshot({ path: shot });
+
+  // ── 4. the endpoint refuses anonymous callers ─────────────────────────────
+  const anon = await fetch(base + '/api/desmos-config');
+  const anonBody = await anon.text();
+  ok('an unauthenticated request is refused', anon.status === 401, String(anon.status));
+  ok('and carries no key', !anonBody.includes(STUB.apiKey));
+
+  // ── 5. a signed-out student is told, not left staring ─────────────────────
+  const d = await timerPage('?desmos-check=1');
+  await d.page.evaluate(() => {
+    globalThis.SI_EXAM_SUPABASE = { auth: { getSession: async () => ({ data: { session: null } }) } };
+    globalThis.SiExamCalculatorConfig._reset();
+  });
+  await d.page.click('[data-si-calculator-open]');
+  await d.page.waitForSelector('.xw-panel.is-open', { timeout: 10000 });
+  await d.page.waitForTimeout(600);
+  const out = await d.page.evaluate(() => ({
+    text: document.querySelector('.xw-mount').innerText.replace(/\n/g, ' '),
+    key: /apiKey/.test(document.documentElement.innerHTML),
+  }));
+  ok('a signed-out student is told to sign in', /signed? in/i.test(out.text),
+     out.text.slice(0, 70));
+  ok('and no key reached that page', !out.key && !/WIRING-CHECK/.test(out.text));
 
   const c = await timerPage('?desmos-check=0');
   ok('any other value of the flag offers nothing', await c.page.evaluate(

@@ -362,60 +362,79 @@ standing security guarantee for the calculator. Do not do that silently.
 `frame-src 'none'` is untouched. That is what structurally prevents anyone
 iframing desmos.com, which the website terms forbid.
 
-### Step 2 — configure the key, without putting it in this repository
+### Step 2 — configure the key — **done**
 
-**Decided and built.** The three options this section used to list are resolved:
-the key is a **Vercel environment variable**, read at request time by a
-**zero-config serverless function** at `api/desmos-config.js`, which hands the
-page the object `exam-graph-desmos.js` already expects.
+The three options this section used to list are resolved. The key is a **Vercel
+environment variable**, read at request time by a **zero-config serverless
+function** at `api/desmos-config.js`, and fetched by the browser **only when a
+signed-in student opens the calculator**.
 
 | | |
 |---|---|
 | **Variable name** | `SI_DESMOS_CONFIG` |
 | **Value** | the configuration object, as compact JSON |
-| **Environments** | Production (and Preview, if you want it live on branch deploys) |
+| **Environments** | Production and Preview |
 
 ```json
 {"apiKey":"<the key>","tier":"commercial","studentFacing":true}
 ```
 
-`apiVersion` is optional — add `,"apiVersion":"v1.12"` only once you have read
-the current version off `desmos.com/api`. Omitted, the provider uses its own
-default.
+`apiVersion` is optional — add `,"apiVersion":"v1.12"` once you have read the
+current version off `desmos.com/api`. Omitted, the provider uses its own default.
 
-**The contract is not reshaped.** The environment variable *is* the
-configuration object. The endpoint parses it, checks it, and assigns it; it does
-not rename fields, invent a second spelling, or supply defaults the provider
-already supplies. A translation layer between the variable and the contract is a
-place for the two to drift apart silently, which is why there isn't one.
+**The contract is not reshaped.** The environment variable *is* the configuration
+object. The endpoint parses it, checks it, and returns it; it does not rename
+fields, invent a second spelling, or supply defaults the provider already
+supplies. A translation layer between the variable and the contract is a place
+for the two to drift apart silently, which is why there isn't one.
 
-Why a function rather than a build step: this site is live. Adding a
-`buildCommand` to a project that is `framework: null` with no build command
-today changes how **every** file is deployed, and a mistake there breaks the
-whole site rather than the calculator. Vercel serves `/api` functions with zero
-configuration for static projects, so nothing about the existing deployment
-changes. `script-src 'self'` already covers it — the endpoint is same-origin.
+Why a function rather than a build step: this site is live, and the Vercel
+project is `framework: null` with no build command. Adding one changes how
+**every** file is deployed, and a mistake there breaks the whole site rather than
+the calculator. Vercel serves `/api` functions with zero configuration for static
+projects, so nothing about the existing deployment changes.
 
-What the endpoint refuses, each returning an inert config rather than a broken
-calculator: absent variable, unparseable JSON, a non-object, a missing or empty
-`apiKey`, a `tier` that is neither `commercial` nor `trial`, and — mirroring the
-client's own refusal — a `trial` key marked `studentFacing` (§2.a). Unknown
-fields are dropped and named in the log, because a typo'd field is otherwise
-silently ignored and the symptom is a calculator that will not start for no
-visible reason.
+What the endpoint refuses, each returning an inert configuration rather than a
+broken calculator: no session (**401**), absent variable, unparseable JSON, a
+non-object, a missing or empty `apiKey`, a `tier` that is neither `commercial`
+nor `trial`, and — mirroring the client's own refusal — a `trial` key marked
+`studentFacing` (§2.a). Unknown fields are dropped and named in the log, because
+a typo'd field is otherwise silently ignored and the symptom is a calculator that
+will not start for no visible reason.
 
 **It never logs the key**, and `scripts/validate-desmos-activation.mjs` fails CI
 if a future edit passes any config value to `console`. Vercel keeps function
 logs; a key logged there is a durable, searchable credential — worse than the
 browser exposure, because the browser exposure is at least inherent and known.
 
-**Be honest about what "confidential" can mean here.** The endpoint is public,
-and the key it returns is visible to anyone who requests it. So is the key in the
-`calculator.js?apiKey=…` URL in any student's network tab. That is what a browser
-integration is, not a flaw in this design. §5.c's "reasonable efforts" are
-therefore: never in git (enforced), never in logs (enforced), and
-**domain-restricted at Desmos if they support it** — which is the control that
-actually binds, and the open question from step 0.
+`SUPABASE_PUBLISHABLE_KEY` may be set to override the publishable key the
+endpoint uses to verify sessions. It defaults to the value already inlined in
+21 pages of this public repository, so it needs no configuration; the override
+exists for a key rotation.
+
+### Step 2b — verifying a deployment without seeing the key
+
+```
+node scripts/check-desmos-config-endpoint.mjs https://<preview>.vercel.app
+```
+
+Anonymous, it checks the things that are about the key being **absent**: the
+endpoint refuses an unauthenticated caller with 401 and an empty config, marks
+itself uncacheable, and no key literal appears in the exam page or in any
+same-origin script it loads.
+
+To also confirm the variable actually reached that deployment, add a session:
+
+```
+SI_SESSION_TOKEN=<supabase access token> \
+  node scripts/check-desmos-config-endpoint.mjs https://<preview>.vercel.app
+```
+
+(DevTools → Application → Local Storage → the `sb-*-auth-token` entry →
+`access_token`, from a signed-in browser on that deployment.)
+
+It then reports the tier, the version and **`apiKey=present`**. It never prints
+the key, its length, or any substring of it.
 
 ### Step 3 — run the activation test
 
@@ -547,3 +566,59 @@ switch it.
 | **The launcher in `mock-exam.html`** | **Done** — the file was unfrozen 2026-08-27 and wired. No student is offered anything: the launcher is gated on `describe().inApp`, which is false for every exam. `scripts/check-exam-calculator-wiring.cjs` drives the real page and asserts it. |
 | **Zero Graph as the production fallback** | Not yet. It draws through the figure renderer, which no shipped page loads — `exam-stimulus.js` is DRAFT and speaks an older spec shape. It now reports `no-renderer` rather than claiming ready, and `mock-exam.html` passes no `fallbackId`. A fallback that cannot draw is not a fallback. |
 | **Everything about how it renders** | Never seen. The mount path is documented-API-shaped and unexercised. |
+| **Server-side proxying of the bundle** | The only way the key becomes a true server secret, and legally uncertain. Not implemented; ask Desmos. §9. |
+
+---
+
+## 9. "Without exposing the secret client-side" — what that can mean
+
+The key was added to Vercel as a **sensitive secret**, with the requirement that
+it not be exposed client-side. That requirement cannot be met literally, and it
+is worth being exact about why rather than quietly redefining it.
+
+**The Desmos JS API is loaded by the student's browser:**
+
+```
+https://www.desmos.com/api/v1.11/calculator.js?apiKey=<key>
+```
+
+The key is in that URL, in that browser's network log, the moment the calculator
+opens. No configuration of our endpoint changes this. It is what a client-side
+API is, and Desmos's own terms are written expecting it — §5.c asks for
+*"reasonable efforts to prevent and discourage others from using your API Key"*,
+not for secrecy that a browser integration cannot provide.
+
+### What is enforced instead
+
+| | where |
+|---|---|
+| Never in git | `validate-desmos-activation.mjs` fails CI on a literal `apiKey` in any tracked file |
+| Never in logs | the same check fails CI if any `console` call in the endpoint or the client modules references a config value |
+| Never in a served asset | `check-desmos-config-endpoint.mjs` fetches the exam page and every same-origin script and looks for a key literal |
+| Never to an anonymous caller | the endpoint requires a valid Supabase session and answers 401 otherwise |
+| Never before it is needed | fetched when a student opens the calculator, not on page load |
+| Never cached | `no-store, private`, so no CDN edge holds a credential |
+
+The last three are new as of 2026-08-28. Before that the endpoint was a
+`<script src>` tag, which cannot carry an Authorization header — so it answered
+the open internet, on every exam page load. That was a much wider exposure than
+the exam itself, and it is closed.
+
+### The one thing that would actually make it a server secret
+
+Proxying Desmos's bundle through our own origin, injecting the key server-side,
+so the browser only ever sees `/api/desmos-calculator.js`.
+
+**This is not implemented, and should not be without asking Desmos first.**
+Re-serving their bundle from our origin is much closer to the mirroring the
+website terms prohibit than to the embedding §5.a licenses, and §5.b(i) forbids
+distributing "the Software Service (or any part thereof) other than as
+specifically authorized". It might well be fine — but "might well be fine" is not
+a basis for re-hosting a licensor's code, and the question costs one email.
+
+### The control that actually binds
+
+**Domain-restricting the key at Desmos**, if they support it. A key that only
+works from `si-math-ai.com` is worth more than any amount of hiding it in
+transit, because it makes a copied key useless. That is the first question in
+step 0, and it is still open.
