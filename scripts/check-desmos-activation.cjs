@@ -65,6 +65,13 @@ const URL_MODE = (process.env.DESMOS_ACTIVATION_URL || '').trim();
 const SESSION = (process.env.SI_SESSION_TOKEN || '').trim();
 const SESSION_KEY = (process.env.SI_SESSION_KEY || 'sb-igvkyxkmjnkzscqgommj-auth-token').trim();
 
+// This project has Vercel Authentication on for every deployment except its
+// custom domains, so a Preview URL answers a headless browser with Vercel's own
+// login wall rather than the exam. A Protection Bypass for Automation secret
+// (Vercel → Project → Settings → Deployment Protection) skips it for requests
+// carrying it. Not needed against www.si-math-ai.com, which is exempt.
+const BYPASS = (process.env.SI_VERCEL_BYPASS || '').trim();
+
 // Everything this process prints goes through here. The API key and the session
 // token are both credentials, and a report that leaks one is worse than no
 // report. Belt and braces: nothing is SUPPOSED to reach the output, and this is
@@ -196,7 +203,12 @@ globalThis.__ws = ws; ws.open();
 // one — never its value, its length or any part of it.
 async function runDeployed({ ok, fails, pass }) {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    extraHTTPHeaders: BYPASS
+      ? { 'x-vercel-protection-bypass': BYPASS, 'x-vercel-set-bypass-cookie': 'true' }
+      : {},
+  });
   const page = await ctx.newPage();
   const errors = [], desmosReqs = [];
   let configStatus = null, configShape = null;
@@ -268,6 +280,12 @@ async function runDeployed({ ok, fails, pass }) {
     process.exit(2);
   }
   ok('the page loads', !!resp && resp.ok(), resp ? String(resp.status()) : 'no response');
+  // Vercel's login wall answers 200, so a status check alone would not catch it.
+  const walled = await page.evaluate(() =>
+    /Authentication Required|Vercel Authentication|Log in to Vercel/i.test(document.body.innerText || ''));
+  ok('it is the exam, not Vercel\u2019s login wall', !walled,
+     walled ? 'set SI_VERCEL_BYPASS (Deployment Protection \u2192 Protection Bypass for Automation)' : '');
+  if (walled) { await browser.close(); return report({ fails, pass }); }
   await page.waitForTimeout(2000);
 
   ok('/api/desmos-config responded', configStatus === 200, String(configStatus));

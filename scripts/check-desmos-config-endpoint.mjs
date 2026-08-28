@@ -30,6 +30,10 @@ if (!url || !/^https?:\/\//.test(url)) {
   process.exit(2);
 }
 const TOKEN = (process.env.SI_SESSION_TOKEN || '').trim();
+// Preview deployments sit behind Vercel Authentication on this project. A
+// Protection Bypass for Automation secret skips it; the custom domain is exempt
+// and needs none.
+const BYPASS = (process.env.SI_VERCEL_BYPASS || '').trim();
 
 const fails = [], pass = [], notes = [];
 const ok = (n, c, d) => { (c ? pass : fails).push((c ? 'PASS  ' : 'FAIL  ') + n + (d ? '  — ' + d : '')); };
@@ -40,7 +44,9 @@ const ok = (n, c, d) => { (c ? pass : fails).push((c ? 'PASS  ' : 'FAIL  ') + n 
 const KEYISH = /(apiKey|api_key)\s*[:=]\s*["'][^"']{8,}["']/;
 
 async function get(path, headers) {
-  const r = await fetch(url + path, { headers: headers || {}, redirect: 'follow' });
+  const h = Object.assign({}, headers || {});
+  if (BYPASS) { h['x-vercel-protection-bypass'] = BYPASS; h['x-vercel-set-bypass-cookie'] = 'true'; }
+  const r = await fetch(url + path, { headers: h, redirect: 'follow' });
   return { status: r.status, body: await r.text(), type: r.headers.get('content-type') || '',
            cache: r.headers.get('cache-control') || '' };
 }
@@ -49,6 +55,9 @@ try {
   // ── 1. anonymous: refused, and empty-handed ────────────────────────────────
   const anon = await get('/api/desmos-config');
   ok('the endpoint exists', anon.status !== 404, String(anon.status));
+  ok('the deployment is reachable, not behind a login wall',
+     !/Authentication Required|Vercel Authentication/i.test(anon.body),
+     'set SI_VERCEL_BYPASS — Vercel → Deployment Protection → Protection Bypass for Automation');
   ok('an anonymous request is refused', anon.status === 401, String(anon.status));
   ok('and its body carries no key', !KEYISH.test(anon.body) && !/"apiKey"\s*:\s*"[^"]/.test(anon.body));
   ok('it is marked uncacheable', /no-store/.test(anon.cache), anon.cache || '(none)');

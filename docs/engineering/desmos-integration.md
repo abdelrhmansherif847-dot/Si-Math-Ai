@@ -458,14 +458,26 @@ Confirm, from the Desmos account or the agreement itself:
 Then record it in this file's header:
 
 ```
-<!-- desmos-authorization: plan=self-serve; permittedUse=commercial-production; approvedApiVersion=vX.Y; confirmedBy=<name>; confirmedOn=YYYY-MM-DD; source=<where this was confirmed> -->
+<!-- desmos-authorization: plan=<self-serve|commercial-addendum>; permittedUse=commercial-production; approvedApiVersion=<vX.Y>; confirmedBy=<who confirmed it>; confirmedOn=<YYYY-MM-DD>; source=<the plan page, invoice or agreement it was read from> -->
 ```
+
+> **This line is an attestation, not a measurement.** Nothing in this repository
+> can ask Desmos whether we are licensed; CI checks only that the fields are
+> filled in and that the deployment matches them. `permittedUse` has exactly one
+> accepted value because serving students on anything else is outside §2.a — but
+> the check accepting it is not evidence that it is TRUE.
+>
+> **Write it only when you have read the authorisation.** `source` exists for
+> that reason: it should name the plan page, invoice or agreement the confirmation
+> came from, so a later reader can check the claim rather than inherit it. Writing
+> `commercial-production` because it is the value that makes CI pass would be
+> exactly the failure this whole file has been trying to avoid.
 
 `scripts/validate-desmos-activation.mjs` format-checks every field, refuses a
 `permittedUse` that is not `commercial-production`, and **fails if the version
 the activation test actually ran differs from the approved one**. The activation
 test reads the same line and compares it against the version the deployment
-served — so an environment quietly running an unapproved version is caught rather
+served, so an environment quietly running an unapproved version is caught rather
 than assumed away.
 
 Without this line, an ACTIVATED record fails CI, and no exam may name a provider.
@@ -493,6 +505,15 @@ A session is **required**, not optional: `/api/desmos-config` refuses anonymous
 callers by design, so an anonymous run would only prove that refusal works. Take
 the token from DevTools → Application → Local Storage → the `sb-*-auth-token`
 entry → `access_token`, on a signed-in browser on that deployment.
+
+**Against a Preview URL you also need a protection bypass.** This project has
+Vercel Authentication enabled for `all_except_custom_domains`, so every Preview
+deployment answers a headless browser with Vercel's own login wall — which
+returns HTTP 200, so a status check alone would not notice. Generate a secret at
+Vercel → Project → Settings → Deployment Protection → **Protection Bypass for
+Automation** and pass it as `SI_VERCEL_BYPASS`. The check looks for the wall by
+name and says so rather than reporting a confusing failure downstream.
+`www.si-math-ai.com` is exempt and needs no bypass.
 
 **Both credentials are handled as credentials.** The session token and the API
 key are registered for redaction the moment they are seen, and every line this
@@ -683,6 +704,7 @@ history, and only one of them is the milestone.
 | `check-calculator-mount-path.cjs` | the mount path, against a **Desmos-shaped stub** — config → script URL → `GraphingCalculator(ourElement)` → real size → `destroy()` | **12 green** |
 | `check-exam-ui.cjs` | the exam surface and provider-agnostic workspace, both themes | **82 green** |
 | `check-desmos-config-endpoint.mjs` | a deployment's endpoint: 401 anonymous, no key in assets, and (with a session) that the variable arrived | **never run** — needs a reachable deployment |
+| the live Preview endpoint | that Vercel picked up `/api` with zero config, that it refuses anonymous callers, and that the widened CSP shipped | **verified 2026-08-28** — see below |
 | `check-desmos-activation.cjs` deployed | **the milestone**: the official calculator rendering for a signed-in student | **never run** — needs Desmos and a deployment |
 
 The third row is new and worth being precise about. It exercises everything on
@@ -694,3 +716,28 @@ environment can produce:
 
 1. **The commercial authorisation, recorded** (step 3a).
 2. **The live Preview render, captured** (step 3, deployed mode).
+
+### The deployment, checked 2026-08-28
+
+Read directly from the Preview build of `a148c10`, through Vercel's own
+authenticated fetch (this environment cannot reach the deployment otherwise):
+
+```
+GET /api/desmos-config   →  401 Unauthorized
+                            {"note":"Sign in to use the calculator.","config":{}}
+                            cache-control: no-store, max-age=0, private
+                            vary: Authorization
+                            x-robots-tag: noindex, nofollow
+```
+
+Three things that were reasoning are now facts:
+
+1. **Vercel served the `/api` function with zero configuration**, on a
+   `framework: null` project with no build command. That was the assumption the
+   whole injection route rested on.
+2. **The endpoint refuses an anonymous caller** and returns no key.
+3. **The widened CSP shipped**, with `https://www.desmos.com` in `script-src`,
+   `style-src`, `font-src`, `img-src` and `connect-src`, and `frame-src 'none'`
+   untouched.
+
+It says nothing about whether Desmos renders. That is still step 3.
