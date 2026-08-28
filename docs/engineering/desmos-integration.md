@@ -738,7 +738,7 @@ history, and only one of them is the milestone.
 | `check-exam-ui.cjs` | the exam surface and provider-agnostic workspace, both themes | **82 green** |
 | `check-desmos-config-endpoint.mjs` | a deployment's endpoint: 401 anonymous, no key in assets, and (with a session) that the variable arrived | **never run** — needs a reachable deployment |
 | the live Preview endpoint | that Vercel picked up `/api` with zero config, that it refuses anonymous callers, and that the widened CSP shipped | **verified 2026-08-28** — see below |
-| `check-desmos-activation.cjs` deployed | **the milestone**: the official calculator rendering for a signed-in student | **never run** — needs Desmos and a deployment |
+| `check-desmos-activation.cjs` deployed | **the milestone**: the official calculator rendering for a signed-in student | **17 of 22 green against a local stand-in; the 5 that fail are all the Desmos load itself.** Never run for real — see below |
 
 The third row is new and worth being precise about. It exercises everything on
 our side of the boundary that was previously unverifiable here — and **the stub
@@ -774,3 +774,49 @@ Three things that were reasoning are now facts:
    untouched.
 
 It says nothing about whether Desmos renders. That is still step 3.
+
+### Why the milestone still cannot be run here, 2026-08-28
+
+Not a limitation of the tooling. The session's egress gateway refuses both hosts
+outright, and its own log says so:
+
+```
+kind:   connect_rejected
+detail: gateway answered 403 to CONNECT (policy denial or upstream failure)
+host:   www.desmos.com:443
+host:   si-math-h7q1rctq9-abdelrhman-s-800.vercel.app:443
+```
+
+The proxy's README is explicit that a 403 is an organisation policy denial and
+must be reported rather than retried or routed around. So Step 3 belongs to
+whoever runs it from an unrestricted network.
+
+**What was done instead: the tool was dry-run against a local stand-in** — the
+real repository files, the real auth-gated endpoint, and a Supabase client that
+reads the seeded session out of `localStorage`, so the deployed-mode code path is
+exercised rather than a simplification of it. **It found four defects that would
+each have wasted a real run:**
+
+1. **It looked for the launcher on the landing page.** The launcher lives on the
+   *running exam* screen. The failure message would have read "the exam does not
+   name a provider, or the launcher is not wired" — a confidently wrong diagnosis
+   of "you are still on the exam-selection screen". It now clicks through:
+   choose an exam, start it, then reach for the calculator.
+2. **It demanded `tier: commercial`.** During the §2.a trial the correct answer
+   is `trial`, so a run doing exactly the right thing would have gone red. Which
+   tier is expected now follows the `desmos-commercial` marker, and on a trial it
+   additionally asserts the key is *not* marked student-facing.
+3. **It parsed the config response as JavaScript.** The endpoint has returned
+   JSON since it started requiring an Authorization header. The parser found
+   nothing and reported no config.
+4. **It asserted the config at page-load time.** The config is fetched on click
+   now, so four assertions were confidently failing about a request nobody had
+   made yet.
+
+Everything up to the Desmos load is now green against the stand-in: the exam
+starts, the launcher appears, the config is fetched on click with a bearer token
+and comes back `trial`/not-student-facing, the workspace opens ungated, the CSP
+blocks nothing, the region has real size, our chrome does not overlap it
+(§5.b(iii)), nothing claims a partnership, and no credential is visible. The five
+remaining failures are all one thing: `net::ERR_TUNNEL_CONNECTION_FAILED` on
+`https://www.desmos.com/api/v1.12/calculator.js`.

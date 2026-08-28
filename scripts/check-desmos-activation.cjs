@@ -150,6 +150,17 @@ function readAuthorization() {
 }
 const AUTH = readAuthorization();
 
+// PENDING until the record says otherwise. It decides which tier this run should
+// expect to find, so reading it wrong would turn a correct trial run red.
+const COMMERCIAL = (function () {
+  try {
+    var rec = fs.readFileSync(path.join(REPO, 'docs/engineering/desmos-integration.md'), 'utf8');
+    var m = rec.split('\n').slice(0, 16).join('\n')
+      .match(/^<!--\s*desmos-commercial:\s*(PENDING|APPROVED)\s*-->$/m);
+    return m ? m[1] : 'PENDING';
+  } catch (e) { return 'PENDING'; }
+}());
+
 // ── the site's own CSP, read from vercel.json rather than restated ────────────
 const vercel = JSON.parse(fs.readFileSync(path.join(REPO, 'vercel.json'), 'utf8'));
 const CSP = vercel.headers
@@ -218,11 +229,15 @@ async function runDeployed({ ok, fails, pass }) {
     if (u.includes('/api/desmos-config')) {
       configStatus = r.status();
       try {
-        const body = await r.text();
         // The body contains the key. It is parsed for SHAPE and immediately
         // discarded; nothing about its value leaves this block.
-        const m = body.match(/globalThis\.SI_DESMOS_CONFIG\s*=\s*(\{[\s\S]*?\});/);
-        const cfg = m ? JSON.parse(m[1]) : null;
+        //
+        // JSON since 2026-08-28, when the endpoint stopped being a <script src>
+        // so it could require an Authorization header. This parser was still
+        // looking for the old `globalThis.SI_DESMOS_CONFIG = {...};` body and
+        // silently found nothing.
+        const body = await r.text();
+        const cfg = (JSON.parse(body) || {}).config || null;
         // The value is registered for scrubbing and never used again. From
         // here on, if it appears anywhere in this process's output it is
         // replaced, whatever path put it there.
@@ -238,6 +253,12 @@ async function runDeployed({ ok, fails, pass }) {
     }
     if (u.includes('desmos.com')) desmosReqs.push({ url: u.split('?')[0], status: r.status() });
   });
+  // Attempted, whether or not it answered. The version has to come from here as
+  // well as from responses: a request that never connects still tells you which
+  // version this deployment asked for, and that is exactly what you want to know
+  // when it fails.
+  const desmosAttempts = [];
+  page.on('request', r => { if (r.url().includes('desmos.com')) desmosAttempts.push(r.url()); });
   page.on('requestfailed', r => { if (r.url().includes('desmos.com'))
     errors.push('request failed: ' + r.url().split('?')[0] + ' — ' + (r.failure() || {}).errorText); });
   page.on('pageerror', e => errors.push('pageerror: ' + e));
@@ -288,20 +309,30 @@ async function runDeployed({ ok, fails, pass }) {
   if (walled) { await browser.close(); return report({ fails, pass }); }
   await page.waitForTimeout(2000);
 
-  ok('/api/desmos-config responded', configStatus === 200, String(configStatus));
-  ok('it returned a key (value never read)', !!(configShape && configShape.hasKey),
-     configShape ? `fields=${configShape.fields}` : 'no parseable config');
-  ok('the tier is commercial (API Terms §3.a for student-facing use)',
-     !!configShape && configShape.tier === 'commercial',
-     configShape ? String(configShape.tier) : '—');
-  if (configShape) notes.push(`config: tier=${configShape.tier} studentFacing=${configShape.studentFacing} `
-    + `apiVersion=${configShape.apiVersion}`);
+  // ── get to the screen a student is on while sitting the exam ──────────────
+  //
+  // The launcher is on the TIMER screen, not the landing page. An earlier
+  // version of this check looked for it immediately after navigation and
+  // reported "the exam does not name a provider, or the launcher is not wired"
+  // — which would have been a badly misleading diagnosis of "you are still on
+  // the exam-selection screen". Found by dry-running this against a local
+  // stand-in before handing it over.
+  //
+  // Clicked through rather than driven by setting page state, because the point
+  // is the real flow: choose an exam, start it, reach for the calculator.
+  const picked = await page.$('.module-btn[data-config], .exam-card[data-config]');
+  if (picked) { await picked.click(); await page.waitForTimeout(400); }
+  const start = await page.$('#btnStart:not([disabled])');
+  ok('the exam can be started', !!start,
+     start ? '' : 'no enabled #btnStart — the selection screen did not accept a choice, '
+                + 'which usually means the session is not valid for this deployment');
+  if (start) { await start.click(); }
+  await page.waitForSelector('[data-si-calculator-open]', { timeout: 20000 }).catch(() => {});
 
-  // ── open the calculator the way a student does ─────────────────────────────
   const launcher = await page.$('[data-si-calculator-open]');
-  ok('the exam page offers a calculator control', !!launcher,
-     launcher ? '' : 'no [data-si-calculator-open] on the page — either the exam '
-                   + 'does not name a provider, or the launcher is not wired');
+  ok('the running exam offers a calculator control', !!launcher,
+     launcher ? '' : 'no [data-si-calculator-open] on the exam screen — the exam names no '
+                   + 'provider and the ?desmos-check=1 flag is not on the URL');
   if (!launcher) { await browser.close(); return report({ fails, pass }); }
 
   await launcher.click();
@@ -332,6 +363,33 @@ async function runDeployed({ ok, fails, pass }) {
     };
   });
 
+  // ── the configuration, asserted AFTER the click that fetches it ───────────
+  //
+  // It used to be asserted right after navigation, which was correct when the
+  // endpoint was a <script src> on every page load. It is fetched on demand
+  // now, so checking at load time was checking something that had not happened
+  // — four confident failures about a request nobody had made yet.
+  ok('/api/desmos-config responded', configStatus === 200, String(configStatus));
+  ok('it returned a key (value never read)', !!(configShape && configShape.hasKey),
+     configShape ? `fields=${configShape.fields}` : 'no parseable config');
+  // Which tier is CORRECT depends on the other axis. During the §2.a trial the
+  // right answer is 'trial', and demanding 'commercial' would fail a run doing
+  // exactly what it should. Once the record says the commercial licence exists,
+  // 'trial' becomes the wrong answer instead.
+  const wantCommercial = COMMERCIAL === 'APPROVED';
+  ok(wantCommercial
+       ? 'the tier is commercial, as the recorded authorisation requires (§3.a)'
+       : 'the tier is trial, which is what §2.a permits while commercial is PENDING',
+     !!configShape && configShape.tier === (wantCommercial ? 'commercial' : 'trial'),
+     configShape ? String(configShape.tier) : '—');
+  if (!wantCommercial) {
+    ok('and it is NOT marked student-facing, which §2.a forbids on a trial key',
+       !!configShape && configShape.studentFacing === false,
+       configShape ? String(configShape.studentFacing) : '—');
+  }
+  if (configShape) notes.push(`config: tier=${configShape.tier} `
+    + `studentFacing=${configShape.studentFacing} apiVersion=${configShape.apiVersion}`);
+
   ok('the workspace opens over the question', st.panelOpen);
   ok('the provider is not gated', !st.gate, st.gate && st.gate.replace(/\n/g, ' '));
   ok('nothing was blocked by the Content-Security-Policy', st.violations.length === 0,
@@ -347,9 +405,9 @@ async function runDeployed({ ok, fails, pass }) {
   // we asked for — a deployment can carry an apiVersion the record never
   // approved, and §5.d makes the version a compliance question rather than a
   // preference.
-  const served = (desmosReqs.map(r => (r.url.match(/\/api\/(v[\d.]+)\//) || [])[1])
-    .filter(Boolean))[0] || null;
-  ok('the API version served is recorded', !!served, served || 'no versioned request seen');
+  const served = ([...desmosReqs.map(r => r.url), ...desmosAttempts]
+    .map(u => (u.match(/\/api\/(v[\d.]+)\//) || [])[1]).filter(Boolean))[0] || null;
+  ok('the API version requested is recorded', !!served, served || 'no versioned request made');
   if (AUTH.approvedApiVersion) {
     ok(`the served version is the approved one (${AUTH.approvedApiVersion})`,
        served === AUTH.approvedApiVersion, `served ${served}`);
