@@ -77,14 +77,32 @@ t.section('Zero providers: the normal state, held everywhere');
     /globalThis\.SI_EXAM_SUPABASE = sb;/.test(page));
 
   // 3. The launcher is gated on the POLICY, not on anything it decides itself.
+  // The production rule and the test override are separate functions, and the
+  // only thing that may open the control is one of exactly those two.
+  const policy = slice(launcher, 'function policyAllows(code) {', 'function available(code) {',
+                       'policyAllows');
   const avail = slice(launcher, 'function available(code) {', 'function injectStyle',
                       'available');
-  t.ok('the launcher is gated on describe().inApp', /describe\(code\)/.test(avail)
-    && /inApp/.test(avail));
-  t.ok('and on nothing else it decides for itself',
-    !/EXAM_CODES|localStorage|isInAppAvailable|apiKey/.test(avail));
-  t.ok('the verification override is an exact flag match',
-    /get\('desmos-check'\) === '1'/.test(launcher));
+  t.ok('the production rule is describe().inApp', /describe\(code\)/.test(policy)
+    && /inApp/.test(policy));
+  t.ok('availability is the policy or the override, and nothing else',
+    /policyAllows\(code\)/.test(avail) && /checkMode\(\)/.test(avail)
+    && !/EXAM_CODES|isInAppAvailable|apiKey|localStorage/.test(avail));
+
+  // The override is an EXACT match on '1' — never a truthy test, which would
+  // make ?desmos-check=0 turn it on.
+  const check = slice(launcher, 'function checkMode() {', 'function policyAllows',
+                      'checkMode');
+  t.ok('the override is an exact match on "1"', /q === '1'/.test(check));
+  t.ok('and "0" clears it rather than merely failing to set it',
+    /=== '0'/.test(check) && /removeItem/.test(check));
+  // sessionStorage, not localStorage: a verification mode must not outlive the
+  // tab it was switched on in. Tested against CODE — the comment above the
+  // implementation names localStorage to explain why it is not used, and prose
+  // explaining a choice is not the choice.
+  const launcherCode = launcher.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  t.ok('the override is remembered per TAB, never persistently',
+    /sessionStorage/.test(launcherCode) && !/localStorage/.test(launcherCode));
 
   // 4. The key is never a literal, and never reaches a log. Both are enforced
   //    repo-wide by scripts/validate-desmos-activation.mjs; asserted here too

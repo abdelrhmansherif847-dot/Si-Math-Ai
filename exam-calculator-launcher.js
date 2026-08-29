@@ -39,20 +39,48 @@
   //
   // Activation is circular: the calculator cannot be checked without being
   // shown, and must not be shown to students before it is checked. This renders
-  // the control for whoever types the flag and changes nothing for anyone else.
+  // the control for whoever turns it on and changes nothing for anyone else.
   // It takes no second opinion on availability — whatever state the provider is
   // in, the workspace already has a card for it.
+  //
+  // IT STICKS FOR THE TAB. It used to read the query string and nothing else,
+  // which made it evaporate on the first in-app navigation: signing in lands on
+  // the dashboard, and the sidebar's link to the exam is a bare mock-exam.html.
+  // The flag was gone before the exam even started, the button correctly did not
+  // render, and that looked exactly like a broken deployment. It cost two
+  // debugging cycles.
+  //
+  // sessionStorage rather than localStorage, deliberately: it dies with the tab,
+  // so a mode meant for one verification session cannot quietly outlive it.
+  // `?desmos-check=0` turns it off again.
+  var CHECK_KEY = 'si-desmos-check';
+
+  function store() {
+    try { return root.sessionStorage; } catch (e) { return null; }
+  }
+
   function checkMode() {
-    try { return new URLSearchParams(root.location.search).get('desmos-check') === '1'; }
-    catch (e) { return false; }
+    try {
+      var q = new URLSearchParams(root.location.search).get('desmos-check');
+      var ss = store();
+      if (q === '1') { if (ss) { try { ss.setItem(CHECK_KEY, '1'); } catch (e) {} } return true; }
+      if (q === '0') { if (ss) { try { ss.removeItem(CHECK_KEY); } catch (e) {} } return false; }
+      if (!ss) return false;
+      try { return ss.getItem(CHECK_KEY) === '1'; } catch (e) { return false; }
+    } catch (e) { return false; }
+  }
+
+  // The production rule, and the only one a student is ever subject to: the
+  // exam's OWN policy names a provider and that provider is registered.
+  function policyAllows(code) {
+    try {
+      var d = root.SiExamCalculator && root.SiExamCalculator.describe(code);
+      return !!(d && d.inApp);
+    } catch (e) { return false; }
   }
 
   function available(code) {
-    try {
-      if (checkMode()) return true;
-      return !!(root.SiExamCalculator && root.SiExamCalculator.describe(code)
-                && root.SiExamCalculator.describe(code).inApp);
-    } catch (e) { return false; }
+    return policyAllows(code) || checkMode();
   }
 
   // ── styles ───────────────────────────────────────────────────────────────
@@ -76,6 +104,9 @@
     '.si-calc-open:hover{filter:brightness(1.08)}',
     '.si-calc-open:focus-visible{outline:2px solid var(--green,#34d399);outline-offset:3px}',
     '.si-calc-open svg{width:14px;height:14px}',
+    '.si-calc-test{font-family:ui-monospace,monospace;font-size:9.5px;font-weight:700;',
+    '  letter-spacing:.09em;padding:2px 5px;border-radius:3px;margin-left:2px;',
+    '  background:rgba(4,18,27,.22);color:inherit}',
     '.xw-scrim{display:none;position:fixed;inset:0;background:rgba(5,10,20,.72);z-index:120}',
     '.xw-scrim.is-open{display:block}',
     '.xw-panel{position:fixed;right:0;top:0;bottom:0;width:min(620px,100%);z-index:130;',
@@ -189,6 +220,16 @@
     b.setAttribute('data-si-calculator-open', '');
     b.innerHTML = ICON;
     b.appendChild(document.createTextNode('Graphing Calculator'));
+    // When the control is only here because verification mode is on, SAY SO on
+    // the control. Otherwise a tester cannot tell a real, policy-driven
+    // calculator from one they switched on themselves — and that is exactly the
+    // confusion this whole gate exists to prevent.
+    if (checkMode() && !policyAllows(code)) {
+      var chip = document.createElement('span');
+      chip.className = 'si-calc-test';
+      chip.textContent = 'TEST';
+      b.appendChild(chip);
+    }
     b.addEventListener('click', open);
     slot.textContent = '';
     slot.appendChild(b);

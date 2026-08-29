@@ -143,9 +143,17 @@ const server = http.createServer((req, res) => {
   const b = await timerPage('?desmos-check=1');
   ok('?desmos-check=1 offers the control', await b.page.evaluate(
     () => document.querySelectorAll('[data-si-calculator-open]').length === 1));
-  const label = await b.page.evaluate(
-    () => document.querySelector('[data-si-calculator-open]').textContent.trim());
-  ok('named for its job, not the vendor', label === 'Graphing Calculator', label);
+  const lab = await b.page.evaluate(() => {
+    const el = document.querySelector('[data-si-calculator-open]').cloneNode(true);
+    const chip = el.querySelector('.si-calc-test');
+    const test = !!chip;
+    if (chip) chip.remove();
+    return { label: el.textContent.trim(), test };
+  });
+  ok('named for its job, not the vendor', lab.label === 'Graphing Calculator', lab.label);
+  // The control is only here because verification mode is on. It says so, so a
+  // tester cannot mistake it for a real, policy-driven calculator.
+  ok('and it is marked TEST, because only the override put it there', lab.test);
   // The exam screen as a student meets it, before anything is opened.
   await b.page.screenshot({ path: path.join(__dirname, 'shots5', 'exam-1-launcher.png'),
                             clip: { x: 260, y: 0, width: 840, height: 820 } });
@@ -225,8 +233,48 @@ const server = http.createServer((req, res) => {
      out.text.slice(0, 70));
   ok('and no key reached that page', !out.key && !/WIRING-CHECK/.test(out.text));
 
+  // ── 6. verification mode survives in-app navigation ───────────────────────
+  //
+  // The real failure, reproduced: the flag was read from the query string and
+  // nowhere else, so signing in (which lands on the dashboard) and then reaching
+  // the exam from the sidebar — a bare mock-exam.html — silently lost it. The
+  // button correctly did not render, and that looked exactly like a broken
+  // deployment.
+  const nav = await timerPage('?desmos-check=1');
+  ok('mode is on when the flag is first seen', await nav.page.evaluate(
+    () => document.querySelectorAll('[data-si-calculator-open]').length === 1));
+  await nav.page.goto(base + '/dashboard.html').catch(() => {});
+  await nav.page.waitForTimeout(300);
+  await nav.page.goto(base + '/mock-exam.html');          // no flag, as the sidebar links
+  await nav.page.waitForTimeout(600);
+  await nav.page.evaluate(() => {
+    s.exam = window.SiExamRegistry.get('SAT_MODULE_1') || { code: 'SAT_MODULE_1' };
+    s.exam.code = 'SAT_MODULE_1'; s.timerTotal = 2100; s.timerSec = 1043;
+    s.timerRunning = false; s.modulePlan = []; s.moduleOrdinal = 1;
+    s.view = 'TIMER'; render();
+  });
+  await nav.page.waitForTimeout(400);
+  ok('and survives navigating away and back WITHOUT the flag',
+     await nav.page.evaluate(
+       () => document.querySelectorAll('[data-si-calculator-open]').length === 1),
+     'the query parameter is no longer the only thing holding the mode');
+
   const c = await timerPage('?desmos-check=0');
   ok('any other value of the flag offers nothing', await c.page.evaluate(
+    () => document.querySelectorAll('[data-si-calculator-open]').length === 0));
+  // ?desmos-check=0 must TURN IT OFF, not merely fail to turn it on.
+  await c.page.goto(base + '/mock-exam.html?desmos-check=1');
+  await c.page.waitForTimeout(500);
+  await c.page.goto(base + '/mock-exam.html?desmos-check=0');
+  await c.page.waitForTimeout(500);
+  await c.page.evaluate(() => {
+    s.exam = window.SiExamRegistry.get('SAT_MODULE_1') || { code: 'SAT_MODULE_1' };
+    s.exam.code = 'SAT_MODULE_1'; s.timerTotal = 2100; s.timerSec = 1043;
+    s.timerRunning = false; s.modulePlan = []; s.moduleOrdinal = 1;
+    s.view = 'TIMER'; render();
+  });
+  await c.page.waitForTimeout(400);
+  ok('and =0 switches it back off once it is on', await c.page.evaluate(
     () => document.querySelectorAll('[data-si-calculator-open]').length === 0));
   console.log('screenshot: ' + shot);
 
