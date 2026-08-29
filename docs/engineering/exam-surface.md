@@ -471,3 +471,59 @@ and I had not re-run it after that change. Fixed; 82/82.
 close together at exam width. Direct labels over a legend is the approved
 decision (`4e227e8`) and this is a real-data crowding case, not a styling
 defect — recorded here rather than quietly redesigned.
+
+### "Open" is a rule about the drawing, not only about the CSS
+
+**Corrected 2026-08-29, on review of Question 4.** The figure carried the
+grammar's exact grid styling and still drew a plated, boxed graph. Measured
+against the grammar's own function/value variant:
+
+| | grammar `v-fn-1` | exam Q4, before |
+|---|---|---|
+| gridlines on the window's edges | **1** (top only) | **4** — all round |
+| y-axis on the left boundary | no | **yes**, doubling it |
+
+Same CSS, same grid density, opposite treatment. The cause was in the geometry,
+not the stylesheet: the renderer ruled every step inside the window **including
+the window's own edges**, so any declared range that happens to land on steps
+produces four outermost lines forming a rectangle. Q4's ranges — x ∈ [0,5],
+y ∈ [−1,5], step 1 — land on all four.
+
+**The correction, from the decision rather than from taste.** For the `graph`
+family the grid rules the *interior only*: a line on the boundary is a frame,
+and a frame is the plated look this family is defined against. The grid stays —
+Q4's `reading` is `value`, so the question does need one — but it supports the
+curve instead of enclosing it.
+
+**And the plane still draws to its edges**, because squared paper is a full
+sheet and the grammar's geometry variant does exactly that. Both halves are
+asserted, and both mutations go red: making the graph close again fails, and
+making the plane open fails harder.
+
+The grammar's own 96-check gate still passes, so the change is consistent with
+every property that decision was checked for. Its function variant loses one
+boundary line, which is the direction "Open" names.
+
+**A note on `reading`.** Q4 asks *"for how many values of x does f(x) = 2?"* —
+a counting question, which sits at the boundary of shape and value, and the
+authored decision is `value`. It is defensible (you must locate y = 2 to count
+crossings) and it is **content**, so it is recorded here for the author rather
+than changed. All twelve authored readings were reviewed against their prompts;
+this is the only one at the boundary.
+
+**Verified per family on the real surface.**
+`scripts/check-exam-figure-fidelity.cjs` now walks one real question of each
+family in `exams.html` and asserts the decision, not just the styling:
+
+```
+function graph · Open — the drawing does not close                [Q4]
+function graph · the grid is there, because the question asks     [Q4]
+coordinate geometry · Squared paper — rules to its edges          [Q16]
+data · Screen-native — rules ACROSS ONLY, and no arrowheads       [Q14]
+number line · Statement — open and closed endpoints both drawn    [Q17]
+table · Boxed — the renderer's table, not an SVG                  [Q12]
+```
+
+That distinction is the lesson: the property comparison proves the exam uses the
+approved **styles**, and could not have caught Q4. "Has a grid" and "is
+enclosed" are different questions, and only the second one was wrong.

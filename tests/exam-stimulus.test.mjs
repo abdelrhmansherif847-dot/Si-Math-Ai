@@ -433,6 +433,51 @@ t.section('one point never carries two names');
        withClass(auto, 'sx-vertex').filter(e => e.textContent === 'O').length, 1);
 }
 
+t.section('open means the drawing does not close');
+{
+  // The grammar's default for a function graph is Open — the curve is the
+  // subject — and a grid appears only when a value must be read off it. "Has a
+  // grid" and "is enclosed" are different things, and the renderer conflated
+  // them: it ruled every step inside the window INCLUDING the window's own
+  // edges, so a range that happens to land on steps produced four outermost
+  // lines forming a rectangle. Q4 of the real exam did exactly that.
+  const box = (svg) => {
+    const lines = withClass(svg, 'sx-grid')[0].children;
+    const V = [], H = [];
+    let top = null, bot = null, left = null, right = null;
+    for (const l of lines) {
+      const [x1, y1, x2, y2] = ['x1','y1','x2','y2'].map(a => +l.getAttribute(a));
+      if (x1 === x2) { V.push(x1); top = y1; bot = y2; } else { H.push(y1); left = x1; right = x2; }
+    }
+    const near = (a, b) => a !== null && b !== null && Math.abs(a - b) < 0.6;
+    return {
+      left:   V.length ? near(Math.min(...V), left)  : false,
+      right:  V.length ? near(Math.max(...V), right) : false,
+      top:    H.length ? near(Math.min(...H), top)   : false,
+      bottom: H.length ? near(Math.max(...H), bot)   : false,
+      lines: lines.length,
+    };
+  };
+  // A window whose every edge lands exactly on a gridline step — the case that
+  // produced the box. Ranges chosen so the defect is reachable at all.
+  const spec = (frame) => ({ id: 's', kind: 'plot', spec: {
+    frame, xRange: [0, 5], yRange: [-1, 5],
+    curves: [{ points: [[0, 0.4], [1, 3.4], [2, 2.6], [3, 0.6], [4, 3]] }],
+    figures: [{ mode: 'curve' }] } });
+
+  const graph = box(R.renderForQuestion({ id: 'q', reading: 'value' }, spec('graph')));
+  t.ok('a function graph with a grid still draws one', graph.lines > 0);
+  t.ok('but rules the interior only — no edge is a gridline',
+       !graph.left && !graph.right && !graph.top && !graph.bottom, JSON.stringify(graph));
+
+  // Squared paper is a full sheet: the plane draws to its edges on purpose, and
+  // the grammar's own geometry variant does. Asserting BOTH is what stops the
+  // fix becoming "no figure ever touches its boundary".
+  const plane = box(R.renderForQuestion({ id: 'q' }, spec('plane')));
+  t.ok('a coordinate plane is squared paper, and still rules to its edges',
+       plane.left || plane.right || plane.top || plane.bottom, JSON.stringify(plane));
+}
+
 t.section('the family rule is computed, not chosen per figure');
 {
   // Each row is a family and what it does with the question's reading. The

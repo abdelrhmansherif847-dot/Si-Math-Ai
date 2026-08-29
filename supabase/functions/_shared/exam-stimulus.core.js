@@ -374,6 +374,27 @@ function drawPlot(spec, opts) {
       if (Math.abs(v / sy - Math.round(v / sy)) > 1e-9)
         grid.appendChild(el('line', { class: 'sx-fine', x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   }
+  // OPEN MEANS THE DRAWING DOES NOT CLOSE.
+  //
+  // The grammar's default for a function graph is Open — the curve is the
+  // subject and the axes are supporting structure — and a grid appears only
+  // when the question needs a value read off it. But "has a grid" and "is
+  // enclosed" are different things, and the renderer was conflating them: a
+  // gridline is drawn at every step inside the window INCLUDING the window's
+  // own edges, so whenever the declared range happens to land on steps the four
+  // outermost lines form a rectangle and the figure reads as a plate.
+  //
+  // Measured, not guessed. The grammar's own function/value variant carries a
+  // gridline on ONE edge; Q4 of the real exam carried one on all four, with the
+  // y-axis sitting on the left edge as well because its range starts at zero.
+  // Same CSS, same grid density, opposite treatment.
+  //
+  // So for a GRAPH the grid rules the interior only. A line on the boundary is
+  // a frame, and a frame is the plated look this family is defined against. The
+  // plane keeps its boundary lines: squared paper is a full sheet, and the
+  // grammar's geometry variant draws to its edges on purpose.
+  const openFrame = opts.frame === 'graph';
+  const inner = (v, lo, hi) => !openFrame || (Math.abs(v - lo) > 1e-9 && Math.abs(v - hi) > 1e-9);
   if (mode !== 'none') {
     // 'rules' is the statistical convention: horizontal rules only. A value is
     // read off a chart by tracking LEFT to the y-axis, so vertical gridlines
@@ -381,11 +402,13 @@ function drawPlot(spec, opts) {
     // a point there is located in two directions at once.
     if (mode !== 'rules')
     for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx)
-      grid.appendChild(el('line', { class: major(v) ? 'sx-major' : null,
-                                    x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
+      if (inner(v, x0, x1))
+        grid.appendChild(el('line', { class: major(v) ? 'sx-major' : null,
+                                      x1: X(v), y1: PAD.t, x2: X(v), y2: H - PAD.b }));
     for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy)
-      grid.appendChild(el('line', { class: majorY(v) ? 'sx-major' : null,
-                                    x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
+      if (inner(v, y0, y1))
+        grid.appendChild(el('line', { class: majorY(v) ? 'sx-major' : null,
+                                      x1: PAD.l, y1: Y(v), x2: W - PAD.r, y2: Y(v) }));
   }
   s.appendChild(grid);
   // The frame is the PLATE BORDER, not the plot window. Framing the window

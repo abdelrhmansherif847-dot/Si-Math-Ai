@@ -65,6 +65,7 @@ const READ = (probe) => {
 let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log('PASS  ' + m); };
 const no = (m, d) => { fail++; console.log('FAIL  ' + m + (d ? '\n      ' + d : '')); };
+const is = (m, c, d) => (c ? ok(m) : no(m, d));
 
 (async () => {
   const server = http.createServer((req, res) => {
@@ -146,6 +147,85 @@ const no = (m, d) => { fail++; console.log('FAIL  ' + m + (d ? '\n      ' + d : 
     else ok(`${sel} matches the approved grammar  [${seen[sel]}]`);
   }
 
+  // ══ THE FAMILY DECISIONS, ON REAL QUESTIONS ══════════════════════════════
+  //
+  // The property comparison above proves the exam uses the approved STYLES. It
+  // cannot prove it applies the approved RULES: Q4 once carried the grammar's
+  // exact grid styling and still drew a boxed, plated figure, because "has a
+  // grid" and "is enclosed" are different questions. These walk one real
+  // question per family and assert the decision itself.
+  const p2 = await browser.newPage();
+  await p2.addInitScript(({ data }) => {
+    const T = { exam_forms: [data.form], exam_form_sections: data.sections,
+                exam_questions: data.questions, exam_stimuli: data.stimuli,
+                profiles: [{ id: 'a', role: 'admin', is_admin: true }] };
+    function q(t) { let rows = (T[t] || []).slice(); const a = { select: () => a,
+      eq: (c, v) => { rows = rows.filter((r) => String(r[c]) === String(v)); return a; },
+      in: (c, vs) => { rows = rows.filter((r) => vs.map(String).includes(String(r[c]))); return a; },
+      order: () => a, then: (f) => Promise.resolve({ data: rows, error: null }).then(f),
+      maybeSingle: () => Promise.resolve({ data: rows[0] || null, error: null }),
+      single: () => Promise.resolve({ data: rows[0] || null, error: null }) }; return a; }
+    window.supabase = { createClient: () => ({ from: q, auth: {
+      getUser: () => Promise.resolve({ data: { user: { id: 'a' } } }) } }) };
+  }, { data: DATA });
+  await p2.goto(base + '/exams.html', { waitUntil: 'networkidle' });
+  await p2.waitForSelector('.ex-pick button');
+  await p2.click('.ex-pick button');
+  await p2.waitForSelector('.ex-card .ex-stem');
+
+  const SHAPE = () => {
+    const svg = document.querySelector('.ex-fig svg.sx');
+    if (!svg) return { table: !!document.querySelector('.ex-fig .sx-table') };
+    const lines = [...(svg.querySelector('.sx-grid') ? svg.querySelector('.sx-grid').children : [])];
+    const ax = [...(svg.querySelector('.sx-axis') ? svg.querySelector('.sx-axis').children : [])];
+    const V = [], H = []; let top = null, bot = null, left = null, right = null;
+    for (const l of lines) {
+      const [x1, y1, x2, y2] = ['x1','y1','x2','y2'].map((a) => +l.getAttribute(a));
+      if (x1 === x2) { V.push(x1); top = y1; bot = y2; } else { H.push(y1); left = x1; right = x2; }
+    }
+    const near = (a, b) => a !== null && b !== null && Math.abs(a - b) < 0.6;
+    return { fam: (svg.getAttribute('class') || '').match(/sx-fam-\w+/)?.[0] || null,
+      gridV: V.length, gridH: H.length,
+      closes: (V.length ? near(Math.min(...V), left) && near(Math.max(...V), right) : false)
+           && (H.length ? near(Math.min(...H), top) && near(Math.max(...H), bot) : false),
+      touchesAnyEdge: (V.length && (near(Math.min(...V), left) || near(Math.max(...V), right)))
+                   || (H.length && (near(Math.min(...H), top) || near(Math.max(...H), bot))),
+      arrows: ax.filter((l) => l.getAttribute('marker-end')).length,
+      endpoints: svg.querySelectorAll('.sx-endpoint').length,
+      openEnds: svg.querySelectorAll('.sx-endpoint.sx-open').length };
+  };
+  const at = async (n) => {
+    await p2.click('.xc-n-toggle');
+    await p2.click('.xc-q >> nth=' + (n - 1));
+    await p2.waitForSelector('.ex-fig svg, .ex-fig table');
+    return p2.evaluate(SHAPE);
+  };
+
+  const graph = await at(4);        // "how many values of x does f(x)=2" — reading: value
+  is('function graph · Open — the drawing does not close  [Q4]',
+     graph.fam === 'sx-fam-graph' && !graph.closes && !graph.touchesAnyEdge, JSON.stringify(graph));
+  is('function graph · the grid is there, because the question asks for a value  [Q4]',
+     graph.gridV > 0 && graph.gridH > 0, JSON.stringify(graph));
+  is('function graph · the axes carry arrowheads — they continue  [Q4]', graph.arrows === 2);
+
+  const plane = await at(16);       // triangle OAB
+  is('coordinate geometry · Squared paper — the grid rules to its edges  [Q16]',
+     plane.fam === 'sx-fam-plane' && plane.touchesAnyEdge, JSON.stringify(plane));
+  is('coordinate geometry · arrowheads, because a plane continues  [Q16]', plane.arrows === 2);
+
+  const scatter = await at(14);
+  is('data · Screen-native — rules ACROSS ONLY, and no arrowheads  [Q14]',
+     scatter.fam === 'sx-fam-data' && scatter.gridV === 0 && scatter.gridH > 0 && scatter.arrows === 0,
+     JSON.stringify(scatter));
+
+  const nl = await at(17);
+  is('number line · Statement — open and closed endpoints both drawn  [Q17]',
+     nl.endpoints === 2 && nl.openEnds === 1, JSON.stringify(nl));
+
+  const table = await at(12);
+  is('table · Boxed — the renderer\'s table, not an SVG  [Q12]', table.table === true);
+
+  await p2.close();
   await browser.close();
   server.close();
   console.log('\n' + pass + '/' + (pass + fail) + ' checks passed');
