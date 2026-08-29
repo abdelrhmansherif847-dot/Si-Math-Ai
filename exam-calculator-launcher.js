@@ -242,8 +242,15 @@
     // Nothing of ours is drawn inside it. The padding is the only thing that
     // changed here, and it exists so the calculator is not flush to the panel.
     '.xw-body{padding:16px 18px 18px;flex:1;display:flex;min-height:0;overflow-y:auto}',
-    '.xw-mount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;',
-    '  border-radius:10px;overflow:hidden}',
+    // `position:relative` is load-bearing, not decoration. Without it the mount
+    // region establishes no containing block, so anything the PROVIDER positions
+    // absolutely — a keypad overlay, a settings menu, an error toast — resolves
+    // against the fixed panel instead and lands on top of our header, including
+    // the Close button. Which is the one control a student needs when the thing
+    // covering it has gone wrong. Found when a stub calculator did exactly that
+    // and the flow check could not press Close.
+    '.xw-mount{position:relative;flex:1;min-width:0;min-height:0;display:flex;',
+    '  flex-direction:column;border-radius:10px;overflow:hidden}',
 
     // ── our cards, when there is no calculator to show ────────────────────
     '.xw-gate,.xw-err{border-radius:10px;padding:24px 26px;flex:0 0 auto;margin:auto 0;',
@@ -287,6 +294,10 @@
     + '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/>'
     + '<line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>';
 
+  // Set from the slot at fill() time. Modal-ness is a property of the PAGE —
+  // whether there is anything to work with behind the panel — not of the click.
+  var wantModal = true;
+
   function workspace() {
     if (ws) return ws;
     var W = root.SiExamWorkspace && root.SiExamWorkspace.Workspace;
@@ -301,15 +312,20 @@
     mark.appendChild(img);
     ws = W({
       providerId: 'desmos',
-      // NO fallbackId. Zero Graph draws through the figure renderer, which no
-      // shipped page loads, so it reports 'no-renderer' here — and a fallback
-      // that cannot draw is not a fallback. Pass it once the renderer ships.
-      fallbackId: null,
+      // Zero Graph draws through the figure renderer, so it is a fallback only
+      // on a page that loads one. This used to be a flat null with a note
+      // saying "pass it once the renderer ships" — the renderer has now shipped
+      // and exams.html loads it, so the condition is asked instead of assumed.
+      // On a page without it the provider reports 'no-renderer' and a fallback
+      // that cannot draw is not a fallback.
+      fallbackId: (root.SiExamStimulus && root.SiExamStimulus.renderForQuestion)
+        ? 'zero-graph' : null,
       title: WRAPPER_NAME,
       eyebrow: WRAPPER_TAGLINE,
       mark: mark,
+      modal: wantModal,
     });
-    document.body.appendChild(ws.scrim);
+    if (ws.scrim) document.body.appendChild(ws.scrim);
     document.body.appendChild(ws.el);
     return ws;
   }
@@ -323,17 +339,28 @@
     var cfgLoad = root.SiExamCalculatorConfig
       ? root.SiExamCalculatorConfig.load(opts.supabase || root.SI_EXAM_SUPABASE)
       : Promise.resolve({ ok: true });
+    // Whether the configuration was ALREADY here when the panel opened. The
+    // config loader caches a success, so from the second open onwards it is —
+    // and the panel was then rendering twice per open: once from open() with
+    // the key already in hand, and again from the callback below. With the real
+    // provider that is a calculator constructed, torn down and constructed
+    // again on every open. Re-render only when the config actually arrived
+    // after the panel was already showing something else.
+    var hadConfig = !!root.SI_DESMOS_CONFIG;
     w.open();
     cfgLoad.then(function (r) {
-      // Re-render whatever the config turned out to be. A refusal is not an
-      // error path: the workspace's gate card explains 'signed-out' the same
-      // way it explains 'no-key'.
+      // A refusal is not an error path: the workspace's gate card explains
+      // 'signed-out' the same way it explains 'no-key'.
       if (r && !r.ok && r.note) w.showMessage(r.state, r.note);
-      else w._render();
+      else if (!hadConfig) w._render();
     });
   }
 
   function fill(slot) {
+    // Read before the early return: the attribute has to be honoured on a slot
+    // that is already filled, or a page whose first screen was modal would keep
+    // that choice for the rest of the exam.
+    wantModal = slot.getAttribute('data-si-calculator-modal') !== 'false';
     if (slot.querySelector('.si-calc-open')) return;
     var code = slot.getAttribute('data-si-calculator-slot') || '';
     if (!available(code)) { slot.textContent = ''; return; }
@@ -399,7 +426,10 @@
     _workspace: function () { return ws; },
     _reset: function () {
       if (observer) { observer.disconnect(); observer = null; }
-      if (ws) { try { ws.close(); } catch (e) {} ws.el.remove(); ws.scrim.remove(); ws = null; }
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+        ws.el.remove(); if (ws.scrim) ws.scrim.remove(); ws = null;
+      }
     },
   };
 

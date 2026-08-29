@@ -46,9 +46,13 @@
 
   /* Aliases for exam-calculator-launcher.js, which styles itself against
      mock-exam.html's token names. Mapping them here is what makes the launcher
-     look native on this page instead of falling back to its own literals. */
+     look native on this page instead of falling back to its own literals.
+     `--green` is NOT --good: --good is the muted ink of a "correct" mark in
+     review, and the launcher paints a FILLED pill with near-black text on it,
+     where a dark green leaves the label barely readable. It keeps the bright
+     mint the control was designed around. */
   --bg-card:var(--exam); --text:var(--ink); --text-dim:var(--ink-3);
-  --border-soft:var(--rule); --green:var(--good); --amber:var(--flag);
+  --border-soft:var(--rule); --green:#2ec9a0; --amber:var(--flag);
   --amber-soft:var(--flag-soft);
 }
 @media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
@@ -85,7 +89,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ex-bar{display:flex;align-items:center;gap:16px;padding:14px 0;
   border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--page);z-index:40}
 .ex-id{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-3);font-weight:600;white-space:nowrap}
+  text-transform:uppercase;color:var(--ink-3);font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .ex-sp{flex:1}
 .ex-note{font-size:13.5px;color:var(--ink-3)}
 .ex-card{background:var(--exam);border:1px solid var(--rule);border-radius:6px;
@@ -262,3 +267,42 @@ button{font:inherit;color:inherit;cursor:pointer}
   font-variant-numeric:tabular-nums}
 .sx-table td.sx-num{font-family:var(--font-mono);font-size:14.5px}
 .sx-note{font-size:12.5px;color:var(--ink-3);margin:8px 0 0}
+
+/* ══ the calculator launcher, placed in the exam bar ══════════════════════
+   exam-calculator-launcher.js injects its own styling, and none of it is
+   overridden here — this is placement only. Its `margin-top` is for the
+   stacked layout of mock-exam.html; in a flex bar it drops the control below
+   the baseline of the timer beside it. */
+.ex-bar .si-calc-open{margin-top:0}
+.ex-bar #calcslot{display:inline-flex;align-items:center}
+
+/* When the calculator is open the exam has to stay usable beside it, so the
+   shell gives up the width the panel takes. Below that width the panel would
+   leave no usable column, so it overlays instead and the student closes it —
+   which is the honest behaviour on a phone, not a worse one. */
+@media (min-width: 1180px) {
+  body.si-calc-panel-open .ex-shell{ padding-right:calc(min(620px, 100%) + 30px) }
+  body.si-calc-panel-open .ex-bar{ padding-right:0 }
+
+  /* WHAT GIVES WAY WHEN THE BAR GETS NARROWER, in priority order. The first
+     version narrowed the shell and left the bar to sort itself out: the
+     launcher ended up half under the panel it had just opened, and the TIMER
+     was pushed off the bar completely. A clock that vanishes when a student
+     opens a calculator is the worst thing on this page to lose.
+     So the two things that must survive are the navigator and the timer, and
+     the two that go are the ones that are redundant while the panel is open —
+     the module note, and the launcher itself, which is on screen as a panel
+     with its own Close button. */
+  body.si-calc-panel-open #calcslot{ display:none }
+  body.si-calc-panel-open .ex-note{ display:none }
+}
+/* The bar never wraps and never lets the clock be squeezed out, at any width. */
+.ex-bar{ flex-wrap:nowrap }
+.ex-bar > *{ min-width:0 }
+.ex-note{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+#timeslot,#navslot,#calcslot{ flex:none }
+/* NO TRANSITION on that padding, deliberately. Animating it re-lays the whole
+   exam — stem, options and every figure — for a fifth of a second, and
+   exam-chrome.js states the rule this surface obeys: nothing animates while a
+   student is reading. It also made the first version of the layout check
+   measure a width mid-flight and report the panel covering the question. */

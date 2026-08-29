@@ -102,6 +102,48 @@ let session = null;      // SiExamDelivery session
 let form = null;         // the loaded form
 let nav = null, timer = null, tick = null;
 let forcedVariant = null;   // reviewer override, review-only (see BREAK)
+let calcSection = null;     // which section the calculator slot belongs to
+
+/* ── THE CALCULATOR SLOT — the only thing this page contributes to it ──────
+ *
+ * Two independent gates, and this page owns the FIRST: the section's own
+ * policy, straight off exam_form_sections.calculator_allowed. When it is false
+ * no slot is emitted, so there is nothing for the launcher to fill. The second
+ * gate is the launcher's — it also requires exam-registry.js to name a provider
+ * for this exam — and nothing here can widen it.
+ *
+ * THE SLOT IS TIED TO THE SECTION, NOT TO THE QUESTION. It was first rebuilt on
+ * every render, which meant tearing the launcher's button down and building it
+ * again on every answer and every navigation — forty-four times in a module,
+ * for a control that does not change. Worse, the panel is open across those
+ * renders: churn under an open calculator is exactly where a mid-exam flicker
+ * or a lost mount would come from. So the element is created once per section
+ * and left alone until the section changes.
+ *
+ * And when the section ends the slot goes, which is how the panel closes: the
+ * launcher watches for its slot and shuts the calculator when none is left.
+ * The exam owns the calculator, not the other way round. */
+function syncCalculatorSlot(s) {
+  const key = s.section
+    ? s.section.ordinal + ':' + (s.section.variantId || '') + ':' + (s.section.calculatorAllowed ? 'y' : 'n')
+    : null;
+  if (key === calcSection) return;              // same section — leave it standing
+  calcSection = key;
+  calcslot.textContent = '';
+  if (s.section && s.section.calculatorAllowed) {
+    const slot = document.createElement('span');
+    slot.setAttribute('data-si-calculator-slot', form.examCode || '');
+    // NOT MODAL HERE. A student has to read the stem, pick an option and type a
+    // grid-in answer with the calculator open — that is most of what it is for.
+    // mock-exam.html keeps the scrim, because there is nothing behind it but a
+    // clock. exam-surface.css makes room for the panel on the class the
+    // workspace sets while it is open.
+    slot.setAttribute('data-si-calculator-modal', 'false');
+    calcslot.appendChild(slot);
+  }
+}
+/** Between modules and after the exam: no slot, so the panel closes itself. */
+function dropCalculatorSlot() { calcSection = null; calcslot.textContent = ''; }
 
 /* ── text ────────────────────────────────────────────────────────────────
    Item text is authored, but it still arrives as data and is inserted as
@@ -129,7 +171,7 @@ const el = (tag, cls, html) => {
 
 /* ── boot ────────────────────────────────────────────────────────────────── */
 function screenMessage(title, body, action) {
-  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barNote.textContent = '';
   view.textContent = '';
   const wrap = el('div', 'ex-mid');
@@ -167,7 +209,7 @@ async function boot() {
 
 /* ── PICK ────────────────────────────────────────────────────────────────── */
 function screenPick(forms) {
-  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barId.textContent = 'Exams'; barNote.textContent = forms.length + ' form(s)';
   view.textContent = '';
   const wrap = el('div', 'ex-mid');
@@ -247,19 +289,7 @@ function screenModule(s) {
   });
   timeslot.appendChild(timer.el);
 
-  // THE CALCULATOR SLOT — the only thing this page contributes to it.
-  //
-  // Two independent gates, and this is the first: the SECTION's own policy,
-  // straight off exam_form_sections.calculator_allowed. When it is false the
-  // slot is not emitted at all, so there is nothing for the launcher to fill.
-  // The second gate is the launcher's: it also requires exam-registry.js to
-  // name a provider for this exam, and every exam currently names none.
-  calcslot.textContent = '';
-  if (s.section.calculatorAllowed) {
-    const slot = document.createElement('span');
-    slot.setAttribute('data-si-calculator-slot', form.examCode || '');
-    calcslot.appendChild(slot);
-  }
+  syncCalculatorSlot(s);
 
   view.textContent = '';
   const card = el('div', 'ex-card');
@@ -341,7 +371,7 @@ function screenModule(s) {
 }
 
 function screenBreak(s) {
-  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barNote.textContent = '';
   view.textContent = '';
   const wrap = el('div', 'ex-mid');
@@ -388,7 +418,7 @@ function screenBreak(s) {
 
 function screenDone(s) {
   stopClock();
-  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barNote.textContent = 'Review';
   view.textContent = '';
 

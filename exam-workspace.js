@@ -67,8 +67,27 @@
    *               API Terms §5.b(iii) forbids obscuring their branding on the
    *               Software Service, and drawing a mascot over someone else's
    *               calculator would be poor manners even where it is permitted.
+   *   modal       default TRUE: a dimming scrim covers the page and a click on
+   *               it closes the panel.
+   *
+   * MODAL IS WRONG WHERE THERE IS A QUESTION BEHIND IT, and that is not a taste
+   * decision. On mock-exam.html there is nothing behind the panel but a clock,
+   * so a scrim costs nothing. On a page delivering questions it costs
+   * everything: a student cannot read the stem, pick an option or type a
+   * grid-in answer while a scrim swallows the clicks — which is most of what a
+   * calculator is FOR. It was found by driving the exam with the panel open and
+   * being unable to press Next.
+   *
+   * The panel already said `aria-modal="false"`, so the scrim was also telling
+   * assistive technology one thing and the pointer another. `modal: false`
+   * makes the two agree: no scrim, no click-to-close, and the exam stays live
+   * underneath.
+   *
+   * Either way the panel toggles `si-calc-panel-open` on <body> while it is
+   * open, so a host page can make room for it without watching the panel.
    *
    * Returns { el, scrim, open, close, isOpen, setProvider, providerId, mountEl }.
+   * `scrim` is null when modal is false — there is nothing to append.
    */
   function Workspace(opts) {
     opts = opts || {};
@@ -77,7 +96,8 @@
     var title = opts.title || 'Graphing Calculator';
     var seed = opts.seed;
 
-    var scrim = el('div', { cls: 'xw-scrim' });
+    var modal = opts.modal !== false;
+    var scrim = modal ? el('div', { cls: 'xw-scrim' }) : null;
     // An optional line above the title, for the host product's own voice. It is
     // static — it never varies with the provider — so it cannot make the header
     // change height when the provider does.
@@ -194,7 +214,11 @@
     function setOpen(v) {
       open = !!v;
       panel.classList.toggle('is-open', open);
-      scrim.classList.toggle('is-open', open);
+      if (scrim) scrim.classList.toggle('is-open', open);
+      // The one signal a host page needs. It is set in BOTH modes: a modal host
+      // may want it too, and a class that appears only sometimes is a class
+      // nobody can rely on.
+      if (document.body) document.body.classList.toggle('si-calc-panel-open', open);
       if (open) render();
       else clear();
     }
@@ -205,7 +229,7 @@
     }
 
     closeBtn.addEventListener('click', function () { setOpen(false); });
-    scrim.addEventListener('click', function () { setOpen(false); });
+    if (scrim) scrim.addEventListener('click', function () { setOpen(false); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && open) setOpen(false);
     });

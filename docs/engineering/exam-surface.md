@@ -322,3 +322,60 @@ origin. "Triangle OAB" stopped saying which O it meant. Fixed in the shared
 renderer (the author's label wins), covered by a test in both directions, and
 found by looking at the pixels — which is the rule
 `student-facing-rendering-validation.md` §6 exists to state.
+
+### The calculator inside the running exam
+
+**Wired 2026-08-29.** `exams.html` emits the slot per section and the existing
+launcher fills it. No second implementation, no second provider path, no change
+to `mock-exam.html`. Driving the flow found four things, and all four were
+defects rather than adjustments.
+
+**The panel was modal, and a modal panel is wrong here.** Its scrim swallowed
+every click on the exam, so a student could not read the stem, pick an option or
+type a grid-in answer with the calculator open — which is most of what a
+calculator is for. Found by trying to press Next with it open and being unable
+to. On `mock-exam.html` a scrim costs nothing, because there is nothing behind
+the panel but a clock. So `Workspace` gained `modal` (default true, unchanged
+for `mock-exam.html`), the slot carries `data-si-calculator-modal="false"`, and
+the panel already said `aria-modal="false"` — the scrim had been telling
+assistive technology one thing and the pointer another.
+
+**The mount region contained nothing.** `.xw-mount` had `overflow:hidden` and no
+`position`, so anything the provider positions absolutely — a keypad overlay, a
+settings menu, an error toast — resolved against the fixed panel and landed on
+top of our header, including the Close button. That is the one control a student
+needs when the thing covering it has gone wrong. One property, in the launcher's
+own CSS.
+
+**It mounted twice on every open after the first.** The config loader caches a
+success, so from the second open the panel rendered once from `open()` with the
+key already in hand and again from the config callback. With the real provider
+that is a calculator constructed, torn down and constructed again on every open.
+The callback now re-renders only when the config actually arrived late.
+
+**The clock could be pushed off the bar.** Making room for the panel narrowed
+the shell and left the bar to cope: the launcher ended up half under the panel it
+had just opened, and the timer went off the end. A clock that disappears when a
+student opens a calculator is the worst thing on this page to lose. The bar now
+has an explicit priority — navigator and timer survive; the module note and the
+launcher give way, the launcher because the panel is on screen with its own
+Close. And the shell's padding does not animate: `exam-chrome.js` states the
+rule, nothing moves while a student is reading.
+
+**The slot is tied to the section, not the question.** It was first rebuilt on
+every render — forty-four times a module, under an open panel. It is now created
+once per section and left alone, which is also what makes the panel close at a
+module boundary: no slot, no calculator.
+
+**Zero Graph is a fallback here, and only here.** The launcher used to pass
+`fallbackId: null` with a note saying to pass it once the figure renderer
+shipped. It has shipped, and `exams.html` loads it, so the launcher now asks
+rather than assumes: `zero-graph` where `SiExamStimulus.renderForQuestion`
+exists, `null` where it does not.
+
+**The gates are untouched.** `scripts/check-exams-calculator-flow.cjs` drives 26
+checks against a Desmos-SHAPED STUB — not Desmos, and passing it proves nothing
+about Desmos — using `?desmos-check=1`, the verification affordance that labels
+the control TEST on screen. `desmos-activation` is still UNPROVEN and
+`desmos-commercial` still PENDING, no exam names a provider, and nothing on this
+page can change that.
