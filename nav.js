@@ -40,6 +40,8 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 2-2 3 3"/></svg>';
   var SUPPORT_ICON =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  var EXAMS_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M14 4v6h6"/><path d="M8 14h6M8 17h4"/></svg>';
 
   // Every page already loads the @supabase/supabase-js CDN bundle which
   // exposes `window.supabase`. nav.js creates its own dedicated client
@@ -102,6 +104,7 @@
     var aActive = page === 'admin.html' ? 'admin-active' : '';
     var mActive = page === 'ai-monitor.html' ? 'active' : '';
     var sActive = page === 'admin-support.html' ? 'active' : '';
+    var eActive = page === 'exams.html' ? 'active' : '';
     var label = ROLE_LABEL[role] || 'Admin Dashboard';
     var showMonitor = lvl >= 2;
 
@@ -119,6 +122,21 @@
       + '<a class="nav-item ' + sActive + '" href="admin-support.html" style="color:#ef4f5f">'
       +   SUPPORT_ICON
       +   '<span class="nav-label">Support Queue</span>'
+      + '</a>'
+      // Exams sits at lvl >= 1 for the same reason Support Queue does: that is
+      // the threshold the DATABASE enforces. All four Question Spine tables are
+      // RLS-gated to has_role_at_least('admin'), so a lower role following this
+      // link would reach a page listing nothing. The link and the policy have to
+      // agree, or one of them is lying to somebody.
+      //
+      // It is in the ADMIN section on purpose. exams.html today is where a
+      // DRAFT form is reviewed before anyone publishes it; student-facing
+      // delivery is a separate, separately approved read model, and when that
+      // exists it gets its own entry outside this section rather than widening
+      // this one.
+      + '<a class="nav-item ' + eActive + '" href="exams.html" style="color:#ef4f5f">'
+      +   EXAMS_ICON
+      +   '<span class="nav-label">Exams</span>'
       + '</a>';
     if (showMonitor) {
       html += ''

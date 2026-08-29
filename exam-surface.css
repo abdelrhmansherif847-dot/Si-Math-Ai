@@ -306,3 +306,10 @@ button{font:inherit;color:inherit;cursor:pointer}
    exam-chrome.js states the rule this surface obeys: nothing animates while a
    student is reading. It also made the first version of the layout check
    measure a width mid-flight and report the panel covering the question. */
+
+/* The way out. Quiet, leftmost, and gone while a module is running — see the
+   comment on the element in exams.html. */
+.ex-back{color:var(--ink-3);text-decoration:none;font-size:13px;font-weight:600;
+  white-space:nowrap;padding:6px 10px;border-radius:5px;border:1px solid transparent}
+.ex-back:hover{color:var(--cyan);border-color:var(--cyan-line)}
+.ex-back[hidden]{display:none}

@@ -379,3 +379,36 @@ about Desmos — using `?desmos-check=1`, the verification affordance that label
 the control TEST on screen. `desmos-activation` is still UNPROVEN and
 `desmos-commercial` still PENDING, no exam names a provider, and nothing on this
 page can change that.
+
+### How you reach it
+
+**Fixed 2026-08-29, after the page was built and shipped unreachable.** Three
+things stood between the owner and the exam, and none of them was Desmos or the
+form's draft status:
+
+1. **Nothing linked to `exams.html`.** Not one anchor anywhere on the site. The
+   page existed, worked, and could be opened only by typing its URL.
+2. **It is not on `main`.** Root `*.html` deploys to production on merge, so
+   until this branch merges the page exists on Preview deployments only.
+3. **It had no way out.** No sidebar — deliberately, because site chrome beside
+   a question is noise — but also no exit, which makes a page a trap.
+
+What was NOT the problem, both measured rather than assumed:
+
+* **RLS.** Acting as the owner's actual account through the policies:
+  1 form, 3 sections, 66 questions, 24 stimuli, all visible. The data path was
+  never the obstacle.
+* **`status = 'draft'`.** Draft is readable by an admin; it is *publication*
+  that gates students. Reviewing a draft is what the state is for.
+
+The link belongs in `nav.js` and nowhere else — that file says so in its own
+header, because `render()` overwrites the slot and "a static one looks correct in
+the source and does not exist in the browser." It sits in the **Admin** section
+at `admin`+, the same threshold the four Spine tables enforce: a link shown below
+it would lead to a page listing nothing. `tests/admin-nav.test.mjs` runs the real
+`render()` and asserts that threshold against Support Queue's, so the two cannot
+drift apart in silence.
+
+`exams.html` gained a quiet `← Dashboard` on the bar, hidden while a module is
+running: an exam is not a screen to wander off a link from, and the browser's own
+Back still works for a reviewer who means it.

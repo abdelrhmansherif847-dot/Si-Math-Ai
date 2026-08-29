@@ -49,6 +49,13 @@
 
 <div class="ex-shell">
   <div class="ex-bar">
+    <!-- A WAY BACK. exams.html deliberately carries no sidebar — site chrome
+         beside a question is noise a student does not need — but a page with no
+         exit is a trap, and this one was reachable only by typing its URL. It is
+         hidden while a module is RUNNING: an exam is not a screen to wander off
+         a link from, and the browser's own Back still works for a reviewer who
+         means it. -->
+    <a class="ex-back" id="barBack" href="dashboard.html" aria-label="Back to the dashboard">← Dashboard</a>
     <span class="ex-id" id="barId">Exams</span>
     <span id="navslot"></span>
     <span class="ex-sp"></span>
@@ -93,6 +100,7 @@ globalThis.SI_EXAM_SUPABASE = sb;
 
 const view   = document.getElementById('view');
 const barId  = document.getElementById('barId');
+const barBack= document.getElementById('barBack');
 const barNote= document.getElementById('barNote');
 const navslot= document.getElementById('navslot');
 const timeslot = document.getElementById('timeslot');
@@ -171,6 +179,7 @@ const el = (tag, cls, html) => {
 
 /* ── boot ────────────────────────────────────────────────────────────────── */
 function screenMessage(title, body, action) {
+  barBack.hidden = false;
   navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barNote.textContent = '';
   view.textContent = '';
@@ -209,6 +218,7 @@ async function boot() {
 
 /* ── PICK ────────────────────────────────────────────────────────────────── */
 function screenPick(forms) {
+  barBack.hidden = false;
   navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barId.textContent = 'Exams'; barNote.textContent = forms.length + ' form(s)';
   view.textContent = '';
@@ -268,6 +278,7 @@ function render() {
 }
 
 function screenModule(s) {
+  barBack.hidden = true;
   // The module is named by its LABEL. exam-registry.js is explicit that no
   // per-variant label exists, "so no screen can leak which path was taken" —
   // this page never prints s.section.variantId while a module is running.
@@ -371,6 +382,7 @@ function screenModule(s) {
 }
 
 function screenBreak(s) {
+  barBack.hidden = false;
   navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barNote.textContent = '';
   view.textContent = '';
@@ -417,6 +429,7 @@ function screenBreak(s) {
 }
 
 function screenDone(s) {
+  barBack.hidden = false;
   stopClock();
   navslot.textContent = ''; timeslot.textContent = ''; dropCalculatorSlot();
   barNote.textContent = 'Review';

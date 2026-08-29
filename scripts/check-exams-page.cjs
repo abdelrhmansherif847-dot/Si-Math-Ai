@@ -115,8 +115,20 @@ const is = (m, c, d) => (c ? ok(m) : no(m, d));
   is('the exam library lists the form from the Spine', /DSAT-2026-A/.test(label), label);
   is('and says it is a draft', /draft/.test(label), label);
 
+  // A PAGE WITH NO EXIT IS A TRAP. exams.html carries no sidebar on purpose,
+  // and for a while carried no way back either — it was reachable only by
+  // typing its URL and leavable only by the browser's Back button.
+  is('the library offers a way back to the dashboard',
+     await page.evaluate(() => {
+       const a = document.getElementById('barBack');
+       return !!a && !a.hidden && a.getAttribute('href') === 'dashboard.html';
+     }));
+
   await page.click('.ex-pick button');
   await page.waitForSelector('.ex-card .ex-stem', { timeout: 10000 });
+
+  is('but not while a module is running — an exam is not a screen to wander off',
+     await page.evaluate(() => document.getElementById('barBack').hidden));
 
   // ── module 1 ─────────────────────────────────────────────────────────────
   const nav1 = await page.textContent('.xc-n-label');
