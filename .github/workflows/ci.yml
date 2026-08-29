@@ -33,3 +33,51 @@ jobs:
       # regenerating, and a package republished under the same version.
       - name: Verify CDN pins and SRI hashes
         run: ./scripts/pin-cdn-sri.sh --check
+
+  # THE VISUAL CONTRACT — a separate job on purpose.
+  #
+  # The suite above is dependency-free by design and must stay that way. This one
+  # needs a browser, because the thing it checks cannot be checked any other way:
+  # three visual regressions in a row passed every computed-style and DOM
+  # assertion in the repository, and were caught only by comparing pixels. A
+  # matching font-size does not prove a figure looks right.
+  #
+  # It renders each approved specimen, compares it with the committed baseline in
+  # tests/visual-baselines/, and then renders the SAME figure through exams.html
+  # and compares the two surfaces with each other. On failure the renders and the
+  # per-figure difference images are uploaded, so a red build can be LOOKED at
+  # rather than guessed at.
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # THE FONT IS PART OF THE BASELINE. The harness pins the figure faces to a
+      # local stack rather than a webfont, so a baseline recorded on one machine
+      # can be compared on another — but only if that face is actually present.
+      # DejaVu is what the baselines were recorded against; without it the runner
+      # falls through to Liberation and every text pixel differs for a reason
+      # that has nothing to do with the figure.
+      - name: Install the pinned font and Chromium
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-dejavu-core
+          npm install -g playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: Figure visual contract
+        run: NODE_PATH=$(npm root -g) node scripts/check-visual-fidelity.cjs
+
+      # A red visual build has to be LOOKABLE-AT, or it is just a number. This
+      # uploads every render and every per-figure difference image, plus the
+      # side-by-side page that lays them out.
+      - name: Upload renders and differences
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff
+          path: tests/visual-out/
+          retention-days: 14

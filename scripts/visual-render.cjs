@@ -181,5 +181,45 @@ async function launch() {
   ] });
 }
 
-module.exports = { serve, context, renderSpecimens, renderThroughExam, chromium, launch,
+/* The same drive, on a REAL form rather than a synthetic one: whatever rows the
+ * fixture holds, opened at the given question numbers. Kept beside
+ * renderThroughExam rather than folded into it, because that one owns the shape
+ * of the synthetic form and this one must not touch the content it is handed. */
+async function renderExamForm(ctx, base, data, numbers) {
+  const p = await ctx.newPage();
+  await p.addInitScript(({ d, pin }) => {
+    const T = { exam_forms: [d.form], exam_form_sections: d.sections,
+                exam_questions: d.questions, exam_stimuli: d.stimuli,
+                profiles: [{ id: 'a', role: 'admin', is_admin: true }] };
+    function q(t) { let rows = (T[t] || []).slice(); const a = { select: () => a,
+      eq: (c, v) => { rows = rows.filter((r) => String(r[c]) === String(v)); return a; },
+      in: (c, vs) => { rows = rows.filter((r) => vs.map(String).includes(String(r[c]))); return a; },
+      order: () => a, then: (f) => Promise.resolve({ data: rows, error: null }).then(f),
+      maybeSingle: () => Promise.resolve({ data: rows[0] || null, error: null }),
+      single: () => Promise.resolve({ data: rows[0] || null, error: null }) }; return a; }
+    window.supabase = { createClient: () => ({ from: q,
+      auth: { getUser: () => Promise.resolve({ data: { user: { id: 'a' } } }) } }) };
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.createElement('style'); s.textContent = pin;
+      document.head.appendChild(s);
+    });
+  }, { d: data, pin: FONT_PIN });
+
+  await p.goto(base + '/exams.html', { waitUntil: 'load' });
+  await p.waitForSelector('.ex-pick button');
+  await p.click('.ex-pick button');
+  await p.waitForSelector('.ex-card .ex-stem');
+  const out = {};
+  for (const n of numbers) {
+    await p.click('.xc-n-toggle');
+    await p.click('.xc-q >> nth=' + (n - 1));
+    await p.waitForSelector('.ex-fig svg, .ex-fig table');
+    out[n] = await p.locator('.ex-fig > *').first().screenshot();
+  }
+  await p.close();
+  return out;
+}
+
+module.exports = { serve, context, renderSpecimens, renderThroughExam, renderExamForm,
+                   chromium, launch,
                    FONT_PIN, REPO };

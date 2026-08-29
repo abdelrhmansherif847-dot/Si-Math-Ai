@@ -148,8 +148,8 @@ student impact during exam-prep windows.
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **99 files** in `supabase/migrations/`, **154 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`; B5 `publish_exam_form_revoke_public` applied 2026-08-25 as version `20260825141519`; M4 `exam_stimuli` applied 2026-08-25 as version `20260825221601`. `20260827a_stimulus_reading` applied 2026-08-27 as version `20260827135710` — adds `spec.frame` to plots and `exam_questions.reading`; see `docs/engineering/reading-field-proposal.md`. `20260827b_plot_figures` applied 2026-08-27 as version `20260827154657`, requiring `spec.figures` on every plot. **Its deployed body carries fewer inline comments than the tree file; the executable logic is byte-identical** — see `docs/engineering/figures-field-proposal.md`) |
-| Static site | **49** root `*.html` pages on Vercel (counted 2026-08-29; `exams.html` was the one added since the 48 figure) |
-| CI | `node tests/run-all.mjs` — **60 checks** (counted 2026-08-29; `admin-nav` was the last added) |
+| Static site | **49** root `*.html` pages on Vercel (counted 2026-08-29; `exams.html` was the one added since the 48 figure). Two root stylesheets now: `figure-system.css` is the approved figure grammar and the only place it exists; `exam-surface.css` is the exam's chrome and links after it |
+| CI | `node tests/run-all.mjs` — **61 checks** (counted 2026-08-29; `validate-figure-system` was the last added). Plus a SECOND GitHub job, `visual`, which installs Chromium and runs `scripts/check-visual-fidelity.cjs` — the pixel comparison. **That job has never run on GitHub**: it was written on a branch and CI here only runs on `main` and pull requests |
 | Desmos calculator | **Integrated into `exams.html`, and no student can see it.** `desmos-activation: PROVEN` (2026-08-29, v1.12, trial tier — the owner's attestation of a live Preview render, not a captured artefact). `desmos-commercial: PENDING` — the account holds a 90-day trial key and the dashboard says to contact Desmos. `exam-registry.js` names **no** provider on any exam and `scripts/validate-desmos-activation.mjs` fails CI if one is named while either marker is short. **The commercial authorisation is the only remaining step** — `docs/engineering/desmos-integration.md` §6 step 3a |
 | Exam delivery | `exams.html` — the question-based exam, reading the Spine. **Admin-only** (RLS), reviewing DRAFT forms; reached from the Admin section of the shared sidebar (`nav.js`, admin+ — the same threshold the RLS policies enforce); `mock-exam.html` is untouched and remains the timer-only flow. Reuses `exam-stimulus.js`, `exam-chrome.js` and the calculator layer; adds `exam-delivery.js`, `exam-form-source.js`, `exam-surface.css`. Student-facing delivery is NOT this page — it is a separately approved published-only read model excluding `correct_answer`. See `docs/engineering/exam-surface.md` |
 | Question Spine | **One form, DRAFT, since 2026-08-29**: `DSAT-2026-A` (`SAT_FULL`) — 3 sections, 66 questions, 24 stimuli, 12 readings. Not published; invisible to students (RLS admin-only, verified by acting as the role). Fidelity, pre-flight and render evidence: `docs/engineering/dsat-form-a-import.md`. **The content is NOT in this repository and must never be** |
@@ -268,6 +268,16 @@ safe or that a merge is sufficient.
 - `docs/roadmap/truth-system-v2-backlog.md` + `.csv` — **frozen baseline.**
   47 epics, 58 tasks; V0–V4 decomposed, V5–V8 at epic level by design
 - `docs/roadmap/v0-notes.md` — Phase V0 assumptions, deviations and deferred work
+
+**The figure system**
+- `docs/engineering/figure-visual-system.md` — the figure grammar, and the visual
+  regression suite that keeps it honest. **Read before changing anything a figure
+  is drawn with.** Three visual regressions in a row shipped past a full set of
+  green property checks; the suite compares pixels because a matching
+  `font-size` cannot tell you a plate is the wrong shape or a grid is ruled in
+  twos. `figure-system.css` is the one grammar, `scripts/figure-specimens.json`
+  the approved appearance as database rows, `tests/visual-baselines/` the
+  approvals themselves
 
 **Earlier architecture records**
 - `docs/roadmap/adaptive-verification.md` — the original L1–L4 blueprint (superseded
