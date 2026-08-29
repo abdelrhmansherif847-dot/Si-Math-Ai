@@ -1,15 +1,18 @@
 # Desmos — the official integration path
 
-<!-- desmos-activation: UNPROVEN -->
+<!-- desmos-activation: PROVEN -->
+<!-- desmos-evidence: date=2026-08-29; apiVersion=v1.12; tier=trial; checkedBy=repository owner, manually in a browser on the Preview deployment -->
 <!-- desmos-commercial: PENDING -->
 
-> ## Status: render **UNPROVEN** · commercial **PENDING**
+> ## Status: render **PROVEN** · commercial **PENDING**
 >
 > **Two markers, because these are two questions and they move independently.**
+> This is exactly the state they were split apart to be able to express: the
+> calculator demonstrably works, and no student may be shown it.
 >
 > | marker | asks | today |
 > |---|---|---|
-> | `desmos-activation` | does the official calculator render? | **UNPROVEN** — it has never been mounted here |
+> | `desmos-activation` | does the official calculator render? | **PROVEN** — 2026-08-29, v1.12, trial tier, verified by the repository owner in a browser on Preview |
 > | `desmos-commercial` | may a student be shown it? | **PENDING** — the account holds a 90-day trial key, and the Desmos dashboard says to contact them for commercial use |
 >
 > They used to be one marker, which could not express the situation we are
@@ -467,9 +470,15 @@ the key, its length, or any substring of it.
 
 ### Step 3a — the commercial authorisation, when it arrives
 
-**Not yet.** As of 2026-08-28 the account holds an **active 90-day trial key**,
-and the Desmos API dashboard says to **contact Desmos** to proceed with
-commercial use. So this step is open, and `desmos-commercial` stays `PENDING`.
+**THE ONLY STEP LEFT, as of 2026-08-29.** Everything else in this runbook is
+done: the CSP is open, the key is configured, the endpoint is auth-gated and
+live, the mount path is exercised, the calculator is integrated into the actual
+question-delivery experience, and `desmos-activation` is **PROVEN**. A student
+still sees nothing, and this is the only reason.
+
+The account holds an **active 90-day trial key**, and the Desmos API dashboard
+says to **contact Desmos** to proceed with commercial use. So this step is open,
+and `desmos-commercial` stays `PENDING`.
 
 That is a partial correction to §1 of this document. §3.a does offer two routes —
 *"upgrade to an appropriate paid plan via our self-service pathway"* **or**
@@ -756,23 +765,48 @@ history, and only one of them is the milestone.
 
 | | what it proves | state |
 |---|---|---|
-| `tests/run-all.mjs` | the socket, the gates, the frozen page holds no logic | **56 green** |
+| `tests/run-all.mjs` | the socket, the gates, the frozen page holds no logic | **59 green** |
 | `check-exam-calculator-wiring.cjs` | the real exam page: no control for students, the override, the auth-gated fetch on click, no key in any served asset | **26 green** |
 | `check-calculator-mount-path.cjs` | the mount path, against a **Desmos-shaped stub** — config → script URL → `GraphingCalculator(ourElement)` → real size → `destroy()`, across the trial / trial-misused / commercial configurations | **14 green** |
 | `check-exam-ui.cjs` | the exam surface and provider-agnostic workspace, both themes | **82 green** |
+| `check-exams-page.cjs` | `exams.html` delivering the real Spine rows over the production CSP | **24 green** |
+| `check-exams-calculator-flow.cjs` | the calculator inside a running exam — open, work, close, navigate, reopen, finish — with answers, flags, position and clock asserted intact. Against a **Desmos-shaped stub** | **26 green** |
 | `check-desmos-config-endpoint.mjs` | a deployment's endpoint: 401 anonymous, no key in assets, and (with a session) that the variable arrived | **never run** — needs a reachable deployment |
 | the live Preview endpoint | that Vercel picked up `/api` with zero config, that it refuses anonymous callers, and that the widened CSP shipped | **verified 2026-08-28** — see below |
-| `check-desmos-activation.cjs` deployed | **the milestone**: the official calculator rendering for a signed-in student | **17 of 22 green against a local stand-in; the 5 that fail are all the Desmos load itself.** Never run for real — see below |
+| `check-desmos-activation.cjs` deployed | **the milestone**: the official calculator rendering for a signed-in student | **still never run for real.** 17 of 22 green against a local stand-in; the 5 that fail are the Desmos load itself. The render is recorded PROVEN on the owner's attestation instead — see below |
 
 The third row is new and worth being precise about. It exercises everything on
 our side of the boundary that was previously unverifiable here — and **the stub
 is not Desmos**. It proves the mount path is correct, not that Desmos renders.
 
-Two things gate "ready for final UI review", and neither is a test result this
-environment can produce:
+### The render, attested 2026-08-29 — and what that is worth
+
+`desmos-activation` is now **PROVEN**, on the repository owner's own account of
+opening the Preview deployment in a browser, signed in, and watching the
+official calculator load and work.
+
+**Say what kind of evidence that is.** It is an ATTESTATION, not a captured
+artefact. Every other row in the table above is a script somebody can re-run;
+this one is a person's word, and the person is the owner of the project the
+claim benefits. That does not make it false — they are the only party who can
+reach a Desmos-serving network here, and refusing to record what they saw would
+have left the marker permanently UNPROVEN for want of a screenshot — but a later
+reader should know they are inheriting a report rather than a re-runnable fact.
+
+What would upgrade it, and is still worth doing: `check-desmos-activation.cjs`
+in deployed mode, which drives the live page as a signed-in student and captures
+the render, scrubbing both credentials from every output. It has never been run
+for real. When it is, its printed evidence line replaces the one in the header
+and this paragraph goes away.
+
+**And it changes nothing for students.** `desmos-commercial` is still `PENDING`,
+the provider-naming gate needs both, and `exam-registry.js` still names no
+provider on any exam. What the marker now records is that the integration works
+— not that anyone may be shown it.
+
+One thing gates "ready for a student", and it is not a test result:
 
 1. **The commercial authorisation, recorded** (step 3a).
-2. **The live Preview render, captured** (step 3, deployed mode).
 
 ### The deployment, checked 2026-08-28
 
