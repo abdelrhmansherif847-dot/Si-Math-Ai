@@ -551,7 +551,8 @@ BODY = f"""
 </div>
 """
 
-HTML = f"""<title>Figure Family Directions</title>
+HTML = f"""<!-- FIGURE-GRAMMAR-EXPLORATION — this page shows treatments that were considered and mostly NOT chosen, so its figure CSS is deliberately its own and is not figure-system.css. See the builder's header. -->
+<title>Figure Family Directions</title>
 {CSS}
 <div class="wrap">
   <header class="mast">

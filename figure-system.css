@@ -31,8 +31,8 @@
    which is how the exam keeps one palette across chrome and figure.
 */
 :root {
-  --fig-ink:#111820; --fig-axis:#3b4756; --fig-num:#2a3644;
-  --fig-grid:#848d99; --fig-fine:#c7d0da;
+  --fig-ink:#0e1620; --fig-axis:#0e1620; --fig-num:#0e1620;
+  --fig-grid:#cdd8e2; --fig-fine:#e4eaf0; --fig-major:#848d99;
   --data-1:#2a78d6; --data-2:#eb6834;
   --t-rule:#8592a0; --t-outer:#2b3743; --t-head:#2c3742; --t-headfg:#ffffff;
   /* the paper the figure sits on: the numeral halo and an open endpoint are
@@ -42,15 +42,15 @@
   --font-serif:'Newsreader',Georgia,serif;
 }
 @media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
-  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
-  --fig-grid:#6b768a; --fig-fine:#333f4e;
+  --fig-ink:#e8eff7; --fig-axis:#e8eff7; --fig-num:#e8eff7;
+  --fig-grid:#2c3844; --fig-fine:#1b242e; --fig-major:#6b768a;
   --data-1:#3987e5; --data-2:#d95926;
   --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
   --exam:#161d25; --rule:#26313d; --ink-3:#8493a5;
 } }
 :root[data-theme="dark"] {
-  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
-  --fig-grid:#6b768a; --fig-fine:#333f4e;
+  --fig-ink:#e8eff7; --fig-axis:#e8eff7; --fig-num:#e8eff7;
+  --fig-grid:#2c3844; --fig-fine:#1b242e; --fig-major:#6b768a;
   --data-1:#3987e5; --data-2:#d95926;
   --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
   --exam:#161d25; --rule:#26313d; --ink-3:#8493a5;
@@ -58,14 +58,24 @@
 
 .sx{display:block;margin:0}
 .sx-frame{fill:none;stroke:var(--rule);stroke-width:1}
+/* SQUARED PAPER IS PAPER. Three tiers, and the ONE THING that had gone wrong:
+   --fig-grid was set to #848d99, which is the approved MAJOR tier's ink — the
+   heavy every-fifth line — so every gridline in the system was drawn one tier
+   too dark. Together with an axis set LIGHTER than approved (#3b4756 against
+   #0e1620) and thinner (1.2 against 1.8), grid and axis converged in weight and
+   the plane stopped reading as a sheet of paper with a plane on it: it read as a
+   lattice of separate lines, which is exactly how it was described.
+   Values taken verbatim from PLANE_INK['paper'] in build-figure-directions.py,
+   the page the families were judged on. */
 .sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
+.sx-grid line.sx-major{stroke:var(--fig-major)}
 .sx-grid line.sx-fine{stroke:var(--fig-fine)}
-.sx-axis line{stroke:var(--fig-axis);stroke-width:1.2;stroke-linecap:butt}
-.sx-axis-base{stroke:var(--fig-axis);stroke-width:1.2}
+.sx-axis line{stroke:var(--fig-axis);stroke-width:1.8;stroke-linecap:butt}
+.sx-axis-base{stroke:var(--fig-axis);stroke-width:1.8}
 .sx-arrow{fill:var(--fig-axis)}
-.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
+.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.8;shape-rendering:crispEdges}
 /* Haloed, so a gridline never runs through a numeral a student is counting. */
-.sx-tick text{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;
+.sx-tick text{fill:var(--fig-num);font-family:var(--font-display);font-size:12px;font-weight:600;
   font-variant-numeric:tabular-nums;
   paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
 .sx-axis-tip{fill:var(--fig-axis);font-family:var(--font-serif);font-style:italic;
@@ -81,9 +91,9 @@
 .sx-vertex{font-family:var(--font-serif);font-style:italic;font-weight:600}
 .sx-direct{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;font-weight:600;
   paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
-.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
+.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3.2}
 .sx-dashed{stroke-dasharray:7 6;stroke-width:2.2}
-.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:2}
+.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:3}
 .sx-point-named{stroke-width:2.4}
 .sx-bar{fill:currentColor}
 /* Series slots. The grammar decided TWO — slots 1-2 of the validated

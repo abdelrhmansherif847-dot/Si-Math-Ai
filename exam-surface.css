@@ -31,6 +31,13 @@
  */
 
 :root {
+  /* The figure tokens are NOT here. figure-system.css owns them, and owning
+     them in one place is the point: they were duplicated here so the exam could
+     win, and the moment the grammar's values were corrected this file silently
+     overrode them — the restored squared paper was drawn in the old ink and the
+     page looked unchanged. The drift gate caught it; the duplication should not
+     have existed to be caught. Nothing in this file reads a --fig-*, --data-* or
+     --t-* token, so there was never anything to win. */
   --page:#eef1f5; --exam:#ffffff; --rule:#dde3ea;
   --ink:#111820; --ink-2:#445264; --ink-3:#6b7a8c;
   --cyan:#0f6f9e; --cyan-soft:rgba(15,111,158,.09); --cyan-line:rgba(15,111,158,.3);
@@ -38,15 +45,11 @@
   --flag:#8a5a00; --flag-soft:rgba(138,90,0,.14);
   --low:#a33a20;  --low-soft:rgba(163,58,32,.10);
   --good:#1c6b4a; --good-soft:rgba(28,107,74,.10);
-  --fig-ink:#111820; --fig-axis:#3b4756; --fig-num:#2a3644;
-  --fig-grid:#848d99; --fig-fine:#c7d0da;
   /* The DATA family's hue, and the decided table's rules. Both are from the
      approved grammar (365d85b) and neither was in this file: the exam surface
      it was first built from only ever showed one function graph, so it never
      had to express a data figure or a table, and what replaced them here was
      invented. Colour slots 1-2 of the validated categorical palette. */
-  --data-1:#2a78d6; --data-2:#eb6834;
-  --t-rule:#8592a0; --t-outer:#2b3743; --t-head:#2c3742; --t-headfg:#ffffff;
   --font-display:'DM Sans',system-ui,-apple-system,sans-serif;
   --font-serif:'Newsreader',Georgia,serif;
   --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
@@ -70,10 +73,6 @@
   --flag:#e0b062; --flag-soft:rgba(224,176,98,.16);
   --low:#e08165;  --low-soft:rgba(224,129,101,.14);
   --good:#63c39a; --good-soft:rgba(99,195,154,.13);
-  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
-  --fig-grid:#6b768a; --fig-fine:#333f4e;
-  --data-1:#3987e5; --data-2:#d95926;
-  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
 } }
 :root[data-theme="dark"] {
   --page:#080c11; --exam:#161d25; --rule:#26313d;
@@ -83,10 +82,6 @@
   --flag:#e0b062; --flag-soft:rgba(224,176,98,.16);
   --low:#e08165;  --low-soft:rgba(224,129,101,.14);
   --good:#63c39a; --good-soft:rgba(99,195,154,.13);
-  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
-  --fig-grid:#6b768a; --fig-fine:#333f4e;
-  --data-1:#3987e5; --data-2:#d95926;
-  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
 }
 
 *{box-sizing:border-box}

@@ -19,6 +19,46 @@ The common shape: **a matching property is not a matching picture.** A computed
 twos, or that a table is a different grey. Each of these was found by looking, and
 each could have been found automatically only by comparing pixels.
 
+## The baselines were wrong first
+
+The visual suite was built before anyone checked that what it was recording was
+right. Recording a baseline from the current renderer and then verifying the
+renderer against that baseline is circular: **a wrong drawing becomes protected
+rather than caught.** That is what happened, and it was caught by going back to
+the page the families were actually judged on — `figure-directions.html`, where
+each treatment was chosen among alternatives — and putting its pixels beside the
+product's.
+
+Measured, on the coordinate plane:
+
+| | approved reference | what shipped |
+|---|---|---|
+| unit grid | `#cdd8e2` — 1.45:1 | `#848d99` — **3.36:1** |
+| sub-unit mesh | `#e4eaf0` — 1.21:1 | absent unless a vertex sat on a half |
+| axis | `#0e1620` at 1.8 — 18.2:1 | `#3b4756` at 1.2 — 9.5:1 |
+
+**`--fig-grid` had been set to the approved MAJOR tier's ink** — the heavy
+every-fifth line — so every gridline in the system was drawn one tier too dark.
+At the same time the axis was set lighter and thinner than approved. Grid and
+axis converged in weight, the mesh that makes paper *paper* was conditional and
+usually absent, and the result read exactly as it was described: a lattice of
+separate lines rather than one coherent plane.
+
+None of this was visible to a property check, and the visual suite could not see
+it either, because the baseline had been recorded from the same wrong renderer.
+The values are now taken verbatim from `PLANE_INK['paper']` in
+`build-figure-directions.py`.
+
+**The contrast floor moved, deliberately and with the owner's decision.** The
+grid sits at 1.45:1, below the 3:1 that `365d85b` introduced. That commit's
+premise — "it sat at 1.25:1, drawn and invisible" — was about a single pale tier;
+two tiers together are legible, which is why the reference looks right. The gate
+no longer asserts a flat floor on the grid. It asserts the RELATIONSHIP that
+actually broke: each tier perceptible, ordered beneath the one above it, and the
+axis dominating the mesh by at least 6x (it is 12.6x). Four mutations confirm it
+— restoring the dark grid, washing the mesh out, lightening the axis, and
+inverting the tiers each red a different check.
+
 ## One grammar
 
 `figure-system.css` is the approved family grammar and the only place it exists.

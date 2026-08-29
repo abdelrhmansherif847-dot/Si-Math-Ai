@@ -67,7 +67,8 @@ FIGCSS = r"""
 .sx-closed{fill:currentColor} .sx-open{fill:var(--plate)}
 """
 
-HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+HTML = f"""<!-- FIGURE-GRAMMAR-EXPLORATION — this page shows treatments that were considered and mostly NOT chosen, so its figure CSS is deliberately its own and is not figure-system.css. See the builder's header. -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>Renderer evaluation</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap">
 <style>{JSXCSS}</style>

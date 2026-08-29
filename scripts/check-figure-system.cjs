@@ -71,8 +71,12 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   ok(`[${theme}] resolutionOf: fifths → ⅕`, Math.abs(rule2.resFifth-0.2)<1e-9, String(rule2.resFifth));
   ok(`[${theme}] resolutionOf: a value off every coarse step → ⅒`,
      Math.abs(rule2.resTenth-0.1)<1e-9, String(rule2.resTenth));
-  ok(`[${theme}] geometry · integer vertices → no sub-unit lines`,
-     rule2.geoFineInt===0, String(rule2.geoFineInt));
+  // SQUARED PAPER ALWAYS CARRIES ITS MESH. This asserted `=== 0` — integer
+  // vertices get no sub-unit lines — until the approved treatment was put beside
+  // the shipped one and the shipped one did not read as paper. gridMode:'fine'
+  // is what was approved; the mesh is the family, not an option within it.
+  ok(`[${theme}] geometry · a mesh under the unit lines, whatever the vertices`,
+     rule2.geoFineInt>6, String(rule2.geoFineInt));
   ok(`[${theme}] geometry · a vertex on a half → sub-unit lines appear`,
      rule2.geoFineHalf>6, String(rule2.geoFineHalf));
   ok(`[${theme}] number line · integer endpoint → no minor ticks`,
@@ -135,16 +139,48 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
             // say `#v-data-0 .sx-series`, which could never reach an exam; the
             // renderer now stamps the family and this proves that rule fires.
             data:g('.sx-fam-data .sx-series','color'),
-            grid:g('.sx-grid line:not(.sx-fine)','stroke'), fine:g('.sx-grid line.sx-fine','stroke'),
+            grid:g('.sx-grid line:not(.sx-fine):not(.sx-major)','stroke'),
+            fine:g('.sx-grid line.sx-fine','stroke'),
+            // From the TOKEN, not from a rendered line: the major tier engages
+            // only where a window is wide enough to carry three of them, so this
+            // page need not have one. Reading a fallback instead compared the
+            // unit tier with itself and the check could never fail.
+            // Resolved BY THE BROWSER, not read as a raw token. The token is a
+            // hex string, and this file's colour parser reads digit runs — it
+            // turned #6b768a into rgb(6,768,8) and reported a 150:1 contrast,
+            // which is above the 21:1 maximum and would have passed whatever the
+            // real value was.
+            major:(()=>{const d=document.createElement('span');
+              d.style.color='var(--fig-major)';document.body.appendChild(d);
+              const v=getComputedStyle(d).color;d.remove();return v;})(),
             // The decided table, on the classes the renderer emits — this used
             // to read .t-sys, a specimen class no exam has ever drawn.
             tRule:g('.sx-table tbody td','borderTopColor'), tTxt:g('.sx-table tbody td','color'),
             tHeadBg:g('.sx-table th','backgroundColor'), tHeadFg:g('.sx-table th','color')};});
-  // A grid is only drawn when the question needs it, so every grid here is
-  // information the reader must perceive — not decoration under a figure.
   for (const [k,min] of [['num',4.5],['ink',3],['axis',3],['lab',4.5],['data',3],
-                         ['grid',3],['tRule',3],['tTxt',4.5]])
+                         ['tRule',3],['tTxt',4.5]])
     ok(`[${theme}] ${k} ≥ ${min}:1 on the figure surface`, cr(c[k],surf)>=min, cr(c[k],surf).toFixed(2)+':1');
+
+  // THE GRID IS PAPER, AND IS CHECKED AS PAPER.
+  //
+  // `grid ≥ 3:1` used to sit in the list above. It was met by drawing every
+  // gridline in #848d99 — which is the approved MAJOR tier's ink, the heavy
+  // every-fifth line — so the whole mesh came out one tier too dark. Held beside
+  // the treatment that was actually approved, that is not squared paper: at 3:1
+  // the grid competes with the axis instead of receding behind it, and the
+  // figure reads as a lattice of separate lines. The approved mesh sits at
+  // 1.45:1 with a finer tier at 1.21:1 under it.
+  //
+  // So the rule is a RELATIONSHIP, not a floor, and it is the relationship that
+  // actually broke. Each tier has to be perceptible against the paper, ordered
+  // beneath the one above it, and the axis has to dominate all of them by a wide
+  // margin — which is what makes a plane read as drawn ON paper.
+  const g = cr(c.grid,surf), f = cr(c.fine,surf), mj = cr(c.major,surf), ax = cr(c.axis,surf);
+  ok(`[${theme}] the mesh is visible on the paper`, g>=1.3, g.toFixed(2)+':1');
+  ok(`[${theme}] and stays paper rather than line work`, g<=2.0, g.toFixed(2)+':1');
+  ok(`[${theme}] the sub-unit tier is quieter than the unit tier`, f<g, `${f.toFixed(2)} < ${g.toFixed(2)}`);
+  ok(`[${theme}] the major tier is louder than the unit tier`, mj>g, `${mj.toFixed(2)} > ${g.toFixed(2)}`);
+  ok(`[${theme}] the axis dominates the mesh it is drawn on`, ax/g>=6, `${ax.toFixed(1)}:1 vs ${g.toFixed(2)}:1 — ${(ax/g).toFixed(1)}x`);
   ok(`[${theme}] table header text on its band ≥ 4.5:1`, cr(c.tHeadFg,c.tHeadBg)>=4.5,
      cr(c.tHeadFg,c.tHeadBg).toFixed(2)+':1');
 

@@ -136,7 +136,17 @@ function resolutionOf(values) {
  *           only, because a value on a chart is read by tracking left.
  */
 function gridPlan(frame, reading, res) {
-  if (frame === 'plane') return { mode: 'major', sub: res < 1 ? res : 0 };
+  // SQUARED PAPER ALWAYS CARRIES ITS FINE TIER. The approved treatment is
+  // gridMode:'fine' — a half-unit mesh under the unit lines — and that mesh is
+  // what makes it read as PAPER rather than as a lattice of drawn lines. Making
+  // it conditional on resolutionOf() left every integer-vertex figure, which is
+  // most of them, with a single coarse tier.
+  //
+  // resolutionOf() still decides, and still matters: it sets HOW FINE the mesh
+  // is, so a vertex at 2.5 sits on a crossing. It just no longer decides whether
+  // there is one. Half is the floor because a half-unit mesh is what squared
+  // paper is; a finer resolution makes a finer mesh.
+  if (frame === 'plane') return { mode: 'major', sub: Math.min(res, 0.5) };
   if (frame === 'graph') return { mode: reading === 'value' ? 'major' : 'none', sub: 0 };
   if (frame === 'data')  return { mode: reading === 'value' ? 'rules' : 'none', sub: 0 };
   // No silent default. A plot whose frame the spec did not declare is a bug in

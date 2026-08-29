@@ -527,8 +527,22 @@ t.section('the family rule is computed, not chosen per figure');
   t.is('integer vertices need no half-steps', R.resolutionOf([0, 1, -3, 12]), 1);
   t.is('a vertex at 2.5 grows half-unit lines', R.resolutionOf([0, 2.5, 4]), 0.5);
   t.is('and one at 0.2 grows fifths', R.resolutionOf([0, 0.2, 1]), 0.2);
-  t.ok('a plane\'s sub-grid is its resolution, not a fixed fraction',
-       R.gridPlan('plane', 'shape', 0.5).sub === 0.5 && R.gridPlan('plane', 'shape', 1).sub === 0);
+  // THE MESH IS NOT OPTIONAL. This asserted the opposite until 2026-08-29:
+  // integer vertices got sub === 0, so most squared-paper figures carried a
+  // single coarse tier. Held against the treatment that was actually approved —
+  // gridMode:'fine' on the page the families were judged on — that is wrong: the
+  // half-unit mesh under the unit lines is what makes the family read as PAPER
+  // rather than as a lattice of separate lines, which is how the shipped version
+  // was described when it was finally looked at.
+  //
+  // resolutionOf() still decides how FINE the mesh is; it no longer decides
+  // whether there is one. Half is the floor, and a finer resolution wins.
+  t.is('squared paper always carries a mesh, whatever its vertices',
+       R.gridPlan('plane', 'shape', 1).sub, 0.5);
+  t.is('and a finer resolution makes a finer one, so a vertex lands on a crossing',
+       R.gridPlan('plane', 'shape', 0.2).sub, 0.2);
+  t.is('a half-resolution figure keeps the half mesh',
+       R.gridPlan('plane', 'shape', 0.5).sub, 0.5);
 }
 
 t.section('the stimulus-only path is closed where a figure needs the question');

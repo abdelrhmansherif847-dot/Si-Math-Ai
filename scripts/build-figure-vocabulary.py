@@ -183,7 +183,8 @@ legal_rows = ''.join(
 def clause(n, title, body):
     return f'<section class="clause"><div class="cn">{n}</div><div class="body"><h2>{title}</h2>{body}</div></section>'
 
-HTML = f"""<title>Figure Vocabulary</title>
+HTML = f"""<!-- FIGURE-GRAMMAR-EXPLORATION — this page shows treatments that were considered and mostly NOT chosen, so its figure CSS is deliberately its own and is not figure-system.css. See the builder's header. -->
+<title>Figure Vocabulary</title>
 {CSS}
 <div class="wrap">
   <header class="mast">
