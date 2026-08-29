@@ -174,6 +174,9 @@ const server = http.createServer((req, res) => {
       overlap: !(hr.bottom <= r.top || r.bottom <= hr.top),
       markInHead: h.querySelectorAll('.xw-mark').length,
       markInMount: m.querySelectorAll('.xw-mark').length,
+      subBold: !!document.querySelector('.xw-sub b'),
+      zeroSrc: (h.querySelector('.xw-zero') || {}).getAttribute
+        ? h.querySelector('.xw-zero').getAttribute('src') : '',
       text: m.innerText.replace(/\n/g, ' '),
       fallback: !!m.querySelector('.xw-fb'),
       script: (document.getElementById('si-desmos-api') || {}).src || null };
@@ -181,9 +184,17 @@ const server = http.createServer((req, res) => {
   ok('opening it fetches the config, once, with a bearer token',
      configHits.length === 1 && configHits[0].auth === true, JSON.stringify(configHits));
   ok('the workspace opens', open.w > 200 && open.h > 200, `${open.w}x${open.h}`);
-  ok('the tool is called Graphing Calculator', open.title === 'Graphing Calculator', open.title);
+  ok('the title carries OUR name, never the vendor\u2019s',
+     /graphing calculator/i.test(open.title) && !/desmos/i.test(open.title), open.title);
   ok('the provider is named in the subtitle, which §6.b licenses',
      /Desmos/.test(open.sub), open.sub);
+  // We have just put our own brand on the header. The attribution beneath it
+  // has to be emphasised rather than incidental, or the header reads as a claim
+  // over a calculator we did not build.
+  ok('and that name is emphasised, not buried', open.subBold);
+  // Zero is the established artwork, not a glyph and not a new drawing.
+  ok('Zero is the mentor artwork that already ships', open.zeroSrc.indexOf('zero-mentor.png') >= 0,
+     open.zeroSrc || '(no img)');
   ok('Zero is in our header and not in the calculator region (§5.b(iii))',
      open.markInHead === 1 && open.markInMount === 0,
      `head=${open.markInHead} mount=${open.markInMount}`);

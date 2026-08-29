@@ -33,6 +33,21 @@
 
   var SLOT = '[data-si-calculator-slot]';
   var STYLE_ID = 'si-calc-style';
+
+  // What WE call our wrapper. The calculator inside it is Desmos's, and the
+  // header names them directly beneath this — see ATTRIBUTION below. Keeping
+  // the two on separate lines is what stops our branding reading as a claim
+  // over their product.
+  //
+  // NOTE: "ZeroTrend" appears nowhere else in this repository — every other
+  // surface, and the frozen knowledge layer, says "Si Math AI". Changing this
+  // one constant is all it takes if that was not intended.
+  var WRAPPER_NAME = 'ZeroTrend Graphing Calculator';
+
+  // Zero, the established mascot: the 360x360 mentor artwork that already ships
+  // inline in chat.html, extracted to a file so the exam can use it without
+  // carrying a second copy of 32KB of base64. Not a new mascot — the same one.
+  var ZERO_SRC = 'assets/zero-mentor.png';
   var ws = null, observer = null, opts = {};
 
   // ── the verification override ────────────────────────────────────────────
@@ -107,52 +122,96 @@
     '.si-calc-test{font-family:ui-monospace,monospace;font-size:9.5px;font-weight:700;',
     '  letter-spacing:.09em;padding:2px 5px;border-radius:3px;margin-left:2px;',
     '  background:rgba(4,18,27,.22);color:inherit}',
-    '.xw-scrim{display:none;position:fixed;inset:0;background:rgba(5,10,20,.72);z-index:120}',
+    // ── the panel ─────────────────────────────────────────────────────────
+    '.xw-scrim{display:none;position:fixed;inset:0;z-index:120;',
+    '  background:radial-gradient(120% 80% at 70% 0%,rgba(6,26,34,.55),rgba(3,9,16,.80))}',
     '.xw-scrim.is-open{display:block}',
-    '.xw-panel{position:fixed;right:0;top:0;bottom:0;width:min(620px,100%);z-index:130;',
-    '  background:var(--bg-card,#0a1120);border-left:1px solid var(--border-soft,#1e2a3d);',
-    '  display:none;flex-direction:column;font:inherit}',
+    '.xw-panel{position:fixed;right:0;top:0;bottom:0;width:min(660px,100%);z-index:130;',
+    '  background:var(--bg-card,#0a1120);display:none;flex-direction:column;font:inherit;',
+    '  border-left:1px solid rgba(52,211,153,.16);',
+    '  box-shadow:-32px 0 68px -34px rgba(0,0,0,.85)}',
     '.xw-panel.is-open{display:flex}',
-    /* Fixed band: the header's height must not depend on which provider is
-       active, or the calculator region below it moves when it changes. */
-    '.xw-head{display:flex;align-items:center;gap:12px;padding:16px 18px;min-height:76px;',
-    '  border-bottom:1px solid var(--border-soft,#1e2a3d)}',
+
+    // ── the header: our chrome, and the only place we brand ───────────────
+    //
+    // A quiet lift rather than a hero. The gradient runs a few percent lighter
+    // at the top and settles into the panel; a single hairline of teal along
+    // the bottom edge is the whole accent. Anything louder would compete with
+    // the calculator, which is the thing the student is actually here for.
+    '.xw-head{position:relative;display:flex;align-items:center;gap:15px;',
+    '  padding:18px 20px 17px;min-height:86px;',
+    '  background:linear-gradient(180deg,rgba(52,211,153,.055),rgba(52,211,153,0) 62%),',
+    '    linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,0) 40%)}',
+    // top highlight and bottom rule, drawn rather than bordered so neither
+    // adds to the header's height and moves the calculator region.
+    '.xw-head::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;',
+    '  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16) 22%,',
+    '    rgba(255,255,255,.16) 78%,transparent)}',
+    '.xw-head::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;',
+    '  background:linear-gradient(90deg,rgba(52,211,153,.42),rgba(56,189,248,.26) 46%,',
+    '    transparent 88%)}',
     '.xw-head>div{min-width:0;flex:1}',
-    '.xw-head h2{margin:0;font-size:16px;font-weight:700;color:var(--text,#e8eef7)}',
-    /* Reserves its line even when empty — a collapsing subtitle shrinks the
-       header and moves the calculator region. */
-    '.xw-sub{margin:2px 0 0;font-size:11.5px;line-height:1.6;min-height:18.4px;',
-    '  color:var(--text-dim,#8fa3bd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.xw-close{margin-left:auto;background:none;border:1px solid var(--border-soft,#1e2a3d);',
-    '  border-radius:6px;padding:6px 12px;font:inherit;font-size:12.5px;',
-    '  color:var(--text-dim,#8fa3bd);cursor:pointer}',
-    '.xw-close:hover{color:var(--text,#e8eef7)}',
-    '.xw-close:focus-visible{outline:2px solid var(--text,#e8eef7);outline-offset:2px}',
-    '.xw-body{padding:16px 18px;flex:1;display:flex;min-height:0;overflow-y:auto}',
-    /* A stage of fixed size. Desmos.GraphingCalculator() measures the element it
-       is given: an auto-height container mounts a calculator with no height. */
-    '.xw-mount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}',
-    '.xw-gate,.xw-err{border-radius:8px;padding:22px 24px;flex:0 0 auto;margin:auto 0;',
-    '  display:flex;flex-direction:column;align-items:flex-start}',
-    '.xw-gate{border:1px dashed var(--border-soft,#1e2a3d)}',
-    /* Told, not shouted: a student mid-exam has a clock running. */
-    '.xw-err{border:1px solid var(--border-soft,#1e2a3d);border-left:3px solid var(--amber,#e0b062)}',
-    '.xw-gate h3,.xw-err h3{margin:0 0 8px;font-size:15px;color:var(--text,#e8eef7)}',
-    '.xw-gate p,.xw-err p{margin:0 0 10px;font-size:13.5px;line-height:1.6;',
+    '.xw-head h2{margin:0;font-size:17.5px;font-weight:700;letter-spacing:-.012em;',
+    '  color:var(--text,#e8eef7);text-wrap:balance}',
+
+    // ── the mascot ────────────────────────────────────────────────────────
+    //
+    // Zero as he is drawn everywhere else — the mentor artwork from chat.html,
+    // not a glyph and not a new drawing. The glow is behind him and stops well
+    // inside the tile, so it reads as depth rather than a sticker.
+    '.xw-mark{position:relative;width:52px;height:52px;flex:none;border-radius:15px;',
+    '  display:flex;align-items:center;justify-content:center;',
+    '  background:linear-gradient(150deg,rgba(52,211,153,.16),rgba(56,189,248,.09) 70%);',
+    '  border:1px solid rgba(52,211,153,.30);',
+    '  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 18px -10px rgba(52,211,153,.55)}',
+    '.xw-zero{display:block;width:44px;height:44px;object-fit:contain;',
+    '  filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}',
+
+    // ── attribution ───────────────────────────────────────────────────────
+    //
+    // The subtitle is where the provider is named, and it is deliberately not
+    // shrunk to a whisper: we have just put our own name on the header, and the
+    // calculator below belongs to Desmos. API Terms §6.b licenses the mark for
+    // exactly this — identifying the tool inside the product.
+    '.xw-sub{margin:3px 0 0;font-size:12px;line-height:1.5;min-height:18px;',
+    '  color:var(--text-dim,#8fa3bd);white-space:nowrap;overflow:hidden;',
+    '  text-overflow:ellipsis;letter-spacing:.005em}',
+    '.xw-sub b{font-weight:600;color:rgba(190,214,234,.96)}',
+
+    // ── close ─────────────────────────────────────────────────────────────
+    '.xw-close{margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:7px;',
+    '  background:rgba(255,255,255,.035);border:1px solid var(--border-soft,#1e2a3d);',
+    '  border-radius:9px;padding:8px 13px;font:inherit;font-size:12.5px;font-weight:600;',
+    '  color:var(--text-dim,#8fa3bd);cursor:pointer;transition:color .16s,border-color .16s,',
+    '    background .16s}',
+    '.xw-close:hover{color:var(--text,#e8eef7);border-color:rgba(52,211,153,.45);',
+    '  background:rgba(52,211,153,.10)}',
+    '.xw-close:focus-visible{outline:2px solid rgba(52,211,153,.75);outline-offset:2px}',
+
+    // ── the calculator's own region ───────────────────────────────────────
+    //
+    // Nothing of ours is drawn inside it. The padding is the only thing that
+    // changed here, and it exists so the calculator is not flush to the panel.
+    '.xw-body{padding:16px 18px 18px;flex:1;display:flex;min-height:0;overflow-y:auto}',
+    '.xw-mount{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;',
+    '  border-radius:10px;overflow:hidden}',
+
+    // ── our cards, when there is no calculator to show ────────────────────
+    '.xw-gate,.xw-err{border-radius:10px;padding:24px 26px;flex:0 0 auto;margin:auto 0;',
+    '  display:flex;flex-direction:column;align-items:flex-start;',
+    '  background:rgba(255,255,255,.02)}',
+    '.xw-gate{border:1px dashed rgba(143,163,189,.42)}',
+    '.xw-err{border:1px solid var(--border-soft,#1e2a3d);',
+    '  border-left:3px solid var(--amber,#e0b062)}',
+    '.xw-gate h3,.xw-err h3{margin:0 0 9px;font-size:15.5px;font-weight:700;',
+    '  color:var(--text,#e8eef7)}',
+    '.xw-gate p,.xw-err p{margin:0 0 11px;font-size:13.5px;line-height:1.62;',
     '  color:var(--text-dim,#8fa3bd);max-width:52ch}',
     '.xw-state{display:inline-block;font-family:ui-monospace,monospace;font-size:10.5px;',
-    '  padding:3px 8px;border-radius:4px;margin:0 0 10px;',
-    '  background:var(--green-soft,rgba(52,211,153,.12));color:var(--green,#34d399)}',
-    '.xw-state.xw-bad{background:var(--amber-soft,rgba(224,176,98,.14));color:var(--amber,#e0b062)}',
-    /* Zero, in the treatment this site already uses — the dragon glyph in a
-       tinted tile. He sits in OUR header and never over the calculator: Desmos
-       API Terms §5.b(iii) forbids obscuring their branding on the Software
-       Service, and drawing a mascot over someone else's calculator would be
-       poor manners even where it is permitted. */
-    '.xw-mark{width:38px;height:38px;flex:none;border-radius:11px;font-size:20px;',
-    '  display:flex;align-items:center;justify-content:center;',
-    '  background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(14,165,233,.1));',
-    '  border:1.5px solid rgba(56,189,248,.4)}',
+    '  letter-spacing:.05em;padding:3px 9px;border-radius:5px;margin:0 0 11px;',
+    '  background:rgba(52,211,153,.13);color:var(--green,#34d399)}',
+    '.xw-state.xw-bad{background:var(--amber-soft,rgba(224,176,98,.14));',
+    '  color:var(--amber,#e0b062)}',
   ].join('\n');
 
   function injectStyle() {
@@ -172,17 +231,21 @@
     if (ws) return ws;
     var W = root.SiExamWorkspace && root.SiExamWorkspace.Workspace;
     if (!W) return null;
+    injectStyle();
     var mark = document.createElement('span');
     mark.className = 'xw-mark';
     mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = '\u{1F409}';
+    var img = document.createElement('img');
+    img.src = ZERO_SRC; img.alt = ''; img.width = 44; img.height = 44;
+    img.className = 'xw-zero';
+    mark.appendChild(img);
     ws = W({
       providerId: 'desmos',
       // NO fallbackId. Zero Graph draws through the figure renderer, which no
       // shipped page loads, so it reports 'no-renderer' here — and a fallback
       // that cannot draw is not a fallback. Pass it once the renderer ships.
       fallbackId: null,
-      title: 'Graphing Calculator',
+      title: WRAPPER_NAME,
       mark: mark,
     });
     document.body.appendChild(ws.scrim);

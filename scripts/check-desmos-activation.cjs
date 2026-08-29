@@ -419,8 +419,13 @@ async function runDeployed({ ok, fails, pass }) {
   ok('the calculator itself is what is in the region', st.kids > 0 && !st.ours,
      st.ours ? 'our own card is there' : `${st.kids} child node(s)`);
   ok('our chrome does not overlap it (§5.b(iii))', !st.overlap, `overlap=${st.overlap}`);
-  ok('the tool is named for its job, not the vendor',
-     st.title === 'Graphing Calculator', st.title);
+  // Our wrapper carries our name; the vendor is named in the subtitle, never
+  // the title. A title reading "Desmos …" would be us presenting their product
+  // as the thing we built; a title with no mention of a calculator would be
+  // branding for its own sake.
+  ok('the title names the tool, not the vendor',
+     /graphing calculator/i.test(st.title || '') && !/desmos/i.test(st.title || ''),
+     st.title);
   ok('nothing claims a partnership',
      !/(powered by|in partnership|zero ?[x×] ?desmos|endorsed|affiliat)/i.test(st.bodyText));
   ok('served over https from Desmos’s own origin',

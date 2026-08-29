@@ -163,10 +163,18 @@
       var st = prov.status ? prov.status() : { ready: true, state: 'ready', detail: '' };
       // The subtitle is where the provider IS named, which is exactly what
       // Desmos API Terms §6.b licenses the Marks for: identifying the tool
-      // inside the application. It is one line by construction — a wrapping
-      // subtitle would grow the header and move the calculator region, and the
-      // panel's shape must not depend on which provider is active.
-      subEl.textContent = st.ready ? (st.detail || prov.displayName) : '';
+      // inside the application. The name is emphasised rather than buried:
+      // the header above it carries OUR brand, and the calculator below is
+      // theirs, so the attribution has to carry its own weight. It stays one
+      // line by construction — a wrapping subtitle would grow the header and
+      // move the calculator region, and the panel's shape must not depend on
+      // which provider is active.
+      subEl.textContent = '';
+      if (st.ready) {
+        subEl.appendChild(el('b', { text: prov.displayName }));
+        var tier = String(st.state || '').replace(/^(trial|commercial)$/, '$1 tier');
+        if (tier) subEl.appendChild(document.createTextNode(' \u00b7 ' + tier));
+      }
       if (!st.ready) { mountEl.appendChild(gateCard(st, prov)); return; }
       active = prov;
       var p;

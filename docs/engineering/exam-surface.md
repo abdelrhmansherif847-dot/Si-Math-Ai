@@ -134,6 +134,34 @@ integrity event, with durations. Sending a student to a second tab would fire an
 integrity event on every legitimate use of a permitted tool. In-panel is the
 only model compatible with the integrity layer that already ships.
 
+### Zero's artwork — a correction, and the resolution
+
+**I said twice that this repository has no Zero image asset. It does.** A
+360×360 PNG of the mentor dragon — blue, bearded, spectacles, robe, staff — is
+inlined in `chat.html` as a `data:` URI on the halo element. I searched for image
+*files* and for `src="…zero…"`, and a base64 data URI matches neither. The
+40×40 `DRAGON_MENTOR` constant in the same file is a second, smaller copy.
+
+So the earlier note here — that the site draws Zero as a glyph and no asset
+exists — was wrong on the second half, and it led the exam to use the emoji when
+the real artwork was available all along.
+
+**Resolved 2026-08-29.** The 360×360 bytes are extracted verbatim to
+`assets/zero-mentor.png` — the same asset, in a file, so the exam surface can use
+it without carrying a second 32KB copy of base64. `chat.html` is untouched.
+Nothing new was drawn: the hand-made vector attempt (`zero-mark.js`) was deleted
+for reading as a seahorse, and that decision stands.
+
+`scripts/check-exam-calculator-wiring.cjs` asserts the header's image is that
+file, so a future edit cannot quietly go back to a glyph.
+
+### Why in-panel, and not a second tab
+
+`exam-integrity.js` records the exam tab being hidden or losing focus as an
+integrity event, with durations. Sending a student to a second tab would fire an
+integrity event on every legitimate use of a permitted tool. In-panel is the
+only model compatible with the integrity layer that already ships.
+
 ### A note on Zero's artwork
 
 **Correction, 2026-08-27.** This section said Zero appears "from the 40×40 PNG
