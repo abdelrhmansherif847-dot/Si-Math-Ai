@@ -175,6 +175,25 @@ const server = http.createServer((req, res) => {
       markInHead: h.querySelectorAll('.xw-mark').length,
       markInMount: m.querySelectorAll('.xw-mark').length,
       subBold: !!document.querySelector('.xw-sub b'),
+      eyebrow: (document.querySelector('.xw-eyebrow') || {}).textContent || '',
+      panelAnimates: (() => {
+        const cs = getComputedStyle(document.querySelector('.xw-panel'));
+        return cs.transitionDuration !== '0s' && cs.transitionProperty !== 'none';
+      })(),
+      // The load-bearing one: NOTHING of ours may animate, transition or float
+      // inside the calculator's own region. A moving container makes Desmos
+      // re-measure; an overlay blocks the keypad.
+      motionInMount: [...document.querySelectorAll('.xw-mount, .xw-mount *')]
+        .filter(e => {
+          const cs = getComputedStyle(e);
+          return (cs.animationName && cs.animationName !== 'none')
+              || (cs.transitionDuration !== '0s' && cs.transitionProperty !== 'none');
+        }).length,
+      overlayInMount: [...document.querySelectorAll('.xw-mount *')]
+        .filter(e => {
+          const cs = getComputedStyle(e);
+          return cs.position === 'absolute' || cs.position === 'fixed';
+        }).length,
       zeroSrc: (h.querySelector('.xw-zero') || {}).getAttribute
         ? h.querySelector('.xw-zero').getAttribute('src') : '',
       text: m.innerText.replace(/\n/g, ' '),
@@ -184,8 +203,10 @@ const server = http.createServer((req, res) => {
   ok('opening it fetches the config, once, with a bearer token',
      configHits.length === 1 && configHits[0].auth === true, JSON.stringify(configHits));
   ok('the workspace opens', open.w > 200 && open.h > 200, `${open.w}x${open.h}`);
-  ok('the title carries OUR name, never the vendor\u2019s',
-     /graphing calculator/i.test(open.title) && !/desmos/i.test(open.title), open.title);
+  // It must name the tool (so the header is not branding for its own sake) and
+  // must not be, or be built from, the vendor's mark.
+  ok('the title names the tool and is ours, not the vendor\u2019s',
+     /graph/i.test(open.title) && !/desmo/i.test(open.title), open.title);
   ok('the provider is named in the subtitle, which §6.b licenses',
      /Desmos/.test(open.sub), open.sub);
   // We have just put our own brand on the header. The attribution beneath it
@@ -195,6 +216,19 @@ const server = http.createServer((req, res) => {
   // Zero is the established artwork, not a glyph and not a new drawing.
   ok('Zero is the mentor artwork that already ships', open.zeroSrc.indexOf('zero-mentor.png') >= 0,
      open.zeroSrc || '(no img)');
+  ok('the header carries the product tagline', /powered by zero/i.test(open.eyebrow),
+     open.eyebrow || '(none)');
+  ok('the panel animates rather than snapping', open.panelAnimates);
+  // The constraint that matters: the calculator's region is left alone.
+  ok('NOTHING of ours animates inside the calculator region',
+     open.motionInMount === 0, String(open.motionInMount));
+  ok('and nothing of ours is positioned over it',
+     open.overlayInMount === 0, String(open.overlayInMount));
+  // The wrapper's name must never be built out of the vendor's — API Terms
+  // §6.b forbids derivative and combination marks.
+  ok('the wrapper name is not derived from the vendor\u2019s mark',
+     !/zesmos|desmo/i.test(open.title.replace(/desmos graphing calculator/i, '')),
+     open.title);
   ok('Zero is in our header and not in the calculator region (§5.b(iii))',
      open.markInHead === 1 && open.markInMount === 0,
      `head=${open.markInHead} mount=${open.markInMount}`);

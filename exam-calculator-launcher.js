@@ -35,14 +35,24 @@
   var STYLE_ID = 'si-calc-style';
 
   // What WE call our wrapper. The calculator inside it is Desmos's, and the
-  // header names them directly beneath this — see ATTRIBUTION below. Keeping
-  // the two on separate lines is what stops our branding reading as a claim
-  // over their product.
+  // header names them directly beneath this. Keeping the two on separate lines
+  // is what stops our branding reading as a claim over their product.
   //
-  // NOTE: "ZeroTrend" appears nowhere else in this repository — every other
-  // surface, and the frozen knowledge layer, says "Si Math AI". Changing this
-  // one constant is all it takes if that was not intended.
-  var WRAPPER_NAME = 'ZeroTrend Graphing Calculator';
+  // ⛔ THIS NAME MAY NOT BE DERIVED FROM "DESMOS". Desmos API Terms §6.b:
+  //
+  //   "You will not challenge the validity of or attempt to register any of the
+  //    Marks, nor will you adopt any derivative or confusingly similar names,
+  //    brands or marks or create any COMBINATION MARKS with the Marks."
+  //
+  // "Zesmos" — Zero + De(smos) — was requested for this slot on 2026-08-29. It
+  // is a combination mark with theirs, which is the case that sentence names
+  // outright, so it is not implemented here. A blend reads as one product with
+  // one owner, and the owner it implies is us; the calculator is theirs.
+  //
+  // The name is a placeholder chosen to be unmistakably ours and derived from
+  // nothing: swapping it is this one line.
+  var WRAPPER_NAME = 'Zero Graphing Studio';
+  var WRAPPER_TAGLINE = 'Powered by Zero';
 
   // Zero, the established mascot: the 360x360 mentor artwork that already ships
   // inline in chat.html, extracted to a file so the exam can use it without
@@ -116,21 +126,37 @@
     '  padding:8px 16px;border-radius:100px;background:var(--green,#34d399);',
     '  border:1px solid var(--green,#34d399);color:#04121b;',
     '  font:inherit;font-size:13px;font-weight:700;cursor:pointer}',
-    '.si-calc-open:hover{filter:brightness(1.08)}',
+    '.si-calc-open{transition:filter .16s ease,transform .12s ease,box-shadow .2s ease}',
+    '.si-calc-open:hover{filter:brightness(1.08);',
+    '  box-shadow:0 4px 16px -8px rgba(52,211,153,.9)}',
+    '.si-calc-open:active{transform:translateY(1px);filter:brightness(.97)}',
     '.si-calc-open:focus-visible{outline:2px solid var(--green,#34d399);outline-offset:3px}',
     '.si-calc-open svg{width:14px;height:14px}',
     '.si-calc-test{font-family:ui-monospace,monospace;font-size:9.5px;font-weight:700;',
     '  letter-spacing:.09em;padding:2px 5px;border-radius:3px;margin-left:2px;',
     '  background:rgba(4,18,27,.22);color:inherit}',
     // ── the panel ─────────────────────────────────────────────────────────
-    '.xw-scrim{display:none;position:fixed;inset:0;z-index:120;',
+    // visibility + opacity + transform rather than a display toggle, so the
+    // panel animates in BOTH directions. Deliberately no scale and no width
+    // change: Desmos measures the element it is handed, and a size that moves
+    // mid-mount is a calculator that lays itself out against the wrong box.
+    // Only opacity and X translation are animated, so the measured size is
+    // constant from the first frame.
+    '.xw-scrim{position:fixed;inset:0;z-index:120;opacity:0;visibility:hidden;',
+    '  pointer-events:none;transition:opacity .28s ease,visibility 0s linear .28s;',
     '  background:radial-gradient(120% 80% at 70% 0%,rgba(6,26,34,.55),rgba(3,9,16,.80))}',
-    '.xw-scrim.is-open{display:block}',
+    '.xw-scrim.is-open{opacity:1;visibility:visible;pointer-events:auto;',
+    '  transition:opacity .28s ease,visibility 0s}',
     '.xw-panel{position:fixed;right:0;top:0;bottom:0;width:min(660px,100%);z-index:130;',
-    '  background:var(--bg-card,#0a1120);display:none;flex-direction:column;font:inherit;',
+    '  background:var(--bg-card,#0a1120);display:flex;flex-direction:column;font:inherit;',
     '  border-left:1px solid rgba(52,211,153,.16);',
-    '  box-shadow:-32px 0 68px -34px rgba(0,0,0,.85)}',
-    '.xw-panel.is-open{display:flex}',
+    '  box-shadow:-32px 0 68px -34px rgba(0,0,0,.85);',
+    '  opacity:0;visibility:hidden;pointer-events:none;transform:translateX(18px);',
+    '  transition:opacity .30s ease,transform .34s cubic-bezier(.22,1,.36,1),',
+    '    visibility 0s linear .34s}',
+    '.xw-panel.is-open{opacity:1;visibility:visible;pointer-events:auto;',
+    '  transform:none;transition:opacity .26s ease,',
+    '    transform .38s cubic-bezier(.22,1,.36,1),visibility 0s}',
 
     // ── the header: our chrome, and the only place we brand ───────────────
     //
@@ -151,8 +177,22 @@
     '  background:linear-gradient(90deg,rgba(52,211,153,.42),rgba(56,189,248,.26) 46%,',
     '    transparent 88%)}',
     '.xw-head>div{min-width:0;flex:1}',
-    '.xw-head h2{margin:0;font-size:17.5px;font-weight:700;letter-spacing:-.012em;',
+    '.xw-eyebrow{display:block;font-family:ui-monospace,monospace;font-size:9.5px;',
+    '  font-weight:700;letter-spacing:.15em;text-transform:uppercase;',
+    '  color:rgba(52,211,153,.92);margin:0 0 3px}',
+    '.xw-head h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.014em;',
     '  color:var(--text,#e8eef7);text-wrap:balance}',
+
+    // The branding arrives; the calculator does not. Each header element rises
+    // a few pixels on a short stagger, and nothing inside .xw-mount is touched
+    // — a moving container would make Desmos re-measure mid-layout.
+    '@keyframes xw-rise{from{opacity:0;transform:translateY(7px)}',
+    '  to{opacity:1;transform:none}}',
+    '.xw-panel.is-open .xw-mark{animation:xw-rise .42s cubic-bezier(.22,1,.36,1) both}',
+    '.xw-panel.is-open .xw-eyebrow{animation:xw-rise .42s cubic-bezier(.22,1,.36,1) .05s both}',
+    '.xw-panel.is-open .xw-head h2{animation:xw-rise .42s cubic-bezier(.22,1,.36,1) .09s both}',
+    '.xw-panel.is-open .xw-sub{animation:xw-rise .42s cubic-bezier(.22,1,.36,1) .14s both}',
+    '.xw-panel.is-open .xw-close{animation:xw-rise .42s cubic-bezier(.22,1,.36,1) .18s both}',
 
     // ── the mascot ────────────────────────────────────────────────────────
     //
@@ -164,8 +204,16 @@
     '  background:linear-gradient(150deg,rgba(52,211,153,.16),rgba(56,189,248,.09) 70%);',
     '  border:1px solid rgba(52,211,153,.30);',
     '  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 18px -10px rgba(52,211,153,.55)}',
-    '.xw-zero{display:block;width:44px;height:44px;object-fit:contain;',
-    '  filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}',
+    '.xw-zero{display:block;width:44px;height:44px;object-fit:contain;position:relative;',
+    '  z-index:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45));',
+    '  transition:transform .32s cubic-bezier(.22,1,.36,1)}',
+    // A slow breath behind him, not on him — the artwork never moves or blurs.
+    '.xw-mark::after{content:"";position:absolute;inset:5px;border-radius:11px;',
+    '  background:radial-gradient(60% 60% at 50% 55%,rgba(52,211,153,.34),transparent 72%);',
+    '  opacity:.55;animation:xw-breathe 5.5s ease-in-out infinite}',
+    '@keyframes xw-breathe{0%,100%{opacity:.38;transform:scale(.94)}',
+    '  50%{opacity:.72;transform:scale(1.04)}}',
+    '.xw-head:hover .xw-zero{transform:translateY(-1.5px) scale(1.04)}',
 
     // ── attribution ───────────────────────────────────────────────────────
     //
@@ -187,6 +235,7 @@
     '.xw-close:hover{color:var(--text,#e8eef7);border-color:rgba(52,211,153,.45);',
     '  background:rgba(52,211,153,.10)}',
     '.xw-close:focus-visible{outline:2px solid rgba(52,211,153,.75);outline-offset:2px}',
+    '.xw-close:active{transform:translateY(1px);background:rgba(52,211,153,.16)}',
 
     // ── the calculator's own region ───────────────────────────────────────
     //
@@ -212,6 +261,17 @@
     '  background:rgba(52,211,153,.13);color:var(--green,#34d399)}',
     '.xw-state.xw-bad{background:var(--amber-soft,rgba(224,176,98,.14));',
     '  color:var(--amber,#e0b062)}',
+    // Every animation above is decoration. None of it carries meaning, so all
+    // of it goes when the viewer has asked for less — including the ambient
+    // breath, which is the one thing that would otherwise never stop.
+    '@media (prefers-reduced-motion:reduce){',
+    '  .xw-panel,.xw-scrim,.xw-zero,.si-calc-open,.xw-close{transition:none!important}',
+    '  .xw-panel.is-open .xw-mark,.xw-panel.is-open .xw-eyebrow,',
+    '  .xw-panel.is-open .xw-head h2,.xw-panel.is-open .xw-sub,',
+    '  .xw-panel.is-open .xw-close{animation:none!important}',
+    '  .xw-mark::after{animation:none!important;opacity:.5}',
+    '  .xw-head:hover .xw-zero{transform:none}',
+    '}',
   ].join('\n');
 
   function injectStyle() {
@@ -246,6 +306,7 @@
       // that cannot draw is not a fallback. Pass it once the renderer ships.
       fallbackId: null,
       title: WRAPPER_NAME,
+      eyebrow: WRAPPER_TAGLINE,
       mark: mark,
     });
     document.body.appendChild(ws.scrim);

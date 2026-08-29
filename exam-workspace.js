@@ -78,12 +78,16 @@
     var seed = opts.seed;
 
     var scrim = el('div', { cls: 'xw-scrim' });
+    // An optional line above the title, for the host product's own voice. It is
+    // static — it never varies with the provider — so it cannot make the header
+    // change height when the provider does.
+    var eyebrowEl = opts.eyebrow ? el('span', { cls: 'xw-eyebrow', text: opts.eyebrow }) : null;
     var titleEl = el('h2', { id: 'xw-title', text: title });
     var subEl = el('p', { cls: 'xw-sub' });
     var closeBtn = el('button', { cls: 'xw-close', type: 'button', text: 'Close' });
     var head = el('div', { cls: 'xw-head' }, [
       opts.mark || null,
-      el('div', {}, [titleEl, subEl]),
+      el('div', {}, [eyebrowEl, titleEl, subEl]),
       closeBtn,
     ]);
     var mountEl = el('div', { cls: 'xw-mount' });

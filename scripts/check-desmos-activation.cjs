@@ -424,7 +424,7 @@ async function runDeployed({ ok, fails, pass }) {
   // as the thing we built; a title with no mention of a calculator would be
   // branding for its own sake.
   ok('the title names the tool, not the vendor',
-     /graphing calculator/i.test(st.title || '') && !/desmos/i.test(st.title || ''),
+     /graph/i.test(st.title || '') && !/desmo/i.test(st.title || ''),
      st.title);
   ok('nothing claims a partnership',
      !/(powered by|in partnership|zero ?[x×] ?desmos|endorsed|affiliat)/i.test(st.bodyText));

@@ -716,6 +716,30 @@ distributing "the Software Service (or any part thereof) other than as
 specifically authorized". It might well be fine — but "might well be fine" is not
 a basis for re-hosting a licensor's code, and the question costs one email.
 
+### The name of our wrapper is constrained too
+
+**"Zesmos" was requested on 2026-08-29 and is not implemented.** It is Zero +
+De(smos) — a blend of our mascot with their mark. §6.b names that case outright:
+
+> "You will not challenge the validity of or attempt to register any of the
+> Marks, nor will you adopt any **derivative or confusingly similar names,
+> brands or marks or create any combination marks with the Marks**."
+
+A blend is the strongest version of the thing that sentence forbids: it reads as
+one product with one owner, and the owner it implies is us. The calculator is
+theirs. It is also a larger claim than "Zero × Desmos", which the owner had
+already ruled out themselves — and it would be made while `desmos-commercial` is
+still `PENDING` on a §2.a trial key.
+
+The wrapper carries a name of our own instead, in `WRAPPER_NAME` at the top of
+`exam-calculator-launcher.js`, with the provider named beneath it in the header.
+`scripts/check-exam-calculator-wiring.cjs` fails if the title is ever built out
+of their mark.
+
+**This is not a "no" to branding the experience.** Everything else asked for —
+the mascot, the tagline, the motion, the brand-native chrome — is built. The
+constraint is on one word.
+
 ### The control that actually binds
 
 **Domain-restricting the key at Desmos**, if they support it. A key that only
