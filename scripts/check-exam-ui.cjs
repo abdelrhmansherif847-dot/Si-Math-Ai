@@ -116,7 +116,13 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
         Math.round(r.width),Math.round(r.height)];};
       return {
         // chrome markup + geometry, minus the one line that is meant to differ
-        chrome: head.innerHTML.replace(/<p class="xw-sub">[^<]*<\/p>/,''),
+        // The subtitle is the ONE line meant to differ by provider, so it is
+        // stripped before comparing. `[^<]*` stopped matching the day the
+        // subtitle gained a <b> around the provider's name, and this check has
+        // been red ever since — reporting a chrome difference that was only
+        // ever the line it is supposed to ignore. Match the element, children
+        // and all.
+        chrome: head.innerHTML.replace(/<p class="xw-sub">[\s\S]*?<\/p>/,''),
         headBox: box(head), mountBox: box(mount), panelBox: box(panel),
         closeText: document.querySelector('.xw-close').textContent,
         title: document.getElementById('xw-title').textContent,

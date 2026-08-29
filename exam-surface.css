@@ -40,6 +40,13 @@
   --good:#1c6b4a; --good-soft:rgba(28,107,74,.10);
   --fig-ink:#111820; --fig-axis:#3b4756; --fig-num:#2a3644;
   --fig-grid:#848d99; --fig-fine:#c7d0da;
+  /* The DATA family's hue, and the decided table's rules. Both are from the
+     approved grammar (365d85b) and neither was in this file: the exam surface
+     it was first built from only ever showed one function graph, so it never
+     had to express a data figure or a table, and what replaced them here was
+     invented. Colour slots 1-2 of the validated categorical palette. */
+  --data-1:#2a78d6; --data-2:#eb6834;
+  --t-rule:#8592a0; --t-outer:#2b3743; --t-head:#2c3742; --t-headfg:#ffffff;
   --font-display:'DM Sans',system-ui,-apple-system,sans-serif;
   --font-serif:'Newsreader',Georgia,serif;
   --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
@@ -65,6 +72,8 @@
   --good:#63c39a; --good-soft:rgba(99,195,154,.13);
   --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
   --fig-grid:#6b768a; --fig-fine:#333f4e;
+  --data-1:#3987e5; --data-2:#d95926;
+  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
 } }
 :root[data-theme="dark"] {
   --page:#080c11; --exam:#161d25; --rule:#26313d;
@@ -76,6 +85,8 @@
   --good:#63c39a; --good-soft:rgba(99,195,154,.13);
   --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
   --fig-grid:#6b768a; --fig-fine:#333f4e;
+  --data-1:#3987e5; --data-2:#d95926;
+  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
 }
 
 *{box-sizing:border-box}
@@ -205,67 +216,109 @@ button{font:inherit;color:inherit;cursor:pointer}
 .xc-q.is-current{background:var(--cyan);border-color:var(--cyan);color:#fff;font-weight:700;
   box-shadow:0 0 0 2px var(--exam),0 0 0 4px var(--cyan);clip-path:none}
 
-/* ══ FIGURES — exam-stimulus.js ═══════════════════════════════════════════
-   The renderer sets no colour at all. Everything a figure looks like is here,
-   which is what lets one grammar serve light, dark, exam and review. */
+/* ══ FIGURES — the approved family grammar ═══════════════════════════════
+   Ported VERBATIM from scripts/build-figure-system.py, the artefact of
+   "Close the figure families as a grammar, not five looks" (365d85b), which is
+   where the five families were decided:
+
+     data          Screen-native — hue on the observations, rules across only,
+                   no arrowheads, no legend, no tooltip, no card
+     tables        Boxed, with a header band
+     number lines  Statement
+     geometry      Squared paper — the grid IS the instrument, never optional
+     function      Open, with a grid only when the question asks for a value
+
+   WHY THIS SECTION WAS REWRITTEN. It was first built from the exam-surface
+   preview, which only ever showed ONE function graph — so it carried no data
+   family and no table, and rules for every family that preview did not exercise
+   were invented here instead of taken from the decision. "The figure renders"
+   was treated as sufficient; it is not. build-figure-system.py now reads THIS
+   file, so its 96-check gate tests the stylesheet the exam actually ships.
+*/
 .sx{display:block;margin:0}
 .sx-frame{fill:none;stroke:var(--rule);stroke-width:1}
 .sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
-.sx-grid line.sx-major{stroke-width:1.6}
 .sx-grid line.sx-fine{stroke:var(--fig-fine)}
 .sx-axis line{stroke:var(--fig-axis);stroke-width:1.2;stroke-linecap:butt}
 .sx-axis-base{stroke:var(--fig-axis);stroke-width:1.2}
 .sx-arrow{fill:var(--fig-axis)}
-.sx-ray-arrow{fill:var(--fig-ink)}
 .sx-tickmark{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
+/* Haloed, so a gridline never runs through a numeral a student is counting. */
 .sx-tick text{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;
-  font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;
-  stroke-linejoin:round}
+  font-variant-numeric:tabular-nums;
+  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
 .sx-axis-tip{fill:var(--fig-axis);font-family:var(--font-serif);font-style:italic;
   font-weight:600;font-size:15px}
 .sx-axis-title{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px}
-.sx-ylab{font-weight:500}
-/* One figure has nothing to be told apart FROM, so a lone series is drawn in
-   ink; hue is spent only where it distinguishes. */
-.sx-series{color:var(--fig-ink)}
-.sx-solo .sx-series{color:var(--fig-ink)}
-.sx-s1{color:var(--fig-ink)}
-.sx-s2{color:var(--cyan)}
-.sx-s3{color:var(--flag)}
+.sx-ylab{font-weight:600}
+/* A named point is set in the mathematics face, italic — the convention a stem
+   uses when it says "triangle OAB". It was DM Sans semibold here, which is the
+   typeface of a caption, not of a vertex. */
+.sx-label{fill:var(--fig-ink);font-family:var(--font-serif);font-style:italic;
+  font-weight:600;font-size:16px;text-anchor:middle;
+  paint-order:stroke;stroke:var(--exam);stroke-width:4px;stroke-linejoin:round}
+.sx-vertex{font-family:var(--font-serif);font-style:italic;font-weight:600}
+.sx-direct{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;font-weight:600;
+  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
 .sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
 .sx-dashed{stroke-dasharray:7 6;stroke-width:2.2}
 .sx-point{fill:currentColor;stroke:var(--exam);stroke-width:2}
 .sx-point-named{stroke-width:2.4}
 .sx-bar{fill:currentColor}
-.sx-label{fill:var(--fig-ink);font-family:var(--font-display);font-size:13px;font-weight:600;
-  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round;
-  text-anchor:middle}
-.sx-vertex{font-family:var(--font-serif);font-style:italic;font-size:15px;font-weight:600}
-.sx-direct{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;font-weight:600;
-  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
+/* Series slots. The grammar decided TWO — slots 1-2 of the validated
+   categorical palette — and spends them on the data family alone, so outside
+   that family every slot is ink. A third series in one data figure is not in
+   the decided vocabulary, so slot 3 stays ink rather than inventing a hue. */
+.sx-series{color:var(--fig-ink)}
+.sx-s1,.sx-s3{color:var(--fig-ink)}
 
-/* Number line. Open vs closed is SEMANTIC — it is < against <= — so the two
-   endpoints must never be told apart by colour alone. */
-.sx-nl-axis line{stroke:var(--fig-axis);stroke-width:1.4}
-.sx-nl-tick{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
-.sx-nl-minor{stroke:var(--fig-fine);stroke-width:1;shape-rendering:crispEdges}
-.sx-nl-seg{stroke:currentColor;stroke-width:6;stroke-linecap:butt}
+/* COLOUR IS SPENT ON THE DATA FAMILY AND NOWHERE ELSE. The grammar said this
+   with `#v-data-0 .sx-series` — a selector for where the figure sat on that
+   page, which could never reach an exam. The renderer now stamps the family it
+   was given, so the rule can be about the figure instead of the layout.
+   The observations are the heaviest thing in a data figure; that is the family's
+   whole point, and it is why the point radius grows here and only here. */
+.sx-fam-data .sx-series,.sx-fam-data .sx-s1{color:var(--data-1)}
+.sx-fam-data .sx-s2{color:var(--data-2)}
+.sx-fam-data .sx-point{r:5}
+
+.sx-nl-axis line{stroke:var(--fig-axis);stroke-width:1.3}
+.sx-nl-tick{stroke:var(--fig-axis);stroke-width:1.3;shape-rendering:crispEdges}
+.sx-nl-minor{stroke:var(--fig-axis);stroke-width:1;opacity:.55}
+.sx-nl-seg{stroke:currentColor;stroke-linecap:butt;stroke-width:5.5}
 .sx-nl-drop{stroke:var(--fig-fine);stroke-width:1.2;stroke-dasharray:3 3}
-.sx-endpoint{stroke:currentColor;stroke-width:2.6}
+/* Open against closed is SEMANTIC — it is < against ≤ — so the two are told
+   apart by fill, never by colour. */
+.sx-endpoint{stroke:currentColor;stroke-width:3}
 .sx-closed{fill:currentColor}
 .sx-open{fill:var(--exam)}
+.sx-ray-arrow{fill:var(--fig-ink)}
 
-/* Tables are content, not containers: a rule under the header, numerals
-   aligned right so a column can be read down, and nothing else. */
+/* ── the decided table: BOXED, WITH A HEADER BAND ──────────────────────────
+   The decision was taken on a hand-built specimen (`.t-sys`) and never reached
+   the renderer's own classes, so the exam drew a plain underlined list instead.
+   This is that specimen's rule set, on the classes drawTable actually emits.
+   The first column is the row's LABEL and stays left; everything else is a
+   value and reads down a right edge.
+
+   ONE RULE FROM THE SPECIMEN IS NOT CARRIED, and it is a layout artifact rather
+   than a decision: `width:1%` on the first column. It works only under the
+   specimen page's own `table{width:100%}`, where it means "shrink the label
+   column and give the rest to the values". Inside an exam card there is no such
+   rule, and the pair produced a 702px table with a 41px label column and a
+   660px column of two-digit numbers. Letting the table size to its content
+   keeps every DECIDED property — the box, the band, the colours, weights, sizes,
+   padding and alignment — and drops only the part that was about the other
+   page's width. */
 .sx-table-wrap{overflow-x:auto;margin:0}
-.sx-table{border-collapse:collapse;font-size:15.5px;min-width:min(100%,320px)}
-.sx-table th,.sx-table td{padding:9px 18px 9px 0;text-align:left;
-  border-bottom:1px solid var(--rule)}
-.sx-table th{font-weight:600;font-size:13.5px;color:var(--ink-2);
-  border-bottom:1.4px solid var(--fig-axis)}
-.sx-table .sx-th-num,.sx-table .sx-num{text-align:right;padding-right:0;
-  font-variant-numeric:tabular-nums}
-.sx-table td.sx-num{font-family:var(--font-mono);font-size:14.5px}
+.sx-table{border-collapse:collapse;font-family:var(--font-display);
+  font-variant-numeric:tabular-nums;border:1.6px solid var(--t-outer)}
+.sx-table th,.sx-table td{white-space:nowrap}
+.sx-table th{font-weight:700;font-size:13px;letter-spacing:.04em;padding:11px 15px;
+  border:1px solid var(--t-head);background:var(--t-head);color:var(--t-headfg);text-align:right}
+.sx-table th:first-child{text-align:left}
+.sx-table td{font-size:16px;padding:10px 15px;border:1px solid var(--t-rule);text-align:right}
+.sx-table td:first-child{text-align:left;font-weight:500}
 .sx-note{font-size:12.5px;color:var(--ink-3);margin:8px 0 0}
 
 /* ══ the calculator launcher, placed in the exam bar ══════════════════════

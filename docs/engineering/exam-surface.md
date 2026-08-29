@@ -412,3 +412,62 @@ drift apart in silence.
 `exams.html` gained a quiet `← Dashboard` on the bar, hidden while a module is
 running: an exam is not a screen to wander off a link from, and the browser's own
 Back still works for a reviewer who means it.
+
+### Visual fidelity — the grammar, not an approximation of it
+
+**Corrected 2026-08-29, after review.** The exam drew every figure successfully
+and drew several of them *wrong*, because `exam-surface.css` was built from the
+wrong source.
+
+**Where the approved styling lives.** `scripts/build-figure-system.py` — the
+artefact of `365d85b`, *"Close the figure families as a grammar, not five
+looks"*, which decided all five: **data** Screen-native, **tables** Boxed with a
+header band, **number lines** Statement, **geometry** Squared paper, **function
+graphs** Open with a grid only when the question asks for a value. It has its
+own 96-check gate, `check-figure-system.cjs`.
+
+**Why it was lost.** `exam-surface.css` was extracted from the exam-UI preview,
+which only ever showed ONE function graph. Everything that preview did not
+exercise was written here from scratch: the data family had no hue at all, the
+table was a plain underlined list instead of a boxed one with a header band, a
+named point was set in DM Sans semibold instead of the mathematics face, and
+every number-line weight was a little off. Fifteen properties across four
+families.
+
+**Why nothing caught it.** `validate-exam-surface-css.mjs` asks whether every
+class has *a* rule. It cannot ask whether it is the *right* rule. Coverage is
+not fidelity, and a check that cannot tell the difference will pass an invented
+stylesheet forever.
+
+**One structural gap had to be closed first.** The grammar spends colour on the
+data family via `#v-data-0 .sx-series` — a selector for where a figure sat on
+*that page*. Nothing like it exists in an exam, where the family is a property of
+the row. So the renderer now stamps `sx-fam-plane|graph|data` from the frame it
+was given, verbatim, and the rule can be about the figure instead of the layout.
+
+**The consolidation.** Both preview builders now read `exam-surface.css` at build
+time instead of carrying their own copies. So the approved-grammar page renders
+from the shipped stylesheet, and its 96 checks — plus the exam surface's 82 —
+test what students get. One system, three surfaces.
+
+**The comparison, as a check.** `scripts/check-exam-figure-fidelity.cjs` reads
+the same computed properties from the real exam (on the production rows) and
+from the approved grammar's page, and fails on any difference. Run against the
+stylesheet shipped the day before, it reports all fifteen; it passes now.
+
+**One rule from the specimen is deliberately not carried**: `width:1%` on the
+table's first column. It is meaningful only under the specimen page's own
+`table{width:100%}`, and inside an exam card the pair produced a 702px table
+with a 41px label column and a 660px column of two-digit numbers. Every decided
+property is kept; only the part that was about the other page's width is not.
+
+**A pre-existing red check surfaced.** `check-exam-ui.cjs` strips the panel
+subtitle before comparing chrome across providers, with `[^<]*` — which stopped
+matching the day the subtitle gained a `<b>` around the provider's name. It had
+been reporting a difference that was only ever the line it is meant to ignore,
+and I had not re-run it after that change. Fixed; 82/82.
+
+**Observed, not changed**: on the two-series bar chart the direct labels sit
+close together at exam width. Direct labels over a legend is the approved
+decision (`4e227e8`) and this is a real-data crowding case, not a styling
+defect — recorded here rather than quietly redesigned.

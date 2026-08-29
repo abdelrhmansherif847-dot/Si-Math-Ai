@@ -50,7 +50,20 @@ const EXEMPT = new Map([
   ['sx-ar-ray', 'a <marker> id'],
   ['sx-clip-',  'a <clipPath> id prefix, completed with a counter'],
   ['sx-s',      'the series-colour prefix; sx-s1..sx-s3 are the real classes'],
+  ['sx-fam-',   'the family prefix; sx-fam-plane|graph|data are the real classes'],
   ['xc-q-',     'the navigator state prefix; the four states are the real classes'],
+
+  // DELIBERATELY UNSTYLED, each because the approved grammar (365d85b) decided
+  // it needs no treatment of its own. An entry here is a decision on the
+  // record, not a gap: the alternative was inventing a rule, which is exactly
+  // how this stylesheet went wrong the first time.
+  ['sx-solo',    'a lone curve. Colour is decided by the FAMILY under the grammar, ' +
+                 'so a single-curve figure needs no separate treatment'],
+  ['sx-major',   'the pre-grammar two-tier grid. No approved surface ever styled it — ' +
+                 'the grammar draws a uniform grid with a quieter sub-unit tier instead'],
+  ['sx-num',     'the decided table aligns by column POSITION (first is the label, ' +
+                 'the rest are values), so the numeric marking carries no treatment'],
+  ['sx-th-num',  'as sx-num, for the header band'],
 ]);
 
 const classesIn = (src, prefix) => {
@@ -76,6 +89,8 @@ const styled = (name) => new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])').test(css
   }
   // The three series colours are built by concatenation, so nothing above sees
   // them. They are the difference between two curves on one plot.
+  // Built by concatenation, so nothing above sees them. The grammar decided two
+  // hues; slot 3 is ink. All three must still resolve to something.
   const series = ['sx-s1', 'sx-s2', 'sx-s3'].filter((n) => !styled(n));
   assert(series.length === 0,
     'the series colours sx-s1..sx-s3 are all styled' + (series.length ? ` — missing: ${series}` : ''));

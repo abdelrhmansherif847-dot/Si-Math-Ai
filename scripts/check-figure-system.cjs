@@ -129,10 +129,17 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   const surf = await p.evaluate(()=>getComputedStyle(document.querySelector('.v')).backgroundColor);
   const c = await p.evaluate(()=>{const g=(s,pr)=>{const e=document.querySelector(s);return e?getComputedStyle(e)[pr]:null;};
     return {num:g('.sx-tick text','fill'), ink:g('.sx-series','color'), axis:g('.sx-axis line','stroke'),
-            lab:g('.sx-label','fill'), data:g('#v-data-1 .sx-series','color'),
+            lab:g('.sx-label','fill'),
+            // The data hue, read through the SHIPPED family selector rather than
+            // through where the figure sits on this page. The grammar used to
+            // say `#v-data-0 .sx-series`, which could never reach an exam; the
+            // renderer now stamps the family and this proves that rule fires.
+            data:g('.sx-fam-data .sx-series','color'),
             grid:g('.sx-grid line:not(.sx-fine)','stroke'), fine:g('.sx-grid line.sx-fine','stroke'),
-            tRule:g('.t-sys tbody td','borderTopColor'), tTxt:g('.t-sys tbody td','color'),
-            tHeadBg:g('.t-sys th','backgroundColor'), tHeadFg:g('.t-sys th','color')};});
+            // The decided table, on the classes the renderer emits — this used
+            // to read .t-sys, a specimen class no exam has ever drawn.
+            tRule:g('.sx-table tbody td','borderTopColor'), tTxt:g('.sx-table tbody td','color'),
+            tHeadBg:g('.sx-table th','backgroundColor'), tHeadFg:g('.sx-table th','color')};});
   // A grid is only drawn when the question needs it, so every grid here is
   // information the reader must perceive — not decoration under a figure.
   for (const [k,min] of [['num',4.5],['ink',3],['axis',3],['lab',4.5],['data',3],

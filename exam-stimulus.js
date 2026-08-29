@@ -286,6 +286,18 @@ function drawPlot(spec, opts) {
   if (opts.aspect === 'plane') sx = sy = Math.min(sx, sy);  // a square grid, countable
 
   const s = svgRoot(W, H);
+  // THE FAMILY, ON THE FIGURE ITSELF.
+  //
+  // The approved grammar (365d85b, "Close the figure families as a grammar, not
+  // five looks") spends colour on the data family and nowhere else, and the
+  // exploration page expressed that as `#v-data-0 .sx-series` — a selector for
+  // where the figure sat on THAT page. Nothing like it exists in an exam, where
+  // a figure's family is a property of its row. So the family is stamped here,
+  // and the stylesheet can finally say "data" without knowing the layout.
+  //
+  // It is the frame VERBATIM — plane | graph | data — not a translation, so
+  // there is no second vocabulary to keep in step with the database.
+  if (opts.frame) s.setAttribute('class', 'sx sx-fam-' + opts.frame);
   // A curve whose samples run past the declared window used to be drawn past
   // the plate as well — the cubic exited the top of its own frame and kept
   // going. The window is what the author declared, so it is also the boundary:
@@ -302,7 +314,8 @@ function drawPlot(spec, opts) {
   // chart; drawn in ink it reads as a figure in an exam. Hue is spent only
   // where there are two or more curves, and then it is the validated
   // categorical set.
-  if (spec.curves.length === 1) s.setAttribute('class', 'sx sx-solo');
+  if (spec.curves.length === 1)
+    s.setAttribute('class', s.getAttribute('class') + ' sx-solo');
   arrowDefs(s, 'sx-ar');
   if (opts.title) s.appendChild(el('title', {}, opts.title));
 
@@ -676,6 +689,9 @@ function drawChart(spec, opts) {
   const band = iw / n, X = i => PAD.l + band * (i + 0.5);
 
   const s = svgRoot(W, H);
+  // A chart is always measured data — the reference-line rule below already
+  // says so — so it carries the data family without being told.
+  s.setAttribute('class', 'sx sx-fam-data');
   // A chart is always measured data, so its reference lines follow the same
   // rule the data family follows on a plot: they appear when the question asks
   // for a value, and not when it asks about a trend.

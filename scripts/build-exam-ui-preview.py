@@ -27,6 +27,14 @@ CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                     '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
 FIG = io.open(CORE, encoding='utf-8').read()
 
+# The SHIPPED stylesheet, read at build time. This page used to carry its own
+# copy of the .xc-* chrome and .sx-* figure rules — and exam-surface.css was
+# then built FROM this page rather than from the approved family grammar, which
+# is how the data family, the decided table and the named-point typeface came to
+# be invented. One file now, read by both.
+SHEET = io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             '..', 'exam-surface.css'), encoding='utf-8').read()
+
 # One realistic question, in the decided grammar: a function graph, reading=value.
 Q = dict(
   n=14, total=22,
@@ -97,57 +105,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .opts .k{flex:none;width:27px;height:27px;border-radius:50%;border:1.4px solid #8792a0;
   display:grid;place-items:center;font-size:13.5px;font-weight:600}
 
-/* ── TIMER ─────────────────────────────────────────────────────────
-   Prominent by weight, not by decoration. The hidden state keeps the
-   control on screen so nothing is lost and nothing has to be hunted. */
-.xc-timer{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;border-radius:5px;
-  border:1px solid var(--rule);background:var(--exam)}
-.xc-t-face{font-family:var(--font-mono);font-weight:600;font-size:19px;letter-spacing:.02em;
-  font-variant-numeric:tabular-nums;color:var(--ink)}
-.xc-t-hidden{display:none;font-size:13.5px;color:var(--ink-3)}
-.xc-timer.is-hidden .xc-t-face{display:none}
-.xc-timer.is-hidden .xc-t-hidden{display:inline}
-.xc-timer.is-low{border-color:var(--low);background:var(--low-soft)}
-.xc-timer.is-low .xc-t-face{color:var(--low)}
-.xc-t-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
-  padding:5px 8px;border-radius:4px;font-size:12.5px;font-weight:600;color:var(--ink-3)}
-.xc-t-toggle:hover{background:var(--cyan-soft);color:var(--cyan)}
-.xc-t-toggle:focus-visible,.xc-n-toggle:focus-visible,.xc-q:focus-visible,.zg-open:focus-visible,
-.xw-close:focus-visible,.zg-plot:focus-visible,.zg-in:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-
-/* ── NAVIGATOR ────────────────────────────────────────────────── */
-.xc-nav{position:relative}
-.xc-n-toggle{display:flex;align-items:center;gap:9px;background:var(--exam);
-  border:1px solid var(--rule);border-radius:5px;padding:8px 14px;font-size:14.5px;font-weight:600}
-.xc-n-toggle:hover{border-color:var(--cyan-line)}
-.xc-n-caret{width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;
-  border-top:5px solid var(--ink-3);transition:transform .15s}
-.xc-nav.is-open .xc-n-caret{transform:rotate(180deg)}
-.xc-n-panel{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:60;
-  background:var(--exam);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);
-  padding:16px 18px;min-width:330px}
-.xc-nav.is-open .xc-n-panel{display:block}
-.xc-n-legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:12px;
-  border-bottom:1px solid var(--rule)}
-.xc-lg{font-size:11.5px;color:var(--ink-3);display:inline-flex;align-items:center;gap:6px}
-.xc-lg::before{content:'';width:13px;height:13px;border-radius:3px;border:1.4px solid #8792a0}
-.xc-lg-cur::before{background:var(--cyan);border-color:var(--cyan);
-  box-shadow:0 0 0 2px var(--exam),0 0 0 3.6px var(--cyan)}
-.xc-lg-ans::before{background:var(--ink-2);border-color:var(--ink-2)}
-.xc-lg-flag::before{background:var(--flag-soft);border-color:var(--flag);
-  clip-path:polygon(0 0,100% 0,100% 62%,62% 100%,0 100%)}
-.xc-n-grid{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}
-.xc-q{width:100%;aspect-ratio:1;min-width:26px;border-radius:4px;border:1.4px solid #8792a0;
-  background:none;font-family:var(--font-mono);font-size:12.5px;font-weight:500;color:var(--ink-2);
-  display:grid;place-items:center;padding:0}
-.xc-q:hover{border-color:var(--cyan)}
-.xc-q-answered{background:var(--ink-2);border-color:var(--ink-2);color:var(--exam)}
-/* shape, not colour alone: a flagged chip is notched */
-.xc-q-flagged{background:var(--flag-soft);border-color:var(--flag);color:var(--flag);font-weight:700;
-  clip-path:polygon(0 0,100% 0,100% 62%,62% 100%,0 100%)}
-/* the current chip is the only one with a ring — that is what makes it unmistakable */
-.xc-q.is-current{background:var(--cyan);border-color:var(--cyan);color:#fff;font-weight:700;
-  box-shadow:0 0 0 2px var(--exam),0 0 0 4px var(--cyan);clip-path:none}
+/* The timer, the navigator and the figure grammar live in exam-surface.css,
+   inlined below — not copied here. */
 
 /* ── ZERO GRAPH ────────────────────────────────────────────────────
    One tool, one name, one mark. Zero leans on the plate rather than
@@ -223,22 +182,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .zg-switch button.on{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-soft);
   font-weight:600}
 
-/* ── figures: the exam's own grammar, unchanged ───────────────── */
-.sx{display:block;margin:0}
-.sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
-.sx-grid line.sx-fine{stroke:var(--fig-fine)}
-.sx-axis line{stroke:var(--fig-axis);stroke-width:1.2;stroke-linecap:butt}
-.sx-arrow{fill:var(--fig-axis)}
-.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
-.sx-tick text{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;
-  font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;
-  stroke-linejoin:round}
-.sx-axis-tip{fill:var(--fig-axis);font-family:'Newsreader',Georgia,serif;font-style:italic;
-  font-weight:600;font-size:15px}
-.sx-axis-title{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px}
-.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
-.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:2}
-.sx-series{color:var(--fig-ink)}
 </style>
 """
 
@@ -286,6 +229,7 @@ HTML = f"""<title>Si Math Exam Surface</title>
   </div>
 </template>
 
+<style>{SHEET}</style>
 <script>{FIG}</script>
 <script>{CHROME}</script>
 <script>{CALC}</script>

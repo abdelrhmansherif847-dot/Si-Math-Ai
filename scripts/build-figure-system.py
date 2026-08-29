@@ -23,6 +23,18 @@ CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                     '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
 R = io.open(CORE, encoding='utf-8').read()
 
+# THE SHIPPED STYLESHEET, read at build time — not a copy.
+#
+# This page IS the approved grammar (365d85b). Its figure rules used to live
+# here, which meant the decision and the thing students see were two files that
+# happened to agree until they did not: exam-surface.css was first built from a
+# preview showing one function graph, and the data family, the table and the
+# named-point typeface were invented rather than taken from this page. Now there
+# is one file, this page renders from it, and check-figure-system.cjs's 96
+# assertions test what the exam actually ships.
+SHEET = io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             '..', 'exam-surface.css'), encoding='utf-8').read()
+
 def samples(f, a, b, st):
     o = []; x = a
     while x <= b + 1e-9:
@@ -159,10 +171,6 @@ CSS = r"""
   --good:#1c6b4a; --good-soft:rgba(28,107,74,.10);
   --bad:#a33a20; --bad-soft:rgba(163,58,32,.09);
   --exam:#ffffff; --exam-rule:#8792a0;
-  --fig-ink:#111820; --fig-axis:#3b4756; --fig-num:#2a3644;
-  --fig-grid:#848d99; --fig-fine:#c7d0da;
-  --data-1:#2a78d6; --data-2:#eb6834;
-  --t-rule:#8592a0; --t-outer:#2b3743; --t-head:#2c3742; --t-headfg:#ffffff;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --page:#080c11; --card:#131920; --rule:#26313d; --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
@@ -171,10 +179,6 @@ CSS = r"""
   --good:#63c39a; --good-soft:rgba(99,195,154,.13);
   --bad:#e08165; --bad-soft:rgba(224,129,101,.13);
   --exam:#161d25; --exam-rule:#6f7d8c;
-  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
-  --fig-grid:#6b768a; --fig-fine:#333f4e;
-  --data-1:#3987e5; --data-2:#d95926;
-  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
 }}
 :root[data-theme="dark"]{
   --page:#080c11; --card:#131920; --rule:#26313d; --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
@@ -183,10 +187,6 @@ CSS = r"""
   --good:#63c39a; --good-soft:rgba(99,195,154,.13);
   --bad:#e08165; --bad-soft:rgba(224,129,101,.13);
   --exam:#161d25; --exam-rule:#6f7d8c;
-  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
-  --fig-grid:#6b768a; --fig-fine:#333f4e;
-  --data-1:#3987e5; --data-2:#d95926;
-  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
 }
 *{box-sizing:border-box}
 body{margin:0;background-color:var(--page);color:var(--ink);
@@ -248,50 +248,8 @@ h2{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:31px;letter-
 code{font-family:ui-monospace,monospace;font-size:.86em;background:var(--accent-soft);
   color:var(--accent);padding:2px 6px;border-radius:3px}
 
-/* ═════════ figures ═════════ */
-.sx{display:block;margin:0}
-.sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
-.sx-grid line.sx-fine{stroke:var(--fig-fine)}
-.sx-axis line{stroke:var(--fig-axis);stroke-width:1.2;stroke-linecap:butt}
-.sx-axis-base{stroke:var(--fig-axis);stroke-width:1.2}
-.sx-arrow{fill:var(--fig-axis)}
-.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
-.sx-tick text{fill:var(--fig-num);font-family:'DM Sans',sans-serif;font-size:12.5px;
-  font-variant-numeric:tabular-nums;
-  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
-.sx-axis-tip{fill:var(--fig-axis);font-family:'Newsreader',Georgia,serif;font-style:italic;
-  font-weight:600;font-size:15px}
-.sx-axis-title{fill:var(--fig-num);font-family:'DM Sans',sans-serif;font-size:12.5px}
-.sx-ylab{font-weight:600}
-.sx-label{fill:var(--fig-ink);font-family:'Newsreader',Georgia,serif;font-style:italic;
-  font-weight:600;font-size:16px;text-anchor:middle;
-  paint-order:stroke;stroke:var(--exam);stroke-width:4px;stroke-linejoin:round}
-.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
-.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:2}
-.sx-series{color:var(--fig-ink)}
-/* colour is spent on the data family and nowhere else */
-#v-data-0 .sx-series,#v-data-1 .sx-series{color:var(--data-1)}
-#v-data-0 .sx-point,#v-data-1 .sx-point{r:5}
-.sx-nl-axis line{stroke:var(--fig-axis);stroke-width:1.3}
-.sx-nl-tick{stroke:var(--fig-axis);stroke-width:1.3;shape-rendering:crispEdges}
-.sx-nl-minor{stroke:var(--fig-axis);stroke-width:1;opacity:.55}
-.sx-nl-seg{stroke:currentColor;stroke-linecap:butt;stroke-width:5.5}
-.sx-endpoint{stroke:currentColor;stroke-width:3}
-.sx-closed{fill:currentColor}
-.sx-open{fill:var(--exam)}
-.sx-ray-arrow{fill:var(--fig-ink)}
-
-/* ═════════ the decided table ═════════ */
-table{border-collapse:collapse;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums;
-  width:100%}
-th,td{white-space:nowrap}
-.t-sys{border:1.6px solid var(--t-outer)}
-.t-sys th{font-weight:700;font-size:13px;letter-spacing:.04em;padding:11px 15px;
-  border:1px solid var(--t-head);background:var(--t-head);color:var(--t-headfg);text-align:right}
-.t-sys th:first-child{text-align:left;width:1%}
-.t-sys td{font-size:16px;padding:10px 15px;border:1px solid var(--t-rule);text-align:right}
-.t-sys td:first-child{text-align:left;font-weight:500;width:1%}
-.t-sys tbody tr.tot td{border-top:1.6px solid var(--t-outer);font-weight:700}
+/* The figure grammar and the decided table now live in exam-surface.css,
+   inlined below. */
 </style>
 """
 
@@ -341,10 +299,10 @@ tables_section = f'''
       <div class="vgrid">
         <div class="v"><div class="vh">no totals</div>
           <div class="vs">A one-way table. Header band, bounded cells, nothing else.</div>
-          <div class="vb">{table_html("t-sys", TABLE_ONE, False)}</div></div>
+          <div class="vb">{table_html("sx-table", TABLE_ONE, False)}</div></div>
         <div class="v"><div class="vh">totals present</div>
           <div class="vs">A two-way table. The totals rank gains weight, not a new treatment.</div>
-          <div class="vb">{table_html("t-sys", TABLE, True)}</div></div>
+          <div class="vb">{table_html("sx-table", TABLE, True)}</div></div>
       </div>
       <p class="varrule">{tf["rule"]}</p></div>
   </div>
@@ -400,6 +358,7 @@ VAR_JSON = json.dumps([
 
 HTML = f"""<title>Figure Family Grammar</title>
 {CSS}
+<style>{SHEET}</style>
 <div class="wrap">
   <header class="mast">
     <p class="kick">Si Math AI &middot; design system &middot; nothing wired</p>
