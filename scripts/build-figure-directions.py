@@ -12,9 +12,15 @@ held constant on purpose, so a mix across families still reads as one exam.
 
 Neutral mathematics throughout: no exam item appears here.
 """
-import io, json, math
+import io, json, math, os
 
-R = io.open('explore-render.js', encoding='utf-8').read()
+# THE renderer, read from its authored source at build time — never a copy
+# pasted into this file. A snapshot was embedded in a preview once and went
+# stale immediately: fixes stopped reaching it while it still looked correct.
+# validate-exam-stimulus.mjs fails if a generated page here falls behind.
+CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
+R = io.open(CORE, encoding='utf-8').read()
 
 def samples(f, a, b, st):
     o = []; x = a
@@ -559,7 +565,7 @@ const PLANE = {json.dumps(PLANE_FIGS)};
 const PDIRS = {json.dumps([{'id': d['id'], 'opts': d['opts']} for d in PLANE_DIRS])};
 const NLSPEC = {json.dumps(NL_SPEC)};
 const NDIRS = {json.dumps([{'id': d['id'], 'opts': d['opts']} for d in NL_DIRS])};
-const {{drawPlot, drawNumberLine}} = globalThis.SiExplore;
+const {{drawPlot, drawNumberLine}} = globalThis.SiExamStimulus;
 
 for (const fid of Object.keys(PLANE)) {{
   const f = PLANE[fid];

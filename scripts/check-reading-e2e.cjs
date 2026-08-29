@@ -59,7 +59,7 @@ const LABEL = process.argv[3] || 'run';
 
  // the stimulus-only path is closed
  const closed = await p.evaluate(()=>{
-   const {renderStimulus, renderForQuestion} = globalThis.SiExplore;
+   const {renderStimulus, renderForQuestion} = globalThis.SiExamStimulus;
    const out = {};
    const s = globalThis.PAYLOAD[0].stimulus;
    try { renderStimulus(s.kind, s.spec, {}); out.stimulusAlone='drew'; }

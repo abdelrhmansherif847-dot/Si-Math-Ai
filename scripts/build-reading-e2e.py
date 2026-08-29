@@ -9,9 +9,15 @@ was given.
 If the figures below differ, the difference came from the question row, because
 the stimulus row is byte-identical between them.
 """
-import io, json, sys
+import io, json, sys, os
 
-R = io.open('explore-render.js', encoding='utf-8').read()
+# THE renderer, read from its authored source at build time — never a copy
+# pasted into this file. A snapshot was embedded in a preview once and went
+# stale immediately: fixes stopped reaching it while it still looked correct.
+# validate-exam-stimulus.mjs fails if a generated page here falls behind.
+CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
+R = io.open(CORE, encoding='utf-8').read()
 PAYLOAD = io.open(sys.argv[1] if len(sys.argv) > 1 else '../e2e-payload.json',
                   encoding='utf-8').read()
 OUT = sys.argv[2] if len(sys.argv) > 2 else 'e2e-preview.html'
@@ -154,7 +160,7 @@ const PAYLOAD = {PAYLOAD};
 // exposed so the harness reads exactly what the page used, rather than
 // re-parsing the file and possibly checking a different thing
 globalThis.PAYLOAD = PAYLOAD;
-const {{ renderForQuestion }} = globalThis.SiExplore;
+const {{ renderForQuestion }} = globalThis.SiExamStimulus;
 for (const q of PAYLOAD) {{
   const host = document.getElementById('fig-' + q.ordinal);
   if (!host) throw new Error('missing host for question ' + q.ordinal);

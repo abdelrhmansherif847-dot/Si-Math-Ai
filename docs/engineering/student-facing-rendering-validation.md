@@ -108,16 +108,28 @@ validated core. `display` is explicitly the place for hints a renderer *may*
 honour, so smuggling them there would let a conforming renderer invert a
 figure's meaning.
 
-**This is an open design decision, deliberately not taken here.** The options
-are (a) extend the `plot` semantic core with a shape/aspect declaration in a
-new migration, (b) accept them as `display` hints and give up the guarantee,
-or (c) keep them outside the spec and require every renderer to carry the
-same enumerated table. The preview currently does (c), which is honest for a
-preview and does not scale to two renderers.
-
-Until it is decided, **no plot-bearing form should be published**: publication
-freezes the spec forever, and a published plot spec cannot currently say what
-its own figure is.
+> **CLOSED 2026-08-27, by (a). Everything above this line is the state of the
+> question, not the state of the system.** The options were (a) extend the
+> `plot` semantic core in a new migration, (b) accept them as `display` hints
+> and give up the guarantee, or (c) keep them outside the spec and require every
+> renderer to carry the same enumerated table. The preview did (c), which was
+> honest for a preview and does not scale to two renderers — and two renderers
+> is exactly what the repository then grew.
+>
+> Two migrations took (a), and both are applied:
+>
+> * `20260827a_stimulus_reading` — `spec.frame` (`plane` | `graph` | `data`),
+>   what a plot IS; and `exam_questions.reading`, what is asked of it. See
+>   `reading-field-proposal.md`.
+> * `20260827b_plot_figures` — `spec.figures[]`, one entry per curve in order,
+>   whose mode the database validates against the frame. See
+>   `figures-field-proposal.md`.
+>
+> So a plot spec now says what its own figure is, and the bar on publishing a
+> plot-bearing form is lifted **on this ground**. Every other publish gate still
+> applies.
+>
+> The renderer caught up on 2026-08-29 — see §7.
 
 ## 5. Where the harness lives
 
@@ -126,12 +138,20 @@ working scratchpad, not in this repository. It is three scripts — figure
 geometry, content fidelity, browser end-to-end — plus a generator that embeds
 the reviewed payload into a self-contained page.
 
-**Wiring it into `tests/run-all.mjs` is deferred until a renderer exists in
-`_shared/`.** The M4 migration already states where that renderer belongs, and
-why: *"Rendering is delivery-phase work and belongs in `_shared/` so preview
-and delivery cannot draw the same question two ways."* The checks above are
-written against a renderer; duplicating them against a preview-only one would
-be the second copy that rule exists to prevent.
+**Wiring it into `tests/run-all.mjs` was deferred until a renderer existed in
+`_shared/`.** The M4 migration states where that renderer belongs, and why:
+*"Rendering is delivery-phase work and belongs in `_shared/` so preview and
+delivery cannot draw the same question two ways."* The checks above are written
+against a renderer; duplicating them against a preview-only one would be the
+second copy that rule exists to prevent.
+
+**That renderer now exists** — `supabase/functions/_shared/exam-stimulus.core.js`,
+§7 below — so the precondition is met. The harness itself still cannot move into
+this repository, because it embeds the content it checks and this repository is
+public. What CAN move, and what §7 delivers, is the renderer's own behaviour: the
+refusals and the family rules are now `tests/exam-stimulus.test.mjs`, in CI, on
+synthetic specs. Layers 1 and 2 — content fidelity and figure geometry against
+the real items — stay with the content.
 
 ## 6. The rule this produced
 
@@ -147,3 +167,98 @@ against an **independently written** statement of intent.
 
 This is the same failure the verification-framework audit named, arriving in a
 new place: *a green check is only evidence if it could have gone red.*
+
+---
+
+## 7. The fold — one renderer, authored once
+
+**Done 2026-08-29, ahead of question delivery.** §5 deferred this until a
+renderer existed in `_shared/`. It now does, and getting there found that the
+repository had grown the exact thing the M4 migration forbids.
+
+### There were two, and the labels were backwards
+
+| file | what its header said | what actually read it |
+|---|---|---|
+| `exam-stimulus.js` | *"Si Math AI — MATH STIMULUS RENDERER"*, `DRAFT — NOT WIRED`, `⛔ BLOCKED ON A SCHEMA DECISION` | its own test, and three superseded design-plate builders |
+| `scripts/explore-render.js` | *"EXPLORATION COPY — not production, not wired to anything"* | every preview build, five figure checks, and **`exam-graph-zero.js` — a shipped module** |
+
+The file calling itself production had fallen a schema generation behind: it
+still took `frame` and `figures` out of band through `opts`, three days after
+the migrations that put them on the row. The file calling itself an exploration
+copy read them off the row, refused a plot without `figures[]`, and carried
+`renderForQuestion(question, stimulus)` — the entry point content goes through.
+
+Nothing caught this because nothing was looking. A preview and a delivery
+drawing one row two ways is not a hypothetical the M4 comment was guarding
+against; it was two files apart, and the exam would have been where it showed.
+
+### What the fold did
+
+* **One authored source**: `supabase/functions/_shared/exam-stimulus.core.js`,
+  exporting `SiExamStimulus`. The schema-aware renderer, with the stale DRAFT
+  and BLOCKED banners removed because both were false by the time they were
+  read, and the history kept in the header so the next reader knows why.
+* **One generated copy**: `exam-stimulus.js`, written by
+  `scripts/sync-exam-stimulus.mjs` — the `study-planner.core.js` pattern, sync
+  on direct run only, so the validator can never repair the file it is about to
+  assert on.
+* **`scripts/explore-render.js` is gone.** Its callers — five preview builders,
+  five figure checks and `exam-graph-zero.js` — now read the core. The builders
+  resolve it from their own path rather than the working directory, and none of
+  them holds a snapshot: the renderer is read at build time, which is the rule
+  `mkpreview.py` wrote after a pasted copy went stale and fixes silently stopped
+  reaching the preview.
+* **`scripts/validate-exam-stimulus.mjs`** is the CI gate — copy drift, the fork
+  staying gone, no stale status banner, generated previews not falling behind,
+  and the schema fields actually being read rather than merely claimed in a
+  comment. Every check was mutation-tested; each goes red under the change it
+  exists to catch.
+
+### The test suite could not fail
+
+`tests/exam-stimulus.test.mjs` never called `t.done()`. Every other suite does.
+`run-all.mjs` decides pass/fail on the exit code, so the suite **printed `FAIL`
+and exited 0** — it had been a vacuous gate since it was written, and CI would
+have stayed green through any defect it caught. Fixed, and proven: four
+deliberate mutations of the renderer now produce failures *and* a non-zero exit.
+
+That is the §6 rule landing on the checker rather than the checked. *A green
+check is only evidence if it could have gone red* — and this one could not,
+for reasons that had nothing to do with what it asserted.
+
+### What the suite asserts now
+
+The grid rule changed with the fold, so its check was rewritten rather than
+relaxed. `niceStep` holds the gridline count between 6 and 9 at every span from
+4 to 1000, so "a major every fifth line" is usually one or two majors, one of
+them hidden under the axis — the survivor read as a heavy stray line through
+the figure. The tier now engages only where at least three majors fall in the
+window. **Both branches are asserted**, because checking only the engaged one
+would pass a renderer that had quietly lost the threshold.
+
+Added with the fold, all against synthetic specs:
+
+* where `reading` applies, as an independently written table over every
+  kind × frame — plus a check that the SQL still states the rule the JS
+  mirrors, so the two cannot drift apart in silence;
+* the four refusals: no `figures[]`, a missing `reading`, a `reading` supplied
+  where nothing renders by it, and a stimulus with no question;
+* **one stimulus row, two readings, two different figures** — the property the
+  `reading` column exists for. If they came out the same the column would be
+  decorative and the migration bought nothing;
+* the family rule as a table (`plane` always ruled; `graph`/`data` ruled only
+  for a value; an undeclared frame throws rather than guessing a look), and the
+  derived sub-grid resolution;
+* that a negative numeral keeps its sign.
+
+### One thing left behind, deliberately
+
+Three design-plate builders — `build-stimulus-plates.py`,
+`build-figure-vocabulary.py`, `build-renderer-eval.py` — predate the
+frame/reading vocabulary and call `renderStimulus()` with a bare stimulus. They
+still *build*; their pages will now throw in a browser for a chart or a
+graph/data plot, because that path is deliberately closed. They are superseded
+design explorations, their outputs are gitignored, and every one was already
+published as an artifact. They were not repaired, and this paragraph exists so
+that is a decision on the record rather than a surprise later.

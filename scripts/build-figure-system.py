@@ -13,9 +13,15 @@ Two inputs decide every variant on the page:
 Every figure below is produced by those rules through the shared renderer. None
 is hand-set. Neutral mathematics throughout; no authored exam item appears.
 """
-import io, json, math
+import io, json, math, os
 
-R = io.open('explore-render.js', encoding='utf-8').read()
+# THE renderer, read from its authored source at build time — never a copy
+# pasted into this file. A snapshot was embedded in a preview once and went
+# stale immediately: fixes stopped reaching it while it still looked correct.
+# validate-exam-stimulus.mjs fails if a generated page here falls behind.
+CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
+R = io.open(CORE, encoding='utf-8').read()
 
 def samples(f, a, b, st):
     o = []; x = a
@@ -410,7 +416,7 @@ HTML = f"""<title>Figure Family Grammar</title>
 <script>{R}</script>
 <script>
 const FAMS = {VAR_JSON};
-const {{drawPlot, drawNumberLine}} = globalThis.SiExplore;
+const {{drawPlot, drawNumberLine}} = globalThis.SiExamStimulus;
 for (const f of FAMS) {{
   f.variants.forEach((v, i) => {{
     const host = document.getElementById('v-' + f.id + '-' + i);

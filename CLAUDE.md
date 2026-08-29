@@ -149,7 +149,7 @@ student impact during exam-prep windows.
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **99 files** in `supabase/migrations/`, **154 applied** in the database (Mock Exam v2 M3 `question_spine` applied 2026-08-24 as version `20260824005242`; B1 `exam_forms_insert_guard` applied 2026-08-24 as version `20260824015733`; B5 `publish_exam_form_revoke_public` applied 2026-08-25 as version `20260825141519`; M4 `exam_stimuli` applied 2026-08-25 as version `20260825221601`. `20260827a_stimulus_reading` applied 2026-08-27 as version `20260827135710` — adds `spec.frame` to plots and `exam_questions.reading`; see `docs/engineering/reading-field-proposal.md`. `20260827b_plot_figures` applied 2026-08-27 as version `20260827154657`, requiring `spec.figures` on every plot. **Its deployed body carries fewer inline comments than the tree file; the executable logic is byte-identical** — see `docs/engineering/figures-field-proposal.md`) |
 | Static site | **48** root `*.html` pages on Vercel (counted 2026-08-25; `support.html` and `admin-support.html` were the two added since the 46 figure) |
-| CI | `node tests/run-all.mjs` — **56 checks** (counted 2026-08-27) |
+| CI | `node tests/run-all.mjs` — **57 checks** (counted 2026-08-29; `validate-exam-stimulus` was the one added) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -212,7 +212,19 @@ a build step to solve a problem that a dependency-free module would solve.
 **The `_shared/` single-source pattern** (`taxonomy.core.js` authored once,
 synced to the browser copy and the Edge Function bundle, CI failing on drift) is
 the established way to share code between the site, the function and the tests.
-Prefer it over duplicating logic.
+Prefer it over duplicating logic. Three modules run under it today —
+`taxonomy.core.js`, `study-planner.core.js` and, since 2026-08-29,
+`exam-stimulus.core.js`, the math stimulus renderer.
+
+**That third one is why the rule is not a preference.** The repository carried
+TWO renderers for three days and the labels were backwards: the file marked
+`DRAFT — NOT WIRED` was read by nothing that mattered while the one marked
+"EXPLORATION COPY — not production" was what every preview and one SHIPPED
+module loaded, and the "production" copy had fallen a schema generation behind.
+Nothing caught it, because nothing was looking. The full record, and the
+vacuously-green test suite found alongside it, is
+`docs/engineering/student-facing-rendering-validation.md` §7. **A second copy of
+anything is a defect with a delay on it.**
 
 ### Deployment, in one line each
 

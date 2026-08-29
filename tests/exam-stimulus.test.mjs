@@ -212,11 +212,19 @@ t.section('the axis numerals are the instrument');
 
 t.section('the grid is countable, not merely present');
 {
-  // The invariant is "every fifth GRIDLINE", not "every fifth unit" — the step
-  // is 1 on a tight range and 2 or 2.5 on a wide one, and the ruling has to
-  // hold either way. The first version of this check assumed a step of 1 and
-  // failed on a range where the renderer had correctly chosen 2.5.
-  for (const [xr, yr] of [[[-1, 7], [-1, 5]], [[-11, 11], [-8, 8]], [[0, 30], [0, 20]]]) {
+  // TWO rules, and the second exists because the first turned out to be
+  // inaudible. Majors fall every fifth GRIDLINE — not every fifth unit, since
+  // the step is 1 on a tight range and 2 or 2.5 on a wide one. But niceStep
+  // holds the line count between 6 and 9 at every span from 4 to 1000, so
+  // "every fifth" is usually one or two lines, one of them hidden underneath
+  // the axis itself. A rhythm with two beats is not a rhythm: the surviving
+  // major read as a heavy stray line drawn through the figure. So the tier
+  // engages only where at least three majors fall inside the window.
+  //
+  // BOTH branches are asserted. Checking only the engaged one would pass a
+  // renderer that had quietly lost the threshold and gone back to drawing
+  // strays, which is the defect this rule was written to remove.
+  const gridOf = (xr, yr) => {
     const svg = plane({ xRange: xr, yRange: yr, curves: [{ points: [[0, 0], [1, 1]] }] },
                       [{ mode: 'polygon' }]);
     const V = withClass(svg, 'sx-grid')[0].children
@@ -224,28 +232,52 @@ t.section('the grid is countable, not merely present');
       .sort((a, b) => +a.getAttribute('x1') - +b.getAttribute('x1'));
     const at = V.map((l, i) => ((l.getAttribute('class') || '') === 'sx-major' ? i : -1))
                 .filter(i => i >= 0);
-    const gaps = at.slice(1).map((v, i) => v - at[i]);
-    t.ok(`x∈[${xr}] — majors fall exactly every fifth gridline`,
-         at.length > 0 && gaps.every(g => g === 5), `${V.length} lines, majors at ${at}`);
-    t.ok(`x∈[${xr}] — the minor rule stays the majority`, at.length * 3 < V.length);
+    return { svg, lines: V.length, at };
+  };
+
+  for (const [xr, yr] of [[[-1, 7], [-1, 5]], [[-11, 11], [-8, 8]], [[0, 30], [0, 20]]]) {
+    const { lines, at } = gridOf(xr, yr);
+    t.ok(`x\u2208[${xr}] — fewer than three majors would fall here, so none are drawn`,
+         at.length === 0);
+    t.ok(`x\u2208[${xr}] — ${lines} gridlines, all of them one weight`, lines > 0);
   }
+
+  const wide = gridOf([0, 100], [0, 60]);
+  const gaps = wide.at.slice(1).map((v, i) => v - wide.at[i]);
+  t.ok('x\u2208[0,100] — the tier engages, and majors fall exactly every fifth gridline',
+       wide.at.length >= 3 && gaps.length > 0 && gaps.every(g => g === 5));
+  t.ok('x\u2208[0,100] — the minor rule stays the majority', wide.at.length * 3 < wide.lines);
 }
 {
-  const svg = plane({ xRange: [-1, 7], yRange: [-1, 5],
+  // Where the tier IS engaged, every ruled line a student might count from has
+  // to be a line they can put a number to.
+  const svg = plane({ xRange: [0, 100], yRange: [0, 60],
                       curves: [{ points: [[0, 0], [1, 1]] }] }, [{ mode: 'polygon' }]);
   const tickX = withClass(svg, 'sx-tick')[0].children
     .filter(e => e.attrs['text-anchor'] === 'middle').map(e => +e.getAttribute('x'));
-  const originX = +withClass(svg, 'sx-axis')[0].children
+  const axisV = withClass(svg, 'sx-axis')[0].children
     .filter(l => l.getAttribute('x1') === l.getAttribute('x2'))
-    .map(l => +l.getAttribute('x1'))[0];
+    .map(l => +l.getAttribute('x1'));
+  const originX = axisV.length ? axisV[0] : -1e9;
   const majorX = withClass(svg, 'sx-grid')[0].children
     .filter(l => (l.getAttribute('class') || '') === 'sx-major'
               && l.getAttribute('x1') === l.getAttribute('x2'))
     .map(l => +l.getAttribute('x1'))
     .filter(x => Math.abs(x - originX) > 0.51);   // the origin is the axis, not a ruled line
   t.ok('every major rule away from the origin carries a numeral',
-       majorX.length > 0 && majorX.every(x => tickX.some(t => Math.abs(t - x) < 0.51)),
-       `majors ${majorX}, numerals ${tickX}`);
+       majorX.length > 0 && majorX.every(x => tickX.some(v => Math.abs(v - x) < 0.51)));
+}
+{
+  // A NEGATIVE numeral must still read as negative. The renderer sets U+2212
+  // MINUS rather than the hyphen a keyboard gives you — a hyphen is short, high
+  // and reads as punctuation next to numerals — and the failure mode worth
+  // guarding is not the glyph choice but the sign going missing altogether.
+  const svg = plane({ xRange: [-8, 8], yRange: [-6, 6],
+                      curves: [{ points: [[0, 0], [1, 1]] }] }, [{ mode: 'polygon' }]);
+  const labels = withClass(svg, 'sx-tick')[0].children
+    .filter(e => e.tag === 'text').map(e => e.textContent);
+  t.ok('negative numerals keep their sign, set as a real minus',
+       labels.some(v => v.startsWith('\u2212')) && !labels.some(v => v.startsWith('-')));
 }
 
 t.section('a number line says < or ≤ and nothing vaguer');
@@ -301,5 +333,122 @@ t.section('the renderer stays inert — an exam figure answers nothing');
   t.ok('the module contains no hover or tooltip machinery',
        !/addEventListener|mouseover|tooltip|onmouse|title=/i.test(code));
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE SCHEMA-AWARE PATH — what the renderer reads off the row
+//
+// Until 2026-08-29 these decisions arrived out of band through `opts`, and the
+// first preview GUESSED one of them from a curve's label with a regex, per
+// frame, silently. Two applied migrations put them in the database — 20260827a
+// (spec.frame, exam_questions.reading) and 20260827b (spec.figures[]) — and
+// renderForQuestion() is the entry point that reads them. Everything below is
+// a refusal or a difference the row is supposed to produce.
+// ═══════════════════════════════════════════════════════════════════════════
+
+t.section('where reading applies is one rule, and the database owns it');
+{
+  // Written out here INDEPENDENTLY of the renderer, from the migration's own
+  // documented semantics — a table that read the implementation back to itself
+  // would move with any bug.
+  const EXPECT = [
+    ['chart',       null,     true,  'a chart is always measured data'],
+    ['plot',        'graph',  true,  'a function graph rules only for a value'],
+    ['plot',        'data',   true,  'measured data rules only for a value'],
+    ['plot',        'plane',  false, 'the plane\'s grid is the instrument, always drawn'],
+    ['table',       null,     false, 'a table has no rendering variant'],
+    ['number_line', null,     false, 'a number line has no rendering variant'],
+  ];
+  for (const [kind, frame, want, why] of EXPECT)
+    t.is(`${kind}${frame ? '/' + frame : ''} — ${why}`,
+         R.needsReading(kind, frame ? { frame } : {}), want);
+
+  // The SQL side of the same rule. If the database changes where reading
+  // applies, this fails and the mirror above has to be revisited rather than
+  // silently disagreeing with what may be stored.
+  const sql = read('supabase/migrations/20260827a_stimulus_reading.sql');
+  t.ok('exam_stimulus_needs_reading still states the rule this mirrors',
+       sql.includes("k = 'chart'")
+    && sql.includes("(k = 'plot' and (s ->> 'frame') in ('graph', 'data'))"));
+}
+
+t.section('a figure is drawn from the row, or not at all');
+{
+  const GRAPH = { id: 'st-1', kind: 'plot', spec: {
+    frame: 'graph', xRange: [-1, 5], yRange: [-2, 6],
+    curves: [{ points: [[0, 0], [1, 2], [2, 1], [3, 4]] }],
+    figures: [{ mode: 'curve' }] } };
+  const refuse = (label, q, st) => {
+    let threw = false;
+    try { R.renderForQuestion(q, st); } catch { threw = true; }
+    t.ok(label, threw);
+  };
+
+  refuse('a plot with no figures[] is refused, never drawn as a guessed curve',
+         { id: 'q', reading: 'value' },
+         { id: 'st', kind: 'plot', spec: { frame: 'graph', xRange: [0, 1], yRange: [0, 1],
+                                           curves: [{ points: [[0, 0], [1, 1]] }] } });
+  refuse('a stimulus that renders BY the reading is refused without one',
+         { id: 'q' }, GRAPH);
+  refuse('and a reading supplied where nothing renders by it is refused too',
+         { id: 'q', reading: 'value' },
+         { id: 'st', kind: 'table', spec: { headers: ['x'], rows: [['1']] } });
+  refuse('a question is required — a stimulus alone cannot decide',
+         null, GRAPH);
+
+  // THE PROPERTY THE READING COLUMN EXISTS FOR. One stimulus row, byte-identical
+  // in both calls; two questions that differ only in `reading`. If the figures
+  // come out the same, the column is decorative and the schema bought nothing.
+  const shape = R.renderForQuestion({ id: 'q14', reading: 'shape' }, GRAPH);
+  const value = R.renderForQuestion({ id: 'q15', reading: 'value' }, GRAPH);
+  const ruled = (svg) => (withClass(svg, 'sx-grid')[0] || { children: [] }).children.length;
+  t.ok('one stimulus + reading "shape" draws no grid — the curve is the subject',
+       ruled(shape) === 0);
+  t.ok('the same stimulus + reading "value" rules a grid to read the value off',
+       ruled(value) > 0);
+}
+
+t.section('the family rule is computed, not chosen per figure');
+{
+  // Each row is a family and what it does with the question's reading. The
+  // plane ignores reading entirely — its grid IS the measuring instrument.
+  t.is('plane — always ruled, whatever is asked',      R.gridPlan('plane', 'shape', 1).mode, 'major');
+  t.is('plane — and still ruled when a value is asked', R.gridPlan('plane', 'value', 1).mode, 'major');
+  t.is('graph + shape — no grid; the curve is the subject', R.gridPlan('graph', 'shape', 1).mode, 'none');
+  t.is('graph + value — a grid, to read the value off',     R.gridPlan('graph', 'value', 1).mode, 'major');
+  t.is('data + shape — no grid',                            R.gridPlan('data', 'shape', 1).mode, 'none');
+  t.is('data + value — horizontal rules only, tracking left', R.gridPlan('data', 'value', 1).mode, 'rules');
+  let threw = false;
+  try { R.gridPlan('scatterplot', 'value', 1); } catch { threw = true; }
+  t.ok('an undeclared frame throws rather than defaulting to a look', threw);
+
+  // The sub-unit grid follows the figure's own vertices, so an endpoint at 2.5
+  // sits ON a crossing instead of between two of them.
+  t.is('integer vertices need no half-steps', R.resolutionOf([0, 1, -3, 12]), 1);
+  t.is('a vertex at 2.5 grows half-unit lines', R.resolutionOf([0, 2.5, 4]), 0.5);
+  t.is('and one at 0.2 grows fifths', R.resolutionOf([0, 0.2, 1]), 0.2);
+  t.ok('a plane\'s sub-grid is its resolution, not a fixed fraction',
+       R.gridPlan('plane', 'shape', 0.5).sub === 0.5 && R.gridPlan('plane', 'shape', 1).sub === 0);
+}
+
+t.section('the stimulus-only path is closed where a figure needs the question');
+{
+  const shut = (label, kind, spec) => {
+    let threw = false;
+    try { R.renderStimulus(kind, spec, {}); } catch { threw = true; }
+    t.ok(label, threw);
+  };
+  shut('a function graph cannot be drawn from a stimulus alone', 'plot',
+       { frame: 'graph', xRange: [0, 1], yRange: [0, 1],
+         curves: [{ points: [[0, 0], [1, 1]] }], figures: [{ mode: 'curve' }] });
+  shut('nor can a chart', 'chart',
+       { series: [{ name: 'a', values: [1, 2] }], categories: ['x', 'y'] });
+  // …but the families whose figure does not depend on the question still draw,
+  // which is what keeps this a boundary rather than a blanket refusal.
+  let drew = false;
+  try { drew = !!R.renderStimulus('table', { headers: ['x'], rows: [['1']] }, {}); } catch { drew = false; }
+  t.ok('a table still draws from the stimulus alone', drew);
+}
+
+t.done();
 
 export default t;

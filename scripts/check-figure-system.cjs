@@ -48,7 +48,7 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
 
   // ═══ RULE TWO: resolution drives density. Derived, so test the function. ═
   const rule2 = await p.evaluate(()=>{
-    const {resolutionOf, gridPlan} = globalThis.SiExplore;
+    const {resolutionOf, gridPlan} = globalThis.SiExamStimulus;
     const geoInt=document.querySelector('#v-geo-0 svg');
     const geoHalf=document.querySelector('#v-geo-1 svg');
     const fine=s=>[...s.querySelectorAll('.sx-grid line.sx-fine')].length;

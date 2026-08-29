@@ -233,7 +233,7 @@ const cr = (a, b) => { const B = over(parse(b), { r:255, g:255, b:255, a:1 });
     //    halves are checked: a lone heavy line is the defect, and a rule that
     //    never engages at all would be a silent regression rather than a fix.
     const tiers = await page.evaluate(() => {
-      const { drawPlot } = globalThis.SiExplore;
+      const { drawPlot } = globalThis.SiExamStimulus;
       const count = (x1, y1) => {
         const svg = drawPlot({ xRange: [0, x1], yRange: [0, y1], curves: [{ points: [[0,0],[1,1]] }] },
                              { aspect: 'data', gridMode: 'major', figures: [{ mode: 'curve' }] });

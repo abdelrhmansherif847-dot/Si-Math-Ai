@@ -143,7 +143,7 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
                      r:Math.round(b.x+b.width),b:Math.round(b.y+b.height)}};
     }
     // a curve deliberately sent far outside its window
-    const {drawPlot}=globalThis.SiExplore;
+    const {drawPlot}=globalThis.SiExamStimulus;
     const pts=[]; for(let x=-4;x<=4;x+=0.25) pts.push([x,x*x*x]);
     const svg=drawPlot({xRange:[-2,2],yRange:[-2,2],xLabel:'x',yLabel:'y',curves:[{points:pts}]},
       {aspect:'data',axes:'plane',width:400,height:260,figures:[{mode:'curve'}]});
@@ -194,7 +194,7 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
   // sitting on the axes at labelled values, which is where exam figures put
   // them. Without the ring this reports overlaps.
   const ring = await p.evaluate(()=>{
-    const {drawPlot}=globalThis.SiExplore;
+    const {drawPlot}=globalThis.SiExamStimulus;
     const svg=drawPlot({xRange:[-1,7],yRange:[-1,7],xLabel:'x',yLabel:'y',
       curves:[{points:[[0,0],[5,0],[5,5],[0,5]]}]},
       {aspect:'plane',gridMode:'major',width:420,maxHeight:420,originLabel:'O',

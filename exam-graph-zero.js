@@ -12,16 +12,19 @@
   // Zero Graph needs TWO things, and until 2026-08-27 it only checked one.
   //
   // It reported ready whenever exam-graph.js was present, but it also draws
-  // through the figure renderer, and that renderer is not shipped on any page
-  // yet — exam-stimulus.js is marked DRAFT — NOT WIRED and speaks an older
-  // spec shape (opts.figures rather than spec.figures). So on the production
-  // exam page this provider would have reported READY and then thrown on mount,
-  // which is the worst of both: an offer that cannot be honoured.
+  // through the figure renderer, and no shipped page loads that renderer:
+  // mock-exam.html is the timer-only flow and delivers no questions, so it has
+  // no figures to draw and no reason to load one. This provider would have
+  // reported READY there and then thrown on mount — the worst of both, an offer
+  // that cannot be honoured.
   //
-  // The check now names what is missing, and mock-exam.html passes no
-  // fallbackId as a result — a fallback that cannot draw is not a fallback.
+  // The check names what is missing, and mock-exam.html passes no fallbackId as
+  // a result: a fallback that cannot draw is not a fallback. On a page that DOES
+  // load exam-stimulus.js — question delivery, when it lands — this goes ready
+  // on its own, with no change here.
   function renderer() {
-    try { return (root.SiExplore && root.SiExplore.renderForQuestion) ? root.SiExplore : null; }
+    var r = root.SiExamStimulus;
+    try { return (r && r.renderForQuestion) ? r : null; }
     catch (e) { return null; }
   }
 

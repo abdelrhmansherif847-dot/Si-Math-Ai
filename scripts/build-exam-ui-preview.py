@@ -6,7 +6,7 @@ if the preview shows it, the module does it.
 
 Neutral mathematics. No authored exam item appears.
 """
-import io, json
+import io, json, os
 
 REPO = '/home/user/Si-Math-Ai/'
 CHROME = io.open(REPO + 'exam-chrome.js', encoding='utf-8').read()
@@ -19,7 +19,13 @@ PZERO  = io.open(REPO + 'exam-graph-zero.js', encoding='utf-8').read()
 # is the only size this artwork is crisp at. See "A note on Zero's artwork" in
 # docs/engineering/exam-surface.md before reaching for a bigger one.
 ZERO_PNG = 'data:image/png;base64,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'
-FIG    = io.open('explore-render.js', encoding='utf-8').read()
+# THE renderer, read from its authored source at build time — never a copy
+# pasted into this file. A snapshot was embedded in a preview once and went
+# stale immediately: fixes stopped reaching it while it still looked correct.
+# validate-exam-stimulus.mjs fails if a generated page here falls behind.
+CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
+FIG = io.open(CORE, encoding='utf-8').read()
 
 # One realistic question, in the decided grammar: a function graph, reading=value.
 Q = dict(
@@ -290,7 +296,7 @@ HTML = f"""<title>Si Math Exam Surface</title>
 <script>
 const Q = {json.dumps(Q)};
 const STATES = {json.dumps({str(k): v for k, v in STATES.items()})};
-const {{ renderForQuestion }} = globalThis.SiExplore;
+const {{ renderForQuestion }} = globalThis.SiExamStimulus;
 const {{ Timer, Navigator }} = globalThis.SiExamChrome;
 
 document.getElementById('fig').appendChild(

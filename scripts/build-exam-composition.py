@@ -13,9 +13,15 @@ look generic.
 
 The questions are original and neutral. No authored exam item appears here.
 """
-import io, json, math
+import io, json, math, os
 
-R = io.open('explore-render.js', encoding='utf-8').read()
+# THE renderer, read from its authored source at build time — never a copy
+# pasted into this file. A snapshot was embedded in a preview once and went
+# stale immediately: fixes stopped reaching it while it still looked correct.
+# validate-exam-stimulus.mjs fails if a generated page here falls behind.
+CORE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    '..', 'supabase', 'functions', '_shared', 'exam-stimulus.core.js')
+R = io.open(CORE, encoding='utf-8').read()
 
 def samples(f, a, b, st):
     o = []; x = a
@@ -544,7 +550,7 @@ HTML = f"""<title>Stimulus Composition Study</title>
 const FIGS = {json.dumps(FIGS)};
 const DATA = {json.dumps({k: {'kind': v['kind'], 'spec': v['spec'], 'opts': v['opts']}
                           for k, v in DATA_FIGS.items()})};
-const {{drawPlot, drawNumberLine, drawChart}} = globalThis.SiExplore;
+const {{drawPlot, drawNumberLine, drawChart}} = globalThis.SiExamStimulus;
 for (const fam of Object.keys(FIGS)) {{
   for (const which of ['today', 'fixed']) {{
     const f = FIGS[fam][which];

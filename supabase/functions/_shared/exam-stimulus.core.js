@@ -1,26 +1,49 @@
-/* EXPLORATION COPY — not production, not wired to anything.
- * Adds two structural options the production renderer does not have, so that
- * genuinely different visual LANGUAGES can be drawn rather than the same one
- * with different colours: gridMode ('none' | 'major' | 'fine') and frame.
+/* Si Math AI — MATH STIMULUS RENDERER
  *
- * Si Math AI — MATH STIMULUS RENDERER
+ * ✍️ AUTHORED HERE, AND ONLY HERE. The browser copy `exam-stimulus.js` is
+ *    GENERATED from this file by scripts/sync-exam-stimulus.mjs, and
+ *    scripts/validate-exam-stimulus.mjs fails CI if the two drift — the same
+ *    discipline taxonomy.core.js and study-planner.core.js already run under.
+ *    Edit this file; run the sync; never edit the copy.
  *
- * ⚠️ STATUS: DRAFT — NOT WIRED. No shipped page loads this file yet, and the
- *    visual language it implements is under review. It is committed because
- *    the specimen sheet it draws is what the design decision is being taken
- *    against, and because its geometry is already covered by
- *    tests/exam-stimulus.test.mjs. Wiring it into the exam surface is a
- *    separate, later step.
+ * WHY IT LIVES IN _shared/
+ * ------------------------
+ * The M4 migration says so, and says why: "Rendering is delivery-phase work and
+ * belongs in _shared/ so preview and delivery cannot draw the same question two
+ * ways" (20260825a_exam_stimuli.sql). That is not tidiness. For three of the
+ * five stimulus families the figure depends on what the QUESTION asks, so two
+ * copies of this renderer would eventually draw one database row two different
+ * ways — and the exam would be the place it was noticed.
  *
- * ⛔ BLOCKED ON A SCHEMA DECISION. exam_stimuli's `plot` kind records where the
- *    points are and cannot record what they ARE — a scatter, a sampled smooth
- *    curve and a polygon are byte-identical in the database and mean entirely
- *    different things to a student. The same gap covers coordinate plane vs
- *    data plot. Until that is settled, every caller has to supply the decision
- *    out of band, via `opts.figures` and `opts.aspect` below. See
- *    docs/engineering/student-facing-rendering-validation.md §4.
+ * It nearly happened. Until 2026-08-29 there were two: this one, exporting
+ * SiExamStimulus and marked "DRAFT — NOT WIRED", and scripts/explore-render.js,
+ * exporting SiExplore and marked "EXPLORATION COPY — not production, not wired
+ * to anything". The labels were exactly backwards. Every preview build, every
+ * figure check and one SHIPPED module — exam-graph-zero.js — read SiExplore,
+ * while the file calling itself production had fallen a schema generation
+ * behind and was read by nothing that mattered. The fold is that pair collapsed
+ * into this file, under the name the exam actually uses.
  *
- * Turns an exam_stimuli row (kind + spec) into an SVG figure.
+ * THE SCHEMA DECISION IS TAKEN — this file no longer works around it
+ * -----------------------------------------------------------------
+ * exam_stimuli's `plot` kind once recorded where the points are and could not
+ * record what they ARE: a scatter, a sampled curve and a polygon were
+ * byte-identical in the database and mean entirely different things to a
+ * student. Every caller had to supply the missing half out of band, and the
+ * first preview GUESSED it from the curve's label with a regex, silently, per
+ * frame. Two migrations closed it, and both are applied:
+ *
+ *   20260827a  spec.frame (plane | graph | data) — what a plot IS
+ *              exam_questions.reading ('shape' | 'value') — what is asked of it
+ *   20260827b  spec.figures[] — one entry per curve, in order, whose mode the
+ *              database validates against the frame
+ *
+ * So the decisions are READ OFF THE ROW now. renderForQuestion() is the entry
+ * point content goes through, and it refuses a row that does not carry them
+ * rather than drawing a guess. The out-of-band `opts` path survives for the
+ * design-exploration pages only (opts.gridMode, opts.plate) — treatments the
+ * family rule would never pick, which is precisely why they are not reachable
+ * from a question.
  *
  * THE ONE RULE THAT SEPARATES THIS FROM A CHART LIBRARY
  * -----------------------------------------------------
@@ -820,7 +843,7 @@ function renderStimulus(kind, spec, opts) {
   throw new Error('renderStimulus: unsupported kind ' + kind);
 }
 
-  root.SiExplore = {
+  root.SiExamStimulus = {
     renderForQuestion: renderForQuestion,
     needsReading: needsReading,
     renderStimulus: renderStimulus,
