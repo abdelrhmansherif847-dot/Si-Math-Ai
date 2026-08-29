@@ -19,7 +19,8 @@
  * Checks:
  *   1. Browser copy      — exam-stimulus.js is byte-identical to the authored
  *                          core (run scripts/sync-exam-stimulus.mjs).
- *   2. One renderer      — the SiExplore fork is gone and stays gone.
+ *   2. One renderer      — the second export name is gone and stays gone (the
+ *                          name itself is not spelled in this file — see the check).
  *   3. Honest header     — the core carries no DRAFT / BLOCKED status banner,
  *                          both of which were false by the time they were read.
  *   4. Fresh previews    — every generated page that inlines the renderer
@@ -66,18 +67,26 @@ const core = readFileSync(SOURCE, 'utf8');
     }
   };
 
+  // The forbidden name, never spelled here. The first version of this check
+  // wrote it as a literal and passed only while this file was untracked; the
+  // moment it was committed, git grep found the guard indicting itself. An
+  // exemption would have been the wrong fix — a rule with a hole in it shaped
+  // exactly like the file enforcing it — so the file simply does not contain
+  // the string, and the rule stays uniform.
+  const FORK = 'Si' + 'Explore';
+
   // The renderer's own header narrates the fork as history and must stay free
   // to. So the word is forbidden everywhere EXCEPT those two files, and any USE
   // of it — an assignment or a property read — is forbidden there as well.
   const SOURCE_FILES = new Set(['supabase/functions/_shared/exam-stimulus.core.js', 'exam-stimulus.js']);
-  const mentions = grep('SiExplore').filter((p) => !SOURCE_FILES.has(p));
+  const mentions = grep(FORK).filter((p) => !SOURCE_FILES.has(p));
   assert(mentions.length === 0,
-    'no SiExplore fork anywhere in the tree' +
+    `no ${FORK} fork anywhere in the tree` +
     (mentions.length ? ` — still referenced by: ${mentions.join(', ')}` : ''));
 
-  const uses = grep('SiExplore\\s*=\\|\\.SiExplore', ['-E']).filter((p) => SOURCE_FILES.has(p));
+  const uses = grep(`${FORK}\\s*=|\\.${FORK}`, ['-E']).filter((p) => SOURCE_FILES.has(p));
   assert(uses.length === 0,
-    'the renderer itself neither defines nor reads SiExplore' +
+    `the renderer itself neither defines nor reads ${FORK}` +
     (uses.length ? ` — found in: ${uses.join(', ')}` : ''));
 
   assert(/^\s*root\.SiExamStimulus = \{/m.test(core), 'the core exports SiExamStimulus');
