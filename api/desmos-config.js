@@ -76,6 +76,39 @@ function send(res, status, obj, note) {
 function inert(res, note) { return send(res, 200, { config: {} }, note); }
 
 /**
+ * Why the environment might not be handing us the variable — NAMES ONLY.
+ *
+ * Added 2026-08-29, after "SI_DESMOS_CONFIG is not set in this environment"
+ * left four indistinguishable explanations on the table: the Preview scope is
+ * branch-restricted, the variable is Production-only, the name has a typo or a
+ * stray character, or the deployment predates the save. Guessing between them
+ * costs a redeploy each time.
+ *
+ * It returns variable NAMES matching /desmos/i, never values — a name is not a
+ * credential, and a name is exactly what distinguishes a typo from a scope
+ * problem. Plus the two pieces of Vercel metadata that say WHICH environment
+ * this function believes it is running in, which is what settles branch and
+ * environment targeting.
+ *
+ * Only reachable by a signed-in caller, and only attached when the
+ * configuration is missing — there is nothing to diagnose when it works.
+ */
+function diagnose() {
+  try {
+    var names = Object.keys(process.env).filter(function (k) { return /desmos/i.test(k); });
+    return {
+      desmosVarNames: names,
+      // The exact bytes matter: a trailing space or a zero-width character
+      // pasted from a browser makes a name that looks identical and is not.
+      exactMatch: Object.prototype.hasOwnProperty.call(process.env, 'SI_DESMOS_CONFIG'),
+      vercelEnv: process.env.VERCEL_ENV || null,
+      gitRef: process.env.VERCEL_GIT_COMMIT_REF || null,
+      gitSha: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || null,
+    };
+  } catch (e) { return null; }
+}
+
+/**
  * Is this caller a signed-in user of THIS project?
  *
  * Verified by asking Supabase, not by decoding the token here — a locally
@@ -108,7 +141,8 @@ module.exports = async function handler(req, res) {
 
   var raw = process.env.SI_DESMOS_CONFIG;
   if (!raw || !String(raw).trim()) {
-    return inert(res, 'SI_DESMOS_CONFIG is not set in this environment.');
+    return send(res, 200, { config: {}, diagnostic: diagnose() },
+      'SI_DESMOS_CONFIG is not set in this environment.');
   }
 
   var cfg;
