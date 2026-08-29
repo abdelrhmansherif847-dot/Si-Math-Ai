@@ -5,7 +5,9 @@ socket, Phase 4), `exam-workspace.js` (the calculator panel), `exam-graph.js`
 (Zero Graph's evaluator), and two providers — `exam-graph-desmos.js` and
 `exam-graph-zero.js`.
 Preview: `scripts/build-exam-ui-preview.py`.
-Verification: `scripts/check-exam-ui.cjs` — **82 checks, both themes**.
+Verification: `scripts/check-exam-ui.cjs` (**82 checks, both themes**) for the
+design surface, and `scripts/check-exam-calculator-wiring.cjs` (**40 checks**)
+against the real `mock-exam.html`.
 
 Built as reusable modules in the house pattern — root `*.js`, IIFE on
 `globalThis`, no build step, no dependencies. `mock-exam.html` is frozen and was
@@ -127,13 +129,6 @@ at the worst possible moment, and the exam's record would say they used a tool
 they did not choose. The check asserts the offer appears, that the active
 provider is *still* the failed one until a click, and that one click switches it.
 
-### Why in-panel, and not a second tab
-
-`exam-integrity.js` records the exam tab being hidden or losing focus as an
-integrity event, with durations. Sending a student to a second tab would fire an
-integrity event on every legitimate use of a permitted tool. In-panel is the
-only model compatible with the integrity layer that already ships.
-
 ### Zero's artwork — a correction, and the resolution
 
 **I said twice that this repository has no Zero image asset. It does.** A
@@ -162,27 +157,57 @@ integrity event, with durations. Sending a student to a second tab would fire an
 integrity event on every legitimate use of a permitted tool. In-panel is the
 only model compatible with the integrity layer that already ships.
 
-### A note on Zero's artwork
+### Where the calculator connects to the exam system
 
-**Correction, 2026-08-27.** This section said Zero appears "from the 40×40 PNG
-that already ships". There is no such asset. Wiring the production page made
-that obvious: `dashboard.html` and `chat.html` draw Zero as the **dragon glyph
-in a tinted tile**, and the repository contains no Zero image file at all. The
-PNG was a scratchpad asset that had leaked into the preview build and into this
-description of it.
+Recorded 2026-08-29, after inspecting what the DSAT mock exam actually is.
 
-`mock-exam.html` therefore uses the treatment the site actually has — the glyph
-in a tile matching the dashboard's `zero-avatar`. Giving the exam a *different*
-Zero from the dashboard's would have been worse than a small one.
+**`mock-exam.html` delivers no questions.** Its views are SELECT → TIMER →
+TRANSITION → RESULTS → MISTAKES → SAVING → SUCCESS, and none of them renders an
+item: no question renderer is loaded, and `exam-stimulus.js` is still marked
+DRAFT — NOT WIRED. Students sit the exam elsewhere — on paper, or in Bluebook —
+and use this page to time themselves, cross module boundaries, and log afterwards
+the questions they got wrong.
 
-I also tried a hand-drawn scalable vector Zero (`zero-mark.js`). **It did not
-work** — the result read as a seahorse rather than a dragon, the beard
-disappeared at small sizes, and the robe did not resolve. It was deleted rather
-than committed, because an off-model mascot in a public repository is worse than
-a correct small one.
+So "put the calculator inside the exam" can only mean what it already means: the
+calculator is available **on the screen the student is on while the clock runs**,
+which is the TIMER view. That is where the slot is, and that is the whole of the
+integration surface until the Question Spine delivers items.
 
-**A scalable Zero is an illustration commission, not an engineering task.** Until
-one exists, every surface should use the 40px raster at or below its native size.
+**The connection point is one field.** `exam-registry.js` gives every exam a
+`calculator` descriptor whose `provider` names the in-app calculator that exam
+offers. `isInAppAvailable(code)` is true only when the policy names a provider
+**and** that provider is registered. Every exam is `provider: null`, so:
+
+```
+provider: null  →  provider: 'desmos'   on SAT_MODULE_1 / SAT_MODULE_2 / SAT_FULL
+```
+
+is the entire integration for the DSAT mock exam, and the same one line is how
+every future maths exam opts in. Nothing is duplicated per exam — the launcher,
+the workspace, the provider socket and the Desmos provider are shared modules the
+page already loads.
+
+That line is deliberately not written yet.
+`scripts/validate-desmos-activation.mjs` fails the build if any exam names a
+provider while either `desmos-activation: PROVEN` or `desmos-commercial:
+APPROVED` is missing. The integration is finished; the gate in front of it is the
+point.
+
+**Per-module policy is NOT built, on purpose.** `exam-calculator.js` describes a
+`partial` scope for exams that permit a calculator in one section only, and the
+timer now has a real module model (`modulePlan`, `moduleOrdinal`). But no exam in
+the registry carries `scope: 'partial'` — EST Math 1's note describes part-2-only
+while its scope says `exam` — so building the gating would be machinery for a
+policy that does not exist. It waits for an exam that needs it.
+
+**One defect found and fixed while inspecting.** The panel is appended to
+`<body>` so it survives the page re-rendering its views — which is also why
+nothing was tearing it down. Opening the calculator during the timer and then
+ending the exam left the student on the Results screen with the panel and its
+scrim still over it. Reproduced in a browser, then fixed with the rule the
+calculator should always have had: when no slot is on the page, the exam screen
+is gone and the calculator goes with it. A module boundary is the same shape, so
+it closes there too and returns with the next module.
 
 ## Quiet during the question
 

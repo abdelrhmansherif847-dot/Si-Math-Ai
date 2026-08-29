@@ -304,6 +304,33 @@ const server = http.createServer((req, res) => {
        () => document.querySelectorAll('[data-si-calculator-open]').length === 1),
      'the query parameter is no longer the only thing holding the mode');
 
+  // ── 7. the calculator belongs to the running exam ─────────────────────────
+  //
+  // It is appended to <body> so it survives the page re-rendering its views —
+  // which is also why nothing was tearing it down. Open during the timer, end
+  // the exam, and the student used to land on Results with a calculator panel
+  // and a dark scrim still over it.
+  const life = await timerPage('?desmos-check=1');
+  await life.page.click('[data-si-calculator-open]');
+  await life.page.waitForSelector('.xw-panel.is-open', { timeout: 10000 });
+  ok('the calculator opens during the exam', await life.page.evaluate(
+    () => !!document.querySelector('.xw-panel.is-open')));
+  await life.page.evaluate(() => { s.view = 'RESULTS'; render(); });
+  await life.page.waitForTimeout(600);
+  const ended = await life.page.evaluate(() => ({
+    panel: !!document.querySelector('.xw-panel.is-open'),
+    scrim: !!document.querySelector('.xw-scrim.is-open'),
+    slots: document.querySelectorAll('[data-si-calculator-slot]').length,
+  }));
+  ok('and closes when the exam screen goes away',
+     !ended.panel && !ended.scrim, JSON.stringify(ended));
+  // A module boundary is the same shape: the timer screen is replaced, so the
+  // calculator goes with it and comes back with the next module.
+  await life.page.evaluate(() => { s.view = 'TRANSITION'; render(); });
+  await life.page.waitForTimeout(400);
+  ok('the same holds at a module boundary', await life.page.evaluate(
+    () => !document.querySelector('.xw-panel.is-open')));
+
   const c = await timerPage('?desmos-check=0');
   ok('any other value of the flag offers nothing', await c.page.evaluate(
     () => document.querySelectorAll('[data-si-calculator-open]').length === 0));

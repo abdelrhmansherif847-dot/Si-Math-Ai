@@ -361,6 +361,19 @@
 
   function scan() {
     var slots = document.querySelectorAll(SLOT);
+    // THE CALCULATOR BELONGS TO THE RUNNING EXAM. When the screen carrying the
+    // slot is gone, so is the calculator — the exam ended, or a module boundary
+    // was crossed.
+    //
+    // Without this the panel outlived the exam: open it during the timer, end
+    // the exam, and the student landed on the Results screen with a calculator
+    // panel and a dark scrim still over it. The panel is appended to <body> so
+    // that it survives the page re-rendering its views, and that is exactly why
+    // nothing was tearing it down. Reproduced in a browser before fixing.
+    if (!slots.length) {
+      if (ws && ws.isOpen()) ws.close();
+      return;
+    }
     for (var i = 0; i < slots.length; i++) fill(slots[i]);
   }
 
