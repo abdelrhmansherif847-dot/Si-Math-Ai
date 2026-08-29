@@ -9,6 +9,12 @@ publish and share while the exam content stays out of a public repository.
   python3 scripts/build-stimulus-plates.py   ->  stimulus-plates.html
 """
 import io, json, sys, os
+# THE GRAMMAR, READ FROM THE ONE FILE THAT DEFINES IT.
+# This page used to keep a private copy of the `.sx` rules. It drifted, and the
+# header above promises the opposite of drift, so the copy is gone.
+FIGCSS_SHARED = io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     '..', 'figure-system.css'), encoding='utf-8').read()
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
@@ -143,45 +149,11 @@ p{margin:0 0 14px}
 .plate-fig{padding:26px 20px;display:flex;justify-content:center;overflow-x:auto}
 .plate-why{padding:0 26px 22px;font-size:15px;color:var(--ink-2);max-width:70ch}
 
-/* ============================================================ SVG LANGUAGE
-   Geometry comes from the renderer; every appearance decision is here. */
-.sx{display:block;font-family:'JetBrains Mono',ui-monospace,monospace}
-.sx-grid line{stroke:var(--grid-line);stroke-width:1}
-.sx-grid line.sx-major{stroke:var(--grid-major);stroke-width:1}
-.sx-axis line{stroke:var(--axis-line);stroke-width:1.75;stroke-linecap:round}
-.sx-axis-base{stroke:var(--axis-line);stroke-width:1.5}
-.sx-arrow{fill:var(--axis-line)}
-.sx-tick text{fill:var(--ink-3);font-size:11.5px;font-variant-numeric:tabular-nums;
-             paint-order:stroke;stroke:var(--plate);stroke-width:2.5px;stroke-linejoin:round}
-.sx-nl-tick{stroke:var(--axis-line);stroke-width:1.25}
-.sx-nl-axis line{stroke-width:2.25}
-.sx-axis-title{fill:var(--ink-2);font-family:'DM Sans',sans-serif;font-size:12.5px}
-.sx-axis-tip{font-family:'Manrope',sans-serif;font-weight:700;font-size:14px;font-style:italic;fill:var(--ink-2)}
-.sx-s1{color:var(--s1)} .sx-s2{color:var(--s2)} .sx-s3{color:var(--s3)}
-.sx-curve{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-.sx-dashed{stroke-dasharray:8 6;stroke-width:2.25}
-.sx-point{fill:currentColor;stroke:var(--plate);stroke-width:2}
-.sx-bar{fill:currentColor;stroke:var(--plate);stroke-width:1}
-.sx-label{fill:var(--ink);font-family:'Manrope',sans-serif;font-weight:800;font-size:14px;
-          stroke:var(--plate);stroke-width:3.5;stroke-linejoin:round}
-.sx-nl-seg{stroke:currentColor;stroke-width:6;stroke-linecap:butt;opacity:.9}
-.sx-endpoint{stroke:currentColor;stroke-width:2.5}
-.sx-closed{fill:currentColor}
-.sx-open{fill:var(--plate)}
-.sx-legend text{fill:var(--ink-2);font-family:'DM Sans',sans-serif;font-size:12.5px}
-.sx-swatch{fill:currentColor}
-
-/* ============================================================ TABLES */
-.sx-table-wrap{max-width:100%;overflow-x:auto}
-.sx-table{border-collapse:collapse;margin:0 auto;font-family:'DM Sans',sans-serif}
-.sx-table th{font-family:'Manrope',sans-serif;font-weight:700;font-size:13.5px;color:var(--ink);
-             padding:11px 22px;border-bottom:1.5px solid var(--ink-2);text-align:left;white-space:nowrap}
-.sx-table td{font-size:15px;color:var(--ink);padding:10px 22px;border-bottom:1px solid var(--rule)}
-.sx-table tbody tr:last-child td{border-bottom:none}
-.sx-num{text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;
-        font-variant-numeric:tabular-nums}
-.sx-note{margin:14px 0 0;font-size:13px;color:var(--ink-3);text-align:center;
-         font-family:'JetBrains Mono',ui-monospace,monospace}
+/* ============================================ THE FIGURE GRAMMAR
+   Injected from figure-system.css at build time. Nothing about a figure
+   is stated on this page: the plates are the shipped grammar or they are
+   not a specimen sheet. */
+""" + FIGCSS_SHARED + r"""
 
 /* ============================================================ SURFACES */
 .cands{display:grid;grid-template-columns:1fr 1fr;gap:20px}

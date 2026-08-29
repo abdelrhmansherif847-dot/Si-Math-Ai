@@ -12,6 +12,11 @@ opposite things, and forcing one visual language on both is what makes the set
 look generic.
 
 The questions are original and neutral. No authored exam item appears here.
+
+This page is FIGURE-GRAMMAR-EXPLORATION: it shows each family as it is drawn
+today beside a RECOMPOSED alternative, so half of it is by definition not the
+shipped grammar. Its figure CSS stays its own; figure-system.css is what the
+exam actually links.
 """
 import io, json, math, os
 

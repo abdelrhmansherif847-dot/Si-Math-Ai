@@ -2,6 +2,10 @@
 
 The frame illustration is drawn by the REAL renderer (exam-stimulus.js), so the
 argument about equal axis scales is demonstrated rather than asserted.
+
+This page is FIGURE-GRAMMAR-EXPLORATION: a review page arguing the vocabulary
+itself, drawn to make an argument rather than to show what ships. Its figure
+CSS stays its own; figure-system.css is the shipped grammar.
 """
 import io, os, json
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -1,7 +1,11 @@
 """Renderer evaluation. The SAME real exam specs, drawn by every candidate,
 each one configured toward the Si Math AI visual system rather than left on its
 defaults — otherwise the comparison is between our art direction and a
-library's, which proves nothing."""
+library's, which proves nothing.
+This page is FIGURE-GRAMMAR-EXPLORATION: a bake-off between candidate
+renderers, each configured toward our visual system. Its figure CSS is per
+candidate on purpose and is not the shipped grammar.
+"""
 import io, json, os, re
 
 LIB = '/tmp/libs'

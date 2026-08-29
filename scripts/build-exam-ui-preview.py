@@ -32,8 +32,12 @@ FIG = io.open(CORE, encoding='utf-8').read()
 # then built FROM this page rather than from the approved family grammar, which
 # is how the data family, the decided table and the named-point typeface came to
 # be invented. One file now, read by both.
-SHEET = io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             '..', 'exam-surface.css'), encoding='utf-8').read()
+def _sheet(name):
+    return io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                '..', name), encoding='utf-8').read()
+# The grammar first, the surface second — the order every page uses, so the
+# tokens both define resolve the way they do in the exam.
+SHEET = _sheet('figure-system.css') + '\n' + _sheet('exam-surface.css')
 
 # One realistic question, in the decided grammar: a function graph, reading=value.
 Q = dict(

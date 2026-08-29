@@ -11,6 +11,11 @@ The shared fundamentals — type, tick treatment, numeral style, spacing — are
 held constant on purpose, so a mix across families still reads as one exam.
 
 Neutral mathematics throughout: no exam item appears here.
+
+This page is FIGURE-GRAMMAR-EXPLORATION: it shows the treatments that were
+considered and mostly NOT chosen, so its figure CSS is deliberately its own
+and must not be replaced with figure-system.css. Forcing the shipped grammar
+onto it would erase the comparison that produced the grammar.
 """
 import io, json, math, os
 

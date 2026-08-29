@@ -10,6 +10,12 @@ If the figures below differ, the difference came from the question row, because
 the stimulus row is byte-identical between them.
 """
 import io, json, sys, os
+# THE GRAMMAR, READ FROM THE ONE FILE THAT DEFINES IT.
+# This page used to keep a private copy of the `.sx` rules. It drifted, and the
+# header above promises the opposite of drift, so the copy is gone.
+FIGCSS_SHARED = io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     '..', 'figure-system.css'), encoding='utf-8').read()
+
 
 # THE renderer, read from its authored source at build time — never a copy
 # pasted into this file. A snapshot was embedded in a preview once and went
@@ -90,24 +96,7 @@ h1{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:clamp(34px,5
 .note{background:var(--accent-soft);border-radius:5px;padding:18px 22px;margin:30px 0 0;
   font-size:15px;color:var(--ink-2);max-width:86ch}
 .note b{color:var(--ink)}
-.sx{display:block;margin:0}
-.sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
-.sx-grid line.sx-fine{stroke:var(--fig-fine)}
-.sx-axis line{stroke:var(--fig-axis);stroke-width:1.2;stroke-linecap:butt}
-.sx-arrow{fill:var(--fig-axis)}
-.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
-.sx-tick text{fill:var(--fig-num);font-family:'DM Sans',sans-serif;font-size:12.5px;
-  font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--exam);
-  stroke-width:3.5px;stroke-linejoin:round}
-.sx-axis-tip{fill:var(--fig-axis);font-family:'Newsreader',Georgia,serif;font-style:italic;
-  font-weight:600;font-size:15px}
-.sx-axis-title{fill:var(--fig-num);font-family:'DM Sans',sans-serif;font-size:12.5px}
-.sx-label{fill:var(--fig-ink);font-family:'Newsreader',Georgia,serif;font-style:italic;
-  font-weight:600;font-size:16px;text-anchor:middle;paint-order:stroke;stroke:var(--exam);
-  stroke-width:4px;stroke-linejoin:round}
-.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
-.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:2}
-.sx-series{color:var(--fig-ink)}
+""" + FIGCSS_SHARED + r"""
 </style>
 """
 

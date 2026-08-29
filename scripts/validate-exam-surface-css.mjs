@@ -37,7 +37,13 @@ const fail = (m) => { console.error('  ✗', m); failures++; };
 const ok = (m) => console.log('  ✓', m);
 const assert = (c, m) => (c ? ok(m) : fail(m));
 
-const css = readFileSync(resolve(root, 'exam-surface.css'), 'utf8');
+// BOTH sheets. The figure grammar moved to figure-system.css so that every
+// surface could link the one file instead of keeping a private copy of it (see
+// validate-figure-system.mjs); the exam links both, in this order, so the checks
+// below still read what the exam actually resolves.
+const SHEETS = ['figure-system.css', 'exam-surface.css']
+  .map((f) => readFileSync(resolve(root, f), 'utf8'));
+const css = SHEETS.join('\n');
 const stimulus = readFileSync(resolve(root, 'exam-stimulus.js'), 'utf8');
 const chrome = readFileSync(resolve(root, 'exam-chrome.js'), 'utf8');
 
@@ -121,7 +127,18 @@ const styled = (name) => new RegExp('\\.' + name + '(?![a-zA-Z0-9_-])').test(css
   assert(/:root\[data-theme="dark"\]\s*\{/.test(css),
     'an explicit dark choice has its own block, so the toggle wins both ways');
   // A token defined only inside a media query is undefined for the other state.
-  const base = css.slice(css.indexOf(':root {'), css.indexOf('@media'));
+  // The LIGHT `:root` of each sheet, taken the same way for both: the text from
+  // its first `:root {` up to its first dark block. Read per file rather than on
+  // the concatenation — a single pass over the joined text sees the first
+  // sheet's dark block and stops, which silently answered "yes" for every token
+  // in the second sheet.
+  const lightRoot = (text) => {
+    const i = text.indexOf(':root {');
+    if (i === -1) return '';
+    const j = text.indexOf('@media', i);
+    return text.slice(i, j === -1 ? undefined : j);
+  };
+  const base = SHEETS.map(lightRoot).join('\n');
   const declares = (block, t) => new RegExp('(?:^|[;{])\\s*' + t + '\\s*:', 'm').test(block);
   const darkOnly = ['--fig-ink', '--fig-grid', '--cyan', '--low', '--flag', '--good']
     .filter((t) => !declares(base, t));
