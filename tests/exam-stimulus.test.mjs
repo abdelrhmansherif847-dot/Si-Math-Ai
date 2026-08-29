@@ -478,6 +478,36 @@ t.section('open means the drawing does not close');
        plane.left || plane.right || plane.top || plane.bottom, JSON.stringify(plane));
 }
 
+t.section('squared paper is ruled in UNITS, not in whatever fits');
+{
+  // The family's stated rule is "integer vertices -> a unit grid", and it was
+  // only half true: resolutionOf() picked the SUB-grid while the major step came
+  // from niceStep, which crosses from 1 to 2 as soon as a window passes nine
+  // units across. A real exam figure at 9.54 across came back ruled every two
+  // units, so a leg of length 6 could not be counted off the paper.
+  //
+  // Both sides are asserted. A renderer that clamped unconditionally would rule
+  // a 22-unit window into 22 columns, a much finer mesh than the approved
+  // specimen's, so the second case is what stops the fix from overreaching.
+  // The step in UNITS, read off the geometry rather than the numerals: the grid
+  // spacing as a fraction of the drawing box, times the window it spans.
+  const stepOf = (xr, yr) => {
+    const svg = plane({ xRange: xr, yRange: yr, curves: [{ points: [[0, 0], [1, 1]] }] },
+                      [{ mode: 'polygon' }]);
+    const v = withClass(svg, 'sx-grid')[0].children
+      .filter(l => l.getAttribute('x1') === l.getAttribute('x2')
+                && (l.getAttribute('class') || '').indexOf('sx-fine') === -1)
+      .map(l => +l.getAttribute('x1')).sort((a, b) => a - b);
+    const px = v[1] - v[0];
+    const rect = all(svg).find(e => e.tag === 'rect' && e.getAttribute('width'));
+    const iw = +rect.getAttribute('width');     // the drawing box, in user units
+    return Math.round((px / iw) * (xr[1] - xr[0]) * 1000) / 1000;
+  };
+  t.is('a 9.5-unit window with integer vertices rules every UNIT', stepOf([0, 9.5], [-1, 9]), 1);
+  t.is('an 8.5-unit window (the specimen) is unchanged',            stepOf([-1, 7.5], [-1, 9.4]), 1);
+  t.is('a 22-unit window stays coarse rather than turning to mesh',  stepOf([-11, 11], [-8, 8]), 2.5);
+}
+
 t.section('the family rule is computed, not chosen per figure');
 {
   // Each row is a family and what it does with the question's reading. The

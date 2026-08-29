@@ -87,6 +87,24 @@ const is = (m, c, d) => (c ? ok(m) : no(m, d));
   await g.goto(base + '/scripts/figure-system.html', { waitUntil: 'networkidle' });
   await g.waitForSelector('.sx');
   const approved = await g.evaluate(READ, PROBE);
+  // THE PLATE ITSELF, not just the ink on it. Every property check in this file
+  // passed while the exam was drawing its figures a quarter flatter than these
+  // specimens and ruling squared paper every TWO units — a matching font-size
+  // and stroke colour say nothing about the shape of the plate they sit on.
+  const approvedPlate = await g.evaluate(() => {
+    const out = {};
+    for (const [key, id] of [['graph', 'v-fn-1'], ['plane', 'v-geo-0'],
+                             ['data', 'v-data-1'], ['nl', 'v-nl-0']]) {
+      const host = document.getElementById(id); if (!host) continue;
+      const svg = host.tagName.toLowerCase() === 'svg' ? host : host.querySelector('svg');
+      const vb = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+      const r = svg.querySelector('clipPath rect');
+      out[key] = { w: vb[2], h: vb[3],
+                   iw: r ? +r.getAttribute('width') : null,
+                   ih: r ? +r.getAttribute('height') : null };
+    }
+    return out;
+  });
   await g.close();
 
   // ── the real exam, on the real rows ──────────────────────────────────────
@@ -200,6 +218,23 @@ const is = (m, c, d) => (c ? ok(m) : no(m, d));
     await p2.waitForSelector('.ex-fig svg, .ex-fig table');
     return p2.evaluate(SHAPE);
   };
+  const plateAt = async (n) => {
+    await p2.click('.xc-n-toggle');
+    await p2.click('.xc-q >> nth=' + (n - 1));
+    await p2.waitForSelector('.ex-fig svg');
+    return p2.evaluate(() => {
+      const svg = document.querySelector('.ex-fig svg');
+      const vb = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+      const r = svg.querySelector('clipPath rect');
+      const gridX = Array.from(svg.querySelectorAll('.sx-grid line'))
+        .filter((l) => l.getAttribute('x1') === l.getAttribute('x2'))
+        .map((l) => +l.getAttribute('x1')).sort((a, b) => a - b);
+      return { w: vb[2], h: vb[3],
+               iw: r ? +r.getAttribute('width') : null,
+               ih: r ? +r.getAttribute('height') : null,
+               cell: gridX.length > 1 ? gridX[1] - gridX[0] : 0 };
+    });
+  };
 
   const graph = await at(4);        // "how many values of x does f(x)=2" — reading: value
   is('function graph · Open — the drawing does not close  [Q4]',
@@ -224,6 +259,50 @@ const is = (m, c, d) => (c ? ok(m) : no(m, d));
 
   const table = await at(12);
   is('table · Boxed — the renderer\'s table, not an SVG  [Q12]', table.table === true);
+
+
+  // ── the plate is the specimen's plate, at the specimen's size ────────────
+  // Drawn at the reference width and DISPLAYED at the column's, so the exam
+  // figure is the approved figure scaled — identical viewBox, identical drawing
+  // box, one factor on every line weight and numeral. Checking a ratio alone
+  // would pass a figure whose ink had been left behind at the old absolute
+  // size, which is exactly what happened.
+  for (const [label, n, key] of [['function graph', 4, 'graph'],
+                                 ['coordinate geometry', 16, 'plane'],
+                                 ['data', 14, 'data'], ['number line', 17, 'nl']]) {
+    const a = approvedPlate[key]; if (!a) continue;
+    const e = await plateAt(n);
+    is(label + ' · drawn on the approved plate  [Q' + n + ']',
+       e.w === a.w && (a.iw === null || e.iw === a.iw),
+       'exam ' + JSON.stringify(e) + '  approved ' + JSON.stringify(a));
+  }
+  // Squared paper is ruled in UNITS: consecutive numerals along the axis differ
+  // by one, so a leg of length 6 is six squares. Read off the numerals rather
+  // than the pixels, because that is the claim — a two-unit cell can be counted
+  // only by twos, and this family exists so that it can be counted at all.
+  //
+  // Anchored on Q19, which is where this actually broke. Q16's window is narrow
+  // enough that it was ruled in units even while Q19 was not, so a check that
+  // looked only at Q16 would have watched the defect ship.
+  for (const n of [19, 16]) {
+    await p2.click('.xc-n-toggle');
+    await p2.click('.xc-q >> nth=' + (n - 1));
+    await p2.waitForSelector('.ex-fig svg');
+    const gaps = await p2.evaluate(() => {
+      const vals = Array.from(document.querySelectorAll('.ex-fig .sx-tick text'))
+        .filter((t) => t.getAttribute('text-anchor') === 'middle')
+        .map((t) => parseFloat(t.textContent.replace('\u2212', '-')))
+        .filter((v) => !Number.isNaN(v));
+      // 0 is never drawn on a plane — the origin carries the letter O instead —
+      // so it is put back before the run is measured. A two-unit grid still
+      // fails: 0,2,4,6 is not a run of ones.
+      if (!vals.includes(0)) vals.push(0);
+      vals.sort((a, b) => a - b);
+      return vals.slice(1).map((v, i) => +(v - vals[i]).toFixed(3));
+    });
+    is('coordinate geometry · ruled in units, so squares can be counted  [Q' + n + ']',
+       gaps.length > 0 && gaps.every((g) => g === 1), JSON.stringify(gaps));
+  }
 
   await p2.close();
   await browser.close();

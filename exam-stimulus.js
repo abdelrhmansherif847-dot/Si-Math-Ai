@@ -77,10 +77,16 @@ function el(name, attrs, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-function svgRoot(w, h) {
+/* `shown` is the CSS width the figure is DISPLAYED at, which is not the same
+ * thing as the width it is DRAWN at. Drawing at the family's reference size and
+ * displaying it larger scales the whole figure — line weight, numerals, ticks,
+ * arrowheads — by one factor, so what reaches the student is the approved
+ * specimen at a different size rather than a redrawn approximation of it.
+ * Defaults to the viewBox width, i.e. 1:1, which is what the grammar page uses. */
+function svgRoot(w, h, shown) {
   const s = el('svg', { viewBox: `0 0 ${w} ${h}`, class: 'sx', role: 'img',
                         preserveAspectRatio: 'xMidYMid meet' });
-  s.style.width = '100%'; s.style.maxWidth = w + 'px'; s.style.height = 'auto';
+  s.style.width = '100%'; s.style.maxWidth = (shown || w) + 'px'; s.style.height = 'auto';
   return s;
 }
 /* A nice step: 1, 2, 2.5 or 5 times a power of ten, never a step a student
@@ -224,6 +230,41 @@ function arrowDefs(s, id, fixed) {
  *   here: {mode:'curve'|'polygon'|'scatter'|'points', closed?, labels?}
  * opts.aspect — 'plane' (one px-per-unit on both axes: circles round, right
  *   angles right, slopes true) or 'data' (axes measure different things). */
+/* THE PLATE SCALES; IT DOES NOT STRETCH.
+ *
+ * The approved grammar (365b, and the specimens `scripts/figure-system.html`
+ * renders) was drawn at ONE size per family: 430x280 for a function graph or a
+ * data plot, 360 wide with a 430 cap for squared paper. Those numbers are not
+ * arbitrary — the proportion of the plate is what makes a curve look the shape
+ * it looks, and how many grid squares fit is what makes squared paper
+ * countable.
+ *
+ * The exam column is 560 wide, and the first version simply passed that width
+ * while keeping the heights tuned for 430. That is a STRETCH, and it broke two
+ * things visibly:
+ *
+ *   - every function and data plate came out 24% flatter than the specimen, so
+ *     the same cubic read as a shallower curve;
+ *   - squared paper hit its (unscaled) height cap, took the "widen x" branch
+ *     below, and came back with a TWO-unit grid and a third of the plate empty.
+ *     A student can no longer count squares to measure a leg, which is the one
+ *     thing that family exists to allow.
+ *
+ * So the reference is stored as the proportion of the INNER box — the drawing
+ * area inside the numeral gutters — and the height is derived from whatever
+ * width the caller asks for. At the reference width every number below is an
+ * identity, which is why the grammar page is untouched by this and its checks
+ * still pass: that is the proof the plate was scaled and not redesigned. */
+const REF = {
+  // MEASURED off the specimens, not re-derived from the plate: both the function
+  // and the data variants clip to exactly 364 x 202 (`PAD.t` is 36 there, not
+  // 18, because both carry a y title — computing it from the plate got this
+  // wrong by 9%).
+  W: 430, iw: 364, ih: 202,
+  // Squared paper: 360 wide, capped at 430 tall, never shorter than 190 of ink
+  planeW: 360, planeIw: 294, planeMaxIh: 430 - 18 - 42, planeMinIh: 190,
+};
+
 function drawPlot(spec, opts) {
   opts = opts || {};
   const figures = opts.figures || [];
@@ -240,6 +281,7 @@ function drawPlot(spec, opts) {
   let [x0, x1] = spec.xRange, [y0, y1] = spec.yRange;
   let H, ih;
 
+
   if (opts.aspect === 'plane') {
     // Equal scales are non-negotiable. HOW they are obtained is a composition
     // decision, and the first version got it wrong: it fixed the canvas and
@@ -255,8 +297,9 @@ function drawPlot(spec, opts) {
     // A genuinely tall figure gets a tall plate. Capping this low forces the
     // OTHER axis to widen, which is what pads a figure out with empty grid —
     // the cap was the cause, not the symptom.
-    const maxIh = (opts.maxHeight || 470) - PAD.t - PAD.b;
-    const minIh = 190;
+    const maxIh = opts.maxHeight ? opts.maxHeight - PAD.t - PAD.b
+                                : iw * (REF.planeMaxIh / REF.planeIw);
+    const minIh = iw * (REF.planeMinIh / REF.planeIw);
     if (want > maxIh) {
       // taller than a plate should be: fit the height and widen x, which adds
       // context rather than distorting anything
@@ -276,16 +319,38 @@ function drawPlot(spec, opts) {
     // to guarantee — the geometry test catches it at 0.01 px.
     H = ih + PAD.t + PAD.b;
   } else {
-    H = opts.height || 340;
-    ih = H - PAD.t - PAD.b;
+    // Derived from the INNER box, not the plate, so a taller numeral gutter or a
+    // wider label margin does not quietly change the drawing's proportion.
+    ih = opts.height ? opts.height - PAD.t - PAD.b : iw * (REF.ih / REF.iw);
+    H = ih + PAD.t + PAD.b;
   }
   const X = v => PAD.l + ((v - x0) / (x1 - x0)) * iw;
   const Y = v => H - PAD.b - ((v - y0) / (y1 - y0)) * ih;
 
   let sx = niceStep(x1 - x0, 9), sy = niceStep(y1 - y0, 7);
-  if (opts.aspect === 'plane') sx = sy = Math.min(sx, sy);  // a square grid, countable
+  if (opts.aspect === 'plane') {
+    sx = sy = Math.min(sx, sy);                             // a square grid, countable
+    // AND THE SQUARE IS A UNIT. "Integer vertices -> a unit grid" is the stated
+    // rule of the squared-paper family, and it was only half implemented:
+    // resolutionOf() decided the SUB-grid (half-unit lines under a vertex at
+    // 2.5) while the major step was still whatever niceStep picked for the
+    // window. niceStep crosses from 1 to 2 the moment a window passes nine
+    // units across — which exam windows routinely do, and the approved specimen
+    // happens to sit just under at 8.5. So a figure whose vertices are all
+    // integers came back ruled every TWO units, and a student can no longer
+    // count squares to measure a leg, which is the one thing this family exists
+    // to allow.
+    //
+    // The unit is given up when the ruling would be finer than the approved
+    // specimen's texture, and that is judged in px rather than units so it holds
+    // at any plate size. The specimen rules at 34.6px per unit and the exam
+    // figure that prompted this at 30.8; a window twice as wide as either falls
+    // well under the bar and keeps the coarser step and its five-line major
+    // tier, which is what that tier is for.
+    if (sx > 1 && iw / (x1 - x0) >= 20) sx = sy = 1;
+  }
 
-  const s = svgRoot(W, H);
+  const s = svgRoot(W, H, opts.shownAt);
   // THE FAMILY, ON THE FIGURE ITSELF.
   //
   // The approved grammar (365d85b, "Close the figure families as a grammar, not
@@ -612,20 +677,27 @@ function drawNumberLine(spec, opts) {
   // A number line has its own design axes, and they are not the plane's. What
   // varies is how many values are named, how loud the endpoint is, and whether
   // the interval rides ON the axis or sits as a separate band ABOVE it.
-  const W = opts.width || 560, H = opts.height || 96, M = 40;
-  const lift = opts.segLift || 0;             // px the interval sits above the axis
-  const y = opts.axisY || (lift ? H - 52 : 44);
-  const ER = opts.endpointR || 6.5;
+  // The strip scales with its width, for the same reason the plate does. Its
+  // grammar is ENDPOINT-FIRST — "the endpoint is the largest mark in the figure,
+  // because open-versus-closed IS the question" — and that is a statement about
+  // proportion. Running the approved 430-wide strip out to the exam's 560 while
+  // the marks stayed fixed shrank the endpoint by 23% relative to the line, and
+  // the rule quietly stopped being true. k is 1 at the reference width.
+  const W = opts.width || 560, k = W / 430;
+  const H = opts.height || 96 * k, M = 40 * k;
+  const lift = (opts.segLift || 0) * k;       // px the interval sits above the axis
+  const y = opts.axisY || (lift ? H - 52 * k : 44 * k);
+  const ER = (opts.endpointR || 6.5) * k;
   const X = v => M + ((v - spec.min) / (spec.max - spec.min)) * (W - 2 * M);
-  const s = svgRoot(W, H);
+  const s = svgRoot(W, H, opts.shownAt);
   arrowDefs(s, 'sx-ar-nl');
-  arrowDefs(s, 'sx-ar-ray', 13);
+  arrowDefs(s, 'sx-ar-ray', 13 * k);
   // A ray that runs off the end of the line already says "continues", so the
   // axis does not need to say it again two pixels further out.
   const segs = spec.segments || [];
   const openR = segs.some(g => g.to >= spec.max), openL = segs.some(g => g.from <= spec.min);
   const ax = el('g', { class: 'sx-axis sx-nl-axis' });
-  ax.appendChild(el('line', { x1: M - 14, y1: y, x2: W - M + 14, y2: y,
+  ax.appendChild(el('line', { x1: M - 14 * k, y1: y, x2: W - M + 14 * k, y2: y,
     'marker-start': openL && !lift ? null : 'url(#sx-ar-nl)',
     'marker-end': openR && !lift ? null : 'url(#sx-ar-nl)' }));
   s.appendChild(ax);
@@ -646,7 +718,7 @@ function drawNumberLine(spec, opts) {
     const ms = mode === 'autofine' ? res * step : step / 2;
     for (let v = Math.ceil(spec.min / ms) * ms; v <= spec.max + 1e-9; v += ms)
       if (Math.abs(v / step - Math.round(v / step)) > 1e-9)
-        tk.appendChild(el('line', { x1: X(v), y1: y - 3.5, x2: X(v), y2: y + 3.5, class: 'sx-nl-minor' }));
+        tk.appendChild(el('line', { x1: X(v), y1: y - 3.5 * k, x2: X(v), y2: y + 3.5 * k, class: 'sx-nl-minor' }));
   }
   const named = (mode === 'ends' || mode === 'autofine')
     ? [spec.min, spec.max].concat((spec.segments||[]).flatMap(g => [g.from, g.to]))
@@ -654,17 +726,17 @@ function drawNumberLine(spec, opts) {
     : null;
   const drawn = [];
   for (let v = Math.ceil(spec.min / step) * step; v <= spec.max + 1e-9; v += step) {
-    tk.appendChild(el('line', { x1: X(v), y1: y - 6, x2: X(v), y2: y + 6, class: 'sx-nl-tick' }));
+    tk.appendChild(el('line', { x1: X(v), y1: y - 6 * k, x2: X(v), y2: y + 6 * k, class: 'sx-nl-tick' }));
     if (named && !named.some(n => Math.abs(n - v) < 1e-9)) continue;
-    tk.appendChild(el('text', { x: X(v), y: y + 26, 'text-anchor': 'middle' }, fmt(v)));
+    tk.appendChild(el('text', { x: X(v), y: y + 26 * k, 'text-anchor': 'middle' }, fmt(v)));
     drawn.push(v);
   }
   // A marked value off the major step — an endpoint at -2.5 — would otherwise
   // be a dot the student cannot put a number to.
   if (named) for (const v of marked)
     if (v > spec.min && v < spec.max && !drawn.some(d => Math.abs(d - v) < 1e-9)) {
-      tk.appendChild(el('line', { x1: X(v), y1: y - 6, x2: X(v), y2: y + 6, class: 'sx-nl-tick' }));
-      tk.appendChild(el('text', { x: X(v), y: y + 26, 'text-anchor': 'middle' }, fmt(v)));
+      tk.appendChild(el('line', { x1: X(v), y1: y - 6 * k, x2: X(v), y2: y + 6 * k, class: 'sx-nl-tick' }));
+      tk.appendChild(el('text', { x: X(v), y: y + 26 * k, 'text-anchor': 'middle' }, fmt(v)));
     }
   s.appendChild(tk);
 
@@ -698,12 +770,19 @@ function drawNumberLine(spec, opts) {
 /* ------------------------------------------------------------------ CHART */
 function drawChart(spec, opts) {
   opts = opts || {};
-  const W = opts.width || 520, H = opts.height || 340;
+  const W = opts.width || 520;
   const named = spec.series.filter(x => x.name);
   const PAD = { l: 52, r: 18, t: spec.yLabel ? 36 : 20, b: spec.xLabel ? 46 : 30 };
   if (spec.chartType !== 'bar' && named.length > 1) PAD.r = Math.max(PAD.r,
     12 + Math.max(...named.map(x => x.name.length)) * 7.2);
-  const iw = W - PAD.l - PAD.r, ih = H - PAD.t - PAD.b;
+  // Same rule as the plate: the drawing area keeps the proportion it was
+  // designed at (520 x 340, labelled on both axes) whatever width it is asked
+  // for. A bar chart run out to the exam column with its height left behind
+  // came back a third flatter than the scatterplot beside it, which is a
+  // difference the data family never asked for.
+  const iw = W - PAD.l - PAD.r;
+  const ih = opts.height ? opts.height - PAD.t - PAD.b : iw * (REF.ih / REF.iw);
+  const H = ih + PAD.t + PAD.b;
   const vals = spec.series.flatMap(s => s.values);
   const lo = Math.min(0, ...vals), hi = Math.max(...vals);
   const step = niceStep(hi - lo, 5), top = Math.ceil(hi / step) * step;
@@ -711,7 +790,7 @@ function drawChart(spec, opts) {
   const n = spec.categories.length;
   const band = iw / n, X = i => PAD.l + band * (i + 0.5);
 
-  const s = svgRoot(W, H);
+  const s = svgRoot(W, H, opts.shownAt);
   // A chart is always measured data — the reference-line rule below already
   // says so — so it carries the data family without being told.
   s.setAttribute('class', 'sx sx-fam-data');
@@ -855,11 +934,26 @@ function renderForQuestion(question, stimulus) {
     throw new Error('renderForQuestion: question ' + (question.id || '?') +
       ' carries reading="' + question.reading + '" for a stimulus that does not render by it');
 
+  /* DRAWN AT THE REFERENCE SIZE, SHOWN AT THE COLUMN'S.
+   *
+   * The first version drew straight at the 560 of the exam column while keeping
+   * the heights the grammar was tuned for at 430. That is a stretch, and it was
+   * visible: plates came out a quarter flatter than the specimen, squared paper
+   * hit its unscaled cap and fell back to a TWO-unit grid a student cannot count
+   * squares on, and every line and numeral ended up a fifth lighter relative to
+   * the figure around it.
+   *
+   * Passing the reference width and letting the browser scale the SVG makes the
+   * exam figure the SAME figure as the specimen — identical geometry, one scale
+   * factor on everything at once. Numerals land at 16.3px against a 17.5px stem,
+   * which is the proportion the grammar page has. */
+  const SHOWN = 560;
   if (kind === 'table') return drawTable(spec);
   if (kind === 'number_line')
-    return drawNumberLine(spec, { tickMode: 'auto', endpointR: 9, width: 560 });
+    return drawNumberLine(spec, { tickMode: 'auto', endpointR: 9,
+                                  width: REF.W, shownAt: SHOWN });
   if (kind === 'chart')
-    return drawChart(spec, { reading: question.reading, width: 560, height: 300 });
+    return drawChart(spec, { reading: question.reading, width: REF.W, shownAt: SHOWN });
   if (kind === 'plot')
     return drawPlot(spec, {
       frame: spec.frame,
@@ -867,7 +961,10 @@ function renderForQuestion(question, stimulus) {
       aspect: spec.frame === 'plane' ? 'plane' : 'data',
       axes: spec.frame === 'data' ? 'data' : 'plane',
       originLabel: spec.frame === 'plane' ? 'O' : null,
-      width: 560, height: 300, maxHeight: 470,
+      // Squared paper is drawn narrower and taller than the other families, and
+      // that is its own reference, not a variation on theirs.
+      width: spec.frame === 'plane' ? REF.planeW : REF.W,
+      shownAt: SHOWN,
       // NO FALLBACK. `figures` says whether these points are a parabola or a
       // scatterplot, and defaulting to 'curve' would draw a continuous
       // relationship the data never claimed. A spec without it is a content
