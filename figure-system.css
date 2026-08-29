@@ -132,7 +132,26 @@
    padding and alignment — and drops only the part that was about the other
    page's width. */
 .sx-table-wrap{overflow-x:auto;margin:0}
-.sx-table{border-collapse:collapse;font-family:var(--font-display);
+/* LINE HEIGHT IS PART OF THE TABLE, not of the page it lands on. Left unset,
+   the cells took the host's: 40px tall on a specimen sheet where it is `normal`,
+   46.6px in the exam, whose body sets 1.6. The decided table was therefore a
+   different table in each of the two places it was looked at, and the visual
+   suite is what found it.
+
+   Pinned in PIXELS, and to an integer. A ratio resolves against each cell's own
+   font size — 1.6 x 16px is 25.6px — and a fractional line box makes every row
+   start on a different sub-pixel than the last, so the same table rasterises
+   differently depending only on where it happens to sit. 24px is within a
+   pixel of what the exam already shipped, and it is the same 24px above a 16px
+   value as above a 13.5px header. */
+/* AND SO IS THE INK. The table set a family, a size and a weight but never a
+   colour, so it took the host's: near-black on a specimen page whose body is
+   the browser default, #111820 in the exam. The same defect as the line height,
+   found the same way — the two renders were identical in every measured
+   property and visibly a different grey. --fig-ink is what every other figure
+   in the system draws with, and it is what the exam was already showing. */
+.sx-table{border-collapse:collapse;font-family:var(--font-display);line-height:24px;
+  color:var(--fig-ink);
   font-variant-numeric:tabular-nums;border:1.6px solid var(--t-outer)}
 .sx-table th,.sx-table td{white-space:nowrap}
 .sx-table th{font-weight:700;font-size:13px;letter-spacing:.04em;padding:11px 15px;

@@ -32,3 +32,8 @@ shots5/
 # Written by scripts/check-desmos-activation.cjs during a live activation run.
 # Never committed: it is a screenshot of a licensed third-party calculator.
 scripts/desmos-activation.png
+
+# Rendered by scripts/check-visual-fidelity.cjs on every run, for looking at.
+# The BASELINES (tests/visual-baselines/) are committed; these are the current
+# renders and the diffs against them, and they are rewritten each time.
+tests/visual-out/

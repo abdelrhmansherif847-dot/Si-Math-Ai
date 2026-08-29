@@ -1,0 +1,687 @@
+{
+ "_": "THE APPROVED APPEARANCE, AS DATABASE ROWS. Each case is exactly what the Spine stores — an exam_stimuli kind and spec, plus the exam_questions.reading that selects the variant — and nothing else. Both sides of the visual suite render it through renderForQuestion(), the one entry point content goes through, so the specimen and the exam cannot disagree about how a row becomes a figure; the only thing that differs between them is the page around it, which is what is being tested. scripts/check-visual-fidelity.cjs compares the pixels against the committed baselines in tests/visual-baselines/. Changing a case changes the contract, and the new baseline has to be looked at by a person before it is committed. geo-2 exists because niceStep crosses from a one-unit step to a two-unit step the moment a window passes nine units across, and the two windows the grammar page happened to show both sit under it — so the squared-paper family shipped ruled every TWO units, uncountable, with every check green. A contract only covers the failures it has a case for.",
+ "cases": [
+  {
+   "id": "fn-0",
+   "family": "fn",
+   "familyName": "Function graphs",
+   "decision": "Open, with a grid only when the question needs one",
+   "label": "reading: shape",
+   "kind": "plot",
+   "spec": {
+    "xRange": [
+     -0.7,
+     4.7
+    ],
+    "yRange": [
+     -1.6,
+     5
+    ],
+    "xLabel": "x",
+    "yLabel": "y",
+    "curves": [
+     {
+      "points": [
+       [
+        -0.6,
+        -1.592
+       ],
+       [
+        -0.4,
+        -0.541
+       ],
+       [
+        -0.2,
+        0.317
+       ],
+       [
+        0.0,
+        1.0
+       ],
+       [
+        0.2,
+        1.523
+       ],
+       [
+        0.4,
+        1.901
+       ],
+       [
+        0.6,
+        2.152
+       ],
+       [
+        0.8,
+        2.291
+       ],
+       [
+        1.0,
+        2.333
+       ],
+       [
+        1.2,
+        2.296
+       ],
+       [
+        1.4,
+        2.195
+       ],
+       [
+        1.6,
+        2.045
+       ],
+       [
+        1.8,
+        1.864
+       ],
+       [
+        2.0,
+        1.667
+       ],
+       [
+        2.2,
+        1.469
+       ],
+       [
+        2.4,
+        1.288
+       ],
+       [
+        2.6,
+        1.139
+       ],
+       [
+        2.8,
+        1.037
+       ],
+       [
+        3.0,
+        1.0
+       ],
+       [
+        3.2,
+        1.043
+       ],
+       [
+        3.4,
+        1.181
+       ],
+       [
+        3.6,
+        1.432
+       ],
+       [
+        3.8,
+        1.811
+       ],
+       [
+        4.0,
+        2.333
+       ],
+       [
+        4.2,
+        3.016
+       ],
+       [
+        4.4,
+        3.875
+       ],
+       [
+        4.6,
+        4.925
+       ]
+      ]
+     }
+    ],
+    "figures": [
+     {
+      "mode": "curve"
+     }
+    ],
+    "frame": "graph"
+   },
+   "reading": "shape"
+  },
+  {
+   "id": "fn-1",
+   "family": "fn",
+   "familyName": "Function graphs",
+   "decision": "Open, with a grid only when the question needs one",
+   "label": "reading: value",
+   "kind": "plot",
+   "spec": {
+    "xRange": [
+     -0.7,
+     4.7
+    ],
+    "yRange": [
+     -1.6,
+     5
+    ],
+    "xLabel": "x",
+    "yLabel": "y",
+    "curves": [
+     {
+      "points": [
+       [
+        -0.6,
+        -1.592
+       ],
+       [
+        -0.4,
+        -0.541
+       ],
+       [
+        -0.2,
+        0.317
+       ],
+       [
+        0.0,
+        1.0
+       ],
+       [
+        0.2,
+        1.523
+       ],
+       [
+        0.4,
+        1.901
+       ],
+       [
+        0.6,
+        2.152
+       ],
+       [
+        0.8,
+        2.291
+       ],
+       [
+        1.0,
+        2.333
+       ],
+       [
+        1.2,
+        2.296
+       ],
+       [
+        1.4,
+        2.195
+       ],
+       [
+        1.6,
+        2.045
+       ],
+       [
+        1.8,
+        1.864
+       ],
+       [
+        2.0,
+        1.667
+       ],
+       [
+        2.2,
+        1.469
+       ],
+       [
+        2.4,
+        1.288
+       ],
+       [
+        2.6,
+        1.139
+       ],
+       [
+        2.8,
+        1.037
+       ],
+       [
+        3.0,
+        1.0
+       ],
+       [
+        3.2,
+        1.043
+       ],
+       [
+        3.4,
+        1.181
+       ],
+       [
+        3.6,
+        1.432
+       ],
+       [
+        3.8,
+        1.811
+       ],
+       [
+        4.0,
+        2.333
+       ],
+       [
+        4.2,
+        3.016
+       ],
+       [
+        4.4,
+        3.875
+       ],
+       [
+        4.6,
+        4.925
+       ]
+      ]
+     }
+    ],
+    "figures": [
+     {
+      "mode": "curve"
+     }
+    ],
+    "frame": "graph"
+   },
+   "reading": "value"
+  },
+  {
+   "id": "geo-0",
+   "family": "geo",
+   "familyName": "Coordinate geometry",
+   "decision": "Squared paper",
+   "label": "vertices on integers",
+   "kind": "plot",
+   "spec": {
+    "xRange": [
+     -1,
+     7.5
+    ],
+    "yRange": [
+     -1,
+     9.4
+    ],
+    "xLabel": "x",
+    "yLabel": "y",
+    "curves": [
+     {
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        6,
+        0
+       ],
+       [
+        6,
+        8
+       ],
+       [
+        0,
+        0
+       ]
+      ]
+     }
+    ],
+    "figures": [
+     {
+      "mode": "polygon",
+      "labels": [
+       "",
+       "A",
+       "B"
+      ]
+     }
+    ],
+    "frame": "plane"
+   },
+   "reading": null
+  },
+  {
+   "id": "geo-1",
+   "family": "geo",
+   "familyName": "Coordinate geometry",
+   "decision": "Squared paper",
+   "label": "a vertex on a half",
+   "kind": "plot",
+   "spec": {
+    "xRange": [
+     -1,
+     7.5
+    ],
+    "yRange": [
+     -1,
+     9.4
+    ],
+    "xLabel": "x",
+    "yLabel": "y",
+    "curves": [
+     {
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        6,
+        0
+       ],
+       [
+        6,
+        7.5
+       ],
+       [
+        0,
+        0
+       ]
+      ]
+     }
+    ],
+    "figures": [
+     {
+      "mode": "polygon",
+      "labels": [
+       "",
+       "A",
+       "B"
+      ]
+     }
+    ],
+    "frame": "plane"
+   },
+   "reading": null
+  },
+  {
+   "id": "data-0",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native",
+   "label": "reading: shape",
+   "kind": "plot",
+   "spec": {
+    "xRange": [
+     0,
+     9
+    ],
+    "yRange": [
+     0,
+     160
+    ],
+    "xLabel": "Practice tests completed",
+    "yLabel": "Score gain",
+    "curves": [
+     {
+      "points": [
+       [
+        1,
+        40
+       ],
+       [
+        2,
+        60
+       ],
+       [
+        3,
+        50
+       ],
+       [
+        4,
+        90
+       ],
+       [
+        5,
+        110
+       ],
+       [
+        6,
+        100
+       ],
+       [
+        7,
+        140
+       ],
+       [
+        8,
+        150
+       ]
+      ]
+     }
+    ],
+    "figures": [
+     {
+      "mode": "scatter"
+     }
+    ],
+    "frame": "data"
+   },
+   "reading": "shape"
+  },
+  {
+   "id": "data-1",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native",
+   "label": "reading: value",
+   "kind": "plot",
+   "spec": {
+    "xRange": [
+     0,
+     9
+    ],
+    "yRange": [
+     0,
+     160
+    ],
+    "xLabel": "Practice tests completed",
+    "yLabel": "Score gain",
+    "curves": [
+     {
+      "points": [
+       [
+        1,
+        40
+       ],
+       [
+        2,
+        60
+       ],
+       [
+        3,
+        50
+       ],
+       [
+        4,
+        90
+       ],
+       [
+        5,
+        110
+       ],
+       [
+        6,
+        100
+       ],
+       [
+        7,
+        140
+       ],
+       [
+        8,
+        150
+       ]
+      ]
+     }
+    ],
+    "figures": [
+     {
+      "mode": "scatter"
+     }
+    ],
+    "frame": "data"
+   },
+   "reading": "value"
+  },
+  {
+   "id": "nl-0",
+   "family": "nl",
+   "familyName": "Number lines",
+   "decision": "Statement, with adaptive tick density",
+   "label": "endpoint on an integer",
+   "kind": "number_line",
+   "spec": {
+    "min": -6,
+    "max": 6,
+    "segments": [
+     {
+      "from": -2,
+      "to": 6,
+      "fromClosed": true,
+      "toClosed": true
+     }
+    ]
+   },
+   "reading": null
+  },
+  {
+   "id": "nl-1",
+   "family": "nl",
+   "familyName": "Number lines",
+   "decision": "Statement, with adaptive tick density",
+   "label": "endpoint on a half",
+   "kind": "number_line",
+   "spec": {
+    "min": -6,
+    "max": 6,
+    "segments": [
+     {
+      "from": -2.5,
+      "to": 6,
+      "fromClosed": false,
+      "toClosed": true
+     }
+    ]
+   },
+   "reading": null
+  },
+  {
+   "id": "table-0",
+   "family": "table",
+   "familyName": "Tables",
+   "decision": "Boxed, with a header band",
+   "label": "the decided table",
+   "kind": "table",
+   "spec": {
+    "headers": [
+     "Plan",
+     "Monthly",
+     "Sessions"
+    ],
+    "rows": [
+     [
+      "Starter",
+      "120",
+      "4"
+     ],
+     [
+      "Standard",
+      "200",
+      "8"
+     ],
+     [
+      "Intensive",
+      "340",
+      "16"
+     ]
+    ]
+   },
+   "reading": null
+  },
+  {
+   "id": "data-2",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native",
+   "label": "the same family as a bar chart",
+   "kind": "chart",
+   "spec": {
+    "chartType": "bar",
+    "categories": [
+     "Mon",
+     "Tue",
+     "Wed",
+     "Thu",
+     "Fri"
+    ],
+    "series": [
+     {
+      "name": "Minutes",
+      "values": [
+       35,
+       50,
+       45,
+       70,
+       60
+      ]
+     }
+    ],
+    "xLabel": "Day",
+    "yLabel": "Minutes practised"
+   },
+   "reading": "value"
+  },
+  {
+   "id": "geo-2",
+   "family": "geo",
+   "familyName": "Coordinate geometry",
+   "decision": "Squared paper",
+   "label": "a window past nine units across",
+   "kind": "plot",
+   "reading": null,
+   "spec": {
+    "frame": "plane",
+    "xRange": [
+     0,
+     9.5
+    ],
+    "yRange": [
+     -1,
+     9
+    ],
+    "xLabel": "x",
+    "yLabel": "y",
+    "figures": [
+     {
+      "mode": "polygon",
+      "labels": [
+       "",
+       "A",
+       "B"
+      ]
+     }
+    ],
+    "curves": [
+     {
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        8,
+        0
+       ],
+       [
+        8,
+        6
+       ],
+       [
+        0,
+        0
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}
