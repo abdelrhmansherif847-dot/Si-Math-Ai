@@ -1,0 +1,264 @@
+/* Si Math AI — THE EXAM SURFACE
+ *
+ * ✍️ THE ONE STYLESHEET for a question-based exam. It dresses two shipped
+ *    modules that deliberately set no colours of their own:
+ *
+ *      exam-stimulus.js  the figure language   .sx-*
+ *      exam-chrome.js    navigator and timer   .xc-*
+ *
+ *    plus the page furniture around them. The calculator panel is NOT here:
+ *    exam-calculator-launcher.js injects its own, so the workspace styling
+ *    travels with the code that builds it.
+ *
+ * WHY IT EXISTS
+ * -------------
+ * Both renderers say the same thing in their headers — "appearance lives in
+ * CSS, not here" — and until now there was nowhere for it to live. Every
+ * `.sx-*` rule in the repository sat inside a preview BUILDER, eight of them,
+ * each with its own copy, ranging from nine rules to twenty-nine. That is the
+ * two-copies problem in the presentation layer, and a shipped page that grew a
+ * ninth copy would have been the worst one, because it is the one a student
+ * sees.
+ *
+ * The exploration builders keep their own treatments on purpose — showing a
+ * figure four ways is what they are for. This file is what SHIPS, and
+ * scripts/check-exam-surface-css.cjs fails if the renderers grow a class it
+ * does not dress.
+ *
+ * THREE THEME STATES, not two: an explicit choice stamps data-theme, and the
+ * default setting stamps nothing, so prefers-color-scheme has to be handled on
+ * its own and the explicit light choice has to win over it.
+ */
+
+:root {
+  --page:#eef1f5; --exam:#ffffff; --rule:#dde3ea;
+  --ink:#111820; --ink-2:#445264; --ink-3:#6b7a8c;
+  --cyan:#0f6f9e; --cyan-soft:rgba(15,111,158,.09); --cyan-line:rgba(15,111,158,.3);
+  --shadow:0 1px 2px rgba(17,24,32,.05),0 12px 32px -18px rgba(17,24,32,.3);
+  --flag:#8a5a00; --flag-soft:rgba(138,90,0,.14);
+  --low:#a33a20;  --low-soft:rgba(163,58,32,.10);
+  --good:#1c6b4a; --good-soft:rgba(28,107,74,.10);
+  --fig-ink:#111820; --fig-axis:#3b4756; --fig-num:#2a3644;
+  --fig-grid:#848d99; --fig-fine:#c7d0da;
+  --font-display:'DM Sans',system-ui,-apple-system,sans-serif;
+  --font-serif:'Newsreader',Georgia,serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+
+  /* Aliases for exam-calculator-launcher.js, which styles itself against
+     mock-exam.html's token names. Mapping them here is what makes the launcher
+     look native on this page instead of falling back to its own literals. */
+  --bg-card:var(--exam); --text:var(--ink); --text-dim:var(--ink-3);
+  --border-soft:var(--rule); --green:var(--good); --amber:var(--flag);
+  --amber-soft:var(--flag-soft);
+}
+@media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
+  --page:#080c11; --exam:#161d25; --rule:#26313d;
+  --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
+  --cyan:#38bdf8; --cyan-soft:rgba(56,189,248,.13); --cyan-line:rgba(56,189,248,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px -18px rgba(0,0,0,.9);
+  --flag:#e0b062; --flag-soft:rgba(224,176,98,.16);
+  --low:#e08165;  --low-soft:rgba(224,129,101,.14);
+  --good:#63c39a; --good-soft:rgba(99,195,154,.13);
+  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
+  --fig-grid:#6b768a; --fig-fine:#333f4e;
+} }
+:root[data-theme="dark"] {
+  --page:#080c11; --exam:#161d25; --rule:#26313d;
+  --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
+  --cyan:#38bdf8; --cyan-soft:rgba(56,189,248,.13); --cyan-line:rgba(56,189,248,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px -18px rgba(0,0,0,.9);
+  --flag:#e0b062; --flag-soft:rgba(224,176,98,.16);
+  --low:#e08165;  --low-soft:rgba(224,129,101,.14);
+  --good:#63c39a; --good-soft:rgba(99,195,154,.13);
+  --fig-ink:#eef3f9; --fig-axis:#b9c7d6; --fig-num:#cfdae6;
+  --fig-grid:#6b768a; --fig-fine:#333f4e;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font:16.5px/1.6 var(--font-display);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+/* ══ page furniture ═══════════════════════════════════════════════════════ */
+.ex-shell{max-width:1180px;margin:0 auto;padding:0 22px 96px}
+.ex-bar{display:flex;align-items:center;gap:16px;padding:14px 0;
+  border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--page);z-index:40}
+.ex-id{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:600;white-space:nowrap}
+.ex-sp{flex:1}
+.ex-note{font-size:13.5px;color:var(--ink-3)}
+.ex-card{background:var(--exam);border:1px solid var(--rule);border-radius:6px;
+  box-shadow:var(--shadow);padding:34px 38px 36px;margin:26px auto 0;max-width:780px}
+.ex-mid{max-width:640px;margin:16vh auto 0;text-align:center}
+.ex-mid h1{font-size:26px;margin:0 0 12px}
+.ex-mid p{color:var(--ink-2);margin:0 0 18px}
+.ex-btn{background:var(--cyan);border:1px solid var(--cyan);color:#fff;border-radius:5px;
+  padding:11px 22px;font-size:15px;font-weight:600}
+.ex-btn:hover{filter:brightness(1.07)}
+.ex-btn.ghost{background:none;color:var(--ink-2);border-color:var(--rule)}
+.ex-btn.ghost:hover{border-color:var(--cyan-line);color:var(--cyan);filter:none}
+.ex-btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.ex-nav{display:flex;align-items:center;gap:14px;max-width:780px;margin:22px auto 0}
+.ex-nav .ex-sp{flex:1}
+
+/* The question itself. `stem` is the prose; italics are the maths convention. */
+.ex-qn{font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 16px;
+  display:flex;align-items:center;gap:12px}
+.ex-flag{margin-left:auto;background:none;border:1px solid var(--rule);border-radius:4px;
+  padding:5px 11px;font-size:12px;font-weight:600;color:var(--ink-3);letter-spacing:0;
+  text-transform:none;font-family:var(--font-display)}
+.ex-flag:hover{border-color:var(--flag);color:var(--flag)}
+.ex-flag.is-on{background:var(--flag-soft);border-color:var(--flag);color:var(--flag)}
+.ex-stem{font-size:17.5px;line-height:1.55;margin:0 0 24px}
+.ex-stem i,.ex-stem em{font-family:var(--font-serif);font-style:italic;font-size:1.06em}
+.ex-fig{margin:0 0 26px;overflow-x:auto}
+.ex-opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ex-opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font-size:16.5px;
+  border:1px solid #8792a0;border-radius:4px;padding:12px 16px;background:none}
+.ex-opt:hover{border-color:var(--cyan)}
+.ex-opt.is-picked{border-color:var(--cyan);background:var(--cyan-soft);font-weight:600}
+.ex-opt .k{flex:none;width:27px;height:27px;border-radius:50%;border:1.4px solid #8792a0;
+  display:grid;place-items:center;font-size:13.5px;font-weight:600}
+.ex-opt.is-picked .k{background:var(--cyan);border-color:var(--cyan);color:#fff}
+.ex-grid-in{width:100%;max-width:260px;font:inherit;font-family:var(--font-mono);font-size:17px;
+  padding:12px 14px;border:1px solid #8792a0;border-radius:4px;
+  background:var(--page);color:var(--ink)}
+.ex-grid-in:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 3px var(--cyan-soft)}
+.ex-hint{font-size:13px;color:var(--ink-3);margin:10px 0 0}
+
+/* Review only — never rendered while a module is running. */
+.ex-row{display:flex;gap:14px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--rule)}
+.ex-row:last-child{border-bottom:none}
+.ex-row .n{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-3);flex:none;width:74px}
+.ex-mark{font-size:12px;font-weight:700;border-radius:3px;padding:2px 8px;flex:none}
+.ex-mark.ok{background:var(--good-soft);color:var(--good)}
+.ex-mark.no{background:var(--low-soft);color:var(--low)}
+.ex-banner{border:1px solid var(--rule);border-left:3px solid var(--flag);border-radius:5px;
+  background:var(--exam);padding:12px 16px;margin:18px auto 0;max-width:780px;
+  font-size:13.5px;color:var(--ink-2)}
+.ex-banner b{color:var(--ink)}
+.ex-pick{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 0;justify-content:center}
+.ex-pick button{background:var(--exam);border:1px solid var(--rule);border-radius:5px;
+  padding:9px 16px;font-size:14px;font-weight:600}
+.ex-pick button:hover{border-color:var(--cyan);color:var(--cyan)}
+.ex-pick button.on{border-color:var(--cyan);background:var(--cyan-soft);color:var(--cyan)}
+
+/* ══ TIMER — exam-chrome.js ═══════════════════════════════════════════════
+   Prominent by weight, not decoration. Low time is colour and border, never
+   motion: a pulsing clock is the pressure the hide control exists to relieve. */
+.xc-timer{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;border-radius:5px;
+  border:1px solid var(--rule);background:var(--exam)}
+.xc-t-face{font-family:var(--font-mono);font-weight:600;font-size:19px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;color:var(--ink)}
+.xc-t-hidden{display:none;font-size:13.5px;color:var(--ink-3)}
+.xc-timer.is-hidden .xc-t-face{display:none}
+.xc-timer.is-hidden .xc-t-hidden{display:inline}
+.xc-timer.is-low{border-color:var(--low);background:var(--low-soft)}
+.xc-timer.is-low .xc-t-face{color:var(--low)}
+.xc-t-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+  padding:5px 8px;border-radius:4px;font-size:12.5px;font-weight:600;color:var(--ink-3)}
+.xc-t-toggle:hover{background:var(--cyan-soft);color:var(--cyan)}
+.xc-t-toggle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ══ NAVIGATOR — exam-chrome.js ═══════════════════════════════════════════
+   Four states, told apart by SHAPE as well as colour so the grid survives a
+   colour-vision difference. Only the current chip carries a ring. */
+.xc-nav{position:relative}
+.xc-n-toggle{display:flex;align-items:center;gap:9px;background:var(--exam);
+  border:1px solid var(--rule);border-radius:5px;padding:8px 14px;font-size:14.5px;font-weight:600}
+.xc-n-toggle:hover{border-color:var(--cyan-line)}
+.xc-n-label{white-space:nowrap}
+.xc-n-caret{width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;
+  border-top:5px solid var(--ink-3);transition:transform .15s}
+.xc-nav.is-open .xc-n-caret{transform:rotate(180deg)}
+.xc-n-panel{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:60;
+  background:var(--exam);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);
+  padding:16px 18px;min-width:330px}
+.xc-nav.is-open .xc-n-panel{display:block}
+.xc-n-legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:12px;
+  border-bottom:1px solid var(--rule)}
+.xc-lg{font-size:11.5px;color:var(--ink-3);display:inline-flex;align-items:center;gap:6px}
+.xc-lg::before{content:'';width:13px;height:13px;border-radius:3px;border:1.4px solid #8792a0}
+.xc-lg-cur::before{background:var(--cyan);border-color:var(--cyan);
+  box-shadow:0 0 0 2px var(--exam),0 0 0 3.6px var(--cyan)}
+.xc-lg-ans::before{background:var(--ink-2);border-color:var(--ink-2)}
+.xc-lg-flag::before{background:var(--flag-soft);border-color:var(--flag);
+  clip-path:polygon(0 0,100% 0,100% 62%,62% 100%,0 100%)}
+.xc-lg-un::before{background:none}
+.xc-n-grid{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}
+.xc-q{width:100%;aspect-ratio:1;min-width:26px;border-radius:4px;border:1.4px solid #8792a0;
+  background:none;font-family:var(--font-mono);font-size:12.5px;font-weight:500;color:var(--ink-2);
+  display:grid;place-items:center;padding:0}
+.xc-q:hover{border-color:var(--cyan)}
+.xc-q-unseen{background:none}
+.xc-q-answered{background:var(--ink-2);border-color:var(--ink-2);color:var(--exam)}
+.xc-q-flagged{background:var(--flag-soft);border-color:var(--flag);color:var(--flag);font-weight:700;
+  clip-path:polygon(0 0,100% 0,100% 62%,62% 100%,0 100%)}
+.xc-q.is-current{background:var(--cyan);border-color:var(--cyan);color:#fff;font-weight:700;
+  box-shadow:0 0 0 2px var(--exam),0 0 0 4px var(--cyan);clip-path:none}
+
+/* ══ FIGURES — exam-stimulus.js ═══════════════════════════════════════════
+   The renderer sets no colour at all. Everything a figure looks like is here,
+   which is what lets one grammar serve light, dark, exam and review. */
+.sx{display:block;margin:0}
+.sx-frame{fill:none;stroke:var(--rule);stroke-width:1}
+.sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
+.sx-grid line.sx-major{stroke-width:1.6}
+.sx-grid line.sx-fine{stroke:var(--fig-fine)}
+.sx-axis line{stroke:var(--fig-axis);stroke-width:1.2;stroke-linecap:butt}
+.sx-axis-base{stroke:var(--fig-axis);stroke-width:1.2}
+.sx-arrow{fill:var(--fig-axis)}
+.sx-ray-arrow{fill:var(--fig-ink)}
+.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
+.sx-tick text{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;
+  font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;
+  stroke-linejoin:round}
+.sx-axis-tip{fill:var(--fig-axis);font-family:var(--font-serif);font-style:italic;
+  font-weight:600;font-size:15px}
+.sx-axis-title{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px}
+.sx-ylab{font-weight:500}
+/* One figure has nothing to be told apart FROM, so a lone series is drawn in
+   ink; hue is spent only where it distinguishes. */
+.sx-series{color:var(--fig-ink)}
+.sx-solo .sx-series{color:var(--fig-ink)}
+.sx-s1{color:var(--fig-ink)}
+.sx-s2{color:var(--cyan)}
+.sx-s3{color:var(--flag)}
+.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
+.sx-dashed{stroke-dasharray:7 6;stroke-width:2.2}
+.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:2}
+.sx-point-named{stroke-width:2.4}
+.sx-bar{fill:currentColor}
+.sx-label{fill:var(--fig-ink);font-family:var(--font-display);font-size:13px;font-weight:600;
+  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round;
+  text-anchor:middle}
+.sx-vertex{font-family:var(--font-serif);font-style:italic;font-size:15px;font-weight:600}
+.sx-direct{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;font-weight:600;
+  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
+
+/* Number line. Open vs closed is SEMANTIC — it is < against <= — so the two
+   endpoints must never be told apart by colour alone. */
+.sx-nl-axis line{stroke:var(--fig-axis);stroke-width:1.4}
+.sx-nl-tick{stroke:var(--fig-axis);stroke-width:1.2;shape-rendering:crispEdges}
+.sx-nl-minor{stroke:var(--fig-fine);stroke-width:1;shape-rendering:crispEdges}
+.sx-nl-seg{stroke:currentColor;stroke-width:6;stroke-linecap:butt}
+.sx-nl-drop{stroke:var(--fig-fine);stroke-width:1.2;stroke-dasharray:3 3}
+.sx-endpoint{stroke:currentColor;stroke-width:2.6}
+.sx-closed{fill:currentColor}
+.sx-open{fill:var(--exam)}
+
+/* Tables are content, not containers: a rule under the header, numerals
+   aligned right so a column can be read down, and nothing else. */
+.sx-table-wrap{overflow-x:auto;margin:0}
+.sx-table{border-collapse:collapse;font-size:15.5px;min-width:min(100%,320px)}
+.sx-table th,.sx-table td{padding:9px 18px 9px 0;text-align:left;
+  border-bottom:1px solid var(--rule)}
+.sx-table th{font-weight:600;font-size:13.5px;color:var(--ink-2);
+  border-bottom:1.4px solid var(--fig-axis)}
+.sx-table .sx-th-num,.sx-table .sx-num{text-align:right;padding-right:0;
+  font-variant-numeric:tabular-nums}
+.sx-table td.sx-num{font-family:var(--font-mono);font-size:14.5px}
+.sx-note{font-size:12.5px;color:var(--ink-3);margin:8px 0 0}

@@ -419,6 +419,13 @@ function drawPlot(spec, opts) {
   // distance from O"). It sits in the one corner the numerals deliberately
   // leave empty, so labelling it costs nothing.
   const originAt = opts.originLabel && showX && showY ? [X(0), Y(0)] : null;
+  // Set when the AUTHOR has already named a vertex sitting at the origin. The
+  // automatic origin label exists because most geometry stems say "triangle
+  // OAB" and the corner is empty anyway — but a figure whose first vertex IS
+  // the origin and is labelled 'O' then got two of them, one from each source,
+  // a few pixels apart. Found on the first question ever rendered from the
+  // Spine, which is what a review surface is for.
+  let originNamed = false;
   s.appendChild(ax);
 
   // The axis tip labels (x and y) sit at the ends of the axes, and the OUTERMOST
@@ -517,13 +524,16 @@ function drawPlot(spec, opts) {
         }
         if (!put) put = [px + Math.cos(want) * 17, py + Math.sin(want) * 17];
         taken.push(box(put[0], put[1], w + 3, LAB));
+        if (Math.abs(p[0]) < 1e-9 && Math.abs(p[1]) < 1e-9) originNamed = true;
         g.appendChild(label(put[0], put[1] + LAB / 3, f.labels[j], 'sx-vertex'));
       });
     }
     s.appendChild(g);
   });
 
-  if (originAt) {
+  // The author's label wins. Two names for one point is worse than none: a
+  // student reading "triangle OAB" has to decide which O the stem means.
+  if (originAt && !originNamed) {
     const w = opts.originLabel.length * LAB * .62;
     let put = null;
     for (const a of [Math.PI * 0.75, Math.PI * 1.25, Math.PI * 0.5, Math.PI]) {

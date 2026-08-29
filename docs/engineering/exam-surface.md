@@ -215,3 +215,110 @@ Checked, not asserted: **nothing in the top bar or the question card animates**,
 the page never scrolls sideways, and every text colour clears 4.5:1 on the exam
 surface in both themes. The tools are one click away and none of them competes
 with the mathematics.
+
+---
+
+## The delivery surface — `exams.html`
+
+**Built 2026-08-29.** The question-based exam: real items and figures read from
+the Question Spine, MCQ and grid-in answers, module timing, adaptive routing and
+marking. `mock-exam.html` is untouched and stays what it is — the timer a
+student runs alongside a paper or Bluebook exam, which delivers no questions.
+
+### What is reused, and what is new
+
+| | |
+|---|---|
+| **Reused, unchanged** | `exam-stimulus.js` (figures, from `spec.frame`/`figures[]` + `question.reading`) · `exam-chrome.js` (navigator, hideable timer) · `exam-calculator.js` + `exam-workspace.js` + `exam-calculator-config.js` + `exam-calculator-launcher.js` + the three providers · `exam-registry.js` · `preflight-exam-form.mjs` |
+| **New — the flow** | `exam-delivery.js`, a state machine with no DOM and no network |
+| **New — the data** | `exam-form-source.js`, the only thing that reads the Spine |
+| **New — the look** | `exam-surface.css`, the first shipped home for the `.sx-*` and `.xc-*` languages |
+| **New — the page** | `exams.html`: auth gate, screens, composition. No exam logic. |
+
+`exam-surface.css` closed a second two-copies problem. Both renderers say in
+their headers that they set no colours — which is what lets one grammar serve
+light, dark, exam and review — and until now every `.sx-*` rule in the
+repository lived inside a preview **builder**, eight of them, nine to
+twenty-nine rules each. A shipped page growing a ninth copy would have been the
+worst one. `scripts/validate-exam-surface-css.mjs` now fails if the renderers
+emit a class the sheet does not dress; the exploration builders keep their own
+treatments, which is what they are for.
+
+### Generic by construction
+
+Nothing in `exam-delivery.js` or `exams.html` names DSAT. The engine reads
+sections in ordinal order, handles any number of them, and treats a variant-
+bearing ordinal as one stage with options. A second form needs no second page.
+
+### Two things it refuses to do
+
+**No routing threshold.** `exam-registry.js` records routing as adaptive-READY
+and inert, because no cut score has been set: *"naming a path would imply a
+measurement we are not making."* So the engine takes a `route` callback and
+never a default, and a session with no route says `routeChosen: false` rather
+than pretending. On the review surface the reviewer chooses, from a control
+labelled as review-only — a form with two Module 2 variants cannot be reviewed
+by sitting one of them.
+
+**No score on the break screen.** The state machine returns an empty `results`
+array in any phase but `DONE`, so the screen could not print a score if it
+tried. A student learns neither their Module 1 score nor which Module 2 they
+were given; a break screen that revealed either would teach them to read their
+own routing, which is a different exam from the one being simulated. The module
+is named by its `label` throughout — never by `variantId`.
+
+### The calculator, at the section level
+
+`exams.html` emits one empty `[data-si-calculator-slot]` and nothing else. Two
+independent gates decide whether anything appears in it:
+
+```
+exam_form_sections.calculator_allowed   the SECTION's policy — no slot at all when false
+exam-registry.js  calculator.provider   WHICH tool — null on every exam today
+```
+
+Both are needed. Both DSAT sections allow one, so the slot is emitted on every
+module of `DSAT-2026-A` — and stays empty, because no exam names a provider and
+`scripts/validate-desmos-activation.mjs` still refuses to let one be named until
+the render is proven and Desmos confirms commercial use. Nothing on this page
+can widen that; it contributes a slot, not a decision.
+
+### Why it is admin-only, and what would change that
+
+All four Spine tables are RLS-gated to `has_role_at_least('admin')`, so a
+signed-in student reaching this URL sees an empty library rather than an exam —
+measured, not assumed: `dsat-form-a-import.md` §5. That is the right posture for
+a surface whose job today is reviewing a DRAFT form on the real stored rows.
+
+Making it student-facing is **not** a change to this page. It is a separately
+approved, published-only read model that excludes `correct_answer` — the M3
+migration says so on the column itself. `exam-form-source.js` already takes
+`withAnswers: false` and returns the same form without the key, so the seam is
+real rather than promised.
+
+### What the browser check proves, and what it does not
+
+`scripts/check-exams-page.cjs` drives the page over the production CSP against
+an export of the actual Spine rows: 24 checks, including that every one of the
+44 questions sat is **visible on screen** (computed colour against computed
+background — the white-on-white defect that passed a DOM check in the first
+preview), that all nine Module 1 figures draw, that the navigator's four states
+are each reached, and that the break screen carries no score-shaped number and
+no variant name.
+
+It stubs the Supabase client, so it checks the page and not the network: the
+auth and RLS path is exercised by a person opening the page signed in. And this
+sandbox has no route to `cdn.jsdelivr.net` — the gateway answers 403 to CONNECT
+— so KaTeX does not load and `$maths$` stays literal in that run. The check says
+so in its own output rather than leaving it to be discovered.
+
+### A defect it caught immediately
+
+The first question ever rendered from the production Spine — a plane plot whose
+triangle starts at the origin, labelled O, A, B — drew **two** letter O's a few
+pixels apart: one from the author's vertex labels and one from the renderer's
+automatic origin label, which exists because most geometry stems name the
+origin. "Triangle OAB" stopped saying which O it meant. Fixed in the shared
+renderer (the author's label wins), covered by a test in both directions, and
+found by looking at the pixels — which is the rule
+`student-facing-rendering-validation.md` §6 exists to state.

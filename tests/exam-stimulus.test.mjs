@@ -407,6 +407,32 @@ t.section('a figure is drawn from the row, or not at all');
        ruled(value) > 0);
 }
 
+t.section('one point never carries two names');
+{
+  // Found on the first question ever rendered from the production Spine: a
+  // plane plot whose triangle starts at the origin and is labelled O, A, B.
+  // The renderer adds its own 'O' because most geometry stems name the origin —
+  // so the corner got two, a few pixels apart, and "triangle OAB" stopped
+  // saying which one it meant.
+  const tri = { id: 'st', kind: 'plot', spec: {
+    frame: 'plane', xRange: [-1, 6], yRange: [-1, 5],
+    curves: [{ points: [[0, 0], [4, 0], [4, 3], [0, 0]] }],
+    figures: [{ mode: 'polygon', labels: ['O', 'A', 'B'] }] } };
+  const named = R.renderForQuestion({ id: 'q' }, tri);
+  const Os = withClass(named, 'sx-vertex').filter(e => e.textContent === 'O');
+  t.is('a vertex the author called O is labelled exactly once', Os.length, 1);
+
+  // …and the automatic label is still drawn when the author named nothing
+  // there, because that is the case it was written for.
+  const unnamed = { id: 'st2', kind: 'plot', spec: {
+    frame: 'plane', xRange: [-1, 6], yRange: [-1, 5],
+    curves: [{ points: [[1, 1], [4, 1], [4, 3], [1, 1]] }],
+    figures: [{ mode: 'polygon', labels: ['P', 'Q', 'R'] }] } };
+  const auto = R.renderForQuestion({ id: 'q' }, unnamed);
+  t.is('an unnamed origin still gets its label',
+       withClass(auto, 'sx-vertex').filter(e => e.textContent === 'O').length, 1);
+}
+
 t.section('the family rule is computed, not chosen per figure');
 {
   // Each row is a family and what it does with the question's reading. The

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Exams · Si Math AI</title>
+
+<!--
+  THE EXAM SURFACE — questions delivered from the Question Spine.
+
+  WHAT THIS PAGE IS, AND WHAT IT IS NOT
+  -------------------------------------
+  This is the question-based exam: real items, real figures, answers, module
+  timing and routing. It is NOT mock-exam.html, which times a student sitting a
+  paper or Bluebook exam alongside it and delivers no questions. That page is
+  frozen, is in use today, and is untouched by any of this.
+
+  IT IS AN ADMIN REVIEW SURFACE TODAY, BY DESIGN
+  ----------------------------------------------
+  All four Spine tables are RLS-gated to has_role_at_least('admin'). A signed-in
+  student holds the SELECT grant and sees zero rows — measured, not assumed:
+  docs/engineering/dsat-form-a-import.md §5. So a reviewer can sit a DRAFT form
+  end to end on the real stored rows before anything is published, and a student
+  reaching this URL gets an empty list rather than an exam.
+
+  Making it student-facing is NOT a change to this page. It is a separately
+  approved, published-only read model that excludes correct_answer — the M3
+  migration says so on the column itself.
+
+  ALMOST NOTHING HERE IS NEW
+  --------------------------
+    exam-delivery.js      the flow: modules, routing, answers, marking
+    exam-form-source.js   the only thing that reads the Spine
+    exam-stimulus.js      the figures, drawn from spec.frame/figures + reading
+    exam-chrome.js        the navigator and the hideable timer
+    exam-surface.css      every colour those two deliberately do not set
+    exam-calculator-*.js  the calculator, entirely behind its existing gates
+  This file is the composition, the auth gate and the screens — nothing else.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" referrerpolicy="no-referrer"/>
+<link rel="stylesheet" href="exam-surface.css"/>
+</head>
+<body>
+
+<div class="ex-shell">
+  <div class="ex-bar">
+    <span class="ex-id" id="barId">Exams</span>
+    <span id="navslot"></span>
+    <span class="ex-sp"></span>
+    <span class="ex-note" id="barNote"></span>
+    <span id="calcslot"></span>
+    <span id="timeslot"></span>
+  </div>
+  <div id="view"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" referrerpolicy="no-referrer"></script>
+
+<script src="exam-stimulus.js"></script>
+<script src="exam-chrome.js"></script>
+<script src="exam-delivery.js"></script>
+<script src="exam-form-source.js"></script>
+
+<!-- The calculator, exactly as mock-exam.html loads it. This page contributes
+     one empty element carrying data-si-calculator-slot and nothing else: every
+     decision about whether a calculator may appear lives behind
+     exam-calculator.js's registry gate and the launcher's own checks, and
+     nothing here can widen them. -->
+<script src="exam-registry.js"></script>
+<script src="exam-calculator.js"></script>
+<script src="exam-workspace.js" defer></script>
+<script src="exam-calculator-config.js" defer></script>
+<script src="exam-calculator-launcher.js" defer></script>
+<script src="exam-graph.js" defer></script>
+<script src="exam-graph-zero.js" defer></script>
+<script src="exam-graph-desmos.js" defer></script>
+
+<script>
+'use strict';
+const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPA_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+// The launcher fetches the calculator configuration with THIS session's access
+// token; it reads the client from here rather than making a second one.
+globalThis.SI_EXAM_SUPABASE = sb;
+
+const view   = document.getElementById('view');
+const barId  = document.getElementById('barId');
+const barNote= document.getElementById('barNote');
+const navslot= document.getElementById('navslot');
+const timeslot = document.getElementById('timeslot');
+const calcslot = document.getElementById('calcslot');
+
+let session = null;      // SiExamDelivery session
+let form = null;         // the loaded form
+let nav = null, timer = null, tick = null;
+let forcedVariant = null;   // reviewer override, review-only (see BREAK)
+
+/* ── text ────────────────────────────────────────────────────────────────
+   Item text is authored, but it still arrives as data and is inserted as
+   HTML, so it is escaped first and only then given the two things the
+   authoring format uses: **bold** and $maths$. KaTeX renders the maths after
+   insertion, walking text nodes, which is why escaping cannot break it. */
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const rich = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+function typeset(el) {
+  if (!globalThis.renderMathInElement) return;
+  try {
+    renderMathInElement(el, { throwOnError: false, delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false },
+    ] });
+  } catch (e) { /* a maths error must never take the question down */ }
+}
+const el = (tag, cls, html) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html !== undefined) n.innerHTML = html;
+  return n;
+};
+
+/* ── boot ────────────────────────────────────────────────────────────────── */
+function screenMessage(title, body, action) {
+  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  barNote.textContent = '';
+  view.textContent = '';
+  const wrap = el('div', 'ex-mid');
+  wrap.appendChild(el('h1', null, esc(title)));
+  wrap.appendChild(el('p', null, body));
+  if (action) wrap.appendChild(action);
+  view.appendChild(wrap);
+}
+
+async function boot() {
+  screenMessage('Loading', 'Reading the exam library.');
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  // The CLIENT-side role read is for the message, not for the gate. The gate is
+  // RLS: a non-admin's query returns zero rows whatever this page believes.
+  let role = 'user';
+  try {
+    const r = await sb.from('profiles').select('role, is_admin').eq('id', user.id).single();
+    role = (r.data && r.data.role) || (r.data && r.data.is_admin ? 'admin' : 'user');
+  } catch (e) { /* fall through to the list, which will be empty */ }
+
+  let forms = [];
+  try { forms = await SiExamFormSource.listForms(sb); }
+  catch (e) { screenMessage('Could not read the exam library', esc(e.message)); return; }
+
+  if (!forms.length) {
+    screenMessage('No exams available to you',
+      'The exam library is readable by administrators only. If you are expecting to see a form here, ' +
+      'your account role is <b>' + esc(role) + '</b>.');
+    return;
+  }
+  screenPick(forms);
+}
+
+/* ── PICK ────────────────────────────────────────────────────────────────── */
+function screenPick(forms) {
+  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  barId.textContent = 'Exams'; barNote.textContent = forms.length + ' form(s)';
+  view.textContent = '';
+  const wrap = el('div', 'ex-mid');
+  wrap.appendChild(el('h1', null, 'Choose a form'));
+  wrap.appendChild(el('p', null,
+    'Every form in the Question Spine. A <b>draft</b> form has not been published and is not ' +
+    'available to any student; sitting it here is how it gets reviewed.'));
+  const pick = el('div', 'ex-pick');
+  forms.forEach((f) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<b>' + esc(f.code) + '</b> · ' + esc(f.examCode) + ' · ' + esc(f.status);
+    b.addEventListener('click', () => start(f.code));
+    pick.appendChild(b);
+  });
+  wrap.appendChild(pick);
+  view.appendChild(wrap);
+}
+
+async function start(code) {
+  screenMessage('Loading', 'Reading ' + esc(code) + ' from the Spine.');
+  try { form = await SiExamFormSource.loadForm(sb, code); }
+  catch (e) { screenMessage('Could not load ' + code, esc(e.message)); return; }
+
+  forcedVariant = null;
+  session = SiExamDelivery.create(form, {
+    // The route is the REVIEWER'S, and only when they make one. No threshold is
+    // applied: exam-registry.js records that routing is adaptive-ready and
+    // inert because no cut score has been set, and a number invented here would
+    // bury a standard-setting decision inside a review tool.
+    route: () => forcedVariant,
+  });
+  render();
+  startClock();
+}
+
+/* ── the clock ───────────────────────────────────────────────────────────── */
+function startClock() {
+  stopClock();
+  tick = setInterval(() => {
+    if (!session || session.state().phase !== 'MODULE') return;
+    const s = session.state();
+    if (timer) timer.set(s.remainingSec);
+    if (s.remainingSec <= 0) { stopClock(); session.finishSection(); render(); }
+  }, 250);
+}
+function stopClock() { if (tick) { clearInterval(tick); tick = null; } }
+
+/* ── render ──────────────────────────────────────────────────────────────── */
+function render() {
+  const s = session.state();
+  barId.textContent = form.code + ' · ' + form.examCode;
+  if (s.phase === 'MODULE') return screenModule(s);
+  if (s.phase === 'BREAK')  return screenBreak(s);
+  return screenDone(s);
+}
+
+function screenModule(s) {
+  // The module is named by its LABEL. exam-registry.js is explicit that no
+  // per-variant label exists, "so no screen can leak which path was taken" —
+  // this page never prints s.section.variantId while a module is running.
+  barNote.textContent = s.section.label;
+
+  // Chrome, rebuilt per module because the question count and clock change.
+  navslot.textContent = '';
+  nav = SiExamChrome.Navigator({
+    total: s.total, current: s.number, states: session.navStates(),
+    onJump: (n) => { session.jump(n); render(); },
+  });
+  navslot.appendChild(nav.el);
+
+  const wasHidden = timer && timer.isHidden();
+  timeslot.textContent = '';
+  timer = SiExamChrome.Timer({
+    remaining: s.remainingSec, total: (s.section.durationMinutes || 0) * 60,
+    hidden: !!wasHidden,
+  });
+  timeslot.appendChild(timer.el);
+
+  // THE CALCULATOR SLOT — the only thing this page contributes to it.
+  //
+  // Two independent gates, and this is the first: the SECTION's own policy,
+  // straight off exam_form_sections.calculator_allowed. When it is false the
+  // slot is not emitted at all, so there is nothing for the launcher to fill.
+  // The second gate is the launcher's: it also requires exam-registry.js to
+  // name a provider for this exam, and every exam currently names none.
+  calcslot.textContent = '';
+  if (s.section.calculatorAllowed) {
+    const slot = document.createElement('span');
+    slot.setAttribute('data-si-calculator-slot', form.examCode || '');
+    calcslot.appendChild(slot);
+  }
+
+  view.textContent = '';
+  const card = el('div', 'ex-card');
+
+  const head = el('div', 'ex-qn');
+  head.appendChild(el('span', null, 'Question ' + s.number + ' of ' + s.total));
+  const flag = document.createElement('button');
+  flag.type = 'button';
+  flag.className = 'ex-flag' + (s.flagged ? ' is-on' : '');
+  flag.textContent = s.flagged ? 'Flagged' : 'Flag for review';
+  flag.addEventListener('click', () => { session.toggleFlag(); render(); });
+  head.appendChild(flag);
+  card.appendChild(head);
+
+  // The figure, drawn from the question and its stimulus together. Nothing is
+  // supplied out of band: frame and figures[] come off the stimulus row and the
+  // reading off the question, which is what makes one shared figure render two
+  // ways for the two questions that share it.
+  if (s.question.stimulus) {
+    const box = el('div', 'ex-fig');
+    try {
+      box.appendChild(SiExamStimulus.renderForQuestion(
+        { id: s.question.id, reading: s.question.reading }, s.question.stimulus));
+    } catch (e) {
+      // A figure that cannot be drawn is a content defect, and a reviewer needs
+      // to see WHICH — silently omitting it would hide the very thing this
+      // surface exists to catch.
+      box.appendChild(el('p', 'ex-hint', 'Figure could not be drawn: ' + esc(e.message)));
+    }
+    card.appendChild(box);
+  }
+
+  card.appendChild(el('p', 'ex-stem', rich(s.question.prompt)));
+
+  if (s.question.format === 'mcq' && Array.isArray(s.question.choices)) {
+    const ul = el('ul', 'ex-opts');
+    s.question.choices.forEach((c) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ex-opt' + (s.answer === c.id ? ' is-picked' : '');
+      b.innerHTML = '<span class="k">' + esc(c.id) + '</span><span>' + rich(c.text) + '</span>';
+      b.addEventListener('click', () => { session.answer(c.id); render(); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+    card.appendChild(ul);
+  } else {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'ex-grid-in';
+    inp.value = s.answer || '';
+    inp.setAttribute('aria-label', 'Your answer');
+    inp.addEventListener('input', () => {
+      session.answer(inp.value);
+      if (nav) { const st = session.navStates(); Object.keys(st).forEach((k) => nav.setState(+k, st[k])); }
+    });
+    card.appendChild(inp);
+    card.appendChild(el('p', 'ex-hint', 'Student-produced response — type your answer.'));
+  }
+  view.appendChild(card);
+  typeset(card);
+
+  // Back | Next, always in that order and always in the same place. Nothing in
+  // this row moves between questions.
+  const bar = el('div', 'ex-nav');
+  const back = document.createElement('button');
+  back.type = 'button'; back.className = 'ex-btn ghost'; back.textContent = '← Back';
+  back.disabled = s.number === 1;
+  back.addEventListener('click', () => { session.prev(); render(); });
+  const next = document.createElement('button');
+  next.type = 'button'; next.className = 'ex-btn';
+  next.textContent = s.isLast ? 'Finish module' : 'Next →';
+  next.addEventListener('click', () => {
+    if (s.isLast) { session.finishSection(); render(); }
+    else { session.next(); render(); }
+  });
+  bar.appendChild(back); bar.appendChild(el('span', 'ex-sp')); bar.appendChild(next);
+  view.appendChild(bar);
+}
+
+function screenBreak(s) {
+  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  barNote.textContent = '';
+  view.textContent = '';
+  const wrap = el('div', 'ex-mid');
+  wrap.appendChild(el('h1', null, 'Module complete'));
+  wrap.appendChild(el('p', null,
+    'Take a moment. The next module begins when you are ready.'));
+  // The state machine does not hand this screen a score, so it could not print
+  // one if it tried. On test day a student learns neither their score nor their
+  // route, and a break screen that revealed either would be teaching them to
+  // read their own routing.
+  wrap.appendChild(el('p', 'ex-hint',
+    'Your score and route are deliberately not shown, exactly as on test day.'));
+
+  const go = document.createElement('button');
+  go.type = 'button'; go.className = 'ex-btn'; go.textContent = 'Begin the next module';
+  go.addEventListener('click', () => { session.beginNextSection(); render(); startClock(); });
+  wrap.appendChild(go);
+  view.appendChild(wrap);
+
+  // REVIEW-ONLY, AND LABELLED AS SUCH. A form with two Module 2 variants cannot
+  // be reviewed by sitting one of them, and no cut score exists to route by. So
+  // the reviewer names the path. This control has no student equivalent and is
+  // not a step towards one.
+  const stage = session._stages()[s.stageIndex + 1];
+  if (stage && stage.options.length > 1) {
+    const box = el('div', 'ex-banner');
+    box.appendChild(el('div', null,
+      '<b>Reviewer control — not part of the student experience.</b> ' +
+      'No routing threshold exists: exam-registry.js records routing as ' +
+      'adaptive-ready and inert. Choose which variant to review.'));
+    const pick = el('div', 'ex-pick');
+    stage.options.forEach((o) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = forcedVariant === o.variantId ? 'on' : '';
+      b.textContent = o.variantId || 'default';
+      b.addEventListener('click', () => { forcedVariant = o.variantId; screenBreak(session.state()); });
+      pick.appendChild(b);
+    });
+    box.appendChild(pick);
+    view.appendChild(box);
+  }
+}
+
+function screenDone(s) {
+  stopClock();
+  navslot.textContent = ''; timeslot.textContent = ''; calcslot.textContent = '';
+  barNote.textContent = 'Review';
+  view.textContent = '';
+
+  const card = el('div', 'ex-card');
+  card.appendChild(el('h1', null, 'Exam complete'));
+  s.results.forEach((r) => {
+    card.appendChild(el('p', null,
+      '<b>Module ' + r.ordinal + (r.variantId ? ' · ' + esc(r.variantId) : '') + '</b> — ' +
+      r.correct + ' of ' + r.total + ' correct'));
+  });
+  if (!s.routeChosen) {
+    card.appendChild(el('p', 'ex-hint',
+      'No route was chosen, so the first variant was delivered.'));
+  }
+  view.appendChild(card);
+
+  const list = el('div', 'ex-card');
+  list.appendChild(el('div', 'ex-qn', 'Every question, as answered'));
+  session.review().forEach((r) => {
+    const row = el('div', 'ex-row');
+    row.appendChild(el('span', 'n', esc(r.label) + (r.variantId ? ' · ' + esc(r.variantId) : '') +
+      ' Q' + r.ordinal));
+    row.appendChild(el('span', 'ex-mark ' + (r.correct ? 'ok' : 'no'), r.correct ? 'correct' : 'wrong'));
+    row.appendChild(el('span', null,
+      'answered ' + (r.given === null ? '<i>nothing</i>' : '<b>' + esc(r.given) + '</b>') +
+      ' · key <b>' + esc(r.question.correctAnswer) + '</b>'));
+    list.appendChild(row);
+  });
+  view.appendChild(list);
+
+  const bar = el('div', 'ex-nav');
+  const again = document.createElement('button');
+  again.type = 'button'; again.className = 'ex-btn ghost'; again.textContent = 'Back to the exam library';
+  again.addEventListener('click', () => boot());
+  bar.appendChild(again);
+  view.appendChild(bar);
+}
+
+boot();
+</script>
+</body>
+</html>
