@@ -188,6 +188,44 @@
     nb.addEventListener('click', notationCheck);
     el.appendChild(nb);
 
+    /* AMBIENCE — a test control, and off until it is pressed. The sounds are
+     * synthesised, not recordings (exam-ambience.js), so there is nothing here
+     * to license and nothing to load; the only question it answers is whether
+     * the idea is worth doing properly. "Once" plays a moment immediately,
+     * because the scheduled interval is not something anyone should sit and
+     * wait through to form an opinion. */
+    var amb = document.createElement('button');
+    amb.type = 'button'; amb.className = 'rv-b';
+    amb.setAttribute('data-rv-amb', '');
+    amb.setAttribute('aria-pressed', 'false');
+    amb.textContent = 'Room sound';
+    amb.title = 'Synthesised placeholder ambience — pen, paper, distant whisper';
+    amb.addEventListener('click', function () {
+      var A = root.SiExamAmbience; if (!A) return;
+      var now = A.isOn() ? !A.disable() : A.enable();
+      amb.setAttribute('aria-pressed', String(now));
+      var out = bar && bar.querySelector('[data-rv-out]');
+      if (out) {
+        out.className = 'rv-out';
+        out.textContent = now
+          ? 'Room sound on — a moment now, then every ' + 45 + 's. Synthesised placeholders.'
+          : 'Room sound off.';
+      }
+    });
+    el.appendChild(amb);
+
+    var once = document.createElement('button');
+    once.type = 'button'; once.className = 'rv-b';
+    once.textContent = 'Once';
+    once.title = 'Play one ambience moment now';
+    once.addEventListener('click', function () {
+      var A = root.SiExamAmbience; if (!A) return;
+      var id = A.moment();
+      var out = bar && bar.querySelector('[data-rv-out]');
+      if (out) { out.className = 'rv-out'; out.textContent = id ? 'Played: ' + id : 'No audio available.'; }
+    });
+    el.appendChild(once);
+
     var sp = document.createElement('span'); sp.className = 'rv-sp'; el.appendChild(sp);
     var out = document.createElement('span');
     out.className = 'rv-out'; out.setAttribute('data-rv-out', '');
@@ -220,6 +258,7 @@
     _check: notationCheck,
     _reset: function () {
       installed = false;
+      try { if (root.SiExamAmbience) root.SiExamAmbience.disable(); } catch (e) {}
       if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
       bar = null; current = 'paper';
       var r = document.documentElement;
