@@ -130,8 +130,8 @@
      re-measure DURATION_S, PEAK_DBFS and TRIM together — all three describe
      the same bytes. */
   var DURATION_S = {
-    'voice-1': 4.83, 'voice-2': 4.51, 'voice-3': 5.32, 'voice-4': 6.04,
-    'voice-5': 5.94, 'voice-6': 4.64, 'voice-7': 5.52,
+    'voice-1': 30.55, 'voice-2': 24.44, 'voice-3': 27.97, 'voice-4': 35.34,
+    'voice-5': 17.07, 'voice-6': 15.27, 'voice-7': 16.62,
   };
 
   var voiceTimer = null, voiceIdx = 0, moduleT0 = 0, moduleKey = null;
@@ -208,14 +208,14 @@
      is exact: the spread across all seven is 0.00 dB, where the previous set
      left voice-3 parked 0.9 dB under the group.
 
-     PEAK dBFS   LOUDEST-100ms   TRIM      -> plays at
-      -3.6         -16.2         0.406       -24.0
-      -3.8         -19.4         0.590       -24.0
-      -3.6         -25.4         1.173       -24.0
-      -3.5         -21.9         0.782       -24.0
-      -3.1         -12.9         0.279       -24.0
-      -3.2         -13.7         0.306       -24.0
-      -3.0         -14.4         0.330       -24.0
+     PEAK dBFS   LOUDEST-100ms   TRIM     LENGTH    -> plays at
+      -4.4         -17.1        0.452    30.55s      -24.0
+      -3.2         -17.2        0.459    24.44s      -24.0
+      -3.2         -25.2        1.152    27.97s      -24.0
+      -3.1         -13.4        0.297    35.34s      -24.0
+      -2.7         -12.4        0.263    17.07s      -24.0
+      -3.2         -15.4        0.371    15.27s      -24.0
+      -3.0         -13.4        0.294    16.62s      -24.0
 
      WHY A TRIM AT ALL, when the files are normalised. Because peak is not
      loudness, which is the whole lesson of this layer: these seven still span
@@ -230,12 +230,12 @@
      them because all three describe the same bytes. Re-measure all three
      together if a clip is ever replaced. */
   var TRIM = {
-    'voice-1': 0.406, 'voice-2': 0.590, 'voice-3': 1.173, 'voice-4': 0.782,
-    'voice-5': 0.279, 'voice-6': 0.306, 'voice-7': 0.330,
+    'voice-1': 0.452, 'voice-2': 0.459, 'voice-3': 1.152, 'voice-4': 0.297,
+    'voice-5': 0.263, 'voice-6': 0.371, 'voice-7': 0.294,
   };
   var PEAK_DBFS = {
-    'voice-1': -3.6, 'voice-2': -3.8, 'voice-3': -3.6, 'voice-4': -3.5,
-    'voice-5': -3.1, 'voice-6': -3.2, 'voice-7': -3.0,
+    'voice-1': -4.4, 'voice-2': -3.2, 'voice-3': -3.2, 'voice-4': -3.1,
+    'voice-5': -2.7, 'voice-6': -3.2, 'voice-7': -3.0,
   };
 
   /* The gain at which the first clip's peak would reach 0 dBFS. The reviewer
@@ -247,7 +247,7 @@
      ceiling to reach the group level. Derived, never chosen — the suite
      asserts the hottest clip actually REACHES full scale here, so a rounded
      value fails. One did: 1.06 shipped for a minute and clipped by 0.04 dB. */
-  var SAFE_MAX = 1.29;
+  var SAFE_MAX = 1.25;
 
   var buffers = {}, fetching = {};
 

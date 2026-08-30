@@ -137,19 +137,39 @@ t.is('every free gap is exactly the configured gap',
   [...new Set(freeGaps(m1).concat(freeGaps(m2)))], [180]);
 
 // Even a fixed event, which may come sooner than a full gap, leaves real
-// silence — the deliberate 33:00/34:00 cluster is the tightest case.
+// silence. This used to be a comfortable margin — 57s against a 3s clip —
+// and the 2026-08-30 switch to full-length recordings spent most of it. The
+// two assertions that stood here asserted the OLD margin (a gap five and ten
+// times the longest clip) and both went red, correctly: they described
+// three-second excerpts, not recordings.
 const allGaps = (m) => m.slice(1).map((e, i) => e.at - m[i].endsAt);
+const longest = Math.max(...clips.map((c) => A.durations[c]));
 const tightest = Math.min(...allGaps(m1), ...allGaps(m2));
-t.note(`tightest gap anywhere: ${tightest.toFixed(1)}s`);
-t.ok('even the tightest gap is far longer than any clip',
-  tightest > Math.max(...clips.map((c) => A.durations[c])) * 5);
+t.note(`longest clip ${longest.toFixed(2)}s · tightest gap ${tightest.toFixed(1)}s`);
 
-// The guarantee has to survive a clip being replaced with a much longer one.
-// If someone drops in a 90-second recording, the chain still opens the gap
-// after it ends — but this check is what would fail first if the planner ever
-// went back to a fixed grid.
-t.ok('the gap exceeds the longest clip many times over',
-  180 > Math.max(...clips.map((c) => A.durations[c])) * 10);
+// A free event always gets its full gap of silence, so the gap must clear the
+// longest recording outright.
+t.ok('the gap exceeds the longest recording', 180 > longest);
+
+// THE BINDING CONSTRAINT IS NOW THE 33:00/34:00 CLUSTER. Those two fixed
+// points are 60 seconds apart by explicit instruction, so the longest
+// recording has to fit inside a minute with silence left over. At 35.34s it
+// does, with 24.7s spare — but a 55-second recording added later would
+// overlap, and the no-overlap checks above would only catch it if it happened
+// to land in that pair. This says the real limit out loud.
+const fixedTimes = A.fixedPoints().map((f) => f.at);
+const closestFixed = Math.min(...fixedTimes.slice(1).map((t2, i) => t2 - fixedTimes[i]));
+t.note(`closest two fixed points: ${closestFixed}s apart`);
+t.ok('the longest recording fits between the closest fixed points',
+  longest < closestFixed);
+t.ok('and leaves at least ten seconds of silence there',
+  closestFixed - longest >= 10);
+
+// Nothing may run past the end of a module — a sound still playing when the
+// timer hits zero is cut by the module ending, which is the one truncation
+// the chain cannot prevent.
+t.ok('module 1 finishes before the module does', m1[m1.length - 1].endsAt < 2100);
+t.ok('module 2 finishes before the module does', m2[m2.length - 1].endsAt < 2100);
 
 t.section('the gap setter cannot be poisoned');
 
