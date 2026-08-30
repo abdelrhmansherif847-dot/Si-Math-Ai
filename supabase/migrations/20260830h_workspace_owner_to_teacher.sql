@@ -1,7 +1,18 @@
 -- =====================================================================
 -- Workspace vocabulary: the teaching 'owner' becomes 'teacher'
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830214819
+--         `workspace_owner_to_teacher`. Applied body differed only in header
+--         text and the omitted outer transaction.
+--         Verified in production: workspace_staff_role reads teacher,
+--         assistant; the index is workspace_staff_one_teacher_idx with
+--         predicate WHERE (staff_role = 'teacher'::workspace_staff_role);
+--         no teaching function still carries the old literal; user_role still
+--         reads user, admin, super_admin, owner; and change_user_role still
+--         holds its 3 PLATFORM 'owner' literals, unchanged. Behaviour re-run
+--         9 of 9 against the live functions — see the DRY RUN note below,
+--         which the post-apply run reproduced exactly.
 -- DEPENDS ON: 20260830a (enum, tables, guards), 20260830c (RPCs)
 --
 -- WHY

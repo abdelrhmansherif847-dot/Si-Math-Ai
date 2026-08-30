@@ -145,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **95 files** in `supabase/migrations/`, **164 applied** in the database. Exam delivery `20260830e/f` and the intervention record `20260830g` applied 2026-08-30; the rollbacks `20260830x/y` are deliberately unapplied (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Migrations | **96 files** in `supabase/migrations/`, **165 applied** in the database. Exam delivery `20260830e/f`, the intervention record `20260830g` and the `owner`→`teacher` rename `20260830h` applied 2026-08-30; the rollbacks `20260830x/y` are deliberately unapplied (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
 | CI | `node tests/run-all.mjs` — **53 checks** (measured 2026-08-30) |
 
@@ -193,7 +193,10 @@ exists for this. Do not treat the file list as the applied list.
 - **Operations:** `ai_tutor_failures`, `analyzer_runs`, `unmapped_detections`
 - **Taxonomy:** `taxonomy_topics`, `taxonomy_subtopics`
 - **Teacher foundation** (live 2026-08-30, all four empty): `teacher_workspaces`,
-  `workspace_staff`, `workspace_students`, `workspace_audit_log`. **A teacher is
+  `workspace_staff`, `workspace_students`, `workspace_audit_log`.
+  **`workspace_staff.staff_role` is `teacher` | `assistant`** — it said `owner`
+  until `20260830h` renamed it, because that word belongs to the PLATFORM owner
+  (`user_role.owner`) alone. Never reintroduce it here. **A teacher is
   not a `user_role`** — being a teacher is owning a workspace, and seeing a
   student is holding an active link to them. All teacher visibility derives from
   `teacher_can_see_student()` and nothing else; it currently guards no academic
