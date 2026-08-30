@@ -1,7 +1,9 @@
 -- =====================================================================
 -- ROLLBACK for 20260830j — the assistant re-application allowance, undone
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. Running it is its own
+-- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. 20260830j went live on
+--         2026-08-30 (schema_migrations 20260830232358), so this is now a live
+--         way back rather than a hypothetical one; running it is its own
 --         approval, exactly like running the forward migration.
 --
 -- WHAT IT RESTORES

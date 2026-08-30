@@ -1,8 +1,12 @@
 # The assistant re-application defect — audit, fix, and evidence (P0)
 
-**Status: 🟡 PREPARED, NOT APPLIED.** `20260830j` is written, dry-run against
-production inside a rolled-back transaction, and mutation-tested. Applying it is
-a separate, explicit decision.
+**Status: ✅ APPLIED 2026-08-30**, with explicit owner approval, as
+`schema_migrations` version **`20260830232358`** (`staff_rejoin`). This
+migration alone. Post-apply verification in §10.
+
+The client half (`teacher.html`, `settings.html`) is merged on the branch and
+reaches students when the branch merges to `main`. Both work with or without the
+migration, so the order does not matter.
 
 **Date:** 2026-08-30 · **Project:** `igvkyxkmjnkzscqgommj` · **Branch:**
 `claude/teacher-intelligence-layer-8e66b0`
@@ -187,3 +191,59 @@ Two follow-ups recorded rather than done:
 supabase/migrations/20260830j_staff_rejoin.sql            -- forward, PREPARED
 supabase/migrations/20260830v_staff_rejoin_rollback.sql   -- back, unapplied
 ```
+
+## 10 · Post-apply verification, against the live database
+
+Applied 2026-08-30 as `20260830232358`. Migration count **166 → 167**.
+
+### Both bodies, byte-for-byte
+
+| Function | Live bytes | Live md5 | Matches the repo |
+|---|---|---|---|
+| `workspace_staff_guard` | 3056 | `6d126d06b33ef40c0b4cf36a40d61952` | **yes** |
+| `staff_join_workspace` | 1941 | `a7a18f39f88cafc8f2955adbac2399a9` | **yes** |
+
+Both `SECURITY DEFINER` with `search_path = pg_catalog, public`; `anon` can
+execute neither. (This time the applied bodies kept their comments — unlike the
+`20260830c` revision described in §7, which is why that discrepancy was worth
+recording rather than shrugging at.)
+
+Nothing else in the family moved: `teacher_create_workspace`,
+`teacher_set_staff_status` and `my_experience` all still carry the md5 they had
+before the apply.
+
+### 15 of 15 behavioural checks against the LIVE functions
+
+Fixtures built through the real RPCs under simulated JWTs; whole transaction
+rolled back. The four questions about the guard were asked inside a definer
+stand-in, so a table privilege could not answer in the guard's place.
+
+| Check | Result |
+|---|---|
+| a first application becomes `pending` and says so | PASS |
+| re-entering while pending writes **no second audit row** | PASS |
+| an **active** assistant is told `active`, not "pending" | PASS |
+| **the defect: a removed assistant re-applies and the row really becomes `pending`** | PASS |
+| `activated_at` / `removed_at` cleared on re-application | PASS |
+| a re-applied assistant still sees **no roster** | PASS |
+| a re-applied assistant **cannot self-approve** | PASS |
+| **G-A** the guard **ALLOWS** `removed → pending` by the row's own user | PASS |
+| **G-B** the guard **refuses** a third party re-applying for someone else | PASS |
+| **G-C** the guard **refuses** `removed → active` by the assistant | PASS |
+| **G-D** the guard **refuses** `pending → active` by the assistant | PASS |
+| the teacher row still cannot change status | PASS |
+| the teacher pasting their own staff code is told `active` | PASS |
+| a wrong code is still refused | PASS |
+| an enrolled student still cannot become staff in the same class | PASS |
+
+### Production is clean
+
+0 workspaces, 0 staff rows, 0 student links, 0 audit rows, 0 interventions.
+Verification created nothing.
+
+### What the guard now permits, stated once
+
+Exactly one status change by anyone other than the workspace owner:
+`removed → pending`, by the account named on the row. Every other transition —
+including every route to `active` — is still the workspace owner's alone,
+measured above rather than argued.

@@ -1,9 +1,17 @@
 -- =====================================================================
 -- A removed assistant can apply again — and the RPC stops lying
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
---         Apply with explicit owner approval, one migration at a time, per
---         CLAUDE.md §3.
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830232358
+--         `staff_rejoin`. Applied body differed only in header text and the
+--         omitted outer transaction (apply_migration supplies its own).
+--         Verified after apply: BOTH live bodies are byte-for-byte identical to
+--         this file — workspace_staff_guard 3056 bytes md5
+--         6d126d06b33ef40c0b4cf36a40d61952, staff_join_workspace 1941 bytes md5
+--         a7a18f39f88cafc8f2955adbac2399a9. Both SECURITY DEFINER with
+--         search_path pinned; `anon` can execute neither. 15 of 15 behavioural
+--         checks re-run against the LIVE functions, the four guard conditions
+--         among them — docs/engineering/staff-rejoin-verification.md §10.
 -- DEPENDS ON: 20260830a (tables, guards), 20260830c (staff_join_workspace),
 --             20260830h (staff_role reads 'teacher' | 'assistant')
 --
