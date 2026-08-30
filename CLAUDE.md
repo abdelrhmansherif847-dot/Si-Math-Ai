@@ -145,9 +145,9 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **100 files** in `supabase/migrations/`, **167 applied** in the database (measured 2026-08-30). `20260830j` (the assistant re-application fix) applied 2026-08-30. Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Migrations | **102 files** in `supabase/migrations/`, **167 applied** in the database (measured 2026-08-30). `20260830j` (the assistant re-application fix) applied 2026-08-30. **`20260830k` (workspace creation becomes Owner-only) is PREPARED and NOT APPLIED.** Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830u/v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
-| CI | `node tests/run-all.mjs` — **55 checks** (measured 2026-08-30) |
+| CI | `node tests/run-all.mjs` — **56 checks** (measured 2026-08-30) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
