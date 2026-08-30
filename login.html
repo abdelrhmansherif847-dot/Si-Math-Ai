@@ -491,6 +491,23 @@ button{font-family:inherit;cursor:pointer}
           }
         }
       }
+      /* Where does this account belong? my_experience() (20260830i) is the one
+         answer, and 'staff' takes precedence over onboarding: student
+         onboarding asks for an exam type and a target date, which a teacher who
+         does not study here has no answer to. Nothing is taken away by this —
+         can_student is always true, the learning product stays one link away,
+         and onboarding is still waiting there if they ever want it.
+
+         Routing is NOT a security boundary. If this call fails, or the
+         migration is not applied yet, the pre-existing destination is used and
+         nothing is lost: teacher.html enforces its own access, and every RPC
+         behind it refuses a caller who is not active staff. */
+      var primary='student';
+      try{
+        var{data:xp,error:xerr}=await supabaseClient.rpc('my_experience');
+        if(!xerr&&xp&&xp.primary==='staff'){primary='staff';}
+      }catch(_e){/* pre-20260830i, or the call failed: route exactly as before */}
+      if(primary==='staff'){window.location.href='teacher.html';return;}
       if(profile&&profile.onboarding_completed===true){window.location.href='dashboard.html';}
       else{window.location.href='onboarding.html';}
     } catch(e){window.location.href='onboarding.html';}

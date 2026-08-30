@@ -145,9 +145,9 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **78 files** in `supabase/migrations/`, **141 applied** in the database (streak server-side + anon revoke applied 2026-08-04) |
-| Static site | 46 root `*.html` pages on Vercel |
-| CI | `node tests/run-all.mjs` — **46 checks** |
+| Migrations | **98 files** in `supabase/migrations/`, **166 applied** in the database (measured 2026-08-30). Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
+| CI | `node tests/run-all.mjs` — **54 checks** (measured 2026-08-30) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -192,6 +192,45 @@ exists for this. Do not treat the file list as the applied list.
   plus the `cost_engine` (9 tables), `ai_catalog` (3 tables) and `econ` schemas
 - **Operations:** `ai_tutor_failures`, `analyzer_runs`, `unmapped_detections`
 - **Taxonomy:** `taxonomy_topics`, `taxonomy_subtopics`
+- **Teacher foundation** (live 2026-08-30, all four empty): `teacher_workspaces`,
+  `workspace_staff`, `workspace_students`, `workspace_audit_log`.
+  **`workspace_staff.staff_role` is `teacher` | `assistant`** — it said `owner`
+  until `20260830h` renamed it, because that word belongs to the PLATFORM owner
+  (`user_role.owner`) alone. Never reintroduce it here. **A teacher is
+  not a `user_role`** — being a teacher is owning a workspace, and seeing a
+  student is holding an active link to them. All teacher visibility derives from
+  `teacher_can_see_student()` and nothing else; it currently guards no academic
+  table, by design. Clients hold SELECT only — every write is a SECURITY DEFINER
+  RPC. Read `docs/roadmap/teacher-intelligence-layer.md` §8 before touching
+  anything teacher-, class- or cohort-shaped
+- **Exam delivery** (live 2026-08-30, both tables empty): `exam_attempts`,
+  `exam_responses`. Per-item response, correctness, time and revisit count — the
+  evidence the weakness pipeline was missing. `is_correct` is THREE-valued:
+  true answered right, false answered wrong, **NULL not answered**. An omission
+  is recorded and is deliberately NOT a weakness signal; collapsing the two
+  turns a pacing problem into a topic weakness. The answer key never reaches the
+  browser: students hold no privilege on `exam_questions`, `exam_start()` selects
+  a named list excluding `correct_answer`, and `exam_submit()` grades
+  server-side. **Nothing is published** — all 3 forms and 161 questions are
+  `draft`, so nothing is sittable. Read
+  `docs/engineering/exam-delivery-verification.md` before touching delivery
+- **Weakness reads** are canonical: `weakness_reports` is the single weakness,
+  and `regenerate-reports.js` is the SOLE authority for `severity_band` and
+  `trend` — **no consumer re-derives either**. The teacher/assistant read is
+  `teacher_student_weaknesses()` (live 2026-08-30), which withholds the
+  analyzer's working numbers so no surface can. `weakness-view.js` shapes one
+  row per role and derives nothing. Evidence inventory and what is still
+  impossible: `docs/engineering/weakness-evidence-audit.md`
+- **Intervention record** (live 2026-08-30, empty): `class_interventions` — a
+  teacher's record of something they already did about a difficulty. It computes
+  nothing, is never a recommendation, and is never an input to the learning
+  profile; it holds no foreign key into any academic table, for the same reason
+  `support_tickets` does not. **Append-only: never deleted, and the only
+  permitted UPDATE is a first withdrawal that changes nothing else** — enforced
+  by `class_interventions_append_only_trg`, not by convention. Clients hold
+  SELECT only; writes go through SECURITY DEFINER RPCs, and the student named on
+  a row can read it. Read `docs/roadmap/teacher-intelligence-layer.md` §10 T1.6
+  and `docs/engineering/teacher-intervention-verification.md` before touching it
 
 ### Repository shape
 
@@ -224,6 +263,11 @@ safe or that a merge is sufficient.
 - `docs/engineering/v0-lessons-learned.md` — rules carried forward from Phase V0
 - `docs/engineering/infrastructure-backlog.md` — platform/deployment work, kept
   deliberately separate from the Truth System backlog
+- `docs/engineering/experience-routing-verification.md` — `my_experience()`,
+  the single caller-scoped answer to "which product does this account belong
+  in?". **LIVE 2026-08-30**, body verified byte-for-byte against the repo. Read
+  it before touching `login.html`'s post-auth routing or `nav.js`'s Teaching
+  link. Routing is not a security boundary; a pending assistant is not staff
 - `docs/engineering/subscription-writer-backlog.md` — open defects in the
   functions that write `subscriptions` (SUB-1 renewal INSERT vs UPSERT, live;
   SUB-2 missing `plan_code`, dead code). Read before touching
@@ -245,6 +289,15 @@ safe or that a merge is sufficient.
 - `docs/roadmap/truth-system-v2-backlog.md` + `.csv` — **frozen baseline.**
   47 epics, 58 tasks; V0–V4 decomposed, V5–V8 at epic level by design
 - `docs/roadmap/v0-notes.md` — Phase V0 assumptions, deviations and deferred work
+
+**Product direction — adopted, deliberately unbuilt**
+- `docs/roadmap/teacher-intelligence-layer.md` — the teacher-facing layer the
+  platform will eventually grow: what it is for, the four gates any teacher
+  feature must pass, the anti-goals, and the staged admission criteria. **It
+  authorizes nothing** — no schema, no role, no surface, no public copy — and the
+  Mock Experience is its prerequisite. Read it before proposing anything
+  teacher-, class- or cohort-shaped; §5 records, measured, why a teacher
+  dashboard cannot honestly be built yet
 
 **Earlier architecture records**
 - `docs/roadmap/adaptive-verification.md` — the original L1–L4 blueprint (superseded

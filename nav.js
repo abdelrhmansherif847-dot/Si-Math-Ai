@@ -16,7 +16,9 @@
  *
  * The script:
  *   - waits for window.sb (the Supabase client every page already creates)
- *   - reads profiles.role (falls back to is_admin -> 'admin')
+ *   - asks my_experience() for the platform role and whether the caller is
+ *     ACTIVE workspace staff (falls back to profiles.role +
+ *     teacher_my_workspaces() until that migration is applied)
  *   - injects "Admin Dashboard" / "Super Admin Dashboard" / "Owner Dashboard"
  *     plus "AI Monitor" (super_admin+ only)
  *   - removes any duplicate admin-link anchors that older inline JS may append
@@ -40,6 +42,11 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 2-2 3 3"/></svg>';
   var SUPPORT_ICON =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+
+  // Teaching uses the sidebar's own colours, not the admin red: it is not an
+  // elevated-privilege link. See render().
+  var TEACH_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>';
 
   // Every page already loads the @supabase/supabase-js CDN bundle which
   // exposes `window.supabase`. nav.js creates its own dedicated client
@@ -89,14 +96,22 @@
     }
   }
 
-  function render(slot, role) {
+  /* A page may already carry its own Teaching link outside the slot
+     (teacher.html does). Injecting a second one would show the same
+     destination twice, so look for it before adding ours. */
+  function hasOwnTeacherLink(slot) {
+    var sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return false;
+    var anchors = sidebar.querySelectorAll('a[href$="teacher.html"]');
+    for (var i = 0; i < anchors.length; i++) {
+      if (!slot || !slot.contains(anchors[i])) return true;
+    }
+    return false;
+  }
+
+  function render(slot, role, teaching) {
     var lvl = ROLE_LEVEL[role];
     if (typeof lvl !== 'number') lvl = 0;
-    if (lvl < 1) {
-      slot.innerHTML = '';
-      slot.style.display = 'none';
-      return;
-    }
 
     var page = currentPageFile();
     var aActive = page === 'admin.html' ? 'admin-active' : '';
@@ -105,7 +120,29 @@
     var label = ROLE_LABEL[role] || 'Admin Dashboard';
     var showMonitor = lvl >= 2;
 
-    var html = ''
+    var html = '';
+
+    /* Teaching is driven by a RELATIONSHIP, never by a rung on user_role: a
+       teacher owns a workspace and an assistant works in one, and both may be
+       plain 'user' accounts. That is the design, not an oversight — see
+       supabase/migrations/20260830a_teacher_foundation_tables.sql. */
+    if (teaching && !hasOwnTeacherLink(slot)) {
+      html += ''
+        + '<div class="side-sec">Teaching</div>'
+        + '<a class="nav-item ' + (page === 'teacher.html' ? 'active' : '') + '" href="teacher.html">'
+        +   TEACH_ICON
+        +   '<span class="nav-label">Teacher Workspace</span>'
+        + '</a>';
+    }
+
+    if (lvl < 1) {
+      if (!html) { slot.innerHTML = ''; slot.style.display = 'none'; return; }
+      slot.innerHTML = html;
+      slot.style.display = 'block';
+      return;
+    }
+
+    html += ''
       + '<div class="side-sec">Admin</div>'
       + '<a class="nav-item ' + aActive + '" href="admin.html" style="color:#ef4f5f">'
       +   ADMIN_ICON
@@ -140,10 +177,47 @@
       var ures = await sb.auth.getUser();
       var user = ures && ures.data && ures.data.user;
       if (!user) { slot.style.display = 'none'; return; }
-      var pres = await sb.from('profiles').select('role, is_admin').eq('id', user.id).maybeSingle();
-      var prof = pres && pres.data;
-      var role = (prof && prof.role) || (prof && prof.is_admin ? 'admin' : 'user');
-      render(slot, role);
+      /* my_experience() (20260830i) is the single answer to "which product is
+         this account in?" — it reports the platform role and whether the caller
+         is ACTIVE staff, in one call, about the caller and nobody else.
+
+         It is a hand-applied migration while this file deploys with the site on
+         merge, so the two arrive in either order. Before it exists the call
+         returns an error and this falls back to what nav.js did before: read
+         profiles.role, then ask teacher_my_workspaces(). Both paths are checked
+         below so neither can rot. */
+      var role = null;
+      var teaching = null;
+      try {
+        var xres = await sb.rpc('my_experience');
+        var x = xres && !xres.error && xres.data;
+        if (x && typeof x === 'object') {
+          role = x.platform_role || 'user';
+          teaching = x.can_staff === true;
+        }
+      } catch (_) { role = null; teaching = null; }
+
+      if (role === null) {
+        var pres = await sb.from('profiles').select('role, is_admin').eq('id', user.id).maybeSingle();
+        var prof = pres && pres.data;
+        role = (prof && prof.role) || (prof && prof.is_admin ? 'admin' : 'user');
+      }
+
+      if (teaching === null) {
+        /* Only an ACTIVE staff row is teaching. A pending assistant has applied
+           and been approved by nobody — teacher_roster() and
+           teacher_student_weaknesses() both refuse them — so the link would open
+           a page of permission errors. This line used to accept any row that was
+           not 'removed', which showed the Teaching link to exactly that account. */
+        teaching = false;
+        try {
+          var tres = await sb.rpc('teacher_my_workspaces');
+          var trows = (tres && tres.data) || [];
+          teaching = trows.some(function (r) { return r && r.staff_status === 'active'; });
+        } catch (_) { teaching = false; }
+      }
+
+      render(slot, role, teaching);
       removeDuplicateAdminLinks(slot);
 
       // Some legacy pages append admin links AFTER auth completes. Sweep

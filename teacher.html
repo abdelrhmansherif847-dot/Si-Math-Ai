@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Teacher Workspace – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- One weakness, read three ways. Derives nothing; see the file's header. -->
+<script src="weakness-view.js"></script>
+<!-- The canonical vocabulary, loaded read-only. teacher_student_weaknesses()
+     returns free-text topic/subtopic and no ids, and the free text collides —
+     "Linear Equations" and "Linear Equations & Functions" are both ALG_006. So
+     an intervention resolves its label to a canonical id here before recording
+     it, and stores nothing when the resolver refuses. This is the authoritative
+     resolver, deliberately NOT taxonomy-compat.js, whose header restricts it to
+     display and forbids exactly this use. -->
+<script src="taxonomy.js"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;--font-body:'DM Sans', system-ui, -apple-system, sans-serif;--font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden;background:#050a14}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.11),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan);cursor:pointer}
+
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:24px 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+.preview-bar{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-md);padding:11px 15px;margin-bottom:18px;font-size:13px;color:#fcd34d}
+.preview-bar.on{display:flex}
+.preview-bar strong{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+
+.page-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+.page-title{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;letter-spacing:-.01em}
+.page-sub{font-size:13.5px;color:var(--text-400);margin-top:4px;max-width:640px}
+.pill{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300);white-space:nowrap}
+.pill.teacher{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.assistant{background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe}
+.pill.ok{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
+.pill.warn{background:var(--amber-soft);border-color:var(--amber-border);color:#fcd34d}
+.pill.off{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.stat{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 16px;min-width:104px}
+.stat .n{font-family:var(--font-display);font-weight:800;font-size:21px;color:#fff;line-height:1.1}
+.stat .l{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500);margin-top:4px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3);font-weight:600;font-size:13.5px;transition:all .2s}
+.btn:hover{background:var(--cyan-bg-med);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;border-color:var(--border-mid);color:var(--text-300)}
+.btn.ghost:hover{background:var(--bg-card-hi);color:#fff}
+.btn.danger{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+.btn.danger:hover{background:rgba(239,79,95,.2);color:#fff}
+.btn.sm{padding:6px 11px;font-size:12px}
+
+.field{width:100%;padding:11px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-size:14px}
+.field:focus{outline:none;border-color:var(--cyan-border);background:var(--bg-elev-2)}
+.field.code{font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+
+/* A grid item defaults to min-width:auto, which refuses to shrink below its
+   content. The roster rows inside hold nowrap text, so without this the column
+   could push the page wider than a phone viewport — and body{overflow-x:hidden}
+   would clip the right edge rather than wrap. Measured at 320-485px it does not
+   currently overflow; this keeps it that way as rows gain content. */
+.cols{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+.cols > *{min-width:0}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar .grow{flex:1;min-width:170px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;padding:6px 11px;border-radius:100px;border:1px solid var(--border-mid);background:transparent;color:var(--text-400)}
+.chip.on{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+
+.code-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.code-chip{font-family:var(--font-mono);font-size:20px;font-weight:700;letter-spacing:.28em;color:#fff;background:var(--bg-elev-1);border:1px dashed var(--cyan-border);border-radius:var(--r-sm);padding:10px 16px}
+.code-note{font-size:12.5px;color:var(--text-400);margin-top:10px;line-height:1.55}
+
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 14px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:8px;transition:border-color .2s,background .2s;text-align:left;width:100%}
+.row:hover{border-color:var(--cyan-border-soft);background:var(--bg-card-hi)}
+.row.dim{opacity:.62}
+.row .avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);font-family:var(--font-display);font-weight:800;font-size:13px}
+/* A row is a <button> holding <span>s, so the whole row is one click target.
+   Spans are inline by default — without these three the name and the meta line
+   run together into one sentence, which is how it first shipped. */
+.row .who{display:block;flex:1 1 130px;min-width:0}
+.row .nm{display:block;font-weight:600;color:#fff;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{display:block;font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .acts{display:flex;gap:8px;flex-shrink:0;align-items:center;margin-left:auto}
+
+.feed{display:flex;flex-direction:column;gap:2px}
+.feed-item{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--border-soft)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--text-500)}
+.feed-dot.join{background:var(--green)}.feed-dot.leave{background:var(--amber)}.feed-dot.admin{background:var(--cyan)}
+.feed-txt{font-size:13.5px;color:var(--text-300);line-height:1.45}
+.feed-when{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:2px}
+
+.note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
+.slot-empty{border:1px dashed var(--border-mid);border-radius:var(--r-md);padding:16px;background:rgba(10,18,36,.5)}
+.wk{border:1px solid var(--border-soft);border-radius:var(--r-md);background:var(--bg-elev-2);padding:13px 14px;margin-bottom:9px}
+.wk-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.wk-lead{font-family:var(--font-display);font-weight:700;font-size:14.5px;color:#fff;flex:1;min-width:0}
+.wk-topic{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-bottom:6px}
+.wk-basis{font-size:12.5px;color:var(--text-400);line-height:1.55}
+.wk-when{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:7px}
+.pill.critical{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+.pill.high{background:var(--gold-soft);border-color:var(--gold-border);color:#fcd34d}
+.pill.medium{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.low{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
+.slot-empty .st{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:8px}
+
+/* The intervention record. Visually quieter than a weakness on purpose: a
+   weakness is the platform's finding, this is the teacher's own note about it,
+   and the second must never look like more evidence than the first. */
+.iv{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border-soft)}
+.iv:last-of-type{border-bottom:none}
+.iv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--cyan)}
+.iv.gone .iv-dot{background:var(--text-500)}
+.iv-main{display:block;flex:1;min-width:0}
+/* Blockified for the same reason .row .nm and .row .meta are, and found the
+   same way — by rendering it. These are <span>s inside a <span>, so without
+   display:block the subject, the note and the date run together into one
+   sentence: "Covered again · Systems of EquationsRe-explained it.Aug 30". */
+.iv-what{display:block;font-size:13.5px;color:var(--text-200);line-height:1.5}
+.iv.gone .iv-what{color:var(--text-500);text-decoration:line-through}
+.iv-note{display:block;font-size:12.5px;color:var(--text-400);line-height:1.55;margin-top:4px}
+.iv-when{display:block;font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:4px}
+.iv-form{border:1px dashed var(--cyan-border);border-radius:var(--r-md);background:var(--bg-elev-2);padding:14px;margin-top:12px}
+.iv-form .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:7px}
+.iv-form .r{margin-bottom:12px}
+.iv-warn{font-size:12.5px;color:#fcd34d;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-sm);padding:9px 11px;margin-bottom:12px;line-height:1.5}
+.empty-state{text-align:center;padding:44px 20px;color:var(--text-400)}
+.empty-state .big{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text-200);margin-bottom:6px}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+.msg{margin-top:12px;font-size:13px;padding:10px 12px;border-radius:var(--r-sm);display:none}
+.msg.err{display:block;background:var(--red-soft);border:1px solid var(--red-border);color:#fca5a5}
+.msg.ok{display:block;background:var(--green-soft);border:1px solid var(--green-border);color:#86efac}
+
+.drawer{position:fixed;z-index:90;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--bg-elev-1);border-left:1px solid var(--border-soft);padding:22px;overflow-y:auto;transform:translateX(101%);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:13.5px}
+.kv .k{color:var(--text-500);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.kv .v{color:var(--text-100);text-align:right}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@media(min-width:1180px){ .cols{grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr)} }
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* The entry animation starts cards at opacity 0 with fill-mode both, so anything
+   that never runs the animation — a reduced-motion setting, a print, a headless
+   capture — is left looking at an invisible page. Honour the preference and
+   land on the final state. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .card{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="dashboard.html">
+    <span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right"><div class="top-avatar" id="topAvatar">?</div></div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
+  <a class="nav-item" href="progress.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
+  <div class="side-sec">Teaching</div>
+  <a class="nav-item active" href="teacher.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>Teacher Workspace</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <div id="adminNavSection" style="display:none"></div>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<main class="main">
+  <div class="preview-bar" id="previewBar">
+    <strong>Preview</strong>
+    <span>Sample data. Nothing here is real, nothing is saved, and no student is connected to anything.</span>
+    <a class="btn ghost sm" href="teacher.html" style="margin-left:auto">Leave preview</a>
+  </div>
+
+  <div id="loadingState" style="text-align:center;padding:80px 0"><div class="spin"></div></div>
+
+  <!-- ── no workspace on this account ─────────────────────────────────── -->
+  <section id="noneState" style="display:none">
+    <div class="page-head"><div>
+      <div class="page-title">Teacher Workspace</div>
+      <div class="page-sub">A workspace connects you to the specific students you teach — and to nobody else on the platform.</div>
+    </div></div>
+    <div class="sec-label">This account</div>
+    <div class="card">
+      <div class="empty-state" style="padding:26px 8px">
+        <div class="big">No teaching workspace here yet</div>
+        <div style="font-size:13.5px;max-width:520px;margin:0 auto 16px">Workspaces are created by the Si Math AI team for a named teacher. If you teach and need one, ask us through <a href="support.html" style="color:var(--cyan-3)">Get Help</a>.</div>
+        <a class="btn ghost sm" href="teacher.html?preview=1">See what a workspace looks like</a>
+      </div>
+    </div>
+    <div class="sec-label">Joining as an assistant</div>
+    <div class="card">
+      <div class="note" style="margin-bottom:14px">If a teacher gave you an assistant code, enter it here. You will appear on their staff list as <strong>pending</strong> and will see nothing at all until they approve you.</div>
+      <div class="code-row">
+        <input class="field code" id="staffCode" maxlength="12" placeholder="ASSISTANT CODE" style="max-width:260px"/>
+        <button class="btn" id="staffJoinBtn">Join workspace</button>
+      </div>
+      <div class="msg" id="staffMsg"></div>
+    </div>
+  </section>
+
+  <!-- ── pending assistant ────────────────────────────────────────────── -->
+  <section id="pendingState" style="display:none">
+    <div class="page-head"><div>
+      <div class="page-title">Waiting for approval</div>
+      <div class="page-sub">You joined <strong id="pendingName">a workspace</strong> as an assistant. The teacher who owns it approves you before you can see their students.</div>
+    </div></div>
+    <div class="card"><div class="note">This gate is deliberate. An assistant code on its own grants no visibility of any student — only the teacher decides who looks at their class.</div></div>
+  </section>
+
+  <!-- ── the workspace ────────────────────────────────────────────────── -->
+  <section id="wsState" style="display:none">
+    <div class="page-head">
+      <div style="flex:1;min-width:220px">
+        <div class="page-title" id="wsName">Workspace</div>
+        <div class="page-sub" id="wsSub"></div>
+      </div>
+      <span class="pill" id="rolePill">—</span>
+    </div>
+    <div class="stats" id="statRow"></div>
+
+    <div id="needsYou" style="display:none">
+      <div class="sec-label">Needs you</div>
+      <div class="card" id="needsYouBody"></div>
+    </div>
+
+    <div class="cols" style="margin-top:24px">
+      <div>
+        <div class="sec-label" style="margin-top:0">Students <span id="rosterCount" style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)"></span></div>
+        <div class="card">
+          <div class="toolbar">
+            <input class="field grow" id="rosterSearch" placeholder="Search by name…" autocomplete="off"/>
+            <div class="chips" id="statusChips">
+              <button class="chip on" data-status="active">Connected</button>
+              <button class="chip" data-status="ended">Left / removed</button>
+              <button class="chip" data-status="all">All</button>
+            </div>
+          </div>
+          <div id="rosterList"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label" style="margin-top:0">Class code</div>
+        <div class="card">
+          <div class="code-row">
+            <span class="code-chip" id="studentCode">--------</span>
+            <button class="btn ghost sm" id="copyCodeBtn">Copy</button>
+            <button class="btn ghost sm" id="rotateStudentBtn" style="display:none">Rotate</button>
+          </div>
+          <div class="code-note" id="codeHelp"></div>
+          <div id="staffCodeWrap" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-soft)">
+            <div class="code-row">
+              <span class="code-chip" id="staffCodeVal" style="border-color:var(--purple-border);font-size:17px">--------</span>
+              <button class="btn ghost sm" id="rotateStaffBtn">Rotate</button>
+            </div>
+            <div class="code-note">Assistant code — yours only. Someone who uses it arrives pending and sees nothing until you approve them.</div>
+          </div>
+          <div class="msg" id="codeMsg"></div>
+        </div>
+
+        <div id="staffSection" style="display:none">
+          <div class="sec-label">Assistants</div>
+          <div class="card"><div id="staffList"></div></div>
+        </div>
+
+        <div id="activitySection" style="display:none">
+          <div class="sec-label">Class activity</div>
+          <div class="card"><div class="feed" id="activityFeed"></div></div>
+        </div>
+
+        <div class="sec-label">What this shows, and what it does not</div>
+        <div class="card">
+          <div class="note" id="scopeNote"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ── one student, from the teacher's side ───────────────────────────── -->
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Student">
+  <div class="drawer-head">
+    <div>
+      <div style="font-family:var(--font-display);font-weight:800;font-size:19px;color:#fff" id="cardName">Student</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-500)" id="cardWs"></div>
+    </div>
+    <button class="btn ghost sm" id="closeDrawer">Close</button>
+  </div>
+  <div id="cardBody"></div>
+
+  <!-- ═══ LEARNING SLOT ══════════════════════════════════════════════════
+       The plug-in point for the Weakness system, and the reason it is a
+       marked region rather than a paragraph someone will later delete.
+
+       CONTRACT — renderLearning(student, el) is the ONLY function that writes
+       here. When weaknesses connect, that one function changes and this
+       markup does not. The same contract is intended for three surfaces so
+       one weakness reads identically everywhere it appears:
+         · the student's own badge      (their weakness, to work on)
+         · this card                    (their teacher, to act on)
+         · the assistant's copy of it   (read-only, same evidence)
+       Two rules travel with the contract, from
+       docs/roadmap/teacher-intelligence-layer.md §6:
+         1. Nothing is rendered here that could not have said something else.
+         2. Nothing is rendered here without the evidence behind it reachable.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="sec-label" style="margin-top:22px">Learning</div>
+  <div id="learningSlot" data-slot="learning"></div>
+
+  <!-- ═══ INTERVENTION RECORD ══════════════════════════════════════════════
+       T1.6. The same shape of contract as the learning slot above, and for the
+       same reason: renderInterventions(student, el) is the ONLY function that
+       writes here.
+
+       What this region is, precisely: a record of something the TEACHER
+       ALREADY DID. The platform never proposes the intervention and never
+       reads this back into anything. Two rules travel with it, from
+       docs/roadmap/teacher-intelligence-layer.md:
+         1. §8.3 — nothing written here reaches the learning profile. There is
+            no path from this table to the analyzer, by schema, not by habit.
+         2. §8.2 principle 5 — the student can read every word of it, and the
+            teacher is told so before they type it.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sec-label" style="margin-top:22px">What you did about it</div>
+  <div id="interventionSlot" data-slot="intervention"></div>
+
+  <div id="cardActions" style="margin-top:22px"></div>
+  <div class="msg" id="cardMsg"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+/* Guarded rather than `supabase.createClient(...)` outright. If the CDN bundle
+   fails to load — blocked network, slow link, a school firewall — the bare form
+   throws a ReferenceError on the first line and takes the WHOLE page with it,
+   leaving a blank screen with no explanation. Here the page still runs: a real
+   session says so plainly (see boot), and preview mode does not need the
+   database at all, which is what makes it a genuine dependency-free preview. */
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+const $ = (id) => document.getElementById(id);
+/* Every name here was typed by another human, so it is escaped on the way
+   into the DOM rather than trusted. */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const initials = (n) => (String(n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('') || '?').toUpperCase();
+const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) { return '—'; } };
+const ago = (iso) => {
+  const d = (Date.now() - new Date(iso).getTime()) / 86400000;
+  if (!isFinite(d)) return '';
+  if (d < 1) return 'today';
+  if (d < 2) return 'yesterday';
+  if (d < 30) return Math.floor(d) + ' days ago';
+  if (d < 365) return Math.floor(d / 30) + ' months ago';
+  return Math.floor(d / 365) + ' years ago';
+};
+const say = (el, text, kind) => { el.className = 'msg ' + (kind || 'ok'); el.textContent = text; };
+const clear = (el) => { el.className = 'msg'; el.textContent = ''; };
+
+$('hamb').addEventListener('click', () => { $('sidebar').classList.toggle('open'); $('overlay').classList.toggle('show'); });
+$('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
+
+/* The workspace's primary staff role is 'teacher'. It was called 'owner' until
+   20260830h renamed it, and that word now belongs to the PLATFORM owner alone.
+   Both values are accepted here on purpose: the static site deploys on merge
+   and the database is migrated by hand, so for one release the two can be in
+   either order and neither order may break the page. Drop 'owner' once
+   20260830h is applied. */
+const TEACHER_ROLES = new Set(['teacher', 'owner']);
+const isTeacherRole = (r) => TEACHER_ROLES.has(r);
+
+const S = {
+  ws: null, isTeacher: false, roster: [], staff: [], activity: [],
+  filter: 'active', search: '',
+  preview: new URLSearchParams(location.search).get('preview') === '1',
+};
+
+/* ── preview fixtures ───────────────────────────────────────────────────
+   So the workspace can be seen and judged as a product before a single real
+   student is enrolled. Everything below is invented, and api.* returns it
+   WITHOUT touching the database — see the guard at the top of every method.
+   Names are obviously placeholder; nothing here resembles a real student. */
+const FIXTURE = {
+  ws: { workspace_id: 'preview', name: 'EST Math — Saturday Group', staff_role: 'teacher',
+        staff_status: 'active', student_join_code: 'K7RMPX42', staff_join_code: 'QW9TLB63', student_count: 6 },
+  roster: [
+    { student_id: 'p1', full_name: 'A. Sample', exam_type: 'EST',  joined_at: iso(-64), status: 'active' },
+    { student_id: 'p2', full_name: 'B. Sample', exam_type: 'EST',  joined_at: iso(-61), status: 'active' },
+    { student_id: 'p3', full_name: 'C. Sample', exam_type: 'SAT',  joined_at: iso(-40), status: 'active' },
+    { student_id: 'p4', full_name: 'D. Sample', exam_type: 'EST',  joined_at: iso(-33), status: 'active' },
+    { student_id: 'p5', full_name: 'E. Sample', exam_type: 'ACT',  joined_at: iso(-12), status: 'active' },
+    { student_id: 'p6', full_name: 'F. Sample', exam_type: 'EST',  joined_at: iso(-9),  status: 'active' },
+    { student_id: 'p7', full_name: 'G. Sample', exam_type: 'SAT',  joined_at: iso(-70), status: 'revoked' },
+    { student_id: 'p8', full_name: 'H. Sample', exam_type: null,   joined_at: iso(-58), status: 'removed' },
+  ],
+  staff: [
+    { id: 's1', user_id: 'aaaaaaaa-0000', staff_role: 'assistant', status: 'pending', created_at: iso(-2) },
+    { id: 's2', user_id: 'bbbbbbbb-0000', staff_role: 'assistant', status: 'active',  created_at: iso(-45) },
+  ],
+  /* Weaknesses keyed by student. Deliberately mirrors the real shape measured
+     on 2026-08-30: most students have one to three, and 91% of live reports
+     carry no trend, so most of these carry none either. */
+  weaknesses: {
+    p3: [
+      { topic: 'Algebra', subtopic: 'Linear Equations', severity_band: 'high', priority_rank: 1,
+        trend: null, last_signal_at: iso(-3), total_signals: 14,
+        signals_ai_chat: 11, signals_mock_exam: 0, signals_focus: 3 },
+      { topic: 'Algebra', subtopic: 'Systems of Equations', severity_band: 'medium', priority_rank: 2,
+        trend: 'declining', last_signal_at: iso(-6), total_signals: 8,
+        signals_ai_chat: 6, signals_mock_exam: 2, signals_focus: 0 },
+      { topic: 'Geometry', subtopic: 'Circles', severity_band: 'low', priority_rank: 3,
+        trend: null, last_signal_at: iso(-19), total_signals: 2,
+        signals_ai_chat: 2, signals_mock_exam: 0, signals_focus: 0 },
+    ],
+    p1: [
+      { topic: 'Data Analysis', subtopic: 'Probability', severity_band: 'critical', priority_rank: 1,
+        trend: null, last_signal_at: iso(-1), total_signals: 4,
+        signals_ai_chat: 4, signals_mock_exam: 0, signals_focus: 0 },
+    ],
+    p2: [],
+  },
+  /* What a teacher already recorded. Only ONE student has anything here, and
+     one of the two is withdrawn — because a preview where every student has a
+     tidy history sells a habit nobody has formed yet. */
+  interventions: {
+    p3: [
+      { id: 'i1', kind: 'retaught', subject_label: 'Linear Equations',
+        topic_id: 'ALGEBRA', subtopic_id: 'ALG_006',
+        note: 'Went through it again with the whole group on Saturday.',
+        decided_on: ymd(-4), created_at: iso(-4), withdrawn_at: null },
+      { id: 'i2', kind: 'spoke_with', subject_label: 'Systems of Equations',
+        topic_id: 'ALGEBRA', subtopic_id: 'ALG_007', note: null,
+        decided_on: ymd(-11), created_at: iso(-11), withdrawn_at: iso(-10) },
+    ],
+    p1: [],
+  },
+  activity: [
+    { action: 'student_joined',   subject_id: 'p6', created_at: iso(-9) },
+    { action: 'staff_joined',     subject_id: 'aaaaaaaa-0000', created_at: iso(-2) },
+    { action: 'student_left',     subject_id: 'p7', created_at: iso(-6) },
+    { action: 'join_code_rotated', subject_id: null, created_at: iso(-20) },
+    { action: 'student_removed',  subject_id: 'p8', created_at: iso(-30) },
+    { action: 'workspace_created', subject_id: null, created_at: iso(-70) },
+  ],
+};
+function iso(days) { return new Date(Date.now() + days * 86400000).toISOString(); }
+function ymd(days) { return iso(days).slice(0, 10); }
+
+/* ── data layer ─────────────────────────────────────────────────────────
+   One place where the database is reached, so preview mode is one early
+   return per method rather than a flag threaded through the UI. */
+const api = {
+  async myWorkspaces() {
+    if (S.preview) return [FIXTURE.ws];
+    const { data, error } = await sb.rpc('teacher_my_workspaces');
+    if (error) throw error;
+    return data || [];
+  },
+  async roster(ws) {
+    if (S.preview) return FIXTURE.roster.slice();
+    const { data, error } = await sb.rpc('teacher_roster', { p_workspace: ws });
+    if (error) throw error;
+    return data || [];
+  },
+  async staff(ws) {
+    if (S.preview) return FIXTURE.staff.slice();
+    const { data, error } = await sb.from('workspace_staff')
+      .select('id,user_id,staff_role,status,created_at')
+      .eq('workspace_id', ws).eq('staff_role', 'assistant')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+  async activity(ws) {
+    if (S.preview) return FIXTURE.activity.slice();
+    const { data, error } = await sb.from('workspace_audit_log')
+      .select('action,subject_id,created_at')
+      .eq('workspace_id', ws)
+      .order('created_at', { ascending: false }).limit(25);
+    if (error) throw error;
+    return data || [];
+  },
+  async card(ws, student) {
+    if (S.preview) {
+      const r = FIXTURE.roster.find((x) => x.student_id === student);
+      return { student_id: r.student_id, full_name: r.full_name, exam_type: r.exam_type,
+               joined_at: r.joined_at, status: r.status, workspace: FIXTURE.ws.name };
+    }
+    const { data, error } = await sb.rpc('teacher_student_card', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+    return data;
+  },
+  async weaknesses(ws, student) {
+    if (S.preview) return (FIXTURE.weaknesses[student] || []);
+    const { data, error } = await sb.rpc('teacher_student_weaknesses', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+    return data || [];
+  },
+  async rotate(ws, kind) {
+    if (S.preview) return 'PREVIEW1';
+    const { data, error } = await sb.rpc('teacher_rotate_join_code', { p_workspace: ws, p_kind: kind });
+    if (error) throw error;
+    return data;
+  },
+  async setStaff(id, status) {
+    if (S.preview) { const s = FIXTURE.staff.find((x) => x.id === id); if (s) s.status = status; return; }
+    const { error } = await sb.rpc('teacher_set_staff_status', { p_staff: id, p_status: status });
+    if (error) throw error;
+  },
+  async removeStudent(ws, student) {
+    if (S.preview) { const r = FIXTURE.roster.find((x) => x.student_id === student); if (r) r.status = 'removed'; return; }
+    const { error } = await sb.rpc('teacher_remove_student', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+  },
+  async joinAsStaff(code) {
+    if (S.preview) return { name: FIXTURE.ws.name };
+    const { data, error } = await sb.rpc('staff_join_workspace', { p_code: code });
+    if (error) throw error;
+    return data;
+  },
+  async interventions(ws, student) {
+    if (S.preview) return (FIXTURE.interventions[student] || []).slice();
+    const { data, error } = await sb.rpc('teacher_student_interventions', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+    return data || [];
+  },
+  async recordIntervention(ws, student, rec) {
+    if (S.preview) {
+      const list = FIXTURE.interventions[student] || (FIXTURE.interventions[student] = []);
+      list.unshift({ id: 'pv' + Date.now(), kind: rec.kind, subject_label: rec.subject_label,
+                     topic_id: rec.topic_id, subtopic_id: rec.subtopic_id, note: rec.note,
+                     decided_on: rec.decided_on, created_at: new Date().toISOString(), withdrawn_at: null });
+      return;
+    }
+    const { error } = await sb.rpc('teacher_record_intervention', {
+      p_workspace: ws, p_student: student, p_kind: rec.kind, p_subject_label: rec.subject_label,
+      p_topic_id: rec.topic_id, p_subtopic_id: rec.subtopic_id, p_note: rec.note, p_decided_on: rec.decided_on });
+    if (error) throw error;
+  },
+  async withdrawIntervention(id) {
+    if (S.preview) {
+      for (const k of Object.keys(FIXTURE.interventions)) {
+        const r = FIXTURE.interventions[k].find((x) => x.id === id);
+        if (r) r.withdrawn_at = new Date().toISOString();
+      }
+      return;
+    }
+    const { error } = await sb.rpc('teacher_withdraw_intervention', { p_id: id });
+    if (error) throw error;
+  },
+};
+
+function show(which) {
+  for (const id of ['loadingState', 'noneState', 'pendingState', 'wsState']) {
+    $(id).style.display = (id === which) ? '' : 'none';
+  }
+}
+
+/* ── bootstrap ─────────────────────────────────────────────────────────── */
+async function boot() {
+  if (S.preview) $('previewBar').classList.add('on');
+
+  if (!S.preview) {
+    if (!sb) {
+      show('noneState');
+      $('noneState').insertAdjacentHTML('afterbegin',
+        '<div class="msg err" style="display:block;margin:0 0 18px">Could not load the Si Math AI connection library. '
+        + 'Check your network and reload — nothing is wrong with your account.</div>');
+      return;
+    }
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { location.href = 'login.html'; return; }
+    $('topAvatar').textContent = initials(session.user.email || '?');
+  } else {
+    $('topAvatar').textContent = 'PV';
+  }
+
+  let rows = [];
+  try { rows = await api.myWorkspaces(); } catch (_) { show('noneState'); return; }
+
+  const active = rows.find((r) => r.staff_status === 'active');
+  if (active) { S.ws = active; S.isTeacher = isTeacherRole(active.staff_role); return renderWorkspace(); }
+
+  const pending = rows.find((r) => r.staff_status === 'pending');
+  if (pending) { $('pendingName').textContent = pending.name; return show('pendingState'); }
+
+  show('noneState');
+}
+
+$('staffJoinBtn').addEventListener('click', async () => {
+  const code = $('staffCode').value.trim();
+  if (!code) return;
+  clear($('staffMsg'));
+  $('staffJoinBtn').disabled = true;
+  try {
+    const data = await api.joinAsStaff(code);
+    $('pendingName').textContent = (data && data.name) || 'a workspace';
+    show('pendingState');
+  } catch (e) {
+    say($('staffMsg'), e.message || 'That code did not work.', 'err');
+  } finally { $('staffJoinBtn').disabled = false; }
+});
+
+/* ── the workspace ─────────────────────────────────────────────────────── */
+async function renderWorkspace() {
+  show('wsState');
+  $('wsName').textContent = S.ws.name;
+  $('rolePill').textContent = S.isTeacher ? 'Teacher' : 'Assistant';
+  $('rolePill').className = 'pill ' + (S.isTeacher ? 'teacher' : 'assistant');
+
+  /* The two roles get different sentences because they have different jobs,
+     not because one is a lesser version of the other. */
+  $('wsSub').textContent = S.isTeacher
+    ? 'Your class. You see the students who joined it, and nobody else on the platform.'
+    : 'You assist in this class. You see the same students the teacher does, and the roster is theirs to change.';
+  $('codeHelp').innerHTML = S.isTeacher
+    ? 'Read this out in class. <strong>Students</strong> enter it in Settings → Teachers &amp; Assistants, and that act is the consent — you cannot add a student who did nothing. Rotating stops new joins; it disconnects nobody.'
+    : 'Share this with students who still need to join. They enter it in Settings → Teachers &amp; Assistants. Only the teacher can rotate it.';
+  /* This paragraph is the page describing itself to the person who will have to
+     defend it to a student or a parent, so it is corrected the day it stops
+     being true. It said "scores and weaknesses are not here yet" for one day
+     after the weakness read went live and was already rendering them. */
+  $('scopeNote').innerHTML = S.isTeacher
+    ? 'You see a student\'s name, which exam they are sitting, when they connected, and the weaknesses the analyzer found — each one with the evidence it was built from. '
+      + 'Not their plan, their credits, their email, or their conversations with Zero: the topic a student struggled with is shareable, the conversation where they struggled is not. '
+      + '<strong>No scores.</strong> There are none worth showing until the new Mock Experience produces per-question evidence, and a number without that behind it would be a guess wearing a decimal point.'
+    : 'You see exactly what the teacher sees about these students — the same weaknesses, from the same analyzer, with the same evidence — and you can change nothing. Adding, removing, approving and recording are the teacher\'s. '
+      + 'Neither of you sees scores, plans, or anything a student said to Zero.';
+
+  $('studentCode').textContent = S.ws.student_join_code || '--------';
+  $('rotateStudentBtn').style.display = S.isTeacher ? '' : 'none';
+  if (S.isTeacher && S.ws.staff_join_code) {
+    $('staffCodeWrap').style.display = '';
+    $('staffCodeVal').textContent = S.ws.staff_join_code;
+  }
+  $('staffSection').style.display = S.isTeacher ? '' : 'none';
+  $('activitySection').style.display = S.isTeacher ? '' : 'none';
+
+  await Promise.all([
+    loadRoster(),
+    S.isTeacher ? loadStaff() : Promise.resolve(),
+    S.isTeacher ? loadActivity() : Promise.resolve(),
+  ]);
+  renderStats();
+  renderNeedsYou();
+}
+
+function renderStats() {
+  const live = S.roster.filter((r) => r.status === 'active');
+  const exams = {};
+  for (const r of live) { const k = r.exam_type || '—'; exams[k] = (exams[k] || 0) + 1; }
+  const top = Object.entries(exams).sort((a, b) => b[1] - a[1]);
+  const joined30 = live.filter((r) => (Date.now() - new Date(r.joined_at).getTime()) < 30 * 86400000).length;
+
+  const tiles = [
+    { n: live.length, l: 'Connected' },
+    { n: joined30, l: 'Joined this month' },
+  ];
+  if (top.length) tiles.push({ n: top.map(([k, v]) => v + ' ' + k).join(' · '), l: 'Exams', wide: true });
+  if (S.isTeacher) tiles.push({ n: S.staff.filter((s) => s.status === 'active').length, l: 'Assistants' });
+
+  $('statRow').innerHTML = tiles.map((t) =>
+    '<div class="stat"><div class="n" style="' + (t.wide ? 'font-size:15px;padding-top:4px' : '') + '">'
+    + esc(t.n) + '</div><div class="l">' + esc(t.l) + '</div></div>').join('');
+}
+
+/* "Needs you" is an attention surface, and it stays honest by only ever
+   holding things that genuinely need a decision from this person today.
+   When there is nothing, it says nothing — an empty week is a real week. */
+function renderNeedsYou() {
+  if (!S.isTeacher) { $('needsYou').style.display = 'none'; return; }
+  const pending = S.staff.filter((s) => s.status === 'pending');
+  if (!pending.length) { $('needsYou').style.display = 'none'; return; }
+  $('needsYou').style.display = '';
+  $('needsYouBody').innerHTML =
+    '<div style="font-size:13.5px;color:var(--text-300);margin-bottom:12px">'
+    + pending.length + (pending.length === 1 ? ' person is' : ' people are')
+    + ' waiting for you to approve them as an assistant. Until you do, they see nothing.</div>'
+    + pending.map((s) => staffRow(s)).join('');
+  wireStaffButtons($('needsYouBody'));
+}
+
+/* ── roster ────────────────────────────────────────────────────────────── */
+async function loadRoster() {
+  try { S.roster = await api.roster(S.ws.workspace_id); }
+  catch (_) { $('rosterList').innerHTML = '<div class="empty-state">Could not load the roster.</div>'; return; }
+  drawRoster();
+}
+
+function visibleRoster() {
+  const q = S.search.trim().toLowerCase();
+  return S.roster.filter((r) => {
+    if (S.filter === 'active' && r.status !== 'active') return false;
+    if (S.filter === 'ended' && r.status === 'active') return false;
+    if (q && !String(r.full_name || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function drawRoster() {
+  const rows = visibleRoster();
+  const live = S.roster.filter((r) => r.status === 'active').length;
+  $('rosterCount').textContent = live ? '· ' + live + ' connected' : '';
+
+  if (!S.roster.length) {
+    $('rosterList').innerHTML = '<div class="empty-state"><div class="big">Nobody has joined yet</div>'
+      + '<div style="font-size:13.5px;max-width:420px;margin:0 auto">Read the class code out in your next session. '
+      + 'Students join from their own Settings page — the connection starts on their side, never yours.</div></div>';
+    return;
+  }
+  if (!rows.length) {
+    $('rosterList').innerHTML = '<div class="empty-state" style="padding:28px"><div class="big">No match</div>'
+      + '<div style="font-size:13.5px">Nothing here fits that search and filter.</div></div>';
+    return;
+  }
+
+  $('rosterList').innerHTML = rows.map((r) => {
+    const ended = r.status !== 'active';
+    const pill = r.status === 'active' ? '<span class="pill ok">Connected</span>'
+      : '<span class="pill off">' + (r.status === 'revoked' ? 'Left' : 'Removed') + '</span>';
+    return '<button class="row' + (ended ? ' dim' : '') + '" data-open="' + esc(r.student_id) + '">'
+      + '<span class="avatar">' + esc(initials(r.full_name)) + '</span>'
+      + '<span class="who"><span class="nm">' + esc(r.full_name) + '</span>'
+      + '<span class="meta">' + esc(r.exam_type || 'exam not set') + ' · joined ' + esc(ago(r.joined_at)) + '</span></span>'
+      + '<span class="acts">' + pill + '</span></button>';
+  }).join('');
+
+  $('rosterList').querySelectorAll('[data-open]').forEach((b) =>
+    b.addEventListener('click', () => openCard(b.getAttribute('data-open'))));
+}
+
+$('rosterSearch').addEventListener('input', (e) => { S.search = e.target.value; drawRoster(); });
+$('statusChips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-status]');
+  if (!b) return;
+  S.filter = b.getAttribute('data-status');
+  $('statusChips').querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === b));
+  drawRoster();
+});
+
+/* ── codes ─────────────────────────────────────────────────────────────── */
+$('copyCodeBtn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('studentCode').textContent); say($('codeMsg'), 'Class code copied.', 'ok'); }
+  catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
+});
+async function rotate(kind, el) {
+  if (!confirm('Rotate the ' + kind + ' code? The old one stops working immediately. Nobody already connected is affected.')) return;
+  try {
+    const code = await api.rotate(S.ws.workspace_id, kind);
+    el.textContent = code;
+    if (kind === 'student') S.ws.student_join_code = code; else S.ws.staff_join_code = code;
+    say($('codeMsg'), 'New ' + kind + ' code generated.', 'ok');
+  } catch (e) { say($('codeMsg'), e.message || 'Could not rotate the code.', 'err'); }
+}
+$('rotateStudentBtn').addEventListener('click', () => rotate('student', $('studentCode')));
+$('rotateStaffBtn').addEventListener('click', () => rotate('staff', $('staffCodeVal')));
+
+/* ── assistants ────────────────────────────────────────────────────────── */
+function staffRow(s) {
+  return '<div class="row">'
+    + '<span class="avatar" style="background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe">A</span>'
+    + '<span class="who"><span class="nm">Assistant</span>'
+    + '<span class="meta">' + esc(String(s.user_id).slice(0, 8)) + ' · joined ' + esc(ago(s.created_at)) + '</span></span>'
+    + '<span class="acts">'
+    + (s.status === 'pending'
+        ? '<span class="pill warn">Pending</span><button class="btn sm" data-approve="' + esc(s.id) + '">Approve</button>'
+        : '<span class="pill ok">Active</span>')
+    + '<button class="btn danger sm" data-remove="' + esc(s.id) + '">Remove</button>'
+    + '</span></div>';
+}
+function wireStaffButtons(scope) {
+  scope.querySelectorAll('[data-approve]').forEach((b) =>
+    b.addEventListener('click', () => setStaff(b.getAttribute('data-approve'), 'active')));
+  scope.querySelectorAll('[data-remove]').forEach((b) =>
+    b.addEventListener('click', () => setStaff(b.getAttribute('data-remove'), 'removed')));
+}
+async function loadStaff() {
+  try { S.staff = await api.staff(S.ws.workspace_id); }
+  catch (_) { $('staffList').innerHTML = '<div class="empty-state">Could not load assistants.</div>'; return; }
+  const rows = S.staff.filter((r) => r.status !== 'removed');
+  $('staffList').innerHTML = rows.length ? rows.map(staffRow).join('')
+    : '<div class="empty-state" style="padding:24px 8px"><div class="big">No assistants yet</div>'
+      + '<div style="font-size:13.5px">Give the assistant code to someone who helps you run this class.</div></div>';
+  wireStaffButtons($('staffList'));
+}
+async function setStaff(id, status) {
+  if (status === 'removed' && !confirm('Remove this assistant? They lose access to the roster immediately.')) return;
+  try { await api.setStaff(id, status); }
+  catch (e) { alert(e.message || 'Could not update the assistant.'); return; }
+  await loadStaff();
+  renderStats();
+  renderNeedsYou();
+}
+
+/* ── class activity ────────────────────────────────────────────────────── */
+const ACTIVITY_TEXT = {
+  workspace_created:  ['admin', 'This class was created'],
+  join_code_rotated:  ['admin', 'The join code was rotated'],
+  student_joined:     ['join',  'joined the class'],
+  student_left:       ['leave', 'disconnected themselves'],
+  student_removed:    ['leave', 'was removed from the class'],
+  staff_joined:       ['admin', 'An assistant asked to join'],
+  staff_activated:    ['admin', 'An assistant was approved'],
+  staff_removed:      ['admin', 'An assistant was removed'],
+};
+async function loadActivity() {
+  try { S.activity = await api.activity(S.ws.workspace_id); }
+  catch (_) { $('activitySection').style.display = 'none'; return; }
+  if (!S.activity.length) { $('activityFeed').innerHTML = '<div class="empty-state" style="padding:20px 8px">Nothing has happened here yet.</div>'; return; }
+
+  /* Names come from the roster we already hold. The audit table stores ids
+     only, and a teacher has no read path to a name outside their own roster —
+     which is the boundary working, not a gap to patch. */
+  const nameOf = (id) => {
+    const r = S.roster.find((x) => x.student_id === id);
+    return r ? r.full_name : null;
+  };
+  $('activityFeed').innerHTML = S.activity.map((a) => {
+    const def = ACTIVITY_TEXT[a.action] || ['admin', a.action];
+    const who = nameOf(a.subject_id);
+    const text = who ? esc(who) + ' ' + def[1] : def[1];
+    return '<div class="feed-item"><span class="feed-dot ' + def[0] + '"></span>'
+      + '<span><span class="feed-txt">' + text + '</span>'
+      + '<span class="feed-when" style="display:block">' + esc(ago(a.created_at)) + '</span></span></div>';
+  }).join('');
+}
+
+/* ── one student ───────────────────────────────────────────────────────── */
+function openDrawer(on) {
+  $('drawer').classList.toggle('open', on);
+  if (on) $('closeDrawer').focus();
+}
+async function openCard(studentId) {
+  clear($('cardMsg'));
+  openDrawer(true);
+  $('cardBody').innerHTML = '<div style="text-align:center;padding:30px 0"><div class="spin"></div></div>';
+  $('learningSlot').innerHTML = '';
+  $('interventionSlot').innerHTML = '';
+  $('cardActions').innerHTML = '';
+  S.weaknesses = [];
+
+  let data;
+  try { data = await api.card(S.ws.workspace_id, studentId); }
+  catch (e) { $('cardBody').innerHTML = ''; say($('cardMsg'), e.message || 'Could not open this student.', 'err'); return; }
+
+  $('cardName').textContent = data.full_name;
+  $('cardWs').textContent = data.workspace;
+  $('cardBody').innerHTML = ''
+    + '<div class="kv"><span class="k">Exam</span><span class="v">' + esc(data.exam_type || 'not set') + '</span></div>'
+    + '<div class="kv"><span class="k">Connected</span><span class="v">' + esc(fmtDate(data.joined_at)) + '</span></div>'
+    + '<div class="kv"><span class="k">Status</span><span class="v">'
+      + (data.status === 'active' ? 'Connected to you' : (data.status === 'revoked' ? 'Left the class' : 'Removed from the class'))
+      + '</span></div>';
+
+  /* Order matters: the weaknesses are what the intervention form offers as
+     subjects, so the learning slot resolves first and stashes them. */
+  await renderLearning(data, $('learningSlot'));
+  await renderInterventions(data, $('interventionSlot'));
+
+  if (S.isTeacher && data.status === 'active') {
+    $('cardActions').innerHTML =
+      '<button class="btn danger" id="removeStudentBtn">Remove from this class</button>'
+      + '<div class="code-note">They keep their account and everything they have done. Only your connection to them ends.</div>';
+    $('removeStudentBtn').addEventListener('click', async () => {
+      if (!confirm('Remove ' + data.full_name + ' from this class?')) return;
+      try { await api.removeStudent(S.ws.workspace_id, studentId); }
+      catch (e) { say($('cardMsg'), e.message || 'Could not remove.', 'err'); return; }
+      openDrawer(false);
+      await loadRoster();
+      renderStats();
+    });
+  } else if (!S.isTeacher) {
+    $('cardActions').innerHTML =
+      '<div class="code-note">Adding and removing students is the teacher\'s. You are here to work with them, not to change who is in the class.</div>';
+  }
+}
+
+/* THE LEARNING SLOT — see the contract above the markup. This is its only
+   writer, and it renders the canonical weakness: the same weakness_reports row
+   the student's own analyzer produced, shaped for this role by WeaknessView.
+   Nothing here recomputes a band or a direction — see weakness-view.js. */
+async function renderLearning(student, el) {
+  const first = esc(String(student.full_name).split(/\s+/)[0]);
+  el.innerHTML = '<div style="padding:14px 0"><div class="spin"></div></div>';
+
+  let rows;
+  try {
+    rows = await api.weaknesses(S.ws.workspace_id, student.student_id);
+    /* Stashed for the intervention form below, which offers these as the
+       subjects a teacher can act on. Read-only: nothing writes back here. */
+    S.weaknesses = rows;
+  } catch (_) {
+    /* teacher_student_weaknesses() ships in 20260830d, which is PREPARED and
+       not applied. Until it is, the card says what it said before rather than
+       inventing a stand-in. */
+    el.innerHTML =
+      '<div class="slot-empty"><div class="st">Reserved — not connected yet</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'The weakness read is prepared but not yet live on this project. When it is, '
+      + first + '\'s weaknesses appear here with the evidence behind each one.'
+      + '</div></div>';
+    return;
+  }
+
+  if (!rows.length) {
+    el.innerHTML =
+      '<div class="slot-empty"><div class="st">Nothing recorded yet</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'The analyzer has not found a weakness for ' + first + ' yet. That is not a clean bill of '
+      + 'health — it means there is not enough of their work on the platform to say anything that '
+      + 'could have been wrong.</div></div>';
+    return;
+  }
+
+  const role = S.isTeacher ? 'teacher' : 'assistant';
+  const views = rows
+    .map((r) => WeaknessView.canonical(r, {
+      AI_CHAT: r.signals_ai_chat, MOCK_EXAM: r.signals_mock_exam, FOCUS_PRACTICE: r.signals_focus }))
+    .map((v) => WeaknessView.forRole(v, role));
+
+  el.innerHTML = views.map((v) => ''
+    + '<div class="wk">'
+    + '<div class="wk-head"><span class="wk-lead">' + esc(v.lead) + '</span>'
+    + (v.bandLabel ? '<span class="pill ' + esc(v.bandTone) + '">' + esc(v.bandLabel) + '</span>' : '')
+    /* showTrend is false whenever the analyzer withheld a direction. Nothing is
+       rendered in its place — not "stable", not a flat arrow. */
+    + (v.showTrend ? '<span class="pill">' + esc(v.trendLabel) + '</span>' : '')
+    + '</div>'
+    + (v.subtopic ? '<div class="wk-topic">' + esc(v.topic) + '</div>' : '')
+    + (v.basis ? '<div class="wk-basis">' + esc(v.basis) + '</div>' : '')
+    + (v.lastSeen ? '<div class="wk-when">last signal ' + esc(v.lastSeen) + '</div>' : '')
+    + '</div>').join('')
+    + '<div class="code-note" style="margin-top:12px">'
+    + (role === 'assistant' ? 'Same weaknesses the teacher sees. ' : '')
+    + 'These come from the same analyzer that produces ' + first + '\'s own weakness page — '
+    + 'one weakness, read from one place, so you and they are never looking at different answers.'
+    + '</div>';
+}
+
+/* ── THE INTERVENTION RECORD ────────────────────────────────────────────
+   See the contract above the markup. renderInterventions is this region's only
+   writer, exactly as renderLearning is the learning slot's.
+
+   Everything below records; nothing below derives, suggests or ranks. The
+   platform has no opinion about what the teacher should have done, and the one
+   thing it adds to what they typed is a canonical id resolved from the label —
+   which is bookkeeping, so that two spellings of the same lesson are still the
+   same lesson a year from now. */
+const IV_KINDS = [
+  ['retaught', 'Covered it again'],
+  ['spoke_with', 'Spoke with them'],
+  ['assigned_practice', 'Gave them practice'],
+  ['other', 'Something else'],
+];
+const IV_PAST = {
+  retaught: 'Covered again', spoke_with: 'Spoke with them',
+  assigned_practice: 'Gave practice', other: 'Acted on',
+};
+
+/* Resolve a displayed weakness label to canonical ids, or to nulls. A refusal
+   is stored as a refusal — never as a guess, and never as a passthrough of the
+   raw string into an id column. */
+function canonicalFor(topicLabel, subtopicLabel) {
+  const T = window.Taxonomy;
+  if (!T || !T.resolveTopicId) return { topic_id: null, subtopic_id: null };
+  const tid = T.resolveTopicId(topicLabel) || null;
+  const sid = tid && subtopicLabel ? (T.resolveSubtopicId(tid, subtopicLabel) || null) : null;
+  return { topic_id: tid, subtopic_id: sid };
+}
+
+const ivDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); } catch (_) { return d; } };
+const dayShift = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+
+async function renderInterventions(student, el) {
+  const first = esc(String(student.full_name).split(/\s+/)[0]);
+  const live = student.status === 'active';
+  el.innerHTML = '<div style="padding:14px 0"><div class="spin"></div></div>';
+
+  let rows;
+  try {
+    rows = await api.interventions(S.ws.workspace_id, student.student_id);
+  } catch (_) {
+    /* 20260830g is applied, so a failure here is a real one — a dropped
+       connection, a revoked link. It must still not read as "you have done
+       nothing", which would be a false statement about a teacher, and it must
+       not throw, which would take the whole student card down with it. */
+    el.innerHTML =
+      '<div class="slot-empty"><div class="st">Could not load this</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'What you recorded about ' + first + ' could not be read just now. '
+      + 'Nothing has been lost — close this and open it again.'
+      + '</div></div>';
+    return;
+  }
+
+  const list = rows.length
+    ? rows.map((r) => {
+        const gone = !!r.withdrawn_at;
+        return '<div class="iv' + (gone ? ' gone' : '') + '">'
+          + '<span class="iv-dot"></span><span class="iv-main">'
+          + '<span class="iv-what">' + esc(IV_PAST[r.kind] || 'Acted on') + ' · <strong>' + esc(r.subject_label) + '</strong></span>'
+          + (r.note ? '<span class="iv-note">' + esc(r.note) + '</span>' : '')
+          + '<span class="iv-when">' + esc(ivDate(r.decided_on)) + (gone ? ' · withdrawn' : '') + '</span>'
+          + '</span>'
+          + (S.isTeacher && !gone ? '<button class="btn ghost sm" data-wd="' + esc(r.id) + '">Withdraw</button>' : '')
+          + '</div>';
+      }).join('')
+    : '<div class="slot-empty"><div class="st">Nothing recorded</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'This is your own note of what you did about ' + first + '\'s weaknesses — not something the platform works out. '
+      + 'It stays here so that when the same weakness comes back, you can see whether it came back to something you had already covered.'
+      + '</div></div>';
+
+  const opts = (S.weaknesses || []).map((w, i) =>
+    '<option value="' + i + '">' + esc(w.subtopic || w.topic) + '</option>').join('');
+
+  el.innerHTML = list
+    + (S.isTeacher && live
+        ? '<div style="margin-top:14px"><button class="btn sm" id="ivOpen">Record what you did</button></div>'
+          + '<div class="iv-form" id="ivForm" style="display:none">'
+          + '<div class="iv-warn">' + first + ' can read anything you write here. That is deliberate — nothing is kept about a student that the student cannot see.</div>'
+          + '<div class="r"><div class="lbl">What did you do</div><div class="chips" id="ivKind">'
+          + IV_KINDS.map(([k, lab], i) => '<button class="chip' + (i === 0 ? ' on' : '') + '" data-k="' + k + '">' + esc(lab) + '</button>').join('')
+          + '</div></div>'
+          + '<div class="r"><div class="lbl">About what</div>'
+          + (opts
+              ? '<select class="field" id="ivSubject">' + opts + '<option value="free">Something else…</option></select>'
+              : '<input class="field" id="ivFree" maxlength="120" placeholder="Which lesson or difficulty"/>')
+          + (opts ? '<input class="field" id="ivFree" maxlength="120" placeholder="Which lesson or difficulty" style="display:none;margin-top:8px"/>' : '')
+          + '</div>'
+          + '<div class="r"><div class="lbl">When</div>'
+          + '<input class="field" id="ivWhen" type="date" value="' + dayShift(0) + '" min="' + dayShift(-30) + '" max="' + dayShift(0) + '"/></div>'
+          + '<div class="r"><div class="lbl">Note (optional)</div>'
+          + '<input class="field" id="ivNote" maxlength="500" placeholder="One line, for you and for them"/></div>'
+          + '<div style="display:flex;gap:8px"><button class="btn sm" id="ivSave">Record it</button>'
+          + '<button class="btn ghost sm" id="ivCancel">Cancel</button></div>'
+          + '</div>'
+        : '')
+    + (!S.isTeacher
+        ? '<div class="code-note" style="margin-top:12px">Recording is the teacher\'s. You see what they recorded, and so does ' + first + '.</div>'
+        : '');
+
+  el.querySelectorAll('[data-wd]').forEach((b) => b.addEventListener('click', async () => {
+    if (!confirm('Withdraw this record? It stays visible, marked as withdrawn — it is not deleted.')) return;
+    try { await api.withdrawIntervention(b.getAttribute('data-wd')); }
+    catch (e) { say($('cardMsg'), e.message || 'Could not withdraw it.', 'err'); return; }
+    await renderInterventions(student, el);
+  }));
+
+  if (!S.isTeacher || !live) return;
+
+  const form = el.querySelector('#ivForm');
+  el.querySelector('#ivOpen').addEventListener('click', () => { form.style.display = 'block'; });
+  el.querySelector('#ivCancel').addEventListener('click', () => { form.style.display = 'none'; });
+
+  let kind = 'retaught';
+  form.querySelector('#ivKind').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-k]');
+    if (!b) return;
+    kind = b.getAttribute('data-k');
+    form.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === b));
+  });
+
+  const subject = form.querySelector('#ivSubject');
+  const free = form.querySelector('#ivFree');
+  if (subject) subject.addEventListener('change', () => {
+    free.style.display = subject.value === 'free' ? 'block' : 'none';
+  });
+
+  form.querySelector('#ivSave').addEventListener('click', async () => {
+    const useFree = !subject || subject.value === 'free';
+    const picked = useFree ? null : (S.weaknesses || [])[Number(subject.value)];
+    const label = useFree ? free.value.trim() : (picked.subtopic || picked.topic);
+    if (!label) { say($('cardMsg'), 'Say what it was about.', 'err'); return; }
+
+    /* Canonical ids only when the label really is a lesson in the taxonomy.
+       A free-typed subject usually is not, and is stored as a label alone. */
+    const ids = picked ? canonicalFor(picked.topic, picked.subtopic) : canonicalFor(label, null);
+
+    try {
+      await api.recordIntervention(S.ws.workspace_id, student.student_id, {
+        kind, subject_label: label, topic_id: ids.topic_id, subtopic_id: ids.subtopic_id,
+        note: form.querySelector('#ivNote').value.trim() || null,
+        decided_on: form.querySelector('#ivWhen').value || dayShift(0),
+      });
+    } catch (e) { say($('cardMsg'), e.message || 'Could not record that.', 'err'); return; }
+    clear($('cardMsg'));
+    await renderInterventions(student, el);
+  });
+}
+
+$('closeDrawer').addEventListener('click', () => openDrawer(false));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openDrawer(false); });
+
+boot();
+</script>
+<script src="nav.js" defer></script>
+</body>
+</html>

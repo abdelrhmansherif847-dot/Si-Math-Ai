@@ -413,6 +413,30 @@ button{font-family:inherit;cursor:pointer}
     <div id="packLoading" style="font-size:13px;color:var(--text-400);text-align:center;padding:12px">Loading packs…</div>
   </section>
 
+  <!-- SECTION 6B: TEACHERS & ASSISTANTS -->
+  <!-- Hidden until student_my_teachers() answers. The RPC ships in
+       20260830c, which is PREPARED and not applied, so until then this
+       section does not exist for anyone rather than showing an error for a
+       capability the backend does not have yet. -->
+  <div id="teacherSection" style="display:none">
+  <div class="sec-label">Teachers &amp; Assistants</div>
+  <section class="card">
+    <div style="font-size:13px;color:var(--text-400);line-height:1.6;margin-bottom:16px">
+      A teacher can see you only if <strong>you</strong> connect to their class with the code they give you.
+      They never see anyone who did not do that, and they never see your plan, your credits or your chats with Zero.
+      End a connection here and their access stops immediately — your own work stays exactly where it is.
+    </div>
+    <div id="teacherList"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-soft)">
+      <input id="classCode" maxlength="12" placeholder="CLASS CODE" autocomplete="off"
+             style="flex:1;min-width:180px;padding:11px 14px;border-radius:10px;background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-family:var(--font-mono);font-size:14px;letter-spacing:.14em;text-transform:uppercase"/>
+      <button id="joinClassBtn"
+              style="padding:11px 18px;border-radius:10px;border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan);font-family:inherit;font-weight:600;font-size:13.5px">Connect to a class</button>
+    </div>
+    <div id="teacherMsg" style="display:none;font-size:13px;padding:10px 13px;border-radius:10px;margin-top:12px"></div>
+  </section>
+  </div>
+
   <!-- SECTION 7: PRIVACY & SECURITY -->
   <div class="sec-label">Privacy &amp; Security</div>
   <section class="card">
@@ -1268,12 +1292,81 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* ── Teachers & Assistants ─────────────────────────────────────────────
+     The student's side of the teacher relationship. Two acts live here and
+     both belong to the student alone: connecting to a class, and ending
+     that connection. A teacher has no path to either — see
+     docs/roadmap/teacher-intelligence-layer.md §8 and the guard trigger in
+     supabase/migrations/20260830a_teacher_foundation_tables.sql. */
+  const escT = (v) => String(v == null ? '' : v).replace(/[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const dateT = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) { return ''; } };
+
+  function sayTeacher(text, ok) {
+    const el = document.getElementById('teacherMsg');
+    if (!el) return;
+    el.style.display = 'block';
+    el.textContent = text;
+    el.style.background = ok ? 'var(--green-soft)' : 'var(--red-soft)';
+    el.style.border = '1px solid ' + (ok ? 'var(--green-border)' : 'var(--red-border)');
+    el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  }
+
+  async function loadMyTeachers() {
+    const box = document.getElementById('teacherList');
+    if (!box) return;
+    const { data, error } = await sb.rpc('student_my_teachers');
+    if (error) return;                       // section stays hidden
+    document.getElementById('teacherSection').style.display = '';
+
+    const rows = data || [];
+    const live = rows.filter((r) => r.status === 'active');
+    if (!live.length) {
+      box.innerHTML = '<div style="font-size:13px;color:var(--text-500);padding:6px 0">'
+        + 'No teacher is connected to your account. Nobody can see your work but you.</div>';
+      return;
+    }
+    box.innerHTML = live.map((r) => ''
+      + '<div class="set-row">'
+      + '<span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg></span>'
+      + '<div class="set-body"><div class="set-t">' + escT(r.workspace_name) + '</div>'
+      + '<div class="set-s">' + escT(r.teacher_name) + ' · connected ' + escT(dateT(r.joined_at)) + '</div></div>'
+      + '<button data-leave="' + escT(r.workspace_id) + '" '
+      + 'style="padding:7px 13px;border-radius:9px;border:1px solid var(--red-border);background:var(--red-soft);color:var(--red);font-family:inherit;font-weight:600;font-size:12.5px">Disconnect</button>'
+      + '</div>').join('');
+
+    box.querySelectorAll('[data-leave]').forEach((b) => b.addEventListener('click', async () => {
+      const id = b.getAttribute('data-leave');
+      if (!confirm('Disconnect from this class? Your teacher stops seeing you straight away. Nothing you have done is deleted.')) return;
+      b.disabled = true;
+      const { error: e2 } = await sb.rpc('student_leave_workspace', { p_workspace: id });
+      b.disabled = false;
+      if (e2) return sayTeacher(e2.message || 'Could not disconnect.', false);
+      sayTeacher('Disconnected. That teacher can no longer see you.', true);
+      loadMyTeachers();
+    }));
+  }
+
+  document.getElementById('joinClassBtn')?.addEventListener('click', async () => {
+    const input = document.getElementById('classCode');
+    const code = (input?.value || '').trim();
+    if (!code) return;
+    const btn = document.getElementById('joinClassBtn');
+    btn.disabled = true;
+    const { data, error } = await sb.rpc('student_join_workspace', { p_code: code });
+    btn.disabled = false;
+    if (error) return sayTeacher(error.message || 'That code did not match a class.', false);
+    input.value = '';
+    sayTeacher('Connected to ' + (data && data.name ? data.name : 'the class') + '.', true);
+    loadMyTeachers();
+  });
+
   // Kick off everything
   async function initAll() {
     // The catalogue has to be in hand before the subscription card names a
     // plan, or the card falls back to a derived label for a moment.
     await Promise.all([loadProfile(), PlanCatalog.load(sb)]);
-    await Promise.all([loadSubscription(), loadCreditPacks()]);
+    await Promise.all([loadSubscription(), loadCreditPacks(), loadMyTeachers()]);
   }
   initAll();
 });

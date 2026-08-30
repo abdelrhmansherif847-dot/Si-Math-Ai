@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Mock Exam – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" referrerpolicy="no-referrer"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="window.__katexReady=true" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" referrerpolicy="no-referrer"></script>
+<!-- The frozen pipeline. exam_submit() hands back mistakes in exactly the shape
+     ExamMistakesLogger.process() takes, so the signals and the analyzer stay
+     the ones the whole platform already uses. -->
+<script src="taxonomy.js"></script>
+<script src="taxonomy-write.js"></script>
+<script src="mastery-updater.js"></script>
+<script src="regenerate-reports.js"></script>
+<script src="exam-mistakes-logger.js"></script>
+<script src="assets/streak.js"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;--font-body:'DM Sans', system-ui, -apple-system, sans-serif;--font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:#050a14;overflow-x:hidden}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+
+.bar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:14px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.bar .ttl{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .sub{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)}
+.spacer{margin-left:auto}
+.timer{font-family:var(--font-mono);font-size:19px;font-weight:700;color:var(--cyan-3);padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);white-space:nowrap}
+.timer.warn{color:#fcd34d;border-color:var(--amber-border);background:var(--amber-soft)}
+.timer.crit{color:#fca5a5;border-color:var(--red-border);background:var(--red-soft);animation:pulse 1.6s ease-in-out infinite}
+
+.wrap{max-width:1180px;margin:0 auto;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 22px) 16px 120px}
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:22px}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:0 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+.h1{font-family:var(--font-display);font-weight:800;font-size:23px;color:#fff;letter-spacing:-.01em}
+.sub{font-size:13.5px;color:var(--text-400);margin-top:5px}
+
+.preview-bar{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-md);padding:11px 15px;margin-bottom:18px;font-size:13px;color:#fcd34d}
+.preview-bar.on{display:flex}
+.preview-bar strong{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3);font-weight:600;font-size:14px;transition:all .18s}
+.btn:hover{background:var(--cyan-bg-med);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;border-color:var(--border-mid);color:var(--text-300)}
+.btn.ghost:hover{background:var(--bg-card-hi);color:#fff}
+.btn.sm{padding:7px 12px;font-size:12.5px}
+.btn.danger{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+
+.qhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.qnum{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500)}
+.pill{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-400)}
+.stim{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-left:2px solid var(--cyan-border);border-radius:var(--r-md);padding:14px 16px;margin-bottom:16px;font-size:14px;color:var(--text-300);overflow-x:auto}
+.prompt{font-size:16.5px;color:#fff;line-height:1.65;margin-bottom:20px}
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);text-align:left;width:100%;color:var(--text-200);font-size:15px;transition:all .16s}
+.choice:hover{border-color:var(--cyan-border-soft);background:var(--bg-card-hi)}
+.choice.on{border-color:var(--cyan-border);background:var(--cyan-bg-soft);color:#fff}
+.choice .k{font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--cyan);width:20px;flex-shrink:0}
+.choice.on .k{color:#fff}
+.grid-in{max-width:280px}
+.grid-in input{width:100%;padding:14px 16px;border-radius:var(--r-md);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:#fff;font-family:var(--font-mono);font-size:19px;letter-spacing:.06em}
+.grid-in input:focus{outline:none;border-color:var(--cyan-border);background:var(--bg-elev-2)}
+.grid-note{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:8px}
+
+.footer{position:fixed;left:0;right:0;bottom:0;z-index:55;background:rgba(5,10,20,.97);border-top:1px solid var(--border-soft);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.footer .mid{margin:0 auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:640px}
+.dot{width:30px;height:30px;border-radius:8px;border:1px solid var(--border-mid);background:var(--bg-elev-1);color:var(--text-400);font-family:var(--font-mono);font-size:11.5px;display:flex;align-items:center;justify-content:center}
+.dot.answered{border-color:var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3)}
+.dot.now{outline:2px solid var(--cyan);outline-offset:1px;color:#fff}
+
+.tile{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:10px;width:100%;text-align:left}
+.tile:hover{border-color:var(--cyan-border-soft)}
+.tile .nm{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
+.tile .mt{font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px}
+.empty{text-align:center;padding:44px 20px;color:var(--text-400)}
+.empty .big{font-family:var(--font-display);font-weight:700;font-size:16.5px;color:var(--text-200);margin-bottom:7px}
+.note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
+.msg{margin-top:14px;font-size:13px;padding:11px 13px;border-radius:var(--r-sm);display:none}
+.msg.err{display:block;background:var(--red-soft);border:1px solid var(--red-border);color:#fca5a5}
+.msg.ok{display:block;background:var(--green-soft);border:1px solid var(--green-border);color:#86efac}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.stat{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:14px 18px;min-width:110px}
+.stat .n{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;line-height:1.1}
+.stat .l{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500);margin-top:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{opacity:.55}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div style="min-width:0">
+    <div class="ttl" id="barTitle">Mock Exam</div>
+    <div class="sub" id="barSub"></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="timer" id="timer" style="display:none">--:--</div>
+  <a class="btn ghost sm" id="leaveBtn" href="dashboard.html">Leave</a>
+</header>
+
+<main class="wrap">
+  <div class="preview-bar" id="previewBar">
+    <strong>Preview</strong>
+    <span>A sample paper with made-up questions. Nothing is saved and no weakness is recorded.</span>
+    <a class="btn ghost sm" href="exam.html" style="margin-left:auto">Leave preview</a>
+  </div>
+
+  <div id="loading" style="text-align:center;padding:70px 0"><div class="spin"></div></div>
+
+  <!-- choose a sitting -->
+  <section id="pick" style="display:none">
+    <div class="h1">Mock Exam</div>
+    <div class="sub">One section at a time, timed the way the real paper is. Every answer, and how long it took, becomes evidence for your weakness analysis.</div>
+    <div class="sec-label" style="margin-top:24px">Available now</div>
+    <div class="card"><div id="pickList"></div></div>
+  </section>
+
+  <!-- sitting -->
+  <section id="sitting" style="display:none">
+    <div class="card">
+      <div class="qhead">
+        <span class="qnum" id="qNum">Question 1</span>
+        <span class="pill" id="qFmt">Multiple choice</span>
+        <span class="pill" id="qCalc" style="display:none">Calculator allowed</span>
+      </div>
+      <div class="stim" id="qStim" style="display:none"></div>
+      <div class="prompt" id="qPrompt"></div>
+      <div class="choices" id="qChoices"></div>
+      <div class="grid-in" id="qGrid" style="display:none">
+        <input id="gridInput" inputmode="text" autocomplete="off" placeholder="Your answer"/>
+        <div class="grid-note">Type your answer. Leave blank to skip.</div>
+      </div>
+      <div class="msg" id="sitMsg"></div>
+    </div>
+  </section>
+
+  <!-- result -->
+  <section id="done" style="display:none">
+    <div class="h1">Section submitted</div>
+    <div class="sub" id="doneSub"></div>
+    <div class="stats" id="doneStats"></div>
+    <div class="sec-label">What happens with this</div>
+    <div class="card">
+      <div class="note" id="doneNote"></div>
+      <div class="msg" id="doneMsg"></div>
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn" href="weakness.html">See my weaknesses</a>
+        <a class="btn ghost" href="dashboard.html">Back to dashboard</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="footer" id="footer" style="display:none">
+  <button class="btn ghost sm" id="prevBtn">Previous</button>
+  <div class="mid" id="palette"></div>
+  <button class="btn ghost sm" id="nextBtn">Next</button>
+  <button class="btn sm" id="submitBtn">Submit section</button>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+/* Guarded: a missing CDN bundle must not take the whole page down with a
+   ReferenceError on line one. */
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const mmss = (secs) => {
+  const s = Math.max(0, Math.round(secs));
+  return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+};
+const say = (el, text, kind) => { el.className = 'msg ' + (kind || 'ok'); el.textContent = text; };
+
+/* KaTeX renders $...$ where it loaded; where it did not, the text still reads. */
+function math(el) {
+  if (!window.renderMathInElement) return;
+  try {
+    window.renderMathInElement(el, {
+      delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+      throwOnError: false,
+    });
+  } catch (_) {}
+}
+
+const S = {
+  preview: new URLSearchParams(location.search).get('preview') === '1',
+  user: null, attempt: null, items: [], cur: 0,
+  enteredAt: 0, endsAt: 0, tick: null, submitting: false, sectionId: null,
+};
+
+/* ── preview fixture ────────────────────────────────────────────────────
+   Nothing is published yet — publishing is a separate authoring decision —
+   so the delivery experience is exercised against a local paper. api.* never
+   reaches the database in this mode. */
+const FIXTURE = {
+  attempt_id: 'preview', duration_seconds: 300, exam_code: 'EST_MATH_1',
+  form_title: 'Sample Paper', section_label: 'Preview Section', calculator_allowed: true,
+  items: [
+    { question_id: 'p1', ordinal: 1, format: 'mcq', prompt: 'If $3x + 5 = 20$, what is the value of $x$?',
+      choices: [{ id: 'A', text: '$3$' }, { id: 'B', text: '$5$' }, { id: 'C', text: '$7$' }, { id: 'D', text: '$15$' }], answer: null },
+    { question_id: 'p2', ordinal: 2, format: 'mcq', prompt: 'A line passes through $(0, 2)$ and $(4, 10)$. What is its slope?',
+      choices: [{ id: 'A', text: '$1$' }, { id: 'B', text: '$2$' }, { id: 'C', text: '$3$' }, { id: 'D', text: '$4$' }], answer: null,
+      stimulus: { kind: 'text', label: 'Note', body: 'Slope is the change in $y$ over the change in $x$.' } },
+    { question_id: 'p3', ordinal: 3, format: 'grid_in', prompt: 'What is $4^2$?', choices: null, answer: null },
+    { question_id: 'p4', ordinal: 4, format: 'mcq', prompt: 'Which value satisfies $x^2 = 49$?',
+      choices: [{ id: 'A', text: '$-7$' }, { id: 'B', text: '$5$' }, { id: 'C', text: '$6$' }, { id: 'D', text: '$8$' }], answer: null },
+  ],
+};
+
+/* ── the only place the database is reached ─────────────────────────────── */
+const api = {
+  async sections() {
+    if (S.preview) return [{ section_id: 'preview', form_title: 'Sample Paper', section_label: 'Preview Section',
+                             exam_code: 'EST_MATH_1', question_count: 4, duration_minutes: 5, calculator_allowed: true }];
+    const { data, error } = await sb.rpc('exam_available_sections');
+    if (error) throw error;
+    return data || [];
+  },
+  async start(sectionId, reqId) {
+    if (S.preview) return JSON.parse(JSON.stringify(FIXTURE));
+    const { data, error } = await sb.rpc('exam_start', { p_section_id: sectionId, p_client_request_id: reqId });
+    if (error) throw error;
+    return data;
+  },
+  async save(questionId, answer, msDelta, visit) {
+    if (S.preview) return;
+    const { error } = await sb.rpc('exam_save_response', {
+      p_attempt: S.attempt.attempt_id, p_question: questionId,
+      p_answer: answer, p_ms_delta: Math.round(msDelta) || 0, p_visit: !!visit });
+    if (error) throw error;
+  },
+  async submit() {
+    if (S.preview) {
+      const answered = S.items.filter((i) => i.answer != null).length;
+      return { total: S.items.length, correct: Math.max(0, answered - 1), wrong: answered ? 1 : 0,
+               omitted: S.items.length - answered, mistakes: [], session_id: null, preview: true };
+    }
+    const { data, error } = await sb.rpc('exam_submit', { p_attempt: S.attempt.attempt_id });
+    if (error) throw error;
+    return data;
+  },
+};
+
+function show(which) {
+  for (const id of ['loading', 'pick', 'sitting', 'done']) $(id).style.display = (id === which) ? '' : 'none';
+  $('footer').style.display = (which === 'sitting') ? '' : 'none';
+  $('timer').style.display = (which === 'sitting') ? '' : 'none';
+}
+
+/* ── bootstrap ─────────────────────────────────────────────────────────── */
+async function boot() {
+  if (S.preview) $('previewBar').classList.add('on');
+  if (!S.preview) {
+    if (!sb) { show('pick'); $('pickList').innerHTML = '<div class="empty">Could not load the connection library. Check your network and reload.</div>'; return; }
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { location.href = 'login.html'; return; }
+    S.user = session.user;
+  }
+
+  let rows = [];
+  try { rows = await api.sections(); } catch (_) { rows = []; }
+
+  if (!rows.length) {
+    show('pick');
+    $('pickList').innerHTML = '<div class="empty"><div class="big">No exam is available yet</div>'
+      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto 16px">Papers are released once they have been written and reviewed. '
+      + 'Nothing is published yet, so there is nothing to sit — that is deliberate, not a fault.</div>'
+      + '<a class="btn ghost sm" href="exam.html?preview=1">Try a sample paper</a></div>';
+    return;
+  }
+
+  show('pick');
+  $('pickList').innerHTML = rows.map((r) => ''
+    + '<button class="tile" data-sec="' + esc(r.section_id) + '">'
+    + '<span style="flex:1;min-width:0"><span class="nm">' + esc(r.form_title) + ' — ' + esc(r.section_label) + '</span>'
+    + '<span class="mt">' + esc(r.exam_code) + ' · ' + esc(r.question_count) + ' questions · '
+    + esc(r.duration_minutes) + ' minutes' + (r.calculator_allowed ? ' · calculator' : '') + '</span></span>'
+    + '<span class="btn sm">Start</span></button>').join('');
+  $('pickList').querySelectorAll('[data-sec]').forEach((b) =>
+    b.addEventListener('click', () => startSection(b.getAttribute('data-sec'))));
+}
+
+/* A stable request id per section, kept in localStorage, is what makes a
+   refresh resume the same sitting instead of starting a second one. */
+function requestIdFor(sectionId) {
+  const key = 'exam_req_' + sectionId;
+  let v = null;
+  try { v = localStorage.getItem(key); } catch (_) {}
+  if (!v) {
+    v = 'r-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem(key, v); } catch (_) {}
+  }
+  return v;
+}
+
+async function startSection(sectionId) {
+  show('loading');
+  S.sectionId = sectionId;
+  try {
+    S.attempt = await api.start(sectionId, requestIdFor(sectionId));
+  } catch (e) {
+    show('pick'); alert(e.message || 'Could not start this section.'); return;
+  }
+  S.items = (S.attempt.items || []).map((i) => Object.assign({}, i));
+
+  if (S.attempt.status === 'submitted') {
+    // Already finished on a previous visit; do not let it be sat twice.
+    return finish(await api.submit());
+  }
+
+  const started = S.attempt.started_at ? new Date(S.attempt.started_at).getTime() : Date.now();
+  S.endsAt = started + (S.attempt.duration_seconds * 1000);
+
+  $('barTitle').textContent = (S.attempt.form_title || 'Mock Exam') + ' — ' + (S.attempt.section_label || '');
+  $('barSub').textContent = S.items.length + ' questions';
+  $('leaveBtn').textContent = 'Leave';
+  if (S.attempt.calculator_allowed) $('qCalc').style.display = '';
+
+  show('sitting');
+  S.cur = 0;
+  renderItem(true);
+  startTimer();
+  window.addEventListener('beforeunload', flushSync);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flush(false); });
+  setInterval(() => { if (!S.submitting) flush(false); }, 20000);
+}
+
+/* ── timer ─────────────────────────────────────────────────────────────── */
+function startTimer() {
+  if (S.tick) clearInterval(S.tick);
+  const paint = () => {
+    const left = (S.endsAt - Date.now()) / 1000;
+    const el = $('timer');
+    el.textContent = mmss(left);
+    el.className = 'timer' + (left <= 60 ? ' crit' : (left <= 300 ? ' warn' : ''));
+    if (left <= 0) { clearInterval(S.tick); doSubmit(true); }
+  };
+  paint();
+  S.tick = setInterval(paint, 1000);
+}
+
+/* ── one item ──────────────────────────────────────────────────────────── */
+function renderItem(isEntry) {
+  const it = S.items[S.cur];
+  $('qNum').textContent = 'Question ' + (S.cur + 1) + ' of ' + S.items.length;
+  $('qFmt').textContent = it.format === 'grid_in' ? 'Write-in answer' : 'Multiple choice';
+
+  if (it.stimulus && (it.stimulus.body || it.stimulus.label)) {
+    $('qStim').style.display = '';
+    $('qStim').innerHTML = (it.stimulus.label ? '<strong>' + esc(it.stimulus.label) + '</strong><br/>' : '')
+      + esc(it.stimulus.body || '');
+  } else { $('qStim').style.display = 'none'; $('qStim').innerHTML = ''; }
+
+  $('qPrompt').innerHTML = esc(it.prompt);
+
+  if (it.format === 'mcq') {
+    $('qChoices').style.display = ''; $('qGrid').style.display = 'none';
+    const list = Array.isArray(it.choices) ? it.choices : [];
+    $('qChoices').innerHTML = list.map((c) => ''
+      + '<button class="choice' + (it.answer === c.id ? ' on' : '') + '" data-choice="' + esc(c.id) + '">'
+      + '<span class="k">' + esc(c.id) + '</span><span>' + esc(c.text) + '</span></button>').join('');
+    $('qChoices').querySelectorAll('[data-choice]').forEach((b) =>
+      b.addEventListener('click', () => choose(b.getAttribute('data-choice'))));
+  } else {
+    $('qChoices').style.display = 'none'; $('qGrid').style.display = '';
+    $('gridInput').value = it.answer == null ? '' : it.answer;
+  }
+
+  math($('qPrompt')); math($('qChoices')); math($('qStim'));
+  drawPalette();
+
+  S.enteredAt = Date.now();
+  // Entering an item is the visit; the time is reported when leaving it.
+  if (isEntry !== false) api.save(it.question_id, it.answer, 0, true).catch(() => {});
+}
+
+function drawPalette() {
+  $('palette').innerHTML = S.items.map((it, i) => ''
+    + '<button class="dot' + (it.answer != null ? ' answered' : '') + (i === S.cur ? ' now' : '') + '" '
+    + 'data-go="' + i + '" aria-label="Question ' + (i + 1) + '">' + (i + 1) + '</button>').join('');
+  $('palette').querySelectorAll('[data-go]').forEach((b) =>
+    b.addEventListener('click', () => go(parseInt(b.getAttribute('data-go'), 10))));
+  $('prevBtn').disabled = S.cur === 0;
+  $('nextBtn').disabled = S.cur === S.items.length - 1;
+}
+
+function currentTyped() {
+  const it = S.items[S.cur];
+  if (it.format !== 'grid_in') return it.answer;
+  const v = $('gridInput').value.trim();
+  return v === '' ? null : v;
+}
+
+/** Report the time spent on the item being left, with whatever is answered. */
+function flush(markVisit) {
+  const it = S.items[S.cur];
+  if (!it) return Promise.resolve();
+  it.answer = currentTyped();
+  const delta = Date.now() - S.enteredAt;
+  S.enteredAt = Date.now();
+  return api.save(it.question_id, it.answer, delta, !!markVisit).catch(() => {});
+}
+function flushSync() { try { flush(false); } catch (_) {} }
+
+function choose(id) {
+  const it = S.items[S.cur];
+  it.answer = (it.answer === id) ? null : id;   // tapping the same choice clears it
+  renderItem(false);
+  flush(false);
+}
+
+function go(i) {
+  if (i < 0 || i >= S.items.length || i === S.cur) return;
+  flush(false);
+  S.cur = i;
+  renderItem(true);
+}
+$('prevBtn').addEventListener('click', () => go(S.cur - 1));
+$('nextBtn').addEventListener('click', () => go(S.cur + 1));
+$('gridInput').addEventListener('input', () => { S.items[S.cur].answer = currentTyped(); drawPalette(); });
+
+/* ── submit ────────────────────────────────────────────────────────────── */
+$('submitBtn').addEventListener('click', () => doSubmit(false));
+
+async function doSubmit(auto) {
+  if (S.submitting) return;
+  const blank = S.items.filter((i) => i.answer == null).length;
+  if (!auto && blank > 0 &&
+      !confirm(blank + (blank === 1 ? ' question is' : ' questions are') + ' still blank. Submit anyway?')) return;
+  if (!auto && blank === 0 && !confirm('Submit this section?')) return;
+
+  S.submitting = true;
+  if (S.tick) clearInterval(S.tick);
+  show('loading');
+  try {
+    await flush(false);
+    const res = await api.submit();
+    await finish(res);
+  } catch (e) {
+    S.submitting = false;
+    show('sitting');
+    say($('sitMsg'), e.message || 'Could not submit. Your answers are saved — try again.', 'err');
+  }
+}
+
+/* The result, and the hand-off to the pipeline that already exists. */
+async function finish(res) {
+  show('done');
+  $('doneSub').textContent = (S.attempt.form_title || '') + ' — ' + (S.attempt.section_label || '');
+  $('doneStats').innerHTML = [
+    { n: res.correct, l: 'Correct' }, { n: res.wrong, l: 'Wrong' },
+    { n: res.omitted, l: 'Left blank' }, { n: res.total, l: 'Questions' },
+  ].map((s) => '<div class="stat"><div class="n">' + esc(s.n) + '</div><div class="l">' + esc(s.l) + '</div></div>').join('');
+
+  /* No scaled score is shown, because none is computed — a raw count is honest
+     and a conversion table does not exist here. */
+  $('doneNote').innerHTML = res.preview
+    ? 'This was a preview, so nothing was saved and no weakness was recorded.'
+    : 'The questions you answered wrongly have gone into your weakness analysis, with the item and your answer attached. '
+      + '<strong>Questions you left blank are recorded but not counted as weaknesses</strong> — running out of time is a pacing '
+      + 'signal, not proof that you do not know the topic.';
+
+  if (res.preview) return;
+  try { localStorage.removeItem('exam_req_' + S.sectionId); } catch (_) {}
+
+  // The frozen logger and the frozen analyzer stay the only writers of
+  // weakness signals and reports. exam_submit() just hands them the mistakes.
+  try {
+    if (window.ExamMistakesLogger && res.session_id) {
+      await window.ExamMistakesLogger.process(sb, S.user.id, res.session_id, res.mistakes || [], {
+        correct: res.correct, wrong: res.wrong, omitted: res.omitted, total_questions: res.total });
+    }
+    if (window.regenerateWeaknessReports) await window.regenerateWeaknessReports(sb, S.user.id);
+    if (window.updateStreak) await window.updateStreak(sb, S.user.id);
+    say($('doneMsg'), 'Your weakness analysis has been updated.', 'ok');
+  } catch (e) {
+    say($('doneMsg'), 'Saved. Your weakness analysis will catch up shortly.', 'ok');
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
