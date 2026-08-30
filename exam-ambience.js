@@ -42,103 +42,118 @@
      being split across three. */
   var GAIN = { voices: 1.0 };
 
-  /* THE VOICE SCHEDULE: A ROTATION, PLUS THREE ANCHORED SOUNDS.
-     The first one at 0:00, the next five minutes later, and so on through the
-     list; after the last it returns to the first. Order and timing are both
-     deterministic — the schedule is a fact that can be printed, which is the
-     whole reason for it.
+  /* THE VOICE SCHEDULE: A CHAIN, PLUS FIXED POINTS IN EVERY MODULE.
 
-     IT DOES NOT RESET AT A MODULE BOUNDARY, and that is a decision rather than
-     an oversight (confirmed 2026-08-30). Restarting each module at sound 1
-     would be one line here — resetting voiceIdx on enable() already does it —
-     so if a later reader finds module 2 "starting on the wrong sound", this is
-     the note saying it is the right one.
-     TWO KINDS OF SOUND, because two kinds of rule were asked for.
+     THE GAP IS MEASURED FROM THE END OF ONE SOUND TO THE START OF THE NEXT.
+     It used to be measured from start to start, on an absolute grid, and the
+     grid was the thing the schedule was built to protect: a table that could
+     be printed and would be exactly what happened. That is now the SECOND
+     priority. A recording plays whole, and the clock moves to accommodate it.
 
-     ROTATION is the continuous cycle: sound 1, 2, 3, 4, round again, never
-     restarting at a module boundary.
+     WHAT THAT CHANGED IN PRACTICE: nothing yet, and the measurement is the
+     reason to say so rather than let a future reader assume it fixed a bug.
+     Nothing was being cut. src.start() is called with no duration, stop() is
+     never called, there is no fade and no cap; the tightest spacing in the old
+     grid was 60 seconds against clips of 2.39-3.15 seconds, so a sound had
+     roughly 57 seconds of silence after it. The cut a listener hears on
+     voice-5 and voice-6 is not a cut at all: those two reach full level in 36
+     and 44 ms where the others take 256-982, and a fast onset 8 dB louder than
+     last week reads as abrupt. Their first samples are 1e-5 and their tails
+     are 52-54 dB down, so there is nothing there to repair.
 
-     ANCHORS are pinned to a point INSIDE each module — sound 5 at 10:00, sound
-     6 at 20:00, sound 7 at 32:00 — and play there once per module, every
-     module. They are held back because all three are much closer, louder
-     recordings than the rotation
-     (15 dB hotter before normalising), and a voice that present is a different
-     kind of event: better once a student has settled than in the opening
-     minutes.
+     The chain is still worth having. It makes "no sound is ever truncated" a
+     property of the mechanism instead of an accident of the current durations
+     — drop in a 90-second recording tomorrow and the gap still opens after it
+     ends. tests/exam-ambience.test.mjs asserts it directly.
 
-     WHY ANCHORS AND NOT JUST A FLOOR ON THE ROTATION. A floor was the first
-     shape and it does not survive the requirement. With a continuous cycle and
-     a skip-if-too-early rule, sound 6 lands at 25:00 in module 1 and then never
-     appears in module 2 at all — the skip shifts the queue, and "in every
-     module" quietly stops being true. An anchor is the only shape that keeps
-     both promises at once: the cycle never restarts, AND each gated sound
-     appears in every module at the point it was given.
+     TWO CLASSES OF EVENT, because two kinds of rule were asked for.
 
-     So a mark is filled by an anchor if one is due, and otherwise by the next
-     rotation entry. The rotation index carries across modules untouched, which
-     is why module 2 opens on a different sound from module 1.
+     FREE events are the rotation: voice-1 through voice-4, each starting GAP
+     seconds after the previous sound FINISHED. The cycle never restarts at a
+     module boundary, which is why module 2 opens on a different sound.
 
-     ELAPSED IS COUNTED IN MARKS, NOT WALL CLOCK. setInterval fires late and the
-     drift accumulates, so Date.now() at the 10:00 mark can read 599.98s and
-     miss an anchor at 600 — exactly the boundary these are built on. Counting
-     marks makes the runtime and schedule() agree by construction rather than by
-     luck, which matters because the printed table is meant to BE what happens.
-     markIdx points at the next entry in that list; moduleT0 is when the
-     current module began, and every arming is measured from it. */
-  var VOICE_EVERY = 180;
+     FIXED events keep their minute: voice-5 at 10:00, voice-6 at 20:00,
+     voice-7 at 32:00, in every module, plus two rotation sounds at 33:00 and
+     34:00. These are times someone asked for, so they stay times. Drift cannot
+     truncate them either — a fixed event is 60+ seconds from its neighbour and
+     the clips are 3 seconds, and the planner refuses to place a free event
+     inside MIN_GAP of one regardless.
+
+     WHY THE FIXED ONES DID NOT BECOME RELATIVE TOO. "Sound 6 after the first
+     20 m in every module" is a statement about the module, not about the queue.
+     Made relative, it would land at a different minute in every module and in
+     every session, and the instruction would no longer be checkable. Say the
+     word if they should drift with the chain instead.
+
+     ARMED ABSOLUTELY, ALWAYS. Each event is armed as a delay from moduleT0
+     rather than "now plus a gap", so a late-firing timeout costs that event a
+     few milliseconds and never accumulates. This is the same reason the old
+     code counted marks instead of reading the clock; the chain reintroduces a
+     running total, so the arming has to stay absolute or the drift comes back
+     compounded by every duration in it. */
+  var GAP = 180;                    // seconds of silence between two sounds
+  var MIN_GAP = 90;                 // no free event this close to a fixed one
+  var LEAD = 3;                     // a fixed event never lands on top of a sound
   var ROTATION = ['voice-1', 'voice-2', 'voice-3', 'voice-4'];
   var ANCHORS = [
     { id: 'voice-5', at: 600 },     // 10:00 into every module
     { id: 'voice-6', at: 1200 },    // 20:00 into every module
-    { id: 'voice-7', at: 1920 },    // 32:00 — deliberately OFF the five-minute grid
+    { id: 'voice-7', at: 1920 },    // 32:00 — deliberately off any regular beat
   ];
-  var voiceTimer = null, voiceIdx = 0, markIdx = 0, moduleT0 = 0, moduleKey = null;
 
-  /* THE MARKS ARE A LIST, NOT A FIXED INTERVAL, and sound 7 is why. It was
-     asked for at 32:00, and 32:00 is not on a five-minute grid — the marks in a
-     35-minute module run 0, 5, 10, 15, 20, 25, 30 and stop. An anchor there
-     would have sat in the repository and never once played. So the marks are
-     the UNION of the grid and the anchor times: the beat is unchanged for
-     everything else, and an anchor can be put anywhere.
-
-     Generated an hour out, which is longer than any module, and driven by a
-     timeout re-armed against the module's start time rather than by an
-     interval. Absolute arming is what stops the drift accumulating — the same
-     reason the old code counted marks instead of reading the clock.
-
-     A GRID MARK TOO CLOSE TO AN ANCHOR IS DROPPED. At a three-minute beat the
-     grid lands on 9:00 and the first anchor on 10:00, which is a MINUTE apart —
-     two exchanges almost on top of each other, in a layer whose whole point is
-     that events are sparse and unremarkable. The anchors are fixed by
-     instruction and the grid is not, so the grid gives way. 90 seconds is the
-     smallest gap that still reads as two separate events rather than one
-     stuttering one. */
-  var HORIZON = 3600, MIN_GAP = 90;
-
-  /* EXTRA MARKS, asked for by hand and exempt from the crowding rule above.
-     The last minutes of a real hall are the busy ones — people finishing,
-     papers moving, someone giving up — so 33:00 and 34:00 come a minute apart
-     on purpose, right after the 32:00 anchor. Clustering is the point here
-     rather than the defect it is elsewhere, which is why these bypass MIN_GAP
-     instead of the constant being loosened for everything.
+  /* EXTRA FIXED POINTS, asked for by hand, and the one place clustering is the
+     point rather than the defect. The last minutes of a real hall are the busy
+     ones — people finishing, papers moving, someone giving up — so 33:00 and
+     34:00 come a minute apart on purpose, right after the 32:00 anchor. They
+     carry no id: each is filled by the next rotation sound.
 
      35:00 WAS ASKED FOR AND IS NOT HERE. A module is 2100 seconds and the
      schedule stops strictly before its end, so a mark at 35:00 is the moment
-     the timer reaches zero: it would never play, in either module. 34:30 is
-     the nearest point that would. */
-  var EXTRA = [1980, 2040];        // 33:00, 34:00
+     the timer reaches zero: it would never play, in either module. */
+  var EXTRA = [1980, 2040];         // 33:00, 34:00
 
-  function markTimes() {
-    var anchors = ANCHORS.map(function (a) { return a.at; });
-    var seen = {}, out = [], t;
-    for (t = 0; t < HORIZON; t += VOICE_EVERY) {
-      var crowded = anchors.some(function (a) { return Math.abs(a - t) < MIN_GAP; });
-      if (!crowded) seen[t] = true;
+  /* Every fixed point in one module, in order. */
+  function fixedPoints() {
+    var out = ANCHORS.map(function (a) { return { at: a.at, id: a.id }; })
+      .concat(EXTRA.map(function (t) { return { at: t, id: null }; }));
+    return out.sort(function (a, b) { return a.at - b.at; });
+  }
+
+  /* HOW LONG EACH RECORDING IS, in seconds, committed so the planner can be
+     simulated without decoding an mp3 — schedule() below prints the real
+     timetable, and a timetable that guessed the durations would print a
+     different one from the one that plays.
+
+     The browser reads the true duration off the decoded buffer and uses that;
+     these values only drive the printed table and the CI checks. They were
+     measured with ffprobe on the shipped files. If a clip is ever replaced,
+     re-measure DURATION_S, PEAK_DBFS and TRIM together — all three describe
+     the same bytes. */
+  var DURATION_S = {
+    'voice-1': 2.70, 'voice-2': 2.39, 'voice-3': 2.51, 'voice-4': 2.99,
+    'voice-5': 3.15, 'voice-6': 3.15, 'voice-7': 2.79,
+  };
+
+  var voiceTimer = null, voiceIdx = 0, moduleT0 = 0, moduleKey = null;
+  var lastEndAt = 0;                // module seconds at which the last sound ended
+  var fixedIdx = 0;                 // how many fixed points this module are done
+
+  var HORIZON = 3600;
+
+  /* THE PLANNER. Given where the last sound ended and how many fixed points
+     have gone, decide what happens next and when. Pure: schedule() and the
+     runtime both call it, so the printed table cannot drift from behaviour. */
+  function planNext(endedAt, fIdx, rIdx) {
+    var cand = endedAt + GAP;
+    var pts = fixedPoints();
+    var f = fIdx < pts.length ? pts[fIdx] : null;
+    if (f && f.at <= cand + MIN_GAP) {
+      // The fixed point wins its minute; it only slides if a sound is still
+      // playing, and then only by LEAD.
+      return { at: Math.max(f.at, endedAt + LEAD), id: f.id || ROTATION[rIdx % ROTATION.length],
+               fixed: true, usesRotation: !f.id };
     }
-    anchors.forEach(function (a) { seen[a] = true; });
-    EXTRA.forEach(function (e) { seen[e] = true; });
-    Object.keys(seen).forEach(function (k) { out.push(+k); });
-    return out.sort(function (a, b) { return a - b; });
+    return { at: cand, id: ROTATION[rIdx % ROTATION.length], fixed: false, usesRotation: true };
   }
 
   function context() {
@@ -271,34 +286,38 @@
     } catch (e) {}
   }
 
-  /* One scheduled exchange. An anchor due at this mark wins; otherwise the
-     rotation advances by one. */
-  function pick(markSeconds) {
-    for (var i = 0; i < ANCHORS.length; i++)
-      if (ANCHORS[i].at === markSeconds) return ANCHORS[i].id;
-    return ROTATION[(voiceIdx++) % ROTATION.length];
-  }
-
   var lastVoice = null;
+
+  /* Play the next event and advance the chain.
+
+     THE GAP OPENS FROM THE REAL DURATION, not from DURATION_S: the browser has
+     the decoded buffer and knows exactly how long it is, so a clip replaced on
+     disk without its table being updated still gets its full length plus the
+     gap. voices() returns that duration, and 0 when nothing decoded yet —
+     which correctly opens the gap from now rather than from a length that
+     never played. */
   function voiceMoment() {
-    var times = markTimes();
-    var t = times[markIdx];
-    if (t === undefined) return null;           // past the horizon: nothing left
-    markIdx++;
-    var id = pick(t);
-    lastVoice = id;
-    voices(0.25, id);
-    return id;
+    var pts = fixedPoints();
+    var plan = planNext(lastEndAt, fixedIdx, voiceIdx);
+    if (plan.at >= HORIZON) return null;              // past the horizon
+    if (plan.fixed) fixedIdx++;
+    if (plan.usesRotation) voiceIdx++;
+    lastVoice = plan.id;
+    var dur = voices(0.25, plan.id) || (DURATION_S[plan.id] || 3);
+    lastEndAt = plan.at + 0.25 + dur;                 // the gap starts HERE
+    return plan.id;
   }
 
-  /* Arm the NEXT mark against the module's start, never against "now plus an
-     interval". A late fire therefore costs that mark a few milliseconds and
-     nothing after it. */
+  /* Arm the next event against the module's start, never against "now plus a
+     gap". The chain now carries a running total, so relative arming would
+     compound every timeout's lateness with every duration; absolute arming
+     costs one event a few milliseconds and nothing after it. */
   function armNext() {
     if (voiceTimer) { root.clearTimeout(voiceTimer); voiceTimer = null; }
-    var times = markTimes(), t = times[markIdx];
-    if (t === undefined || !on) return;
-    var due = moduleT0 + t * 1000 - Date.now();
+    if (!on) return;
+    var plan = planNext(lastEndAt, fixedIdx, voiceIdx);
+    if (plan.at >= HORIZON) return;
+    var due = moduleT0 + plan.at * 1000 - Date.now();
     voiceTimer = root.setTimeout(function () {
       if (!on) return;
       voiceMoment();
@@ -309,28 +328,44 @@
   /* THE PAGE SAYS WHEN A MODULE STARTS, because only the page knows. Called on
      every render with whatever identifies the current module; the clock resets
      only when that changes, so calling it repeatedly is free. The rotation
-     index is deliberately NOT reset — the cycle runs straight through. */
+     index is deliberately NOT reset — the cycle runs straight through — but
+     the chain and the fixed points are, because both are module-relative.
+
+     lastEndAt starts at -GAP so the first event lands at 0:00. */
   function noteModule(key) {
     if (key === moduleKey) return false;
     moduleKey = key;
-    markIdx = 0;
+    fixedIdx = 0;
+    lastEndAt = -GAP;
     moduleT0 = Date.now();
     if (on) armNext();
     return true;
   }
 
-  /* The timetable for ONE module, as data. Anchors land on their own mark;
-     everything else is the rotation continuing from wherever it is, so pass
-     `startIndex` to see a later module. */
+  /* THE TIMETABLE FOR ONE MODULE, as data — and it is a SIMULATION of the
+     runtime rather than a second description of it. Same planner, same
+     durations, same order, so the table cannot say one thing while the page
+     does another. That mattered more when the times were a fixed grid; now
+     that a duration moves every subsequent event, a table derived any other
+     way would be wrong by construction.
+
+     `startIndex` continues the rotation, so pass a previous module's
+     nextIndex to see the one after it. */
   function schedule(moduleMinutes, startIndex) {
-    var out = [], end = (moduleMinutes || 35) * 60, i = startIndex || 0;
-    var times = markTimes();
-    for (var k = 0; k < times.length && times[k] < end; k++) {
-      var t = times[k], id = null;
-      for (var a = 0; a < ANCHORS.length; a++) if (ANCHORS[a].at === t) id = ANCHORS[a].id;
-      if (!id) id = ROTATION[(i++) % ROTATION.length];
-      out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
-                 clip: id, anchored: !!ANCHORS.filter(function (x) { return x.at === t; }).length });
+    var out = [], end = (moduleMinutes || 35) * 60;
+    var i = startIndex || 0, f = 0, ended = -GAP, guard = 0;
+    while (guard++ < 500) {
+      var plan = planNext(ended, f, i);
+      if (plan.at >= end || plan.at >= HORIZON) break;
+      if (plan.fixed) f++;
+      if (plan.usesRotation) i++;
+      var dur = DURATION_S[plan.id] || 3;
+      var t = plan.at;
+      out.push({ at: +t.toFixed(2),
+                 clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + Math.floor(t % 60),
+                 clip: plan.id, seconds: dur, fixed: plan.fixed,
+                 endsAt: +(t + 0.25 + dur).toFixed(2) });
+      ended = t + 0.25 + dur;
     }
     out.nextIndex = i;
     return out;
@@ -342,11 +377,12 @@
       if (!context()) return false;
       on = true;
       voiceIdx = 0;
-      markIdx = 0;
+      fixedIdx = 0;
+      lastEndAt = -GAP;              // so the first event lands at 0:00
       moduleT0 = Date.now();
       preload();
-      // THE FIRST MARK IS 0:00, so arming immediately plays it now rather than
-      // leaving the schedule's first entry silent.
+      // The first event is at 0:00, so arming immediately plays it now rather
+      // than leaving the chain's first entry silent.
       armNext();
       return true;
     } catch (e) { return false; }
@@ -374,19 +410,22 @@
     // The voice schedule, and a way to hear the next one without waiting for it.
     schedule: schedule,
     voiceNow: voiceMoment,
-    // Console-only. Returns the beat when called with nothing — an accidental
-    // voiceEverySeconds() used to set VOICE_EVERY to NaN, and a NaN step ends
-    // markTimes()' loop after one iteration, silently reducing the whole
-    // schedule to 0:00 plus the anchors.
-    voiceEverySeconds: function (s) {
-      if (!isFinite(s)) return VOICE_EVERY;
-      VOICE_EVERY = Math.max(10, s);
+    /* Console-only. The gap BETWEEN sounds, in seconds — end of one to start
+       of the next, which is what changed on 2026-08-30. Returns the current
+       value when called with nothing: an accidental gapSeconds() setting it to
+       NaN would put every event at NaN seconds and stop the layer dead, and
+       the same slip on the old interval reduced the whole schedule to 0:00 in
+       silence. */
+    gapSeconds: function (v) {
+      if (!isFinite(v)) return GAP;
+      GAP = Math.max(10, v);
       if (on) { disable(); enable(); }
-      return VOICE_EVERY;
+      return GAP;
     },
     noteModule: noteModule,
     get _lastVoice() { return lastVoice; },
-    marks: markTimes,
+    durations: DURATION_S,
+    fixedPoints: fixedPoints,
     _voices: ROTATION.concat(ANCHORS.map(function (a) { return a.id; })),
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

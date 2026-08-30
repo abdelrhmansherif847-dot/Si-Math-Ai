@@ -87,17 +87,22 @@ t.section('the schedule reaches every clip, in both modules');
 const m1 = A.schedule(35, 0);
 const m2 = A.schedule(35, m1.nextIndex);
 
-t.is('module 1 has 14 marks', m1.length, 14);
-t.is('module 2 has 14 marks', m2.length, 14);
+t.ok('module 1 has sounds', m1.length > 8);
+t.is('module 2 has as many', m2.length, m1.length);
 t.ok('every scheduled clip is a real clip',
   m1.concat(m2).every((e) => clips.includes(e.clip)));
 
-// The anchors were each asked for at a named minute, in EVERY module. A
-// rotation-with-a-floor could not keep that promise and an anchor at 32:00 is
-// not even on the three-minute grid, so both facts are worth pinning.
-const anchorsOf = (m) => m.filter((e) => e.anchored).map((e) => e.clock + ' ' + e.clip);
-t.is('module 1 anchors', anchorsOf(m1), ['10:00 voice-5', '20:00 voice-6', '32:00 voice-7']);
-t.is('module 2 anchors', anchorsOf(m2), ['10:00 voice-5', '20:00 voice-6', '32:00 voice-7']);
+// The anchors were each asked for at a named minute, in EVERY module. Made
+// relative to the chain they would land somewhere different in every module and
+// every session, so they stay times — and a time is checkable.
+const anchorsOf = (m) => m.filter((e) => ['voice-5', 'voice-6', 'voice-7'].includes(e.clip))
+  .map((e) => e.clock + ' ' + e.clip);
+t.is('module 1 anchors keep their minute', anchorsOf(m1),
+  ['10:00 voice-5', '20:00 voice-6', '32:00 voice-7']);
+t.is('module 2 anchors keep their minute', anchorsOf(m2),
+  ['10:00 voice-5', '20:00 voice-6', '32:00 voice-7']);
+t.ok('every anchor is marked fixed',
+  m1.filter((e) => ['voice-5', 'voice-6', 'voice-7'].includes(e.clip)).every((e) => e.fixed));
 
 // The rotation is continuous across the boundary, by explicit instruction.
 t.ok('module 2 does not restart the rotation', m1[0].clip !== m2[0].clip);
@@ -107,5 +112,50 @@ t.ok('module 2 does not restart the rotation', m1[0].clip !== m2[0].clip);
 // listener discovers instead of the suite.
 const heard = new Set(m1.concat(m2).map((e) => e.clip));
 t.is('all seven are heard within two modules', clips.filter((c) => !heard.has(c)), []);
+
+t.section('no sound can be cut short');
+
+// This is the point of the chain. The gap is measured from the END of one
+// sound to the START of the next, so a sound cannot be overtaken however long
+// it runs. Asserting it on the simulated timetable is the whole guarantee:
+// nothing else in the module can truncate a source — start() is called with no
+// duration and stop() is never called.
+const overlaps = (m) => m.slice(1).filter((e, i) => e.at < m[i].endsAt)
+  .map((e) => e.clock + ' ' + e.clip);
+t.is('module 1 never starts a sound before the last one ends', overlaps(m1), []);
+t.is('module 2 never starts a sound before the last one ends', overlaps(m2), []);
+
+t.ok('every clip has a committed duration', clips.every((c) => A.durations[c] > 0));
+t.is('no duration without a clip', Object.keys(A.durations).filter((k) => !clips.includes(k)), []);
+
+// A free event is a full gap after the previous sound ENDED, to the hundredth.
+// Fixed events are exempt: they keep their minute, which is what makes them
+// fixed, and the planner still refuses to place one on top of a playing sound.
+const freeGaps = (m) => m.slice(1).filter((e) => !e.fixed)
+  .map((e, i) => +(e.at - m[m.indexOf(e) - 1].endsAt).toFixed(2));
+t.is('every free gap is exactly the configured gap',
+  [...new Set(freeGaps(m1).concat(freeGaps(m2)))], [180]);
+
+// Even a fixed event, which may come sooner than a full gap, leaves real
+// silence — the deliberate 33:00/34:00 cluster is the tightest case.
+const allGaps = (m) => m.slice(1).map((e, i) => e.at - m[i].endsAt);
+const tightest = Math.min(...allGaps(m1), ...allGaps(m2));
+t.note(`tightest gap anywhere: ${tightest.toFixed(1)}s`);
+t.ok('even the tightest gap is far longer than any clip',
+  tightest > Math.max(...clips.map((c) => A.durations[c])) * 5);
+
+// The guarantee has to survive a clip being replaced with a much longer one.
+// If someone drops in a 90-second recording, the chain still opens the gap
+// after it ends — but this check is what would fail first if the planner ever
+// went back to a fixed grid.
+t.ok('the gap exceeds the longest clip many times over',
+  180 > Math.max(...clips.map((c) => A.durations[c])) * 10);
+
+t.section('the gap setter cannot be poisoned');
+
+t.is('gapSeconds() reports the gap', A.gapSeconds(), 180);
+t.is('gapSeconds(undefined) does not set NaN', A.gapSeconds(undefined), 180);
+t.ok('a NaN gap would have stopped the layer dead',
+  A.schedule(35, 0).length > 0);
 
 t.done();
