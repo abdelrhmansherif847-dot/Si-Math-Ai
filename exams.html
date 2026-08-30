@@ -298,6 +298,7 @@ function startClock() {
 function stopClock() { if (tick) { clearInterval(tick); tick = null; } }
 
 /* ── render ──────────────────────────────────────────────────────────────── */
+const root_ambience = () => (typeof SiExamAmbience !== 'undefined' ? SiExamAmbience : null);
 function render() {
   const s = session.state();
   barId.textContent = form.code + ' · ' + form.examCode;
@@ -308,6 +309,15 @@ function render() {
 
 function screenModule(s) {
   barBack.hidden = true;
+  // The ambience anchors two of its sounds to points INSIDE a module, so it has
+  // to be told when one starts — only this page knows. Keyed by section rather
+  // than by label, because both modules are labelled "Module 2" across the two
+  // variants and a label would not tell them apart. Idempotent, so calling it on
+  // every render costs nothing.
+  try {
+    if (root_ambience()) root_ambience().noteModule(
+      s.section.id || (s.section.ordinal + ':' + (s.section.variantId || '')));
+  } catch (e) {}
   // The module is named by its LABEL. exam-registry.js is explicit that no
   // per-variant label exists, "so no screen can leak which path was taken" —
   // this page never prints s.section.variantId while a module is running.

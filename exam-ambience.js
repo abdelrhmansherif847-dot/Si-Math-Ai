@@ -35,7 +35,7 @@
   // cannot be judged by waiting ten minutes for it.
   var EVERY = 45;
 
-  /* THE VOICES ARE A FIXED CYCLE, NOT A DICE ROLL.
+  /* THE VOICE SCHEDULE: A ROTATION, PLUS TWO ANCHORED SOUNDS.
      The first one at 0:00, the next five minutes later, and so on through the
      list; after the last it returns to the first. Order and timing are both
      deterministic — the schedule is a fact that can be printed, which is the
@@ -50,30 +50,43 @@
      are texture and should not arrive on a beat, while an exchange between two
      students is an event and reads better on one.
 
-     `after` is the earliest point in the SITTING a clip may be heard, in
-     seconds from the start. Sound 5 is held until 10:00 because it is a much
-     closer, louder recording than the other four — 15 dB hotter before
-     normalising — and a voice that present is a different kind of event, better
-     once a student has settled than in the first minutes. A clip that is not
-     yet eligible is SKIPPED and the cycle moves on rather than stalling, so the
-     five-minute beat never slips.
+     TWO KINDS OF SOUND, because two kinds of rule were asked for.
 
-     THE ORDER PUTS SOUND 5 THIRD so its turn falls exactly on 10:00, the mark
-     it is gated to. Left fifth it would have waited until 20:00 and the gate
-     would have been decorative — a rule that never fires is not a rule.
+     ROTATION is the continuous cycle: sound 1, 2, 3, 4, round again, never
+     restarting at a module boundary.
 
-     ELAPSED IS COUNTED IN MARKS, NOT IN WALL CLOCK. A setInterval fires a few
-     milliseconds late and the drift accumulates, so `Date.now()` at the 10:00
-     mark can read 599.98s and skip a clip gated at 600 — the exact boundary
-     this list is built around. Counting marks makes the runtime and schedule()
-     agree by construction rather than by luck, which matters because the
-     printed table is supposed to BE what happens. */
+     ANCHORS are pinned to a point INSIDE each module — sound 5 at 10:00, sound
+     6 at 20:00 — and play there once per module, every module. They are held
+     back because both are much closer, louder recordings than the rotation
+     (15 dB hotter before normalising), and a voice that present is a different
+     kind of event: better once a student has settled than in the opening
+     minutes.
+
+     WHY ANCHORS AND NOT JUST A FLOOR ON THE ROTATION. A floor was the first
+     shape and it does not survive the requirement. With a continuous cycle and
+     a skip-if-too-early rule, sound 6 lands at 25:00 in module 1 and then never
+     appears in module 2 at all — the skip shifts the queue, and "in every
+     module" quietly stops being true. An anchor is the only shape that keeps
+     both promises at once: the cycle never restarts, AND each gated sound
+     appears in every module at the point it was given.
+
+     So a mark is filled by an anchor if one is due, and otherwise by the next
+     rotation entry. The rotation index carries across modules untouched, which
+     is why module 2 opens on a different sound from module 1.
+
+     ELAPSED IS COUNTED IN MARKS, NOT WALL CLOCK. setInterval fires late and the
+     drift accumulates, so Date.now() at the 10:00 mark can read 599.98s and
+     miss an anchor at 600 — exactly the boundary these are built on. Counting
+     marks makes the runtime and schedule() agree by construction rather than by
+     luck, which matters because the printed table is meant to BE what happens.
+     moduleMark counts marks since the current module began. */
   var VOICE_EVERY = 300;
-  var VOICES = [
-    { id: 'voice-1' }, { id: 'voice-2' }, { id: 'voice-5', after: 600 },
-    { id: 'voice-3' }, { id: 'voice-4' },
+  var ROTATION = ['voice-1', 'voice-2', 'voice-3', 'voice-4'];
+  var ANCHORS = [
+    { id: 'voice-5', at: 600 },     // 10:00 into every module
+    { id: 'voice-6', at: 1200 },    // 20:00 into every module
   ];
-  var voiceTimer = null, voiceIdx = 0, marks = 0;
+  var voiceTimer = null, voiceIdx = 0, moduleMark = 0, moduleKey = null;
 
   function context() {
     if (ctx) return ctx;
@@ -180,7 +193,7 @@
   }
 
   function voices(at, name) {
-    var id = name || VOICES[voiceIdx % VOICES.length].id;
+    var id = name || ROTATION[voiceIdx % ROTATION.length];
     var buf = clip(id);
     if (!buf) return 0;                      // not decoded yet, or failed: silence
     var src = ctx.createBufferSource();
@@ -194,7 +207,12 @@
 
   // Warm the cache the moment the layer is switched on, so the first moment is
   // not the one that misses.
-  function preload() { try { VOICES.forEach(function (v) { clip(v.id); }); } catch (e) {} }
+  function preload() {
+    try {
+      ROTATION.forEach(clip);
+      ANCHORS.forEach(function (a) { clip(a.id); });
+    } catch (e) {}
+  }
 
   var MOMENTS = [
     { id: 'writing',  play: function () { pen(0); paper(1.1 + Math.random()); } },
@@ -219,21 +237,49 @@
   }
 
   /* One scheduled exchange: paper under it, never a pen — a student writing is
-     not the one talking. Advances the cycle so they come round in order, and
-     steps over any clip not yet eligible — bounded by the list length, so a
-     list where nothing is eligible yet plays nothing rather than spinning. */
+     not the one talking. An anchor due at this mark wins; otherwise the
+     rotation advances by one. */
+  function pick(markSeconds) {
+    for (var i = 0; i < ANCHORS.length; i++)
+      if (ANCHORS[i].at === markSeconds) return ANCHORS[i].id;
+    return ROTATION[(voiceIdx++) % ROTATION.length];
+  }
+
+  var lastVoice = null;
   function voiceMoment() {
-    var elapsed = marks * VOICE_EVERY;
-    marks++;
-    for (var tries = 0; tries < VOICES.length; tries++) {
-      var v = VOICES[voiceIdx % VOICES.length];
-      voiceIdx++;
-      if (v.after && elapsed < v.after) continue;
-      paper(0.05);
-      voices(0.25, v.id);
-      return v.id;
+    var id = pick(moduleMark * VOICE_EVERY);
+    moduleMark++;
+    lastVoice = id;
+    paper(0.05);
+    voices(0.25, id);
+    return id;
+  }
+
+  /* THE PAGE SAYS WHEN A MODULE STARTS, because only the page knows. Called on
+     every render with whatever identifies the current module; the clock resets
+     only when that changes, so calling it repeatedly is free. The rotation
+     index is deliberately NOT reset — the cycle runs straight through. */
+  function noteModule(key) {
+    if (key === moduleKey) return false;
+    moduleKey = key;
+    moduleMark = 0;
+    return true;
+  }
+
+  /* The timetable for ONE module, as data. Anchors land on their own mark;
+     everything else is the rotation continuing from wherever it is, so pass
+     `startIndex` to see a later module. */
+  function schedule(moduleMinutes, startIndex) {
+    var out = [], end = (moduleMinutes || 35) * 60, i = startIndex || 0;
+    for (var t = 0; t < end; t += VOICE_EVERY) {
+      var id = null;
+      for (var a = 0; a < ANCHORS.length; a++) if (ANCHORS[a].at === t) id = ANCHORS[a].id;
+      if (!id) id = ROTATION[(i++) % ROTATION.length];
+      out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
+                 clip: id, anchored: !!ANCHORS.filter(function (x) { return x.at === t; }).length });
     }
-    return null;
+    out.nextIndex = i;
+    return out;
   }
 
   function enable() {
@@ -242,7 +288,7 @@
       if (!context()) return false;
       on = true;
       voiceIdx = 0;
-      marks = 0;
+      moduleMark = 0;
       preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
       voiceTimer = root.setInterval(function () { if (on) voiceMoment(); }, VOICE_EVERY * 1000);
@@ -253,25 +299,6 @@
       moment();
       return true;
     } catch (e) { return false; }
-  }
-
-  /* The timetable, as data, so it can be read rather than inferred. Minutes are
-     from the start of a module; a module shorter than the first mark simply
-     yields nothing. */
-  function schedule(totalMinutes, fromSeconds) {
-    var out = [], t = fromSeconds || 0, i = 0, end = (totalMinutes || 35) * 60;
-    while (t < end) {
-      for (var tries = 0; tries < VOICES.length; tries++) {
-        var v = VOICES[i % VOICES.length];
-        i++;
-        if (v.after && t < v.after) continue;
-        out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
-                   clip: v.id });
-        break;
-      }
-      t += VOICE_EVERY;
-    }
-    return out;
   }
 
   function disable() {
@@ -297,7 +324,9 @@
     schedule: schedule,
     voiceNow: voiceMoment,
     voiceEverySeconds: function (s) { VOICE_EVERY = Math.max(10, s); if (on) { disable(); enable(); } },
-    _voices: VOICES.map(function (v) { return v.id; }),
+    noteModule: noteModule,
+    get _lastVoice() { return lastVoice; },
+    _voices: ROTATION.concat(ANCHORS.map(function (a) { return a.id; })),
     _moments: MOMENTS.map(function (m) { return m.id; }),
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));
