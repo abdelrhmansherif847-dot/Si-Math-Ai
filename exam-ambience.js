@@ -44,7 +44,7 @@
      are texture and should not arrive on a beat, while an exchange between two
      students is an event and reads better on one. */
   var VOICE_EVERY = 300;
-  var VOICES = ['voice-1', 'voice-2', 'voice-3'];
+  var VOICES = ['voice-1', 'voice-2', 'voice-3', 'voice-4'];
   var voiceTimer = null, voiceIdx = 0;
 
   function context() {
