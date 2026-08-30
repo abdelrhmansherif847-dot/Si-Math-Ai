@@ -434,6 +434,18 @@ button{font-family:inherit;cursor:pointer}
               style="padding:11px 18px;border-radius:10px;border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan);font-family:inherit;font-weight:600;font-size:13.5px">Connect to a class</button>
     </div>
     <div id="teacherMsg" style="display:none;font-size:13px;padding:10px 13px;border-radius:10px;margin-top:12px"></div>
+    <!-- The assistant's way in. teacher.html carries the ASSISTANT CODE box, but
+         its only two links (login.html's redirect and nav.js's Teaching link)
+         are both gated on ACTIVE staff — so someone handed an assistant code
+         had no path to the box that accepts it, and a pending assistant had no
+         way back to check their own status. This is a LINK and nothing more:
+         it grants no access, and teacher.html shows an approved assistant
+         nothing until the teacher approves them. -->
+    <div style="font-size:12.5px;color:var(--text-500);margin-top:14px;padding-top:14px;border-top:1px solid var(--border-soft)">
+      Helping a teacher run a class? If they gave you an <strong>assistant code</strong>,
+      <a href="teacher.html" style="color:var(--cyan-3)">enter it here</a> — you will appear on their staff
+      list as pending and see nothing at all until they approve you.
+    </div>
   </section>
   </div>
 
