@@ -117,7 +117,7 @@ t.ok('renderLearning is what fills it', /async function renderLearning\(student,
    second authority the whole design exists to prevent. */
 t.ok('the slot renders through WeaknessView', /WeaknessView\.canonical\(/.test(PAGE) && /WeaknessView\.forRole\(/.test(PAGE));
 t.ok('the module is actually loaded by the page', /<script src="weakness-view\.js"><\/script>/.test(PAGE));
-t.ok('the role passed is the viewer\'s real role', /S\.isOwner \? 'teacher' : 'assistant'/.test(PAGE));
+t.ok('the role passed is the viewer\'s real role', /S\.isTeacher \? 'teacher' : 'assistant'/.test(PAGE));
 t.ok('a withheld trend renders nothing at all', /v\.showTrend \?/.test(PAGE) && !/showTrend[\s\S]{0,80}'Stable'/.test(PAGE));
 t.ok('the page derives no band of its own', !/severity_band\s*[<>=]/.test(PAGE));
 
@@ -135,7 +135,21 @@ for (const [el, what] of [['rotateStudentBtn', 'rotate the class code'],
                           ['staffSection', 'manage assistants'],
                           ['activitySection', 'read class activity']])
   t.ok(`owner-only in the markup: ${what}`,
-    new RegExp(`\\$\\('${el}'\\)\\.style\\.display = S\\.isOwner`).test(PAGE));
+    new RegExp(`\\$\\('${el}'\\)\\.style\\.display = S\\.isTeacher`).test(PAGE));
+
+/* 20260830h renames the workspace's primary staff role from 'owner' to
+   'teacher'. The migration is applied by hand and the site deploys on merge, so
+   for one release the page must accept BOTH values in either order. This check
+   is what makes that deliberate rather than accidental — and what will fail
+   loudly if someone drops the tolerance before the migration is live. */
+t.ok('the page accepts both the old and the new staff-role value',
+  /TEACHER_ROLES = new Set\(\['teacher', 'owner'\]\)/.test(PAGE)
+  && /isTeacherRole\(active\.staff_role\)/.test(PAGE));
+t.ok('and it says why the tolerance exists', /deploys on merge[\s\S]{0,200}migrated by hand/.test(PAGE));
+t.ok('listing assistants names the role it wants, not the one it excludes',
+  /\.eq\('staff_role', 'assistant'\)/.test(PAGE) && !/neq\('staff_role'/.test(PAGE));
+t.ok('nothing user-facing still calls the teacher an owner',
+  !/'Owner'/.test(PAGE) && !/pill\.owner/.test(PAGE));
 
 t.ok('the assistant is told plainly what is theirs and what is not',
   /roster is theirs to change/.test(PAGE) && /Adding and removing students is the teacher/.test(PAGE));

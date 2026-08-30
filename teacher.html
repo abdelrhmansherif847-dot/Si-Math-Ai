@@ -85,7 +85,7 @@ input,select{font-family:inherit}
 .page-title{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;letter-spacing:-.01em}
 .page-sub{font-size:13.5px;color:var(--text-400);margin-top:4px;max-width:640px}
 .pill{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300);white-space:nowrap}
-.pill.owner{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.teacher{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
 .pill.assistant{background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe}
 .pill.ok{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
 .pill.warn{background:var(--amber-soft);border-color:var(--amber-border);color:#fcd34d}
@@ -437,8 +437,17 @@ const clear = (el) => { el.className = 'msg'; el.textContent = ''; };
 $('hamb').addEventListener('click', () => { $('sidebar').classList.toggle('open'); $('overlay').classList.toggle('show'); });
 $('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
 
+/* The workspace's primary staff role is 'teacher'. It was called 'owner' until
+   20260830h renamed it, and that word now belongs to the PLATFORM owner alone.
+   Both values are accepted here on purpose: the static site deploys on merge
+   and the database is migrated by hand, so for one release the two can be in
+   either order and neither order may break the page. Drop 'owner' once
+   20260830h is applied. */
+const TEACHER_ROLES = new Set(['teacher', 'owner']);
+const isTeacherRole = (r) => TEACHER_ROLES.has(r);
+
 const S = {
-  ws: null, isOwner: false, roster: [], staff: [], activity: [],
+  ws: null, isTeacher: false, roster: [], staff: [], activity: [],
   filter: 'active', search: '',
   preview: new URLSearchParams(location.search).get('preview') === '1',
 };
@@ -449,7 +458,7 @@ const S = {
    WITHOUT touching the database — see the guard at the top of every method.
    Names are obviously placeholder; nothing here resembles a real student. */
 const FIXTURE = {
-  ws: { workspace_id: 'preview', name: 'EST Math — Saturday Group', staff_role: 'owner',
+  ws: { workspace_id: 'preview', name: 'EST Math — Saturday Group', staff_role: 'teacher',
         staff_status: 'active', student_join_code: 'K7RMPX42', staff_join_code: 'QW9TLB63', student_count: 6 },
   roster: [
     { student_id: 'p1', full_name: 'A. Sample', exam_type: 'EST',  joined_at: iso(-64), status: 'active' },
@@ -534,7 +543,7 @@ const api = {
     if (S.preview) return FIXTURE.staff.slice();
     const { data, error } = await sb.from('workspace_staff')
       .select('id,user_id,staff_role,status,created_at')
-      .eq('workspace_id', ws).neq('staff_role', 'owner')
+      .eq('workspace_id', ws).eq('staff_role', 'assistant')
       .order('created_at', { ascending: true });
     if (error) throw error;
     return data || [];
@@ -647,7 +656,7 @@ async function boot() {
   try { rows = await api.myWorkspaces(); } catch (_) { show('noneState'); return; }
 
   const active = rows.find((r) => r.staff_status === 'active');
-  if (active) { S.ws = active; S.isOwner = active.staff_role === 'owner'; return renderWorkspace(); }
+  if (active) { S.ws = active; S.isTeacher = isTeacherRole(active.staff_role); return renderWorkspace(); }
 
   const pending = rows.find((r) => r.staff_status === 'pending');
   if (pending) { $('pendingName').textContent = pending.name; return show('pendingState'); }
@@ -673,22 +682,22 @@ $('staffJoinBtn').addEventListener('click', async () => {
 async function renderWorkspace() {
   show('wsState');
   $('wsName').textContent = S.ws.name;
-  $('rolePill').textContent = S.isOwner ? 'Owner' : 'Assistant';
-  $('rolePill').className = 'pill ' + (S.isOwner ? 'owner' : 'assistant');
+  $('rolePill').textContent = S.isTeacher ? 'Teacher' : 'Assistant';
+  $('rolePill').className = 'pill ' + (S.isTeacher ? 'teacher' : 'assistant');
 
   /* The two roles get different sentences because they have different jobs,
      not because one is a lesser version of the other. */
-  $('wsSub').textContent = S.isOwner
+  $('wsSub').textContent = S.isTeacher
     ? 'Your class. You see the students who joined it, and nobody else on the platform.'
     : 'You assist in this class. You see the same students the teacher does, and the roster is theirs to change.';
-  $('codeHelp').innerHTML = S.isOwner
+  $('codeHelp').innerHTML = S.isTeacher
     ? 'Read this out in class. <strong>Students</strong> enter it in Settings → Teachers &amp; Assistants, and that act is the consent — you cannot add a student who did nothing. Rotating stops new joins; it disconnects nobody.'
     : 'Share this with students who still need to join. They enter it in Settings → Teachers &amp; Assistants. Only the teacher can rotate it.';
   /* This paragraph is the page describing itself to the person who will have to
      defend it to a student or a parent, so it is corrected the day it stops
      being true. It said "scores and weaknesses are not here yet" for one day
      after the weakness read went live and was already rendering them. */
-  $('scopeNote').innerHTML = S.isOwner
+  $('scopeNote').innerHTML = S.isTeacher
     ? 'You see a student\'s name, which exam they are sitting, when they connected, and the weaknesses the analyzer found — each one with the evidence it was built from. '
       + 'Not their plan, their credits, their email, or their conversations with Zero: the topic a student struggled with is shareable, the conversation where they struggled is not. '
       + '<strong>No scores.</strong> There are none worth showing until the new Mock Experience produces per-question evidence, and a number without that behind it would be a guess wearing a decimal point.'
@@ -696,18 +705,18 @@ async function renderWorkspace() {
       + 'Neither of you sees scores, plans, or anything a student said to Zero.';
 
   $('studentCode').textContent = S.ws.student_join_code || '--------';
-  $('rotateStudentBtn').style.display = S.isOwner ? '' : 'none';
-  if (S.isOwner && S.ws.staff_join_code) {
+  $('rotateStudentBtn').style.display = S.isTeacher ? '' : 'none';
+  if (S.isTeacher && S.ws.staff_join_code) {
     $('staffCodeWrap').style.display = '';
     $('staffCodeVal').textContent = S.ws.staff_join_code;
   }
-  $('staffSection').style.display = S.isOwner ? '' : 'none';
-  $('activitySection').style.display = S.isOwner ? '' : 'none';
+  $('staffSection').style.display = S.isTeacher ? '' : 'none';
+  $('activitySection').style.display = S.isTeacher ? '' : 'none';
 
   await Promise.all([
     loadRoster(),
-    S.isOwner ? loadStaff() : Promise.resolve(),
-    S.isOwner ? loadActivity() : Promise.resolve(),
+    S.isTeacher ? loadStaff() : Promise.resolve(),
+    S.isTeacher ? loadActivity() : Promise.resolve(),
   ]);
   renderStats();
   renderNeedsYou();
@@ -725,7 +734,7 @@ function renderStats() {
     { n: joined30, l: 'Joined this month' },
   ];
   if (top.length) tiles.push({ n: top.map(([k, v]) => v + ' ' + k).join(' · '), l: 'Exams', wide: true });
-  if (S.isOwner) tiles.push({ n: S.staff.filter((s) => s.status === 'active').length, l: 'Assistants' });
+  if (S.isTeacher) tiles.push({ n: S.staff.filter((s) => s.status === 'active').length, l: 'Assistants' });
 
   $('statRow').innerHTML = tiles.map((t) =>
     '<div class="stat"><div class="n" style="' + (t.wide ? 'font-size:15px;padding-top:4px' : '') + '">'
@@ -736,7 +745,7 @@ function renderStats() {
    holding things that genuinely need a decision from this person today.
    When there is nothing, it says nothing — an empty week is a real week. */
 function renderNeedsYou() {
-  if (!S.isOwner) { $('needsYou').style.display = 'none'; return; }
+  if (!S.isTeacher) { $('needsYou').style.display = 'none'; return; }
   const pending = S.staff.filter((s) => s.status === 'pending');
   if (!pending.length) { $('needsYou').style.display = 'none'; return; }
   $('needsYou').style.display = '';
@@ -925,7 +934,7 @@ async function openCard(studentId) {
   await renderLearning(data, $('learningSlot'));
   await renderInterventions(data, $('interventionSlot'));
 
-  if (S.isOwner && data.status === 'active') {
+  if (S.isTeacher && data.status === 'active') {
     $('cardActions').innerHTML =
       '<button class="btn danger" id="removeStudentBtn">Remove from this class</button>'
       + '<div class="code-note">They keep their account and everything they have done. Only your connection to them ends.</div>';
@@ -937,7 +946,7 @@ async function openCard(studentId) {
       await loadRoster();
       renderStats();
     });
-  } else if (!S.isOwner) {
+  } else if (!S.isTeacher) {
     $('cardActions').innerHTML =
       '<div class="code-note">Adding and removing students is the teacher\'s. You are here to work with them, not to change who is in the class.</div>';
   }
@@ -980,7 +989,7 @@ async function renderLearning(student, el) {
     return;
   }
 
-  const role = S.isOwner ? 'teacher' : 'assistant';
+  const role = S.isTeacher ? 'teacher' : 'assistant';
   const views = rows
     .map((r) => WeaknessView.canonical(r, {
       AI_CHAT: r.signals_ai_chat, MOCK_EXAM: r.signals_mock_exam, FOCUS_PRACTICE: r.signals_focus }))
@@ -1070,7 +1079,7 @@ async function renderInterventions(student, el) {
           + (r.note ? '<span class="iv-note">' + esc(r.note) + '</span>' : '')
           + '<span class="iv-when">' + esc(ivDate(r.decided_on)) + (gone ? ' · withdrawn' : '') + '</span>'
           + '</span>'
-          + (S.isOwner && !gone ? '<button class="btn ghost sm" data-wd="' + esc(r.id) + '">Withdraw</button>' : '')
+          + (S.isTeacher && !gone ? '<button class="btn ghost sm" data-wd="' + esc(r.id) + '">Withdraw</button>' : '')
           + '</div>';
       }).join('')
     : '<div class="slot-empty"><div class="st">Nothing recorded</div>'
@@ -1083,7 +1092,7 @@ async function renderInterventions(student, el) {
     '<option value="' + i + '">' + esc(w.subtopic || w.topic) + '</option>').join('');
 
   el.innerHTML = list
-    + (S.isOwner && live
+    + (S.isTeacher && live
         ? '<div style="margin-top:14px"><button class="btn sm" id="ivOpen">Record what you did</button></div>'
           + '<div class="iv-form" id="ivForm" style="display:none">'
           + '<div class="iv-warn">' + first + ' can read anything you write here. That is deliberate — nothing is kept about a student that the student cannot see.</div>'
@@ -1104,7 +1113,7 @@ async function renderInterventions(student, el) {
           + '<button class="btn ghost sm" id="ivCancel">Cancel</button></div>'
           + '</div>'
         : '')
-    + (!S.isOwner
+    + (!S.isTeacher
         ? '<div class="code-note" style="margin-top:12px">Recording is the teacher\'s. You see what they recorded, and so does ' + first + '.</div>'
         : '');
 
@@ -1115,7 +1124,7 @@ async function renderInterventions(student, el) {
     await renderInterventions(student, el);
   }));
 
-  if (!S.isOwner || !live) return;
+  if (!S.isTeacher || !live) return;
 
   const form = el.querySelector('#ivForm');
   el.querySelector('#ivOpen').addEventListener('click', () => { form.style.display = 'block'; });

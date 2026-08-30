@@ -132,8 +132,8 @@ t.ok('and it is granted to them', /grant execute on function student_my_interven
 t.ok('the writing surface warns that the student can read it',
   /can read anything you write here/.test(REGION));
 t.ok('the page does not offer an assistant a way to record',
-  /if \(!S\.isOwner \|\| !live\) return;/.test(REGION)
-  && /S\.isOwner && live/.test(REGION));
+  /if \(!S\.isTeacher \|\| !live\) return;/.test(REGION)
+  && /S\.isTeacher && live/.test(REGION));
 
 // ══ 4 · RESTRAINT ═════════════════════════════════════════════════════════
 t.section('The platform records what the teacher did; it proposes nothing');
