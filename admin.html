@@ -444,6 +444,47 @@ select.search-input{cursor:pointer}
     </div>
   </section>
 
+  <!-- (9) TEACHER WORKSPACES (owner only) -->
+  <!-- Creating a workspace is what makes someone a Teacher. It writes no
+       profiles.role, grants no admin rights, and the client never touches the
+       workspace tables: teacher_create_workspace() is the sole writer, and it
+       mints the teacher staff row and both join codes in one transaction. -->
+  <section class="card" id="teacherWsPanel" style="display:none;margin-bottom:18px">
+    <div class="card-head">
+      <div class="card-ico">🎓</div>
+      <div><div class="card-title">Teacher Workspaces</div>
+        <div class="card-sub">Owner-only — create a class for an account that already exists. Creating the workspace is what makes them a Teacher: no platform role changes, and they never become an admin.</div></div>
+    </div>
+
+    <div style="background:rgba(10,18,36,.5);border:1px solid var(--border-soft);border-radius:14px;padding:16px;margin-bottom:18px">
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">1 · Choose the teacher</div>
+      <div class="search-row">
+        <input type="text" class="search-input" id="twSearchInput" placeholder="Find an existing account by email (press Enter)…"/>
+      </div>
+      <div id="twSearchResults" style="margin-top:10px"></div>
+      <div id="twSelected" style="display:none;margin-top:12px;padding:11px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);font-size:13px"></div>
+
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin:18px 0 10px">2 · Name the class</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input type="text" class="search-input" id="twClassName" maxlength="80" placeholder="Class name (2–80 characters)" style="flex:1;min-width:220px"/>
+        <button class="btn btn-green" id="twCreateBtn" disabled>Create workspace</button>
+      </div>
+      <div id="twMsg" style="display:none;font-size:13px;padding:10px 13px;border-radius:10px;margin-top:12px"></div>
+    </div>
+
+    <!-- what was just created. The codes are the whole point of the flow, so
+         they are shown once, large, with what each one is for. -->
+    <div id="twCreated" style="display:none;margin-bottom:18px"></div>
+
+    <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">Existing workspaces</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Class</th><th>Teacher</th><th>Student code</th><th>Staff code</th><th>Students</th><th>Created</th></tr></thead>
+        <tbody id="twListBody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-500)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ============== END OVERVIEW SECTIONS ============== -->
 
   <div class="tabs">
@@ -1151,6 +1192,11 @@ async function init() {
   if (role === 'owner') {
     const panel = document.getElementById('roleMgmtPanel');
     if (panel) panel.style.display = '';
+    /* Owner-only, and this is a DISPLAY rule, not a boundary: data-role-min and
+       this branch both work by hiding elements. The real restriction lives in
+       teacher_create_workspace(), which refuses a non-Owner caller. */
+    const twp = document.getElementById('teacherWsPanel');
+    if (twp) { twp.style.display = ''; loadTeacherWorkspaces(); }
   }
   if (!_roleColumnExists) {
     const b = document.getElementById('roleMigrationBanner');
@@ -3710,6 +3756,193 @@ async function _loadRoleAudit() {
   } catch(e) {
     document.getElementById('roleAuditBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-500)">Audit table not accessible.</td></tr>';
   }
+}
+
+/* ── Teacher Workspaces (owner only) ─────────────────────────────────────
+   Creating a workspace is what makes an account a Teacher. Nothing here writes
+   profiles.role, grants admin, or touches a workspace table directly:
+   teacher_create_workspace() is the sole writer and does the whole thing in one
+   transaction — the workspace row, the teacher/active staff row, both join
+   codes with collision retry, and the audit entry.
+
+   The account search reuses the query Role Management already performs. It adds
+   no new way to reach profiles: admins can already select every row
+   (RLS admin_select_profiles), and a second, narrower path would be more
+   surface for no less exposure. */
+const TW = { pick: null, teaching: new Set() };
+
+function twSay(text, kind) {
+  const el = document.getElementById('twMsg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = text;
+  el.style.background = kind === 'err' ? 'rgba(239,79,95,.10)' : 'rgba(52,199,123,.10)';
+  el.style.color = kind === 'err' ? 'var(--red)' : 'var(--green)';
+}
+function twClearMsg() { const el = document.getElementById('twMsg'); if (el) el.style.display = 'none'; }
+
+async function loadTeacherWorkspaces() {
+  const body = document.getElementById('twListBody');
+  try {
+    /* The Owner reads these directly: both policies carry
+       `OR has_role_at_least('admin')`. teacher_my_workspaces() would return
+       nothing here — correctly, because the Owner is not staff of the class. */
+    const { data: ws, error } = await sb.from('teacher_workspaces')
+      .select('id, name, owner_id, student_join_code, staff_join_code, created_at, is_active')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const rows = ws || [];
+
+    TW.teaching = new Set(rows.filter(w => w.is_active).map(w => w.owner_id));
+
+    const ids = [...new Set(rows.map(w => w.owner_id))];
+    let pMap = {};
+    if (ids.length) {
+      const { data: ps } = await sb.from('profiles').select('id, email, full_name').in('id', ids);
+      pMap = Object.fromEntries((ps || []).map(p => [p.id, p]));
+    }
+    let counts = {};
+    if (rows.length) {
+      const { data: links } = await sb.from('workspace_students')
+        .select('workspace_id, status').eq('status', 'active');
+      for (const l of (links || [])) counts[l.workspace_id] = (counts[l.workspace_id] || 0) + 1;
+    }
+
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-500)">'
+        + 'No workspaces yet. Until one exists, no class code exists, and the "Connect to a class" box in a student\'s Settings cannot succeed.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(w => {
+        const t = pMap[w.owner_id] || {};
+        return '<tr>'
+          + '<td><div class="bold">' + esc(w.name) + '</div>'
+          +   (w.is_active ? '' : '<span class="chip gray">inactive</span>') + '</td>'
+          + '<td><div>' + esc(t.full_name || '—') + '</div>'
+          +   '<div style="font-size:11.5px;color:var(--text-500)">' + esc(t.email || w.owner_id) + '</div></td>'
+          + '<td class="mono">' + esc(w.student_join_code) + '</td>'
+          + '<td class="mono">' + esc(w.staff_join_code) + '</td>'
+          + '<td>' + (counts[w.id] || 0) + '</td>'
+          + '<td class="mono">' + fmtDate(w.created_at) + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+  } catch (e) {
+    console.error('loadTeacherWorkspaces', e);
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--red)">Could not load workspaces — ' + esc(e.message || 'unknown error') + '</td></tr>';
+  }
+
+  const inp = document.getElementById('twSearchInput');
+  if (inp && !inp._wired) {
+    inp._wired = true;
+    inp.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter') return;
+      const q = inp.value.trim();
+      const box = document.getElementById('twSearchResults');
+      if (!q) { box.innerHTML = ''; return; }
+      // The same query Role Management runs. No new capability.
+      const { data: sr } = await sb.from('profiles')
+        .select('id, email, full_name, role').ilike('email', '%' + q + '%').limit(50);
+      twRenderResults(sr || []);
+    });
+  }
+  const btn = document.getElementById('twCreateBtn');
+  if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', twCreate); }
+}
+
+function twRenderResults(rows) {
+  const box = document.getElementById('twSearchResults');
+  if (!rows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-500);padding:8px 0">No account matches that email.</div>'; return; }
+  box.innerHTML = rows.map(u => {
+    /* One class per teacher until the multi-workspace selector exists.
+       teacher.html renders only the FIRST active workspace it is handed, so a
+       second class would be created and then be unreachable for its teacher.
+       This is a GUARDRAIL, not a boundary — the database still permits it. */
+    const already = TW.teaching.has(u.id);
+    const label = esc(u.full_name || '—') + ' · ' + esc(u.email || u.id);
+    return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:10px;border:1px solid var(--border-soft);margin-bottom:6px">'
+      + '<div style="font-size:13px">' + label
+      +   (u.role && u.role !== 'user' ? ' <span class="chip amber">' + esc(u.role) + '</span>' : '')
+      +   (already ? ' <span class="chip gray">already teaches a class</span>' : '')
+      + '</div>'
+      + (already
+          ? '<span style="font-size:12px;color:var(--text-500)">One class per teacher for now</span>'
+          : '<button class="btn btn-sm btn-ghost" onclick="twSelect(\'' + esc(u.id) + '\',\'' + esc(u.email || '') + '\',\'' + esc(u.full_name || '') + '\')">Select</button>')
+      + '</div>';
+  }).join('');
+}
+
+function twSelect(id, email, name) {
+  TW.pick = { id, email, name };
+  const el = document.getElementById('twSelected');
+  el.style.display = 'block';
+  el.innerHTML = 'Teacher: <strong>' + esc(name || email || id) + '</strong>'
+    + (name && email ? ' <span style="color:var(--text-400)">· ' + esc(email) + '</span>' : '')
+    + '<div style="font-size:12px;color:var(--text-400);margin-top:4px">This account keeps its own student experience and gains no platform role.</div>';
+  document.getElementById('twCreateBtn').disabled = false;
+  twClearMsg();
+}
+
+async function twCreate() {
+  const btn = document.getElementById('twCreateBtn');
+  const name = (document.getElementById('twClassName').value || '').trim();
+  if (!TW.pick) { twSay('Choose the teacher first.', 'err'); return; }
+  if (name.length < 2 || name.length > 80) { twSay('The class name must be 2 to 80 characters.', 'err'); return; }
+  if (TW.teaching.has(TW.pick.id)) {
+    twSay('That account already teaches a class. One class per teacher until the workspace selector is built — a second class would be created and then be unreachable for them.', 'err');
+    return;
+  }
+  btn.disabled = true;
+  twClearMsg();
+  try {
+    // The sole writer. The client never inserts into a workspace table.
+    const { data: newId, error } = await sb.rpc('teacher_create_workspace',
+      { p_owner: TW.pick.id, p_name: name });
+    if (error) throw error;
+
+    const { data: w, error: rerr } = await sb.from('teacher_workspaces')
+      .select('id, name, owner_id, student_join_code, staff_join_code, created_at')
+      .eq('id', newId).single();
+    if (rerr) throw rerr;
+
+    twShowCreated(w, TW.pick);
+    document.getElementById('twClassName').value = '';
+    document.getElementById('twSearchResults').innerHTML = '';
+    document.getElementById('twSelected').style.display = 'none';
+    TW.pick = null;
+    await loadTeacherWorkspaces();
+    toast('Workspace created', 'green');
+  } catch (e) {
+    /* After the Owner-only migration a non-Owner caller is refused HERE, by the
+       database, not by the hidden panel. Show what the server actually said. */
+    twSay(e.message || 'Could not create the workspace.', 'err');
+    btn.disabled = false;
+  }
+}
+
+function twShowCreated(w, teacher) {
+  const box = document.getElementById('twCreated');
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div style="border:1px solid var(--green-border,rgba(52,199,123,.35));background:rgba(52,199,123,.07);border-radius:14px;padding:18px">'
+    + '<div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:4px">' + esc(w.name) + ' is ready</div>'
+    + '<div style="font-size:13px;color:var(--text-400);margin-bottom:16px">Teacher: <strong>' + esc(teacher.name || teacher.email || w.owner_id) + '</strong>'
+    +   ' · created ' + fmtDate(w.created_at) + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">'
+    +   '<div style="padding:13px 15px;border-radius:11px;background:rgba(10,18,36,.6);border:1px solid var(--border-mid)">'
+    +     '<div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:6px">Student class code</div>'
+    +     '<div class="mono" style="font-size:21px;letter-spacing:.16em;color:var(--cyan)">' + esc(w.student_join_code) + '</div>'
+    +     '<div style="font-size:12px;color:var(--text-500);margin-top:7px">The teacher gives this to their students. A student enters it in <strong>Settings → Teachers &amp; Assistants</strong>; that is the moment they consent to being seen.</div>'
+    +   '</div>'
+    +   '<div style="padding:13px 15px;border-radius:11px;background:rgba(10,18,36,.6);border:1px solid var(--border-mid)">'
+    +     '<div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:6px">Staff code</div>'
+    +     '<div class="mono" style="font-size:21px;letter-spacing:.16em;color:var(--amber)">' + esc(w.staff_join_code) + '</div>'
+    +     '<div style="font-size:12px;color:var(--text-500);margin-top:7px">This one mints <strong>assistants</strong>, so it is not for students. An assistant who enters it arrives <strong>pending</strong> and sees nothing until the teacher approves them.</div>'
+    +   '</div>'
+    + '</div>'
+    + '<div style="font-size:12.5px;color:var(--text-400);margin-top:15px;padding-top:13px;border-top:1px solid var(--border-soft)">'
+    +   'Nothing else is needed. The next time this account signs in they are taken straight to their Teacher workspace, with both codes already waiting — they were given no platform role, and they keep their own student experience.'
+    + '</div>'
+    + '</div>';
 }
 
 init();

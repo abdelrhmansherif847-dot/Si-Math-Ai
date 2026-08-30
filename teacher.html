@@ -590,7 +590,7 @@ const api = {
     if (error) throw error;
   },
   async joinAsStaff(code) {
-    if (S.preview) return { name: FIXTURE.ws.name };
+    if (S.preview) return { name: FIXTURE.ws.name, status: 'pending' };
     const { data, error } = await sb.rpc('staff_join_workspace', { p_code: code });
     if (error) throw error;
     return data;
@@ -671,6 +671,17 @@ $('staffJoinBtn').addEventListener('click', async () => {
   $('staffJoinBtn').disabled = true;
   try {
     const data = await api.joinAsStaff(code);
+    /* staff_join_workspace() reports the REAL status since 20260830j. It used
+       to answer 'pending' to every call, so a removed assistant re-entering the
+       code was shown the waiting screen for an application that was never
+       filed, and an already-active assistant was told they were waiting.
+
+       'active' means this account is already staff here — re-approved, or the
+       teacher pasting their own staff code — so load the workspace instead of
+       claiming they are waiting. Only 'pending' is a wait. A client on the old
+       bundle still gets 'pending' from the new function in the case that
+       matters, so the two can deploy in either order. */
+    if (data && data.status === 'active') { location.reload(); return; }
     $('pendingName').textContent = (data && data.name) || 'a workspace';
     show('pendingState');
   } catch (e) {
