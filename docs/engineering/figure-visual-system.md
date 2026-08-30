@@ -209,32 +209,49 @@ clear; with it, none of the three collides. Reverting the channel turns `pie-2`
 red and leaves the other two green, which is the check earning its keep. Same
 lesson `geo-2` records: **a contract only covers the failures it has a case for.**
 
-### A two-panel pie is drawn at half the family's type size (open)
+### A two-panel pie was drawn at half the family's type size (fixed)
 
-Measured in the real card, at 1440×900, against a 17.5px stem:
+Measured in the real card, at 1440×900, against a 17.5px stem and this exam's
+15.6px bar-chart numerals, the pie's labels landed at **8.7px** — on the figure
+a student reads the answer off.
 
-| figure | plate | shown | scale | type on screen |
-|---|---|---|---|---|
-| bar chart (Q7) | 430u | 560px | 1.302 | numerals **15.6px** |
-| pie, two panels | 801u | 560px | 0.699 | labels **8.7px** |
-| pie, on the approved exploration page | 330u | 255px | 0.774 | labels **9.7px** |
-| pie, one panel per row, full column | 422u | 560px | 1.327 | labels **16.6px** |
+The cause is not the stylesheet. **A one-line label is as wide as its whole
+string, and that width — not the circle — makes a pie plate three times the
+width of the pie inside it.** Two of those abreast overflow any question column,
+so the column scales the plate down and the type with it.
 
-Every family is capped at the same 560px question column. A two-panel pie is
-more than twice as wide a plate as anything else in the grammar, so the cap
-scales it — and everything inside it — to roughly half. The labels are not
-small because the stylesheet says 12.5px; they are small because the arrangement
-doubles the plate.
+Ten compositions were rendered through the real `exams.html` card against the
+live rows before one was chosen. The ones that only moved the constants each
+traded one defect for another:
 
-The last row is the tell: **one panel plus its gutters is 422 units, which is the
-430 the rest of the data family already draws at.** The panel geometry was
-authored to the family's reference width; only putting two of them abreast
-fights it. Stacked, the type lands at 16.6px and matches the exam.
+| composition | label | pie radius | figure height |
+|---|---|---|---|
+| as shipped — 560px measure, one line | 8.7px | 44.7px | 178px |
+| the card's full 702px measure | 11.0px | 56.1px | 223px |
+| + type raised to 17px | 12.6px | 47.6px | 189px |
+| + pies drawn smaller | 13.7px | 38.6px | 174px |
+| + smaller again | 14.6px | **32.3px** | 152px |
+| one panel per row (stacked) | 16.8px | 80.4px | **590px** |
+| **the share set beneath its name** | **15.3px** | **57.7px** | **240px** |
 
-It is left as it is, deliberately. Side by side is the arrangement chosen on the
-exploration page, at realistic exam size, with the type at 9.7px — a smaller
-register was what was approved, and swapping the arrangement is a design decision
-rather than a defect repair. Stacking also costs what it buys: a stacked pair is
-a **690px** figure that pushes the stem and all four options below the fold at
-1440×900, where the side-by-side pair leaves the whole question on one screen.
-Both renders exist; the choice is a human one.
+Raising the type widens the labels, which widens the plate, which scales it back
+down — so it is only ever bought by shrinking the pies until the charts are an
+afterthought. Stacking buys the type at the cost of a figure that pushes the
+stem and all four options below the fold.
+
+**Setting the share on a second line makes a label as wide as the longer of the
+two strings rather than their sum** — close to half for real category names. The
+plate narrows, the scale rises, and the type and the pie both get bigger. It
+costs one line of height per label and changes nothing about the vocabulary:
+same two hues and two neutrals, same direct labelling, same white separators,
+same titles.
+
+Two things follow from it, both deliberate:
+
+- **The pie is shown at the card's measure (702px), not the figure measure
+  (560px).** A pie is the one family whose plate is intrinsically two figures
+  side by side; the stem and the answer choices already use all 702. `SHOWN`
+  is untouched, so no other family moves.
+- **`PIE.PX` is 300**, the width a panel comes out at when a two-panel plate is
+  shown at 702 — so a lone pie and a paired one draw a panel the same size,
+  which is what that cap has always been for.

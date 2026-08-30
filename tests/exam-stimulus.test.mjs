@@ -564,9 +564,18 @@ t.section('the pie family: a whole divided, in the vocabulary that already exist
   t.is('and spend exactly the four decided slots', slots.join(','),
        'sx-pie-s1,sx-pie-s2,sx-pie-s3,sx-pie-s4');
 
-  const labs = all(two).filter(e => e.className === 'sx-pie-label').map(e => e.textContent);
-  t.is('every slice names itself, directly, never in a legend', labs.length, 8);
-  t.ok('and carries its share', labs[0] === 'USA  40%', labs[0]);
+  // THE LABEL IS TWO LINES: the name, then its share beneath it. That is what
+  // lets a two-panel pie be drawn at the exam's own type size rather than half
+  // it — a one-line label is as wide as the whole string, and that width is
+  // what forces the plate past the column. So the name nodes and the share
+  // nodes are counted separately, and each slice must have one of each.
+  const names = all(two).filter(e => e.className === 'sx-pie-label').map(e => e.textContent);
+  const shares = all(two).filter(e => e.className === 'sx-pie-label sx-pie-share')
+    .map(e => e.textContent);
+  t.is('every slice names itself, directly, never in a legend', names.length, 8);
+  t.is('and carries its share on a second line', shares.length, 8);
+  t.ok('the name is the name alone', names[0] === 'USA', names[0]);
+  t.ok('and the share is the share alone', shares[0] === '40%', shares[0]);
 
   // A pie renders from the stimulus alone: it has no variant a question could
   // select, because the values are already written on it.

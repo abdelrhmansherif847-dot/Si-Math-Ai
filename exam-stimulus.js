@@ -807,7 +807,8 @@ function drawNumberLine(spec, opts) {
  * borrow from. Without it "Above 50 50%" ran off the right of a two-panel
  * figure by a character, which the exploration never showed because each pie
  * there had a box of its own. */
-const PIE = { W: 330, H: 234, R: 64, LAB: 15, PAD: 46, CH: 7.2, PX: 245, SEP: -Math.PI / 2 };
+const PIE = { W: 330, H: 246, R: 64, LAB: 16, PAD: 46, CH: 9.8, PX: 300, SHOWN: 702,
+              LINE: 16, SEP: -Math.PI / 2 };
 /* The four fills, NAMED rather than built by concatenating an index. Spelling
  * them out is how the stylesheet gate can see them: it reads the classes this
  * file emits out of the source text, so a name assembled from a prefix and a
@@ -853,9 +854,9 @@ function drawPie(spec, opts) {
      * It over-estimates by around 15% on real strings, and every consumer below
      * relies on erring long: that surplus IS the air between two labels. */
     const labels = cats.map((c, i) => {
-      const text = c + '  ' + fmt(Math.round((vals[i] / total) * 1000) / 10) + '%';
-      return { text, mid: arcs[i][2], right: Math.cos(arcs[i][2]) >= -0.02,
-               w: Math.round(text.length * PIE.CH + 10) };
+      const share = fmt(Math.round((vals[i] / total) * 1000) / 10) + '%';
+      return { name: c, share, mid: arcs[i][2], right: Math.cos(arcs[i][2]) >= -0.02,
+               w: Math.round(Math.max(c.length, share.length) * PIE.CH + 10) };
     });
     const reach = (side) => Math.max(0, ...labels.filter(L => L.right === side).map(L => L.w));
     return { arcs, labels, title: pan.title, reachR: reach(true), reachL: reach(false) };
@@ -866,7 +867,30 @@ function drawPie(spec, opts) {
   const widest = Math.max(0, ...geom.flatMap(g => g.labels.map(L => L.w)));
   const pad = Math.max(PIE.PAD, widest - (pw / 2 - PIE.R - PIE.LAB));
 
-  /* THE CHANNEL BETWEEN TWO PANELS is sized by the two labels that actually
+  /* THE LABEL IS TWO LINES: the category, and its share beneath it.
+   *
+   * This is the whole reason the family can be drawn at the exam's own type
+   * size. A one-line label is as wide as the entire string, and that width —
+   * not the circle — is what makes a pie plate three times the width of the pie
+   * inside it. Two of those abreast overflow any question column, so the column
+   * scales the plate down and the type with it: labels landed at 8.7px against
+   * this exam's 15.6px bar-chart numerals and a 17.5px stem, on the figure a
+   * student has to read the answer off.
+   *
+   * Everything else traded one defect for another. Widening to the card measure
+   * reached 11px. Raising the type widened the labels, which widened the plate,
+   * which scaled it back down — 14.6px only by shrinking the pies to 32px and
+   * making the charts an afterthought. Stacking the panels reached 16.8px and a
+   * 590px figure that pushes the stem and every option below the fold.
+   *
+   * Setting the share beneath the name makes a label as wide as the LONGER OF
+   * THE TWO strings instead of their sum — close to half for real category
+   * names. The plate narrows, the scale rises, and the type AND the pie both
+   * get bigger: 15.3px labels and a 57.7px radius, against 8.7px and 44.7px
+   * before, for one line of height per label. Compositions rendered in the real
+   * card and compared: docs/engineering/figure-visual-system.md.
+   *
+   * THE CHANNEL BETWEEN TWO PANELS is sized by the two labels that actually
    * meet in it — the left panel's furthest-right label and the right panel's
    * furthest-left one — and not by a constant.
    *
@@ -894,10 +918,9 @@ function drawPie(spec, opts) {
    * display width is derived from the panel width instead, and the caller's
    * value is a CAP rather than a target.
    *
-   * The cap BINDS for two panels: 245 per panel wants more than the column has,
-   * so a two-panel pie is scaled to fit and its type lands smaller than the
-   * rest of the family's. That is a property of the arrangement, not of this
-   * cap — see docs/engineering/figure-visual-system.md. */
+   * 300 is the width a panel comes out at when a two-panel plate is shown at
+   * PIE.SHOWN, so both cases land on the same panel size rather than one of
+   * them being capped and the other not. */
   const shown = Math.min(opts.shownAt || W, Math.round(W * PIE.PX / pw));
   const s = svgRoot(W, H, shown);
   s.setAttribute('class', 'sx sx-fam-data');
@@ -924,8 +947,11 @@ function drawPie(spec, opts) {
 
     gm.labels.forEach((L) => {
       const [lx, ly] = P(L.mid, r + PIE.LAB);
-      g.appendChild(el('text', { x: lx, y: ly + 4, class: 'sx-pie-label',
-        'text-anchor': L.right ? 'start' : 'end' }, L.text));
+      const anchor = L.right ? 'start' : 'end';
+      g.appendChild(el('text', { x: lx, y: ly - 2, class: 'sx-pie-label',
+        'text-anchor': anchor }, L.name));
+      g.appendChild(el('text', { x: lx, y: ly - 2 + PIE.LINE, class: 'sx-pie-label sx-pie-share',
+        'text-anchor': anchor }, L.share));
     });
     s.appendChild(g);
   });
@@ -1129,7 +1155,13 @@ function renderForQuestion(question, stimulus) {
     // through the chart kind and branches on chartType — the same field the
     // database validates against.
     return spec.chartType === 'pie'
-      ? drawPie(spec, { shownAt: SHOWN })
+      // THE PIE IS SHOWN AT THE CARD'S MEASURE, NOT THE FIGURE'S. 560 is the
+      // width every other family is drawn at; the card itself is 702 wide and
+      // the stem and the answer choices already use all of it. A pie is the one
+      // family whose plate is intrinsically two figures side by side, and
+      // holding it to 560 costs it type size no other family pays. Nothing else
+      // moves: SHOWN is untouched.
+      ? drawPie(spec, { shownAt: PIE.SHOWN })
       : drawChart(spec, { reading: question.reading, width: REF.W, shownAt: SHOWN });
   if (kind === 'plot')
     return drawPlot(spec, {
