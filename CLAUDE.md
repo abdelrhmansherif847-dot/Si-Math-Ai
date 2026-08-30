@@ -248,6 +248,9 @@ Prefer it over duplicating logic.
 ### Deployment, in one line each
 
 - **Merging to `main` deploys the static site to Vercel production, automatically.**
+  Confirmed again 2026-08-30: `72aa7fb` (the teacher/exam merge) was READY on
+  production minutes after the push, and `nav.js`, `login.html` and
+  `settings.html` were served byte-for-byte as committed.
 - **Nothing deploys the Edge Function automatically.** It is a manual CLI step.
 - **Nothing applies migrations automatically.** They are manual and individually approved.
 

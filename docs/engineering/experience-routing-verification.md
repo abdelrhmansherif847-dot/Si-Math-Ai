@@ -4,10 +4,8 @@
 `schema_migrations` version **`20260830222037`** (`my_experience`). This
 migration alone; nothing else was touched. Post-apply verification in §8.
 
-The client wiring in `login.html` and `nav.js` is merged into the branch but
-**reaches students only when the branch merges to `main`** — the static site
-deploys on merge, and this is a database change. Both files work with or without
-the function, so the order does not matter.
+The client wiring in `login.html` and `nav.js` **is live**: `main` at `72aa7fb`
+deployed to Vercel production on 2026-08-30. Post-deploy verification in §9.
 
 **Date:** 2026-08-30 · **Project:** `igvkyxkmjnkzscqgommj` · **Branch:**
 `claude/teacher-intelligence-layer-8e66b0`
@@ -217,3 +215,66 @@ warning**, `teacher_my_workspaces()`, `student_my_teachers()` and
 `student_my_interventions()` among them. Authorization lives inside each body,
 never in who may call it (`20260830b`). No ERROR-level finding exists on the
 project.
+
+## 9 · Post-deploy verification, against the live site
+
+`main` merged at **`72aa7fb`**; Vercel production deployment
+`dpl_ELWu64MwwR8H2afG8do7s4cxUyRc`, state READY, `githubCommitSha` matching the
+merge exactly.
+
+### The deployed bytes
+
+Fetched from `https://www.si-math-ai.com` (through the Vercel API — the host
+itself is blocked by this session's egress policy) and compared against
+`git show 72aa7fb:<file>`:
+
+| File | Live | Matches the repo |
+|---|---|---|
+| `nav.js` | 200 | **byte-for-byte** |
+| `login.html` | 200 | **byte-for-byte** |
+| `settings.html` | 200 | **byte-for-byte** |
+
+`login.html` calls `my_experience()`, destructures the RPC error, and its
+`primary === 'staff'` branch precedes the onboarding branch — checked in the
+served file, not the local one. `nav.js` takes both the role and `can_staff`
+from the same call and keeps its fallback.
+
+### Every real account, swept
+
+The live `my_experience()` was run once **as each of the 37 real accounts**,
+under that account's own simulated JWT. Not a sample:
+
+| | |
+|---|---|
+| accounts checked | **37** |
+| routed to `student` | **37** |
+| routed to `staff` | **0** |
+| `can_student` true | **37** |
+| `can_staff` true | **0** |
+| correct six-key shape | **37** |
+| platform roles present | `user`, `super_admin`, `owner` |
+
+**No ordinary user's experience changed**, and the accounts carrying
+`super_admin` and `owner` are among the 37 routed to `student` — the platform
+role really does not decide the experience, measured on live data rather than
+argued.
+
+### The new settings section, for a real student
+
+`student_my_teachers()` called as five real accounts: succeeded for all five,
+returned zero rows for all five. So the section reveals itself and says *"No
+teacher is connected to your account. Nobody can see your work but you."* That
+is the only student-visible change in this deploy.
+
+### The rest is inert
+
+0 workspaces, 0 staff rows, 0 student links, 0 audit rows, 0 interventions,
+0 exam attempts, 0 exam responses; 0 published exam forms. `teacher.html` is
+reachable but every roster is empty, and `exam.html` is reachable but nothing is
+sittable. 166 migrations applied — verification created nothing.
+
+### What is now observable
+
+The routing boundary is live but has never fired: with 0 active staff rows,
+no account can reach `primary: staff`. The first time it fires will be the
+first workspace an admin creates.
