@@ -13,6 +13,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <!-- One weakness, read three ways. Derives nothing; see the file's header. -->
 <script src="weakness-view.js"></script>
+<!-- The canonical vocabulary, loaded read-only. teacher_student_weaknesses()
+     returns free-text topic/subtopic and no ids, and the free text collides —
+     "Linear Equations" and "Linear Equations & Functions" are both ALG_006. So
+     an intervention resolves its label to a canonical id here before recording
+     it, and stores nothing when the resolver refuses. This is the authoritative
+     resolver, deliberately NOT taxonomy-compat.js, whose header restricts it to
+     display and forbids exactly this use. -->
+<script src="taxonomy.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -151,6 +159,27 @@ input,select{font-family:inherit}
 .pill.medium{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
 .pill.low{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
 .slot-empty .st{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:8px}
+
+/* The intervention record. Visually quieter than a weakness on purpose: a
+   weakness is the platform's finding, this is the teacher's own note about it,
+   and the second must never look like more evidence than the first. */
+.iv{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border-soft)}
+.iv:last-of-type{border-bottom:none}
+.iv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--cyan)}
+.iv.gone .iv-dot{background:var(--text-500)}
+.iv-main{display:block;flex:1;min-width:0}
+/* Blockified for the same reason .row .nm and .row .meta are, and found the
+   same way — by rendering it. These are <span>s inside a <span>, so without
+   display:block the subject, the note and the date run together into one
+   sentence: "Covered again · Systems of EquationsRe-explained it.Aug 30". */
+.iv-what{display:block;font-size:13.5px;color:var(--text-200);line-height:1.5}
+.iv.gone .iv-what{color:var(--text-500);text-decoration:line-through}
+.iv-note{display:block;font-size:12.5px;color:var(--text-400);line-height:1.55;margin-top:4px}
+.iv-when{display:block;font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:4px}
+.iv-form{border:1px dashed var(--cyan-border);border-radius:var(--r-md);background:var(--bg-elev-2);padding:14px;margin-top:12px}
+.iv-form .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:7px}
+.iv-form .r{margin-bottom:12px}
+.iv-warn{font-size:12.5px;color:#fcd34d;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-sm);padding:9px 11px;margin-bottom:12px;line-height:1.5}
 .empty-state{text-align:center;padding:44px 20px;color:var(--text-400)}
 .empty-state .big{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text-200);margin-bottom:6px}
 .spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
@@ -352,6 +381,23 @@ input,select{font-family:inherit}
   <div class="sec-label" style="margin-top:22px">Learning</div>
   <div id="learningSlot" data-slot="learning"></div>
 
+  <!-- ═══ INTERVENTION RECORD ══════════════════════════════════════════════
+       T1.6. The same shape of contract as the learning slot above, and for the
+       same reason: renderInterventions(student, el) is the ONLY function that
+       writes here.
+
+       What this region is, precisely: a record of something the TEACHER
+       ALREADY DID. The platform never proposes the intervention and never
+       reads this back into anything. Two rules travel with it, from
+       docs/roadmap/teacher-intelligence-layer.md:
+         1. §8.3 — nothing written here reaches the learning profile. There is
+            no path from this table to the analyzer, by schema, not by habit.
+         2. §8.2 principle 5 — the student can read every word of it, and the
+            teacher is told so before they type it.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="sec-label" style="margin-top:22px">What you did about it</div>
+  <div id="interventionSlot" data-slot="intervention"></div>
+
   <div id="cardActions" style="margin-top:22px"></div>
   <div class="msg" id="cardMsg"></div>
 </div>
@@ -441,6 +487,21 @@ const FIXTURE = {
     ],
     p2: [],
   },
+  /* What a teacher already recorded. Only ONE student has anything here, and
+     one of the two is withdrawn — because a preview where every student has a
+     tidy history sells a habit nobody has formed yet. */
+  interventions: {
+    p3: [
+      { id: 'i1', kind: 'retaught', subject_label: 'Linear Equations',
+        topic_id: 'ALGEBRA', subtopic_id: 'ALG_006',
+        note: 'Went through it again with the whole group on Saturday.',
+        decided_on: ymd(-4), created_at: iso(-4), withdrawn_at: null },
+      { id: 'i2', kind: 'spoke_with', subject_label: 'Systems of Equations',
+        topic_id: 'ALGEBRA', subtopic_id: 'ALG_007', note: null,
+        decided_on: ymd(-11), created_at: iso(-11), withdrawn_at: iso(-10) },
+    ],
+    p1: [],
+  },
   activity: [
     { action: 'student_joined',   subject_id: 'p6', created_at: iso(-9) },
     { action: 'staff_joined',     subject_id: 'aaaaaaaa-0000', created_at: iso(-2) },
@@ -451,6 +512,7 @@ const FIXTURE = {
   ],
 };
 function iso(days) { return new Date(Date.now() + days * 86400000).toISOString(); }
+function ymd(days) { return iso(days).slice(0, 10); }
 
 /* ── data layer ─────────────────────────────────────────────────────────
    One place where the database is reached, so preview mode is one early
@@ -524,6 +586,36 @@ const api = {
     if (error) throw error;
     return data;
   },
+  async interventions(ws, student) {
+    if (S.preview) return (FIXTURE.interventions[student] || []).slice();
+    const { data, error } = await sb.rpc('teacher_student_interventions', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+    return data || [];
+  },
+  async recordIntervention(ws, student, rec) {
+    if (S.preview) {
+      const list = FIXTURE.interventions[student] || (FIXTURE.interventions[student] = []);
+      list.unshift({ id: 'pv' + Date.now(), kind: rec.kind, subject_label: rec.subject_label,
+                     topic_id: rec.topic_id, subtopic_id: rec.subtopic_id, note: rec.note,
+                     decided_on: rec.decided_on, created_at: new Date().toISOString(), withdrawn_at: null });
+      return;
+    }
+    const { error } = await sb.rpc('teacher_record_intervention', {
+      p_workspace: ws, p_student: student, p_kind: rec.kind, p_subject_label: rec.subject_label,
+      p_topic_id: rec.topic_id, p_subtopic_id: rec.subtopic_id, p_note: rec.note, p_decided_on: rec.decided_on });
+    if (error) throw error;
+  },
+  async withdrawIntervention(id) {
+    if (S.preview) {
+      for (const k of Object.keys(FIXTURE.interventions)) {
+        const r = FIXTURE.interventions[k].find((x) => x.id === id);
+        if (r) r.withdrawn_at = new Date().toISOString();
+      }
+      return;
+    }
+    const { error } = await sb.rpc('teacher_withdraw_intervention', { p_id: id });
+    if (error) throw error;
+  },
 };
 
 function show(which) {
@@ -592,11 +684,16 @@ async function renderWorkspace() {
   $('codeHelp').innerHTML = S.isOwner
     ? 'Read this out in class. <strong>Students</strong> enter it in Settings → Teachers &amp; Assistants, and that act is the consent — you cannot add a student who did nothing. Rotating stops new joins; it disconnects nobody.'
     : 'Share this with students who still need to join. They enter it in Settings → Teachers &amp; Assistants. Only the teacher can rotate it.';
+  /* This paragraph is the page describing itself to the person who will have to
+     defend it to a student or a parent, so it is corrected the day it stops
+     being true. It said "scores and weaknesses are not here yet" for one day
+     after the weakness read went live and was already rendering them. */
   $('scopeNote').innerHTML = S.isOwner
-    ? 'You see a student\'s name, which exam they are sitting, and when they connected. Not their plan, their credits, their email, or their conversations with Zero. '
-      + 'Scores and weaknesses are not here yet — they arrive through this class once the new Mock Experience produces evidence worth acting on, and they will arrive with that evidence attached.'
-    : 'You see exactly what the teacher sees about these students, and you can change nothing. Adding, removing and approving are the teacher\'s. '
-      + 'Scores and weaknesses are not here yet for either of you.';
+    ? 'You see a student\'s name, which exam they are sitting, when they connected, and the weaknesses the analyzer found — each one with the evidence it was built from. '
+      + 'Not their plan, their credits, their email, or their conversations with Zero: the topic a student struggled with is shareable, the conversation where they struggled is not. '
+      + '<strong>No scores.</strong> There are none worth showing until the new Mock Experience produces per-question evidence, and a number without that behind it would be a guess wearing a decimal point.'
+    : 'You see exactly what the teacher sees about these students — the same weaknesses, from the same analyzer, with the same evidence — and you can change nothing. Adding, removing, approving and recording are the teacher\'s. '
+      + 'Neither of you sees scores, plans, or anything a student said to Zero.';
 
   $('studentCode').textContent = S.ws.student_join_code || '--------';
   $('rotateStudentBtn').style.display = S.isOwner ? '' : 'none';
@@ -806,7 +903,9 @@ async function openCard(studentId) {
   openDrawer(true);
   $('cardBody').innerHTML = '<div style="text-align:center;padding:30px 0"><div class="spin"></div></div>';
   $('learningSlot').innerHTML = '';
+  $('interventionSlot').innerHTML = '';
   $('cardActions').innerHTML = '';
+  S.weaknesses = [];
 
   let data;
   try { data = await api.card(S.ws.workspace_id, studentId); }
@@ -821,7 +920,10 @@ async function openCard(studentId) {
       + (data.status === 'active' ? 'Connected to you' : (data.status === 'revoked' ? 'Left the class' : 'Removed from the class'))
       + '</span></div>';
 
+  /* Order matters: the weaknesses are what the intervention form offers as
+     subjects, so the learning slot resolves first and stashes them. */
   await renderLearning(data, $('learningSlot'));
+  await renderInterventions(data, $('interventionSlot'));
 
   if (S.isOwner && data.status === 'active') {
     $('cardActions').innerHTML =
@@ -852,6 +954,9 @@ async function renderLearning(student, el) {
   let rows;
   try {
     rows = await api.weaknesses(S.ws.workspace_id, student.student_id);
+    /* Stashed for the intervention form below, which offers these as the
+       subjects a teacher can act on. Read-only: nothing writes back here. */
+    S.weaknesses = rows;
   } catch (_) {
     /* teacher_student_weaknesses() ships in 20260830d, which is PREPARED and
        not applied. Until it is, the card says what it said before rather than
@@ -898,6 +1003,158 @@ async function renderLearning(student, el) {
     + 'These come from the same analyzer that produces ' + first + '\'s own weakness page — '
     + 'one weakness, read from one place, so you and they are never looking at different answers.'
     + '</div>';
+}
+
+/* ── THE INTERVENTION RECORD ────────────────────────────────────────────
+   See the contract above the markup. renderInterventions is this region's only
+   writer, exactly as renderLearning is the learning slot's.
+
+   Everything below records; nothing below derives, suggests or ranks. The
+   platform has no opinion about what the teacher should have done, and the one
+   thing it adds to what they typed is a canonical id resolved from the label —
+   which is bookkeeping, so that two spellings of the same lesson are still the
+   same lesson a year from now. */
+const IV_KINDS = [
+  ['retaught', 'Covered it again'],
+  ['spoke_with', 'Spoke with them'],
+  ['assigned_practice', 'Gave them practice'],
+  ['other', 'Something else'],
+];
+const IV_PAST = {
+  retaught: 'Covered again', spoke_with: 'Spoke with them',
+  assigned_practice: 'Gave practice', other: 'Acted on',
+};
+
+/* Resolve a displayed weakness label to canonical ids, or to nulls. A refusal
+   is stored as a refusal — never as a guess, and never as a passthrough of the
+   raw string into an id column. */
+function canonicalFor(topicLabel, subtopicLabel) {
+  const T = window.Taxonomy;
+  if (!T || !T.resolveTopicId) return { topic_id: null, subtopic_id: null };
+  const tid = T.resolveTopicId(topicLabel) || null;
+  const sid = tid && subtopicLabel ? (T.resolveSubtopicId(tid, subtopicLabel) || null) : null;
+  return { topic_id: tid, subtopic_id: sid };
+}
+
+const ivDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); } catch (_) { return d; } };
+const dayShift = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+
+async function renderInterventions(student, el) {
+  const first = esc(String(student.full_name).split(/\s+/)[0]);
+  const live = student.status === 'active';
+  el.innerHTML = '<div style="padding:14px 0"><div class="spin"></div></div>';
+
+  let rows;
+  try {
+    rows = await api.interventions(S.ws.workspace_id, student.student_id);
+  } catch (_) {
+    /* 20260830g is applied, so a failure here is a real one — a dropped
+       connection, a revoked link. It must still not read as "you have done
+       nothing", which would be a false statement about a teacher, and it must
+       not throw, which would take the whole student card down with it. */
+    el.innerHTML =
+      '<div class="slot-empty"><div class="st">Could not load this</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'What you recorded about ' + first + ' could not be read just now. '
+      + 'Nothing has been lost — close this and open it again.'
+      + '</div></div>';
+    return;
+  }
+
+  const list = rows.length
+    ? rows.map((r) => {
+        const gone = !!r.withdrawn_at;
+        return '<div class="iv' + (gone ? ' gone' : '') + '">'
+          + '<span class="iv-dot"></span><span class="iv-main">'
+          + '<span class="iv-what">' + esc(IV_PAST[r.kind] || 'Acted on') + ' · <strong>' + esc(r.subject_label) + '</strong></span>'
+          + (r.note ? '<span class="iv-note">' + esc(r.note) + '</span>' : '')
+          + '<span class="iv-when">' + esc(ivDate(r.decided_on)) + (gone ? ' · withdrawn' : '') + '</span>'
+          + '</span>'
+          + (S.isOwner && !gone ? '<button class="btn ghost sm" data-wd="' + esc(r.id) + '">Withdraw</button>' : '')
+          + '</div>';
+      }).join('')
+    : '<div class="slot-empty"><div class="st">Nothing recorded</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'This is your own note of what you did about ' + first + '\'s weaknesses — not something the platform works out. '
+      + 'It stays here so that when the same weakness comes back, you can see whether it came back to something you had already covered.'
+      + '</div></div>';
+
+  const opts = (S.weaknesses || []).map((w, i) =>
+    '<option value="' + i + '">' + esc(w.subtopic || w.topic) + '</option>').join('');
+
+  el.innerHTML = list
+    + (S.isOwner && live
+        ? '<div style="margin-top:14px"><button class="btn sm" id="ivOpen">Record what you did</button></div>'
+          + '<div class="iv-form" id="ivForm" style="display:none">'
+          + '<div class="iv-warn">' + first + ' can read anything you write here. That is deliberate — nothing is kept about a student that the student cannot see.</div>'
+          + '<div class="r"><div class="lbl">What did you do</div><div class="chips" id="ivKind">'
+          + IV_KINDS.map(([k, lab], i) => '<button class="chip' + (i === 0 ? ' on' : '') + '" data-k="' + k + '">' + esc(lab) + '</button>').join('')
+          + '</div></div>'
+          + '<div class="r"><div class="lbl">About what</div>'
+          + (opts
+              ? '<select class="field" id="ivSubject">' + opts + '<option value="free">Something else…</option></select>'
+              : '<input class="field" id="ivFree" maxlength="120" placeholder="Which lesson or difficulty"/>')
+          + (opts ? '<input class="field" id="ivFree" maxlength="120" placeholder="Which lesson or difficulty" style="display:none;margin-top:8px"/>' : '')
+          + '</div>'
+          + '<div class="r"><div class="lbl">When</div>'
+          + '<input class="field" id="ivWhen" type="date" value="' + dayShift(0) + '" min="' + dayShift(-30) + '" max="' + dayShift(0) + '"/></div>'
+          + '<div class="r"><div class="lbl">Note (optional)</div>'
+          + '<input class="field" id="ivNote" maxlength="500" placeholder="One line, for you and for them"/></div>'
+          + '<div style="display:flex;gap:8px"><button class="btn sm" id="ivSave">Record it</button>'
+          + '<button class="btn ghost sm" id="ivCancel">Cancel</button></div>'
+          + '</div>'
+        : '')
+    + (!S.isOwner
+        ? '<div class="code-note" style="margin-top:12px">Recording is the teacher\'s. You see what they recorded, and so does ' + first + '.</div>'
+        : '');
+
+  el.querySelectorAll('[data-wd]').forEach((b) => b.addEventListener('click', async () => {
+    if (!confirm('Withdraw this record? It stays visible, marked as withdrawn — it is not deleted.')) return;
+    try { await api.withdrawIntervention(b.getAttribute('data-wd')); }
+    catch (e) { say($('cardMsg'), e.message || 'Could not withdraw it.', 'err'); return; }
+    await renderInterventions(student, el);
+  }));
+
+  if (!S.isOwner || !live) return;
+
+  const form = el.querySelector('#ivForm');
+  el.querySelector('#ivOpen').addEventListener('click', () => { form.style.display = 'block'; });
+  el.querySelector('#ivCancel').addEventListener('click', () => { form.style.display = 'none'; });
+
+  let kind = 'retaught';
+  form.querySelector('#ivKind').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-k]');
+    if (!b) return;
+    kind = b.getAttribute('data-k');
+    form.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === b));
+  });
+
+  const subject = form.querySelector('#ivSubject');
+  const free = form.querySelector('#ivFree');
+  if (subject) subject.addEventListener('change', () => {
+    free.style.display = subject.value === 'free' ? 'block' : 'none';
+  });
+
+  form.querySelector('#ivSave').addEventListener('click', async () => {
+    const useFree = !subject || subject.value === 'free';
+    const picked = useFree ? null : (S.weaknesses || [])[Number(subject.value)];
+    const label = useFree ? free.value.trim() : (picked.subtopic || picked.topic);
+    if (!label) { say($('cardMsg'), 'Say what it was about.', 'err'); return; }
+
+    /* Canonical ids only when the label really is a lesson in the taxonomy.
+       A free-typed subject usually is not, and is stored as a label alone. */
+    const ids = picked ? canonicalFor(picked.topic, picked.subtopic) : canonicalFor(label, null);
+
+    try {
+      await api.recordIntervention(S.ws.workspace_id, student.student_id, {
+        kind, subject_label: label, topic_id: ids.topic_id, subtopic_id: ids.subtopic_id,
+        note: form.querySelector('#ivNote').value.trim() || null,
+        decided_on: form.querySelector('#ivWhen').value || dayShift(0),
+      });
+    } catch (e) { say($('cardMsg'), e.message || 'Could not record that.', 'err'); return; }
+    clear($('cardMsg'));
+    await renderInterventions(student, el);
+  });
 }
 
 $('closeDrawer').addEventListener('click', () => openDrawer(false));

@@ -1,5 +1,12 @@
 // Verify each regression fix against the REAL shipped assets/streak.js.
-import { read, evalSnippet } from '/home/user/Si-Math-Ai/tests/_source.mjs';
+/* Relative, like every other suite. This was an absolute path into one
+   machine's home directory, so the suite could only ever run there: on GitHub's
+   runner, on a fresh clone, and on any other checkout it died at import with
+   ERR_MODULE_NOT_FOUND before a single assertion ran — and run-all reported it
+   as one red suite among fifty green ones rather than as a suite that has never
+   executed anywhere but its author's laptop. Found by running the suite on a
+   fresh clone; it is on main too. */
+import { read, evalSnippet } from './_source.mjs';
 const SRC = read('assets/streak.js');
 const TZ = 'Asia/Dubai';
 const keyIn = (d, tz) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);

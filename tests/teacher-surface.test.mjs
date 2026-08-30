@@ -79,8 +79,20 @@ t.ok('preview carries weakness fixtures', wkFixtures.length >= 3);
 t.ok('most preview weaknesses carry no trend, as in production',
   wkFixtures.filter((x) => x === null).length > wkFixtures.filter((x) => x !== null).length);
 
-// The words are allowed in prose that explains their absence — a number is not.
-t.ok('the page states what it does not show', /Scores and weaknesses are not here yet/.test(PAGE));
+/* The words are allowed in prose that explains their absence — a number is not.
+   This assertion used to require the sentence "Scores and weaknesses are not
+   here yet", and it went on passing for a day after the weakness read went
+   live and the page began rendering weaknesses. A test that pins prose pins it
+   whether or not it is still true, so what is checked now is the property: the
+   page names what it withholds, and says why, and the one thing it must still
+   withhold is a score. */
+t.ok('the page names what it withholds and why',
+  /<strong>No scores\.<\/strong>/.test(PAGE)
+  && /Mock Experience produces per-question evidence/.test(PAGE));
+t.ok('the assistant is told the same thing, not a vaguer version',
+  /Neither of you sees scores/.test(PAGE));
+t.ok('the boundary around the tutor conversation is stated, not implied',
+  /the conversation where they struggled is not/.test(PAGE));
 t.ok('the empty learning state explains why, in words',
   /could have been wrong/.test(PAGE) && /Mock Experience/.test(PAGE));
 

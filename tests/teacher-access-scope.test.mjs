@@ -38,6 +38,16 @@ const MIG = {
   b: read('supabase/migrations/20260830b_teacher_foundation_rls.sql'),
   c: read('supabase/migrations/20260830c_teacher_foundation_rpcs.sql'),
   d: read('supabase/migrations/20260830d_teacher_weakness_read.sql'),
+  /* T1.6, applied 2026-08-30. It belongs in this map because the page calls its
+     three RPCs, and the assertion below — that every RPC the page calls is
+     defined by an approved migration — is exactly the check that must not be
+     satisfiable by a function nobody wrote. Its own contract lives in
+     tests/teacher-intervention.test.mjs.
+     The keys are the file letters: g and x, not e and y, because e/f/y belong to
+     the Mock delivery work on this same branch. Keeping the keys honest is what
+     stops the next reader from opening the wrong file. */
+  g: read('supabase/migrations/20260830g_teacher_intervention_record.sql'),
+  x: read('supabase/migrations/20260830x_teacher_intervention_rollback.sql'),
   z: read('supabase/migrations/20260830z_teacher_foundation_rollback.sql'),
 };
 const PAGE = read('teacher.html');
@@ -58,10 +68,18 @@ const FORWARD = [EXEC.a, EXEC.b, EXEC.c].join('\n');
    different, narrower contract than the foundation — see section 9. Keeping it
    out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
 const WEAKNESS = EXEC.d;
+/* Migration g writes a table of its own, so like d it is held to its own
+   contract (tests/teacher-intervention.test.mjs) rather than to the
+   foundation's blanket ban — which is what keeps that ban a blanket ban. */
+const INTERVENTION = EXEC.g;
 /* Privilege hygiene and rollback completeness apply to every function this
    system ships, foundation or not. Only the academic-boundary ban is scoped to
    the foundation alone. */
-const ALL_FORWARD = FORWARD + '\n' + WEAKNESS;
+const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION;
+/* Rollback is split across two files by design: x drops what g created, then z
+   drops the foundation it hung from. Completeness has to be checked against
+   both, or adding a second rollback file would silently weaken the check. */
+const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z;
 
 // The four tables this system is allowed to create and touch.
 const OWN_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];
@@ -217,7 +235,7 @@ t.is('every table is dropped by the rollback',
 t.is('every type is dropped by the rollback',
   madeTypes.filter((x) => !new RegExp(`drop type if exists ${x}\\b`, 'i').test(EXEC.z)), []);
 t.is('every function is dropped by the rollback',
-  [...new Set(created)].filter((x) => !new RegExp(`drop function if exists ${x}\\s*\\(`, 'i').test(EXEC.z)), []);
+  [...new Set(created)].filter((x) => !new RegExp(`drop function if exists ${x}\\s*\\(`, 'i').test(ALL_ROLLBACK)), []);
 
 // ══ 8 · THE SHIPPED SURFACES ══════════════════════════════════════════════
 t.section('The pages call the approved surface and nothing else');

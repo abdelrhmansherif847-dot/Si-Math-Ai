@@ -684,6 +684,69 @@ are chosen before anyone is invested in the answer.
   constraint protects *insights* from thin data — it was never a reason to
   defer consent. T2 onward still waits on the evidence.
 
+### T1.6 — The intervention record, and still no analytics
+
+- **Entry:** T1 live. Nothing else. This stage deliberately carries no evidence
+  condition, for the same reason T1 did not: it computes nothing.
+- **What it is:** one durable record of a decision a teacher already made —
+  *"I covered this with this student on this date."* Not a recommendation, not a
+  flag, not a score. The teacher writes it; the platform stores it and shows it
+  back.
+- **Why it ships before the analytics it belongs to.** §12's loop needs to
+  compare what happened *after* an intervention with what happened before it,
+  and §4.7 fixes the condition that makes such a comparison honest: *"A leading
+  indicator is only leading if it was recorded before the outcome it precedes."*
+  An intervention log started on the day the loop is built has no history to
+  compare against, and every entry backfilled into it is chosen with the outcome
+  already known. Starting the record early is the only version of it that can
+  ever be evidence. Same argument as T1, applied to a different table: the part
+  that is impossible to retrofit goes first.
+- **What it must not become.** Not a recommendation engine — the platform never
+  suggests the intervention, it only stores the one the teacher chose. Not an
+  input to anything: §8.3's boundary applies in full, and the table carries no
+  foreign key into any academic table, exactly as `support_tickets` does not.
+  Not a teacher performance record — §12's three rules bind here from the first
+  row, and there is no aggregate across teachers, no comparison, and no upward
+  channel.
+- **Append-only, and withdrawable rather than editable.** A record whose text can
+  be revised after the fact loses the one property that makes it useful later.
+  A mistake is withdrawn, and the withdrawal is itself dated.
+- **The student can see it.** §8.2 principle 5 — *"Nothing about a student that
+  the student cannot themselves see"* — is stated there as a design constraint
+  rather than a toggle, and this is the first surface where it costs something.
+  It is honoured: the record is readable by the student it names, and the
+  teacher is told so at the moment they write it. A note a teacher would not
+  want their student to read is a note that belongs somewhere other than this
+  platform.
+- **Its honest limit, stated now.** An intervention record with nothing measuring
+  the outcome is a log, not a loop. It becomes the loop only when a later stage
+  can say whether the difficulty it targeted changed — and that still waits on
+  the evidence §5 says does not exist. Nothing in this stage may be described,
+  internally or externally, as closing the loop.
+- **Approved 2026-08-30 (second session), by the founder, on the record.**
+- **LIVE since 2026-08-30** (`schema_migrations 20260830204951`, migration
+  `20260830g`, rollback `20260830x`). `class_interventions` plus its append-only
+  trigger, two read policies and four RPCs; the record and its form on the
+  teacher's student card, with the student-can-read-this warning shown at the
+  moment of writing. Verified in two passes, 37 of 37 — 12 structural and 25
+  behavioural against real accounts inside a rolled-back transaction, including
+  that `service_role`, which holds every write privilege on the table and
+  bypasses RLS, is refused by the trigger. Full record:
+  `docs/engineering/teacher-intervention-verification.md` §7.
+- **T1.6 IS CLOSED. Teacher Intelligence takes no further feature work for now**
+  — founder's instruction, 2026-08-30. The next dependency is Mock delivery and
+  the per-item evidence it produces, and that is where the work goes. A proposal
+  to add anything to this layer before that evidence exists should be refused by
+  citing this line and §5.
+- **The dependency moved the same day.** `20260830e/f` landed the delivery
+  schema — `exam_attempts` and `exam_responses`, the latter carrying answer,
+  correctness, time on item and revisit count, which are exactly the four facts
+  `weakness-evidence-audit.md` §5 found missing — and `exam.html` is the sitting
+  itself. That closes the *structural* half of §5.3 absence 1. The other half is
+  not closed by a migration: **the evidence still has to accumulate from real
+  students sitting real mocks**, and until it does, §5.2's arithmetic is
+  unchanged. T2 opens on attempts, not on tables.
+
 ### T2 — Per-student trajectory, evidence-first
 
 - **Entry:** enough attempts per student that a trajectory can be wrong (§6.2),
@@ -857,6 +920,54 @@ them should be discovered mid-implementation.
     rather than a role, since being a teacher is a relationship to specific
     students rather than a level of privilege.
 
+11. **Whether a class-level claim is blocked by the same evidence gate as a
+    per-student one.** Raised 2026-08-30 (second session). **Answered: not yet
+    — wait for the Mock.** Recorded in full because the argument survives the
+    answer and will be made again.
+
+    *The argument for.* §5.2 measures the corpus per student — 5 students with
+    any mock session, 2 with three or more, one holding 68% of it — and
+    concludes no trajectory is computable. That conclusion is sound, and it is a
+    conclusion about a **per-student series**. A claim of the form *"n of the m
+    students in this workspace carry an active weakness on the same canonical
+    subtopic"* needs one point per student across enough students, not a series
+    per student. Aggregation is the operation that turns evidence too thin to
+    describe an individual into evidence sufficient to describe a group; that is
+    what it is for. On the four gates of §6.1 such a claim passes cleanly:
+    the evidence exists (225 weakness reports, 139 canonical), the action is
+    named and is the one a teacher actually takes (*re-teach this in the next
+    session*), it is falsifiable (weakness spread evenly across 33 subtopics
+    produces silence, which §6.4 already requires), and consent is the existing
+    `teacher_can_see_student()` path with no widening.
+
+    *The argument against, which is why the answer is no.* Three things, and the
+    third is the serious one.
+    - There is no class. All four workspace tables were empty on 2026-08-30, and
+      a class-level claim with no class is a claim about the platform's 13
+      students wearing a teacher's vocabulary.
+    - 86 of 225 reports carry a null `subtopic_id` (38%). Grouping is only
+      honest on the canonical id — the free-text labels already collide,
+      `"Linear Equations"` and `"Linear Equations & Functions"` both resolving to
+      `ALG_006` — so more than a third of the evidence cannot enter the
+      aggregate at all and would have to be reported as excluded.
+    - **Selection bias, which no sample size fixes.** 86% of weakness signals
+      come from tutor conversations. Convergence in that corpus measures what
+      students chose to *ask about*, which is not the same construct as what
+      they get *wrong*: a topic being taught this week draws questions from
+      strong and weak students alike. "9 students converge on `ALG_007`" would
+      be read by a teacher as a diagnosis and is currently closer to a
+      popularity measure. Exam-derived signals are the ones that would settle
+      which it is, and there are 13 of them.
+
+    *Pre-registered threshold, fixed now so it cannot be chosen later.* §6.2
+    requires the cut to be set before the analysis is written. When this is
+    built, a subtopic is reported as a class pattern only at **≥3 students AND
+    ≥20% of the active roster** — both conditions, not either. Chosen
+    2026-08-30, before any surface existed to make it look good: 3 of 60 is not
+    a class pattern, and neither is 2 of 6. Whoever builds this inherits the
+    number; changing it is a decision to record here, with its reason, not a
+    tuning knob.
+
 ---
 
 ## 16. Provenance
@@ -873,3 +984,15 @@ them should be discovered mid-implementation.
   are this document's own engineering contribution: what the platform can
   actually compute today, what would make each idea honest, and what must be
   decided before any of it is built.
+- **2026-08-30 (second session) — three decisions.** A class-level convergence
+  surface was proposed on the argument that aggregation is a different evidence
+  problem from trajectory. It was **refused**: the argument and the three
+  counter-arguments are recorded as §15 open question 11, together with the
+  threshold pre-registered under §6.2 so that a later session cannot choose it
+  after seeing which cut produces an interesting screen. **T1.6** — the
+  intervention record — was approved instead, on the §4.7 grounds that a marker
+  recorded after the outcome it precedes is worthless, so the log has to start
+  early or never. And the T1 surface's scope note was found **stale**: it still
+  told teachers that weaknesses were not there while the learning slot was
+  rendering them, which is a page describing itself wrongly to the person who
+  has to defend it.
