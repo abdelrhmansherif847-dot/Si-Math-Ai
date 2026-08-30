@@ -31,10 +31,22 @@
   // which is a number to argue with rather than a measurement.
   var GAIN = { pen: 0.55, paper: 0.40, voices: 0.50 };
 
-  // How often a moment happens. Short here ON PURPOSE — the real interval is
-  // 8-12 minutes (mock-exam-v2-investigation §8.3) and you cannot judge a
-  // texture by waiting ten minutes for it.
+  // How often a PEN-AND-PAPER moment happens. Short here on purpose — a texture
+  // cannot be judged by waiting ten minutes for it.
   var EVERY = 45;
+
+  /* THE VOICES ARE ON A CLOCK, NOT A DICE ROLL.
+     Every five minutes, the three recordings in order and then round again.
+     Deterministic because it was asked for as a schedule: on a 35-minute module
+     that is six plays — 5:00, 10:00, 15:00, 20:00, 25:00, 30:00 — which is
+     exactly two passes through the three, and the same again in module 2.
+     35:00 is the end of the module, so nothing is scheduled there.
+     Kept separate from the pen and paper, which stay random: writing and paper
+     are texture and should not arrive on a beat, while an exchange between two
+     students is an event and reads better spaced evenly. */
+  var VOICE_EVERY = 300;
+  var VOICES = ['voice-1', 'voice-2', 'voice-3'];
+  var voiceTimer = null, voiceIdx = 0;
 
   function context() {
     if (ctx) return ctx;
@@ -124,7 +136,6 @@
      never turns this on. A clip that fails to load leaves the layer silent and
      the other two playing, because a missing asset must not take the exam with
      it. */
-  var CLIPS = ['voice-exchange', 'voice-short', 'voice-mid', 'voice-long'];
   var buffers = {}, fetching = {};
 
   function clip(name) {
@@ -142,7 +153,7 @@
   }
 
   function voices(at, name) {
-    var id = name || CLIPS[Math.floor(Math.random() * CLIPS.length)];
+    var id = name || VOICES[voiceIdx % VOICES.length];
     var buf = clip(id);
     if (!buf) return 0;                      // not decoded yet, or failed: silence
     var src = ctx.createBufferSource();
@@ -156,17 +167,13 @@
 
   // Warm the cache the moment the layer is switched on, so the first moment is
   // not the one that misses.
-  function preload() { try { CLIPS.forEach(clip); } catch (e) {} }
+  function preload() { try { VOICES.forEach(clip); } catch (e) {} }
 
   var MOMENTS = [
     { id: 'writing',  play: function () { pen(0); paper(1.1 + Math.random()); } },
     { id: 'page',     play: function () { paper(0); pen(0.7 + Math.random() * 0.6); } },
     { id: 'settling', play: function () { paper(0); paper(0.5 + Math.random() * 0.4); } },
     { id: 'nearby',   play: function () { pen(0); pen(1.4 + Math.random() * 0.8); } },
-    // The voice moments. Paper under the voice, never a pen: a student writing
-    // is not the one talking.
-    { id: 'asking',   play: function () { voices(0.25); paper(0.05); } },
-    { id: 'room',     play: function () { paper(0); voices(0.8); pen(2.6); } },
   ];
 
   /** Play one moment now. Exposed so it can be auditioned without waiting. */
@@ -184,22 +191,48 @@
     } catch (e) { return null; }
   }
 
+  /* One scheduled exchange: paper under it, never a pen — a student writing is
+     not the one talking. Advances the cycle so the three come round in order. */
+  function voiceMoment() {
+    var id = VOICES[voiceIdx % VOICES.length];
+    voiceIdx++;
+    paper(0.05);
+    voices(0.25, id);
+    return id;
+  }
+
   function enable() {
     try {
       if (on) return true;
       if (!context()) return false;
       on = true;
+      voiceIdx = 0;
       preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
+      voiceTimer = root.setInterval(function () { if (on) voiceMoment(); }, VOICE_EVERY * 1000);
       moment();                      // one immediately, so it can be judged now
       return true;
     } catch (e) { return false; }
+  }
+
+  /* The timetable, as data, so it can be read rather than inferred. Minutes are
+     from the start of a module; a module shorter than the first mark simply
+     yields nothing. */
+  function schedule(moduleMinutes) {
+    var out = [], t = VOICE_EVERY, i = 0, end = (moduleMinutes || 35) * 60;
+    while (t < end) {
+      out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
+                 clip: VOICES[i % VOICES.length] });
+      i++; t += VOICE_EVERY;
+    }
+    return out;
   }
 
   function disable() {
     try {
       on = false;
       if (timer) { root.clearInterval(timer); timer = null; }
+      if (voiceTimer) { root.clearInterval(voiceTimer); voiceTimer = null; }
       if (ctx && ctx.state === 'running') ctx.suspend();
       return true;
     } catch (e) { return false; }
@@ -214,6 +247,11 @@
     setGain: function (k, v) { if (k in GAIN) GAIN[k] = Math.max(0, Math.min(1, v)); },
     setMaster: function (v) { if (master) master.gain.value = Math.max(0, Math.min(1, v)); },
     everySeconds: function (s) { EVERY = Math.max(5, s); if (on) { disable(); enable(); } },
+    // The voice schedule, and a way to hear the next one without waiting for it.
+    schedule: schedule,
+    voiceNow: voiceMoment,
+    voiceEverySeconds: function (s) { VOICE_EVERY = Math.max(10, s); if (on) { disable(); enable(); } },
+    _voices: VOICES.slice(),
     _moments: MOMENTS.map(function (m) { return m.id; }),
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));
