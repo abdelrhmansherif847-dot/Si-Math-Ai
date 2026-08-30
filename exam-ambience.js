@@ -81,7 +81,7 @@
      luck, which matters because the printed table is meant to BE what happens.
      markIdx points at the next entry in that list; moduleT0 is when the
      current module began, and every arming is measured from it. */
-  var VOICE_EVERY = 300;
+  var VOICE_EVERY = 180;
   var ROTATION = ['voice-1', 'voice-2', 'voice-3', 'voice-4'];
   var ANCHORS = [
     { id: 'voice-5', at: 600 },     // 10:00 into every module
@@ -100,12 +100,24 @@
      Generated an hour out, which is longer than any module, and driven by a
      timeout re-armed against the module's start time rather than by an
      interval. Absolute arming is what stops the drift accumulating — the same
-     reason the old code counted marks instead of reading the clock. */
-  var HORIZON = 3600;
+     reason the old code counted marks instead of reading the clock.
+
+     A GRID MARK TOO CLOSE TO AN ANCHOR IS DROPPED. At a three-minute beat the
+     grid lands on 9:00 and the first anchor on 10:00, which is a MINUTE apart —
+     two exchanges almost on top of each other, in a layer whose whole point is
+     that events are sparse and unremarkable. The anchors are fixed by
+     instruction and the grid is not, so the grid gives way. 90 seconds is the
+     smallest gap that still reads as two separate events rather than one
+     stuttering one. */
+  var HORIZON = 3600, MIN_GAP = 90;
   function markTimes() {
+    var anchors = ANCHORS.map(function (a) { return a.at; });
     var seen = {}, out = [], t;
-    for (t = 0; t < HORIZON; t += VOICE_EVERY) seen[t] = true;
-    ANCHORS.forEach(function (a) { seen[a.at] = true; });
+    for (t = 0; t < HORIZON; t += VOICE_EVERY) {
+      var crowded = anchors.some(function (a) { return Math.abs(a - t) < MIN_GAP; });
+      if (!crowded) seen[t] = true;
+    }
+    anchors.forEach(function (a) { seen[a] = true; });
     Object.keys(seen).forEach(function (k) { out.push(+k); });
     return out.sort(function (a, b) { return a - b; });
   }
