@@ -65,9 +65,19 @@ t.ok('fixtures are visibly fictional', /Sample/.test(PAGE) && !/@/.test(PAGE.sli
 t.section('The page shows no learning metric it cannot compute');
 
 const FIXTURE_BLOCK = PAGE.slice(PAGE.indexOf('const FIXTURE'), PAGE.indexOf('function iso'));
-t.is('no fixture invents a score, accuracy or mastery value',
-  ['score', 'accuracy', 'mastery', 'weakness', 'percentile', 'trend']
+/* severity_band and trend ARE legitimate in fixtures now — they are the
+   analyzer's own outputs, which the preview mirrors. What must never appear is
+   a metric this platform does not compute for a teacher. */
+t.is('no fixture invents a metric the platform does not produce',
+  ['accuracy', 'mastery', 'percentile', 'weakness_score', 'improvement']
     .filter((k) => new RegExp(k, 'i').test(FIXTURE_BLOCK)), []);
+
+/* The preview must mirror the real shape, or it sells a product that does not
+   exist: 205 of 225 live reports carry no trend. */
+const wkFixtures = [...FIXTURE_BLOCK.matchAll(/trend:\s*(null|'(\w+)')/g)].map((m) => m[2] || null);
+t.ok('preview carries weakness fixtures', wkFixtures.length >= 3);
+t.ok('most preview weaknesses carry no trend, as in production',
+  wkFixtures.filter((x) => x === null).length > wkFixtures.filter((x) => x !== null).length);
 
 // The words are allowed in prose that explains their absence — a number is not.
 t.ok('the page states what it does not show', /Scores and weaknesses are not here yet/.test(PAGE));
@@ -88,7 +98,21 @@ t.ok('the contract names the three surfaces one weakness must read the same on',
    already forked. */
 const slotWrites = [...PAGE.matchAll(/\$\('learningSlot'\)\.innerHTML\s*=\s*([^;]*)/g)].map((m) => m[1].trim());
 t.is('the only direct write to the slot is the reset', slotWrites, ["''"]);
-t.ok('renderLearning is what fills it', /function renderLearning\(student, el\)[\s\S]{0,600}el\.innerHTML/.test(PAGE));
+t.ok('renderLearning is what fills it', /async function renderLearning\(student, el\)[\s\S]{0,400}el\.innerHTML/.test(PAGE));
+
+/* The slot reads the canonical weakness through the shared module. A surface
+   that reached into weakness_reports and shaped its own view would be the
+   second authority the whole design exists to prevent. */
+t.ok('the slot renders through WeaknessView', /WeaknessView\.canonical\(/.test(PAGE) && /WeaknessView\.forRole\(/.test(PAGE));
+t.ok('the module is actually loaded by the page', /<script src="weakness-view\.js"><\/script>/.test(PAGE));
+t.ok('the role passed is the viewer\'s real role', /S\.isOwner \? 'teacher' : 'assistant'/.test(PAGE));
+t.ok('a withheld trend renders nothing at all', /v\.showTrend \?/.test(PAGE) && !/showTrend[\s\S]{0,80}'Stable'/.test(PAGE));
+t.ok('the page derives no band of its own', !/severity_band\s*[<>=]/.test(PAGE));
+
+/* The read is prepared, not applied. Every other page degrades gracefully when
+   an RPC is missing; this slot must too, or opening a student throws. */
+t.ok('a missing weakness RPC degrades instead of throwing',
+  /catch \(_\) \{[\s\S]{0,600}Reserved — not connected yet/.test(PAGE));
 t.ok('renderLearning renders no number', !/%/.test(
   PAGE.slice(PAGE.indexOf('function renderLearning'), PAGE.indexOf('$(\'closeDrawer\')'))));
 

@@ -656,6 +656,19 @@ are chosen before anyone is invested in the answer.
   evidence trail, not a redesign. `tests/teacher-surface.test.mjs` fails if the
   slot grows a second author or if the page ever shows a metric it cannot
   compute.
+- **Weakness Intelligence v1, 2026-08-30 — surfaces wired, read PREPARED.** An
+  evidence audit (`docs/engineering/weakness-evidence-audit.md`) established what
+  the exam engine actually records: **no per-item responses exist anywhere**, and
+  86% of weakness signals come from tutor conversations against 1.5% from mock
+  exams. So v1 connects the weakness that genuinely exists rather than inventing
+  an exam-derived one. `weakness-view.js` turns one `weakness_reports` row into
+  a student, teacher or assistant view and **derives nothing** — the analyzer
+  keeps sole authority over severity and trend, and a null trend (205 of 225
+  live reports) renders nothing rather than "stable". Every teacher-facing
+  weakness carries its basis, naming the absence of exam evidence when there is
+  none. `20260830d_teacher_weakness_read.sql` is the first consumer of
+  `teacher_can_see_student()` and is **PREPARED, not applied**; the card degrades
+  to its previous state until it is.
 - **On the ordering.** T1 was written above as waiting on T0's exit condition.
   It was built first, deliberately: T1 carries no analytics, so nothing in it
   depends on how much evidence exists, while the access model is the one part

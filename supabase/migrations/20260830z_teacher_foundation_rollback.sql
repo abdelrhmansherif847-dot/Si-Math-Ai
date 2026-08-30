@@ -18,6 +18,7 @@
 
 begin;
 
+drop function if exists teacher_student_weaknesses(uuid, uuid);
 drop function if exists teacher_student_card(uuid, uuid);
 drop function if exists teacher_roster(uuid);
 drop function if exists teacher_my_workspaces();

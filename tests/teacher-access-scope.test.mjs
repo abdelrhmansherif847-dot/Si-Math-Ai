@@ -37,6 +37,7 @@ const MIG = {
   a: read('supabase/migrations/20260830a_teacher_foundation_tables.sql'),
   b: read('supabase/migrations/20260830b_teacher_foundation_rls.sql'),
   c: read('supabase/migrations/20260830c_teacher_foundation_rpcs.sql'),
+  d: read('supabase/migrations/20260830d_teacher_weakness_read.sql'),
   z: read('supabase/migrations/20260830z_teacher_foundation_rollback.sql'),
 };
 const PAGE = read('teacher.html');
@@ -53,6 +54,14 @@ const exec = (sql) => sql
 
 const EXEC = Object.fromEntries(Object.entries(MIG).map(([k, v]) => [k, exec(v)]));
 const FORWARD = [EXEC.a, EXEC.b, EXEC.c].join('\n');
+/* Migration d is the FIRST deliberate academic read, so it is held to a
+   different, narrower contract than the foundation — see section 9. Keeping it
+   out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
+const WEAKNESS = EXEC.d;
+/* Privilege hygiene and rollback completeness apply to every function this
+   system ships, foundation or not. Only the academic-boundary ban is scoped to
+   the foundation alone. */
+const ALL_FORWARD = FORWARD + '\n' + WEAKNESS;
 
 // The four tables this system is allowed to create and touch.
 const OWN_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];
@@ -174,19 +183,19 @@ for (const tbl of OWN_TABLES) {
     new RegExp(`grant select on table ${tbl}\\s+to authenticated`, 'i').test(EXEC.b));
 }
 t.is('no write verb is granted to a client role',
-  [...FORWARD.matchAll(/grant\s+(insert|update|delete|truncate)[^;]*to\s+(anon|authenticated)/gi)].map((m) => m[0]), []);
+  [...ALL_FORWARD.matchAll(/grant\s+(insert|update|delete|truncate)[^;]*to\s+(anon|authenticated)/gi)].map((m) => m[0]), []);
 
 // The DEFAULT ACL on public functions grants EXECUTE to anon and authenticated,
 // so a bare CREATE FUNCTION is callable by anyone logged in. Both directions of
 // getting this wrong are already in the repo's history — see the header of
 // 20260830b. Every function must therefore be revoked explicitly.
-const created = [...FORWARD.matchAll(/create or replace function ([a-z_]+)\s*\(/gi)].map((m) => m[1]);
+const created = [...ALL_FORWARD.matchAll(/create or replace function ([a-z_]+)\s*\(/gi)].map((m) => m[1]);
 t.ok('functions are created (the check is not vacuous)', created.length >= 14);
 const unrevoked = [...new Set(created)].filter(
-  (fn) => !new RegExp(`revoke all on function ${fn}\\s*\\(`, 'i').test(FORWARD));
+  (fn) => !new RegExp(`revoke all on function ${fn}\\s*\\(`, 'i').test(ALL_FORWARD));
 t.is('every function is revoked from public, anon, authenticated', unrevoked, []);
 
-const definers = [...FORWARD.matchAll(/create or replace function [a-z_]+\([\s\S]*?security definer([\s\S]*?)as \$\$/gi)];
+const definers = [...ALL_FORWARD.matchAll(/create or replace function [a-z_]+\([\s\S]*?security definer([\s\S]*?)as \$\$/gi)];
 t.ok('security definer functions exist', definers.length >= 10);
 t.is('every definer function pins its search_path',
   definers.filter((m) => !/set search_path = pg_catalog, public/.test(m[1])).length, 0);
@@ -238,5 +247,42 @@ t.ok('nav.js tolerates the RPC not existing yet', /try \{[\s\S]{0,400}teacher_my
 // improve, the promise is not. teacher-surface.test.mjs owns the detail.
 t.ok('the teacher page states what it does not show, rather than faking it',
   /could have been wrong/.test(PAGE) && /Mock Experience/.test(PAGE));
+
+// ══ 9 · THE FIRST ACADEMIC READ ═══════════════════════════════════════════
+t.section('Weakness read — narrow by construction, not by good intentions');
+
+/* The foundation reaches no academic table. This one reaches exactly two, and
+   the whole value of the boundary is that the list is short and checked. */
+const WEAKNESS_ALLOWED = ['weakness_reports', 'weakness_signals'];
+t.is('it reads only the two weakness tables',
+  ACADEMIC.filter((tbl) => new RegExp(`\\b${tbl}\\b`).test(WEAKNESS))
+    .filter((tbl) => !WEAKNESS_ALLOWED.includes(tbl)), []);
+t.ok('it really does read them (not vacuous)',
+  WEAKNESS_ALLOWED.every((tbl) => new RegExp(`\\b${tbl}\\b`).test(WEAKNESS)));
+
+/* Both gates, and the pairing of the two. teacher_can_see_student() is
+   caller-scoped rather than workspace-scoped, so staff of workspace A must not
+   reach a student they are only linked to in workspace B. */
+t.ok('it gates on workspace staff', /workspace_is_active_staff\(p_workspace\)/.test(WEAKNESS));
+t.ok('it gates on the link to this student', /teacher_can_see_student\(p_student\)/.test(WEAKNESS));
+t.ok('it checks the student is in THIS workspace',
+  /workspace_students ws[\s\S]{0,300}ws\.workspace_id = p_workspace[\s\S]{0,200}ws\.student_id = p_student/.test(WEAKNESS));
+
+/* The analyzer's working numbers stay with the analyzer. Handing them to a
+   surface is how a second authority for severity gets built by accident. */
+t.is('the analyzer\'s working numbers are withheld',
+  ['weakness_score', 'mastery_score', 'improvement_score', 'recent7_count', 'recent14_count']
+    .filter((c) => new RegExp(`\\b${c}\\b`).test(WEAKNESS)), []);
+t.ok('but the conclusions are returned', /severity_band/.test(WEAKNESS) && /priority_rank/.test(WEAKNESS));
+t.ok('a null trend is never coalesced', !/coalesce\(r\.trend/.test(WEAKNESS));
+
+t.ok('it creates no table, policy or role', !/create (table|policy|type|role)/i.test(WEAKNESS));
+t.ok('it joins no profile data', !/\bprofiles\b/.test(WEAKNESS));
+t.ok('it is revoked then granted deliberately',
+  /revoke all on function teacher_student_weaknesses/.test(WEAKNESS)
+  && /grant execute on function teacher_student_weaknesses\(uuid, uuid\)\s+to authenticated/.test(WEAKNESS));
+t.ok('it pins its search_path', /security definer[\s\S]{0,120}set search_path = pg_catalog, public/.test(WEAKNESS));
+t.ok('the rollback drops it',
+  /drop function if exists teacher_student_weaknesses\(uuid, uuid\)/.test(EXEC.z));
 
 t.done();

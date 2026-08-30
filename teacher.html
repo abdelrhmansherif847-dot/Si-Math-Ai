@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- One weakness, read three ways. Derives nothing; see the file's header. -->
+<script src="weakness-view.js"></script>
 <style>
 :root{
   --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
@@ -138,6 +140,16 @@ input,select{font-family:inherit}
 
 .note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
 .slot-empty{border:1px dashed var(--border-mid);border-radius:var(--r-md);padding:16px;background:rgba(10,18,36,.5)}
+.wk{border:1px solid var(--border-soft);border-radius:var(--r-md);background:var(--bg-elev-2);padding:13px 14px;margin-bottom:9px}
+.wk-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.wk-lead{font-family:var(--font-display);font-weight:700;font-size:14.5px;color:#fff;flex:1;min-width:0}
+.wk-topic{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-bottom:6px}
+.wk-basis{font-size:12.5px;color:var(--text-400);line-height:1.55}
+.wk-when{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:7px}
+.pill.critical{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+.pill.high{background:var(--gold-soft);border-color:var(--gold-border);color:#fcd34d}
+.pill.medium{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.low{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
 .slot-empty .st{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:8px}
 .empty-state{text-align:center;padding:44px 20px;color:var(--text-400)}
 .empty-state .big{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text-200);margin-bottom:6px}
@@ -407,6 +419,28 @@ const FIXTURE = {
     { id: 's1', user_id: 'aaaaaaaa-0000', staff_role: 'assistant', status: 'pending', created_at: iso(-2) },
     { id: 's2', user_id: 'bbbbbbbb-0000', staff_role: 'assistant', status: 'active',  created_at: iso(-45) },
   ],
+  /* Weaknesses keyed by student. Deliberately mirrors the real shape measured
+     on 2026-08-30: most students have one to three, and 91% of live reports
+     carry no trend, so most of these carry none either. */
+  weaknesses: {
+    p3: [
+      { topic: 'Algebra', subtopic: 'Linear Equations', severity_band: 'high', priority_rank: 1,
+        trend: null, last_signal_at: iso(-3), total_signals: 14,
+        signals_ai_chat: 11, signals_mock_exam: 0, signals_focus: 3 },
+      { topic: 'Algebra', subtopic: 'Systems of Equations', severity_band: 'medium', priority_rank: 2,
+        trend: 'declining', last_signal_at: iso(-6), total_signals: 8,
+        signals_ai_chat: 6, signals_mock_exam: 2, signals_focus: 0 },
+      { topic: 'Geometry', subtopic: 'Circles', severity_band: 'low', priority_rank: 3,
+        trend: null, last_signal_at: iso(-19), total_signals: 2,
+        signals_ai_chat: 2, signals_mock_exam: 0, signals_focus: 0 },
+    ],
+    p1: [
+      { topic: 'Data Analysis', subtopic: 'Probability', severity_band: 'critical', priority_rank: 1,
+        trend: null, last_signal_at: iso(-1), total_signals: 4,
+        signals_ai_chat: 4, signals_mock_exam: 0, signals_focus: 0 },
+    ],
+    p2: [],
+  },
   activity: [
     { action: 'student_joined',   subject_id: 'p6', created_at: iso(-9) },
     { action: 'staff_joined',     subject_id: 'aaaaaaaa-0000', created_at: iso(-2) },
@@ -461,6 +495,12 @@ const api = {
     const { data, error } = await sb.rpc('teacher_student_card', { p_workspace: ws, p_student: student });
     if (error) throw error;
     return data;
+  },
+  async weaknesses(ws, student) {
+    if (S.preview) return (FIXTURE.weaknesses[student] || []);
+    const { data, error } = await sb.rpc('teacher_student_weaknesses', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+    return data || [];
   },
   async rotate(ws, kind) {
     if (S.preview) return 'PREVIEW1';
@@ -781,7 +821,7 @@ async function openCard(studentId) {
       + (data.status === 'active' ? 'Connected to you' : (data.status === 'revoked' ? 'Left the class' : 'Removed from the class'))
       + '</span></div>';
 
-  renderLearning(data, $('learningSlot'));
+  await renderLearning(data, $('learningSlot'));
 
   if (S.isOwner && data.status === 'active') {
     $('cardActions').innerHTML =
@@ -801,19 +841,63 @@ async function openCard(studentId) {
   }
 }
 
-/* THE LEARNING SLOT — see the contract above the markup.
-   Today it renders the truth: there is nothing to say yet, and why. When the
-   Weakness system connects, this function is what changes. */
-function renderLearning(student, el) {
-  el.innerHTML =
-    '<div class="slot-empty">'
-    + '<div class="st">Reserved — nothing to show yet</div>'
-    + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
-    + 'No weakness, score or trend appears here until the platform can say something about '
-    + esc(String(student.full_name).split(/\s+/)[0])
-    + ' that could have been wrong — which needs per-question evidence from the new Mock Experience. '
-    + 'When it arrives it lands here with the attempts behind it, never as a number on its own.'
-    + '</div></div>';
+/* THE LEARNING SLOT — see the contract above the markup. This is its only
+   writer, and it renders the canonical weakness: the same weakness_reports row
+   the student's own analyzer produced, shaped for this role by WeaknessView.
+   Nothing here recomputes a band or a direction — see weakness-view.js. */
+async function renderLearning(student, el) {
+  const first = esc(String(student.full_name).split(/\s+/)[0]);
+  el.innerHTML = '<div style="padding:14px 0"><div class="spin"></div></div>';
+
+  let rows;
+  try {
+    rows = await api.weaknesses(S.ws.workspace_id, student.student_id);
+  } catch (_) {
+    /* teacher_student_weaknesses() ships in 20260830d, which is PREPARED and
+       not applied. Until it is, the card says what it said before rather than
+       inventing a stand-in. */
+    el.innerHTML =
+      '<div class="slot-empty"><div class="st">Reserved — not connected yet</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'The weakness read is prepared but not yet live on this project. When it is, '
+      + first + '\'s weaknesses appear here with the evidence behind each one.'
+      + '</div></div>';
+    return;
+  }
+
+  if (!rows.length) {
+    el.innerHTML =
+      '<div class="slot-empty"><div class="st">Nothing recorded yet</div>'
+      + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+      + 'The analyzer has not found a weakness for ' + first + ' yet. That is not a clean bill of '
+      + 'health — it means there is not enough of their work on the platform to say anything that '
+      + 'could have been wrong.</div></div>';
+    return;
+  }
+
+  const role = S.isOwner ? 'teacher' : 'assistant';
+  const views = rows
+    .map((r) => WeaknessView.canonical(r, {
+      AI_CHAT: r.signals_ai_chat, MOCK_EXAM: r.signals_mock_exam, FOCUS_PRACTICE: r.signals_focus }))
+    .map((v) => WeaknessView.forRole(v, role));
+
+  el.innerHTML = views.map((v) => ''
+    + '<div class="wk">'
+    + '<div class="wk-head"><span class="wk-lead">' + esc(v.lead) + '</span>'
+    + (v.bandLabel ? '<span class="pill ' + esc(v.bandTone) + '">' + esc(v.bandLabel) + '</span>' : '')
+    /* showTrend is false whenever the analyzer withheld a direction. Nothing is
+       rendered in its place — not "stable", not a flat arrow. */
+    + (v.showTrend ? '<span class="pill">' + esc(v.trendLabel) + '</span>' : '')
+    + '</div>'
+    + (v.subtopic ? '<div class="wk-topic">' + esc(v.topic) + '</div>' : '')
+    + (v.basis ? '<div class="wk-basis">' + esc(v.basis) + '</div>' : '')
+    + (v.lastSeen ? '<div class="wk-when">last signal ' + esc(v.lastSeen) + '</div>' : '')
+    + '</div>').join('')
+    + '<div class="code-note" style="margin-top:12px">'
+    + (role === 'assistant' ? 'Same weaknesses the teacher sees. ' : '')
+    + 'These come from the same analyzer that produces ' + first + '\'s own weakness page — '
+    + 'one weakness, read from one place, so you and they are never looking at different answers.'
+    + '</div>';
 }
 
 $('closeDrawer').addEventListener('click', () => openDrawer(false));
