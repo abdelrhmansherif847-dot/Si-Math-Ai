@@ -199,7 +199,7 @@
     amb.setAttribute('data-rv-amb', '');
     amb.setAttribute('aria-pressed', 'false');
     amb.textContent = 'Room sound';
-    amb.title = 'Synthesised placeholder ambience — pen, paper, distant whisper';
+    amb.title = 'Synthesised placeholder ambience — pen, paper, distant voices';
     amb.addEventListener('click', function () {
       var A = root.SiExamAmbience; if (!A) return;
       var now = A.isOn() ? !A.disable() : A.enable();
