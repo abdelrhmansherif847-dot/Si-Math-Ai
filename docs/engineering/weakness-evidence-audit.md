@@ -181,3 +181,23 @@ reports, and the same three views improve together.
 4. **v1 adds no threshold of its own.** It presents and discloses; it derives
    nothing. A new cut-off chosen now would be chosen against 13 students, one of
    whom is 64% of the data.
+
+---
+
+## 7 · What shipped, 2026-08-30
+
+`teacher_student_weaknesses()` is **live** (`20260830195034`), and it is the
+first consumer of `teacher_can_see_student()`. `weakness-view.js` shapes one
+`weakness_reports` row for a student, teacher or assistant and derives nothing.
+
+Verified against a real student holding **144** canonical reports: the teacher
+read returned all 144, **135 of them with no trend — matching the table
+exactly**, with the per-source basis populated (384 AI_CHAT signals against 11
+MOCK_EXAM across that student's weaknesses, which is this audit's §2 finding
+showing up in the product rather than in a document).
+
+**Phase closed.** What remains blocked is exactly what §5 said would be:
+everything that needs a per-item response. The next phase is Mock delivery and
+per-question evidence — and when it lands, the pipeline needs no new surface. A
+new signal `source` flows into the same reports, and the student, teacher and
+assistant views improve together because they read the same row.

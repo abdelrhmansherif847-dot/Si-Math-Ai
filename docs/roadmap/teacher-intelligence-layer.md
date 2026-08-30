@@ -667,8 +667,16 @@ are chosen before anyone is invested in the answer.
   live reports) renders nothing rather than "stable". Every teacher-facing
   weakness carries its basis, naming the absence of exam evidence when there is
   none. `20260830d_teacher_weakness_read.sql` is the first consumer of
-  `teacher_can_see_student()` and is **PREPARED, not applied**; the card degrades
-  to its previous state until it is.
+  `teacher_can_see_student()` and went **live 2026-08-30** (`20260830195034`),
+  verified 9 of 9 under simulated JWTs against a student holding 144 real
+  reports. The workspace-pairing gate earned its place: a caller whom both
+  earlier gates admitted — active staff of workspace B, able to see the student
+  through workspace A — was refused by it. Withdrawing consent removes the
+  weaknesses along with everything else.
+- **T2 is not open.** The layer now shows a real weakness with its basis, and
+  stops there. Trajectories, hidden students and attention allocation still wait
+  on the evidence §5 says does not exist — per-item responses from a delivered
+  mock.
 - **On the ordering.** T1 was written above as waiting on T0's exit condition.
   It was built first, deliberately: T1 carries no analytics, so nothing in it
   depends on how much evidence exists, while the access model is the one part

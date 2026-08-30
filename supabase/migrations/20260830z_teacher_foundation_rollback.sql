@@ -5,6 +5,7 @@
 --         migrations went live on 2026-08-30, so this stopped being a
 --         hypothetical the moment they did: it is now the live withdrawal
 --         path, to be run only if the teacher foundation is being removed.
+--         20260830d (the weakness read) is live too and is dropped first here.
 --
 -- Written at the same time as the forward migrations, on the principle the
 -- support system used: a migration whose rollback is written later is a

@@ -112,3 +112,37 @@ with `teacher_create_workspace(<owner uuid>, '<class name>')`.
 - **Anything about learning.** No analytics exist here, deliberately — T1 is
   identity and consent. `teacher_can_see_student()` is live and guards nothing,
   waiting for the evidence the Mock Experience will produce.
+
+---
+
+## 6 · Weakness Intelligence v1 — applied and verified, 2026-08-30
+
+`teacher_student_weaknesses()` applied as `20260830195034`
+(`teacher_weakness_read`), the first consumer of `teacher_can_see_student()`.
+Verified after apply: SECURITY DEFINER, `search_path` pinned, `anon` cannot
+execute it, `authenticated` can, and the return signature is exactly the ten
+approved columns — `topic, subtopic, severity_band, priority_rank, trend,
+last_signal_at, total_signals, signals_ai_chat, signals_mock_exam,
+signals_focus`. The analyzer's working numbers are absent from the signature, so
+no surface can re-derive a band from them.
+
+End-to-end, one rolled-back transaction, every step under a simulated JWT,
+against a **real student holding 144 canonical weakness reports**:
+
+| # | What was proven |
+|---|---|
+| 1 | The teacher read returns all 144 reports — the RPC and the table agree exactly |
+| 2 | **135 of the 144 carry no trend, matching the table exactly** — the analyzer's refusal survives the trip to the surface uncoalesced |
+| 3 | The evidence basis is populated: 384 `AI_CHAT` signals against 11 `MOCK_EXAM` across that student's weaknesses — the audit's central finding visible in the product |
+| 4 | A stranger is refused — `42501` |
+| 5 | A **pending** assistant is refused; once approved, they read the **same 144** |
+| 6 | **The pairing gate earned its place.** The assistant was active staff of workspace B *and* could see the student through workspace A, so both earlier gates passed — and the third refused: *"that student is not in this workspace"* |
+| 7 | The student disconnects → the teacher loses the weaknesses along with everything else — `42501` |
+
+**9 of 9 passed.** Production after the run: `teacher_workspaces` 0,
+`workspace_staff` 0, `workspace_students` 0, `workspace_audit_log` 0, and
+`weakness_reports` untouched at 225. No test data survived.
+
+**Still not proven:** the browser path (the card is covered by
+`tests/teacher-surface.test.mjs`, not by a signed-in teacher clicking it), and
+anything at scale — every check ran on a roster of one.

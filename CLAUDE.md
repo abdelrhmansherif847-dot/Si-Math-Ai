@@ -145,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **89 files** in `supabase/migrations/`, **160 applied** in the database (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` applied 2026-08-30 |
+| Migrations | **90 files** in `supabase/migrations/`, **161 applied** in the database (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **49** root `*.html` pages on Vercel (measured 2026-08-30; the entry said 46 and had been stale since before `teacher.html`) |
 | CI | `node tests/run-all.mjs` — **50 checks** (measured 2026-08-30) |
 
@@ -200,6 +200,13 @@ exists for this. Do not treat the file list as the applied list.
   table, by design. Clients hold SELECT only — every write is a SECURITY DEFINER
   RPC. Read `docs/roadmap/teacher-intelligence-layer.md` §8 before touching
   anything teacher-, class- or cohort-shaped
+- **Weakness reads** are canonical: `weakness_reports` is the single weakness,
+  and `regenerate-reports.js` is the SOLE authority for `severity_band` and
+  `trend` — **no consumer re-derives either**. The teacher/assistant read is
+  `teacher_student_weaknesses()` (live 2026-08-30), which withholds the
+  analyzer's working numbers so no surface can. `weakness-view.js` shapes one
+  row per role and derives nothing. Evidence inventory and what is still
+  impossible: `docs/engineering/weakness-evidence-audit.md`
 
 ### Repository shape
 

@@ -1,7 +1,15 @@
 -- =====================================================================
 -- Weakness Intelligence v1 — the teacher/assistant read path
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval (CLAUDE.md §3), recorded as schema_migrations version
+--         20260830195034 `teacher_weakness_read`. Revision 1. The applied body
+--         differed only in header text and the omitted outer transaction.
+--         Verified end to end under simulated JWTs, 9 of 9 — including that a
+--         teacher reads all 144 of a real student's canonical reports, that
+--         135 of those 144 carry no trend exactly as the table does, and that
+--         the workspace-pairing gate refuses a caller whom BOTH earlier gates
+--         admitted. See docs/engineering/teacher-foundation-verification.md §6.
 -- DEPENDS ON: 20260830a/b/c (the teacher foundation, applied 2026-08-30)
 -- CONTEXT: docs/engineering/weakness-evidence-audit.md — read it first. It is
 --          the reason this function returns what it does and withholds the rest.
