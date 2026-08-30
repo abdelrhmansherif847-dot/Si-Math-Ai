@@ -329,6 +329,10 @@ HTML = f"""<!-- FIGURE-GRAMMAR-EXPLORATION — several candidate pie treatments,
      figure-system.css. Nothing here is the shipped grammar. -->
 <!doctype html><meta charset="utf-8"><title>Pie chart &mdash; four directions</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- An internal design record, deployed so it can be LOOKED AT on the real site
+     under the real CSP, at the real measure. Not part of the public knowledge
+     layer and not for indexing. -->
+<meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap">
 {CSS}
 <style>{SL}</style>

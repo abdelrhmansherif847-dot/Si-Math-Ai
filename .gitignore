@@ -37,4 +37,10 @@ scripts/desmos-activation.png
 # The BASELINES (tests/visual-baselines/) are committed; these are the current
 # renders and the diffs against them, and they are rewritten each time.
 tests/visual-out/
+# pie-directions.html is the exception: every other generated page here is
+# ignored, and the consequence is that none of them has ever been deployable —
+# they could only ever be reviewed through screenshots someone pasted. A design
+# decision is taken by LOOKING at the thing on the real site, so this one is
+# committed and served. It carries noindex; it is not public-site surface.
+!scripts/pie-directions.html
 pie-directions.html
