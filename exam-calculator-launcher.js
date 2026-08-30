@@ -104,8 +104,39 @@
     } catch (e) { return false; }
   }
 
+  // ── reviewer mode ─────────────────────────────────────────────────────────
+  //
+  // The same override as above, turned on by the PAGE rather than by typing a
+  // query string. exams.html reviews DRAFT forms and is admin-only — the Spine
+  // tables are RLS-gated to has_role_at_least('admin'), so a non-admin gets no
+  // form and never reaches a question to put a calculator beside. On that page,
+  // asking a reviewer to remember ?desmos-check=1 on every visit is friction
+  // with no safety in it: the flag is already typeable by anyone signed in, so
+  // enabling it for admins WIDENS NOTHING. It narrows the typing, not the gate.
+  //
+  // What it deliberately does not do: it does not consult the exam's policy,
+  // does not name a provider, and does not touch desmos-commercial. Students
+  // remain governed by policyAllows() alone — API Terms §3.a, which nothing
+  // here can grant. This is §2.a internal evaluation and is labelled TEST on
+  // the control like any other override.
+  var reviewer = false;
+
+  /**
+   * setReviewer(on)
+   *
+   * Turn the control on for a reviewing admin. Called by the page AFTER its own
+   * role read, because only the page knows who is looking. Re-scans, so it
+   * works whether it is called before or after the slot appears.
+   */
+  function setReviewer(on) {
+    reviewer = !!on;
+    if (observer) scan();
+  }
+
+  function overridden() { return checkMode() || reviewer; }
+
   function available(code) {
-    return policyAllows(code) || checkMode();
+    return policyAllows(code) || overridden();
   }
 
   // ── styles ───────────────────────────────────────────────────────────────
@@ -375,7 +406,7 @@
     // the control. Otherwise a tester cannot tell a real, policy-driven
     // calculator from one they switched on themselves — and that is exactly the
     // confusion this whole gate exists to prevent.
-    if (checkMode() && !policyAllows(code)) {
+    if (overridden() && !policyAllows(code)) {
       var chip = document.createElement('span');
       chip.className = 'si-calc-test';
       chip.textContent = 'TEST';
@@ -421,10 +452,12 @@
 
   root.SiExamCalculatorLauncher = {
     install: install,
+    setReviewer: setReviewer,
     open: open,
     isAvailable: available,
     _workspace: function () { return ws; },
     _reset: function () {
+      reviewer = false;
       if (observer) { observer.disconnect(); observer = null; }
       if (ws) {
         try { ws.close(); } catch (e) {}

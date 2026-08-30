@@ -85,9 +85,37 @@ t.section('Zero providers: the normal state, held everywhere');
                       'available');
   t.ok('the production rule is describe().inApp', /describe\(code\)/.test(policy)
     && /inApp/.test(policy));
-  t.ok('availability is the policy or the override, and nothing else',
-    /policyAllows\(code\)/.test(avail) && /checkMode\(\)/.test(avail)
+  t.ok('availability is the policy or a declared override, and nothing else',
+    /policyAllows\(code\)/.test(avail) && /overridden\(\)/.test(avail)
     && !/EXAM_CODES|isInAppAvailable|apiKey|localStorage/.test(avail));
+
+  // THE OVERRIDES ARE A CLOSED LIST. There are two — the query-string flag a
+  // verifier types, and reviewer mode, which exams.html turns on for an account
+  // RLS actually served the Spine to. Both are internal evaluation under API
+  // Terms §2.a and both label the control TEST. A third way in would be a way a
+  // student could reach the calculator without a policy naming a provider,
+  // which is the one thing this gate exists to stop, so the set is asserted
+  // rather than left to grow.
+  const over = slice(launcher, 'function overridden() {', 'function available(code) {',
+                     'overridden');
+  t.ok('the overrides are exactly the typed flag and reviewer mode',
+    /checkMode\(\)/.test(over) && /reviewer/.test(over)
+    && !/policyAllows|inApp|apiKey|localStorage|role|is_admin/.test(over));
+
+  // Reviewer mode is set BY THE PAGE, never inferred here: only the page knows
+  // who is looking, and the launcher must not grow its own opinion about roles.
+  const setrev = slice(launcher, 'function setReviewer(on) {', 'function overridden',
+                       'setReviewer');
+  t.ok('reviewer mode is set by the page and reads no role itself',
+    !/profiles|role|is_admin|supabase|fetch/.test(setrev));
+
+  // And the exam page turns it on only once RLS has answered — a non-empty
+  // library is the database's verdict, where the page's own role read is not.
+  const exams = read('exams.html');
+  t.ok('exams.html enables reviewer mode from the RLS answer, after the empty check',
+    exams.indexOf('setReviewer(true)') > exams.indexOf("if (!forms.length)"));
+  t.ok('and mock-exam.html, which is frozen, does not enable it at all',
+    !/setReviewer/.test(read('mock-exam.html')));
 
   // The override is an EXACT match on '1' — never a truthy test, which would
   // make ?desmos-check=0 turn it on.

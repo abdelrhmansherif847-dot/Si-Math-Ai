@@ -214,6 +214,24 @@ async function boot() {
       'your account role is <b>' + esc(role) + '</b>.');
     return;
   }
+
+  /* THE CALCULATOR, FOR THE REVIEWER LOOKING AT A DRAFT FORM.
+   *
+   * Gated on `forms.length` rather than on the `role` string above, and that is
+   * the point: the role read is this page's own and is for the message, while a
+   * non-empty library is the ANSWER RLS GAVE. Only an account the database will
+   * serve the Spine to gets here, so the control follows the same authority the
+   * questions do.
+   *
+   * It is the existing ?desmos-check override, turned on by the page instead of
+   * by typing — that flag is already available to anyone signed in, so this
+   * widens nothing and only removes the retyping. The control still labels
+   * itself TEST, no exam names a provider, and desmos-commercial is untouched:
+   * students are governed by policy alone, which is API Terms §3.a and is not
+   * something this line could grant. This is §2.a internal evaluation.
+   */
+  try { SiExamCalculatorLauncher.setReviewer(true); } catch (e) {}
+
   screenPick(forms);
 }
 
