@@ -35,15 +35,14 @@
   // cannot be judged by waiting ten minutes for it.
   var EVERY = 45;
 
-  /* THE VOICES ARE ON A CLOCK, NOT A DICE ROLL.
-     Every five minutes, the three recordings in order and then round again.
-     Deterministic because it was asked for as a schedule: on a 35-minute module
-     that is six plays — 5:00, 10:00, 15:00, 20:00, 25:00, 30:00 — which is
-     exactly two passes through the three, and the same again in module 2.
-     35:00 is the end of the module, so nothing is scheduled there.
+  /* THE VOICES ARE A FIXED CYCLE, NOT A DICE ROLL.
+     The first one at 0:00, the next five minutes later, and so on through the
+     list; after the last it returns to the first and keeps going for as long as
+     the module runs. Order and timing are both deterministic — the schedule is
+     a fact that can be printed, which is the whole reason for it.
      Kept separate from the pen and paper, which stay random: writing and paper
      are texture and should not arrive on a beat, while an exchange between two
-     students is an event and reads better spaced evenly. */
+     students is an event and reads better on one. */
   var VOICE_EVERY = 300;
   var VOICES = ['voice-1', 'voice-2', 'voice-3'];
   var voiceTimer = null, voiceIdx = 0;
@@ -210,7 +209,11 @@
       preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
       voiceTimer = root.setInterval(function () { if (on) voiceMoment(); }, VOICE_EVERY * 1000);
-      moment();                      // one immediately, so it can be judged now
+      // THE FIRST ONE IS AT 0:00. The cycle starts with the module rather than
+      // five minutes into it, so the mark at 0:00 is the first entry of the
+      // schedule and not a silent one.
+      voiceMoment();
+      moment();
       return true;
     } catch (e) { return false; }
   }
@@ -219,7 +222,7 @@
      from the start of a module; a module shorter than the first mark simply
      yields nothing. */
   function schedule(moduleMinutes) {
-    var out = [], t = VOICE_EVERY, i = 0, end = (moduleMinutes || 35) * 60;
+    var out = [], t = 0, i = 0, end = (moduleMinutes || 35) * 60;
     while (t < end) {
       out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
                  clip: VOICES[i % VOICES.length] });
