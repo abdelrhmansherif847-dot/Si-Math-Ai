@@ -15,11 +15,16 @@
  * copies of this renderer would eventually draw one database row two different
  * ways — and the exam would be the place it was noticed.
  *
+ * (The fork's name is deliberately not spelled here. The gate that forbids it
+ * greps the tracked tree, and this file is inlined verbatim into the generated
+ * specimen pages — which are now committed so they can be opened — so naming it
+ * in a comment reintroduces it as a match.)
+ *
  * It nearly happened. Until 2026-08-29 there were two: this one, exporting
  * SiExamStimulus and marked "DRAFT — NOT WIRED", and scripts/explore-render.js,
- * exporting SiExplore and marked "EXPLORATION COPY — not production, not wired
+ * exporting a second global and marked "EXPLORATION COPY — not production, not wired
  * to anything". The labels were exactly backwards. Every preview build, every
- * figure check and one SHIPPED module — exam-graph-zero.js — read SiExplore,
+ * figure check and one SHIPPED module — exam-graph-zero.js — read that one,
  * while the file calling itself production had fallen a schema generation
  * behind and was read by nothing that mattered. The fold is that pair collapsed
  * into this file, under the name the exam actually uses.
@@ -776,6 +781,107 @@ function drawNumberLine(spec, opts) {
   return s;
 }
 
+/* -------------------------------------------------------------------- PIE */
+/* A WHOLE, DIVIDED — and a family, not a drawing for one question.
+ *
+ * The treatment is "the decided vocabulary" (scripts/pie-directions.html, C),
+ * chosen from four by looking at them inside a question at the exam's own
+ * measure. Its point is that it introduces NO new colour: the two decided hues,
+ * then two neutrals, so a pie can be drawn without reopening the palette.
+ *
+ * `panels` is why this is a family. One stimulus may carry several pies —
+ * distributions of the same population cut different ways — which is the shape
+ * this kind of question actually takes, and a schema that allowed only one
+ * would have forced two stimulus rows and lost the fact that the two charts
+ * describe one whole. Each panel is independent: its own categories, its own
+ * values, its own title.
+ *
+ * FOUR SLOTS, AND NO MORE. The vocabulary has four fills. A distribution with
+ * more parts than that is not drawable here, and says so rather than cycling
+ * back to slot 1 and telling a reader two different things are the same thing.
+ */
+/* PAD is the room a rim label needs, and it is not optional. A label sits at
+ * R + LAB from the centre and runs OUTWARD from there, so the box has to hold
+ * the disc plus the longest label — and the outermost panel has no neighbour to
+ * borrow from. Without it "Above 50 50%" ran off the right of a two-panel
+ * figure by a character, which the exploration never showed because each pie
+ * there had a box of its own. */
+const PIE = { W: 330, H: 234, R: 64, LAB: 15, PAD: 46, CH: 7.2, SEP: -Math.PI / 2 };
+/* The four fills, NAMED rather than built by concatenating an index. Spelling
+ * them out is how the stylesheet gate can see them: it reads the classes this
+ * file emits out of the source text, so a name assembled from a prefix and a
+ * number reaches it as the bare prefix — a class no rule will ever match. (The
+ * first version of this comment quoted that prefix and tripped the same gate on
+ * itself, which is worth knowing before writing one here.) It also puts the
+ * vocabulary's limit in one place instead of in an arithmetic expression. */
+const PIE_SLOT = ['sx-pie-s1', 'sx-pie-s2', 'sx-pie-s3', 'sx-pie-s4'];
+
+function drawPie(spec, opts) {
+  opts = opts || {};
+  const panels = spec.panels || [];
+  if (!panels.length) throw new Error('drawPie: a pie needs at least one panel');
+  const titled = panels.some(p => p.title);
+  const pw = PIE.W, ph = PIE.H + (titled ? 20 : 0);
+  // The gutter is sized to the LONGEST LABEL, not to a constant. A fixed 46
+  // held "Above 50 50%" and lost a longer one, and a family that clips its own
+  // content on wording it was not tried against is a one-off with a wider spec.
+  // Estimated from the character count the way drawChart already sizes for a
+  // named series — nothing is in the document yet to measure. 7.2 is that same
+  // constant; 6.6 was tried first and came up ten pixels short on a long one.
+  const widest = Math.max(...panels.flatMap(pn => (pn.categories || []).map((c, i) => {
+    const v = (pn.values || [])[i], tot = (pn.values || []).reduce((a, x) => a + x, 0) || 1;
+    return (c + '  ' + fmt(Math.round((v / tot) * 1000) / 10) + '%').length;
+  })), 0);
+  const pad = Math.max(PIE.PAD, Math.round(widest * PIE.CH + 10) - (pw / 2 - PIE.R - PIE.LAB));
+  const W = pw * panels.length + pad * 2, H = ph;
+  const s = svgRoot(W, H, opts.shownAt);
+  s.setAttribute('class', 'sx sx-fam-data');
+
+  panels.forEach((pan, pi) => {
+    const cats = pan.categories || [], vals = pan.values || [];
+    if (cats.length !== vals.length)
+      throw new Error('drawPie: panel ' + pi + ' has ' + cats.length +
+                      ' categories and ' + vals.length + ' values');
+    if (cats.length > PIE_SLOT.length)
+      throw new Error('drawPie: panel ' + pi + ' has ' + cats.length +
+                      ' slices and the decided vocabulary has ' + PIE_SLOT.length +
+                      ' fills — a fifth would have to invent a hue');
+    const total = vals.reduce((a, v) => a + v, 0);
+    if (!(total > 0)) throw new Error('drawPie: panel ' + pi + ' sums to ' + total);
+
+    const g = el('g', {});
+    const cx = pad + pi * pw + pw / 2, cy = (titled ? 20 : 0) + PIE.H / 2, r = PIE.R;
+    if (pan.title)
+      g.appendChild(el('text', { x: cx, y: 14, class: 'sx-pie-title' }, pan.title));
+
+    const P = (a, rad) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
+    let a0 = PIE.SEP;
+    const mids = [];
+    vals.forEach((v, i) => {
+      const a1 = a0 + (v / total) * Math.PI * 2, big = (a1 - a0) > Math.PI ? 1 : 0;
+      const [x0, y0] = P(a0, r), [x1, y1] = P(a1, r);
+      // A single-slice distribution is a circle, and an arc from a point back to
+      // itself draws nothing at all — so it is closed as a circle instead.
+      g.appendChild(vals.length === 1
+        ? el('circle', { cx, cy, r, class: 'sx-pie-slice ' + PIE_SLOT[0] })
+        : el('path', { class: 'sx-pie-slice ' + PIE_SLOT[i],
+            d: `M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${big} 1 ${x1},${y1} Z` }));
+      mids.push((a0 + a1) / 2);
+      a0 = a1;
+    });
+
+    cats.forEach((c, i) => {
+      const [lx, ly] = P(mids[i], r + PIE.LAB);
+      const right = Math.cos(mids[i]) >= -0.02;
+      g.appendChild(el('text', { x: lx, y: ly + 4, class: 'sx-pie-label',
+        'text-anchor': right ? 'start' : 'end' },
+        c + '  ' + fmt(Math.round((vals[i] / total) * 1000) / 10) + '%'));
+    });
+    s.appendChild(g);
+  });
+  return s;
+}
+
 /* ------------------------------------------------------------------ CHART */
 function drawChart(spec, opts) {
   opts = opts || {};
@@ -910,6 +1016,13 @@ function drawTable(spec) {
  * what may be DRAWN, and a disagreement would mean a row that validates and
  * cannot be rendered, or the reverse. */
 function needsReading(kind, spec) {
+  // A PIE IS THE EXCEPTION AMONG CHARTS. Every other chart renders by `reading`,
+  // because whether a value must be got off the figure decides whether it is
+  // ruled. A pie names every slice on the figure itself, so there is nothing
+  // left for a question to change — it renders from the stimulus alone. Placed
+  // FIRST: written after the return below, it was dead, and a pie would have
+  // been refused for carrying no reading it could ever have used.
+  if (kind === 'chart' && (spec || {}).chartType === 'pie') return false;
   return kind === 'chart'
       || (kind === 'plot' && ['graph', 'data'].indexOf((spec || {}).frame) !== -1);
 }
@@ -962,7 +1075,12 @@ function renderForQuestion(question, stimulus) {
     return drawNumberLine(spec, { tickMode: 'auto', endpointR: 9,
                                   width: REF.W, shownAt: SHOWN });
   if (kind === 'chart')
-    return drawChart(spec, { reading: question.reading, width: REF.W, shownAt: SHOWN });
+    // A pie is a chart whose shape is a whole rather than an axis, so it comes
+    // through the chart kind and branches on chartType — the same field the
+    // database validates against.
+    return spec.chartType === 'pie'
+      ? drawPie(spec, { shownAt: SHOWN })
+      : drawChart(spec, { reading: question.reading, width: REF.W, shownAt: SHOWN });
   if (kind === 'plot')
     return drawPlot(spec, {
       frame: spec.frame,
@@ -993,7 +1111,8 @@ function renderStimulus(kind, spec, opts) {
       ' renders by the question, so it cannot be drawn from a stimulus alone — ' +
       'use renderForQuestion(question, stimulus)');
   if (kind === 'table') return drawTable(spec);
-  if (kind === 'chart') return drawChart(spec, opts);
+  if (kind === 'chart')
+    return spec.chartType === 'pie' ? drawPie(spec, opts) : drawChart(spec, opts);
   if (kind === 'number_line') return drawNumberLine(spec, opts);
   if (kind === 'plot') return drawPlot(spec, opts);
   throw new Error('renderStimulus: unsupported kind ' + kind);
@@ -1009,5 +1128,6 @@ function renderStimulus(kind, spec, opts) {
     drawChart: drawChart,
     drawTable: drawTable,
     drawNumberLine: drawNumberLine,
+    drawPie: drawPie,
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

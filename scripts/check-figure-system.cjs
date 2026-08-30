@@ -25,7 +25,14 @@ const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),
     return {id:h.id||'table', ok:!!(s||t), w:r?Math.round(r.width):0,
             marks:s?s.querySelectorAll('path,line,circle,polyline').length:0};
   }));
-  ok(`[${theme}] 10 variants present`, drew.length===10, 'got '+drew.length);
+  // COUNTED FROM THE PAGE, not from a number written here. This asserted `=== 10`
+  // and went red the moment a sixth family was added — the check was measuring
+  // how many variants existed when it was written, which is not a property of
+  // anything. What matters is that every variant the page LAYS OUT actually drew
+  // something, so the expected count comes from the page's own variant blocks.
+  const expected = await p.evaluate(()=>document.querySelectorAll('.vb').length);
+  ok(`[${theme}] every variant the page lays out has drawn`,
+     drew.length===expected && expected>0, `${drew.length} of ${expected}`);
   for (const d of drew) ok(`[${theme}] ${d.id} drew`, d.ok && d.w>200, JSON.stringify(d));
 
   // ═══ RULE ONE: `reading` flips the grid. The page's central claim. ═══════

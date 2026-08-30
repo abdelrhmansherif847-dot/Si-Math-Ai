@@ -1,5 +1,709 @@
-/* AUTO-GENERATED from supabase/functions/_shared/exam-stimulus.core.js by scripts/sync-exam-stimulus.mjs — DO NOT EDIT. */
-/* Si Math AI — MATH STIMULUS RENDERER
+<title>Figure Family Grammar</title>
+<meta name="robots" content="noindex,nofollow">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700&display=swap">
+<style>
+:root{
+  --page:#e9edf2; --card:#ffffff; --rule:#dde3ea; --ink:#111820; --ink-2:#445264; --ink-3:#6b7a8c;
+  --accent:#0f5c8c; --accent-soft:rgba(15,92,140,.08);
+  --shadow:0 1px 2px rgba(17,24,32,.05), 0 12px 32px -18px rgba(17,24,32,.3);
+  --good:#1c6b4a; --good-soft:rgba(28,107,74,.10);
+  --bad:#a33a20; --bad-soft:rgba(163,58,32,.09);
+  --exam:#ffffff; --exam-rule:#8792a0;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#080c11; --card:#131920; --rule:#26313d; --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
+  --accent:#6bb6e4; --accent-soft:rgba(107,182,228,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 34px -18px rgba(0,0,0,.9);
+  --good:#63c39a; --good-soft:rgba(99,195,154,.13);
+  --bad:#e08165; --bad-soft:rgba(224,129,101,.13);
+  --exam:#161d25; --exam-rule:#6f7d8c;
+}}
+:root[data-theme="dark"]{
+  --page:#080c11; --card:#131920; --rule:#26313d; --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
+  --accent:#6bb6e4; --accent-soft:rgba(107,182,228,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 34px -18px rgba(0,0,0,.9);
+  --good:#63c39a; --good-soft:rgba(99,195,154,.13);
+  --bad:#e08165; --bad-soft:rgba(224,129,101,.13);
+  --exam:#161d25; --exam-rule:#6f7d8c;
+}
+*{box-sizing:border-box}
+body{margin:0;background-color:var(--page);color:var(--ink);
+  font:16.5px/1.6 'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 26px 140px}
+.mast{padding:84px 0 6px;max-width:66ch}
+.kick{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);
+  margin:0 0 18px;font-weight:600}
+h1{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:clamp(38px,5.4vw,58px);
+  line-height:1.03;letter-spacing:-.024em;margin:0 0 22px;text-wrap:balance}
+.lede{font-size:19.5px;color:var(--ink-2);margin:0 0 16px}
+h2{font-family:'Newsreader',Georgia,serif;font-weight:600;font-size:31px;letter-spacing:-.014em;
+  margin:0 0 4px}
+.dec{font-size:15px;color:var(--good);font-weight:600;margin:0 0 4px}
+.job{font-size:15.5px;color:var(--ink-3);margin:0 0 26px}
+
+/* the two rules, stated once, up front */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin:40px 0 12px}
+.rl{background:var(--card);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);
+  padding:24px 26px}
+.rl .n{font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 10px}
+.rl h3{font-family:'Newsreader',serif;font-weight:600;font-size:21px;margin:0 0 10px}
+.rl p{margin:0 0 10px;font-size:15px;color:var(--ink-2)}.rl p:last-child{margin:0}
+.rl .tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-bottom:12px}
+.rl .aut{color:var(--bad);background:var(--bad-soft)}
+.rl .der{color:var(--good);background:var(--good-soft)}
+
+.fam{margin:70px 0 0;padding-top:36px;border-top:1px solid var(--rule)}
+.split{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:34px;align-items:start}
+@media (max-width:900px){.split{grid-template-columns:1fr}}
+.gram{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:11px}
+.gram li{font-size:14.5px;line-height:1.55;color:var(--ink-2);padding-left:17px;position:relative}
+.gram li::before{content:'';position:absolute;left:0;top:.62em;width:6px;height:1.5px;
+  background:var(--accent)}
+.gram li b{color:var(--ink)}
+.lbl{font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 12px}
+.varrule{background:var(--accent-soft);border-radius:5px;padding:15px 18px;margin:22px 0 0;
+  font-size:14.5px;line-height:1.6;color:var(--ink-2)}
+.varrule b{color:var(--ink)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.v{background:var(--exam);border:1px solid var(--rule);border-radius:5px;box-shadow:var(--shadow);
+  padding:18px 20px 16px;display:flex;flex-direction:column;gap:10px}
+.v .vh{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--accent);font-weight:600}
+.v .vs{font-size:13.5px;color:var(--ink-3);line-height:1.5}
+.v .vb{overflow-x:auto;display:flex;justify-content:center;padding:6px 0 2px}
+.ref{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 0}
+.ref span{font-size:13px;color:var(--ink-3);background:var(--bad-soft);border-radius:4px;
+  padding:8px 12px}
+.ref b{color:var(--bad);font-weight:700}
+
+.close{background:var(--card);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);
+  padding:30px 34px;margin-top:70px}
+.close h3{font-family:'Newsreader',serif;font-weight:600;font-size:22px;margin:0 0 14px}
+.close p{margin:0 0 12px;color:var(--ink-2);max-width:80ch}.close p:last-child{margin:0}
+.close b{color:var(--ink)}
+code{font-family:ui-monospace,monospace;font-size:.86em;background:var(--accent-soft);
+  color:var(--accent);padding:2px 6px;border-radius:3px}
+
+/* The figure grammar and the decided table now live in exam-surface.css,
+   inlined below. */
+</style>
+
+<style>/* Si Math AI — THE FIGURE SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════
+   THE approved figure grammar, and the only place it exists.
+
+   Five families, each a decision rather than a look (365b, "Close the figure
+   families as a grammar, not five looks"):
+
+     data & scatter      Screen-native
+     tables              Boxed, with a header band
+     number lines        Statement, with adaptive minor ticks where the
+                         mathematics needs them
+     coordinate geometry Squared paper
+     function graphs     Open, gridded only where a value must be read off
+
+   WHY THIS IS ITS OWN FILE. It used to be a section of exam-surface.css, and
+   six preview builders each kept a private copy of it rather than reading that
+   file. They drifted. stimulus-plates.html — whose own header promises "what is
+   approved on the specimen sheet is literally what a student will see" —
+   differed from the shipped sheet in twenty selectors: axis strokes 1.75 round
+   against 1.2 butt, curves 2.5 against 3, and the x/y tips set in bold sans
+   rather than the serif italic that ships. Anyone approving the appearance from
+   that sheet approved something the product does not draw.
+
+   So the grammar is one file that every surface LINKS — the exam, the specimen
+   sheets, the previews, and anything built later. scripts/validate-figure-
+   system.mjs fails the build if a page defines `.sx` rules of its own again.
+
+   Self-contained on purpose: it carries its own tokens, so a page can link it
+   alone and still get the grammar exactly. A host page that defines the same
+   token names — exam-surface.css does — simply links AFTER this file and wins,
+   which is how the exam keeps one palette across chrome and figure.
+*/
+:root {
+  --fig-ink:#0e1620; --fig-axis:#0e1620; --fig-num:#0e1620;
+  --fig-grid:#cdd8e2; --fig-fine:#e4eaf0; --fig-major:#848d99;
+  --data-1:#2a78d6; --data-2:#eb6834; --data-3:#9aa6b3; --data-4:#d3dae1;
+  --data-lab:#1d2733;
+  --t-rule:#8592a0; --t-outer:#2b3743; --t-head:#2c3742; --t-headfg:#ffffff;
+  /* the paper the figure sits on: the numeral halo and an open endpoint are
+     punched out of it, so it has to match whatever the figure is placed on */
+  --exam:#ffffff; --rule:#dde3ea; --ink-3:#6b7a8c;
+  --font-display:'DM Sans',system-ui,-apple-system,sans-serif;
+  --font-serif:'Newsreader',Georgia,serif;
+}
+@media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
+  --fig-ink:#e8eff7; --fig-axis:#e8eff7; --fig-num:#e8eff7;
+  --fig-grid:#2c3844; --fig-fine:#1b242e; --fig-major:#6b768a;
+  --data-1:#3987e5; --data-2:#d95926; --data-3:#6b768a; --data-4:#39434f;
+  --data-lab:#e6edf5;
+  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
+  --exam:#161d25; --rule:#26313d; --ink-3:#8493a5;
+} }
+:root[data-theme="dark"] {
+  --fig-ink:#e8eff7; --fig-axis:#e8eff7; --fig-num:#e8eff7;
+  --fig-grid:#2c3844; --fig-fine:#1b242e; --fig-major:#6b768a;
+  --data-1:#3987e5; --data-2:#d95926; --data-3:#6b768a; --data-4:#39434f;
+  --data-lab:#e6edf5;
+  --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
+  --exam:#161d25; --rule:#26313d; --ink-3:#8493a5;
+}
+
+.sx{display:block;margin:0}
+.sx-frame{fill:none;stroke:var(--rule);stroke-width:1}
+/* SQUARED PAPER IS PAPER. Three tiers, and the ONE THING that had gone wrong:
+   --fig-grid was set to #848d99, which is the approved MAJOR tier's ink — the
+   heavy every-fifth line — so every gridline in the system was drawn one tier
+   too dark. Together with an axis set LIGHTER than approved (#3b4756 against
+   #0e1620) and thinner (1.2 against 1.8), grid and axis converged in weight and
+   the plane stopped reading as a sheet of paper with a plane on it: it read as a
+   lattice of separate lines, which is exactly how it was described.
+   Values taken verbatim from PLANE_INK['paper'] in build-figure-directions.py,
+   the page the families were judged on. */
+.sx-grid line{stroke:var(--fig-grid);stroke-width:1;shape-rendering:crispEdges}
+.sx-grid line.sx-major{stroke:var(--fig-major)}
+.sx-grid line.sx-fine{stroke:var(--fig-fine)}
+.sx-axis line{stroke:var(--fig-axis);stroke-width:1.8;stroke-linecap:butt}
+.sx-axis-base{stroke:var(--fig-axis);stroke-width:1.8}
+.sx-arrow{fill:var(--fig-axis)}
+.sx-tickmark{stroke:var(--fig-axis);stroke-width:1.8;shape-rendering:crispEdges}
+/* Haloed, so a gridline never runs through a numeral a student is counting. */
+.sx-tick text{fill:var(--fig-num);font-family:var(--font-display);font-size:12px;font-weight:600;
+  font-variant-numeric:tabular-nums;
+  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
+.sx-axis-tip{fill:var(--fig-axis);font-family:var(--font-serif);font-style:italic;
+  font-weight:600;font-size:15px}
+.sx-axis-title{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px}
+.sx-ylab{font-weight:600}
+/* A named point is set in the mathematics face, italic — the convention a stem
+   uses when it says "triangle OAB". It was DM Sans semibold here, which is the
+   typeface of a caption, not of a vertex. */
+.sx-label{fill:var(--fig-ink);font-family:var(--font-serif);font-style:italic;
+  font-weight:600;font-size:16px;text-anchor:middle;
+  paint-order:stroke;stroke:var(--exam);stroke-width:4px;stroke-linejoin:round}
+.sx-vertex{font-family:var(--font-serif);font-style:italic;font-weight:600}
+.sx-direct{fill:var(--fig-num);font-family:var(--font-display);font-size:12.5px;font-weight:600;
+  paint-order:stroke;stroke:var(--exam);stroke-width:3.5px;stroke-linejoin:round}
+.sx-curve{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:3.2}
+.sx-dashed{stroke-dasharray:7 6;stroke-width:2.2}
+.sx-point{fill:currentColor;stroke:var(--exam);stroke-width:3}
+.sx-point-named{stroke-width:2.4}
+.sx-bar{fill:currentColor}
+/* Series slots. The grammar decided TWO — slots 1-2 of the validated
+   categorical palette — and spends them on the data family alone, so outside
+   that family every slot is ink. A third series in one data figure is not in
+   the decided vocabulary, so slot 3 stays ink rather than inventing a hue.
+
+   THE PIE FAMILY DID NOT CHANGE THAT. A four-part distribution needs four
+   fills, and the direction chosen for it (`pie-directions.html`, treatment C,
+   "the decided vocabulary") answers that by spending the two hues it already
+   has and then reaching for NEUTRALS — --data-3 and --data-4 — rather than
+   inventing a third and fourth hue. Slots 3 and 4 are greys on purpose: they
+   are the vocabulary running out, said honestly, and they are the reason no new
+   colour entered the system to draw a pie. */
+.sx-series{color:var(--fig-ink)}
+.sx-s1,.sx-s3{color:var(--fig-ink)}
+
+/* COLOUR IS SPENT ON THE DATA FAMILY AND NOWHERE ELSE. The grammar said this
+   with `#v-data-0 .sx-series` — a selector for where the figure sat on that
+   page, which could never reach an exam. The renderer now stamps the family it
+   was given, so the rule can be about the figure instead of the layout.
+   The observations are the heaviest thing in a data figure; that is the family's
+   whole point, and it is why the point radius grows here and only here. */
+.sx-fam-data .sx-series,.sx-fam-data .sx-s1{color:var(--data-1)}
+.sx-fam-data .sx-s2{color:var(--data-2)}
+.sx-fam-data .sx-point{r:5}
+
+/* ── PIE: a whole, divided ──────────────────────────────────────────────────
+   Chosen from four candidates by looking at them at the exam's own measure
+   (`scripts/pie-directions.html`). The others spent tints of one hue, opened
+   the disc into a ring, or pulled every label out onto a leader; this one keeps
+   the vocabulary closed, which is why it was picked.
+
+   Slices run clockwise from twelve o'clock in the order the spec gives them —
+   the author's order, largest first by convention — because a reader compares a
+   share against the vertical. The separator is drawn in the PAPER colour rather
+   than a grey: the gap between two slices is the card showing through, not
+   another line competing with the drawing. */
+.sx-pie-slice{stroke:var(--exam);stroke-width:2}
+.sx-pie-s1{fill:var(--data-1)} .sx-pie-s2{fill:var(--data-2)}
+.sx-pie-s3{fill:var(--data-3)} .sx-pie-s4{fill:var(--data-4)}
+/* Identity sits at the slice's own rim — a direct label, never a legend, which
+   is the data family's rule and the one thing every treatment agreed on. */
+.sx-pie-label{fill:var(--data-lab);font-family:var(--font-display);
+  font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.sx-pie-title{fill:var(--fig-num);font-family:var(--font-display);
+  font-size:12.5px;font-weight:600;text-anchor:middle}
+
+.sx-nl-axis line{stroke:var(--fig-axis);stroke-width:1.3}
+.sx-nl-tick{stroke:var(--fig-axis);stroke-width:1.3;shape-rendering:crispEdges}
+.sx-nl-minor{stroke:var(--fig-axis);stroke-width:1;opacity:.55}
+.sx-nl-seg{stroke:currentColor;stroke-linecap:butt;stroke-width:5.5}
+.sx-nl-drop{stroke:var(--fig-fine);stroke-width:1.2;stroke-dasharray:3 3}
+/* Open against closed is SEMANTIC — it is < against ≤ — so the two are told
+   apart by fill, never by colour. */
+.sx-endpoint{stroke:currentColor;stroke-width:3}
+.sx-closed{fill:currentColor}
+.sx-open{fill:var(--exam)}
+.sx-ray-arrow{fill:var(--fig-ink)}
+
+/* ── the decided table: BOXED, WITH A HEADER BAND ──────────────────────────
+   The decision was taken on a hand-built specimen (`.t-sys`) and never reached
+   the renderer's own classes, so the exam drew a plain underlined list instead.
+   This is that specimen's rule set, on the classes drawTable actually emits.
+   The first column is the row's LABEL and stays left; everything else is a
+   value and reads down a right edge.
+
+   ONE RULE FROM THE SPECIMEN IS NOT CARRIED, and it is a layout artifact rather
+   than a decision: `width:1%` on the first column. It works only under the
+   specimen page's own `table{width:100%}`, where it means "shrink the label
+   column and give the rest to the values". Inside an exam card there is no such
+   rule, and the pair produced a 702px table with a 41px label column and a
+   660px column of two-digit numbers. Letting the table size to its content
+   keeps every DECIDED property — the box, the band, the colours, weights, sizes,
+   padding and alignment — and drops only the part that was about the other
+   page's width. */
+.sx-table-wrap{overflow-x:auto;margin:0}
+/* LINE HEIGHT IS PART OF THE TABLE, not of the page it lands on. Left unset,
+   the cells took the host's: 40px tall on a specimen sheet where it is `normal`,
+   46.6px in the exam, whose body sets 1.6. The decided table was therefore a
+   different table in each of the two places it was looked at, and the visual
+   suite is what found it.
+
+   Pinned in PIXELS, and to an integer. A ratio resolves against each cell's own
+   font size — 1.6 x 16px is 25.6px — and a fractional line box makes every row
+   start on a different sub-pixel than the last, so the same table rasterises
+   differently depending only on where it happens to sit. 24px is within a
+   pixel of what the exam already shipped, and it is the same 24px above a 16px
+   value as above a 13.5px header. */
+/* AND SO IS THE INK. The table set a family, a size and a weight but never a
+   colour, so it took the host's: near-black on a specimen page whose body is
+   the browser default, #111820 in the exam. The same defect as the line height,
+   found the same way — the two renders were identical in every measured
+   property and visibly a different grey. --fig-ink is what every other figure
+   in the system draws with, and it is what the exam was already showing. */
+.sx-table{border-collapse:collapse;font-family:var(--font-display);line-height:24px;
+  color:var(--fig-ink);
+  font-variant-numeric:tabular-nums;border:1.6px solid var(--t-outer)}
+.sx-table th,.sx-table td{white-space:nowrap}
+.sx-table th{font-weight:700;font-size:13px;letter-spacing:.04em;padding:11px 15px;
+  border:1px solid var(--t-head);background:var(--t-head);color:var(--t-headfg);text-align:right}
+.sx-table th:first-child{text-align:left}
+.sx-table td{font-size:16px;padding:10px 15px;border:1px solid var(--t-rule);text-align:right}
+.sx-table td:first-child{text-align:left;font-weight:500}
+.sx-note{font-size:12.5px;color:var(--ink-3);margin:8px 0 0}
+
+/* Si Math AI — THE EXAM SURFACE
+ *
+ * ✍️ THE ONE STYLESHEET for a question-based exam. It dresses two shipped
+ *    modules that deliberately set no colours of their own:
+ *
+ *      exam-stimulus.js  the figure language   .sx-*
+ *      exam-chrome.js    navigator and timer   .xc-*
+ *
+ *    plus the page furniture around them. The calculator panel is NOT here:
+ *    exam-calculator-launcher.js injects its own, so the workspace styling
+ *    travels with the code that builds it.
+ *
+ * WHY IT EXISTS
+ * -------------
+ * Both renderers say the same thing in their headers — "appearance lives in
+ * CSS, not here" — and until now there was nowhere for it to live. Every
+ * `.sx-*` rule in the repository sat inside a preview BUILDER, eight of them,
+ * each with its own copy, ranging from nine rules to twenty-nine. That is the
+ * two-copies problem in the presentation layer, and a shipped page that grew a
+ * ninth copy would have been the worst one, because it is the one a student
+ * sees.
+ *
+ * The exploration builders keep their own treatments on purpose — showing a
+ * figure four ways is what they are for. This file is what SHIPS, and
+ * scripts/check-exam-surface-css.cjs fails if the renderers grow a class it
+ * does not dress.
+ *
+ * THREE THEME STATES, not two: an explicit choice stamps data-theme, and the
+ * default setting stamps nothing, so prefers-color-scheme has to be handled on
+ * its own and the explicit light choice has to win over it.
+ */
+
+:root {
+  /* The figure tokens are NOT here. figure-system.css owns them, and owning
+     them in one place is the point: they were duplicated here so the exam could
+     win, and the moment the grammar's values were corrected this file silently
+     overrode them — the restored squared paper was drawn in the old ink and the
+     page looked unchanged. The drift gate caught it; the duplication should not
+     have existed to be caught. Nothing in this file reads a --fig-*, --data-* or
+     --t-* token, so there was never anything to win. */
+  --page:#eef1f5; --exam:#ffffff; --rule:#dde3ea;
+  --ink:#111820; --ink-2:#445264; --ink-3:#6b7a8c;
+  --cyan:#0f6f9e; --cyan-soft:rgba(15,111,158,.09); --cyan-line:rgba(15,111,158,.3);
+  --shadow:0 1px 2px rgba(17,24,32,.05),0 12px 32px -18px rgba(17,24,32,.3);
+  --flag:#8a5a00; --flag-soft:rgba(138,90,0,.14);
+  --low:#a33a20;  --low-soft:rgba(163,58,32,.10);
+  --good:#1c6b4a; --good-soft:rgba(28,107,74,.10);
+  /* The DATA family's hue, and the decided table's rules. Both are from the
+     approved grammar (365d85b) and neither was in this file: the exam surface
+     it was first built from only ever showed one function graph, so it never
+     had to express a data figure or a table, and what replaced them here was
+     invented. Colour slots 1-2 of the validated categorical palette. */
+  --font-display:'DM Sans',system-ui,-apple-system,sans-serif;
+  --font-serif:'Newsreader',Georgia,serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+
+  /* Aliases for exam-calculator-launcher.js, which styles itself against
+     mock-exam.html's token names. Mapping them here is what makes the launcher
+     look native on this page instead of falling back to its own literals.
+     `--green` is NOT --good: --good is the muted ink of a "correct" mark in
+     review, and the launcher paints a FILLED pill with near-black text on it,
+     where a dark green leaves the label barely readable. It keeps the bright
+     mint the control was designed around. */
+  --bg-card:var(--exam); --text:var(--ink); --text-dim:var(--ink-3);
+  --border-soft:var(--rule); --green:#2ec9a0; --amber:var(--flag);
+  --amber-soft:var(--flag-soft);
+}
+@media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
+  --page:#080c11; --exam:#161d25; --rule:#26313d;
+  --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
+  --cyan:#38bdf8; --cyan-soft:rgba(56,189,248,.13); --cyan-line:rgba(56,189,248,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px -18px rgba(0,0,0,.9);
+  --flag:#e0b062; --flag-soft:rgba(224,176,98,.16);
+  --low:#e08165;  --low-soft:rgba(224,129,101,.14);
+  --good:#63c39a; --good-soft:rgba(99,195,154,.13);
+} }
+:root[data-theme="dark"] {
+  --page:#080c11; --exam:#161d25; --rule:#26313d;
+  --ink:#eef3f9; --ink-2:#aebccc; --ink-3:#8493a5;
+  --cyan:#38bdf8; --cyan-soft:rgba(56,189,248,.13); --cyan-line:rgba(56,189,248,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px -18px rgba(0,0,0,.9);
+  --flag:#e0b062; --flag-soft:rgba(224,176,98,.16);
+  --low:#e08165;  --low-soft:rgba(224,129,101,.14);
+  --good:#63c39a; --good-soft:rgba(99,195,154,.13);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font:16.5px/1.6 var(--font-display);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+/* ══ page furniture ═══════════════════════════════════════════════════════ */
+.ex-shell{max-width:1180px;margin:0 auto;padding:0 22px 96px}
+.ex-bar{display:flex;align-items:center;gap:16px;padding:14px 0;
+  border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--page);z-index:40}
+.ex-id{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ex-sp{flex:1}
+.ex-note{font-size:13.5px;color:var(--ink-3)}
+.ex-card{background:var(--exam);border:1px solid var(--rule);border-radius:6px;
+  box-shadow:var(--shadow);padding:34px 38px 36px;margin:26px auto 0;max-width:780px}
+.ex-mid{max-width:640px;margin:16vh auto 0;text-align:center}
+.ex-mid h1{font-size:26px;margin:0 0 12px}
+.ex-mid p{color:var(--ink-2);margin:0 0 18px}
+.ex-btn{background:var(--cyan);border:1px solid var(--cyan);color:#fff;border-radius:5px;
+  padding:11px 22px;font-size:15px;font-weight:600}
+.ex-btn:hover{filter:brightness(1.07)}
+.ex-btn.ghost{background:none;color:var(--ink-2);border-color:var(--rule)}
+.ex-btn.ghost:hover{border-color:var(--cyan-line);color:var(--cyan);filter:none}
+.ex-btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.ex-nav{display:flex;align-items:center;gap:14px;max-width:780px;margin:22px auto 0}
+.ex-nav .ex-sp{flex:1}
+
+/* The question itself. `stem` is the prose; italics are the maths convention. */
+.ex-qn{font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 16px;
+  display:flex;align-items:center;gap:12px}
+.ex-flag{margin-left:auto;background:none;border:1px solid var(--rule);border-radius:4px;
+  padding:5px 11px;font-size:12px;font-weight:600;color:var(--ink-3);letter-spacing:0;
+  text-transform:none;font-family:var(--font-display)}
+.ex-flag:hover{border-color:var(--flag);color:var(--flag)}
+.ex-flag.is-on{background:var(--flag-soft);border-color:var(--flag);color:var(--flag)}
+.ex-stem{font-size:17.5px;line-height:1.55;margin:0 0 24px}
+.ex-stem i,.ex-stem em{font-family:var(--font-serif);font-style:italic;font-size:1.06em}
+.ex-fig{margin:0 0 26px;overflow-x:auto}
+.ex-opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ex-opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font-size:16.5px;
+  border:1px solid #8792a0;border-radius:4px;padding:12px 16px;background:none}
+.ex-opt:hover{border-color:var(--cyan)}
+.ex-opt.is-picked{border-color:var(--cyan);background:var(--cyan-soft);font-weight:600}
+.ex-opt .k{flex:none;width:27px;height:27px;border-radius:50%;border:1.4px solid #8792a0;
+  display:grid;place-items:center;font-size:13.5px;font-weight:600}
+.ex-opt.is-picked .k{background:var(--cyan);border-color:var(--cyan);color:#fff}
+.ex-grid-in{width:100%;max-width:260px;font:inherit;font-family:var(--font-mono);font-size:17px;
+  padding:12px 14px;border:1px solid #8792a0;border-radius:4px;
+  background:var(--page);color:var(--ink)}
+.ex-grid-in:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 3px var(--cyan-soft)}
+.ex-hint{font-size:13px;color:var(--ink-3);margin:10px 0 0}
+
+/* Review only — never rendered while a module is running. */
+.ex-row{display:flex;gap:14px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--rule)}
+.ex-row:last-child{border-bottom:none}
+.ex-row .n{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-3);flex:none;width:74px}
+.ex-mark{font-size:12px;font-weight:700;border-radius:3px;padding:2px 8px;flex:none}
+.ex-mark.ok{background:var(--good-soft);color:var(--good)}
+.ex-mark.no{background:var(--low-soft);color:var(--low)}
+.ex-banner{border:1px solid var(--rule);border-left:3px solid var(--flag);border-radius:5px;
+  background:var(--exam);padding:12px 16px;margin:18px auto 0;max-width:780px;
+  font-size:13.5px;color:var(--ink-2)}
+.ex-banner b{color:var(--ink)}
+.ex-pick{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 0;justify-content:center}
+.ex-pick button{background:var(--exam);border:1px solid var(--rule);border-radius:5px;
+  padding:9px 16px;font-size:14px;font-weight:600}
+.ex-pick button:hover{border-color:var(--cyan);color:var(--cyan)}
+.ex-pick button.on{border-color:var(--cyan);background:var(--cyan-soft);color:var(--cyan)}
+
+/* ══ TIMER — exam-chrome.js ═══════════════════════════════════════════════
+   Prominent by weight, not decoration. Low time is colour and border, never
+   motion: a pulsing clock is the pressure the hide control exists to relieve. */
+.xc-timer{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;border-radius:5px;
+  border:1px solid var(--rule);background:var(--exam)}
+.xc-t-face{font-family:var(--font-mono);font-weight:600;font-size:19px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;color:var(--ink)}
+.xc-t-hidden{display:none;font-size:13.5px;color:var(--ink-3)}
+.xc-timer.is-hidden .xc-t-face{display:none}
+.xc-timer.is-hidden .xc-t-hidden{display:inline}
+.xc-timer.is-low{border-color:var(--low);background:var(--low-soft)}
+.xc-timer.is-low .xc-t-face{color:var(--low)}
+.xc-t-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+  padding:5px 8px;border-radius:4px;font-size:12.5px;font-weight:600;color:var(--ink-3)}
+.xc-t-toggle:hover{background:var(--cyan-soft);color:var(--cyan)}
+.xc-t-toggle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ══ NAVIGATOR — exam-chrome.js ═══════════════════════════════════════════
+   Four states, told apart by SHAPE as well as colour so the grid survives a
+   colour-vision difference. Only the current chip carries a ring. */
+.xc-nav{position:relative}
+.xc-n-toggle{display:flex;align-items:center;gap:9px;background:var(--exam);
+  border:1px solid var(--rule);border-radius:5px;padding:8px 14px;font-size:14.5px;font-weight:600}
+.xc-n-toggle:hover{border-color:var(--cyan-line)}
+.xc-n-label{white-space:nowrap}
+.xc-n-caret{width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;
+  border-top:5px solid var(--ink-3);transition:transform .15s}
+.xc-nav.is-open .xc-n-caret{transform:rotate(180deg)}
+.xc-n-panel{display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:60;
+  background:var(--exam);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);
+  padding:16px 18px;min-width:330px}
+.xc-nav.is-open .xc-n-panel{display:block}
+.xc-n-legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 14px;padding-bottom:12px;
+  border-bottom:1px solid var(--rule)}
+.xc-lg{font-size:11.5px;color:var(--ink-3);display:inline-flex;align-items:center;gap:6px}
+.xc-lg::before{content:'';width:13px;height:13px;border-radius:3px;border:1.4px solid #8792a0}
+.xc-lg-cur::before{background:var(--cyan);border-color:var(--cyan);
+  box-shadow:0 0 0 2px var(--exam),0 0 0 3.6px var(--cyan)}
+.xc-lg-ans::before{background:var(--ink-2);border-color:var(--ink-2)}
+.xc-lg-flag::before{background:var(--flag-soft);border-color:var(--flag);
+  clip-path:polygon(0 0,100% 0,100% 62%,62% 100%,0 100%)}
+.xc-lg-un::before{background:none}
+.xc-n-grid{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}
+.xc-q{width:100%;aspect-ratio:1;min-width:26px;border-radius:4px;border:1.4px solid #8792a0;
+  background:none;font-family:var(--font-mono);font-size:12.5px;font-weight:500;color:var(--ink-2);
+  display:grid;place-items:center;padding:0}
+.xc-q:hover{border-color:var(--cyan)}
+.xc-q-unseen{background:none}
+.xc-q-answered{background:var(--ink-2);border-color:var(--ink-2);color:var(--exam)}
+.xc-q-flagged{background:var(--flag-soft);border-color:var(--flag);color:var(--flag);font-weight:700;
+  clip-path:polygon(0 0,100% 0,100% 62%,62% 100%,0 100%)}
+.xc-q.is-current{background:var(--cyan);border-color:var(--cyan);color:#fff;font-weight:700;
+  box-shadow:0 0 0 2px var(--exam),0 0 0 4px var(--cyan);clip-path:none}
+
+/* ══ FIGURES ══════════════════════════════════════════════════════════════
+   NOT HERE ANY MORE. The approved family grammar is figure-system.css, which
+   every surface that draws a figure links — the exam, the specimen sheets and
+   the previews alike. It lived here once, and six preview builders answered by
+   keeping private copies that drifted; one of them was the sheet the appearance
+   was approved from. Link the file, never restate it:
+
+       <link rel="stylesheet" href="figure-system.css">
+       <link rel="stylesheet" href="exam-surface.css">
+
+   In that order, so this file's palette wins for the tokens both define and the
+   figure matches the chrome around it. scripts/validate-figure-system.mjs fails
+   the build if `.sx` rules reappear anywhere else. */
+
+/* ══ the calculator launcher, placed in the exam bar ══════════════════════
+   exam-calculator-launcher.js injects its own styling, and none of it is
+   overridden here — this is placement only. Its `margin-top` is for the
+   stacked layout of mock-exam.html; in a flex bar it drops the control below
+   the baseline of the timer beside it. */
+.ex-bar .si-calc-open{margin-top:0}
+.ex-bar #calcslot{display:inline-flex;align-items:center}
+
+/* When the calculator is open the exam has to stay usable beside it, so the
+   shell gives up the width the panel takes. Below that width the panel would
+   leave no usable column, so it overlays instead and the student closes it —
+   which is the honest behaviour on a phone, not a worse one. */
+@media (min-width: 1180px) {
+  body.si-calc-panel-open .ex-shell{ padding-right:calc(min(620px, 100%) + 30px) }
+  body.si-calc-panel-open .ex-bar{ padding-right:0 }
+
+  /* WHAT GIVES WAY WHEN THE BAR GETS NARROWER, in priority order. The first
+     version narrowed the shell and left the bar to sort itself out: the
+     launcher ended up half under the panel it had just opened, and the TIMER
+     was pushed off the bar completely. A clock that vanishes when a student
+     opens a calculator is the worst thing on this page to lose.
+     So the two things that must survive are the navigator and the timer, and
+     the two that go are the ones that are redundant while the panel is open —
+     the module note, and the launcher itself, which is on screen as a panel
+     with its own Close button. */
+  body.si-calc-panel-open #calcslot{ display:none }
+  body.si-calc-panel-open .ex-note{ display:none }
+}
+/* The bar never wraps and never lets the clock be squeezed out, at any width. */
+.ex-bar{ flex-wrap:nowrap }
+.ex-bar > *{ min-width:0 }
+.ex-note{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+#timeslot,#navslot,#calcslot{ flex:none }
+/* NO TRANSITION on that padding, deliberately. Animating it re-lays the whole
+   exam — stem, options and every figure — for a fifth of a second, and
+   exam-chrome.js states the rule this surface obeys: nothing animates while a
+   student is reading. It also made the first version of the layout check
+   measure a width mid-flight and report the panel covering the question. */
+
+/* The way out. Quiet, leftmost, and gone while a module is running — see the
+   comment on the element in exams.html. */
+.ex-back{color:var(--ink-3);text-decoration:none;font-size:13px;font-weight:600;
+  white-space:nowrap;padding:6px 10px;border-radius:5px;border:1px solid transparent}
+.ex-back:hover{color:var(--cyan);border-color:var(--cyan-line)}
+.ex-back[hidden]{display:none}
+</style>
+<div class="wrap">
+  <header class="mast">
+    <p class="kick">Si Math AI &middot; design system &middot; nothing wired</p>
+    <h1>Five families, two rules.</h1>
+    <p class="lede">Not five looks handed out to five kinds of picture. Each family has a fixed
+      <b>grammar</b> that never varies, and one axis of variation &mdash; and the variant is
+      <b>computed from the question</b>, not chosen per figure.</p>
+    <p class="lede">Two inputs decide every variant below. One has to be authored because no figure
+      can reveal it; the other is already sitting in the spec. Every figure on this page was
+      produced by those rules through the shared renderer &mdash; none is hand-set.</p>
+  </header>
+  
+<div class="rules">
+  <div class="rl">
+    <p class="n">Rule one</p>
+    <span class="tag aut">Authored</span>
+    <h3><code>reading</code>: shape or value</h3>
+    <p>Does the student have to get a <b>number</b> off the figure, or only judge its <b>shape</b>?</p>
+    <p>Nothing in the geometry can answer that &mdash; it is a property of the question, not of the
+      picture. So it has to be authored, and the stimulus schema has to carry a field for it.</p>
+    <p>It turns the grid on a function graph on and off, and the reference lines on a chart.</p>
+  </div>
+  <div class="rl">
+    <p class="n">Rule two</p>
+    <span class="tag der">Derived</span>
+    <h3><code>resolutionOf()</code>: how fine the marks are</h3>
+    <p>The coarsest step on which <b>every marked value lands exactly</b> &mdash; 1, &frac12;,
+      &frac14;, &#8533; or &#8530;.</p>
+    <p>Nobody chooses it. It is already in the spec: an endpoint at &minus;2.5 makes it &frac12;,
+      and the figure grows half-step marks so that endpoint sits on one.</p>
+    <p>It sets tick density on a number line and grid density in coordinate geometry.</p>
+  </div>
+</div>
+
+<section class="fam" id="fn">
+  <h2>Function graphs</h2>
+  <p class="dec">&#10003;&ensp;Open, with a grid only when the question needs one</p>
+  <p class="job">Read shape, and sometimes read a value.</p>
+  <div class="split">
+    <div><p class="lbl">The grammar &mdash; never varies</p>
+      <ul class="gram"><li>The curve is the heaviest mark in the figure. Scaffolding always steps back behind it.</li><li>Scales are <b>not</b> equal. Nothing here needs an <i>x</i> unit to match a <i>y</i> unit, and forcing it wastes the plate.</li><li>The axes are a plane: arrowheads, and italic <i>x</i> and <i>y</i> at their ends.</li><li>The window is trimmed to where the curve lives, and the curve is clipped to it.</li></ul></div>
+    <div><p class="lbl">The one thing that varies &mdash; Whether a grid is drawn.</p>
+      <div class="vgrid"><div class="v"><div class="vh">reading: shape</div><div class="vs">&ldquo;How many turning points does the graph have?&rdquo;</div><div class="vb" id="v-fn-0"></div></div><div class="v"><div class="vh">reading: value</div><div class="vs">&ldquo;What is the value of <i>f</i>(3)?&rdquo;</div><div class="vb" id="v-fn-1"></div></div></div>
+      <p class="varrule"><code>reading</code> is authored on the question. <b>shape</b> &rarr; no grid. <b>value</b> &rarr; a grid, because the student has to get a number off the picture.</p></div>
+  </div>
+</section>
+<section class="fam" id="geo">
+  <h2>Coordinate geometry</h2>
+  <p class="dec">&#10003;&ensp;Squared paper</p>
+  <p class="job">Count lengths and identify named points.</p>
+  <div class="split">
+    <div><p class="lbl">The grammar &mdash; never varies</p>
+      <ul class="gram"><li>Equal scales, always. Shape carries meaning here, so a circle must be round and a right angle right.</li><li>The grid is the measuring instrument and is <b>always</b> present. It is not background.</li><li>Every vertex the stem names is named on the figure, and so is the origin.</li><li>The figure is bold enough to sit on top of its own grid.</li></ul></div>
+    <div><p class="lbl">The one thing that varies &mdash; How fine the grid is.</p>
+      <div class="vgrid"><div class="v"><div class="vh">vertices on integers</div><div class="vs">resolution 1 &rarr; one square per unit</div><div class="vb" id="v-geo-0"></div></div><div class="v"><div class="vh">a vertex on a half</div><div class="vs">resolution &frac12; &rarr; half-unit lines appear</div><div class="vb" id="v-geo-1"></div></div></div>
+      <p class="varrule">Derived, not chosen: the grid step is <code>resolutionOf()</code> of the figure&rsquo;s own vertices. Integer vertices &rarr; a unit grid. A vertex at 2.5 &rarr; half-unit lines, so that vertex sits on a crossing.</p></div>
+  </div>
+</section>
+<section class="fam" id="data">
+  <h2>Data and scatterplots</h2>
+  <p class="dec">&#10003;&ensp;Screen-native</p>
+  <p class="job">Locate one observation, or judge a trend.</p>
+  <div class="split">
+    <div><p class="lbl">The grammar &mdash; never varies</p>
+      <ul class="gram"><li>These are measured data, so none of the plane&rsquo;s conventions apply: no arrowheads, no equal scales, no origin.</li><li>The data carries a validated hue and is the most saturated thing in the figure.</li><li>Identity comes from a direct label on the series, never a legend.</li><li>Nothing is interactive. On a dashboard a tooltip shows the value; on an exam it is the answer.</li></ul></div>
+    <div><p class="lbl">The one thing that varies &mdash; Whether reference lines are drawn.</p>
+      <div class="vgrid"><div class="v"><div class="vh">reading: shape</div><div class="vs">&ldquo;Which best describes the association?&rdquo;</div><div class="vb" id="v-data-0"></div></div><div class="v"><div class="vh">reading: value</div><div class="vs">&ldquo;What is the greatest gain below 5 tests?&rdquo;</div><div class="vb" id="v-data-1"></div></div></div>
+      <p class="varrule">The same authored <code>reading</code> as the function family, answered differently: <b>value</b> &rarr; horizontal rules, because a value on a chart is read by tracking left. <b>shape</b> &rarr; none, because a trend needs no rule to be seen.</p></div>
+  </div>
+</section>
+<section class="fam" id="pie">
+  <h2>A whole, divided</h2>
+  <p class="dec">&#10003;&ensp;The decided vocabulary</p>
+  <p class="job">Read one share, or compare two.</p>
+  <div class="split">
+    <div><p class="lbl">The grammar &mdash; never varies</p>
+      <ul class="gram"><li>No axis, so none of the plane&rsquo;s conventions apply: the shape IS the total.</li><li>Four fills and no more &mdash; the two decided hues, then two neutrals. A fifth part would have to invent a colour, so a fifth part is refused.</li><li>Every slice names itself at its own rim, with its share. Never a legend.</li><li>The separator is the paper showing through, not a line of its own.</li></ul></div>
+    <div><p class="lbl">The one thing that varies &mdash; How many panels the one stimulus carries.</p>
+      <div class="vgrid"><div class="v"><div class="vh">two panels</div><div class="vs">one population, cut two ways</div><div class="vb" id="v-pie-0"></div></div><div class="v"><div class="vh">one panel</div><div class="vs">and a share small enough to test its own label</div><div class="vb" id="v-pie-1"></div></div></div>
+      <p class="varrule">Not a variant of the figure, a property of the QUESTION: one population cut two ways is <b>one</b> stimulus, because a question comparing a share in the first with a share in the second is only answerable if both describe the same whole.</p></div>
+  </div>
+</section>
+<section class="fam" id="nl">
+  <h2>Number lines</h2>
+  <p class="dec">&#10003;&ensp;Statement, with adaptive tick density</p>
+  <p class="job">Read one endpoint and decide open or closed.</p>
+  <div class="split">
+    <div><p class="lbl">The grammar &mdash; never varies</p>
+      <ul class="gram"><li>Endpoint-first: the endpoint is the largest mark in the figure, because open-versus-closed <i>is</i> the question.</li><li>Only the values the question turns on are named. A number line is not a ruler to be read across.</li><li>Open and closed are drawn as hollow and filled &mdash; semantic, never decorative.</li><li>The line runs the full width of the text. It is a strip, and it is given a strip&rsquo;s shape.</li></ul></div>
+    <div><p class="lbl">The one thing that varies &mdash; How dense the ticks are.</p>
+      <div class="vgrid"><div class="v"><div class="vh">endpoint on an integer</div><div class="vs">resolution 1 &rarr; clean line, no minor ticks</div><div class="vb" id="v-nl-0"></div></div><div class="v"><div class="vh">endpoint on a half</div><div class="vs">resolution &frac12; &rarr; half-step ticks, and &minus;2.5 named</div><div class="vb" id="v-nl-1"></div></div></div>
+      <p class="varrule">Derived: <code>resolutionOf()</code> of the marked values. All integers &rarr; no minor ticks. An endpoint at &minus;2.5 &rarr; half-step ticks, and that value is named even though it is off the major step.</p></div>
+  </div>
+</section>
+
+<section class="fam" id="tbl">
+  <h2>Tables</h2>
+  <p class="dec">&#10003;&ensp;Boxed &mdash; header band</p>
+  <p class="job">Find one cell fast, and be certain of its row and its column.</p>
+  <div class="split">
+    <div><p class="lbl">The grammar &mdash; never varies</p>
+      <ul class="gram"><li>Every cell is bounded. Under time, nothing about which row and column a number belongs to is left to alignment.</li><li>The header is reversed out of solid ink, so it labels the object rather than being its first row.</li><li>Numerals are tabular and right-aligned; row labels are not.</li><li>The table sits at the text&rsquo;s left margin. It is part of the question, not an object placed beside it.</li></ul>
+      <div class="ref"><span><b>Refused &middot; Panel</b> &mdash; reads as UI placed beside the question rather than part of it</span><span><b>Refused &middot; Typographic</b> &mdash; beautiful, and the slowest to track a row across under time</span></div></div>
+    <div><p class="lbl">The one thing that varies &mdash; Whether a totals rank is present.</p>
+      <div class="vgrid">
+        <div class="v"><div class="vh">no totals</div>
+          <div class="vs">A one-way table. Header band, bounded cells, nothing else.</div>
+          <div class="vb"><table class="sx-table"><thead><tr><th>Plan</th><th>Sessions</th><th>Price (EGP)</th></tr></thead><tbody><tr><td>Starter</td><td>4</td><td>480</td></tr><tr><td>Standard</td><td>8</td><td>900</td></tr><tr><td>Intensive</td><td>12</td><td>1,260</td></tr></tbody></table></div></div>
+        <div class="v"><div class="vh">totals present</div>
+          <div class="vs">A two-way table. The totals rank gains weight, not a new treatment.</div>
+          <div class="vb"><table class="sx-table"><thead><tr><th></th><th>Robotics</th><th>Debate</th><th>Studio Art</th><th>Total</th></tr></thead><tbody><tr><td>Grade 11</td><td>32</td><td>18</td><td>25</td><td>75</td></tr><tr><td>Grade 12</td><td>27</td><td>24</td><td>19</td><td>70</td></tr><tr class="tot"><td>Total</td><td>59</td><td>42</td><td>44</td><td>145</td></tr></tbody></table></div></div>
+      </div>
+      <p class="varrule">Structural, and derived from the data: a totals row or column is separated by <b>weight</b> &mdash; a heavier rule and bolder numerals &mdash; never by a different treatment, so the table still reads as one object.</p></div>
+  </div>
+</section>
+<div class="close">
+  <h3>What this changes downstream</h3>
+  <p><b>One field is now missing from the schema.</b> <code>reading</code> cannot be inferred from a
+    figure &mdash; two questions can share a graph and want different treatments &mdash; so
+    <code>exam_stimuli</code> needs to carry it, and <code>exam_stimulus_spec_ok</code> needs to
+    accept it. That is a migration change, and it is worth knowing now rather than after content is
+    inserted.</p>
+  <p><b>Everything else is derivable.</b> Grid density, tick density and the totals rank all fall
+    out of values the spec already holds, which is why nothing on this page was hand-set: every
+    figure above was produced by the two rules through the shared renderer.</p>
+  <p><b>Shared across all five, and not negotiable per family:</b> the typeface and numeral style,
+    tick treatment and numeral placement, the space around a figure inside a question, and the
+    measure of the column. Those are what make a set of five different treatments still read as one
+    exam.</p>
+  <p>Production is untouched: the renderer is not wired, no migration exists, and no content has
+    been inserted.</p>
+</div>
+
+</div>
+<script>/* Si Math AI — MATH STIMULUS RENDERER
  *
  * ✍️ AUTHORED HERE, AND ONLY HERE. The browser copy `exam-stimulus.js` is
  *    GENERATED from this file by scripts/sync-exam-stimulus.mjs, and
@@ -1132,3 +1836,17 @@ function renderStimulus(kind, spec, opts) {
     drawPie: drawPie,
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));
+</script>
+<script>
+const FAMS = [{"id": "fn", "kind": "plot", "variants": [{"spec": {"xRange": [-0.7, 4.7], "yRange": [-1.6, 5], "xLabel": "x", "yLabel": "y", "curves": [{"points": [[-0.6, -1.592], [-0.4, -0.541], [-0.2, 0.317], [0.0, 1.0], [0.2, 1.523], [0.4, 1.901], [0.6, 2.152], [0.8, 2.291], [1.0, 2.333], [1.2, 2.296], [1.4, 2.195], [1.6, 2.045], [1.8, 1.864], [2.0, 1.667], [2.2, 1.469], [2.4, 1.288], [2.6, 1.139], [2.8, 1.037], [3.0, 1.0], [3.2, 1.043], [3.4, 1.181], [3.6, 1.432], [3.8, 1.811], [4.0, 2.333], [4.2, 3.016], [4.4, 3.875], [4.6, 4.925]]}]}, "opts": {"aspect": "data", "axes": "plane", "frame": "graph", "reading": "shape", "width": 430, "height": 280, "figures": [{"mode": "curve"}]}}, {"spec": {"xRange": [-0.7, 4.7], "yRange": [-1.6, 5], "xLabel": "x", "yLabel": "y", "curves": [{"points": [[-0.6, -1.592], [-0.4, -0.541], [-0.2, 0.317], [0.0, 1.0], [0.2, 1.523], [0.4, 1.901], [0.6, 2.152], [0.8, 2.291], [1.0, 2.333], [1.2, 2.296], [1.4, 2.195], [1.6, 2.045], [1.8, 1.864], [2.0, 1.667], [2.2, 1.469], [2.4, 1.288], [2.6, 1.139], [2.8, 1.037], [3.0, 1.0], [3.2, 1.043], [3.4, 1.181], [3.6, 1.432], [3.8, 1.811], [4.0, 2.333], [4.2, 3.016], [4.4, 3.875], [4.6, 4.925]]}]}, "opts": {"aspect": "data", "axes": "plane", "frame": "graph", "reading": "value", "width": 430, "height": 280, "figures": [{"mode": "curve"}]}}]}, {"id": "geo", "kind": "plot", "variants": [{"spec": {"xRange": [-1, 7.5], "yRange": [-1, 9.4], "xLabel": "x", "yLabel": "y", "curves": [{"points": [[0, 0], [6, 0], [6, 8], [0, 0]]}]}, "opts": {"aspect": "plane", "frame": "plane", "width": 360, "maxHeight": 430, "originLabel": "O", "figures": [{"mode": "polygon", "labels": ["", "A", "B"]}]}}, {"spec": {"xRange": [-1, 7.5], "yRange": [-1, 9.4], "xLabel": "x", "yLabel": "y", "curves": [{"points": [[0, 0], [6, 0], [6, 7.5], [0, 0]]}]}, "opts": {"aspect": "plane", "frame": "plane", "width": 360, "maxHeight": 430, "originLabel": "O", "figures": [{"mode": "polygon", "labels": ["", "A", "B"]}]}}]}, {"id": "data", "kind": "plot", "variants": [{"spec": {"xRange": [0, 9], "yRange": [0, 160], "xLabel": "Practice tests completed", "yLabel": "Score gain", "curves": [{"points": [[1, 40], [2, 60], [3, 50], [4, 90], [5, 110], [6, 100], [7, 140], [8, 150]]}]}, "opts": {"aspect": "data", "frame": "data", "reading": "shape", "width": 430, "height": 280, "figures": [{"mode": "scatter"}]}}, {"spec": {"xRange": [0, 9], "yRange": [0, 160], "xLabel": "Practice tests completed", "yLabel": "Score gain", "curves": [{"points": [[1, 40], [2, 60], [3, 50], [4, 90], [5, 110], [6, 100], [7, 140], [8, 150]]}]}, "opts": {"aspect": "data", "frame": "data", "reading": "value", "width": 430, "height": 280, "figures": [{"mode": "scatter"}]}}]}, {"id": "pie", "kind": "pie", "variants": [{"spec": {"chartType": "pie", "panels": [{"title": "By destination", "categories": ["USA", "Japan", "Others", "UK"], "values": [40, 30, 20, 10]}, {"title": "By age", "categories": ["Above 50", "40\u201349", "30\u201339", "Below 30"], "values": [50, 20, 15, 15]}]}, "opts": {}}, {"spec": {"chartType": "pie", "panels": [{"categories": ["Passed", "Retook", "Withdrew"], "values": [72, 23, 5]}]}, "opts": {}}]}, {"id": "nl", "kind": "nl", "variants": [{"spec": {"min": -6, "max": 6, "segments": [{"from": -2, "to": 6, "fromClosed": true, "toClosed": true}]}, "opts": {"tickMode": "auto", "endpointR": 9, "width": 430}}, {"spec": {"min": -6, "max": 6, "segments": [{"from": -2.5, "to": 6, "fromClosed": false, "toClosed": true}]}, "opts": {"tickMode": "auto", "endpointR": 9, "width": 430}}]}];
+const {drawPlot, drawNumberLine, drawPie} = globalThis.SiExamStimulus;
+for (const f of FAMS) {
+  f.variants.forEach((v, i) => {
+    const host = document.getElementById('v-' + f.id + '-' + i);
+    if (!host) throw new Error('missing host v-' + f.id + '-' + i);
+    host.appendChild(f.kind === 'nl' ? drawNumberLine(v.spec, v.opts)
+                 : f.kind === 'pie' ? drawPie(v.spec, v.opts)
+                 : drawPlot(v.spec, v.opts));
+  });
+}
+</script>

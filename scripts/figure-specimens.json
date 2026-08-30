@@ -1,5 +1,5 @@
 {
- "_": "THE APPROVED APPEARANCE, AS DATABASE ROWS. Each case is exactly what the Spine stores — an exam_stimuli kind and spec, plus the exam_questions.reading that selects the variant — and nothing else. Both sides of the visual suite render it through renderForQuestion(), the one entry point content goes through, so the specimen and the exam cannot disagree about how a row becomes a figure; the only thing that differs between them is the page around it, which is what is being tested. scripts/check-visual-fidelity.cjs compares the pixels against the committed baselines in tests/visual-baselines/. Changing a case changes the contract, and the new baseline has to be looked at by a person before it is committed. geo-2 exists because niceStep crosses from a one-unit step to a two-unit step the moment a window passes nine units across, and the two windows the grammar page happened to show both sit under it — so the squared-paper family shipped ruled every TWO units, uncountable, with every check green. A contract only covers the failures it has a case for.",
+ "_": "THE APPROVED APPEARANCE, AS DATABASE ROWS. Each case is exactly what the Spine stores — an exam_stimuli kind and spec, plus the exam_questions.reading that selects the variant — and nothing else. Both sides of the visual suite render it through renderForQuestion(), the one entry point content goes through, so the specimen and the exam cannot disagree about how a row becomes a figure; the only thing that differs between them is the page around it, which is what is being tested. scripts/check-visual-fidelity.cjs compares the pixels against the committed baselines in tests/visual-baselines/. Changing a case changes the contract, and the new baseline has to be looked at by a person before it is committed. geo-2 exists because niceStep crosses from a one-unit step to a two-unit step the moment a window passes nine units across, and the two windows the grammar page happened to show both sit under it — so the squared-paper family shipped ruled every TWO units, uncountable, with every check green. A contract only covers the failures it has a case for. pie-0 carries TWO panels because a pie stimulus routinely does — one population cut two ways — and a single-panel contract would not have caught a second panel drawn on top of the first. pie-1 is one panel with a 5% slice, which is where a rim label stops fitting beside its own wedge.",
  "cases": [
   {
    "id": "fn-0",
@@ -678,6 +678,76 @@
         0,
         0
        ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "pie-0",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native — and, for a whole divided, the decided vocabulary",
+   "label": "a whole, divided",
+   "kind": "chart",
+   "reading": null,
+   "spec": {
+    "chartType": "pie",
+    "panels": [
+     {
+      "title": "By destination",
+      "categories": [
+       "USA",
+       "Japan",
+       "Others",
+       "UK"
+      ],
+      "values": [
+       40,
+       30,
+       20,
+       10
+      ]
+     },
+     {
+      "title": "By age",
+      "categories": [
+       "Above 50",
+       "40–49",
+       "30–39",
+       "Below 30"
+      ],
+      "values": [
+       50,
+       20,
+       15,
+       15
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "pie-1",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native — and, for a whole divided, the decided vocabulary",
+   "label": "one panel, and a slice small enough to test the label",
+   "kind": "chart",
+   "reading": null,
+   "spec": {
+    "chartType": "pie",
+    "panels": [
+     {
+      "categories": [
+       "Passed",
+       "Retook",
+       "Withdrew"
+      ],
+      "values": [
+       72,
+       23,
+       5
       ]
      }
     ]

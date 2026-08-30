@@ -545,6 +545,58 @@ t.section('the family rule is computed, not chosen per figure');
        R.gridPlan('plane', 'shape', 0.5).sub, 0.5);
 }
 
+t.section('the pie family: a whole divided, in the vocabulary that already existed');
+{
+  const pie = (panels) => R.renderForQuestion({ id: 'q', reading: null },
+    { id: 's', kind: 'chart', spec: { chartType: 'pie', panels } });
+  const two = pie([
+    { title: 'By destination', categories: ['USA', 'Japan', 'Others', 'UK'], values: [40, 30, 20, 10] },
+    { title: 'By age', categories: ['Above 50', '40–49', '30–39', 'Below 30'], values: [50, 20, 15, 15] }]);
+
+  const slices = all(two).filter(e => (e.className || '').includes('sx-pie-slice'));
+  t.is('two panels draw two whole distributions', slices.length, 8);
+
+  // NO NEW COLOUR. The direction was chosen because it spends what the palette
+  // already had — two hues, then neutrals — so the check that matters is that
+  // the fills come from the four decided slots and nowhere else.
+  const slots = [...new Set(slices.map(e => (e.className || '')
+    .split(' ').find(c => /^sx-pie-s\d$/.test(c))))].sort();
+  t.is('and spend exactly the four decided slots', slots.join(','),
+       'sx-pie-s1,sx-pie-s2,sx-pie-s3,sx-pie-s4');
+
+  const labs = all(two).filter(e => e.className === 'sx-pie-label').map(e => e.textContent);
+  t.is('every slice names itself, directly, never in a legend', labs.length, 8);
+  t.ok('and carries its share', labs[0] === 'USA  40%', labs[0]);
+
+  // A pie renders from the stimulus alone: it has no variant a question could
+  // select, because the values are already written on it.
+  let threw = false;
+  try { R.renderStimulus('chart', { chartType: 'pie', panels: [
+    { categories: ['a', 'b'], values: [1, 1] }] }, {}); } catch { threw = true; }
+  t.ok('a pie draws from the stimulus alone — no reading to supply', !threw);
+
+  // THE VOCABULARY IS FOUR, AND RUNNING OUT IS AN ERROR RATHER THAN A WRAP.
+  // Cycling back to slot 1 would tell a reader that the fifth part and the
+  // first are the same thing.
+  let five = false;
+  try { pie([{ categories: ['a','b','c','d','e'], values: [1,1,1,1,1] }]); } catch { five = true; }
+  t.ok('a fifth slice is refused rather than reusing a hue', five);
+
+  let empty = false;
+  try { pie([{ categories: ['a'], values: [0] }]); } catch { empty = true; }
+  t.ok('a distribution summing to nothing is refused', empty);
+
+  let ragged = false;
+  try { pie([{ categories: ['a','b'], values: [1] }]); } catch { ragged = true; }
+  t.ok('categories and values must agree in length', ragged);
+
+  // One part is a circle, not an arc from a point back to itself, which draws
+  // nothing at all.
+  const one = pie([{ categories: ['All'], values: [100] }]);
+  t.is('a single part is drawn as a circle', all(one)
+    .filter(e => e.tag === 'circle' && (e.className || '').includes('sx-pie-slice')).length, 1);
+}
+
 t.section('the stimulus-only path is closed where a figure needs the question');
 {
   const shut = (label, kind, spec) => {

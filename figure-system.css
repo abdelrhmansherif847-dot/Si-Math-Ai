@@ -33,7 +33,8 @@
 :root {
   --fig-ink:#0e1620; --fig-axis:#0e1620; --fig-num:#0e1620;
   --fig-grid:#cdd8e2; --fig-fine:#e4eaf0; --fig-major:#848d99;
-  --data-1:#2a78d6; --data-2:#eb6834;
+  --data-1:#2a78d6; --data-2:#eb6834; --data-3:#9aa6b3; --data-4:#d3dae1;
+  --data-lab:#1d2733;
   --t-rule:#8592a0; --t-outer:#2b3743; --t-head:#2c3742; --t-headfg:#ffffff;
   /* the paper the figure sits on: the numeral halo and an open endpoint are
      punched out of it, so it has to match whatever the figure is placed on */
@@ -44,14 +45,16 @@
 @media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
   --fig-ink:#e8eff7; --fig-axis:#e8eff7; --fig-num:#e8eff7;
   --fig-grid:#2c3844; --fig-fine:#1b242e; --fig-major:#6b768a;
-  --data-1:#3987e5; --data-2:#d95926;
+  --data-1:#3987e5; --data-2:#d95926; --data-3:#6b768a; --data-4:#39434f;
+  --data-lab:#e6edf5;
   --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
   --exam:#161d25; --rule:#26313d; --ink-3:#8493a5;
 } }
 :root[data-theme="dark"] {
   --fig-ink:#e8eff7; --fig-axis:#e8eff7; --fig-num:#e8eff7;
   --fig-grid:#2c3844; --fig-fine:#1b242e; --fig-major:#6b768a;
-  --data-1:#3987e5; --data-2:#d95926;
+  --data-1:#3987e5; --data-2:#d95926; --data-3:#6b768a; --data-4:#39434f;
+  --data-lab:#e6edf5;
   --t-rule:#7b8896; --t-outer:#9fadbb; --t-head:#39485a; --t-headfg:#eef3f9;
   --exam:#161d25; --rule:#26313d; --ink-3:#8493a5;
 }
@@ -99,7 +102,15 @@
 /* Series slots. The grammar decided TWO — slots 1-2 of the validated
    categorical palette — and spends them on the data family alone, so outside
    that family every slot is ink. A third series in one data figure is not in
-   the decided vocabulary, so slot 3 stays ink rather than inventing a hue. */
+   the decided vocabulary, so slot 3 stays ink rather than inventing a hue.
+
+   THE PIE FAMILY DID NOT CHANGE THAT. A four-part distribution needs four
+   fills, and the direction chosen for it (`pie-directions.html`, treatment C,
+   "the decided vocabulary") answers that by spending the two hues it already
+   has and then reaching for NEUTRALS — --data-3 and --data-4 — rather than
+   inventing a third and fourth hue. Slots 3 and 4 are greys on purpose: they
+   are the vocabulary running out, said honestly, and they are the reason no new
+   colour entered the system to draw a pie. */
 .sx-series{color:var(--fig-ink)}
 .sx-s1,.sx-s3{color:var(--fig-ink)}
 
@@ -112,6 +123,27 @@
 .sx-fam-data .sx-series,.sx-fam-data .sx-s1{color:var(--data-1)}
 .sx-fam-data .sx-s2{color:var(--data-2)}
 .sx-fam-data .sx-point{r:5}
+
+/* ── PIE: a whole, divided ──────────────────────────────────────────────────
+   Chosen from four candidates by looking at them at the exam's own measure
+   (`scripts/pie-directions.html`). The others spent tints of one hue, opened
+   the disc into a ring, or pulled every label out onto a leader; this one keeps
+   the vocabulary closed, which is why it was picked.
+
+   Slices run clockwise from twelve o'clock in the order the spec gives them —
+   the author's order, largest first by convention — because a reader compares a
+   share against the vertical. The separator is drawn in the PAPER colour rather
+   than a grey: the gap between two slices is the card showing through, not
+   another line competing with the drawing. */
+.sx-pie-slice{stroke:var(--exam);stroke-width:2}
+.sx-pie-s1{fill:var(--data-1)} .sx-pie-s2{fill:var(--data-2)}
+.sx-pie-s3{fill:var(--data-3)} .sx-pie-s4{fill:var(--data-4)}
+/* Identity sits at the slice's own rim — a direct label, never a legend, which
+   is the data family's rule and the one thing every treatment agreed on. */
+.sx-pie-label{fill:var(--data-lab);font-family:var(--font-display);
+  font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.sx-pie-title{fill:var(--fig-num);font-family:var(--font-display);
+  font-size:12.5px;font-weight:600;text-anchor:middle}
 
 .sx-nl-axis line{stroke:var(--fig-axis);stroke-width:1.3}
 .sx-nl-tick{stroke:var(--fig-axis);stroke-width:1.3;shape-rendering:crispEdges}

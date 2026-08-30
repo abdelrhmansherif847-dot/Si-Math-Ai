@@ -21,6 +21,11 @@ figure-directions.html
 shots/
 exam-composition.html
 shots2/
+# figure-system.html is the design system's own page — the one that shows what
+# each family IS. Committed and served for the same reason pie-directions.html
+# is: a page nobody can open is a page nobody checks, and that is how a specimen
+# sheet drifted twenty selectors from what ships. Carries noindex.
+!scripts/figure-system.html
 figure-system.html
 shots3/
 shots4/

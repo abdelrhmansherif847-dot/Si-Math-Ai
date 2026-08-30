@@ -261,6 +261,46 @@ const is = (m, c, d) => (c ? ok(m) : no(m, d));
   is('table · Boxed — the renderer\'s table, not an SVG  [Q12]', table.table === true);
 
 
+  // ── the pie names every slice, and no name may be lost ──────────────────
+  // A rim label runs OUTWARD from the disc, so the box has to hold the longest
+  // one — and on a multi-panel figure the outermost label has no neighbour to
+  // borrow room from. It ran off the right by a character the first time, on a
+  // figure whose every colour, class and proportion was correct. Measured from
+  // laid-out text rather than asserted from CSS, because only the layout knows
+  // how wide a word is.
+  {
+    const r = await p2.evaluate(() => {
+      const R = globalThis.SiExamStimulus;
+      const host = document.createElement('div');
+      host.style.width = '702px'; document.body.appendChild(host);
+      const shapes = [
+        [{ title: 'By destination', categories: ['USA', 'Japan', 'Others', 'UK'], values: [40, 30, 20, 10] },
+         { title: 'By age', categories: ['Above 50', '40–49', '30–39', 'Below 30'], values: [50, 20, 15, 15] }],
+        [{ categories: ['Passed', 'Retook', 'Withdrew'], values: [72, 23, 5] }],
+        [{ categories: ['A really quite long category name', 'B'], values: [50, 50] }],
+      ];
+      let clipped = 0, collided = 0, labels = 0;
+      for (const panels of shapes) {
+        const svg = R.renderForQuestion({ id: 'q', reading: null },
+          { id: 's', kind: 'chart', spec: { chartType: 'pie', panels } });
+        host.appendChild(svg);
+        const box = svg.getBoundingClientRect();
+        const rc = [...svg.querySelectorAll('.sx-pie-label')].map((t) => t.getBoundingClientRect());
+        labels += rc.length;
+        rc.forEach((t) => { if (t.left < box.left - 0.5 || t.right > box.right + 0.5) clipped++; });
+        for (let i = 0; i < rc.length; i++) for (let j = i + 1; j < rc.length; j++) {
+          const a = rc[i], c = rc[j];
+          if (!(a.right < c.left || c.right < a.left || a.bottom < c.top || c.bottom < a.top)) collided++;
+        }
+      }
+      host.remove();
+      return { clipped, collided, labels };
+    });
+    is('pie · every slice label is inside its own figure  [3 shapes]',
+       r.clipped === 0 && r.labels > 0, JSON.stringify(r));
+    is('pie · and no two labels overlap  [3 shapes]', r.collided === 0, JSON.stringify(r));
+  }
+
   // ── the plate is the specimen's plate, at the specimen's size ────────────
   // Drawn at the reference width and DISPLAYED at the column's, so the exam
   // figure is the approved figure scaled — identical viewBox, identical drawing

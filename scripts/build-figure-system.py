@@ -119,6 +119,31 @@ FAMILIES = [
        opts=dict(aspect='data', frame='data', reading='value', width=430, height=280,
                  figures=[dict(mode='scatter')])),
    ]),
+ dict(id='pie', name='A whole, divided', decision='The decided vocabulary',
+   job='Read one share, or compare two.',
+   grammar=[
+     'No axis, so none of the plane&rsquo;s conventions apply: the shape IS the total.',
+     'Four fills and no more &mdash; the two decided hues, then two neutrals. A fifth part '
+     'would have to invent a colour, so a fifth part is refused.',
+     'Every slice names itself at its own rim, with its share. Never a legend.',
+     'The separator is the paper showing through, not a line of its own.',
+   ],
+   axis='How many panels the one stimulus carries.',
+   rule='Not a variant of the figure, a property of the QUESTION: one population cut two '
+        'ways is <b>one</b> stimulus, because a question comparing a share in the first with '
+        'a share in the second is only answerable if both describe the same whole.',
+   kind='pie',
+   variants=[
+     dict(label='two panels', sub='one population, cut two ways',
+       spec=dict(chartType='pie', panels=[
+         dict(title='By destination', categories=['USA','Japan','Others','UK'], values=[40,30,20,10]),
+         dict(title='By age', categories=['Above 50','40\u201349','30\u201339','Below 30'], values=[50,20,15,15])]),
+       opts=dict()),
+     dict(label='one panel', sub='and a share small enough to test its own label',
+       spec=dict(chartType='pie', panels=[
+         dict(categories=['Passed','Retook','Withdrew'], values=[72,23,5])]),
+       opts=dict()),
+   ]),
  dict(id='nl', name='Number lines', decision='Statement, with adaptive tick density',
    job='Read one endpoint and decide open or closed.',
    grammar=[
@@ -361,6 +386,7 @@ VAR_JSON = json.dumps([
   for f in FAMILIES])
 
 HTML = f"""<title>Figure Family Grammar</title>
+<meta name="robots" content="noindex,nofollow">
 {CSS}
 <style>{SHEET}</style>
 <div class="wrap">
@@ -379,12 +405,14 @@ HTML = f"""<title>Figure Family Grammar</title>
 <script>{R}</script>
 <script>
 const FAMS = {VAR_JSON};
-const {{drawPlot, drawNumberLine}} = globalThis.SiExamStimulus;
+const {{drawPlot, drawNumberLine, drawPie}} = globalThis.SiExamStimulus;
 for (const f of FAMS) {{
   f.variants.forEach((v, i) => {{
     const host = document.getElementById('v-' + f.id + '-' + i);
     if (!host) throw new Error('missing host v-' + f.id + '-' + i);
-    host.appendChild(f.kind === 'nl' ? drawNumberLine(v.spec, v.opts) : drawPlot(v.spec, v.opts));
+    host.appendChild(f.kind === 'nl' ? drawNumberLine(v.spec, v.opts)
+                 : f.kind === 'pie' ? drawPie(v.spec, v.opts)
+                 : drawPlot(v.spec, v.opts));
   }});
 }}
 </script>
