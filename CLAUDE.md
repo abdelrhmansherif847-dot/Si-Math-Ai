@@ -145,9 +145,9 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **90 files** in `supabase/migrations/`, **161 applied** in the database (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Migrations | **93 files** in `supabase/migrations/`, **161 applied** in the database (the exam-delivery trio `20260830e/f/y` is PREPARED and unapplied) (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **49** root `*.html` pages on Vercel (measured 2026-08-30; the entry said 46 and had been stale since before `teacher.html`) |
-| CI | `node tests/run-all.mjs` — **50 checks** (measured 2026-08-30) |
+| CI | `node tests/run-all.mjs` — **51 checks** (measured 2026-08-30) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;

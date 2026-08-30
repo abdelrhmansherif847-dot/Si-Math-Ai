@@ -196,6 +196,14 @@ exactly**, with the per-source basis populated (384 AI_CHAT signals against 11
 MOCK_EXAM across that student's weaknesses, which is this audit's §2 finding
 showing up in the product rather than in a document).
 
+**The evidence layer is prepared (2026-08-30).** `20260830e/f` record the four
+facts §5 found missing — response, correctness, time on item, revisit count —
+and feed them into this same pipeline rather than a new one. Verified against
+production inside a rolled-back transaction, including that the answer key never
+reaches the browser and that **an omission is recorded without becoming a
+weakness signal**: see `docs/engineering/exam-delivery-verification.md`. They are
+not applied, and no content is published yet.
+
 **Phase closed.** What remains blocked is exactly what §5 said would be:
 everything that needs a per-item response. The next phase is Mock delivery and
 per-question evidence — and when it lands, the pipeline needs no new surface. A
