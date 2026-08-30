@@ -37,3 +37,4 @@ scripts/desmos-activation.png
 # The BASELINES (tests/visual-baselines/) are committed; these are the current
 # renders and the diffs against them, and they are rewritten each time.
 tests/visual-out/
+pie-directions.html
