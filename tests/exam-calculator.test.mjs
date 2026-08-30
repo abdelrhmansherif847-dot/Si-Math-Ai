@@ -117,6 +117,27 @@ t.section('Zero providers: the normal state, held everywhere');
   t.ok('and mock-exam.html, which is frozen, does not enable it at all',
     !/setReviewer/.test(read('mock-exam.html')));
 
+  // THE REVIEWER BAR RIDES THE SAME AUTHORITY. Surface candidates and the
+  // notation check are review tools; they come up where the calculator does,
+  // after RLS answered, and exist on no student surface.
+  t.ok('the reviewer bar installs after the RLS answer, not from the role read',
+    exams.indexOf('SiExamReviewerBar.install()') > exams.indexOf("if (!forms.length)"));
+  t.ok('and no student surface loads it',
+    !/exam-reviewer-bar/.test(read('mock-exam.html')));
+
+  // It changes the SURFACE and nothing else. Re-tinting the figure inks per
+  // candidate — which the specimen sheet does, in its own token names — would
+  // mean reviewing figures the product does not draw, and that is the defect
+  // this repository has already shipped twice.
+  const barjs = read('exam-reviewer-bar.js');
+  const applied = slice(barjs, 'function applySurface(id) {', 'function notationCheck',
+                        'applySurface');
+  t.ok('the surface switch sets only the plate and the ground',
+    /--exam/.test(applied) && /--page/.test(applied)
+    && !/--fig-|--data-|--ink|--rule/.test(applied));
+  t.ok('and the rest of the palette follows data-theme, the shipped mechanism',
+    /setAttribute\('data-theme'/.test(applied));
+
   // The override is an EXACT match on '1' — never a truthy test, which would
   // make ?desmos-check=0 turn it on.
   const check = slice(launcher, 'function checkMode() {', 'function policyAllows',

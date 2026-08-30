@@ -90,6 +90,11 @@
 <script src="exam-graph-zero.js" defer></script>
 <script src="exam-graph-desmos.js" defer></script>
 
+<!-- The reviewer bar: surface candidates and the notation check. Installed only
+     after RLS has served this account an exam library, so it exists on no
+     student surface. Nothing else loads it. -->
+<script src="exam-reviewer-bar.js" defer></script>
+
 <script>
 'use strict';
 const SUPA_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
@@ -231,6 +236,10 @@ async function boot() {
    * something this line could grant. This is §2.a internal evaluation.
    */
   try { SiExamCalculatorLauncher.setReviewer(true); } catch (e) {}
+
+  // The review controls come up on the same authority, at the same moment, and
+  // for the same reason: this account is one the database will show a DRAFT.
+  try { SiExamReviewerBar.install(); } catch (e) {}
 
   screenPick(forms);
 }
