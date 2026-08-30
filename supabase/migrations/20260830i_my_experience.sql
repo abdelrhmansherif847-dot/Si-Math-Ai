@@ -1,9 +1,17 @@
 -- =====================================================================
 -- my_experience() — one caller-scoped answer to "which product am I in?"
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
---         Apply with explicit owner approval, one migration at a time, per
---         CLAUDE.md §3.
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830222037
+--         `my_experience`. Applied body differed only in header text and the
+--         omitted outer transaction (apply_migration supplies its own).
+--         Verified after apply: the live prosrc is byte-for-byte identical to
+--         this file's body (2128 bytes, md5 a8fcd788b28fd325bae0bca8664c2361);
+--         0 arguments, SECURITY DEFINER, STABLE, search_path pinned, returns
+--         jsonb; `anon` cannot execute, `authenticated` can, PUBLIC holds no
+--         grant. 18 of 18 behavioural checks re-run against the LIVE function
+--         under simulated JWTs inside a rolled-back transaction — see
+--         docs/engineering/experience-routing-verification.md §8.
 -- DEPENDS ON: 20260830a (workspace_staff, teacher_workspaces),
 --             20260830h (staff_role reads 'teacher' | 'assistant')
 --

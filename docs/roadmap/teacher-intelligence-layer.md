@@ -747,7 +747,7 @@ are chosen before anyone is invested in the answer.
   students sitting real mocks**, and until it does, §5.2's arithmetic is
   unchanged. T2 opens on attempts, not on tables.
 
-### T1.7 — Primary Experience and routing (prepared, not applied)
+### T1.7 — Primary Experience and routing (live 2026-08-30)
 
 Not a feature — the identity model the T1 surfaces were already implying, made
 explicit and single. `my_experience()` (`20260830i`) is one caller-scoped
@@ -773,10 +773,13 @@ answering it three ways.
   nothing, and grants nothing; every permission stays where §8.3 put it. A
   client that ignores it gains exactly nothing.
 
-Dry-run evidence, mutation tests, and what was deliberately left out of the
-increment: `docs/engineering/experience-routing-verification.md`. **It does not
-reopen T1.6.** No analytics, no new academic read, no new access — it changes
-where a browser sends someone, and nothing else.
+`20260830i` was applied 2026-08-30 and re-verified against the live database:
+18 of 18 behavioural checks, the body byte-for-byte identical to the repository,
+and the four workspace tables still holding 0 rows afterwards. Evidence,
+mutation tests, and what was deliberately left out of the increment:
+`docs/engineering/experience-routing-verification.md`. **It does not reopen
+T1.6.** No analytics, no new academic read, no new access — it changes where a
+browser sends someone, and nothing else.
 
 ### T2 — Per-student trajectory, evidence-first
 

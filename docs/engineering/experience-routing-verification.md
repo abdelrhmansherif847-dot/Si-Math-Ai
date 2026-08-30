@@ -1,8 +1,13 @@
 # Experience routing — `my_experience()` (20260830i), prepared and verified
 
-**Status: 🟡 PREPARED, NOT APPLIED.** The migration and the two client changes
-are written, dry-run against production inside a rolled-back transaction, and
-mutation-tested. Applying it is a separate, explicit decision.
+**Status: ✅ APPLIED 2026-08-30**, with explicit owner approval, as
+`schema_migrations` version **`20260830222037`** (`my_experience`). This
+migration alone; nothing else was touched. Post-apply verification in §8.
+
+The client wiring in `login.html` and `nav.js` is merged into the branch but
+**reaches students only when the branch merges to `main`** — the static site
+deploys on merge, and this is a database change. Both files work with or without
+the function, so the order does not matter.
 
 **Date:** 2026-08-30 · **Project:** `igvkyxkmjnkzscqgommj` · **Branch:**
 `claude/teacher-intelligence-layer-8e66b0`
@@ -148,13 +153,67 @@ the authenticated user's relationship to a workspace, and from nothing else.
 * removing the `TEACHER_ROLES` tolerance in `teacher.html`, which still accepts
   both `teacher` and `owner`
 
-## 7 · To apply
+## 7 · Files
 
 ```
-supabase/migrations/20260830i_my_experience.sql      -- forward
-supabase/migrations/20260830w_my_experience_rollback.sql  -- back
+supabase/migrations/20260830i_my_experience.sql            -- forward, APPLIED
+supabase/migrations/20260830w_my_experience_rollback.sql   -- back, unapplied
 ```
 
-One migration, explicitly approved, per `CLAUDE.md` §3. Applying it is
-reversible and touches no data: the function owns no table, is referenced by no
-policy, trigger or foreign key, and both consumers work with or without it.
+The rollback is safe at any time: the function owns no table, is referenced by
+no policy, trigger or foreign key, and both consumers work with or without it.
+
+## 8 · Post-apply verification, against the live database
+
+Applied 2026-08-30 as `20260830222037`. Migration count moved **165 → 166**.
+
+### The function contract, read from the live catalogue
+
+| | |
+|---|---|
+| arguments | **0** — there is no version of this call that asks about someone else |
+| security | `SECURITY DEFINER`, `STABLE` |
+| `search_path` | `pg_catalog, public` (pinned) |
+| returns | `jsonb` |
+| ACL | `authenticated:EXECUTE, postgres:EXECUTE, service_role:EXECUTE` — **`anon` cannot execute it, and PUBLIC holds no grant** |
+| body | **byte-for-byte identical to the repository file**: 2128 bytes, md5 `a8fcd788b28fd325bae0bca8664c2361` |
+
+The body comparison matters more than it looks. The repo has been ahead of
+production before (`CLAUDE.md`, the Edge Function rows), and "applied" is not
+the same claim as "what is running is what we reviewed". Here they are the same
+bytes, measured.
+
+### Behaviour, re-run against the LIVE function — 18 of 18 PASS
+
+The function was **not** re-created for these; the fixtures were built through
+the real RPCs under simulated JWT identities, and the whole transaction was
+rolled back.
+
+| # | Check | Result |
+|---|---|---|
+| 1–3 | **Platform Owner is NOT automatically `primary: staff`** — `student`, `can_staff: false`, while `platform_role` still reads `owner`; six keys exactly | PASS |
+| 4–6 | **Active staff → `primary: staff`**, `can_staff: true`, `can_student` still true, membership reads `teacher`/`active` with the right workspace id | PASS |
+| 7–9 | **Pending assistant → `primary: student`, `can_staff: false`**, `pending_count: 1`, row visible as `assistant`/`pending` | PASS |
+| 10 | approval flips them to `staff` and `pending_count` falls to 0 | PASS |
+| 11 | an enrolled student is not staff | PASS |
+| 12–14 | **Multi-workspace represented correctly** — teacher in one class and assistant in another gives two memberships, both roles, both workspace ids | PASS |
+| 15–16 | a removed membership disappears while the other still counts; one caller's answer never contains another's memberships | PASS |
+| 17 | **A deactivated workspace grants no staff experience** — `student`, `can_staff: false`, empty list | PASS |
+| 18 | an unidentified caller gets the student default, not an error | PASS |
+
+### Production is clean
+
+Re-measured after the rollback: `teacher_workspaces`, `workspace_staff`,
+`workspace_students`, `workspace_audit_log`, `class_interventions` and
+`exam_attempts` all still hold **0 rows**. Verification created no workspace and
+no membership.
+
+### Advisors
+
+One WARN, `0029_authenticated_security_definer_function_executable`: a
+`SECURITY DEFINER` function is callable by `authenticated`. That is the design,
+and it is the project's standing pattern — **20 functions carry the identical
+warning**, `teacher_my_workspaces()`, `student_my_teachers()` and
+`student_my_interventions()` among them. Authorization lives inside each body,
+never in who may call it (`20260830b`). No ERROR-level finding exists on the
+project.

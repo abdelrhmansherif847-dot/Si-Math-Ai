@@ -1,8 +1,9 @@
 -- =====================================================================
 -- ROLLBACK for 20260830i — remove my_experience()
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. This file exists so the
---         forward migration has a stated way back; running it is its own
+-- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. 20260830i went live on
+--         2026-08-30 (schema_migrations 20260830222037), so this file is now a
+--         live way back rather than a hypothetical one; running it is its own
 --         approval, exactly like running the forward one.
 --
 -- SAFE TO RUN AT ANY TIME. my_experience() owns no data, is referenced by no
