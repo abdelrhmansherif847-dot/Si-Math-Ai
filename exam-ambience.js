@@ -9,11 +9,11 @@
 // WHY SYNTHESISED AND NOT SOURCED. Both other routes are shut from here. Every
 // sound library is blocked by this environment's egress proxy, and the audio
 // generator available refuses sound effects by design. Synthesis was the only
-// way to put something in your ears today, and for two of the three layers it
-// is the honest choice anyway: pen-on-paper and paper rustle ARE broadband
-// noise with an envelope, so those are not mock-ups of the sound but cheap
-// versions of the real mechanism. The third layer is not, and the comment above
-// `utter()` records what that cost and what replaced it.
+// way to put something in your ears today, and for these two layers it is the
+// honest choice anyway: pen-on-paper and paper rustle ARE broadband noise with
+// an envelope, so neither is a mock-up of the sound — each is a cheap version of
+// the real mechanism. The voice layer is the one where that stopped being true;
+// see the note above MOMENTS.
 //
 // AUDIO OBSERVES; IT NEVER DRIVES — the rule exam-audio.js already sets. Nothing
 // here touches the timer, the view, saving or scoring. Every entry point
@@ -24,10 +24,9 @@
 
   var ctx = null, master = null, timer = null, on = false, last = null;
 
-  // Independent gains, which is the point of layers: the voices can come down
-  // without touching the pen. These are the starting mix and are meant to be
-  // argued with.
-  var GAIN = { pen: 0.55, paper: 0.40, voices: 0.30 };
+  // Independent gains, which is the point of layers: paper comes down without
+  // touching the pen. The starting mix, and meant to be argued with.
+  var GAIN = { pen: 0.55, paper: 0.40 };
 
   // How often a moment happens. Short here ON PURPOSE — the real interval is
   // 8-12 minutes (mock-exam-v2-investigation §8.3) and you cannot judge a
@@ -92,112 +91,22 @@
     return 0.8;
   }
 
-  /* THE ROOM. One impulse response, made once and reused: noise decaying
-     exponentially, which is what a small hard room does to a sound. Everything
-     voiced goes through it, and that single fact is most of what separates
-     "someone across the room" from "a sound in your headphones". */
-  var room = null;
-  function reverb() {
-    if (room) return room;
-    var secs = 1.1, n = Math.floor(ctx.sampleRate * secs);
-    var ir = ctx.createBuffer(2, n, ctx.sampleRate);
-    for (var c = 0; c < 2; c++) {
-      var d = ir.getChannelData(c);
-      for (var i = 0; i < n; i++)
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6);
-    }
-    room = ctx.createConvolver();
-    room.buffer = ir;
-    var wet = ctx.createGain();
-    wet.gain.value = 0.9;
-    room.connect(wet); wet.connect(master);
-    return room;
-  }
-
-  /* DISTANT VOICES — the replacement for a synthetic whisper, and a different
-     mechanism rather than the same one turned down.
-     
-     The first attempt shaped NOISE into syllables. That is why it sounded
-     artificial: noise with a speech-like envelope is exactly what it is, and
-     the ear is very good at hearing the difference. A voice is not noise with a
-     rhythm — it is a PITCHED source with a fundamental and harmonics, filtered
-     by a mouth into formants that move as the mouth moves. So:
-
-       sawtooth at a speaking fundamental, drifting  — the vocal folds
-       three parallel bandpass filters, sliding      — the mouth
-       a hard lowpass                                — distance and a wall
-       convolution reverb                            — the room it happens in
-
-     Still no words, and still by requirement: the formants move between vowel
-     positions without ever forming consonants, so there is speech-shaped sound
-     and nothing to decode. Two short utterances with a gap is what makes it an
-     exchange between two people rather than one person muttering — the second
-     is briefer and a different pitch, the shape of an answer. */
-  function utter(at, f0, dur) {
-    var osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(f0, at);
-    // Real speech never holds a pitch. This drift is small and is the
-    // difference between a voice and a buzzer.
-    osc.frequency.linearRampToValueAtTime(f0 * (0.88 + Math.random() * 0.2), at + dur);
-
-    var glottal = ctx.createGain();
-    glottal.gain.setValueAtTime(0, at);
-    var t = at, syl = 2 + Math.floor(Math.random() * 2);
-    for (var i = 0; i < syl; i++) {
-      var len = dur / syl;
-      glottal.gain.linearRampToValueAtTime(0.6 + Math.random() * 0.4, t + len * 0.35);
-      glottal.gain.linearRampToValueAtTime(0.12, t + len * 0.95);
-      t += len;
-    }
-    glottal.gain.linearRampToValueAtTime(0, at + dur + 0.05);
-    osc.connect(glottal);
-
-    // Two vowel positions, slid between. Which vowels does not matter; that
-    // they MOVE is what reads as a mouth.
-    var F = [[520, 1180, 2500], [700, 1500, 2600]];
-    var a = F[Math.floor(Math.random() * 2)], b = F[Math.floor(Math.random() * 2)];
-    var sum = ctx.createGain(); sum.gain.value = 1;
-    for (var k = 0; k < 3; k++) {
-      var bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.Q.value = 6 - k * 1.5;
-      bp.frequency.setValueAtTime(a[k], at);
-      bp.frequency.linearRampToValueAtTime(b[k], at + dur);
-      var fg = ctx.createGain();
-      fg.gain.value = [1, 0.6, 0.25][k];
-      glottal.connect(bp); bp.connect(fg); fg.connect(sum);
-    }
-
-    // Distance: a wall and some metres of air take the top off.
-    var far = ctx.createBiquadFilter();
-    far.type = 'lowpass'; far.frequency.value = 820; far.Q.value = 0.7;
-    var out = ctx.createGain();
-    out.gain.value = GAIN.voices;
-    sum.connect(far); far.connect(out);
-    out.connect(reverb());
-    // A little direct signal so it is not pure reverb, which sounds like a cave.
-    var dry = ctx.createGain(); dry.gain.value = 0.35;
-    out.connect(dry); dry.connect(master);
-
-    osc.start(at); osc.stop(at + dur + 0.2);
-  }
-
-  function voices(at) {
-    var t0 = ctx.currentTime + at;
-    var low = 95 + Math.random() * 45;
-    utter(t0, low, 0.34 + Math.random() * 0.22);
-    // The reply: shorter, higher, after the kind of gap a quick answer takes.
-    utter(t0 + 0.55 + Math.random() * 0.35, low * (1.25 + Math.random() * 0.3),
-          0.20 + Math.random() * 0.14);
-    return 1.2;
-  }
+  /* THE THIRD LAYER IS DELIBERATELY MISSING.
+     A distant voice belongs here — two students exchanging something brief and
+     muffled — and two attempts at synthesising one were thrown away. The first
+     shaped noise into syllables and sounded like noise shaped into syllables.
+     The second built a real little vocal tract, pitch and formants and a
+     convolved room, and measured correctly as a periodic voice at 124 Hz; it
+     still sounded engineered, because a voice is the one sound a listener has
+     spent their whole life calibrated against and approximations do not survive
+     that. No third attempt: this layer waits for a recording. The slot is the
+     comment, not a stub — dead code here would read as a plan. */
 
   var MOMENTS = [
     { id: 'writing',  play: function () { pen(0); paper(1.1 + Math.random()); } },
     { id: 'page',     play: function () { paper(0); pen(0.7 + Math.random() * 0.6); } },
-    { id: 'asking',   play: function () { voices(0.2); paper(0.1); } },
-    { id: 'room',     play: function () { pen(0); voices(0.9); paper(2.1); } },
+    { id: 'settling', play: function () { paper(0); paper(0.5 + Math.random() * 0.4); } },
+    { id: 'nearby',   play: function () { pen(0); pen(1.4 + Math.random() * 0.8); } },
   ];
 
   /** Play one moment now. Exposed so it can be auditioned without waiting. */
