@@ -42,9 +42,9 @@
   // config has loaded (or if the network read fails). Once load() completes the
   // DB is always authoritative. Keep in sync with the migration.
   var DEFAULT_COST = {
-    CHAT_TEXT: 5, CHAT_IMAGE: 8, CHAT_FOLLOWUP: 2, CHAT_DEEP_EXPLAIN: 10,
+    CHAT_TEXT: 8, CHAT_IMAGE: 8, CHAT_FOLLOWUP: 2, CHAT_DEEP_EXPLAIN: 10,
     STUDY_PLAN: 20, MOCK_EXAM: 40, MOCK_TIMER: 10, MOCK_PRACTICE: 10,
-    FOCUS_SESSION: 15, WEAKNESS_ANALYSIS: 20, AI_CHAT_MESSAGE: 5
+    FOCUS_SESSION: 15, WEAKNESS_ANALYSIS: 20, AI_CHAT_MESSAGE: 8
   };
 
   // Back-compat safety net. Until the operation-based migration is live the
