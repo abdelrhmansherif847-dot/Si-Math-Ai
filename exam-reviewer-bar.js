@@ -226,6 +226,48 @@
     });
     el.appendChild(once);
 
+    /* LEVEL, in dB, because a review that cannot change the level can only
+     * report that it is wrong. The clips are matched to each other by TRIM in
+     * the module, so this moves all seven together and the balance holds
+     * wherever it lands.
+     *
+     * It stops at the module's safeMax rather than at some round number: that
+     * is the gain at which the hottest clip's peak reaches full scale, and a
+     * distorted clip is the one thing that would make a listening judgement
+     * worthless. Down is unbounded to zero. */
+    var VOL_STEP = 1.5;                                   // dB per press
+    var vdn = document.createElement('button');
+    var vup = document.createElement('button');
+    var readout = function () {
+      var A = root.SiExamAmbience; if (!A) return;
+      var g = A.gains.voices;
+      var out = bar && bar.querySelector('[data-rv-out]');
+      var at = g >= A.safeMax - 1e-9 ? ' — at the ceiling, the material clips above this'
+             : g <= 0 ? ' — silent' : '';
+      if (out) {
+        out.className = 'rv-out';
+        out.textContent = 'Level ' + (g > 0 ? (20 * Math.log10(g)).toFixed(1) + ' dB' : '\u2212\u221e')
+          + ' (\u00d7' + g.toFixed(2) + ')' + at;
+      }
+    };
+    var nudge = function (dB) {
+      var A = root.SiExamAmbience; if (!A) return;
+      // A multiplicative step never reaches zero, so pressing Vol- forty times
+      // left the level at -64 dB reading "x0.00" and the silent branch below
+      // was unreachable. Anything under -60 dB is silence in a room; snap.
+      var next = A.gains.voices * Math.pow(10, dB / 20);
+      A.setGain('voices', next < 0.001 ? 0 : next);
+      readout();
+    };
+    vdn.type = 'button'; vdn.className = 'rv-b'; vdn.textContent = 'Vol \u2212';
+    vdn.title = 'All seven exchanges quieter by ' + VOL_STEP + ' dB';
+    vdn.addEventListener('click', function () { nudge(-VOL_STEP); });
+    vup.type = 'button'; vup.className = 'rv-b'; vup.textContent = 'Vol +';
+    vup.title = 'All seven exchanges louder by ' + VOL_STEP + ' dB, up to the no-clipping ceiling';
+    vup.addEventListener('click', function () { nudge(VOL_STEP); });
+    el.appendChild(vdn);
+    el.appendChild(vup);
+
     var sp = document.createElement('span'); sp.className = 'rv-sp'; el.appendChild(sp);
     var out = document.createElement('span');
     out.className = 'rv-out'; out.setAttribute('data-rv-out', '');

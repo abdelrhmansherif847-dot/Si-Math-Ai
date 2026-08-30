@@ -20,13 +20,27 @@
 
   var ctx = null, master = null, on = false;
 
-  /* One gain, for the one layer. The clips are normalised to a common -6 dBFS
-     peak so this number means the same thing for all seven — a whisper recorded
-     honestly is QUIET, the raw takes peaked between -15 and -25 dBFS, and
-     normalising is level rather than processing, so treatment A's character is
-     untouched. 0.5 against a master of 0.35 is background, not foreground; it
-     is a number to argue with rather than a measurement. */
-  var GAIN = { voices: 0.50 };
+  /* THE LAYER GAIN, AND WHY IT COULD NOT SIMPLY BE RAISED.
+     The clips were normalised to a common -6 dBFS PEAK, and the comment that
+     used to sit here said that made one number mean the same thing for all
+     seven. It does not, and measuring is what showed it: peaks were within
+     0.7 dB of each other while the loudest 100 ms of each clip — which is what
+     a listener actually hears — spanned 16.8 dB, from -16.7 dBFS on voice-5 to
+     -33.5 dBFS on voice-3.
+
+     A whisper is why. Peak-normalising sets the level from the plosives, and a
+     whispered plosive is a spike far above the body of the phrase; the quieter
+     the recording, the wider that gap. voice-3's crest factor is 27.3 dB
+     against voice-5's 10.4 dB, so peak-matching them left voice-3's whisper
+     17 dB down. At the old gain it played at -45.7 dBFS: present in the graph,
+     inaudible in a room.
+
+     So raising ONE number could not make all seven louder. The fix is TRIM
+     below — a per-clip level that matches them by loudness — and only then is
+     a single gain meaningful. This is now unity because the trims land the
+     group exactly where it should sit; the level lives in one place instead of
+     being split across three. */
+  var GAIN = { voices: 1.0 };
 
   /* THE VOICE SCHEDULE: A ROTATION, PLUS THREE ANCHORED SOUNDS.
      The first one at 0:00, the next five minutes later, and so on through the
@@ -133,7 +147,10 @@
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.35;          // everything is quiet, then quieter
+    // Unity: the per-clip TRIMs set the level, so this stage only sums.
+    // It was 0.35 while the layer's level was split between here and GAIN,
+    // which is how a 16.8 dB imbalance stayed invisible for as long as it did.
+    master.gain.value = 1.0;
     master.connect(ctx.destination);
     return ctx;
   }
@@ -167,6 +184,55 @@
      never turns this on. A clip that fails to load costs its own marks and
      nothing else — the schedule keeps running and the other six still play,
      because a missing asset must not take the exam with it. */
+  /* PER-CLIP LOUDNESS TRIM — measured, not chosen.
+
+     Each clip's loudest 100 ms window was measured against its own true peak,
+     and the trim is whatever brings that window to a common -24 dBFS, EXCEPT
+     where doing so would push the clip's peak past -0.5 dBFS. voice-3 hits
+     that ceiling and lands 0.9 dB under the group, which is the honest outcome
+     for the most distant of the seven recordings rather than a compromise
+     worth limiting for.
+
+     PEAK dBFS  LOUDEST-100ms  TRIM dB   WAS       NOW      CHANGE
+      -5.8        -19.6         -6.14   -33.0    -24.0     +9.0
+      -6.0        -25.1         -1.49   -37.7    -24.0    +13.7
+      -6.2        -33.5         +5.74   -45.7    -24.9    +20.9   <- at the ceiling
+      -6.4        -26.7         +0.88   -40.0    -24.0    +16.0
+      -6.3        -16.7         -8.05   -31.1    -24.0     +7.1
+      -6.1        -19.3         -6.77   -32.4    -24.0     +8.4
+      -6.5        -20.5         -5.14   -34.0    -24.0    +10.0
+
+     EVERY CLIP IS LOUDER, which a single gain could not have done: the ones
+     that needed it most gain three times what the loudest one does.
+
+     THE FILES ARE UNTOUCHED. This is a playback trim, so the approved audio
+     keeps its bytes, no second lossy generation is encoded, and the numbers
+     stay legible and reversible here rather than baked into an asset.
+
+     PEAK is committed beside TRIM so the no-clipping invariant is checkable
+     without decoding an mp3 in CI; tests/exam-ambience.test.mjs asserts
+     PEAK + TRIM + gain stays under 0 dBFS for every clip. Re-measure both
+     together if a clip is ever replaced. */
+  var TRIM = {
+    'voice-1': 0.493, 'voice-2': 0.842, 'voice-3': 1.936, 'voice-4': 1.107,
+    'voice-5': 0.396, 'voice-6': 0.459, 'voice-7': 0.553,
+  };
+  var PEAK_DBFS = {
+    'voice-1': -5.8, 'voice-2': -6.0, 'voice-3': -6.2, 'voice-4': -6.4,
+    'voice-5': -6.3, 'voice-6': -6.1, 'voice-7': -6.5,
+  };
+
+  /* The gain at which the first clip's peak would reach 0 dBFS. voice-3 sets
+     it, being the one parked at the ceiling. The reviewer control stops here
+     rather than letting a review session distort the material it is judging.
+
+     1.05, NOT 1.06: voice-3 sits at -0.46 dBFS at unity, so it has 0.46 dB of
+     room and 1.06 spends 0.50. The rounded-up value shipped for about a minute
+     and tests/exam-ambience.test.mjs failed it, which is the entire argument
+     for checking a derived constant instead of trusting the arithmetic that
+     produced it. */
+  var SAFE_MAX = 1.05;
+
   var buffers = {}, fetching = {};
 
   function clip(name) {
@@ -190,7 +256,7 @@
     var src = ctx.createBufferSource();
     src.buffer = buf;
     var g = ctx.createGain();
-    g.gain.value = GAIN.voices;
+    g.gain.value = GAIN.voices * (TRIM[id] || 1);
     src.connect(g); g.connect(master);
     src.start(ctx.currentTime + at);
     return buf.duration;
@@ -300,7 +366,10 @@
     disable: disable,
     isOn: function () { return on; },
     gains: GAIN,
-    setGain: function (k, v) { if (k in GAIN) GAIN[k] = Math.max(0, Math.min(1, v)); },
+    setGain: function (k, v) { if (k in GAIN) GAIN[k] = Math.max(0, Math.min(SAFE_MAX, v)); return GAIN[k]; },
+    safeMax: SAFE_MAX,
+    trim: TRIM,
+    peakDbfs: PEAK_DBFS,
     setMaster: function (v) { if (master) master.gain.value = Math.max(0, Math.min(1, v)); },
     // The voice schedule, and a way to hear the next one without waiting for it.
     schedule: schedule,
