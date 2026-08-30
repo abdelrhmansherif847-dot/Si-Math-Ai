@@ -41,6 +41,11 @@
   var SUPPORT_ICON =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4f5f;width:18px;height:18px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
+  // Teaching uses the sidebar's own colours, not the admin red: it is not an
+  // elevated-privilege link. See render().
+  var TEACH_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>';
+
   // Every page already loads the @supabase/supabase-js CDN bundle which
   // exposes `window.supabase`. nav.js creates its own dedicated client
   // (the publishable key is the same anon key embedded in every page) so
@@ -89,14 +94,22 @@
     }
   }
 
-  function render(slot, role) {
+  /* A page may already carry its own Teaching link outside the slot
+     (teacher.html does). Injecting a second one would show the same
+     destination twice, so look for it before adding ours. */
+  function hasOwnTeacherLink(slot) {
+    var sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return false;
+    var anchors = sidebar.querySelectorAll('a[href$="teacher.html"]');
+    for (var i = 0; i < anchors.length; i++) {
+      if (!slot || !slot.contains(anchors[i])) return true;
+    }
+    return false;
+  }
+
+  function render(slot, role, teaching) {
     var lvl = ROLE_LEVEL[role];
     if (typeof lvl !== 'number') lvl = 0;
-    if (lvl < 1) {
-      slot.innerHTML = '';
-      slot.style.display = 'none';
-      return;
-    }
 
     var page = currentPageFile();
     var aActive = page === 'admin.html' ? 'admin-active' : '';
@@ -105,7 +118,29 @@
     var label = ROLE_LABEL[role] || 'Admin Dashboard';
     var showMonitor = lvl >= 2;
 
-    var html = ''
+    var html = '';
+
+    /* Teaching is driven by a RELATIONSHIP, never by a rung on user_role: a
+       teacher owns a workspace and an assistant works in one, and both may be
+       plain 'user' accounts. That is the design, not an oversight — see
+       supabase/migrations/20260830a_teacher_foundation_tables.sql. */
+    if (teaching && !hasOwnTeacherLink(slot)) {
+      html += ''
+        + '<div class="side-sec">Teaching</div>'
+        + '<a class="nav-item ' + (page === 'teacher.html' ? 'active' : '') + '" href="teacher.html">'
+        +   TEACH_ICON
+        +   '<span class="nav-label">Teacher Workspace</span>'
+        + '</a>';
+    }
+
+    if (lvl < 1) {
+      if (!html) { slot.innerHTML = ''; slot.style.display = 'none'; return; }
+      slot.innerHTML = html;
+      slot.style.display = 'block';
+      return;
+    }
+
+    html += ''
       + '<div class="side-sec">Admin</div>'
       + '<a class="nav-item ' + aActive + '" href="admin.html" style="color:#ef4f5f">'
       +   ADMIN_ICON
@@ -143,7 +178,20 @@
       var pres = await sb.from('profiles').select('role, is_admin').eq('id', user.id).maybeSingle();
       var prof = pres && pres.data;
       var role = (prof && prof.role) || (prof && prof.is_admin ? 'admin' : 'user');
-      render(slot, role);
+
+      /* teacher_my_workspaces() ships in 20260830c, which is PREPARED and not
+         applied. Until it is, this call returns an error and every page must
+         render exactly as it does today — so the failure is swallowed and
+         `teaching` stays false. Nothing here waits on it either: one awaited
+         RPC beside the profile read, no retry, no polling. */
+      var teaching = false;
+      try {
+        var tres = await sb.rpc('teacher_my_workspaces');
+        var trows = (tres && tres.data) || [];
+        teaching = trows.some(function (r) { return r && r.staff_status !== 'removed'; });
+      } catch (_) { teaching = false; }
+
+      render(slot, role, teaching);
       removeDuplicateAdminLinks(slot);
 
       // Some legacy pages append admin links AFTER auth completes. Sweep

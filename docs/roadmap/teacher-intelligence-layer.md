@@ -630,6 +630,18 @@ are chosen before anyone is invested in the answer.
   drew.
 - **Exit condition:** real classes with real enrolled students, and revocation
   exercised at least once end-to-end.
+- **Built 2026-08-30 — PREPARED, not applied.** `teacher_workspaces`,
+  `workspace_staff`, `workspace_students`, `workspace_audit_log`, their guards,
+  policies and RPCs (`supabase/migrations/20260830a…c`, rollback in `…z`), the
+  `teacher.html` workspace, the student's consent surface in `settings.html`,
+  the relationship-driven nav entry, and `tests/teacher-access-scope.test.mjs`.
+  The migrations are written and reviewed but **not run** — CLAUDE.md §3.
+- **On the ordering.** T1 was written above as waiting on T0's exit condition.
+  It was built first, deliberately: T1 carries no analytics, so nothing in it
+  depends on how much evidence exists, while the access model is the one part
+  that is expensive to get wrong and impossible to retrofit. The sequencing
+  constraint protects *insights* from thin data — it was never a reason to
+  defer consent. T2 onward still waits on the evidence.
 
 ### T2 — Per-student trajectory, evidence-first
 

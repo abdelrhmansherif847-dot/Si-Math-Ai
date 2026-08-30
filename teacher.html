@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Teacher Workspace – Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;--font-body:'DM Sans', system-ui, -apple-system, sans-serif;--font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden;background:#050a14}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.11),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan);cursor:pointer}
+
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:24px 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+.page-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+.page-title{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;letter-spacing:-.01em}
+.page-sub{font-size:13.5px;color:var(--text-400);margin-top:4px;max-width:640px}
+.pill{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300)}
+.pill.owner{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.assistant{background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe}
+.pill.ok{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
+.pill.warn{background:var(--amber-soft);border-color:var(--amber-border);color:#fcd34d}
+.pill.off{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3);font-weight:600;font-size:13.5px;transition:all .2s}
+.btn:hover{background:var(--cyan-bg-med);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;border-color:var(--border-mid);color:var(--text-300)}
+.btn.ghost:hover{background:var(--bg-card-hi);color:#fff}
+.btn.danger{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+.btn.danger:hover{background:rgba(239,79,95,.2);color:#fff}
+.btn.sm{padding:6px 11px;font-size:12px}
+
+.field{width:100%;padding:11px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+.field:focus{outline:none;border-color:var(--cyan-border);background:var(--bg-elev-2)}
+
+.code-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.code-chip{font-family:var(--font-mono);font-size:20px;font-weight:700;letter-spacing:.28em;color:#fff;background:var(--bg-elev-1);border:1px dashed var(--cyan-border);border-radius:var(--r-sm);padding:10px 16px}
+.code-note{font-size:12.5px;color:var(--text-400);margin-top:10px;line-height:1.5}
+
+.row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:8px;transition:border-color .2s}
+.row:hover{border-color:var(--cyan-border-soft)}
+.row .avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);font-family:var(--font-display);font-weight:800;font-size:13px}
+.row .who{flex:1;min-width:0}
+.row .nm{font-weight:600;color:#fff;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:2px}
+.row .acts{display:flex;gap:8px;flex-shrink:0}
+
+.note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.6}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-400)}
+.empty-state .big{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text-200);margin-bottom:6px}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+.msg{margin-top:12px;font-size:13px;padding:10px 12px;border-radius:var(--r-sm);display:none}
+.msg.err{display:block;background:var(--red-soft);border:1px solid var(--red-border);color:#fca5a5}
+.msg.ok{display:block;background:var(--green-soft);border:1px solid var(--green-border);color:#86efac}
+
+.drawer{position:fixed;z-index:90;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--bg-elev-1);border-left:1px solid var(--border-soft);padding:22px;overflow-y:auto;transform:translateX(100%);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:13.5px}
+.kv .k{color:var(--text-500);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.kv .v{color:var(--text-100);text-align:right}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="dashboard.html">
+    <span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right"><div class="top-avatar" id="topAvatar">?</div></div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
+  <a class="nav-item" href="progress.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
+  <div class="side-sec">Teaching</div>
+  <a class="nav-item active" href="teacher.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>Teacher Workspace</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <div id="adminNavSection" style="display:none"></div>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<main class="main">
+  <div id="loadingState" style="text-align:center;padding:80px 0"><div class="spin"></div></div>
+
+  <!-- No workspace on this account -->
+  <section id="noneState" style="display:none">
+    <div class="page-head"><div>
+      <div class="page-title">Teacher Workspace</div>
+      <div class="page-sub">A workspace connects you to the specific students you teach — and to nobody else on the platform.</div>
+    </div></div>
+    <div class="sec-label">This account</div>
+    <div class="card">
+      <div class="empty-state" style="padding:28px 8px">
+        <div class="big">No teaching workspace here yet</div>
+        <div style="font-size:13.5px;max-width:520px;margin:0 auto">Workspaces are created by the Si Math AI team for a named teacher. If you are a teacher and need one, contact us through <a href="support.html" style="color:var(--cyan-3)">Get Help</a>.</div>
+      </div>
+    </div>
+    <div class="sec-label">Joining as an assistant</div>
+    <div class="card">
+      <div class="note" style="margin-bottom:14px">If a teacher gave you an assistant code, enter it here. You will appear on their staff list as <strong>pending</strong> and will see nothing at all until they approve you.</div>
+      <div class="code-row">
+        <input class="field" id="staffCode" maxlength="12" placeholder="ASSISTANT CODE" style="max-width:260px"/>
+        <button class="btn" id="staffJoinBtn">Join workspace</button>
+      </div>
+      <div class="msg" id="staffMsg"></div>
+    </div>
+  </section>
+
+  <!-- Pending assistant -->
+  <section id="pendingState" style="display:none">
+    <div class="page-head"><div>
+      <div class="page-title">Waiting for approval</div>
+      <div class="page-sub">You have joined <strong id="pendingName">a workspace</strong> as an assistant. The teacher who owns it has to approve you before you can see their roster.</div>
+    </div></div>
+    <div class="card"><div class="note">This gate is deliberate. An assistant code on its own grants no visibility of any student — only the teacher can decide who looks at their class.</div></div>
+  </section>
+
+  <!-- Active workspace -->
+  <section id="wsState" style="display:none">
+    <div class="page-head">
+      <div style="flex:1;min-width:220px">
+        <div class="page-title" id="wsName">Workspace</div>
+        <div class="page-sub" id="wsSub"></div>
+      </div>
+      <span class="pill" id="rolePill">—</span>
+    </div>
+
+    <div class="sec-label">Class code</div>
+    <div class="card">
+      <div class="code-row">
+        <span class="code-chip" id="studentCode">--------</span>
+        <button class="btn ghost sm" id="copyCodeBtn">Copy</button>
+        <button class="btn ghost sm" id="rotateStudentBtn" style="display:none">Rotate</button>
+      </div>
+      <div class="code-note">Give this to your students. <strong>They</strong> enter it in Settings → Teachers &amp; Assistants, and that act is the consent: no teacher can add a student who did nothing. Rotating the code stops new joins; it does not disconnect anyone already on the roster.</div>
+      <div id="staffCodeWrap" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)">
+        <div class="code-row">
+          <span class="code-chip" id="staffCodeVal" style="border-color:var(--purple-border)">--------</span>
+          <button class="btn ghost sm" id="rotateStaffBtn">Rotate</button>
+        </div>
+        <div class="code-note">Assistant code — owner only. Someone who uses it arrives pending and sees nothing until you approve them below.</div>
+      </div>
+      <div class="msg" id="codeMsg"></div>
+    </div>
+
+    <div id="staffSection" style="display:none">
+      <div class="sec-label">Assistants</div>
+      <div class="card"><div id="staffList"></div></div>
+    </div>
+
+    <div class="sec-label">Students <span id="rosterCount" style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)"></span></div>
+    <div class="card"><div id="rosterList"></div></div>
+
+    <div class="sec-label">What this workspace does not show yet</div>
+    <div class="card">
+      <div class="note">Scores, weaknesses, trajectories and readiness are <strong>not here</strong>, and their absence is deliberate rather than unfinished. Those insights need per-question evidence from the new Mock Experience before they can be honest — today the platform holds 22 mock sittings from 5 students, and any "class trend" drawn from that would be a claim about one person. This page ships the relationship first; the intelligence arrives through it, with its evidence attached, once there is evidence to attach.</div>
+    </div>
+  </section>
+</main>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff" id="cardName">Student</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-500)" id="cardWs"></div>
+    </div>
+    <button class="btn ghost sm" id="closeDrawer">Close</button>
+  </div>
+  <div id="cardBody"></div>
+  <div class="msg" id="cardMsg"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (id) => document.getElementById(id);
+/* Every name rendered here was typed by another human being, so it is escaped
+   on the way into the DOM rather than trusted. */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const initials = (n) => (String(n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('') || '?').toUpperCase();
+const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) { return '—'; } };
+const say = (el, text, kind) => { el.className = 'msg ' + (kind || 'ok'); el.textContent = text; };
+const clear = (el) => { el.className = 'msg'; el.textContent = ''; };
+
+$('hamb').addEventListener('click', () => { $('sidebar').classList.toggle('open'); $('overlay').classList.toggle('show'); });
+$('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
+
+let WS = null;          // the active workspace row from teacher_my_workspaces()
+let IS_OWNER = false;
+
+function show(which) {
+  for (const id of ['loadingState', 'noneState', 'pendingState', 'wsState']) {
+    $(id).style.display = (id === which) ? '' : 'none';
+  }
+}
+
+/* ── bootstrap ─────────────────────────────────────────────────────────── */
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = 'login.html'; return; }
+  $('topAvatar').textContent = initials(session.user.email || '?');
+
+  const { data, error } = await sb.rpc('teacher_my_workspaces');
+  if (error) { show('noneState'); return; }
+
+  const rows = data || [];
+  const active = rows.find((r) => r.staff_status === 'active');
+  if (active) { WS = active; IS_OWNER = active.staff_role === 'owner'; return renderWorkspace(); }
+
+  const pending = rows.find((r) => r.staff_status === 'pending');
+  if (pending) { $('pendingName').textContent = pending.name; return show('pendingState'); }
+
+  show('noneState');
+}
+
+/* ── no workspace: join as an assistant ────────────────────────────────── */
+$('staffJoinBtn').addEventListener('click', async () => {
+  const code = $('staffCode').value.trim();
+  if (!code) return;
+  clear($('staffMsg'));
+  $('staffJoinBtn').disabled = true;
+  const { data, error } = await sb.rpc('staff_join_workspace', { p_code: code });
+  $('staffJoinBtn').disabled = false;
+  if (error) return say($('staffMsg'), error.message || 'That code did not work.', 'err');
+  $('pendingName').textContent = (data && data.name) || 'a workspace';
+  show('pendingState');
+});
+
+/* ── the workspace ─────────────────────────────────────────────────────── */
+async function renderWorkspace() {
+  show('wsState');
+  $('wsName').textContent = WS.name;
+  $('wsSub').textContent = IS_OWNER
+    ? 'You own this workspace. You see only the students who joined it.'
+    : 'You assist in this workspace. You see the same roster, and cannot change it.';
+  $('rolePill').textContent = IS_OWNER ? 'Owner' : 'Assistant';
+  $('rolePill').className = 'pill ' + (IS_OWNER ? 'owner' : 'assistant');
+
+  $('studentCode').textContent = WS.student_join_code || '--------';
+  $('rotateStudentBtn').style.display = IS_OWNER ? '' : 'none';
+  if (IS_OWNER && WS.staff_join_code) {
+    $('staffCodeWrap').style.display = '';
+    $('staffCodeVal').textContent = WS.staff_join_code;
+  }
+  $('staffSection').style.display = IS_OWNER ? '' : 'none';
+
+  await Promise.all([loadRoster(), IS_OWNER ? loadStaff() : Promise.resolve()]);
+}
+
+$('copyCodeBtn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('studentCode').textContent); say($('codeMsg'), 'Class code copied.', 'ok'); }
+  catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
+});
+
+async function rotate(kind, el) {
+  if (!confirm('Rotate the ' + kind + ' code? The old one stops working immediately. Nobody already connected is affected.')) return;
+  const { data, error } = await sb.rpc('teacher_rotate_join_code', { p_workspace: WS.workspace_id, p_kind: kind });
+  if (error) return say($('codeMsg'), error.message || 'Could not rotate the code.', 'err');
+  el.textContent = data;
+  if (kind === 'student') WS.student_join_code = data; else WS.staff_join_code = data;
+  say($('codeMsg'), 'New ' + kind + ' code generated.', 'ok');
+}
+$('rotateStudentBtn').addEventListener('click', () => rotate('student', $('studentCode')));
+$('rotateStaffBtn').addEventListener('click', () => rotate('staff', $('staffCodeVal')));
+
+/* ── roster ────────────────────────────────────────────────────────────── */
+async function loadRoster() {
+  const { data, error } = await sb.rpc('teacher_roster', { p_workspace: WS.workspace_id });
+  const list = $('rosterList');
+  if (error) { list.innerHTML = '<div class="empty-state">Could not load the roster.</div>'; return; }
+
+  const rows = data || [];
+  const live = rows.filter((r) => r.status === 'active');
+  $('rosterCount').textContent = live.length ? '· ' + live.length + ' connected' : '';
+
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty-state"><div class="big">Nobody has joined yet</div>'
+      + '<div style="font-size:13.5px">Share the class code above. Students join from their own Settings page — the connection starts on their side, never yours.</div></div>';
+    return;
+  }
+
+  list.innerHTML = rows.map((r) => {
+    const statusPill = r.status === 'active'
+      ? '<span class="pill ok">Connected</span>'
+      : '<span class="pill off">' + (r.status === 'revoked' ? 'Left' : 'Removed') + '</span>';
+    return '<div class="row" data-student="' + esc(r.student_id) + '">'
+      + '<div class="avatar">' + esc(initials(r.full_name)) + '</div>'
+      + '<div class="who"><div class="nm">' + esc(r.full_name) + '</div>'
+      + '<div class="meta">' + esc(r.exam_type || 'exam not set') + ' · since ' + esc(fmtDate(r.joined_at)) + '</div></div>'
+      + '<div class="acts">' + statusPill + '<button class="btn ghost sm" data-open="' + esc(r.student_id) + '">Open</button></div>'
+      + '</div>';
+  }).join('');
+
+  list.querySelectorAll('[data-open]').forEach((b) =>
+    b.addEventListener('click', () => openCard(b.getAttribute('data-open'))));
+}
+
+/* ── assistants (owner only) ───────────────────────────────────────────── */
+async function loadStaff() {
+  const { data, error } = await sb.from('workspace_staff')
+    .select('id,user_id,staff_role,status,created_at')
+    .eq('workspace_id', WS.workspace_id)
+    .neq('staff_role', 'owner')
+    .order('created_at', { ascending: true });
+
+  const box = $('staffList');
+  if (error) { box.innerHTML = '<div class="empty-state">Could not load assistants.</div>'; return; }
+  const rows = (data || []).filter((r) => r.status !== 'removed');
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty-state" style="padding:28px 8px"><div class="big">No assistants yet</div>'
+      + '<div style="font-size:13.5px">Share the assistant code above with someone who helps you run this class.</div></div>';
+    return;
+  }
+  box.innerHTML = rows.map((r) => ''
+    + '<div class="row">'
+    + '<div class="avatar" style="background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe">A</div>'
+    + '<div class="who"><div class="nm">Assistant</div>'
+    + '<div class="meta">' + esc(String(r.user_id).slice(0, 8)) + ' · joined ' + esc(fmtDate(r.created_at)) + '</div></div>'
+    + '<div class="acts">'
+    + (r.status === 'pending'
+        ? '<span class="pill warn">Pending</span><button class="btn sm" data-approve="' + esc(r.id) + '">Approve</button>'
+        : '<span class="pill ok">Active</span>')
+    + '<button class="btn danger sm" data-remove="' + esc(r.id) + '">Remove</button>'
+    + '</div></div>').join('');
+
+  box.querySelectorAll('[data-approve]').forEach((b) =>
+    b.addEventListener('click', () => setStaff(b.getAttribute('data-approve'), 'active')));
+  box.querySelectorAll('[data-remove]').forEach((b) =>
+    b.addEventListener('click', () => setStaff(b.getAttribute('data-remove'), 'removed')));
+}
+
+async function setStaff(id, status) {
+  if (status === 'removed' && !confirm('Remove this assistant? They lose access to the roster immediately.')) return;
+  const { error } = await sb.rpc('teacher_set_staff_status', { p_staff: id, p_status: status });
+  if (error) return alert(error.message || 'Could not update the assistant.');
+  loadStaff();
+}
+
+/* ── one student, from the teacher's side ──────────────────────────────── */
+async function openCard(studentId) {
+  clear($('cardMsg'));
+  $('drawer').classList.add('open');
+  $('cardBody').innerHTML = '<div style="text-align:center;padding:40px 0"><div class="spin"></div></div>';
+
+  const { data, error } = await sb.rpc('teacher_student_card', { p_workspace: WS.workspace_id, p_student: studentId });
+  if (error) { $('cardBody').innerHTML = ''; say($('cardMsg'), error.message || 'Could not open this student.', 'err'); return; }
+
+  $('cardName').textContent = data.full_name;
+  $('cardWs').textContent = data.workspace;
+  $('cardBody').innerHTML = ''
+    + '<div class="kv"><span class="k">Exam</span><span class="v">' + esc(data.exam_type || 'not set') + '</span></div>'
+    + '<div class="kv"><span class="k">Connected</span><span class="v">' + esc(fmtDate(data.joined_at)) + '</span></div>'
+    + '<div class="kv"><span class="k">Status</span><span class="v">' + esc(data.status) + '</span></div>'
+    + '<div class="sec-label" style="margin-top:22px">Learning</div>'
+    + '<div class="note">Nothing yet, on purpose. This student\'s practice, weaknesses and mock results are not shown here until the platform can say something about them that could have been wrong — which needs per-question evidence the new Mock Experience will produce. When it arrives it will appear here with the attempts behind it, never as a number on its own.</div>'
+    + (IS_OWNER && data.status === 'active'
+        ? '<div style="margin-top:22px"><button class="btn danger" id="removeStudentBtn">Remove from this class</button>'
+          + '<div class="code-note">They keep their account and all their own work. Only your connection to them ends.</div></div>'
+        : '');
+
+  const rm = $('removeStudentBtn');
+  if (rm) rm.addEventListener('click', async () => {
+    if (!confirm('Remove ' + data.full_name + ' from this class?')) return;
+    const { error: e2 } = await sb.rpc('teacher_remove_student', { p_workspace: WS.workspace_id, p_student: studentId });
+    if (e2) return say($('cardMsg'), e2.message || 'Could not remove.', 'err');
+    $('drawer').classList.remove('open');
+    loadRoster();
+  });
+}
+$('closeDrawer').addEventListener('click', () => $('drawer').classList.remove('open'));
+
+boot();
+</script>
+<script src="nav.js" defer></script>
+</body>
+</html>
