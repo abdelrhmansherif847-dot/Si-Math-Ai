@@ -218,6 +218,16 @@ exists for this. Do not treat the file list as the applied list.
   analyzer's working numbers so no surface can. `weakness-view.js` shapes one
   row per role and derives nothing. Evidence inventory and what is still
   impossible: `docs/engineering/weakness-evidence-audit.md`
+- **Intervention record** (live 2026-08-30, empty): `class_interventions` — a
+  teacher's record of something they already did about a difficulty. It computes
+  nothing, is never a recommendation, and is never an input to the learning
+  profile; it holds no foreign key into any academic table, for the same reason
+  `support_tickets` does not. **Append-only: never deleted, and the only
+  permitted UPDATE is a first withdrawal that changes nothing else** — enforced
+  by `class_interventions_append_only_trg`, not by convention. Clients hold
+  SELECT only; writes go through SECURITY DEFINER RPCs, and the student named on
+  a row can read it. Read `docs/roadmap/teacher-intelligence-layer.md` §10 T1.6
+  and `docs/engineering/teacher-intervention-verification.md` before touching it
 
 ### Repository shape
 
