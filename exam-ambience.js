@@ -79,14 +79,36 @@
      miss an anchor at 600 — exactly the boundary these are built on. Counting
      marks makes the runtime and schedule() agree by construction rather than by
      luck, which matters because the printed table is meant to BE what happens.
-     moduleMark counts marks since the current module began. */
+     markIdx points at the next entry in that list; moduleT0 is when the
+     current module began, and every arming is measured from it. */
   var VOICE_EVERY = 300;
   var ROTATION = ['voice-1', 'voice-2', 'voice-3', 'voice-4'];
   var ANCHORS = [
     { id: 'voice-5', at: 600 },     // 10:00 into every module
     { id: 'voice-6', at: 1200 },    // 20:00 into every module
+    { id: 'voice-7', at: 1920 },    // 32:00 — deliberately OFF the five-minute grid
   ];
-  var voiceTimer = null, voiceIdx = 0, moduleMark = 0, moduleKey = null;
+  var voiceTimer = null, voiceIdx = 0, markIdx = 0, moduleT0 = 0, moduleKey = null;
+
+  /* THE MARKS ARE A LIST, NOT A FIXED INTERVAL, and sound 7 is why. It was
+     asked for at 32:00, and 32:00 is not on a five-minute grid — the marks in a
+     35-minute module run 0, 5, 10, 15, 20, 25, 30 and stop. An anchor there
+     would have sat in the repository and never once played. So the marks are
+     the UNION of the grid and the anchor times: the beat is unchanged for
+     everything else, and an anchor can be put anywhere.
+
+     Generated an hour out, which is longer than any module, and driven by a
+     timeout re-armed against the module's start time rather than by an
+     interval. Absolute arming is what stops the drift accumulating — the same
+     reason the old code counted marks instead of reading the clock. */
+  var HORIZON = 3600;
+  function markTimes() {
+    var seen = {}, out = [], t;
+    for (t = 0; t < HORIZON; t += VOICE_EVERY) seen[t] = true;
+    ANCHORS.forEach(function (a) { seen[a.at] = true; });
+    Object.keys(seen).forEach(function (k) { out.push(+k); });
+    return out.sort(function (a, b) { return a - b; });
+  }
 
   function context() {
     if (ctx) return ctx;
@@ -247,12 +269,30 @@
 
   var lastVoice = null;
   function voiceMoment() {
-    var id = pick(moduleMark * VOICE_EVERY);
-    moduleMark++;
+    var times = markTimes();
+    var t = times[markIdx];
+    if (t === undefined) return null;           // past the horizon: nothing left
+    markIdx++;
+    var id = pick(t);
     lastVoice = id;
     paper(0.05);
     voices(0.25, id);
     return id;
+  }
+
+  /* Arm the NEXT mark against the module's start, never against "now plus an
+     interval". A late fire therefore costs that mark a few milliseconds and
+     nothing after it. */
+  function armNext() {
+    if (voiceTimer) { root.clearTimeout(voiceTimer); voiceTimer = null; }
+    var times = markTimes(), t = times[markIdx];
+    if (t === undefined || !on) return;
+    var due = moduleT0 + t * 1000 - Date.now();
+    voiceTimer = root.setTimeout(function () {
+      if (!on) return;
+      voiceMoment();
+      armNext();
+    }, Math.max(0, due));
   }
 
   /* THE PAGE SAYS WHEN A MODULE STARTS, because only the page knows. Called on
@@ -262,7 +302,9 @@
   function noteModule(key) {
     if (key === moduleKey) return false;
     moduleKey = key;
-    moduleMark = 0;
+    markIdx = 0;
+    moduleT0 = Date.now();
+    if (on) armNext();
     return true;
   }
 
@@ -271,8 +313,9 @@
      `startIndex` to see a later module. */
   function schedule(moduleMinutes, startIndex) {
     var out = [], end = (moduleMinutes || 35) * 60, i = startIndex || 0;
-    for (var t = 0; t < end; t += VOICE_EVERY) {
-      var id = null;
+    var times = markTimes();
+    for (var k = 0; k < times.length && times[k] < end; k++) {
+      var t = times[k], id = null;
       for (var a = 0; a < ANCHORS.length; a++) if (ANCHORS[a].at === t) id = ANCHORS[a].id;
       if (!id) id = ROTATION[(i++) % ROTATION.length];
       out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
@@ -288,14 +331,13 @@
       if (!context()) return false;
       on = true;
       voiceIdx = 0;
-      moduleMark = 0;
+      markIdx = 0;
+      moduleT0 = Date.now();
       preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
-      voiceTimer = root.setInterval(function () { if (on) voiceMoment(); }, VOICE_EVERY * 1000);
-      // THE FIRST ONE IS AT 0:00. The cycle starts with the module rather than
-      // five minutes into it, so the mark at 0:00 is the first entry of the
-      // schedule and not a silent one.
-      voiceMoment();
+      // THE FIRST MARK IS 0:00, so arming immediately plays it now rather than
+      // leaving the schedule's first entry silent.
+      armNext();
       moment();
       return true;
     } catch (e) { return false; }
@@ -305,7 +347,7 @@
     try {
       on = false;
       if (timer) { root.clearInterval(timer); timer = null; }
-      if (voiceTimer) { root.clearInterval(voiceTimer); voiceTimer = null; }
+      if (voiceTimer) { root.clearTimeout(voiceTimer); voiceTimer = null; }
       if (ctx && ctx.state === 'running') ctx.suspend();
       return true;
     } catch (e) { return false; }
@@ -326,6 +368,7 @@
     voiceEverySeconds: function (s) { VOICE_EVERY = Math.max(10, s); if (on) { disable(); enable(); } },
     noteModule: noteModule,
     get _lastVoice() { return lastVoice; },
+    marks: markTimes,
     _voices: ROTATION.concat(ANCHORS.map(function (a) { return a.id; })),
     _moments: MOMENTS.map(function (m) { return m.id; }),
   };
