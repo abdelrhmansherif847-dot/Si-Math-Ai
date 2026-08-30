@@ -37,6 +37,7 @@ body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-
 .orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
 
 .topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
 .hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
@@ -66,15 +67,24 @@ button{font-family:inherit;cursor:pointer}
 .sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:24px 4px 12px;display:flex;align-items:center;gap:8px}
 .sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
 
+.preview-bar{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-md);padding:11px 15px;margin-bottom:18px;font-size:13px;color:#fcd34d}
+.preview-bar.on{display:flex}
+.preview-bar strong{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+
 .page-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:4px}
 .page-title{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;letter-spacing:-.01em}
 .page-sub{font-size:13.5px;color:var(--text-400);margin-top:4px;max-width:640px}
-.pill{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300)}
+.pill{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300);white-space:nowrap}
 .pill.owner{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
 .pill.assistant{background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe}
 .pill.ok{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
 .pill.warn{background:var(--amber-soft);border-color:var(--amber-border);color:#fcd34d}
 .pill.off{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.stat{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 16px;min-width:104px}
+.stat .n{font-family:var(--font-display);font-weight:800;font-size:21px;color:#fff;line-height:1.1}
+.stat .l{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500);margin-top:4px}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3);font-weight:600;font-size:13.5px;transition:all .2s}
 .btn:hover{background:var(--cyan-bg-med);color:#fff}
@@ -85,32 +95,60 @@ button{font-family:inherit;cursor:pointer}
 .btn.danger:hover{background:rgba(239,79,95,.2);color:#fff}
 .btn.sm{padding:6px 11px;font-size:12px}
 
-.field{width:100%;padding:11px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+.field{width:100%;padding:11px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-size:14px}
 .field:focus{outline:none;border-color:var(--cyan-border);background:var(--bg-elev-2)}
+.field.code{font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+
+/* A grid item defaults to min-width:auto, which refuses to shrink below its
+   content. The roster rows inside hold nowrap text, so without this the column
+   could push the page wider than a phone viewport — and body{overflow-x:hidden}
+   would clip the right edge rather than wrap. Measured at 320-485px it does not
+   currently overflow; this keeps it that way as rows gain content. */
+.cols{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+.cols > *{min-width:0}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar .grow{flex:1;min-width:170px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;padding:6px 11px;border-radius:100px;border:1px solid var(--border-mid);background:transparent;color:var(--text-400)}
+.chip.on{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
 
 .code-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .code-chip{font-family:var(--font-mono);font-size:20px;font-weight:700;letter-spacing:.28em;color:#fff;background:var(--bg-elev-1);border:1px dashed var(--cyan-border);border-radius:var(--r-sm);padding:10px 16px}
-.code-note{font-size:12.5px;color:var(--text-400);margin-top:10px;line-height:1.5}
+.code-note{font-size:12.5px;color:var(--text-400);margin-top:10px;line-height:1.55}
 
-.row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:8px;transition:border-color .2s}
-.row:hover{border-color:var(--cyan-border-soft)}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 14px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:8px;transition:border-color .2s,background .2s;text-align:left;width:100%}
+.row:hover{border-color:var(--cyan-border-soft);background:var(--bg-card-hi)}
+.row.dim{opacity:.62}
 .row .avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);font-family:var(--font-display);font-weight:800;font-size:13px}
-.row .who{flex:1;min-width:0}
-.row .nm{font-weight:600;color:#fff;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .meta{font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:2px}
-.row .acts{display:flex;gap:8px;flex-shrink:0}
+/* A row is a <button> holding <span>s, so the whole row is one click target.
+   Spans are inline by default — without these three the name and the meta line
+   run together into one sentence, which is how it first shipped. */
+.row .who{display:block;flex:1 1 130px;min-width:0}
+.row .nm{display:block;font-weight:600;color:#fff;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{display:block;font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .acts{display:flex;gap:8px;flex-shrink:0;align-items:center;margin-left:auto}
 
-.note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.6}
-.empty-state{text-align:center;padding:48px 20px;color:var(--text-400)}
+.feed{display:flex;flex-direction:column;gap:2px}
+.feed-item{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--border-soft)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--text-500)}
+.feed-dot.join{background:var(--green)}.feed-dot.leave{background:var(--amber)}.feed-dot.admin{background:var(--cyan)}
+.feed-txt{font-size:13.5px;color:var(--text-300);line-height:1.45}
+.feed-when{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:2px}
+
+.note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
+.slot-empty{border:1px dashed var(--border-mid);border-radius:var(--r-md);padding:16px;background:rgba(10,18,36,.5)}
+.slot-empty .st{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:8px}
+.empty-state{text-align:center;padding:44px 20px;color:var(--text-400)}
 .empty-state .big{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text-200);margin-bottom:6px}
 .spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
 .msg{margin-top:12px;font-size:13px;padding:10px 12px;border-radius:var(--r-sm);display:none}
 .msg.err{display:block;background:var(--red-soft);border:1px solid var(--red-border);color:#fca5a5}
 .msg.ok{display:block;background:var(--green-soft);border:1px solid var(--green-border);color:#86efac}
 
-.drawer{position:fixed;z-index:90;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--bg-elev-1);border-left:1px solid var(--border-soft);padding:22px;overflow-y:auto;transform:translateX(100%);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
+.drawer{position:fixed;z-index:90;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--bg-elev-1);border-left:1px solid var(--border-soft);padding:22px;overflow-y:auto;transform:translateX(101%);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
 .drawer.open{transform:translateX(0)}
-.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
 .kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:13.5px}
 .kv .k{color:var(--text-500);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 .kv .v{color:var(--text-100);text-align:right}
@@ -120,8 +158,17 @@ button{font-family:inherit;cursor:pointer}
   .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
   .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
 }
+@media(min-width:1180px){ .cols{grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr)} }
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* The entry animation starts cards at opacity 0 with fill-mode both, so anything
+   that never runs the animation — a reduced-motion setting, a print, a headless
+   capture — is left looking at an invisible page. Honour the preference and
+   land on the final state. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .card{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
@@ -151,9 +198,15 @@ button{font-family:inherit;cursor:pointer}
 <div class="overlay" id="overlay"></div>
 
 <main class="main">
+  <div class="preview-bar" id="previewBar">
+    <strong>Preview</strong>
+    <span>Sample data. Nothing here is real, nothing is saved, and no student is connected to anything.</span>
+    <a class="btn ghost sm" href="teacher.html" style="margin-left:auto">Leave preview</a>
+  </div>
+
   <div id="loadingState" style="text-align:center;padding:80px 0"><div class="spin"></div></div>
 
-  <!-- No workspace on this account -->
+  <!-- ── no workspace on this account ─────────────────────────────────── -->
   <section id="noneState" style="display:none">
     <div class="page-head"><div>
       <div class="page-title">Teacher Workspace</div>
@@ -161,32 +214,33 @@ button{font-family:inherit;cursor:pointer}
     </div></div>
     <div class="sec-label">This account</div>
     <div class="card">
-      <div class="empty-state" style="padding:28px 8px">
+      <div class="empty-state" style="padding:26px 8px">
         <div class="big">No teaching workspace here yet</div>
-        <div style="font-size:13.5px;max-width:520px;margin:0 auto">Workspaces are created by the Si Math AI team for a named teacher. If you are a teacher and need one, contact us through <a href="support.html" style="color:var(--cyan-3)">Get Help</a>.</div>
+        <div style="font-size:13.5px;max-width:520px;margin:0 auto 16px">Workspaces are created by the Si Math AI team for a named teacher. If you teach and need one, ask us through <a href="support.html" style="color:var(--cyan-3)">Get Help</a>.</div>
+        <a class="btn ghost sm" href="teacher.html?preview=1">See what a workspace looks like</a>
       </div>
     </div>
     <div class="sec-label">Joining as an assistant</div>
     <div class="card">
       <div class="note" style="margin-bottom:14px">If a teacher gave you an assistant code, enter it here. You will appear on their staff list as <strong>pending</strong> and will see nothing at all until they approve you.</div>
       <div class="code-row">
-        <input class="field" id="staffCode" maxlength="12" placeholder="ASSISTANT CODE" style="max-width:260px"/>
+        <input class="field code" id="staffCode" maxlength="12" placeholder="ASSISTANT CODE" style="max-width:260px"/>
         <button class="btn" id="staffJoinBtn">Join workspace</button>
       </div>
       <div class="msg" id="staffMsg"></div>
     </div>
   </section>
 
-  <!-- Pending assistant -->
+  <!-- ── pending assistant ────────────────────────────────────────────── -->
   <section id="pendingState" style="display:none">
     <div class="page-head"><div>
       <div class="page-title">Waiting for approval</div>
-      <div class="page-sub">You have joined <strong id="pendingName">a workspace</strong> as an assistant. The teacher who owns it has to approve you before you can see their roster.</div>
+      <div class="page-sub">You joined <strong id="pendingName">a workspace</strong> as an assistant. The teacher who owns it approves you before you can see their students.</div>
     </div></div>
-    <div class="card"><div class="note">This gate is deliberate. An assistant code on its own grants no visibility of any student — only the teacher can decide who looks at their class.</div></div>
+    <div class="card"><div class="note">This gate is deliberate. An assistant code on its own grants no visibility of any student — only the teacher decides who looks at their class.</div></div>
   </section>
 
-  <!-- Active workspace -->
+  <!-- ── the workspace ────────────────────────────────────────────────── -->
   <section id="wsState" style="display:none">
     <div class="page-head">
       <div style="flex:1;min-width:220px">
@@ -195,72 +249,242 @@ button{font-family:inherit;cursor:pointer}
       </div>
       <span class="pill" id="rolePill">—</span>
     </div>
+    <div class="stats" id="statRow"></div>
 
-    <div class="sec-label">Class code</div>
-    <div class="card">
-      <div class="code-row">
-        <span class="code-chip" id="studentCode">--------</span>
-        <button class="btn ghost sm" id="copyCodeBtn">Copy</button>
-        <button class="btn ghost sm" id="rotateStudentBtn" style="display:none">Rotate</button>
-      </div>
-      <div class="code-note">Give this to your students. <strong>They</strong> enter it in Settings → Teachers &amp; Assistants, and that act is the consent: no teacher can add a student who did nothing. Rotating the code stops new joins; it does not disconnect anyone already on the roster.</div>
-      <div id="staffCodeWrap" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)">
-        <div class="code-row">
-          <span class="code-chip" id="staffCodeVal" style="border-color:var(--purple-border)">--------</span>
-          <button class="btn ghost sm" id="rotateStaffBtn">Rotate</button>
+    <div id="needsYou" style="display:none">
+      <div class="sec-label">Needs you</div>
+      <div class="card" id="needsYouBody"></div>
+    </div>
+
+    <div class="cols" style="margin-top:24px">
+      <div>
+        <div class="sec-label" style="margin-top:0">Students <span id="rosterCount" style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)"></span></div>
+        <div class="card">
+          <div class="toolbar">
+            <input class="field grow" id="rosterSearch" placeholder="Search by name…" autocomplete="off"/>
+            <div class="chips" id="statusChips">
+              <button class="chip on" data-status="active">Connected</button>
+              <button class="chip" data-status="ended">Left / removed</button>
+              <button class="chip" data-status="all">All</button>
+            </div>
+          </div>
+          <div id="rosterList"></div>
         </div>
-        <div class="code-note">Assistant code — owner only. Someone who uses it arrives pending and sees nothing until you approve them below.</div>
       </div>
-      <div class="msg" id="codeMsg"></div>
-    </div>
 
-    <div id="staffSection" style="display:none">
-      <div class="sec-label">Assistants</div>
-      <div class="card"><div id="staffList"></div></div>
-    </div>
+      <div>
+        <div class="sec-label" style="margin-top:0">Class code</div>
+        <div class="card">
+          <div class="code-row">
+            <span class="code-chip" id="studentCode">--------</span>
+            <button class="btn ghost sm" id="copyCodeBtn">Copy</button>
+            <button class="btn ghost sm" id="rotateStudentBtn" style="display:none">Rotate</button>
+          </div>
+          <div class="code-note" id="codeHelp"></div>
+          <div id="staffCodeWrap" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-soft)">
+            <div class="code-row">
+              <span class="code-chip" id="staffCodeVal" style="border-color:var(--purple-border);font-size:17px">--------</span>
+              <button class="btn ghost sm" id="rotateStaffBtn">Rotate</button>
+            </div>
+            <div class="code-note">Assistant code — yours only. Someone who uses it arrives pending and sees nothing until you approve them.</div>
+          </div>
+          <div class="msg" id="codeMsg"></div>
+        </div>
 
-    <div class="sec-label">Students <span id="rosterCount" style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-500)"></span></div>
-    <div class="card"><div id="rosterList"></div></div>
+        <div id="staffSection" style="display:none">
+          <div class="sec-label">Assistants</div>
+          <div class="card"><div id="staffList"></div></div>
+        </div>
 
-    <div class="sec-label">What this workspace does not show yet</div>
-    <div class="card">
-      <div class="note">Scores, weaknesses, trajectories and readiness are <strong>not here</strong>, and their absence is deliberate rather than unfinished. Those insights need per-question evidence from the new Mock Experience before they can be honest — today the platform holds 22 mock sittings from 5 students, and any "class trend" drawn from that would be a claim about one person. This page ships the relationship first; the intelligence arrives through it, with its evidence attached, once there is evidence to attach.</div>
+        <div id="activitySection" style="display:none">
+          <div class="sec-label">Class activity</div>
+          <div class="card"><div class="feed" id="activityFeed"></div></div>
+        </div>
+
+        <div class="sec-label">What this shows, and what it does not</div>
+        <div class="card">
+          <div class="note" id="scopeNote"></div>
+        </div>
+      </div>
     </div>
   </section>
 </main>
 
-<div class="drawer" id="drawer">
+<!-- ── one student, from the teacher's side ───────────────────────────── -->
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Student">
   <div class="drawer-head">
     <div>
-      <div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff" id="cardName">Student</div>
+      <div style="font-family:var(--font-display);font-weight:800;font-size:19px;color:#fff" id="cardName">Student</div>
       <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-500)" id="cardWs"></div>
     </div>
     <button class="btn ghost sm" id="closeDrawer">Close</button>
   </div>
   <div id="cardBody"></div>
+
+  <!-- ═══ LEARNING SLOT ══════════════════════════════════════════════════
+       The plug-in point for the Weakness system, and the reason it is a
+       marked region rather than a paragraph someone will later delete.
+
+       CONTRACT — renderLearning(student, el) is the ONLY function that writes
+       here. When weaknesses connect, that one function changes and this
+       markup does not. The same contract is intended for three surfaces so
+       one weakness reads identically everywhere it appears:
+         · the student's own badge      (their weakness, to work on)
+         · this card                    (their teacher, to act on)
+         · the assistant's copy of it   (read-only, same evidence)
+       Two rules travel with the contract, from
+       docs/roadmap/teacher-intelligence-layer.md §6:
+         1. Nothing is rendered here that could not have said something else.
+         2. Nothing is rendered here without the evidence behind it reachable.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="sec-label" style="margin-top:22px">Learning</div>
+  <div id="learningSlot" data-slot="learning"></div>
+
+  <div id="cardActions" style="margin-top:22px"></div>
   <div class="msg" id="cardMsg"></div>
 </div>
 
 <script>
 const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* Guarded rather than `supabase.createClient(...)` outright. If the CDN bundle
+   fails to load — blocked network, slow link, a school firewall — the bare form
+   throws a ReferenceError on the first line and takes the WHOLE page with it,
+   leaving a blank screen with no explanation. Here the page still runs: a real
+   session says so plainly (see boot), and preview mode does not need the
+   database at all, which is what makes it a genuine dependency-free preview. */
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
 const $ = (id) => document.getElementById(id);
-/* Every name rendered here was typed by another human being, so it is escaped
-   on the way into the DOM rather than trusted. */
+/* Every name here was typed by another human, so it is escaped on the way
+   into the DOM rather than trusted. */
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const initials = (n) => (String(n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('') || '?').toUpperCase();
 const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) { return '—'; } };
+const ago = (iso) => {
+  const d = (Date.now() - new Date(iso).getTime()) / 86400000;
+  if (!isFinite(d)) return '';
+  if (d < 1) return 'today';
+  if (d < 2) return 'yesterday';
+  if (d < 30) return Math.floor(d) + ' days ago';
+  if (d < 365) return Math.floor(d / 30) + ' months ago';
+  return Math.floor(d / 365) + ' years ago';
+};
 const say = (el, text, kind) => { el.className = 'msg ' + (kind || 'ok'); el.textContent = text; };
 const clear = (el) => { el.className = 'msg'; el.textContent = ''; };
 
 $('hamb').addEventListener('click', () => { $('sidebar').classList.toggle('open'); $('overlay').classList.toggle('show'); });
 $('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
 
-let WS = null;          // the active workspace row from teacher_my_workspaces()
-let IS_OWNER = false;
+const S = {
+  ws: null, isOwner: false, roster: [], staff: [], activity: [],
+  filter: 'active', search: '',
+  preview: new URLSearchParams(location.search).get('preview') === '1',
+};
+
+/* ── preview fixtures ───────────────────────────────────────────────────
+   So the workspace can be seen and judged as a product before a single real
+   student is enrolled. Everything below is invented, and api.* returns it
+   WITHOUT touching the database — see the guard at the top of every method.
+   Names are obviously placeholder; nothing here resembles a real student. */
+const FIXTURE = {
+  ws: { workspace_id: 'preview', name: 'EST Math — Saturday Group', staff_role: 'owner',
+        staff_status: 'active', student_join_code: 'K7RMPX42', staff_join_code: 'QW9TLB63', student_count: 6 },
+  roster: [
+    { student_id: 'p1', full_name: 'A. Sample', exam_type: 'EST',  joined_at: iso(-64), status: 'active' },
+    { student_id: 'p2', full_name: 'B. Sample', exam_type: 'EST',  joined_at: iso(-61), status: 'active' },
+    { student_id: 'p3', full_name: 'C. Sample', exam_type: 'SAT',  joined_at: iso(-40), status: 'active' },
+    { student_id: 'p4', full_name: 'D. Sample', exam_type: 'EST',  joined_at: iso(-33), status: 'active' },
+    { student_id: 'p5', full_name: 'E. Sample', exam_type: 'ACT',  joined_at: iso(-12), status: 'active' },
+    { student_id: 'p6', full_name: 'F. Sample', exam_type: 'EST',  joined_at: iso(-9),  status: 'active' },
+    { student_id: 'p7', full_name: 'G. Sample', exam_type: 'SAT',  joined_at: iso(-70), status: 'revoked' },
+    { student_id: 'p8', full_name: 'H. Sample', exam_type: null,   joined_at: iso(-58), status: 'removed' },
+  ],
+  staff: [
+    { id: 's1', user_id: 'aaaaaaaa-0000', staff_role: 'assistant', status: 'pending', created_at: iso(-2) },
+    { id: 's2', user_id: 'bbbbbbbb-0000', staff_role: 'assistant', status: 'active',  created_at: iso(-45) },
+  ],
+  activity: [
+    { action: 'student_joined',   subject_id: 'p6', created_at: iso(-9) },
+    { action: 'staff_joined',     subject_id: 'aaaaaaaa-0000', created_at: iso(-2) },
+    { action: 'student_left',     subject_id: 'p7', created_at: iso(-6) },
+    { action: 'join_code_rotated', subject_id: null, created_at: iso(-20) },
+    { action: 'student_removed',  subject_id: 'p8', created_at: iso(-30) },
+    { action: 'workspace_created', subject_id: null, created_at: iso(-70) },
+  ],
+};
+function iso(days) { return new Date(Date.now() + days * 86400000).toISOString(); }
+
+/* ── data layer ─────────────────────────────────────────────────────────
+   One place where the database is reached, so preview mode is one early
+   return per method rather than a flag threaded through the UI. */
+const api = {
+  async myWorkspaces() {
+    if (S.preview) return [FIXTURE.ws];
+    const { data, error } = await sb.rpc('teacher_my_workspaces');
+    if (error) throw error;
+    return data || [];
+  },
+  async roster(ws) {
+    if (S.preview) return FIXTURE.roster.slice();
+    const { data, error } = await sb.rpc('teacher_roster', { p_workspace: ws });
+    if (error) throw error;
+    return data || [];
+  },
+  async staff(ws) {
+    if (S.preview) return FIXTURE.staff.slice();
+    const { data, error } = await sb.from('workspace_staff')
+      .select('id,user_id,staff_role,status,created_at')
+      .eq('workspace_id', ws).neq('staff_role', 'owner')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+  async activity(ws) {
+    if (S.preview) return FIXTURE.activity.slice();
+    const { data, error } = await sb.from('workspace_audit_log')
+      .select('action,subject_id,created_at')
+      .eq('workspace_id', ws)
+      .order('created_at', { ascending: false }).limit(25);
+    if (error) throw error;
+    return data || [];
+  },
+  async card(ws, student) {
+    if (S.preview) {
+      const r = FIXTURE.roster.find((x) => x.student_id === student);
+      return { student_id: r.student_id, full_name: r.full_name, exam_type: r.exam_type,
+               joined_at: r.joined_at, status: r.status, workspace: FIXTURE.ws.name };
+    }
+    const { data, error } = await sb.rpc('teacher_student_card', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+    return data;
+  },
+  async rotate(ws, kind) {
+    if (S.preview) return 'PREVIEW1';
+    const { data, error } = await sb.rpc('teacher_rotate_join_code', { p_workspace: ws, p_kind: kind });
+    if (error) throw error;
+    return data;
+  },
+  async setStaff(id, status) {
+    if (S.preview) { const s = FIXTURE.staff.find((x) => x.id === id); if (s) s.status = status; return; }
+    const { error } = await sb.rpc('teacher_set_staff_status', { p_staff: id, p_status: status });
+    if (error) throw error;
+  },
+  async removeStudent(ws, student) {
+    if (S.preview) { const r = FIXTURE.roster.find((x) => x.student_id === student); if (r) r.status = 'removed'; return; }
+    const { error } = await sb.rpc('teacher_remove_student', { p_workspace: ws, p_student: student });
+    if (error) throw error;
+  },
+  async joinAsStaff(code) {
+    if (S.preview) return { name: FIXTURE.ws.name };
+    const { data, error } = await sb.rpc('staff_join_workspace', { p_code: code });
+    if (error) throw error;
+    return data;
+  },
+};
 
 function show(which) {
   for (const id of ['loadingState', 'noneState', 'pendingState', 'wsState']) {
@@ -270,16 +494,28 @@ function show(which) {
 
 /* ── bootstrap ─────────────────────────────────────────────────────────── */
 async function boot() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { location.href = 'login.html'; return; }
-  $('topAvatar').textContent = initials(session.user.email || '?');
+  if (S.preview) $('previewBar').classList.add('on');
 
-  const { data, error } = await sb.rpc('teacher_my_workspaces');
-  if (error) { show('noneState'); return; }
+  if (!S.preview) {
+    if (!sb) {
+      show('noneState');
+      $('noneState').insertAdjacentHTML('afterbegin',
+        '<div class="msg err" style="display:block;margin:0 0 18px">Could not load the Si Math AI connection library. '
+        + 'Check your network and reload — nothing is wrong with your account.</div>');
+      return;
+    }
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { location.href = 'login.html'; return; }
+    $('topAvatar').textContent = initials(session.user.email || '?');
+  } else {
+    $('topAvatar').textContent = 'PV';
+  }
 
-  const rows = data || [];
+  let rows = [];
+  try { rows = await api.myWorkspaces(); } catch (_) { show('noneState'); return; }
+
   const active = rows.find((r) => r.staff_status === 'active');
-  if (active) { WS = active; IS_OWNER = active.staff_role === 'owner'; return renderWorkspace(); }
+  if (active) { S.ws = active; S.isOwner = active.staff_role === 'owner'; return renderWorkspace(); }
 
   const pending = rows.find((r) => r.staff_status === 'pending');
   if (pending) { $('pendingName').textContent = pending.name; return show('pendingState'); }
@@ -287,161 +523,301 @@ async function boot() {
   show('noneState');
 }
 
-/* ── no workspace: join as an assistant ────────────────────────────────── */
 $('staffJoinBtn').addEventListener('click', async () => {
   const code = $('staffCode').value.trim();
   if (!code) return;
   clear($('staffMsg'));
   $('staffJoinBtn').disabled = true;
-  const { data, error } = await sb.rpc('staff_join_workspace', { p_code: code });
-  $('staffJoinBtn').disabled = false;
-  if (error) return say($('staffMsg'), error.message || 'That code did not work.', 'err');
-  $('pendingName').textContent = (data && data.name) || 'a workspace';
-  show('pendingState');
+  try {
+    const data = await api.joinAsStaff(code);
+    $('pendingName').textContent = (data && data.name) || 'a workspace';
+    show('pendingState');
+  } catch (e) {
+    say($('staffMsg'), e.message || 'That code did not work.', 'err');
+  } finally { $('staffJoinBtn').disabled = false; }
 });
 
 /* ── the workspace ─────────────────────────────────────────────────────── */
 async function renderWorkspace() {
   show('wsState');
-  $('wsName').textContent = WS.name;
-  $('wsSub').textContent = IS_OWNER
-    ? 'You own this workspace. You see only the students who joined it.'
-    : 'You assist in this workspace. You see the same roster, and cannot change it.';
-  $('rolePill').textContent = IS_OWNER ? 'Owner' : 'Assistant';
-  $('rolePill').className = 'pill ' + (IS_OWNER ? 'owner' : 'assistant');
+  $('wsName').textContent = S.ws.name;
+  $('rolePill').textContent = S.isOwner ? 'Owner' : 'Assistant';
+  $('rolePill').className = 'pill ' + (S.isOwner ? 'owner' : 'assistant');
 
-  $('studentCode').textContent = WS.student_join_code || '--------';
-  $('rotateStudentBtn').style.display = IS_OWNER ? '' : 'none';
-  if (IS_OWNER && WS.staff_join_code) {
+  /* The two roles get different sentences because they have different jobs,
+     not because one is a lesser version of the other. */
+  $('wsSub').textContent = S.isOwner
+    ? 'Your class. You see the students who joined it, and nobody else on the platform.'
+    : 'You assist in this class. You see the same students the teacher does, and the roster is theirs to change.';
+  $('codeHelp').innerHTML = S.isOwner
+    ? 'Read this out in class. <strong>Students</strong> enter it in Settings → Teachers &amp; Assistants, and that act is the consent — you cannot add a student who did nothing. Rotating stops new joins; it disconnects nobody.'
+    : 'Share this with students who still need to join. They enter it in Settings → Teachers &amp; Assistants. Only the teacher can rotate it.';
+  $('scopeNote').innerHTML = S.isOwner
+    ? 'You see a student\'s name, which exam they are sitting, and when they connected. Not their plan, their credits, their email, or their conversations with Zero. '
+      + 'Scores and weaknesses are not here yet — they arrive through this class once the new Mock Experience produces evidence worth acting on, and they will arrive with that evidence attached.'
+    : 'You see exactly what the teacher sees about these students, and you can change nothing. Adding, removing and approving are the teacher\'s. '
+      + 'Scores and weaknesses are not here yet for either of you.';
+
+  $('studentCode').textContent = S.ws.student_join_code || '--------';
+  $('rotateStudentBtn').style.display = S.isOwner ? '' : 'none';
+  if (S.isOwner && S.ws.staff_join_code) {
     $('staffCodeWrap').style.display = '';
-    $('staffCodeVal').textContent = WS.staff_join_code;
+    $('staffCodeVal').textContent = S.ws.staff_join_code;
   }
-  $('staffSection').style.display = IS_OWNER ? '' : 'none';
+  $('staffSection').style.display = S.isOwner ? '' : 'none';
+  $('activitySection').style.display = S.isOwner ? '' : 'none';
 
-  await Promise.all([loadRoster(), IS_OWNER ? loadStaff() : Promise.resolve()]);
+  await Promise.all([
+    loadRoster(),
+    S.isOwner ? loadStaff() : Promise.resolve(),
+    S.isOwner ? loadActivity() : Promise.resolve(),
+  ]);
+  renderStats();
+  renderNeedsYou();
 }
 
+function renderStats() {
+  const live = S.roster.filter((r) => r.status === 'active');
+  const exams = {};
+  for (const r of live) { const k = r.exam_type || '—'; exams[k] = (exams[k] || 0) + 1; }
+  const top = Object.entries(exams).sort((a, b) => b[1] - a[1]);
+  const joined30 = live.filter((r) => (Date.now() - new Date(r.joined_at).getTime()) < 30 * 86400000).length;
+
+  const tiles = [
+    { n: live.length, l: 'Connected' },
+    { n: joined30, l: 'Joined this month' },
+  ];
+  if (top.length) tiles.push({ n: top.map(([k, v]) => v + ' ' + k).join(' · '), l: 'Exams', wide: true });
+  if (S.isOwner) tiles.push({ n: S.staff.filter((s) => s.status === 'active').length, l: 'Assistants' });
+
+  $('statRow').innerHTML = tiles.map((t) =>
+    '<div class="stat"><div class="n" style="' + (t.wide ? 'font-size:15px;padding-top:4px' : '') + '">'
+    + esc(t.n) + '</div><div class="l">' + esc(t.l) + '</div></div>').join('');
+}
+
+/* "Needs you" is an attention surface, and it stays honest by only ever
+   holding things that genuinely need a decision from this person today.
+   When there is nothing, it says nothing — an empty week is a real week. */
+function renderNeedsYou() {
+  if (!S.isOwner) { $('needsYou').style.display = 'none'; return; }
+  const pending = S.staff.filter((s) => s.status === 'pending');
+  if (!pending.length) { $('needsYou').style.display = 'none'; return; }
+  $('needsYou').style.display = '';
+  $('needsYouBody').innerHTML =
+    '<div style="font-size:13.5px;color:var(--text-300);margin-bottom:12px">'
+    + pending.length + (pending.length === 1 ? ' person is' : ' people are')
+    + ' waiting for you to approve them as an assistant. Until you do, they see nothing.</div>'
+    + pending.map((s) => staffRow(s)).join('');
+  wireStaffButtons($('needsYouBody'));
+}
+
+/* ── roster ────────────────────────────────────────────────────────────── */
+async function loadRoster() {
+  try { S.roster = await api.roster(S.ws.workspace_id); }
+  catch (_) { $('rosterList').innerHTML = '<div class="empty-state">Could not load the roster.</div>'; return; }
+  drawRoster();
+}
+
+function visibleRoster() {
+  const q = S.search.trim().toLowerCase();
+  return S.roster.filter((r) => {
+    if (S.filter === 'active' && r.status !== 'active') return false;
+    if (S.filter === 'ended' && r.status === 'active') return false;
+    if (q && !String(r.full_name || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function drawRoster() {
+  const rows = visibleRoster();
+  const live = S.roster.filter((r) => r.status === 'active').length;
+  $('rosterCount').textContent = live ? '· ' + live + ' connected' : '';
+
+  if (!S.roster.length) {
+    $('rosterList').innerHTML = '<div class="empty-state"><div class="big">Nobody has joined yet</div>'
+      + '<div style="font-size:13.5px;max-width:420px;margin:0 auto">Read the class code out in your next session. '
+      + 'Students join from their own Settings page — the connection starts on their side, never yours.</div></div>';
+    return;
+  }
+  if (!rows.length) {
+    $('rosterList').innerHTML = '<div class="empty-state" style="padding:28px"><div class="big">No match</div>'
+      + '<div style="font-size:13.5px">Nothing here fits that search and filter.</div></div>';
+    return;
+  }
+
+  $('rosterList').innerHTML = rows.map((r) => {
+    const ended = r.status !== 'active';
+    const pill = r.status === 'active' ? '<span class="pill ok">Connected</span>'
+      : '<span class="pill off">' + (r.status === 'revoked' ? 'Left' : 'Removed') + '</span>';
+    return '<button class="row' + (ended ? ' dim' : '') + '" data-open="' + esc(r.student_id) + '">'
+      + '<span class="avatar">' + esc(initials(r.full_name)) + '</span>'
+      + '<span class="who"><span class="nm">' + esc(r.full_name) + '</span>'
+      + '<span class="meta">' + esc(r.exam_type || 'exam not set') + ' · joined ' + esc(ago(r.joined_at)) + '</span></span>'
+      + '<span class="acts">' + pill + '</span></button>';
+  }).join('');
+
+  $('rosterList').querySelectorAll('[data-open]').forEach((b) =>
+    b.addEventListener('click', () => openCard(b.getAttribute('data-open'))));
+}
+
+$('rosterSearch').addEventListener('input', (e) => { S.search = e.target.value; drawRoster(); });
+$('statusChips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-status]');
+  if (!b) return;
+  S.filter = b.getAttribute('data-status');
+  $('statusChips').querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === b));
+  drawRoster();
+});
+
+/* ── codes ─────────────────────────────────────────────────────────────── */
 $('copyCodeBtn').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('studentCode').textContent); say($('codeMsg'), 'Class code copied.', 'ok'); }
   catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
 });
-
 async function rotate(kind, el) {
   if (!confirm('Rotate the ' + kind + ' code? The old one stops working immediately. Nobody already connected is affected.')) return;
-  const { data, error } = await sb.rpc('teacher_rotate_join_code', { p_workspace: WS.workspace_id, p_kind: kind });
-  if (error) return say($('codeMsg'), error.message || 'Could not rotate the code.', 'err');
-  el.textContent = data;
-  if (kind === 'student') WS.student_join_code = data; else WS.staff_join_code = data;
-  say($('codeMsg'), 'New ' + kind + ' code generated.', 'ok');
+  try {
+    const code = await api.rotate(S.ws.workspace_id, kind);
+    el.textContent = code;
+    if (kind === 'student') S.ws.student_join_code = code; else S.ws.staff_join_code = code;
+    say($('codeMsg'), 'New ' + kind + ' code generated.', 'ok');
+  } catch (e) { say($('codeMsg'), e.message || 'Could not rotate the code.', 'err'); }
 }
 $('rotateStudentBtn').addEventListener('click', () => rotate('student', $('studentCode')));
 $('rotateStaffBtn').addEventListener('click', () => rotate('staff', $('staffCodeVal')));
 
-/* ── roster ────────────────────────────────────────────────────────────── */
-async function loadRoster() {
-  const { data, error } = await sb.rpc('teacher_roster', { p_workspace: WS.workspace_id });
-  const list = $('rosterList');
-  if (error) { list.innerHTML = '<div class="empty-state">Could not load the roster.</div>'; return; }
-
-  const rows = data || [];
-  const live = rows.filter((r) => r.status === 'active');
-  $('rosterCount').textContent = live.length ? '· ' + live.length + ' connected' : '';
-
-  if (!rows.length) {
-    list.innerHTML = '<div class="empty-state"><div class="big">Nobody has joined yet</div>'
-      + '<div style="font-size:13.5px">Share the class code above. Students join from their own Settings page — the connection starts on their side, never yours.</div></div>';
-    return;
-  }
-
-  list.innerHTML = rows.map((r) => {
-    const statusPill = r.status === 'active'
-      ? '<span class="pill ok">Connected</span>'
-      : '<span class="pill off">' + (r.status === 'revoked' ? 'Left' : 'Removed') + '</span>';
-    return '<div class="row" data-student="' + esc(r.student_id) + '">'
-      + '<div class="avatar">' + esc(initials(r.full_name)) + '</div>'
-      + '<div class="who"><div class="nm">' + esc(r.full_name) + '</div>'
-      + '<div class="meta">' + esc(r.exam_type || 'exam not set') + ' · since ' + esc(fmtDate(r.joined_at)) + '</div></div>'
-      + '<div class="acts">' + statusPill + '<button class="btn ghost sm" data-open="' + esc(r.student_id) + '">Open</button></div>'
-      + '</div>';
-  }).join('');
-
-  list.querySelectorAll('[data-open]').forEach((b) =>
-    b.addEventListener('click', () => openCard(b.getAttribute('data-open'))));
-}
-
-/* ── assistants (owner only) ───────────────────────────────────────────── */
-async function loadStaff() {
-  const { data, error } = await sb.from('workspace_staff')
-    .select('id,user_id,staff_role,status,created_at')
-    .eq('workspace_id', WS.workspace_id)
-    .neq('staff_role', 'owner')
-    .order('created_at', { ascending: true });
-
-  const box = $('staffList');
-  if (error) { box.innerHTML = '<div class="empty-state">Could not load assistants.</div>'; return; }
-  const rows = (data || []).filter((r) => r.status !== 'removed');
-  if (!rows.length) {
-    box.innerHTML = '<div class="empty-state" style="padding:28px 8px"><div class="big">No assistants yet</div>'
-      + '<div style="font-size:13.5px">Share the assistant code above with someone who helps you run this class.</div></div>';
-    return;
-  }
-  box.innerHTML = rows.map((r) => ''
-    + '<div class="row">'
-    + '<div class="avatar" style="background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe">A</div>'
-    + '<div class="who"><div class="nm">Assistant</div>'
-    + '<div class="meta">' + esc(String(r.user_id).slice(0, 8)) + ' · joined ' + esc(fmtDate(r.created_at)) + '</div></div>'
-    + '<div class="acts">'
-    + (r.status === 'pending'
-        ? '<span class="pill warn">Pending</span><button class="btn sm" data-approve="' + esc(r.id) + '">Approve</button>'
+/* ── assistants ────────────────────────────────────────────────────────── */
+function staffRow(s) {
+  return '<div class="row">'
+    + '<span class="avatar" style="background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe">A</span>'
+    + '<span class="who"><span class="nm">Assistant</span>'
+    + '<span class="meta">' + esc(String(s.user_id).slice(0, 8)) + ' · joined ' + esc(ago(s.created_at)) + '</span></span>'
+    + '<span class="acts">'
+    + (s.status === 'pending'
+        ? '<span class="pill warn">Pending</span><button class="btn sm" data-approve="' + esc(s.id) + '">Approve</button>'
         : '<span class="pill ok">Active</span>')
-    + '<button class="btn danger sm" data-remove="' + esc(r.id) + '">Remove</button>'
-    + '</div></div>').join('');
-
-  box.querySelectorAll('[data-approve]').forEach((b) =>
+    + '<button class="btn danger sm" data-remove="' + esc(s.id) + '">Remove</button>'
+    + '</span></div>';
+}
+function wireStaffButtons(scope) {
+  scope.querySelectorAll('[data-approve]').forEach((b) =>
     b.addEventListener('click', () => setStaff(b.getAttribute('data-approve'), 'active')));
-  box.querySelectorAll('[data-remove]').forEach((b) =>
+  scope.querySelectorAll('[data-remove]').forEach((b) =>
     b.addEventListener('click', () => setStaff(b.getAttribute('data-remove'), 'removed')));
 }
-
+async function loadStaff() {
+  try { S.staff = await api.staff(S.ws.workspace_id); }
+  catch (_) { $('staffList').innerHTML = '<div class="empty-state">Could not load assistants.</div>'; return; }
+  const rows = S.staff.filter((r) => r.status !== 'removed');
+  $('staffList').innerHTML = rows.length ? rows.map(staffRow).join('')
+    : '<div class="empty-state" style="padding:24px 8px"><div class="big">No assistants yet</div>'
+      + '<div style="font-size:13.5px">Give the assistant code to someone who helps you run this class.</div></div>';
+  wireStaffButtons($('staffList'));
+}
 async function setStaff(id, status) {
   if (status === 'removed' && !confirm('Remove this assistant? They lose access to the roster immediately.')) return;
-  const { error } = await sb.rpc('teacher_set_staff_status', { p_staff: id, p_status: status });
-  if (error) return alert(error.message || 'Could not update the assistant.');
-  loadStaff();
+  try { await api.setStaff(id, status); }
+  catch (e) { alert(e.message || 'Could not update the assistant.'); return; }
+  await loadStaff();
+  renderStats();
+  renderNeedsYou();
 }
 
-/* ── one student, from the teacher's side ──────────────────────────────── */
+/* ── class activity ────────────────────────────────────────────────────── */
+const ACTIVITY_TEXT = {
+  workspace_created:  ['admin', 'This class was created'],
+  join_code_rotated:  ['admin', 'The join code was rotated'],
+  student_joined:     ['join',  'joined the class'],
+  student_left:       ['leave', 'disconnected themselves'],
+  student_removed:    ['leave', 'was removed from the class'],
+  staff_joined:       ['admin', 'An assistant asked to join'],
+  staff_activated:    ['admin', 'An assistant was approved'],
+  staff_removed:      ['admin', 'An assistant was removed'],
+};
+async function loadActivity() {
+  try { S.activity = await api.activity(S.ws.workspace_id); }
+  catch (_) { $('activitySection').style.display = 'none'; return; }
+  if (!S.activity.length) { $('activityFeed').innerHTML = '<div class="empty-state" style="padding:20px 8px">Nothing has happened here yet.</div>'; return; }
+
+  /* Names come from the roster we already hold. The audit table stores ids
+     only, and a teacher has no read path to a name outside their own roster —
+     which is the boundary working, not a gap to patch. */
+  const nameOf = (id) => {
+    const r = S.roster.find((x) => x.student_id === id);
+    return r ? r.full_name : null;
+  };
+  $('activityFeed').innerHTML = S.activity.map((a) => {
+    const def = ACTIVITY_TEXT[a.action] || ['admin', a.action];
+    const who = nameOf(a.subject_id);
+    const text = who ? esc(who) + ' ' + def[1] : def[1];
+    return '<div class="feed-item"><span class="feed-dot ' + def[0] + '"></span>'
+      + '<span><span class="feed-txt">' + text + '</span>'
+      + '<span class="feed-when" style="display:block">' + esc(ago(a.created_at)) + '</span></span></div>';
+  }).join('');
+}
+
+/* ── one student ───────────────────────────────────────────────────────── */
+function openDrawer(on) {
+  $('drawer').classList.toggle('open', on);
+  if (on) $('closeDrawer').focus();
+}
 async function openCard(studentId) {
   clear($('cardMsg'));
-  $('drawer').classList.add('open');
-  $('cardBody').innerHTML = '<div style="text-align:center;padding:40px 0"><div class="spin"></div></div>';
+  openDrawer(true);
+  $('cardBody').innerHTML = '<div style="text-align:center;padding:30px 0"><div class="spin"></div></div>';
+  $('learningSlot').innerHTML = '';
+  $('cardActions').innerHTML = '';
 
-  const { data, error } = await sb.rpc('teacher_student_card', { p_workspace: WS.workspace_id, p_student: studentId });
-  if (error) { $('cardBody').innerHTML = ''; say($('cardMsg'), error.message || 'Could not open this student.', 'err'); return; }
+  let data;
+  try { data = await api.card(S.ws.workspace_id, studentId); }
+  catch (e) { $('cardBody').innerHTML = ''; say($('cardMsg'), e.message || 'Could not open this student.', 'err'); return; }
 
   $('cardName').textContent = data.full_name;
   $('cardWs').textContent = data.workspace;
   $('cardBody').innerHTML = ''
     + '<div class="kv"><span class="k">Exam</span><span class="v">' + esc(data.exam_type || 'not set') + '</span></div>'
     + '<div class="kv"><span class="k">Connected</span><span class="v">' + esc(fmtDate(data.joined_at)) + '</span></div>'
-    + '<div class="kv"><span class="k">Status</span><span class="v">' + esc(data.status) + '</span></div>'
-    + '<div class="sec-label" style="margin-top:22px">Learning</div>'
-    + '<div class="note">Nothing yet, on purpose. This student\'s practice, weaknesses and mock results are not shown here until the platform can say something about them that could have been wrong — which needs per-question evidence the new Mock Experience will produce. When it arrives it will appear here with the attempts behind it, never as a number on its own.</div>'
-    + (IS_OWNER && data.status === 'active'
-        ? '<div style="margin-top:22px"><button class="btn danger" id="removeStudentBtn">Remove from this class</button>'
-          + '<div class="code-note">They keep their account and all their own work. Only your connection to them ends.</div></div>'
-        : '');
+    + '<div class="kv"><span class="k">Status</span><span class="v">'
+      + (data.status === 'active' ? 'Connected to you' : (data.status === 'revoked' ? 'Left the class' : 'Removed from the class'))
+      + '</span></div>';
 
-  const rm = $('removeStudentBtn');
-  if (rm) rm.addEventListener('click', async () => {
-    if (!confirm('Remove ' + data.full_name + ' from this class?')) return;
-    const { error: e2 } = await sb.rpc('teacher_remove_student', { p_workspace: WS.workspace_id, p_student: studentId });
-    if (e2) return say($('cardMsg'), e2.message || 'Could not remove.', 'err');
-    $('drawer').classList.remove('open');
-    loadRoster();
-  });
+  renderLearning(data, $('learningSlot'));
+
+  if (S.isOwner && data.status === 'active') {
+    $('cardActions').innerHTML =
+      '<button class="btn danger" id="removeStudentBtn">Remove from this class</button>'
+      + '<div class="code-note">They keep their account and everything they have done. Only your connection to them ends.</div>';
+    $('removeStudentBtn').addEventListener('click', async () => {
+      if (!confirm('Remove ' + data.full_name + ' from this class?')) return;
+      try { await api.removeStudent(S.ws.workspace_id, studentId); }
+      catch (e) { say($('cardMsg'), e.message || 'Could not remove.', 'err'); return; }
+      openDrawer(false);
+      await loadRoster();
+      renderStats();
+    });
+  } else if (!S.isOwner) {
+    $('cardActions').innerHTML =
+      '<div class="code-note">Adding and removing students is the teacher\'s. You are here to work with them, not to change who is in the class.</div>';
+  }
 }
-$('closeDrawer').addEventListener('click', () => $('drawer').classList.remove('open'));
+
+/* THE LEARNING SLOT — see the contract above the markup.
+   Today it renders the truth: there is nothing to say yet, and why. When the
+   Weakness system connects, this function is what changes. */
+function renderLearning(student, el) {
+  el.innerHTML =
+    '<div class="slot-empty">'
+    + '<div class="st">Reserved — nothing to show yet</div>'
+    + '<div style="font-size:13px;color:var(--text-400);line-height:1.65">'
+    + 'No weakness, score or trend appears here until the platform can say something about '
+    + esc(String(student.full_name).split(/\s+/)[0])
+    + ' that could have been wrong — which needs per-question evidence from the new Mock Experience. '
+    + 'When it arrives it lands here with the attempts behind it, never as a number on its own.'
+    + '</div></div>';
+}
+
+$('closeDrawer').addEventListener('click', () => openDrawer(false));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openDrawer(false); });
 
 boot();
 </script>

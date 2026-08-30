@@ -640,6 +640,22 @@ are chosen before anyone is invested in the answer.
   a teacher writing directly as a privileged role still cannot create a link
   for a student. Full record: `docs/engineering/teacher-foundation-verification.md`.
   All four tables are empty; the first workspace is created deliberately.
+- **The surfaces, 2026-08-30.** `teacher.html` is a working class surface for
+  both roles: roster with search and status filters, class-shape stats, a
+  "Needs you" strip that stays hidden when nothing needs deciding, join codes,
+  assistant approval, and a class-activity feed read from `workspace_audit_log`.
+  An assistant gets the same students and none of the controls, described as a
+  different job rather than a degraded copy. `?preview=1` renders the whole
+  thing from local fixtures without touching the database, so the product can be
+  judged before a single real student is enrolled.
+- **The Weakness plug-in point exists and is empty on purpose.** The student
+  card carries a marked `data-slot="learning"` region with one writer,
+  `renderLearning()`, and a contract naming the three surfaces one weakness must
+  read the same on — the student's own badge, the teacher's card, the
+  assistant's copy. Connecting weaknesses later is that function plus its
+  evidence trail, not a redesign. `tests/teacher-surface.test.mjs` fails if the
+  slot grows a second author or if the page ever shows a metric it cannot
+  compute.
 - **On the ordering.** T1 was written above as waiting on T0's exit condition.
   It was built first, deliberately: T1 carries no analytics, so nothing in it
   depends on how much evidence exists, while the access model is the one part

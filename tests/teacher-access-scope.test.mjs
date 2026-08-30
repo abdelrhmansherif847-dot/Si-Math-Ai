@@ -234,7 +234,9 @@ t.ok('settings.html shows who can currently see them', /rpc\('student_my_teacher
 t.ok('nav.js tolerates the RPC not existing yet', /try \{[\s\S]{0,400}teacher_my_workspaces[\s\S]{0,400}catch/.test(NAV));
 
 // Honesty check: the page must not display analytics it cannot compute (§6).
+// Asserted as a property rather than an exact sentence — the wording is free to
+// improve, the promise is not. teacher-surface.test.mjs owns the detail.
 t.ok('the teacher page states what it does not show, rather than faking it',
-  /not shown here until the platform can say something about them that could have been wrong/.test(PAGE));
+  /could have been wrong/.test(PAGE) && /Mock Experience/.test(PAGE));
 
 t.done();

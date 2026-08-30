@@ -1,0 +1,149 @@
+// Surface suite for the Teacher & Assistant experience.
+//
+// tests/teacher-access-scope.test.mjs proves the DATABASE cannot leak. This one
+// covers the page itself: the promises the interface makes, and three bugs that
+// were found by actually rendering it headlessly rather than by reading it.
+//
+// FOUR PROPERTIES:
+//   1. PREVIEW    ?preview=1 renders sample data and touches the database not at
+//                 all — otherwise "preview" is a word, not a guarantee
+//   2. HONESTY    the page shows no learning metric it cannot compute, and says
+//                 so in words instead of drawing an empty chart
+//   3. SLOT       the Weakness plug-in point is a marked region with exactly one
+//                 writer, so connecting it later is a function, not a redesign
+//   4. ROLES      an assistant's page differs from the owner's by capability,
+//                 and the owner-only controls are gated in the markup as well as
+//                 on the server
+//
+// Plus regression guards for what the render found: a page that dies to a blank
+// screen if the CDN is slow, rows whose name and meta collapsed onto one line,
+// and cards left invisible when the entry animation never runs.
+
+import { suite } from './_assert.mjs';
+import { read } from './_source.mjs';
+
+const t = suite('teacher-surface');
+const PAGE = read('teacher.html');
+
+/** The api object is the single place the page reaches the database. */
+const API = (() => {
+  const a = PAGE.indexOf('const api = {');
+  const b = PAGE.indexOf('\n};', a);
+  if (a < 0 || b < 0) throw new Error('teacher.html: the api object could not be located');
+  return PAGE.slice(a, b);
+})();
+
+// ══ 1 · PREVIEW ═══════════════════════════════════════════════════════════
+t.section('Preview renders sample data and reaches nothing');
+
+t.ok('preview is opt-in from the query string', /preview.*===\s*'1'/.test(PAGE));
+t.ok('the page announces itself as preview', /previewBar/.test(PAGE) && /Nothing here is real/.test(PAGE));
+
+/* Every api method that can reach the database must refuse to, in preview,
+   BEFORE it gets there. Splitting on `async name(` gives one segment per
+   method; the check is positional, so a guard added after the call fails. */
+const methods = API.split(/\n  async /).slice(1)
+  .map((seg) => ({ name: (seg.match(/^(\w+)/) || [])[1], body: seg }));
+t.ok('api methods were found (not a vacuous split)', methods.length >= 8);
+
+const reaching = methods.filter((m) => /\bsb\./.test(m.body));
+t.ok('api methods really do reach the database (not vacuous)', reaching.length >= 8);
+t.is('every database call is preceded by a preview guard',
+  reaching.filter((m) => {
+    const guard = m.body.search(/if \(S\.preview\)/);
+    const call = m.body.search(/\bsb\./);
+    return guard < 0 || guard > call;
+  }).map((m) => m.name), []);
+
+/* Preview must also not need a session, or it would bounce to login. */
+const boot = PAGE.slice(PAGE.indexOf('async function boot()'), PAGE.indexOf('$(\'staffJoinBtn\')'));
+t.ok('preview skips the session check', /if \(!S\.preview\) \{[\s\S]*?getSession/.test(boot));
+
+t.ok('fixtures are visibly fictional', /Sample/.test(PAGE) && !/@/.test(PAGE.slice(PAGE.indexOf('const FIXTURE'), PAGE.indexOf('function iso'))));
+
+// ══ 2 · HONESTY ═══════════════════════════════════════════════════════════
+t.section('The page shows no learning metric it cannot compute');
+
+const FIXTURE_BLOCK = PAGE.slice(PAGE.indexOf('const FIXTURE'), PAGE.indexOf('function iso'));
+t.is('no fixture invents a score, accuracy or mastery value',
+  ['score', 'accuracy', 'mastery', 'weakness', 'percentile', 'trend']
+    .filter((k) => new RegExp(k, 'i').test(FIXTURE_BLOCK)), []);
+
+// The words are allowed in prose that explains their absence — a number is not.
+t.ok('the page states what it does not show', /Scores and weaknesses are not here yet/.test(PAGE));
+t.ok('the empty learning state explains why, in words',
+  /could have been wrong/.test(PAGE) && /Mock Experience/.test(PAGE));
+
+// ══ 3 · THE WEAKNESS SLOT ═════════════════════════════════════════════════
+t.section('The Weakness plug-in point is one marked region with one writer');
+
+t.ok('the slot is marked in the markup', /id="learningSlot" data-slot="learning"/.test(PAGE));
+t.ok('the slot carries its contract as a comment',
+  /LEARNING SLOT/.test(PAGE) && /renderLearning\(student, el\) is the ONLY function that writes/.test(PAGE));
+t.ok('the contract names the three surfaces one weakness must read the same on',
+  /student's own badge/.test(PAGE) && /assistant's copy/.test(PAGE));
+
+/* Exactly one writer: openCard may blank it, renderLearning fills it. Any other
+   assignment means the slot has grown a second author and the plug-in point is
+   already forked. */
+const slotWrites = [...PAGE.matchAll(/\$\('learningSlot'\)\.innerHTML\s*=\s*([^;]*)/g)].map((m) => m[1].trim());
+t.is('the only direct write to the slot is the reset', slotWrites, ["''"]);
+t.ok('renderLearning is what fills it', /function renderLearning\(student, el\)[\s\S]{0,600}el\.innerHTML/.test(PAGE));
+t.ok('renderLearning renders no number', !/%/.test(
+  PAGE.slice(PAGE.indexOf('function renderLearning'), PAGE.indexOf('$(\'closeDrawer\')'))));
+
+// ══ 4 · ROLES ═════════════════════════════════════════════════════════════
+t.section('An assistant\'s page differs by capability, not by being a worse copy');
+
+for (const [el, what] of [['rotateStudentBtn', 'rotate the class code'],
+                          ['staffSection', 'manage assistants'],
+                          ['activitySection', 'read class activity']])
+  t.ok(`owner-only in the markup: ${what}`,
+    new RegExp(`\\$\\('${el}'\\)\\.style\\.display = S\\.isOwner`).test(PAGE));
+
+t.ok('the assistant is told plainly what is theirs and what is not',
+  /roster is theirs to change/.test(PAGE) && /Adding and removing students is the teacher/.test(PAGE));
+t.ok('"needs you" stays empty rather than inventing work',
+  /if \(!pending\.length\) \{ \$\('needsYou'\)\.style\.display = 'none'/.test(PAGE));
+
+// ══ 5 · REGRESSIONS THE RENDER FOUND ══════════════════════════════════════
+t.section('Regressions found by rendering the page, not by reading it');
+
+/* A bare `supabase.createClient(...)` throws a ReferenceError when the CDN
+   bundle is missing, and takes the whole inline script — the whole page — with
+   it. Found because Chromium here cannot reach the CDN and the page was blank. */
+t.ok('the client is constructed defensively', /window\.supabase && window\.supabase\.createClient/.test(PAGE));
+t.ok('a missing library explains itself instead of showing a blank page',
+  /Could not load the Si Math AI connection library/.test(PAGE));
+
+/* Rows are <button> + <span> so the whole row is one click target; spans are
+   inline, so without display:block the name and meta ran together. */
+t.ok('row name is blockified', /\.row \.nm\{display:block/.test(PAGE));
+t.ok('row meta is blockified', /\.row \.meta\{display:block/.test(PAGE));
+
+/* animation:rise uses fill-mode both, so a card whose animation never runs sits
+   at opacity 0 — an invisible page for reduced-motion users. */
+t.ok('reduced motion lands on the final state, not on opacity 0',
+  /prefers-reduced-motion: reduce\)\{[\s\S]{0,400}\.card\{opacity:1/.test(PAGE));
+
+/* Grid items default to min-width:auto and refuse to shrink below nowrap text.
+   Measured clean at 320px; this keeps it that way. */
+t.ok('grid children may shrink', /\.cols > \*\{min-width:0\}/.test(PAGE));
+
+// ══ 6 · UNTRUSTED TEXT ════════════════════════════════════════════════════
+t.section('Names come from other people, so they are escaped');
+
+t.ok('an escaper exists', /const esc = \(s\)/.test(PAGE));
+/* Only markup matters here. A name concatenated into a confirm() string is
+   plain text to the browser, and escaping it would show the user "&amp;". So
+   the check is scoped to lines that actually build HTML — which is where an
+   unescaped name would become an injection. */
+const markupLines = PAGE.split('\n').filter((l) => /innerHTML|insertAdjacentHTML|'<|>'/.test(l));
+t.ok('the page builds markup by concatenation (not a vacuous scope)', markupLines.length > 20);
+t.is('no unescaped name is concatenated into markup',
+  markupLines.filter((l) => /\+\s*(?:r|data|s|a)\.(full_name|workspace|exam_type|name)\b/.test(l))
+    .map((l) => l.trim().slice(0, 60)), []);
+t.ok('the roster escapes what it renders',
+  /esc\(r\.full_name\)/.test(PAGE) && /esc\(r\.exam_type/.test(PAGE));
+
+t.done();
