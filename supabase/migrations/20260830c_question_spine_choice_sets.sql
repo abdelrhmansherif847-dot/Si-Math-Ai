@@ -1,7 +1,12 @@
--- 20260830a — widen the Spine's answer model so ACT can exist in it.
+-- 20260830c — widen the Spine's answer model so ACT can exist in it.
 --
--- ⛔ PREPARED — NOT APPLIED. Individually approved before apply_migration,
---    per CLAUDE.md §3. Rollback: 20260830a_question_spine_choice_sets_rollback.sql
+-- ✅ APPLIED 2026-08-30, individually approved per CLAUDE.md §3.
+--    Rollback: 20260830c_question_spine_choice_sets_rollback.sql
+--
+--    Verified after applying, against production: the constraint now reads
+--    CHECK (exam_question_answer_ok(question_format, choices, correct_answer));
+--    A-E and F-K are storable; a set containing I is refused; an F-K question
+--    answered 'A' is refused; and all 66 existing rows remain valid.
 --
 -- WHY
 -- ---

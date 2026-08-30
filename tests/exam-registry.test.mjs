@@ -280,7 +280,7 @@ t.ok('a missing registry is guarded like a missing SDK',
 
 t.section('answer conventions — how many options, and what they are called');
 
-// The convention is the reason an ACT form can exist at all: 20260830a widened
+// The convention is the reason an ACT form can exist at all: 20260830c widened
 // the database to STORE five-choice questions and deliberately refused to learn
 // which letters belong on which ordinal. This is where that lives, so it is
 // where it has to be checked.
@@ -319,7 +319,7 @@ t.is('choiceIdsFor returns a copy', R.choiceIdsFor('ACT_MATH', 1).length, 5);
 // a form passes pre-flight and is refused on insert.
 const STORABLE = [['A', 'B', 'C', 'D'], ['A', 'B', 'C', 'D', 'E'], ['F', 'G', 'H', 'J', 'K']]
   .map((a) => a.join(''));
-t.is('every convention produces only sets 20260830a can store',
+t.is('every convention produces only sets 20260830c can store',
   Object.keys(R.ANSWER_CONVENTIONS)
     .flatMap((k) => R.ANSWER_CONVENTIONS[k].sets.map((a) => a.slice().sort().join('')))
     .filter((set) => !STORABLE.includes(set)), []);

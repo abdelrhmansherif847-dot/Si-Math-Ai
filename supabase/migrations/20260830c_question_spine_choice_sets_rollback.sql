@@ -1,4 +1,4 @@
--- Rollback for 20260830a — back to the four-choice A-D Spine.
+-- Rollback for 20260830c — back to the four-choice A-D Spine.
 --
 -- ⚠️  THIS IS DESTRUCTIVE IF ANY 5-CHOICE QUESTION EXISTS.
 --     Restoring the narrow constraint runs a validation pass over the table, so
@@ -10,7 +10,7 @@
 -- Also note this restores the WEAKER answer rule: correct_answer goes back to a
 -- fixed A-D list rather than being checked against the row's own choices. That
 -- tightening was collateral to the widening and is reverted with it, because
--- leaving a constraint behind that 20260830a introduced would make the rollback
+-- leaving a constraint behind that 20260830c introduced would make the rollback
 -- a partial one.
 
 begin;

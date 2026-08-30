@@ -72,7 +72,7 @@
   // in a row, and both habits cost them time on test day. That is the same
   // argument the calculator policy above makes, applied to the answer sheet.
   //
-  // WHY IT LIVES HERE. 20260830a widened the Spine to store any of the three
+  // WHY IT LIVES HERE. 20260830c widened the Spine to store any of the three
   // sets, and deliberately stopped there: the database says what is STORABLE,
   // and refuses to learn which set belongs on which ordinal of which exam —
   // the same line M3 drew when it would not CHECK exam_code against a list, or
