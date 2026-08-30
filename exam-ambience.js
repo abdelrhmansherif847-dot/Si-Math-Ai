@@ -1,19 +1,14 @@
 // Exam ambience — a TEST VERSION, to hear whether the idea is any good.
 //
-// THESE ARE NOT RECORDINGS. Every sound here is synthesised in the browser: no
-// files, no downloads, no licence to clear, nothing to commit. That is the whole point at this stage — the question on the table is
-// "does a room around the student help or distract", and it can be answered
-// with textures that are roughly right. Real Foley replaces these later without
-// reshaping anything: same three layers, same gains, same scheduler.
+// THREE LAYERS, AND THEY ARE NOT THE SAME KIND OF THING. Pen and paper are
+// synthesised in the browser from filtered noise; the voices are a real
+// recording, made by the owner and processed from it. That split is deliberate
+// and is explained where each one is defined: noise with an envelope IS what a
+// nib and a sheet of paper sound like, and it is not what a voice sounds like.
 //
-// WHY SYNTHESISED AND NOT SOURCED. Both other routes are shut from here. Every
-// sound library is blocked by this environment's egress proxy, and the audio
-// generator available refuses sound effects by design. Synthesis was the only
-// way to put something in your ears today, and for these two layers it is the
-// honest choice anyway: pen-on-paper and paper rustle ARE broadband noise with
-// an envelope, so neither is a mock-up of the sound — each is a cheap version of
-// the real mechanism. The voice layer is the one where that stopped being true;
-// see the note above MOMENTS.
+// The synthetic pair also had no alternative — every sound library is blocked by
+// this environment's egress proxy and the audio generator available refuses
+// sound effects — but they would be the right choice regardless.
 //
 // AUDIO OBSERVES; IT NEVER DRIVES — the rule exam-audio.js already sets. Nothing
 // here touches the timer, the view, saving or scoring. Every entry point
@@ -24,9 +19,17 @@
 
   var ctx = null, master = null, timer = null, on = false, last = null;
 
-  // Independent gains, which is the point of layers: paper comes down without
-  // touching the pen. The starting mix, and meant to be argued with.
-  var GAIN = { pen: 0.55, paper: 0.40 };
+  // Independent gains, which is the point of layers: the voices come down
+  // without touching the pen. The starting mix, and meant to be argued with.
+  //
+  // `voices` is the one that will need tuning, and the clips are normalised to
+  // a common -6 dBFS peak so this number means the same thing for all four. A
+  // whisper recorded honestly is QUIET — the raw takes peaked between -15 and
+  // -25 dBFS — so without that step the layer sat about 18 dB under the pen and
+  // was effectively inaudible. Normalising is level, not processing: treatment
+  // A's character is untouched. At 0.5 the voice lands a few dB under the pen,
+  // which is a number to argue with rather than a measurement.
+  var GAIN = { pen: 0.55, paper: 0.40, voices: 0.50 };
 
   // How often a moment happens. Short here ON PURPOSE — the real interval is
   // 8-12 minutes (mock-exam-v2-investigation §8.3) and you cannot judge a
@@ -91,22 +94,69 @@
     return 0.8;
   }
 
-  /* THE THIRD LAYER IS DELIBERATELY MISSING.
-     A distant voice belongs here — two students exchanging something brief and
-     muffled — and two attempts at synthesising one were thrown away. The first
-     shaped noise into syllables and sounded like noise shaped into syllables.
-     The second built a real little vocal tract, pitch and formants and a
-     convolved room, and measured correctly as a periodic voice at 124 Hz; it
-     still sounded engineered, because a voice is the one sound a listener has
-     spent their whole life calibrated against and approximations do not survive
-     that. No third attempt: this layer waits for a recording. The slot is the
-     comment, not a stub — dead code here would read as a plan. */
+  /* VOICES — THE ONE LAYER THAT IS A RECORDING.
+     
+     Two attempts at synthesising a voice were thrown away first. The second one
+     measured correctly — a periodic source at 124 Hz with sliding formants and
+     a convolved room — and still sounded engineered, because a voice is the one
+     sound a listener has spent their whole life calibrated against and an
+     approximation does not survive that. So this layer is a real recording and
+     the other two stay synthetic, which is not an inconsistency: pen-on-paper
+     and paper rustle ARE noise with an envelope, and a voice is not.
+
+     The clips are CLEANED ONLY — a gentle FFT denoise that took 4.7 dB off the
+     noise floor while costing the whisper under 1 dB — and deliberately not
+     distanced. Room-processed versions were made and not chosen. What keeps
+     them in the background is therefore the GAIN and nothing else, which is a
+     number anyone can move, rather than filtering baked into the file.
+
+     Fetched on first use, not on page load: nothing downloads for a student who
+     never turns this on. A clip that fails to load leaves the layer silent and
+     the other two playing, because a missing asset must not take the exam with
+     it. */
+  var CLIPS = ['voice-exchange', 'voice-short', 'voice-mid', 'voice-long'];
+  var buffers = {}, fetching = {};
+
+  function clip(name) {
+    if (buffers[name] !== undefined) return buffers[name];
+    if (fetching[name]) return null;
+    fetching[name] = true;
+    try {
+      root.fetch('assets/exam-ambience/' + name + '.mp3')
+        .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+        .then(function (a) { return ctx.decodeAudioData(a); })
+        .then(function (b) { buffers[name] = b; })
+        .catch(function () { buffers[name] = null; });
+    } catch (e) { buffers[name] = null; }
+    return null;
+  }
+
+  function voices(at, name) {
+    var id = name || CLIPS[Math.floor(Math.random() * CLIPS.length)];
+    var buf = clip(id);
+    if (!buf) return 0;                      // not decoded yet, or failed: silence
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    var g = ctx.createGain();
+    g.gain.value = GAIN.voices;
+    src.connect(g); g.connect(master);
+    src.start(ctx.currentTime + at);
+    return buf.duration;
+  }
+
+  // Warm the cache the moment the layer is switched on, so the first moment is
+  // not the one that misses.
+  function preload() { try { CLIPS.forEach(clip); } catch (e) {} }
 
   var MOMENTS = [
     { id: 'writing',  play: function () { pen(0); paper(1.1 + Math.random()); } },
     { id: 'page',     play: function () { paper(0); pen(0.7 + Math.random() * 0.6); } },
     { id: 'settling', play: function () { paper(0); paper(0.5 + Math.random() * 0.4); } },
     { id: 'nearby',   play: function () { pen(0); pen(1.4 + Math.random() * 0.8); } },
+    // The voice moments. Paper under the voice, never a pen: a student writing
+    // is not the one talking.
+    { id: 'asking',   play: function () { voices(0.25); paper(0.05); } },
+    { id: 'room',     play: function () { paper(0); voices(0.8); pen(2.6); } },
   ];
 
   /** Play one moment now. Exposed so it can be auditioned without waiting. */
@@ -129,6 +179,7 @@
       if (on) return true;
       if (!context()) return false;
       on = true;
+      preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
       moment();                      // one immediately, so it can be judged now
       return true;

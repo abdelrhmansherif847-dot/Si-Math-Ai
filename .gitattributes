@@ -47,3 +47,9 @@
 *.woff  binary
 *.woff2 binary
 *.ttf   binary
+# Audio. The first audio in this repository; without these lines `text=auto`
+# would sniff them as text and rewrite bytes on checkout.
+*.mp3  binary
+*.wav  binary
+*.ogg  binary
+*.m4a  binary
