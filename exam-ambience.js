@@ -42,17 +42,27 @@
      whole reason for it.
 
      IT DOES NOT RESET AT A MODULE BOUNDARY, and that is a decision rather than
-     an oversight (confirmed 2026-08-30). Seven marks fit a 35-minute module and
-     the cycle is four long, so module 1 reads 1-2-3-4-1-2-3 and module 2 opens
-     on 4. Restarting each module at sound 1 would be one line here — resetting
-     voiceIdx on enable() already does it — so if a later reader finds module 2
-     "starting on the wrong sound", this is the note saying it is the right one.
+     an oversight (confirmed 2026-08-30). Restarting each module at sound 1
+     would be one line here — resetting voiceIdx on enable() already does it —
+     so if a later reader finds module 2 "starting on the wrong sound", this is
+     the note saying it is the right one.
      Kept separate from the pen and paper, which stay random: writing and paper
      are texture and should not arrive on a beat, while an exchange between two
-     students is an event and reads better on one. */
+     students is an event and reads better on one.
+
+     `after` is the earliest point in the SITTING a clip may be heard, in
+     seconds from the start. Sound 5 is held until 10:00 because it is a much
+     closer, louder recording than the other four — 15 dB hotter before
+     normalising — and a voice that present is a different kind of event, better
+     once a student has settled than in the first minutes. A clip that is not
+     yet eligible is SKIPPED and the cycle moves on rather than stalling, so the
+     five-minute beat never slips. */
   var VOICE_EVERY = 300;
-  var VOICES = ['voice-1', 'voice-2', 'voice-3', 'voice-4'];
-  var voiceTimer = null, voiceIdx = 0;
+  var VOICES = [
+    { id: 'voice-1' }, { id: 'voice-2' }, { id: 'voice-3' }, { id: 'voice-4' },
+    { id: 'voice-5', after: 600 },
+  ];
+  var voiceTimer = null, voiceIdx = 0, startedAt = 0;
 
   function context() {
     if (ctx) return ctx;
@@ -159,7 +169,7 @@
   }
 
   function voices(at, name) {
-    var id = name || VOICES[voiceIdx % VOICES.length];
+    var id = name || VOICES[voiceIdx % VOICES.length].id;
     var buf = clip(id);
     if (!buf) return 0;                      // not decoded yet, or failed: silence
     var src = ctx.createBufferSource();
@@ -173,7 +183,7 @@
 
   // Warm the cache the moment the layer is switched on, so the first moment is
   // not the one that misses.
-  function preload() { try { VOICES.forEach(clip); } catch (e) {} }
+  function preload() { try { VOICES.forEach(function (v) { clip(v.id); }); } catch (e) {} }
 
   var MOMENTS = [
     { id: 'writing',  play: function () { pen(0); paper(1.1 + Math.random()); } },
@@ -198,13 +208,20 @@
   }
 
   /* One scheduled exchange: paper under it, never a pen — a student writing is
-     not the one talking. Advances the cycle so the three come round in order. */
+     not the one talking. Advances the cycle so they come round in order, and
+     steps over any clip not yet eligible — bounded by the list length, so a
+     list where nothing is eligible yet plays nothing rather than spinning. */
   function voiceMoment() {
-    var id = VOICES[voiceIdx % VOICES.length];
-    voiceIdx++;
-    paper(0.05);
-    voices(0.25, id);
-    return id;
+    var elapsed = startedAt ? (Date.now() - startedAt) / 1000 : 0;
+    for (var tries = 0; tries < VOICES.length; tries++) {
+      var v = VOICES[voiceIdx % VOICES.length];
+      voiceIdx++;
+      if (v.after && elapsed < v.after) continue;
+      paper(0.05);
+      voices(0.25, v.id);
+      return v.id;
+    }
+    return null;
   }
 
   function enable() {
@@ -213,6 +230,7 @@
       if (!context()) return false;
       on = true;
       voiceIdx = 0;
+      startedAt = Date.now();
       preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
       voiceTimer = root.setInterval(function () { if (on) voiceMoment(); }, VOICE_EVERY * 1000);
@@ -228,12 +246,18 @@
   /* The timetable, as data, so it can be read rather than inferred. Minutes are
      from the start of a module; a module shorter than the first mark simply
      yields nothing. */
-  function schedule(moduleMinutes) {
-    var out = [], t = 0, i = 0, end = (moduleMinutes || 35) * 60;
+  function schedule(totalMinutes, fromSeconds) {
+    var out = [], t = fromSeconds || 0, i = 0, end = (totalMinutes || 35) * 60;
     while (t < end) {
-      out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
-                 clip: VOICES[i % VOICES.length] });
-      i++; t += VOICE_EVERY;
+      for (var tries = 0; tries < VOICES.length; tries++) {
+        var v = VOICES[i % VOICES.length];
+        i++;
+        if (v.after && t < v.after) continue;
+        out.push({ at: t, clock: Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60),
+                   clip: v.id });
+        break;
+      }
+      t += VOICE_EVERY;
     }
     return out;
   }
@@ -261,7 +285,7 @@
     schedule: schedule,
     voiceNow: voiceMoment,
     voiceEverySeconds: function (s) { VOICE_EVERY = Math.max(10, s); if (on) { disable(); enable(); } },
-    _voices: VOICES.slice(),
+    _voices: VOICES.map(function (v) { return v.id; }),
     _moments: MOMENTS.map(function (m) { return m.id; }),
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));
