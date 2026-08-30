@@ -1511,7 +1511,7 @@ function drawNumberLine(spec, opts) {
  * borrow from. Without it "Above 50 50%" ran off the right of a two-panel
  * figure by a character, which the exploration never showed because each pie
  * there had a box of its own. */
-const PIE = { W: 330, H: 234, R: 64, LAB: 15, PAD: 46, CH: 7.2, SEP: -Math.PI / 2 };
+const PIE = { W: 330, H: 234, R: 64, LAB: 15, PAD: 46, CH: 7.2, PX: 245, SEP: -Math.PI / 2 };
 /* The four fills, NAMED rather than built by concatenating an index. Spelling
  * them out is how the stylesheet gate can see them: it reads the classes this
  * file emits out of the source text, so a name assembled from a prefix and a
@@ -1539,7 +1539,15 @@ function drawPie(spec, opts) {
   })), 0);
   const pad = Math.max(PIE.PAD, Math.round(widest * PIE.CH + 10) - (pw / 2 - PIE.R - PIE.LAB));
   const W = pw * panels.length + pad * 2, H = ph;
-  const s = svgRoot(W, H, opts.shownAt);
+  /* A PANEL IS ALWAYS THE SAME SIZE ON THE PAGE. The viewBox grows with the
+   * panel count, so displaying every pie at one width made a lone pie render a
+   * third larger than a pair — same family, same grammar, visibly heavier ink
+   * and bigger type, purely because of how many panels it happened to have.
+   * That is the plate-stretch defect again in a different costume. So the
+   * display width is derived from the panel width instead, and the caller's
+   * value is a CAP rather than a target. */
+  const shown = Math.min(opts.shownAt || W, Math.round(W * PIE.PX / pw));
+  const s = svgRoot(W, H, shown);
   s.setAttribute('class', 'sx sx-fam-data');
 
   panels.forEach((pan, pi) => {

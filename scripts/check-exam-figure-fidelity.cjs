@@ -299,6 +299,29 @@ const is = (m, c, d) => (c ? ok(m) : no(m, d));
     is('pie · every slice label is inside its own figure  [3 shapes]',
        r.clipped === 0 && r.labels > 0, JSON.stringify(r));
     is('pie · and no two labels overlap  [3 shapes]', r.collided === 0, JSON.stringify(r));
+
+    // ONE PANEL AND TWO PANELS ARE THE SAME FAMILY, so they have to be drawn at
+    // the same size on the page. The viewBox grows with the panel count, and
+    // displaying every pie at one width made a lone pie render a third larger —
+    // heavier ink, bigger type, same grammar. The plate-stretch defect again.
+    const sc = await p2.evaluate(() => {
+      const R = globalThis.SiExamStimulus;
+      const host = document.createElement('div');
+      host.style.width = '702px'; document.body.appendChild(host);
+      const at = (panels) => {
+        const svg = R.renderForQuestion({ id: 'q', reading: null },
+          { id: 's', kind: 'chart', spec: { chartType: 'pie', panels } });
+        host.appendChild(svg);
+        return svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+      };
+      const one = at([{ categories: ['a', 'b', 'c'], values: [7, 2, 1] }]);
+      const two = at([{ categories: ['a', 'b'], values: [1, 1] },
+                      { categories: ['c', 'd'], values: [1, 1] }]);
+      host.remove();
+      return { one: +one.toFixed(3), two: +two.toFixed(3) };
+    });
+    is('pie · a panel is the same size whatever the panel count',
+       Math.abs(sc.one - sc.two) < 0.01, JSON.stringify(sc));
   }
 
   // ── the plate is the specimen's plate, at the specimen's size ────────────
