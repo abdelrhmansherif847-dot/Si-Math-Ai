@@ -1,6 +1,15 @@
 -- =====================================================================
--- ⛔ PREPARED — NOT APPLIED. Awaiting individual approval.
+-- APPLIED 2026-08-30 as version 20260830020842, after individual approval.
 -- Chosen treatment and why: scripts/pie-directions.html (direction C).
+--
+-- Verified in production on apply, with the same thirteen cases proven on a
+-- throwaway database beforehand: the two-panel pie accepted; bar and line
+-- unchanged; five slices, one slice, a zero sum, a negative part, ragged
+-- arrays, an empty name, an axis key, a pie authored as an axis chart, no
+-- panels and four panels all refused. All 24 existing stimuli still validate.
+--
+-- INCOMPLETE ON ITS OWN. This makes a pie storable; 20260830b makes one
+-- insertable. Found by trying — see that file.
 -- =====================================================================
 --
 -- A pie is a chart whose shape is a whole rather than an axis.
