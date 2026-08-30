@@ -188,12 +188,16 @@
     nb.addEventListener('click', notationCheck);
     el.appendChild(nb);
 
-    /* AMBIENCE — a test control, and off until it is pressed. The sounds are
-     * synthesised, not recordings (exam-ambience.js), so there is nothing here
-     * to license and nothing to load; the only question it answers is whether
-     * the idea is worth doing properly. "Once" plays a moment immediately,
-     * because the scheduled interval is not something anyone should sit and
-     * wait through to form an opinion. */
+    /* AMBIENCE — a test control, and off until it is pressed.
+     *
+     * All seven sounds are RECORDINGS now (exam-ambience.js), which reverses
+     * what this comment used to say: they are fetched on first press, so
+     * nothing downloads for anyone who never touches this button. Off by
+     * default is therefore a bandwidth decision as well as a taste one.
+     *
+     * "Once" plays the next scheduled exchange immediately, because the
+     * three-minute beat is not something anyone should sit and wait through to
+     * form an opinion. */
     var amb = document.createElement('button');
     amb.type = 'button'; amb.className = 'rv-b';
     amb.setAttribute('data-rv-amb', '');
