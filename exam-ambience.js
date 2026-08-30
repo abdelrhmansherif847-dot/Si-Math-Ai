@@ -56,13 +56,24 @@
      normalising — and a voice that present is a different kind of event, better
      once a student has settled than in the first minutes. A clip that is not
      yet eligible is SKIPPED and the cycle moves on rather than stalling, so the
-     five-minute beat never slips. */
+     five-minute beat never slips.
+
+     THE ORDER PUTS SOUND 5 THIRD so its turn falls exactly on 10:00, the mark
+     it is gated to. Left fifth it would have waited until 20:00 and the gate
+     would have been decorative — a rule that never fires is not a rule.
+
+     ELAPSED IS COUNTED IN MARKS, NOT IN WALL CLOCK. A setInterval fires a few
+     milliseconds late and the drift accumulates, so `Date.now()` at the 10:00
+     mark can read 599.98s and skip a clip gated at 600 — the exact boundary
+     this list is built around. Counting marks makes the runtime and schedule()
+     agree by construction rather than by luck, which matters because the
+     printed table is supposed to BE what happens. */
   var VOICE_EVERY = 300;
   var VOICES = [
-    { id: 'voice-1' }, { id: 'voice-2' }, { id: 'voice-3' }, { id: 'voice-4' },
-    { id: 'voice-5', after: 600 },
+    { id: 'voice-1' }, { id: 'voice-2' }, { id: 'voice-5', after: 600 },
+    { id: 'voice-3' }, { id: 'voice-4' },
   ];
-  var voiceTimer = null, voiceIdx = 0, startedAt = 0;
+  var voiceTimer = null, voiceIdx = 0, marks = 0;
 
   function context() {
     if (ctx) return ctx;
@@ -212,7 +223,8 @@
      steps over any clip not yet eligible — bounded by the list length, so a
      list where nothing is eligible yet plays nothing rather than spinning. */
   function voiceMoment() {
-    var elapsed = startedAt ? (Date.now() - startedAt) / 1000 : 0;
+    var elapsed = marks * VOICE_EVERY;
+    marks++;
     for (var tries = 0; tries < VOICES.length; tries++) {
       var v = VOICES[voiceIdx % VOICES.length];
       voiceIdx++;
@@ -230,7 +242,7 @@
       if (!context()) return false;
       on = true;
       voiceIdx = 0;
-      startedAt = Date.now();
+      marks = 0;
       preload();
       timer = root.setInterval(function () { if (on) moment(); }, EVERY * 1000);
       voiceTimer = root.setInterval(function () { if (on) voiceMoment(); }, VOICE_EVERY * 1000);
