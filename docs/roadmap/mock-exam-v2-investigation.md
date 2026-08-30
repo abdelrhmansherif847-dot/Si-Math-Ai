@@ -622,6 +622,26 @@ Design rules that fall out of the spec:
 
 ### 8.3 Scheduling with controlled randomness
 
+**AMENDED 2026-08-30 — a moment is a MIX, not a clip.** This section and §8.5
+were written around a pool of 6–8 finished clips, one played per moment. The
+owner's spec for the first moment is three things at once — a pen writing, paper
+being handled, and a distant whisper between two students with no intelligible
+words — and asks for them as **separate layers with independent gain and
+timing**.
+
+That is a better shape and the reason is not aesthetic. A finished "exam
+ambience" file is one decision, taken by whoever mastered it, and the only knob
+left is master volume: if the whisper is a shade too present there is nothing to
+do but discard the file. Three layers means the whisper can be pulled 6 dB down
+without touching the pen, the paper can be moved half a second off the pen so
+they do not sound struck together, and the same three assets make a different
+moment by changing gains alone. It also keeps the licence trail per source
+rather than per mix.
+
+So the pool is a pool of **moments**, each a small list of `{layer, gain, delay}`
+over a shared library of raw one-shots. Everything below still holds — the
+interval, the no-repeat rule, the deferral — with "clip" read as "moment".
+
 Spec: every 8–12 minutes, random pick, no consecutive repeat, never overlapping.
 
 - After each clip finishes, schedule the next at `now + uniform(8min, 12min)`.
@@ -646,28 +666,42 @@ exam is a working exam; a broken timer is a ruined attempt.
 - **Preload on exam start**, decode once into `AudioBuffer`s, reuse for the whole
   session. That is one network round per clip per exam, which answers the spec's
   "avoid excessive network requests" without a service worker.
-- Keep the whole library **under ~500 KB**. Roughly 6–8 clips of 1–3 seconds at a
-  modest bitrate — mono is fine and halves the size; these are background textures,
-  not music.
+- Keep the whole library **under ~500 KB**. Under the layered shape that is
+  roughly 6–8 RAW one-shots of 1–3 seconds rather than 6–8 finished mixes, which
+  is the same budget or less: layers are reused across moments where a mix would
+  have shipped the pen three times. Mono is fine and halves the size; these are
+  background textures, not music.
 - `.mp3` alone is sufficient — universally supported across current browsers, and
   a second format is bytes for no gain.
 - Serve from `assets/exam-ambience/`, static on Vercel, alongside everything else.
 
-### 8.6 Where the sounds come from — a content decision, again
+### 8.6 Where the sounds come from — DECIDED 2026-08-30: route 2
 
 Exactly like the exam questions in §5–6, **this is a licensing question, not an
 engineering one.** Pencil-writing and page-turn recordings are owned by whoever
-recorded them. Three lawful routes:
+recorded them. Three lawful routes were open:
 
 1. **CC0 / public domain** (e.g. Freesound CC0, Pixabay) — free, but each file's
    licence must be individually verified and recorded, not assumed from the site.
-2. **Purchased royalty-free** — a clean paper trail, small cost.
+2. **Purchased royalty-free / licensed Foley library** — a clean paper trail,
+   small cost. ← **CHOSEN.**
 3. **Record them.** A pencil on paper and a page turn are trivially recordable in
-   a quiet room, they cost nothing, and the provenance is unimpeachable. For a
-   library this small this is genuinely the best option.
+   a quiet room, they cost nothing, and the provenance is unimpeachable.
+
+**Route 3 was this section's own recommendation and the owner overruled it, for
+a reason that is about the product rather than the paperwork.** These clips work
+only if they are unnoticed. A phone recording of a real pencil is still a phone
+recording — room tone, handling noise, a noise floor that does not match the
+next clip's — and a student who *notices* the sound has been pulled out of the
+exam by the very thing meant to put them in one. Professionally recorded Foley
+is quiet, close-mic'd and consistent between takes, which is the whole
+requirement. Recording our own is revisited **only if** the sound identity turns
+out to matter enough to be worth a library of our own; that is a later decision
+and not a blocker on this one.
 
 Whichever route, record the source and licence per file in the repo, the way
-`pin-cdn-sri.sh` records where each pin came from.
+`pin-cdn-sri.sh` records where each pin came from. Nothing is committed until
+its licence line is.
 
 ### 8.7 Accessibility — the part that needs care
 
@@ -714,7 +748,7 @@ Setting is independent of the announcements setting, per the spec.
 | Phase | Adds | DB | Blocked on |
 |---|---|---|---|
 | 1 — Exam Registry | calculator descriptor `{allowed, provider, scope}`; announcement + ambience schedules per config | none | unfreeze `mock-exam.html` |
-| 2 — Modular DSAT + **audio bus** | `exam-audio.js` (both channels), `exam-proctor.js`, **§9 ambient scheduler** | none | ambient **asset licensing** |
+| 2 — Modular DSAT + **audio bus** | `exam-audio.js` (both channels), `exam-proctor.js`, **§9 ambient scheduler** | none | ambient **assets**. The licensing ROUTE is decided (§8.6, 2026-08-30); the files themselves are not obtained, and that is the whole remaining block |
 | 3 — Integrity | unchanged | 2 migrations | policy decision |
 | 4 — Saved Questions | unchanged | 1 migration | — |
 | **4.5 — Calculator panel** | `exam-calculator.js` host + provider abstraction + clean-licence default provider | none | — |
@@ -735,7 +769,7 @@ is unscheduled by design: it is gated on a signature, not on engineering.
 | R13 | Third-party script with DOM access on the page §4 exists to protect | **High** | Sandboxed same-origin iframe, self-hosted bundle |
 | R14 | A substitute calculator taught as if it were the DSAT tool | Medium | Label it plainly as a practice calculator |
 | R15 | Ambient audio harming students with sensory/attention differences | **High** | Default off; opt-in; persistent in-exam mute; WCAG 1.4.2 |
-| R16 | Ambient assets used without a verified licence | Medium | Record source + licence per file; recording them is cheapest |
+| R16 | Ambient assets used without a verified licence | Medium | Route 2 chosen (§8.6): licensed library. Record source, licence and permitted use per FILE — a library subscription is not a blanket grant, and a per-file line is what a later reader can check |
 | R17 | Audio failure taking down the exam | **High** | Observer pattern; every audio path wrapped; silence is a valid state |
 | R18 | `calculator: true` on exams where it is not universally permitted | Medium | `scope` in the descriptor; EST I is part-2-only |
 | R19 | EST mislabelled "Emirates Standardized Test" to students | Low | Confirm with user, then correct |
