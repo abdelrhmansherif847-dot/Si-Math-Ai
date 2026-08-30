@@ -747,6 +747,37 @@ are chosen before anyone is invested in the answer.
   students sitting real mocks**, and until it does, §5.2's arithmetic is
   unchanged. T2 opens on attempts, not on tables.
 
+### T1.7 — Primary Experience and routing (prepared, not applied)
+
+Not a feature — the identity model the T1 surfaces were already implying, made
+explicit and single. `my_experience()` (`20260830i`) is one caller-scoped
+function answering *"which product does this account belong in?"*, and
+`login.html` and `nav.js` become its consumers instead of three surfaces
+answering it three ways.
+
+- **Being a teacher is still a relationship.** `primary` is derived from
+  `workspace_staff` on every call. There is no `user_role` value for teacher,
+  nothing is stored, and nothing can go stale.
+- **The platform role does not decide the experience.** An admin who teaches
+  nothing is a student here. Admin remains a capability reached from the Admin
+  section, never a home. §8.2.
+- **An account never loses its own student experience.** `can_student` is
+  unconditionally true. A teacher who studies here is still a student.
+- **A pending assistant is not staff.** Approved by nobody, refused by
+  `teacher_roster()` and `teacher_student_weaknesses()` — so routing them to the
+  staff surface would be a page of permission errors. This was a live defect:
+  `nav.js` counted any row that was not `removed` as teaching. Fixed at the
+  source rather than in one of its readers.
+- **Routing is not a security boundary,** and this is the line to quote when
+  someone proposes to make it one. The function takes no arguments, writes
+  nothing, and grants nothing; every permission stays where §8.3 put it. A
+  client that ignores it gains exactly nothing.
+
+Dry-run evidence, mutation tests, and what was deliberately left out of the
+increment: `docs/engineering/experience-routing-verification.md`. **It does not
+reopen T1.6.** No analytics, no new academic read, no new access — it changes
+where a browser sends someone, and nothing else.
+
 ### T2 — Per-student trajectory, evidence-first
 
 - **Entry:** enough attempts per student that a trajectory can be wrong (§6.2),

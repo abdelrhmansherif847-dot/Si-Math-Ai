@@ -16,7 +16,9 @@
  *
  * The script:
  *   - waits for window.sb (the Supabase client every page already creates)
- *   - reads profiles.role (falls back to is_admin -> 'admin')
+ *   - asks my_experience() for the platform role and whether the caller is
+ *     ACTIVE workspace staff (falls back to profiles.role +
+ *     teacher_my_workspaces() until that migration is applied)
  *   - injects "Admin Dashboard" / "Super Admin Dashboard" / "Owner Dashboard"
  *     plus "AI Monitor" (super_admin+ only)
  *   - removes any duplicate admin-link anchors that older inline JS may append
@@ -175,21 +177,45 @@
       var ures = await sb.auth.getUser();
       var user = ures && ures.data && ures.data.user;
       if (!user) { slot.style.display = 'none'; return; }
-      var pres = await sb.from('profiles').select('role, is_admin').eq('id', user.id).maybeSingle();
-      var prof = pres && pres.data;
-      var role = (prof && prof.role) || (prof && prof.is_admin ? 'admin' : 'user');
+      /* my_experience() (20260830i) is the single answer to "which product is
+         this account in?" — it reports the platform role and whether the caller
+         is ACTIVE staff, in one call, about the caller and nobody else.
 
-      /* teacher_my_workspaces() ships in 20260830c, which is PREPARED and not
-         applied. Until it is, this call returns an error and every page must
-         render exactly as it does today — so the failure is swallowed and
-         `teaching` stays false. Nothing here waits on it either: one awaited
-         RPC beside the profile read, no retry, no polling. */
-      var teaching = false;
+         It is a hand-applied migration while this file deploys with the site on
+         merge, so the two arrive in either order. Before it exists the call
+         returns an error and this falls back to what nav.js did before: read
+         profiles.role, then ask teacher_my_workspaces(). Both paths are checked
+         below so neither can rot. */
+      var role = null;
+      var teaching = null;
       try {
-        var tres = await sb.rpc('teacher_my_workspaces');
-        var trows = (tres && tres.data) || [];
-        teaching = trows.some(function (r) { return r && r.staff_status !== 'removed'; });
-      } catch (_) { teaching = false; }
+        var xres = await sb.rpc('my_experience');
+        var x = xres && !xres.error && xres.data;
+        if (x && typeof x === 'object') {
+          role = x.platform_role || 'user';
+          teaching = x.can_staff === true;
+        }
+      } catch (_) { role = null; teaching = null; }
+
+      if (role === null) {
+        var pres = await sb.from('profiles').select('role, is_admin').eq('id', user.id).maybeSingle();
+        var prof = pres && pres.data;
+        role = (prof && prof.role) || (prof && prof.is_admin ? 'admin' : 'user');
+      }
+
+      if (teaching === null) {
+        /* Only an ACTIVE staff row is teaching. A pending assistant has applied
+           and been approved by nobody — teacher_roster() and
+           teacher_student_weaknesses() both refuse them — so the link would open
+           a page of permission errors. This line used to accept any row that was
+           not 'removed', which showed the Teaching link to exactly that account. */
+        teaching = false;
+        try {
+          var tres = await sb.rpc('teacher_my_workspaces');
+          var trows = (tres && tres.data) || [];
+          teaching = trows.some(function (r) { return r && r.staff_status === 'active'; });
+        } catch (_) { teaching = false; }
+      }
 
       render(slot, role, teaching);
       removeDuplicateAdminLinks(slot);

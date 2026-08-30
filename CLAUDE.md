@@ -145,9 +145,9 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **96 files** in `supabase/migrations/`, **165 applied** in the database. Exam delivery `20260830e/f`, the intervention record `20260830g` and the `owner`→`teacher` rename `20260830h` applied 2026-08-30; the rollbacks `20260830x/y` are deliberately unapplied (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Migrations | **98 files** in `supabase/migrations/`, **165 applied** in the database (measured 2026-08-30). Exam delivery `20260830e/f`, the intervention record `20260830g` and the `owner`→`teacher` rename `20260830h` applied 2026-08-30. **`20260830i` (`my_experience()`) is PREPARED and NOT APPLIED** — it is the file count moving without the applied count, which is the normal state of this repo. The rollbacks `20260830w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
-| CI | `node tests/run-all.mjs` — **53 checks** (measured 2026-08-30) |
+| CI | `node tests/run-all.mjs` — **54 checks** (measured 2026-08-30) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -263,6 +263,11 @@ safe or that a merge is sufficient.
 - `docs/engineering/v0-lessons-learned.md` — rules carried forward from Phase V0
 - `docs/engineering/infrastructure-backlog.md` — platform/deployment work, kept
   deliberately separate from the Truth System backlog
+- `docs/engineering/experience-routing-verification.md` — `my_experience()`,
+  the single caller-scoped answer to "which product does this account belong
+  in?", PREPARED and dry-run but **not applied**. Read it before touching
+  `login.html`'s post-auth routing or `nav.js`'s Teaching link. Routing is not a
+  security boundary; a pending assistant is not staff
 - `docs/engineering/subscription-writer-backlog.md` — open defects in the
   functions that write `subscriptions` (SUB-1 renewal INSERT vs UPSERT, live;
   SUB-2 missing `plan_code`, dead code). Read before touching
