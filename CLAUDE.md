@@ -147,7 +147,7 @@ student impact during exam-prep windows.
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **78 files** in `supabase/migrations/`, **141 applied** in the database (streak server-side + anon revoke applied 2026-08-04) |
 | Static site | 46 root `*.html` pages on Vercel |
-| CI | `node tests/run-all.mjs` — **46 checks** |
+| CI | `node tests/run-all.mjs` — **47 checks** (measured 2026-08-30) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -245,6 +245,15 @@ safe or that a merge is sufficient.
 - `docs/roadmap/truth-system-v2-backlog.md` + `.csv` — **frozen baseline.**
   47 epics, 58 tasks; V0–V4 decomposed, V5–V8 at epic level by design
 - `docs/roadmap/v0-notes.md` — Phase V0 assumptions, deviations and deferred work
+
+**Product direction — adopted, deliberately unbuilt**
+- `docs/roadmap/teacher-intelligence-layer.md` — the teacher-facing layer the
+  platform will eventually grow: what it is for, the four gates any teacher
+  feature must pass, the anti-goals, and the staged admission criteria. **It
+  authorizes nothing** — no schema, no role, no surface, no public copy — and the
+  Mock Experience is its prerequisite. Read it before proposing anything
+  teacher-, class- or cohort-shaped; §5 records, measured, why a teacher
+  dashboard cannot honestly be built yet
 
 **Earlier architecture records**
 - `docs/roadmap/adaptive-verification.md` — the original L1–L4 blueprint (superseded
