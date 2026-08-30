@@ -1,7 +1,12 @@
 -- =====================================================================
 -- Mock delivery · 2 of 2 — start, save, submit
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830203031
+--         `exam_delivery_rpcs`. Verified after apply: all four client RPCs are
+--         SECURITY DEFINER with search_path pinned and `anon` able to execute
+--         none of them. exam_available_sections() returns 0 rows, because
+--         nothing is published — which is the intended state.
 -- DEPENDS ON: 20260830e (exam_attempts, exam_responses, exam_answer_matches)
 --
 -- Three verbs, and a listing. Every one is SECURITY DEFINER because students

@@ -145,9 +145,9 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **93 files** in `supabase/migrations/`, **161 applied** in the database (the exam-delivery trio `20260830e/f/y` is PREPARED and unapplied) (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
-| Static site | **49** root `*.html` pages on Vercel (measured 2026-08-30; the entry said 46 and had been stale since before `teacher.html`) |
-| CI | `node tests/run-all.mjs` — **51 checks** (measured 2026-08-30) |
+| Migrations | **93 files** in `supabase/migrations/`, **163 applied** in the database. Exam delivery `20260830e/f` applied 2026-08-30; the rollback `20260830y` is deliberately unapplied (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
+| CI | `node tests/run-all.mjs` — **52 checks** (measured 2026-08-30) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -200,6 +200,17 @@ exists for this. Do not treat the file list as the applied list.
   table, by design. Clients hold SELECT only — every write is a SECURITY DEFINER
   RPC. Read `docs/roadmap/teacher-intelligence-layer.md` §8 before touching
   anything teacher-, class- or cohort-shaped
+- **Exam delivery** (live 2026-08-30, both tables empty): `exam_attempts`,
+  `exam_responses`. Per-item response, correctness, time and revisit count — the
+  evidence the weakness pipeline was missing. `is_correct` is THREE-valued:
+  true answered right, false answered wrong, **NULL not answered**. An omission
+  is recorded and is deliberately NOT a weakness signal; collapsing the two
+  turns a pacing problem into a topic weakness. The answer key never reaches the
+  browser: students hold no privilege on `exam_questions`, `exam_start()` selects
+  a named list excluding `correct_answer`, and `exam_submit()` grades
+  server-side. **Nothing is published** — all 3 forms and 161 questions are
+  `draft`, so nothing is sittable. Read
+  `docs/engineering/exam-delivery-verification.md` before touching delivery
 - **Weakness reads** are canonical: `weakness_reports` is the single weakness,
   and `regenerate-reports.js` is the SOLE authority for `severity_band` and
   `trend` — **no consumer re-derives either**. The teacher/assistant read is

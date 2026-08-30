@@ -1,8 +1,13 @@
 # Mock delivery — dry run against production, 2026-08-30
 
-**Status: PREPARED, NOT APPLIED.** `20260830e`, `20260830f` and the rollback
-`20260830y` are written and verified but have **not** been run against
-`igvkyxkmjnkzscqgommj`. CLAUDE.md §3 requires per-migration approval.
+**Status: LIVE.** `20260830e` (`20260830202630`) and `20260830f`
+(`20260830203031`) were applied to `igvkyxkmjnkzscqgommj` on 2026-08-30 with
+explicit owner approval, one at a time, verified after each. The rollback
+`20260830y` is deliberately not applied.
+
+**No content was published.** All 3 forms and all 161 questions remain `draft`,
+`exam_available_sections()` returns 0, and `exam_attempts`/`exam_responses` hold
+0 rows. Publishing stays a separate authoring decision.
 
 **Why:** `docs/engineering/weakness-evidence-audit.md` §5 found that every
 blocked weakness insight is blocked by the same absence — no per-item response
@@ -85,10 +90,37 @@ itself: `exam_submit` returns mistakes in the shape `ExamMistakesLogger.process(
 already takes, so the frozen logger and the frozen analyzer stay the only
 authorities.
 
-## 5 · What is still missing before a student can sit one
+## 5 · The delivery page
 
-1. **Approval to apply** the three migrations.
-2. **A delivery page.** Nothing in the browser calls these RPCs yet.
-3. **Published content.** All 3 forms and all 161 questions are `draft`. Nothing
-   is deliverable until a form is taken through review and published — an
-   authoring decision, and deliberately not one this work took on its own.
+`exam.html` is the browser half: pick a sitting, sit it timed, one item at a
+time, submit. It is resumable — a stable `client_request_id` in `localStorage`
+means a refresh resumes the same attempt rather than starting a second one — and
+the timer is anchored to the server's `started_at`, so reloading does not buy
+more time. Running out submits automatically.
+
+It reports the four facts as it goes: the answer, a **time delta** since the last
+save (so a lost message costs one interval rather than the total), a visit on
+entering an item, and a flush on leaving, every 20 seconds, and when the tab is
+hidden or closed.
+
+On submit it hands the mistakes straight to `ExamMistakesLogger.process()` and
+then `regenerateWeaknessReports()` — the frozen logger and the frozen analyzer
+stay the only writers of signals and reports. The result is four raw counts;
+there is no scaled score because none is computed.
+
+**Driven end to end in a real browser** (preview paper): start → Q1 of 4, four
+choices, timer counting → answer → next → jump to the grid-in item → type →
+submit → "1 correct, 1 wrong, 2 left blank, 4 questions". The page tells the
+student in words that blanks are recorded but not counted as weaknesses.
+
+`?preview=1` runs a sample paper entirely from local fixtures and reaches the
+database not at all, which is how the experience was built and verified without
+publishing anything.
+
+## 6 · What is still missing before a real student can sit one
+
+**Published content, and nothing else.** All 3 forms and all 161 questions are
+`draft`, so `exam_available_sections()` is empty and the page shows an honest
+"no exam is available yet" state. Taking a form through review and publishing it
+is an authoring decision with an immutability contract attached, and this work
+deliberately did not take it.

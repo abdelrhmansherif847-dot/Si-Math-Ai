@@ -1,7 +1,12 @@
 -- =====================================================================
 -- Mock delivery — per-question evidence for the weakness pipeline
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval (CLAUDE.md §3).
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830202630
+--         `exam_delivery_tables`. Verified after apply: both tables RLS-enabled
+--         with one read policy each, `anon` holds nothing, `authenticated`
+--         holds SELECT only, and exam_answer_matches is not client-callable.
+--         No form or question changed status.
 -- DEPENDS ON: the exam authoring tables (exam_forms/sections/questions/stimuli)
 -- CONTEXT: docs/engineering/weakness-evidence-audit.md §5 lists exactly what is
 --          impossible today and why. This file records the missing evidence and

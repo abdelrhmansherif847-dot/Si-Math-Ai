@@ -2,6 +2,8 @@
 -- Mock delivery — rollback
 -- =====================================================================
 -- STATUS: ⛔ NOT APPLIED, and only to be run if delivery is being withdrawn.
+--         20260830e and 20260830f went live on 2026-08-30, so this is now the
+--         real withdrawal path rather than a hypothetical one.
 -- Written alongside the forward migrations, on the same principle the teacher
 -- foundation used: a rollback written later is a rollback written under pressure.
 --
