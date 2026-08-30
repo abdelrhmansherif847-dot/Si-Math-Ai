@@ -91,7 +91,7 @@ for m in 20260824a_question_spine 20260824b_exam_forms_insert_guard \
          20260827a_stimulus_reading 20260827b_plot_figures; do
   step "migration $m" $PSQL -d examdraft -q -v ON_ERROR_STOP=1 -f "$REPO/supabase/migrations/$m.sql"
 done
-step "generate the DRAFT insert" python3 "$REPO/scripts/build-exam-form-draft.py" "$DIR" "$FORM" "$TMP/draft.sql"
+step "generate the DRAFT insert" python3 "$REPO/scripts/build-exam-form-draft.py" "$DIR" "$FORM" "$TMP/draft.sql" "$EXAM"
 step "load it ($FORM, draft)" $PSQL -d examdraft -q -v ON_ERROR_STOP=1 -f "$TMP/draft.sql"
 
 echo
