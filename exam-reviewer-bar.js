@@ -199,7 +199,7 @@
     amb.setAttribute('data-rv-amb', '');
     amb.setAttribute('aria-pressed', 'false');
     amb.textContent = 'Room sound';
-    amb.title = 'Synthesised placeholder ambience — pen and paper. The voice layer waits for a recording.';
+    amb.title = 'Room sound — seven recorded exchanges on a fixed schedule';
     amb.addEventListener('click', function () {
       var A = root.SiExamAmbience; if (!A) return;
       var now = A.isOn() ? !A.disable() : A.enable();
@@ -208,7 +208,7 @@
       if (out) {
         out.className = 'rv-out';
         out.textContent = now
-          ? 'Room sound on — a moment now, then every ' + 45 + 's. Synthesised placeholders.'
+          ? 'Room sound on — one now, then on the schedule.'
           : 'Room sound off.';
       }
     });
@@ -217,10 +217,10 @@
     var once = document.createElement('button');
     once.type = 'button'; once.className = 'rv-b';
     once.textContent = 'Once';
-    once.title = 'Play one ambience moment now';
+    once.title = 'Play the next scheduled exchange now, without waiting for its mark';
     once.addEventListener('click', function () {
       var A = root.SiExamAmbience; if (!A) return;
-      var id = A.moment();
+      var id = A.voiceNow();
       var out = bar && bar.querySelector('[data-rv-out]');
       if (out) { out.className = 'rv-out'; out.textContent = id ? 'Played: ' + id : 'No audio available.'; }
     });
