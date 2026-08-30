@@ -59,6 +59,77 @@
   //              practising against the wrong calculator builds wrong habits.
   var CALC_SCOPES = ['exam', 'partial', 'none'];
 
+  // ── Answer conventions ─────────────────────────────────────────────────────
+  //
+  // HOW MANY OPTIONS A QUESTION HAS, AND WHAT THEY ARE CALLED, IS A PROPERTY OF
+  // THE EXAM — not of the question, and not of the database.
+  //
+  // The SAT and the EST offer four options lettered A-D. The ACT offers five,
+  // and its letters ALTERNATE by question number: odd-numbered questions run
+  // A B C D E, even-numbered run F G H J K. There is no I — next to a question
+  // number it reads as a 1. A student who practises on A-D for every ACT
+  // question learns to scan four options and to expect the same letters twice
+  // in a row, and both habits cost them time on test day. That is the same
+  // argument the calculator policy above makes, applied to the answer sheet.
+  //
+  // WHY IT LIVES HERE. 20260830a widened the Spine to store any of the three
+  // sets, and deliberately stopped there: the database says what is STORABLE,
+  // and refuses to learn which set belongs on which ordinal of which exam —
+  // the same line M3 drew when it would not CHECK exam_code against a list, or
+  // name a variant id. This is the registry side of that line, and it is the
+  // only place the convention is written down. The pre-flight reads it; the
+  // draft builder reads it; nothing hard-codes a letter.
+  var ANSWER_CONVENTIONS = {
+    // Four options, one lettering, and student-produced responses permitted.
+    sat4: {
+      id: 'sat4',
+      optionCount: 4,
+      gridInAllowed: true,
+      sets: [['A', 'B', 'C', 'D']],
+      // Same set on every question, so the ordinal is not consulted.
+      idsFor: function () { return ['A', 'B', 'C', 'D']; },
+      note: 'Four options, A-D, on every question. Student-produced responses permitted.',
+    },
+    // Five options, alternating lettering, no student-produced responses.
+    act5alt: {
+      id: 'act5alt',
+      optionCount: 5,
+      gridInAllowed: false,
+      sets: [['A', 'B', 'C', 'D', 'E'], ['F', 'G', 'H', 'J', 'K']],
+      idsFor: function (ordinal) {
+        return (ordinal % 2 === 1)
+          ? ['A', 'B', 'C', 'D', 'E']
+          : ['F', 'G', 'H', 'J', 'K'];
+      },
+      note: 'Five options. Odd-numbered questions are lettered A-E, even-numbered '
+          + 'F-K (no I). Every question is multiple choice.',
+    },
+  };
+
+  /** The convention for an exam, or null for one that holds no questions. */
+  function answerConvention(code) {
+    var e = get(code);
+    return (e && e.answers && ANSWER_CONVENTIONS[e.answers]) || null;
+  }
+
+  /**
+   * The exact option ids question `ordinal` of `code` must offer.
+   * Returns null for an exam with no convention (Practice Timer holds no items).
+   * ORDINAL IS 1-BASED, matching exam_questions.ordinal, because an off-by-one
+   * here would silently letter every ACT question the wrong way round.
+   */
+  function choiceIdsFor(code, ordinal) {
+    var c = answerConvention(code);
+    if (!c) return null;
+    return c.idsFor(ordinal).slice();
+  }
+
+  /** Does this exam permit student-produced responses at all? */
+  function gridInAllowed(code) {
+    var c = answerConvention(code);
+    return !!(c && c.gridInAllowed);
+  }
+
   // ── Ambience default ───────────────────────────────────────────────────────
   // OFF. Ambient exam-hall sound is opt-in through an explicitly chosen
   // "Realistic Exam Environment", never a default imposed on every student.
@@ -84,6 +155,7 @@
   var EXAMS = [
     {
       code: 'SAT_MODULE_1',
+      answers: 'sat4',
       examType: 'SAT',
       displayName: 'SAT Math — Module 1',
       shortName: 'Module 1',
@@ -114,6 +186,7 @@
 
     {
       code: 'SAT_MODULE_2',
+      answers: 'sat4',
       examType: 'SAT',
       displayName: 'SAT Math — Module 2',
       shortName: 'Module 2',
@@ -148,6 +221,7 @@
 
     {
       code: 'SAT_FULL',
+      answers: 'sat4',
       examType: 'SAT',
       displayName: 'Full SAT Math',
       shortName: 'Full SAT',
@@ -199,6 +273,7 @@
 
     {
       code: 'EST_MATH_1',
+      answers: 'sat4',
       examType: 'EST',
       displayName: 'EST Math 1',
       shortName: 'EST Math 1',
@@ -241,6 +316,7 @@
 
     {
       code: 'EST_MATH_2_L1',
+      answers: 'sat4',
       examType: 'EST',
       displayName: 'EST Math 2 — Level 1',
       shortName: 'EST Math 2 L1',
@@ -271,6 +347,7 @@
 
     {
       code: 'ACT_MATH',
+      answers: 'act5alt',
       examType: 'ACT',
       displayName: 'ACT Math',
       shortName: 'ACT Math',
@@ -815,6 +892,10 @@
     isLastModule: isLastModule,
     nextModule: nextModule,
     moduleStartState: moduleStartState,
+    ANSWER_CONVENTIONS: ANSWER_CONVENTIONS,
+    answerConvention: answerConvention,
+    choiceIdsFor: choiceIdsFor,
+    gridInAllowed: gridInAllowed,
     ADAPTIVE_EXAM_CODES: ADAPTIVE_EXAM_CODES,
     isAdaptiveExam: isAdaptiveExam,
     selectNextModule: selectNextModule,

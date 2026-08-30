@@ -278,4 +278,64 @@ t.ok('EXAM_CONFIGS is assigned from the compat view',
 t.ok('a missing registry is guarded like a missing SDK',
   pageSrc.includes('!window.SiExamRegistry'));
 
+t.section('answer conventions — how many options, and what they are called');
+
+// The convention is the reason an ACT form can exist at all: 20260830a widened
+// the database to STORE five-choice questions and deliberately refused to learn
+// which letters belong on which ordinal. This is where that lives, so it is
+// where it has to be checked.
+const conv = (c) => R.answerConvention(c);
+
+t.is('SAT follows the four-option convention', conv('SAT_FULL').id, 'sat4');
+t.is('EST Math 1 follows it too', conv('EST_MATH_1').id, 'sat4');
+t.is('EST Math 2 follows it too', conv('EST_MATH_2_L1').id, 'sat4');
+t.is('ACT has its own', conv('ACT_MATH').id, 'act5alt');
+t.is('the Practice Timer has none — it holds no items', R.answerConvention('PRACTICE'), null);
+t.is('every exam that holds questions declares one',
+  R.all().filter((e) => e.modules && e.code !== 'PRACTICE' && !R.answerConvention(e.code))
+    .map((e) => e.code), []);
+
+t.is('SAT offers four options', R.choiceIdsFor('SAT_FULL', 1), ['A', 'B', 'C', 'D']);
+t.is('EST offers four options', R.choiceIdsFor('EST_MATH_1', 7), ['A', 'B', 'C', 'D']);
+
+// THE ALTERNATION IS THE WHOLE POINT. An ACT paper letters odd questions A-E
+// and even questions F-K, and a student who practises A-D throughout learns to
+// scan four options and to expect the same letters twice running.
+t.is('ACT question 1 is lettered A-E', R.choiceIdsFor('ACT_MATH', 1), ['A', 'B', 'C', 'D', 'E']);
+t.is('ACT question 2 is lettered F-K', R.choiceIdsFor('ACT_MATH', 2), ['F', 'G', 'H', 'J', 'K']);
+t.is('ACT question 45 is lettered A-E', R.choiceIdsFor('ACT_MATH', 45), ['A', 'B', 'C', 'D', 'E']);
+t.ok('ACT never letters an option I — it reads as a 1 beside the question number',
+  ![1, 2, 3, 4].some((n) => R.choiceIdsFor('ACT_MATH', n).includes('I')));
+t.ok('the two ACT sets never share a letter',
+  R.choiceIdsFor('ACT_MATH', 1).every((x) => !R.choiceIdsFor('ACT_MATH', 2).includes(x)));
+
+// The returned array must not be the registry's own, or one caller sorting it
+// in place would re-letter the exam for every caller after it.
+const ids = R.choiceIdsFor('ACT_MATH', 1);
+ids.push('Z');
+t.is('choiceIdsFor returns a copy', R.choiceIdsFor('ACT_MATH', 1).length, 5);
+
+// Every set the registry can produce must be one the database will accept, or
+// a form passes pre-flight and is refused on insert.
+const STORABLE = [['A', 'B', 'C', 'D'], ['A', 'B', 'C', 'D', 'E'], ['F', 'G', 'H', 'J', 'K']]
+  .map((a) => a.join(''));
+t.is('every convention produces only sets 20260830a can store',
+  Object.keys(R.ANSWER_CONVENTIONS)
+    .flatMap((k) => R.ANSWER_CONVENTIONS[k].sets.map((a) => a.slice().sort().join('')))
+    .filter((set) => !STORABLE.includes(set)), []);
+t.is('and idsFor only ever returns one of its own declared sets',
+  Object.keys(R.ANSWER_CONVENTIONS).flatMap((k) => {
+    const c = R.ANSWER_CONVENTIONS[k];
+    const declared = c.sets.map((a) => a.join(''));
+    return [1, 2, 3, 4, 45, 50].map((n) => c.idsFor(n).join(''))
+      .filter((got) => !declared.includes(got));
+  }), []);
+
+// The ACT is entirely multiple choice; the SAT and EST carry student-produced
+// responses. A grid-in authored into an ACT form would be a question its
+// answer sheet has no way to represent.
+t.ok('the SAT permits student-produced responses', R.gridInAllowed('SAT_FULL'));
+t.ok('the EST permits them', R.gridInAllowed('EST_MATH_1'));
+t.ok('the ACT does not', !R.gridInAllowed('ACT_MATH'));
+
 t.done();
