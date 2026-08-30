@@ -104,11 +104,21 @@
      the other two stay synthetic, which is not an inconsistency: pen-on-paper
      and paper rustle ARE noise with an envelope, and a voice is not.
 
-     The clips are CLEANED ONLY — a gentle FFT denoise that took 4.7 dB off the
-     noise floor while costing the whisper under 1 dB — and deliberately not
-     distanced. Room-processed versions were made and not chosen. What keeps
-     them in the background is therefore the GAIN and nothing else, which is a
-     number anyone can move, rather than filtering baked into the file.
+     The clips are CLEANED ONLY — a gentle FFT denoise, 7.4 dB off the noise
+     floor — and deliberately not distanced. Room-processed versions were made
+     and not chosen. What keeps them in the background is therefore the GAIN and
+     nothing else, which is a number anyone can move, rather than filtering
+     baked into the file.
+
+     THE DENOISE IS TUNED PER TAKE, not reused. The first recording took nr=12
+     and lost under 1 dB of whisper. The same setting on this one lost 4.4 dB
+     from one passage — and sweeping the strength showed that passage still
+     losing 3.8 dB at the gentlest setting that does anything at all. The cause
+     is not the filter being too strong: a whisper is largely UNVOICED, so
+     whispered consonants ARE broadband noise, and a spectral denoiser cannot
+     tell them from the room. So this take runs at nr=6, which is gentler than
+     the first take's and still takes more off the floor. Reusing a number would
+     have been the mistake that reusing an approach avoids.
 
      Fetched on first use, not on page load: nothing downloads for a student who
      never turns this on. A clip that fails to load leaves the layer silent and
