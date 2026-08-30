@@ -822,30 +822,13 @@ function drawPie(spec, opts) {
   if (!panels.length) throw new Error('drawPie: a pie needs at least one panel');
   const titled = panels.some(p => p.title);
   const pw = PIE.W, ph = PIE.H + (titled ? 20 : 0);
-  // The gutter is sized to the LONGEST LABEL, not to a constant. A fixed 46
-  // held "Above 50 50%" and lost a longer one, and a family that clips its own
-  // content on wording it was not tried against is a one-off with a wider spec.
-  // Estimated from the character count the way drawChart already sizes for a
-  // named series — nothing is in the document yet to measure. 7.2 is that same
-  // constant; 6.6 was tried first and came up ten pixels short on a long one.
-  const widest = Math.max(...panels.flatMap(pn => (pn.categories || []).map((c, i) => {
-    const v = (pn.values || [])[i], tot = (pn.values || []).reduce((a, x) => a + x, 0) || 1;
-    return (c + '  ' + fmt(Math.round((v / tot) * 1000) / 10) + '%').length;
-  })), 0);
-  const pad = Math.max(PIE.PAD, Math.round(widest * PIE.CH + 10) - (pw / 2 - PIE.R - PIE.LAB));
-  const W = pw * panels.length + pad * 2, H = ph;
-  /* A PANEL IS ALWAYS THE SAME SIZE ON THE PAGE. The viewBox grows with the
-   * panel count, so displaying every pie at one width made a lone pie render a
-   * third larger than a pair — same family, same grammar, visibly heavier ink
-   * and bigger type, purely because of how many panels it happened to have.
-   * That is the plate-stretch defect again in a different costume. So the
-   * display width is derived from the panel width instead, and the caller's
-   * value is a CAP rather than a target. */
-  const shown = Math.min(opts.shownAt || W, Math.round(W * PIE.PX / pw));
-  const s = svgRoot(W, H, shown);
-  s.setAttribute('class', 'sx sx-fam-data');
 
-  panels.forEach((pan, pi) => {
+  /* MEASURE FIRST, LAY OUT SECOND. Which side of its circle a label sits on
+   * follows from the slice angles, so every panel's angles are computed before
+   * anything is placed. The layout then knows how far each panel's ink actually
+   * reaches to its left and to its right, which is what the gutters and the
+   * channel between two panels are sized from. */
+  const geom = panels.map((pan, pi) => {
     const cats = pan.categories || [], vals = pan.values || [];
     if (cats.length !== vals.length)
       throw new Error('drawPie: panel ' + pi + ' has ' + cats.length +
@@ -857,33 +840,91 @@ function drawPie(spec, opts) {
     const total = vals.reduce((a, v) => a + v, 0);
     if (!(total > 0)) throw new Error('drawPie: panel ' + pi + ' sums to ' + total);
 
+    let a0 = PIE.SEP;
+    const arcs = vals.map((v) => {
+      const a1 = a0 + (v / total) * Math.PI * 2, arc = [a0, a1, (a0 + a1) / 2];
+      a0 = a1; return arc;
+    });
+    /* Widths are ESTIMATED from the character count, the way drawChart already
+     * sizes for a named series — nothing is in the document yet to measure, and
+     * the Edge Function has no document at all. 7.2 per character is that same
+     * constant; 6.6 was tried first and came up ten pixels short on a long one.
+     * It over-estimates by around 15% on real strings, and every consumer below
+     * relies on erring long: that surplus IS the air between two labels. */
+    const labels = cats.map((c, i) => {
+      const text = c + '  ' + fmt(Math.round((vals[i] / total) * 1000) / 10) + '%';
+      return { text, mid: arcs[i][2], right: Math.cos(arcs[i][2]) >= -0.02,
+               w: Math.round(text.length * PIE.CH + 10) };
+    });
+    const reach = (side) => Math.max(0, ...labels.filter(L => L.right === side).map(L => L.w));
+    return { arcs, labels, title: pan.title, reachR: reach(true), reachL: reach(false) };
+  });
+
+  // The outer gutter holds the longest label of all, so no panel is clipped by
+  // the plate edge whichever end it happens to land on.
+  const widest = Math.max(0, ...geom.flatMap(g => g.labels.map(L => L.w)));
+  const pad = Math.max(PIE.PAD, widest - (pw / 2 - PIE.R - PIE.LAB));
+
+  /* THE CHANNEL BETWEEN TWO PANELS is sized by the two labels that actually
+   * meet in it — the left panel's furthest-right label and the right panel's
+   * furthest-left one — and not by a constant.
+   *
+   * Abutting panels are wide enough only while both are short. On the
+   * study-centre pair they were not: "Mathematics  45%" and "Year 10  20%"
+   * overlapped by a pixel and read as a two-line block floating between the
+   * pies, belonging to neither, on a question whose whole point is telling the
+   * two apart. The OUTER gutter had been sized for exactly this overhang and
+   * the inner one had never been sized at all.
+   *
+   * No slack is added beyond the two reaches. The estimate above already runs
+   * long, and every unit here is paid for twice: the plate is capped at the
+   * question column, so a wider channel scales the whole figure — pies, labels
+   * and all — down. A pair that already clears keeps abutting panels, so a pie
+   * whose labels never met renders exactly as it did before this existed. */
+  const steps = geom.slice(0, -1).map((g, i) =>
+    Math.max(pw, 2 * (PIE.R + PIE.LAB) + g.reachR + geom[i + 1].reachL));
+  const W = pw + steps.reduce((a, d) => a + d, 0) + pad * 2, H = ph;
+
+  /* A PANEL IS ALWAYS THE SAME SIZE ON THE PAGE. The viewBox grows with the
+   * panel count, so displaying every pie at one width made a lone pie render a
+   * third larger than a pair — same family, same grammar, visibly heavier ink
+   * and bigger type, purely because of how many panels it happened to have.
+   * That is the plate-stretch defect again in a different costume. So the
+   * display width is derived from the panel width instead, and the caller's
+   * value is a CAP rather than a target.
+   *
+   * The cap BINDS for two panels: 245 per panel wants more than the column has,
+   * so a two-panel pie is scaled to fit and its type lands smaller than the
+   * rest of the family's. That is a property of the arrangement, not of this
+   * cap — see docs/engineering/figure-visual-system.md. */
+  const shown = Math.min(opts.shownAt || W, Math.round(W * PIE.PX / pw));
+  const s = svgRoot(W, H, shown);
+  s.setAttribute('class', 'sx sx-fam-data');
+
+  let left = pad;
+  geom.forEach((gm, pi) => {
     const g = el('g', {});
-    const cx = pad + pi * pw + pw / 2, cy = (titled ? 20 : 0) + PIE.H / 2, r = PIE.R;
-    if (pan.title)
-      g.appendChild(el('text', { x: cx, y: 14, class: 'sx-pie-title' }, pan.title));
+    const cx = left + pw / 2, cy = (titled ? 20 : 0) + PIE.H / 2, r = PIE.R;
+    left += steps[pi] || 0;
+    if (gm.title)
+      g.appendChild(el('text', { x: cx, y: 14, class: 'sx-pie-title' }, gm.title));
 
     const P = (a, rad) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
-    let a0 = PIE.SEP;
-    const mids = [];
-    vals.forEach((v, i) => {
-      const a1 = a0 + (v / total) * Math.PI * 2, big = (a1 - a0) > Math.PI ? 1 : 0;
+    gm.arcs.forEach(([a0, a1], i) => {
+      const big = (a1 - a0) > Math.PI ? 1 : 0;
       const [x0, y0] = P(a0, r), [x1, y1] = P(a1, r);
       // A single-slice distribution is a circle, and an arc from a point back to
       // itself draws nothing at all — so it is closed as a circle instead.
-      g.appendChild(vals.length === 1
+      g.appendChild(gm.arcs.length === 1
         ? el('circle', { cx, cy, r, class: 'sx-pie-slice ' + PIE_SLOT[0] })
         : el('path', { class: 'sx-pie-slice ' + PIE_SLOT[i],
             d: `M${cx},${cy} L${x0},${y0} A${r},${r} 0 ${big} 1 ${x1},${y1} Z` }));
-      mids.push((a0 + a1) / 2);
-      a0 = a1;
     });
 
-    cats.forEach((c, i) => {
-      const [lx, ly] = P(mids[i], r + PIE.LAB);
-      const right = Math.cos(mids[i]) >= -0.02;
+    gm.labels.forEach((L) => {
+      const [lx, ly] = P(L.mid, r + PIE.LAB);
       g.appendChild(el('text', { x: lx, y: ly + 4, class: 'sx-pie-label',
-        'text-anchor': right ? 'start' : 'end' },
-        c + '  ' + fmt(Math.round((vals[i] / total) * 1000) / 10) + '%'));
+        'text-anchor': L.right ? 'start' : 'end' }, L.text));
     });
     s.appendChild(g);
   });

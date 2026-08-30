@@ -752,6 +752,51 @@
      }
     ]
    }
+  },
+  {
+   "id": "pie-2",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native — and, for a whole divided, the decided vocabulary",
+   "label": "two panels whose longest labels face each other across the channel",
+   "kind": "chart",
+   "reading": null,
+   "note": "THE SHAPE OF A DEFECT THAT SHIPPED, not the item it shipped in. pie-0 has two panels as well, but its labels are short and the two facing the channel are shorter still, so abutting panels held and nothing in this set could have gone red. What broke a real question was a long label pointing RIGHT out of the left panel meeting a long one pointing LEFT out of the right panel: they overlapped and read as one block belonging to neither pie. The wording and numbers here are invented — this repository is public and no exam content may enter it — and reach further across the channel than the case that found it, so this covers it strictly.",
+   "spec": {
+    "chartType": "pie",
+    "panels": [
+     {
+      "title": "By department",
+      "categories": [
+       "Engineering",
+       "Marketing",
+       "Finance",
+       "Legal"
+      ],
+      "values": [
+       42,
+       28,
+       18,
+       12
+      ]
+     },
+     {
+      "title": "By location",
+      "categories": [
+       "Cairo",
+       "Alexandria",
+       "Port Said",
+       "Aswan"
+      ],
+      "values": [
+       38,
+       27,
+       22,
+       13
+      ]
+     }
+    ]
+   }
   }
  ]
 }

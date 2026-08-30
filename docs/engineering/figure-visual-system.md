@@ -167,3 +167,74 @@ the point is to look at them.
 CI runs the contract in its own job with Chromium, and uploads every render and
 difference image on failure, so a red build can be looked at rather than guessed
 at. **This job has not yet run on GitHub**; it is written but unverified there.
+
+## The pie family, and what looking at it found
+
+The pie family shipped green — 26 of 26 visual checks at 0.000%, every property
+check passing — and was still wrong in the exam. The two defects it carried are
+worth keeping, because neither was the kind a check was watching for and one is
+still open.
+
+### Two panels' labels met in the middle (fixed)
+
+`drawPie` sized an outer gutter from the longest label so no label could be
+clipped by the plate edge, then laid the panels out abutting. Inside a panel a
+label starts `R + LAB` from the centre and runs outward, so any label wider than
+`pw/2 − R − LAB` overhangs its own panel. With two panels side by side, the left
+one's right-hand label and the right one's left-hand label overhang into the
+same channel and meet.
+
+On `DSAT-2026-A` Q21/Q22 they did: **"Mathematics  45%" and "Year 10  20%"
+overlapped by 0.8 × 3.1 px** and read as a single two-line block floating between
+the pies, belonging to neither — on a pair of questions whose whole point is
+telling the two distributions apart. The outer gutter had been sized for exactly
+this overhang. The inner one had never been sized at all.
+
+The channel is now sized from the two labels that actually meet in it — the left
+panel's furthest-right reach plus the right panel's furthest-left — with no
+constant added, because the character-count width estimate already runs about
+15% long and that surplus is the air. Panels that already clear stay abutting,
+so `pie-0` and `pie-1` render byte-identically to the baselines approved before
+this existed.
+
+**Why no case caught it.** `pie-0` has two panels as well, but its labels are
+short and the two facing the channel are shorter still, so abutting panels held
+and nothing in the set could have gone red. `pie-2` is the missing case: not the
+exam's item — **this repository is public and no exam content may enter it** — but
+its shape, a long right-pointing label out of the left panel meeting a long
+left-pointing one out of the right, invented and reaching further across the
+channel than the case that found it. Measured in a browser with the channel
+removed, `pie-2`'s two labels overlap by 32.2px while `pie-0` and `pie-1` still
+clear; with it, none of the three collides. Reverting the channel turns `pie-2`
+red and leaves the other two green, which is the check earning its keep. Same
+lesson `geo-2` records: **a contract only covers the failures it has a case for.**
+
+### A two-panel pie is drawn at half the family's type size (open)
+
+Measured in the real card, at 1440×900, against a 17.5px stem:
+
+| figure | plate | shown | scale | type on screen |
+|---|---|---|---|---|
+| bar chart (Q7) | 430u | 560px | 1.302 | numerals **15.6px** |
+| pie, two panels | 801u | 560px | 0.699 | labels **8.7px** |
+| pie, on the approved exploration page | 330u | 255px | 0.774 | labels **9.7px** |
+| pie, one panel per row, full column | 422u | 560px | 1.327 | labels **16.6px** |
+
+Every family is capped at the same 560px question column. A two-panel pie is
+more than twice as wide a plate as anything else in the grammar, so the cap
+scales it — and everything inside it — to roughly half. The labels are not
+small because the stylesheet says 12.5px; they are small because the arrangement
+doubles the plate.
+
+The last row is the tell: **one panel plus its gutters is 422 units, which is the
+430 the rest of the data family already draws at.** The panel geometry was
+authored to the family's reference width; only putting two of them abreast
+fights it. Stacked, the type lands at 16.6px and matches the exam.
+
+It is left as it is, deliberately. Side by side is the arrangement chosen on the
+exploration page, at realistic exam size, with the type at 9.7px — a smaller
+register was what was approved, and swapping the arrangement is a design decision
+rather than a defect repair. Stacking also costs what it buys: a stacked pair is
+a **690px** figure that pushes the stem and all four options below the fold at
+1440×900, where the side-by-side pair leaves the whole question on one screen.
+Both renders exist; the choice is a human one.

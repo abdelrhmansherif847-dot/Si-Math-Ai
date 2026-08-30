@@ -1,6 +1,17 @@
 -- =====================================================================
--- ⛔ PREPARED — NOT APPLIED. Awaiting individual approval.
+-- APPLIED 2026-08-30 as version 20260830022108, after individual approval.
 -- The second half of pie support, found by trying to insert one.
+--
+-- Verified in production immediately after applying, by asking the function
+-- itself about every stimulus shape the schema allows. Only the pie moved:
+--
+--   chart / bar        true   (unchanged)   plot / graph   true  (unchanged)
+--   chart / line       true   (unchanged)   plot / data    true  (unchanged)
+--   chart / pie       FALSE   (was true)    plot / plane   false (unchanged)
+--   table              false  (unchanged)   number_line    false (unchanged)
+--
+-- The insert it unblocked went in the same day: one shared pie stimulus, two
+-- questions pointing at it, both with reading NULL.
 -- =====================================================================
 --
 -- 20260830a made a pie STORABLE. This makes it insertable.
