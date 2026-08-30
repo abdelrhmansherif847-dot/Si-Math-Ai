@@ -130,8 +130,8 @@
      re-measure DURATION_S, PEAK_DBFS and TRIM together — all three describe
      the same bytes. */
   var DURATION_S = {
-    'voice-1': 2.70, 'voice-2': 2.39, 'voice-3': 2.51, 'voice-4': 2.99,
-    'voice-5': 3.15, 'voice-6': 3.15, 'voice-7': 2.79,
+    'voice-1': 4.83, 'voice-2': 4.51, 'voice-3': 5.32, 'voice-4': 6.04,
+    'voice-5': 5.94, 'voice-6': 4.64, 'voice-7': 5.52,
   };
 
   var voiceTimer = null, voiceIdx = 0, moduleT0 = 0, moduleKey = null;
@@ -202,51 +202,52 @@
   /* PER-CLIP LOUDNESS TRIM — measured, not chosen.
 
      Each clip's loudest 100 ms window was measured against its own true peak,
-     and the trim is whatever brings that window to a common -24 dBFS, EXCEPT
-     where doing so would push the clip's peak past -0.5 dBFS. voice-3 hits
-     that ceiling and lands 0.9 dB under the group, which is the honest outcome
-     for the most distant of the seven recordings rather than a compromise
-     worth limiting for.
+     and the trim is whatever brings that window to a common -24 dBFS. Since
+     the 2026-08-30 re-cut every clip is peak-normalised to -3 dBFS before
+     encoding, so no clip reaches the -0.5 dBFS ceiling any more and the match
+     is exact: the spread across all seven is 0.00 dB, where the previous set
+     left voice-3 parked 0.9 dB under the group.
 
-     PEAK dBFS  LOUDEST-100ms  TRIM dB   WAS       NOW      CHANGE
-      -5.8        -19.6         -6.14   -33.0    -24.0     +9.0
-      -6.0        -25.1         -1.49   -37.7    -24.0    +13.7
-      -6.2        -33.5         +5.74   -45.7    -24.9    +20.9   <- at the ceiling
-      -6.4        -26.7         +0.88   -40.0    -24.0    +16.0
-      -6.3        -16.7         -8.05   -31.1    -24.0     +7.1
-      -6.1        -19.3         -6.77   -32.4    -24.0     +8.4
-      -6.5        -20.5         -5.14   -34.0    -24.0    +10.0
+     PEAK dBFS   LOUDEST-100ms   TRIM      -> plays at
+      -3.6         -16.2         0.406       -24.0
+      -3.8         -19.4         0.590       -24.0
+      -3.6         -25.4         1.173       -24.0
+      -3.5         -21.9         0.782       -24.0
+      -3.1         -12.9         0.279       -24.0
+      -3.2         -13.7         0.306       -24.0
+      -3.0         -14.4         0.330       -24.0
 
-     EVERY CLIP IS LOUDER, which a single gain could not have done: the ones
-     that needed it most gain three times what the loudest one does.
-
-     THE FILES ARE UNTOUCHED. This is a playback trim, so the approved audio
-     keeps its bytes, no second lossy generation is encoded, and the numbers
-     stay legible and reversible here rather than baked into an asset.
+     WHY A TRIM AT ALL, when the files are normalised. Because peak is not
+     loudness, which is the whole lesson of this layer: these seven still span
+     12.5 dB in the loudest 100 ms while their peaks sit within 0.8 dB. The
+     normalisation exists to give a 64 kbps encoder a strong signal, not to set
+     the playback level, and confusing those two is what left five of the seven
+     inaudible before.
 
      PEAK is committed beside TRIM so the no-clipping invariant is checkable
      without decoding an mp3 in CI; tests/exam-ambience.test.mjs asserts
-     PEAK + TRIM + gain stays under 0 dBFS for every clip. Re-measure both
+     PEAK + TRIM + gain stays under 0 dBFS for every clip. DURATION_S sits with
+     them because all three describe the same bytes. Re-measure all three
      together if a clip is ever replaced. */
   var TRIM = {
-    'voice-1': 0.493, 'voice-2': 0.842, 'voice-3': 1.936, 'voice-4': 1.107,
-    'voice-5': 0.396, 'voice-6': 0.459, 'voice-7': 0.553,
+    'voice-1': 0.406, 'voice-2': 0.590, 'voice-3': 1.173, 'voice-4': 0.782,
+    'voice-5': 0.279, 'voice-6': 0.306, 'voice-7': 0.330,
   };
   var PEAK_DBFS = {
-    'voice-1': -5.8, 'voice-2': -6.0, 'voice-3': -6.2, 'voice-4': -6.4,
-    'voice-5': -6.3, 'voice-6': -6.1, 'voice-7': -6.5,
+    'voice-1': -3.6, 'voice-2': -3.8, 'voice-3': -3.6, 'voice-4': -3.5,
+    'voice-5': -3.1, 'voice-6': -3.2, 'voice-7': -3.0,
   };
 
-  /* The gain at which the first clip's peak would reach 0 dBFS. voice-3 sets
-     it, being the one parked at the ceiling. The reviewer control stops here
-     rather than letting a review session distort the material it is judging.
+  /* The gain at which the first clip's peak would reach 0 dBFS. The reviewer
+     control stops here rather than letting a review session distort the
+     material it is judging.
 
-     1.05, NOT 1.06: voice-3 sits at -0.46 dBFS at unity, so it has 0.46 dB of
-     room and 1.06 spends 0.50. The rounded-up value shipped for about a minute
-     and tests/exam-ambience.test.mjs failed it, which is the entire argument
-     for checking a derived constant instead of trusting the arithmetic that
-     produced it. */
-  var SAFE_MAX = 1.05;
+     1.29 since the re-cut, from 1.05: the clips now leave 2.23 dB of headroom
+     at unity instead of 0.46, because none of them is straining against the
+     ceiling to reach the group level. Derived, never chosen — the suite
+     asserts the hottest clip actually REACHES full scale here, so a rounded
+     value fails. One did: 1.06 shipped for a minute and clipped by 0.04 dB. */
+  var SAFE_MAX = 1.29;
 
   var buffers = {}, fetching = {};
 
