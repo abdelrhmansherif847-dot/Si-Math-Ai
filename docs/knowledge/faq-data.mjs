@@ -571,7 +571,7 @@ export const CATEGORIES = [
       },
       {
         q: 'Is the Founder discount permanent?',
-        a: '<p>Yes. The 50% discount is a lifetime discount, and the discounted price is locked forever for as long as the membership remains active. Future price increases do not apply to a Founder member. If the membership lapses, the Founder rate and the reserved place are released and cannot be recovered once the remaining memberships are gone.</p>',
+        a: '<p>Yes. The 50% discount is a lifetime discount, and the discounted price is locked forever for as long as the membership remains active. Future price increases do not apply to a Founder member. If the membership lapses, the Founder rate is released and cannot be recovered, because Founder membership is now closed.</p>',
       },
       {
         q: 'How many Founder Badge memberships are left?',
@@ -599,11 +599,11 @@ export const CATEGORIES = [
       },
       {
         q: 'Will there be another founding round later?',
-        a: '<p>No. The number is fixed, it is not reissued when the current memberships are claimed, and there is no second founding round under a different name.</p>',
+        a: '<p>No. The number was fixed, it is not reissued now that Founder membership has closed, and there is no second founding round under a different name.</p>',
       },
       {
-        q: 'Should I claim a Founder spot immediately?',
-        a: '<p>Only if the platform is right for you. The scarcity is real and structural, but there is a permanent free tier precisely so that you can evaluate the platform properly first. Start free, use it against your own material, and upgrade only if it earns it.</p>',
+        q: 'Can I still claim a Founder spot?',
+        a: '<p>No. Founder membership is closed and no further memberships are being issued. The current plans are on the pricing page, and there is a permanent free tier — start free, use it against your own material, and subscribe only if it earns it.</p>',
       },
     ],
   },
