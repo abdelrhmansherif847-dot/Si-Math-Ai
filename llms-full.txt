@@ -636,7 +636,7 @@ on top of measurement; mastery scores are what actually describe exam readiness.
 - **The discounted price is locked forever, for as long as the membership remains active.** Future price increases never apply to a Founder member.
 - **A permanent Founder badge** on the student's profile.
 - **The complete platform**, plus a full credit allocation for the AI tutor.
-- **Only 3 Founder memberships remain.** The number is fixed and is not reissued once claimed; there is no second founding round.
+- **Founder membership is closed.** No memberships remain available. The number was fixed and is not reissued once claimed; there is no second founding round.
 
 The cap exists because a permanent 50% price lock is a lasting commitment against
 every future price of the platform. It can be honoured for a small founding group
@@ -1112,7 +1112,7 @@ and upgrades, with email confirmation within 24 hours.
 **What is the Founder Badge?**
 A founding membership giving a 50% lifetime discount locked forever while the
 membership remains active, a permanent Founder badge, and the complete platform.
-Only 3 memberships remain.
+Founder membership is closed and no memberships remain available.
 
 **Is the Founder discount permanent?**
 Yes — 50% for life, with the discounted price locked forever for as long as the

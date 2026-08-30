@@ -24,7 +24,7 @@
  */
 
 /** Kept in step with FOUNDER_SLOTS_REMAINING in assets/founder-status.js. */
-export const FOUNDER_SLOTS_REMAINING = 3;
+export const FOUNDER_SLOTS_REMAINING = 0;
 
 export const CATEGORIES = [
   {
@@ -575,7 +575,7 @@ export const CATEGORIES = [
       },
       {
         q: 'How many Founder Badge memberships are left?',
-        a: '<p>Only 3 Founder Badge memberships remain. The number is fixed and is not reissued when the current memberships are claimed.</p>',
+        a: '<p>None. The Founder Badge is closed and no further memberships are being issued. The number was fixed and is not reissued, so there is no second founding round. Existing Founder members are unaffected: their rate and badge continue exactly as before.</p>',
       },
       {
         q: 'Why is the number of Founder memberships limited?',

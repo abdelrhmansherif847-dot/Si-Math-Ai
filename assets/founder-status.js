@@ -29,8 +29,10 @@
 (function (root) {
   'use strict';
 
-  /** Founder Badge memberships still available. Edit here only. */
-  var FOUNDER_SLOTS_REMAINING = 3;
+  /** Founder Badge memberships still available. Edit here only.
+   *  0 = sold out. The knowledge layer must then state closure rather than a
+   *  count; validate-knowledge-layer.mjs enforces which form is required. */
+  var FOUNDER_SLOTS_REMAINING = 0;
 
   /** Lifetime discount, in percent, applied to the Founder Badge price. */
   var FOUNDER_DISCOUNT_PERCENT = 50;

@@ -2234,12 +2234,28 @@ const slotSources = [
   ['llms-full.txt', read('llms-full.txt')],
 ];
 
+// A count of zero is not scarcity copy, it is a closure — "only 0 memberships
+// remain" is not a sentence anyone should ship. So when the constant reaches 0
+// the requirement inverts: every surface must state that the badge is closed,
+// and must carry no numeric claim at all. That second half is the one that
+// matters commercially. approve_payment_request raises "No Founder slots
+// remaining" once the counter hits zero, so a page still advertising stock
+// sends students to a checkout that refuses them.
+const SOLD_OUT_CLAIM =
+  /(?:founder (?:badge |membership )?(?:is |has )?(?:now )?closed|closed to new members|no (?:further )?memberships?\s+(?:are|remain)|sold out)/i;
+
 for (const [label, text] of slotSources) {
   const found = [...text.matchAll(SLOT_CLAIM)].map((m) => Number(m[1]));
-  ok(`${label}: states the remaining Founder count`, found.length > 0);
-  const wrong = found.filter((n) => n !== SLOTS);
-  ok(`${label}: every stated count is ${SLOTS}`, wrong.length === 0,
-    wrong.length ? `found ${wrong.join(', ')}` : '');
+  if (SLOTS === 0) {
+    ok(`${label}: states that Founder membership is closed`, SOLD_OUT_CLAIM.test(text));
+    ok(`${label}: states no remaining count while sold out`, found.length === 0,
+      found.length ? `still advertises "only ${found.join('", "only ')}"` : '');
+  } else {
+    ok(`${label}: states the remaining Founder count`, found.length > 0);
+    const wrong = found.filter((n) => n !== SLOTS);
+    ok(`${label}: every stated count is ${SLOTS}`, wrong.length === 0,
+      wrong.length ? `found ${wrong.join(', ')}` : '');
+  }
 }
 
 // The lifetime discount percentage must agree too.
