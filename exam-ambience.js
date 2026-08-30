@@ -28,7 +28,7 @@
      is a number to argue with rather than a measurement. */
   var GAIN = { voices: 0.50 };
 
-  /* THE VOICE SCHEDULE: A ROTATION, PLUS TWO ANCHORED SOUNDS.
+  /* THE VOICE SCHEDULE: A ROTATION, PLUS THREE ANCHORED SOUNDS.
      The first one at 0:00, the next five minutes later, and so on through the
      list; after the last it returns to the first. Order and timing are both
      deterministic — the schedule is a fact that can be printed, which is the
@@ -45,8 +45,9 @@
      restarting at a module boundary.
 
      ANCHORS are pinned to a point INSIDE each module — sound 5 at 10:00, sound
-     6 at 20:00 — and play there once per module, every module. They are held
-     back because both are much closer, louder recordings than the rotation
+     6 at 20:00, sound 7 at 32:00 — and play there once per module, every
+     module. They are held back because all three are much closer, louder
+     recordings than the rotation
      (15 dB hotter before normalising), and a voice that present is a different
      kind of event: better once a student has settled than in the opening
      minutes.
@@ -163,9 +164,9 @@
      have been the mistake that reusing an approach avoids.
 
      Fetched on first use, not on page load: nothing downloads for a student who
-     never turns this on. A clip that fails to load leaves the layer silent and
-     the other two playing, because a missing asset must not take the exam with
-     it. */
+     never turns this on. A clip that fails to load costs its own marks and
+     nothing else — the schedule keeps running and the other six still play,
+     because a missing asset must not take the exam with it. */
   var buffers = {}, fetching = {};
 
   function clip(name) {
