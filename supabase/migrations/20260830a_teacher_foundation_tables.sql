@@ -1,10 +1,16 @@
 -- =====================================================================
 -- Teacher & Assistant Foundation · 1 of 4 — enums, tables, guards
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval.
---         Revision 1. Nothing in this file has been run against
---         igvkyxkmjnkzscqgommj. CLAUDE.md §3: writing a migration file is
---         not applying it.
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval (CLAUDE.md §3), recorded as schema_migrations version
+--         20260830182750 `teacher_foundation_tables`. Revision 1.
+--         The applied body differed from this file in two ways only: the
+--         header text, and the outer begin;/commit; below were omitted
+--         because apply_migration supplies its own transaction. The
+--         begin;/commit; are kept here for the CLI path.
+--         Verified after apply: 4 tables RLS-enabled with 0 policies
+--         (deny-all), 4 enums, 2 guard triggers, 15 indexes, and all three
+--         helper functions revoked from public/anon/authenticated.
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §8 (access, consent
 --          and the data boundary) and §10 T1 (identity and consent, with no
 --          analytics at all).

@@ -1,7 +1,14 @@
 -- =====================================================================
 -- Teacher & Assistant Foundation · 3 of 4 — every write, and the read surface
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval. Revision 1.
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830183143
+--         `teacher_foundation_rpcs`. Revision 1. Applied body differed only in
+--         header text and the omitted outer transaction (see 20260830a).
+--         Verified after apply: all 11 functions are SECURITY DEFINER with
+--         search_path pinned, `anon` can execute none of them, `authenticated`
+--         can execute all 11. End-to-end flow proven under simulated JWTs —
+--         docs/engineering/teacher-foundation-verification.md.
 -- DEPENDS ON: 20260830a (tables, guards), 20260830b (predicates, policies)
 --
 -- WHY EVERY MUTATION IS AN RPC

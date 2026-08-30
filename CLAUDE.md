@@ -145,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **78 files** in `supabase/migrations/`, **141 applied** in the database (streak server-side + anon revoke applied 2026-08-04) |
+| Migrations | **89 files** in `supabase/migrations/`, **160 applied** in the database (measured 2026-08-30; the entry said 78/141 and was stale by the support system and the exam-authoring tables). Teacher foundation `20260830a…c` applied 2026-08-30 |
 | Static site | **49** root `*.html` pages on Vercel (measured 2026-08-30; the entry said 46 and had been stale since before `teacher.html`) |
 | CI | `node tests/run-all.mjs` — **48 checks** (measured 2026-08-30) |
 
@@ -192,6 +192,14 @@ exists for this. Do not treat the file list as the applied list.
   plus the `cost_engine` (9 tables), `ai_catalog` (3 tables) and `econ` schemas
 - **Operations:** `ai_tutor_failures`, `analyzer_runs`, `unmapped_detections`
 - **Taxonomy:** `taxonomy_topics`, `taxonomy_subtopics`
+- **Teacher foundation** (live 2026-08-30, all four empty): `teacher_workspaces`,
+  `workspace_staff`, `workspace_students`, `workspace_audit_log`. **A teacher is
+  not a `user_role`** — being a teacher is owning a workspace, and seeing a
+  student is holding an active link to them. All teacher visibility derives from
+  `teacher_can_see_student()` and nothing else; it currently guards no academic
+  table, by design. Clients hold SELECT only — every write is a SECURITY DEFINER
+  RPC. Read `docs/roadmap/teacher-intelligence-layer.md` §8 before touching
+  anything teacher-, class- or cohort-shaped
 
 ### Repository shape
 

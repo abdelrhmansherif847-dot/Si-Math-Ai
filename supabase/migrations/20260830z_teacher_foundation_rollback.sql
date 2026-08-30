@@ -1,8 +1,10 @@
 -- =====================================================================
 -- Teacher & Assistant Foundation · 4 of 4 — rollback
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED, and not to be run unless the three
---         forward migrations were applied and are being withdrawn.
+-- STATUS: ⛔ NOT APPLIED, and it should stay that way. The three forward
+--         migrations went live on 2026-08-30, so this stopped being a
+--         hypothetical the moment they did: it is now the live withdrawal
+--         path, to be run only if the teacher foundation is being removed.
 --
 -- Written at the same time as the forward migrations, on the principle the
 -- support system used: a migration whose rollback is written later is a

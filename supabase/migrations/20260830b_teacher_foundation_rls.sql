@@ -1,7 +1,14 @@
 -- =====================================================================
 -- Teacher & Assistant Foundation · 2 of 4 — predicates and every policy
 -- =====================================================================
--- STATUS: ⛔ PREPARED — NOT YET APPLIED. Awaiting owner approval. Revision 1.
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830183010
+--         `teacher_foundation_rls`. Revision 1. Applied body differed only in
+--         header text and the omitted outer transaction (see 20260830a).
+--         Verified after apply: `anon` holds NO privilege of any kind on the
+--         four tables, `authenticated` holds SELECT only, four SELECT policies
+--         exist and zero write policies, and teacher_can_see_student() guards
+--         no table outside this system.
 -- DEPENDS ON: 20260830a (enums, tables, guards, RLS enabled with no policy)
 --
 -- WHAT THIS OPENS
@@ -140,6 +147,15 @@ grant execute on function teacher_can_see_student(uuid)   to authenticated;
 -- client write is refused before RLS is consulted, which is stronger than
 -- having no policy for it. service_role keeps its defaults; the definer RPCs
 -- run as owner and are unaffected.
+--
+-- THIS REVOKE IS LOAD-BEARING, and the apply of 20260830a proved it. Measured
+-- between the two migrations, `anon` and `authenticated` each held
+-- DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on all four
+-- brand-new tables — the same DEFAULT ACL trap the function grants have, one
+-- level up. In that window the tables were closed by RLS alone (enabled, zero
+-- policies, so deny-all), which is why 20260830a is safe to apply on its own.
+-- But a future table added without this revoke would be one permissive policy
+-- away from a client-writable roster.
 
 revoke all on table teacher_workspaces  from anon, authenticated;
 revoke all on table workspace_staff     from anon, authenticated;
