@@ -37,9 +37,16 @@
 
   /* THE VOICES ARE A FIXED CYCLE, NOT A DICE ROLL.
      The first one at 0:00, the next five minutes later, and so on through the
-     list; after the last it returns to the first and keeps going for as long as
-     the module runs. Order and timing are both deterministic — the schedule is
-     a fact that can be printed, which is the whole reason for it.
+     list; after the last it returns to the first. Order and timing are both
+     deterministic — the schedule is a fact that can be printed, which is the
+     whole reason for it.
+
+     IT DOES NOT RESET AT A MODULE BOUNDARY, and that is a decision rather than
+     an oversight (confirmed 2026-08-30). Seven marks fit a 35-minute module and
+     the cycle is four long, so module 1 reads 1-2-3-4-1-2-3 and module 2 opens
+     on 4. Restarting each module at sound 1 would be one line here — resetting
+     voiceIdx on enable() already does it — so if a later reader finds module 2
+     "starting on the wrong sound", this is the note saying it is the right one.
      Kept separate from the pen and paper, which stay random: writing and paper
      are texture and should not arrive on a beat, while an exchange between two
      students is an event and reads better on one. */
