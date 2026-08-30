@@ -1,7 +1,9 @@
 -- =====================================================================
 -- ROLLBACK for 20260830k — workspace creation returns to admin-and-above
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. Running it is its own
+-- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. 20260830k went live on
+--         2026-08-30 (schema_migrations 20260830235339), so this is now a live
+--         way back rather than a hypothetical one; running it is its own
 --         approval, exactly like running the forward migration.
 --
 -- Restores teacher_create_workspace() to the body from 20260830h, byte-for-byte

@@ -1,8 +1,16 @@
 -- =====================================================================
 -- Workspace creation becomes the platform Owner's alone
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
---         Apply with explicit owner approval, per CLAUDE.md §3.
+-- STATUS: ✅ APPLIED 2026-08-30 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval, recorded as schema_migrations version 20260830235339
+--         `owner_only_provisioning`. Applied body differed only in header text
+--         and the omitted outer transaction.
+--         Verified after apply: the live body is byte-for-byte identical to
+--         this file (1406 bytes, md5 4fcd6366140b44145604c000e4e228c5);
+--         `has_role_at_least` no longer appears in it and the owner equality
+--         does; SECURITY DEFINER, VOLATILE, search_path pinned, `anon` cannot
+--         execute. 14 of 14 behavioural checks re-run against the LIVE
+--         function — docs/engineering/owner-provisioning-verification.md §11.
 -- DEPENDS ON: 20260830c (teacher_create_workspace), 20260830h ('teacher')
 --
 -- WHY

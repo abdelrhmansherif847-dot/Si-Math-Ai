@@ -4,8 +4,8 @@
 
 | Half | Status |
 |---|---|
-| The provisioning surface in `admin.html` | **Built.** Deployable today against the already-live migrations |
-| `20260830k` — creation becomes Owner-only | **🟡 PREPARED, NOT APPLIED.** Dry-run and mutation-tested; awaiting explicit approval |
+| The provisioning surface in `admin.html` | **Built**, on the branch. Reaches the Owner when the branch merges to `main` |
+| `20260830k` — creation becomes Owner-only | **✅ APPLIED 2026-08-30** as `20260830235339`. Post-apply verification in §11 |
 
 **Date:** 2026-08-30 · **Project:** `igvkyxkmjnkzscqgommj` · **Branch:**
 `claude/teacher-intelligence-layer-8e66b0`
@@ -177,3 +177,56 @@ tests/owner-provisioning.test.mjs                             -- 57 checks
 
 The multi-workspace selector; any duplicate-name constraint; any change to the
 workspace model, routing, `my_experience()`, or unrelated permissions.
+
+## 11 · Post-apply verification, against the live database
+
+Applied 2026-08-30 as `20260830235339`. Migration count **167 → 168**.
+
+### The live function
+
+| | |
+|---|---|
+| body | **byte-for-byte identical to the reviewed file** — 1406 bytes, md5 `4fcd6366140b44145604c000e4e228c5` |
+| gate | `has_role_at_least` **no longer appears**; `current_user_role() <> 'owner'` does |
+| shape | `SECURITY DEFINER`, `VOLATILE`, `search_path = pg_catalog, public` |
+| ACL | `anon` cannot execute; `authenticated` can (authorization is inside the body) |
+
+### 14 of 14 behavioural checks against the LIVE function
+
+Fixtures created through the real RPCs under simulated JWTs, inside a
+transaction that was rolled back.
+
+| # | Check | Result |
+|---|---|---|
+| 1–2 | **both `super_admin` accounts are REFUSED** — `platform owner only` | PASS |
+| 3 | **a Teacher cannot self-provision** | PASS |
+| 4 | `profiles.role` before creation is `user` | PASS |
+| 5 | **the platform Owner CAN create a workspace** | PASS |
+| 6 | **creating a workspace does NOT change `profiles.role`** — still `user` | PASS |
+| 7 | the assigned account becomes **active `teacher` staff** | PASS |
+| 8 | **`my_experience()` resolves to the staff experience** (`primary=staff`, `can_staff=true`) | PASS |
+| 9 | **both join codes created**, distinct, 8 characters | PASS |
+| 10 | **the audit record is written**, naming actor and subject | PASS |
+| 11 | the first-use path closes — student joins, teacher sees them on the roster | PASS |
+| 12 | an unknown account is still refused | PASS |
+| 13 | a `super_admin` can still **READ** workspaces — reads deliberately not narrowed | PASS |
+| 14 | **the Owner has no authority INSIDE the class** — `teacher_set_staff_status: workspace owner only` | PASS |
+
+Check 14 is the one that states the model plainly: the platform Owner decides
+*who teaches*, and has no say in what happens *inside* a class. Those are
+different authorities and they stay different.
+
+### Production is clean
+
+0 workspaces, 0 staff rows, 0 student links, 0 audit rows, 0 interventions.
+Verification created nothing.
+
+Nothing neighbouring moved: `workspace_staff_guard`, `staff_join_workspace`,
+`my_experience` and `change_user_role` all still carry the md5 they had before
+the apply — `change_user_role` in particular, which holds the platform `owner`
+literals this work has never touched.
+
+### What is now true
+
+Creation is the platform Owner's alone, enforced by the database rather than by
+a hidden panel. Three accounts could provision before; **one can now.**
