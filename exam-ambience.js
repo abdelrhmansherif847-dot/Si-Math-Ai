@@ -110,6 +110,20 @@
      smallest gap that still reads as two separate events rather than one
      stuttering one. */
   var HORIZON = 3600, MIN_GAP = 90;
+
+  /* EXTRA MARKS, asked for by hand and exempt from the crowding rule above.
+     The last minutes of a real hall are the busy ones — people finishing,
+     papers moving, someone giving up — so 33:00 and 34:00 come a minute apart
+     on purpose, right after the 32:00 anchor. Clustering is the point here
+     rather than the defect it is elsewhere, which is why these bypass MIN_GAP
+     instead of the constant being loosened for everything.
+
+     35:00 WAS ASKED FOR AND IS NOT HERE. A module is 2100 seconds and the
+     schedule stops strictly before its end, so a mark at 35:00 is the moment
+     the timer reaches zero: it would never play, in either module. 34:30 is
+     the nearest point that would. */
+  var EXTRA = [1980, 2040];        // 33:00, 34:00
+
   function markTimes() {
     var anchors = ANCHORS.map(function (a) { return a.at; });
     var seen = {}, out = [], t;
@@ -118,6 +132,7 @@
       if (!crowded) seen[t] = true;
     }
     anchors.forEach(function (a) { seen[a] = true; });
+    EXTRA.forEach(function (e) { seen[e] = true; });
     Object.keys(seen).forEach(function (k) { out.push(+k); });
     return out.sort(function (a, b) { return a - b; });
   }
