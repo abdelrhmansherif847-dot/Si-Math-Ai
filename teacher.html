@@ -108,6 +108,28 @@ input,select{font-family:inherit}
 .field{width:100%;padding:11px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-size:14px}
 .field:focus{outline:none;border-color:var(--cyan-border);background:var(--bg-elev-2)}
 .field.code{font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+/* input[type=date] is the one control that does not reliably honour
+   box-sizing:border-box or width:100% in iOS Safari: it is laid out as a native
+   control, so its padding and border can land OUTSIDE the declared width and it
+   refuses to shrink below the intrinsic width of its own date text plus picker
+   indicator. In the intervention form that pushed the WHEN field about 30px
+   past the dashed .iv-form edge on an iPhone — the container's content box is
+   328px at a 390px viewport while its outer box is 358px, which is the size the
+   control took. Desktop Blink honours width:100% here and shows nothing wrong,
+   which is why this needed a real device to see.
+
+   max-width is the actual guarantee: whatever intrinsic or padding-derived
+   width the platform computes, the control can never exceed its parent.
+   min-width:0 lets it shrink, and resetting the appearance stops WebKit sizing
+   it as a native widget. box-sizing is restated even though *{box-sizing:
+   border-box} already covers it, because max-width:100% only caps the CONTENT
+   box: if the platform lays this control out as content-box, the 28px padding
+   and 2px border still land outside and the ceiling does not hold. Measured:
+   under that condition the field is 358px inside a 328px content box — a 30px
+   overhang, exactly the reported symptom. The picker still opens on tap. This constrains the
+   control itself rather than clipping the page — html/body already carry
+   overflow-x:hidden, which would have hidden the symptom and kept the bug. */
+.field[type="date"]{-webkit-appearance:none;appearance:none;box-sizing:border-box;min-width:0;max-width:100%}
 
 /* A grid item defaults to min-width:auto, which refuses to shrink below its
    content. The roster rows inside hold nowrap text, so without this the column
@@ -709,8 +731,20 @@ async function renderWorkspace() {
      defend it to a student or a parent, so it is corrected the day it stops
      being true. It said "scores and weaknesses are not here yet" for one day
      after the weakness read went live and was already rendering them. */
+  /* TWO DIFFERENT EXAM CONCEPTS, and this line must not blur them.
+   (1) The exam a student is PREPARING FOR — profiles.exam_type, one of SAT,
+       EST or ACT. It is what teacher_roster() returns and the only exam fact a
+       teacher can see today.
+   (2) A teacher-created or teacher-assigned exam, sat through the workspace.
+       THIS DOES NOT EXIST. Audited 2026-08-31 against production: not one
+       exam_* table carries workspace_id, teacher_id, class_id or assigned_to.
+       Exams are platform-wide artefacts; a student reaches one through the
+       general product, never through a class relationship.
+   "which exam they are sitting" read as (2) and promised something the data
+   model cannot deliver. If (2) is ever built it needs its own schema design,
+   and this copy must then say which of the two it means. */
   $('scopeNote').innerHTML = S.isTeacher
-    ? 'You see a student\'s name, which exam they are sitting, when they connected, and the weaknesses the analyzer found — each one with the evidence it was built from. '
+    ? 'You see a student\'s name, which exam they are preparing for (SAT, EST or ACT), when they connected, and the weaknesses the analyzer found — each one with the evidence it was built from. '
       + 'Not their plan, their credits, their email, or their conversations with Zero: the topic a student struggled with is shareable, the conversation where they struggled is not. '
       + '<strong>No scores.</strong> There are none worth showing until the new Mock Experience produces per-question evidence, and a number without that behind it would be a guess wearing a decimal point.'
     : 'You see exactly what the teacher sees about these students — the same weaknesses, from the same analyzer, with the same evidence — and you can change nothing. Adding, removing, approving and recording are the teacher\'s. '

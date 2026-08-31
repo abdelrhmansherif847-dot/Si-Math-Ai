@@ -220,4 +220,51 @@ t.ok('it reports success on the same surface as the class code',
 t.ok('and it fails the same way, rather than silently',
   /catch \(_\) \{ say\(\$\('codeMsg'\), 'Copy failed/.test(COPY_STAFF));
 
+
+// ══ THE DATE FIELD CANNOT ESCAPE ITS FORM ═════════════════════════════════
+t.section('The WHEN field is constrained, not clipped');
+
+/* Reported from an iPhone: the date input hung ~30px past the dashed .iv-form
+   edge. Desktop Blink honours width:100% on a date input and shows nothing
+   wrong; iOS Safari lays it out as a native control, so its padding and border
+   can land OUTSIDE the declared width. Measured under that condition: 358px
+   inside a 328px content box — exactly the reported overhang. */
+const DATE_RULE = (PAGE.match(/\.field\[type="date"\]\{[^}]*\}/) || [''])[0];
+t.ok('there is a rule for the date control at all', DATE_RULE.length > 0);
+t.ok('it can shrink inside its parent', /min-width:0/.test(DATE_RULE));
+t.ok('it can never exceed its parent', /max-width:100%/.test(DATE_RULE));
+/* max-width alone caps only the CONTENT box: with content-box sizing the
+   padding and border still land outside and the ceiling does not hold. */
+t.ok('and box-sizing is restated so that ceiling actually holds',
+  /box-sizing:border-box/.test(DATE_RULE));
+t.ok('the platform stops sizing it as a native widget',
+  /-webkit-appearance:none/.test(DATE_RULE) && /[^-]appearance:none/.test(DATE_RULE));
+
+/* The fix must constrain the control, never hide the symptom. */
+t.ok('no overflow was clipped away to solve it',
+  !/\.iv-form\{[^}]*overflow/.test(PAGE) && !/#interventionSlot\{[^}]*overflow/.test(PAGE));
+
+// ══ THE TWO EXAM CONCEPTS STAY DISTINCT ═══════════════════════════════════
+t.section('The copy describes the exam a student is preparing for');
+
+/* Audited against production: not one exam_* table carries workspace_id,
+   teacher_id, class_id or assigned_to. A teacher-created exam does not exist,
+   so the copy must not imply a teacher can see one. */
+t.ok('it names the exam the student is PREPARING FOR',
+  /which exam they are preparing for \(SAT, EST or ACT\)/.test(PAGE));
+/* Scoped to the rendered STRING, not the file: the comment above it quotes the
+   old phrase to explain why it changed, and asserting over the whole page would
+   fail on the documentation of the fix. */
+const SCOPE_COPY = slice(PAGE, "$('scopeNote').innerHTML", 'renderIntervention', 'scope note copy');
+t.ok('the rendered copy is really the sliced region', /You see a student/.test(SCOPE_COPY));
+t.ok('it no longer implies a sitting the teacher can see',
+  !/which exam they are sitting/.test(SCOPE_COPY));
+t.ok('the two concepts are recorded in the source so the next edit keeps them apart',
+  /TWO DIFFERENT EXAM CONCEPTS/.test(PAGE) && /THIS DOES NOT EXIST/.test(PAGE));
+
+/* And the page must not have grown a teacher-exam feature by accident. */
+t.is('no teacher-assigned exam surface was introduced',
+  ['assign_exam', 'teacher_exam', 'workspace_exam', 'assigned_exam', 'class_exam']
+    .filter((n) => PAGE.includes(n)), []);
+
 t.done();
