@@ -21,6 +21,9 @@
  *     teacher_my_workspaces() until that migration is applied)
  *   - injects "Admin Dashboard" / "Super Admin Dashboard" / "Owner Dashboard"
  *     plus "AI Monitor" (super_admin+ only)
+ *   - hides student navigation when the caller is ACTIVE workspace staff, so
+ *     the staff surface is Teacher Workspace / Profile / Settings only. That is
+ *     cosmetic: the student pages stay reachable and can_student stays true.
  *   - removes any duplicate admin-link anchors that older inline JS may append
  *     to the sidebar (so frozen pages with their own injection still render
  *     cleanly without a second admin link).
@@ -107,6 +110,55 @@
       if (!slot || !slot.contains(anchors[i])) return true;
     }
     return false;
+  }
+
+  /* ── THE STAFF NAV FILTER ─────────────────────────────────────────────
+     When an account is ACTIVE staff, the sidebar shows the staff surface only:
+     Teacher Workspace, Profile, Settings. Everything else is hidden.
+
+     THIS IS COSMETIC AND NOTHING ELSE. It sets style.display and touches no
+     href, removes no element, calls no RPC and changes no permission. Every
+     student page stays exactly as reachable as it was — by URL, by bookmark,
+     by history — because the account has not stopped being a student:
+     my_experience().can_student is still unconditionally true, and the
+     database is untouched. We stop ADVERTISING the student pages in the staff
+     surface; we do not take them away. A surface switcher will make the move
+     between the two deliberate; until then, hiding a link must not become a
+     lock on a door.
+
+     It is conditional on ACTIVE staff, which is why teacher.html's own markup
+     still carries the student menu: a PENDING assistant reaches that page (the
+     Settings link exists for exactly that) and can_staff is false for them, so
+     they keep their whole student sidebar and their way back. */
+  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'profile.html': 1, 'settings.html': 1 };
+
+  function applyStaffNav(slot, teaching) {
+    if (!teaching) return;
+    var sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    var items = sidebar.querySelectorAll('a.nav-item');
+    for (var i = 0; i < items.length; i++) {
+      var a = items[i];
+      // The slot is nav.js's own: the Teaching link and the Admin block live
+      // there, and neither is student navigation.
+      if (slot && slot.contains(a)) continue;
+      var file = (a.getAttribute('href') || '').split('/').pop().split('?')[0].toLowerCase();
+      if (!STAFF_NAV_KEEP[file]) a.style.display = 'none';
+    }
+
+    // A section heading with nothing left under it is just noise.
+    var kids = sidebar.children;
+    for (var j = 0; j < kids.length; j++) {
+      if (!kids[j].classList || !kids[j].classList.contains('side-sec')) continue;
+      var anyVisible = false;
+      for (var k = j + 1; k < kids.length; k++) {
+        if (kids[k].classList && kids[k].classList.contains('side-sec')) break;
+        if (kids[k].classList && kids[k].classList.contains('nav-item')
+            && kids[k].style.display !== 'none') { anyVisible = true; break; }
+      }
+      kids[j].style.display = anyVisible ? '' : 'none';
+    }
   }
 
   function render(slot, role, teaching) {
@@ -219,13 +271,14 @@
 
       render(slot, role, teaching);
       removeDuplicateAdminLinks(slot);
+      applyStaffNav(slot, teaching);
 
       // Some legacy pages append admin links AFTER auth completes. Sweep
       // duplicates once more on the next animation frame and again 500ms
       // later — cheap, covers the common race without a permanent observer.
-      requestAnimationFrame(function () { removeDuplicateAdminLinks(slot); });
-      setTimeout(function () { removeDuplicateAdminLinks(slot); }, 500);
-      setTimeout(function () { removeDuplicateAdminLinks(slot); }, 1500);
+      requestAnimationFrame(function () { removeDuplicateAdminLinks(slot); applyStaffNav(slot, teaching); });
+      setTimeout(function () { removeDuplicateAdminLinks(slot); applyStaffNav(slot, teaching); }, 500);
+      setTimeout(function () { removeDuplicateAdminLinks(slot); applyStaffNav(slot, teaching); }, 1500);
     } catch (e) {
       console.error('[nav.js]', e);
     }
