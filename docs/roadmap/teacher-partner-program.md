@@ -521,19 +521,106 @@ proposed for approval.
 
 ---
 
-## Open questions — needed before implementation
+## Decisions — answered by the owner, 2026-08-31
 
-1. **Packs: in or out?** (§D5a) — recommendation: in.
-2. **Rounding: 2dp or 4dp?** (§D5b) — recommendation: 2dp, half-up.
-3. **Attribution pending-rule: last-touch or first-touch in the browser?**
-   (§C1) — recommendation: last-touch pending, first-touch binding.
-4. **Attribution expiry** — recommendation: none in v1.
-5. **Commission base: gross or net?** Carried over unanswered from
-   `pricing-financial-model-2026-08.md` §3. This plan assumes **gross**, as the
-   brief states. On Pro Annual, 15% of gross is a large share of margin.
-6. **VAT / withholding on teacher payouts** — nothing encoded, unchanged from
-   the pricing review §4.
-7. **Who may become a partner?** Today a teacher is anyone the platform Owner
-   provisions a workspace for (`20260830k`). The program inherits that gate,
-   which means partner admission is currently Owner-only and manual. Confirm
-   that is intended.
+| # | Question | Answer |
+|---|---|---|
+| 1 | Do credit packs count? | **Yes.** Any approved purchase with gross > 0 |
+| 2 | Rounding | **2 decimals, half-up.** 349 x 12.5% = 43.63 |
+| 3 | Pending attribution | **Last touch while unpaid**, then permanently bound by the first successful purchase |
+| 4 | Attribution expiry | **None in v1** |
+| 5 | Commission basis | **Gross**, from `plan_definitions.amount_egp`, never from the client |
+| 6 | VAT / withholding | **Guess nothing.** Structure for it, and pay nobody until the treatment is confirmed |
+| 7 | Partner eligibility | **`staff_role = 'teacher'`.** No new role |
+
+Answer 3 changed the model: attribution is no longer immutable from the moment
+it is written. It is a mutable pointer that the first purchase **locks**, which
+is why `locked_at` exists and why the guard trigger permits an update only
+while it is null.
+
+Answer 6 is enforced rather than noted: `admin_set_commission_status` refuses to
+mark anything `paid` while `system_settings.referral_payouts_enabled` is not
+`'true'`, and that setting ships `false`. `commission_egp` (gross commission),
+`withholding_egp` and `net_payable_egp` are separate columns, so a withholding
+rule can be applied later without touching a single earned figure.
+
+---
+
+## What was built, and what the dry runs proved
+
+Five migration files, **all PREPARED and NOT APPLIED**:
+
+| file | what it is |
+|---|---|
+| `20260831b_referral_tables.sql` | 7 tables, RLS, the guards, the seeded ladder |
+| `20260831c_referral_engine.sql` | `purchase_events`, the award trigger, the historical backfill |
+| `20260831d_referral_rpcs.sql` | attribution, the teacher reads, the admin writes |
+| `20260831e_referral_payment_hooks.sql` | the three payment functions, verbatim + 4 lines |
+| `20260831y_referral_rollback.sql` | unhook first, and refuse to drop a ledger with rows |
+
+### One mechanism, because two would drift
+
+Both payment paths write one canonical `purchase_events` row; a trigger on that
+table is the only thing in the system that creates a commission. The three
+payment functions gain **one line each** (two for `approve_payment_request`,
+which returns separately for packs) and compute nothing. `record_purchase_event`
+takes no amount parameter, by design, so no caller can pass a wrong one.
+
+`purchase_events` also gives the platform something it did not have: a single
+answer to "has this student ever bought anything?" across two tables with
+different status vocabularies. The migration backfills it from history —
+**18 rows, 13 approved requests and 5 legacy payments** — which is what stops a
+teacher earning a first-purchase commission on a customer the platform already
+had.
+
+### The bug the dry run caught
+
+`attribute_referral` and `admin_reassign_referral` both did
+
+```sql
+select * into v_existing from referral_attributions where student_user_id = v_uid;
+...
+perform set_config('si.referral_rpc', 'on', true);
+if found then update ... else insert ... end if;
+```
+
+**`PERFORM` resets `FOUND`.** So `found` was always true, the first attribution
+took the UPDATE branch, updated zero rows, and returned `{"ok": true}` while
+binding nobody. Every student would have gone unattributed and no commission
+would ever have been awarded — a silent, total failure that no amount of reading
+had caught. Both functions now capture `v_had_row := found` immediately, and
+`tests/referral-program.test.mjs` fails if either regresses.
+
+### Dry-run evidence, all inside rolled-back transactions
+
+| run | result |
+|---|---|
+| Engine | **18/18** — the full ladder at 349 (#1 and #9 at 10% = 34.90, #10 and #29 at 12.5% = **43.63**, #30 at 15% = 52.35), replay awards once, a second purchase never awards, packs award, an unpriceable legacy plan awards nothing and says why, a non-teacher earns nothing, an unreferred student is silent, reversing three drops the teacher out of 15%, a gap in the ladder is refused |
+| Payment hooks | **6/6** — a request whose `amount_egp` said **99,999** produced a commission on the catalogue's **349**; the approval itself still granted 1,000 credits and set the status; the pack branch awards; a rejected request awards nothing; a student cannot approve their own payment |
+| Attribution | **7/7** — first code attributes, a second re-points an unpaid student, once paid a later code cannot move it, an existing paying customer can never be attributed, direct writes and deletes are refused, a locked row cannot be unlocked |
+| Access & admin | **8/8** — an active assistant and a student are both refused the earnings read, the payout gate holds, approving is audited, a teacher cannot approve their own commission |
+
+Nothing leaked: 0 referral tables, 0 functions and 0 settings exist in
+production, `approve_payment_request` is still `md5 d1dd67130e32a31866738bf9b674bd09`,
+and all 13 approved payments are untouched.
+
+`tests/referral-program.test.mjs` — **69 checks, 27/27 mutants killed.** Four of
+those checks were vacuous when first written (a float rate slipped past, a hook
+wrapped in `IF false` still counted as hooked, the frozen-column check only
+proved the columns existed, and the payout gate matched its own lookup rather
+than its comparison) and were rewritten until each could go red.
+
+## Still open, and not ours to close
+
+1. **Commission on gross or net** is answered — gross — but the *margin*
+   consequence is not. On Pro Annual, 15% of 2,999 is 449.85.
+2. **VAT and withholding.** Nothing is encoded, by instruction. Payouts stay
+   disabled until it is.
+3. **`admin-actions` is an Edge Function.** Hooking `activate_subscription` and
+   `activate_credit_pack` covers it without redeploying the function — but if a
+   future action activates a plan by writing `profiles` directly instead of
+   calling those RPCs, it will not announce a purchase. There is no such action
+   today.
+4. **The client work is designed and not built** — sections E, F and G above.
+   It is deliberately a separate increment: the ledger can be applied and
+   verified with no user-visible change at all.
