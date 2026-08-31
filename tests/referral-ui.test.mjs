@@ -132,18 +132,26 @@ t.ok('no referred students yet is a sentence, not a blank table',
   /No referred students yet/.test(SECTION));
 t.ok('and it says what to do about it', /Share your code or link/.test(SECTION));
 
-// ══ 7 · THE HONEST STATUS ═════════════════════════════════════════════════
-t.section('It does not claim to work before it does');
+// ══ 7 · THE PROMISE MATCHES THE PRODUCT ═══════════════════════════════════
+t.section('It tells a teacher to share a link that actually works');
 
-/* Nothing student-facing calls attribute_referral() yet: sign-up does not read
-   ?ref= and there is nowhere to type a code. A teacher told to "share your
-   link" today would be told something false. Both surfaces say so, and these
-   checks are what force them to be removed together when it ships. */
-t.ok('teacher.html says the code is not shareable yet', /Not shareable yet/.test(SECTION));
-t.ok('partner.html says the same', /Not shareable yet/.test(PARTNER));
-t.is('no student-facing surface captures a referral yet — so the notice must stay',
-  ['signup.html', 'login.html', 'settings.html', 'onboarding.html']
-    .filter((f) => /attribute_referral/.test(read(f))), []);
+/* These two move together. While no student surface captured a referral, both
+   pages carried a "Not shareable yet" notice; the capture now exists, so the
+   notice is gone and this is the check that keeps the two in step — telling a
+   teacher to share a link that credits nobody is the failure being guarded
+   against, in either direction. */
+const CAPTURE = read('referral.js');
+t.ok('a student-side capture exists', /rpc\('attribute_referral'/.test(CAPTURE));
+t.is('and is loaded by the pages a referral link lands on and signs in through',
+  ['index.html', 'pricing.html', 'signup.html', 'login.html', 'onboarding.html', 'dashboard.html']
+    .filter((f) => !/src="referral\.js"/.test(read(f))), []);
+t.is('so neither teacher surface still says it is not shareable',
+  [SECTION, PARTNER].filter((src) => /Not shareable yet/.test(src)).length, 0);
+t.ok('and both now tell the teacher to share it',
+  /Share the link/.test(SECTION) && /Send the link/.test(PARTNER));
+/* The page must not promise an entry box that does not exist. */
+t.is('neither surface tells a student to type a code anywhere',
+  [SECTION, PARTNER].filter((src) => /enter(ing)? the code|type the code/i.test(src)).length, 0);
 
 // ══ 8 · NOTHING ELSE MOVED ════════════════════════════════════════════════
 t.section('The existing workspace is untouched');

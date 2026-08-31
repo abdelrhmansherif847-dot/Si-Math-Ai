@@ -1055,19 +1055,10 @@ function renderReferrals() {
     +   '<button class="btn ghost sm" id="copyRefLink">Copy link</button>'
     + '</div>'
     + '<div class="code-note" style="margin-top:10px;word-break:break-all">' + esc(link) + '</div>'
-    /* The ledger is live; the student-facing capture is not. Sign-up does not
-       read ?ref= yet and there is nowhere for a student to type a code, so
-       sharing this today would credit nobody. Saying so is the difference
-       between a feature that is coming and a teacher who thinks they are
-       earning and is not. Delete this block when the student surface ships. */
-    + '<div class="note" style="margin-top:12px;border-left-color:var(--gold-border)">'
-    +   '<b style="color:#fcd34d">Not shareable yet.</b> Your code exists and your earnings will be '
-    +   'tracked against it, but sign-up does not read the link yet and students have no way to enter '
-    +   'a code. Hold on to this until we tell you it is live — sharing it now would credit nobody.</div>'
-    + '<div class="note" style="margin-top:12px">Once it is live: a student is credited to you when '
-    +   'they use this before their first purchase. If they later use another teacher\'s code they '
-    +   'move — until they pay, and then they are yours permanently. A student who had already '
-    +   'bought something before using your code is never credited.</div>'
+    + '<div class="note" style="margin-top:12px">Share the link. A student who opens it is credited '
+    +   'to you the moment they sign in, and stays yours from their first purchase onwards. If they '
+    +   'open another teacher\'s link before paying they move — after they pay, nothing moves them. '
+    +   'A student who had already bought something before opening your link is never credited.</div>'
     + '<div class="msg" id="refMsg"></div>'
 
     // ── overview ──
