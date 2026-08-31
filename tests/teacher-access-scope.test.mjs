@@ -49,6 +49,13 @@ const MIG = {
   g: read('supabase/migrations/20260830g_teacher_intervention_record.sql'),
   x: read('supabase/migrations/20260830x_teacher_intervention_rollback.sql'),
   z: read('supabase/migrations/20260830z_teacher_foundation_rollback.sql'),
+  /* The class-wide attention read, PREPARED on this branch and not yet applied.
+     It is in this map for the same reason g is: teacher.html calls it, and the
+     RPC-provenance check below only means something if the map is the complete
+     list of migrations that may define what the page calls. Its own contract —
+     scope, tiers, freshness, the cap — lives in tests/teacher-attention.test.mjs. */
+  attn:     read('supabase/migrations/20260831a_teacher_attention.sql'),
+  attn_rb:  read('supabase/migrations/20260831z_teacher_attention_rollback.sql'),
 };
 const PAGE = read('teacher.html');
 const SETTINGS = read('settings.html');
@@ -75,11 +82,15 @@ const INTERVENTION = EXEC.g;
 /* Privilege hygiene and rollback completeness apply to every function this
    system ships, foundation or not. Only the academic-boundary ban is scoped to
    the foundation alone. */
-const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION;
+/* The attention read is an academic read like d: it reaches weakness_reports on
+   purpose, so it stays out of FORWARD (whose ban is the foundation's) but must
+   still answer for its privileges and its rollback. */
+const ATTENTION = EXEC.attn;
+const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATTENTION;
 /* Rollback is split across two files by design: x drops what g created, then z
    drops the foundation it hung from. Completeness has to be checked against
    both, or adding a second rollback file would silently weaken the check. */
-const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z;
+const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb;
 
 // The four tables this system is allowed to create and touch.
 const OWN_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];
