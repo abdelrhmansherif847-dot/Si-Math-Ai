@@ -1,8 +1,7 @@
 -- =====================================================================
 -- Teacher Partner Program — 1 of 4: the tables
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
---         Apply with explicit owner approval, per CLAUDE.md §3.
+-- STATUS: 🟢 APPLIED 2026-08-31 as version 20260831115804, with explicit owner approval.
 -- APPLY ORDER: b (tables) -> c (engine) -> d (rpcs) -> e (payment hooks)
 -- ROLLBACK:    20260831y, which unhooks e before dropping anything.
 --

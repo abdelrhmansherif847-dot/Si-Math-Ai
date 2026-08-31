@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Teacher Partner Program — 2 of 4: the engine
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
+-- STATUS: 🟢 APPLIED 2026-08-31 as version 20260831120342, with explicit owner approval.
 -- DEPENDS ON: 20260831b
 --
 -- ONE MECHANISM, NOT TWO

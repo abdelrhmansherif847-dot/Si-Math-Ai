@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Teacher Partner Program — 3 of 4: attribution, teacher reads, admin writes
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
+-- STATUS: 🟢 APPLIED 2026-08-31 as version 20260831120608, with explicit owner approval.
 -- DEPENDS ON: 20260831b, 20260831c
 --
 -- Every function below revokes the default ACL before granting deliberately:

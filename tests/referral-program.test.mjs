@@ -175,10 +175,23 @@ t.ok('the student list carries nothing sensitive',
 // ══ 7 · PRIVILEGES ════════════════════════════════════════════════════════
 t.section('The default ACL is revoked, then granted deliberately');
 
-const created = [...X.RPCS.matchAll(/create or replace function (\w+)\(/g)].map((m) => m[1]);
-t.ok('functions are created (not vacuous)', created.length >= 8);
-t.is('every one is revoked from public, anon and authenticated',
-  created.filter((f) => !new RegExp(`revoke all on function ${f}\\(`).test(X.RPCS)), []);
+const ACL = read('supabase/migrations/20260831f_referral_engine_acl.sql');
+const REVOKES = X.RPCS + '\n' + exec(ACL);
+
+/* EVERY function this program ships, from all four forward migrations — not
+   just the ones one file happened to be thinking about. That gap is exactly
+   how record_purchase_event shipped granted to anon: it is SECURITY DEFINER
+   and takes the target user_id as an argument, so anon could have fabricated a
+   purchase for any account and minted a commission. Closed by 20260831f. */
+const created = [...(X.TABLES + X.ENGINE + X.RPCS).matchAll(/create or replace function (\w+)\(/g)]
+  .map((m) => m[1]);
+t.ok('functions are created (not vacuous)', created.length >= 12);
+t.is('EVERY function the program ships is revoked from public, anon and authenticated',
+  created.filter((f) => !new RegExp(`revoke all on function ${f}\\(`).test(REVOKES)), []);
+/* The seam between the payment path and the ledger takes a user_id, so it must
+   carry no client grant at all. */
+t.ok('record_purchase_event is granted to nobody',
+  !/grant execute on function record_purchase_event/.test(REVOKES));
 t.is('nothing is granted to anon',
   [...X.RPCS.matchAll(/grant execute on function [^;]*? to (\w+)/g)].map((m) => m[1])
     .filter((r) => r !== 'authenticated'), []);

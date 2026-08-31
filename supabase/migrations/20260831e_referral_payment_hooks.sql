@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Teacher Partner Program — 4 of 4: the payment hooks
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
+-- STATUS: 🟢 APPLIED 2026-08-31 as version 20260831152640, with explicit owner approval.
 -- DEPENDS ON: 20260831b, 20260831c
 --
 -- ⚠️  THIS FILE REDEFINES THE THREE FUNCTIONS THAT GRANT EVERY PLAN ON THE
@@ -32,9 +32,10 @@
 -- counts CHARACTERS and that body carries two em-dashes, three bytes each.
 -- Compare md5, which is unambiguous, rather than a length.
 --
--- **Re-run that diff against production immediately before applying.** If any
--- of the three has moved since, this file would silently REVERT it — which is
--- the single largest risk in the whole program.
+-- THE FRESH DIFF WAS RUN, and all three were byte-identical to the audit at
+-- the moment of applying. Re-run it before any future re-application: if one of
+-- the three has moved since, this file would silently REVERT it, which is the
+-- single largest risk in the whole program.
 --
 -- WHY THE LINE IS ALL THAT IS ADDED
 -- ---------------------------------

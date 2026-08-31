@@ -1,7 +1,8 @@
 -- =====================================================================
 -- ROLLBACK for 20260831b/c/d/e — remove the Teacher Partner Program
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately NOT APPLIED.
+-- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. 20260831b/c/d/e/f ARE applied
+--         (live 2026-08-31); this is the way back if the program is withdrawn.
 --
 -- ORDER MATTERS. The payment functions are unhooked FIRST, before anything
 -- they call is dropped. Reversing that order leaves three functions
@@ -57,6 +58,8 @@ end $$;
 drop trigger if exists referral_award_trg on purchase_events;
 drop function if exists referral_award_from_event();
 drop function if exists record_purchase_event(text, uuid, uuid, text);
+-- 20260831f only revoked privileges on the functions above; dropping them
+-- removes its effect too, so it needs no separate undo.
 
 drop function if exists admin_referral_overview();
 drop function if exists admin_reassign_referral(uuid, uuid, text, boolean);

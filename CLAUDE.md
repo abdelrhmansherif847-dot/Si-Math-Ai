@@ -145,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **109 files** in `supabase/migrations/`, **169 applied** in the database (measured 2026-08-31). The five `20260831b/c/d/e/y` referral files are PREPARED and deliberately unapplied — `20260831e` REDEFINES `approve_payment_request`, `activate_subscription` and `activate_credit_pack`, so diff it against production before applying or it silently reverts them; see `docs/roadmap/teacher-partner-program.md`. `20260831a` (`teacher_attention()`) applied 2026-08-31 as version `20260831025024`; its rollback `20260831z` is PREPARED and deliberately unapplied — the gap between the two counts is now partly deliberate, not only historical. `20260830j` (the assistant re-application fix) and `20260830k` (workspace creation is now **platform Owner only** — `current_user_role() <> 'owner'`, not a rung comparison) applied 2026-08-30. Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830u/v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Migrations | **110 files** in `supabase/migrations/`, **174 applied** in the database (measured 2026-08-31). The Teacher Partner Program backend `20260831b/c/d/e` applied 2026-08-31 (versions `20260831115804` / `120342` / `120608` / `152640`), plus the ACL fix `20260831f` (`153041`). **`20260831e` REDEFINES `approve_payment_request`, `activate_subscription` and `activate_credit_pack`** — never re-apply it without first diffing all three against production, or it silently reverts whatever changed. Its rollback `20260831y` is PREPARED and deliberately unapplied. `20260831a` (`teacher_attention()`) applied 2026-08-31 as version `20260831025024`; its rollback `20260831z` is PREPARED and deliberately unapplied — the gap between the two counts is now partly deliberate, not only historical. `20260830j` (the assistant re-application fix) and `20260830k` (workspace creation is now **platform Owner only** — `current_user_role() <> 'owner'`, not a rung comparison) applied 2026-08-30. Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830u/v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
 | CI | `node tests/run-all.mjs` — **58 checks** (measured 2026-08-31) |
 
@@ -228,6 +228,27 @@ exists for this. Do not treat the file list as the applied list.
   inventory and what is still impossible:
   `docs/engineering/weakness-evidence-audit.md`; access proof:
   `docs/engineering/teacher-attention-verification.md`
+- **Teacher Partner Program** (backend live 2026-08-31, no UI): `referral_codes`,
+  `referral_attributions`, `referral_commissions`, `referral_commission_rates`,
+  `purchase_events`, `referral_award_skips`, `referral_audit_log`. The rules are
+  **constraints, not code**: `UNIQUE(student_user_id)` on commissions is
+  "one first purchase ever", `UNIQUE(source_kind, source_id)` is "one award per
+  payment", and `PRIMARY KEY(student_user_id)` on attributions is "one teacher
+  per student". Rates are **integer basis points** (12.5% = `1250`) in one table
+  whose bands are validated as a set; every rate is **frozen into its award**, so
+  crossing a tier never restates history. **`purchase_events` is the canonical
+  purchase ledger** — both payment paths write it, a trigger on it is the ONLY
+  thing that creates a commission, and it is the single answer to "has this
+  student ever bought anything?". **Commission base is
+  `plan_definitions.amount_egp`, NEVER `payment_requests.amount_egp`**, which is
+  a direct client insert with no trigger and no CHECK. `record_purchase_event()`
+  takes no amount and **no client role holds EXECUTE on it** — it takes a
+  target user_id, so a grant would let anyone fabricate a purchase (fixed by
+  `20260831f`; the first version shipped granted to `anon`). Payouts are
+  **disabled** (`system_settings.referral_payouts_enabled = 'false'`) until the
+  VAT/withholding treatment is confirmed. A teacher is still just an active
+  `staff_role = 'teacher'` row — **no new role**. Read
+  `docs/roadmap/teacher-partner-program.md` before touching any of it
 - **Intervention record** (live 2026-08-30, empty): `class_interventions` — a
   teacher's record of something they already did about a difficulty. It computes
   nothing, is never a recommendation, and is never an input to the learning
