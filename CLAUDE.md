@@ -145,7 +145,7 @@ student impact during exam-prep windows.
 | Difficulty detector | `detector-v1` (heuristic) + LLM shadow classifier v2 |
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
-| Migrations | **104 files** in `supabase/migrations/`, **168 applied** in the database (measured 2026-08-31). `20260831a` (`teacher_attention()`) and its rollback `20260831z` are PREPARED and deliberately unapplied — the gap between the two counts is now partly deliberate, not only historical. `20260830j` (the assistant re-application fix) and `20260830k` (workspace creation is now **platform Owner only** — `current_user_role() <> 'owner'`, not a rung comparison) applied 2026-08-30. Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830u/v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
+| Migrations | **104 files** in `supabase/migrations/`, **169 applied** in the database (measured 2026-08-31). `20260831a` (`teacher_attention()`) applied 2026-08-31 as version `20260831025024`; its rollback `20260831z` is PREPARED and deliberately unapplied — the gap between the two counts is now partly deliberate, not only historical. `20260830j` (the assistant re-application fix) and `20260830k` (workspace creation is now **platform Owner only** — `current_user_role() <> 'owner'`, not a rung comparison) applied 2026-08-30. Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830u/v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
 | Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
 | CI | `node tests/run-all.mjs` — **58 checks** (measured 2026-08-31) |
 
@@ -219,8 +219,15 @@ exists for this. Do not treat the file list as the applied list.
   `trend` — **no consumer re-derives either**. The teacher/assistant read is
   `teacher_student_weaknesses()` (live 2026-08-30), which withholds the
   analyzer's working numbers so no surface can. `weakness-view.js` shapes one
-  row per role and derives nothing. Evidence inventory and what is still
-  impossible: `docs/engineering/weakness-evidence-audit.md`
+  row per role and derives nothing. The class-wide read is `teacher_attention()`
+  (live 2026-08-31), which answers "who should I look at first" with at most
+  **five** students and never a score: the tier is chosen by **freshness first**,
+  so a student silent for a month is `quiet` and never `struggling`, however
+  severe their last snapshot was. `trend`, `recent7_count`, `recent14_count` and
+  `priority_rank` are measured unreliable and are read by nothing. Evidence
+  inventory and what is still impossible:
+  `docs/engineering/weakness-evidence-audit.md`; access proof:
+  `docs/engineering/teacher-attention-verification.md`
 - **Intervention record** (live 2026-08-30, empty): `class_interventions` — a
   teacher's record of something they already did about a difficulty. It computes
   nothing, is never a recommendation, and is never an input to the learning
@@ -271,6 +278,12 @@ safe or that a merge is sufficient.
   in?". **LIVE 2026-08-30**, body verified byte-for-byte against the repo. Read
   it before touching `login.html`'s post-auth routing or `nav.js`'s Teaching
   link. Routing is not a security boundary; a pending assistant is not staff
+- `docs/engineering/teacher-attention-verification.md` — `teacher_attention()`,
+  the class-wide "who needs the first look" read. **LIVE 2026-08-31**, body
+  verified byte-for-byte and ACL matched against the four teaching reads already
+  in production. Read it before changing the qualification rules, the cap, or
+  `FRESH_DAYS` — §4 records, with the mutant that proves it, why freshness
+  outranks severity, and §8 records what the list still cannot establish
 - `docs/engineering/subscription-writer-backlog.md` — open defects in the
   functions that write `subscriptions` (SUB-1 renewal INSERT vs UPSERT, live;
   SUB-2 missing `plan_code`, dead code). Read before touching

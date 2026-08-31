@@ -1,8 +1,11 @@
 -- =====================================================================
 -- teacher_attention() — where should a teacher look first, and why
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only.
---         Apply with explicit owner approval, per CLAUDE.md §3.
+-- STATUS: 🟢 APPLIED 2026-08-31 as version 20260831025024, with explicit owner
+--         approval, per CLAUDE.md §3. The live body was verified byte-for-byte
+--         against this file (3541 bytes, md5 ddbcc6cd54086ef6da8f68a49f5125ae)
+--         and its ACL against the four teaching reads already in production.
+--         Access verification: docs/engineering/teacher-attention-verification.md
 -- DEPENDS ON: 20260830b (workspace_is_active_staff), 20260830c (teacher_roster),
 --             20260830d (teacher_student_weaknesses — the per-student read this
 --             summarises)

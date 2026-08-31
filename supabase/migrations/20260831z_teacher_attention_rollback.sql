@@ -1,7 +1,8 @@
 -- =====================================================================
 -- ROLLBACK for 20260831a — remove teacher_attention()
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately NOT APPLIED.
+-- STATUS: 🟡 PREPARED, deliberately NOT APPLIED. 20260831a IS applied (live
+--         2026-08-31); this is the way back if it ever needs to be withdrawn.
 --
 -- SAFE AT ANY TIME. teacher_attention() owns no data, is referenced by no
 -- policy, trigger or foreign key, and writes nothing: it reads
