@@ -154,10 +154,28 @@ exist. Why the counter reads 0 against five holders is unexplained — most like
 it was zeroed by hand to close sales. The wording states only what is verifiable:
 no memberships remain available.
 
-## Prepared, not applied
+## Prepared, not applied — ⚠️ CORRECTED 2026-08-31: THE FILES ARE GONE
 
-Three migration files, inert until reviewed and explicitly approved
-(CLAUDE.md §3):
+This section described three referral migration files as sitting in the branch.
+**They were never committed, on any branch.** Verified 2026-08-31:
+`git log --all --diff-filter=A -- '*referral*' '*commission*'` returns nothing,
+and `grep -rin "\breferral\b"` matches nothing in the repository outside this
+document. They existed only in the working tree of the session that wrote this
+file, and that container was reclaimed.
+
+Two of the three names are now **taken by applied migrations** —
+`20260830a_teacher_foundation_tables.sql` and
+`20260830b_teacher_foundation_rls.sql`, both live since 2026-08-30 — so the
+names cannot be reused even if the files are rewritten.
+
+The design is not lost: it is carried forward, corrected and extended, in
+`docs/roadmap/teacher-partner-program.md`. What that plan keeps from here is the
+part that mattered — the business rules belong in constraints, not in
+application code. What it corrects is the commission base: `payment_requests.
+amount_egp` is a **direct client insert** with no trigger and no CHECK, so it is
+student-controlled and must never be the figure a payout is computed from.
+
+The original text, for the record:
 
 - `20260830a_teacher_referral_commissions.sql` — four tables plus
   `attribute_referral()` and `award_referral_commission()`.
