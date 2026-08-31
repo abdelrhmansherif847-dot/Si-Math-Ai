@@ -200,6 +200,38 @@ input,select{font-family:inherit}
 .iv.gone .iv-what{color:var(--text-500);text-decoration:line-through}
 .iv-note{display:block;font-size:12.5px;color:var(--text-400);line-height:1.55;margin-top:4px}
 .iv-when{display:block;font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:4px}
+/* ── referrals & earnings ────────────────────────────────────────────────
+   Reuses the page's own card, stat, code-row and row components. The only
+   new shapes are the tier ladder and its progress bar, because nothing on
+   the page already says "you are here, and here is what is next". */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.tier{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:14px 16px;position:relative}
+.tier.on{border-color:var(--gold-border);background:var(--bg-card-hi)}
+.tier .pct{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--text-300);line-height:1.1}
+.tier.on .pct{color:#fcd34d}
+.tier .band{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;color:var(--text-500);margin-top:5px}
+.tier .youre{position:absolute;top:10px;right:10px;font-family:var(--font-mono);font-size:9px;
+  letter-spacing:.12em;color:#fcd34d;border:1px solid var(--gold-border);border-radius:3px;padding:2px 6px}
+.prog{height:6px;border-radius:3px;background:var(--bg-elev-2);overflow:hidden;margin-top:12px}
+.prog > i{display:block;height:100%;background:var(--gold-border);border-radius:3px}
+.ref-next{font-size:13.5px;color:var(--text-300);margin-top:10px}
+.ref-next b{color:#fcd34d}
+.money{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:2px}
+.money .m{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 14px}
+.money .m .v{font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff;line-height:1.15}
+.money .m .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-500);margin-top:5px}
+.rs-head,.rs-row{display:grid;grid-template-columns:minmax(120px,1.4fr) 92px minmax(96px,1fr) 92px 92px 86px;
+  gap:10px;align-items:center}
+.rs-head{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-500);padding:0 14px 9px;border-bottom:1px solid var(--border-soft)}
+.rs-row{padding:12px 14px;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text-300)}
+.rs-row:last-child{border-bottom:none}
+.rs-row .who{color:var(--text-100);font-weight:600;font-size:13.5px}
+.rs-scroll{overflow-x:auto}
+.rs-scroll > div{min-width:640px}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .att-why{display:block;font-size:13.5px;color:var(--text-200);line-height:1.5;margin-top:3px}
 .att-when{display:block;font-size:11.5px;color:var(--text-500);margin-top:3px;white-space:normal}
 .pill.warn{border-color:var(--gold-border);color:#fcd34d}
@@ -258,6 +290,7 @@ input,select{font-family:inherit}
   <a class="nav-item" href="progress.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
   <div class="side-sec">Teaching</div>
   <a class="nav-item active" href="teacher.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>Teacher Workspace</a>
+  <a class="nav-item" href="partner.html" id="sidePartnerLink" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Partner Program</a>
   <div class="side-sec">Account</div>
   <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
   <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
@@ -384,6 +417,14 @@ input,select{font-family:inherit}
         </div>
       </div>
     </div>
+
+    <!-- Teacher only. An assistant runs the class; the commission belongs to
+         the person whose class it is. The three RPCs behind this refuse an
+         assistant independently, so hiding it is not the security boundary. -->
+    <div id="referrals" style="display:none">
+      <div class="sec-label">Referrals &amp; earnings</div>
+      <div class="card" id="referralsBody"></div>
+    </div>
   </section>
 </main>
 
@@ -483,7 +524,7 @@ const TEACHER_ROLES = new Set(['teacher', 'owner']);
 const isTeacherRole = (r) => TEACHER_ROLES.has(r);
 
 const S = {
-  ws: null, isTeacher: false, roster: [], staff: [], activity: [], attention: null,
+  ws: null, isTeacher: false, roster: [], staff: [], activity: [], attention: null, ref: null,
   filter: 'active', search: '',
   preview: new URLSearchParams(location.search).get('preview') === '1',
 };
@@ -494,6 +535,31 @@ const S = {
    WITHOUT touching the database — see the guard at the top of every method.
    Names are obviously placeholder; nothing here resembles a real student. */
 const FIXTURE = {
+  /* Seven paid students: mid-way through the first tier, with a real distance
+     to the next one, so the preview shows the ladder doing its job rather than
+     an empty or a maxed-out state. */
+  referral: {
+    code: 'K7RMPX42',
+    summary: { code: 'K7RMPX42', referred_count: 11, paid_count: 7,
+               tier_label: '10%', rate_bps: 1000,
+               next_tier_label: '12.5%', next_tier_at: 10, students_to_next: 3,
+               gross_generated: 7643, earned: 764.30, pending: 594.40,
+               approved: 169.90, paid: 0, reversed: 34.90 },
+    students: [
+      { student_id: 'p1', full_name: 'A. Sample', attributed_at: iso(-64), has_paid: true,
+        purchase_at: iso(-60), plan_code: 'PRO_ANNUAL',  gross_egp: 2999, commission_egp: 299.90, status: 'approved' },
+      { student_id: 'p2', full_name: 'B. Sample', attributed_at: iso(-61), has_paid: true,
+        purchase_at: iso(-52), plan_code: 'HERO',        gross_egp: 1949, commission_egp: 194.90, status: 'pending' },
+      { student_id: 'p3', full_name: 'C. Sample', attributed_at: iso(-40), has_paid: true,
+        purchase_at: iso(-31), plan_code: 'PRO_QUARTERLY', gross_egp: 899, commission_egp: 89.90, status: 'pending' },
+      { student_id: 'p4', full_name: 'D. Sample', attributed_at: iso(-33), has_paid: true,
+        purchase_at: iso(-20), plan_code: 'PACK_ULTRA',  gross_egp: 1299, commission_egp: 129.90, status: 'pending' },
+      { student_id: 'p5', full_name: 'E. Sample', attributed_at: iso(-12), has_paid: true,
+        purchase_at: iso(-9),  plan_code: 'PRO_MONTHLY', gross_egp: 349,  commission_egp: 34.90, status: 'reversed' },
+      { student_id: 'p6', full_name: 'F. Sample', attributed_at: iso(-9),  has_paid: false,
+        purchase_at: null, plan_code: null, gross_egp: null, commission_egp: null, status: null },
+    ],
+  },
   /* One row per tier, so the preview shows all three sentences the section can
      say. The ids and names are the roster's own: clicking a row must open the
      card it names, and the names must stay obviously placeholder. */
@@ -579,6 +645,23 @@ const api = {
     const { data, error } = await sb.rpc('teacher_my_workspaces');
     if (error) throw error;
     return data || [];
+  },
+  /* teacher_referral_code() is VOLATILE: the first call issues the teacher
+     their code. That is deliberate and it is the moment the program starts
+     existing for them — nothing is created for an assistant or a student,
+     because the function refuses them. */
+  async referral() {
+    if (S.preview) return { code: FIXTURE.referral.code,
+                            summary: FIXTURE.referral.summary,
+                            students: FIXTURE.referral.students.slice() };
+    const code = await sb.rpc('teacher_referral_code');
+    if (code.error) return null;
+    const [sum, stu] = await Promise.all([
+      sb.rpc('teacher_referral_summary'),
+      sb.rpc('teacher_referral_students'),
+    ]);
+    if (sum.error) return null;
+    return { code: code.data, summary: sum.data, students: (!stu.error && stu.data) || [] };
   },
   async attention(ws) {
     if (S.preview) return FIXTURE.attention.slice();
@@ -798,10 +881,14 @@ async function renderWorkspace() {
     loadAttention(),
     S.isTeacher ? loadStaff() : Promise.resolve(),
     S.isTeacher ? loadActivity() : Promise.resolve(),
+    S.isTeacher ? loadReferrals() : Promise.resolve(),
   ]);
   renderStats();
   renderNeedsYou();
   renderAttention();
+  renderReferrals();
+  // The Partner Program page is the teacher's, not the assistant's.
+  if (S.isTeacher) $('sidePartnerLink').style.display = '';
 }
 
 function renderStats() {
@@ -893,6 +980,156 @@ function renderAttention() {
 
   box.querySelectorAll('.att-row').forEach((el) => {
     el.addEventListener('click', () => openCard(el.dataset.sid));
+  });
+}
+
+/* ── REFERRALS & EARNINGS ─────────────────────────────────────────────────
+   Teacher only, and the three RPCs behind it refuse an assistant on their own,
+   so this section being hidden is a courtesy rather than the boundary.
+
+   PAYOUTS ARE DISABLED. admin_set_commission_status() refuses to mark anything
+   paid while system_settings.referral_payouts_enabled is false, so there is
+   deliberately NO withdraw or request-payout control here: a button that
+   always fails is worse than no button. The four states are reported as what
+   they are — earned, pending, paid, reversed — and nothing implies money is
+   collectable today. */
+const EGP = (n) => 'EGP ' + Number(n || 0).toLocaleString('en-EG',
+  { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* A null result means the read is unavailable — the account is not a teacher,
+   or the call failed. Either way the section stays hidden and the page is
+   exactly what it was. */
+async function loadReferrals() {
+  if (!S.isTeacher) { S.ref = null; return; }
+  try { S.ref = await api.referral(); }
+  catch (_) { S.ref = null; }
+}
+
+function tierLadder(sum) {
+  /* The ladder is stated here as copy, and it is the SERVER that decides which
+     band an award actually uses (referral_commission_rates). If the two ever
+     disagree the server is right — which is why the highlighted band is chosen
+     by matching the server's own tier_label, not by re-deriving it here. */
+  const bands = [
+    { pct: '10%',   band: '1–9 paid students' },
+    { pct: '12.5%', band: '10–29 paid students' },
+    { pct: '15%',   band: '30+ paid students' },
+  ];
+  return '<div class="tiers">' + bands.map((b) => {
+    const on = b.pct === sum.tier_label;
+    return '<div class="tier' + (on ? ' on' : '') + '">'
+      + (on ? '<span class="youre">YOU</span>' : '')
+      + '<div class="pct">' + b.pct + '</div>'
+      + '<div class="band">' + b.band + '</div></div>';
+  }).join('') + '</div>';
+}
+
+function renderReferrals() {
+  const box = $('referralsBody');
+  const R = S.ref;
+  if (!R || !R.summary) { $('referrals').style.display = 'none'; return; }
+  $('referrals').style.display = '';
+
+  const sum = R.summary;
+  const rows = R.students || [];
+  const paid = Number(sum.paid_count || 0);
+  const toNext = sum.students_to_next;
+  const link = location.origin + '/?ref=' + encodeURIComponent(R.code || '');
+
+  /* Progress is measured inside the CURRENT band, not from zero: at 7 of the
+     10 needed for 12.5% the bar should read 7/10, and at the top band there is
+     nothing left to fill. */
+  const pct = (toNext == null) ? 100
+    : Math.max(0, Math.min(100, Math.round((paid / Number(sum.next_tier_at || 1)) * 100)));
+
+  const nextLine = (toNext == null)
+    ? 'You are on the top tier.'
+    : '<b>' + toNext + '</b> more paid ' + (toNext === 1 ? 'student' : 'students')
+      + ' to reach <b>' + esc(sum.next_tier_label) + '</b>.';
+
+  box.innerHTML = ''
+    // ── the code and the link ──
+    + '<div class="code-row">'
+    +   '<span class="code-chip" style="border-color:var(--gold-border)">' + esc(R.code || '--------') + '</span>'
+    +   '<button class="btn ghost sm" id="copyRefCode">Copy code</button>'
+    +   '<button class="btn ghost sm" id="copyRefLink">Copy link</button>'
+    + '</div>'
+    + '<div class="code-note" style="margin-top:10px;word-break:break-all">' + esc(link) + '</div>'
+    /* The ledger is live; the student-facing capture is not. Sign-up does not
+       read ?ref= yet and there is nowhere for a student to type a code, so
+       sharing this today would credit nobody. Saying so is the difference
+       between a feature that is coming and a teacher who thinks they are
+       earning and is not. Delete this block when the student surface ships. */
+    + '<div class="note" style="margin-top:12px;border-left-color:var(--gold-border)">'
+    +   '<b style="color:#fcd34d">Not shareable yet.</b> Your code exists and your earnings will be '
+    +   'tracked against it, but sign-up does not read the link yet and students have no way to enter '
+    +   'a code. Hold on to this until we tell you it is live — sharing it now would credit nobody.</div>'
+    + '<div class="note" style="margin-top:12px">Once it is live: a student is credited to you when '
+    +   'they use this before their first purchase. If they later use another teacher\'s code they '
+    +   'move — until they pay, and then they are yours permanently. A student who had already '
+    +   'bought something before using your code is never credited.</div>'
+    + '<div class="msg" id="refMsg"></div>'
+
+    // ── overview ──
+    + '<div class="stats" style="margin-top:18px">'
+    +   '<div class="stat"><div class="n num">' + esc(sum.referred_count) + '</div><div class="l">Referred</div></div>'
+    +   '<div class="stat"><div class="n num">' + paid + '</div><div class="l">Paid</div></div>'
+    +   '<div class="stat"><div class="n">' + esc(sum.tier_label) + '</div><div class="l">Your rate</div></div>'
+    + '</div>'
+    + tierLadder(sum)
+    + '<div class="prog"><i style="width:' + pct + '%"></i></div>'
+    + '<div class="ref-next">' + nextLine + '</div>'
+
+    // ── earnings. No payout control: payouts are disabled. ──
+    + '<div class="sec-label" style="margin-top:22px">Earnings</div>'
+    + '<div class="money">'
+    +   '<div class="m"><div class="v num">' + EGP(sum.gross_generated) + '</div><div class="k">Gross generated</div></div>'
+    +   '<div class="m"><div class="v num">' + EGP(sum.earned)   + '</div><div class="k">Earned</div></div>'
+    +   '<div class="m"><div class="v num">' + EGP(sum.pending)  + '</div><div class="k">Pending</div></div>'
+    +   '<div class="m"><div class="v num">' + EGP(sum.paid)     + '</div><div class="k">Paid</div></div>'
+    +   '<div class="m"><div class="v num">' + EGP(sum.reversed) + '</div><div class="k">Reversed</div></div>'
+    + '</div>'
+    + '<div class="note" style="margin-top:12px">Commission is earned on a student\'s FIRST successful '
+    +   'purchase only, calculated on the plan price. Renewals, and payments that fail, are rejected '
+    +   'or are reversed, earn nothing. Payouts are not open yet — these figures are your record, '
+    +   'not a balance you can withdraw today.</div>'
+
+    // ── the students ──
+    + '<div class="sec-label" style="margin-top:22px">Your referred students</div>'
+    + (rows.length ? (
+        '<div class="rs-scroll"><div>'
+        + '<div class="rs-head"><span>Student</span><span>Status</span><span>First purchase</span>'
+        +   '<span>Amount</span><span>Commission</span><span>State</span></div>'
+        + rows.map((r) => {
+            const nm = '<span class="who">' + esc(r.full_name || 'Student') + '</span>';
+            if (!r.has_paid) {
+              return '<div class="rs-row">' + nm
+                + '<span><span class="pill">Referred</span></span>'
+                + '<span class="meta">Not yet</span><span class="meta">—</span>'
+                + '<span class="meta">—</span><span class="meta">—</span></div>';
+            }
+            return '<div class="rs-row">' + nm
+              + '<span><span class="pill">Paid</span></span>'
+              + '<span class="meta num">' + esc(fmtDate(r.purchase_at)) + '<br>'
+              +   '<span style="color:var(--text-500)">' + esc(r.plan_code || '') + '</span></span>'
+              + '<span class="num">' + EGP(r.gross_egp) + '</span>'
+              + '<span class="num" style="color:#fcd34d">' + EGP(r.commission_egp) + '</span>'
+              + '<span class="meta">' + esc(r.status || '') + '</span></div>';
+          }).join('')
+        + '</div></div>'
+      ) : (
+        '<div class="empty-state" style="padding:30px 8px"><div class="big">No referred students yet</div>'
+        + '<div style="font-size:13.5px">Share your code or link with a student before they subscribe, '
+        + 'and they will appear here.</div></div>'
+      ));
+
+  $('copyRefCode').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(R.code); say($('refMsg'), 'Referral code copied.', 'ok'); }
+    catch (_) { say($('refMsg'), 'Copy failed — read it out instead.', 'err'); }
+  });
+  $('copyRefLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(link); say($('refMsg'), 'Referral link copied.', 'ok'); }
+    catch (_) { say($('refMsg'), 'Copy failed — the link is written above.', 'err'); }
   });
 }
 

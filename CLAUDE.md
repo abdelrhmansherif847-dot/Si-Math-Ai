@@ -146,8 +146,8 @@ student impact during exam-prep windows.
 | Taxonomy | version 1 — **5 topics, 33 subtopics** |
 | Plan catalogue | **Plan Catalog V2** — `plan_definitions` is the sole catalogue; `pricing_settings` and `credit_packs` are views over it. Plans are authored from the Owner Dashboard |
 | Migrations | **110 files** in `supabase/migrations/`, **174 applied** in the database (measured 2026-08-31). The Teacher Partner Program backend `20260831b/c/d/e` applied 2026-08-31 (versions `20260831115804` / `120342` / `120608` / `152640`), plus the ACL fix `20260831f` (`153041`). **`20260831e` REDEFINES `approve_payment_request`, `activate_subscription` and `activate_credit_pack`** — never re-apply it without first diffing all three against production, or it silently reverts whatever changed. Its rollback `20260831y` is PREPARED and deliberately unapplied. `20260831a` (`teacher_attention()`) applied 2026-08-31 as version `20260831025024`; its rollback `20260831z` is PREPARED and deliberately unapplied — the gap between the two counts is now partly deliberate, not only historical. `20260830j` (the assistant re-application fix) and `20260830k` (workspace creation is now **platform Owner only** — `current_user_role() <> 'owner'`, not a rung comparison) applied 2026-08-30. Exam delivery `20260830e/f`, the intervention record `20260830g`, the `owner`→`teacher` rename `20260830h` and the routing function `20260830i` (`my_experience()`) applied 2026-08-30. The rollbacks `20260830u/v/w/x/y` are deliberately unapplied. Teacher foundation `20260830a…c` and the weakness read `20260830d` applied 2026-08-30 |
-| Static site | **50** root `*.html` pages on Vercel (measured 2026-08-30, after `teacher.html` and `exam.html`) |
-| CI | `node tests/run-all.mjs` — **58 checks** (measured 2026-08-31) |
+| Static site | **51** root `*.html` pages on Vercel (measured 2026-08-31, after `partner.html`) |
+| CI | `node tests/run-all.mjs` — **60 checks** (measured 2026-08-31) |
 
 **Source version and platform version are different axes and must never be
 written as one figure.** `AI_TUTOR_VERSION` is a constant in the source;
@@ -248,7 +248,16 @@ exists for this. Do not treat the file list as the applied list.
   **disabled** (`system_settings.referral_payouts_enabled = 'false'`) until the
   VAT/withholding treatment is confirmed. A teacher is still just an active
   `staff_role = 'teacher'` row — **no new role**. Read
-  `docs/roadmap/teacher-partner-program.md` before touching any of it
+  `docs/roadmap/teacher-partner-program.md` before touching any of it.
+  **Teacher UI live in the repo, NOT yet deployed** (2026-08-31): the
+  "Referrals & earnings" section on `teacher.html` and the new `partner.html`.
+  Both gate on `staff_role = 'teacher'` — **never on `can_staff`, which is true
+  for an assistant**. Neither surface offers a payout control, because
+  `admin_set_commission_status` refuses to mark anything paid. **Nothing
+  student-facing calls `attribute_referral()` yet** — sign-up does not read
+  `?ref=` and there is nowhere to enter a code — so both surfaces carry a
+  "Not shareable yet" notice, and `tests/referral-ui.test.mjs` fails if that
+  notice is removed while the student surface is still missing
 - **Intervention record** (live 2026-08-30, empty): `class_interventions` — a
   teacher's record of something they already did about a difficulty. It computes
   nothing, is never a recommendation, and is never an input to the learning

@@ -28,9 +28,27 @@ const CODE = FILTER.replace(/\/\*[\s\S]*?\*\//g, '').split('\n')
 t.section('The staff surface is exactly three destinations');
 
 t.ok('the filter exists and is real code', /function applyStaffNav/.test(CODE) && CODE.length > 400);
-t.is('the keep-list is exactly Teacher Workspace, Profile, Settings',
+/* partner.html joined the staff surface with the Partner Program. It belongs
+   here for the same reason teacher.html does — it is a staff destination, and
+   a keep-list that omitted it would hide the page from the very people it is
+   for. Note this list is about the FILTER: whether the Partner LINK is drawn
+   at all is a separate, stricter question, asserted below, because can_staff
+   includes assistants and the Partner Program does not. */
+t.is('the keep-list is exactly the four staff destinations',
   (FILTER.match(/'([a-z-]+\.html)': 1/g) || []).map((m) => m.match(/'(.+)'/)[1]).sort(),
-  ['profile.html', 'settings.html', 'teacher.html']);
+  ['partner.html', 'profile.html', 'settings.html', 'teacher.html']);
+
+/* The money belongs to whoever's class it is. `teaching` is can_staff, which
+   an ACTIVE ASSISTANT also satisfies, so the Partner link must be gated on
+   something narrower — and it is: staff_role === 'teacher'. */
+t.ok('the Partner link is drawn only for a teacher, never for an assistant',
+  /if \(isTeacher\) \{[\s\S]{0,300}?href="partner\.html"/.test(NAV));
+t.ok('and isTeacher means an ACTIVE membership whose staff_role is teacher',
+  /r\[roleKey\] === 'teacher' && r\[statusKey\] === 'active'/.test(NAV));
+/* Two call sites: the my_experience() branch and the teacher_my_workspaces()
+   fallback. One would mean the other path silently never shows the link. */
+t.is('both identity paths call it, so neither can rot',
+  (NAV.match(/ownsAClass\(/g) || []).length, 2);
 
 // ══ 2 · IT IS COSMETIC — THE WHOLE POINT ══════════════════════════════════
 t.section('The filter changes appearance and nothing else');
@@ -221,7 +239,10 @@ const parseSidebar = (html) => {
   return out;
 };
 
-const KEEP = new Set(['teacher.html', 'profile.html', 'settings.html']);
+/* Restated rather than read from nav.js on purpose: this sweep is the second
+   opinion on the filter, and a copy that derives its expectation from the
+   thing it is checking cannot disagree with it. */
+const KEEP = new Set(['teacher.html', 'partner.html', 'profile.html', 'settings.html']);
 const leaks = [];
 const emptied = [];
 for (const page of SIDEBAR_PAGES) {

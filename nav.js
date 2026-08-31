@@ -130,7 +130,7 @@
      still carries the student menu: a PENDING assistant reaches that page (the
      Settings link exists for exactly that) and can_staff is false for them, so
      they keep their whole student sidebar and their way back. */
-  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'profile.html': 1, 'settings.html': 1 };
+  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'partner.html': 1, 'profile.html': 1, 'settings.html': 1 };
 
   function applyStaffNav(slot, teaching) {
     if (!teaching) return;
@@ -168,7 +168,9 @@
     }
   }
 
-  function render(slot, role, teaching) {
+  var PARTNER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>';
+
+  function render(slot, role, teaching, isTeacher) {
     var lvl = ROLE_LEVEL[role];
     if (typeof lvl !== 'number') lvl = 0;
 
@@ -192,6 +194,20 @@
         +   TEACH_ICON
         +   '<span class="nav-label">Teacher Workspace</span>'
         + '</a>';
+      /* The Partner Program is the TEACHER's, not the assistant's: the money
+         belongs to whoever's class it is. `teaching` is can_staff, which is
+         true for an active assistant too, so it is the wrong flag here —
+         staff_role is what separates the two, and my_experience() already
+         reports it per membership. Every referral RPC refuses an assistant on
+         its own, so this is about not advertising a page that would refuse
+         them, not about holding a door shut. */
+      if (isTeacher) {
+        html += ''
+          + '<a class="nav-item ' + (page === 'partner.html' ? 'active' : '') + '" href="partner.html">'
+          +   PARTNER_ICON
+          +   '<span class="nav-label">Partner Program</span>'
+          + '</a>';
+      }
     }
 
     if (lvl < 1) {
@@ -247,12 +263,22 @@
          below so neither can rot. */
       var role = null;
       var teaching = null;
+      var isTeacher = false;
+      /* An ACTIVE membership whose staff_role is 'teacher'. Both branches below
+         compute it, so neither can rot: my_experience() already returns
+         staff_role per membership, and teacher_my_workspaces() carries it too. */
+      var ownsAClass = function (rows, roleKey, statusKey) {
+        return (rows || []).some(function (r) {
+          return r && r[roleKey] === 'teacher' && r[statusKey] === 'active';
+        });
+      };
       try {
         var xres = await sb.rpc('my_experience');
         var x = xres && !xres.error && xres.data;
         if (x && typeof x === 'object') {
           role = x.platform_role || 'user';
           teaching = x.can_staff === true;
+          isTeacher = ownsAClass(x.staff_memberships, 'staff_role', 'status');
         }
       } catch (_) { role = null; teaching = null; }
 
@@ -273,10 +299,11 @@
           var tres = await sb.rpc('teacher_my_workspaces');
           var trows = (tres && tres.data) || [];
           teaching = trows.some(function (r) { return r && r.staff_status === 'active'; });
-        } catch (_) { teaching = false; }
+          isTeacher = ownsAClass(trows, 'staff_role', 'staff_status');
+        } catch (_) { teaching = false; isTeacher = false; }
       }
 
-      render(slot, role, teaching);
+      render(slot, role, teaching, isTeacher);
       removeDuplicateAdminLinks(slot);
       applyStaffNav(slot, teaching);
 

@@ -56,6 +56,15 @@ const MIG = {
      scope, tiers, freshness, the cap — lives in tests/teacher-attention.test.mjs. */
   attn:     read('supabase/migrations/20260831a_teacher_attention.sql'),
   attn_rb:  read('supabase/migrations/20260831z_teacher_attention_rollback.sql'),
+  /* The Teacher Partner Program, live 2026-08-31. In this map because
+     teacher.html calls three of its RPCs, and the provenance check below only
+     means something if the map is the complete list of migrations that may
+     define what the page calls. Its own contract — constraints, both payment
+     paths, the frozen award, the payout gate — lives in
+     tests/referral-program.test.mjs. */
+  ref:      read('supabase/migrations/20260831d_referral_rpcs.sql'),
+  ref_acl:  read('supabase/migrations/20260831f_referral_engine_acl.sql'),
+  ref_rb:   read('supabase/migrations/20260831y_referral_rollback.sql'),
 };
 const PAGE = read('teacher.html');
 const SETTINGS = read('settings.html');
@@ -86,11 +95,16 @@ const INTERVENTION = EXEC.g;
    purpose, so it stays out of FORWARD (whose ban is the foundation's) but must
    still answer for its privileges and its rollback. */
 const ATTENTION = EXEC.attn;
-const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATTENTION;
+/* The referral reads reach plan_definitions and workspace_staff on purpose, so
+   like d and attn they stay out of FORWARD (whose ban is the foundation's) but
+   must still answer for their privileges and their rollback. */
+const REFERRAL = EXEC.ref + '\n' + EXEC.ref_acl;
+const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATTENTION
+                  + '\n' + REFERRAL;
 /* Rollback is split across two files by design: x drops what g created, then z
    drops the foundation it hung from. Completeness has to be checked against
    both, or adding a second rollback file would silently weaken the check. */
-const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb;
+const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb + '\n' + EXEC.ref_rb;
 
 // The four tables this system is allowed to create and touch.
 const OWN_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];

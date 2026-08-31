@@ -120,12 +120,12 @@ t.section('nav.js decides Teaching from can_staff, and still works without it');
 
 /* The actual shipped block, run as-is. `slice` throws if either marker moves,
    so this cannot silently degrade into testing nothing. */
-const NAV_DECISION = slice(NAV, '      var role = null;', '      render(slot, role, teaching);',
-  'nav.js decision block');
+const NAV_DECISION = slice(NAV, '      var role = null;',
+  '      render(slot, role, teaching, isTeacher);', 'nav.js decision block');
 
 const navDecide = (sb) => {
   const fn = new Function('sb', 'user',
-    `return (async () => {\n${NAV_DECISION}\nreturn { role: role, teaching: teaching };\n})();`);
+    `return (async () => {\n${NAV_DECISION}\nreturn { role: role, teaching: teaching, isTeacher: isTeacher };\n})();`);
   return fn(sb, { id: 'u1' });
 };
 
@@ -287,5 +287,38 @@ t.ok('nav.js derives Teaching from can_staff, not from the role',
 
 t.ok('login.html routes on primary, not on a role',
   /xp\.primary==='staff'/.test(LOGIN) && !/routeAfterAuth[\s\S]{0,4000}?platform_role\s*===/.test(LOGIN));
+
+// ══ 4 · TEACHER IS NOT STAFF ══════════════════════════════════════════════
+t.section('The Partner Program belongs to the teacher, not to their assistant');
+
+/* can_staff is true for an ACTIVE ASSISTANT, so a Partner link gated on it
+   would show one teacher's earnings page to the person who helps them run the
+   class. These run the shipped block, so they fail if that regresses. */
+const M = (staff_role, status) => ({ workspace_id: 'w', name: 'C', staff_role, status });
+
+t.is('an active TEACHER is a partner',
+  (await navDecide(mkSb({ exp: EXP({ can_staff: true, staff_memberships: [M('teacher', 'active')] }) }))).isTeacher,
+  true);
+t.is('an active ASSISTANT is staff, and is NOT a partner',
+  (await navDecide(mkSb({ exp: EXP({ can_staff: true, staff_memberships: [M('assistant', 'active')] }) }))).isTeacher,
+  false);
+t.is('an assistant is still staff, so they keep the Workspace link',
+  (await navDecide(mkSb({ exp: EXP({ can_staff: true, staff_memberships: [M('assistant', 'active')] }) }))).teaching,
+  true);
+t.is('a PENDING teacher application is not yet a partner',
+  (await navDecide(mkSb({ exp: EXP({ can_staff: false, staff_memberships: [M('teacher', 'pending')] }) }))).isTeacher,
+  false);
+t.is('a plain student is neither',
+  (await navDecide(mkSb({ exp: EXP() }))).isTeacher, false);
+
+/* The fallback path must agree, or the link silently never appears whenever
+   my_experience() is unavailable. teacher_my_workspaces() names the columns
+   differently, which is exactly the kind of detail that rots unchecked. */
+t.is('the FALLBACK path reaches the same answer for a teacher',
+  (await navDecide(mkSb({ expThrow: true, profile: { role: 'user' },
+    workspaces: [{ staff_role: 'teacher', staff_status: 'active' }] }))).isTeacher, true);
+t.is('and for an assistant',
+  (await navDecide(mkSb({ expThrow: true, profile: { role: 'user' },
+    workspaces: [{ staff_role: 'assistant', staff_status: 'active' }] }))).isTeacher, false);
 
 t.done();

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Teacher Partner Program — Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- One weakness, read three ways. Derives nothing; see the file's header. -->
+<script src="weakness-view.js"></script>
+<!-- The canonical vocabulary, loaded read-only. teacher_student_weaknesses()
+     returns free-text topic/subtopic and no ids, and the free text collides —
+     "Linear Equations" and "Linear Equations & Functions" are both ALG_006. So
+     an intervention resolves its label to a canonical id here before recording
+     it, and stores nothing when the resolver refuses. This is the authoritative
+     resolver, deliberately NOT taxonomy-compat.js, whose header restricts it to
+     display and forbids exactly this use. -->
+<script src="taxonomy.js"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-3:#7dd3fc;
+  --cyan-bg-soft:rgba(56,189,248,.1);--cyan-bg-med:rgba(56,189,248,.16);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);--purple-border:rgba(168,85,247,.32);
+  --gold:#f59e0b;--gold-soft:rgba(245,158,11,.12);--gold-border:rgba(245,158,11,.32);
+  --text-100:#ffffff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:24px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;--font-body:'DM Sans', system-ui, -apple-system, sans-serif;--font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --nav-h:58px;--side-w:262px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden;background:#050a14}
+body{background:#050a14;color:var(--text-200);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.orb-1{width:420px;height:420px;background:radial-gradient(circle,rgba(56,189,248,.11),transparent 70%);top:-140px;right:-120px}
+.orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(14,165,233,.07),transparent 70%);bottom:-80px;left:-100px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);display:flex;align-items:center;gap:12px;padding-left:16px;padding-right:16px;background:rgba(5,10,20,.97);border-bottom:1px solid var(--border-soft)}
+.hamb{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:11px;color:var(--text-200)}
+.hamb svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff}
+.logo-mark{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--cyan-border);box-shadow:0 0 16px rgba(56,189,248,.22);overflow:hidden}
+.logo-mark img{width:96%;height:96%;object-fit:contain;display:block}
+.brand .mid{color:var(--cyan)}.brand .ai{color:var(--text-300);font-weight:700}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top-avatar{width:34px;height:34px;border-radius:50%;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--cyan);cursor:pointer}
+
+.sidebar{position:fixed;z-index:70;top:0;bottom:0;left:0;width:var(--side-w);background:var(--bg-elev-1);border-right:1px solid var(--border-soft);padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 14px) 14px 18px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;transform:translateX(-100%);transition:transform .32s cubic-bezier(.5,.1,.25,1)}
+.sidebar.open{transform:translateX(0)}
+.side-sec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--text-300);font-weight:500;font-size:14.5px;position:relative;border:1px solid transparent;transition:all .2s}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;color:var(--text-400);transition:color .2s}
+.nav-item:hover{background:var(--bg-card);color:var(--text-100)}
+.nav-item:hover svg{color:var(--cyan)}
+.nav-item.active{background:var(--cyan-bg-soft);color:#fff;border-color:var(--cyan-border-soft)}
+.nav-item.active svg{color:var(--cyan)}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:22px;border-radius:0 4px 4px 0;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.overlay{position:fixed;inset:0;z-index:65;background:rgba(2,6,14,.66);opacity:0;visibility:hidden;transition:opacity .3s}
+.overlay.show{opacity:1;visibility:visible}
+
+.main{position:relative;z-index:10;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 20px) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;animation:rise .5s ease both}
+.sec-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-500);margin:24px 4px 12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+
+.preview-bar{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-md);padding:11px 15px;margin-bottom:18px;font-size:13px;color:#fcd34d}
+.preview-bar.on{display:flex}
+.preview-bar strong{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+
+.page-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+.page-title{font-family:var(--font-display);font-weight:800;font-size:24px;color:#fff;letter-spacing:-.01em}
+.page-sub{font-size:13.5px;color:var(--text-400);margin-top:4px;max-width:640px}
+.pill{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid var(--border-mid);color:var(--text-300);white-space:nowrap}
+.pill.teacher{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.assistant{background:var(--purple-soft);border-color:var(--purple-border);color:#d8b4fe}
+.pill.ok{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
+.pill.warn{background:var(--amber-soft);border-color:var(--amber-border);color:#fcd34d}
+.pill.off{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.stat{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 16px;min-width:104px}
+.stat .n{font-family:var(--font-display);font-weight:800;font-size:21px;color:#fff;line-height:1.1}
+.stat .l{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500);margin-top:4px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3);font-weight:600;font-size:13.5px;transition:all .2s}
+.btn:hover{background:var(--cyan-bg-med);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;border-color:var(--border-mid);color:var(--text-300)}
+.btn.ghost:hover{background:var(--bg-card-hi);color:#fff}
+.btn.danger{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+.btn.danger:hover{background:rgba(239,79,95,.2);color:#fff}
+.btn.sm{padding:6px 11px;font-size:12px}
+
+.field{width:100%;padding:11px 14px;border-radius:var(--r-sm);background:var(--bg-elev-1);border:1px solid var(--border-mid);color:var(--text-100);font-size:14px}
+.field:focus{outline:none;border-color:var(--cyan-border);background:var(--bg-elev-2)}
+.field.code{font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+/* input[type=date] is the one control that does not reliably honour
+   box-sizing:border-box or width:100% in iOS Safari: it is laid out as a native
+   control, so its padding and border can land OUTSIDE the declared width and it
+   refuses to shrink below the intrinsic width of its own date text plus picker
+   indicator. In the intervention form that pushed the WHEN field about 30px
+   past the dashed .iv-form edge on an iPhone — the container's content box is
+   328px at a 390px viewport while its outer box is 358px, which is the size the
+   control took. Desktop Blink honours width:100% here and shows nothing wrong,
+   which is why this needed a real device to see.
+
+   max-width:100% and box-sizing:border-box are the guarantee TOGETHER, and
+   neither is sufficient alone: max-width caps only the CONTENT box, so if the
+   platform lays this control out as content-box the 28px padding and 2px border
+   still land outside and the ceiling does not hold. Measured under exactly that
+   condition, the field came to 358px inside a 328px content box — a 30px
+   overhang, which is the reported symptom. box-sizing is therefore restated
+   here even though *{box-sizing:border-box} already covers it. min-width:0 lets
+   it shrink, and resetting the appearance stops WebKit sizing it as a native
+   widget; the picker still opens on tap.
+
+   This constrains the control itself rather than clipping the page. html and
+   body already carry overflow-x:hidden, which would have hidden the symptom and
+   kept the bug. */
+.field[type="date"]{-webkit-appearance:none;appearance:none;box-sizing:border-box;min-width:0;max-width:100%}
+
+/* A grid item defaults to min-width:auto, which refuses to shrink below its
+   content. The roster rows inside hold nowrap text, so without this the column
+   could push the page wider than a phone viewport — and body{overflow-x:hidden}
+   would clip the right edge rather than wrap. Measured at 320-485px it does not
+   currently overflow; this keeps it that way as rows gain content. */
+.cols{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+.cols > *{min-width:0}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar .grow{flex:1;min-width:170px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;padding:6px 11px;border-radius:100px;border:1px solid var(--border-mid);background:transparent;color:var(--text-400)}
+.chip.on{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+
+.code-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.code-chip{font-family:var(--font-mono);font-size:20px;font-weight:700;letter-spacing:.28em;color:#fff;background:var(--bg-elev-1);border:1px dashed var(--cyan-border);border-radius:var(--r-sm);padding:10px 16px}
+.code-note{font-size:12.5px;color:var(--text-400);margin-top:10px;line-height:1.55}
+
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 14px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:8px;transition:border-color .2s,background .2s;text-align:left;width:100%}
+.row:hover{border-color:var(--cyan-border-soft);background:var(--bg-card-hi)}
+.row.dim{opacity:.62}
+.row .avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);color:var(--cyan);font-family:var(--font-display);font-weight:800;font-size:13px}
+/* A row is a <button> holding <span>s, so the whole row is one click target.
+   Spans are inline by default — without these three the name and the meta line
+   run together into one sentence, which is how it first shipped. */
+.row .who{display:block;flex:1 1 130px;min-width:0}
+.row .nm{display:block;font-weight:600;color:#fff;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{display:block;font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .acts{display:flex;gap:8px;flex-shrink:0;align-items:center;margin-left:auto}
+
+.feed{display:flex;flex-direction:column;gap:2px}
+.feed-item{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--border-soft)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--text-500)}
+.feed-dot.join{background:var(--green)}.feed-dot.leave{background:var(--amber)}.feed-dot.admin{background:var(--cyan)}
+.feed-txt{font-size:13.5px;color:var(--text-300);line-height:1.45}
+.feed-when{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:2px}
+
+.note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
+.slot-empty{border:1px dashed var(--border-mid);border-radius:var(--r-md);padding:16px;background:rgba(10,18,36,.5)}
+.wk{border:1px solid var(--border-soft);border-radius:var(--r-md);background:var(--bg-elev-2);padding:13px 14px;margin-bottom:9px}
+.wk-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.wk-lead{font-family:var(--font-display);font-weight:700;font-size:14.5px;color:#fff;flex:1;min-width:0}
+.wk-topic{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-bottom:6px}
+.wk-basis{font-size:12.5px;color:var(--text-400);line-height:1.55}
+.wk-when{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:7px}
+.pill.critical{background:var(--red-soft);border-color:var(--red-border);color:#fca5a5}
+.pill.high{background:var(--gold-soft);border-color:var(--gold-border);color:#fcd34d}
+.pill.medium{background:var(--cyan-bg-soft);border-color:var(--cyan-border);color:var(--cyan-3)}
+.pill.low{background:var(--green-soft);border-color:var(--green-border);color:#86efac}
+.slot-empty .st{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:8px}
+
+/* The intervention record. Visually quieter than a weakness on purpose: a
+   weakness is the platform's finding, this is the teacher's own note about it,
+   and the second must never look like more evidence than the first. */
+.iv{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border-soft)}
+.iv:last-of-type{border-bottom:none}
+.iv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--cyan)}
+.iv.gone .iv-dot{background:var(--text-500)}
+.iv-main{display:block;flex:1;min-width:0}
+/* Blockified for the same reason .row .nm and .row .meta are, and found the
+   same way — by rendering it. These are <span>s inside a <span>, so without
+   display:block the subject, the note and the date run together into one
+   sentence: "Covered again · Systems of EquationsRe-explained it.Aug 30". */
+.iv-what{display:block;font-size:13.5px;color:var(--text-200);line-height:1.5}
+.iv.gone .iv-what{color:var(--text-500);text-decoration:line-through}
+.iv-note{display:block;font-size:12.5px;color:var(--text-400);line-height:1.55;margin-top:4px}
+.iv-when{display:block;font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);margin-top:4px}
+/* ── referrals & earnings ────────────────────────────────────────────────
+   Reuses the page's own card, stat, code-row and row components. The only
+   new shapes are the tier ladder and its progress bar, because nothing on
+   the page already says "you are here, and here is what is next". */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.tier{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:14px 16px;position:relative}
+.tier.on{border-color:var(--gold-border);background:var(--bg-card-hi)}
+.tier .pct{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--text-300);line-height:1.1}
+.tier.on .pct{color:#fcd34d}
+.tier .band{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;color:var(--text-500);margin-top:5px}
+.tier .youre{position:absolute;top:10px;right:10px;font-family:var(--font-mono);font-size:9px;
+  letter-spacing:.12em;color:#fcd34d;border:1px solid var(--gold-border);border-radius:3px;padding:2px 6px}
+.prog{height:6px;border-radius:3px;background:var(--bg-elev-2);overflow:hidden;margin-top:12px}
+.prog > i{display:block;height:100%;background:var(--gold-border);border-radius:3px}
+.ref-next{font-size:13.5px;color:var(--text-300);margin-top:10px}
+.ref-next b{color:#fcd34d}
+.money{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:2px}
+.money .m{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 14px}
+.money .m .v{font-family:var(--font-display);font-weight:800;font-size:17px;color:#fff;line-height:1.15}
+.money .m .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-500);margin-top:5px}
+.rs-head,.rs-row{display:grid;grid-template-columns:minmax(120px,1.4fr) 92px minmax(96px,1fr) 92px 92px 86px;
+  gap:10px;align-items:center}
+.rs-head{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-500);padding:0 14px 9px;border-bottom:1px solid var(--border-soft)}
+.rs-row{padding:12px 14px;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text-300)}
+.rs-row:last-child{border-bottom:none}
+.rs-row .who{color:var(--text-100);font-weight:600;font-size:13.5px}
+.rs-scroll{overflow-x:auto}
+.rs-scroll > div{min-width:640px}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+/* partner.html only: prose blocks and the worked-example table */
+.ph{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cyan-3);margin-top:20px}
+.ph:first-child{margin-top:0}
+.pp{font-size:14px;line-height:1.7;color:var(--text-300);margin:8px 0 0;max-width:62ch}
+.pp b{color:var(--text-100)}
+.ex-head,.ex-row{display:grid;grid-template-columns:minmax(120px,1.4fr) repeat(4,minmax(88px,1fr));
+  gap:10px;align-items:center}
+.ex-head{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-500);padding:0 14px 9px;border-bottom:1px solid var(--border-soft)}
+.ex-row{padding:12px 14px;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--text-300)}
+.ex-row:last-child{border-bottom:none}
+.att-why{display:block;font-size:13.5px;color:var(--text-200);line-height:1.5;margin-top:3px}
+.att-when{display:block;font-size:11.5px;color:var(--text-500);margin-top:3px;white-space:normal}
+.pill.warn{border-color:var(--gold-border);color:#fcd34d}
+.iv-form{border:1px dashed var(--cyan-border);border-radius:var(--r-md);background:var(--bg-elev-2);padding:14px;margin-top:12px}
+.iv-form .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:7px}
+.iv-form .r{margin-bottom:12px}
+.iv-warn{font-size:12.5px;color:#fcd34d;background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:var(--r-sm);padding:9px 11px;margin-bottom:12px;line-height:1.5}
+.empty-state{text-align:center;padding:44px 20px;color:var(--text-400)}
+.empty-state .big{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text-200);margin-bottom:6px}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--cyan-border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+.msg{margin-top:12px;font-size:13px;padding:10px 12px;border-radius:var(--r-sm);display:none}
+.msg.err{display:block;background:var(--red-soft);border:1px solid var(--red-border);color:#fca5a5}
+.msg.ok{display:block;background:var(--green-soft);border:1px solid var(--green-border);color:#86efac}
+
+.drawer{position:fixed;z-index:90;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--bg-elev-1);border-left:1px solid var(--border-soft);padding:22px;overflow-y:auto;transform:translateX(101%);transition:transform .3s cubic-bezier(.5,.1,.25,1)}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:13.5px}
+.kv .k{color:var(--text-500);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.kv .v{color:var(--text-100);text-align:right}
+
+@media(min-width:1024px){
+  .hamb{display:none}.sidebar{transform:translateX(0)}.overlay{display:none!important}
+  .main{padding-left:calc(var(--side-w) + 28px);padding-right:28px;max-width:1360px}
+  .topbar{padding-left:calc(var(--side-w) + 28px)}.brand.in-topbar{display:none}
+}
+@media(min-width:1180px){ .cols{grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr)} }
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* The entry animation starts cards at opacity 0 with fill-mode both, so anything
+   that never runs the animation — a reduced-motion setting, a print, a headless
+   capture — is left looking at an invisible page. Honour the preference and
+   land on the final state. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .card{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+
+<header class="topbar">
+  <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a class="brand in-topbar" href="dashboard.html">
+    <span class="logo-mark"><img src="assets/si-math-ai-logo.jpg" alt="Si Math AI"/></span>
+    <span>Si<span class="mid">Math</span> <span class="ai">AI</span></span>
+  </a>
+  <div class="topbar-right"><div class="top-avatar" id="topAvatar">?</div></div>
+</header>
+
+<aside class="sidebar" id="sidebar">
+  <div class="side-sec">Menu</div>
+  <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+  <a class="nav-item" href="chat.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>Chat with Zero</a>
+  <a class="nav-item" href="progress.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
+  <div class="side-sec">Teaching</div>
+  <a class="nav-item" href="teacher.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>Teacher Workspace</a>
+  <a class="nav-item active" href="partner.html" id="sidePartnerLink" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Partner Program</a>
+  <div class="side-sec">Account</div>
+  <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+  <a class="nav-item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  <div id="adminNavSection" style="display:none"></div>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<main class="main">
+  <div id="loadingState" style="text-align:center;padding:80px 0"><div class="spin"></div></div>
+
+  <!-- Not a teacher. Not an error, and not a lecture — the page simply is not
+       theirs. The three referral RPCs refuse them independently, so this is a
+       courtesy, not the boundary. -->
+  <section id="denyState" style="display:none">
+    <div class="page-head"><div style="flex:1">
+      <div class="page-title">Teacher Partner Program</div>
+      <div class="page-sub">For teachers who run a class on Si Math AI.</div>
+    </div></div>
+    <div class="card">
+      <div class="empty-state">
+        <div class="big">This page is for teachers</div>
+        <div style="font-size:13.5px;max-width:52ch;margin:0 auto">
+          The Partner Program is for the teacher who owns a classroom. If you assist in one,
+          your teacher holds the referral code for that class.
+        </div>
+        <div style="margin-top:18px"><a class="btn ghost sm" href="dashboard.html">Back to your dashboard</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pageState" style="display:none">
+    <div class="page-head">
+      <div style="flex:1;min-width:220px">
+        <div class="page-title">Teacher Partner Program</div>
+        <div class="page-sub">Earn a commission when a student you introduce subscribes for the first time.</div>
+      </div>
+      <span class="pill teacher">Teacher</span>
+    </div>
+
+    <div class="sec-label">Your code</div>
+    <div class="card">
+      <div class="code-row">
+        <span class="code-chip" id="pCode" style="border-color:var(--gold-border)">--------</span>
+        <button class="btn ghost sm" id="pCopyCode">Copy code</button>
+        <button class="btn ghost sm" id="pCopyLink">Copy link</button>
+      </div>
+      <div class="code-note" id="pLink" style="margin-top:10px;word-break:break-all"></div>
+      <div class="note" style="margin-top:12px;border-left-color:var(--gold-border)">
+        <b style="color:#fcd34d">Not shareable yet.</b> Your code exists and your earnings will be
+        tracked against it, but sign-up does not read the link yet and students have no way to enter
+        a code. Hold on to it until we tell you it is live.
+      </div>
+      <div class="msg" id="pMsg"></div>
+    </div>
+
+    <div class="sec-label">How it works</div>
+    <div class="cols">
+      <div class="card">
+        <div class="ph">1 · A student uses your code</div>
+        <p class="pp">Through your link, or by entering the code. They are credited to you from
+        that moment. If they use another teacher's code afterwards, they move — the most recent
+        code wins right up until they pay.</p>
+
+        <div class="ph">2 · They make their first purchase</div>
+        <p class="pp">The moment a payment is approved, the credit becomes permanent. Nothing can
+        move that student to another teacher afterwards except a deliberate, recorded correction
+        by an administrator.</p>
+
+        <div class="ph">3 · Your commission is recorded</div>
+        <p class="pp">Calculated on the plan's own price from our catalogue — never on whatever
+        figure was typed into a payment form — and frozen at the rate you were on that day.</p>
+      </div>
+      <div class="card">
+        <div class="ph">What earns a commission</div>
+        <p class="pp">A student's <b>first</b> successful paid purchase, and only that. Any plan
+        counts, and so does a credit pack.</p>
+
+        <div class="ph">What does not</div>
+        <p class="pp">Renewals earn nothing in this first version of the programme — the commission
+        is for bringing a student to Si Math AI, not for their continued subscription. Payments
+        that fail, are rejected, are refunded or are reversed earn nothing either. A student who
+        had already bought something before using your code is never credited: the programme
+        rewards a new student, not a transfer of an existing one.</p>
+
+        <div class="ph">One student, one commission</div>
+        <p class="pp">A student can only ever generate one first purchase, so a second commission
+        for the same student is not something we decline — it is something the system cannot
+        create.</p>
+      </div>
+    </div>
+
+    <div class="sec-label">Commission tiers</div>
+    <div class="card">
+      <p class="pp" style="margin-top:0">Your rate is set by how many of your referred students
+      have made a first purchase. It rises as you bring more, and it applies to each new
+      commission from that point — commissions already recorded keep the rate they were earned at.</p>
+      <div class="tiers" id="pTiers"></div>
+      <div class="ref-next" id="pWhere"></div>
+    </div>
+
+    <div class="sec-label">What that is worth</div>
+    <div class="card">
+      <div class="rs-scroll"><div style="min-width:520px">
+        <div class="ex-head"><span>Plan</span><span>Price</span><span>10%</span><span>12.5%</span><span>15%</span></div>
+        <div id="pExamples"></div>
+      </div></div>
+      <div class="note" style="margin-top:14px">Figures are the commission on one student's first
+      purchase, at each tier. Current plan prices; if a price changes, so does the commission on
+      purchases after it.</div>
+    </div>
+
+    <div class="sec-label">Getting paid</div>
+    <div class="card">
+      <p class="pp" style="margin-top:0">Every commission is recorded the moment it is earned and
+      moves through four states, all of which you can see on your workspace page:</p>
+      <div class="money" style="margin-top:14px">
+        <div class="m"><div class="v" style="font-size:14px">Earned</div><div class="k">recorded and yours</div></div>
+        <div class="m"><div class="v" style="font-size:14px">Pending</div><div class="k">awaiting review</div></div>
+        <div class="m"><div class="v" style="font-size:14px">Paid</div><div class="k">sent to you</div></div>
+        <div class="m"><div class="v" style="font-size:14px">Reversed</div><div class="k">withdrawn, with a reason</div></div>
+      </div>
+      <div class="note" style="margin-top:14px"><b>Payouts are not open yet.</b> Commissions are
+      being recorded now so that nothing is lost, but no money moves until we have confirmed how
+      tax and withholding apply. There is deliberately no withdraw button here: we would rather
+      show you nothing than a button that fails.</div>
+      <p class="pp">A reversed commission stays on your record with the reason it was withdrawn.
+      Nothing is ever quietly deleted from your earnings.</p>
+    </div>
+
+    <div class="sec-label">A note on what this is not</div>
+    <div class="card">
+      <div class="note">This programme changes nothing about what your students pay. They see the
+      same plans at the same prices as everybody else, and your commission comes out of Si Math AI's
+      side, not theirs. You are not reselling and you are not setting prices.</div>
+    </div>
+  </section>
+</main>
+
+<script src="plan-catalog.js"></script>
+<script src="nav.js" defer></script>
+<script>
+/* ── Teacher Partner Program ───────────────────────────────────────────────
+   A teacher is the holder of an ACTIVE workspace_staff row with staff_role
+   'teacher' — there is no partner role and no rung on user_role, exactly as
+   the classroom system already defines it. This page asks the database that
+   question by calling teacher_referral_code(), which refuses anybody else;
+   the deny state below is a courtesy, not the boundary. */
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g,
+  (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const EGP = (n) => 'EGP ' + Number(n || 0).toLocaleString('en-EG',
+  { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const say = (el, msg, kind) => { el.textContent = msg; el.className = 'msg ' + (kind || ''); el.style.display = 'block'; };
+
+const PREVIEW = new URLSearchParams(location.search).get('preview') === '1';
+
+/* The ladder is stated here as copy and lives for real in
+   referral_commission_rates. If the two ever disagree the database is right —
+   which is why the highlighted band is matched against the server's own
+   tier_label rather than re-derived from the count. */
+const TIERS = [
+  { pct: '10%',   bps: 1000, band: '1–9 paid students' },
+  { pct: '12.5%', bps: 1250, band: '10–29 paid students' },
+  { pct: '15%',   bps: 1500, band: '30+ paid students' },
+];
+/* No plan list and no price list lives here, deliberately. plan_definitions is
+   the sole catalogue and PlanCatalog is the only sanctioned reader of it, so a
+   new plan appears in these examples on its own and a repriced one cannot go
+   stale. A hardcoded 349 in this file is exactly the defect that put "Unlimited
+   AI messages" on a metered checkout — see plan-catalog.js rule 3. */
+
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+/* Guarded rather than `supabase.createClient(...)` outright, for the same
+   reason teacher.html guards it: if the CDN bundle fails to load, the bare form
+   throws on the first line and takes the whole page with it. */
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+function renderTiers(current) {
+  $('pTiers').innerHTML = TIERS.map((t) => {
+    const on = t.pct === current;
+    return '<div class="tier' + (on ? ' on' : '') + '">'
+      + (on ? '<span class="youre">YOU</span>' : '')
+      + '<div class="pct">' + t.pct + '</div><div class="band">' + t.band + '</div></div>';
+  }).join('');
+}
+
+/* Every active public subscription a student can actually buy, at whatever it
+   currently costs. A free plan earns nothing, so it has no place in a table
+   about earnings. */
+function renderExamples(plans) {
+  if (!plans.length) {
+    $('pExamples').innerHTML = '<div class="ex-row" style="grid-template-columns:1fr">'
+      + '<span class="meta">Plan prices could not be loaded. Reload the page to see the figures.</span></div>';
+    return;
+  }
+  $('pExamples').innerHTML = plans.map((pl) => {
+    const price = Number(pl.amount_egp);
+    // round half-up to two places — the same arithmetic the server performs
+    const at = (bps) => EGP(Math.round(price * bps / 100 + 1e-9) / 100);
+    return '<div class="ex-row"><span class="who">' + esc(pl.display_name || pl.plan_code) + '</span>'
+      + '<span class="num">' + EGP(price) + '</span>'
+      + TIERS.map((t) => '<span class="num" style="color:#fcd34d">' + at(t.bps) + '</span>').join('')
+      + '</div>';
+  }).join('');
+}
+
+/* Founder plans are excluded: the badge is sold out and cannot be a new
+   purchase, so it would be an example of an earning nobody can make. */
+function examplePlans() {
+  if (!window.PlanCatalog) return [];
+  return PlanCatalog.subscriptions()
+    .filter((pl) => Number(pl.amount_egp) > 0 && !pl.is_founder)
+    .sort((a, b) => Number(a.amount_egp) - Number(b.amount_egp));
+}
+
+async function boot() {
+  if (PREVIEW) {
+    $('loadingState').style.display = 'none';
+    $('pageState').style.display = '';
+    $('sidePartnerLink').style.display = '';
+    $('pCode').textContent = 'K7RMPX42';
+    $('pLink').textContent = location.origin + '/?ref=K7RMPX42';
+    renderTiers('10%');
+    $('pWhere').innerHTML = 'You are on <b>10%</b>. <b>3</b> more paid students to reach <b>12.5%</b>.';
+    // Preview has no database. Rather than invent prices — the one thing this
+    // page must never do — it says so and shows the percentages instead.
+    renderExamples([]);
+    wireCopy('K7RMPX42');
+    return;
+  }
+
+  if (!sb) { $('loadingState').style.display = 'none'; $('denyState').style.display = ''; return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = 'login.html'; return; }
+
+  // teacher_referral_code() raises 42501 for anybody who is not an active
+  // teacher, so this single call is both the read and the gate.
+  const { data: code, error } = await sb.rpc('teacher_referral_code');
+  $('loadingState').style.display = 'none';
+  if (error || !code) { $('denyState').style.display = ''; return; }
+
+  $('pageState').style.display = '';
+  $('sidePartnerLink').style.display = '';
+  $('pCode').textContent = code;
+  const link = location.origin + '/?ref=' + encodeURIComponent(code);
+  $('pLink').textContent = link;
+  wireCopy(code, link);
+
+  // Live prices through PlanCatalog, so the examples cannot drift from what a
+  // student actually pays and a new plan needs no edit here.
+  try { await PlanCatalog.load(sb); } catch (_) { /* renderExamples says so */ }
+  renderExamples(examplePlans());
+
+  let sum = null;
+  try {
+    const { data } = await sb.rpc('teacher_referral_summary');
+    sum = data;
+  } catch (_) { sum = null; }
+  renderTiers(sum ? sum.tier_label : '10%');
+  if (sum) {
+    $('pWhere').innerHTML = (sum.students_to_next == null)
+      ? 'You are on <b>' + esc(sum.tier_label) + '</b>, the top tier.'
+      : 'You are on <b>' + esc(sum.tier_label) + '</b>. <b>' + esc(sum.students_to_next)
+        + '</b> more paid ' + (Number(sum.students_to_next) === 1 ? 'student' : 'students')
+        + ' to reach <b>' + esc(sum.next_tier_label) + '</b>.';
+  }
+}
+
+function wireCopy(code, link) {
+  const href = link || (location.origin + '/?ref=' + encodeURIComponent(code));
+  $('pCopyCode').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(code); say($('pMsg'), 'Referral code copied.', 'ok'); }
+    catch (_) { say($('pMsg'), 'Copy failed — read it out instead.', 'err'); }
+  });
+  $('pCopyLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(href); say($('pMsg'), 'Referral link copied.', 'ok'); }
+    catch (_) { say($('pMsg'), 'Copy failed — the link is written above.', 'err'); }
+  });
+}
+
+boot();
+</script>
+</body>
+</html>
