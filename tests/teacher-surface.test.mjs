@@ -20,7 +20,7 @@
 // and cards left invisible when the entry animation never runs.
 
 import { suite } from './_assert.mjs';
-import { read } from './_source.mjs';
+import { read, slice } from './_source.mjs';
 
 const t = suite('teacher-surface');
 const PAGE = read('teacher.html');
@@ -195,5 +195,29 @@ t.is('no unescaped name is concatenated into markup',
     .map((l) => l.trim().slice(0, 60)), []);
 t.ok('the roster escapes what it renders',
   /esc\(r\.full_name\)/.test(PAGE) && /esc\(r\.exam_type/.test(PAGE));
+
+
+// ══ CODES: both are copyable ══════════════════════════════════════════════
+t.section('Every code the teacher hands out can be copied, not transcribed');
+
+/* The assistant code had Rotate but no Copy — the one code most likely to be
+   sent to a person privately was the only one you had to read off the screen. */
+const CODES = slice(PAGE, 'id="studentCode"', 'id="staffCodeWrap"', 'class code row')
+  + slice(PAGE, 'id="staffCodeWrap"', 'code-note', 'assistant code row');
+t.ok('the class code has Copy and Rotate',
+  /id="copyCodeBtn"/.test(CODES) && /id="rotateStudentBtn"/.test(CODES));
+t.ok('the assistant code has Copy and Rotate',
+  /id="copyStaffBtn"/.test(CODES) && /id="rotateStaffBtn"/.test(CODES));
+t.ok('Copy comes before Rotate on both rows, so the pattern reads the same',
+  CODES.indexOf('copyCodeBtn') < CODES.indexOf('rotateStudentBtn')
+  && CODES.indexOf('copyStaffBtn') < CODES.indexOf('rotateStaffBtn'));
+
+const COPY_STAFF = slice(PAGE, "$('copyStaffBtn').addEventListener", '});', 'assistant copy handler');
+t.ok('it copies the assistant chip, not the class chip',
+  /writeText\(\$\('staffCodeVal'\)\.textContent\)/.test(COPY_STAFF));
+t.ok('it reports success on the same surface as the class code',
+  /say\(\$\('codeMsg'\), 'Assistant code copied\.', 'ok'\)/.test(COPY_STAFF));
+t.ok('and it fails the same way, rather than silently',
+  /catch \(_\) \{ say\(\$\('codeMsg'\), 'Copy failed/.test(COPY_STAFF));
 
 t.done();

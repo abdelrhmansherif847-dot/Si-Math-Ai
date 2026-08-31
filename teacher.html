@@ -325,6 +325,7 @@ input,select{font-family:inherit}
           <div id="staffCodeWrap" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-soft)">
             <div class="code-row">
               <span class="code-chip" id="staffCodeVal" style="border-color:var(--purple-border);font-size:17px">--------</span>
+              <button class="btn ghost sm" id="copyStaffBtn">Copy</button>
               <button class="btn ghost sm" id="rotateStaffBtn">Rotate</button>
             </div>
             <div class="code-note">Assistant code — yours only. Someone who uses it arrives pending and sees nothing until you approve them.</div>
@@ -829,6 +830,15 @@ $('statusChips').addEventListener('click', (e) => {
 /* ── codes ─────────────────────────────────────────────────────────────── */
 $('copyCodeBtn').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('studentCode').textContent); say($('codeMsg'), 'Class code copied.', 'ok'); }
+  catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
+});
+
+/* The assistant code had Rotate but no Copy, so the one code you are most
+   likely to send to a person privately was the one you had to transcribe by
+   eye. Same interaction and same feedback surface as the class code; the only
+   difference is which chip is read and what the message calls it. */
+$('copyStaffBtn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('staffCodeVal').textContent); say($('codeMsg'), 'Assistant code copied.', 'ok'); }
   catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
 });
 async function rotate(kind, el) {
