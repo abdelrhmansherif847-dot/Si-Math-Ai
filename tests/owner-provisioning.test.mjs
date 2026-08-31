@@ -216,8 +216,12 @@ t.section('The Create button always explains itself');
 t.ok('the button is NOT born disabled',
   !/id="twCreateBtn" disabled/.test(PAGE) && /id="twCreateBtn">Create workspace/.test(PAGE));
 t.ok('twSelect no longer has to enable it', !/twCreateBtn'\)\.disabled = false/.test(JS));
-t.ok('clicking with nothing chosen explains what is missing',
-  /if \(!TW\.pick\) \{ twSay\('Choose the teacher first\.', 'err'\); return; \}/.test(JS));
+/* Assert the PROPERTY, not the prose: nothing chosen must produce a visible
+   explanation and stop, whatever the wording becomes. */
+t.ok('clicking with nothing chosen explains what is missing and stops',
+  /if \(!TW\.pick\) \{ twSay\('[^']{20,}', 'err'\); return; \}/.test(JS));
+t.ok('and it does not call the account "the teacher" as if it already were one',
+  !/twSay\('Choose the teacher/.test(JS));
 t.ok('an invalid class name explains itself too',
   /name\.length < 2 \|\| name\.length > 80[\s\S]{0,120}?twSay\(/.test(JS));
 t.ok('the button always becomes usable again', /\} finally \{[\s\S]{0,80}?btn\.disabled = false;/.test(JS));
@@ -236,5 +240,43 @@ t.ok('a missing read-back says the workspace exists anyway',
   /was created, but its codes could not be read back/.test(JS));
 t.ok('the list is reloaded either way',
   JS.indexOf('await loadTeacherWorkspaces();') > JS.indexOf('could not be read back'));
+
+
+// ══ 10 · THE COPY MATCHES THE MODEL ═══════════════════════════════════════
+t.section('The wording says the account BECOMES the teacher, not that it is one');
+
+/* "Choose the teacher" described the opposite of how this works: nobody is a
+   teacher until a class is created for them. Read as a prerequisite, it makes a
+   correct flow look broken. */
+t.ok('step 1 asks for an account to MAKE the teacher',
+  /Choose the account that will teach this class/.test(PAGE));
+t.ok('and says explicitly that nothing must be set up first',
+  /It becomes the teacher when you create the class/.test(PAGE));
+t.ok('the selected panel names an ACCOUNT', /Selected account: <strong>/.test(JS));
+t.ok('and says creating the class is what makes it a teacher',
+  /Creating the class is what makes this account a teacher/.test(JS));
+t.ok('no step calls it "the teacher" as a precondition',
+  !/1 · Choose the teacher</.test(PAGE) && !/'Teacher: <strong>'/.test(JS));
+t.ok('a no-match result explains the account must already exist',
+  /must already have a Si Math AI account/.test(JS));
+
+// ══ 11 · SEARCH IS NOT ENTER-ONLY ═════════════════════════════════════════
+t.section('Every control in step 1 can be reached without guessing');
+
+t.ok('a Search button exists', /id="twSearchBtn"/.test(PAGE));
+t.ok('the button and the Enter key run the SAME search',
+  /const runSearch = async \(\) =>/.test(JS)
+  && /sbtn\.addEventListener\('click', runSearch\)/.test(JS)
+  && /if \(e\.key === 'Enter'\) \{ e\.preventDefault\(\); runSearch\(\); \}/.test(JS));
+/* Scoped to THIS panel. Role Management has its own Enter-only search; it is
+   a pre-existing control in someone else's section and not this increment's to
+   change, so asserting over the whole page would fail on it. */
+const PANEL = slice(PAGE, 'id="teacherWsPanel"', '<!-- ============== END OVERVIEW', 'provisioning panel');
+t.ok('the panel really is the sliced region', /twSearchInput/.test(PANEL) && /twCreateBtn/.test(PANEL));
+t.ok('this panel\'s placeholder no longer demands Enter', !/press Enter/.test(PANEL));
+t.ok('an empty search says what to do rather than blanking',
+  /Type an email address to search/.test(JS));
+t.ok('a failed search reports the error instead of showing nothing',
+  /Could not search: ' \+ esc\(error\.message\)/.test(JS));
 
 t.done();

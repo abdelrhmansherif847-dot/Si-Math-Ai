@@ -457,9 +457,14 @@ select.search-input{cursor:pointer}
     </div>
 
     <div style="background:rgba(10,18,36,.5);border:1px solid var(--border-soft);border-radius:14px;padding:16px;margin-bottom:18px">
-      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:10px">1 · Choose the teacher</div>
-      <div class="search-row">
-        <input type="text" class="search-input" id="twSearchInput" placeholder="Find an existing account by email (press Enter)…"/>
+      <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin-bottom:4px">1 · Choose the account that will teach this class</div>
+      <!-- The account does NOT have to be a teacher already — nobody is, until a
+           class is created for them. Saying "choose the teacher" described the
+           opposite of how this works and read as a prerequisite. -->
+      <div style="font-size:12.5px;color:var(--text-500);margin-bottom:10px">Any existing account. It becomes the teacher when you create the class — there is nothing to set up on it first.</div>
+      <div class="search-row" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input type="text" class="search-input" id="twSearchInput" style="flex:1;min-width:220px" placeholder="Search an existing account by email…"/>
+        <button class="btn btn-ghost" id="twSearchBtn">Search</button>
       </div>
       <div id="twSearchResults" style="margin-top:10px"></div>
       <div id="twSelected" style="display:none;margin-top:12px;padding:11px 14px;border-radius:10px;background:var(--cyan-bg-soft);border:1px solid var(--cyan-border);font-size:13px"></div>
@@ -3831,20 +3836,26 @@ async function loadTeacherWorkspaces() {
     body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--red)">Could not load workspaces — ' + esc(e.message || 'unknown error') + '</td></tr>';
   }
 
+  /* Enter used to be the ONLY way to run the search, with no button and no
+     feedback — type an email, click elsewhere, and nothing happened. That is
+     the same silent dead end as the disabled Create button. */
   const inp = document.getElementById('twSearchInput');
+  const runSearch = async () => {
+    const q = (inp.value || '').trim();
+    const box = document.getElementById('twSearchResults');
+    if (!q) { box.innerHTML = '<div style="font-size:13px;color:var(--text-500);padding:8px 0">Type an email address to search.</div>'; return; }
+    // The same query Role Management runs. No new capability.
+    const { data: sr, error } = await sb.from('profiles')
+      .select('id, email, full_name, role').ilike('email', '%' + q + '%').limit(50);
+    if (error) { box.innerHTML = '<div style="font-size:13px;color:var(--red);padding:8px 0">Could not search: ' + esc(error.message) + '</div>'; return; }
+    twRenderResults(sr || []);
+  };
   if (inp && !inp._wired) {
     inp._wired = true;
-    inp.addEventListener('keydown', async (e) => {
-      if (e.key !== 'Enter') return;
-      const q = inp.value.trim();
-      const box = document.getElementById('twSearchResults');
-      if (!q) { box.innerHTML = ''; return; }
-      // The same query Role Management runs. No new capability.
-      const { data: sr } = await sb.from('profiles')
-        .select('id, email, full_name, role').ilike('email', '%' + q + '%').limit(50);
-      twRenderResults(sr || []);
-    });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
   }
+  const sbtn = document.getElementById('twSearchBtn');
+  if (sbtn && !sbtn._wired) { sbtn._wired = true; sbtn.addEventListener('click', runSearch); }
   /* One delegated listener for the whole results list. Selecting is a click on
      the row, not only on the small button, because a disabled Create button
      with no explanation is how this flow dead-ended before. */
@@ -3864,7 +3875,7 @@ async function loadTeacherWorkspaces() {
 
 function twRenderResults(rows) {
   const box = document.getElementById('twSearchResults');
-  if (!rows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-500);padding:8px 0">No account matches that email.</div>'; return; }
+  if (!rows.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-500);padding:8px 0">No account matches that email. The person must already have a Si Math AI account — this creates a class for an existing account, it does not create the account.</div>'; return; }
   box.innerHTML = rows.map(u => {
     /* One class per teacher until the multi-workspace selector exists.
        teacher.html renders only the FIRST active workspace it is handed, so a
@@ -3890,7 +3901,7 @@ function twRenderResults(rows) {
       + '</div>'
       + (already
           ? '<span style="font-size:12px;color:var(--text-500)">One class per teacher for now</span>'
-          : '<button class="btn btn-sm btn-ghost">Select</button>')
+          : '<button class="btn btn-sm btn-ghost">Select this account</button>')
       + '</div>';
   }).join('');
 }
@@ -3899,16 +3910,17 @@ function twSelect(id, email, name) {
   TW.pick = { id, email, name };
   const el = document.getElementById('twSelected');
   el.style.display = 'block';
-  el.innerHTML = 'Teacher: <strong>' + esc(name || email || id) + '</strong>'
-    + (name && email ? ' <span style="color:var(--text-400)">· ' + esc(email) + '</span>' : '')
-    + '<div style="font-size:12px;color:var(--text-400);margin-top:4px">This account keeps its own student experience and gains no platform role.</div>';
+  el.innerHTML = 'Selected account: <strong>' + esc(name || email || id) + '</strong>'
+    + (name && email ? ' <span style="color:var(--text-400)">— ' + esc(email) + '</span>' : '')
+    + '<div style="font-size:12px;color:var(--text-400);margin-top:4px">Creating the class is what makes this account a teacher. '
+    + 'It gains no platform role, and it keeps its own student experience.</div>';
   twClearMsg();
 }
 
 async function twCreate() {
   const btn = document.getElementById('twCreateBtn');
   const name = (document.getElementById('twClassName').value || '').trim();
-  if (!TW.pick) { twSay('Choose the teacher first.', 'err'); return; }
+  if (!TW.pick) { twSay('Search for an account above and select it first — that is the account this class will belong to.', 'err'); return; }
   if (name.length < 2 || name.length > 80) { twSay('The class name must be 2 to 80 characters.', 'err'); return; }
   if (TW.teaching.has(TW.pick.id)) {
     twSay('That account already teaches a class. One class per teacher until the workspace selector is built — a second class would be created and then be unreachable for them.', 'err');
