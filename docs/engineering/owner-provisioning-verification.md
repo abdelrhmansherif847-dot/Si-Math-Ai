@@ -230,3 +230,79 @@ literals this work has never touched.
 
 Creation is the platform Owner's alone, enforced by the database rather than by
 a hidden panel. Three accounts could provision before; **one can now.**
+
+## 12 · The Select handler defect, found in first real use (2026-08-31)
+
+The Owner reported that with an account chosen and `ABDO CLASS` typed, **Create
+workspace did nothing**. The class name was never the problem — this was my bug.
+
+### What was wrong
+
+The Select handler was built by concatenating values into an inline `onclick`:
+
+```js
+'<button ... onclick="twSelect(\'' + esc(u.id) + '\',\'' + esc(u.email) + '\',\'' + esc(u.full_name) + '\')">'
+```
+
+`esc()` escapes `&`, `<`, `>` and `"` — **but not the apostrophe.** A name such
+as `O'Brien` therefore produced
+
+```html
+onclick="twSelect('id','email','Abdo O'Brien')"
+```
+
+which is broken JavaScript. Reproduced by driving the deployed page headlessly:
+
+```
+SELECT button rendered: true
+WINDOW ERROR: Uncaught SyntaxError: missing ) after argument list
+AFTER select — disabled: true
+AFTER select — TW.pick: null
+AFTER create click — msg visible: false
+```
+
+Clicking Select silently failed, `TW.pick` stayed `null`, the Create button
+never enabled, and clicking it produced **nothing at all** — matching the report
+exactly, and matching the database, which held 0 workspaces and 0 audit rows:
+the RPC never ran.
+
+Two defects compounded it, both found in the same run:
+
+* **The disabled button made its own guidance unreachable.** `twCreate` already
+  said *"Choose the teacher first."*, but a disabled button never fires, so the
+  flow dead-ended with no explanation of what was missing.
+* **A null read-back crashed a success.** After the RPC returns an id the
+  workspace *exists*; `twShowCreated(null)` threw on `w.name` and the catch
+  reported that crash as though creation had failed.
+
+### The fix
+
+1. **No JavaScript is built from strings any more.** Identity travels in `data-`
+   attributes and one delegated listener reads it back — the whole class of
+   escaping bug is gone, not just the apostrophe. The row itself is clickable,
+   not only the small button.
+2. **The Create button is never born disabled**, so its guidance is reachable,
+   and a `finally` always restores it.
+3. **The read-back uses `maybeSingle()` and guards null**, saying the workspace
+   exists rather than reporting a failure.
+
+### Evidence
+
+Re-driven headlessly, both an ordinary name and `Abdo O'Brien`: clicking Create
+with nothing chosen now says *"Choose the teacher first."*; the row selects;
+the RPC is called; the created panel shows both codes; the button recovers; the
+list shows the new class. Identical for both names.
+
+`tests/owner-provisioning.test.mjs` grew to **78 checks**, including an
+executable regression that runs the real `twRenderResults` over hostile names —
+an apostrophe, a double quote, an ampersand, and injected markup — and asserts
+the output carries no `onclick`, keeps the apostrophe intact in its attribute,
+escapes the quote so the attribute cannot be closed early, and neutralises the
+injection. Six mutations each turn exactly the intended check red.
+
+### Why the tests missed it
+
+Every earlier check on this panel read the source. None *ran* it, so a defect
+that only appears when the browser parses a generated attribute was invisible.
+The regression above executes the renderer; the headless drive executes the
+page. Reading the code was never going to find this one.

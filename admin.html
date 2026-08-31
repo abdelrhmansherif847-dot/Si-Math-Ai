@@ -467,7 +467,7 @@ select.search-input{cursor:pointer}
       <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-400);margin:18px 0 10px">2 · Name the class</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input type="text" class="search-input" id="twClassName" maxlength="80" placeholder="Class name (2–80 characters)" style="flex:1;min-width:220px"/>
-        <button class="btn btn-green" id="twCreateBtn" disabled>Create workspace</button>
+        <button class="btn btn-green" id="twCreateBtn">Create workspace</button>
       </div>
       <div id="twMsg" style="display:none;font-size:13px;padding:10px 13px;border-radius:10px;margin-top:12px"></div>
     </div>
@@ -3845,6 +3845,19 @@ async function loadTeacherWorkspaces() {
       twRenderResults(sr || []);
     });
   }
+  /* One delegated listener for the whole results list. Selecting is a click on
+     the row, not only on the small button, because a disabled Create button
+     with no explanation is how this flow dead-ended before. */
+  const box = document.getElementById('twSearchResults');
+  if (box && !box._wired) {
+    box._wired = true;
+    box.addEventListener('click', (e) => {
+      const row = e.target.closest('.tw-pick');
+      if (!row) return;
+      twSelect(row.dataset.id, row.dataset.email, row.dataset.name);
+    });
+  }
+
   const btn = document.getElementById('twCreateBtn');
   if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', twCreate); }
 }
@@ -3859,14 +3872,25 @@ function twRenderResults(rows) {
        This is a GUARDRAIL, not a boundary — the database still permits it. */
     const already = TW.teaching.has(u.id);
     const label = esc(u.full_name || '—') + ' · ' + esc(u.email || u.id);
-    return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:10px;border:1px solid var(--border-soft);margin-bottom:6px">'
+    /* The identity travels in data attributes and the click is handled by one
+       delegated listener. It used to be interpolated into an inline onclick,
+       which esc() does not make safe: esc escapes & < > and " but NOT the
+       apostrophe, so a name like O'Brien produced
+           onclick="twSelect('id','email','Abdo O'Brien')"
+       — broken JavaScript. Clicking Select then did nothing at all, TW.pick
+       stayed null, and the Create button never enabled. No JS is built from
+       strings here any more, so the whole class of bug is gone. */
+    return '<div ' + (already ? '' : 'class="tw-pick" data-id="' + esc(u.id) + '" data-email="'
+             + esc(u.email || '') + '" data-name="' + esc(u.full_name || '') + '" ')
+      + 'style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:10px;border:1px solid var(--border-soft);margin-bottom:6px'
+      + (already ? '' : ';cursor:pointer') + '">'
       + '<div style="font-size:13px">' + label
       +   (u.role && u.role !== 'user' ? ' <span class="chip amber">' + esc(u.role) + '</span>' : '')
       +   (already ? ' <span class="chip gray">already teaches a class</span>' : '')
       + '</div>'
       + (already
           ? '<span style="font-size:12px;color:var(--text-500)">One class per teacher for now</span>'
-          : '<button class="btn btn-sm btn-ghost" onclick="twSelect(\'' + esc(u.id) + '\',\'' + esc(u.email || '') + '\',\'' + esc(u.full_name || '') + '\')">Select</button>')
+          : '<button class="btn btn-sm btn-ghost">Select</button>')
       + '</div>';
   }).join('');
 }
@@ -3878,7 +3902,6 @@ function twSelect(id, email, name) {
   el.innerHTML = 'Teacher: <strong>' + esc(name || email || id) + '</strong>'
     + (name && email ? ' <span style="color:var(--text-400)">· ' + esc(email) + '</span>' : '')
     + '<div style="font-size:12px;color:var(--text-400);margin-top:4px">This account keeps its own student experience and gains no platform role.</div>';
-  document.getElementById('twCreateBtn').disabled = false;
   twClearMsg();
 }
 
@@ -3899,22 +3922,31 @@ async function twCreate() {
       { p_owner: TW.pick.id, p_name: name });
     if (error) throw error;
 
+    /* maybeSingle, not single: by the time the RPC has returned an id the
+       workspace EXISTS, so a read-back that finds nothing is a display problem,
+       never a reason to throw. twShowCreated(null) used to crash on w.name and
+       report that crash as if the creation had failed. */
     const { data: w, error: rerr } = await sb.from('teacher_workspaces')
       .select('id, name, owner_id, student_join_code, staff_join_code, created_at')
-      .eq('id', newId).single();
+      .eq('id', newId).maybeSingle();
     if (rerr) throw rerr;
 
-    twShowCreated(w, TW.pick);
+    if (w) {
+      twShowCreated(w, TW.pick);
+      toast('Workspace created', 'green');
+    } else {
+      twSay('The workspace was created, but its codes could not be read back. It is in the list below.', 'err');
+    }
     document.getElementById('twClassName').value = '';
     document.getElementById('twSearchResults').innerHTML = '';
     document.getElementById('twSelected').style.display = 'none';
     TW.pick = null;
     await loadTeacherWorkspaces();
-    toast('Workspace created', 'green');
   } catch (e) {
     /* After the Owner-only migration a non-Owner caller is refused HERE, by the
        database, not by the hidden panel. Show what the server actually said. */
     twSay(e.message || 'Could not create the workspace.', 'err');
+  } finally {
     btn.disabled = false;
   }
 }

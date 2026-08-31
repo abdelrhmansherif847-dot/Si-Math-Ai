@@ -20,7 +20,7 @@
 //                    teacher.html renders only the first workspace it is handed
 
 import { suite } from './_assert.mjs';
-import { read, slice } from './_source.mjs';
+import { read, slice, evalSnippet } from './_source.mjs';
 
 const t = suite('owner-provisioning');
 
@@ -155,5 +155,86 @@ t.ok('it warns that the staff code mints assistants',
    names teacher_my_workspaces() to explain why it is not used. */
 t.ok('the list reads the table directly, not teacher_my_workspaces()',
   !/rpc\('teacher_my_workspaces'\)/.test(JS) && /from\('teacher_workspaces'\)/.test(JS));
+
+
+// ══ 7 · THE SELECT-HANDLER BUG, AND ITS WHOLE CLASS ═══════════════════════
+t.section('Selecting an account cannot be broken by the characters in a name');
+
+/* The bug: the Select handler was built by concatenating values into an inline
+   onclick. esc() escapes & < > and " but NOT the apostrophe, so a name like
+   O'Brien produced
+       onclick="twSelect('id','email','Abdo O'Brien')"
+   — broken JavaScript. Clicking Select did nothing, TW.pick stayed null, the
+   Create button never enabled, and clicking it was silent because a disabled
+   button cannot reach its own guidance. Found by driving the real page
+   headlessly, not by reading it. */
+
+/* Executable code only. The panel's comment legitimately quotes the broken
+   onclick it replaced, and asserting over raw text would fail on the very
+   documentation of the fix. */
+const CODE = JS.replace(/\/\*[\s\S]*?\*\//g, '').split('\n')
+  .filter((l) => !l.trim().startsWith('//')).join('\n');
+t.ok('the stripped code is still the real thing (not emptied)',
+  /twRenderResults/.test(CODE) && CODE.length > 2000);
+t.ok('no inline event handler is generated anywhere in the panel',
+  !/onclick=/.test(CODE) && !/onchange=|oninput=/.test(CODE));
+t.ok('identity travels as data attributes', /data-id="' \+ esc\(u\.id\)/.test(JS));
+t.ok('a delegated listener reads them back',
+  /closest\('\.tw-pick'\)/.test(JS) && /twSelect\(row\.dataset\.id, row\.dataset\.email, row\.dataset\.name\)/.test(JS));
+
+/* Executable: run the REAL twRenderResults over names built to break the old
+   code, and assert the markup it produces is inert and complete. */
+const RENDER = slice(PAGE, 'function twRenderResults', 'function twSelect', 'twRenderResults');
+const ESC = slice(PAGE, 'function esc(str)', 'function fmtDate', 'esc');
+const HOSTILE = [
+  { id: 'u1', email: "o'brien@example.com", full_name: "Abdo O'Brien", role: 'user' },
+  { id: 'u2', email: 'q@example.com', full_name: 'A "quoted" name', role: 'user' },
+  { id: 'u3', email: 'amp@example.com', full_name: 'Tom & Jerry', role: 'user' },
+  { id: 'u4', email: 'x@example.com', full_name: '</div><script>alert(1)</script>', role: 'user' },
+];
+const box = { innerHTML: '' };
+const { twRenderResults } = evalSnippet(
+  `${ESC}\nconst TW = { teaching: new Set() };\n` +
+  `const document = { getElementById: () => box };\n${RENDER}`,
+  { box }, ['twRenderResults']);
+twRenderResults(HOSTILE);
+const html = box.innerHTML;
+
+t.ok('the render produced markup (not a vacuous empty string)', html.length > 200);
+t.ok('every hostile account still yields a selectable row',
+  (html.match(/class="tw-pick"/g) || []).length === HOSTILE.length);
+t.ok('no onclick survives into the markup', !/onclick/.test(html));
+t.ok("an apostrophe reaches the data attribute intact", /data-name="Abdo O'Brien"/.test(html));
+t.ok('a double quote is escaped, so the attribute cannot be closed early',
+  /data-name="A &quot;quoted&quot; name"/.test(html));
+t.ok('an ampersand is escaped', /Tom &amp; Jerry/.test(html));
+t.ok('injected markup is neutralised', !/<script>alert/.test(html) && /&lt;\/div&gt;/.test(html));
+
+// ══ 8 · NO SILENT DEAD END ════════════════════════════════════════════════
+t.section('The Create button always explains itself');
+
+t.ok('the button is NOT born disabled',
+  !/id="twCreateBtn" disabled/.test(PAGE) && /id="twCreateBtn">Create workspace/.test(PAGE));
+t.ok('twSelect no longer has to enable it', !/twCreateBtn'\)\.disabled = false/.test(JS));
+t.ok('clicking with nothing chosen explains what is missing',
+  /if \(!TW\.pick\) \{ twSay\('Choose the teacher first\.', 'err'\); return; \}/.test(JS));
+t.ok('an invalid class name explains itself too',
+  /name\.length < 2 \|\| name\.length > 80[\s\S]{0,120}?twSay\(/.test(JS));
+t.ok('the button always becomes usable again', /\} finally \{[\s\S]{0,80}?btn\.disabled = false;/.test(JS));
+t.ok('a stale message is cleared before each attempt',
+  JS.indexOf('twClearMsg();') < JS.indexOf("sb.rpc('teacher_create_workspace'"));
+
+// ══ 9 · A CREATED WORKSPACE IS NEVER REPORTED AS A FAILURE ════════════════
+t.section('The read-back cannot turn a success into a crash');
+
+/* Once the RPC returns an id the workspace EXISTS. twShowCreated(null) used to
+   throw on w.name and the catch reported that crash as if creation had failed. */
+t.ok('the read-back uses maybeSingle, so zero rows is not an error',
+  /\.eq\('id', newId\)\.maybeSingle\(\)/.test(JS) && !/\.eq\('id', newId\)\.single\(\)/.test(JS));
+t.ok('twShowCreated is only called with a row', /if \(w\) \{[\s\S]{0,120}?twShowCreated\(w, TW\.pick\)/.test(JS));
+t.ok('a missing read-back says the workspace exists anyway',
+  /was created, but its codes could not be read back/.test(JS));
+t.ok('the list is reloaded either way',
+  JS.indexOf('await loadTeacherWorkspaces();') > JS.indexOf('could not be read back'));
 
 t.done();
