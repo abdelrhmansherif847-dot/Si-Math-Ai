@@ -118,17 +118,19 @@ input,select{font-family:inherit}
    control took. Desktop Blink honours width:100% here and shows nothing wrong,
    which is why this needed a real device to see.
 
-   max-width is the actual guarantee: whatever intrinsic or padding-derived
-   width the platform computes, the control can never exceed its parent.
-   min-width:0 lets it shrink, and resetting the appearance stops WebKit sizing
-   it as a native widget. box-sizing is restated even though *{box-sizing:
-   border-box} already covers it, because max-width:100% only caps the CONTENT
-   box: if the platform lays this control out as content-box, the 28px padding
-   and 2px border still land outside and the ceiling does not hold. Measured:
-   under that condition the field is 358px inside a 328px content box — a 30px
-   overhang, exactly the reported symptom. The picker still opens on tap. This constrains the
-   control itself rather than clipping the page — html/body already carry
-   overflow-x:hidden, which would have hidden the symptom and kept the bug. */
+   max-width:100% and box-sizing:border-box are the guarantee TOGETHER, and
+   neither is sufficient alone: max-width caps only the CONTENT box, so if the
+   platform lays this control out as content-box the 28px padding and 2px border
+   still land outside and the ceiling does not hold. Measured under exactly that
+   condition, the field came to 358px inside a 328px content box — a 30px
+   overhang, which is the reported symptom. box-sizing is therefore restated
+   here even though *{box-sizing:border-box} already covers it. min-width:0 lets
+   it shrink, and resetting the appearance stops WebKit sizing it as a native
+   widget; the picker still opens on tap.
+
+   This constrains the control itself rather than clipping the page. html and
+   body already carry overflow-x:hidden, which would have hidden the symptom and
+   kept the bug. */
 .field[type="date"]{-webkit-appearance:none;appearance:none;box-sizing:border-box;min-width:0;max-width:100%}
 
 /* A grid item defaults to min-width:auto, which refuses to shrink below its

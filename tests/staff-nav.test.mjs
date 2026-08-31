@@ -35,8 +35,15 @@ t.is('the keep-list is exactly Teacher Workspace, Profile, Settings',
 // ══ 2 · IT IS COSMETIC — THE WHOLE POINT ══════════════════════════════════
 t.section('The filter changes appearance and nothing else');
 
-t.ok('it only ever sets style.display',
-  /\.style\.display = 'none'/.test(CODE) && /\.style\.display = anyVisible/.test(CODE));
+t.ok('it only ever sets style.display', /\.style\.display = 'none'/.test(CODE));
+/* A cosmetic filter that can SHOW things is not only cosmetic: writing '' back
+   to a heading would reveal one a page had deliberately hidden. */
+t.ok('it never un-hides anything', !/style\.display = ''/.test(CODE) && !/style\.display = anyVisible/.test(CODE));
+t.ok('a heading is only ever hidden, and only when nothing under it is left',
+  /if \(!anyVisible\) kids\[j\]\.style\.display = 'none';/.test(CODE));
+/* A kept destination must survive a query string or a fragment. */
+t.ok('the href is reduced to its filename, query and fragment removed',
+  /\.split\('\?'\)\[0\]\.split\('#'\)\[0\]/.test(CODE));
 for (const forbidden of [
   ['removes an element',        /removeChild|\.remove\(\)/],
   ['rewrites a link',           /setAttribute\('href'|\.href\s*=/],
@@ -156,6 +163,22 @@ const runFilter = (teaching) => {
   t.is('and every section heading', secs.filter((s) => s.style.display !== '').length, 0);
 }
 
+// -- a kept destination carrying a fragment, and a pre-hidden heading
+{
+  const spec = [
+    ['side-sec', null], ['nav-item', 'dashboard.html'],
+    ['side-sec', null], ['nav-item', 'profile.html#security'], ['nav-item', 'settings.html?tab=1'],
+  ];
+  const dom = makeDom(spec);
+  dom.children[0].style.display = 'none';        // a heading the page hid itself
+  const fn = new Function('document', 'slot', 'teaching',
+    `${FILTER.slice(0, FILTER.lastIndexOf('function render('))}\napplyStaffNav(slot, teaching);`);
+  fn(dom.document, dom.slot, true);
+  t.is('a kept page survives a #fragment', dom.children[3].style.display, '');
+  t.is('and a ?query', dom.children[4].style.display, '');
+  t.is('a heading the page hid stays hidden', dom.children[0].style.display, 'none');
+}
+
 // -- running twice must not drift
 {
   const dom = makeDom(SPEC);
@@ -166,5 +189,91 @@ const runFilter = (teaching) => {
   t.is('the filter is idempotent across the repeated sweeps',
     [by('settings.html').style.display, by('dashboard.html').style.display], ['', 'none']);
 }
+
+
+// ══ 6 · EVERY REAL SIDEBAR IN THE REPO, THROUGH THE REAL FILTER ═══════════
+t.section('The shipped filter, run over every page that actually has a sidebar');
+
+/* A browser probe kept truncating settings.html, so this drives the same code
+   over the real markup instead: the anchors and headings are parsed out of each
+   shipped page, in document order, and the shipped filter is executed on them.
+   No browser, no timing, and it covers pages a manual probe would skip. */
+import { readdirSync } from 'node:fs';
+import { REPO } from './_source.mjs';
+
+const SIDEBAR_PAGES = readdirSync(REPO).filter((f) => f.endsWith('.html'))
+  .filter((f) => /class="sidebar"/.test(read(f)));
+t.ok('sidebar pages were found (not a vacuous sweep)', SIDEBAR_PAGES.length >= 14);
+
+const parseSidebar = (html) => {
+  const a = html.indexOf('<aside class="sidebar"');
+  const b = html.indexOf('</aside>', a);
+  if (a < 0 || b < 0) return null;
+  const region = html.slice(a, b);
+  const out = [];
+  const re = /<div class="side-sec"[^>]*>|<a\b[^>]*class="[^"]*\bnav-item\b[^"]*"[^>]*>/g;
+  let m;
+  while ((m = re.exec(region))) {
+    const tag = m[0];
+    if (tag.startsWith('<div')) out.push(['side-sec', null]);
+    else out.push(['nav-item', (tag.match(/href="([^"]*)"/) || [, ''])[1]]);
+  }
+  return out;
+};
+
+const KEEP = new Set(['teacher.html', 'profile.html', 'settings.html']);
+const leaks = [];
+const emptied = [];
+for (const page of SIDEBAR_PAGES) {
+  const spec = parseSidebar(read(page));
+  if (!spec || !spec.some(([c]) => c === 'nav-item')) continue;
+  const dom = makeDom(spec);
+  const fn = new Function('document', 'slot', 'teaching',
+    `${FILTER.slice(0, FILTER.lastIndexOf('function render('))}\napplyStaffNav(slot, teaching);`);
+  fn(dom.document, dom.slot, true);
+  const visible = dom.children
+    .filter((c) => c._cls.includes('nav-item') && c.style.display !== 'none')
+    .map((c) => (c._href || '').split('/').pop().split('?')[0].split('#')[0].toLowerCase());
+  const bad = visible.filter((h) => h && !KEEP.has(h));
+  if (bad.length) leaks.push(`${page}: ${bad.join(', ')}`);
+  if (!visible.length) emptied.push(page);
+}
+t.is('no page leaks a student destination into the staff surface', leaks, []);
+
+/* A page whose sidebar has none of the three would render an empty rail. The
+   Teaching link nav.js injects into the slot still appears, but it is worth
+   knowing which pages those are rather than discovering it visually. */
+t.is('no page is left with an entirely empty sidebar', emptied, []);
+
+// and the same sweep as a non-staff account must change nothing at all
+const untouched = [];
+for (const page of SIDEBAR_PAGES) {
+  const spec = parseSidebar(read(page));
+  if (!spec || !spec.some(([c]) => c === 'nav-item')) continue;
+  const dom = makeDom(spec);
+  const fn = new Function('document', 'slot', 'teaching',
+    `${FILTER.slice(0, FILTER.lastIndexOf('function render('))}\napplyStaffNav(slot, teaching);`);
+  fn(dom.document, dom.slot, false);
+  if (dom.children.some((c) => c.style.display === 'none')) untouched.push(page);
+}
+t.is('a non-staff account has every sidebar left completely untouched', untouched, []);
+
+/* The sweep above proves the filter WOULD hide those links. It does not prove
+   nav.js runs on the page — and without it, nothing hides. So pin the coverage:
+   every sidebar page must load nav.js and carry the slot it needs, with one
+   documented exception. */
+const NO_NAV = SIDEBAR_PAGES.filter((f) => !/<script src="nav\.js"/.test(read(f)));
+const NO_SLOT = SIDEBAR_PAGES.filter((f) => !/id="adminNavSection"/.test(read(f)));
+
+/* admin-support.html is the Support Queue: an ADMIN page, reachable only at
+   role >= admin, and it carries neither nav.js nor the slot. An account that is
+   both an admin AND active staff would still see the full student sidebar
+   there. It is pinned here rather than fixed, because wiring it is a markup
+   change to an admin surface that was not in this increment's scope — and
+   pinning it means the next person finds it deliberately instead of by
+   surprise. Tighten this list, never grow it. */
+t.is('admin-support.html is the ONLY sidebar page nav.js does not reach',
+  NO_NAV, ['admin-support.html']);
+t.is('and the only one without the slot', NO_SLOT, ['admin-support.html']);
 
 t.done();

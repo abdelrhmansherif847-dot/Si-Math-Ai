@@ -143,7 +143,9 @@
       // The slot is nav.js's own: the Teaching link and the Admin block live
       // there, and neither is student navigation.
       if (slot && slot.contains(a)) continue;
-      var file = (a.getAttribute('href') || '').split('/').pop().split('?')[0].toLowerCase();
+      // Strip the query AND the fragment: profile.html#security is still Profile.
+      var file = (a.getAttribute('href') || '').split('/').pop()
+        .split('?')[0].split('#')[0].toLowerCase();
       if (!STAFF_NAV_KEEP[file]) a.style.display = 'none';
     }
 
@@ -157,7 +159,12 @@
         if (kids[k].classList && kids[k].classList.contains('nav-item')
             && kids[k].style.display !== 'none') { anyVisible = true; break; }
       }
-      kids[j].style.display = anyVisible ? '' : 'none';
+      // Only ever HIDE. Writing '' back would make this filter reveal a heading
+      // a page had deliberately hidden — a cosmetic filter that can show things
+      // is no longer only cosmetic. No .side-sec is born hidden today, so this
+      // is latent rather than live, but the contract should be true by
+      // construction rather than by luck.
+      if (!anyVisible) kids[j].style.display = 'none';
     }
   }
 
