@@ -265,15 +265,13 @@ t.is('a non-staff account has every sidebar left completely untouched', untouche
 const NO_NAV = SIDEBAR_PAGES.filter((f) => !/<script src="nav\.js"/.test(read(f)));
 const NO_SLOT = SIDEBAR_PAGES.filter((f) => !/id="adminNavSection"/.test(read(f)));
 
-/* admin-support.html is the Support Queue: an ADMIN page, reachable only at
-   role >= admin, and it carries neither nav.js nor the slot. An account that is
-   both an admin AND active staff would still see the full student sidebar
-   there. It is pinned here rather than fixed, because wiring it is a markup
-   change to an admin surface that was not in this increment's scope — and
-   pinning it means the next person finds it deliberately instead of by
-   surprise. Tighten this list, never grow it. */
-t.is('admin-support.html is the ONLY sidebar page nav.js does not reach',
-  NO_NAV, ['admin-support.html']);
-t.is('and the only one without the slot', NO_SLOT, ['admin-support.html']);
+/* There is no exception any more. admin-support.html was the last page whose
+   sidebar nav.js could not reach — an admin-only surface, so it needed an
+   account that was both admin AND active staff, which nobody is today. It was
+   closed anyway: a navigation rule with a known hole is a rule you cannot state
+   simply. If a page ever appears in either list, the staff surface leaks there
+   and this goes red. */
+t.is('every sidebar page loads nav.js', NO_NAV, []);
+t.is('every sidebar page carries the slot it needs', NO_SLOT, []);
 
 t.done();
