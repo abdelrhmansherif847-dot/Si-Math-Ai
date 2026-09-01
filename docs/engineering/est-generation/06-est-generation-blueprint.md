@@ -18,6 +18,89 @@ says, and 7–8 decide whether what came out is acceptable.
 
 ---
 
+## 0. Rule strength — the anti-overfitting layer
+
+**The corpus is four forms.** Turning every observed frequency into a mandatory
+rule would produce four forms with shuffled questions, not an exam. Every rule in
+this blueprint therefore carries a **strength**, declared in
+`scripts/est-blueprint.mjs` `RULES` alongside its evidence tier and the reason
+the two combine as they do.
+
+| Strength | Meaning | What a generator may vary |
+|---|---|---|
+| **hard** | Must always hold. Violation is a defect. | Nothing |
+| **range** | Must land inside a stated interval — anywhere inside it | Position within the range |
+| **soft** | Should usually hold; a form may deviate **with a recorded reason** | The deviation, once explained |
+| **tendency** | Reproduce **across the series**, not in every form | Per-form conformance |
+| **rare** | Must appear in **some** forms of a series and **not in all** | Which forms carry it |
+| **optional** | Free choice, recorded so it is varied deliberately | Everything |
+
+**Evidence caps strength, and the validator enforces the cap:**
+
+- **T3 evidence cannot support a `hard` constraint.** Three-of-four-forms is a
+  tendency, not a law.
+- **T4 evidence cannot constrain generation at all** — only `rare`, `tendency`
+  or `optional`.
+
+Mutation-tested: promoting a T4 finding to `hard` turns the validator red.
+
+### Where each kind of rule lives
+
+| Strength | Examples |
+|---|---|
+| **hard** | 50 items · 100% four-option MCQ · no archetype or context repeat within a form · no numeric duplication across the series · the key is read off, not chosen · every distractor named · the derived-target partner present · the last item is not the peak · peaks not adjacent · geometry not adjacent |
+| **range** | Published domain bands · published KAR bands · family counts · demand-band shares · device budgets · set structure · stimulus coverage · key balance |
+| **soft** | The on-ramp shape · per-block dispersion · no family twice in a row · peaks stacking two devices · the share of colon-form stems |
+| **tendency** | A14 landing on exactly 3 · the per-form family mix · within-set skill ordering · the corpus's A-letter deficit (recorded, deliberately **not** reproduced) |
+| **rare** | Complex numbers · NOT-items · stem modifiers · "none of the above" · four-computation options · scaled axes · explicit rounding · a named data source · an option with its own caveat · a prose-only shared stimulus |
+| **optional** | Which archetype fills a slot · the context · the numbers |
+
+**The point of the `tendency` row.** A14 lands on exactly 3 items in all four
+reference forms. That is striking — and n = 4. Making it law would bake a
+coincidence into 25 forms. It is recorded as a tendency to reproduce *in
+aggregate*, and individual forms are free to carry 2 or 4.
+
+---
+
+## 0b. The KAR position
+
+Stated once, in `scripts/est-blueprint.mjs` `KAR_CALIBRATION`, and enforced:
+
+- **The published bands are the generation target.** PUBLISHER-AUTHORITATIVE (T1):
+  Knowledge 35–45%, Application 45–55%, Reasoning 5–15%.
+- **Our item-level classification is an imperfect measurement** (T4). We measured
+  Knowledge at 14% against a published 35–45%.
+- **The measurement is not used as a generation constraint.** The validator fails
+  if that flag is flipped.
+- **Where the published specification and our measurement disagree, the
+  specification wins**, and the disagreement is recorded rather than resolved by
+  quietly moving the specification to fit what we measured. The likeliest
+  explanation is that our Knowledge bar is set too high; the corpus contains no
+  publisher-classified exemplar of any band, so there is nothing to calibrate
+  against.
+- **No form may claim to hit the published KAR bands** until artifact 7 §6's
+  rubric has been applied by two independent passes that agree. The validator
+  fails if that claim is enabled.
+
+---
+
+## 0c. Two retained budgets the platform cannot yet render
+
+`nts` (not-to-scale figures) and `objectOptions` (graphical answer choices) are
+**PRODUCT / RENDERING CAPABILITY GAPS, not exam-design exclusions**. Their
+budgets stay in this blueprint — 1–4 and 1–2 respectively — and the validator
+fails if either floor is zeroed or either gap is reclassified as an exclusion.
+
+Requirements: [R1 — figure renderer](R1-figure-renderer-requirements.md),
+[R2 — answer-choice schema](R2-answer-choice-schema.md).
+
+**The interim rule is absolute:** author these items in full, including their
+figure or choice specification. Never substitute a to-scale diagram for a
+schematic one, never label a to-scale diagram "not drawn to scale", and never
+fake a graphical option set as prose.
+
+---
+
 ## 1. What a generation run produces
 
 One **form**: 50 four-option multiple-choice items, one section, 75 minutes.

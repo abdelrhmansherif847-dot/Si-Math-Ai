@@ -18,13 +18,18 @@ been reviewed.
 | 6 | [Generation Blueprint](06-est-generation-blueprint.md) | The executable spec: 50 slots, quotas, device budgets, anti-repetition. |
 | 7 | [Question QA Specification](07-est-question-qa-spec.md) | Per-item gates, and the KAR rubric. |
 | 8 | [Exam QA Specification](08-est-exam-qa-spec.md) | Form and series gates, and what none of it can check. |
+| 9 | [Series Diversity](09-est-series-diversity.md) | Ten tracked dimensions across 25 forms, audited as a pure function. |
+| R1 | [Figure renderer requirements](R1-figure-renderer-requirements.md) | The not-to-scale contract. A capability gap, not an exclusion. |
+| R2 | [Answer-choice schema](R2-answer-choice-schema.md) | Graphical and object-valued options. A capability gap, not an exclusion. |
 
 ## Executable parts
 
-- [`scripts/est-blueprint.mjs`](../../../scripts/est-blueprint.mjs) — the blueprint as data.
-- [`scripts/validate-est-blueprint.mjs`](../../../scripts/validate-est-blueprint.mjs) — the gate. Auto-discovered by `tests/run-all.mjs`; CI fails if the blueprint stops satisfying its own rules. Mutation-tested before commit.
+- [`scripts/est-blueprint.mjs`](../../../scripts/est-blueprint.mjs) — the blueprint as data, including `RULES` (rule strengths), `KAR_CALIBRATION` and `RENDERING_CAPABILITY`.
+- [`scripts/validate-est-blueprint.mjs`](../../../scripts/validate-est-blueprint.mjs) — the gate. Auto-discovered by `tests/run-all.mjs`. Mutation-tested.
+- [`scripts/est-series-ledger.mjs`](../../../scripts/est-series-ledger.mjs) — the series auditor, a pure function.
+- [`tests/est-series-ledger.test.mjs`](../../../tests/est-series-ledger.test.mjs) — 19 checks, each breaking one diversity dimension.
 
-## Two rules that govern the whole set
+## Three rules that govern the whole set
 
 **No exam content in this repository.** It is public. The corpus lives outside
 it; archetypes are described structurally and every illustration is our own.
@@ -32,6 +37,10 @@ it; archetypes are described structurally and every illustration is our own.
 **Evidence tiers on every finding.** T1 publisher-authoritative, T2 strongly
 supported across all four forms, T3 inferred, T4 low confidence. **A pattern
 becomes a hard generation rule only at T1 or T2.** Artifact 1 §0.
+
+**The published specification outranks our measurement.** Where the two disagree
+— as they do on KAR — the specification is the target and the disagreement is
+recorded, never resolved by moving the specification to fit us. Artifact 6 §0b.
 
 ## Known consequence for shipped work
 
