@@ -1,7 +1,16 @@
 -- =====================================================================
 -- exam_stimulus_shape_ok() — one rule, given a name
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only, inside a rollback.
+-- STATUS: 🟢 APPLIED 2026-09-01 as version 20260901150838.
+--
+-- Applied after a dry-run in a rolled-back transaction, then verified live:
+-- prosrc byte-identical to this file (290 bytes), constraint reduced to
+-- CHECK (exam_stimulus_shape_ok(kind, body, spec, media_ref)) and validated,
+-- ACL postgres+service_role matching the other stimulus validators, the
+-- 48-case truth table showing 0 disagreements with the rule it replaced, and
+-- all 33 stored rows still passing. The 20260901z rollback was rehearsed in a
+-- transaction that aborted: it returns both the whole-schema constraint md5
+-- and the function-signature md5 to their pre-apply values exactly.
 --
 -- WHAT THIS IS, AND ALL IT IS
 -- ---------------------------
