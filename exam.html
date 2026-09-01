@@ -5,7 +5,7 @@
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <meta name="robots" content="noindex,nofollow"/>
-<title>Mock Exam – Si Math AI</title>
+<title>Exams – Si Math AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
@@ -98,8 +98,10 @@ input{font-family:inherit}
 
 .tile{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:10px;width:100%;text-align:left}
 .tile:hover{border-color:var(--cyan-border-soft)}
-.tile .nm{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
-.tile .mt{font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px}
+.tile .nm{display:block;font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
+.tile .mt{display:block;font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px}
+.fam{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin:18px 0 9px}
+.fam:first-child{margin-top:0}
 .empty{text-align:center;padding:44px 20px;color:var(--text-400)}
 .empty .big{font-family:var(--font-display);font-weight:700;font-size:16.5px;color:var(--text-200);margin-bottom:7px}
 .note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
@@ -119,7 +121,7 @@ input{font-family:inherit}
 <body>
 <header class="bar">
   <div style="min-width:0">
-    <div class="ttl" id="barTitle">Mock Exam</div>
+    <div class="ttl" id="barTitle">Exams</div>
     <div class="sub" id="barSub"></div>
   </div>
   <div class="spacer"></div>
@@ -138,10 +140,21 @@ input{font-family:inherit}
 
   <!-- choose a sitting -->
   <section id="pick" style="display:none">
-    <div class="h1">Mock Exam</div>
+    <div class="h1">Exams</div>
     <div class="sub">One section at a time, timed the way the real paper is. Every answer, and how long it took, becomes evidence for your weakness analysis.</div>
-    <div class="sec-label" style="margin-top:24px">Available now</div>
+
+    <!-- Platform exams: the SAT / ACT / EST papers the platform publishes for
+         everyone. They belong to no class and are never workspace-specific. -->
+    <div class="sec-label" style="margin-top:24px">Platform exams</div>
     <div class="card"><div id="pickList"></div></div>
+
+    <!-- Teachers: papers set by the class a student has connected to. Hidden
+         entirely for a student with no class — an empty section would be
+         advertising a feature they have no way into. -->
+    <div id="teachersBlock" style="display:none">
+      <div class="sec-label" style="margin-top:26px">Teachers</div>
+      <div class="card"><div id="teacherList"></div></div>
+    </div>
   </section>
 
   <!-- sitting -->
@@ -262,6 +275,30 @@ const api = {
       p_answer: answer, p_ms_delta: Math.round(msDelta) || 0, p_visit: !!visit });
     if (error) throw error;
   },
+  /* Which classes this student has connected to. The Teachers category exists
+     only for a student who has joined one, so this is what decides whether it
+     is rendered at all. A failure here must never take the platform exams down
+     with it, so every path returns a list. */
+  async myTeachers() {
+    if (S.preview) return [];
+    try {
+      const { data, error } = await sb.rpc('student_my_teachers');
+      if (error) return [];
+      /* The RPC returns EVERY link the student has ever had — it orders active
+         first but does not filter, so a student who left a class still gets a
+         row. Only an active link may open the Teachers category. */
+      return (data || []).filter((t) => t && t.status === 'active');
+    } catch (_) { return []; }
+  },
+  /* THE SEAM FOR THE TEACHER ASSIGNMENT SYSTEM.
+     Increment A ships the category, not the content. There is no teacher_exams
+     table and no RPC to call yet, so this returns nothing and the section
+     renders its empty state honestly. When the backend lands this becomes its
+     only caller, scoped to the workspaces myTeachers() returned, and nothing
+     else on this page changes. */
+  async teacherExams(_workspaceIds) {
+    return [];
+  },
   async submit() {
     if (S.preview) {
       const answered = S.items.filter((i) => i.answer != null).length;
@@ -290,27 +327,75 @@ async function boot() {
     S.user = session.user;
   }
 
-  let rows = [];
+  let rows = [], teachers = [], teacherExams = [];
   try { rows = await api.sections(); } catch (_) { rows = []; }
+  try { teachers = await api.myTeachers(); } catch (_) { teachers = []; }
+  if (teachers.length) {
+    try { teacherExams = await api.teacherExams(teachers.map((t) => t.workspace_id)); }
+    catch (_) { teacherExams = []; }
+  }
 
+  show('pick');
+  renderPlatform(rows);
+  renderTeachers(teachers, teacherExams);
+  document.querySelectorAll('#pick [data-sec]').forEach((b) =>
+    b.addEventListener('click', () => startSection(b.getAttribute('data-sec'))));
+}
+
+/* One tile, whoever set the paper. Kept separate from the grouping so the
+   Teachers category renders identical rows once it has content to render. */
+function tile(r) {
+  return '<button class="tile" data-sec="' + esc(r.section_id) + '">'
+    + '<span style="flex:1;min-width:0"><span class="nm">' + esc(r.form_title) + ' — ' + esc(r.section_label) + '</span>'
+    + '<span class="mt">' + esc(r.exam_code) + ' · ' + esc(r.question_count) + ' questions · '
+    + esc(r.duration_minutes) + ' minutes' + (r.calculator_allowed ? ' · calculator' : '') + '</span></span>'
+    + '<span class="btn sm">Start</span></button>';
+}
+
+/* The exam family is the part of exam_code before the first underscore, so
+   SAT_FULL, EST_MATH_1 and ACT_MATH group without a hardcoded list that would
+   silently drop a family added later. A code that fits no known family still
+   gets its own heading rather than disappearing. */
+const FAMILY_ORDER = ['SAT', 'ACT', 'EST'];
+function familyOf(examCode) {
+  return String(examCode || '').split('_')[0].toUpperCase() || 'OTHER';
+}
+
+function renderPlatform(rows) {
   if (!rows.length) {
-    show('pick');
     $('pickList').innerHTML = '<div class="empty"><div class="big">No exam is available yet</div>'
       + '<div style="font-size:13.5px;max-width:460px;margin:0 auto 16px">Papers are released once they have been written and reviewed. '
       + 'Nothing is published yet, so there is nothing to sit — that is deliberate, not a fault.</div>'
       + '<a class="btn ghost sm" href="exam.html?preview=1">Try a sample paper</a></div>';
     return;
   }
+  const byFamily = new Map();
+  for (const r of rows) {
+    const f = familyOf(r.exam_code);
+    if (!byFamily.has(f)) byFamily.set(f, []);
+    byFamily.get(f).push(r);
+  }
+  const known = FAMILY_ORDER.filter((f) => byFamily.has(f));
+  const rest = [...byFamily.keys()].filter((f) => !FAMILY_ORDER.includes(f)).sort();
+  $('pickList').innerHTML = known.concat(rest)
+    .map((f) => '<div class="fam">' + esc(f) + '</div>' + byFamily.get(f).map(tile).join(''))
+    .join('');
+}
 
-  show('pick');
-  $('pickList').innerHTML = rows.map((r) => ''
-    + '<button class="tile" data-sec="' + esc(r.section_id) + '">'
-    + '<span style="flex:1;min-width:0"><span class="nm">' + esc(r.form_title) + ' — ' + esc(r.section_label) + '</span>'
-    + '<span class="mt">' + esc(r.exam_code) + ' · ' + esc(r.question_count) + ' questions · '
-    + esc(r.duration_minutes) + ' minutes' + (r.calculator_allowed ? ' · calculator' : '') + '</span></span>'
-    + '<span class="btn sm">Start</span></button>').join('');
-  $('pickList').querySelectorAll('[data-sec]').forEach((b) =>
-    b.addEventListener('click', () => startSection(b.getAttribute('data-sec'))));
+/* Hidden outright for a student with no class: an empty Teachers section would
+   advertise a feature they have no way into, and the way in is a code their
+   teacher gives them, not anything on this page. */
+function renderTeachers(teachers, exams) {
+  if (!teachers.length) { $('teachersBlock').style.display = 'none'; return; }
+  $('teachersBlock').style.display = '';
+  if (!exams.length) {
+    const names = teachers.map((t) => esc(t.workspace_name || 'your class')).join(', ');
+    $('teacherList').innerHTML = '<div class="empty"><div class="big">No exam set yet</div>'
+      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">Papers set by ' + names
+      + ' will appear here. Nothing has been set yet — that is not a fault, and there is nothing for you to do.</div></div>';
+    return;
+  }
+  $('teacherList').innerHTML = exams.map(tile).join('');
 }
 
 /* A stable request id per section, kept in localStorage, is what makes a

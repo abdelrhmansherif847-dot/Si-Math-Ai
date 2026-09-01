@@ -29,7 +29,7 @@ t.section('A preview paper reaches nothing');
 t.ok('preview is opt-in from the query string', /preview.*===\s*'1'/.test(PAGE));
 const methods = API.split(/\n  async /).slice(1).map((seg) => ({ name: (seg.match(/^(\w+)/) || [])[1], body: seg }));
 const reaching = methods.filter((m) => /\bsb\.rpc/.test(m.body));
-t.ok('api methods reach the database (not vacuous)', reaching.length === 4);
+t.ok('api methods reach the database (not vacuous)', reaching.length === 5);
 t.is('every database call is preceded by a preview guard',
   reaching.filter((m) => {
     const g = m.body.search(/if \(S\.preview\)/), c = m.body.search(/\bsb\.rpc/);
@@ -57,9 +57,10 @@ t.ok('the frozen analyzer is what rebuilds the reports', /window\.regenerateWeak
 t.is('the page writes no weakness table itself',
   ['weakness_signals', 'weakness_reports', 'mastery_records', 'exam_mistakes']
     .filter((tbl) => new RegExp(`from\\('${tbl}'\\)`).test(PAGE)), []);
-t.is('every RPC it calls is one of the four approved ones',
+t.is('every RPC it calls is one of the approved ones',
   [...new Set([...PAGE.matchAll(/\.rpc\('([a-z_]+)'/g)].map((m) => m[1]))]
-    .filter((f) => !['exam_available_sections', 'exam_start', 'exam_save_response', 'exam_submit'].includes(f)), []);
+    .filter((f) => !['exam_available_sections', 'exam_start', 'exam_save_response', 'exam_submit',
+                     'student_my_teachers'].includes(f)), []);
 t.ok('the dependencies the frozen logger needs are loaded',
   ['taxonomy.js', 'taxonomy-write.js', 'mastery-updater.js', 'regenerate-reports.js', 'exam-mistakes-logger.js']
     .every((f) => new RegExp(`<script src="${f.replace('.', '\\.')}"`).test(PAGE)));
@@ -110,5 +111,54 @@ t.ok('reduced motion is honoured', /prefers-reduced-motion: reduce/.test(PAGE));
 /* Nothing is published, so the honest empty state is the one students see. */
 t.ok('an empty catalogue explains itself rather than looking broken',
   /No exam is available yet/.test(PAGE) && /that is deliberate, not a fault/.test(PAGE));
+
+// ══ 7 · THE TWO CATEGORIES ════════════════════════════════════════════════
+// Increment A. The page grew a category structure and NOTHING ELSE: no teacher
+// exam content, no second code, no schema. These checks pin the shape so the
+// Teacher Assignment system has somewhere honest to land, and so the platform
+// catalogue cannot quietly acquire a class.
+t.section('Platform exams and Teachers are separate categories');
+
+t.ok('both categories exist in the markup',
+  /class="sec-label"[^>]*>Platform exams</.test(PAGE) && /class="sec-label"[^>]*>Teachers</.test(PAGE));
+t.ok('they render into separate containers',
+  /id="pickList"/.test(PAGE) && /id="teacherList"/.test(PAGE));
+
+/* The Teachers block is hidden by default in the markup AND hidden again
+   whenever there is no active link, so neither alone is load-bearing. */
+t.ok('the Teachers block ships hidden', /id="teachersBlock" style="display:none"/.test(PAGE));
+t.ok('and is hidden for a student with no class',
+  /if \(!teachers\.length\) \{ \$\('teachersBlock'\)\.style\.display = 'none'; return; \}/.test(PAGE));
+
+/* A student who LEFT a class must not keep the category: student_my_teachers()
+   returns revoked and removed links too, ordered active-first but unfiltered. */
+t.ok('only an ACTIVE link opens the category', /filter\(\(t\) => t && t\.status === 'active'\)/.test(PAGE));
+
+/* Platform grouping is derived, not enumerated, so a family added later cannot
+   silently vanish from the page. */
+t.ok('families are derived from exam_code, not hardcoded',
+  /split\('_'\)\[0\]/.test(PAGE));
+t.ok('an unknown family still gets a heading rather than disappearing',
+  /rest = \[\.\.\.byFamily\.keys\(\)\]\.filter/.test(PAGE) && /known\.concat\(rest\)/.test(PAGE));
+
+/* The seam. Increment A must not invent a backend: the teacher list has to come
+   back empty because nothing exists to fill it, not because a call failed. */
+const SEAM = /async teacherExams\(_?workspaceIds?\) \{\s*return \[\];\s*\},/.test(PAGE);
+t.ok('teacherExams() is an empty seam, not a call to a table that does not exist', SEAM);
+t.is('no teacher-exam table or RPC is referenced anywhere',
+  ['teacher_exams', 'teacher_exam_questions', 'homework', 'assignment']
+    .filter((n) => new RegExp(`from\\('${n}|rpc\\('${n}`).test(PAGE)), []);
+
+/* Both empty states have to read as deliberate rather than broken — the whole
+   page is empty today and will be until a form is published. */
+t.ok('the Teachers empty state is honest about being empty',
+  /No exam set yet/.test(PAGE) && /that is not a fault, and there is nothing for you to do/.test(PAGE));
+t.ok('it names the class the papers would come from', /Papers set by ' \+ names/.test(PAGE));
+
+/* The platform side must stay exactly what it was. */
+t.ok('platform exams still come from the unparameterised published read',
+  /rpc\('exam_available_sections'\)/.test(PAGE));
+t.is('the page sends no workspace or class argument to any exam RPC',
+  [...PAGE.matchAll(/p_workspace|workspace_id:|p_class/g)].map((m) => m[0]), []);
 
 t.done();

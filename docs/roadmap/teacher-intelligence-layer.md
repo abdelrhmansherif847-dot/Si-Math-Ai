@@ -1002,10 +1002,49 @@ them should be discovered mid-implementation.
     number; changing it is a decision to record here, with its reason, not a
     tuning knob.
 
+12. **Whether a Teacher Exam needs its own access code.** Raised 2026-09-01.
+    **Answered: no — class membership is the access boundary.** A student joins
+    a workspace with the Class Code, and from that moment sees every published
+    Teacher Exam of that workspace and no other workspace's. There is no second
+    code on the exam side.
+
+    The reason to record it rather than just implement it: the alternative was
+    live for a moment. A teacher may reasonably want a paper only part of the
+    class sits, which is the Homework Code pattern applied to an exam. That is a
+    **nullable code column and a redemption table**, and adding it later to a
+    table already carrying live attempts is a migration over student work.
+    Whoever revisits this should know it was considered and declined, not
+    overlooked — and that Homework already carries the mechanism to copy.
+
+13. **Whether a teacher-AUTHORED exam's results become learning evidence.**
+    Raised 2026-09-01. **Answered: no, not initially.** Results are shown to the
+    teacher and to the student as academic results. They do **not** reach
+    `weakness_signals`, `weakness_reports`, `mastery_records` or the analyzer.
+
+    This is a different question from the one settled for teacher-*assigned*
+    platform exams, which do produce evidence under a distinct `TEACHER_EXAM`
+    source. The difference is the content, not the assignment: a platform paper
+    has a reviewed taxonomy mapping and a calibrated difficulty on every item,
+    and a teacher-authored question has neither. Feeding it into the pipeline
+    would mix measured evidence with unvalidated content and leave nobody
+    downstream able to tell which is which — the same failure §8.3 forbids for a
+    teacher's opinion, arriving by a different route.
+
+    **The bar for changing this is stated now, so it cannot be lowered later:**
+    a designed and approved taxonomy mapping for teacher-authored items, and a
+    difficulty signal that is measured rather than asserted by the author. Until
+    both exist, a teacher exam is a result, not a measurement.
+
 ---
 
 ## 16. Provenance
 
+- **2026-09-01 — Two architecture decisions recorded (§15.12, §15.13),** taken
+  with Increment A of the Teacher Assignment system: Teacher Exams are gated by
+  class membership rather than a second code, and teacher-authored exam results
+  stay out of the learning-signal pipeline until taxonomy and difficulty mapping
+  are designed and approved. Increment A itself ships the Exams page category
+  structure only — no schema, no backend, no Teacher Exam content.
 - **2026-08-30 — Direction adopted.** Recorded from the founder's product
   direction (two messages: *"Teacher Intelligence Layer — Why Teachers Would
   Bring Their Students to SI Math AI"* and the follow-up
