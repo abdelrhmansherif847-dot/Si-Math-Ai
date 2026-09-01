@@ -8,7 +8,7 @@ const lum=o=>{const[r,g,b]=[o.r,o.g,o.b].map(v=>{v/=255;return v<=.03928?v/12.92
 const cr=(a,b)=>{const B=over(parse(b),{r:255,g:255,b:255,a:1}),A=over(parse(a),B);
   const[x,y]=[lum(A),lum(B)].sort((m,n)=>n-m);return (x+.05)/(y+.05);};
 
-(async()=>{const br=await chromium.launch(); const fails=[],pass=[];
+(async()=>{const br=await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }); const fails=[],pass=[];
  const ok=(n,c,d)=>{(c?pass:fails).push((c?'PASS  ':'FAIL  ')+n+(d?'  — '+d:''));};
  for (const theme of ['light','dark']) {
   const ctx=await br.newContext({viewport:{width:1300,height:1000},deviceScaleFactor:2,colorScheme:theme});

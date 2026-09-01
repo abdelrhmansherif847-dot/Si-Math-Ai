@@ -31,7 +31,7 @@ const cr = (a, b) => { const B = over(parse(b), { r:255, g:255, b:255, a:1 });
   return (x + .05) / (y + .05); };
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const fails = [], pass = [];
   const ok = (n, c, d) => { (c ? pass : fails).push((c ? 'PASS  ' : 'FAIL  ') + n + (d ? '  — ' + d : '')); };
 

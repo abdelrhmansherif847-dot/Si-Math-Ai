@@ -4,7 +4,7 @@ const FILE = process.argv[2] || 'e2e-preview.html';
 const LABEL = process.argv[3] || 'run';
 
 (async()=>{
- const br=await chromium.launch(); const fails=[],pass=[];
+ const br=await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }); const fails=[],pass=[];
  const ok=(n,c,d)=>{(c?pass:fails).push((c?'PASS  ':'FAIL  ')+n+(d?'  — '+d:''));};
  const ctx=await br.newContext({viewport:{width:1400,height:1000},deviceScaleFactor:2});
  const p=await ctx.newPage(); const errs=[];

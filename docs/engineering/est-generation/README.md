@@ -21,6 +21,9 @@ been reviewed.
 | 9 | [Series Diversity](09-est-series-diversity.md) | Ten tracked dimensions across 25 forms, audited as a pure function. |
 | R1 | [Figure renderer requirements](R1-figure-renderer-requirements.md) | The not-to-scale contract. A capability gap, not an exclusion. |
 | R2 | [Answer-choice schema](R2-answer-choice-schema.md) | Graphical and object-valued options. A capability gap, not an exclusion. |
+| 10 | [ESTM1-2026-A rebuild](10-estm1-2026-a-rebuild.md) | The first form built from this specification, and what building it proved about the specification. |
+| 11 | [ESTM1-2026-A internal review](11-estm1-internal-review.md) | The second-reader content review of all 50 items: what was defective, what was left alone, and the three gates it produced. |
+| — | [ESTM1-2026-A status](STATUS-ESTM1-2026-A.md) | **DRAFT — INTERNAL REVIEW ONLY.** The restrictions, the KAR position, the difficulty label, and the R1/R2 gaps. Enforced in CI. |
 
 ## Executable parts
 
@@ -28,6 +31,8 @@ been reviewed.
 - [`scripts/validate-est-blueprint.mjs`](../../../scripts/validate-est-blueprint.mjs) — the gate. Auto-discovered by `tests/run-all.mjs`. Mutation-tested.
 - [`scripts/est-series-ledger.mjs`](../../../scripts/est-series-ledger.mjs) — the series auditor, a pure function.
 - [`tests/est-series-ledger.test.mjs`](../../../tests/est-series-ledger.test.mjs) — 19 checks, each breaking one diversity dimension.
+- [`scripts/validate-est-form-status.mjs`](../../../scripts/validate-est-form-status.mjs) — the gate on the status above: the five restrictions, the difficulty label, the KAR flags, and that no scaled-score conversion exists anywhere.
+- [`scripts/audit-est-form.mjs`](../../../scripts/audit-est-form.mjs) — the form gates, run against an authored payload held OUTSIDE this repository. Deliberately not named `validate-*`, which `tests/run-all.mjs` runs with no arguments.
 
 ## Three rules that govern the whole set
 

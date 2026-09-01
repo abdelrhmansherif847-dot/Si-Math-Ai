@@ -797,6 +797,86 @@
      }
     ]
    }
+  },
+  {
+   "id": "data-3",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native",
+   "label": "two series, the shorter one labelled last",
+   "kind": "chart",
+   "spec": {
+    "chartType": "bar",
+    "categories": [
+     "Mon",
+     "Tue",
+     "Wed",
+     "Thu",
+     "Fri"
+    ],
+    "series": [
+     {
+      "name": "Before",
+      "values": [
+       40,
+       40,
+       60,
+       20,
+       40
+      ]
+     },
+     {
+      "name": "After",
+      "values": [
+       100,
+       80,
+       20,
+       60,
+       60
+      ]
+     }
+    ],
+    "xLabel": "Day",
+    "yLabel": "Words per minute"
+   },
+   "reading": "value",
+   "_why": "TWO SERIES ON A BAR CHART. The suite had one-series bars only, and the configuration it was missing is the one that broke: a direct label centred over its own bar ran straight through the taller sibling bar beside it. The LAST group here is deliberately the shape that collided -- the labelled series shorter, a taller sibling next to it -- so this baseline fails if a label ever moves back over a bar. The data is invented for this sheet and belongs to no form; every value sits on a ruled line, which is what a reading='value' chart must be."
+  },
+  {
+   "id": "data-4",
+   "family": "data",
+   "familyName": "Data and scatterplots",
+   "decision": "Screen-native",
+   "label": "a line chart, ruled for an exact read",
+   "kind": "chart",
+   "spec": {
+    "chartType": "line",
+    "categories": [
+     "Jan",
+     "Feb",
+     "Mar",
+     "Apr",
+     "May",
+     "Jun"
+    ],
+    "series": [
+     {
+      "name": "Visitors",
+      "values": [
+       50,
+       150,
+       250,
+       200,
+       100,
+       50
+      ]
+     }
+    ],
+    "xLabel": "Month",
+    "yLabel": "Visitors"
+   },
+   "reading": "value",
+   "_why": "A LINE CHART, which the suite did not draw at all. Every chart baseline was a bar or a pie, so the line branch -- its curve, its point markers, its ruled value grid -- shipped unbaselined. Invented data, belonging to no form, with every plotted value on a rule."
   }
  ]
 }

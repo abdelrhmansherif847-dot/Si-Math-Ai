@@ -1,6 +1,6 @@
 const { chromium } = require('playwright'); const path=require('path');
 (async()=>{
- const br=await chromium.launch(); const ctx=await br.newContext(); const p=await ctx.newPage();
+ const br=await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }); const ctx=await br.newContext(); const p=await ctx.newPage();
  await p.goto('file://'+path.join(__dirname,'e2e-preview.html')); await p.waitForTimeout(400);
  const r = await p.evaluate(()=>{
    const {renderForQuestion} = globalThis.SiExamStimulus;

@@ -34,7 +34,17 @@ if (!dir) { console.error('usage: build-est-form-sql.mjs <content-dir> <out.sql>
 const form = JSON.parse(readFileSync(resolve(dir, 'payload.json'), 'utf8'));
 
 const q = s => "'" + String(s).replace(/'/g, "''") + "'";
-const j = o => q(JSON.stringify(o));
+// EVERY EMITTED BYTE IS ASCII. The stem-and-leaf stimulus separates its leaves
+// with U+00A0 because HTML collapses runs of ordinary spaces and "1 1 4 6 8"
+// came out as "11 4 6 8" on the rendered page. That character did not survive
+// the trip through the tooling the first time -- it arrived at the database as a
+// plain space and the defect came back -- so the JSON blobs are emitted with
+// every non-ASCII character written as a \uXXXX escape. Postgres unescapes them
+// when the literal is cast to jsonb, so the stored value is the real character
+// while the SQL text itself is pure ASCII and nothing in transit can rewrite it.
+const asciiOnly = s => s.replace(/[\u0080-\uffff]/g,
+  c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+const j = o => q(asciiOnly(JSON.stringify(o)));
 const nul = v => (v === null || v === undefined ? 'NULL' : q(v));
 
 // Only stimuli that at least one item points at, so a held figure or an unused
@@ -92,7 +102,12 @@ L.push(`SELECT sec.id, (i->>'o')::int, i->>'prompt', 'mcq', i->'choices', i->>'a
 L.push(`       i->>'diff', i->>'topic', i->>'sub', 'draft', 'original_si_math',`);
 L.push(`       CASE WHEN i->>'stim' IS NULL THEN NULL ELSE`);
 L.push(`         (SELECT st.id FROM public.exam_stimuli st`);
-L.push(`           WHERE st.form_id = f.id AND st.label LIKE (i->>'stim') || ' — %') END,`);
+// The label separator is an EM DASH, and this predicate is the only place one
+// would otherwise appear as a literal character in the emitted SQL. A stimulus
+// join that silently matches nothing leaves all sixteen stimulus items with a
+// NULL stimulus_id and a form that renders without its figures, so the dash is
+// built server-side from its code point instead of trusted to survive transit.
+L.push(`           WHERE st.form_id = f.id AND st.label LIKE (i->>'stim') || ' ' || chr(8212) || ' %') END,`);
 L.push(`       i->>'reading'`);
 L.push(`  FROM jsonb_array_elements(${j(qRows)}::jsonb) i`);
 L.push(`  JOIN public.exam_forms f ON f.code = ${q(form.code)}`);

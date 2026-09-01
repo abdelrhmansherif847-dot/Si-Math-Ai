@@ -964,8 +964,18 @@ function drawChart(spec, opts) {
   const W = opts.width || 520;
   const named = spec.series.filter(x => x.name);
   const PAD = { l: 52, r: 18, t: spec.yLabel ? 36 : 20, b: spec.xLabel ? 46 : 30 };
-  if (spec.chartType !== 'bar' && named.length > 1) PAD.r = Math.max(PAD.r,
-    12 + Math.max(...named.map(x => x.name.length)) * 7.2);
+  // A multi-series chart labels each series beside its own last mark, so the
+  // room those words need is reserved before anything is placed. This used to
+  // exclude bar charts, on the assumption that a bar's label sits ABOVE its own
+  // bar and so needs no width -- and that assumption is what put the word
+  // "Morning" through the middle of the Wednesday evening bar, twice.
+  // 8.4 is the MEASURED advance of the bold direct-label face, not the 7.2 the
+  // rest of this file uses for regular weight. At 7.2 a seven-character series
+  // name cleared the frame by three pixels and a longer one would not have
+  // cleared it at all -- and a clipped label is a figure that has lost the only
+  // thing telling the reader which series is which.
+  if (named.length > 1) PAD.r = Math.max(PAD.r,
+    14 + Math.max(...named.map(x => x.name.length)) * 8.4);
   // Same rule as the plate: the drawing area keeps the proportion it was
   // designed at (520 x 340, labelled on both axes) whatever width it is asked
   // for. A bar chart run out to the exam column with its height left behind
@@ -1027,15 +1037,37 @@ function drawChart(spec, opts) {
   // Identity is never colour alone. On an exam it is carried by a DIRECT LABEL
   // on the series itself rather than a legend box: a legend costs a lookup, and
   // a lookup under time is exactly what a figure is supposed to remove.
+  //
+  // EVERY DIRECT LABEL SITS BESIDE THE LAST MARK, NEVER OVER A BAR. A bar
+  // chart's label used to be centred above its own bar, and it collided with
+  // whichever sibling bar in that last group happened to be taller: the word
+  // ran across the neighbouring bar with a halo cut out of it. The data was
+  // reshaped to dodge it once and the collision came straight back the next
+  // time the numbers changed, because the fix was in the content and the defect
+  // is in the drawing. So the label now goes to the RIGHT of the last group,
+  // vertically on its own bar's top -- the same placement the line branch has
+  // always used, and the reason PAD.r above now reserves the width for it.
+  //
+  // Two series that end level would print their labels on top of each other, so
+  // labels are laid out in descending height and pushed apart to LINE, which is
+  // the smallest gap that keeps two lines of this type legible.
   if (spec.series.length > 1) {
-    spec.series.forEach((ser, si) => {
-      if (!ser.name) return;
-      const i = ser.values.length - 1, v = ser.values[i];
-      const at = spec.chartType === 'bar'
-        ? [X(i) + (si - (spec.series.length - 1) / 2) * 24, Y(v) - 9]
-        : [X(i) + 9, Y(v) + 4];
-      s.appendChild(el('text', { x: at[0], y: at[1], class: 'sx-direct',
-        'text-anchor': spec.chartType === 'bar' ? 'middle' : 'start' }, ser.name));
+    const i0 = Math.max(...spec.series.map(x => x.values.length)) - 1;
+    const bw = spec.chartType === 'bar'
+      ? Math.min(46, band / spec.series.length - 6) : 0;
+    const right = spec.chartType === 'bar'
+      ? X(i0) + (bw * spec.series.length + 2 * (spec.series.length - 1)) / 2 + 6
+      : X(i0) + 9;
+    const LINE = 14;
+    const placed = spec.series
+      .map((ser, si) => ({ ser, si, i: Math.min(i0, ser.values.length - 1) }))
+      .filter(r => r.ser.name)
+      .map(r => ({ ...r, y: Y(r.ser.values[r.i]) + 4 }))
+      .sort((a, b) => a.y - b.y);
+    placed.forEach((r, k) => {
+      if (k && r.y - placed[k - 1].y < LINE) r.y = placed[k - 1].y + LINE;
+      s.appendChild(el('text', { x: right, y: r.y, class: 'sx-direct',
+        'text-anchor': 'start' }, r.ser.name));
     });
   }
   // The y title reads left-to-right above its own axis, not rotated up the

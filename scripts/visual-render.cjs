@@ -174,7 +174,14 @@ async function renderThroughExam(ctx, base, cases) {
  * another needs.
  */
 async function launch() {
-  return chromium.launch({ args: [
+  // CHROMIUM_PATH lets a machine that already has a browser point at it. The
+  // `visual` CI job installs the exact build Playwright asks for and needs
+  // nothing here; a sandbox that ships its own Chromium under a different build
+  // number would otherwise be told to run `npx playwright install` against a
+  // repository that deliberately has no package.json. The flags below still
+  // apply either way, and they are what makes a baseline portable.
+  const executablePath = process.env.CHROMIUM_PATH || undefined;
+  return chromium.launch({ executablePath, args: [
     '--disable-lcd-text',              // grayscale antialiasing, both sides
     '--disable-font-subpixel-positioning',
     '--force-color-profile=srgb',

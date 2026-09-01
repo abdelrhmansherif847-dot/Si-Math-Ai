@@ -177,6 +177,59 @@ for (const it of items.filter(i => (i.dev || []).includes('derived')))
   check((it.dcl || []).includes('D1'),
     `G2.3: Q${it.o} has a derived target but no D1 (un-derived value) distractor`);
 
+// ── legibility: a value the item must READ must sit on a drawn rule ──────────
+// Found by the second-reader review, not by any gate that existed then. Both of
+// the form's charts asked for exact values off a figure whose gridlines the
+// renderer rules at niceStep(max, 5) — and not one plotted value landed on a
+// rule. Every answer was a guess between two rules, and nothing said so, because
+// the checks in place only ever asked whether a field was present.
+//
+// This reproduces the renderer's own step arithmetic rather than describing it,
+// so the two cannot drift: exam-stimulus.core.js draws a chart's horizontal
+// rules at every niceStep(hi - lo, 5) from lo, and a plot's at niceStep(span, 9)
+// across and niceStep(span, 7) up.
+const niceStep = (span, target) => {
+  const raw = span / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 2.5, 5, 10].map(m => m * p).find(c => c >= raw) || p;
+};
+const onStep = (v, step) => Math.abs(v / step - Math.round(v / step)) < 1e-9;
+const stimuli = form.stimuli || {};
+for (const it of items) {
+  if (it.reading !== 'value' || !it.stim) continue;
+  const st = stimuli[it.stim];
+  if (!st) { F(`G4.1: Q${it.o} names stimulus ${it.stim}, which the payload does not carry`); continue; }
+  const spec = st.spec || {};
+  if (st.kind === 'chart' && spec.chartType !== 'pie') {
+    const vals = (spec.series || []).flatMap(s => s.values);
+    const lo = Math.min(0, ...vals), step = niceStep(Math.max(...vals) - lo, 5);
+    const off = vals.filter(v => !onStep(v - lo, step));
+    check(off.length === 0,
+      `G4.1: Q${it.o} reads values off ${it.stim}, which is ruled every ${step}; ` +
+      `${off.length} plotted value(s) fall between rules: ${[...new Set(off)].join(', ')}`);
+  }
+  if (st.kind === 'plot' && spec.frame === 'graph') {
+    const sy = niceStep(spec.yRange[1] - spec.yRange[0], 7);
+    const sx = niceStep(spec.xRange[1] - spec.xRange[0], 9);
+    // A curve passes through every value between its samples, so no gate can
+    // infer WHICH value the question asks for -- only the question knows. So
+    // the item declares the coordinates it makes the student read, and those
+    // are the ones checked. Q37 asked for f(0) = -3 on a plane ruled every 2:
+    // the answer sat exactly halfway between two lines with a distractor one
+    // line away, and no automated check could see it because none knew that -3
+    // was the number being read.
+    const reads = it.reads;
+    check(Array.isArray(reads) && reads.length > 0,
+      `G4.2: Q${it.o} reads values off a graph but declares no "reads" coordinates`);
+    for (const [rx, ry] of reads || []) {
+      check(onStep(rx - spec.xRange[0], sx) && onStep(ry - spec.yRange[0], sy),
+        `G4.2: Q${it.o} must read (${rx}, ${ry}) off ${it.stim}, which is ruled every ` +
+        `${sx} across and ${sy} up -- that point does not sit on a ruled line`);
+    }
+    N(`Q${it.o} reads ${(reads || []).map(r => `(${r})`).join(' ')} off ${it.stim}: ` +
+      `ruled every ${sx} across and every ${sy} up.`);
+  }
+}
+
 // ── rendering capability: authored, held, and NOT worked around ──────────────
 const held = items.filter(i => i.figureHeld);
 for (const [name, g] of Object.entries(RENDERING_CAPABILITY)) {
