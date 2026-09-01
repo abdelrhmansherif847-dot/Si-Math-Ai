@@ -20,6 +20,7 @@
 <script src="taxonomy-write.js"></script>
 <script src="mastery-updater.js"></script>
 <script src="regenerate-reports.js"></script>
+<script src="stimulus-view.js"></script>
 <script src="exam-mistakes-logger.js"></script>
 <script src="assets/streak.js"></script>
 <style>
@@ -102,6 +103,45 @@ input{font-family:inherit}
 .tile .mt{display:block;font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px}
 .fam{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin:18px 0 9px}
 .fam:first-child{margin-top:0}
+/* ── stimulus rendering (stimulus-view.js) ─────────────────────────────────
+   Colours come from the page tokens so a figure belongs to the paper rather
+   than looking pasted into it. Every geometry value is set by the module; only
+   presentation lives here, which is what lets one stylesheet serve a chart, a
+   plot and a number line without the module knowing about any of them. */
+.sv{font-size:14px;color:var(--text-300)}
+.sv-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin-bottom:9px}
+.sv-text{white-space:pre-wrap}
+.sv-note{font-size:12.5px;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:8px;padding:8px 11px;margin-top:9px}
+.sv-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sv-table{border-collapse:collapse;font-size:13.5px;min-width:min(100%,320px)}
+.sv-table th,.sv-table td{border:1px solid var(--border-mid);padding:7px 12px;text-align:left;white-space:nowrap}
+.sv-table th{background:var(--bg-elev-2);color:var(--text-200);font-weight:700}
+.sv-table td{color:var(--text-300);font-variant-numeric:tabular-nums}
+.sv-cap{font-size:12.5px;color:var(--text-400);margin-top:7px}
+.sv-svg{display:block;max-width:100%;height:auto;margin:2px 0}
+.sv-plot,.sv-pie{max-width:420px}
+.sv-nline{max-width:520px}
+.sv-grid{stroke:var(--border-soft);stroke-width:1}
+.sv-axis{stroke:var(--text-500);stroke-width:1.4}
+.sv-tick{fill:var(--text-400);font-family:var(--font-mono);font-size:10px}
+.sv-tick-x{text-anchor:middle}
+.sv-tick-y{text-anchor:end}
+.sv-axlabel{fill:var(--text-300);font-size:11.5px;text-anchor:middle}
+.sv-end{text-anchor:end}
+.sv-line{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.sv-poly{fill:none;stroke-width:2.2;stroke-linejoin:round}
+.sv-dash{stroke-dasharray:6 5}
+.sv-plabel{fill:var(--text-200);font-size:11.5px;font-weight:700}
+.sv-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:9px;font-size:12.5px;color:var(--text-400)}
+.sv-key{display:inline-flex;align-items:center;gap:6px}
+.sv-key i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.sv-panels{display:flex;flex-wrap:wrap;gap:22px}
+.sv-panel{margin:0;flex:1 1 200px;min-width:0}
+.sv-panel .sv-cap{margin:0 0 6px;color:var(--text-300);font-weight:700}
+.sv-seg{stroke:var(--cyan);stroke-width:3.4;stroke-linecap:round}
+.sv-dot-on{fill:var(--cyan);stroke:var(--cyan);stroke-width:2}
+.sv-dot-off{fill:var(--bg-card);stroke:var(--cyan);stroke-width:2}
+.sv-figure{display:block;max-width:100%;height:auto;border-radius:8px;background:#fff}
 .empty{text-align:center;padding:44px 20px;color:var(--text-400)}
 .empty .big{font-family:var(--font-display);font-weight:700;font-size:16.5px;color:var(--text-200);margin-bottom:7px}
 .note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
@@ -463,10 +503,16 @@ function renderItem(isEntry) {
   $('qNum').textContent = 'Question ' + (S.cur + 1) + ' of ' + S.items.length;
   $('qFmt').textContent = it.format === 'grid_in' ? 'Write-in answer' : 'Multiple choice';
 
-  if (it.stimulus && (it.stimulus.body || it.stimulus.label)) {
+  /* Until stimulus-view.js existed this rendered the label and the body and
+     nothing else — and every stimulus in the corpus is a `spec` with no body,
+     so 29 of DSAT-2026-A's 66 questions referred to a figure that never
+     appeared. The module draws all six kinds; if it is somehow missing, say so
+     rather than showing a prompt about a graph with no graph. */
+  if (it.stimulus) {
     $('qStim').style.display = '';
-    $('qStim').innerHTML = (it.stimulus.label ? '<strong>' + esc(it.stimulus.label) + '</strong><br/>' : '')
-      + esc(it.stimulus.body || '');
+    $('qStim').innerHTML = window.StimulusView
+      ? window.StimulusView.render(it.stimulus)
+      : '<div class="sv-note">This figure could not be displayed. Reload the page.</div>';
   } else { $('qStim').style.display = 'none'; $('qStim').innerHTML = ''; }
 
   $('qPrompt').innerHTML = esc(it.prompt);
