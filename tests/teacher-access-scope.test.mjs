@@ -65,6 +65,19 @@ const MIG = {
   ref:      read('supabase/migrations/20260831d_referral_rpcs.sql'),
   ref_acl:  read('supabase/migrations/20260831f_referral_engine_acl.sql'),
   ref_rb:   read('supabase/migrations/20260831y_referral_rollback.sql'),
+  /* Teacher Exams 3b, PREPARED on this branch and not yet applied. Unlike d,
+     attn and ref, these create tables OF THEIR OWN rather than reading someone
+     else's, so they go into FORWARD and are held to the foundation's blanket
+     academic ban — which is the strongest statement available that
+     teacher-authored exam content never touches the platform catalogue or the
+     analyzer. That only works because their executable SQL names no academic
+     table: the four validators they share (exam_stimulus_shape_ok,
+     exam_stimulus_spec_ok, exam_question_choices_ok, exam_question_answer_ok)
+     are functions, and \b-anchored `exam_questions` does not match inside
+     `teacher_exam_questions`. */
+  te_c:     read('supabase/migrations/20260901c_teacher_exam_tables.sql'),
+  te_d:     read('supabase/migrations/20260901d_teacher_exam_rls.sql'),
+  te_rb:    read('supabase/migrations/20260901x_teacher_exam_rollback.sql'),
 };
 const PAGE = read('teacher.html');
 const SETTINGS = read('settings.html');
@@ -79,7 +92,7 @@ const exec = (sql) => sql
   .join('\n');
 
 const EXEC = Object.fromEntries(Object.entries(MIG).map(([k, v]) => [k, exec(v)]));
-const FORWARD = [EXEC.a, EXEC.b, EXEC.c].join('\n');
+const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d].join('\n');
 /* Migration d is the FIRST deliberate academic read, so it is held to a
    different, narrower contract than the foundation — see section 9. Keeping it
    out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
@@ -104,10 +117,21 @@ const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATT
 /* Rollback is split across two files by design: x drops what g created, then z
    drops the foundation it hung from. Completeness has to be checked against
    both, or adding a second rollback file would silently weaken the check. */
-const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb + '\n' + EXEC.ref_rb;
+const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb + '\n' + EXEC.ref_rb
+                   + '\n' + EXEC.te_rb;
 
 // The four tables this system is allowed to create and touch.
-const OWN_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];
+const FOUNDATION_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];
+/* Teacher Exams 3b. Kept as a SEPARATE list, not folded into the one above,
+   because section 6 asserts each table's RLS and grants against the specific
+   migration that governs it — the foundation's live in a/b, these in te_c/te_d.
+   Merging the lists would make those assertions look for teacher_exams in
+   20260830a and quietly pass or fail for the wrong reason. */
+const EXAM_TABLES = ['teacher_exams', 'teacher_exam_stimuli', 'teacher_exam_questions',
+                     'teacher_exam_access', 'teacher_exam_attempts', 'teacher_exam_responses'];
+/* The union is what the academic boundary means by "this system's own tables":
+   a policy or a foreign key landing anywhere else is the breach. */
+const OWN_TABLES = [...FOUNDATION_TABLES, ...EXAM_TABLES];
 
 // ══ 1 · ACADEMIC BOUNDARY ═════════════════════════════════════════════════
 t.section('Academic boundary — no teacher path into a student\'s learning record');
@@ -218,12 +242,18 @@ t.ok('workspace_is_owner() is the owner column, not a staff row',
 // ══ 6 · PRIVILEGES ════════════════════════════════════════════════════════
 t.section('Privileges — SELECT only for clients, every function stated');
 
-for (const tbl of OWN_TABLES) {
-  t.ok(`${tbl}: RLS is enabled`, new RegExp(`alter table ${tbl}\\s+enable row level security`, 'i').test(EXEC.a));
-  t.ok(`${tbl}: anon and authenticated are stripped first`,
-    new RegExp(`revoke all on table ${tbl}\\s+from anon, authenticated`, 'i').test(EXEC.b));
-  t.ok(`${tbl}: authenticated gets SELECT and nothing else`,
-    new RegExp(`grant select on table ${tbl}\\s+to authenticated`, 'i').test(EXEC.b));
+for (const [tables, rlsIn, grantsIn, where] of [
+  [FOUNDATION_TABLES, EXEC.a, EXEC.b, '20260830a/b'],
+  [EXAM_TABLES, EXEC.te_d, EXEC.te_d, '20260901d'],
+]) {
+  for (const tbl of tables) {
+    t.ok(`${tbl}: RLS is enabled (${where})`,
+      new RegExp(`alter table ${tbl}\\s+enable row level security`, 'i').test(rlsIn));
+    t.ok(`${tbl}: anon and authenticated are stripped first (${where})`,
+      new RegExp(`revoke all on table ${tbl}\\s+from anon, authenticated`, 'i').test(grantsIn));
+    t.ok(`${tbl}: authenticated gets SELECT and nothing else (${where})`,
+      new RegExp(`grant select on table ${tbl}\\s+to authenticated`, 'i').test(grantsIn));
+  }
 }
 t.is('no write verb is granted to a client role',
   [...ALL_FORWARD.matchAll(/grant\s+(insert|update|delete|truncate)[^;]*to\s+(anon|authenticated)/gi)].map((m) => m[0]), []);
@@ -252,11 +282,11 @@ t.ok('no inline is_admin predicate is copied in',
 // ══ 7 · ROLLBACK ══════════════════════════════════════════════════════════
 t.section('Rollback — written now, and complete');
 
-const madeTables = [...EXEC.a.matchAll(/create table ([a-z_]+)/gi)].map((m) => m[1]);
+const madeTables = [...(EXEC.a + '\n' + EXEC.te_c).matchAll(/create table ([a-z_]+)/gi)].map((m) => m[1]);
 const madeTypes = [...EXEC.a.matchAll(/create type ([a-z_]+)/gi)].map((m) => m[1]);
-t.ok('tables and types are created (not vacuous)', madeTables.length === 4 && madeTypes.length === 4);
+t.ok('tables and types are created (not vacuous)', madeTables.length === 10 && madeTypes.length === 4);
 t.is('every table is dropped by the rollback',
-  madeTables.filter((x) => !new RegExp(`drop table if exists ${x}\\b`, 'i').test(EXEC.z)), []);
+  madeTables.filter((x) => !new RegExp(`drop table if exists ${x}\\b`, 'i').test(EXEC.z + '\n' + EXEC.te_rb)), []);
 t.is('every type is dropped by the rollback',
   madeTypes.filter((x) => !new RegExp(`drop type if exists ${x}\\b`, 'i').test(EXEC.z)), []);
 t.is('every function is dropped by the rollback',
