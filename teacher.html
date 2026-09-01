@@ -290,6 +290,7 @@ input,select{font-family:inherit}
   <a class="nav-item" href="progress.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
   <div class="side-sec">Teaching</div>
   <a class="nav-item active" href="teacher.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>Teacher Workspace</a>
+  <a class="nav-item" href="teacher-exams.html" id="sideExamsLink" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>Teacher Exams</a>
   <a class="nav-item" href="partner.html" id="sidePartnerLink" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Partner Program</a>
   <div class="side-sec">Account</div>
   <a class="nav-item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
@@ -887,7 +888,11 @@ async function renderWorkspace() {
   renderNeedsYou();
   renderAttention();
   renderReferrals();
-  // The Partner Program page is the teacher's, not the assistant's.
+  // Teacher Exams is for BOTH: academic parity is a locked decision, and
+  // renderWorkspace() is only reached by ACTIVE staff, so no role test belongs
+  // here. The Partner Program below is the contrast — that one is the
+  // teacher's alone, because an assistant earns no commission.
+  $('sideExamsLink').style.display = '';
   if (S.isTeacher) $('sidePartnerLink').style.display = '';
 }
 

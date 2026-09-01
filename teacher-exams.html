@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Teacher Exams — Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" referrerpolicy="no-referrer"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" referrerpolicy="no-referrer"></script>
+<!-- THE renderer. The same file the student player uses, so what a teacher sees
+     in Preview is what a student will see, and a second drawing implementation
+     can never drift from the first. -->
+<script src="stimulus-view.js"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-bg-soft:rgba(56,189,248,.1);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;
+  --font-body:'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-200);font-family:var(--font-body);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--cyan)}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+.page-title{font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--text-100);letter-spacing:-.02em}
+.page-sub{color:var(--text-400);font-size:14px;margin-top:4px}
+.head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
+.card h3{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-100);margin:0 0 12px}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--cyan-border);
+  background:var(--cyan-bg-soft);color:var(--cyan);border-radius:var(--r-sm);padding:9px 15px;
+  font:600 13.5px/1 var(--font-body);cursor:pointer}
+.btn:hover{background:rgba(56,189,248,.18)}
+.btn.ghost{background:transparent;border-color:var(--border-mid);color:var(--text-300)}
+.btn.danger{background:var(--red-soft);border-color:var(--red-border);color:var(--red)}
+.btn.go{background:var(--green-soft);border-color:var(--green-border);color:var(--green)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{display:block;font-size:12px;font-weight:600;color:var(--text-400);
+  text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+input,select,textarea{width:100%;background:var(--bg-elev-1);border:1px solid var(--border-mid);
+  color:var(--text-100);border-radius:var(--r-sm);padding:10px 12px;font:400 14px/1.5 var(--font-body)}
+textarea{min-height:90px;resize:vertical;font-family:var(--font-mono);font-size:12.5px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.field{margin-bottom:14px}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font:700 11px/1.6 var(--font-body);
+  text-transform:uppercase;letter-spacing:.06em}
+.pill.draft{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+.pill.published{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.pill.closed{background:rgba(120,140,170,.12);color:var(--text-400);border:1px solid var(--border-mid)}
+.pill.pending{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+.pill.approved{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.pill.rejected,.pill.revoked{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+.pill.outsider{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+.tile{display:flex;align-items:center;gap:12px;background:var(--bg-elev-1);border:1px solid var(--border-soft);
+  border-radius:var(--r-md);padding:14px 16px;margin-bottom:10px;cursor:pointer}
+.tile:hover{border-color:var(--cyan-border-soft);background:var(--bg-card-hi)}
+.tile .nm{display:block;font-weight:700;color:var(--text-100);font-size:15px}
+.tile .mt{display:block;color:var(--text-400);font-size:12.5px;margin-top:2px}
+.code{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--cyan);letter-spacing:.16em}
+.empty{text-align:center;padding:34px 18px;color:var(--text-400)}
+.empty .big{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--text-200);margin-bottom:6px}
+.q{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:14px 16px;margin-bottom:10px}
+.q .qh{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.q .ord{font-family:var(--font-mono);font-weight:700;color:var(--cyan);font-size:13px}
+.msg{margin-top:10px;padding:9px 12px;border-radius:var(--r-sm);font-size:13px;display:none}
+.msg.on{display:block}
+.msg.ok{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.msg.err{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+table.q-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+table.q-tbl th,table.q-tbl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border-soft)}
+table.q-tbl th{color:var(--text-400);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.prev{background:var(--bg-elev-2);border:1px dashed var(--cyan-border-soft);border-radius:var(--r-md);
+  padding:16px;margin-top:12px}
+.prev-h{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin-bottom:8px}
+.sv-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0}
+.sv-table th,.sv-table td{border:1px solid var(--border-mid);padding:6px 9px;text-align:left}
+.sv-note{color:var(--text-400);font-size:12.5px;font-style:italic}
+.sv-label{font-weight:700;color:var(--text-200);font-size:13px;margin-bottom:4px}
+.sv-dot-on{fill:currentColor}.sv-dot-off{fill:var(--bg)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div style="flex:1;min-width:240px">
+      <div class="page-title">Teacher Exams</div>
+      <div class="page-sub" id="subLine">Papers you set for your own class.</div>
+    </div>
+    <a class="btn ghost" href="teacher.html">← Teaching</a>
+  </div>
+
+  <div id="loadingState" class="card"><div class="empty">Loading…</div></div>
+
+  <div id="denyState" class="card hide">
+    <div class="empty">
+      <div class="big">This page is for teachers and their assistants</div>
+      <div>You are not active staff of any class. If your teacher has invited you,
+           the invitation has to be activated by them first.</div>
+    </div>
+  </div>
+
+  <!-- ── LIST ─────────────────────────────────────────────────────── -->
+  <div id="listState" class="hide">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div style="flex:1;min-width:200px">
+          <label for="wsPick">Class</label>
+          <select id="wsPick"></select>
+        </div>
+        <button class="btn" id="btnNew" style="align-self:flex-end">+ New exam</button>
+      </div>
+      <div class="msg" id="listMsg"></div>
+    </div>
+    <div class="card">
+      <h3>Exams</h3>
+      <div id="examList"></div>
+    </div>
+  </div>
+
+  <!-- ── ONE EXAM ─────────────────────────────────────────────────── -->
+  <div id="examState" class="hide">
+    <div class="row" style="justify-content:space-between;margin-bottom:14px">
+      <button class="btn ghost sm" id="btnBack">← All exams</button>
+      <span class="pill" id="exStatus">draft</span>
+    </div>
+
+    <div class="card" id="metaCard">
+      <h3>The paper</h3>
+      <div class="field"><label for="fTitle">Title</label><input id="fTitle" maxlength="200"/></div>
+      <div class="field"><label for="fInstr">Instructions for the student (optional)</label>
+        <textarea id="fInstr" maxlength="4000" style="min-height:64px;font-family:var(--font-body);font-size:14px"></textarea></div>
+      <div class="grid2">
+        <div class="field"><label for="fDur">Duration (minutes)</label><input id="fDur" type="number" min="1" max="600"/></div>
+        <div class="field"><label for="fCalc">Calculator</label>
+          <select id="fCalc"><option value="true">Allowed</option><option value="false">Not allowed</option></select></div>
+        <div class="field"><label for="fOpens">Opens (optional)</label><input id="fOpens" type="datetime-local"/></div>
+        <div class="field"><label for="fCloses">Closes (optional)</label><input id="fCloses" type="datetime-local"/></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnSaveMeta">Save</button>
+        <button class="btn danger sm" id="btnDelete">Delete draft</button>
+      </div>
+      <div class="msg" id="metaMsg"></div>
+    </div>
+
+    <div class="card" id="stimCard">
+      <h3>Figures and data</h3>
+      <div class="page-sub" style="margin:-6px 0 12px">
+        A figure can be shared by several questions in this exam. Preview shows exactly what the student will see.
+      </div>
+      <div id="stimList"></div>
+      <div class="grid2">
+        <div class="field"><label for="sKind">Kind</label>
+          <select id="sKind">
+            <option value="text">Text</option><option value="table">Table</option>
+            <option value="chart">Chart</option><option value="plot">Plot / graph</option>
+            <option value="number_line">Number line</option><option value="figure">Figure (SVG)</option>
+          </select></div>
+        <div class="field"><label for="sLabel">Label (optional)</label><input id="sLabel" maxlength="200"/></div>
+      </div>
+      <div class="field" id="sBodyWrap"><label for="sBody">Text</label>
+        <textarea id="sBody" style="font-family:var(--font-body);font-size:14px"></textarea></div>
+      <div class="field hide" id="sSpecWrap"><label for="sSpec">Spec (JSON)</label>
+        <textarea id="sSpec" spellcheck="false"></textarea></div>
+      <div class="field hide" id="sFileWrap"><label for="sFile">SVG file</label><input id="sFile" type="file" accept=".svg,image/svg+xml"/></div>
+      <div class="row">
+        <button class="btn" id="btnPreviewStim">Preview</button>
+        <button class="btn go" id="btnSaveStim">Add figure</button>
+        <button class="btn ghost sm" id="btnCancelStim">Cancel edit</button>
+      </div>
+      <div class="msg" id="stimMsg"></div>
+      <div class="prev hide" id="stimPrev"><div class="prev-h">Preview — as the student sees it</div><div id="stimPrevBody"></div></div>
+    </div>
+
+    <div class="card" id="qCard">
+      <h3>Questions</h3>
+      <div id="qList"></div>
+      <div class="grid2">
+        <div class="field"><label for="qFmt">Format</label>
+          <select id="qFmt"><option value="mcq">Multiple choice</option><option value="grid_in">Grid-in</option></select></div>
+        <div class="field"><label for="qStim">Figure</label><select id="qStim"><option value="">None</option></select></div>
+      </div>
+      <div class="field"><label for="qPrompt">Question</label>
+        <textarea id="qPrompt" style="font-family:var(--font-body);font-size:14px"></textarea></div>
+      <div class="grid2 hide" id="qChoiceWrap">
+        <div class="field"><label for="qA">A</label><input id="qA"/></div>
+        <div class="field"><label for="qB">B</label><input id="qB"/></div>
+        <div class="field"><label for="qC">C</label><input id="qC"/></div>
+        <div class="field"><label for="qD">D</label><input id="qD"/></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="qAns">Correct answer</label><input id="qAns" maxlength="20"/></div>
+        <div class="field"><label for="qExpl">Explanation (staff only, optional)</label><input id="qExpl"/></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnPreviewQ">Preview</button>
+        <button class="btn go" id="btnSaveQ">Add question</button>
+        <button class="btn ghost sm" id="btnCancelQ">Cancel edit</button>
+      </div>
+      <div class="msg" id="qMsg"></div>
+      <div class="prev hide" id="qPrev"><div class="prev-h">Preview — the answer key is never shown to a student</div><div id="qPrevBody"></div></div>
+    </div>
+
+    <div class="card" id="publishCard">
+      <h3>Publishing</h3>
+      <div id="pubHint" class="page-sub" style="margin:-6px 0 12px"></div>
+      <div class="row">
+        <button class="btn go" id="btnPublish">Publish</button>
+        <button class="btn danger sm" id="btnClose">Close exam</button>
+      </div>
+      <div class="msg" id="pubMsg"></div>
+    </div>
+
+    <div class="card hide" id="codeCard">
+      <h3>Exam code</h3>
+      <div class="page-sub" style="margin:-6px 0 12px">
+        Give this to the students who should sit the paper. The code by itself grants nothing —
+        it puts a request in the queue below, and you decide.
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="code" id="exCode">--------</span>
+        <div class="row">
+          <button class="btn ghost sm" id="btnCopyCode">Copy</button>
+          <button class="btn ghost sm" id="btnRotate">Rotate</button>
+        </div>
+      </div>
+      <div class="msg" id="codeMsg"></div>
+    </div>
+
+    <div class="card hide" id="reqCard">
+      <h3>Access requests</h3>
+      <div id="reqList"></div>
+      <div class="row" id="bulkRow" style="margin-top:10px">
+        <button class="btn sm" id="btnApproveAll">Approve everyone in this class</button>
+      </div>
+      <div class="msg" id="reqMsg"></div>
+    </div>
+
+    <div class="card hide" id="resCard">
+      <h3>Results</h3>
+      <div id="resList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+/* Guarded rather than `supabase.createClient(...)` outright, for the same reason
+   teacher.html and partner.html guard it: if the CDN bundle fails to load, the
+   bare form throws on the first line and takes the whole page with it. */
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function say(el, text, kind) { el.className = 'msg on ' + (kind || 'ok'); el.textContent = text; }
+function clearMsg(el) { el.className = 'msg'; el.textContent = ''; }
+/* KaTeX where it loaded; where it did not, the text still reads. */
+function math(el) {
+  if (!window.renderMathInElement) return;
+  try {
+    window.renderMathInElement(el, {
+      delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],
+      throwOnError: false,
+    });
+  } catch (_) {}
+}
+const S = { ws: null, staff: [], exam: null, questions: [], stimuli: [],
+            editStim: null, editQ: null };
+
+/* ── the only place the database is reached ──────────────────────────────
+   Reads go straight to the tables, which is what 3b's staff-read policies are
+   for; every WRITE is an RPC, because no client role holds a write privilege
+   on any of these tables and none ever should. */
+const api = {
+  workspaces: () => sb.rpc('teacher_my_workspaces'),
+  exams:     (ws) => sb.from('teacher_exams').select('*').eq('workspace_id', ws)
+                       .order('created_at', { ascending: false }),
+  exam:      (id) => sb.from('teacher_exams').select('*').eq('id', id).maybeSingle(),
+  questions: (id) => sb.from('teacher_exam_questions').select('*').eq('exam_id', id)
+                       .order('ordinal', { ascending: true }),
+  stimuli:   (id) => sb.from('teacher_exam_stimuli').select('*').eq('exam_id', id)
+                       .order('created_at', { ascending: true }),
+  create:  (ws, t, d, c) => sb.rpc('teacher_exam_create',
+              { p_workspace: ws, p_title: t, p_duration_minutes: d, p_calculator_allowed: c }),
+  update:  (p) => sb.rpc('teacher_exam_update', p),
+  del:     (id) => sb.rpc('teacher_exam_delete', { p_exam: id }),
+  saveStim:(p) => sb.rpc('teacher_exam_save_stimulus', p),
+  delStim: (id) => sb.rpc('teacher_exam_delete_stimulus', { p_stimulus: id }),
+  saveQ:   (p) => sb.rpc('teacher_exam_save_question', p),
+  delQ:    (id) => sb.rpc('teacher_exam_delete_question', { p_question: id }),
+  reorder: (id, ids) => sb.rpc('teacher_exam_reorder_questions',
+              { p_exam: id, p_question_ids: ids }),
+  publish: (id) => sb.rpc('teacher_exam_publish', { p_exam: id }),
+  closeEx: (id) => sb.rpc('teacher_exam_close', { p_exam: id }),
+  rotate:  (id) => sb.rpc('teacher_exam_rotate_code', { p_exam: id }),
+  requests:(id) => sb.rpc('teacher_exam_requests', { p_exam: id }),
+  decide:  (id, stu, st) => sb.rpc('teacher_exam_decide_access',
+              { p_exam: id, p_student: stu, p_state: st }),
+  approveMembers: (id, ids) => sb.rpc('teacher_exam_approve_members',
+              { p_exam: id, p_students: ids }),
+  results: (id) => sb.rpc('teacher_exam_results', { p_exam: id }),
+};
+
+function show(which) {
+  ['loadingState','denyState','listState','examState'].forEach((s) => {
+    $(s).classList.toggle('hide', s !== which);
+  });
+}
+const localDT = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate())
+       + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+};
+const toISO = (v) => (v ? new Date(v).toISOString() : null);
+
+/* ── list ─────────────────────────────────────────────────────────────── */
+async function loadExams() {
+  const { data, error } = await api.exams(S.ws);
+  if (error) { say($('listMsg'), 'Could not load exams.', 'err'); return; }
+  const rows = data || [];
+  if (!rows.length) {
+    $('examList').innerHTML = '<div class="empty"><div class="big">No exams yet</div>'
+      + '<div>Create one, add the questions, then publish it. Nothing is visible to a student '
+      + 'until you publish and approve their request.</div></div>';
+    return;
+  }
+  $('examList').innerHTML = rows.map((e) =>
+    '<div class="tile" data-exam="' + esc(e.id) + '">'
+    + '<div style="flex:1"><span class="nm">' + esc(e.title) + '</span>'
+    + '<span class="mt">' + e.duration_minutes + ' min'
+    + (e.status === 'draft' ? '' : ' · code ' + esc(e.exam_code)) + '</span></div>'
+    + '<span class="pill ' + esc(e.status) + '">' + esc(e.status) + '</span></div>').join('');
+  $('examList').querySelectorAll('[data-exam]').forEach((el) => {
+    el.addEventListener('click', () => openExam(el.getAttribute('data-exam')));
+  });
+}
+
+/* ── one exam ─────────────────────────────────────────────────────────── */
+async function openExam(id) {
+  show('examState');
+  const { data: e } = await api.exam(id);
+  if (!e) { show('listState'); return; }
+  S.exam = e;
+  const draft = e.status === 'draft';
+  $('exStatus').className = 'pill ' + esc(e.status);
+  $('exStatus').textContent = e.status;
+  $('fTitle').value = e.title || '';
+  $('fInstr').value = e.instructions || '';
+  $('fDur').value = e.duration_minutes;
+  $('fCalc').value = String(!!e.calculator_allowed);
+  $('fOpens').value = localDT(e.opens_at);
+  $('fCloses').value = localDT(e.closes_at);
+  ['fTitle','fInstr','fDur','fCalc','fOpens','fCloses'].forEach((f) => { $(f).disabled = !draft; });
+  $('btnSaveMeta').disabled = !draft;
+  $('btnDelete').classList.toggle('hide', !draft);
+  $('stimCard').classList.toggle('hide', !draft);
+  $('qCard').classList.toggle('hide', !draft);
+  $('btnPublish').classList.toggle('hide', !draft);
+  $('btnClose').classList.toggle('hide', e.status !== 'published');
+  $('publishCard').classList.toggle('hide', e.status === 'closed');
+  $('codeCard').classList.toggle('hide', draft);
+  $('reqCard').classList.toggle('hide', draft);
+  $('resCard').classList.toggle('hide', draft);
+  $('btnRotate').classList.toggle('hide', e.status !== 'published');
+  $('exCode').textContent = e.exam_code || '--------';
+  [ 'metaMsg','stimMsg','qMsg','pubMsg','codeMsg','reqMsg' ].forEach((m) => clearMsg($(m)));
+
+  await Promise.all([loadStimuli(), loadQuestions()]);
+  if (!draft) { await loadRequests(); await loadResults(); }
+  updatePublishHint();
+}
+
+function updatePublishHint() {
+  if (!S.exam || S.exam.status !== 'draft') { $('pubHint').textContent = ''; return; }
+  const n = S.questions.length;
+  const ords = S.questions.map((q) => q.ordinal);
+  const contiguous = n > 0 && Math.min.apply(null, ords) === 1 && Math.max.apply(null, ords) === n;
+  $('pubHint').textContent = n === 0
+    ? 'Add at least one question before publishing.'
+    : (contiguous
+        ? n + ' question' + (n === 1 ? '' : 's') + ', numbered 1 to ' + n
+          + '. Once published the paper is fixed — only the code and the closing time can change.'
+        : 'Question numbers must run 1 to ' + n + ' with no gaps.');
+}
+
+/* ── stimuli ──────────────────────────────────────────────────────────── */
+async function loadStimuli() {
+  const { data } = await api.stimuli(S.exam.id);
+  S.stimuli = data || [];
+  $('stimList').innerHTML = S.stimuli.length
+    ? S.stimuli.map((s) =>
+        '<div class="q"><div class="qh"><span class="ord">' + esc(s.kind) + '</span>'
+        + '<b>' + esc(s.label || '(no label)') + '</b>'
+        + '<span style="flex:1"></span>'
+        + (S.exam.status === 'draft'
+            ? '<button class="btn ghost sm" data-es="' + esc(s.id) + '">Edit</button>'
+              + '<button class="btn danger sm" data-ds="' + esc(s.id) + '">Delete</button>' : '')
+        + '</div></div>').join('')
+    : '<div class="page-sub" style="margin-bottom:10px">No figures yet.</div>';
+  $('qStim').innerHTML = '<option value="">None</option>'
+    + S.stimuli.map((s) => '<option value="' + esc(s.id) + '">'
+        + esc(s.kind) + ' — ' + esc(s.label || s.id.slice(0, 8)) + '</option>').join('');
+  $('stimList').querySelectorAll('[data-es]').forEach((b) =>
+    b.addEventListener('click', () => editStimulus(b.getAttribute('data-es'))));
+  $('stimList').querySelectorAll('[data-ds]').forEach((b) =>
+    b.addEventListener('click', () => deleteStimulus(b.getAttribute('data-ds'))));
+}
+
+function stimulusFromForm() {
+  const kind = $('sKind').value;
+  const st = { kind: kind, label: $('sLabel').value.trim() || null,
+               body: null, spec: null, media_ref: null };
+  if (kind === 'text') st.body = $('sBody').value;
+  else if (kind === 'figure') st.media_ref = S.pendingSvg || null;
+  else {
+    try { st.spec = JSON.parse($('sSpec').value || 'null'); }
+    catch (err) { throw new Error('The spec is not valid JSON.'); }
+  }
+  return st;
+}
+
+function syncStimulusForm() {
+  const k = $('sKind').value;
+  $('sBodyWrap').classList.toggle('hide', k !== 'text');
+  $('sSpecWrap').classList.toggle('hide', k === 'text' || k === 'figure');
+  $('sFileWrap').classList.toggle('hide', k !== 'figure');
+}
+
+function previewStimulus() {
+  clearMsg($('stimMsg'));
+  let st;
+  try { st = stimulusFromForm(); }
+  catch (e) { say($('stimMsg'), e.message, 'err'); return; }
+  $('stimPrev').classList.remove('hide');
+  $('stimPrevBody').innerHTML = window.StimulusView
+    ? window.StimulusView.render(st)
+    : '<div class="sv-note">The renderer did not load. Reload the page.</div>';
+  math($('stimPrevBody'));
+}
+
+async function saveStimulus() {
+  clearMsg($('stimMsg'));
+  let st;
+  try { st = stimulusFromForm(); }
+  catch (e) { say($('stimMsg'), e.message, 'err'); return; }
+  const { data, error } = await api.saveStim({
+    p_exam: S.exam.id, p_stimulus: S.editStim, p_kind: st.kind, p_label: st.label,
+    p_body: st.body, p_spec: st.spec, p_media_ref: st.media_ref });
+  if (error) { say($('stimMsg'), error.message, 'err'); return; }
+  say($('stimMsg'), S.editStim ? 'Figure updated.' : 'Figure added.', 'ok');
+  cancelStimulusEdit();
+  await loadStimuli();
+}
+
+function editStimulus(id) {
+  const s = S.stimuli.find((x) => x.id === id);
+  if (!s) return;
+  S.editStim = id;
+  $('sKind').value = s.kind;
+  $('sLabel').value = s.label || '';
+  $('sBody').value = s.body || '';
+  $('sSpec').value = s.spec ? JSON.stringify(s.spec, null, 2) : '';
+  S.pendingSvg = s.media_ref || null;
+  syncStimulusForm();
+  $('btnSaveStim').textContent = 'Save figure';
+  say($('stimMsg'), 'Editing "' + (s.label || s.kind) + '".', 'ok');
+}
+
+function cancelStimulusEdit() {
+  S.editStim = null; S.pendingSvg = null;
+  $('sLabel').value = ''; $('sBody').value = ''; $('sSpec').value = ''; $('sFile').value = '';
+  $('btnSaveStim').textContent = 'Add figure';
+  $('stimPrev').classList.add('hide');
+}
+
+async function deleteStimulus(id) {
+  const { error } = await api.delStim(id);
+  if (error) { say($('stimMsg'), error.message, 'err'); return; }
+  say($('stimMsg'), 'Figure deleted.', 'ok');
+  await loadStimuli();
+}
+
+/* ── questions ────────────────────────────────────────────────────────── */
+async function loadQuestions() {
+  const { data } = await api.questions(S.exam.id);
+  S.questions = data || [];
+  const draft = S.exam.status === 'draft';
+  $('qList').innerHTML = S.questions.length
+    ? S.questions.map((q, i) =>
+        '<div class="q"><div class="qh"><span class="ord">' + q.ordinal + '</span>'
+        + '<span class="pill ' + (q.question_format === 'mcq' ? 'approved' : 'pending') + '">'
+        + (q.question_format === 'mcq' ? 'MCQ' : 'Grid-in') + '</span>'
+        + '<span style="flex:1"></span>'
+        + (draft
+            ? (i > 0 ? '<button class="btn ghost sm" data-up="' + esc(q.id) + '">↑</button>' : '')
+              + (i < S.questions.length - 1 ? '<button class="btn ghost sm" data-dn="' + esc(q.id) + '">↓</button>' : '')
+              + '<button class="btn ghost sm" data-eq="' + esc(q.id) + '">Edit</button>'
+              + '<button class="btn danger sm" data-dq="' + esc(q.id) + '">Delete</button>' : '')
+        + '</div><div class="qp">' + esc(q.prompt) + '</div></div>').join('')
+    : '<div class="page-sub" style="margin-bottom:10px">No questions yet.</div>';
+  $('qList').querySelectorAll('.qp').forEach(math);
+  $('qList').querySelectorAll('[data-eq]').forEach((b) =>
+    b.addEventListener('click', () => editQuestion(b.getAttribute('data-eq'))));
+  $('qList').querySelectorAll('[data-dq]').forEach((b) =>
+    b.addEventListener('click', () => deleteQuestion(b.getAttribute('data-dq'))));
+  $('qList').querySelectorAll('[data-up]').forEach((b) =>
+    b.addEventListener('click', () => move(b.getAttribute('data-up'), -1)));
+  $('qList').querySelectorAll('[data-dn]').forEach((b) =>
+    b.addEventListener('click', () => move(b.getAttribute('data-dn'), 1)));
+  updatePublishHint();
+}
+
+function questionFromForm() {
+  const fmt = $('qFmt').value;
+  let choices = null;
+  if (fmt === 'mcq') {
+    const t = ['qA','qB','qC','qD'].map((f) => $(f).value.trim());
+    if (t.some((x) => !x)) throw new Error('A multiple-choice question needs all four options.');
+    choices = ['A','B','C','D'].map((id, i) => ({ id: id, text: t[i] }));
+  }
+  return { fmt: fmt, choices: choices, prompt: $('qPrompt').value,
+           ans: $('qAns').value.trim(), expl: $('qExpl').value.trim() || null,
+           stim: $('qStim').value || null };
+}
+
+function previewQuestion() {
+  clearMsg($('qMsg'));
+  let q;
+  try { q = questionFromForm(); } catch (e) { say($('qMsg'), e.message, 'err'); return; }
+  const st = S.stimuli.find((s) => s.id === q.stim);
+  $('qPrev').classList.remove('hide');
+  $('qPrevBody').innerHTML =
+    (st && window.StimulusView ? window.StimulusView.render(st) : '')
+    + '<div style="margin:10px 0;color:var(--text-100)">' + esc(q.prompt) + '</div>'
+    + (q.choices
+        ? q.choices.map((c) => '<div style="margin:4px 0">'
+            + '<b style="color:var(--cyan)">' + esc(c.id) + '</b> &nbsp;' + esc(c.text) + '</div>').join('')
+        : '<div class="sv-note">Grid-in — the student types a value.</div>');
+  math($('qPrevBody'));
+}
+
+async function saveQuestion() {
+  clearMsg($('qMsg'));
+  let q;
+  try { q = questionFromForm(); } catch (e) { say($('qMsg'), e.message, 'err'); return; }
+  const ordinal = S.editQ
+    ? (S.questions.find((x) => x.id === S.editQ) || {}).ordinal
+    : S.questions.length + 1;
+  const { error } = await api.saveQ({
+    p_exam: S.exam.id, p_question: S.editQ, p_ordinal: ordinal, p_prompt: q.prompt,
+    p_format: q.fmt, p_correct_answer: q.ans, p_choices: q.choices,
+    p_explanation: q.expl, p_stimulus: q.stim });
+  if (error) { say($('qMsg'), error.message, 'err'); return; }
+  say($('qMsg'), S.editQ ? 'Question updated.' : 'Question added.', 'ok');
+  cancelQuestionEdit();
+  await loadQuestions();
+}
+
+function editQuestion(id) {
+  const q = S.questions.find((x) => x.id === id);
+  if (!q) return;
+  S.editQ = id;
+  $('qFmt').value = q.question_format;
+  $('qPrompt').value = q.prompt;
+  $('qAns').value = q.correct_answer || '';
+  $('qExpl').value = q.explanation || '';
+  $('qStim').value = q.stimulus_id || '';
+  const ch = q.choices || [];
+  ['qA','qB','qC','qD'].forEach((f, i) => { $(f).value = ch[i] ? ch[i].text : ''; });
+  syncQuestionForm();
+  $('btnSaveQ').textContent = 'Save question';
+  say($('qMsg'), 'Editing question ' + q.ordinal + '.', 'ok');
+}
+
+function cancelQuestionEdit() {
+  S.editQ = null;
+  ['qPrompt','qAns','qExpl','qA','qB','qC','qD'].forEach((f) => { $(f).value = ''; });
+  $('qStim').value = '';
+  $('btnSaveQ').textContent = 'Add question';
+  $('qPrev').classList.add('hide');
+}
+
+function syncQuestionForm() { $('qChoiceWrap').classList.toggle('hide', $('qFmt').value !== 'mcq'); }
+
+async function deleteQuestion(id) {
+  const { error } = await api.delQ(id);
+  if (error) { say($('qMsg'), error.message, 'err'); return; }
+  say($('qMsg'), 'Question deleted, and the numbering closed up.', 'ok');
+  await loadQuestions();
+}
+
+/* Reordering sends the WHOLE list, because that is what the RPC requires: a
+   partial list would leave questions behind at their old numbers and produce
+   exactly the state publish refuses. */
+async function move(id, delta) {
+  const ids = S.questions.map((q) => q.id);
+  const i = ids.indexOf(id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  ids[i] = ids[j]; ids[j] = id;
+  const { error } = await api.reorder(S.exam.id, ids);
+  if (error) { say($('qMsg'), error.message, 'err'); return; }
+  await loadQuestions();
+}
+
+/* ── publish / close / rotate ─────────────────────────────────────────── */
+async function doPublish() {
+  clearMsg($('pubMsg'));
+  const { data, error } = await api.publish(S.exam.id);
+  if (error) { say($('pubMsg'), error.message, 'err'); return; }
+  say($('pubMsg'), 'Published. The exam code is below — the paper is now fixed.', 'ok');
+  await openExam(S.exam.id);
+  void data;
+}
+
+async function doClose() {
+  clearMsg($('pubMsg'));
+  const { error } = await api.closeEx(S.exam.id);
+  if (error) { say($('pubMsg'), error.message, 'err'); return; }
+  await openExam(S.exam.id);
+}
+
+async function doRotate() {
+  clearMsg($('codeMsg'));
+  const { data, error } = await api.rotate(S.exam.id);
+  if (error) { say($('codeMsg'), error.message, 'err'); return; }
+  $('exCode').textContent = data;
+  S.exam.exam_code = data;
+  say($('codeMsg'), 'New code. The old one stops working — requests already decided are untouched.', 'ok');
+}
+
+/* ── requests ─────────────────────────────────────────────────────────── */
+async function loadRequests() {
+  const { data, error } = await api.requests(S.exam.id);
+  if (error) { $('reqList').innerHTML = '<div class="page-sub">Could not load requests.</div>'; return; }
+  const rows = data || [];
+  if (!rows.length) {
+    $('reqList').innerHTML = '<div class="empty"><div class="big">No requests yet</div>'
+      + '<div>Students who enter the code will appear here for you to approve.</div></div>';
+    $('bulkRow').classList.add('hide');
+    return;
+  }
+  $('bulkRow').classList.toggle('hide', !rows.some((r) => r.state === 'pending' && r.is_member_now));
+  $('reqList').innerHTML = '<table class="q-tbl"><thead><tr><th>Student</th><th>In this class</th>'
+    + '<th>State</th><th></th></tr></thead><tbody>'
+    + rows.map((r) =>
+        '<tr><td>' + esc(r.full_name) + '</td>'
+        + '<td>' + (r.is_member_now
+            ? '<span class="pill approved">member</span>'
+            : '<span class="pill outsider">not in this class</span>') + '</td>'
+        + '<td><span class="pill ' + esc(r.state) + '">' + esc(r.state) + '</span></td>'
+        + '<td style="text-align:right">'
+        + (r.state !== 'approved'
+            ? '<button class="btn go sm" data-ap="' + esc(r.student_id) + '">Approve</button> ' : '')
+        + (r.state === 'pending'
+            ? '<button class="btn danger sm" data-rj="' + esc(r.student_id) + '">Reject</button>' : '')
+        + (r.state === 'approved'
+            ? '<button class="btn danger sm" data-rv="' + esc(r.student_id) + '">Revoke</button>' : '')
+        + '</td></tr>').join('')
+    + '</tbody></table>';
+  const wire = (attr, state) => $('reqList').querySelectorAll('[' + attr + ']').forEach((b) =>
+    b.addEventListener('click', () => decide(b.getAttribute(attr), state)));
+  wire('data-ap', 'approved'); wire('data-rj', 'rejected'); wire('data-rv', 'revoked');
+}
+
+async function decide(student, state) {
+  clearMsg($('reqMsg'));
+  const { error } = await api.decide(S.exam.id, student, state);
+  if (error) { say($('reqMsg'), error.message, 'err'); return; }
+  await loadRequests();
+}
+
+/* Members only, and the RPC enforces that rather than this button: an outsider
+   named in the list is skipped and counted, so "approve everyone" can never
+   sweep one in. */
+async function approveAll() {
+  clearMsg($('reqMsg'));
+  const { data: rows } = await api.requests(S.exam.id);
+  const ids = (rows || []).filter((r) => r.state === 'pending' && r.is_member_now)
+                          .map((r) => r.student_id);
+  if (!ids.length) { say($('reqMsg'), 'Nobody in this class is waiting.', 'ok'); return; }
+  const { data, error } = await api.approveMembers(S.exam.id, ids);
+  if (error) { say($('reqMsg'), error.message, 'err'); return; }
+  say($('reqMsg'), 'Approved ' + data.approved
+      + (data.skipped ? ', skipped ' + data.skipped + ' who are not in this class.' : '.'), 'ok');
+  await loadRequests();
+}
+
+/* ── results ──────────────────────────────────────────────────────────── */
+async function loadResults() {
+  const { data, error } = await api.results(S.exam.id);
+  if (error) { $('resList').innerHTML = '<div class="page-sub">Could not load results.</div>'; return; }
+  const rows = data || [];
+  $('resList').innerHTML = rows.length
+    ? '<table class="q-tbl"><thead><tr><th>Student</th><th>State</th><th>Correct</th>'
+      + '<th>Wrong</th><th>Left blank</th></tr></thead><tbody>'
+      + rows.map((r) => '<tr><td>' + esc(r.full_name) + '</td>'
+          + '<td>' + esc(r.status) + '</td><td>' + r.correct + '</td>'
+          + '<td>' + r.wrong + '</td><td>' + r.omitted + '</td></tr>').join('')
+      + '</tbody></table>'
+    : '<div class="empty"><div class="big">Nobody has sat this yet</div>'
+      + '<div>Results appear as students submit.</div></div>';
+}
+
+/* ── boot ─────────────────────────────────────────────────────────────── */
+async function boot() {
+  if (!sb) { show('denyState'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = 'login.html'; return; }
+
+  const { data, error } = await api.workspaces();
+  // ACTIVE staff only. A pending assistant has applied, not been admitted, and
+  // teacher_my_workspaces() returns their row all the same.
+  S.staff = (data || []).filter((w) => w.staff_status === 'active');
+  if (error || !S.staff.length) { show('denyState'); return; }
+
+  $('wsPick').innerHTML = S.staff.map((w) =>
+    '<option value="' + esc(w.workspace_id) + '">' + esc(w.name) + '</option>').join('');
+  S.ws = S.staff[0].workspace_id;
+  $('subLine').textContent = S.staff.length === 1
+    ? 'Papers you set for ' + S.staff[0].name + '.'
+    : 'Papers you set for your classes.';
+  show('listState');
+  await loadExams();
+}
+
+$('wsPick').addEventListener('change', async () => { S.ws = $('wsPick').value; await loadExams(); });
+$('btnBack').addEventListener('click', async () => { show('listState'); await loadExams(); });
+$('btnNew').addEventListener('click', async () => {
+  clearMsg($('listMsg'));
+  const { data, error } = await api.create(S.ws, 'Untitled exam', 45, true);
+  if (error) { say($('listMsg'), error.message, 'err'); return; }
+  await openExam(data.exam_id);
+});
+$('btnSaveMeta').addEventListener('click', async () => {
+  clearMsg($('metaMsg'));
+  const { error } = await api.update({
+    p_exam: S.exam.id, p_title: $('fTitle').value, p_instructions: $('fInstr').value,
+    p_duration_minutes: Number($('fDur').value), p_calculator_allowed: $('fCalc').value === 'true',
+    p_opens_at: toISO($('fOpens').value), p_closes_at: toISO($('fCloses').value) });
+  if (error) { say($('metaMsg'), error.message, 'err'); return; }
+  say($('metaMsg'), 'Saved.', 'ok');
+  const { data: e } = await api.exam(S.exam.id);
+  S.exam = e || S.exam;
+});
+$('btnDelete').addEventListener('click', async () => {
+  const { error } = await api.del(S.exam.id);
+  if (error) { say($('metaMsg'), error.message, 'err'); return; }
+  show('listState'); await loadExams();
+});
+$('sKind').addEventListener('change', syncStimulusForm);
+$('sFile').addEventListener('change', () => {
+  const f = $('sFile').files && $('sFile').files[0];
+  if (!f) { S.pendingSvg = null; return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    const txt = String(rd.result || '');
+    if (!/<svg/i.test(txt)) { say($('stimMsg'), 'That file does not look like an SVG.', 'err'); return; }
+    // btoa needs latin1; unescape(encodeURIComponent(..)) is the standard
+    // round-trip for UTF-8 source text.
+    try { S.pendingSvg = btoa(unescape(encodeURIComponent(txt))); }
+    catch (_) { say($('stimMsg'), 'That figure could not be encoded.', 'err'); return; }
+    say($('stimMsg'), 'Figure loaded — press Preview to check it.', 'ok');
+  };
+  rd.readAsText(f);
+});
+$('btnPreviewStim').addEventListener('click', previewStimulus);
+$('btnSaveStim').addEventListener('click', saveStimulus);
+$('btnCancelStim').addEventListener('click', cancelStimulusEdit);
+$('qFmt').addEventListener('change', syncQuestionForm);
+$('btnPreviewQ').addEventListener('click', previewQuestion);
+$('btnSaveQ').addEventListener('click', saveQuestion);
+$('btnCancelQ').addEventListener('click', cancelQuestionEdit);
+$('btnPublish').addEventListener('click', doPublish);
+$('btnClose').addEventListener('click', doClose);
+$('btnRotate').addEventListener('click', doRotate);
+$('btnCopyCode').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('exCode').textContent); say($('codeMsg'), 'Code copied.', 'ok'); }
+  catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
+});
+$('btnApproveAll').addEventListener('click', approveAll);
+
+syncStimulusForm();
+syncQuestionForm();
+boot();
+</script>
+</body>
+</html>
