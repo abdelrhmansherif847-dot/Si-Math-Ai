@@ -146,3 +146,51 @@ against a **real student holding 144 canonical weakness reports**:
 **Still not proven:** the browser path (the card is covered by
 `tests/teacher-surface.test.mjs`, not by a signed-in teacher clicking it), and
 anything at scale — every check ran on a roster of one.
+
+## 7 · The stored ids travel with the read — applied and verified, 2026-09-01
+
+`20260901h` applied as `20260901220926` (`teacher_weakness_read_ids`): two
+trailing output columns, `topic_id` and `subtopic_id`, on
+`teacher_student_weaknesses()`, for the class-wide weakness aggregate
+(`teacher-intelligence-layer.md` §15.11, decision b — the aggregate keys on the
+STORED id and must not resolve a label to recover one, and no teacher read
+carried the stored id). The body was generated from `20260830d`, not retyped;
+`tests/teacher-class-patterns.test.mjs` asserts the two differ by exactly the
+two added select lines, 14 of 14 mutants killed.
+
+Verified after apply, against predictions written down before it:
+
+| | Expected | Live |
+|---|---|---|
+| Signature | the ten approved columns, then `topic_id text, subtopic_id text` | exactly that |
+| `pg_get_functiondef()` md5 | `5d69fc5116d3f78416b30d68714c752a`, pre-computed from the file (the same reconstruction reproduces the old function's `889dfaaa…`) | `5d69fc5116d3f78416b30d68714c752a` |
+| ACL | `postgres=X, service_role=X, authenticated=X` — the four other teaching reads | identical; anon and public cannot execute |
+| Posture | SECURITY DEFINER, `search_path=pg_catalog, public`, STABLE, comment re-stated | all present |
+| Every other function (hash excluding this one) | `89e78600…` | `89e78600…` |
+| Policies / constraints / relations | `fad6918e…` / `28193c25…` / `201dde96…` | unchanged |
+| Rows | 225 reports, 893 signals, 5 workspace rows | unchanged |
+
+The `20260830d` contract suite, re-run in one aborted transaction with fixtures
+built through the real RPCs (`staff_join_workspace`, `teacher_set_staff_status`,
+`teacher_create_workspace` as the platform owner, `student_leave_workspace`):
+
+| # | Proven |
+|---|---|
+| 1 | The RPC and the table agree on every field of the real student's rows, the two ids included (2 of 2) |
+| 2 | Null trend travels as null (2 = 2) |
+| 3 | The per-source basis equals the signal table (3 `AI_CHAT`, 0 `MOCK_EXAM`) |
+| 4 | A stranger is refused — `42501` |
+| 5 | A pending assistant is refused; once activated they read the same two rows, both with `subtopic_id` |
+| 6 | The pairing gate: active staff of workspace B who can see the student through A is refused for B — *"that student is not in this workspace"* |
+| 7 | The student disconnects → the teacher is refused — *"no active link to this student"* |
+| 8 | An unlinked student who holds reports is refused |
+| 9 | `anon` cannot execute |
+
+**10 of 10.** Residue after the abort: 1 workspace, 1 staff row, 1 active link,
+2 audit rows, 225 reports — exactly the pre-run state; no rehearsal workspace
+survived. Consumers: `weakness-view.js` produces byte-identical teacher and
+assistant views for a ten-column and a twelve-column row (run in Node against
+the shipped module), and `renderLearning()` reads only named fields. Rollback
+`20260901t` stays prepared and unapplied; rehearsed the same day, it returns
+the signature and the md5 to their pre-apply values.
+

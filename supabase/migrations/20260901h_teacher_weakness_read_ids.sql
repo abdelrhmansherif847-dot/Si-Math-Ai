@@ -1,8 +1,18 @@
 -- =====================================================================
 -- teacher_student_weaknesses() — the stored taxonomy ids travel with the row
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback: 20260901t, prepared alongside.
+-- STATUS: ✅ APPLIED 2026-09-01 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval (CLAUDE.md §3), recorded as schema_migrations version
+--         20260901220926 `teacher_weakness_read_ids`. Applied through the MCP
+--         tool with this file's text verbatim, minus the outer transaction.
+--         Verified after apply: twelve-column signature; live
+--         pg_get_functiondef() md5 5d69fc5116d3f78416b30d68714c752a, equal to
+--         the value pre-computed from this file; ACL identical to the four
+--         other teaching reads; anon/public refused, authenticated allowed;
+--         SECURITY DEFINER with search_path pinned; the real student's rows
+--         carry the stored ids; the 20260830d contract suite re-run 10 of 10
+--         in an aborted transaction. Every other function, policy, constraint
+--         and relation hash unchanged. Rollback: 20260901t, prepared, unapplied.
 -- DEPENDS ON: 20260830d (the read this widens), 20260830b (the gates it keeps)
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §15.11 — decision (b),
 --          locked 2026-09-01: the class-wide aggregate keys on the STORED

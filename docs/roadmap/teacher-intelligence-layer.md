@@ -1070,8 +1070,12 @@ them should be discovered mid-implementation.
     retyped; dry-run and rehearsed against production in aborted transactions —
     the widened read returned the real student's two rows with ids equal to the
     stored ones, the unlinked student was still refused, and the rollback's
-    `pg_get_functiondef()` md5 returned to the pre-apply value. Applied only on
-    a separate, explicit approval; the card follows the apply.
+    `pg_get_functiondef()` md5 returned to the pre-apply value. **Applied
+    2026-09-01 as `20260901220926`** on a separate, explicit approval: live md5
+    `5d69fc51…` equal to the value pre-computed from the file, ACL identical to
+    the other teaching reads, the `20260830d` contract suite re-run 10 of 10 in
+    an aborted transaction, every other function/policy/constraint hash
+    unchanged. `20260901t` stays prepared and unapplied. The card follows.
 
 12. **Whether a Teacher Exam needs its own access code.**
     Raised 2026-09-01. ~~**Answered: no — class membership is the access
@@ -1216,5 +1220,5 @@ them should be discovered mid-implementation.
   same audit found that no existing read carries the stored id to a teacher, so
   the UI-only scope cannot honour the identity decision on its own; the
   delivery path is an owner decision listed under §15.11 — chosen the same
-  day: widen the read (path A), prepared as `20260901h`/`20260901t` and not
-  applied.
+  day: widen the read (path A), prepared as `20260901h`/`20260901t`, and
+  `20260901h` applied that evening as `20260901220926` after its own approval.

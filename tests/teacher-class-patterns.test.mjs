@@ -101,8 +101,10 @@ t.ok('it asserts the pre-apply md5 of pg_get_functiondef()',
 t.ok('it re-states the ACL for the same reason the forward file does',
   /revoke all on function teacher_student_weaknesses\(uuid, uuid\) from public, anon, authenticated;/.test(T)
   && /grant execute on function teacher_student_weaknesses\(uuid, uuid\) to authenticated;/.test(T));
-t.ok('both files are marked PREPARED, not applied',
-  /STATUS: 🟡 PREPARED/.test(H) && /STATUS: 🟡 PREPARED/.test(T));
+t.ok('the forward file records its apply (version 20260901220926) and the rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-01[\s\S]{0,200}20260901220926/.test(H) && /STATUS: 🟡 PREPARED/.test(T));
+t.ok('the forward file records the verified live md5, and it is the file\'s own',
+  /5d69fc5116d3f78416b30d68714c752a/.test(H));
 
 // ══ 4 · NOTHING ELSE IS TOUCHED ═══════════════════════════════════════════
 t.section('Neither file touches any other object or any row');
