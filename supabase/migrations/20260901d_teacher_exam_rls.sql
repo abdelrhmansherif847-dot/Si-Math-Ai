@@ -1,7 +1,13 @@
 -- =====================================================================
 -- Teacher Exams, increment 3b.2 — RLS, grants, and the answer-key boundary
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only, inside a rollback.
+-- STATUS: 🟢 APPLIED 2026-09-01 as version 20260901161844.
+--
+-- Verified live: 9 policies, all SELECT; SELECT-only for authenticated on all
+-- six tables; anon holds nothing anywhere; no client role holds any write
+-- privilege. Acting as the real signed-in student, teacher_exam_questions
+-- returned ZERO rows while their own access row, sitting and answers returned
+-- one each — so the answer-key boundary is measured, not asserted.
 --
 -- Same discipline as 20260830b: RLS on, table privileges STRIPPED and granted
 -- back deliberately, SELECT only for clients. A policy filters rows a role may

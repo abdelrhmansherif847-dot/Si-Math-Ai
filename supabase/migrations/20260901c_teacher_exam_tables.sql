@@ -1,7 +1,16 @@
 -- =====================================================================
 -- Teacher Exams, increment 3b.1 — six tables, their rules, their guards
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only, inside a rollback.
+-- STATUS: 🟢 APPLIED 2026-09-01 as version 20260901161812.
+--
+-- A correction followed at 20260901162042. The first apply was pasted from a
+-- comment-stripped rendering of this file, so five of the six guard bodies
+-- landed in production without their inline comments and blank lines —
+-- semantically identical, textually not. In this repository the migration file
+-- is the record of what is live, so the five were re-applied VERBATIM with
+-- create or replace, and all seven functions here are now byte-identical to
+-- production (md5-compared, not eyeballed). create or replace preserved the
+-- ACLs, which was asserted rather than assumed.
 --
 -- SCOPE. Tables, constraints and triggers. NO RPC, no function that any client
 -- calls, no grant (20260901d does RLS and grants), no UI, no content. After
