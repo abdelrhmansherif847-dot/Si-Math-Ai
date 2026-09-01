@@ -1065,6 +1065,14 @@ them should be discovered mid-implementation.
       reversed. Recorded only so the trade stays visible: it counts the 5 rows,
       and it lets the aggregate's identity drift whenever an alias is added.
 
+    *Chosen 2026-09-01: **A.*** Prepared the same day as `20260901h` (forward)
+    and `20260901t` (rollback), generated from the `20260830d` body rather than
+    retyped; dry-run and rehearsed against production in aborted transactions —
+    the widened read returned the real student's two rows with ids equal to the
+    stored ones, the unlinked student was still refused, and the rollback's
+    `pg_get_functiondef()` md5 returned to the pre-apply value. Applied only on
+    a separate, explicit approval; the card follows the apply.
+
 12. **Whether a Teacher Exam needs its own access code.**
     Raised 2026-09-01. ~~**Answered: no — class membership is the access
     boundary.**~~ **REVOKED the same day, before any implementation. Superseded
@@ -1207,5 +1215,6 @@ them should be discovered mid-implementation.
   (stored id; the resolver excluded from counting) before implementation. The
   same audit found that no existing read carries the stored id to a teacher, so
   the UI-only scope cannot honour the identity decision on its own; the
-  delivery path is an owner decision listed under §15.11, and implementation
-  is held for it.
+  delivery path is an owner decision listed under §15.11 — chosen the same
+  day: widen the read (path A), prepared as `20260901h`/`20260901t` and not
+  applied.
