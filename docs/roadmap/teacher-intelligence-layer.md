@@ -957,7 +957,9 @@ them should be discovered mid-implementation.
 11. **Whether a class-level claim is blocked by the same evidence gate as a
     per-student one.** Raised 2026-08-30 (second session). **Answered: not yet
     — wait for the Mock.** Recorded in full because the argument survives the
-    answer and will be made again.
+    answer and will be made again. **Superseded 2026-09-01 — admitted by the
+    owner under the pre-registered cut, with two further decisions locked before
+    implementation; see the end of this entry.**
 
     *The argument for.* §5.2 measures the corpus per student — 5 students with
     any mock session, 2 with three or more, one holding 68% of it — and
@@ -1001,6 +1003,67 @@ them should be discovered mid-implementation.
     a class pattern, and neither is 2 of 6. Whoever builds this inherits the
     number; changing it is a decision to record here, with its reason, not a
     tuning knob.
+
+    *Admitted 2026-09-01.* A class exists now (T1 live since 2026-08-30: one
+    workspace, one teacher, one active student), and a read-only audit that day
+    established that the per-student reads already carry everything the
+    aggregate needs except one thing, recorded below. The owner admitted the
+    surface on the pre-registered cut — **≥3 distinct active students AND ≥20%
+    of the active roster, both** — and locked two further decisions before a
+    line was written, so neither could be chosen against a screen:
+
+    - **(a) Freshness — inherited, not new.** A row counts toward a pattern only
+      when its `last_signal_at` is within `FRESH_DAYS = 14`, the constant
+      `teacher_attention()` already uses. A class pattern is a reason to act
+      *now*; six students who struggled a month ago is history, and two
+      definitions of "current" on one page would be two chances to disagree.
+      Measured cost of the rule, platform-wide on 2026-09-01: 22 canonical
+      subtopics met ≥3 students ignoring freshness; **0** met it within 14
+      days. Silence is the expected output, and a valid one (§6.4).
+    - **(b) Identity — the stored id, not the resolver.** The aggregation key is
+      `weakness_reports.subtopic_id` as written at the student's last
+      regeneration. `taxonomy.js` may resolve labels for display; it must not
+      recover or reinterpret a null historical id for counting. Rows with a
+      null `subtopic_id` are excluded, and the exclusion is disclosed in the
+      card as unmapped evidence. Measured: 86 of 225 reports carry no id; the
+      current resolver would recover 5 of them, and those 5 are deliberately
+      **not** recovered — counting them would re-read historical evidence with
+      today's aliases, which is the resolver manufacturing a pattern. (The same
+      replay showed the resolver reproducing the stored pair on 139 of 139 rows
+      that have one, which is why it is safe for display.)
+
+    Each qualifying pattern discloses, and never thresholds on: the distinct
+    affected-student count over the active-roster denominator and the
+    percentage; the high/critical student count exactly as stored; the source
+    mix; the freshest `last_signal_at`; and the number of excluded rows.
+    `trend` is neither derived nor aggregated (211 of 225 null). The basis line
+    says what the argument above says: this is convergence in what students
+    asked about, not exam correctness.
+
+    *One consequence, found in the audit and recorded before implementation
+    rather than around it.* `teacher_student_weaknesses()` returns `topic` and
+    `subtopic` as labels and does not return `topic_id` or `subtopic_id`; no
+    other teacher read does either, and a teacher holds no row-level read on
+    `weakness_reports` (verified live: 0 rows). So decision (b) cannot be
+    honoured by a UI-only build on today's read — the client would have to
+    resolve the labels, which is exactly what (b) forbids. The stored id has to
+    travel through a read. Three ways, for the owner to choose; implementation
+    is held until one is:
+
+    - **A.** Widen `teacher_student_weaknesses()` by two output columns,
+      `topic_id` and `subtopic_id`, body otherwise identical. Not a new read and
+      not new access — a taxonomy identifier derived from a label the caller
+      already sees — with no schema and no policy. But a return-type change is
+      a DROP + CREATE, so it is a migration: ACL re-asserted, rollback
+      rehearsed, approved individually per CLAUDE.md §3.
+    - **B.** A server-side `teacher_class_patterns(p_workspace)` that applies
+      the cut, the freshness rule and the exclusion in SQL over stored ids and
+      returns only qualifying patterns. One call instead of N+1, and the
+      threshold lives in SQL as the attention budget does — and it is a new
+      function, which the approval excluded.
+    - **C.** Keep the UI-only scope by keying on the resolver — decision (b)
+      reversed. Recorded only so the trade stays visible: it counts the 5 rows,
+      and it lets the aggregate's identity drift whenever an alias is added.
 
 12. **Whether a Teacher Exam needs its own access code.**
     Raised 2026-09-01. ~~**Answered: no — class membership is the access
@@ -1136,3 +1199,13 @@ them should be discovered mid-implementation.
   told teachers that weaknesses were not there while the learning slot was
   rendering them, which is a page describing itself wrongly to the person who
   has to defend it.
+- **2026-09-01 — the class-level claim, admitted with two decisions.** A
+  read-only audit (recorded under §15.11) established that the aggregate needs
+  no new data and no new access, and that the pre-registered cut, applied with
+  `teacher_attention()`'s 14-day freshness, is silent on today's production
+  even platform-wide. The owner locked freshness (inherited) and identity
+  (stored id; the resolver excluded from counting) before implementation. The
+  same audit found that no existing read carries the stored id to a teacher, so
+  the UI-only scope cannot honour the identity decision on its own; the
+  delivery path is an owner decision listed under §15.11, and implementation
+  is held for it.
