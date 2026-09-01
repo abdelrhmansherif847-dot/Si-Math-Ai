@@ -167,7 +167,14 @@ function dropCalculatorSlot() { calcSection = null; calcslot.textContent = ''; }
    insertion, walking text nodes, which is why escaping cannot break it. */
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const rich = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+/* A newline in an authored stem is a LINE BREAK, not whitespace. Roman-numeral
+   items set their three statements on their own lines — every reference form in
+   the corpus does — and a <p> collapses newlines, so without this the statements
+   run together into one unreadable sentence. Escaping happens first, so the
+   inserted <br> is the only markup that can reach the DOM. */
+const rich = (s) => esc(s)
+  .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+  .replace(/\r\n|\r|\n/g, '<br>');
 function typeset(el) {
   if (!globalThis.renderMathInElement) return;
   try {
