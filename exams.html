@@ -267,12 +267,32 @@ function screenPick(forms) {
   forms.forEach((f) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.innerHTML = '<b>' + esc(f.code) + '</b> · ' + esc(f.examCode) + ' · ' + esc(f.status);
+    b.innerHTML = '<b>' + esc(f.code) + '</b> · ' + esc(f.examCode) +
+      '<span class="ex-pick-status">' + esc(statusLabel(f.status)) + '</span>';
     b.addEventListener('click', () => start(f.code));
     pick.appendChild(b);
   });
   wrap.appendChild(pick);
   view.appendChild(wrap);
+}
+
+/* THE STORED STATUS IS A STATE MACHINE VALUE; THIS IS WHAT IT MEANS TO A READER.
+ *
+ * exam_forms.status stays 'draft' in the database and nothing here changes it:
+ * publish_exam_form() keys off that value, the import tooling refuses to run
+ * against a form that is not 'draft', and scripts/validate-est-form-status.mjs
+ * asserts on it. Renaming the column value to say what it means would break all
+ * three and would be a publication act dressed as a caption.
+ *
+ * So the mapping is at the point of DISPLAY, where it belongs. A draft form in
+ * this list is, by construction, one no student can reach — RLS serves this page
+ * to admin and above only — and the label should say so rather than making the
+ * reader infer it from a four-letter enum.
+ */
+function statusLabel(status) {
+  if (status === 'draft') return 'DRAFT — INTERNAL REVIEW ONLY';
+  if (status === 'published') return 'PUBLISHED';
+  return String(status || 'unknown').toUpperCase();
 }
 
 async function start(code) {
