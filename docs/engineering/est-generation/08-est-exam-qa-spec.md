@@ -76,12 +76,18 @@ and a form-level failure.
 | **C1** | **No archetype repeats within the form.** Target 50 distinct archetypes in 50 items; **50 required**, matching the two reference forms that achieve it. |
 | **C2** | **No context repeats.** No two items share a scenario; no named person appears twice; no two items use the same real-world quantity (two salary items, two fuel items). |
 | **C3** | **Shared-stimulus structure.** 3–5 sets; sizes 2–3 with at most one set of 4; contiguous; 8–12 items in sets; first set starting by Q10, last after Q39; every set introduced by the `Questions X to Y refer to…` heading. |
-| **C4** | **Stimulus variety.** No stimulus type more than 3 times; at least one rare-tail type; at least one object-valued option set; roughly a third of items carrying a stimulus (15–20 of 50). |
+| **C4** | **Stimulus variety.** 14–18 items carry a stimulus; no single stimulus type on more than 5 of them; at least one rare-tail type; at least one object-valued option set. |
 
 **C1 is set at zero repeats, not "at most one".** Two of the four reference forms
 achieve 50 distinct archetypes in 50 items, and the two that do not each repeat
 once inside a shared-stimulus pair. Setting the gate at zero costs a generator
 almost nothing and removes the judgement call about which repeat is benign.
+
+**C4's numbers are measured, not chosen.** The four reference forms carry a
+stimulus on 18, 17, 18 and 14 items, and the most-used single type reaches 5
+items in a form (tables in two forms, geometric figures in a third). An earlier
+draft of this gate said "15–20 items, no type more than 3 times"; both halves
+were wrong against the corpus and are corrected here.
 
 **C2 catches the failure mode a reader notices first.** A form with two shopping
 problems reads as thin long before anyone counts its domain weights.
@@ -181,3 +187,54 @@ Stated plainly so that a green run is not over-read.
   regressions because nothing looked at the output
   (`docs/engineering/figure-visual-system.md`). **Someone reads all 50 items
   before a form ships.**
+
+---
+
+## 8. Two platform gaps that block full fidelity today
+
+Found while starting the `ESTM1-2026-A` rebuild, by trying to author against this
+specification rather than by reading the code. Both are recorded here because
+they cap how authentic *any* generated EST form can be until they are closed.
+
+### Gap 1 — no not-to-scale schematic diagram
+
+**`(Figure not drawn to scale)` is a core-recurring EST device** — 8 items across
+all four reference forms (artifact 2 §4). It requires a labelled geometric
+diagram that the student **must not measure**.
+
+The Spine offers six stimulus kinds. `figure` carries an SVG by reference
+(`media_ref` + `media_sha256` + `media_reason`), and **`exam-stimulus.js` throws
+`unsupported kind` on it** — nothing renders it. Every other kind that can draw a
+diagram is a `plot`, and all three plot frames are drawn to scale: `plane` draws
+the grid, and `graph`/`data` draw reference lines. A side labelled 9 cm that is
+drawn 3 units long would be a lie the renderer tells the student.
+
+**Consequence:** the rebuild carries **zero** `nts` items against a budget of
+1–4. Its geometry is coordinate geometry on a `plane` plot, or described in prose
+with no diagram — which the corpus also does, so the items are authentic
+individually; the *device* is simply absent.
+
+**To close it:** an SVG figure pipeline — author, hash, store, render, and bring
+under the visual-fidelity suite. That is its own piece of work and is not started
+here.
+
+### Gap 2 — no graphical option sets
+
+**Options that are objects rather than values** appear in 4 items across 3 forms:
+four graphs, four number lines, four systems of equations, four rows of a
+comparison table.
+
+`exam_questions.choices` is `[{id, text}]` — a string per option. **Four systems
+of equations and four prose claims are expressible** (LaTeX in `text`), so the
+device is partly available. **Four graphs and four number lines are not.**
+
+**Consequence:** the rebuild's object-valued option set is a set of four systems,
+not four graphs. That is a real corpus shape, so the item is authentic — but the
+graphical half of the device is unavailable.
+
+**To close it:** a choice payload that can carry a spec per option, and a
+renderer that draws it. Larger than gap 1, and it interacts with answer-key
+storage; not started here.
+
+**Neither gap is worked around.** Nothing is drawn to scale and labelled as if it
+were not, and no option set is faked. The gaps are carried as gaps.

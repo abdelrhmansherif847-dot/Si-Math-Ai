@@ -167,5 +167,5 @@ export const ANTI_REPETITION = {
   contextRepeatsWithinForm: 0,            // no two items share a scenario
   maxContextUsesAcrossSeries: 2,
   namedPersonRepeatsWithinForm: 0,
-  stimulusTypeMaxPerForm: 3,
+  stimulusTypeMaxPerForm: 5,   // measured: the corpus reaches 5 items on one type
 };
