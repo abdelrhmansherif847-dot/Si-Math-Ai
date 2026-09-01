@@ -23,6 +23,7 @@ been reviewed.
 | R2 | [Answer-choice schema](R2-answer-choice-schema.md) | Graphical and object-valued options. A capability gap, not an exclusion. |
 | 10 | [ESTM1-2026-A rebuild](10-estm1-2026-a-rebuild.md) | The first form built from this specification, and what building it proved about the specification. |
 | 11 | [ESTM1-2026-A internal review](11-estm1-internal-review.md) | The second-reader content review of all 50 items: what was defective, what was left alone, and the three gates it produced. |
+| 13 | [Generator Gap Specification](13-generator-gap-specification.md) | **DESIGN SPECIFICATION — NOT IMPLEMENTED.** The n=200 forensic evidence translated into generator requirements: the mechanism gap table, the eight missing question species, the hidden-step decomposition, the bypass audit, difficulty as a signature rather than a score, the anti-clone fingerprint, and a three-stage roadmap. |
 | — | [ESTM1-2026-A status](STATUS-ESTM1-2026-A.md) | **DRAFT — INTERNAL REVIEW ONLY.** The restrictions, the KAR position, the difficulty label, and the R1/R2 gaps. Enforced in CI. |
 
 ## Executable parts
