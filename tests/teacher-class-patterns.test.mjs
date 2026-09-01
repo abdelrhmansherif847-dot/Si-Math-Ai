@@ -118,4 +118,131 @@ for (const [label, src] of [['20260901h', H], ['20260901t', T]]) {
       .filter((f) => f !== 'teacher_student_weaknesses'), []);
 }
 
+// ══ 5 · THE RULE, RUN ═════════════════════════════════════════════════════
+// Part 2. The rule lives in teacher.html between two markers as a PURE
+// function, so this suite can lift it out and run it rather than pattern-
+// match its source. Every rule below is the §15.11 one, exercised on data.
+const TP = read('teacher.html');
+const blockOf = (src, a, b) => {
+  const i = src.indexOf(a), j = src.indexOf(b, i);
+  if (i < 0 || j < 0) throw new Error('teacher.html: block ' + a + ' could not be located');
+  return src.slice(i, j);
+};
+const PURE = blockOf(TP, '/* ── class patterns · pure ── */', '/* ── end class patterns · pure ── */');
+const PAGE_BLK = blockOf(TP, '/* ── class patterns · page ── */', '/* ── end class patterns · page ── */');
+const { PATTERN_RULES, classPatterns } = new Function(PURE + '\nreturn { PATTERN_RULES, classPatterns };')();
+/* The bans below are on CODE. The block's comments say "outside the window" and
+   "never resolved here", and a ban that trips on its own explanation is a ban
+   that gets deleted — so comments are stripped before scanning. */
+const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+const PURE_CODE = code(PURE), PAGE_CODE = code(PAGE_BLK);
+
+t.section('The rule is the pre-registered one, and it is pure');
+t.is('the three numbers are inherited — 14 days, 3 students, 20%',
+  [PATTERN_RULES.freshDays, PATTERN_RULES.minStudents, PATTERN_RULES.minSharePct], [14, 3, 20]);
+t.ok('and frozen', Object.isFrozen(PATTERN_RULES) && Object.isFrozen(PATTERN_RULES.severeBands));
+t.is('"high or critical" is the set teacher_attention() counts, declared once', PATTERN_RULES.severeBands, ['high', 'critical']);
+/* teacher-surface pins the whole page against `severity_band <>=`: the page
+   must never shape a band of its own. The count reads the STORED band against
+   the declared set and compares nothing. */
+t.ok('the stored band is never compared, only looked up', !/severity_band\s*[<>=!]/.test(PURE_CODE) && /severeBands\.indexOf\(r\.severity_band\)/.test(PURE_CODE));
+t.is('the pure block reaches no DOM, network, page state or role',
+  [...PURE_CODE.matchAll(/\b(document|window|sb|fetch|isTeacher)\b|\$\(|\bS\./g)].map((m) => m[0]), []);
+t.is('it never resolves a label — no taxonomy, no resolver, no canonicalFor',
+  [...PURE_CODE.matchAll(/Taxonomy|resolve|canonicalFor|normalize/gi)].map((m) => m[0]), []);
+t.ok('trend is neither read nor emitted', !/trend/.test(PURE_CODE));
+
+const NOW = Date.parse('2026-09-01T12:00:00Z');
+const at = (days) => new Date(NOW - days * 86400000).toISOString();
+const row = (o) => Object.assign({ topic: 'Algebra', subtopic: 'Linear', severity_band: 'medium', priority_rank: 1,
+  trend: null, last_signal_at: at(3), total_signals: 1, signals_ai_chat: 1, signals_mock_exam: 0, signals_focus: 0,
+  topic_id: 'ALGEBRA', subtopic_id: 'ALG_006' }, o);
+const stu = (id, rows) => ({ student_id: 's' + id, full_name: 'Student ' + id, rows });
+const filler = (k, from) => Array.from({ length: k }, (_, i) => stu(from + i, []));
+const run = (per) => classPatterns(per, NOW);
+const names = (res) => res.patterns.map((p) => p.subtopic_id + ':' + p.n + '/' + p.m);
+
+t.section('Identity: the stored subtopic_id, and nothing else');
+t.is('four spellings of one stored id are one pattern',
+  names(run([stu(1, [row({ subtopic: 'Linear' })]), stu(2, [row({ subtopic: 'Linear Equations' })]),
+             stu(3, [row({ subtopic: 'Slope & Rate of Change' })]), stu(4, [row({ subtopic: 'solving linear equations' })])])),
+  ['ALG_006:4/4']);
+t.is('one label under three stored ids is no pattern',
+  names(run([stu(1, [row({ subtopic_id: 'ALG_006' })]), stu(2, [row({ subtopic_id: 'ALG_007' })]), stu(3, [row({ subtopic_id: 'ALG_008' })])])), []);
+const nulls = run([stu(1, [row({ subtopic_id: null, topic_id: null })]), stu(2, [row({ subtopic_id: null })]), stu(3, [row({ subtopic_id: null })])]);
+t.is('rows without a stored id form no pattern, however many students share the label', names(nulls), []);
+t.is('and every one of them is counted as excluded', nulls.excluded, 3);
+const blanks = run([stu(1, [row({ subtopic_id: '' })]), stu(2, [row({ subtopic_id: '' })]), stu(3, [row({ subtopic_id: '' })])]);
+t.is('an empty-string id is a missing id', [names(blanks), blanks.excluded], [[], 3]);
+t.is('a null-id row outside the window is not "excluded" — it is simply outside',
+  run([stu(1, [row({ subtopic_id: null, last_signal_at: at(20) })])]).excluded, 0);
+
+t.section('Freshness: 14 days, applied before counting');
+t.is('a signal exactly 14 days old still counts',
+  names(run([stu(1, [row({ last_signal_at: at(14) })]), stu(2, [row({ last_signal_at: at(14) })]), stu(3, [row({ last_signal_at: at(14) })])])), ['ALG_006:3/3']);
+t.is('a signal 15 days old does not',
+  names(run([stu(1, [row({ last_signal_at: at(15) })]), stu(2, [row()]), stu(3, [row()])])), []);
+t.is('an undated row is neither counted nor excluded',
+  (() => { const r = run([stu(1, [row({ last_signal_at: null })])]); return [r.fresh, r.excluded]; })(), [0, 0]);
+
+t.section('Counting: distinct students, both thresholds, integer arithmetic');
+const split = run([stu(1, [row({ subtopic: 'a' }), row({ subtopic: 'b' }), row({ subtopic: 'c' })]), stu(2, [row()])]);
+t.is('a student with three rows on one id counts once (2 students, so no pattern)', names(split), []);
+t.is('3 of 5 qualifies (60%)', names(run([stu(1, [row()]), stu(2, [row()]), stu(3, [row()])].concat(filler(2, 4)))), ['ALG_006:3/5']);
+t.is('2 of 5 does not — fewer than 3 students', names(run([stu(1, [row()]), stu(2, [row()])].concat(filler(3, 3)))), []);
+t.is('3 of 20 does not — 15% is under a fifth', names(run([stu(1, [row()]), stu(2, [row()]), stu(3, [row()])].concat(filler(17, 4)))), []);
+t.is('3 of 15 qualifies — exactly 20% is enough',
+  names(run([stu(1, [row()]), stu(2, [row()]), stu(3, [row()])].concat(filler(12, 4)))), ['ALG_006:3/15']);
+t.is('4 of 20 qualifies', names(run([stu(1, [row()]), stu(2, [row()]), stu(3, [row()]), stu(4, [row()])].concat(filler(16, 5)))), ['ALG_006:4/20']);
+const unread = run([stu(1, [row()]), stu(2, [row()]), stu(3, [row()]), stu(4, null)]);
+t.is('a refused read stays in the denominator and is reported, never guessed', [unread.unreadable, names(unread)], [1, ['ALG_006:3/4']]);
+
+t.section('What is disclosed, as stored');
+const dis = run([stu(1, [row({ severity_band: 'high', signals_ai_chat: 5, signals_mock_exam: 1 }), row({ subtopic: 'b', severity_band: 'low', signals_focus: 2, last_signal_at: at(1) })]),
+                 stu(2, [row({ severity_band: 'critical' })]), stu(3, [row({ severity_band: 'medium' })]), stu(4, [row({ severity_band: 'low' })])]);
+const P0 = dis.patterns[0];
+t.is('high and critical students are counted once each; medium and low are not', P0.severe, 2);
+t.is('the source mix sums every contributing row (5+1, 1, 1, 1 conversation signals)', P0.sources, { ai_chat: 9, mock_exam: 1, focus: 2 });
+t.is('the freshest signal is the newest contributing date', P0.freshest, at(1));
+t.is('the students behind the pattern are listed, for the drawer',
+  P0.students.map((x) => x.student_id), ['s1', 's2', 's3', 's4']);
+t.ok('the pattern carries no trend', !('trend' in P0));
+const two = run([stu(1, [row(), row({ subtopic_id: 'GEO_006', subtopic: 'Circles', topic_id: 'GEOMETRY' })]),
+                 stu(2, [row(), row({ subtopic_id: 'GEO_006' })]), stu(3, [row(), row({ subtopic_id: 'GEO_006' })]), stu(4, [row()])]);
+t.is('patterns are ordered by students first, then by id — never by anything arbitrary', names(two), ['ALG_006:4/4', 'GEO_006:3/4']);
+
+// ══ 6 · THE CARD ══════════════════════════════════════════════════════════
+t.section('The card: under Attention, silent by default, parity, drawer');
+
+const iAtt = TP.indexOf('<div id="attention" style="display:none">');
+const iPat = TP.indexOf('<div id="patterns" style="display:none">');
+const iNeed = TP.indexOf('<div id="needsYou" style="display:none">');
+t.ok('the block sits directly under Attention and above Needs you', iAtt > 0 && iPat > iAtt && iNeed > iPat);
+t.ok('it ships hidden', iPat > 0);
+t.ok('and is hidden again whenever there is nothing to say',
+  /if \(!P \|\| \(!P\.patterns\.length && !P\.excluded && !P\.unreadable\)\) \{ \$\('patterns'\)\.style\.display = 'none'; return; \}/.test(PAGE_BLK));
+t.ok('the page block never tests the role — teacher and assistant see the same card', !/isTeacher/.test(PAGE_BLK));
+t.ok('it reads through the existing gated per-student read, per active student',
+  /S\.roster\.filter\(\(r\) => r\.status === 'active'\)/.test(PAGE_BLK)
+  && /api\.weaknesses\(S\.ws\.workspace_id, r\.student_id\)/.test(PAGE_BLK));
+t.is('it adds no RPC and no table read', [...PAGE_BLK.matchAll(/rpc\(|\.from\(/g)].map((m) => m[0]), []);
+t.ok('a refused read becomes rows: null, not a guess', /catch \(_\) \{ return \{ student_id: r\.student_id, full_name: r\.full_name, rows: null \}; \}/.test(PAGE_BLK));
+t.ok('names are looked up BY ID for display, and nothing is resolved',
+  /_subtopicById\[p\.subtopic_id\]/.test(PAGE_CODE) && /_topicById\[p\.topic_id\]/.test(PAGE_CODE) && !/resolve|canonicalFor/.test(PAGE_CODE));
+t.ok('every student behind a pattern opens the existing drawer',
+  /data-sid="' \+ esc\(x\.student_id\)/.test(PAGE_BLK) && /openCard\(el\.dataset\.sid\)/.test(PAGE_BLK));
+t.ok('the basis is stated: weakness evidence, not exam correctness', /<strong>not from exam correctness<\/strong>/.test(PAGE_BLK));
+t.ok('the exclusion is disclosed as unmapped evidence', /could not be counted — unmapped topics/.test(PAGE_BLK));
+t.ok('an unreadable student is disclosed too', /could not be read and/.test(PAGE_BLK));
+t.ok('copy takes its numbers from the rule, so copy and rule cannot drift',
+  /R\.freshDays/.test(PAGE_BLK) && /R\.minStudents/.test(PAGE_BLK) && /R\.minSharePct/.test(PAGE_BLK)
+  && !/\b14 days\b|\b20%|at least 3 /.test(PAGE_BLK));
+t.ok('trend is never rendered', !/trend/.test(PAGE_CODE));
+t.ok('patterns load after the roster and render after Attention',
+  /loadRoster\(\)\.then\(loadPatterns\)/.test(TP) && /renderAttention\(\);\n  renderPatterns\(\);/.test(TP));
+t.ok('removing a student recomputes the class patterns', /renderAttention\(\);\n      await loadPatterns\(\);\n      renderPatterns\(\);/.test(TP));
+const SCOPE = blockOf(TP, "$('scopeNote').innerHTML", 'renderIntervention');
+t.is('the scope note tells BOTH roles how class patterns are counted', (SCOPE.match(/\+ patternsSentence\(\)/g) || []).length, 2);
+t.ok('and that sentence says never from exam correctness', /never from exam correctness/.test(PAGE_BLK));
+
 t.done();

@@ -234,6 +234,9 @@ input,select{font-family:inherit}
 .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .att-why{display:block;font-size:13.5px;color:var(--text-200);line-height:1.5;margin-top:3px}
 .att-when{display:block;font-size:11.5px;color:var(--text-500);margin-top:3px;white-space:normal}
+.pat-row{cursor:default}
+.pat-row .chip{cursor:pointer}
+.pat-row .chip:hover{border-color:var(--cyan-border);color:var(--cyan-3)}
 .pill.warn{border-color:var(--gold-border);color:#fcd34d}
 .iv-form{border:1px dashed var(--cyan-border);border-radius:var(--r-md);background:var(--bg-elev-2);padding:14px;margin-top:12px}
 .iv-form .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-500);margin-bottom:7px}
@@ -359,6 +362,18 @@ input,select{font-family:inherit}
     <div id="attention" style="display:none">
       <div class="sec-label">Students who may need your attention</div>
       <div class="card" id="attentionBody"></div>
+    </div>
+
+    <!-- Class patterns: the one class-level read of the weakness evidence, and
+         it is silent by default. A row appears only when at least three
+         students and at least a fifth of the connected class hold a weakness
+         on the same canonical subtopic with a signal in the last 14 days — the
+         cut pre-registered in teacher-intelligence-layer.md §15.11 before a
+         screen existed to tune it against. Counted from the STORED
+         subtopic_id, never from a label the page resolved. -->
+    <div id="patterns" style="display:none">
+      <div class="sec-label">Class patterns</div>
+      <div class="card" id="patternsBody"></div>
     </div>
 
     <div id="needsYou" style="display:none">
@@ -525,7 +540,7 @@ const TEACHER_ROLES = new Set(['teacher', 'owner']);
 const isTeacherRole = (r) => TEACHER_ROLES.has(r);
 
 const S = {
-  ws: null, isTeacher: false, roster: [], staff: [], activity: [], attention: null, ref: null,
+  ws: null, isTeacher: false, roster: [], staff: [], activity: [], attention: null, ref: null, patterns: null,
   filter: 'active', search: '',
   preview: new URLSearchParams(location.search).get('preview') === '1',
 };
@@ -591,24 +606,44 @@ const FIXTURE = {
   /* Weaknesses keyed by student. Deliberately mirrors the real shape measured
      on 2026-08-30: most students have one to three, and 91% of live reports
      carry no trend, so most of these carry none either. */
+  /* Rows carry the STORED taxonomy ids the live read returns since 20260901h.
+     Four students share ALG_006 under four spellings, which is the class
+     pattern the preview exists to rehearse; one row has no id, so the
+     "could not be counted" line is rehearsed too. */
   weaknesses: {
     p3: [
       { topic: 'Algebra', subtopic: 'Linear Equations', severity_band: 'high', priority_rank: 1,
         trend: null, last_signal_at: iso(-3), total_signals: 14,
-        signals_ai_chat: 11, signals_mock_exam: 0, signals_focus: 3 },
+        signals_ai_chat: 11, signals_mock_exam: 0, signals_focus: 3, topic_id: 'ALGEBRA', subtopic_id: 'ALG_006' },
       { topic: 'Algebra', subtopic: 'Systems of Equations', severity_band: 'medium', priority_rank: 2,
         trend: 'declining', last_signal_at: iso(-6), total_signals: 8,
-        signals_ai_chat: 6, signals_mock_exam: 2, signals_focus: 0 },
+        signals_ai_chat: 6, signals_mock_exam: 2, signals_focus: 0, topic_id: 'ALGEBRA', subtopic_id: 'ALG_007' },
       { topic: 'Geometry', subtopic: 'Circles', severity_band: 'low', priority_rank: 3,
         trend: null, last_signal_at: iso(-19), total_signals: 2,
-        signals_ai_chat: 2, signals_mock_exam: 0, signals_focus: 0 },
+        signals_ai_chat: 2, signals_mock_exam: 0, signals_focus: 0, topic_id: 'GEOMETRY', subtopic_id: 'GEO_006' },
     ],
     p1: [
       { topic: 'Data Analysis', subtopic: 'Probability', severity_band: 'critical', priority_rank: 1,
         trend: null, last_signal_at: iso(-1), total_signals: 4,
-        signals_ai_chat: 4, signals_mock_exam: 0, signals_focus: 0 },
+        signals_ai_chat: 4, signals_mock_exam: 0, signals_focus: 0, topic_id: 'PROBABILITY_RATIOS', subtopic_id: 'PR_001' },
+      { topic: 'Algebra', subtopic: 'Linear Equations & Functions', severity_band: 'high', priority_rank: 2,
+        trend: null, last_signal_at: iso(-4), total_signals: 6,
+        signals_ai_chat: 5, signals_mock_exam: 1, signals_focus: 0, topic_id: 'ALGEBRA', subtopic_id: 'ALG_006' },
     ],
     p2: [],
+    p4: [
+      { topic: 'Algebra', subtopic: 'Solving Linear Equations', severity_band: 'medium', priority_rank: 1,
+        trend: null, last_signal_at: iso(-8), total_signals: 3,
+        signals_ai_chat: 3, signals_mock_exam: 0, signals_focus: 0, topic_id: 'ALGEBRA', subtopic_id: 'ALG_006' },
+    ],
+    p5: [
+      { topic: 'Algebra', subtopic: 'Linear', severity_band: 'low', priority_rank: 1,
+        trend: null, last_signal_at: iso(-2), total_signals: 2,
+        signals_ai_chat: 2, signals_mock_exam: 0, signals_focus: 0, topic_id: 'ALGEBRA', subtopic_id: 'ALG_006' },
+      { topic: 'Word Problems', subtopic: 'Linear Word Problems', severity_band: 'medium', priority_rank: 2,
+        trend: null, last_signal_at: iso(-5), total_signals: 3,
+        signals_ai_chat: 3, signals_mock_exam: 0, signals_focus: 0, topic_id: null, subtopic_id: null },
+    ],
   },
   /* What a teacher already recorded. Only ONE student has anything here, and
      one of the two is withdrawn — because a preview where every student has a
@@ -864,9 +899,11 @@ async function renderWorkspace() {
   $('scopeNote').innerHTML = S.isTeacher
     ? 'You see a student\'s name, which exam they are preparing for (SAT, EST or ACT), when they connected, and the weaknesses the analyzer found — each one with the evidence it was built from. '
       + 'Not their plan, their credits, their email, or their conversations with Zero: the topic a student struggled with is shareable, the conversation where they struggled is not. '
-      + '<strong>No scores.</strong> There are none worth showing until the new Mock Experience produces per-question evidence, and a number without that behind it would be a guess wearing a decimal point.'
+      + '<strong>No scores.</strong> There are none worth showing until the new Mock Experience produces per-question evidence, and a number without that behind it would be a guess wearing a decimal point. '
+      + patternsSentence()
     : 'You see exactly what the teacher sees about these students — the same weaknesses, from the same analyzer, with the same evidence — and you can change nothing. Adding, removing, approving and recording are the teacher\'s. '
-      + 'Neither of you sees scores, plans, or anything a student said to Zero.';
+      + 'Neither of you sees scores, plans, or anything a student said to Zero. '
+      + patternsSentence();
 
   $('studentCode').textContent = S.ws.student_join_code || '--------';
   $('rotateStudentBtn').style.display = S.isTeacher ? '' : 'none';
@@ -878,7 +915,7 @@ async function renderWorkspace() {
   $('activitySection').style.display = S.isTeacher ? '' : 'none';
 
   await Promise.all([
-    loadRoster(),
+    loadRoster().then(loadPatterns),
     loadAttention(),
     S.isTeacher ? loadStaff() : Promise.resolve(),
     S.isTeacher ? loadActivity() : Promise.resolve(),
@@ -887,6 +924,7 @@ async function renderWorkspace() {
   renderStats();
   renderNeedsYou();
   renderAttention();
+  renderPatterns();
   renderReferrals();
   // Teacher Exams is for BOTH: academic parity is a locked decision, and
   // renderWorkspace() is only reached by ACTIVE staff, so no role test belongs
@@ -1145,6 +1183,148 @@ function renderNeedsYou() {
   wireStaffButtons($('needsYouBody'));
 }
 
+/* ── class patterns · pure ── */
+/* The rule, written down before the screen. §15.11 pre-registered the cut on
+   2026-08-30 and locked freshness and identity on 2026-09-01; these three
+   numbers are inherited, not tuned. minSharePct is an integer and the share
+   test is n × 100 against pct × m, so it is exact by construction rather
+   than by luck with floating point (measured: no exact-20% pair up to a
+   roster of 400 misbehaves either way — the integer form just makes that a
+   non-question). severeBands is the set teacher_attention() counts as high_or_critical
+   (20260831a) — declared once here, read as stored, never derived. */
+const PATTERN_RULES = Object.freeze({ freshDays: 14, minStudents: 3, minSharePct: 20,
+                                      severeBands: Object.freeze(['high', 'critical']) });
+
+/* Pure: no DOM, no network, no role. `per` holds one entry per ACTIVE student,
+   { student_id, full_name, rows }, where rows is what
+   teacher_student_weaknesses() returned for them, or null if the read was
+   refused. Returns the patterns that clear BOTH thresholds, and what was left
+   out — so the card can say so instead of implying completeness. */
+function classPatterns(per, now, rules) {
+  const R = rules || PATTERN_RULES;
+  const cutoff = now - R.freshDays * 86400000;
+  const m = per.length;
+  const by = new Map();
+  let fresh = 0, excluded = 0, unreadable = 0;
+  for (const p of per) {
+    if (!Array.isArray(p.rows)) { unreadable++; continue; }
+    for (const r of p.rows) {
+      const t = r.last_signal_at ? new Date(r.last_signal_at).getTime() : NaN;
+      if (!(t >= cutoff)) continue;                 // outside the window: not evidence of now
+      fresh++;
+      // The STORED id, or nothing. A label is never resolved here to recover one.
+      if (r.subtopic_id == null || r.subtopic_id === '') { excluded++; continue; }
+      let e = by.get(r.subtopic_id);
+      if (!e) {
+        e = { subtopic_id: r.subtopic_id, topic_id: r.topic_id || null, label: r.subtopic, topicLabel: r.topic,
+              students: new Map(), ai_chat: 0, mock_exam: 0, focus: 0, freshest: 0 };
+        by.set(r.subtopic_id, e);
+      }
+      // One student counts once, however many spellings of the subtopic they hold.
+      let st = e.students.get(p.student_id);
+      if (!st) { st = { student_id: p.student_id, full_name: p.full_name, severe: false }; e.students.set(p.student_id, st); }
+      if (R.severeBands.indexOf(r.severity_band) >= 0) st.severe = true;   // the stored band, against the declared set
+      e.ai_chat += r.signals_ai_chat || 0; e.mock_exam += r.signals_mock_exam || 0; e.focus += r.signals_focus || 0;
+      if (t > e.freshest) e.freshest = t;
+    }
+  }
+  const patterns = [];
+  for (const e of by.values()) {
+    const n = e.students.size;
+    if (n < R.minStudents) continue;               // both conditions, each on its own
+    if (n * 100 < R.minSharePct * m) continue;
+    const students = [...e.students.values()];
+    patterns.push({
+      subtopic_id: e.subtopic_id, topic_id: e.topic_id, label: e.label, topicLabel: e.topicLabel,
+      n: n, m: m, pct: Math.round(n * 100 / m),
+      severe: students.filter((x) => x.severe).length,
+      sources: { ai_chat: e.ai_chat, mock_exam: e.mock_exam, focus: e.focus },
+      freshest: new Date(e.freshest).toISOString(),
+      students: students.map((x) => ({ student_id: x.student_id, full_name: x.full_name })),
+    });
+  }
+  patterns.sort((a, b) => (b.n - a.n) || (a.subtopic_id < b.subtopic_id ? -1 : a.subtopic_id > b.subtopic_id ? 1 : 0));
+  return { m: m, fresh: fresh, excluded: excluded, unreadable: unreadable, patterns: patterns };
+}
+/* ── end class patterns · pure ── */
+
+/* ── class patterns · page ── */
+function patternsSentence() {
+  const R = PATTERN_RULES;
+  return '<strong>Class patterns</strong> are counted from the same weakness evidence — never from exam correctness — '
+    + 'by canonical subtopic, only within the last ' + R.freshDays + ' days, and only when at least ' + R.minStudents
+    + ' students and ' + R.minSharePct + '% of the class share one; otherwise that section stays empty.';
+}
+
+async function loadPatterns() {
+  S.patterns = null;
+  const live = S.roster.filter((r) => r.status === 'active');
+  if (!live.length) { S.patterns = classPatterns([], Date.now()); return; }
+  /* One read per connected student — the same gated read the drawer uses, so
+     a student the server would refuse is refused here too, and counted as
+     unreadable rather than guessed at. */
+  const per = await Promise.all(live.map(async (r) => {
+    try { return { student_id: r.student_id, full_name: r.full_name, rows: await api.weaknesses(S.ws.workspace_id, r.student_id) }; }
+    catch (_) { return { student_id: r.student_id, full_name: r.full_name, rows: null }; }
+  }));
+  S.patterns = classPatterns(per, Date.now());
+}
+
+/* Display names come from the taxonomy BY ID — a lookup, not a resolution.
+   The stored label is the fallback should an id ever be unknown to this build. */
+function patternNames(p) {
+  const T = window.Taxonomy || {};
+  const sub = T._subtopicById && T._subtopicById[p.subtopic_id];
+  const top = T._topicById && p.topic_id && T._topicById[p.topic_id];
+  return { sub: sub ? sub.displayName : (p.label || p.subtopic_id), top: top ? top.displayName : (p.topicLabel || '') };
+}
+
+function renderPatterns() {
+  const P = S.patterns;
+  const box = $('patternsBody');
+  /* Hidden entirely when there is nothing to say: no pattern, nothing
+     excluded, nobody unreadable. An empty fortnight is a valid fortnight. */
+  if (!P || (!P.patterns.length && !P.excluded && !P.unreadable)) { $('patterns').style.display = 'none'; return; }
+  $('patterns').style.display = '';
+  const R = PATTERN_RULES;
+  const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+  const parts = [];
+  parts.push('<div class="note" style="margin-bottom:12px">Built from the weakness evidence the analyzer already holds for each student — '
+    + 'what they struggled with in conversations and practice — <strong>not from exam correctness</strong>. '
+    + 'Counted by canonical subtopic, only where a signal is dated within the last ' + R.freshDays + ' days, and shown only when at least '
+    + R.minStudents + ' students and at least ' + R.minSharePct + '% of the connected class share it.</div>');
+  if (!P.patterns.length) {
+    parts.push('<div class="meta">No class-wide pattern in the last ' + R.freshDays + ' days.</div>');
+  }
+  for (const p of P.patterns) {
+    const nm = patternNames(p);
+    parts.push('<div class="row att-row pat-row">'
+      + '<div class="iv-main">'
+      +   '<span class="nm">' + esc(nm.sub) + (nm.top ? ' <span class="meta">· ' + esc(nm.top) + '</span>' : '') + '</span>'
+      +   '<span class="att-why"><strong>' + p.n + ' of ' + p.m + '</strong> connected students (' + p.pct + '%)'
+      +     (p.severe ? ' · <strong>' + p.severe + '</strong> at high or critical severity' : ' · none at high or critical severity') + '</span>'
+      +   '<span class="meta att-when">Evidence: ' + plural(p.sources.ai_chat, 'conversation signal', 'conversation signals')
+      +     ', ' + plural(p.sources.mock_exam, 'exam signal', 'exam signals') + ', ' + plural(p.sources.focus, 'practice signal', 'practice signals')
+      +     ' · freshest ' + esc(ago(p.freshest)) + '</span>'
+      +   '<div class="chips" style="margin-top:8px">' + p.students.map((x) =>
+            '<button class="chip" data-sid="' + esc(x.student_id) + '">' + esc(x.full_name) + '</button>').join('') + '</div>'
+      + '</div></div>');
+  }
+  if (P.excluded) {
+    parts.push('<div class="meta" style="margin-top:10px">' + plural(P.excluded, 'weakness', 'weaknesses')
+      + ' in this window could not be counted — unmapped topics, recorded before the taxonomy mapped them. Left out rather than guessed.</div>');
+  }
+  if (P.unreadable) {
+    parts.push('<div class="meta" style="margin-top:6px">' + plural(P.unreadable, 'student', 'students') + ' could not be read and '
+      + (P.unreadable === 1 ? 'is' : 'are') + ' not counted.</div>');
+  }
+  box.innerHTML = parts.join('');
+  box.querySelectorAll('.chip[data-sid]').forEach((el) => {
+    el.addEventListener('click', () => openCard(el.dataset.sid));
+  });
+}
+/* ── end class patterns · page ── */
+
 /* ── roster ────────────────────────────────────────────────────────────── */
 async function loadRoster() {
   try { S.roster = await api.roster(S.ws.workspace_id); }
@@ -1343,6 +1523,8 @@ async function openCard(studentId) {
       await Promise.all([loadRoster(), loadAttention()]);
       renderStats();
       renderAttention();
+      await loadPatterns();
+      renderPatterns();
     });
   } else if (!S.isTeacher) {
     $('cardActions').innerHTML =

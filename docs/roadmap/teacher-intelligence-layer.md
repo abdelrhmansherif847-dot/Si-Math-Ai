@@ -1077,6 +1077,28 @@ them should be discovered mid-implementation.
     an aborted transaction, every other function/policy/constraint hash
     unchanged. `20260901t` stays prepared and unapplied. The card follows.
 
+    *Built 2026-09-01, in the repository and not deployed.* One block on
+    `teacher.html` directly under Attention, hidden by default. The rule is a
+    pure function in the page, lifted out and RUN by
+    `tests/teacher-class-patterns.test.mjs` rather than pattern-matched:
+    stored `subtopic_id` only, 14-day window applied before counting, distinct
+    students, both thresholds independently, integer arithmetic for the share,
+    `severeBands = ['high','critical']` declared once (the set
+    `teacher_attention()` counts) and read as stored, no trend anywhere, the
+    refused read counted as unreadable rather than guessed. One reading the
+    locked bullets left open, settled here: **when no pattern qualifies but
+    fresh rows were excluded, the card shows only the disclosure** — "No
+    class-wide pattern in the last 14 days" plus the unmapped count — because
+    a disclosure the card hides is not a disclosure; it stays hidden only when
+    there is nothing at all to say. Display names come from the taxonomy by
+    id (a lookup), the stored label being the fallback. 21 of 21 mutants
+    killed; one further mutant — the share test in floating point — proved
+    *equivalent* on every exact-20% roster up to 400 and was dropped rather
+    than counted, and the comment that had claimed otherwise was corrected.
+    Rendered headless in five states (silent, pattern, excluded-only,
+    assistant, hostile labels): the assistant sees the identical card, a
+    chip opens the existing drawer, nothing injected fires.
+
 12. **Whether a Teacher Exam needs its own access code.**
     Raised 2026-09-01. ~~**Answered: no — class membership is the access
     boundary.**~~ **REVOKED the same day, before any implementation. Superseded
@@ -1221,4 +1243,6 @@ them should be discovered mid-implementation.
   the UI-only scope cannot honour the identity decision on its own; the
   delivery path is an owner decision listed under §15.11 — chosen the same
   day: widen the read (path A), prepared as `20260901h`/`20260901t`, and
-  `20260901h` applied that evening as `20260901220926` after its own approval.
+  `20260901h` applied that evening as `20260901220926` after its own approval,
+  and the card built the same night against it — in the repository, not
+  deployed.
