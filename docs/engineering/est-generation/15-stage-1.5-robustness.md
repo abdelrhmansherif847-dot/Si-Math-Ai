@@ -538,5 +538,7 @@ weakened; two checks added inside the existing `validate-est-primitives` gate.
 
 ## 11. Commit
 
-Recorded on the commit that carries this document — see the Stage-1.5 report in
-the session transcript for the hash.
+`8d43764393949fd19c9197ba6f5604d87ba2283d` on
+`claude/mock-exam-enhancement-nnwb48`. (This line was written by the follow-up
+commit that amends it, so the hash it names is the commit that introduced every
+change described above.)
