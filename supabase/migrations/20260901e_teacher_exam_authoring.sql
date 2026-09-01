@@ -1,7 +1,14 @@
 -- =====================================================================
 -- Teacher Exams, increment 3c — authoring, and the publish gate
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only, inside a rollback.
+-- STATUS: 🟢 APPLIED 2026-09-01 as version 20260901165317.
+--
+-- All twelve bodies were md5-compared against this file after applying and
+-- were byte-identical on the first attempt — unlike 20260901c, which needed a
+-- verbatim re-apply because it had been pasted from a comment-stripped
+-- rendering. ACLs verified live: the ten client RPCs at postgres +
+-- service_role + authenticated, the two internal helpers at postgres +
+-- service_role and callable by no client at all.
 --
 -- SCOPE. Ten RPCs that let a teacher or an ACTIVE assistant build a paper and
 -- publish it, plus one internal helper. No table, column, policy or grant
