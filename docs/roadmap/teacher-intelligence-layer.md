@@ -1002,19 +1002,24 @@ them should be discovered mid-implementation.
     number; changing it is a decision to record here, with its reason, not a
     tuning knob.
 
-12. **Whether a Teacher Exam needs its own access code.** Raised 2026-09-01.
-    **Answered: no — class membership is the access boundary.** A student joins
-    a workspace with the Class Code, and from that moment sees every published
-    Teacher Exam of that workspace and no other workspace's. There is no second
-    code on the exam side.
+12. **Whether a Teacher Exam needs its own access code.**
+    Raised 2026-09-01. ~~**Answered: no — class membership is the access
+    boundary.**~~ **REVOKED the same day, before any implementation. Superseded
+    by §15.14.**
 
-    The reason to record it rather than just implement it: the alternative was
-    live for a moment. A teacher may reasonably want a paper only part of the
-    class sits, which is the Homework Code pattern applied to an exam. That is a
-    **nullable code column and a redemption table**, and adding it later to a
-    table already carrying live attempts is a migration over student work.
-    Whoever revisits this should know it was considered and declined, not
-    overlooked — and that Homework already carries the mechanism to copy.
+    Recorded rather than deleted because the reasoning that replaced it is the
+    point. The original answer made class membership sufficient: join the class,
+    see every published Teacher Exam in it. It was withdrawn on the observation
+    that **a Class Code spreads.** It is read aloud in a room, photographed and
+    forwarded, and it is deliberately long-lived — so a student outside the class
+    who obtains one would have obtained every exam in that class along with it.
+    Making membership the only boundary puts the integrity of every future exam
+    behind the least-protected credential in the system.
+
+    The paragraph below it — that a teacher may want a paper only part of the
+    class sits, and that retrofitting a code onto a table already carrying live
+    attempts is a migration over student work — survives the revocation and is
+    now an argument *for* §15.14 rather than a deferred risk.
 
 13. **Whether a teacher-AUTHORED exam's results become learning evidence.**
     Raised 2026-09-01. **Answered: no, not initially.** Results are shown to the
@@ -1035,10 +1040,72 @@ them should be discovered mid-implementation.
     difficulty signal that is measured rather than asserted by the author. Until
     both exist, a teacher exam is a result, not a measurement.
 
+14. **How a student gains access to a Teacher Exam.** Decided 2026-09-01,
+    replacing §15.12. **Every Teacher Exam carries its own unique Exam Code, and
+    the code grants nothing by itself: it raises a request that a teacher or an
+    active assistant must approve.**
+
+    The rule, in full:
+
+    ```
+    can_start(exam, student) =
+          approved                    -- teacher_exam_access.state = 'approved'
+      AND active class membership     -- re-checked at every start, never cached
+      AND exam open                   -- published, and not past its close
+    ```
+
+    Four properties are load-bearing and none may be quietly dropped:
+
+    - **The two codes do different work and must never be conflated.** The Class
+      Code creates a *relationship* (a `workspace_students` row). The Exam Code
+      raises a *request against one exam* (a `teacher_exam_access` row). Neither
+      substitutes for the other, and the exam itself stays scoped to its
+      workspace so that even a leaked code keeps the decision inside the class.
+    - **Approval is per exam.** It is never inherited from class membership, so
+      an exam's audience is controlled individually even where the Class Code has
+      spread widely. This is the whole reason the decision changed.
+    - **Membership is a live condition, not a stored one.** Revoking a student's
+      class link makes `can_start` false immediately, with no access row touched
+      and no cleanup job — the same mechanism that already makes
+      `teacher_can_see_student()` honest, and the reason §8.2 principle 3
+      (*revocation is real*) holds here without a special case. An attempt
+      already in progress may be finished and submitted; no new attempt may
+      start. Destroying work a student is halfway through is a support incident,
+      not a security control.
+    - **A non-member may raise a request, and the teacher sees their name and
+      nothing else** beyond a prominent *not in this class* marker. This is a
+      deliberate trade: the queue becomes a leak detector, at the cost of a
+      name being visible to a teacher the student has no relationship with. No
+      academic, commercial or contact data crosses with it — §8.4 is unchanged.
+      Bulk approval is restricted to verified members of the workspace, so an
+      outsider can never be swept in by a single tap.
+
+    **Rotating the Exam Code stops future code-based requests and silently
+    revokes nothing** — pending requests stay in front of the teacher, who can
+    then judge them knowing the code had leaked. Voiding them would hide the
+    signal that prompted the rotation.
+
+    Abuse is bounded by four layers, the first of which is a constraint rather
+    than code: `primary key (exam_id, student_id)` means one row per student per
+    exam *ever*; a decided row is not the student's to reopen; five pending
+    requests per student per hour caps guessing across exams; and every failure
+    returns one indistinguishable message, so the code box is never an oracle
+    for which codes exist — exactly as `student_join_workspace()` already does.
+
+    **Homework is not covered by this decision** and keeps its own model
+    (code → immediate unlock, no approval). That asymmetry is deliberate —
+    homework is practice, an exam is graded — and is recorded here so it reads
+    as a choice rather than an oversight.
+
 ---
 
 ## 16. Provenance
 
+- **2026-09-01 — §15.12 revoked the same day it was written, and replaced by
+  §15.14.** Class membership alone was made insufficient for Teacher Exam access
+  on the observation that a Class Code spreads: every exam now carries its own
+  code, and that code raises an approval request rather than granting entry.
+  Design only; nothing implemented.
 - **2026-09-01 — Two architecture decisions recorded (§15.12, §15.13),** taken
   with Increment A of the Teacher Assignment system: Teacher Exams are gated by
   class membership rather than a second code, and teacher-authored exam results
