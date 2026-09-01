@@ -1,0 +1,2023 @@
+{
+ "_note": "Structural fingerprints of the 200-item EST reference corpus. FINGERPRINTS ONLY: no stem, no options, no answer, no numbers. Four of the seven axes in artifact 13 section 9.2 are populated from the archetype database; options/narrative/numeric are not recorded there and are null. A null axis never matches.",
+ "_axes_populated": [
+  "ctx",
+  "chain",
+  "target",
+  "distract"
+ ],
+ "_axes_null": [
+  "options",
+  "narrative",
+  "numeric"
+ ],
+ "_forms": {
+  "T1": "sample test 1",
+  "T2": "sample test 2",
+  "T3": "sample test 3",
+  "T5": "sample test 5"
+ },
+ "_generated_from": "item-level archetype database, artifact 2",
+ "items": [
+  {
+   "id": "T1-Q1",
+   "ctx": "no-stimulus",
+   "chain": "model-build-equation",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "structural-model",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q2",
+   "ctx": "no-stimulus",
+   "chain": "linear-solve",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q3",
+   "ctx": "no-stimulus",
+   "chain": "model-build-equation",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "structural-model",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q4",
+   "ctx": "stimulus:S1-model shared",
+   "chain": "parameter-interpret-constant",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "misread-parameter",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q5",
+   "ctx": "stimulus:S1-model shared",
+   "chain": "parameter-interpret-rate",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "rate-inverted",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q6",
+   "ctx": "no-stimulus integer",
+   "chain": "fixed-overhead-integer-floor",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "step-omitted",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q7",
+   "ctx": "stimulus:graph repr-mismatch",
+   "chain": "inequality-from-graph",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "sign-flip-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q8",
+   "ctx": "no-stimulus",
+   "chain": "exponent-laws-simplify",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "exponent-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q9",
+   "ctx": "no-stimulus repr-mismatch",
+   "chain": "factor-polynomial",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "gcf-dropped",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q10",
+   "ctx": "no-stimulus",
+   "chain": "parameters-from-roots",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q11",
+   "ctx": "no-stimulus multi-branch",
+   "chain": "absolute-value-nested-count",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "half-done",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q12",
+   "ctx": "no-stimulus time-trap",
+   "chain": "targeted-coefficient-extract",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "one-pair-only",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q13",
+   "ctx": "no-stimulus hidden-factor",
+   "chain": "rational-expression-simplify",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "structural",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q14",
+   "ctx": "no-stimulus boundary",
+   "chain": "circle-inside-boundary",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "on-the-circle",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q15",
+   "ctx": "stimulus:figure nts",
+   "chain": "angle-chase-parallel",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "angle-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q16",
+   "ctx": "no-stimulus",
+   "chain": "radical-equation-parameter",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "UNRESOLVED-SCAN",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q17",
+   "ctx": "stimulus:figure nts;hybrid",
+   "chain": "parabola-inscribed-square",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "param-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q18",
+   "ctx": "stimulus:table",
+   "chain": "table-linear-missing",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "slope-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q19",
+   "ctx": "no-stimulus",
+   "chain": "asymptote-count",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "count-off",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q20",
+   "ctx": "no-stimulus roman",
+   "chain": "roman-numeral-properties",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "subset-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q21",
+   "ctx": "no-stimulus repr-mismatch",
+   "chain": "model-build-absvalue",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "centre-radius-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q22",
+   "ctx": "no-stimulus not-item",
+   "chain": "perpendicular-NOT-item",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "slope-sign",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q23",
+   "ctx": "no-stimulus",
+   "chain": "two-price-system-money",
+   "target": "composite:DAP",
+   "options": null,
+   "distract": "count-not-money",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q24",
+   "ctx": "no-stimulus",
+   "chain": "fraction-equation-solve",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "sign-denominator-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q25",
+   "ctx": "no-stimulus",
+   "chain": "param-from-point-then-slope",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "param-itself",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q26",
+   "ctx": "no-stimulus",
+   "chain": "literal-system",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q27",
+   "ctx": "no-stimulus unit-conf",
+   "chain": "percent-with-wrong-flip",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "count-as-percent",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q28",
+   "ctx": "stimulus:pie",
+   "chain": "pie-ratio-on-remainder",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "remainder-whole",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q29",
+   "ctx": "stimulus:bar2 shared",
+   "chain": "graph-comprehension-axes",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "label-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q30",
+   "ctx": "stimulus:bar2 shared",
+   "chain": "bar-compare-single",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "misread",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q31",
+   "ctx": "stimulus:bar2 shared",
+   "chain": "bar-read-single",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "misread",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q32",
+   "ctx": "stimulus:bar2 shared",
+   "chain": "bar-multi-condition-scan",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "partial-scan",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q33",
+   "ctx": "no-stimulus",
+   "chain": "probability-number-property",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "count-denominator",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q34",
+   "ctx": "no-stimulus",
+   "chain": "compound-interest-reverse",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "period-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q35",
+   "ctx": "no-stimulus",
+   "chain": "prob-replacement-order-grid",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "2x2-repl-order",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q36",
+   "ctx": "no-stimulus",
+   "chain": "symbolic-counting-formula",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "perm-vs-comb",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q37",
+   "ctx": "stimulus:scatter",
+   "chain": "scatter-trend-plausibility",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "off-trend",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q38",
+   "ctx": "stimulus:cumfreq",
+   "chain": "cumulative-frequency-mode",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "interval-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q39",
+   "ctx": "no-stimulus",
+   "chain": "exponent-radical-equation",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "exponent-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q40",
+   "ctx": "stimulus:table attribution",
+   "chain": "which-student-multi-claim",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "property-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q41",
+   "ctx": "no-stimulus sign-domain",
+   "chain": "radicals-sign-constrained",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q42",
+   "ctx": "no-stimulus",
+   "chain": "function-of-function-eval",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "term-dropped",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q43",
+   "ctx": "stimulus:figure nts",
+   "chain": "cone-slant-vs-height",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "slant-as-height",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q44",
+   "ctx": "stimulus:figure always-true",
+   "chain": "always-true-parallel-angles",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "relation-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q45",
+   "ctx": "no-stimulus boundary",
+   "chain": "absvalue-interval-max",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "other-endpoint",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q46",
+   "ctx": "no-stimulus",
+   "chain": "composed-percentage-chain",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "per-step-named",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q47",
+   "ctx": "stimulus:line",
+   "chain": "line-graph-mean",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "sum-not-mean",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q48",
+   "ctx": "no-stimulus stem-modifier",
+   "chain": "prob-inclusion-exclusion-half",
+   "target": "composite:DAP",
+   "options": null,
+   "distract": "un-halved",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q49",
+   "ctx": "no-stimulus factor-grouping",
+   "chain": "cubic-real-solution-count",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "count-off",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T1-Q50",
+   "ctx": "stimulus:figure nts",
+   "chain": "similar-right-triangles-altitudes",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "ratio-inverted",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q1",
+   "ctx": "no-stimulus",
+   "chain": "linear-composite",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q2",
+   "ctx": "no-stimulus",
+   "chain": "linear-solve",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q3",
+   "ctx": "no-stimulus",
+   "chain": "function-eval",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q4",
+   "ctx": "stimulus:S-model shared",
+   "chain": "parameter-interpret",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "misread-parameter",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q5",
+   "ctx": "stimulus:S-model shared",
+   "chain": "parameter-interpret",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "misread-parameter",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q6",
+   "ctx": "stimulus:grid",
+   "chain": "circle-circumference-from-grid",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "formula-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q7",
+   "ctx": "no-stimulus could-be",
+   "chain": "inequality-translate-test",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q8",
+   "ctx": "no-stimulus",
+   "chain": "consecutive-integers-sum",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "first-not-sum",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q9",
+   "ctx": "no-stimulus",
+   "chain": "quadratic-range",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "vertex-sign",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q10",
+   "ctx": "stimulus:figure nts;recall",
+   "chain": "trig-ratio-composite-figure",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "ratio-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q11",
+   "ctx": "no-stimulus roman",
+   "chain": "roman-numeral-sign-reasoning",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "subset-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q12",
+   "ctx": "no-stimulus",
+   "chain": "composition-evaluate",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "order-stop-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q13",
+   "ctx": "no-stimulus branch",
+   "chain": "conditional-branch-word",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "both-branches",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q14",
+   "ctx": "no-stimulus vieta",
+   "chain": "parameters-from-roots",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q15",
+   "ctx": "stimulus:figure",
+   "chain": "angle-chase-algebraic",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "angle-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q16",
+   "ctx": "no-stimulus",
+   "chain": "vertex-abscissa",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "factor2-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q17",
+   "ctx": "no-stimulus",
+   "chain": "line-parabola-intersection",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "coord-cross-pair",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q18",
+   "ctx": "stimulus:pie unit-conf",
+   "chain": "pie-percent-to-count-diff",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "percent-as-count",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q19",
+   "ctx": "no-stimulus",
+   "chain": "system-composite-target",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "given-constant",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q20",
+   "ctx": "stimulus:line shared",
+   "chain": "graph-read-multi-step-rate",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "step-omitted",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q21",
+   "ctx": "stimulus:line shared",
+   "chain": "aggregate-over-groups",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "single-point",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q22",
+   "ctx": "stimulus:line shared",
+   "chain": "whole-sum-then-percent",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "partial-sum",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q23",
+   "ctx": "no-stimulus",
+   "chain": "cubic-factors-sum-roots",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "factor-ignored",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q24",
+   "ctx": "no-stimulus recall",
+   "chain": "line-two-points-xintercept",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "slope-or-yint",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q25",
+   "ctx": "no-stimulus",
+   "chain": "composite-eval-difference",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "each-step-named",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q26",
+   "ctx": "no-stimulus complex",
+   "chain": "biquadratic-product-roots",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "imaginary-set",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q27",
+   "ctx": "no-stimulus",
+   "chain": "model-build-equation",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "structural-model",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q28",
+   "ctx": "no-stimulus recall",
+   "chain": "parallelogram-centre-midpoint",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "coord-transpose",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q29",
+   "ctx": "no-stimulus",
+   "chain": "inverse-function-rational",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "structural",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q30",
+   "ctx": "no-stimulus",
+   "chain": "counting-perm-vs-comb",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "perm-vs-comb",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q31",
+   "ctx": "stimulus:table shared;order",
+   "chain": "mean-of-subset-ordering-trap",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "wrong-rows",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q32",
+   "ctx": "stimulus:table shared",
+   "chain": "percent-change-direction-base",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "2x2-dir-base",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q33",
+   "ctx": "stimulus:table shared",
+   "chain": "rate-of-change-two-rows",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "sign-interval-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q34",
+   "ctx": "no-stimulus",
+   "chain": "exponential-growth-offbyone",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "exponent-linear-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q35",
+   "ctx": "no-stimulus",
+   "chain": "coefficient-matching-identity",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "2x2-sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q36",
+   "ctx": "no-stimulus boundary",
+   "chain": "compound-inequality-point-test",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "strict-boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q37",
+   "ctx": "no-stimulus",
+   "chain": "rational-undefined",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "2x2-sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q38",
+   "ctx": "no-stimulus repr-mismatch",
+   "chain": "proportion-rearrange",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "structural",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q39",
+   "ctx": "stimulus:table shared;interval-opts",
+   "chain": "weighted-mean-frequency",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "single-column",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q40",
+   "ctx": "stimulus:table shared;none-above",
+   "chain": "measure-of-centre-compare",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "measure-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q41",
+   "ctx": "no-stimulus",
+   "chain": "two-condition-rate-word",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "partial-condition",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q42",
+   "ctx": "no-stimulus",
+   "chain": "translate-composite-target",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q43",
+   "ctx": "no-stimulus",
+   "chain": "direct-variation-transformed",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "constant-ignored",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q44",
+   "ctx": "stimulus:scatter shared",
+   "chain": "best-fit-slope-read",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "interval-offbyone",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q45",
+   "ctx": "stimulus:scatter shared;inclusive",
+   "chain": "scatter-column-sum-range",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "range-boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q46",
+   "ctx": "no-stimulus recall",
+   "chain": "exponent-law-substitution",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "exponent-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q47",
+   "ctx": "no-stimulus",
+   "chain": "trig-costumed-algebra",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "scale-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q48",
+   "ctx": "no-stimulus",
+   "chain": "inequality-system-quadrant",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "region-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q49",
+   "ctx": "stimulus:science-text reading-load",
+   "chain": "literal-formula-rearrange",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "2x2-struct-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T2-Q50",
+   "ctx": "no-stimulus",
+   "chain": "scale-equation-composite",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "2x2-sign-scale",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q1",
+   "ctx": "no-stimulus",
+   "chain": "linear-verbal-substitution",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "substituted-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q2",
+   "ctx": "no-stimulus",
+   "chain": "two-purchase-system-third-bundle",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "single-item",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q3",
+   "ctx": "no-stimulus",
+   "chain": "proportion-rearrange",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "structural",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q4",
+   "ctx": "no-stimulus",
+   "chain": "symbolic-composition",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "2x2-struct-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q5",
+   "ctx": "no-stimulus recall;repr-mismatch",
+   "chain": "slope-nonstandard-form",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "coefficient-lift",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q6",
+   "ctx": "stimulus:figure nts",
+   "chain": "similar-triangles-parallel-composite",
+   "target": "composite:GT",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q7",
+   "ctx": "stimulus:graph shared;roman",
+   "chain": "graph-roman-numeral",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "subset-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q8",
+   "ctx": "stimulus:graph shared",
+   "chain": "tangent-at-vertex-concept",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "axis-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q9",
+   "ctx": "stimulus:table 4-way-compute",
+   "chain": "fixed-plus-variable-compare",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "near-miss",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q10",
+   "ctx": "no-stimulus",
+   "chain": "axis-of-symmetry-parameter",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-factor-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q11",
+   "ctx": "no-stimulus boundary;integer",
+   "chain": "compound-ineq-composite-integer",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "strict-boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q12",
+   "ctx": "no-stimulus recall",
+   "chain": "perpendicular-through-midpoint",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "2x2-slope-int",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q13",
+   "ctx": "no-stimulus",
+   "chain": "exponent-equation-composite",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q14",
+   "ctx": "no-stimulus vieta",
+   "chain": "product-of-roots",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "unrearranged-c",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q15",
+   "ctx": "no-stimulus",
+   "chain": "rational-equation-composite",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "x-not-x2",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q16",
+   "ctx": "stimulus:table shared",
+   "chain": "mean-from-table",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "sum-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q17",
+   "ctx": "stimulus:table shared;offbyone",
+   "chain": "ordinal-row-reference-percent",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "wrong-row",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q18",
+   "ctx": "stimulus:table shared",
+   "chain": "percent-change-base",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "base-choice",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q19",
+   "ctx": "no-stimulus",
+   "chain": "vertex-form-complete-square",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "2x2-sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q20",
+   "ctx": "no-stimulus collapse",
+   "chain": "radical-simplify-cancels-zero",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "partial-radical",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q21",
+   "ctx": "no-stimulus",
+   "chain": "sum-product-then-half-greater",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "2x2-which-halved",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q22",
+   "ctx": "stimulus:graph unit-conv",
+   "chain": "physics-graph-unit-conversion",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "no-conversion",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q23",
+   "ctx": "no-stimulus",
+   "chain": "inverse-vs-reciprocal",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "reciprocal-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q24",
+   "ctx": "stimulus:scatter shared;given-eqs",
+   "chain": "two-model-intersection-read",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "adjacent-year",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q25",
+   "ctx": "stimulus:scatter shared",
+   "chain": "residual-actual-vs-predicted",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "magnitude-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q26",
+   "ctx": "no-stimulus stem-modifier",
+   "chain": "probability-squared-target",
+   "target": "composite:DAP",
+   "options": null,
+   "distract": "un-squared",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q27",
+   "ctx": "stimulus:figure nts",
+   "chain": "angle-chase-two-variables",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "first-variable",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q28",
+   "ctx": "no-stimulus recall",
+   "chain": "collinear-points",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "slope-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q29",
+   "ctx": "no-stimulus 4-way-compute",
+   "chain": "infinite-solutions-identify",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "proportional-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q30",
+   "ctx": "no-stimulus",
+   "chain": "constrained-enumeration",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "count-offbyone",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q31",
+   "ctx": "no-stimulus",
+   "chain": "quadratic-through-three-points",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "2x2-sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q32",
+   "ctx": "stimulus:table",
+   "chain": "two-way-table-denominator",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "wrong-denominator",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q33",
+   "ctx": "no-stimulus",
+   "chain": "perpendicular-parameters-composite",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q34",
+   "ctx": "no-stimulus not-item",
+   "chain": "absvalue-inequality-NOT-item",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q35",
+   "ctx": "no-stimulus boundary",
+   "chain": "inequality-intersection-unique",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "adjacent-int",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q36",
+   "ctx": "no-stimulus",
+   "chain": "remainder-theorem-composite",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q37",
+   "ctx": "stimulus:bar",
+   "chain": "bar-percent-to-other-category",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "scale-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q38",
+   "ctx": "no-stimulus complex",
+   "chain": "complex-number-composite",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "sign-form-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q39",
+   "ctx": "no-stimulus offbyone;named-source",
+   "chain": "linear-extrapolation-daycount",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "day-offbyone",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q40",
+   "ctx": "no-stimulus",
+   "chain": "inverse-variation-composite",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q41",
+   "ctx": "no-stimulus recall",
+   "chain": "coordinate-rectangle-rotated",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "side-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q42",
+   "ctx": "stimulus:text shared",
+   "chain": "fixed-plus-rate-total",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "fee-omitted",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q43",
+   "ctx": "stimulus:text shared;integer",
+   "chain": "budget-integer-floor",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "fee-omitted",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q44",
+   "ctx": "no-stimulus",
+   "chain": "backwards-fraction-chain",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "intermediate-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q45",
+   "ctx": "stimulus:line2 shared",
+   "chain": "percent-decrease-two-series",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "base-choice",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q46",
+   "ctx": "stimulus:line2 shared",
+   "chain": "event-anchored-series-scan",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "partial-scan",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q47",
+   "ctx": "no-stimulus",
+   "chain": "reverse-percentage",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "add-back",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q48",
+   "ctx": "stimulus:graph3",
+   "chain": "multi-curve-graph-sum",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "partial-sum",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q49",
+   "ctx": "no-stimulus",
+   "chain": "mean-with-added-element",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "total-not-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T3-Q50",
+   "ctx": "no-stimulus",
+   "chain": "targeted-coefficient-extract",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "one-pair-only",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q1",
+   "ctx": "no-stimulus",
+   "chain": "ratio-three-part-largest",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "wrong-member",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q2",
+   "ctx": "no-stimulus",
+   "chain": "remainder-theorem",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q3",
+   "ctx": "no-stimulus",
+   "chain": "compound-interest-forward",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "period-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q4",
+   "ctx": "no-stimulus",
+   "chain": "parallel-parameters-composite",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "raw-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q5",
+   "ctx": "stimulus:stemleaf",
+   "chain": "stem-and-leaf-median",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "7th-8th-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q6",
+   "ctx": "no-stimulus recall",
+   "chain": "collinear-points",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "slope-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q7",
+   "ctx": "stimulus:graph-opts graph-as-option",
+   "chain": "absvalue-graph-identify",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "transformation-set",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q8",
+   "ctx": "stimulus:figure nts;roman",
+   "chain": "circle-roman-numeral",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "subset-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q9",
+   "ctx": "stimulus:curve shared",
+   "chain": "parameter-interpret-intercept",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "fixed-vs-unit",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q10",
+   "ctx": "stimulus:curve shared;scaled-axis",
+   "chain": "scaled-axis-read",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "raw-axis",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q11",
+   "ctx": "stimulus:curve shared;scaled-axis",
+   "chain": "read-then-percent-scaled",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "scale-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q12",
+   "ctx": "stimulus:numline-opts numline-as-option",
+   "chain": "quadratic-inequality-numberline",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "root-sign-set",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q13",
+   "ctx": "no-stimulus",
+   "chain": "inverse-value-evaluate",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q14",
+   "ctx": "stimulus:bar2 shared",
+   "chain": "grouped-bar-aggregate",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "single-bar",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q15",
+   "ctx": "stimulus:bar2 shared",
+   "chain": "qualitative-claim-eval",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "trend-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q16",
+   "ctx": "stimulus:bar2 shared;none-reason",
+   "chain": "causal-inference-no-calc",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "direction-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q17",
+   "ctx": "no-stimulus",
+   "chain": "percent-increase-simple",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q18",
+   "ctx": "no-stimulus",
+   "chain": "no-solution-parameter",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "adjacent-int",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q19",
+   "ctx": "no-stimulus",
+   "chain": "mean-to-target",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "total-not-value",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q20",
+   "ctx": "no-stimulus vieta",
+   "chain": "sum-of-roots",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-scale-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q21",
+   "ctx": "no-stimulus",
+   "chain": "substitute-into-radical",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "x-not-expr",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q22",
+   "ctx": "no-stimulus",
+   "chain": "expected-value",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q23",
+   "ctx": "no-stimulus",
+   "chain": "range-of-rational",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "domain-vs-range",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q24",
+   "ctx": "no-stimulus",
+   "chain": "prob-complement-no-replacement",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "repl-complement-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q25",
+   "ctx": "no-stimulus",
+   "chain": "direct-variation-square",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "constant-power-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q26",
+   "ctx": "stimulus:table",
+   "chain": "linear-table-two-unknowns",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "single-unknown",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q27",
+   "ctx": "no-stimulus",
+   "chain": "exponent-common-base",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q28",
+   "ctx": "no-stimulus boundary;integer",
+   "chain": "compound-ineq-composite-integer",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "strict-boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q29",
+   "ctx": "no-stimulus",
+   "chain": "system-one-coordinate",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "other-coordinate",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q30",
+   "ctx": "no-stimulus given-sheet;rounding",
+   "chain": "special-triangle-45",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "ratio-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q31",
+   "ctx": "stimulus:dataset",
+   "chain": "interquartile-range",
+   "target": "direct:DAP",
+   "options": null,
+   "distract": "quartile-conf",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q32",
+   "ctx": "no-stimulus",
+   "chain": "prism-volume-ratio-dimension",
+   "target": "composite:GT",
+   "options": null,
+   "distract": "wrong-dimension",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q33",
+   "ctx": "no-stimulus",
+   "chain": "absvalue-select-positive-root",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "other-root",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q34",
+   "ctx": "no-stimulus",
+   "chain": "radical-index-simplify",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "partial-extract",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q35",
+   "ctx": "no-stimulus paraphrase",
+   "chain": "vertex-paraphrased",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-factor-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q36",
+   "ctx": "no-stimulus",
+   "chain": "system-composite-product",
+   "target": "composite:FA",
+   "options": null,
+   "distract": "single-variable",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q37",
+   "ctx": "no-stimulus",
+   "chain": "multi-step-linear-distribute",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "2x2-sign-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q38",
+   "ctx": "no-stimulus option-with-caveat",
+   "chain": "complex-fraction-simplify",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "structural",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q39",
+   "ctx": "no-stimulus symbolic-answer",
+   "chain": "parametric-system-symbolic",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "sign-form-grid",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q40",
+   "ctx": "no-stimulus",
+   "chain": "divisibility-remainder-parameter",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "sign-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q41",
+   "ctx": "no-stimulus roman",
+   "chain": "vertical-line-roman",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "slope-zero-vs-undef",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q42",
+   "ctx": "no-stimulus",
+   "chain": "roots-ordered-select",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "other-root",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q43",
+   "ctx": "stimulus:table shared",
+   "chain": "table-from-function-value",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q44",
+   "ctx": "stimulus:table shared;can-be",
+   "chain": "multi-valued-can-be",
+   "target": "composite:AAF",
+   "options": null,
+   "distract": "other-branch",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q45",
+   "ctx": "no-stimulus recall",
+   "chain": "circle-centre-point-diameter",
+   "target": "composite:GT",
+   "options": null,
+   "distract": "radius-not-diameter",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q46",
+   "ctx": "no-stimulus boundary;integer",
+   "chain": "inequality-smallest-integer",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "strict-boundary",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q47",
+   "ctx": "no-stimulus",
+   "chain": "chained-substitution",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "arith-slip",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q48",
+   "ctx": "no-stimulus",
+   "chain": "square-from-diagonal",
+   "target": "direct:GT",
+   "options": null,
+   "distract": "diagonal-squared",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q49",
+   "ctx": "no-stimulus",
+   "chain": "curve-line-select-root",
+   "target": "direct:AAF",
+   "options": null,
+   "distract": "other-root",
+   "narrative": null,
+   "numeric": null
+  },
+  {
+   "id": "T5-Q50",
+   "ctx": "no-stimulus recall",
+   "chain": "parallel-slope-standard-form",
+   "target": "direct:FA",
+   "options": null,
+   "distract": "intercept-as-slope",
+   "narrative": null,
+   "numeric": null
+  }
+ ]
+}
