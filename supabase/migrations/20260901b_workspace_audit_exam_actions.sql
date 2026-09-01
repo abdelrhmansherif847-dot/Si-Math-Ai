@@ -1,7 +1,15 @@
 -- =====================================================================
 -- Teacher Exams, increment 3a — eight audit labels, and nothing else
 -- =====================================================================
--- STATUS: 🟡 PREPARED — NOT APPLIED. Dry-run only, inside a rollback.
+-- STATUS: 🟢 APPLIED 2026-09-01 as version 20260901153803.
+--
+-- Post-apply verification, including the one test the dry-run structurally
+-- could not run: all EIGHT labels were written to workspace_audit_log for real
+-- and each read back identical — done per label, because each was added by its
+-- own ALTER and proving one writable proves nothing about the other seven. That
+-- write test ran in a transaction that aborted (rows 2 -> 10 -> 2), because this
+-- table is append-only and has no delete path: a verification row would have
+-- been permanent. The original eight labels still hold sort positions 1..8.
 --
 -- WHAT THIS IS, AND ALL IT IS
 -- ---------------------------
@@ -24,7 +32,7 @@
 --
 -- ⚠️ THIS MIGRATION IS NOT CLEANLY REVERSIBLE.
 -- PostgreSQL has no ALTER TYPE ... DROP VALUE. Undoing it means dropping and
--- recreating the type around a live column — see 20260902z, which is written
+-- recreating the type around a live column — see 20260901y, which is written
 -- out honestly rather than pretended. Treat the choice of labels as permanent:
 -- a label added speculatively and never used is clutter that cannot be swept
 -- up. That is why this adds eight and not ten. There is no 'exam_deleted' here

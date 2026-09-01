@@ -1,5 +1,5 @@
 -- =====================================================================
--- Rollback for 20260902a — and this one is NOT a real undo
+-- Rollback for 20260901b — and this one is NOT a real undo
 -- =====================================================================
 -- STATUS: 🔴 PREPARED, deliberately unapplied, and deliberately unpleasant.
 --
