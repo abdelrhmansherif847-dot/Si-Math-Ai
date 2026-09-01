@@ -117,6 +117,41 @@ const lands = (options, value) => {
 };
 
 /**
+ * Read an item's counterfactuals in either shape. A single-primitive item
+ * declares one; a composed item declares one per mechanism (est-compose.mjs).
+ */
+export function counterfactualsOf(item) {
+  if (Array.isArray(item.counterfactuals)) return item.counterfactuals;
+  if (item.counterfactual) return [{ mechanism: item.primaryMechanism || 'primary', ...item.counterfactual }];
+  return [];
+}
+
+/**
+ * Is one counterfactual well-formed AND non-inert?
+ *
+ *   value        withholding the mechanism moves the key
+ *   determinacy  withholding it leaves more than one option standing, so the
+ *                item becomes unanswerable — needed wherever the target is a
+ *                selection rather than a quantity, because stating a prose
+ *                relation makes such an item easier without moving its answer
+ */
+export function checkCounterfactual(cf, keyValue) {
+  if (!cf || typeof cf !== 'object') return { ok: false, reason: 'counterfactual missing' };
+  if (cf.kind === 'determinacy') {
+    return cf.optionsSurviving > 1
+      ? { ok: true }
+      : { ok: false, reason: `${cf.mechanism || 'mechanism'}: withholding it still leaves the item determinate — the mechanism is decoration` };
+  }
+  if (cf.kind === 'value' || cf.kind === undefined) {
+    if (cf.value === undefined) return { ok: false, reason: `${cf.mechanism || 'mechanism'}: value counterfactual has no value` };
+    return qEq(cf.value, keyValue)
+      ? { ok: false, reason: `${cf.mechanism || 'mechanism'}: withholding it leaves the key unchanged — the mechanism is decoration` }
+      : { ok: true };
+  }
+  return { ok: false, reason: `${cf.mechanism || 'mechanism'}: unknown counterfactual kind ${cf.kind}` };
+}
+
+/**
  * The load-bearing assessment. This is the acceptance criterion of Stage 1 and
  * the only thing that decides whether a generated item counts.
  */
@@ -150,12 +185,18 @@ export function assess(item) {
   // item becomes unanswerable. Artifact 13 section 8.7 states this directly:
   // "the item is unanswerable without it, proved by solving with the relation
   // withheld". Getting this wrong rejected every P-UNSTATED-MODEL candidate.
-  const cf = item.counterfactual;
-  if (!cf) reasons.push('no counterfactual supplied');
-  else if (cf.kind === 'determinacy') {
-    if (!(cf.optionsSurviving > 1)) reasons.push('withholding the mechanism still leaves the item determinate — mechanism is decoration');
-  } else if (cf.value === undefined) reasons.push('value counterfactual has no value');
-  else if (qEq(cf.value, keyValue)) reasons.push('counterfactual key equals the key — mechanism is decoration');
+  //
+  // A COMPOSED item carries one counterfactual PER MECHANISM, because
+  // load-bearing does not compose: two mechanisms that each bite alone can
+  // produce an item in which one is decoration. Every entry is checked, so the
+  // plural shape is a strictly higher bar than the singular one, never a way
+  // round it.
+  const cfs = counterfactualsOf(item);
+  if (!cfs.length) reasons.push('no counterfactual supplied');
+  for (const cf of cfs) {
+    const r = checkCounterfactual(cf, keyValue);
+    if (!r.ok) reasons.push(r.reason);
+  }
 
   return {
     loadBearing: reasons.length === 0,
@@ -997,10 +1038,21 @@ export function pNamedConfig(seed, opts = {}) {
     ],
     counterfactual: { kind: 'value', note: 'a to-scale figure supplied, resolving the adjacency by inspection',
                       value: toQ(cand.misread) },
+    // The fingerprint has to SEE what the generator varies, or the archetype
+    // work is invisible to anti-clone. Wiring it into form emission found that
+    // it did not: `apply-ratio-adj-to-hyp` and `apply-ratio-opp-to-adj` share
+    // nine of eleven tokens, and a token-set comparison cannot tell a direction
+    // from its reverse. Every structural axis below is now a SINGLE token, so
+    // `adj2hyp` and `hyp2adj` are different tokens rather than the same two
+    // words in the other order.
     fingerprintParts: {
-      ctx: 'triangle-no-figure', chain: ['parse-vertex-names', 'locate-right-angle', `apply-ratio-${givenRole}-to-${askedRole}`],
-      target: `value:length:${askedRole}`, options: 'scale-ladder', distract: ['D5', 'D5', 'D4'],
-      narrative: 'named-triangle', numeric: ['given-side', `angle-${theta}`],
+      ctx: `triangle-no-figure right${rightAt} named${namedAt}`,
+      chain: ['parse-vertex-names', 'locate-right-angle', `ratio-${givenRole}2${askedRole}`, `special-${theta}`],
+      target: `value-length-${askedRole} from-${givenRole}`,
+      options: `scale-ladder-${theta} ${givenRole}2${askedRole}`,
+      distract: ['D5', 'D5', 'D4'],
+      narrative: `named-triangle right-at-${rightAt}`,
+      numeric: [`angle${theta}`, `given-${givenRole}`, `asked-${askedRole}`],
     },
   };
 }
