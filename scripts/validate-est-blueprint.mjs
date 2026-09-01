@@ -13,6 +13,7 @@
 import {
   DOMAIN_BANDS, FAMILIES, COMBINED_FAMILY_RANGES, DEMAND_BANDS, DEVICE_BUDGETS,
   SET_RULES, KEY_RULES, SLOTS, ANTI_REPETITION,
+  STRENGTHS, RULES, KAR_CALIBRATION, RENDERING_CAPABILITY,
 } from './est-blueprint.mjs';
 
 const fails = [];
@@ -154,6 +155,50 @@ check(KEY_RULES.perLetter[0] * 4 <= N && KEY_RULES.perLetter[1] * 4 >= N,
   `key budget ${KEY_RULES.perLetter.join('..')} per letter cannot sum to ${N}`);
 check(ANTI_REPETITION.archetypeRepeatsWithinForm === 0,
   'anti-repetition must forbid archetype repeats within a form');
+
+// ── rule strengths (the anti-overfitting layer) ───────────────────────────────
+for (const [name, r] of Object.entries(RULES)) {
+  check(STRENGTHS.includes(r.strength), `rule ${name}: unknown strength "${r.strength}"`);
+  check(/^T[1-4]$/.test(r.tier), `rule ${name}: unknown evidence tier "${r.tier}"`);
+  check(typeof r.why === 'string' && r.why.length > 20, `rule ${name}: needs a stated reason`);
+  // Evidence caps strength. A T3 finding may not become law; a T4 finding may
+  // not constrain generation at all. This is the guard against overfitting four
+  // forms into a mandatory rule set.
+  if (r.tier === 'T3') check(!['hard'].includes(r.strength),
+    `rule ${name}: T3 evidence cannot support a hard constraint`);
+  if (r.tier === 'T4') check(['rare', 'optional', 'tendency'].includes(r.strength),
+    `rule ${name}: T4 evidence cannot constrain generation (strength "${r.strength}")`);
+}
+for (const name of ['domainBands', 'karBands', 'deviceBudgets', 'setStructure', 'keyBalance',
+                    'noArchetypeRepeat', 'noContextRepeat', 'noNumericDuplication'])
+  check(RULES[name], `rule "${name}" must be declared with a strength`);
+
+// at least one rule of each strength, so the taxonomy is used rather than decorative
+for (const st of STRENGTHS)
+  check(Object.values(RULES).some(r => r.strength === st), `no rule carries strength "${st}"`);
+
+// ── KAR: the published bands are the target, our measurement is not ───────────
+check(KAR_CALIBRATION.target === 'published', 'KAR target must be the published bands, never our measurement');
+check(KAR_CALIBRATION.targetTier === 'T1', 'the KAR target must be publisher-authoritative');
+check(KAR_CALIBRATION.measurementTier === 'T4', 'our KAR measurement must be recorded as T4');
+check(KAR_CALIBRATION.useMeasurementAsConstraint === false,
+  'our KAR measurement must not be used as a generation constraint');
+check(KAR_CALIBRATION.claimAllowed === false,
+  'no form may claim to hit the published KAR bands until the rubric is calibrated');
+
+// ── rendering gaps keep their budgets ─────────────────────────────────────────
+for (const [name, g] of Object.entries(RENDERING_CAPABILITY)) {
+  check(g.kind === 'PRODUCT / RENDERING CAPABILITY GAP',
+    `${name}: a rendering gap must be classified as a capability gap, not an exam-design exclusion`);
+  check(g.budgetRetained === true, `${name}: the blueprint budget must be retained, not removed`);
+  const b = DEVICE_BUDGETS[g.device];
+  check(b, `${name}: device "${g.device}" has no budget`);
+  if (b) check(b[0] >= 1, `${name}: device "${g.device}" budget floor is ${b[0]} — a gap must not zero it out`);
+  const used = SLOTS.filter(s => s.f.includes(g.device)).length;
+  check(used >= b[0], `${name}: only ${used} slots carry "${g.device}" against a floor of ${b[0]}`);
+  check(typeof g.requirement === 'string' && g.requirement.length > 10,
+    `${name}: must point at a written requirement document`);
+}
 
 // ── report ────────────────────────────────────────────────────────────────────
 if (process.argv.includes('--print')) {

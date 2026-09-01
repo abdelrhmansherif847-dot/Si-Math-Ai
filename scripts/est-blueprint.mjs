@@ -12,6 +12,121 @@
 // No dependencies, no build step, same bytes in Node and the browser, per the
 // repo's standing convention.
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RULE STRENGTH — the anti-overfitting layer.
+//
+// The corpus is four forms. Turning every observed frequency into a mandatory
+// rule would produce four forms with shuffled questions, not an exam. Every
+// rule below therefore carries a STRENGTH, and the strength decides what the
+// validator does with it and what a generator is allowed to vary.
+//
+//   'hard'      Must always hold. Violation is a defect. Publisher-authoritative
+//               facts and structural invariants live here.
+//   'range'     Must land inside a stated interval, anywhere inside it.
+//   'soft'      Should usually hold. A form may deviate WITH A RECORDED REASON;
+//               the validator warns rather than fails.
+//   'tendency'  Reproduce in aggregate ACROSS THE SERIES, not in every form.
+//               Per-form conformance is not required and not desirable.
+//   'rare'      A minority pattern. Must appear in SOME forms of a series and
+//               must NOT appear in all of them.
+//   'optional'  Free choice. Recorded only so a generator varies it deliberately
+//               rather than by accident.
+//
+// A rule's strength is evidence-driven: T1/T2 findings can be 'hard' or 'range';
+// T3 findings cap at 'soft' or 'tendency'; T4 findings cannot constrain
+// generation at all.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const STRENGTHS = ['hard', 'range', 'soft', 'tendency', 'rare', 'optional'];
+
+/**
+ * Every rule this blueprint states, with its strength, its evidence tier and
+ * the reason the two combine the way they do. The validator consults this to
+ * decide whether a violation is a failure or a warning; a rule missing from
+ * here is itself a failure.
+ */
+export const RULES = {
+  // ── hard: publisher-authoritative structure ────────────────────────────────
+  itemCount:            { strength: 'hard', tier: 'T1', why: 'The publisher prints 50 items in one 75-minute section.' },
+  allMultipleChoice:    { strength: 'hard', tier: 'T1', why: 'The publisher prints "all multiple choice"; 200/200 corpus items are 4-option MCQ.' },
+  fourOptionsAD:        { strength: 'hard', tier: 'T1', why: 'A-D in every item of every form.' },
+
+  // ── hard: structural invariants measured across all four forms ─────────────
+  noArchetypeRepeat:    { strength: 'hard', tier: 'T2', why: '191 archetypes over 200 items; two forms reach 50 distinct in 50.' },
+  noContextRepeat:      { strength: 'hard', tier: 'T2', why: 'No scenario recurs inside a form anywhere in the corpus.' },
+  noNumericDuplication: { strength: 'hard', tier: 'T2', why: 'Series-level. A recognised question invalidates the score it produces.' },
+  keyReadNotChosen:     { strength: 'hard', tier: 'T2', why: 'Options run in magnitude or structural order; the letter falls out.' },
+  everyDistractorNamed: { strength: 'hard', tier: 'T2', why: 'No unnameable option found in 600 corpus distractors.' },
+  derivedPartnerPresent:{ strength: 'hard', tier: 'T2', why: 'The un-derived value is offered on essentially every derived-target item.' },
+  lastItemNotPeak:      { strength: 'hard', tier: 'T2', why: 'No reference form ends on its highest-demand item.' },
+  peaksNotAdjacent:     { strength: 'hard', tier: 'T2', why: 'No two peak-band items are adjacent anywhere in 200 items.' },
+  geometryNotAdjacent:  { strength: 'hard', tier: 'T2', why: 'Geometry is scattered in all four forms; never more than two adjacent.' },
+
+  // ── range: published bands and measured per-form intervals ─────────────────
+  domainBands:          { strength: 'range', tier: 'T1', why: 'Published. Anywhere inside the band is authentic.' },
+  karBands:             { strength: 'range', tier: 'T1', why: 'Published. See KAR_CALIBRATION below: the TARGET is T1, our MEASUREMENT is T4.' },
+  familyCounts:         { strength: 'range', tier: 'T3', why: 'Per-form counts swing widely inside a stable family list.' },
+  demandShares:         { strength: 'range', tier: 'T3', why: 'Fitted to reproduce the corpus shape; not calibrated against students.' },
+  deviceBudgets:        { strength: 'range', tier: 'T2', why: 'Device presence is T2; per-form counts vary, so a range not a point.' },
+  setStructure:         { strength: 'range', tier: 'T2', why: '15 sets over 4 forms: 2-3 items, one of 4, first early and last late.' },
+  stimulusCoverage:     { strength: 'range', tier: 'T2', why: '18/17/18/14 items carry a stimulus; one type reaches 5 items.' },
+  keyBalance:           { strength: 'range', tier: 'T2', why: 'DELIBERATE DEPARTURE: tighter than the corpus, on fairness grounds.' },
+
+  // ── soft: shape, not law ───────────────────────────────────────────────────
+  onRampShape:          { strength: 'soft', tier: 'T3', why: 'Q1-10 is the easiest block in 3 of 4 forms; Form 3 is not.' },
+  blockDispersion:      { strength: 'soft', tier: 'T3', why: 'Reproduces a flat-but-varied texture; the exact per-block mix varies.' },
+  noFamilyTwiceInARow:  { strength: 'soft', tier: 'T3', why: 'Adjacent same-family items read as a set that is not one.' },
+  peaksStackDevices:    { strength: 'soft', tier: 'T3', why: 'The corpus also builds one peak per form from step count alone.' },
+  colonStemShare:       { strength: 'soft', tier: 'T2', why: 'About a third of stems trail into the options; the share varies by form.' },
+
+  // ── tendency: hold across the SERIES, not inside one form ──────────────────
+  a14ExactlyThree:      { strength: 'tendency', tier: 'T3', why: 'Exactly 3 in all four forms - striking, but n=4. Do not make it law.' },
+  perFormFamilyMix:     { strength: 'tendency', tier: 'T3', why: 'A12 runs 2-6, A15 runs 1-4, A05 runs 1-4. Vary between forms.' },
+  withinSetOrdering:    { strength: 'tendency', tier: 'T3', why: 'Sets cover distinct skills; they do NOT reliably ramp.' },
+  aLetterDeficit:       { strength: 'tendency', tier: 'T2', why: 'Real but deliberately NOT reproduced. Recorded, not applied.' },
+
+  // ── rare: must appear in some forms of a series, never in all ──────────────
+  complexNumbers:       { strength: 'rare', tier: 'T3', why: '2 of 4 forms carry an item involving i. Legitimate EST content, but not every form.' },
+  notItems:             { strength: 'rare', tier: 'T3', why: '2 of 4 forms ("could NOT be", "is not a solution").' },
+  stemModifiers:        { strength: 'rare', tier: 'T3', why: '2 of 4 forms (half of, the square of).' },
+  noneOfTheAbove:       { strength: 'rare', tier: 'T3', why: '2 of 4 forms, never as the key.' },
+  fourWayOptions:       { strength: 'rare', tier: 'T4', why: '1 form. Rotate; never mandatory.' },
+  scaledAxes:           { strength: 'rare', tier: 'T4', why: 'One form scales both axes ("in hundreds"), twice. A real device on thin evidence.' },
+  explicitRounding:     { strength: 'rare', tier: 'T4', why: 'One form states a rounding instruction in the stem. Rotate; never required.' },
+  namedDataSource:      { strength: 'rare', tier: 'T4', why: '1 form. Only ever with a real, correctly attributed source.' },
+  optionWithCaveat:     { strength: 'rare', tier: 'T4', why: 'One option in one form carries its own domain restriction. Elegant, and singular.' },
+  proseOnlySharedStim:  { strength: 'rare', tier: 'T4', why: 'One form shares a stimulus that is prose with no graphic at all. Worth keeping available.' },
+
+  // ── optional: vary deliberately ────────────────────────────────────────────
+  archetypeChoice:      { strength: 'optional', tier: 'T2', why: 'Which archetype fills a slot is the generator\'s main degree of freedom.' },
+  contextChoice:        { strength: 'optional', tier: 'T2', why: 'Bounded by the authenticity model, free within it.' },
+  numberChoice:         { strength: 'optional', tier: 'T3', why: 'Bounded by calculator-tractability and distractor separation.' },
+};
+
+/**
+ * The KAR position, stated once so it cannot drift.
+ *
+ * The PUBLISHED bands are the generation target and are PUBLISHER-AUTHORITATIVE.
+ * OUR item-level classification of the corpus is an imperfect MEASUREMENT that
+ * disagrees with them (we measured Knowledge at 14% against a published 35-45%),
+ * and it is NOT used as a generation constraint.
+ *
+ * Where the published specification and our measurement disagree, the
+ * SPECIFICATION WINS and the disagreement is recorded rather than resolved by
+ * quietly moving the specification. The most likely explanation is that our
+ * Knowledge bar is set too high; the corpus contains no publisher-classified
+ * exemplar of any band, so there is nothing to calibrate against.
+ */
+export const KAR_CALIBRATION = {
+  target: 'published',                 // never 'measured'
+  targetTier: 'T1',
+  measurementTier: 'T4',
+  measured: { K: 0.14, A: 0.66, R: 0.20 },
+  useMeasurementAsConstraint: false,
+  blockedOn: 'A KAR rubric applied by two independent passes that agree (artifact 7 section 6).',
+  claimAllowed: false,                 // no form may claim to hit the published bands yet
+};
+
 /** Published domain bands (PUBLISHER-AUTHORITATIVE, artifact 1 §3). */
 export const DOMAIN_BANDS = {
   FA:  { name: 'Foundational Algebra',           min: 0.27, max: 0.32 },
@@ -158,6 +273,42 @@ export const SLOTS = [
   S(49, 'A07',  'core'),
   S(50, 'A01',  'entry'),
 ];
+
+/**
+ * PRODUCT / RENDERING CAPABILITY GAPS.
+ *
+ * These are NOT exam-design exclusions. Each names an item type the authentic
+ * corpus contains, that the blueprint therefore keeps a budget for, and that the
+ * CURRENT renderer or schema cannot yet present. The budget stays; the platform
+ * has to catch up.
+ *
+ * A generator authors these items in full, including their figure or choice
+ * specification. The delivery layer decides whether they can be presented today.
+ * Nothing here is worked around: no diagram is drawn to scale and labelled as if
+ * it were not, and no graphical option set is faked as text.
+ */
+export const RENDERING_CAPABILITY = {
+  notToScaleFigure: {
+    kind: 'PRODUCT / RENDERING CAPABILITY GAP',
+    device: 'nts',
+    budgetRetained: true,
+    corpusEvidence: '8 items across 4 of 4 forms — core recurring',
+    blockedBy: "exam-stimulus.js throws on the 'figure' kind; every plot frame draws to scale",
+    requirement: 'docs/engineering/est-generation/R1-figure-renderer-requirements.md',
+    interimRule: 'Author the item and its figure spec in full. Do NOT substitute a to-scale ' +
+                 'diagram, and do NOT label a to-scale diagram "not drawn to scale".',
+  },
+  graphicalChoices: {
+    kind: 'PRODUCT / RENDERING CAPABILITY GAP',
+    device: 'objectOptions',
+    budgetRetained: true,
+    corpusEvidence: '4 items across 3 of 4 forms — occasional; graphs, number lines, systems, table rows',
+    blockedBy: 'exam_questions.choices is [{id, text}] — a string per option',
+    requirement: 'docs/engineering/est-generation/R2-answer-choice-schema.md',
+    interimRule: 'Text-expressible object choices (systems, prose claims, table rows) are ' +
+                 'authorable today. Graph and number-line choices are authored and held.',
+  },
+};
 
 /** Anti-repetition rules that span forms (artifact 2 §1, artifact 1 §9). */
 export const ANTI_REPETITION = {
