@@ -392,6 +392,6 @@ approval is an informed one.
 
 ## 12. Commit
 
-`docs/engineering/est-generation/16-stage-2-blueprint.md` is carried by the
-Stage-2 commit; the hash is recorded in the follow-up commit that amends this
-line, and in the Stage-2 report.
+`3436335c3e59c9593e1cdeb5d71bf5f726e28a47` on
+`claude/mock-exam-enhancement-nnwb48` — the commit that introduced every change
+described above. This line was written by the follow-up commit that amends it.
