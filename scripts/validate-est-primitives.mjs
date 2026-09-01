@@ -19,8 +19,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  PRIMITIVES, SPECIES_COVERAGE, generate, assess, pCombination,
-  assertInteraction, assertExpensiveFirstMove, qEq,
+  PRIMITIVES, SPECIES_COVERAGE, generate, assess, pCombination, assertInteraction, assertExpensiveFirstMove, qEq, qNum, trapLevel,
 } from './est-primitives.mjs';
 import { fingerprintAll, compare, detectClone, AXES } from './est-fingerprint.mjs';
 
@@ -98,7 +97,19 @@ for (const it of sets['P-CLASSIFY'].items) {
 }
 
 for (const it of sets['P-DECOY'].items) {
-  check(it.collapse && it.collapse.sum === 0, `P-DECOY#${it.seed}: the collapse is not exact`);
+  // The decoy must be PROVABLY inert, and each form proves it differently: one
+  // by an exact coefficient collapse, the other by the shared part being
+  // identical in both functions. Asserting the same field for both would have
+  // meant asserting neither.
+  if (it.form === 'coefficients_sum_zero')
+    check(it.collapse && it.collapse.sum === 0, `P-DECOY#${it.seed}: the collapse is not exact`);
+  else if (it.form === 'shared_terms_cancel') {
+    check(!!it.decoy && /x\^2/.test(it.decoy.shared), `P-DECOY#${it.seed}: no shared part declared`);
+    const shared = it.decoy.shared.replace(/\s+/g, '');
+    const both = [...it.stem.matchAll(/=\s*(.+?)\$/g)].map(m => m[1].replace(/\s+/g, ''));
+    check(both.length === 2 && both.every(e => e.startsWith(shared.split('+')[0].split('-')[0])),
+      `P-DECOY#${it.seed}: the two functions do not open with the same shared term`);
+  } else check(false, `P-DECOY#${it.seed}: unknown form ${it.form}`);
   const blind = it.routes.filter(r => !r.requiresInsight);
   check(blind.every(r => it.options.some(o => qEq(o.value, r.value))),
     `P-DECOY#${it.seed}: every "processed the decoy" route must land on a printed option`);
@@ -240,26 +251,124 @@ for (const name of Object.keys(sets))
    keys, so a numeric floor would be meaningless against it. */
 
 const SELECTION = new Set(['P-UNSTATED-MODEL']);
-// P-DECOY is a KNOWN, UNRESOLVED defect, not an exemption of convenience: its
-// only realisation of the supplied-decoy species collapses the numerator to
-// zero, so its key is 0 by construction. Choosing a different realisation is a
-// design decision held for Stage 2 review. The entry is deliberately narrow —
-// remove this line and the gate fails until the primitive is redesigned.
-const VARIETY_WAIVED = new Set(['P-DECOY']);
+
+// Scope. The rule exists so a student cannot answer by pattern instead of by
+// the mechanism, and what a student sits is a FORM, not a primitive's output.
+// So the unit is the SUB-FORM. A sub-form whose key is forced to a constant by
+// its own mathematics may say so — and saying so costs it something: it must
+// declare `constantKey` with a reason and a per-form cap, which the blueprint
+// then has to honour. A primitive must still have at least one sub-form whose
+// key genuinely varies, or it has no answer variety at all.
+const subFormsOf = name => {
+  const g = {};
+  for (const it of sets[name].items) (g[it.form || '-'] ||= []).push(it);
+  return g;
+};
 
 for (const name of Object.keys(sets)) {
-  const keys = sets[name].items.map(it => it.options.find(o => o.id === it.key).text);
-  const distinct = new Set(keys).size;
-  const commonest = Math.max(...[...new Set(keys)].map(k => keys.filter(x => x === k).length));
-  if (VARIETY_WAIVED.has(name)) {
-    check(distinct === 1, `${name}: waived for answer variety but now varies — remove the waiver`);
-    continue;
+  const groups = subFormsOf(name);
+  let anyVaries = false;
+  for (const [form, its] of Object.entries(groups)) {
+    const keys = its.map(it => it.options.find(o => o.id === it.key).text);
+    const distinct = new Set(keys).size;
+    const commonest = Math.max(...[...new Set(keys)].map(k => keys.filter(x => x === k).length));
+    const declared = its[0].constantKey;
+    if (declared) {
+      check(distinct === 1 && keys[0] === declared.value,
+        `${name}/${form}: declares a constant key of ${declared.value} but produced ${distinct} distinct keys — remove the declaration`);
+      check(typeof declared.reason === 'string' && declared.reason.length > 20,
+        `${name}/${form}: constantKey needs a stated mathematical reason`);
+      check(declared.maxPerForm === 1, `${name}/${form}: a constant-key sub-form must cap itself at one item per form`);
+      continue;
+    }
+    // Thresholds scale with how many items this sub-form actually contributed;
+    // a sub-form that drew 4 of the 20 cannot be asked for 8 distinct keys.
+    const [minDistinct, maxShare] = SELECTION.has(name)
+      ? [Math.min(2, its.length), 0.75]
+      : [Math.min(8, Math.ceil(its.length * 0.6)), 0.40];
+    check(distinct >= minDistinct,
+      `${name}/${form}: only ${distinct} distinct keys across ${its.length} items (need ${minDistinct})`);
+    check(commonest / its.length <= maxShare || its.length < 4,
+      `${name}/${form}: one key accounts for ${commonest}/${its.length} items (max ${Math.round(maxShare * 100)}%)`);
+    anyVaries = true;
   }
-  const [minDistinct, maxShare] = SELECTION.has(name) ? [2, 0.75] : [8, 0.40];
-  check(distinct >= minDistinct, `${name}: only ${distinct} distinct keys across ${N} items (need ${minDistinct})`);
-  check(commonest / keys.length <= maxShare,
-    `${name}: one key accounts for ${commonest}/${keys.length} items (max ${Math.round(maxShare * 100)}%)`);
+  check(anyVaries, `${name}: every sub-form declares a constant key — the primitive has no answer variety at all`);
 }
+
+/* ── 10. option magnitude and error-path coverage ──
+   The Stage-1 conversion items printed 150 / 390 / 1590 / 37590 — four orders
+   of magnitude, and the outermost option there for no better reason than that
+   an error path happened to produce it.
+
+   The fix is NOT to force the options close together. Numerical proximity with
+   no error behind it is a worse distractor than a distant value a student would
+   actually reach. So the rule is about PATHS first and magnitude second:
+
+   (a) every printed option must be the answer some enumerated route produces —
+       no option is arbitrary;
+   (b) magnitude alone must not identify the key: some distractor within a
+       factor of three of it, UNLESS the item declares an option architecture
+       saying why scale is the quantity under test (the prefix ladder does).
+
+   `assess()` already requires that a mechanism-BLIND route land on a printed
+   option. This is the converse, and it is the half that was missing. */
+
+for (const name of Object.keys(sets)) {
+  for (const it of sets[name].items) {
+    const keyVal = it.options.find(o => o.id === it.key).value;
+    const unrouted = it.options.filter(o => !it.routes.some(r => qEq(r.value, o.value)));
+    check(unrouted.length === 0,
+      `${name}#${it.seed}: option(s) ${unrouted.map(o => o.text).join(', ')} are reached by no enumerated route — a distractor nobody arrives at`);
+
+    // A prose-selection target's option "values" are labels, not quantities:
+    // "increased" is index 0 and "cannot be determined" is index 3, and the
+    // ratio between them means nothing. The path check above still applies.
+    if (String(it.fingerprintParts?.target || '').startsWith('selection:')) continue;
+
+    const kn = Math.abs(qNum(keyVal));
+    const near = it.options.some(o => {
+      if (o.id === it.key) return false;
+      const v = Math.abs(qNum(o.value));
+      if (kn === 0) return v < 3;                 // a zero key: any small option is near
+      return v > kn / 3 && v < kn * 3;
+    });
+    check(near || !!it.optionArchitecture,
+      `${name}#${it.seed}: every distractor is more than a factor of three from the key and no option architecture justifies it — magnitude alone picks the answer`);
+
+    if (it.optionArchitecture) {
+      const a = it.optionArchitecture;
+      check(a.kind === 'scale-ladder' && a.base > 1 && typeof a.reason === 'string' && a.reason.length > 30,
+        `${name}#${it.seed}: option architecture must name a kind, a base and a reason`);
+      // Every rung must sit an exact power of the base from the key, or the
+      // "ladder" is just a wide spread with a label on it.
+      for (const o of it.options) {
+        const ratio = Math.abs(qNum(o.value)) / kn;
+        const rung = Math.log(ratio) / Math.log(a.base);
+        check(Math.abs(rung - Math.round(rung)) < 1e-9,
+          `${name}#${it.seed}: option ${o.text} is not a rung of the declared base-${a.base} ladder`);
+      }
+    }
+  }
+}
+
+/* ── 11. trap saturation ──
+   Stage 1 gave every generated item a maximal trap. A paper on which the
+   obvious move is punished at every question is not a harder paper, it is a
+   less authentic one — the reference corpus runs near 60%.
+
+   This is a CEILING, not a target. Nothing here asks a primitive to produce a
+   gentle item it has no mathematical reason to produce; what it forbids is the
+   generator being INCAPABLE of one. A single primitive may legitimately sit at
+   100% level 2 — P-CLASSIFY does, because the reflex technique genuinely costs
+   as much as the correct one — and the check is on the whole set. */
+
+const traps = Object.values(sets).flatMap(r => r.items).map(it => trapLevel(it));
+const atLevel = n => traps.filter(t => t.level === n).length;
+const levelsSeen = new Set(traps.map(t => t.level)).size;
+check(levelsSeen >= 2, 'trap saturation: every generated item sits at the same trap level — the generator can only make one kind of question');
+check(atLevel(2) / traps.length <= 0.80,
+  `trap saturation: ${atLevel(2)}/${traps.length} items punish the natural move at full cost (ceiling 80%, reference corpus ~60%)`);
+for (const t of traps) check([0, 1, 2].includes(t.level) && typeof t.reason === 'string', 'trap level must be graded with a reason');
 
 /* ── report ── */
 

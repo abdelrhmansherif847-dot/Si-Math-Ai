@@ -71,7 +71,7 @@ for (const k of Object.keys(bySkeleton)) {
 
 {
   const a = fingerprintItem(sets['P-CLASSIFY'][0]);
-  const b = fingerprintItem(sets['P-CLASSIFY'][1]);
+  const b = fingerprintItem(sets['P-CLASSIFY'][1]);   // one sub-form, so a clean pair
   ok(sets['P-CLASSIFY'][0].stem !== sets['P-CLASSIFY'][1].stem, 'the two items do differ on the page');
   const c = compare(a, b);
   ok(c.matched === 7, 'but every structural axis matches — numbers are not structure');
@@ -81,9 +81,14 @@ for (const k of Object.keys(bySkeleton)) {
    Each axis must be load-bearing in the comparison, or it is decoration. */
 
 {
-  const a = fingerprintItem(sets['P-DECOY'][0]);
+  // Two items from the SAME sub-form: P-DECOY now has two, and a pair drawn
+  // across them differs structurally to begin with, which is the detector
+  // working rather than failing.
+  const pair = sets['P-DECOY'].filter(i => i.form === sets['P-DECOY'][0].form).slice(0, 2);
+  ok(pair.length === 2, 'two P-DECOY items share a sub-form');
+  const a = fingerprintItem(pair[0]);
   for (const ax of AXES) {
-    const b = { ...fingerprintItem(sets['P-DECOY'][1]), [ax]: 'entirely-unrelated-structure-token' };
+    const b = { ...fingerprintItem(pair[1]), [ax]: 'entirely-unrelated-structure-token' };
     const c = compare(a, b);
     ok(c.matched === 6, `breaking ${ax} drops the match count by exactly one`);
     ok(c.per[ax].hit === false, `and ${ax} itself no longer hits`);
@@ -93,8 +98,9 @@ for (const k of Object.keys(bySkeleton)) {
 /* ── a null axis never matches, so an unpopulated table cannot manufacture hits ── */
 
 {
-  const a = fingerprintItem(sets['P-NORMALISE'][0]);
-  const b = { ...fingerprintItem(sets['P-NORMALISE'][1]), narrative: null, numeric: null, options: null };
+  const same = sets['P-NORMALISE'].filter(i => i.form === sets['P-NORMALISE'][0].form).slice(0, 2);
+  const a = fingerprintItem(same[0]);
+  const b = { ...fingerprintItem(same[1]), narrative: null, numeric: null, options: null };
   const c = compare(a, b);
   ok(c.comparable === 4, 'three null axes leave four comparable');
   ok(c.matched <= 4, 'a null axis cannot count as a match');

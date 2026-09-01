@@ -221,6 +221,7 @@ function combSumDiff(rand, opts) {
       ROUTE('assign-free-symbol', { insight: false, cost: assignCost, value: key }),
       ROUTE('solve-for-each-symbol', { insight: false, cost: 5, value: dStopped, natural: true }),
       ROUTE('drop-the-halving', { insight: false, cost: 3, value: dUnhalved }),
+      ROUTE('sign-slip-on-the-v-term', { insight: false, cost: 4, value: dSignSlip }),
     ],
     // Mechanism removed: supply a third relation so every symbol is determined
     // and the combination is assembled from parts. Key changes.
@@ -323,14 +324,20 @@ const CARRIERS = {
     carrierText: k => `for each ${k} months of access`,
   },
   axis_scale: {
-    k: 100, direction: 'multiply', unit: 'units',
-    stem: (F, r, S, k) => `A workshop's output is recorded in hundreds of units. A supplier charges a fixed fee of $\\$${F}$ plus $\\$${r}$ per unit produced. If the recorded output is ${S}, what is the total charge?`,
-    carrierText: () => 'recorded in hundreds of units',
+    // A factor of 100 put the un-converted answer roughly two decades from the
+    // key, which is the option-spread finding. A dozen is both a smaller factor
+    // and the more natural way a workshop actually records output.
+    k: 12, direction: 'multiply', unit: 'units',
+    stem: (F, r, S, k) => `A workshop records its output in dozens of units. A supplier charges a fixed fee of $\\$${F}$ plus $\\$${r}$ per unit produced. If the recorded output is ${S}, what is the total charge?`,
+    carrierText: () => 'output recorded in dozens of units',
   },
   si_prefix: {
+    // The stem used to end "with $I$ in amperes", which names the conversion
+    // the item is testing. Asking for the answer IN OHMS carries the same
+    // requirement — an ohm is a volt per ampere — without announcing it.
     k: 1000, direction: 'divide', unit: 'mA',
-    stem: (V, _r, I, k) => `A component carries a current of ${I} mA when the potential difference across it is $${V}$ volts. Using $R = \\dfrac{V}{I}$ with $I$ in amperes, what is the resistance $R$, in ohms?`,
-    carrierText: () => 'current quoted in mA, formula takes amperes',
+    stem: (V, _r, I, k) => `A component carries a current of ${I} mA when the potential difference across it is $${V}$ volts. Using $R = \\dfrac{V}{I}$, what is the resistance $R$, in ohms?`,
+    carrierText: () => 'current quoted in mA, resistance asked in ohms',
     quotient: true,
   },
 };
@@ -346,36 +353,40 @@ export function pConversion(seed, opts = {}) {
     const V = rand.int(2, 24);
     const mA = rand.pick([2, 4, 5, 8, 10, 16, 20, 25, 40, 50]) * 10;
     const amps = Q(mA, 1000);
-    const key = qDiv(Q(V), amps);                     // ohms
-    const unconverted = qDiv(Q(V), Q(mA));            // D6 MANDATORY: I left in mA
-    const partial = qDiv(Q(V), Q(mA, k / 2));         // D6 converted by half the factor
-    const inverted = qDiv(amps, Q(V));                // D3 reciprocal
+    // Each option is the answer produced by dividing the current by a DIFFERENT
+    // power of ten — the prefix errors a student actually makes. Reading mA as
+    // if it were the base unit, as centi, as deci. The old set reached for a
+    // near-miss (half the conversion factor, which nobody does) purely to
+    // satisfy an anti-estimation guard; a conversion item is allowed to have
+    // options that differ in scale, because scale is what it tests.
+    const byDivisor = D => qDiv(Q(V), Q(mA, D));
+    const key = byDivisor(k);                         // ohms, converted correctly
+    const unconverted = byDivisor(1);                 // D6 MANDATORY: I left in mA
+    const centiSlip = byDivisor(100);                 // read the prefix as centi
+    const deciSlip = byDivisor(10);                   // read the prefix as deci
     if (qEq(key, unconverted)) return { error: 'conversion is not binding' };
     const dec = v => { const x = qNum(v); return Number.isInteger(x) ? String(x) : String(Number(x.toFixed(4))); };
-    const L = layout(rand, key, [unconverted, partial, inverted], dec);
+    const L = layout(rand, key, [unconverted, centiSlip, deciSlip], dec);
     if (L.error) return { error: L.error };
-    const near = [unconverted, partial, inverted].some(d => {
-      const ratio = Math.abs(qNum(d) / qNum(key));
-      return ratio > 1 / 3 && ratio < 3;
-    });
-    if (!near) return { error: 'every distractor is a decade away — magnitude alone identifies the key' };
     return {
       primitive: 'P-CONVERSION', species: 'binding-conversion', form: carrier,
       stem: C.stem(V, null, mA, k),
       stimulusCarrier: { carrier, factor: k, direction: 'divide', text: C.carrierText(k) },
       ...L,
-      distractorClasses: ['D6', 'D6', 'D3'],
+      optionArchitecture: { kind: 'scale-ladder', base: 10, anchor: 'key',
+        reason: 'every option is the answer a named prefix error yields, so the options differ in scale by construction — which is the quantity the item tests' },
+      distractorClasses: ['D6', 'D6', 'D6'],
       mechanism: { hidden_step: 2, repr_switch: 2, multiconcept: 1, trap_cost: 2, inference: 1 },
       routes: [
         ROUTE('convert-mA-then-divide', { insight: true, cost: 3, value: key }),
         ROUTE('divide-in-given-units', { insight: false, cost: 2, value: unconverted, natural: true }),
-        ROUTE('convert-part-way', { insight: false, cost: 3, value: partial }),
-        ROUTE('invert-the-quotient', { insight: false, cost: 2, value: inverted }),
+        ROUTE('read-the-prefix-as-centi', { insight: false, cost: 3, value: centiSlip }),
+        ROUTE('read-the-prefix-as-deci', { insight: false, cost: 3, value: deciSlip }),
       ],
       counterfactual: { kind: 'value', note: 'current quoted in amperes — no conversion exists', value: unconverted },
       fingerprintParts: {
         ctx: `quotient-model:${carrier}`, chain: ['read-quantity', 'convert-si-prefix', 'apply-quotient-formula'],
-        target: 'value:derived-quantity', options: 'scale-ladder', distract: ['D6', 'D6', 'D3'],
+        target: 'value:derived-quantity', options: 'scale-ladder', distract: ['D6', 'D6', 'D6'],
         narrative: 'single-component', numeric: ['potential', 'current', 'carrier-factor'],
       },
     };
@@ -396,9 +407,15 @@ export function pConversion(seed, opts = {}) {
 
   const key = qAdd(Q(fixed), qMul(Q(rate), converted));
   const unconverted = qAdd(Q(fixed), qMul(Q(rate), Q(shown)));       // D6 MANDATORY
-  const reversed = div                                               // D3 wrong direction
-    ? qAdd(Q(fixed), qMul(Q(rate), Q(shown * k)))
-    : qAdd(Q(fixed * k), qMul(Q(rate), Q(shown)));                   // scaled the fee, not the output
+  // Converting the WRONG WAY on a divide carrier multiplies where it should
+  // divide, so the answer lands k^2 from the key — four decades out on the
+  // 25 km carrier. It is a real error, but an option nobody reads past, and it
+  // was what stretched the printed set. Charging the joining fee once per
+  // period is the same kind of mistake — the model misapplied rather than the
+  // arithmetic slipped — and it stays on the page.
+  const reversed = div
+    ? qMul(qAdd(Q(fixed), Q(rate)), converted)                       // D3 fee charged once per period
+    : qAdd(Q(fixed * k), qMul(Q(rate), Q(shown)));                   // D3 scaled the fee, not the output
   const partial = qAdd(Q(fixed), qMul(Q(rate), partialUnits));       // D6 partial conversion
   if (qEq(key, unconverted)) return { error: 'conversion is not binding' };
 
@@ -424,7 +441,8 @@ export function pConversion(seed, opts = {}) {
     routes: [
       ROUTE('convert-then-compute', { insight: true, cost: 3, value: key }),
       ROUTE('compute-in-given-units', { insight: false, cost: 2, value: unconverted, natural: true }),
-      ROUTE('convert-the-wrong-way', { insight: false, cost: 3, value: reversed }),
+      ROUTE(div ? 'charge-the-fee-each-period' : 'scale-the-fee-not-the-output',
+      { insight: false, cost: 3, value: reversed }),
       ROUTE('convert-part-way', { insight: false, cost: 3, value: partial }),
     ],
     counterfactual: { kind: 'value', note: 'rate quoted in the target unit — no conversion exists', value: unconverted },
@@ -467,6 +485,17 @@ function normNonMonic(rand) {
 
   const L = layout(rand, key, [dNaive, dSignRoot, dConst]);
   if (L.error) return { error: L.error };
+
+  // ANTI-ESTIMATION. P(b/a) can land very near zero while P(b) is large, and
+  // the option set then gives the key away by shape alone: one small value
+  // among three big ones. P-CONVERSION has carried this guard since Stage 1;
+  // this primitive needed it and did not have it.
+  const kn = Math.abs(qNum(key));
+  const near = [dNaive, dSignRoot, dConst].some(d => {
+    const v = Math.abs(qNum(d));
+    return kn === 0 ? v < 3 : v > kn / 3 && v < kn * 3;
+  });
+  if (!near) return { error: 'every distractor is more than a factor of three from the key — magnitude alone identifies it' };
 
   return {
     primitive: 'P-NORMALISE', species: 'normalisation-gate', form: 'non_monic_divisor',
@@ -521,6 +550,7 @@ function normMixedBase(rand) {
       ROUTE('rewrite-to-common-base', { insight: true, cost: 5, value: key }),
       ROUTE('equate-exponents-as-written', { insight: false, cost: 3, value: dSameBase, natural: true }),
       ROUTE('stop-at-x', { insight: false, cost: 5, value: dXitself }),
+      ROUTE('sign-slip-on-the-target-shift', { insight: false, cost: 5, value: dSign }),
     ],
     counterfactual: { kind: 'value', note: 'all three terms presented on the common base', value: dSameBase },
     fingerprintParts: {
@@ -573,7 +603,8 @@ export function pScope(seed, opts = {}) {
     routes: [
       ROUTE('apply-to-the-residual', { insight: true, cost: 3, value: readingRest }),
       ROUTE('apply-to-the-total', { insight: false, cost: 2, value: readingTotal, natural: true }),
-      ROUTE('report-the-residual', { insight: false, cost: 2, value: rest }),
+      ROUTE('report-the-first-group', { insight: false, cost: 1, value: first }),
+      ROUTE('take-the-complement-within-the-residual', { insight: false, cost: 3, value: dRemainder }),
     ],
     counterfactual: { kind: 'value', note: 'referent stated explicitly ("of the whole club")', value: readingTotal },
     fingerprintParts: {
@@ -618,6 +649,7 @@ export function pClassify(seed, opts = {}) {
       ROUTE('classify-then-cancel-x-terms', { insight: true, cost: 4, value: key }),
       ROUTE('require-both-sides-identical', { insight: false, cost: 4, value: dInfinite, natural: true }),
       ROUTE('solve-for-x-instead', { insight: false, cost: 3, value: dSolveForX }),
+      ROUTE('subtract-the-offset-the-wrong-way', { insight: false, cost: 4, value: dSign }),
     ],
     counterfactual: { kind: 'value', note: 'stem asks for the value making the equation an identity', value: dInfinite },
     fingerprintParts: {
@@ -636,6 +668,23 @@ export function pClassify(seed, opts = {}) {
 
 export function pDecoy(seed, opts = {}) {
   const rand = rng(seed);
+  const form = opts.form || rand.pick(['coefficients_sum_zero', 'shared_terms_cancel']);
+  if (form === 'coefficients_sum_zero') return decoyCollapse(rand, opts);
+  if (form === 'shared_terms_cancel') return decoyShared(rand, opts);
+  throw new Error(`P-DECOY: unknown form ${form}`);
+}
+
+/**
+ * The decoy is the DENOMINATOR: the numerator vanishes, so the heavy radical
+ * below it never has to be touched.
+ *
+ * The key is 0 here by mathematical necessity, not by convenience. "The
+ * denominator is irrelevant" is true exactly when the numerator is zero — give
+ * the numerator any other value and the denominator becomes load-bearing, and
+ * the item stops being a decoy item at all. That constraint is what the
+ * `shared_terms_cancel` sibling exists to escape.
+ */
+function decoyCollapse(rand, opts = {}) {
   // Numerator: c1·m1·B + c2·m2·B + c3·m3·B with Σ ci·mi = 0, over a heavy denominator.
   const m1 = rand.pick([2, 3, 4]), m2 = rand.pick([2, 3, 5]), m3 = 1;
   const c1 = rand.pick([2, 3, 4, 6]);
@@ -662,6 +711,13 @@ export function pDecoy(seed, opts = {}) {
 
   return {
     primitive: 'P-DECOY', species: 'supplied-decoy', form: 'coefficients_sum_zero',
+    // The key cannot vary here, and the constraint is mathematical: the
+    // denominator is irrelevant exactly when the numerator vanishes. Declaring
+    // it carries an obligation rather than an excuse — a form may contain at
+    // most one item from this sub-form, because a second would let a student
+    // answer by pattern instead of by the collapse.
+    constantKey: { value: '0', maxPerForm: 1,
+      reason: 'the decoy is the denominator, and only a vanishing numerator makes a denominator irrelevant' },
     stem: `Simplify $\\dfrac{${coef(c1, `\\sqrt{${m1 * m1}t}`)} ${term(c2, `\\sqrt{${m2 * m2}t}`)} ${term(c3, '\\sqrt{t}')}}{\\sqrt{${den * den}t^{3}}}$ for $t > 0$.`,
     collapse: { multipliers: [m1, m2, m3], coefficients: [c1, c2, c3], sum: c1 * m1 + c2 * m2 + c3 * m3 },
     ...L,
@@ -671,12 +727,72 @@ export function pDecoy(seed, opts = {}) {
       ROUTE('simplify-numerator-see-collapse', { insight: true, cost: 3, value: key }),
       ROUTE('rationalise-denominator-first', { insight: false, cost: 7, value: dSlip1, natural: true }),
       ROUTE('mis-simplify-one-radical', { insight: false, cost: 5, value: dSlip2 }),
+      ROUTE('sign-slip-on-the-third-term', { insight: false, cost: 5, value: dSlip3 }),
     ],
     counterfactual: { kind: 'value', note: 'coefficients no longer sum to zero', value: dSlip1 },
     fingerprintParts: {
       ctx: 'pure-algebraic', chain: ['simplify-radical-terms', 'detect-coefficient-collapse', 'discard-denominator'],
       target: 'expression:simplified', options: 'collapse-family', distract: ['D7', 'D3', 'D6'],
       narrative: 'symbols-only:1', numeric: ['multipliers', 'coefficients', 'denominator'],
+    },
+  };
+}
+
+/**
+ * The decoy is the SHARED PART of two expressions: it cancels in the difference,
+ * so the quadratic and constant terms are supplied, look essential, and are
+ * never needed.
+ *
+ * This is the sibling that lets the key vary. Evaluating both polynomials and
+ * subtracting is a legitimate route to the key — it is simply LONGER, which is
+ * the distinction the anti-bypass rule was written to make. What the mechanism
+ * buys is not correctness; it is the difference between two operations and
+ * eight, and the printed distractors catch the students who take the long road
+ * and slip on it.
+ */
+function decoyShared(rand, opts = {}) {
+  const A = rand.int(2, 9);                     // shared quadratic coefficient
+  const C = rand.nonZero(-12, 12);              // shared constant
+  const p = rand.nonZero(-9, 9);
+  let q = rand.nonZero(-9, 9);
+  if (q === p) return { error: 'linear coefficients coincide — nothing survives the cancellation' };
+  const x0 = rand.int(2, 6);
+
+  const at = c => Q(A * x0 * x0 + c * x0 + C);
+  const key = Q((q - p) * x0);                  // (h - g)(x0), the shared part gone
+  const dH = at(q);                             // evaluated h only
+  const dG = at(p);                             // evaluated g only
+  const dRev = Q((p - q) * x0);                 // subtracted the wrong way round
+
+  // The shared part must actually be worth cancelling: if |A·x0^2 + C| is small
+  // the two evaluations are as cheap as the difference and the decoy is inert.
+  if (Math.abs(A * x0 * x0 + C) < 12) return { error: 'shared part too small to be worth cancelling' };
+
+  const L = layout(rand, key, [dH, dG, dRev]);
+  if (L.error) return { error: L.error };
+
+  const sign = c => `${c < 0 ? '-' : '+'} ${Math.abs(c)}`;
+  return {
+    primitive: 'P-DECOY', species: 'supplied-decoy', form: 'shared_terms_cancel',
+    stem: `If $g(x) = ${coef(A, 'x^2')} ${term(p, 'x')} ${term(C, '')}$ and $h(x) = ${coef(A, 'x^2')} ${term(q, 'x')} ${term(C, '')}$, what is the value of $h(${x0}) - g(${x0})$?`,
+    decoy: { shared: `${A}x^2 ${sign(C)}`, cancelsIn: 'the difference' },
+    ...L,
+    distractorClasses: ['D7', 'D7', 'D3'],
+    mechanism: { hidden_step: 2, filtering: 2, nonobvious_rel: 1, abstraction: 1 },
+    routes: [
+      ROUTE('subtract-then-evaluate', { insight: true, cost: 2, value: key }),
+      // Evaluating both is CORRECT and slower. It is the natural move, and it is
+      // not a bypass: cost 8 against the insight's 2.
+      ROUTE('evaluate-both-then-subtract', { insight: false, cost: 8, value: key, natural: true }),
+      ROUTE('evaluate-h-only', { insight: false, cost: 4, value: dH }),
+      ROUTE('evaluate-g-only', { insight: false, cost: 4, value: dG }),
+      ROUTE('subtract-in-the-stated-order', { insight: false, cost: 3, value: dRev }),
+    ],
+    counterfactual: { kind: 'value', note: 'the quadratic terms differ, so nothing cancels', value: qAdd(key, Q(A)) },
+    fingerprintParts: {
+      ctx: 'function-pair', chain: ['form-difference-of-functions', 'cancel-shared-terms', 'evaluate-remainder'],
+      target: 'value:difference-at-a-point', options: 'evaluation-family', distract: ['D7', 'D7', 'D3'],
+      narrative: 'symbols-only:2', numeric: ['shared-quadratic', 'shared-constant', 'linear-p', 'linear-q', 'point'],
     },
   };
 }
@@ -723,6 +839,10 @@ export function pUnstatedModel(seed, opts = {}) {
       ROUTE('supply-aggregate-model', { insight: true, cost: 3, value: key }),
       ROUTE('map-count-direction-onto-price', { insight: false, cost: 1, value: naive, natural: true }),
       ROUTE('declare-undeterminable', { insight: false, cost: 1, value: Q(3) }),
+      // Reading the aggregate's invariance as the unit's — "revenue was the
+      // same, so the price was the same" — the exact confusion the bridging
+      // relation resolves, and the one option nothing pointed at.
+      ROUTE('carry-invariance-from-aggregate-to-unit', { insight: false, cost: 1, value: Q(2) }),
     ],
     // With `revenue = price x quantity` withheld, nothing in the stem distinguishes
     // the four claims: all survive, so the item is unanswerable without the model.
@@ -740,45 +860,147 @@ export function pUnstatedModel(seed, opts = {}) {
 // load-bearing hidden steps, tied second largest, and entirely geometric.
 // `figure_mode: none` is available today; `not_to_scale` waits on R1.
 
+/**
+ * Every side length is a fixed multiple of the hypotenuse, so one table drives
+ * every configuration. `factor(theta, from, to)` is the transformation the item
+ * actually tests: it is the STRUCTURAL identity of the question, and varying it
+ * is what varying the configuration means.
+ */
+const TRIG = {
+  30: { sin: 0.5, cos: Math.sqrt(3) / 2 },
+  45: { sin: Math.SQRT1_2, cos: Math.SQRT1_2 },
+  60: { sin: Math.sqrt(3) / 2, cos: 0.5 },
+};
+const asHyp = (th, role) => (role === 'hyp' ? 1 : role === 'adj' ? TRIG[th].cos : TRIG[th].sin);
+const factor = (th, from, to) => asHyp(th, to) / asHyp(th, from);
+const ROLES = ['hyp', 'adj', 'opp'];
+const ROUTE_NAME = {
+  misread: 'read-the-right-angle-at-the-wrong-vertex',
+  wrongTriangle: 'apply-the-other-special-triangle-ratio',
+  invert: 'apply-the-ratio-upside-down',
+  other: 'solve-for-the-third-side',
+  identity: 'assume-given-side-is-answer',
+};
+
+/**
+ * P-NAMED-CONFIG. The configuration is fixed by three-letter angle names and
+ * nothing else: no figure, and the right angle is given as `m∠PQR = 90°` rather
+ * than "the right angle is at Q", so BOTH angle positions have to be read out
+ * of the middle letter.
+ *
+ * Stage 1 shipped one configuration — right angle at Q, 45° at P, a leg given,
+ * the hypotenuse asked — and 20 draws produced 8 distinct questions. The
+ * primitive worked and the species did not: "naming determines structure" is
+ * not demonstrated by an item whose structure never changes. What varies now is
+ * the transformation itself (which ratio, in which direction, between which two
+ * roles) on top of which vertices carry the two named angles.
+ */
 export function pNamedConfig(seed, opts = {}) {
   const rand = rng(seed);
   const device = opts.device || 'three_letter_angle';
   if (device !== 'three_letter_angle') throw new Error(`P-NAMED-CONFIG: ${device} needs the R1 not-to-scale contract`);
 
-  // Right angle at Q. Angle named PQR would be AT Q; angle QPR is AT P.
-  // Naming the 45-degree angle QPR puts it at P, so PR is the hypotenuse.
-  const leg = rand.int(3, 12);
-  const key = qMul(Q(leg), Q(1414, 1000));     // leg * sqrt2, to 3 dp then rounded below
-  const round1 = v => Q(Math.round(qNum(v) * 10), 10);
+  const V = ['P', 'Q', 'R'];
+  const rightAt = opts.rightAt || rand.pick(V);
+  const rest = V.filter(v => v !== rightAt);
+  const namedAt = opts.namedAt || rand.pick(rest);
+  const third = rest.find(v => v !== namedAt);
 
-  const keyR = round1(key);                                  // hypotenuse
-  const dLegItself = round1(Q(leg));                         // repeated the given leg
-  const dLegOverRoot2 = round1(qMul(Q(leg), Q(707, 1000)));  // treated the leg as the hypotenuse
-  const dDouble = round1(Q(leg * 2));                        // doubled the leg
-  if (qEq(keyR, dLegItself) || qEq(keyR, dLegOverRoot2)) return { error: 'wrong configurations are not distinguishable' };
+  // Roles, resolved from the naming. The hypotenuse is the side that does NOT
+  // touch the right-angle vertex; "adjacent" and "opposite" are relative to the
+  // named acute angle.
+  const side = (a, b) => [a, b].sort().join('');
+  const sideOf = { hyp: side(namedAt, third), adj: side(rightAt, namedAt), opp: side(rightAt, third) };
 
-  const dec1 = v => qNum(v).toFixed(1);   // "11.3 cm", not "113/10"
-  const L = layout(rand, keyR, [dLegItself, dLegOverRoot2, dDouble], dec1);
+  const theta = opts.theta || rand.pick([30, 45, 60]);
+  const givenRole = opts.givenRole || rand.pick(ROLES);
+  const askedRole = opts.askedRole || rand.pick(ROLES.filter(r => r !== givenRole));
+
+  const given = rand.int(3, 20);
+  const f = factor(theta, givenRole, askedRole);
+  if (Math.abs(f - 1) < 1e-9) return { error: 'the transformation is the identity — nothing is asked' };
+
+  // Error paths, each diagnosable and each a real misreading:
+  //   invert       — applied the relation upside down
+  //   misread-role — read the given side into the wrong role, i.e. put the right
+  //                  angle at the wrong vertex. This is the species' own trap.
+  //   other-side   — solved for the third side instead of the one named
+  const misreadFrom = ROLES.find(r => r !== givenRole && r !== askedRole);
+  const otherTheta = [30, 45, 60].find(t => t !== theta && Math.abs(factor(t, givenRole, askedRole) - f) > 1e-9);
+  const cand = {
+    // The species' own error: the right angle read at the wrong vertex, so the
+    // given side enters in the wrong role. INVISIBLE at 45 degrees, where the
+    // two legs are interchangeable — which is why the wrong-triangle family
+    // below exists, and why a 45-degree item that keeps only this one is
+    // correctly refused rather than shipped with an undetectable misreading.
+    misread: given * factor(theta, misreadFrom, askedRole),
+    // Applied the other special triangle's ratio: a 30-60-90 relation used on a
+    // 45-45-90 figure, or the reverse.
+    wrongTriangle: otherTheta ? given * factor(otherTheta, givenRole, askedRole) : NaN,
+    invert: given / f,
+    other: given * factor(theta, givenRole, misreadFrom),
+    identity: given,
+  };
+  const keyRaw = given * f;
+
+  const r1 = v => Math.round(v * 10) / 10;
+  const chosen = ['misread', 'wrongTriangle', 'invert', 'other', 'identity'];
+  const picked = [];
+  for (const nameK of chosen) {
+    const v = cand[nameK];
+    if (!Number.isFinite(v) || !(v > 0.5 && v < 400)) continue;
+    // Rounding must not be what separates two options, and no option may sit on
+    // top of another once printed.
+    if (Math.abs(v - keyRaw) < 0.05 || picked.some(x => Math.abs(x.v - v) < 0.05)) continue;
+    picked.push({ name: nameK, v });
+    if (picked.length === 3) break;
+  }
+  if (picked.length < 3) return { error: 'wrong configurations are not distinguishable at this precision' };
+  if (!(keyRaw > 0.5 && keyRaw < 400)) return { error: 'answer outside a plausible printed range' };
+
+  const toQ = v => Q(Math.round(v * 10), 10);
+  const dec1 = v => qNum(v).toFixed(1);
+  const L = layout(rand, toQ(keyRaw), picked.map(x => toQ(x.v)), dec1);
   if (L.error) return { error: L.error };
+
+  // The natural error is whichever misreading this configuration actually
+  // supports. At 45 degrees that is not the vertex misreading, so the flag moves
+  // rather than being asserted where it is not true.
+  // ...and an error whose answer is just the number already in the stem is not
+  // the error a competent student makes. At 45 degrees the vertex misreading
+  // collapses onto exactly that, so the flag moves to the misreading that does
+  // bite there rather than being claimed for one that does not.
+  const naturalError = ['misread', 'wrongTriangle', 'invert']
+    .find(n => picked.some(x => x.name === n && Math.abs(x.v - given) > 0.05)) || null;
+
+  const angleName = v => {
+    const others = V.filter(x => x !== v).sort();
+    return `${others[0]}${v}${others[1]}`;
+  };
+  const archetype = `${theta}:${givenRole}->${askedRole}`;
 
   return {
     primitive: 'P-NAMED-CONFIG', species: 'naming-determines-structure', form: 'three_letter_angle',
     figureMode: 'none',
-    stem: `In right triangle $PQR$ the right angle is at $Q$, and $m\\angle QPR = 45^\\circ$. If $PQ = ${leg}$ cm, what is the length of $\\overline{PR}$, to the nearest tenth of a centimetre?`,
-    configuration: { rightAngleAt: 'Q', namedAngleAt: 'P', hypotenuse: 'PR', givenSide: 'PQ' },
+    stem: `In triangle $PQR$, $m\\angle ${angleName(rightAt)} = 90^\\circ$ and $m\\angle ${angleName(namedAt)} = ${theta}^\\circ$. ` +
+      `If $${sideOf[givenRole]} = ${given}$ cm, what is the length of $\\overline{${sideOf[askedRole]}}$, to the nearest tenth of a centimetre?`,
+    configuration: { rightAngleAt: rightAt, namedAngleAt: namedAt, theta, givenRole, askedRole,
+                     given: sideOf[givenRole], asked: sideOf[askedRole], hypotenuse: sideOf.hyp },
+    archetype,
     ...L,
     distractorClasses: ['D5', 'D5', 'D4'],
     mechanism: { hidden_step: 2, inference: 2, competing_interp: 1, repr_switch: 2, multiconcept: 1 },
     routes: [
-      ROUTE('locate-vertices-from-names', { insight: true, cost: 4, value: keyR }),
-      ROUTE('read-first-letter-as-vertex', { insight: false, cost: 4, value: dLegOverRoot2, natural: true }),
-      ROUTE('assume-given-side-is-answer', { insight: false, cost: 1, value: dLegItself }),
+      ROUTE('locate-vertices-from-names', { insight: true, cost: 4, value: toQ(keyRaw) }),
+      ...picked.map(x => ROUTE(ROUTE_NAME[x.name],
+        { insight: false, cost: x.name === 'identity' ? 1 : 4, value: toQ(x.v), natural: x.name === naturalError })),
     ],
-    counterfactual: { kind: 'value', note: 'a to-scale figure supplied, resolving the adjacency by inspection', value: dLegOverRoot2 },
+    counterfactual: { kind: 'value', note: 'a to-scale figure supplied, resolving the adjacency by inspection',
+                      value: toQ(cand.misread) },
     fingerprintParts: {
-      ctx: 'triangle-no-figure', chain: ['parse-vertex-names', 'locate-right-angle', 'apply-special-triangle-ratio'],
-      target: 'value:length', options: 'scale-ladder', distract: ['D5', 'D5', 'D4'],
-      narrative: 'named-triangle', numeric: ['leg', 'angle'],
+      ctx: 'triangle-no-figure', chain: ['parse-vertex-names', 'locate-right-angle', `apply-ratio-${givenRole}-to-${askedRole}`],
+      target: `value:length:${askedRole}`, options: 'scale-ladder', distract: ['D5', 'D5', 'D4'],
+      narrative: 'named-triangle', numeric: ['given-side', `angle-${theta}`],
     },
   };
 }
@@ -828,6 +1050,46 @@ export function assertExpensiveFirstMove(item) {
   const bad = natural.filter(r => qEq(r.value, keyValue) && r.cost <= cheapestInsight);
   if (bad.length) return { ok: false, reason: `natural first move is correct and cheap: ${bad.map(r => r.name).join(', ')}` };
   return { ok: true, cheapestInsight };
+}
+
+/* ══════════════════════════ trap level ══════════════════════════ */
+
+/**
+ * How much a wrong route actually costs — three levels, read off the route
+ * model rather than asserted in metadata.
+ *
+ *   0  no meaningful trap. Nothing a student would NATURALLY do lands on a
+ *      printed wrong answer. Distractors exist and are diagnosable, but the
+ *      obvious move either reaches the key or is one nobody makes.
+ *   1  natural, low cost. The natural move lands wrong, but cheaply — a slip
+ *      caught quickly, and less work than the correct route.
+ *   2  genuine high cost. The natural move lands wrong AFTER at least as much
+ *      work as the correct route: the student pays full price and gets nothing.
+ *
+ * WHY THIS IS NOT A SECOND DIFFICULTY SCORE. It grades one thing — what the
+ * natural first move costs — and it is descriptive. Stage 1 generated
+ * trap_cost 2 in 100% of items against roughly 60% in the reference corpus,
+ * and a paper on which every question punishes the obvious move is not a
+ * harder paper, it is a less authentic one. The point is to be able to SEE the
+ * distribution, and to let a primitive emit a gentle item where a gentle item
+ * is what the mathematics gives. Nothing here manufactures a trap to fill a
+ * quota; a primitive that has no natural trap reports 0.
+ */
+export function trapLevel(item) {
+  const keyValue = item.options.find(o => o.id === item.key).value;
+  const natural = item.routes.filter(r => r.natural);
+  const insight = item.routes.filter(r => r.requiresInsight && qEq(r.value, keyValue));
+  const insightCost = insight.length ? Math.min(...insight.map(r => r.cost)) : Infinity;
+
+  const trapping = natural.filter(r => {
+    const hit = item.options.find(o => qEq(o.value, r.value));
+    return hit && hit.id !== item.key;
+  });
+  if (!trapping.length) return { level: 0, reason: 'no natural route lands on a printed wrong answer' };
+  const worst = Math.max(...trapping.map(r => r.cost));
+  return worst >= insightCost
+    ? { level: 2, reason: `natural route "${trapping[0].name}" costs ${worst} against the insight's ${insightCost} and is wrong` }
+    : { level: 1, reason: `natural route "${trapping[0].name}" is wrong but cheaper (${worst}) than the insight (${insightCost})` };
 }
 
 /* ══════════════════════════ registry & batch generation ══════════════════════════ */

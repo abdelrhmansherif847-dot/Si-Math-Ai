@@ -138,21 +138,61 @@ ok(controlAccepted === 0, 'negative control: no single-relation item may be acce
   // is exactly the reference failure: an ambiguity that cannot be selected.
   const m = clone(it);
   m.options.find(o => qEq(o.value, alt.value)).value = Q(999979);
+
+  // A LIMIT OF THE GENERIC GATE, recorded rather than hidden. assess() asks
+  // whether SOME mechanism-blind route lands on a printed distractor. Stage 1.5
+  // enumerated the routes that P-SCOPE's other two options had always been
+  // reachable by, and with those on the list the mutant still satisfies it:
+  // reporting the first group is a blind route and it still lands somewhere.
+  // The generic gate got easier to satisfy as the route model got more honest.
   const a = assess(m);
-  ok(!a.loadBearing, 'P-SCOPE: MUTANT whose alternative reading is unoffered must fail');
-  ok(a.reasons.some(r => r.includes('printed distractor')), 'P-SCOPE: and must say the blind route lands nowhere');
+  ok(a.loadBearing, 'P-SCOPE: the generic gate no longer catches this mutant — other blind routes still land');
+
+  // Which is exactly why each primitive carries a MECHANISM-SPECIFIC rule. The
+  // scope mechanism is diagnosable only if the competing reading is printed,
+  // and that is the assertion that has to catch it.
+  const altOffered = x => x.options.some(o => qEq(o.value, x.readings.find(r => !r.intended).value));
+  ok(altOffered(it), 'P-SCOPE: the alternative reading is offered on a real item');
+  ok(!altOffered(m), 'P-SCOPE: MUTANT whose alternative reading is unoffered is caught by the mechanism-specific rule');
 }
 
 /* ── P-DECOY: the collapse must be exact ── */
 
 {
-  const it = generate('P-DECOY', 1, { seed: 4242 }).items[0];
-  ok(it.collapse.sum === 0, 'P-DECOY: coefficients sum to zero exactly');
-  ok(qEq(keyValue(it), Q(0)), 'P-DECOY: the key is zero');
-  const blind = it.routes.filter(r => !r.requiresInsight);
-  ok(blind.every(r => it.options.some(o => qEq(o.value, r.value))),
-    'P-DECOY: every processed-the-decoy route lands on a printed option');
-  ok(blind.some(r => r.cost > 5), 'P-DECOY: the decoy route is materially more expensive than seeing the collapse');
+  const all = generate('P-DECOY', 24, { seed: 4242 }).items;
+  const collapse = all.filter(i => i.form === 'coefficients_sum_zero');
+  const shared = all.filter(i => i.form === 'shared_terms_cancel');
+  ok(collapse.length > 0 && shared.length > 0, 'P-DECOY: both realisations of the species are produced');
+
+  // The decoy is the DENOMINATOR: only a vanishing numerator makes it inert, so
+  // the key is 0 and the sub-form says so rather than being excused for it.
+  for (const it of collapse) {
+    ok(it.collapse.sum === 0, 'P-DECOY/collapse: coefficients sum to zero exactly');
+    ok(qEq(keyValue(it), Q(0)), 'P-DECOY/collapse: the key is zero');
+    ok(it.constantKey && it.constantKey.value === '0' && it.constantKey.maxPerForm === 1,
+      'P-DECOY/collapse: the forced key is declared, with a per-form cap');
+    const blind = it.routes.filter(r => !r.requiresInsight);
+    ok(blind.some(r => r.cost > 5), 'P-DECOY/collapse: processing the decoy costs materially more than seeing the collapse');
+  }
+
+  // The decoy is the SHARED PART of two functions. Evaluating both is correct
+  // and slower — a longer route, not a bypass — and the key varies.
+  ok(new Set(shared.map(i => qStr(keyValue(i)))).size > 1, 'P-DECOY/shared: the key varies across draws');
+  for (const it of shared) {
+    ok(!it.constantKey, 'P-DECOY/shared: does not claim a forced key');
+    const long = it.routes.find(r => r.name === 'evaluate-both-then-subtract');
+    const ins = it.routes.find(r => r.requiresInsight);
+    ok(long && qEq(long.value, keyValue(it)), 'P-DECOY/shared: the slow route does reach the key');
+    ok(long.cost > ins.cost, 'P-DECOY/shared: and costs more than the insight, so it is not a bypass');
+  }
+
+  for (const it of all) {
+    const blind = it.routes.filter(r => !r.requiresInsight);
+    ok(blind.every(r => it.options.some(o => qEq(o.value, r.value))),
+      'P-DECOY: every processed-the-decoy route lands on a printed option');
+    ok(it.options.every(o => it.routes.some(r => qEq(r.value, o.value))),
+      'P-DECOY: and every printed option is reached by some route');
+  }
 }
 
 /* ── P-UNSTATED-MODEL: determinacy, not value ── */
