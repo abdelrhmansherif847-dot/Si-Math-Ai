@@ -111,6 +111,16 @@ input{font-family:inherit}
 .sv{font-size:14px;color:var(--text-300)}
 .sv-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin-bottom:9px}
 .sv-text{white-space:pre-wrap}
+.codebox{display:flex;gap:8px;margin-bottom:14px}
+.codebox input{flex:1;min-width:0;background:var(--bg-elev-1);border:1px solid var(--border-mid);
+  color:var(--text-100);border-radius:10px;padding:10px 12px;font:600 14px/1.4 var(--font-mono);
+  letter-spacing:.12em;text-transform:uppercase}
+.tile.flat{cursor:default;opacity:.72}
+.tile.flat:hover{border-color:var(--border-soft);background:var(--bg-elev-1)}
+.state{font:700 11.5px/1.6 var(--font-body);text-transform:uppercase;letter-spacing:.06em;
+  padding:3px 10px;border-radius:999px;white-space:nowrap}
+.st-pending{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+.st-no{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
 .sv-note{font-size:12.5px;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:8px;padding:8px 11px;margin-top:9px}
 .sv-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .sv-table{border-collapse:collapse;font-size:13.5px;min-width:min(100%,320px)}
@@ -193,7 +203,18 @@ input{font-family:inherit}
          advertising a feature they have no way into. -->
     <div id="teachersBlock" style="display:none">
       <div class="sec-label" style="margin-top:26px">Teachers</div>
-      <div class="card"><div id="teacherList"></div></div>
+      <div class="card">
+        <!-- The way in. A teacher exam is not discoverable: it is not listed
+             until the student has entered its code, and the code by itself
+             grants nothing — it raises a request the teacher must approve. -->
+        <div class="codebox">
+          <input id="codeIn" maxlength="12" autocomplete="off" spellcheck="false"
+                 placeholder="Exam code from your teacher"/>
+          <button class="btn sm" id="codeGo">Request access</button>
+        </div>
+        <div class="msg" id="codeMsg" style="display:none"></div>
+        <div id="teacherList"></div>
+      </div>
     </div>
   </section>
 
@@ -272,6 +293,12 @@ const S = {
   preview: new URLSearchParams(location.search).get('preview') === '1',
   user: null, attempt: null, items: [], cur: 0,
   enteredAt: 0, endsAt: 0, tick: null, submitting: false, sectionId: null,
+  /* Which system this sitting belongs to. Every api.* method below dispatches
+     on it, and nothing else on the page needs to know: the item shape a
+     teacher exam returns is identical to the platform's. The id itself lives
+     in sectionId for both systems — a second name for the same value is how a
+     resume eventually lands on the wrong one. */
+  source: 'platform',
 };
 
 /* ── preview fixture ────────────────────────────────────────────────────
@@ -302,17 +329,23 @@ const api = {
     if (error) throw error;
     return data || [];
   },
-  async start(sectionId, reqId) {
+  async start(id, reqId) {
     if (S.preview) return JSON.parse(JSON.stringify(FIXTURE));
-    const { data, error } = await sb.rpc('exam_start', { p_section_id: sectionId, p_client_request_id: reqId });
+    /* teacher_exam_start() calls teacher_exam_can_start() itself; the page
+       never re-derives that rule and must not start trying to. */
+    const { data, error } = S.source === 'teacher'
+      ? await sb.rpc('teacher_exam_start', { p_exam: id, p_client_request_id: reqId })
+      : await sb.rpc('exam_start', { p_section_id: id, p_client_request_id: reqId });
     if (error) throw error;
     return data;
   },
   async save(questionId, answer, msDelta, visit) {
     if (S.preview) return;
-    const { error } = await sb.rpc('exam_save_response', {
-      p_attempt: S.attempt.attempt_id, p_question: questionId,
-      p_answer: answer, p_ms_delta: Math.round(msDelta) || 0, p_visit: !!visit });
+    const args = { p_attempt: S.attempt.attempt_id, p_question: questionId,
+      p_answer: answer, p_ms_delta: Math.round(msDelta) || 0, p_visit: !!visit };
+    const { error } = S.source === 'teacher'
+      ? await sb.rpc('teacher_exam_save_response', args)
+      : await sb.rpc('exam_save_response', args);
     if (error) throw error;
   },
   /* Which classes this student has connected to. The Teachers category exists
@@ -330,14 +363,27 @@ const api = {
       return (data || []).filter((t) => t && t.status === 'active');
     } catch (_) { return []; }
   },
-  /* THE SEAM FOR THE TEACHER ASSIGNMENT SYSTEM.
-     Increment A ships the category, not the content. There is no teacher_exams
-     table and no RPC to call yet, so this returns nothing and the section
-     renders its empty state honestly. When the backend lands this becomes its
-     only caller, scoped to the workspaces myTeachers() returned, and nothing
-     else on this page changes. */
-  async teacherExams(_workspaceIds) {
-    return [];
+  /* THE SEAM, NOW CONNECTED. Only exams this student already holds an access
+     row for: a teacher exam is not discoverable without its code, and this
+     must never become a directory of a class's papers. The RPC is already
+     scoped to auth.uid(), so no workspace argument is needed or accepted. */
+  async teacherExams() {
+    if (S.preview) return [];
+    try {
+      const { data, error } = await sb.rpc('student_my_teacher_exams');
+      if (error) return [];
+      return data || [];
+    } catch (_) { return []; }
+  },
+  /* Entering a code does not open anything. It raises a request, and the
+     teacher or an active assistant decides. Every failure — a wrong code, a
+     draft's code, a closed exam's, one that never existed — comes back as the
+     same message, so this box is never an oracle for which codes are real. */
+  async requestAccess(code) {
+    if (S.preview) return { created: false, state: 'pending', title: 'Sample Paper' };
+    const { data, error } = await sb.rpc('student_request_exam_access', { p_code: code });
+    if (error) throw error;
+    return data;
   },
   async submit() {
     if (S.preview) {
@@ -345,7 +391,9 @@ const api = {
       return { total: S.items.length, correct: Math.max(0, answered - 1), wrong: answered ? 1 : 0,
                omitted: S.items.length - answered, mistakes: [], session_id: null, preview: true };
     }
-    const { data, error } = await sb.rpc('exam_submit', { p_attempt: S.attempt.attempt_id });
+    const { data, error } = S.source === 'teacher'
+      ? await sb.rpc('teacher_exam_submit', { p_attempt: S.attempt.attempt_id })
+      : await sb.rpc('exam_submit', { p_attempt: S.attempt.attempt_id });
     if (error) throw error;
     return data;
   },
@@ -370,16 +418,36 @@ async function boot() {
   let rows = [], teachers = [], teacherExams = [];
   try { rows = await api.sections(); } catch (_) { rows = []; }
   try { teachers = await api.myTeachers(); } catch (_) { teachers = []; }
-  if (teachers.length) {
-    try { teacherExams = await api.teacherExams(teachers.map((t) => t.workspace_id)); }
-    catch (_) { teacherExams = []; }
-  }
+  /* Asked for unconditionally: a student may hold a pending request for a class
+     they are not in, and that request still has to be visible to them. */
+  if (!S.preview) { try { teacherExams = await api.teacherExams(); } catch (_) { teacherExams = []; } }
 
   show('pick');
   renderPlatform(rows);
   renderTeachers(teachers, teacherExams);
   document.querySelectorAll('#pick [data-sec]').forEach((b) =>
     b.addEventListener('click', () => startSection(b.getAttribute('data-sec'))));
+  $('codeGo').addEventListener('click', submitCode);
+  $('codeIn').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') submitCode(); });
+}
+
+async function submitCode() {
+  const code = $('codeIn').value.trim();
+  if (!code) return;
+  $('codeGo').disabled = true;
+  try {
+    const res = await api.requestAccess(code);
+    $('codeIn').value = '';
+    say($('codeMsg'), res.created
+      ? 'Request sent to your teacher for "' + res.title + '". You can sit it once they approve.'
+      : 'You have already asked for "' + res.title + '" — it is ' + res.state + '.', 'ok');
+    $('codeMsg').style.display = '';
+    const teachers = await api.myTeachers();
+    renderTeachers(teachers, await api.teacherExams());
+  } catch (e) {
+    say($('codeMsg'), e.message || 'That code did not match an open exam.', 'err');
+    $('codeMsg').style.display = '';
+  } finally { $('codeGo').disabled = false; }
 }
 
 /* One tile, whoever set the paper. Kept separate from the grouping so the
@@ -426,22 +494,76 @@ function renderPlatform(rows) {
    advertise a feature they have no way into, and the way in is a code their
    teacher gives them, not anything on this page. */
 function renderTeachers(teachers, exams) {
-  if (!teachers.length) { $('teachersBlock').style.display = 'none'; return; }
+  /* Shown to a student with a class, and also to one who has none but has
+     already asked for an exam — otherwise a pending request would have nowhere
+     to appear. */
+  if (!teachers.length && !exams.length) { $('teachersBlock').style.display = 'none'; return; }
   $('teachersBlock').style.display = '';
   if (!exams.length) {
     const names = teachers.map((t) => esc(t.workspace_name || 'your class')).join(', ');
-    $('teacherList').innerHTML = '<div class="empty"><div class="big">No exam set yet</div>'
+    $('teacherList').innerHTML = '<div class="empty"><div class="big">No exam yet</div>'
       + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">Papers set by ' + names
-      + ' will appear here. Nothing has been set yet — that is not a fault, and there is nothing for you to do.</div></div>';
+      + ' appear here once you enter the code your teacher gives you.</div></div>';
     return;
   }
-  $('teacherList').innerHTML = exams.map(tile).join('');
+  $('teacherList').innerHTML = exams.map(teacherTile).join('');
+  $('teacherList').querySelectorAll('[data-exam]').forEach((b) =>
+    b.addEventListener('click', () => startTeacherExam(b.getAttribute('data-exam'))));
+}
+
+/* WHY a row is not startable, when the student's own access is fine.
+   can_start is a single boolean and the server deliberately gives no reason
+   with it, so the page may only say what it can SEE: the exam's status and
+   its window. Everything else — a class link revoked after approval, a
+   deactivated workspace — is invisible from here, and "Not open yet" would
+   be the page inventing a cause for the student. It says nothing it did not
+   compute, and points at the one person who does know. */
+function whyNotOpen(e) {
+  const now = Date.now();
+  const opens = e.opens_at ? new Date(e.opens_at).getTime() : null;
+  const closes = e.closes_at ? new Date(e.closes_at).getTime() : null;
+  if (e.status === 'closed') return ['Closed', 'st-no'];
+  if (e.status === 'draft') return ['Not open yet', 'st-pending'];
+  if (opens && opens > now) return ['Opens ' + when(opens), 'st-pending'];
+  if (closes && closes < now) return ['Window closed', 'st-no'];
+  return ['Ask your teacher', 'st-pending'];
+}
+
+const when = (ms) => {
+  try {
+    return new Date(ms).toLocaleString(undefined,
+      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch (_) { return 'later'; }
+};
+
+/* One row per exam the student has asked for. Only can_start — which the
+   server recomputes on every call from approval, live membership and the
+   exam's own window — turns the row into a button. The page never decides
+   this for itself. */
+function teacherTile(e) {
+  const meta = esc(e.workspace_name || 'Your class') + ' · ' + esc(e.duration_minutes)
+    + ' minutes' + (e.calculator_allowed ? ' · calculator' : '');
+  const head = '<span style="flex:1;min-width:0"><span class="nm">' + esc(e.title) + '</span>'
+    + '<span class="mt">' + meta + '</span></span>';
+  if (e.can_start) {
+    return '<button class="tile" data-exam="' + esc(e.exam_id) + '">' + head
+      + '<span class="btn sm">Start</span></button>';
+  }
+  const why = {
+    pending:  ['Waiting for your teacher', 'st-pending'],
+    rejected: ['Not approved', 'st-no'],
+    revoked:  ['Access withdrawn', 'st-no'],
+  }[e.access_state] || whyNotOpen(e);
+  return '<div class="tile flat">' + head
+    + '<span class="state ' + why[1] + '">' + esc(why[0]) + '</span></div>';
 }
 
 /* A stable request id per section, kept in localStorage, is what makes a
    refresh resume the same sitting instead of starting a second one. */
 function requestIdFor(sectionId) {
-  const key = 'exam_req_' + sectionId;
+  /* Namespaced by source: a teacher exam id and a platform section id are both
+     uuids, and one key for both would let a resume land on the wrong sitting. */
+  const key = 'exam_req_' + (S.source === 'teacher' ? 't_' : '') + sectionId;
   let v = null;
   try { v = localStorage.getItem(key); } catch (_) {}
   if (!v) {
@@ -449,6 +571,11 @@ function requestIdFor(sectionId) {
     try { localStorage.setItem(key, v); } catch (_) {}
   }
   return v;
+}
+
+async function startTeacherExam(examId) {
+  S.source = 'teacher';
+  return startSection(examId);
 }
 
 async function startSection(sectionId) {
@@ -469,7 +596,9 @@ async function startSection(sectionId) {
   const started = S.attempt.started_at ? new Date(S.attempt.started_at).getTime() : Date.now();
   S.endsAt = started + (S.attempt.duration_seconds * 1000);
 
-  $('barTitle').textContent = (S.attempt.form_title || 'Mock Exam') + ' — ' + (S.attempt.section_label || '');
+  $('barTitle').textContent = S.source === 'teacher'
+    ? (S.attempt.title || 'Exam')
+    : ((S.attempt.form_title || 'Mock Exam') + ' — ' + (S.attempt.section_label || ''));
   $('barSub').textContent = S.items.length + ' questions';
   $('leaveBtn').textContent = 'Leave';
   if (S.attempt.calculator_allowed) $('qCalc').style.display = '';
@@ -610,11 +739,28 @@ async function doSubmit(auto) {
 /* The result, and the hand-off to the pipeline that already exists. */
 async function finish(res) {
   show('done');
-  $('doneSub').textContent = (S.attempt.form_title || '') + ' — ' + (S.attempt.section_label || '');
+  $('doneSub').textContent = S.source === 'teacher'
+    ? (S.attempt.title || '')
+    : ((S.attempt.form_title || '') + ' — ' + (S.attempt.section_label || ''));
   $('doneStats').innerHTML = [
     { n: res.correct, l: 'Correct' }, { n: res.wrong, l: 'Wrong' },
     { n: res.omitted, l: 'Left blank' }, { n: res.total, l: 'Questions' },
   ].map((s) => '<div class="stat"><div class="n">' + esc(s.n) + '</div><div class="l">' + esc(s.l) + '</div></div>').join('');
+
+  /* A TEACHER-AUTHORED PAPER STOPS HERE.
+     Its result is an academic result and not learning evidence: the items carry
+     no reviewed taxonomy mapping and no measured difficulty, so feeding them to
+     the analyzer would mix unvalidated content with measured evidence and leave
+     nobody able to tell which is which. teacher_exam_submit() returns no
+     session_id and no mistakes array precisely so this path cannot be taken by
+     accident — the guard below is the second lock, not the only one. */
+  if (S.source === 'teacher') {
+    $('doneNote').innerHTML = 'Your teacher can see this result. It is a class result and does '
+      + 'not change your weakness analysis — those come from the platform\'s own papers, '
+      + 'where every question is mapped and calibrated.';
+    try { localStorage.removeItem('exam_req_t_' + S.sectionId); } catch (_) {}
+    return;
+  }
 
   /* No scaled score is shown, because none is computed — a raw count is honest
      and a conversion table does not exist here. */

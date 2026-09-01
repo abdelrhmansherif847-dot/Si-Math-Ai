@@ -29,7 +29,9 @@ t.section('A preview paper reaches nothing');
 t.ok('preview is opt-in from the query string', /preview.*===\s*'1'/.test(PAGE));
 const methods = API.split(/\n  async /).slice(1).map((seg) => ({ name: (seg.match(/^(\w+)/) || [])[1], body: seg }));
 const reaching = methods.filter((m) => /\bsb\.rpc/.test(m.body));
-t.ok('api methods reach the database (not vacuous)', reaching.length === 5);
+// A floor, not an exact count: the point is only that the preview-guard
+// check below is not testing an empty set. 3g took it from 5 to 7.
+t.ok('api methods reach the database (not vacuous)', reaching.length >= 7);
 t.is('every database call is preceded by a preview guard',
   reaching.filter((m) => {
     const g = m.body.search(/if \(S\.preview\)/), c = m.body.search(/\bsb\.rpc/);
@@ -60,7 +62,19 @@ t.is('the page writes no weakness table itself',
 t.is('every RPC it calls is one of the approved ones',
   [...new Set([...PAGE.matchAll(/\.rpc\('([a-z_]+)'/g)].map((m) => m[1]))]
     .filter((f) => !['exam_available_sections', 'exam_start', 'exam_save_response', 'exam_submit',
-                     'student_my_teachers'].includes(f)), []);
+                     'student_my_teachers',
+                     // 3g. The five STUDENT-side teacher-exam contracts and no
+                     // others: nothing here may reach an authoring or staff RPC.
+                     'student_my_teacher_exams', 'student_request_exam_access',
+                     'teacher_exam_start', 'teacher_exam_save_response',
+                     'teacher_exam_submit'].includes(f)), []);
+/* The student player must never call a STAFF surface. Naming them individually
+   is what makes this fail if one is ever wired in by mistake. */
+t.is('no staff-only teacher-exam RPC is reachable from the student page',
+  ['teacher_exam_create', 'teacher_exam_publish', 'teacher_exam_close', 'teacher_exam_requests',
+   'teacher_exam_decide_access', 'teacher_exam_results', 'teacher_exam_result_detail',
+   'teacher_exam_rotate_code', 'teacher_exam_save_question', 'teacher_exam_approve_members']
+    .filter((fn) => new RegExp(`rpc\\('${fn}'`).test(PAGE)), []);
 t.ok('the dependencies the frozen logger needs are loaded',
   ['taxonomy.js', 'taxonomy-write.js', 'mastery-updater.js', 'regenerate-reports.js', 'exam-mistakes-logger.js']
     .every((f) => new RegExp(`<script src="${f.replace('.', '\\.')}"`).test(PAGE)));
@@ -127,8 +141,11 @@ t.ok('they render into separate containers',
 /* The Teachers block is hidden by default in the markup AND hidden again
    whenever there is no active link, so neither alone is load-bearing. */
 t.ok('the Teachers block ships hidden', /id="teachersBlock" style="display:none"/.test(PAGE));
-t.ok('and is hidden for a student with no class',
-  /if \(!teachers\.length\) \{ \$\('teachersBlock'\)\.style\.display = 'none'; return; \}/.test(PAGE));
+/* 3g widened this by exactly one case: a student with no class but a pending
+   request must still see it, or the request they raised has nowhere to appear.
+   Anyone with neither still gets nothing. */
+t.ok('and is hidden for a student with neither a class nor a request',
+  /if \(!teachers\.length && !exams\.length\) \{ \$\('teachersBlock'\)\.style\.display = 'none'; return; \}/.test(PAGE));
 
 /* A student who LEFT a class must not keep the category: student_my_teachers()
    returns revoked and removed links too, ordered active-first but unfiltered. */
@@ -141,18 +158,25 @@ t.ok('families are derived from exam_code, not hardcoded',
 t.ok('an unknown family still gets a heading rather than disappearing',
   /rest = \[\.\.\.byFamily\.keys\(\)\]\.filter/.test(PAGE) && /known\.concat\(rest\)/.test(PAGE));
 
-/* The seam. Increment A must not invent a backend: the teacher list has to come
-   back empty because nothing exists to fill it, not because a call failed. */
-const SEAM = /async teacherExams\(_?workspaceIds?\) \{\s*return \[\];\s*\},/.test(PAGE);
-t.ok('teacherExams() is an empty seam, not a call to a table that does not exist', SEAM);
-t.is('no teacher-exam table or RPC is referenced anywhere',
-  ['teacher_exams', 'teacher_exam_questions', 'homework', 'assignment']
-    .filter((n) => new RegExp(`from\\('${n}|rpc\\('${n}`).test(PAGE)), []);
+/* The seam, connected in 3g. It reads the student's OWN access rows, which is
+   what keeps an exam undiscoverable without its code — the RPC is scoped to
+   auth.uid() and takes no workspace argument to widen. */
+t.ok('teacherExams() calls student_my_teacher_exams()',
+  /async teacherExams\(\) \{[\s\S]{0,320}rpc\('student_my_teacher_exams'\)/.test(PAGE));
+t.ok('it passes no workspace argument that could widen the scope',
+  !/student_my_teacher_exams',\s*\{/.test(PAGE));
+/* Reading a teacher-exam TABLE directly would bypass the named-column select
+   that keeps the answer key server-side. The student page holds SELECT on
+   those tables, so this is a live hazard, not a theoretical one. */
+t.is('the student page reads no teacher-exam table directly',
+  ['teacher_exams', 'teacher_exam_questions', 'teacher_exam_stimuli', 'teacher_exam_access',
+   'teacher_exam_attempts', 'teacher_exam_responses', 'homework', 'assignment']
+    .filter((n) => new RegExp(`from\\('${n}'`).test(PAGE)), []);
 
 /* Both empty states have to read as deliberate rather than broken — the whole
    page is empty today and will be until a form is published. */
 t.ok('the Teachers empty state is honest about being empty',
-  /No exam set yet/.test(PAGE) && /that is not a fault, and there is nothing for you to do/.test(PAGE));
+  /No exam yet/.test(PAGE) && /appear here once you enter the code your teacher gives you/.test(PAGE));
 t.ok('it names the class the papers would come from', /Papers set by ' \+ names/.test(PAGE));
 
 /* The platform side must stay exactly what it was. */
