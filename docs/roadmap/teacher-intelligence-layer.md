@@ -1315,6 +1315,187 @@ them should be discovered mid-implementation.
     these files assumes its shape, and it must be prepared, reviewed and
     approved as its own increment before H5.
 
+    ---
+
+    **H2 APPLY IS HELD (2026-09-02).** The owner accepted the preparation as
+    technically clean and then declined to apply it until two gaps are closed:
+    the missing answer record above, and the lifecycle of the three fields that
+    stay mutable after publish. Both are settled below as *designs awaiting
+    approval*. No H2 SQL was changed in producing them; `20260902b/c/y` are
+    byte-identical to the files that were dry-run and rehearsed.
+
+    ### 15.15a · The per-item answer record — design, not yet written
+
+    Audited against the two live models rather than recalled:
+    `teacher_exam_responses` (3b, live, 0 rows) and the platform's own
+    `exam_responses` (live, 0 rows). Proposed as its own migration
+    `20260902d`, with rollback `20260902x`, **applied together with
+    `20260902b/c` so that no partial schema is ever committed** — which is the
+    owner's stated reason for holding H2 in the first place.
+
+    ```
+    teacher_homework_responses
+      id                uuid primary key default gen_random_uuid()
+      attempt_id        uuid not null -> teacher_homework_attempts(id) on delete cascade
+      question_id       uuid not null -> teacher_homework_questions(id) on delete restrict
+      homework_id       uuid not null                     -- see the composite-FK note
+      ordinal           integer not null
+      answer            text
+      is_correct        boolean
+      last_answered_at  timestamptz
+
+      teacher_homework_responses_slot_uq      unique (attempt_id, question_id)
+      teacher_homework_responses_ordinal_check    check (ordinal > 0)
+      teacher_homework_responses_answer_check     check (answer is null or char_length(answer) <= 500)
+      teacher_homework_responses_omission_check   check (answer is not null or is_correct is null)
+
+      teacher_homework_responses_attempt_idx  (attempt_id, ordinal)
+      teacher_homework_responses_question_idx (question_id)
+    ```
+
+    **What is deliberately absent, against 3b's shape.** `ms_on_item`,
+    `visit_count` and `first_seen_at`. Homework is untimed and resumable across
+    days: a millisecond total accumulated over a week with a tab left open
+    measures nothing, and a revisit count over days is not the same quantity as
+    a revisit inside a timed sitting. Both are numbers a later surface would be
+    tempted to read as pacing evidence, which is precisely what decision 2
+    forbids. With no visit tracking, `first_seen_at` collapses into the first
+    write of `last_answered_at` and earns no column.
+
+    **What is kept, unchanged, because the live schema supports the reuse.**
+    The three-valued rule — `is_correct` true / false / **NULL = not answered**,
+    made structural by the omission CHECK, so an omission can never be recorded
+    as a wrong answer. The `answer` bound. The one-row-per-slot unique. The
+    naming convention, constraint for constraint.
+
+    **The one invariant 3b does not enforce, proposed here.** Nothing in the
+    exam model structurally prevents a response row that points at an attempt of
+    exam A and a question of exam B; it is correct only because the RPC builds
+    the rows. Two ways to close it for homework:
+
+    - **(a) a guard**, `teacher_homework_response_same_homework()`, mirroring
+      the `teacher_homework_stimulus_same_homework()` already in `20260902b`.
+      Costs one lookup per inserted row; touches no existing H2 file.
+    - **(b) composite foreign keys — recommended.** Denormalise `homework_id`
+      onto the response row, add `unique (id, homework_id)` to
+      `teacher_homework_attempts` and to `teacher_homework_questions`, and point
+      two composite FKs at them. The invariant then holds by constraint rather
+      than by a trigger a later migration could drop — the project's stated
+      preference. **It requires two added lines in `20260902b`,** which is an H2
+      SQL change and therefore needs approval; it is free now only because H2 is
+      still unapplied, and would be an ALTER on live tables later.
+
+    **RLS and grants**, following 3b exactly: RLS on; `revoke all` from `anon`
+    and `authenticated`; `grant select` to `authenticated`; no write privilege
+    for any client role; two SELECT policies — `_own_read` (the attempt is
+    mine) and `_staff_read` (`teacher_homework_is_staff(a.homework_id) or
+    has_role_at_least('admin')`). H5's RPCs are the only writers.
+
+    **Lifecycle.** (1) H5's open RPC creates the attempt and one row per
+    question, `answer` and `is_correct` NULL, in ordinal order — rows exist from
+    the start, which is what makes the save path a pure UPDATE and gives resume
+    a stable set of slots, exactly as `teacher_exam_start()` does. (2) Save
+    updates one slot while the attempt is `in_progress`, scoped to
+    `auth.uid()`, with one indistinguishable failure message
+    (`teacher_exam_save_response()`'s pattern). (3) Submit grades every slot
+    through `exam_answer_matches()` — the platform's single grading rule, the
+    same call 3e makes — leaves unanswered slots NULL, then flips the attempt
+    and computes `late` from `due_at` at that instant; grading comes **before**
+    the flip, because the guard freezes answers once the attempt is not in
+    progress. (4) After submit the student's feedback read returns, per item,
+    their answer, `is_correct`, the teacher's `explanation`, and
+    `correct_answer` **only** when `reveal_answers` is true at read time —
+    explanation and key come from the RPC, never from a table read, because
+    students hold no policy on `teacher_homework_questions`. (5) Nothing is ever
+    deleted and nothing is re-graded: once `is_correct` holds a verdict the
+    guard refuses to change it.
+
+    **Two findings from the audit, both measured, neither fixed here.**
+
+    1. **The exam system already discloses per item what its RPC withholds.**
+       `teacher_exam_submit()` returns counts only, and its comment says why —
+       *"an mcq marked wrong is a narrowed key on a paper the teacher may set
+       again"*. But `teacher_exam_responses_own_read` plus `grant select`
+       lets the student read `is_correct` per item straight from the table.
+       Demonstrated on production in an aborting transaction: one graded
+       sitting, the student read back `false answer=A ordinal=1`. The key
+       itself stayed closed (0 rows from `teacher_exam_questions`) and an
+       unrelated student saw nothing, so the boundary that matters holds — what
+       leaks is the breakdown the RPC's own rationale says it is withholding.
+       For **homework** the same policy is correct, because per-item feedback
+       *is* decision 1. For **exams** it is a contradiction between two live
+       objects, and it is the exam vertical's decision, not this one's.
+    2. **`teacher_exam_responses` has no index beyond its primary key and its
+       slot unique**, while the platform's `exam_responses` carries both
+       `(attempt_id, ordinal)` and `(question_id)`. The design above follows the
+       platform table. Whether 3b should be brought into line is a separate
+       observation, recorded, not acted on.
+
+    ### 15.15b · The three post-publish mutable fields — measured, then proposed
+
+    Measured on production in an aborting transaction against the paper table
+    and both guards **extracted verbatim** from `20260902b` (cases L01–L24, no
+    unexpected results; a first run was refused by
+    `teacher_homework_code_check` because the test codes used `I` and `1`, the
+    excluded glyphs — the CHECK works):
+
+    | field | draft | published | closed |
+    |---|---|---|---|
+    | `homework_code` | rotate ok | rotate ok | refused `42501` |
+    | `due_at` | set ok | later / earlier / cleared ok | refused `42501` |
+    | `reveal_answers` | on and off ok | on ok, **and off again ok** | refused `42501` **both ways** |
+    | `title`, `instructions` | edit ok | refused `42501` | refused `42501` |
+
+    **1 · `homework_code` — proposed rule: unchanged.** Mutable in `draft` and
+    `published`, frozen once `closed`. Rotation stops the old code and revokes
+    nothing (§15.14). One measured hazard is recorded rather than fixed: a code
+    the paper has rotated *away* from can later be claimed by a **new**
+    homework, because the only uniqueness is on the live value. For exams a
+    recycled code merely raises a request a teacher must approve, so the mistake
+    is visible; homework has **no queue**, so a recycled code attaches
+    immediately and silently. The exposure is bounded — attachment also requires
+    active membership of *that* homework's class, so a recycled code can only
+    misfire inside the same class, where the teacher is the sole issuer. The
+    clean fix (never re-issue a code the workspace has held) needs a retired-code
+    record and belongs to **H4**, not to H2.
+
+    **2 · `due_at` — proposed rule: unchanged.** Mutable in `draft` and
+    `published`, in either direction, and nullable; frozen once `closed`.
+    Decision 3 makes it a date and never a lock, so extending it is the ordinary
+    act. History is already immune, and this was measured rather than assumed:
+    moving `due_at` thirty days into the future *after* a late submission left
+    that attempt `late = true`, and the attempts guard refuses to rewrite the
+    flag at all.
+
+    **3 · `reveal_answers` — proposed rule: CHANGE, and it needs approval.**
+    Two problems, both measured:
+
+    - A **closed** homework can never reveal its answers (L16), and closing
+      while `reveal_answers` is false is permitted (L23). So the ordinary
+      marking flow — *due date passes → close the homework → now show the
+      answers* — is *impossible*, and a teacher who closes first has locked the
+      key away from their class permanently. This collides head-on with
+      `20260902b`'s own stated rationale for the field: *"turning answers on
+      after everyone has submitted is the normal use"*.
+    - While published, `true → false` is allowed (L11). Hiding a key students
+      have already read is theatre, and a reversible flag invites a surface to
+      treat it as a live permission rather than a decision already taken.
+
+      **Proposed:** make `reveal_answers` a **one-way latch** — `false → true`
+      only, `true → false` refused in every status — and allow the latch to be
+      thrown in `draft`, `published` **and `closed`**, as the single, explicitly
+      named exception to *a closed homework is final*. Everything else about
+      `closed` stays final. This is a change to `teacher_homework_guard()` in
+      `20260902b` and has deliberately **not** been written.
+
+      Alternatives, both recommended against: keep `closed` absolutely final and
+      require the teacher to reveal before closing (the mistake is then
+      unrecoverable and only a UI warning stands between a teacher and it); or
+      allow reveal to move both ways while closed (keeps the un-reveal theatre).
+
+    The measured table above is now pinned by `tests/teacher-homework.test.mjs`
+    (§17), so a silent change to any of it turns the suite red.
+
 ---
 
 ## 16. Provenance
@@ -1366,6 +1547,18 @@ them should be discovered mid-implementation.
   survived first exposed a prefix-matching grant check, now fixed in two
   suites. The per-item answer record H5 needs was kept out because the approved
   scope named five tables, and it is flagged as its own increment.
+- **2026-09-02 — Teacher Homework H2 prepared, then HELD at the owner's
+  decision.** The preparation was accepted as clean and the apply refused until
+  two gaps close: the per-item answer record H5 cannot work without, and the
+  lifecycle of the three fields that stay mutable after publish. Both were then
+  audited against the live schema and measured on production in aborting
+  transactions (§15.15a, §15.15b). The measurement found that a **closed**
+  homework can never reveal its answers, which defeats the ordinary marking
+  flow and the migration's own stated rationale for the field — the one
+  proposed change to H2 SQL, written nowhere yet and awaiting approval. Two
+  further findings were recorded and not acted on: a retired homework code can
+  be claimed by a new homework, and the exam system's own RLS already hands a
+  student the per-item breakdown `teacher_exam_submit()` says it withholds.
 - **2026-09-02 — Teacher Homework: six decisions locked, H1 prepared.** The
   read-only audit (§15.15) established that nothing homework-shaped exists,
   what the exam system lends by call and what it lends only as a template, and

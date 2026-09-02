@@ -342,4 +342,57 @@ t.ok('drops no exam table, no validator, no type', !/drop (table|function) if ex
 t.section('All three H2 files are PREPARED');
 t.ok('PREPARED, and none claims APPLIED', [TB, TC, TY].every((f) => /STATUS: 🟡 PREPARED/.test(f) && !/APPLIED/.test(f)));
 
+// ══ 17 · THE THREE POST-PUBLISH MUTABLE FIELDS ════════════════════════════
+/* MEASURED on production 2026-09-02 in an aborting transaction, against the
+   paper table and both guards extracted VERBATIM from 20260902b (cases L01–L24,
+   0 unexpected results). The truth table:
+
+     field             draft            published                     closed
+     homework_code     rotate ok        rotate ok                     REFUSED 42501
+     due_at            set ok           later / earlier / null ok     REFUSED 42501
+     reveal_answers    on and off ok    on ok, and OFF AGAIN ok       REFUSED 42501 both ways
+     title, instr.     edit ok          REFUSED 42501                 REFUSED 42501
+
+   Three further measurements, each of which is a decision the owner now holds:
+     · moving due_at 30 days into the future AFTER a late submission left that
+       attempt late = true — history is not rewritten, and the flag is
+       structurally unrewritable anyway;
+     · a code the paper had rotated AWAY from was claimed by a NEW homework;
+     · closing while reveal_answers is false is permitted, and it can then never
+       be turned on — so "close, then show the answers" is impossible today.
+
+   The checks below pin that behaviour to the source, so a silent change turns
+   this suite red. They pin what IS, not what should be. */
+t.section('The three post-publish mutable fields: lifecycle pinned to the guard');
+
+t.ok('no branch of the guard names any of the three, so no per-status rule restricts them',
+  !/new\.homework_code|new\.due_at|new\.reveal_answers/.test(G));
+t.ok('the closed refusal precedes both the transition block and the published freeze — closed freezes all three',
+  G.indexOf("old.status = 'closed'") < G.indexOf('new.status is distinct from old.status')
+  && G.indexOf("old.status = 'closed'") < G.indexOf("if old.status = 'published' then"));
+t.ok('and the closed refusal carves out no exception: reveal_answers is not excluded from it',
+  /if old\.status = 'closed' then\s+raise exception[^;]+;\s*end if;/.test(G));
+t.ok('due_at carries no CHECK — it may be null, past or future',
+  !/due_at/.test(HW.replace(/due_at\s+timestamptz,/, '')));
+t.ok('a submitted attempt is final, so moving due_at can never rewrite an existing late flag',
+  /if old\.status <> 'in_progress' then\s+raise exception/.test(TG));
+t.ok('the code alphabet excludes the ambiguous glyphs I, O, 0 and 1',
+  !/[IO01]/.test(codeRule(HW)));
+t.ok('uniqueness is on the LIVE value only, and no history table exists — a retired code can be claimed again',
+  /homework_code\s+text not null unique/.test(HW) && !/code_history|retired_code/.test(H2));
+/* The header's prose wraps across comment lines, so it is matched flat: a
+   sentence that spans a line break is still one sentence. */
+const TBFLAT = TB.replace(/\n\s*--\s*/g, ' ').replace(/\s+/g, ' ');
+t.ok('the file states which three stay mutable and why, so the choice is visible in review',
+  /the code \(rotation answers a leak\)/.test(TBFLAT) && /due_at \(a teacher may extend or bring forward\)/.test(TBFLAT));
+t.ok('and it records the reveal_answers rationale that the closed rule partly defeats (open decision, §15.15)',
+  /turning answers on after everyone has submitted is the normal use/.test(TBFLAT)
+  && /closed homework is final in every respect/.test(TBFLAT));
+
+// ══ 18 · THE ANSWER RECORD IS ABSENT, AND SAYS SO ═════════════════════════
+t.section('No per-item answer record exists yet, and H2 does not assume one');
+t.ok('nothing in the H2 SQL references a response/answer table',
+  !/teacher_homework_responses|teacher_homework_answers/.test(H2));
+t.ok('the rollback does not pretend to drop one either', !/teacher_homework_responses/.test(TYC));
+
 t.done();
