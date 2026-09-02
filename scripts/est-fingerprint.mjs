@@ -64,6 +64,31 @@ export const AXIS_THRESHOLD = {
   ctx: 0.5, chain: 0.5, target: 0.6, options: 0.6, distract: 0.6, narrative: 0.5, numeric: 0.5,
 };
 
+/**
+ * The chain axis carries two different KINDS of value, and they need different
+ * thresholds.
+ *
+ *   a free-text archetype LABEL — what the reference database records, e.g.
+ *   `budget-fixed-fee-integer-floor`. Loose matching is right here: the clone
+ *   that motivated this whole system differed from its source by three
+ *   characters, and exact matching missed it.
+ *
+ *   a structured STEP LIST — what a generated item supplies, e.g.
+ *   ['parse-vertex-names', 'locate-right-angle', 'ratio-adj2hyp', 'special-60'].
+ *   Loose matching is wrong here: every item of a type shares its setup steps,
+ *   so boilerplate dominates the token set and two genuinely different
+ *   transformations score 0.818 on nine shared tokens out of eleven. A chain is
+ *   a sequence of operations, and two chains that differ in any operation are
+ *   different transformations.
+ *
+ * Measured on real items: two draws from ONE sub-form score 1.000; two draws
+ * with different transformations score 0.818. The threshold below separates
+ * them, and the reference-table comparisons are untouched because their chains
+ * are strings.
+ */
+export const CHAIN_STEPLIST_THRESHOLD = 0.9;
+const isStepList = v => Array.isArray(v) && v.length > 1;
+
 /* ────────────────────────── building a fingerprint ────────────────────────── */
 
 /**
@@ -117,7 +142,9 @@ export function compare(a, b) {
     if (a[ax] == null || b[ax] == null) { per[ax] = null; continue; }
     comparable++;
     const sim = jaccard(tokens(a[ax]), tokens(b[ax]));
-    const hit = sim >= AXIS_THRESHOLD[ax];
+    const need = ax === 'chain' && isStepList(a[ax]) && isStepList(b[ax])
+      ? CHAIN_STEPLIST_THRESHOLD : AXIS_THRESHOLD[ax];
+    const hit = sim >= need;
     per[ax] = { sim: Number(sim.toFixed(3)), hit };
     if (hit) matched++;
   }

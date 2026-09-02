@@ -85,7 +85,7 @@ const LETTERS = ['A', 'B', 'C', 'D'];
  * which is how "the un-converted answer must be an option AND must be wrong"
  * stops being a slogan.
  */
-function layout(rand, keyValue, distractors, fmt = qStr) {
+export function layout(rand, keyValue, distractors, fmt = qStr) {
   const all = [keyValue, ...distractors];
   for (let i = 0; i < all.length; i++)
     for (let j = i + 1; j < all.length; j++)
@@ -104,11 +104,11 @@ function layout(rand, keyValue, distractors, fmt = qStr) {
    route, key, distractor, counterfactual or fingerprint reads them. */
 
 /** A coefficient attached to a symbol: 1 prints as nothing, -1 as a bare minus. */
-const coef = (c, sym) => (sym ? `${c === 1 ? '' : c === -1 ? '-' : c}${sym}` : String(c));
+export const coef = (c, sym) => (sym ? `${c === 1 ? '' : c === -1 ? '-' : c}${sym}` : String(c));
 /** A following term, with its own sign: `- v`, `+ 2x`, `- 7`. */
-const term = (c, sym) => `${c < 0 ? '-' : '+'} ${coef(Math.abs(c), sym)}`;
+export const term = (c, sym) => `${c < 0 ? '-' : '+'} ${coef(Math.abs(c), sym)}`;
 /** A signed constant inside a bracket: `a - 3`, never `a + -3`. */
-const signedConst = k => `${k < 0 ? '-' : '+'} ${Math.abs(k)}`;
+export const signedConst = k => `${k < 0 ? '-' : '+'} ${Math.abs(k)}`;
 
 /** Which printed option, if any, a route's value lands on. */
 const lands = (options, value) => {
@@ -503,9 +503,10 @@ export function pConversion(seed, opts = {}) {
 
 export function pNormalise(seed, opts = {}) {
   const rand = rng(seed);
-  const form = opts.form || rand.pick(['non_monic_divisor', 'mixed_base']);
+  const form = opts.form || rand.pick(['non_monic_divisor', 'mixed_base', 'vertex_form']);
   if (form === 'non_monic_divisor') return normNonMonic(rand);
   if (form === 'mixed_base') return normMixedBase(rand);
+  if (form === 'vertex_form') return normVertexForm(rand);
   throw new Error(`P-NORMALISE: unknown form ${form}`);
 }
 
@@ -602,6 +603,52 @@ function normMixedBase(rand) {
   };
 }
 
+/**
+ * The standard technique reads the vertex straight off `a(x - h)^2 + k`. In
+ * EXPANDED form it does not apply until the square is completed, and nothing in
+ * the stem says the form is wrong — the un-normalised read is the trap, and it
+ * is printed. Serves family A06, which had only routine structures.
+ */
+function normVertexForm(rand) {
+  const a = rand.pick([1, 2, 3, -1, -2]);
+  const h = rand.nonZero(-6, 6), k = rand.nonZero(-12, 12);
+  // y = a(x - h)^2 + k  expands to  a x^2 - 2ah x + (a h^2 + k)
+  const b = -2 * a * h, c = a * h * h + k;
+  const key = Q(k);                                   // the minimum (or maximum) value
+  const dReadC = Q(c);                                // read the constant term as the vertex value
+  const dReadH = Q(h);                                // reported the x-coordinate instead
+  const dSignH = Q(-b);                               // read -b as the vertex value
+  const all = [key, dReadC, dReadH, dSignH];
+  for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++)
+    if (qEq(all[i], all[j])) return { error: 'two option values coincide' };
+  const kn = Math.abs(qNum(key));
+  if (!all.slice(1).some(v => { const x = Math.abs(qNum(v)); return kn === 0 ? x < 3 : x > kn / 3 && x < kn * 3; }))
+    return { error: 'every distractor is more than a factor of three from the key' };
+  const L = layout(rand, key, [dReadC, dReadH, dSignH]);
+  if (L.error) return { error: L.error };
+  return {
+    primitive: 'P-NORMALISE', species: 'normalisation-gate', form: 'vertex_form',
+    stem: `The function $f$ is defined by $f(x) = ${coef(a, 'x^2')} ${term(b, 'x')} ${term(c, '')}$. ` +
+      `What is the ${a > 0 ? 'minimum' : 'maximum'} value of $f(x)$?`,
+    ...L,
+    distractorClasses: ['D4', 'D1', 'D3'],
+    mechanism: { hidden_step: 2, abstraction: 2, nonobvious_rel: 2, multiconcept: 1, repr_switch: 1 },
+    routes: [
+      ROUTE('complete-the-square-then-read', { insight: true, cost: 5, value: key }),
+      ROUTE('read-the-constant-term-as-the-vertex', { insight: false, cost: 1, value: dReadC, natural: true }),
+      ROUTE('report-the-x-coordinate', { insight: false, cost: 4, value: dReadH }),
+      ROUTE('read-minus-b-as-the-value', { insight: false, cost: 2, value: dSignH }),
+    ],
+    counterfactual: { kind: 'value', note: 'the function given already in vertex form', value: dReadC },
+    fingerprintParts: {
+      ctx: 'quadratic-function no-stimulus',
+      chain: ['recognise-expanded-form', 'complete-the-square', 'read-vertex-value'],
+      target: 'value:extremum', options: 'coefficient-confusions', distract: ['D4', 'D1', 'D3'],
+      narrative: 'single-function', numeric: ['leading', 'linear', 'constant'],
+    },
+  };
+}
+
 /* ══════════════════════════ P-SCOPE (M4) — GATED ══════════════════════════ */
 // Referent and quantifier scope. `competing_interp` flips sign across the four
 // forms (−0.04 … 0.36), so this primitive is BUILT AND NOT SCHEDULED. Every
@@ -663,6 +710,60 @@ export function pScope(seed, opts = {}) {
 
 export function pClassify(seed, opts = {}) {
   const rand = rng(seed);
+  const form = opts.form || rand.pick(['existence-of-solutions', 'inequality-direction']);
+  if (form === 'inequality-direction') return classifyInequality(rand);
+  return classifyExistence(rand);
+}
+
+/**
+ * The classification gate on an INEQUALITY: whether the relation reverses is
+ * decided by the SIGN of the coefficient, not by its size, and nothing in the
+ * stem says so. Serves family A04, which had only routine structures.
+ */
+function classifyInequality(rand) {
+  const a = rand.nonZero(-9, 9), b = rand.nonZero(-15, 15), c = rand.nonZero(-30, 30);
+  if (Math.abs(a) === 1) return { error: 'a unit coefficient makes the division invisible' };
+  const bound = Q(c - b, a);
+  if (!qIsInt(bound)) return { error: 'the boundary is not a whole number at this level' };
+  const kv = qNum(bound);
+  // The relation is `ax + b <= c`. With a < 0 the direction reverses, so the
+  // answer is the LEAST integer, not the greatest.
+  const reverses = a < 0;
+  const key = Q(reverses ? Math.ceil(kv) : Math.floor(kv));
+  const dIgnoredSign = Q(reverses ? Math.floor(kv) - 1 : Math.ceil(kv) + 1);   // kept the original direction
+  const dNoDivide = Q(c - b);                                                  // never divided
+  const dSignSlip = qNeg(key);
+  const all = [key, dIgnoredSign, dNoDivide, dSignSlip];
+  for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++)
+    if (qEq(all[i], all[j])) return { error: 'two option values coincide' };
+  const kn = Math.abs(qNum(key));
+  if (!all.slice(1).some(v => { const x = Math.abs(qNum(v)); return kn === 0 ? x < 3 : x > kn / 3 && x < kn * 3; }))
+    return { error: 'every distractor is more than a factor of three from the key' };
+  const L = layout(rand, key, [dIgnoredSign, dNoDivide, dSignSlip]);
+  if (L.error) return { error: L.error };
+  return {
+    primitive: 'P-CLASSIFY', species: 'classification-gate', form: 'inequality-direction',
+    stem: `What is the ${reverses ? 'least' : 'greatest'} integer $x$ for which $${coef(a, 'x')} ${term(b, '')} \\le ${c}$?`,
+    ...L,
+    distractorClasses: ['D2', 'D1', 'D3'],
+    mechanism: { hidden_step: 2, inference: 2, nonobvious_rel: 2, abstraction: 2, reversal: 2, filtering: 1 },
+    routes: [
+      ROUTE('classify-the-sign-then-bound', { insight: true, cost: 4, value: key }),
+      ROUTE('keep-the-stated-direction', { insight: false, cost: 4, value: dIgnoredSign, natural: true }),
+      ROUTE('stop-before-dividing', { insight: false, cost: 2, value: dNoDivide }),
+      ROUTE('sign-slip-on-the-boundary', { insight: false, cost: 3, value: dSignSlip }),
+    ],
+    counterfactual: { kind: 'value', note: 'the coefficient given as positive, so the direction never reverses', value: dIgnoredSign },
+    fingerprintParts: {
+      ctx: 'pure-algebraic inequality no-stimulus',
+      chain: ['classify-coefficient-sign', 'reverse-or-keep-direction', 'bound-to-integer'],
+      target: 'value:extreme-integer-under-constraint', options: 'direction-grid', distract: ['D2', 'D1', 'D3'],
+      narrative: 'symbols-only:1 signed-coefficient', numeric: ['coeff-sign', 'const', 'bound'],
+    },
+  };
+}
+
+function classifyExistence(rand) {
   const k = rand.nonZero(-6, 6), qc = rand.pick([2, 3, 4, 5]), r = rand.nonZero(-8, 8);
   const m = qc * rand.int(2, 6);
   const u = rand.nonZero(-12, 12);

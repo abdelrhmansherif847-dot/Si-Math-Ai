@@ -91,9 +91,13 @@ for (const it of sets['P-SCOPE'].items) {
 }
 
 for (const it of sets['P-CLASSIFY'].items) {
-  const reflex = it.routes.find(r => r.name === 'require-both-sides-identical');
+  // Each form has its OWN reflex technique, and the assertion has to name the
+  // right one: for the existence gate it is treating both sides as identical,
+  // for the inequality gate it is keeping the stated direction.
+  const reflexName = it.form === 'inequality-direction' ? 'keep-the-stated-direction' : 'require-both-sides-identical';
+  const reflex = it.routes.find(r => r.name === reflexName);
   check(!!reflex && it.options.some(o => qEq(o.value, reflex.value)),
-    `P-CLASSIFY#${it.seed}: the reflex technique's output must be a printed option`);
+    `P-CLASSIFY#${it.seed}: the reflex technique (${reflexName}) must terminate on a printed option`);
 }
 
 for (const it of sets['P-DECOY'].items) {

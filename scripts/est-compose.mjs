@@ -260,3 +260,152 @@ export function composeClassifyNormalise(seed, opts = {}) {
       }),
     });
 }
+
+/* ────────────────────────── C1 · conversion → combination ────────────────────────── */
+
+/**
+ * A recorded quantity must be converted before it enters a system whose
+ * individual unknowns are undetermined and whose asked combination is not.
+ *
+ * The conversion is binding — the un-converted total is printed and wrong — and
+ * the combination is determinate: no amount of algebra recovers a, b and c
+ * separately, only (a+c) and b. Neither mechanism resolves the other, which is
+ * what the per-mechanism counterfactuals check.
+ */
+export function composeConvertCombine(seed, opts = {}) {
+  const rand = rng(seed);
+  const perDozen = 12;
+  const recorded = rand.int(4, 12);                 // output recorded in dozens
+  const total = recorded * perDozen;
+  const d = rand.nonZero(-10, 10) * 2;              // a - b + c
+  if ((total + d) % 2 !== 0) return { error: 'the block is not a whole quantity' };
+  const block = (total + d) / 2;                    // a + c
+  const bVal = (total - d) / 2;                     // b
+  if (block === 0 || bVal === 0) return { error: 'a determined block is zero — the item collapses' };
+  const m = rand.pick([2, 3, -2]), n = rand.pick([1, -1, 2]);
+
+  const target = (T, blk, bb) => Q(m * blk + n * bb);
+  const key = target(total, block, bVal);
+  const uncBlock = (recorded + d) / 2, uncB = (recorded - d) / 2;
+  if (!Number.isInteger(uncBlock)) return { error: 'the un-converted route is not a whole quantity — the trap is unreachable' };
+  const gridA = Q(m * uncBlock + n * uncB);         // never converted
+  const gridB = Q(block);                           // converted, then stopped at the block
+  const gridAB = Q(uncBlock);                       // never converted AND stopped at the block
+
+  const all = [key, gridA, gridB, gridAB];
+  for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++)
+    if (qEq(all[i], all[j])) return { error: 'two cells of the error grid coincide' };
+  const kn = Math.abs(qNum(key));
+  if (!all.slice(1).some(v => { const x = Math.abs(qNum(v)); return kn === 0 ? x < 3 : x > kn / 3 && x < kn * 3; }))
+    return { error: 'every cell is more than a factor of three from the key' };
+
+  const order = [0, 1, 2, 3];
+  for (let i = 3; i > 0; i--) { const j = rand.int(0, i); [order[i], order[j]] = [order[j], order[i]]; }
+  const LETTERS = ['A', 'B', 'C', 'D'];
+  const layout = { options: order.map((src, pos) => ({ id: LETTERS[pos], value: all[src], text: qStr(all[src]) })),
+                   key: LETTERS[order.indexOf(0)] };
+
+  const stem = `A workshop records its output in dozens of units, and the recorded output for three machines together is ${recorded}. ` +
+    `The machines produced $a$, $b$ and $c$ units, with $a + b + c$ equal to that total and $a - b + c = ${d}$. ` +
+    `What is the value of $${m === 1 ? '' : m === -1 ? '-' : m}(a + c) ${n < 0 ? '-' : '+'} ${Math.abs(n) === 1 ? '' : Math.abs(n)}b$?`;
+
+  return compose(
+    { primitive: 'P-CONVERSION', form: 'axis_scale', seed },
+    { primitive: 'P-COMBINATION', form: 'sum-difference', seed },
+    { binding: 'serial', stem, representationSwitches: 1,
+      mechanism: { hidden_step: 2, multiconcept: 2, nonobvious_rel: 2, abstraction: 2, filtering: 1, repr_switch: 1 },
+      conceptChain: [
+        { concept: 'convert-recorded-units', inputs: ['recorded'], output: 'total' },
+        { concept: 'eliminate-to-block', inputs: ['total', 'difference'], output: 'block' },
+        { concept: 'eliminate-to-single', inputs: ['total', 'difference'], output: 'single' },
+        { concept: 'assemble-target', inputs: ['block', 'single'], output: 'answer' },
+      ],
+      fingerprintParts: {
+        ctx: 'recorded-units composed', chain: ['convert-recorded-total', 'eliminate-to-block', 'assemble-combination'],
+        target: 'value:combination-after-conversion', options: '2x2-error-grid', distract: ['D6', 'D1', 'D6D1'],
+        narrative: 'three-machines-one-total', numeric: ['recorded', 'difference', 'scale-m', 'scale-n'] },
+      combine: () => ({
+        layout, distractorClasses: ['D6', 'D1', 'D6D1'],
+        errorGrid: { a: gridA, b: gridB, ab: gridAB },
+        routes: [
+          ROUTE('convert-then-combine', { insight: true, cost: 6, value: key }),
+          ROUTE('combine-in-recorded-units', { insight: false, cost: 5, value: gridA, natural: true }),
+          ROUTE('convert-then-stop-at-the-block', { insight: false, cost: 4, value: gridB }),
+          ROUTE('stop-at-the-block-in-recorded-units', { insight: false, cost: 3, value: gridAB }),
+        ],
+        counterfactuals: [
+          { mechanism: 'P-CONVERSION', kind: 'value', value: gridA, note: 'the total taken in recorded units, combination still correct' },
+          { mechanism: 'P-COMBINATION', kind: 'value', value: gridB, note: 'the block reported as the answer, conversion still correct' },
+        ],
+      }) });
+}
+
+/* ────────────────────────── C3 · named configuration → unstated model ────────────────────────── */
+
+const TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+
+/**
+ * The configuration is fixed by three-letter naming; the relation that finishes
+ * the item is stated nowhere. Which two sides are the LEGS follows from where
+ * the right angle is named, and that the legs serve as base and height follows
+ * from the right angle — neither is on the page.
+ */
+export function composeNamedModel(seed, opts = {}) {
+  const rand = rng(seed);
+  const V = ['P', 'Q', 'R'];
+  const rightAt = rand.pick(V);
+  const rest = V.filter(v => v !== rightAt);
+  const [x, y, h] = rand.pick(TRIPLES);
+  const side = (a, b) => [a, b].sort().join('');
+  const legGiven = side(rightAt, rest[0]);          // touches the right angle: a leg
+  const hyp = side(rest[0], rest[1]);               // does not: the hypotenuse
+
+  const key = Q(x * y, 2);                          // half base times height
+  const gridA = Q(x * h, 2);                        // read the hypotenuse as the other leg
+  const gridB = Q(x * y);                           // legs right, the half forgotten
+  const gridAB = Q(x * h);                          // both
+
+  const all = [key, gridA, gridB, gridAB];
+  for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++)
+    if (qEq(all[i], all[j])) return { error: 'two cells of the error grid coincide' };
+
+  const order = [0, 1, 2, 3];
+  for (let i = 3; i > 0; i--) { const j = rand.int(0, i); [order[i], order[j]] = [order[j], order[i]]; }
+  const LETTERS = ['A', 'B', 'C', 'D'];
+  const layout = { options: order.map((src, pos) => ({ id: LETTERS[pos], value: all[src], text: qStr(all[src]) })),
+                   key: LETTERS[order.indexOf(0)] };
+
+  const angleName = v => { const o = V.filter(z => z !== v).sort(); return `${o[0]}${v}${o[1]}`; };
+  const stem = `In triangle $PQR$, $m\\angle ${angleName(rightAt)} = 90^\\circ$. If $${legGiven} = ${x}$ cm and $${hyp} = ${h}$ cm, ` +
+    `what is the area of triangle $PQR$, in square centimetres?`;
+
+  return compose(
+    { primitive: 'P-NAMED-CONFIG', form: 'three_letter_angle', seed },
+    { primitive: 'P-UNSTATED-MODEL', form: 'aggregate_invariance', seed },
+    { binding: 'serial', stem, representationSwitches: 1,
+      mechanism: { hidden_step: 2, inference: 2, nonobvious_rel: 2, repr_switch: 2, multiconcept: 2, competing_interp: 1 },
+      conceptChain: [
+        { concept: 'locate-right-angle-from-naming', inputs: ['angle-name'], output: 'leg-pair' },
+        { concept: 'recover-the-second-leg', inputs: ['leg-pair', 'given-sides'], output: 'other-leg' },
+        { concept: 'supply-area-model', inputs: ['leg-pair'], output: 'base-height-roles' },
+        { concept: 'compute-area', inputs: ['other-leg', 'base-height-roles'], output: 'area' },
+      ],
+      fingerprintParts: {
+        ctx: 'triangle-no-figure composed', chain: ['parse-vertex-names', 'recover-leg-by-pythagoras', 'apply-area-model'],
+        target: 'value:area-from-naming', options: '2x2-error-grid', distract: ['D5', 'D2', 'D5D2'],
+        narrative: 'named-triangle-two-sides', numeric: ['leg', 'hypotenuse'] },
+      combine: () => ({
+        layout, distractorClasses: ['D5', 'D2', 'D5D2'],
+        errorGrid: { a: gridA, b: gridB, ab: gridAB },
+        routes: [
+          ROUTE('locate-legs-then-apply-area-model', { insight: true, cost: 6, value: key }),
+          ROUTE('treat-the-hypotenuse-as-a-leg', { insight: false, cost: 5, value: gridA, natural: true }),
+          ROUTE('legs-correct-but-omit-the-half', { insight: false, cost: 5, value: gridB }),
+          ROUTE('hypotenuse-as-a-leg-and-omit-the-half', { insight: false, cost: 4, value: gridAB }),
+        ],
+        counterfactuals: [
+          { mechanism: 'P-NAMED-CONFIG', kind: 'value', value: gridA, note: 'the right angle read at the wrong vertex, area model still correct' },
+          { mechanism: 'P-UNSTATED-MODEL', kind: 'value', value: gridB, note: 'the legs identified correctly, the halving unsupplied' },
+        ],
+      }) });
+}
