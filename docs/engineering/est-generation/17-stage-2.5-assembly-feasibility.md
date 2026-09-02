@@ -413,6 +413,6 @@ Recorded so the next approval is an informed one, not as a request.
 
 ## 14. Commit
 
-`docs/engineering/est-generation/17-stage-2.5-assembly-feasibility.md` is carried
-by the Stage-2.5 commit; the hash is recorded by the follow-up commit that amends
-this line, and in the Stage-2.5 report.
+`337b80f4801043d21e0973932fd9ba86ffab3b6d` on
+`claude/mock-exam-enhancement-nnwb48` — the commit that introduced every change
+described above. This line was written by the follow-up commit that amends it.
