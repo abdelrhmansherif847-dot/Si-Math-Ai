@@ -1244,7 +1244,76 @@ them should be discovered mid-implementation.
     transaction, the two stored rows byte-identical, every other hash equal to
     the post-`20260901h` baseline. Its rollback posture `20260902z` — like
     `20260901y` — is not a clean undo and says so; it stays prepared and
-    unapplied. H2 has not started.
+    unapplied.
+
+    **H2 is PREPARED and NOT APPLIED** (`20260902b` tables and guards,
+    `20260902c` RLS, `20260902y` the undo). Before a line was written the live
+    conventions were read rather than recalled: the six `teacher_exam*` tables
+    with RLS enabled and `relforcerowsecurity` false, SELECT-only grants to
+    `authenticated` and nothing to `anon`, nine SELECT policies, the four
+    IMMUTABLE validators' exact signatures, `workspace_is_active_staff(uuid)`,
+    and the 3b guard bodies. H2 mirrors that posture and borrows exactly four
+    things, all by call and all value-in/boolean-out:
+    `exam_stimulus_shape_ok()`, `exam_stimulus_spec_ok()`,
+    `exam_question_choices_ok()`, `exam_question_answer_ok()` — asserted
+    character-for-character identical to 3b's own calls. Nothing else is
+    shared: the exam access table, `teacher_exam_can_start()` and
+    `teacher_exam_is_staff()` are not referenced anywhere in the executable
+    SQL, which the suite checks with stored `COMMENT ON` text stripped as well
+    as `--` comments.
+
+    Five tables, 28 named constraints, 9 foreign keys, 3 indexes, 5 guards on
+    6 triggers, 1 staff helper, 7 SELECT policies, no RPC, no row. Where it
+    differs from 3b, a locked decision says why: no `duration_minutes`, no
+    `calculator_allowed`, no `opens_at`/`closes_at` (homework is untimed
+    practice, publishing opens it); `due_at` nullable and `late` on the attempt
+    (decision 3 — a date, never a lock); `reveal_answers` NOT NULL default
+    false (decision 1); `teacher_homework_access` with three columns and **no
+    state and no was_member** (§15.14 gives homework no queue); one attempt per
+    student per homework as a UNIQUE pair, with no client request id, no
+    duration and no `abandoned`. Once published the paper is frozen and exactly
+    **three** fields stay mutable — the code (rotation answers a leak), `due_at`
+    (a teacher may extend), and `reveal_answers` (turning answers on after
+    everyone has submitted is the normal use, not an edit to the paper). That
+    "exactly three" is derived from the table in the test, not listed: a new
+    column whose fate nobody decided turns the check red.
+
+    Verified against production without applying anything. The dry-run ran both
+    files verbatim in an aborting transaction and then **49 probes, 0
+    failures**: a teacher and an ACTIVE ASSISTANT read identically (the
+    assistant was created through `staff_join_workspace()` and activated
+    through `teacher_set_staff_status()` in the same transaction, so parity is
+    demonstrated rather than asserted); a member student sees no paper and no
+    content but does see their own attachment and their own attempt; an
+    outsider sees nothing; `anon` cannot even call the staff helper; every
+    client write — teacher, assistant, student, platform owner — is refused
+    with `42501`, because no write path exists at all until H3; the guards
+    refuse a cross-homework stimulus, an unreadable parent (fail closed), a
+    moved item, a title edit after publishing, content changes on a published
+    paper, a reopen, an attachment update or delete, and any change to a
+    submitted attempt; a submission after `due_at` is ACCEPTED and flagged
+    `late`; and `weakness_signals`, `exam_mistakes` and `exam_practice_sessions`
+    moved by **zero**, with no audit row carrying a homework label. The
+    rollback was rehearsed in its own aborting transaction: with one attachment
+    planted it **refused** by name and count, and once that row was unwound it
+    returned the constraint, policy, relation, trigger, grant and function
+    hashes to their exact pre-H2 values. Production afterwards: 184 applied,
+    newest still `20260902001047`, zero `teacher_homework%` objects, the audit
+    log's two rows byte-identical.
+
+    The contract suite is 128 checks and **34 of 34 mutants are killed**. One
+    is worth recording because it survived first: a grant reading
+    `to authenticated, anon` slipped past a check that matched
+    `to authenticated` as a PREFIX. Both this suite and
+    `teacher-access-scope.test.mjs` now compare the whole grantee list, and the
+    same hole is closed for the exam tables.
+
+    **One thing the approved scope leaves out, and it is a real gap.** H5
+    cannot save or grade anything without a per-item answer record — the
+    homework twin of `teacher_exam_responses`. The approved H2 scope named five
+    tables and this is not one of them, so it is deliberately absent, nothing in
+    these files assumes its shape, and it must be prepared, reviewed and
+    approved as its own increment before H5.
 
 ---
 
@@ -1285,6 +1354,18 @@ them should be discovered mid-implementation.
   told teachers that weaknesses were not there while the learning slot was
   rendering them, which is a page describing itself wrongly to the person who
   has to defend it.
+- **2026-09-02 — Teacher Homework H2 prepared, and not applied.** Five tables,
+  their constraints, their guards and their RLS, written after reading the live
+  3b conventions rather than recalling them. Both forward files were run
+  verbatim against production inside an aborting transaction with 49
+  behavioural probes (0 failures, assistant parity driven end to end through the
+  real staff RPCs, every client write refused, the analyzer unmoved), and the
+  rollback was rehearsed the same way — it refused while an attachment existed,
+  and returned every schema hash to its pre-H2 value. Production is unchanged:
+  184 applied, newest `20260902001047`. 34 of 34 mutants killed; the one that
+  survived first exposed a prefix-matching grant check, now fixed in two
+  suites. The per-item answer record H5 needs was kept out because the approved
+  scope named five tables, and it is flagged as its own increment.
 - **2026-09-02 — Teacher Homework: six decisions locked, H1 prepared.** The
   read-only audit (§15.15) established that nothing homework-shaped exists,
   what the exam system lends by call and what it lends only as a template, and
