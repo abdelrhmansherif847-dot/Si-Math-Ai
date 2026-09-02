@@ -391,6 +391,6 @@ measuring the generator's own band assignment rather than reading the questions.
 
 ## 14. Commit
 
-`docs/engineering/est-generation/18-stage-3-prototype-review.md` is carried by
-the Stage-3 commit; the hash is recorded by the follow-up commit that amends this
-line, and in the Stage-3 report.
+`efb92c78c59f5e3f9918886c0039f6086dbd8c5b` on
+`claude/mock-exam-enhancement-nnwb48` — the commit that introduced every change
+described above. This line was written by the follow-up commit that amends it.
