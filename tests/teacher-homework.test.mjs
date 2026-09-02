@@ -66,7 +66,8 @@ t.ok('it records what it cannot check: a write test must run post-apply, in an a
 // ══ 3 · THE FILE TELLS THE TRUTH ABOUT ITSELF ═════════════════════════════
 t.section('Irreversibility, the PG property, and the writing convention are recorded');
 
-t.ok('marked PREPARED, not applied', /STATUS: 🟡 PREPARED, not applied/.test(F));
+t.ok('records its apply (version 20260902001047) — and the rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-02[\s\S]{0,200}20260902001047/.test(F) && /STATUS: 🔴 PREPARED/.test(R));
 t.ok('says it is not cleanly reversible and why (no DROP VALUE)', /NOT CLEANLY REVERSIBLE/.test(F) && /no ALTER TYPE \.\.\. DROP VALUE/.test(F));
 t.ok('records the measured property that forces the split', /unsafe use of new value/.test(F) && /cannot work as one unit/.test(F));
 t.ok('records why exactly five — no deleted, no opened/submitted, no access family (no queue)',

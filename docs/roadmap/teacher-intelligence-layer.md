@@ -1238,9 +1238,13 @@ them should be discovered mid-implementation.
     verified with a rehearsed rollback: H1 five audit labels → H2 tables,
     guards, RLS → H3 authoring RPCs and publish gate → H4 code, attach, student
     list → H5 open, save, submit, feedback, staff results → H6 staff UI → H7
-    student UI and the dashboard card. H1 is PREPARED as `20260902a` with its
-    rollback posture `20260902z`, which — like `20260901y` — is not a clean undo
-    and says so.
+    student UI and the dashboard card. **H1 applied 2026-09-02 as
+    `20260902001047`**: the five labels at positions 17–21, the sixteen before
+    them unmoved, each label written and read back for real in an aborting
+    transaction, the two stored rows byte-identical, every other hash equal to
+    the post-`20260901h` baseline. Its rollback posture `20260902z` — like
+    `20260901y` — is not a clean undo and says so; it stays prepared and
+    unapplied. H2 has not started.
 
 ---
 
@@ -1286,7 +1290,9 @@ them should be discovered mid-implementation.
   what the exam system lends by call and what it lends only as a template, and
   that `exam.html` is reachable only by URL. The owner locked feedback,
   analyzer boundary, late submissions, closing, parity and the entry point, and
-  approved H1 only — five irreversible audit labels, prepared and not applied.
+  approved H1 only — five irreversible audit labels, prepared, then applied the
+  same night as `20260902001047` on its own approval and verified. H2 not
+  started.
 - **2026-09-01 — the class-level claim, admitted with two decisions.** A
   read-only audit (recorded under §15.11) established that the aggregate needs
   no new data and no new access, and that the pre-registered cut, applied with

@@ -1,9 +1,20 @@
 -- =====================================================================
 -- Teacher Homework, increment H1 — five audit labels, and nothing else
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback posture: 20260902z — read its header
---         before relying on it, because it is not a clean undo.
+-- STATUS: ✅ APPLIED 2026-09-02 to igvkyxkmjnkzscqgommj with explicit owner
+--         approval (CLAUDE.md §3), recorded as schema_migrations version
+--         20260902001047 `workspace_audit_homework_actions`. Applied through
+--         the MCP tool with this file's text verbatim, minus the outer
+--         transaction. Post-apply verification, including the one test the
+--         dry-run structurally could not run: all FIVE labels were written to
+--         workspace_audit_log for real and each read back identical — done per
+--         label, in a transaction that aborted (rows 2 -> 7 -> 2), because the
+--         log is append-only. Positions 1..16 unchanged, the five at 17..21;
+--         type oid unchanged; the two stored rows byte-identical (md5
+--         9ff25122…); every other function, policy, constraint and relation
+--         hash equal to the post-20260901h baseline. Rollback posture:
+--         20260902z — prepared, unapplied, rehearsed; read its header before
+--         relying on it, because it is not a clean undo.
 -- DEPENDS ON: 20260901b (the type already carries the eight exam labels;
 --             positions 1–16 are what this file asserts it will not move)
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §15.14 (homework keeps
