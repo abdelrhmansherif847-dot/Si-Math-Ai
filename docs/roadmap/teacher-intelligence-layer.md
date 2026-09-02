@@ -1194,6 +1194,54 @@ them should be discovered mid-implementation.
     homework is practice, an exam is graded — and is recorded here so it reads
     as a choice rather than an oversight.
 
+
+15. **Teacher Homework — audited 2026-09-01, six decisions locked 2026-09-02.**
+    A read-only audit found nothing homework-shaped in production: no table,
+    function or type. The task-shaped relations that exist (`focus_tasks`,
+    `focus_plans`, `study_plans`, `exam_practice_sessions`) are the student's
+    own study system and feed learning inference, so they cannot host
+    teacher-set work — the reason Teacher Exams got their own tables. §15.14
+    already recorded the access model (code → immediate unlock for an active
+    member, no approval queue; *homework is practice, an exam is graded*), and
+    the audit confirmed it fits: the Class Code makes the relationship, the
+    Homework Code attaches one homework to a member, and every read re-checks
+    membership live, exactly as `teacher_exam_can_start()` does. Reusable by
+    call, unchanged: `workspace_is_active_staff()`, the live-membership
+    predicate pattern, `exam_answer_matches()`, `exam_stimulus_shape_ok()`,
+    `teacher_exam_new_code()`, the audit-log write, the code-normalisation and
+    one-message convention, `stimulus-view.js`. Reusable as templates, copied:
+    the 3b guards, the SELECT-only RLS shape, `teacher-exams.html`. Not
+    reusable and not to be: the exam access queue, `teacher_exam_can_start`,
+    `teacher_exam_is_staff`, the six exam tables. One finding beyond the ask:
+    `exam.html` — the 3g student surface — is linked from nowhere and reachable
+    only by URL; it needs its own decision.
+
+    The six decisions, locked before a line of H1:
+
+    1. **Feedback** — per-item correctness and the teacher's explanation after
+       submission; the correct-answer text only when `reveal_answers = true`,
+       default false. Counts-only, as exams give, would make homework pointless
+       as practice.
+    2. **Analyzer** — entirely outside it, exactly as Teacher Exams: no write to
+       `weakness_signals`, `exam_mistakes`, `exam_practice_sessions` or any
+       learning-inference table. Teacher-authored content is uncalibrated.
+    3. **Late submissions** — allowed and flagged `late`, never refused solely
+       because the due date passed.
+    4. **Closing** — stops new opens; an attempt already in progress may finish
+       (§15.14's rule, for the same reason).
+    5. **Assistant parity** — full, on the same active-staff gate.
+    6. **Student entry point** — a dashboard card, *From your teachers*. Not a
+       site-wide `nav.js` student RPC (overkill for V1), and not URL-only, which
+       is the 3g gap this finding exposed.
+
+    Increments, each prepared, dry-run, mutation-tested, approved, applied and
+    verified with a rehearsed rollback: H1 five audit labels → H2 tables,
+    guards, RLS → H3 authoring RPCs and publish gate → H4 code, attach, student
+    list → H5 open, save, submit, feedback, staff results → H6 staff UI → H7
+    student UI and the dashboard card. H1 is PREPARED as `20260902a` with its
+    rollback posture `20260902z`, which — like `20260901y` — is not a clean undo
+    and says so.
+
 ---
 
 ## 16. Provenance
@@ -1233,6 +1281,12 @@ them should be discovered mid-implementation.
   told teachers that weaknesses were not there while the learning slot was
   rendering them, which is a page describing itself wrongly to the person who
   has to defend it.
+- **2026-09-02 — Teacher Homework: six decisions locked, H1 prepared.** The
+  read-only audit (§15.15) established that nothing homework-shaped exists,
+  what the exam system lends by call and what it lends only as a template, and
+  that `exam.html` is reachable only by URL. The owner locked feedback,
+  analyzer boundary, late submissions, closing, parity and the entry point, and
+  approved H1 only — five irreversible audit labels, prepared and not applied.
 - **2026-09-01 — the class-level claim, admitted with two decisions.** A
   read-only audit (recorded under §15.11) established that the aggregate needs
   no new data and no new access, and that the pre-registered cut, applied with
