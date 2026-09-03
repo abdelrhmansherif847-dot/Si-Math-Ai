@@ -2097,14 +2097,30 @@ them should be discovered mid-implementation.
        live homework nor reserved, which is what stops a concurrent create
        slipping between them.
 
-       **What enforces it, stated plainly: the three RPCs, not a constraint.**
-       Measured in the dry-run — a raw INSERT carrying a retired code is
-       ACCEPTED, because the UNIQUE on `homework_code` cannot see the
+       **What enforces it.** The three RPCs on every path a client can reach,
+       and `teacher_homework_code_guard()` — a **BEFORE INSERT trigger on
+       `teacher_homework`** — in the database itself.
+
+       The trigger exists because the first version did not have one and the
+       dry-run measured the consequence: a raw INSERT carrying a retired code
+       was **ACCEPTED**, since the UNIQUE on `homework_code` cannot see the
        reservation table and a CHECK may not subquery. Clients hold no INSERT
-       on `teacher_homework`, so the only route is a future migration or a
-       service_role writer; a BEFORE INSERT guard would close it, but that
-       touches a live H2 table, so it is recorded as a known limitation rather
-       than taken silently.
+       on `teacher_homework`, so nothing reachable today could do it — but an
+       invariant that depends on nobody currently holding a grant is an
+       application rule wearing a database rule's clothes. The guard is
+       `SECURITY DEFINER` with a pinned `search_path`, so RLS on the
+       reservation can never blind it, and it is callable by nobody. It raises
+       `22000` rather than `23505` on purpose: `teacher_homework_create()`
+       catches `unique_violation` to retry a collision, and a RAISE carries no
+       `constraint_name`, so a 23505 would enter that handler only to be
+       re-raised opaquely.
+
+       **What it does not cover, said rather than left to be found:** it is
+       BEFORE INSERT only, so a raw UPDATE of `homework_code` to a retired
+       value is still possible for a table owner or a future migration.
+       Rotation is the only path that changes a code and it goes through the
+       RPC. Extending the guard to UPDATE was deliberately out of this
+       increment's scope and is a separate decision.
     2. **`teacher_homework_attach_attempts`** — every submission counted, not
        just successful attachments. It holds who and when and nothing else: not
        the submitted code, not the outcome, because storing the outcome would
@@ -2157,6 +2173,12 @@ them should be discovered mid-implementation.
     | student presents a deleted draft's code | `no_match` — indistinguishable from any other miss |
     | deleting a draft a student holds | REFUSED, and **+0** reservations: a refusal retires nothing |
     | reservation / attempt row, as table owner | UPDATE and DELETE both refused |
+    | **raw INSERT with a retired code, as table owner** | **REFUSED `22000`** — the guard, and the reason it exists |
+    | raw INSERT with a deleted draft's code | REFUSED `22000` |
+    | raw INSERT with a LIVE code | REFUSED `23505` — the UNIQUE, a separate mechanism |
+    | raw INSERT with a fresh code | ACCEPTED — the guard blocks nothing ordinary |
+    | raw UPDATE to a retired code | ACCEPTED — BEFORE INSERT only, exactly as scoped |
+    | triggers on `teacher_homework` after install | 2 — H2's, plus the guard, H2's body unchanged |
     | duplicate attachment, raw | `23505` — the PK is what makes a real concurrent double-attach safe |
     | teacher closes the paper | `can_open` false |
     | outsider calling the staff roster · anon calling attach | `42501` |
@@ -2166,10 +2188,13 @@ them should be discovered mid-implementation.
     the table alias `h`, and plpgsql refuses that (`42702`). The alias is now
     `hw` and the suite pins it.
 
-    **Rollback rehearsal.** Homework tables and functions went **6,22 → 8,27 →
-    6,22**, and all eleven hashes returned **identical, 0 differing**, with all
-    **three** H3 bodies restored byte-for-byte. The refusal was exercised with
-    a reservation planted and fired correctly.
+    **Rollback rehearsal.** Homework tables, functions and triggers-on-
+    `teacher_homework` went **6,22,1 → 8,28,2 → 6,22,1**, and all twelve hashes
+    returned **identical, 0 differing**, with all **three** H3 bodies restored
+    byte-for-byte. The guard sits on a table that survives the rollback, so it
+    is dropped by name — trigger before function — and the rollback asserts
+    `teacher_homework` is back to H2's single trigger with its body unchanged.
+    The refusal was exercised with a reservation planted and fired correctly.
 
     #### The rollback window — written before the apply, not after
 
@@ -2187,8 +2212,8 @@ them should be discovered mid-implementation.
 
     #### Verification
 
-    342 checks in `tests/teacher-homework.test.mjs`, 109 in
-    `teacher-access-scope`, CI 66/66, **58 of 58 mutants killed with none
+    350 checks in `tests/teacher-homework.test.mjs`, 109 in
+    `teacher-access-scope`, CI 66/66, **68 of 68 mutants killed with none
     unapplied**. One of those mutants exists only because the shared
     access-scope suite's definer/`search_path` check matched `as $$` alone and
     so had been **silently skipping every teacher_exam and teacher_homework

@@ -1095,15 +1095,42 @@ t.ok('the delete still refuses on any student row, and still deletes content fir
 t.ok('the file states the invariant in those words',
   /ONCE A HOMEWORK CODE HAS EXISTED, IT NEVER BECOMES AVAILABLE AGAIN/.test(H4)
   && /Both exits are atomic/.test(H4FLAT));
-/* Measured in the dry-run and recorded rather than glossed: the invariant is
-   enforced by the three RPCs, not by a constraint — a raw INSERT carrying a
-   retired code is accepted, because UNIQUE cannot see the reservation table
-   and a CHECK may not subquery. */
-t.ok('the file states what enforces the invariant, and what does not',
-  /enforced by, STATED PLAINLY: the three RPCs,\s+not a constraint/.test(H4FLAT.replace(/\s+/g, ' '))
-  || /not a constraint/.test(H4FLAT));
-t.ok('and names the option it deliberately did not take',
-  /BEFORE INSERT guard on teacher_homework would close it/.test(H4FLAT));
+/* The dry-run measured that a raw INSERT could still claim a retired code —
+   UNIQUE cannot see the reservation table and a CHECK may not subquery — so
+   the invariant is now enforced one level down as well. */
+t.ok('a BEFORE INSERT guard puts the invariant in the database',
+  /before insert on teacher_homework\s+for each row execute function teacher_homework_code_guard\(\)/.test(H4C));
+t.ok('it is INSERT only — no update, no delete',
+  !/before insert or update on teacher_homework/.test(H4C)
+  && !/create trigger teacher_homework_code_guard_trg\s+before (update|delete)/.test(H4C));
+t.ok('it consults the reservation, and fails closed by being definer',
+  /from teacher_homework_retired_codes where code = new\.homework_code/.test(body4('teacher_homework_code_guard'))
+  && /create or replace function teacher_homework_code_guard\(\)\nreturns trigger\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog, public/.test(H4C));
+t.ok('it is callable by nobody',
+  /revoke all on function teacher_homework_code_guard\(\) from public, anon, authenticated;/.test(H4C)
+  && !/grant execute on function teacher_homework_code_guard/.test(H4C));
+/* Not 23505: teacher_homework_create() catches unique_violation to retry a
+   collision, and a RAISE carries no constraint_name, so a 23505 here would
+   enter that handler only to be re-raised opaquely. */
+t.ok('and it deliberately avoids the errcode the create retry catches',
+  /using errcode = '22000'/.test(body4('teacher_homework_code_guard'))
+  && !/23505/.test(body4('teacher_homework_code_guard'))
+  && /Deliberately NOT errcode 23505/.test(H4));
+/* H4 only ever ADDS. Anything it dropped would belong to H2 or H3, and the
+   file that installs a guard is the easiest place to quietly remove one. */
+t.is('the forward file drops nothing at all',
+  [...H4C.matchAll(/drop\s+(trigger|function|table|policy|index|type|constraint)/gi)].map((m) => m[0]), []);
+t.ok('§7.12b pins the trigger, and §7.12c pins H2\u2019s as untouched',
+  /the invariant is only a convention/.test(H4C)
+  && /19bbc18c825edce8b3c9a03c75f9fecb/.test(H4C)
+  && /BEFORE DELETE OR UPDATE ON public/.test(H4C));
+/* Said rather than left to be found: the guard is INSERT-only, so a raw
+   UPDATE of homework_code remains a path. Excluded from this increment's
+   scope on purpose. */
+t.ok('the file states what the guard does NOT cover',
+  /WHAT THE TRIGGER DOES NOT COVER/.test(H4)
+  && /it is BEFORE INSERT only/.test(H4FLAT)
+  && /a raw UPDATE of homework_code to a retired value .* is still possible/.test(H4FLAT.replace(/\s+/g, ' ')));
 t.ok('§7.5b pins the other exit, and that it precedes the row delete',
   /deleting a draft releases its code back into circulation/.test(H4C)
   && /there is a window where it is free/.test(H4C));
@@ -1169,12 +1196,21 @@ t.ok('and it asserts the third md5 as well',
   /7f3c8934a08ef9a749717fc2d52ff26a/.test(H4ZC));
 t.ok('the refusal is a real condition, not a disabled one',
   /if v_codes > 0 then/.test(H4ZC) && !/if false then/.test(H4ZC));
-t.is('it drops exactly what H4 added — five functions, two guards, two tables',
+t.is('it drops exactly what H4 added — six functions, two guards, two tables',
   [...H4ZC.matchAll(/drop (?:function|table) if exists ([a-z_]+)/g)].map((m) => m[1]).sort(),
   ['student_attach_homework', 'student_my_homework', 'teacher_homework_attach_attempts',
    'teacher_homework_attach_attempts_guard', 'teacher_homework_can_open',
-   'teacher_homework_code_available', 'teacher_homework_retired_codes',
-   'teacher_homework_retired_codes_guard', 'teacher_homework_students']);
+   'teacher_homework_code_available', 'teacher_homework_code_guard',
+   'teacher_homework_retired_codes', 'teacher_homework_retired_codes_guard',
+   'teacher_homework_students']);
+/* The guard sits on an H2 table that SURVIVES, so no DROP TABLE carries it
+   away — it must be removed by name, trigger before function. */
+t.ok('the code guard is dropped explicitly, trigger first',
+  /drop trigger if exists teacher_homework_code_guard_trg on teacher_homework;/.test(H4ZC)
+  && H4ZC.indexOf('drop trigger if exists teacher_homework_code_guard_trg')
+     < H4ZC.indexOf('drop function if exists teacher_homework_code_guard()'));
+t.ok('and it asserts teacher_homework is back to H2\u2019s single trigger',
+  /H2 left exactly one/.test(H4ZC) && /19bbc18c825edce8b3c9a03c75f9fecb/.test(H4ZC));
 t.ok('and it asserts H2 and the rest of H3 came back: 6 tables, 9 policies, 22 functions',
   /<> 6 then/.test(H4ZC) && /<> 9 then/.test(H4ZC) && /<> 22 then/.test(H4ZC));
 t.ok('both H4 files are PREPARED and unapplied',

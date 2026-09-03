@@ -99,17 +99,27 @@
 --       is neither held by a live homework nor reserved, which is what makes
 --       a concurrent create unable to slip between them.
 --
---       WHAT THIS INVARIANT IS ENFORCED BY, STATED PLAINLY: the three RPCs,
---       not a constraint. Measured in the dry-run — a raw INSERT into
---       teacher_homework carrying a retired code is ACCEPTED, because the
---       UNIQUE on homework_code cannot see this table and no CHECK may
---       subquery. Clients hold no INSERT on teacher_homework, so the only way
---       to reach that path is a future migration or a service_role writer;
---       but this project prefers rules that are constraints (H2 chose
---       composite foreign keys over a trigger for exactly this reason), and a
---       BEFORE INSERT guard on teacher_homework would close it. That would
---       touch a live H2 table, so it is recorded here as a known limitation
---       and left for its own decision rather than taken silently.
+--       WHAT ENFORCES IT. The three RPCs enforce it on every path a client can
+--       reach, and teacher_homework_code_guard() — a BEFORE INSERT trigger on
+--       teacher_homework, §2b below — enforces it in the database itself.
+--
+--       The trigger exists because the first version of this file did not have
+--       one, and the dry-run measured the consequence: a raw INSERT carrying a
+--       retired code was ACCEPTED, because the UNIQUE on homework_code cannot
+--       see the reservation table and a CHECK may not subquery. Clients hold
+--       no INSERT on teacher_homework, so nothing reachable today could do it
+--       — but an invariant that depends on nobody currently holding a grant is
+--       an application rule wearing a database rule's clothes, and this
+--       project prefers the real thing (H2 chose composite foreign keys over a
+--       trigger for the same reason).
+--
+--       WHAT THE TRIGGER DOES NOT COVER, said plainly rather than left to be
+--       discovered: it is BEFORE INSERT only, so a raw UPDATE of
+--       homework_code to a retired value — by the table owner or a future
+--       migration — is still possible. Rotation is the only path that changes
+--       a code and it goes through the RPC, which consults the reservation.
+--       Extending the guard to UPDATE was deliberately excluded from this
+--       increment's scope; it is a separate decision, recorded in §15.17.
 --
 --   teacher_homework_attach_attempts
 --       MEASURED GAP (§15.17): the exam limiter counts ROWS CREATED in
@@ -173,6 +183,43 @@ create trigger teacher_homework_retired_codes_guard_trg
 alter table teacher_homework_retired_codes enable row level security;
 revoke all on table teacher_homework_retired_codes from anon, authenticated;
 revoke all on function teacher_homework_retired_codes_guard() from public, anon, authenticated;
+
+-- ── 2b · the invariant, in the database ───────────────────────────────
+-- The RPCs check teacher_homework_code_available() before they issue a code.
+-- This is the same rule one level down, where a writer that never called an
+-- RPC still meets it. It is BEFORE INSERT only: rotation is the sole path that
+-- changes an existing code and it goes through the RPC (see the header for
+-- what that leaves open, and why that is a separate decision).
+create or replace function teacher_homework_code_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $fn$
+begin
+  -- SECURITY DEFINER so RLS on the reservation table can never blind the
+  -- check: a guard that cannot see the rows it guards against fails open,
+  -- which is the one thing a guard must not do.
+  if exists (select 1 from teacher_homework_retired_codes where code = new.homework_code) then
+    raise exception
+      'teacher_homework: code % was retired and can never be issued again', new.homework_code
+      using errcode = '22000';
+  end if;
+  return new;
+end;
+$fn$;
+
+-- Deliberately NOT errcode 23505. teacher_homework_create() catches
+-- unique_violation to retry a code collision, and a RAISE carries no
+-- constraint_name, so a 23505 here would enter that handler only to be
+-- re-raised as an opaque error. 22000 keeps this refusal out of the retry
+-- path entirely — the retry is for collisions with LIVE codes, which the
+-- UNIQUE still raises normally.
+create trigger teacher_homework_code_guard_trg
+  before insert on teacher_homework
+  for each row execute function teacher_homework_code_guard();
+
+revoke all on function teacher_homework_code_guard() from public, anon, authenticated;
 
 -- ── 2 · the attach limiter ────────────────────────────────────────────
 
@@ -826,6 +873,53 @@ begin
        where n.nspname = 'public' and p.proname = 'teacher_homework_is_staff')
      <> '63ef7fa28bf3a0c48bd6658abd11009a' then
     raise exception 'H4: teacher_homework_is_staff() was redefined — it belongs to 20260902c';
+  end if;
+
+  -- 7.12b THE INVARIANT IS IN THE DATABASE. The guard exists, fires on INSERT
+  --       ONLY, reads the reservation, and is definer with a pinned path.
+  select pg_get_triggerdef(tg.oid) into v_bad
+    from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
+   where c.relname = 'teacher_homework' and tg.tgname = 'teacher_homework_code_guard_trg'
+     and not tg.tgisinternal;
+  if v_bad is null then
+    raise exception 'H4: the code guard is not installed — the invariant is only a convention';
+  end if;
+  if v_bad !~ 'BEFORE INSERT ON public\.teacher_homework' or v_bad ~ 'UPDATE|DELETE' then
+    raise exception 'H4: the code guard is not BEFORE INSERT only: %', v_bad;
+  end if;
+  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'teacher_homework_code_guard';
+  if v_src !~ 'from teacher_homework_retired_codes where code = new\.homework_code' then
+    raise exception 'H4: the code guard does not consult the reservation';
+  end if;
+  if not (select p.prosecdef and p.proconfig @> array['search_path=pg_catalog, public']
+            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and p.proname = 'teacher_homework_code_guard') then
+    raise exception 'H4: the code guard is not definer with a pinned search_path — RLS could blind it';
+  end if;
+  if has_function_privilege('authenticated', 'teacher_homework_code_guard()', 'execute')
+     or has_function_privilege('anon', 'teacher_homework_code_guard()', 'execute') then
+    raise exception 'H4: the code guard is client-callable';
+  end if;
+
+  -- 7.12c AND H2'S OWN TRIGGER IS UNTOUCHED. The new one is additive: H2's
+  --       guard was BEFORE DELETE OR UPDATE and had no INSERT coverage at all,
+  --       so nothing it does changes.
+  if (select md5(p.prosrc) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'teacher_homework_guard')
+     <> '19bbc18c825edce8b3c9a03c75f9fecb' then
+    raise exception 'H4: it altered teacher_homework_guard(), which belongs to 20260902b';
+  end if;
+  select pg_get_triggerdef(tg.oid) into v_bad
+    from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
+   where c.relname = 'teacher_homework' and tg.tgname = 'teacher_homework_guard_trg';
+  if v_bad !~ 'BEFORE DELETE OR UPDATE ON public\.teacher_homework' then
+    raise exception 'H4: H2''s trigger on teacher_homework changed: %', v_bad;
+  end if;
+  select count(*) into v_n from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
+   where c.relname = 'teacher_homework' and not tg.tgisinternal;
+  if v_n <> 2 then
+    raise exception 'H4: teacher_homework carries % triggers — H2''s one, plus this file''s one', v_n;
   end if;
 
   -- 7.13 the shape of the homework system after this increment

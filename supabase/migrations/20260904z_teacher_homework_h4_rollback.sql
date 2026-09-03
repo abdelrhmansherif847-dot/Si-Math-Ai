@@ -75,6 +75,13 @@ begin
 end $$;
 
 -- ── 2 · drop what H4 added ────────────────────────────────────────────
+-- The code guard first, and explicitly: it sits on teacher_homework, which is
+-- an H2 table that SURVIVES this rollback, so unlike the guards on the two H4
+-- tables it is not carried away by a DROP TABLE. Trigger before function —
+-- the function cannot be dropped while a trigger depends on it.
+drop trigger if exists teacher_homework_code_guard_trg on teacher_homework;
+drop function if exists teacher_homework_code_guard();
+
 drop function if exists student_attach_homework(text);
 drop function if exists teacher_homework_can_open(uuid);
 drop function if exists student_my_homework();
@@ -87,7 +94,7 @@ drop table if exists teacher_homework_retired_codes;
 drop function if exists teacher_homework_attach_attempts_guard();
 drop function if exists teacher_homework_retired_codes_guard();
 
--- ── 3 · restore the two H3 bodies, verbatim from 20260903b ────────────
+-- ── 3 · restore the three H3 bodies, verbatim from 20260903b ──────────
 
 create or replace function teacher_homework_create(p_workspace uuid, p_title text)
 returns jsonb
@@ -248,7 +255,8 @@ begin
   select string_agg(x.n, ', ') into v_left
     from unnest(array['student_attach_homework','teacher_homework_can_open','student_my_homework',
                       'teacher_homework_students','teacher_homework_code_available',
-                      'teacher_homework_retired_codes_guard','teacher_homework_attach_attempts_guard']) as x(n)
+                      'teacher_homework_retired_codes_guard','teacher_homework_attach_attempts_guard',
+                      'teacher_homework_code_guard']) as x(n)
    where exists (select 1 from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
                   where ns.nspname = 'public' and p.proname = x.n);
   if v_left is not null then
@@ -302,6 +310,25 @@ begin
        where n.nspname = 'public' and p.proname = 'teacher_homework_is_staff')
      <> '63ef7fa28bf3a0c48bd6658abd11009a' then
     raise exception 'rollback H4: it disturbed teacher_homework_is_staff()';
+  end if;
+
+  -- teacher_homework carries H2's ONE trigger again, unchanged. The guard H4
+  -- added sat on a table that survives, so failing to remove it would leave a
+  -- rollback that looks complete and is not.
+  select count(*) into v_n from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
+   where c.relname = 'teacher_homework' and not tg.tgisinternal;
+  if v_n <> 1 then
+    raise exception 'rollback H4: teacher_homework carries % trigger(s); H2 left exactly one', v_n;
+  end if;
+  if (select pg_get_triggerdef(tg.oid) from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
+       where c.relname = 'teacher_homework' and not tg.tgisinternal)
+     !~ 'BEFORE DELETE OR UPDATE ON public\.teacher_homework' then
+    raise exception 'rollback H4: the trigger left on teacher_homework is not H2''s';
+  end if;
+  if (select md5(p.prosrc) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'teacher_homework_guard')
+     <> '19bbc18c825edce8b3c9a03c75f9fecb' then
+    raise exception 'rollback H4: it disturbed teacher_homework_guard()';
   end if;
 end $$;
 
