@@ -1,0 +1,50 @@
+{
+  "recordedOn": "2026-09-03",
+  "why": "Stage 24 established that supported vocabulary expansion is exhausted and that the series-overlap target is a corpus question, not a generator one. The generator is frozen while the corpus is investigated, and this file is what 'frozen' means: the numbers below are re-derived by scripts/validate-est-baseline.mjs on every CI run, so drift is a failure rather than a discovery.",
+  "artifact": "docs/engineering/est-generation/25-reference-corpus-expansion-plan.md",
+  "vocabulary": {
+    "referenceArchetypesNamed": 189,
+    "referenceArchetypesExecutable": 183,
+    "completeness": 0.968,
+    "unbuilt": {
+      "coordinatePlaneStimulus": [
+        "inequality-from-graph",
+        "absvalue-graph-identify",
+        "graph-roman-numeral",
+        "vertical-line-roman"
+      ],
+      "richerLineGraph": [
+        "event-anchored-series-scan",
+        "physics-graph-unit-conversion"
+      ]
+    }
+  },
+  "capacity": {
+    "eligibleObjects": 150,
+    "theoreticalBestOverlapShare": 0.479,
+    "theoreticalBestOverlapShareRange": [
+      0.463,
+      0.479
+    ],
+    "ceilingNote": "The bound is a function of the realised (family, band) demand profile, which shifts slightly with the scheduling policy. 0.463 is the profile under the plain seriesLedger, 0.479 under policy D \u2014 the run the readiness gate grades. Quoting one without the other is how a range becomes a false precision.",
+    "constructiveOptimumShare": 0.508,
+    "achievedOverlapShare": 0.64,
+    "allocationEfficiency": 0.749,
+    "allocationPenaltyFloor": 1.7,
+    "allocationPenaltyFloorEligibleDenominator": 1.39,
+    "everyFormObjectMinimum": 3,
+    "everyFormObjectMinimumGradedProfile": 6,
+    "everyFormObjectsAchieved": 17,
+    "recommendedCooldownPolicy": "D"
+  },
+  "structural": {
+    "formsCompleteOutOf25": 25,
+    "bandMixDeviation": 0,
+    "familyMixDeviation": 0,
+    "ciChecks": 79
+  },
+  "frozen": {
+    "estm1PayloadMd5": "38926f22b7869608f310d0a8e21bb55e",
+    "note": "ESTM1-2026-A lives outside this repository. The md5 is recorded so a session can check it has not been touched; the payload itself is never committed."
+  }
+}

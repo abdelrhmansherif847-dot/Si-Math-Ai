@@ -485,7 +485,21 @@ export function simulateSeries({ policy, forms: N = 25, seed0 = 31400, step = 97
  * the same fifteen objects in every form fails here exactly as loudly as one
  * with no vocabulary at all.
  */
+/**
+ * SUPERSEDED by `READINESS` in est-capacity.mjs. Kept because the record of what
+ * was asked for, and why it was wrong, is worth more than a tidy file.
+ *
+ * Stage 24 measured that the best pairwise overlap ANY assignment can reach with
+ * the current eligibility structure is about 46%, so `overlapShare: 0.20` was
+ * never a feasibility gate — it was an aspiration against a corpus whose own
+ * 2.3% comes from a much larger archetype pool than the library has. Stage 25
+ * estimated that pool at 1,500–2,600 against the 189 observed. Both numbers
+ * below stay here as targets to aim at, and neither is a pass/fail condition on
+ * the generator any more.
+ */
 export const STAGE_B = {
+  superseded: 'READINESS in scripts/est-capacity.mjs, from artifact 24 SS11',
+  aspirational: true,
   vocabulary: 250,
   overlapShare: 0.20,
   objectsInEveryForm: 0,

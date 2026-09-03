@@ -108,6 +108,14 @@ export function requiredCapacity(share, N = 25, S = 50) {
  * needs a deliberate allocation over ~1,200 objects, which is a publisher's
  * item bank, not a library.
  */
+/**
+ * ASPIRATIONAL, not a feasibility gate. Stage 24 measured the best achievable
+ * pairwise overlap at about 46% under the current eligibility structure, and
+ * Stage 25 found the corpus's own 2.3% is the signature of an archetype pool of
+ * roughly 1,500-2,600 rather than the 189 four forms revealed. The stages below
+ * are the ladder the programme is climbing; reaching stage B or C is a corpus
+ * question before it is a generator one.
+ */
 export const SERIES_TARGET = {
   referenceShare: 0.023,
   stages: [
