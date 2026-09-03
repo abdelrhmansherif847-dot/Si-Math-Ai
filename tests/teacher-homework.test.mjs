@@ -811,13 +811,19 @@ t.is('it rebuilds exactly the twenty-one labels that preceded it',
 t.ok('it widens to text and narrows back onto the type',
   /alter column action type text/.test(RVZC) && /alter column action type workspace_audit_action\s+using action::workspace_audit_action/.test(RVZC));
 t.ok('and checks the column landed back ON the type', /format_type\(a\.atttypid, a\.atttypmod\)/.test(RVZC));
-t.ok('both reveal-label files are PREPARED and unapplied',
-  /STATUS: 🟡 PREPARED/.test(RV) && /STATUS: 🔴 PREPARED/.test(RVZ) && !/APPLIED 2026/.test(RV));
+t.ok('the label migration records its apply, and its rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-03 as version 20260903175543/.test(RV) && /STATUS: 🔴 PREPARED/.test(RVZ));
 /* Order is a real dependency, not a filing convention: the label cannot be
    written in the transaction that adds it, so 20260903b installed first would
    give a teacher a runtime failure. Both files say so. */
-t.ok('20260903a must be applied BEFORE 20260903b, and both say so',
-  /only AFTER 20260903a/.test(TA) && /BEFORE 20260903b/.test(RV));
+/* The order survives the apply as a documented dependency, not just as two
+   timestamps: 20260903a says it went in before 20260903b, 20260903b says the
+   label must be committed before it can write it, and the versions agree. */
+t.ok('20260903a was applied BEFORE 20260903b, and both files say why',
+  /immediately before\s+--\s+20260903b/.test(RV)
+  && /immediately after\s+--\s+20260903a/.test(TA)
+  && /must\s+--\s+be committed before this file can write it/.test(TA)
+  && RV.includes('20260903175543') && TA.includes('20260903175957'));
 t.ok('and 20260903b refuses to install if the label is not there yet', /apply 20260903a first/.test(TA));
 
 // ══ 27 · THE H3 / H4 / H5 BOUNDARY ════════════════════════════════════════
@@ -872,7 +878,15 @@ t.ok('it asserts H2 survives: the helper, the five guards, six tables, nine poli
   /it destroyed H2 functions/.test(TAZC) && /<> 6 then/.test(TAZC) && /<> 9 then/.test(TAZC));
 t.ok('it reports what it would strand rather than refusing — a draft is not a submitted answer',
   /raise notice/.test(TAZC) && /uneditable until the RPCs return/.test(TAZ.replace(/\n\s*--\s*/g, ' ')));
-t.ok('both H3 files are PREPARED and unapplied',
-  /STATUS: 🟡 PREPARED/.test(TA) && /STATUS: 🟡 PREPARED/.test(TAZ) && !/APPLIED 2026/.test(TA) && !/APPLIED 2026/.test(TAZ));
+/* Applied in the order the dependency requires, and the two versions prove it:
+   the label (…175543) precedes the RPCs (…175957). The rollback stays PREPARED,
+   which is its whole point. */
+t.ok('H3 records its apply, in the required order, and its rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-03 as version 20260903175957/.test(TA)
+  && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(TAZ)
+  && !/STATUS: ✅ APPLIED/.test(TAZ));
+t.ok('and both files name the order as a dependency rather than a convention',
+  /20260903175543/.test(TA) && /20260903175957/.test(RV)
+  && /that order is a real dependency/i.test(RV.replace(/\n\s*--\s*/g, ' ')));
 
 t.done();

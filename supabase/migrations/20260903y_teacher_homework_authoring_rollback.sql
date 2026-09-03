@@ -1,7 +1,13 @@
 -- =====================================================================
 -- Rollback for 20260903b — the homework authoring RPCs
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately unapplied.
+-- STATUS: 🟡 PREPARED, deliberately unapplied. The file it undoes went LIVE on
+--         2026-09-03 as version 20260903175957, so this is now a real undo of
+--         live functions. Rehearsed before that apply, in one aborting
+--         transaction: the homework functions went 7 -> 22 -> 7 and all nine
+--         hashes — signatures, bodies, ACLs, constraints, policies, relations,
+--         triggers, table grants, counts — returned to their exact pre-install
+--         values, with 0 differing.
 --
 -- This is a CLEAN undo, and a cheap one: 20260903b creates no table, no policy,
 -- no type, no column and no row, so removing it is removing fifteen functions.

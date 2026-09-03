@@ -1946,9 +1946,99 @@ them should be discovered mid-implementation.
     be planted in the transaction that adds it — and it refused with the
     intended message; the literal itself is pinned by the contract suite.
 
+    ### 15.16c · H3 APPLIED, 2026-09-03 — and verified after the fact
+
+    Applied in the required order, as two separate transactions:
+
+    | file | version | what it added |
+    |---|---|---|
+    | `20260903a` | `20260903175543` | one enum label, `homework_answers_revealed` |
+    | `20260903b` | `20260903175957` | 13 client RPCs + 2 helpers; no table, policy or type |
+
+    Between the two, the label was read back **committed and castable** — the
+    one test `20260903a`'s own verification block said it could not perform,
+    because a new enum value is unusable until its transaction commits. That
+    is the whole reason the increment is two files, and the gap between them is
+    where the proof lives.
+
+    #### Structural
+
+    All **15 bodies byte-identical** to `20260903b` (`md5(prosrc)` against
+    values pre-computed from the file). All 13 client RPCs are `SECURITY
+    DEFINER` with `search_path` pinned and `authenticated` holding EXECUTE; the
+    two helpers are callable by nobody; `anon` holds EXECUTE on nothing
+    homework-shaped. `teacher_homework_is_staff` still hashes to
+    `63ef7fa2…` — H2's helper was called, never redefined. The enum stands at
+    **22 labels with the new one at position 22 and the prior 21 in their
+    original order**, compared as one exact string rather than a count.
+
+    **The schema hashes did not move.** Constraints `f0c920cc…`, policies
+    `222a2ad9…`, relations `53ff18a8…`, triggers `e755accf…`, table grants
+    `2d610a2a…` are each byte-identical to the values measured *before* the
+    install during the rollback rehearsal. "H3 adds no schema" is therefore a
+    measurement, not a claim. Public functions went 186 → **201** (+15);
+    policies stayed **133**, tables **82**.
+
+    #### Behavioural, on the live functions, in an aborting transaction
+
+    The delete lifecycle, all nine cases:
+
+    | case | result |
+    |---|---|
+    | empty draft | DELETED |
+    | draft with 1 stimulus + 2 questions | DELETED — paper, questions and stimuli all gone |
+    | draft + attachment | REFUSED `42501`, *1 student(s) hold this homework* |
+    | draft + attempt | REFUSED `42501`, *1 have started it* |
+    | draft + attempt + **graded answer** | REFUSED `42501` |
+    | published | REFUSED — *close it, do not delete it* |
+    | closed | REFUSED — *can no longer be deleted* (never "close it") |
+    | outsider | REFUSED `42501`, no such homework |
+    | active assistant | DELETED — parity |
+    | student rows after every refusal | untouched: access 1, attempts 2, answers 1 |
+
+    The reveal lifecycle, driven by the **real RPC** — no shadow was needed this
+    time, because the label was already committed:
+
+    | case | result |
+    |---|---|
+    | teacher reveal | latch `true`, **+1** event |
+    | the row | workspace correct · actor = the revealing teacher · `subject_id` NULL · `meta` exactly `{"homework_id": …}` · `created_at` = the transaction's `now()`, from the column default |
+    | two further calls | **+0** events; total for that paper stays **1** |
+    | outsider reveal | REFUSED `42501`, **+0** events, latch untouched |
+    | active assistant reveal | **+1** event, actor = the revealing assistant |
+    | closed homework reveal | latch `true`, status still `closed`, `closed_at` kept, **+1** event |
+    | un-reveal, as table owner | REFUSED `22000` |
+    | ledger | R1=1 R2=1 R3=1 R4=0; every row has an actor and a homework, none a subject |
+
+    Refusals by everyone who is not active staff: a **pending assistant**
+    cannot create, edit or reveal; an enrolled **student** cannot create or
+    publish; an **outsider** cannot rotate a code; **anon** gets *permission
+    denied for function* on both create and reveal — the ACL, not the gate; and
+    even a signed-in teacher gets *permission denied* on the internal helper.
+
+    Nothing survived: the six homework tables are back at **0 rows**, the audit
+    log at **2 rows** carrying no homework label, and the analyzer unmoved at
+    **893 / 11 / 24**. `homework_attached` remains at 0 — that label is H4's.
+
+    #### New production baseline (2026-09-03, post-H3)
+
+    189 migrations, newest `20260903175957` · 6 homework tables, 9 policies,
+    **22** homework functions (7 from H2 + 15 from H3) · 201 public functions ·
+    133 public policies · 82 tables · 22 enum labels · homework function bodies
+    `460b13a8…`, signatures `b49d7d17…` · constraints `f0c920cc…`, policies
+    `222a2ad9…`, relations `53ff18a8…`, triggers `e755accf…`, grants
+    `2d610a2a…`.
+
+    Both rollbacks stay PREPARED and unapplied: `20260903y` (rehearsed, 7 → 22
+    → 7 with 0 differing hashes) and `20260903z` (rehearsed; note its own
+    warning has now come true — with `20260903b` live, undoing the label means
+    running `20260903y` first).
+
+    **There is still no student write path.** H4 has not started.
+
     #### Verification
 
-    261 checks in `tests/teacher-homework.test.mjs`, 109 in
+    262 checks in `tests/teacher-homework.test.mjs`, 109 in
     `teacher-access-scope`, CI 66/66 green, and **73 of 73 mutants killed with
     none unapplied**. Three of those mutants exist because earlier passes let
     something through: `M60` (a `create or replace function` smuggled into the

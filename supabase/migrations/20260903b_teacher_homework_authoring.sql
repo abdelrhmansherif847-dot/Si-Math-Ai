@@ -1,8 +1,12 @@
 -- =====================================================================
 -- Teacher Homework, increment H3 — authoring, publish, close, rotation
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3), and only AFTER 20260903a. Rollback: 20260903y.
+-- STATUS: ✅ APPLIED 2026-09-03 as version 20260903175957, immediately after
+--         20260903a (version 20260903175543). Rollback: 20260903y, PREPARED and
+--         unapplied. Post-apply: all 15 bodies byte-identical to this file, and
+--         the schema hashes (constraints, policies, relations, triggers, table
+--         grants) unchanged from before the install — this increment adds no
+--         schema, measured rather than asserted.
 -- DEPENDS ON: the H2 package, LIVE since 2026-09-03 (20260903123333 /
 --             123410 / 123458) — the six tables, their guards, and
 --             teacher_homework_is_staff(), which this file CALLS and never

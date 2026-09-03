@@ -1,8 +1,12 @@
 -- =====================================================================
 -- Teacher Homework — one audit label: revealing the answers
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3), and BEFORE 20260903b. Rollback: 20260903z.
+-- STATUS: ✅ APPLIED 2026-09-03 as version 20260903175543, immediately before
+--         20260903b (version 20260903175957). That order is a real dependency,
+--         not a filing convention. Rollback: 20260903z, PREPARED and unapplied.
+--         Post-apply: 22 labels, this one at position 22, the prior 21 exact,
+--         and the label proved WRITABLE by the live RPC in an aborting
+--         transaction — the test this file said it could not perform itself.
 -- DEPENDS ON: 20260902a (the type already carries the five homework labels;
 --             positions 1–21 are what this file asserts it will not move)
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §15.16a — the audit that

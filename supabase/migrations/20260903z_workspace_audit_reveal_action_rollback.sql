@@ -9,9 +9,14 @@
 -- 20260902z and 20260901y take, for the same reason.
 --
 -- It refuses outright if any row already records the label, because a rollback
--- that silently discards history is not a rollback. And its window closes the
--- moment 20260903b ships: once teacher_homework_reveal_answers() exists and can
--- write the label, undoing the label means undoing the RPC first.
+-- that silently discards history is not a rollback. And its window has now
+-- CLOSED in the sense it warned about: 20260903b is LIVE, so
+-- teacher_homework_reveal_answers() exists and can write the label, and undoing
+-- the label means running 20260903y first. Rehearsed before the apply: the
+-- label list returned to its exact pre-add md5, the log stayed byte-identical
+-- and back on the type, and the dropped label was refused again on a fresh
+-- insert. Its refusal path was rehearsed with a stand-in label, because the
+-- real literal cannot be planted in the transaction that adds it.
 -- =====================================================================
 
 begin;
