@@ -462,7 +462,167 @@ const STIMULUS_CONSTRUCTS = {
    50 slots. Everything below closes a named part of that 21-item shortfall, and
    nothing below exists for any other reason. */
 
-const VARIANTS = {
+/* The six non-value constructs, kept in their OWN object and merged by
+   concatenation below. Five of their families already have a VARIANTS entry,
+   and a duplicate key in one object literal silently overwrites the earlier
+   one — a defect this file has already shipped once, when a second `A09:`
+   replaced the first without a word. */
+const NON_VALUE_VARIANTS = {
+  /* ── NON-VALUE TARGETS, added in the Primitive Coverage Revision ───────────
+     The reference asks for something other than a value in 29% of its items and
+     spreads them across nearly every family — A02's four archetypes are ALL
+     expression or selection targets, A10 asks for simplified expressions, A08
+     for equivalent forms, A04 for intervals, A17 for points inside a boundary,
+     A06 for which equation fits. The library asked for a value in 89% of its
+     constructs, so the seven new non-value PRIMITIVES alone could not move a
+     form below 82%: seven constructs spread over seven families each compete
+     with the value constructs already in that family.
+
+     These six are ordinary, Entry-band, and non-value. None of them is a
+     restatement of an existing construct: each changes what the student decides
+     — produce an object rather than a number — and four change the object too. */
+
+  A10: [(rand) => {                                 // equivalent exponent expression
+    const a = rand.int(3, 9), b = rand.int(2, 6), c = rand.int(2, 5);
+    if (a + b - c <= 1) return { error: 'the simplified power is trivial' };
+    const texts = [
+      `$x^{${a + b - c}}$`,
+      `$x^{${a + b + c}}$`,
+      `$x^{${a * b - c}}$`,
+      `$x^{${a + b}}$`,
+    ];
+    if (new Set(texts).size !== 4) return { error: 'two options print identically' };
+    return OK(rand, Q(0), [
+      { name: 'added-the-divisor-exponent', value: Q(1), cost: 2 },
+      { name: 'multiplied-the-numerator-exponents', value: Q(2), cost: 2 },
+      { name: 'dropped-the-division', value: Q(3), cost: 1 },
+    ], { family: 'A10', construct: 'equivalent-exponent-expression',
+      stem: `For $x > 0$, which of the following is equivalent to $\\dfrac{x^{${a}} \\cdot x^{${b}}}{x^{${c}}}$?`,
+      mechanism: { abstraction: 1 },
+      fingerprintParts: { ctx: 'exponents no-stimulus', chain: ['add-the-numerator-exponents', 'subtract-the-divisor'],
+        target: 'expression:power', options: 'expression-set', distract: ['D3', 'D3', 'D1'],
+        narrative: 'symbols-only:one-power', numeric: ['exp-a', 'exp-b', 'exp-c'] } },
+      v => texts[qNum(v)]);
+  }],
+
+  A08: [(rand) => {                                 // equivalent rational expression
+    const r = rand.nonZero(-7, 7), s2 = rand.nonZero(-7, 7);
+    if (r === s2 || r === -s2) return { error: 'the factors coincide' };
+    const texts = [
+      `$\\dfrac{x ${signedConst(-r)}}{x ${signedConst(-s2)}}$`,
+      `$\\dfrac{x ${signedConst(r)}}{x ${signedConst(s2)}}$`,
+      `$\\dfrac{x ${signedConst(-s2)}}{x ${signedConst(-r)}}$`,
+      `$x ${signedConst(-r)}$`,
+    ];
+    if (new Set(texts).size !== 4) return { error: 'two options print identically' };
+    return OK(rand, Q(0), [
+      { name: 'sign-slip-in-both-factors', value: Q(1), cost: 2 },
+      { name: 'inverted-the-quotient', value: Q(2), cost: 2 },
+      { name: 'cancelled-the-whole-denominator', value: Q(3), cost: 1 },
+    ], { family: 'A08', construct: 'equivalent-rational-expression',
+      stem: `Which of the following is equivalent to $\\dfrac{x^2 ${term(-(r + r), 'x')} ${term(r * r, '')}}` +
+            `{x^2 ${term(-(r + s2), 'x')} ${term(r * s2, '')}}$ for $x \\neq ${s2}$ and $x \\neq ${r}$?`,
+      mechanism: { abstraction: 1, filtering: 1 },
+      fingerprintParts: { ctx: 'rational-expression no-stimulus', chain: ['factor-both', 'cancel-the-common-factor'],
+        target: 'expression:rational', options: 'expression-set', distract: ['D3', 'D2', 'D3'],
+        narrative: 'symbols-only:one-quotient', numeric: ['root-r', 'root-s'] } },
+      v => texts[qNum(v)]);
+  }],
+
+  A02: [(rand) => {                                 // rearrange a literal formula
+    const texts = [
+      `$b = \\dfrac{2A}{h} - a$`,
+      `$b = \\dfrac{2A - a}{h}$`,
+      `$b = \\dfrac{A}{h} - a$`,
+      `$b = \\dfrac{2A}{h + a}$`,
+    ];
+    const which = rand.int(0, 0);   // one construction; the entropy is in the layout
+    void which;
+    return OK(rand, Q(0), [
+      { name: 'subtracted-before-dividing', value: Q(1), cost: 2 },
+      { name: 'forgot-to-double', value: Q(2), cost: 1 },
+      { name: 'added-a-into-the-denominator', value: Q(3), cost: 2 },
+    ], { family: 'A02', construct: 'rearrange-literal-formula',
+      stem: `The area $A$ of a trapezium with parallel sides $a$ and $b$ and height $h$ is given by ` +
+            `$A = \\dfrac{h(a + b)}{2}$. Which of the following gives $b$ in terms of $A$, $a$ and $h$?`,
+      mechanism: { abstraction: 1, reversal: 1 },
+      fingerprintParts: { ctx: 'literal-formula no-stimulus', chain: ['clear-the-fraction', 'isolate-the-named-symbol'],
+        target: 'expression:literal', options: 'expression-set', distract: ['D3', 'D1', 'D3'],
+        narrative: 'named-formula-rearranged', numeric: [] } },
+      v => texts[qNum(v)]);
+  }],
+
+  A04: [(rand) => {                                 // absolute-value interval
+    const c = rand.int(2, 12), r = rand.int(2, 9);
+    const texts = [
+      `${c - r} < x < ${c + r}`,
+      `x < ${c - r}$ or $x > ${c + r}`,
+      `${-c - r} < x < ${-c + r}`,
+      `${-r} < x < ${r}`,
+    ];
+    if (new Set(texts).size !== 4) return { error: 'two options print identically' };
+    return OK(rand, Q(0), [
+      { name: 'solved-the-greater-than-instead', value: Q(1), cost: 2 },
+      { name: 'negated-the-centre', value: Q(2), cost: 2 },
+      { name: 'dropped-the-centre-entirely', value: Q(3), cost: 1 },
+    ], { family: 'A04', construct: 'absolute-value-interval',
+      stem: `Which of the following describes all values of $x$ for which $|x - ${c}| < ${r}$?`,
+      mechanism: { abstraction: 1, repr_switch: 1 },
+      fingerprintParts: { ctx: 'absolute-value no-stimulus', chain: ['split-the-modulus', 'write-the-interval'],
+        target: 'selection:interval', options: 'interval-set', distract: ['D2', 'D3', 'D1'],
+        narrative: 'symbols-only:one-modulus', numeric: ['centre', 'radius'] } },
+      v => texts[qNum(v)]);
+  }],
+
+  A17: [(rand) => {                                 // which point lies inside the circle
+    const r = rand.pick([5, 10, 13]);
+    const inside = [[r - 2, 1], [1, r - 3], [r - 4, 2]][rand.int(0, 2)];
+    const on = { 5: [3, 4], 10: [6, 8], 13: [5, 12] }[r];
+    const outside = [on[0] + 1, on[1] + 1];
+    const far = [r, r];
+    const d2 = p2 => p2[0] * p2[0] + p2[1] * p2[1];
+    if (d2(inside) >= r * r) return { error: 'the intended interior point is not inside' };
+    const texts = [`(${inside[0]}, ${inside[1]})`, `(${on[0]}, ${on[1]})`, `(${outside[0]}, ${outside[1]})`, `(${far[0]}, ${far[1]})`];
+    if (new Set(texts).size !== 4) return { error: 'two options print identically' };
+    return OK(rand, Q(0), [
+      { name: 'chose-a-point-on-the-circle', value: Q(1), cost: 2 },
+      { name: 'chose-a-point-just-outside', value: Q(2), cost: 2 },
+      { name: 'read-the-radius-as-a-coordinate-pair', value: Q(3), cost: 1 },
+    ], { family: 'A17', construct: 'point-inside-a-circle',
+      stem: `In the $xy$-plane, a circle has centre $(0, 0)$ and radius $${r}$. ` +
+            `Which of the following points lies inside the circle?`,
+      mechanism: { abstraction: 1, repr_switch: 1, filtering: 1 },
+      fingerprintParts: { ctx: 'circle no-stimulus', chain: ['compare-the-distance-to-the-radius'],
+        target: 'selection:point', options: 'point-set', distract: ['D2', 'D2', 'D5'],
+        narrative: 'one-circle-four-points', numeric: ['radius'] } },
+      v => texts[qNum(v)]);
+  }],
+
+  A06: [(rand) => {                                 // which equation has the stated roots
+    const p2 = rand.nonZero(-7, 7), q2 = rand.nonZero(-7, 7);
+    if (p2 === q2) return { error: 'a repeated root removes the decision' };
+    const b = -(p2 + q2), c = p2 * q2;
+    const texts = [
+      `y = x^2 ${term(b, 'x')} ${term(c, '')}`,
+      `y = x^2 ${term(-b, 'x')} ${term(c, '')}`,
+      `y = x^2 ${term(b, 'x')} ${term(-c, '')}`,
+      `y = x^2 ${term(p2 + q2, 'x')} ${term(-c, '')}`,
+    ];
+    if (new Set(texts).size !== 4) return { error: 'two options print identically' };
+    return OK(rand, Q(0), [
+      { name: 'kept-the-sign-of-the-sum', value: Q(1), cost: 2 },
+      { name: 'negated-the-product', value: Q(2), cost: 2 },
+      { name: 'negated-both', value: Q(3), cost: 2 },
+    ], { family: 'A06', construct: 'equation-from-its-roots',
+      stem: `The graph of a quadratic function in the $xy$-plane crosses the $x$-axis at $x = ${p2}$ and $x = ${q2}$. ` +
+            `Which of the following could be its equation?`,
+      mechanism: { abstraction: 1, reversal: 1, repr_switch: 1 },
+      fingerprintParts: { ctx: 'quadratic no-stimulus', chain: ['form-the-factors', 'expand-to-standard-form'],
+        target: 'equation:quadratic', options: 'equation-set', distract: ['D3', 'D3', 'D3'],
+        narrative: 'symbols-only:roots-given', numeric: ['root-p', 'root-q'] } },
+      v => texts[qNum(v)]);
+  }],
+
   /* ── LONG BUT ROUTINE, added at Stage 3.5 ─────────────────────────────────
      The step-independence gate measured a Spearman r(steps, band) of +0.89
      against a reference range of +0.13 to +0.47: the generator's bands were
@@ -476,7 +636,15 @@ const VARIANTS = {
      "7 arithmetic operations, zero reasoning", T3 Q4 is "4 operations, zero
      discovery". These three constructs are that shape. They are pure execution
      — nothing is discovered, nothing is disguised — and they are long. */
+};
 
+/* The three LONG-BUT-ROUTINE constructs from Stage 3.5, in their own object for
+   the same reason: A10, A07 and A12 all appear in VARIANTS too, and a repeated
+   key in one literal loses the earlier entry without a word. The extraction that
+   created NON_VALUE_VARIANTS swept these three in with it and did exactly that —
+   `equivalent-exponent-expression` vanished under `fraction-grind` and the
+   construct count read 2 where it should have read 3. */
+const LONG_ROUTINE_VARIANTS = {
   A10: [(rand) => {                                 // fraction grind
     // Proper fractions only, drawn as such rather than drawn and rejected. A
     // real paper does not print 3/3, and a unit-valued term collapses a step
@@ -561,6 +729,9 @@ const VARIANTS = {
         narrative: 'tank-emptied-by-a-pump', numeric: ['volume', 'litres-per-cubic', 'rate'] } });
   }],
 
+};
+
+const VARIANTS = {
   A01: [(rand) => {                                  // rearrange a formula
     const a = rand.int(2, 9), b = rand.int(2, 9), c = rand.int(2, 9) * a * b;
     return OK(rand, Q(c, a * b), [
@@ -1004,6 +1175,62 @@ export const READERS = {
             options: 'threshold-slips', distract: ['D6', 'D5', 'D2'], narrative: 'four-category-display', numeric: ['bar-values', 'threshold'] } }); } },
     ],
     A14: [
+      // A SECOND A14 reader on this display kind. With only one, a set needing
+      // A14 was blocked whenever an earlier set had spent it — seed 8500 lost
+      // both slots of S4 for exactly that reason. Three of the four reference
+      // forms carry exactly three A14 items, so the family is never optional.
+      // A CLAIM reader. The reference's display blocks are not all value
+      // questions: `qualitative-claim-eval`, `causal-inference-no-calc` and
+      // `graph-comprehension-axes` are 6 of its 30 A13 items, and T1 Q29 — "zero
+      // computation, reads the axes against four claims" — opens a four-item
+      // block with one. Every reader here asked for a number, which left seven
+      // of a form's fifty slots value-locked and the value share stuck at 82%.
+      { name: 'bar-claim', read: (rand, st) => {
+        const v = st.values, days = st.categories;
+        const total = v.reduce((a, b) => a + b, 0);
+        const hi = v.indexOf(Math.max(...v)), lo = v.indexOf(Math.min(...v));
+        if (v.filter(x => x === v[hi]).length > 1 || v.filter(x => x === v[lo]).length > 1)
+          return { error: 'a tie makes two claims equally true' };
+        const firstTwo = v[0] + v[1];
+        if (firstTwo * 2 > total) return { error: 'the half claim is also true' };
+        if (v.every((x, i) => i === 0 || x >= v[i - 1])) return { error: 'the increasing claim is also true' };
+        const texts = [
+          `More items were sold on ${days[hi]} than on any other day`,
+          `The number sold increased on each successive day`,
+          `More than half of the items were sold on the first two days`,
+          `The fewest items were sold on ${days[(lo + 1) % 4]}`,
+        ];
+        if (new Set(texts).size !== 4) return { error: 'two claims print identically' };
+        return OK(rand, Q(0), [
+          { name: 'accepted-a-claim-true-of-part-of-the-data', value: Q(1), cost: 2 },
+          { name: 'estimated-the-halves-by-eye', value: Q(2), cost: 2 },
+          { name: 'read-the-wrong-extreme', value: Q(3), cost: 1 },
+        ], { family: 'A13', construct: 'claim-about-a-chart', stimulus: st,
+          stem: `The bar chart shows the number of items sold on four days. Which of the following statements is supported by the chart?`,
+          mechanism: { filtering: 2, repr_switch: 1, competing_interp: 1 },
+          fingerprintParts: { ctx: 'stimulus:bar-chart shared', chain: ['test-each-claim', 'reject-the-partly-true'],
+            target: 'selection:claim', options: 'prose-claims', distract: ['D5', 'D5', 'D5'],
+            narrative: 'four-category-display', numeric: ['bar-values'] } },
+          val => texts[qNum(val)]); } },
+
+      { name: 'bar-median', read: (rand, st) => {
+        const v = [...st.values].sort((a, b) => a - b);
+        if ((v[1] + v[2]) % 2 !== 0) return { error: 'the median is not a whole number at this level' };
+        const med = (v[1] + v[2]) / 2;
+        const total = v.reduce((a, b) => a + b, 0);
+        if (total % 4 !== 0) return { error: 'the mean distractor is not a whole number' };
+        if (med === total / 4 || med === st.values[1] || med === v[3] - v[0]) return { error: 'a distractor coincides with the key' };
+        return OK(rand, Q(med), [
+          { name: 'reported-the-mean-instead', value: Q(total, 4), cost: 2 },
+          { name: 'took-the-middle-of-the-unsorted-list', value: Q(st.values[1]), cost: 1 },
+          { name: 'reported-the-range', value: Q(v[3] - v[0]), cost: 1 },
+        ], { family: 'A14', construct: 'median-of-a-chart', stimulus: st,
+          stem: `The bar chart shows the number of items sold on four days. What is the median of the four values?`,
+          mechanism: { repr_switch: 2, filtering: 1 },
+          fingerprintParts: { ctx: 'stimulus:bar-chart shared', chain: ['order-the-four-values', 'average-the-middle-two'],
+            target: 'value:median', options: 'centre-slips', distract: ['D2', 'D3', 'D1'],
+            narrative: 'four-category-display', numeric: ['bar-values'] } }); } },
+
       { name: 'bar-mean', read: (rand, st) => {
         const v = st.values, t = v.reduce((a, b) => a + b, 0);
         if (t % v.length !== 0) return { error: 'the mean is not a whole number at this level' };
@@ -1021,6 +1248,35 @@ export const READERS = {
 
   'data-list': {
     A13: [
+      // The same, on a list. See the note on `bar-claim`.
+      { name: 'list-claim', read: (rand, st) => {
+        const v = st.values, n = v.length;
+        const total = v.reduce((a, b) => a + b, 0);
+        const mean = total / n, med = v[(n - 1) / 2];
+        if (mean === med) return { error: 'the mean and the median coincide' };
+        const above = v.filter(x => x > mean).length;
+        if (above === 0 || above === n) return { error: 'the mean separates nothing' };
+        if (v[n - 1] - v[0] === med) return { error: 'the range claim collides with the median' };
+        const texts = [
+          `The mean of the values is ${mean > med ? 'greater' : 'less'} than the median`,
+          `The mean of the values is ${mean > med ? 'less' : 'greater'} than the median`,
+          `More than half of the values are greater than the mean`,
+          `Every value is greater than the mean`,
+        ];
+        if (above * 2 > n) return { error: 'the majority claim is also true' };
+        if (new Set(texts).size !== 4) return { error: 'two claims print identically' };
+        return OK(rand, Q(0), [
+          { name: 'compared-the-centres-the-wrong-way', value: Q(1), cost: 2 },
+          { name: 'counted-the-values-above-the-median-instead', value: Q(2), cost: 2 },
+          { name: 'read-the-largest-value-as-typical', value: Q(3), cost: 1 },
+        ], { family: 'A13', construct: 'claim-about-a-list', stimulus: st,
+          stem: `The list shows five recorded values. Which of the following statements is true of the values?`,
+          mechanism: { filtering: 2, repr_switch: 1, multiconcept: 1 },
+          fingerprintParts: { ctx: 'stimulus:data-list shared', chain: ['compute-both-centres', 'compare-them'],
+            target: 'selection:claim', options: 'prose-claims', distract: ['D3', 'D5', 'D5'],
+            narrative: 'five-value-list', numeric: ['list-values'] } },
+          val => texts[qNum(val)]); } },
+
       { name: 'list-count-above', read: (rand, st) => {
         const v = st.values, cut = v[2];
         const above = v.filter(x => x > cut).length;
@@ -1143,6 +1399,27 @@ export const READERS = {
             options: 'aggregation-slips', distract: ['D1', 'D2', 'D1'], narrative: 'three-region-table', numeric: ['row-values'] } }); } },
     ],
     A14: [
+      // Every display kind is kept at least two A14 readers deep. A kind with
+      // one is a single point of failure for any set containing an A14 slot,
+      // and two seeds lost both slots of a set to exactly that.
+      { name: 'table-median', read: (rand, st) => {
+        const vals = st.rows.map(r => r[1]).sort((a, b) => a - b);
+        const med = vals[(vals.length - 1) / 2];
+        const t = vals.reduce((a, b) => a + b, 0);
+        if (t % vals.length !== 0) return { error: 'the mean distractor is not a whole number' };
+        if (med === t / vals.length || med === vals[vals.length - 1] || med === vals[vals.length - 1] - vals[0])
+          return { error: 'a distractor coincides with the key' };
+        return OK(rand, Q(med), [
+          { name: 'reported-the-mean-instead', value: Q(t, vals.length), cost: 2 },
+          { name: 'reported-the-largest-row', value: Q(vals[vals.length - 1]), cost: 1 },
+          { name: 'reported-the-spread', value: Q(vals[vals.length - 1] - vals[0]), cost: 2 },
+        ], { family: 'A14', construct: 'median-of-a-table', stimulus: st,
+          stem: `The table shows deliveries by region. What is the median of the three values?`,
+          mechanism: { repr_switch: 2, filtering: 1 },
+          fingerprintParts: { ctx: 'stimulus:table shared', chain: ['order-the-rows', 'take-the-middle'],
+            target: 'value:median', options: 'centre-slips', distract: ['D2', 'D1', 'D2'],
+            narrative: 'three-region-table', numeric: ['row-values'] } }); } },
+
       { name: 'table-mean', read: (rand, st) => {
         const rows = st.rows, t = rows.reduce((a, r) => a + r[1], 0);
         if (t % rows.length !== 0) return { error: 'the mean is not a whole number at this level' };
@@ -1296,7 +1573,7 @@ export function kindsFor(families, exclude = new Set()) {
 }
 
 export const ROUTINE_CONSTRUCTS = Object.fromEntries(
-  Object.keys(BASE).map(f => [f, [BASE[f], ...(VARIANTS[f] || [])]]));
+  Object.keys(BASE).map(f => [f, [BASE[f], ...(VARIANTS[f] || []), ...(NON_VALUE_VARIANTS[f] || []), ...(LONG_ROUTINE_VARIANTS[f] || [])]]));
 export const ROUTINE_FAMILIES = Object.keys(ROUTINE_CONSTRUCTS);
 export const EMITS_STIMULUS = new Set(['A13', 'A14', 'A15']);
 

@@ -12,7 +12,7 @@
 import {
   generate, assess, pCombination, pConversion, pScope, pDecoy, pUnstatedModel,
   assertInteraction, assertExpensiveFirstMove,
-  Q, qAdd, qEq, qStr, rng, ROUTE,
+  Q, qAdd, qEq, qStr, rng, ROUTE, PRIMITIVES,
 } from '../scripts/est-primitives.mjs';
 
 let pass = 0, fail = 0;
@@ -281,6 +281,43 @@ ok(controlAccepted === 0, 'negative control: no single-relation item may be acce
   ok(a !== c, 'a different seed gives a different validation set');
   const r1 = rng(7), r2 = rng(7);
   ok(r1.int(0, 1e6) === r2.int(0, 1e6), 'rng is reproducible');
+}
+
+/* ── REGRESSION: P-COMBINATION/sum-difference degeneracy ──────────────────────
+   The target is m(u+w) + n·v. When m === n it factors to m(u+v+w) = m·A, which
+   the FIRST relation answers alone — so an item claiming to need both relations
+   needs one. Measured incidence before the fix: 90 of 817 candidates, 11%, and
+   one of them shipped in ESTM2-2026-P2 as its Q36.
+
+   Two things are asserted, because the fix has two parts and only the second is
+   structural: the construction no longer BUILDS the degenerate case, and
+   assess() REFUSES it even when it is built anyway. The second is what stops a
+   future sibling primitive reintroducing the same shape. */
+{
+  let degenerate = 0, built = 0, loadBearing = 0;
+  for (let s = 1000; s < 3000; s++) {
+    const c = PRIMITIVES['P-COMBINATION'](s, { form: 'sum-difference' });
+    if (c && c.error) { if (/m === n/.test(c.error)) degenerate++; continue; }
+    built++;
+    if (assess(c).loadBearing) loadBearing++;
+  }
+  ok(degenerate > 0, `the degenerate parameterisation is rejected at construction (${degenerate} of ${degenerate + built} candidates)`);
+  ok(built > 0 && loadBearing === built, `every built candidate is load-bearing (${loadBearing}/${built})`);
+
+  // Part 2, on its own: build the degenerate item anyway and assess it.
+  let base = null;
+  for (let s = 1000; s < 1200 && !base; s++) { const c = PRIMITIVES['P-COMBINATION'](s, { form: 'sum-difference' }); if (c && !c.error) base = c; }
+  ok(!!base && assess(base).loadBearing, 'BASELINE: a healthy sum-difference item is load-bearing');
+  const deg = JSON.parse(JSON.stringify(base));
+  const keyValue = deg.options.find(o => o.id === deg.key).value;
+  const collapse = deg.routes.find(r => r.name === 'read-the-target-off-the-first-relation');
+  ok(!!collapse, 'the collapse route is enumerated on every sum-difference item, healthy or not');
+  ok(!qEq(collapse.value, keyValue), 'and on a healthy item it does NOT reach the key');
+  deg.routes = deg.routes.map(r => (r === collapse ? { ...r, value: keyValue } : r));
+  const a = assess(deg);
+  ok(!a.loadBearing, 'MUTATION degeneracy: an item whose target collapses to one relation is refused');
+  ok(a.reasons.some(x => /bypass: read-the-target-off-the-first-relation/.test(x)),
+    'and it is refused as a BYPASS by the general contract, not by a special case');
 }
 
 console.log(`  ${pass} passed, ${fail} failed`);

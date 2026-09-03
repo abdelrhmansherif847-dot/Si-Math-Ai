@@ -39,8 +39,10 @@ import { generateRoutine, ROUTINE_FAMILIES, ROUTINE_CONSTRUCTS, CONSTRUCT_COUNTS
          assessRoutine, stimulusSet, kindsFor } from './est-routine.mjs';
 import { composeClassifyNormalise, composeConvertCombine, composeNamedModel, assessComposed } from './est-compose.mjs';
 import { CORE_CONSTRUCTS, CORE_SERVES, generateCore, assessCore } from './est-core-stream.mjs';
+import { INTERPRET_PRIMITIVES } from './est-interpret.mjs';
 import { fingerprintItem, detectClone } from './est-fingerprint.mjs';
 import { formGates, rebalanceKeys, contentKeysOf, itemSteps, AUTHENTICITY } from './est-form-gates.mjs';
+import { objectOf, objectDiversity, OBJECT_RULES } from './est-objects.mjs';
 
 /** What kind of thing an item asks for: value, selection, expression, equation. */
 const targetKindOf = it =>
@@ -67,7 +69,20 @@ export const SERVES = {
   // Stage 3.5: the two families that held six slots and no mechanism at all.
   'P-PARTITION/partition_mean': 'A14',
   'P-PARTITION/inclusion_exclusion': 'A15',
+  // Primitive Coverage Revision: the non-value targets. The library asked for a
+  // value in 89% of its constructs against a reference 71%, had ZERO
+  // interpretation and ZERO equation targets, and could not build the
+  // Roman-numeral item the blueprint has required since artifact 6.
+  'P-INTERPRET/parameter_meaning': 'A02',
+  'P-INTERPRET/axes_comprehension': 'A13',
+  'P-SUBSET/roman_properties': 'A18',
+  'P-SUBSET/roman_conditions': 'A08',
+  'P-SELECT-OBJECT/which_equation': 'A05',
+  'P-SELECT-OBJECT/which_system': 'A03',
 };
+
+/** Every mechanism primitive, Stage-1 and later. */
+const ALL_PRIMITIVES = { ...PRIMITIVES, ...INTERPRET_PRIMITIVES };
 
 /**
  * Slots per band in a 50-item form.
@@ -113,12 +128,12 @@ export function buildPool({ seed = 4100, perConstruct = 10 } = {}) {
   }
 
   // mechanism
-  for (const name of Object.keys(PRIMITIVES)) {
+  for (const name of Object.keys(ALL_PRIMITIVES)) {
     let s = seed, tries = 0;
     while (tries < perConstruct * 120) {
       tries++;
       let c;
-      try { c = PRIMITIVES[name](s++, {}); } catch (e) { note(`${name}: threw ${e.message}`); continue; }
+      try { c = ALL_PRIMITIVES[name](s++, {}); } catch (e) { note(`${name}: threw ${e.message}`); continue; }
       if (!c || c.error) { note(`${name}: ${c ? c.error : 'null'}`); continue; }
       const a = assess(c);
       if (!a.loadBearing) { note(`${name}: ${a.reasons[0]}`); continue; }
@@ -164,6 +179,13 @@ export function buildPool({ seed = 4100, perConstruct = 10 } = {}) {
 export function capacityOf(pool) {
   const cap = {};
   const seen = new Set();
+  // Counted per MATHEMATICAL OBJECT, not per structure. P-NAMED-CONFIG offers
+  // fourteen structures that are all one object — the special right triangle —
+  // so a family with three slots and three objects was told it had three
+  // named-configuration structures available and matched two of them to two
+  // slots. The object gate then refused the second at emission and the slot
+  // went unfilled. Capacity has to be counted in the unit the rule polices.
+  const seenObject = new Set();
   // A family's usable structures are also capped per SUB-FORM. P-NAMED-CONFIG
   // offers fourteen structures under one sub-form, and counting all fourteen
   // told the matching that A16 could take three named-configuration slots when
@@ -176,6 +198,9 @@ export function capacityOf(pool) {
     seen.add(id);
     const bands = BANDS.filter(b => admits(b, profileOf(c, trapLevel)));
     if (!bands.length) continue;
+    const obj = objectOf(c);
+    if (seenObject.has(obj)) continue;
+    seenObject.add(obj);
     perSubForm[c.subForm] = (perSubForm[c.subForm] || 0) + 1;
     if (perSubForm[c.subForm] > ARCHETYPE_DIVERSITY.maxPerSubForm) continue;
     (cap[c.family] ||= { structures: [], composed: false });
@@ -268,6 +293,22 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
   // $(a-2)(4x+1) = 12x-4$ at Q01 and again at Q12 because the check existed
   // only as an audit.
   const usedContent = new Set();
+  // Mathematical objects already asked. The corpus asks each object once —
+  // 49/49/50/50 distinct archetypes in 50 items — so a form may repeat at most
+  // one, and none may appear three times. ESTM2-2026-P2 printed the remainder
+  // theorem three times through three different sub-forms, which every
+  // structural check passed because they ARE three different structures.
+  const usedObject = {};
+  const objectClash = (it) => {
+    const o = objectOf(it);
+    if ((usedObject[o] || 0) >= OBJECT_RULES.maxPerObject) return true;
+    if (usedObject[o] === 1) {
+      const alreadyRepeated = Object.values(usedObject).filter(n => n > 1).length;
+      if (alreadyRepeated >= OBJECT_RULES.maxObjectsRepeated) return true;
+    }
+    return false;
+  };
+  const takeObject = it => { const o = objectOf(it); usedObject[o] = (usedObject[o] || 0) + 1; };
   const contentClash = it => contentKeysOf(it).some(([k, v]) => usedContent.has(`${k}::${v}`));
   const takeContent = it => { for (const [k, v] of contentKeysOf(it)) usedContent.add(`${k}::${v}`); };
   const placed = [], unfilled = [], fingerprints = [];
@@ -345,7 +386,7 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
         : okBands.sort((x, y) => (setNeed[y] / BAND_PLAN[y]) - (setNeed[x] / BAND_PLAN[x])))[0] || 'Core';
       setNeed[band]--;
       const struct = it.subForm;
-      takeContent(it);
+      takeContent(it); takeObject(it);
       used.structure[struct] = (used.structure[struct] || 0) + 1;
       used.subForm[struct] = (used.subForm[struct] || 0) + 1;
       used.primitive[it.primitive] = (used.primitive[it.primitive] || 0) + 1;
@@ -392,7 +433,14 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
     const overValueBudget = valueSoFar > AUTHENTICITY.maxValueTargetShare * Math.max(1, placed.length);
     let chosen = null;
     for (const mode of ['preferNonValue', 'strict', 'relaxed']) {
-    const relaxed = mode === 'relaxed';
+    // The non-value pass ignores the PLANNED STRUCTURE, and that is the whole
+    // reason it works. Its first version kept the plan, so it looked for a
+    // candidate that was both the matched structure and non-value — a
+    // conjunction that almost never holds — and the value share sat at 82%
+    // while twelve families held an unused non-value construct. Every other
+    // rule still applies; only the structure the matching pencilled in is
+    // treated as advisory, exactly as the relaxed pass treats it.
+    const relaxed = mode !== 'strict';
     if (chosen) break;
     if (mode === 'preferNonValue' && !overValueBudget) continue;
     for (const c of pool) {
@@ -414,6 +462,7 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
       if ((used.structure[struct] || 0) >= ARCHETYPE_DIVERSITY.maxPerArchetype) { reject(`structure ${struct} already used ${ARCHETYPE_DIVERSITY.maxPerArchetype}x`); continue; }
       if ((used.subForm[c.subForm] || 0) >= ARCHETYPE_DIVERSITY.maxPerSubForm) { reject(`sub-form ${c.subForm} already used ${ARCHETYPE_DIVERSITY.maxPerSubForm}x`); continue; }
       if (contentClash(c)) { reject('repeats surface content already printed in this form'); continue; }
+      if (objectClash(c)) { reject(`the mathematical object ${objectOf(c)} is already asked in this form`); continue; }
       if ((used.primitive[c.primitive] || 0) >= ARCHETYPE_DIVERSITY.maxPerPrimitive) { reject(`primitive ${c.primitive} quota reached`); continue; }
       const fp = fingerprintItem(c);
       if (detectClone(fp, fingerprints, 'sibling').clone) { reject('anti-clone: structural repeat of an item already placed'); continue; }
@@ -425,7 +474,7 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
       reason: `no ${band} candidate of structure ${a.structure || '(any)'} in ${slot.fam} survived the slot rules` }); continue; }
 
     chosen.taken = true;
-    takeContent(chosen);
+    takeContent(chosen); takeObject(chosen);
     const struct = chosen.archetype ? `${chosen.subForm}#${chosen.archetype}` : chosen.subForm;
     used.structure[struct] = (used.structure[struct] || 0) + 1;
     used.subForm[chosen.subForm] = (used.subForm[chosen.subForm] || 0) + 1;
@@ -464,6 +513,8 @@ export function verify(run) {
   // are MEASUREMENTS of a coverage gap the generator cannot presently close —
   // recorded, reported, and carried in artifact 19 §7 rather than asserted, on
   // the same footing as the Entry and Peak band counts below.
+  const objects = run.placed.length === SLOTS.length ? objectDiversity(run.placed) : null;
+  if (objects) for (const f of objects.failures) fails.push(`object diversity: ${f}`);
   const gates = run.placed.length === SLOTS.length ? formGates(run.placed) : null;
   const measurements = [];
   const OPEN = /ask for a value|take a number of operations some Entry item also takes/;

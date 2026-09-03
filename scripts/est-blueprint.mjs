@@ -229,7 +229,7 @@ export const SLOTS = [
   S(5,  'A05',  'core'),
   S(6,  'A13',  'entry',   'S1', ['rareStimulus']),
   S(7,  'A13',  'core',    'S1'),
-  S(8,  'A13',  'core',    'S1'),
+  S(8,  'A09',  'core'),
   S(9,  'A10',  'stretch'),
   S(10, 'A16',  'core',    null, ['nts']),
   S(11, 'A04',  'core',    null, ['boundary']),
@@ -258,7 +258,18 @@ export const SLOTS = [
   S(34, 'A11',  'core'),
   S(35, 'A16',  'peak',    null, ['nts', 'derived']),
   S(36, 'A03',  'core',    null, ['derived']),
-  S(37, 'A09',  'entry'),
+  // STANDALONE A13, and it sits here rather than beside S1 because the
+  // anti-repetition rule forbids two items of one family adjacent outside a
+  // shared set — moving it out of S1 in place put A13 at both Q7 and Q8.
+  //
+  // Every A13 slot used to sit inside a set, and a set is built from READERS of
+  // one generated display, so a display item that makes its OWN display had
+  // nowhere to go — and the reference archetypes that do exactly that
+  // (parameter-interpret, qualitative-claim-eval, graph-comprehension-axes: 6 of
+  // the corpus's 30 A13 items) could not be placed at all. The corpus does not
+  // block all of its display items either: 7.5 A13 items per form against 3-5
+  // sets of 2-3 leaves some standing alone.
+  S(37, 'A13',  'entry'),
   S(38, 'A12b', 'core'),
   S(39, 'A05',  'stretch', null, ['offsheet']),
   S(40, 'A08',  'core'),

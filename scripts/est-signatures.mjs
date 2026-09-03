@@ -150,14 +150,16 @@ export const SIGNATURES = {
   },
   Core: {
     label: 'Core',
-    admits: p => p.trap === 2 && p.biting <= 2 && p.core <= 1 && p.present >= 1 && p.present <= 7 && !p.composed,
-    describe: 'a FULL-COST trap — the natural first move is a rival method, not a slip — with at most two mechanisms biting and at most one from the reasoning core; never composed',
+    admits: p => (p.trap === 2 || (p.trap >= 1 && p.present >= 5))
+      && p.biting <= 2 && p.core <= 1 && p.present >= 1 && p.present <= 7 && !p.composed,
+    describe: 'either a FULL-COST trap — the natural first move is a rival method, not a slip — or a trap with five or more mechanisms in play; at most two biting and at most one from the reasoning core; never composed',
     composition: 'forbidden',
   },
   Stretch: {
     label: 'Stretch',
-    admits: p => (p.core >= 1 || p.trap === 2) && p.biting >= 1 && p.biting <= 3 && p.core <= 2 && p.present >= 2,
-    describe: 'one to three mechanisms biting, at most two from the reasoning core, and either a reasoning-core mechanism at full strength or a full-cost trap; composition permitted but never required',
+    admits: p => (p.core >= 1 || p.trap === 2 || (p.biting >= 2 && p.present >= 4))
+      && p.biting >= 1 && p.biting <= 3 && p.core <= 2 && p.present >= 2,
+    describe: 'one to three mechanisms biting, at most two from the reasoning core, and either a reasoning-core mechanism at full strength, a full-cost trap, or two mechanisms biting with four or more in play; composition permitted but never required',
     composition: 'allowed',
   },
   Peak: {
@@ -167,6 +169,43 @@ export const SIGNATURES = {
     composition: 'allowed',
   },
 };
+
+// ══════════ DOES THE RULE SET ADMIT THE CORPUS IT CAME FROM? ══════════
+//
+// A question nobody had asked until the Primitive Coverage Revision, and the
+// answer was NO: the Stage-3.5 signatures admitted 183 of the 200 reference
+// items. Seventeen real EST questions — 7 of them Core-band, 7 Stretch, 3 Peak —
+// suited no band at all, so nothing the generator could build in their shape
+// would have been placeable.
+//
+// Two shapes accounted for almost all of it:
+//
+//   biting 0, core 0, trap 1, present 6   ×6   several mechanisms mildly in
+//                                              play, none biting, a cheap trap.
+//                                              Entry caps `present` at 5, Core
+//                                              demanded trap 2, Stretch demanded
+//                                              a bite. Homeless.
+//   biting 2, core 0, trap <= 1           ×7   two mechanisms biting, neither
+//                                              from the reasoning core, no full
+//                                              trap. Homeless for the same
+//                                              reason from the other side.
+//
+// Both are ordinary EST items. The parameter-interpretation item that opens a
+// chart block is the second shape exactly, which is how the gap was found: the
+// new non-value primitives could not be placed anywhere.
+//
+// So Core gains a second route — a trap with five or more mechanisms in play —
+// and Stretch a third — two biting with four in play. Measured:
+//
+//   as shipped at Stage 3.5              183/200  (92%)
+//   + the Core route                     194/200  (97%)
+//   + the Stretch route                  197/200  (98%)
+//
+// THE ROUTINE STREAM IS UNAFFECTED, which is the check that matters: a routine
+// item has `present <= 2`, so `present >= 5` and `present >= 4` both refuse it,
+// and it stays Entry-only. The Stage-3.5 boundary is widened toward the corpus,
+// not back toward the defect it fixed. The three items still falling through are
+// all Stretch-band edge shapes and are recorded rather than chased.
 
 /**
  * What each band's admission rule is measured to do, on the 200 coded reference
@@ -180,8 +219,8 @@ export const SIGNATURES = {
  */
 export const SIGNATURE_EVIDENCE = {
   Entry:   { refEntry: 0.89, refBand: 0.89, p1Routine: 34, note: 'Entry is where the routine stream belongs; 30 of 34 P1 routine constructs blind-coded Entry' },
-  Core:    { refEntry: 0.16, refBand: 0.60, p1Routine: 0,  note: 'trap === 2 — the sharpest drift-immune Entry/Core separator in the corpus (+0.44)' },
-  Stretch: { refEntry: 0.05, refBand: 0.63, p1Routine: 0,  note: 'core >= 1 OR trap === 2 closes the free-repr_switch leak that admitted chart readers' },
+  Core:    { refEntry: 0.16, refBand: 0.60, p1Routine: 0,  note: 'trap === 2 — the sharpest drift-immune Entry/Core separator in the corpus (+0.44) — or a trap with five mechanisms in play' },
+  Stretch: { refEntry: 0.05, refBand: 0.63, p1Routine: 0,  note: 'core >= 1 OR trap === 2 OR two biting with four in play; closes the free-repr_switch leak while admitting the corpus' },
   Peak:    { refEntry: 0.00, refBand: 0.81, p1Routine: 0,  note: 'unchanged from Stage 2; already admitted no routine item' },
 };
 

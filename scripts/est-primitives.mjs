@@ -237,6 +237,30 @@ function combSumDiff(rand, opts) {
   if (A === B) return { error: 'A === B collapses v to zero' };
   if ((A + B) % 2 !== 0 || (A - B) % 2 !== 0) return { error: 'half-integer blocks read badly at this level' };
   const m = rand.pick([2, 3, -2, -3]), n = rand.pick([1, -1, 2, -2]);
+
+  // ── THE DEGENERACY, AND WHY THE REJECTION IS STRUCTURAL ──────────────────
+  //
+  // The target is m(u+w) + n·v. When m === n it factors:
+  //
+  //     m(u+w) + m·v  =  m(u + v + w)  =  m·A
+  //
+  // — readable off the FIRST relation alone. The second relation is decoration,
+  // the block combination is not required, and the item is not the item it
+  // claims to be. Measured before the fix: 90 of 817 candidates, 11%. One
+  // reached ESTM2-2026-P2 as its Q36.
+  //
+  // Six stages of review missed it because assess()'s anti-bypass check
+  // compares only ENUMERATED routes, and nobody enumerated this one. So the fix
+  // is two parts, and the second is the one that matters:
+  //
+  //   1. reject the degenerate parameterisation here;
+  //   2. ENUMERATE the collapse as a route whenever it exists, so that if this
+  //      rejection is ever removed or a sibling primitive reintroduces the same
+  //      shape, assess() SEES the bypass and refuses the item itself.
+  //
+  // Part 2 is what makes this structural rather than an allowlist: the check
+  // that catches it lives in the general contract, not in this function.
+  if (m === n) return { error: `m === n makes the target ${m}(u + v + w), which the first relation answers alone` };
   const uw = Q((A + B) / 2), v = Q((A - B) / 2);
   if (v.n === 0 || uw.n === 0) return { error: 'a determined block is zero — the item collapses' };
 
@@ -263,6 +287,12 @@ function combSumDiff(rand, opts) {
       ROUTE('solve-for-each-symbol', { insight: false, cost: 5, value: dStopped, natural: true }),
       ROUTE('drop-the-halving', { insight: false, cost: 3, value: dUnhalved }),
       ROUTE('sign-slip-on-the-v-term', { insight: false, cost: 4, value: dSignSlip }),
+      // Part 2 of the degeneracy fix. When m === n the target is m(u+v+w) and
+      // ONE relation answers it in one step. Enumerated unconditionally — its
+      // value only equals the key in the degenerate case, so in every healthy
+      // item it is just another wrong route, and in a degenerate one it is a
+      // cost-1 blind route onto the key, which assess() rejects as a bypass.
+      ROUTE('read-the-target-off-the-first-relation', { insight: false, cost: 1, value: qMul(Q(m), Q(A)) }),
     ],
     // Mechanism removed: supply a third relation so every symbol is determined
     // and the combination is assembled from parts. Key changes.

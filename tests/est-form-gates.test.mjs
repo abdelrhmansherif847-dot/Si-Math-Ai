@@ -24,6 +24,7 @@ import {
   keyBalance, rebalanceKeys, contentReuse, authenticity, stepIndependence,
   formGates, spearman, itemSteps, KEY_BALANCE, AUTHENTICITY, STEP_INDEPENDENCE,
 } from '../scripts/est-form-gates.mjs';
+import { objectOf, objectDiversity, coverage, OBJECT_RULES, REFERENCE_OBJECTS } from '../scripts/est-objects.mjs';
 
 let pass = 0, fail = 0;
 const ok = (cond, label) => { if (cond) { pass++; } else { fail++; console.log(`  FAIL  ${label}`); } };
@@ -238,6 +239,59 @@ ok(contentReuse(base.placed).ok, 'BASELINE: no surface content is printed twice'
   ok(g.step && g.key && g.reuse && g.auth, 'and all four sub-reports');
   ok(itemSteps({ fingerprintParts: { chain: ['a', 'b', 'c'] } }) === 3, 'itemSteps counts the chain');
   ok(Object.keys(CORE_CONSTRUCTS).length >= 13, `${Object.keys(CORE_CONSTRUCTS).length} Core constructs`);
+}
+
+/* ── 10. mathematical-object diversity (Primitive Coverage Revision) ────────── */
+{
+  const od = objectDiversity(base.placed);
+  ok(od.distinct >= 49, `BASELINE: ${od.distinct} distinct mathematical objects in ${base.placed.length} items`);
+  ok(od.ok, `BASELINE: object diversity holds — ${od.failures.join('; ') || 'no repeats beyond the allowance'}`);
+  ok(OBJECT_RULES.refDistinctPerForm.join(',') === '49,49,50,50',
+    'the reference standard is recorded: 49 / 49 / 50 / 50 distinct archetypes in 50 items');
+
+  // Three items on one object is what ESTM2-2026-P2 did with the remainder
+  // theorem, through three different sub-forms and three different fingerprints.
+  const thrice = clone(base);
+  for (let i = 0; i < 3; i++) {
+    thrice.placed[i].item.stream = 'core';
+    thrice.placed[i].item.construct = 'remainder-theorem';
+  }
+  const t = objectDiversity(thrice.placed);
+  ok(!t.ok && t.failures.some(f => /ask the object/.test(f)),
+    'MUTATION objects: three items on one mathematical object are caught');
+
+  // Two objects repeated once each: the corpus carries at most one.
+  const twice = clone(base);
+  twice.placed[0].item.stream = 'core'; twice.placed[0].item.construct = 'remainder-theorem';
+  twice.placed[1].item.stream = 'mechanism'; twice.placed[1].item.construct = 'non_monic_divisor';
+  twice.placed[2].item.stream = 'routine'; twice.placed[2].item.construct = 'compound-growth';
+  twice.placed[3].item.stream = 'core'; twice.placed[3].item.construct = 'compound-two-years';
+  const w = objectDiversity(twice.placed);
+  ok(!w.ok && w.failures.some(f => /appear more than once/.test(f)),
+    'MUTATION objects: two different objects each repeated is caught');
+
+  // Constructs that fingerprint apart but teach the same thing SHARE an id —
+  // that is the whole point, and it is asserted rather than assumed.
+  ok(objectOf({ stream: 'core', construct: 'remainder-theorem' })
+     === objectOf({ stream: 'mechanism', construct: 'non_monic_divisor' }),
+    'two different sub-forms of the remainder theorem share one object id');
+  ok(objectOf({ stream: 'routine', construct: 'compound-growth' })
+     === objectOf({ stream: 'core', construct: 'compound-two-years' }),
+    'and so do the two compound-interest constructs');
+  ok(objectOf({ stream: 'routine', construct: 'solve-linear' })
+     !== objectOf({ stream: 'core', construct: 'multiple-of-the-solution' }),
+    'while a target shift IS a different decision point, so it is a different object');
+
+  // An unannotated construct must never silently license a repeat.
+  const unknown = objectOf({ stream: 'routine', construct: 'no-such-construct-exists' });
+  ok(/^unmapped:/.test(unknown), 'an unmapped construct becomes its own object rather than a blank');
+
+  // Coverage of the reference vocabulary is measurable, not asserted.
+  const cov = coverage({ A07: ['routine:evaluate-factored-form', 'core:remainder-theorem'] });
+  ok(cov.A07.refObjects === 9 && cov.A07.covered === 2 && cov.A07.deficit === 7,
+    `coverage() measures the gap: A07 covers ${cov.A07.covered} of ${cov.A07.refObjects}`);
+  ok(Object.values(REFERENCE_OBJECTS).reduce((n, f) => n + f.objects.length, 0) === 189,
+    'the reference vocabulary is the full 189 objects from artifact 2');
 }
 
 console.log(`  ${pass} passed, ${fail} failed`);
