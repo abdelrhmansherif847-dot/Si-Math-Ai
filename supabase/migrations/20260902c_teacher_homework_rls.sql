@@ -2,7 +2,12 @@
 -- Teacher Homework, increment H2.2 — RLS, grants, and the answer-key boundary
 -- =====================================================================
 -- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3), and only together with 20260902b. Rollback: 20260902y.
+--         (CLAUDE.md §3). Second file of the ATOMIC H2 SCHEMA PACKAGE:
+--         20260902b, then this, then 20260902d, in that order, all or none.
+--         Rollback: 20260902y, which undoes all three.
+--         NOTE the counts in §4 are POINT-IN-TIME: five tables and seven
+--         policies is the state after b and this file, and before 20260902d
+--         adds the answer record. 20260902d re-asserts the package totals.
 --
 -- Same discipline as 20260901d: RLS on, table privileges STRIPPED and granted
 -- back deliberately, SELECT only for clients, anon nothing anywhere. After this

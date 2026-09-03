@@ -1318,11 +1318,13 @@ them should be discovered mid-implementation.
     ---
 
     **H2 APPLY IS HELD (2026-09-02).** The owner accepted the preparation as
-    technically clean and then declined to apply it until two gaps are closed:
-    the missing answer record above, and the lifecycle of the three fields that
-    stay mutable after publish. Both are settled below as *designs awaiting
-    approval*. No H2 SQL was changed in producing them; `20260902b/c/y` are
-    byte-identical to the files that were dry-run and rehearsed.
+    technically clean and then declined to apply it until two gaps were closed:
+    the missing answer record, and the lifecycle of the three fields that stay
+    mutable after publish. Both were designed, measured, and then **approved on
+    2026-09-03 with three decisions** — composite foreign keys rather than a
+    guard, a one-way `reveal_answers` latch, and one atomic package. The files
+    now implement all three and remain PREPARED and unapplied. What the package
+    is, and the evidence behind it, is §15.15c.
 
     ### 15.15a · The per-item answer record — design, not yet written
 
@@ -1376,7 +1378,7 @@ them should be discovered mid-implementation.
     - **(a) a guard**, `teacher_homework_response_same_homework()`, mirroring
       the `teacher_homework_stimulus_same_homework()` already in `20260902b`.
       Costs one lookup per inserted row; touches no existing H2 file.
-    - **(b) composite foreign keys — recommended.** Denormalise `homework_id`
+    - **(b) composite foreign keys — APPROVED 2026-09-03.** Denormalise `homework_id`
       onto the response row, add `unique (id, homework_id)` to
       `teacher_homework_attempts` and to `teacher_homework_questions`, and point
       two composite FKs at them. The invariant then holds by constraint rather
@@ -1481,12 +1483,12 @@ them should be discovered mid-implementation.
       have already read is theatre, and a reversible flag invites a surface to
       treat it as a live permission rather than a decision already taken.
 
-      **Proposed:** make `reveal_answers` a **one-way latch** — `false → true`
-      only, `true → false` refused in every status — and allow the latch to be
-      thrown in `draft`, `published` **and `closed`**, as the single, explicitly
-      named exception to *a closed homework is final*. Everything else about
-      `closed` stays final. This is a change to `teacher_homework_guard()` in
-      `20260902b` and has deliberately **not** been written.
+      **APPROVED 2026-09-03:** `reveal_answers` is a **one-way latch** —
+      `false → true` only, `true → false` refused in every status — and the
+      latch may be thrown in `draft`, `published` **and `closed`**, as the
+      single, explicitly named exception to *a closed homework is final*.
+      Everything else about `closed` stays final. Implemented in
+      `teacher_homework_guard()`; measured below.
 
       Alternatives, both recommended against: keep `closed` absolutely final and
       require the teacher to reveal before closing (the mistake is then
@@ -1495,6 +1497,82 @@ them should be discovered mid-implementation.
 
     The measured table above is now pinned by `tests/teacher-homework.test.mjs`
     (§17), so a silent change to any of it turns the suite red.
+
+    ### 15.15c · The H2 package as approved — three files, one unit
+
+    Approved 2026-09-03: **`20260902b` + `20260902c` + `20260902d` apply
+    together or not at all**, and `20260902y` undoes all three. The rollback is
+    safe on a partially applied package — every drop is `if exists`, every count
+    `to_regclass`-guarded — which is what makes three statements behave as one
+    unit. All four files remain PREPARED and unapplied.
+
+    **What the approval changed.** `20260902b` gained a `unique (id,
+    homework_id)` on the attempts table and another on the questions table — two
+    lines, free only while H2 is unapplied — and its guard gained the latch plus
+    a closed gate that names every other column explicitly, so a column added
+    later is refused by default rather than quietly joining the exception.
+    `20260902d` is new: the answer record, its guard, its RLS and its two
+    policies. `20260902c` gained only a header note that its counts are
+    point-in-time (five tables, seven policies) because `20260902d` then takes
+    the package to six and nine.
+
+    **The invariant is now a foreign key.** An answer names
+    `(attempt_id, homework_id)` and `(question_id, homework_id)`, each a
+    composite FK onto the keys above. Measured on production: an attempt of
+    paper A beside a question of paper B is refused with `23503` naming
+    `teacher_homework_responses_question_fk`; with `homework_id` set to B
+    instead, refused naming `teacher_homework_responses_attempt_fk`; the
+    consistent triple is accepted. No trigger enforces this and none is needed.
+
+    **The latch, measured across every status and both directions:**
+
+    | | draft | published | closed |
+    |---|---|---|---|
+    | `false → true` | allowed | allowed | **allowed** — the one exception |
+    | `true → false` | refused `22000` | refused `22000` | refused `22000` |
+    | code / `due_at` | allowed | allowed | refused `42501` |
+    | `title` / `instructions` | allowed | refused `42501` | refused `42501` |
+
+    Revealing on a closed paper left `closed_at` and `status` untouched, and a
+    single statement that tried to reveal **and** move `due_at` was refused
+    outright — the exception is not a trojan.
+
+    **Evidence, all of it measured, none of it applied.**
+
+    - Contract suite 169 checks; `teacher-access-scope` 109; CI 66 of 66.
+    - **33 of 33 mutants killed** across all four files — including a deleted
+      latch, an inverted latch, a latch scoped to one status, a closed gate
+      reverted to refusing everything, both parent keys removed, each composite
+      FK degraded to a single column, the omission CHECK dropped, re-grading
+      allowed, a timing column and the answer key smuggled onto the response,
+      `anon` granted a read, and a rollback that forgets the answer table.
+    - **Production dry-run, aborting: 37 probes, 0 unexpected results.** The
+      three files applied in order and their own verification blocks passed;
+      6 tables / 7 functions / 9 policies / 7 triggers / 17 indexes / 2
+      composite FKs; teacher, active assistant (created and activated through
+      the real staff RPCs) and platform admin read identically; a member student
+      sees no paper and no content but does see their own attachment, attempt
+      and answers; an outsider and a pending assistant see nothing; every client
+      write is refused `42501` because no write path exists until H3; a late
+      submission is accepted and flagged; `weakness_signals`, `exam_mistakes`
+      and `exam_practice_sessions` moved by zero inside the transaction.
+    - **Rollback rehearsal, aborting: 0 unexpected results.** With one attempt
+      and one answer planted the undo refused with exactly *"1 attempt(s), 0
+      attachment(s) and 1 answer(s) exist"*; with the plants unwound it returned
+      the function, policy, constraint, relation-and-index, trigger and
+      client-grant hashes to their exact pre-package values.
+    - Production afterwards: 184 applied, newest still `20260902001047`, zero
+      `teacher_homework%` objects, the audit log's two rows byte-identical.
+
+    One probe failure is worth recording because it was the guard doing its job:
+    the first dry-run attempt published each paper *before* writing its content,
+    and `teacher_homework_content_guard()` refused — content belongs to a draft.
+    The probe was reordered; the migration was not touched.
+
+    **Still out of H2, deliberately.** The retired-code hazard (a code a paper
+    rotated away from can be claimed by a new homework) stays an **H4**
+    decision; solving it needs a retired-code record and would mix access and
+    code lifecycle into the base schema.
 
 ---
 
@@ -1547,6 +1625,14 @@ them should be discovered mid-implementation.
   survived first exposed a prefix-matching grant check, now fixed in two
   suites. The per-item answer record H5 needs was kept out because the approved
   scope named five tables, and it is flagged as its own increment.
+- **2026-09-03 — the three H2 decisions taken, and the package closed.** The
+  owner chose composite foreign keys over a guard ("a foreign key is not an
+  opinion"), the one-way `reveal_answers` latch including the closed-status
+  exception, and one atomic `b + c + d` package with a matching rollback. The
+  files now carry all three; 33 of 33 mutants die, the verbatim dry-run and the
+  rollback rehearsal both come back clean on production, and nothing is applied.
+  The retired-code hazard was explicitly left to H4 rather than allowed to widen
+  H2.
 - **2026-09-02 — Teacher Homework H2 prepared, then HELD at the owner's
   decision.** The preparation was accepted as clean and the apply refused until
   two gaps close: the per-item answer record H5 cannot work without, and the

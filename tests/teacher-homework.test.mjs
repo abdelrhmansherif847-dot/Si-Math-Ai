@@ -143,8 +143,8 @@ const columns = (def) => [...def.matchAll(/\n  ([a-z_]+)\s+(uuid|text|timestampt
 t.section('H2 creates exactly the five approved tables — no answer record, no row, no exam reference');
 
 t.is('the five tables, in dependency order', [...TBC.matchAll(/create table ([a-z_]+)/g)].map((m) => m[1]), FIVE_TABLES);
-t.ok('no per-item answer record: it is named as required before H5 and outside this increment',
-  !/teacher_homework_responses/.test(H2) && /required before[\s\S]{0,12}H5/.test(TB) && /deliberately outside this[\s\S]{0,12}increment/.test(TB));
+t.ok('file b creates no answer record itself — that is 20260902d, which it names',
+  !/create table teacher_homework_responses/.test(TBC) && /20260902d/.test(TB));
 t.is('no type is created (the five labels came with H1)', [...H2.matchAll(/create type [a-z_]+/g)].map((m) => m[0]), []);
 t.is('no row is written', [...H2.matchAll(/^\s*(insert|update|delete|truncate)\s/gim)].map((m) => m[0].trim()), []);
 t.ok('no audit row either — H2 causes no event the labels could name', !/workspace_audit_log/.test(H2));
@@ -241,7 +241,8 @@ const G = fnDef(TBC, 'teacher_homework_guard').body;
 t.ok('a draft may be deleted; anything published may not', /if tg_op = 'DELETE' then\s+if old\.status <> 'draft' then\s+raise exception/.test(G));
 const immutable = distinctCols(G.slice(0, G.indexOf("old.status = 'closed'")));
 t.is('identity is immutable: id, workspace, author, creation time', immutable, ['id', 'workspace_id', 'created_by', 'created_at']);
-t.ok('closed is final in every respect', /if old\.status = 'closed' then\s+raise exception/.test(G));
+t.ok('closed refuses every column change but one, and says which',
+  /is closed — revealing the answers is the only change still permitted/.test(G));
 t.ok('draft -> published stamps published_at; published -> closed stamps closed_at; nothing else is legal',
   /if old\.status = 'draft' and new\.status = 'published' then\s+new\.published_at := coalesce\(new\.published_at, now\(\)\);\s+elsif old\.status = 'published' and new\.status = 'closed' then\s+new\.closed_at := coalesce\(new\.closed_at, now\(\)\);\s+else\s+raise exception/.test(G));
 const frozen = distinctCols(G.slice(G.indexOf("if old.status = 'published' then")));
@@ -327,10 +328,20 @@ t.ok('and it rejects a student-shaped predicate on content, not merely a policy 
 // ══ 15 · THE UNDO ═════════════════════════════════════════════════════════
 t.section('20260902y is a clean undo that refuses to destroy student work');
 
-t.ok('refuses if any attempt or attachment exists', /if v_attempts > 0 or v_access > 0 then\s+raise exception\s+'rollback H2 refused/.test(TYC));
+t.ok('refuses if any attempt, attachment or answer exists',
+  /if v_attempts > 0 or v_access > 0 or v_answers > 0 then\s+raise exception\s+'rollback H2 refused/.test(TYC));
 t.ok('the refusal precedes the first drop', TYC.indexOf('rollback H2 refused') < TYC.indexOf('drop table if exists'));
-t.is('drops the five tables, children first', [...TYC.matchAll(/drop table if exists ([a-z_]+);/g)].map((m) => m[1]), [...FIVE_TABLES].reverse());
-t.is('drops the six functions and no other', [...TYC.matchAll(/drop function if exists ([a-z_]+)\(/g)].map((m) => m[1]).sort(), [...GUARDS, 'teacher_homework_is_staff'].sort());
+t.is('drops all SIX tables, children first — the answer record before the two it points at',
+  [...TYC.matchAll(/drop table if exists ([a-z_]+);/g)].map((m) => m[1]),
+  ['teacher_homework_responses', ...[...FIVE_TABLES].reverse()]);
+t.is('drops the seven functions and no other',
+  [...TYC.matchAll(/drop function if exists ([a-z_]+)\(/g)].map((m) => m[1]).sort(),
+  [...GUARDS, 'teacher_homework_is_staff', 'teacher_homework_responses_guard'].sort());
+t.ok('it refuses if any ANSWER exists too, not only attempts and attachments',
+  /v_attempts > 0 or v_access > 0 or v_answers > 0/.test(TYC));
+t.ok('and it is safe on a PARTIALLY applied package: every drop is if-exists, every count to_regclass-guarded',
+  (TYC.match(/drop (table|function) if exists/g) || []).length === 13
+  && (TYC.match(/to_regclass\(/g) || []).length === 3);
 t.ok('asserts nothing homework-shaped remains', /relname like 'teacher\\_homework%'/.test(TYC) && /proname like 'teacher\\_homework%'/.test(TYC));
 t.is('asserts the borrowed validators SURVIVE',
   ((TYC.match(/unnest\(array\[([\s\S]*?)\]\)/) || [])[1] || '').match(/'([a-z_]+)'/g)?.map((s) => s.replace(/'/g, '')) || null,
@@ -338,61 +349,159 @@ t.is('asserts the borrowed validators SURVIVE',
 t.ok('asserts the six teacher_exam tables are still present', /relname like 'teacher\\_exam%' and c\.relkind = 'r'/.test(TYC) && /if v_n <> 6 then/.test(TYC));
 t.ok('drops no exam table, no validator, no type', !/drop (table|function) if exists (teacher_exam|exam_)/.test(TYC) && !/drop type/.test(TYC));
 
-// ══ 16 · STATUS ═══════════════════════════════════════════════════════════
-t.section('All three H2 files are PREPARED');
-t.ok('PREPARED, and none claims APPLIED', [TB, TC, TY].every((f) => /STATUS: 🟡 PREPARED/.test(f) && !/APPLIED/.test(f)));
 
 // ══ 17 · THE THREE POST-PUBLISH MUTABLE FIELDS ════════════════════════════
-/* MEASURED on production 2026-09-02 in an aborting transaction, against the
-   paper table and both guards extracted VERBATIM from 20260902b (cases L01–L24,
-   0 unexpected results). The truth table:
+/* MEASURED on production, in aborting transactions, against the paper table
+   and its guard extracted VERBATIM from 20260902b. The rule below is the one
+   the owner approved on 2026-09-02 after the first measurement showed a closed
+   homework could never reveal its answers at all:
 
-     field             draft            published                     closed
-     homework_code     rotate ok        rotate ok                     REFUSED 42501
-     due_at            set ok           later / earlier / null ok     REFUSED 42501
-     reveal_answers    on and off ok    on ok, and OFF AGAIN ok       REFUSED 42501 both ways
-     title, instr.     edit ok          REFUSED 42501                 REFUSED 42501
+     field                draft       published                   closed
+     homework_code        rotate ok   rotate ok                   REFUSED 42501
+     due_at               set ok      later / earlier / null ok   REFUSED 42501
+     reveal false -> true ok          ok                          OK — the one exception
+     reveal true -> false REFUSED     REFUSED                     REFUSED   (22000, any status)
+     title, instructions  edit ok     REFUSED                     REFUSED
 
-   Three further measurements, each of which is a decision the owner now holds:
-     · moving due_at 30 days into the future AFTER a late submission left that
-       attempt late = true — history is not rewritten, and the flag is
-       structurally unrewritable anyway;
-     · a code the paper had rotated AWAY from was claimed by a NEW homework;
-     · closing while reveal_answers is false is permitted, and it can then never
-       be turned on — so "close, then show the answers" is impossible today.
+   Two consequences recorded deliberately: a reveal set by mistake on a DRAFT
+   cannot be unset (a draft has no students, so nothing was shown — delete it);
+   and a code the paper rotated AWAY from can be claimed by a new homework,
+   which is an H4 decision and is not solved here. */
+t.section('The three post-publish mutable fields: the approved rule, pinned to the guard');
 
-   The checks below pin that behaviour to the source, so a silent change turns
-   this suite red. They pin what IS, not what should be. */
-t.section('The three post-publish mutable fields: lifecycle pinned to the guard');
+t.ok('the latch is checked BEFORE the closed gate — which is what lets a closed homework still reveal',
+  G.indexOf('old.reveal_answers and not new.reveal_answers') < G.indexOf("if old.status = 'closed' then"));
+t.ok('un-reveal is refused unconditionally: no status appears anywhere in the latch',
+  /if old\.reveal_answers and not new\.reveal_answers then\s+raise exception 'teacher_homework: answers, once revealed, stay revealed'\s+using errcode = '22000';\s+end if;/.test(G));
+/* The closed gate lists the frozen columns rather than inferring them, so a
+   column added to the table later is refused by default instead of quietly
+   joining reveal_answers in the exception. This check derives the expected list
+   FROM THE TABLE, so adding a column without deciding its fate turns it red. */
+const closedTuple = (() => {
+  const m = G.match(/if old\.status = 'closed' then\s+if \(([\s\S]*?)\)\s+is distinct from/);
+  return m ? [...m[1].matchAll(/new\.([a-z_]+)/g)].map((x) => x[1]) : null;
+})();
+t.is('the closed gate freezes every column except reveal_answers',
+  (closedTuple || []).slice().sort(),
+  columns(HW).filter((c) => !['id', 'workspace_id', 'created_by', 'created_at', 'updated_at', 'reveal_answers'].includes(c)).sort());
+t.ok('and having passed it, a closed row is stamped and returned rather than falling through to the transition rules',
+  /old\.status = 'closed' then[\s\S]*?new\.updated_at := now\(\);\s+return new;\s+end if;/.test(G));
 
-t.ok('no branch of the guard names any of the three, so no per-status rule restricts them',
-  !/new\.homework_code|new\.due_at|new\.reveal_answers/.test(G));
-t.ok('the closed refusal precedes both the transition block and the published freeze — closed freezes all three',
-  G.indexOf("old.status = 'closed'") < G.indexOf('new.status is distinct from old.status')
-  && G.indexOf("old.status = 'closed'") < G.indexOf("if old.status = 'published' then"));
-t.ok('and the closed refusal carves out no exception: reveal_answers is not excluded from it',
-  /if old\.status = 'closed' then\s+raise exception[^;]+;\s*end if;/.test(G));
+/* Outside the closed gate nothing restricts the three by status. Removing that
+   one block is how this is asserted: the outer `end if;` is the only one at
+   two-space indent, so the inner refusal cannot be mistaken for it. */
+const gNoClosed = G.replace(/if old\.status = 'closed' then[\s\S]*?\n  end if;\n/, '');
+t.ok('with the closed gate removed, no branch mentions homework_code or due_at at all',
+  !/new\.homework_code|new\.due_at/.test(gNoClosed));
+t.ok('and reveal_answers survives exactly once outside it — the latch, and nothing else',
+  (gNoClosed.match(/new\.reveal_answers/g) || []).length === 1);
 t.ok('due_at carries no CHECK — it may be null, past or future',
   !/due_at/.test(HW.replace(/due_at\s+timestamptz,/, '')));
 t.ok('a submitted attempt is final, so moving due_at can never rewrite an existing late flag',
   /if old\.status <> 'in_progress' then\s+raise exception/.test(TG));
 t.ok('the code alphabet excludes the ambiguous glyphs I, O, 0 and 1',
   !/[IO01]/.test(codeRule(HW)));
-t.ok('uniqueness is on the LIVE value only, and no history table exists — a retired code can be claimed again',
+t.ok('uniqueness is on the LIVE value only, and no history table exists — a retired code can be claimed again (H4)',
   /homework_code\s+text not null unique/.test(HW) && !/code_history|retired_code/.test(H2));
-/* The header's prose wraps across comment lines, so it is matched flat: a
-   sentence that spans a line break is still one sentence. */
+
+/* The header's prose wraps across comment lines, so it is matched flat. */
 const TBFLAT = TB.replace(/\n\s*--\s*/g, ' ').replace(/\s+/g, ' ');
 t.ok('the file states which three stay mutable and why, so the choice is visible in review',
   /the code \(rotation answers a leak\)/.test(TBFLAT) && /due_at \(a teacher may extend or bring forward\)/.test(TBFLAT));
-t.ok('and it records the reveal_answers rationale that the closed rule partly defeats (open decision, §15.15)',
-  /turning answers on after everyone has submitted is the normal use/.test(TBFLAT)
-  && /closed homework is final in every respect/.test(TBFLAT));
+t.ok('and it records the latch, the measurement behind it, and the draft consequence',
+  /ONE-WAY LATCH/.test(TBFLAT) && /made the ordinary marking flow/.test(TBFLAT)
+  && /a reveal set by mistake on a DRAFT cannot be unset either/.test(TBFLAT));
 
-// ══ 18 · THE ANSWER RECORD IS ABSENT, AND SAYS SO ═════════════════════════
-t.section('No per-item answer record exists yet, and H2 does not assume one');
-t.ok('nothing in the H2 SQL references a response/answer table',
-  !/teacher_homework_responses|teacher_homework_answers/.test(H2));
-t.ok('the rollback does not pretend to drop one either', !/teacher_homework_responses/.test(TYC));
+// ══ 18 · THE ANSWER RECORD (20260902d) ════════════════════════════════════
+const TD = read('supabase/migrations/20260902d_teacher_homework_responses.sql');
+const TDC = code(TD);
+const RS = tableDef(TDC, 'teacher_homework_responses');
+const RGF = fnDef(TDC, 'teacher_homework_responses_guard');
+
+t.section('20260902d: one answer record, and "same homework" as a foreign key');
+
+t.is('exactly one table', [...TDC.matchAll(/create table ([a-z_]+)/g)].map((m) => m[1]), ['teacher_homework_responses']);
+t.is('its columns are the approved eight',
+  columns(RS), ['id', 'attempt_id', 'question_id', 'homework_id', 'ordinal', 'answer', 'is_correct', 'last_answered_at']);
+t.ok('no timing or visit columns — homework is untimed and resumable (§15.15a)',
+  !/ms_on_item|visit_count|first_seen_at|duration/.test(TDC));
+t.ok('no taxonomy, difficulty, skill or origin column — nothing to pretend calibration with',
+  !/topic_id|subtopic_id|difficulty|\bskill\b|content_origin/.test(TDC));
+t.ok('the answer KEY is not here: no correct_answer and no explanation column',
+  !/correct_answer|explanation/.test(TDC));
+t.ok('the three-valued rule is structural: NULL is "not answered", never "wrong"',
+  /check \(answer is not null or is_correct is null\)/.test(RS));
+t.ok('one answer per item per attempt', /unique \(attempt_id, question_id\)/.test(RS));
+t.ok('the answer is bounded and the ordinal positive',
+  /char_length\(answer\) <= 500/.test(RS) && /ordinal > 0/.test(RS));
+
+/* THE INVARIANT. Both keys must be COMPOSITE and both must carry homework_id —
+   a pair of single-column FKs would satisfy "points at a real row" while still
+   allowing an attempt of one homework beside a question of another. */
+const fks = [...RS.matchAll(/foreign key \(([^)]+)\)\s*references ([a-z_]+) \(([^)]+)\)([^,\n]*)/g)]
+  .map((m) => `${m[1].replace(/\s+/g, ' ')} -> ${m[2]}(${m[3].replace(/\s+/g, ' ')})${m[4].replace(/\s+$/, '')}`);
+t.is('both foreign keys are composite, and each carries homework_id', fks,
+  ['attempt_id, homework_id -> teacher_homework_attempts(id, homework_id) on delete cascade',
+   'question_id, homework_id -> teacher_homework_questions(id, homework_id) on delete restrict']);
+t.ok('so the rule is a constraint, not a trigger: no same-homework guard exists for responses',
+  !/same_homework/.test(TDC));
+t.ok('and 20260902b carries the two parent keys those foreign keys point at',
+  /constraint teacher_homework_attempts_id_homework_uq unique \(id, homework_id\)/.test(TBC)
+  && /constraint teacher_homework_questions_id_homework_uq unique \(id, homework_id\)/.test(TBC));
+t.is('two indexes: a whole attempt in order, and one item across the class',
+  [...TDC.matchAll(/create index ([a-z_]+)\s+on teacher_homework_responses \(([^)]+)\)/g)].map((m) => `${m[1]} (${m[2]})`),
+  ['teacher_homework_responses_attempt_idx (attempt_id, ordinal)',
+   'teacher_homework_responses_question_idx (question_id)']);
+
+t.ok('the guard is SECURITY DEFINER with a pinned search_path, and EXECUTE is revoked',
+  /security definer/.test(RGF.head) && /set search_path = pg_catalog, public/.test(RGF.head)
+  && /revoke all on function teacher_homework_responses_guard\(\) from public, anon, authenticated;/.test(TDC));
+t.ok('an answer is never deleted', /if tg_op = 'DELETE' then\s+raise exception/.test(RGF.body));
+t.is('which item of which attempt is immutable', distinctCols(RGF.body).slice(0, 4),
+  ['attempt_id', 'question_id', 'homework_id', 'ordinal']);
+t.ok('graded once, never re-graded',
+  /if old\.is_correct is not null and new\.is_correct is distinct from old\.is_correct then/.test(RGF.body));
+t.ok('an answer cannot change once its attempt is not in progress, and it fails closed on an unreadable parent',
+  /select status into v_status from teacher_homework_attempts where id = new\.attempt_id/.test(RGF.body)
+  && /if v_status is null or v_status <> 'in_progress' then/.test(RGF.body));
+t.ok('wired BEFORE update or delete',
+  /create trigger teacher_homework_responses_guard_trg\s+before update or delete on teacher_homework_responses/.test(TDC));
+
+t.ok('RLS on, privileges stripped, SELECT only for authenticated',
+  /alter table teacher_homework_responses enable row level security/.test(TDC)
+  && /revoke all on table teacher_homework_responses from anon, authenticated/.test(TDC)
+  && /grant select on table teacher_homework_responses to authenticated;/.test(TDC));
+t.is('no write verb and no anon grant',
+  [...TDC.matchAll(/grant\s+(insert|update|delete|truncate|all)[^;]*;|grant[^;]*to anon[^;]*;/gi)].map((m) => m[0]), []);
+const RPOL = [...TDC.matchAll(/create policy ([a-z_]+) on teacher_homework_responses\s+for ([a-z]+) to ([a-z_]+)\s+using \(([\s\S]*?)\);/g)]
+  .map((m) => ({ name: m[1], cmd: m[2], role: m[3], qual: m[4].replace(/\s+/g, ' ') }));
+t.is('exactly two policies, both SELECT for authenticated', RPOL.map((p) => `${p.name}:${p.cmd}:${p.role}`),
+  ['teacher_homework_responses_own_read:select:authenticated',
+   'teacher_homework_responses_staff_read:select:authenticated']);
+t.ok('a student reads only the answers of an attempt that is theirs',
+  RPOL.length === 2 && /a\.user_id = auth\.uid\(\)/.test(RPOL[0].qual) && /teacher_homework_attempts a/.test(RPOL[0].qual));
+t.ok('staff read through the role-blind helper on the denormalised homework_id',
+  RPOL.length === 2 && /teacher_homework_is_staff\(homework_id\) or has_role_at_least\('admin'::user_role\)/.test(RPOL[1].qual)
+  && !/staff_role/.test(TDC));
+t.ok('its verification pins the composite keys, the parent keys, the omission CHECK and the package totals',
+  /2 two-column foreign keys/.test(TD) && /keys from 20260902b are missing/.test(TD)
+  && /omission CHECK is gone/.test(TD) && /found 6/.test(TD.replace(/found %/g, 'found 6')));
+
+// ══ 19 · THE PACKAGE ══════════════════════════════════════════════════════
+t.section('b + c + d apply together or not at all, and one rollback undoes all three');
+
+/* The phrase wraps across comment lines in 20260902d, so the declaration is
+   matched flat — a sentence broken by a line break is still the sentence. */
+const flat = (f) => f.replace(/\n\s*--\s*/g, ' ').replace(/\s+/g, ' ');
+t.ok('all three forward files declare the atomic package and name the other two',
+  [TB, TC, TD].every((f) => /ATOMIC H2 SCHEMA PACKAGE/.test(flat(f)))
+  && /20260902c/.test(TB) && /20260902d/.test(TB)
+  && /20260902b/.test(TC) && /20260902d/.test(TC)
+  && /20260902b/.test(TD) && /20260902c/.test(TD));
+t.ok('and all three name 20260902y as the single undo',
+  [TB, TC, TD].every((f) => /20260902y/.test(f)));
+t.ok('20260902c records that its own counts are point-in-time, not package totals', /POINT-IN-TIME/.test(TC));
+t.ok('all four files are PREPARED, and none claims APPLIED',
+  [TB, TC, TD, TY].every((f) => /STATUS: 🟡 PREPARED/.test(f) && !/APPLIED/.test(f)));
 
 t.done();

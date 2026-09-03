@@ -2,7 +2,10 @@
 -- Teacher Homework, increment H2.1 — five tables, their rules, their guards
 -- =====================================================================
 -- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback: 20260902y (a clean undo, unlike 20260902z).
+--         (CLAUDE.md §3). Part of the ATOMIC H2 SCHEMA PACKAGE — 20260902b,
+--         then 20260902c, then 20260902d, in that order, all of them or none.
+--         Rollback: 20260902y, which undoes all three (a clean undo, unlike
+--         20260902z).
 -- DEPENDS ON: 20260830a (teacher_workspaces), 20260901a (exam_stimulus_shape_ok),
 --             20260902a (the five homework audit labels — H2 writes none of them)
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §15.14 (homework keeps its
@@ -14,11 +17,15 @@
 -- row. After H2 the five tables exist, are governed, and are unreachable by
 -- anyone: there is no write path at all until H3 ships the authoring RPCs.
 --
--- Exactly the five tables the approved H2 scope names. A per-item ANSWER
--- record — the homework twin of teacher_exam_responses — is required before
--- H5 can save or grade anything, and it is deliberately outside this
--- increment: it is to be prepared, reviewed and approved as its own step, not
--- carried in here. Nothing in this file assumes its shape.
+-- Five tables. The sixth — teacher_homework_responses, the per-item answer
+-- record H5 cannot save or grade without — is 20260902d, designed and approved
+-- separately (§15.15a) and applied in the same package. THIS FILE carries two
+-- things on its behalf, both approved 2026-09-02: a `unique (id, homework_id)`
+-- on the attempts table and another on the questions table. They exist so that
+-- 20260902d can express, as a composite FOREIGN KEY rather than as a trigger,
+-- the rule that an answer's attempt and its question belong to the SAME
+-- homework. Adding them here costs two lines while H2 is unapplied; after an
+-- apply they would be an ALTER on live tables.
 --
 -- WHAT THIS DELIBERATELY DOES NOT TOUCH
 -- -------------------------------------
@@ -48,9 +55,11 @@
 --   due_at, nullable
 --       a date, never a lock: a submission after it is accepted and flagged
 --       late, never refused. (decision 3)
---   reveal_answers, NOT NULL default false
+--   reveal_answers, NOT NULL default false, and a ONE-WAY LATCH
 --       per-item correctness and the teacher's explanation are shown after
 --       submission; the correct-answer TEXT only when this is true. (decision 1)
+--       false -> true is permitted in every status INCLUDING closed; true ->
+--       false is refused in every status. See guard 6.1. (§15.15b)
 --   teacher_homework_access has NO state and NO was_member column
 --       there is no queue: entering the code attaches an ACTIVE member at
 --       once, and the row records that and nothing more. Access itself is
@@ -180,6 +189,13 @@ create table teacher_homework_questions (
   updated_at      timestamptz not null default now(),
 
   constraint teacher_homework_questions_slot_uq unique (homework_id, ordinal),
+  -- Half of the structural invariant the answer record needs (20260902d).
+  -- With this key a response can name (question_id, homework_id) as a
+  -- composite FOREIGN KEY, so the DATABASE refuses an answer that joins an
+  -- attempt of one homework to a question of another. A trigger could enforce
+  -- the same rule; a later migration could also drop that trigger. A foreign
+  -- key is not an opinion.
+  constraint teacher_homework_questions_id_homework_uq unique (id, homework_id),
   constraint teacher_homework_questions_ordinal_check check (ordinal > 0),
   constraint teacher_homework_questions_prompt_check
     check (char_length(prompt) between 1 and 8000),
@@ -245,6 +261,8 @@ create table teacher_homework_attempts (
   -- sessions: a refresh, a second device, a week later all find this row.
   -- The pair is the idempotency, so no client request id is needed.
   constraint teacher_homework_attempts_one_per_student unique (homework_id, user_id),
+  -- The other half of the composite-FK invariant — see the questions table.
+  constraint teacher_homework_attempts_id_homework_uq unique (id, homework_id),
   constraint teacher_homework_attempts_status_check
     check (status in ('in_progress', 'submitted')),
   constraint teacher_homework_attempts_submitted_check
@@ -264,11 +282,23 @@ comment on column teacher_homework_attempts.late is
 
 -- 6.1 · the homework's own life: draft -> published -> closed, one way, no
 --       deletes once published. Once published, the PAPER is frozen: title,
---       instructions and published_at cannot change. Exactly three things stay
+--       instructions and published_at cannot change. Three things stay
 --       mutable, each for a stated reason: the code (rotation answers a leak),
 --       due_at (a teacher may extend or bring forward), and reveal_answers
 --       (decision 1 — turning answers on after everyone has submitted is the
 --       normal use, not an edit to the paper).
+--
+--       reveal_answers is a ONE-WAY LATCH (§15.15b, approved 2026-09-02):
+--       false -> true in any status INCLUDING closed, true -> false never.
+--       Both halves were measured before the rule existed: a closed homework
+--       could not reveal its answers at all, which made the ordinary marking
+--       flow — the due date passes, you close it, then you show the answers —
+--       impossible; and a revealed homework could be un-revealed, which only
+--       hides what the class has already read. Throwing the latch is now the
+--       ONE change a closed homework still accepts. One consequence is
+--       deliberate: a reveal set by mistake on a DRAFT cannot be unset either.
+--       A draft has no students, so nothing was shown to anyone — delete the
+--       draft and start again.
 create or replace function teacher_homework_guard()
 returns trigger
 language plpgsql
@@ -293,10 +323,30 @@ begin
       using errcode = '22000';
   end if;
 
-  -- A closed homework is final in every respect.
+  -- THE LATCH. Revealing the answers is a decision, not a setting: once taken
+  -- it cannot be taken back, in any status. Checked BEFORE the closed gate,
+  -- because throwing the latch is the one thing a closed homework may do.
+  if old.reveal_answers and not new.reveal_answers then
+    raise exception 'teacher_homework: answers, once revealed, stay revealed'
+      using errcode = '22000';
+  end if;
+
+  -- A closed homework is final in every respect but one: the latch above. Every
+  -- other column must be untouched, named here rather than inferred, so that a
+  -- column added later is refused by default instead of quietly slipping
+  -- through the exception.
   if old.status = 'closed' then
-    raise exception 'teacher_homework: homework % is closed and cannot change', old.homework_code
-      using errcode = '42501';
+    if (new.title, new.instructions, new.homework_code, new.status, new.due_at,
+        new.published_at, new.closed_at)
+       is distinct from
+       (old.title, old.instructions, old.homework_code, old.status, old.due_at,
+        old.published_at, old.closed_at) then
+      raise exception
+        'teacher_homework: homework % is closed — revealing the answers is the only change still permitted',
+        old.homework_code using errcode = '42501';
+    end if;
+    new.updated_at := now();
+    return new;
   end if;
 
   if new.status is distinct from old.status then

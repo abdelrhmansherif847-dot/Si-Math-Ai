@@ -85,6 +85,7 @@ const MIG = {
      column by column — lives in tests/teacher-homework.test.mjs. */
   th_b:     read('supabase/migrations/20260902b_teacher_homework_tables.sql'),
   th_c:     read('supabase/migrations/20260902c_teacher_homework_rls.sql'),
+  th_d:     read('supabase/migrations/20260902d_teacher_homework_responses.sql'),
   th_rb:    read('supabase/migrations/20260902y_teacher_homework_rollback.sql'),
 };
 const PAGE = read('teacher.html');
@@ -100,7 +101,7 @@ const exec = (sql) => sql
   .join('\n');
 
 const EXEC = Object.fromEntries(Object.entries(MIG).map(([k, v]) => [k, exec(v)]));
-const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c].join('\n');
+const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d].join('\n');
 /* Migration d is the FIRST deliberate academic read, so it is held to a
    different, narrower contract than the foundation — see section 9. Keeping it
    out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
@@ -140,7 +141,8 @@ const EXAM_TABLES = ['teacher_exams', 'teacher_exam_stimuli', 'teacher_exam_ques
 /* Teacher Homework H2. A third list for the same reason: its RLS and grants
    live in 20260902c and are asserted against that file alone. */
 const HOMEWORK_TABLES = ['teacher_homework', 'teacher_homework_stimuli', 'teacher_homework_questions',
-                         'teacher_homework_access', 'teacher_homework_attempts'];
+                         'teacher_homework_access', 'teacher_homework_attempts',
+                         'teacher_homework_responses'];
 /* The union is what the academic boundary means by "this system's own tables":
    a policy or a foreign key landing anywhere else is the breach. */
 const OWN_TABLES = [...FOUNDATION_TABLES, ...EXAM_TABLES, ...HOMEWORK_TABLES];
@@ -257,7 +259,8 @@ t.section('Privileges — SELECT only for clients, every function stated');
 for (const [tables, rlsIn, grantsIn, where] of [
   [FOUNDATION_TABLES, EXEC.a, EXEC.b, '20260830a/b'],
   [EXAM_TABLES, EXEC.te_d, EXEC.te_d, '20260901d'],
-  [HOMEWORK_TABLES, EXEC.th_c, EXEC.th_c, '20260902c'],
+  [HOMEWORK_TABLES.slice(0, 5), EXEC.th_c, EXEC.th_c, '20260902c'],
+  [['teacher_homework_responses'], EXEC.th_d, EXEC.th_d, '20260902d'],
 ]) {
   for (const tbl of tables) {
     t.ok(`${tbl}: RLS is enabled (${where})`,
@@ -299,9 +302,9 @@ t.ok('no inline is_admin predicate is copied in',
 // ══ 7 · ROLLBACK ══════════════════════════════════════════════════════════
 t.section('Rollback — written now, and complete');
 
-const madeTables = [...(EXEC.a + '\n' + EXEC.te_c + '\n' + EXEC.th_b).matchAll(/create table ([a-z_]+)/gi)].map((m) => m[1]);
+const madeTables = [...(EXEC.a + '\n' + EXEC.te_c + '\n' + EXEC.th_b + '\n' + EXEC.th_d).matchAll(/create table ([a-z_]+)/gi)].map((m) => m[1]);
 const madeTypes = [...EXEC.a.matchAll(/create type ([a-z_]+)/gi)].map((m) => m[1]);
-t.ok('tables and types are created (not vacuous)', madeTables.length === 15 && madeTypes.length === 4);
+t.ok('tables and types are created (not vacuous)', madeTables.length === 16 && madeTypes.length === 4);
 t.is('every table is dropped by the rollback',
   madeTables.filter((x) => !new RegExp(`drop table if exists ${x}\\b`, 'i').test(EXEC.z + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb)), []);
 t.is('every type is dropped by the rollback',
