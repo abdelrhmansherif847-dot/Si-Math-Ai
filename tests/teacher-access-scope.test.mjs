@@ -94,6 +94,14 @@ const MIG = {
   th_a:     read('supabase/migrations/20260903b_teacher_homework_authoring.sql'),
   th_a_rb:  read('supabase/migrations/20260903y_teacher_homework_authoring_rollback.sql'),
   th_rb:    read('supabase/migrations/20260902y_teacher_homework_rollback.sql'),
+  /* Teacher Homework H4, PREPARED and not applied: the first STUDENT write
+     path. It belongs in FORWARD for the same reason H3 does — the foundation's
+     blanket academic ban must cover the point where a real student is bound to
+     teacher-set work — and in ALL_ROLLBACK so a new RPC cannot ship without an
+     undo. It also creates two tables, so it joins the create/drop pairing
+     check below. */
+  th_h4:    read('supabase/migrations/20260904a_teacher_homework_h4.sql'),
+  th_h4_rb: read('supabase/migrations/20260904z_teacher_homework_h4_rollback.sql'),
 };
 const PAGE = read('teacher.html');
 const SETTINGS = read('settings.html');
@@ -108,7 +116,7 @@ const exec = (sql) => sql
   .join('\n');
 
 const EXEC = Object.fromEntries(Object.entries(MIG).map(([k, v]) => [k, exec(v)]));
-const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d, EXEC.th_a].join('\n');
+const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d, EXEC.th_a, EXEC.th_h4].join('\n');
 /* Migration d is the FIRST deliberate academic read, so it is held to a
    different, narrower contract than the foundation — see section 9. Keeping it
    out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
@@ -134,7 +142,7 @@ const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATT
    drops the foundation it hung from. Completeness has to be checked against
    both, or adding a second rollback file would silently weaken the check. */
 const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb + '\n' + EXEC.ref_rb
-                   + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb + '\n' + EXEC.th_a_rb;
+                   + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb + '\n' + EXEC.th_a_rb + '\n' + EXEC.th_h4_rb;
 
 // The four tables this system is allowed to create and touch.
 const FOUNDATION_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];
@@ -295,7 +303,11 @@ const unrevoked = [...new Set(created)].filter(
   (fn) => !new RegExp(`revoke all on function ${fn}\\s*\\(`, 'i').test(ALL_FORWARD));
 t.is('every function is revoked from public, anon, authenticated', unrevoked, []);
 
-const definers = [...ALL_FORWARD.matchAll(/create or replace function [a-z_]+\([\s\S]*?security definer([\s\S]*?)as \$\$/gi)];
+/* The body delimiter is whatever tag the file chose. This used to match `as $$`
+   alone, which silently skipped every teacher_exam and teacher_homework
+   migration — all of them use `$fn$` — so the pin below was never actually
+   checked on them. Matching any dollar-quote tag is what makes it real. */
+const definers = [...ALL_FORWARD.matchAll(/create or replace function [a-z_]+\([\s\S]*?security definer([\s\S]*?)as \$[a-z]*\$/gi)];
 t.ok('security definer functions exist', definers.length >= 10);
 t.is('every definer function pins its search_path',
   definers.filter((m) => !/set search_path = pg_catalog, public/.test(m[1])).length, 0);
@@ -309,11 +321,14 @@ t.ok('no inline is_admin predicate is copied in',
 // ══ 7 · ROLLBACK ══════════════════════════════════════════════════════════
 t.section('Rollback — written now, and complete');
 
-const madeTables = [...(EXEC.a + '\n' + EXEC.te_c + '\n' + EXEC.th_b + '\n' + EXEC.th_d).matchAll(/create table ([a-z_]+)/gi)].map((m) => m[1]);
+const madeTables = [...(EXEC.a + '\n' + EXEC.te_c + '\n' + EXEC.th_b + '\n' + EXEC.th_d + '\n' + EXEC.th_h4).matchAll(/create table ([a-z_]+)/gi)].map((m) => m[1]);
 const madeTypes = [...EXEC.a.matchAll(/create type ([a-z_]+)/gi)].map((m) => m[1]);
-t.ok('tables and types are created (not vacuous)', madeTables.length === 16 && madeTypes.length === 4);
+/* 16 through H2, plus H4's two internal tables (the retired-code reservation
+   and the attach limiter). The count is the anchor that keeps the two checks
+   below from passing over an empty list. */
+t.ok('tables and types are created (not vacuous)', madeTables.length === 18 && madeTypes.length === 4);
 t.is('every table is dropped by the rollback',
-  madeTables.filter((x) => !new RegExp(`drop table if exists ${x}\\b`, 'i').test(EXEC.z + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb)), []);
+  madeTables.filter((x) => !new RegExp(`drop table if exists ${x}\\b`, 'i').test(EXEC.z + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb + '\n' + EXEC.th_h4_rb)), []);
 t.is('every type is dropped by the rollback',
   madeTypes.filter((x) => !new RegExp(`drop type if exists ${x}\\b`, 'i').test(EXEC.z)), []);
 t.is('every function is dropped by the rollback',

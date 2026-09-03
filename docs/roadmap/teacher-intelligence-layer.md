@@ -2034,7 +2034,135 @@ them should be discovered mid-implementation.
     warning has now come true — with `20260903b` live, undoing the label means
     running `20260903y` first).
 
-    **There is still no student write path.** H4 has not started.
+    **There is still no student write path.** H4 opened as audit-only the same
+    day and is recorded in §15.17.
+
+    ### 15.17 · H4 — the audit, and the package it produced (PREPARED)
+
+    #### The live facts the audit measured
+
+    Everything here was read from production, most of it in aborting
+    transactions, before a line of H4 was written.
+
+    - **The two access tables are deliberately different shapes.**
+      `teacher_exam_access` carries `state`, `was_member_at_request`,
+      `decided_at`, `decided_by`; `teacher_homework_access` has three columns
+      and no state. §15.14 is why.
+    - **`teacher_homework_access_guard` refuses every UPDATE and every DELETE,
+      unconditionally** — measured as the table owner: `22000` and `42501`.
+      INSERT is the only operation it permits, so an attachment is write-once
+      forever and there is no un-attach without a new migration.
+    - **No student read policy exists** on `teacher_homework`, its questions or
+      its stimuli: a member student reads 0 papers, 0 questions, 0 stimuli. The
+      exam system is identical — every student-facing read is a definer RPC. So
+      H4 needs **no new policy**.
+    - **Three findings changed the design.** The two audit disciplines in
+      production disagree (`student_join_workspace` writes a `student_joined`
+      row on *every* call — three joins measured **+3** rows for one
+      membership — while `student_request_exam_access` logs only a new row).
+      **Removal is undone by the student**: `teacher_remove_student` sets
+      `removed`, and re-entering the same class code sets it straight back to
+      `active`, so rotating the class code is the real revocation. And the
+      **retired-code hazard is real and was demonstrated**: rotation frees the
+      old code, nothing reserves it, and a *different* homework was accepted
+      when given that exact value.
+    - **There is no rate-limit infrastructure, no scheduler and no retention
+      convention anywhere in this database.** No `pg_cron`, no job, no
+      cleanup/purge function; `student_request_exam_access` is the only
+      function that does a time-window count, and `ai_usage_logs` — the one
+      live counting table — has never had a row deleted. Any retention H4
+      defines is therefore a new convention, and one that must run inside the
+      RPC or not at all.
+
+    #### Two approved corrections, and the one that could not be copied
+
+    1. **`teacher_homework_retired_codes`** — permanent, not a TTL. It carries
+       **no foreign key**, because a cascade would free the code the moment its
+       draft was deleted, which is the hazard itself.
+    2. **`teacher_homework_attach_attempts`** — every submission counted, not
+       just successful attachments. It holds who and when and nothing else: not
+       the submitted code, not the outcome, because storing the outcome would
+       make the table the oracle the one-reason rule exists to prevent.
+
+    **The defect a probe caught before any of it ran.** The attach RPC as first
+    written recorded the attempt and then RAISED `'that code did not match'`.
+    Measured on production: a row inserted by a function that then raises does
+    **not** survive the raise (0 rows), while the same insert followed by a
+    return does (1 row). The limiter would therefore have counted only
+    successes — silently reproducing the exact exam blind spot H4 was approved
+    to fix. Every **expected** refusal now RETURNS `{ok:false, reason:…}`; the
+    rate limit is the one refusal that still raises, deliberately, because
+    discarding its own row is what stops a throttled caller growing the table.
+
+    #### The contract
+
+    ```
+    attach(code):  signed in -> rate limit -> resolve a PUBLISHED homework in
+                   an ACTIVE class -> not active staff -> ACTIVE member ->
+                   attach -> audit once
+
+    can_open(hw) = attached AND active membership AND active workspace
+                   AND published          -- all live, none cached, no due_at
+    ```
+
+    `teacher_homework_can_open()` takes **no student parameter**: one would let
+    any account probe another student's access. A wrong code, a draft, a closed
+    paper, a deactivated class and a real code held by a non-member all return
+    the identical `no_match`; only staff get a distinct reason, and safely,
+    since staff already read every code in their class.
+
+    #### Evidence (all aborting)
+
+    | probe | result |
+    |---|---|
+    | member attaches, code typed lowercase with spaces | `{ok:true, reason:attached}` |
+    | the same code again | `already_attached`, **+0** audit events, still 1 access row |
+    | the audit row | actor = the student, `subject_id` = the student, `meta` = `{homework_id}`, timestamp from the column default |
+    | outsider · pending assistant · draft · closed · deactivated class · garbage | `no_match` for all six, **+0** access rows |
+    | teacher · active assistant | `staff` |
+    | **14 wrong codes in a row** | 10 accepted, then `53400` — and **10 attempt rows recorded**, where the exam limiter would hold 0 |
+    | 5 rows planted 3 hours old, then one call | pruned to 1 — the only sweep that can run |
+    | removed student | `can_open` false, attachment kept, re-attach `no_match` |
+    | rejoins the class, then attaches | `can_open` true again |
+    | rotation | old code reserved, retired code `no_match`, `code_available` false |
+    | reservation / attempt row, as table owner | UPDATE and DELETE both refused |
+    | duplicate attachment, raw | `23505` — the PK is what makes a real concurrent double-attach safe |
+    | teacher closes the paper | `can_open` false |
+    | outsider calling the staff roster · anon calling attach | `42501` |
+    | analyzer, attempts, responses | 893/11/24 unmoved; 0 and 0 |
+
+    A second defect the dry-run caught: the rowtype variable `h` collided with
+    the table alias `h`, and plpgsql refuses that (`42702`). The alias is now
+    `hw` and the suite pins it.
+
+    **Rollback rehearsal.** Homework tables and functions went **6,22 → 8,27 →
+    6,22**, and all eleven hashes returned **identical, 0 differing**. The
+    refusal was exercised with a reservation planted and fired correctly.
+
+    #### The rollback window — written before the apply, not after
+
+    `20260904z` refuses while **any** code is reserved, so **the first code
+    rotation closes it completely**: releasing reserved codes would be worse
+    than never having fixed the hazard, because a teacher who rotated a leaked
+    code was told the old one was dead. The **first student attachment** closes
+    the *H2* rollback rather than this one — `20260902y` already refuses while
+    attachments exist — and this file deletes no attachment. The limiter table
+    is always safe to drop; its rows are one-hour counters.
+
+    #### Verification
+
+    331 checks in `tests/teacher-homework.test.mjs`, 109 in
+    `teacher-access-scope`, CI 66/66, **53 of 53 mutants killed with none
+    unapplied**. One of those mutants exists only because the shared
+    access-scope suite's definer/`search_path` check matched `as $$` alone and
+    so had been **silently skipping every teacher_exam and teacher_homework
+    migration** — all of them use `$fn$`. Widened to any dollar-quote tag, it
+    passes, so nothing was hiding behind it.
+
+    **Production is unchanged**: 189 migrations, newest `20260903175957`, no H4
+    object present, `teacher_homework_create` and `teacher_homework_rotate_code`
+    still at their H3 md5, six homework tables at 0 rows, and constraints,
+    policies, relations, triggers and grants all at their post-H3 hashes.
 
     #### Verification
 

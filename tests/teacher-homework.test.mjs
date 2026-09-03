@@ -889,4 +889,275 @@ t.ok('and both files name the order as a dependency rather than a convention',
   /20260903175543/.test(TA) && /20260903175957/.test(RV)
   && /that order is a real dependency/i.test(RV.replace(/\n\s*--\s*/g, ' ')));
 
+// ══════════════════════════════════════════════════════════════════════════
+// PART 5 · increment H4 — the student attaches
+// ══════════════════════════════════════════════════════════════════════════
+/* H4 is the first student WRITE path. Two things in it are not copies of the
+   exam system but corrections to it, each approved after the audit measured
+   the problem: a rotated homework code is retired permanently (the exam system
+   frees it, and a different paper can take it), and the limiter counts every
+   submission (the exam limiter counts rows created, so a wrong code is free).
+   The checks below pin both, plus the attach ORDER, which is the contract. */
+
+const H4  = read('supabase/migrations/20260904a_teacher_homework_h4.sql');
+const H4Z = read('supabase/migrations/20260904z_teacher_homework_h4_rollback.sql');
+const H4C = code(H4), H4ZC = code(H4Z);
+const body4 = (n) => fnDef(H4C, n).body;
+const sig4 = (n) => (H4.match(new RegExp('create or replace function ' + n + '\\(([^)]*)\\)')) || [])[1];
+
+// ══ 28 · THE TWO NEW TABLES ═══════════════════════════════════════════════
+t.section('H4 adds exactly two tables, and neither is client-reachable');
+
+t.is('the retired-code reservation holds provenance and a timestamp, nothing more',
+  columns(tableDef(H4C, 'teacher_homework_retired_codes')),
+  ['code', 'homework_id', 'workspace_id', 'retired_at', 'retired_by']);
+/* The measured reason: a cascade would free the code the moment its draft was
+   deleted, which is the hazard the table exists to prevent. */
+t.ok('and it carries NO foreign key, on purpose',
+  !/references/.test(tableDef(H4C, 'teacher_homework_retired_codes'))
+  && /must outlive the paper/.test(H4.replace(/\n\s*--\s*/g, ' ')));
+/* SQL string literals are concatenated across lines, so the comment text is
+   flattened by joining adjacent literals before it is matched. */
+const H4FLAT = H4.replace(/'\s*\n\s*'/g, '').replace(/\n\s*--\s*/g, ' ');
+t.ok('the reservation is permanent — no TTL, no expiry column, no sweep',
+  !/expires_at|ttl|valid_until/i.test(tableDef(H4C, 'teacher_homework_retired_codes'))
+  && /Permanent by decision, not a TTL/.test(H4FLAT));
+t.ok('the code it stores must look like a homework code', codeRule(tableDef(H4C, 'teacher_homework_retired_codes')) === '^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$');
+
+/* The limiter is the one table in this system whose value is what it does NOT
+   hold: no submitted code, no outcome, no homework id. Storing the outcome
+   would make the table the oracle the one-message rule exists to prevent. */
+t.is('the limiter holds exactly who and when', 
+  [...tableDef(H4C, 'teacher_homework_attach_attempts').matchAll(/\n  ([a-z_]+)\s+\S/g)].map((m) => m[1]),
+  ['id', 'user_id', 'attempted_at']);
+t.ok('it never stores the submitted code, the outcome, or the homework',
+  !/code|outcome|success|failed|homework_id|ip_|user_agent/.test(
+    tableDef(H4C, 'teacher_homework_attach_attempts')));
+t.ok('it is indexed the way the two live counters already are',
+  /on teacher_homework_attach_attempts \(user_id, attempted_at desc\)/.test(H4C));
+
+t.is('neither table grants anything to a client',
+  [...H4C.matchAll(/grant [a-z, ]+ on table (teacher_homework_retired_codes|teacher_homework_attach_attempts)/gi)].map((m) => m[0]), []);
+t.ok('both revoke from anon and authenticated, and both enable RLS',
+  (H4C.match(/revoke all on table teacher_homework_(retired_codes|attach_attempts) from anon, authenticated;/g) || []).length === 2
+  && (H4C.match(/alter table teacher_homework_(retired_codes|attach_attempts) enable row level security;/g) || []).length === 2);
+t.is('and neither gets a policy',
+  [...H4C.matchAll(/create policy [a-z_]+ on (teacher_homework_retired_codes|teacher_homework_attach_attempts)/gi)].map((m) => m[0]), []);
+
+t.ok('a reservation is never released or edited',
+  /a retired code is never released/.test(body4('teacher_homework_retired_codes_guard'))
+  && /written once and never changed/.test(body4('teacher_homework_retired_codes_guard')));
+/* An attempt may be PRUNED — that is the retention mechanism — but never
+   rewritten, so the guard covers UPDATE alone. */
+t.ok('an attempt may be pruned but never rewritten',
+  /before update on teacher_homework_attach_attempts/.test(H4C)
+  && !/before update or delete on teacher_homework_attach_attempts/.test(H4C));
+
+// ══ 29 · RETENTION, DEFINED RATHER THAN ASSUMED ═══════════════════════════
+t.section('Retention: the only sweep that can run is the one inside the RPC');
+
+/* Measured during the audit: this database has no pg_cron, no scheduled job
+   and no cleanup function anywhere. A retention policy that needs a scheduler
+   would therefore never run, so the RPC prunes its own caller's rows. */
+t.ok('the file records that there is no scheduler to rely on',
+  /there is no scheduler in\s+this database \(measured/.test(H4.replace(/\n\s*--\s*/g, '\n  '))
+  || /no pg_cron, no job, no cleanup function/.test(H4.replace(/\n\s*--\s*/g, ' ')));
+t.ok('the prune happens BEFORE the count, so an expired row can never be counted',
+  body4('student_attach_homework').indexOf('delete from teacher_homework_attach_attempts')
+    < body4('student_attach_homework').indexOf('select count(*) into v_recent'));
+t.ok('the window and the limit are named constants, not literals buried in a comparison',
+  /WINDOW_\s+constant interval := interval '1 hour'/.test(H4C)
+  && /LIMIT_\s+constant integer\s+:= 10/.test(H4C));
+t.ok('and the residual is stated: a caller who never returns leaves at most the limit',
+  /leaves behind at most\s+LIMIT_ rows/.test(H4.replace(/\n\s*--\s*/g, ' ')));
+
+// ══ 30 · THE ATTACH ORDER IS THE CONTRACT ═════════════════════════════════
+t.section('signed in -> rate limit -> resolve -> not staff -> member -> attach -> audit');
+
+const AB = body4('student_attach_homework');
+const at = (needle) => { const i = AB.indexOf(needle); if (i < 0) throw new Error('missing: ' + needle); return i; };
+t.ok('1 signed in, before anything else', at("sign in first") < at('delete from teacher_homework_attach_attempts'));
+t.ok('2 the attempt is RECORDED before it is counted — a guess is never free',
+  at('insert into teacher_homework_attach_attempts') < at('select count(*) into v_recent'));
+t.ok('3 the limit is enforced BEFORE the code is resolved',
+  at('too many attempts') < at('select hw.* into h from teacher_homework hw'));
+/* MEASURED on production: a row inserted by a function that then raises does
+   not survive the raise. An expected refusal must therefore RETURN, or the
+   attempt row this limiter exists to keep is rolled back with the exception
+   and only successes are ever counted — the exam limiter's blind spot,
+   reintroduced. The rate limit is the one refusal that still raises, and that
+   is deliberate: it discards its own row so a throttled caller cannot grow
+   the table. */
+t.ok('every expected refusal RETURNS, so the attempt it recorded survives',
+  !/raise exception 'student_attach_homework: that code/.test(AB)
+  && (AB.match(/return jsonb_build_object\('ok', false/g) || []).length === 3);
+t.is('and exactly one refusal still raises — the rate limit',
+  [...AB.matchAll(/raise exception 'student_attach_homework: ([^']*)'/g)].map((m) => m[1]),
+  ['sign in first', 'too many attempts in the last hour, try again later']);
+t.ok('the file records the measurement that forced this shape',
+  /a row inserted by\s+a plpgsql function that then RAISES does not survive the raise/.test(H4FLAT)
+  && /0 rows/.test(H4FLAT) && /1 row/.test(H4FLAT));
+t.ok('4 the code resolves only a PUBLISHED homework in an ACTIVE class',
+  /where hw\.homework_code = v_norm and hw\.status = 'published' and w\.is_active/.test(AB));
+/* h is the rowtype variable; an alias of h makes the join ambiguous and
+   plpgsql refuses with 42702. The dry-run found it, so the alias is pinned. */
+t.ok('and the join alias does not collide with the rowtype variable',
+  /from teacher_homework hw/.test(AB) && !/from teacher_homework h\b/.test(AB));
+t.ok('5 staff are refused before membership is even considered',
+  at("'reason', 'staff'") < at('from workspace_students ws'));
+t.ok('6 membership is checked LIVE and never stored',
+  /ws\.status = 'active'\s+and \(ws\.expires_at is null or ws\.expires_at > now\(\)\)/.test(AB)
+  && !/was_member/.test(AB));
+t.ok('7 the attach is idempotent by primary key',
+  /on conflict \(homework_id, student_id\) do nothing/.test(AB));
+t.ok('8 the audit row comes last, and only when something attached',
+  at('if v_new then') < at('homework_attached') && at('on conflict (homework_id, student_id)') < at('if v_new then'));
+
+/* The normalisation both live entry points already use, character for
+   character — a student who types spaces or lowercase is not punished. */
+t.ok('the code is normalised exactly as student_join_workspace does',
+  AB.includes("upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'))"));
+/* An exam records was_member_at_request because a non-member may still raise a
+   request. Here they may not, so there is nothing to record — and nothing in
+   this path may reach the exam access model either. */
+t.ok('it records no membership flag and never reads the exam access model',
+  !/was_member/.test(AB) && !/teacher_exam/.test(AB));
+t.ok('the count reads the limiter, not the attachment table (the exam mistake)',
+  /from teacher_homework_attach_attempts\n   where user_id = auth\.uid\(\) and attempted_at > now\(\) - WINDOW_/.test(AB)
+  && !/from teacher_homework_access[\s\S]{0,80}attached_at > now\(\)/.test(AB));
+t.ok('the staff roster is gated on active staff of that homework',
+  /if not teacher_homework_is_staff\(p_homework\) then/.test(body4('teacher_homework_students')));
+
+// ══ 31 · THE ONE MESSAGE ══════════════════════════════════════════════════
+t.section('A bad code and a non-member fail identically');
+
+t.is('the same reason is returned exactly twice — unknown code, and not a member',
+  (AB.match(/'no_match'/g) || []).length, 2);
+t.ok('and the not-a-member case has no reason of its own',
+  !/not_a_member|not_member|no_membership/.test(AB));
+t.ok('a draft, a closed paper and a deactivated class all fall into the same branch',
+  (AB.match(/status = 'published'/g) || []).length === 1 && !/status = 'draft'|status = 'closed'/.test(AB));
+/* Staff DO get a distinct message, and safely: staff already read every
+   homework in their class, its code included, so it confirms nothing. */
+t.ok('only staff get a distinct reason, and the file says why that leaks nothing',
+  /'reason', 'staff'/.test(AB)
+  && /confirms nothing they cannot already see/.test(H4.replace(/\n\s*--\s*/g, ' ')));
+t.ok('and the cost of the one message is recorded, not hidden',
+  /The cost is real and is accepted/.test(H4.replace(/\n\s*--\s*/g, ' ')));
+
+// ══ 32 · THE GATE ═════════════════════════════════════════════════════════
+t.section('teacher_homework_can_open: no student parameter, four live conditions');
+
+t.is('it takes the homework and nothing else', sig4('teacher_homework_can_open'), 'p_homework uuid');
+t.ok('the caller is bound from auth.uid(), never passed in',
+  (body4('teacher_homework_can_open').match(/auth\.uid\(\)/g) || []).length === 2);
+const CO = body4('teacher_homework_can_open');
+t.ok('attached, active membership, active workspace, published — all four, all live',
+  /teacher_homework_access a/.test(CO) && /ws\.status = 'active'/.test(CO)
+  && /w\.is_active/.test(CO) && /h\.status = 'published'/.test(CO));
+/* Decision 3: the due date is a date, never a lock. A gate that read it would
+   turn every late submission into a refusal. */
+t.ok('and it never reads due_at', !/due_at/.test(CO));
+t.ok('the student list computes the gate per row rather than filtering',
+  /teacher_homework_can_open\(h\.id\)/.test(body4('student_my_homework')));
+
+// ══ 33 · THE RETIRED-CODE FIX ═════════════════════════════════════════════
+t.section('A rotated code never comes back');
+
+t.ok('create and rotate both consult the reservation',
+  /teacher_homework_code_available/.test(body4('teacher_homework_create'))
+  && /teacher_homework_code_available/.test(body4('teacher_homework_rotate_code')));
+t.ok('availability means BOTH not-in-use and not-retired, in one place',
+  /not exists \(select 1 from teacher_homework where homework_code = p_code\)/.test(body4('teacher_homework_code_available'))
+  && /not exists \(select 1 from teacher_homework_retired_codes where code = p_code\)/.test(body4('teacher_homework_code_available')));
+t.ok('the helper that answers "does this code exist" is callable by NOBODY',
+  /revoke all on function teacher_homework_code_available\(text\)\s+from public, anon, authenticated;/.test(H4C)
+  && !/grant execute on function teacher_homework_code_available/.test(H4C));
+t.ok('rotation retires the code it replaces, after the new one is in place',
+  /insert into teacher_homework_retired_codes/.test(body4('teacher_homework_rotate_code'))
+  && body4('teacher_homework_rotate_code').indexOf('update teacher_homework set homework_code')
+     < body4('teacher_homework_rotate_code').indexOf('insert into teacher_homework_retired_codes'));
+/* The two redefined bodies are H3's plus this check and nothing else. The
+   header carries the 20260831e warning because that is the hazard. */
+t.ok('the file warns that it redefines two LIVE functions',
+  /THIS FILE REDEFINES TWO LIVE FUNCTIONS/.test(H4) && /20260831e/.test(H4));
+
+// ══ 34 · THE AUDIT EVENT ══════════════════════════════════════════════════
+t.section('One attachment, one homework_attached event');
+
+t.ok('the label is H1’s, and no enum migration is needed',
+  /'homework_attached'/.test(AB) && !/alter type workspace_audit_action/.test(H4C));
+t.ok('actor and subject are both the student; meta names the homework',
+  /values \(h\.workspace_id, auth\.uid\(\), 'homework_attached', auth\.uid\(\),\s+jsonb_build_object\('homework_id', h\.id\)\)/.test(AB));
+t.ok('a re-entered code attaches nothing and logs nothing',
+  /if v_new then/.test(AB) && /get diagnostics v_recent = row_count/.test(AB));
+/* Two disciplines exist in production; the audit measured student_join_workspace
+   writing three rows for one membership. H4 follows the exam RPC instead. */
+t.ok('and the file says which of the two live conventions it followed, and why',
+  /deliberately NOT\s+student_join_workspace/.test(H4.replace(/\n\s*--\s*/g, '\n  ')));
+
+// ══ 35 · THE H4 / H5 BOUNDARY ═════════════════════════════════════════════
+t.section('H4 writes attachments and nothing else');
+
+t.is('no H4 function writes an attempt or a response',
+  ['student_attach_homework', 'teacher_homework_can_open', 'student_my_homework', 'teacher_homework_students']
+    .filter((f) => /(insert\s+into|update|delete\s+from)\s+teacher_homework_(attempts|responses)/.test(body4(f))), []);
+t.is('and no open, save, submit or grade appears anywhere in the file',
+  [...H4C.matchAll(/create or replace function (student_homework_(open|save|submit)|teacher_homework_grade)\w*/g)].map((m) => m[0]), []);
+t.ok('the staff roster reads attempts but never writes them',
+  /left join teacher_homework_attempts/.test(body4('teacher_homework_students')));
+
+// ══ 36 · THE ROLLBACK, AND ITS WINDOW ═════════════════════════════════════
+t.section('20260904z: a window that closes on its own, said before the apply');
+
+t.ok('it is PREPARED and unapplied', /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H4Z));
+t.ok('it REFUSES while any code is reserved — releasing them is the hazard itself',
+  /rollback H4 refused: % retired homework code\(s\) are reserved/.test(H4ZC));
+t.ok('it does NOT refuse on attachments, and says what survives instead',
+  /raise notice/.test(H4ZC) && /They are NOT deleted/.test(H4ZC)
+  && !/rollback H4 refused[\s\S]{0,200}attachment/.test(H4ZC));
+/* The point the owner asked to be written down BEFORE the apply rather than
+   discovered after it. */
+t.ok('the header names both closing events up front',
+  /THE FIRST CODE ROTATION closes this rollback completely/.test(H4Z)
+  && /THE FIRST STUDENT ATTACHMENT closes the H2 rollback/.test(H4Z));
+t.ok('it restores both redefined bodies and asserts their H3 md5',
+  /c9c6e06c2f8c7978dd3dc871dfd1f13f/.test(H4ZC) && /58cedf72a23d0adcaac12ca27fd41c86/.test(H4ZC));
+/* Stronger than quoting the hashes: the restored text is compared against the
+   H3 file itself. A restore that is nearly right — one lost btrim() — is the
+   20260831e failure, and a quoted md5 alone would not catch it here. */
+t.is('and the body it restores IS 20260903b\u2019s, character for character',
+  [fnDef(H4Z, 'teacher_homework_create').body, fnDef(H4Z, 'teacher_homework_rotate_code').body],
+  [fnDef(TA, 'teacher_homework_create').body, fnDef(TA, 'teacher_homework_rotate_code').body]);
+t.ok('the refusal is a real condition, not a disabled one',
+  /if v_codes > 0 then/.test(H4ZC) && !/if false then/.test(H4ZC));
+t.is('it drops exactly what H4 added — five functions, two guards, two tables',
+  [...H4ZC.matchAll(/drop (?:function|table) if exists ([a-z_]+)/g)].map((m) => m[1]).sort(),
+  ['student_attach_homework', 'student_my_homework', 'teacher_homework_attach_attempts',
+   'teacher_homework_attach_attempts_guard', 'teacher_homework_can_open',
+   'teacher_homework_code_available', 'teacher_homework_retired_codes',
+   'teacher_homework_retired_codes_guard', 'teacher_homework_students']);
+t.ok('and it asserts H2 and the rest of H3 came back: 6 tables, 9 policies, 22 functions',
+  /<> 6 then/.test(H4ZC) && /<> 9 then/.test(H4ZC) && /<> 22 then/.test(H4ZC));
+t.ok('both H4 files are PREPARED and unapplied',
+  /STATUS: 🟡 PREPARED, not applied/.test(H4) && !/APPLIED 2026/.test(H4) && !/STATUS: ✅/.test(H4Z));
+
+// ══ 37 · THE FILE'S OWN VERIFICATION MUST BE ABLE TO FAIL ═════════════════
+t.section('§7 checks the four things that would actually break H4');
+
+/* A verification block is only evidence if its conditions are live. Each of
+   these was a surviving mutant until it was pinned: replacing any one with a
+   constant-false test left the suite green. */
+t.ok('§7.2 forbids a foreign key that could free reserved codes',
+  /conrelid = 'teacher_homework_retired_codes'::regclass and contype = 'f'\) then/.test(H4C));
+t.ok('§7.6 compares the positions of the limit and the code lookup',
+  /position\('too many attempts' in v_src\) > position\('''no_match''' in v_src\)/.test(H4C));
+t.ok('§7.7 counts the shared reason and requires exactly two',
+  /length\('''no_match'''\) <> 2 then/.test(H4C));
+t.ok('§7.7b forbids an expected refusal from raising',
+  /an expected refusal raises, which discards the attempt it just recorded/.test(H4C));
+t.ok('§7.13 pins the table count at eight',
+  /if v_n <> 8 then/.test(H4C));
+t.ok('and none of §7 has been disabled with a constant', !/if false then/.test(H4C));
+
 t.done();
