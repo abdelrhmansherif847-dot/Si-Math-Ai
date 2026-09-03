@@ -3265,3 +3265,143 @@ Deletion is not an option in any of them: an attempt **can never be deleted**
 this audit and are open: the wording of a repeated submission (§3), and the
 key-selection shape in the read RPC (§6). **S-2 remains open. D-4 to D-8 remain
 open. No implementation was prepared.**
+
+### 15.21 · S-2, repeat submit, concurrency and key selection — LOCKED
+
+**Still AUDIT ONLY.** No migration, no SQL change, no function, no policy, no
+UI. Probes aborted; all eight homework tables held 0 rows before and after.
+
+> **S-2.** An in-progress attempt is never deleted and never auto-converted. While
+> membership is inactive the student cannot start, resume, save or submit; the
+> attempt stays `in_progress`; if they rejoin and become active again they may
+> resume it. No `abandoned` status and no cleanup in H5. **A permanently
+> stranded `in_progress` attempt is an accepted lifecycle consequence, not a
+> defect.**
+
+> **Repeat submit.** Idempotent no-op: the first submit grades and transitions;
+> later calls mutate nothing and return the same summary. A retry must never turn
+> an already-successful submission into a student-visible error.
+
+> **Concurrency.** A correctness requirement, not an optimisation: save and
+> submit each lock the owning attempt with `FOR UPDATE` before validating and
+> writing. No response write may commit after the attempt is `submitted`.
+
+> **Key selection.** The correct answer and explanation are not selected at all
+> unless the caller is entitled to see them — separate entitled / non-entitled
+> branches rather than selecting the key and masking it.
+
+---
+
+#### 1 · Exact consequences
+
+**S-2 costs nothing and enforces nothing.** Measured: after removal the attempt
+was still `in_progress` with both responses intact — nothing deleted, nothing
+converted. But **the membership block is the RPC's alone**: saving into a removed
+student's in-progress attempt was **ACCEPTED at the table**. So S-2 and D-1's
+"live-rechecked" clause rest entirely on H5 re-checking membership on **every
+save and every submit**, not only at start. That must be an asserted contract,
+the way §7's checks are — it is the single load-bearing line of the decision.
+
+**A removed student keeps their own answers and loses the paper.** Measured: 2
+response rows and 1 attempt row still readable through RLS (`own_read` has no
+membership condition), and **0** question rows. Raw answers with nothing to read
+them against. No key exposure; recorded as an oddity, not a hole.
+
+**The composite consequence of D-1 + S-2, measured end to end.** Removed → the
+teacher closes the paper → the student rejoins and is active again → the sitting
+is still `in_progress` and, by the locked rules, still resumable and
+submittable. **So a closed paper can receive a submission an arbitrary time after
+it closed, from a student who had left the class in between.** That follows
+directly from the two locks and is recorded here so it is a decision rather than
+a surprise.
+
+**Repeat submit: the summary needs no storage.** Measured — recomputing the
+counts with no write returned exactly the first submit's figures
+(1 correct / 1 wrong / 0 omitted / 2 total), so the no-op branch can serve the
+same summary from a pure read.
+
+#### 2 · Conflicts
+
+**One, and it is with the repeat-submit lock.** The attempts guard raises
+`22000` on *any* update to a submitted attempt — measured: a naive second flip
+was refused. So an idempotent repeat submit must **branch on status before it
+writes**, exactly as `teacher_exam_submit` does (`if a.status = 'in_progress'
+then …`). *Attempting the write and catching the error is not the same thing*:
+the guard raises rather than no-opping, and catching `22000` would also swallow
+genuine failures.
+
+No other conflicts. S-2 conflicts with nothing precisely because the attempt
+stays `in_progress` and therefore stays writable at the table — which is why §1's
+RPC obligation matters. The lock ordering conflicts with nothing. Key selection
+is a shape choice inside a function that does not yet exist.
+
+#### 3 · Functions and policies that will eventually need changing
+
+| target | change | driver |
+|---|---|---|
+| `student_my_homework()` | `can_open` must become *may start* **or** *may resume*; and a surface that cannot open a paper needs to know why, so membership state is worth exposing | D-1, S-2 |
+| `teacher_homework_students()` | *optional* — expose whether the student is still an active member, so the roster can tell a stranded sitting from an active one | S-2 |
+| `teacher_homework_can_open()` | **none** — it is already exactly the new-start gate | D-1 (option a) |
+| every policy | **none at all** | D-2 |
+
+New functions H5 will add: a `can_resume`-shaped helper, the read RPC, start,
+save, submit. Nothing else in the live schema is touched.
+
+#### 4 · Lock ordering and deadlock implications
+
+**One rule covers it: every write path takes the attempt row first, and nothing
+takes it second.**
+
+| path | order |
+|---|---|
+| save | lock the attempt → verify `in_progress` + authorization → write the response |
+| submit | lock the attempt → verify `in_progress` → grade → flip |
+| start | lock the **homework** row → check the gate → insert the attempt (a row that does not exist yet, so uncontended) |
+| publish / close | lock the homework row — they already do |
+
+Measured compatibility:
+
+- **Readers are never blocked.** While `FOR UPDATE` was held on an attempt, the
+  staff roster read still returned its 2 rows.
+- **The response's own foreign key cannot deadlock against it.**
+  `teacher_homework_responses_attempt_fk` is
+  `FOREIGN KEY (attempt_id, homework_id) REFERENCES teacher_homework_attempts(id, homework_id)`,
+  so a response write takes `KEY SHARE` on the parent attempt — a lock
+  `FOR UPDATE` already dominates.
+
+**The one way to create a genuine cycle, recorded so it is avoided:** `start`
+holds the *homework* row and then touches an attempt. If `submit` ever took
+`FOR UPDATE` on the *homework* row while holding the attempt — for instance to
+read `due_at` when computing `late` — that is attempt → homework against start's
+homework → attempt, and it can deadlock. **Submit must read the homework without
+locking it.**
+
+#### 5 · Does the accepted stranded attempt create a secondary authorization issue
+
+**No authorization hole. Two non-authorization consequences and one obligation.**
+
+1. **The roster cannot tell stranded from active.** Measured:
+   `teacher_homework_students()` returned `in_progress / null` with no membership
+   signal, so a sitting whose student left looks exactly like one still being
+   worked on. An information gap the teacher will read wrongly — fixed by the
+   optional change in §3, not by a permission.
+2. **A removed student retains read access to their own answers** and none to
+   the questions. Their own work, no key, no other student's data. Not a hole.
+3. **The obligation from §1:** the database will happily let a removed student's
+   attempt be written. S-2 is only true while every H5 write path re-checks
+   membership live. If that check is ever dropped, removal silently stops
+   meaning anything — and nothing in the schema would notice.
+
+Nothing changes for `anon` (still nothing, everywhere), for staff parity, or for
+cross-student isolation.
+
+---
+
+**Locked so far: D-1, D-2, D-3, S-1, S-2, repeat-submit semantics, the
+save/submit locking rule, and the key-selection principle.** Still open: **D-4**
+(enforce grade-before-submit or rely on convention), **D-5** (`late` frozen at
+submit), **D-6** (audit labels for start/save/submit), **D-7** (staff answer
+review surface), **D-8** (start idempotency wording), and the hardening items
+**H-1** (no INSERT guard on attempts or responses), **H-2** (`last_answered_at`
+mutable after submit) and **H-3** (the key sits behind RLS, not behind a grant).
+**No implementation was prepared.**
