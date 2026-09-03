@@ -34,7 +34,7 @@ import {
   BANDS, BAND_SHARES, TRAP_MIX, MECHANISM_TARGETS, COMPOSITION_LIMITS,
   ARCHETYPE_DIVERSITY, TIME_BUDGET, MECHANISMS, admits, profileOf,
 } from './est-signatures.mjs';
-import { PRIMITIVES, trapLevel, assess } from './est-primitives.mjs';
+import { PRIMITIVES, trapLevel, assess, rng } from './est-primitives.mjs';
 import { generateRoutine, ROUTINE_FAMILIES, ROUTINE_CONSTRUCTS, CONSTRUCT_COUNTS, EMITS_STIMULUS,
          assessRoutine, stimulusSet, kindsFor } from './est-routine.mjs';
 import { composeClassifyNormalise, composeConvertCombine, composeNamedModel, assessComposed } from './est-compose.mjs';
@@ -43,6 +43,7 @@ import { INTERPRET_PRIMITIVES } from './est-interpret.mjs';
 import { fingerprintItem, detectClone } from './est-fingerprint.mjs';
 import { formGates, rebalanceKeys, contentKeysOf, itemSteps, AUTHENTICITY } from './est-form-gates.mjs';
 import { objectOf, objectDiversity, OBJECT_RULES } from './est-objects.mjs';
+import { signaturesOf, contentCollisions } from './est-content.mjs';
 
 /** What kind of thing an item asks for: value, selection, expression, equation. */
 const targetKindOf = it =>
@@ -118,8 +119,16 @@ export function buildPool({ seed = 4100, perConstruct = 10 } = {}) {
   }
 
   // core — routine mathematics with a rival-method trap
+  //
+  // TWICE the per-construct depth of the other streams, and the reason is
+  // measured: 28 of the 50 slots are Core, more than any other band, and a Core
+  // candidate has to clear `admits(Core, ...)` on top of every diversity gate.
+  // At equal depth the series-capacity expansion left two seeds in twelve one
+  // slot short — not because a gate was too strict but because the family's
+  // shallow pool had nothing left that fit. Depth is the fix; loosening a gate
+  // would not be.
   for (const id of Object.keys(CORE_CONSTRUCTS)) {
-    const r = generateCore(id, perConstruct, { seed, maxTries: perConstruct * 80 });
+    const r = generateCore(id, perConstruct * 2, { seed, maxTries: perConstruct * 160 });
     for (const e of r.rejected) note(`core/${id}: ${e}`);
     for (const it of r.items) {
       it.stream = 'core'; it.subForm = `C-${id}/${it.construct}`; it.family = CORE_SERVES[id];
@@ -281,7 +290,35 @@ export function assignBands(cap, composedFamilies, slots = SLOTS, alreadyPlaced 
 /* ────────────────────────── the fill ────────────────────────── */
 
 export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
-  const { pool, poolRejections } = buildPool({ seed, perConstruct });
+  const { pool: builtPool, poolRejections } = buildPool({ seed, perConstruct });
+
+  // ── THE POOL IS SHUFFLED PER SEED, AND THAT IS A SERIES FIX ────────────────
+  //
+  // Without it the assembler is deterministic in the one place it must not be.
+  // The matching sorts families and the fill loop takes the first admissible
+  // candidate in POOL ORDER, so the same family/band slot draws the same
+  // construct in every form of a series. The seed changed the numbers inside an
+  // item and never which item was asked.
+  //
+  // Measured before this shuffle, over 11 assembled forms: 37 of 99 pool
+  // constructs appeared in NONE of them — capacity and demand both present,
+  // zero emissions — including BOTH equation-targeted constructs, which is why
+  // ESTM2-2026-P3 emitted no equation item while the library contained one.
+  // Over 25 forms the pairwise object overlap was 41.95 of 50 against a
+  // random-draw prediction of 27.8 from the same vocabulary: an allocation
+  // penalty of 1.51x sitting on top of the vocabulary shortage.
+  //
+  // Shuffling costs nothing and changes no contract: every candidate still has
+  // to pass its stream's contract, its band's signature, anti-clone, content
+  // signatures and the object rule. It only stops the assembler preferring one
+  // construct over an equally admissible sibling for no reason.
+  const shuffle = (arr, s0) => {
+    const r = rng(s0 >>> 0);
+    const out = arr.slice();
+    for (let i = out.length - 1; i > 0; i--) { const j = r.int(0, i); [out[i], out[j]] = [out[j], out[i]]; }
+    return out;
+  };
+  const pool = shuffle(builtPool, seed * 2654435761);
   const composedFamilies = new Set(pool.filter(c => c.composedOf).map(c => c.family));
 
   const rejected = {};
@@ -309,8 +346,14 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
     return false;
   };
   const takeObject = it => { const o = objectOf(it); usedObject[o] = (usedObject[o] || 0) + 1; };
-  const contentClash = it => contentKeysOf(it).some(([k, v]) => usedContent.has(`${k}::${v}`));
-  const takeContent = it => { for (const [k, v] of contentKeysOf(it)) usedContent.add(`${k}::${v}`); };
+  // TWO detectors, deliberately. The Stage-3.5 axes still run, and the
+  // STRUCTURAL signatures of est-content.mjs run beside them, because the
+  // length threshold the first one used to decide what counted as distinctive
+  // never looked at `f(x) = 2x + 4` — nine characters — and ESTM2-2026-P3
+  // printed it at Q15 and again at Q47.
+  const keysOf = it => [...contentKeysOf(it), ...signaturesOf(it)];
+  const contentClash = it => keysOf(it).some(([k, v]) => usedContent.has(`${k}::${v}`));
+  const takeContent = it => { for (const [k, v] of keysOf(it)) usedContent.add(`${k}::${v}`); };
   const placed = [], unfilled = [], fingerprints = [];
   const stimuli = {};
   let composedCount = 0, retries = 0;
@@ -515,6 +558,8 @@ export function verify(run) {
   // the same footing as the Entry and Peak band counts below.
   const objects = run.placed.length === SLOTS.length ? objectDiversity(run.placed) : null;
   if (objects) for (const f of objects.failures) fails.push(`object diversity: ${f}`);
+  const structural = run.placed.length === SLOTS.length ? contentCollisions(run.placed) : null;
+  if (structural) for (const f of structural.failures) fails.push(`content signature: ${f}`);
   const gates = run.placed.length === SLOTS.length ? formGates(run.placed) : null;
   const measurements = [];
   const OPEN = /ask for a value|take a number of operations some Entry item also takes/;

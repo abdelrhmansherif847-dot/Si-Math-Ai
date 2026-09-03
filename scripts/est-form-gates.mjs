@@ -409,6 +409,16 @@ export function contentKeysOf(item) {
   return keys;
 }
 
+/**
+ * SUPERSEDED at the series-capacity pass by est-content.mjs.
+ *
+ * Kept because its four axes still run — the option grid and the constant
+ * combination in particular — but the length threshold it used to decide which
+ * math spans were "distinctive" is gone. `contentCollisions()` in est-content.mjs
+ * decides structurally instead, and the assembler consults both. The reason is
+ * recorded there: P3 printed `f(x) = 2x + 4` twice and this function's
+ * twelve-character floor never looked at a nine-character span.
+ */
 export function contentReuse(placements) {
   const seen = new Map();
   const collisions = [];

@@ -131,8 +131,9 @@ export function profileOf(item, trapLevelOf) {
   const present = MECHANISMS.filter(k => (m[k] || 0) >= 1).length;
   const biting = MECHANISMS.filter(k => (m[k] || 0) >= 2).length;
   const core = REASONING_CORE.filter(k => (m[k] || 0) >= 2).length;
+  const carry = DIFFICULTY_CARRYING.filter(k => (m[k] || 0) >= 2).length;
   const trap = trapLevelOf ? trapLevelOf(item).level : (item.trapLevel ?? null);
-  return { present, biting, core, trap, composed: !!item.composedOf };
+  return { present, biting, core, carry, trap, composed: !!item.composedOf };
 }
 
 /**
@@ -141,6 +142,74 @@ export function profileOf(item, trapLevelOf) {
  * `composition` is a permission, never a requirement: no band demands a
  * composed item, and the form-level cap keeps composition rare.
  */
+// ══════ MECHANISM PRESENCE, LOAD-BEARING, AND DIFFICULTY ARE THREE THINGS ══════
+//
+// ESTM2-2026-P3 placed four of its sixteen mechanism items in Stretch or Peak
+// slots and the blind coder returned all four to Entry or Core — while every one
+// of them was load-bearing under assess(). That is not a contradiction and
+// assess() is not weakened for it: assess() proves a mechanism is PRESENT and
+// that removing it breaks the item. Whether the item is HARD is a separate
+// question, and the corpus answers it.
+//
+// Across the 200 reference items, for each mechanism, the share of items where
+// it bites that are nonetheless Entry- or Core-band:
+//
+//   hidden_step        0 of 62   (0%)      <- a bite is never an easy item
+//   inference          0 of 26   (0%)
+//   nonobvious_rel     0 of 22   (0%)
+//   multiconcept       1 of 34   (3%)
+//   competing_interp   1 of 28   (4%)
+//   ---------------------------------------------------------------------
+//   reversal           1 of 15   (7%)      <- a bite is compatible with an easy item
+//   filtering          5 of 33  (15%)
+//   abstraction        7 of 45  (16%)
+//   repr_switch        7 of 39  (18%)
+//
+// The nine split into two classes and the line is sharp. Five CARRY difficulty:
+// where they bite, the item is essentially never easy. Four SUPPORT it: they are
+// real mechanisms, they are load-bearing, and an item can bite two of them and
+// still be a Core question. P3's Q2 bit `filtering` and `abstraction`, was
+// load-bearing, and coded RLx 7.
+//
+// Measured directly on the corpus: items with two or more mechanisms biting and
+// NONE of them carrying are n=8, banded Core 3 / Stretch 2 / Peak 3, mean RLx
+// 14.1. The same shape WITH a carrying bite is n=80, banded Stretch 22 / Peak
+// 58, mean RLx 17.1, and never Entry or Core.
+//
+// So Stretch's "two biting with four in play" route now requires one of the five
+// to be a carrying mechanism, and Core gains the shape that route used to
+// swallow. Reference admission is unchanged at 197/200; Stretch's easy-admission
+// rate falls from 9% to 7%; Peak stays at 0%; and a routine item, which bites at
+// most one mechanism, is refused by both.
+//
+// What separates a hard biting item from an easy one, measured over the 124
+// items where something bites (105 hard, 19 easy):
+//
+//   a reasoning-core mechanism bites   71% vs  5%   +0.66
+//   two or more mechanisms bite        81% vs 16%   +0.65
+//   three or more bite                 48% vs  0%   +0.48
+//   trap_cost == 2                     73% vs 26%   +0.47
+//   five or more mechanisms present    68% vs 26%   +0.41
+//   opacity == 2                       99% vs 58%   +0.41
+//   steps >= 4                         47% vs 42%   +0.05   <- separates nothing
+//   approaches >= 3                     6% vs 11%   -0.05   <- wrong direction
+//
+// `self_verify` behaves exactly as the coding schema predicted and is still
+// never summed: among biting items its three levels carry mean RLx 18.00, 15.49
+// and 14.65. A cheaply checkable item is easier at equal reasoning load.
+
+/** The five mechanisms whose bite is never compatible with an easy item. */
+export const DIFFICULTY_CARRYING = ['hidden_step', 'inference', 'multiconcept', 'nonobvious_rel', 'competing_interp'];
+
+/** The four that are load-bearing without being difficulty-carrying. */
+export const DIFFICULTY_SUPPORTING = ['repr_switch', 'filtering', 'abstraction', 'reversal'];
+
+/** Share of biting items that are nonetheless Entry- or Core-band, per mechanism. */
+export const MECHANISM_EASY_RATE = {
+  hidden_step: 0.00, inference: 0.00, nonobvious_rel: 0.00, multiconcept: 0.03, competing_interp: 0.04,
+  reversal: 0.07, filtering: 0.15, abstraction: 0.16, repr_switch: 0.18,
+};
+
 export const SIGNATURES = {
   Entry: {
     label: 'Entry',
@@ -150,16 +219,16 @@ export const SIGNATURES = {
   },
   Core: {
     label: 'Core',
-    admits: p => (p.trap === 2 || (p.trap >= 1 && p.present >= 5))
+    admits: p => (p.trap === 2 || (p.trap >= 1 && p.present >= 5) || (p.biting >= 2 && (p.carry || 0) === 0))
       && p.biting <= 2 && p.core <= 1 && p.present >= 1 && p.present <= 7 && !p.composed,
-    describe: 'either a FULL-COST trap — the natural first move is a rival method, not a slip — or a trap with five or more mechanisms in play; at most two biting and at most one from the reasoning core; never composed',
+    describe: 'a FULL-COST trap, or a trap with five or more mechanisms in play, or two mechanisms biting where neither is one of the five that carry difficulty; at most two biting and at most one from the reasoning core; never composed',
     composition: 'forbidden',
   },
   Stretch: {
     label: 'Stretch',
-    admits: p => (p.core >= 1 || p.trap === 2 || (p.biting >= 2 && p.present >= 4))
+    admits: p => (p.core >= 1 || p.trap === 2 || (p.biting >= 2 && p.present >= 4 && (p.carry || 0) >= 1))
       && p.biting >= 1 && p.biting <= 3 && p.core <= 2 && p.present >= 2,
-    describe: 'one to three mechanisms biting, at most two from the reasoning core, and either a reasoning-core mechanism at full strength, a full-cost trap, or two mechanisms biting with four or more in play; composition permitted but never required',
+    describe: 'one to three mechanisms biting, at most two from the reasoning core, and either a reasoning-core mechanism at full strength, a full-cost trap, or two mechanisms biting with four in play of which one CARRIES difficulty; composition permitted but never required',
     composition: 'allowed',
   },
   Peak: {

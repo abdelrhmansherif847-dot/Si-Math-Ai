@@ -280,6 +280,115 @@ export const CONSTRUCT_OBJECT = {
   'mechanism:aggregate_invariance': 'sum-product-then-half-greater',
   'core:consecutive-odd-integers': 'consecutive-integers-sum',
   'core:divisibility-consequence': 'roman-numeral-properties',
+
+  // ══ Series-capacity library expansion (scripts/est-vocabulary.mjs) ══
+  //
+  // Every entry below is a reference archetype the library previously could not
+  // build. They are registered here rather than derived from the module because
+  // a derived map would have to invoke 62 builders at import time; the pairing
+  // is held honest instead by tests/est-vocabulary.test.mjs, which builds every
+  // ask and asserts its (construct, object) pair appears here exactly once.
+
+  // ── Core-stream expansion (scripts/est-core-stream.mjs) ──
+  // Placed where blueprint core-slot demand exceeded the stream's supply.
+  'core:other-input-with-the-same-output': 'multi-valued-can-be',
+  'core:count-real-solutions-of-a-cubic': 'cubic-real-solution-count',
+  'core:inverse-of-a-shifted-reciprocal': 'inverse-function-rational',
+  'core:real-part-of-a-square': 'complex-number-composite',
+  'core:reverse-two-years-of-growth': 'compound-interest-reverse',
+  'core:rise-then-fall-does-not-cancel': 'percent-with-wrong-flip',
+  'core:slope-of-a-line-of-best-fit': 'best-fit-slope-read',
+  'core:cosine-from-a-given-sine': 'trig-costumed-algebra',
+  'core:circumference-from-two-points': 'circle-circumference-from-grid',
+  'core:two-draws-with-replacement': 'probability-squared-target',
+  'core:intercept-from-two-table-rows': 'linear-table-two-unknowns',
+  'core:parameter-for-no-solution': 'parametric-system-symbolic',
+  'core:sum-of-intersection-abscissae': 'curve-line-select-root',
+  'core:solve-then-evaluate-a-different-expression': 'translate-composite-target',
+  'core:parallel-cut-similar-triangles': 'similar-triangles-parallel-composite',
+  'core:one-bar-as-a-percent-of-another': 'bar-percent-to-other-category',
+  'core:percent-decrease-across-a-series': 'percent-decrease-two-series',
+  'core:scaled-table-selected-rows': 'scaled-axis-read',
+  // A01
+  'routine:chained-substitution': 'chained-substitution',
+  'routine:fraction-equation': 'fraction-equation-solve',
+  'routine:solve-then-substitute': 'linear-composite',
+  'routine:translate-then-solve': 'linear-verbal-substitution',
+  // A02
+  'routine:absolute-value-model': 'model-build-absvalue',
+  // A03
+  'routine:two-price-system': 'two-price-system-money',
+  'routine:third-bundle': 'two-purchase-system-third-bundle',
+  // A04
+  'routine:point-test-count': 'compound-inequality-point-test',
+  'routine:quadratic-inequality-count': 'quadratic-inequality-numberline',
+  'routine:unique-integer-solution': 'inequality-intersection-unique',
+  // A05
+  'routine:slope-from-standard-form': 'parallel-slope-standard-form',
+  'routine:perpendicular-bisector-slope': 'perpendicular-through-midpoint',
+  'routine:complete-a-linear-table': 'table-linear-missing',
+  // A06
+  'routine:product-of-roots': 'product-of-roots',
+  'routine:axis-of-symmetry': 'axis-of-symmetry-parameter',
+  'routine:root-difference': 'roots-ordered-select',
+  'routine:range-lower-bound': 'quadratic-range',
+  'routine:intersection-abscissa-sum': 'line-parabola-intersection',
+  'routine:parameters-from-roots': 'parameters-from-roots',
+  'routine:least-value-of-a-parabola': 'vertex-paraphrased',
+  'routine:fit-a-parabola-to-three-points': 'quadratic-through-three-points',
+  // A07
+  'routine:match-coefficients': 'coefficient-matching-identity',
+  'routine:sum-of-roots-of-a-factored-cubic': 'cubic-factors-sum-roots',
+  'routine:remainder-theorem-parameter': 'divisibility-remainder-parameter',
+  'routine:product-of-roots-of-a-biquadratic': 'biquadratic-product-roots',
+  // A08
+  'routine:count-vertical-asymptotes': 'asymptote-count',
+  'routine:inverse-not-reciprocal': 'inverse-vs-reciprocal',
+  'routine:divide-two-fractions': 'complex-fraction-simplify',
+  'routine:excluded-output': 'range-of-rational',
+  'routine:clear-a-denominator': 'rational-equation-composite',
+  // A09
+  'routine:evaluate-a-quadratic-function': 'function-eval',
+  'routine:compose-two-functions': 'symbolic-composition',
+  'routine:reverse-read-a-function-table': 'table-from-function-value',
+  // A10
+  'routine:power-of-a-power': 'exponent-law-substitution',
+  'routine:radical-index': 'radical-index-simplify',
+  'routine:sign-constrained-root': 'radicals-sign-constrained',
+  'routine:evaluate-radical-expression': 'substitute-into-radical',
+  'routine:solve-a-radical-equation': 'exponent-radical-equation',
+  'routine:equate-exponents-across-bases': 'exponent-equation-composite',
+  'routine:radical-equation-with-a-parameter': 'radical-equation-parameter',
+  // A11
+  'routine:direct-variation-with-a-square': 'direct-variation-square',
+  'routine:solve-for-the-day-count': 'linear-extrapolation-daycount',
+  'routine:exponential-growth-step-count': 'exponential-growth-offbyone',
+  // A12
+  'routine:undo-a-percent-increase': 'reverse-percentage',
+  'routine:percent-change-with-the-right-base': 'percent-change-base',
+  'routine:three-part-ratio': 'ratio-three-part-largest',
+  'routine:crossover-of-two-linear-costs': 'fixed-plus-variable-compare',
+  // A13
+  'routine:rate-of-change-from-a-table': 'rate-of-change-two-rows',
+  'routine:mean-from-a-frequency-table': 'weighted-mean-frequency',
+  'routine:total-then-percent-of-a-category': 'whole-sum-then-percent',
+  // A14
+  'routine:interquartile-range': 'interquartile-range',
+  'routine:residual-from-a-model': 'residual-actual-vs-predicted',
+  // A15
+  'routine:expected-value': 'expected-value',
+  'routine:probability-of-a-number-property': 'probability-number-property',
+  'routine:enumerate-under-a-constraint': 'constrained-enumeration',
+  // A16
+  'routine:co-interior-angle': 'angle-chase-parallel',
+  'routine:angles-in-a-given-ratio': 'angle-chase-two-variables',
+  'routine:altitude-to-the-hypotenuse': 'similar-right-triangles-altitudes',
+  // A17
+  'routine:area-of-a-square-from-its-diagonal': 'square-from-diagonal',
+  'routine:cone-height-from-slant': 'cone-slant-vs-height',
+  'routine:fourth-vertex-of-a-parallelogram': 'parallelogram-centre-midpoint',
+  // A18
+  'routine:count-solutions-of-a-nested-absolute-value': 'absolute-value-nested-count',
 };
 
 /** The object an assembled item produces. */

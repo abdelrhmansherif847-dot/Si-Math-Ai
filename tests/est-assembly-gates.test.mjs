@@ -12,7 +12,7 @@
 import { assemble, verify, bottleneck, BAND_PLAN } from '../scripts/est-assemble.mjs';
 import { BANDS, BAND_SHARES, COMPOSITION_LIMITS, ARCHETYPE_DIVERSITY, admits, profileOf } from '../scripts/est-signatures.mjs';
 import { trapLevel, assess, Q } from '../scripts/est-primitives.mjs';
-import { assessRoutine, ROUTINE_CONSTRUCTS, ROUTINE_FAMILIES, kindsFor, READERS, stimulusSet } from '../scripts/est-routine.mjs';
+import { assessRoutine, ROUTINE_CONSTRUCTS, ROUTINE_FAMILIES, kindsFor, READERS, readersFor, stimulusSet } from '../scripts/est-routine.mjs';
 import { assessComposed } from '../scripts/est-compose.mjs';
 import { fingerprintItem, detectClone } from '../scripts/est-fingerprint.mjs';
 import { SLOTS, SET_RULES } from '../scripts/est-blueprint.mjs';
@@ -80,9 +80,13 @@ ok(base.placed.every(p => p.item.stream), 'every placed item records which strea
   ok(kindsFor(Array(9).fill('A13')).length === 0,
     'MUTATION stimulus: a set demanding more readings than any display offers has no serving kind');
   ok(kindsFor(['A13', 'A13', 'A14']).length > 0, 'and a set the readers do cover finds one');
-  const r = stimulusSet('bar-chart', ['A13', 'A13'], 99,
-    new Set(['bar-difference', 'bar-total', 'bar-argmax', 'bar-above-threshold',
-             'bar-percent-change', 'core-bar-consecutive-pair']));
+  // The exclusion list is DERIVED from the reader pool, not typed out. Typed
+  // out, it silently stopped being "every reader" the moment the series-capacity
+  // pass added two Core bar readers, and the mutation passed for the wrong
+  // reason — the set became unbuildable in the test's imagination only.
+  const everyBarReader = new Set(Object.values(readersFor('bar-chart')).flat().map(x => x.name));
+  ok(everyBarReader.size >= 6, `the bar-chart pool offers ${everyBarReader.size} readers to exclude`);
+  const r = stimulusSet('bar-chart', ['A13', 'A13'], 99, everyBarReader);
   ok(!!r.error, 'MUTATION stimulus: excluding every reader of a kind makes the set unbuildable, and it says so');
 }
 
@@ -137,8 +141,21 @@ ok(base.placed.every(p => p.item.stream), 'every placed item records which strea
     const asserted = b !== 'Entry' && b !== 'Peak';
     if (asserted) ok(band[b] >= lo && band[b] <= hi, `band ${b} = ${band[b]}, inside ${lo}..${hi}`);
   }
-  const outOfRange = verify(base).measurements.filter(m => /^band (Entry|Peak)/.test(m));
-  ok(outOfRange.length >= 1, `Entry and Peak are recorded as open measurements: ${outOfRange.join('; ') || 'none'}`);
+  // This asserted that Entry and Peak were ACTUALLY out of range, which stopped
+  // being true when the series-capacity expansion gave the thin bands enough
+  // structures to hit their share. A test that fails because the generator got
+  // better is testing the wrong thing: what matters is the CLASSIFICATION —
+  // an Entry or Peak deviation is recorded as an open measurement, never as a
+  // failure, and a Core or Stretch deviation is a failure. So force each.
+  for (const open of ['Entry', 'Peak']) {
+    const forced = clone(base);
+    forced.placed = forced.placed.map(p => ({ ...p, band: open }));
+    const v = verify(forced);
+    ok(v.measurements.some(m => new RegExp(`^band ${open}`).test(m)),
+      `a ${open} deviation is recorded as an open measurement`);
+    ok(!v.fails.some(f => new RegExp(`^band ${open}`).test(f)),
+      `a ${open} deviation is not recorded as a failure`);
+  }
   const starved = clone(base);
   starved.placed = starved.placed.map(p => ({ ...p, band: p.band === 'Stretch' ? 'Core' : p.band }));
   const v = verify(starved);

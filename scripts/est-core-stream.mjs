@@ -727,6 +727,409 @@ const CONSTRUCTS = {
           narrative: 'one-integer-constrained', numeric: ['divisor'] },
       }, v => texts[qNum(v)]);
   },
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SERIES-CAPACITY EXPANSION
+     ══════════════════════════════════════════════════════════════════════
+
+     Measured, not guessed. Over twelve assembled forms the Core stream fills
+     12.4 of 50 slots from 17 objects and 8 of those 17 appear in EVERY form;
+     the mechanism stream fills 19.2 from 22 objects with 16 in every form. The
+     routine stream, after 62 new asks, holds 55 objects at 3.4 forms each. So
+     the series-reuse the generator still has is almost entirely Core and
+     mechanism, and adding routine vocabulary cannot touch it: routine is 16 of
+     50 slots and its objects were already spread.
+
+     Blueprint core-slot demand against the supply this pass started with:
+     A13 wanted 6 and had 0 constructs of its own (only readers), A09 wanted 3
+     and had 1, A07/A08/A14 wanted 2 each and had 1, A10 wanted 1 and had none.
+     Every construct below closes one of those, and every one of them names a
+     reference archetype the library previously could not build.               */
+
+  // The parabola's symmetry, asked as "which other input gives this output".
+  // The rival solves f(a) = 0 — a different question, answered correctly.
+  A09b: (rand) => {
+    const h = rand.int(2, 7), d = rand.int(1, 3);
+    const x0 = h + d, key = h - d, zero = 2 * h;         // the given input, the answer, f's other zero
+    if (2 * h <= 3 * d) return { error: 'the axis is not near the key' };
+    if (key === 0 || [zero, x0, h].some(v => v === key) || zero === x0 || zero === h || x0 === h)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('the axis of symmetry is x = h', Q(h)), S('reflect the given input across it', Q(key))],
+      [S('set f(a) = 0', Q(0)), S('take the non-zero root', Q(zero))],
+      [{ name: 'reported-the-given-input', value: Q(x0), cost: 1 },
+       { name: 'reported-the-axis-of-symmetry', value: Q(h), cost: 1 }],
+      { family: 'A09', construct: 'other-input-with-the-same-output',
+        method: 'reflect-across-the-axis-of-symmetry', rivalName: 'solved-for-a-zero-instead',
+        stem: `The function $f$ is defined by $f(x) = x^{2} ${term(-2 * h, 'x')}$. If $f(a) = f(${x0})$ and $a \\neq ${x0}$, ` +
+              `what is the value of $a$?`,
+        mechanism: { abstraction: 1, nonobvious_rel: 1, reversal: 1 },
+        fingerprintParts: { ctx: 'quadratic no-stimulus', chain: ['locate-the-axis', 'reflect-the-input'],
+          target: 'value:input', options: 'symmetry-rivals', distract: ['D2', 'D6', 'D3'],
+          narrative: 'symbols-only:equal-outputs', numeric: ['axis', 'given-input'] } });
+  },
+
+  // How many real solutions, where the rival counts the non-zero ones.
+  A07b: (rand) => {
+    // Three shapes, not one. A single shape gave this construct nine possible
+    // instances, and with A07 holding two Core slots the anti-clone rule left a
+    // seed in sixteen with nothing placeable. The shapes differ in what gets
+    // lost when you divide through — a root, or a repeated root's multiplicity
+    // — so they are three instances of one object, not three objects.
+    const k = rand.pick([1, 4, 9, 16, 25, 36, 49, 64, 81]);
+    const r = Math.round(Math.sqrt(k));
+    const a = rand.nonZero(-9, 9);
+    const shape = rand.pick(['cubic', 'quartic', 'repeated']);
+    const spec = {
+      cubic: { key: 3, rival: 2, slips: [1, 0], divisor: 'x',
+        stem: `How many distinct real solutions does the equation $x^{3} = ${k}x$ have?`,
+        left: 'factor out x', right: 'divide both sides by x' },
+      quartic: { key: 3, rival: 2, slips: [4, 1], divisor: 'x squared',
+        stem: `How many distinct real solutions does the equation $x^{4} = ${k}x^{2}$ have?`,
+        left: 'factor out x squared', right: 'divide both sides by x squared' },
+      repeated: { key: 2, rival: 1, slips: [3, 0], divisor: 'x squared',
+        stem: `How many distinct real solutions does the equation $x^{3} ${term(a, 'x^{2}')} = 0$ have?`,
+        left: 'factor out x squared', right: 'divide both sides by x squared' },
+    }[shape];
+    if (shape !== 'repeated' && r * r !== k) return { error: 'the roots are not printable' };
+    return OK(rand,
+      [S(spec.left, Q(0)), S('count every distinct root of the factored form', Q(spec.key))],
+      [S(spec.right, Q(1)), S('count the roots that remain', Q(spec.rival))],
+      [{ name: 'counted-roots-with-multiplicity', value: Q(spec.slips[0]), cost: 1 },
+       { name: 'lost-every-root-but-one', value: Q(spec.slips[1]), cost: 1 }],
+      { family: 'A07', construct: 'count-real-solutions-of-a-cubic',
+        method: 'factor-then-count-all-roots', rivalName: `divided-through-by-${spec.divisor.replace(' ', '-')}-first`,
+        stem: spec.stem,
+        mechanism: { abstraction: 1, filtering: 1, hidden_step: 1 },
+        fingerprintParts: { ctx: 'polynomials no-stimulus', chain: ['factor-the-polynomial', 'count-the-distinct-roots'],
+          target: 'value:count', options: 'lost-root-rivals', distract: ['D3', 'D6', 'D6'],
+          narrative: `symbols-only:${shape}-equation`, numeric: ['coefficient'] } });
+  },
+
+  // The inverse of a shifted reciprocal, against evaluating it forwards.
+  A08b: (rand) => {
+    const h = rand.int(2, 7), c = rand.int(2, 6), y = c + rand.int(1, 4);
+    const key = qAdd(Q(h), Q(1, y - c));                 // solve y = 1/(x-h) + c
+    const fwd = qAdd(Q(1, y - h), Q(c));                 // f(y): a different question
+    if (y === h) return { error: 'the forward evaluation is undefined' };
+    if (qEq(key, fwd) || qEq(key, Q(1, y)) || qEq(fwd, Q(1, y)) || qEq(key, Q(h)) || qEq(fwd, Q(h)))
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('subtract the outer constant', Q(y - c)), S('invert and add the shift', key)],
+      [S('substitute the given number into f', Q(1, y - h)), S('add the outer constant', fwd)],
+      [{ name: 'took-the-reciprocal-of-the-input', value: Q(1, y), cost: 1 },
+       { name: 'reported-the-shift', value: Q(h), cost: 1 }],
+      { family: 'A08', construct: 'inverse-of-a-shifted-reciprocal',
+        method: 'undo-each-operation-in-turn', rivalName: 'evaluated-the-function-forwards',
+        stem: `The function $f$ is defined by $f(x) = \\dfrac{1}{x - ${h}} + ${c}$. What is the value of $f^{-1}(${y})$?`,
+        mechanism: { abstraction: 1, reversal: 1, repr_switch: 1 },
+        fingerprintParts: { ctx: 'rational-function no-stimulus', chain: ['peel-the-outer-constant', 'invert-the-reciprocal'],
+          target: 'value:inverse', options: 'direction-rivals', distract: ['D2', 'D3', 'D6'],
+          narrative: 'symbols-only:shifted-reciprocal', numeric: ['shift', 'constant', 'output'] } });
+  },
+
+  // The real part of a square, against the modulus squared.
+  A10: (rand) => {
+    // a >= 2b keeps the modulus-squared rival inside the factor-of-three window
+    // without rejection: (a^2 + b^2) < 3(a^2 - b^2) whenever a > b * sqrt(2).
+    const b = rand.int(1, 3), a = rand.int(2 * b, 7);
+    const key = a * a - b * b, mod = a * a + b * b, im = 2 * a * b;
+    if (key === 0 || [mod, im, a * a].some(v => v === key) || mod === im || mod === a * a || im === a * a)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('expand the square', Q(a * a)), S('replace i^2 with -1 and collect the real terms', Q(key))],
+      [S('square each component', Q(b * b)), S('add them as if i^2 were +1', Q(mod))],
+      [{ name: 'reported-the-imaginary-part', value: Q(im), cost: 1 },
+       { name: 'squared-only-the-real-component', value: Q(a * a), cost: 1 }],
+      { family: 'A10', construct: 'real-part-of-a-square',
+        method: 'expand-then-apply-i-squared', rivalName: 'added-the-squares-instead',
+        stem: `In the complex number system, $i^{2} = -1$. What is the real part of $(${a} + ${b}i)^{2}$?`,
+        mechanism: { abstraction: 1, repr_switch: 1, hidden_step: 1 },
+        fingerprintParts: { ctx: 'complex-numbers no-stimulus', chain: ['expand-the-binomial-square', 'apply-i-squared'],
+          target: 'value:real-part', options: 'sign-of-i-squared-rivals', distract: ['D3', 'D2', 'D2'],
+          narrative: 'symbols-only:complex-square', numeric: ['real', 'imaginary'] } });
+  },
+
+  // Undoing two years of growth, against applying the same percent downward.
+  A11c: (rand) => {
+    const p = rand.pick([20, 25, 50]), base = rand.int(2, 9);
+    const up = (100 + p) / 100, down = (100 - p) / 100;
+    const key = base * 10000, final = key * up * up;
+    const rival = final * down * down, oneYear = key * up;
+    if (!Number.isInteger(final) || !Number.isInteger(rival)) return { error: 'a price is not a whole number' };
+    const flat = final - Math.round(final * 2 * p / 100);
+    if (!Number.isInteger(final * 2 * p / 100)) return { error: 'the flat-percent slip is not whole' };
+    if ([rival, oneYear, flat].some(v => v === key) || rival === oneYear || rival === flat || oneYear === flat)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('divide by the growth factor', Q(oneYear)), S('divide by it again', Q(key))],
+      [S('reduce the final value by the same percent', Q(final * down)), S('reduce it again', Q(rival))],
+      [{ name: 'undid-only-one-year', value: Q(oneYear), cost: 1 },
+       { name: 'subtracted-twice-the-percent-of-the-final-value', value: Q(flat), cost: 2 }],
+      { family: 'A11', construct: 'reverse-two-years-of-growth',
+        method: 'divide-by-the-growth-factor-twice', rivalName: 'applied-the-same-percent-downward',
+        stem: `An investment grows by ${p}% each year. After two years it is worth $${final}. ` +
+              `What was it worth at the start?`,
+        mechanism: { abstraction: 1, reversal: 1, multiconcept: 1 },
+        fingerprintParts: { ctx: 'growth no-stimulus', chain: ['identify-the-growth-factor', 'divide-it-out-twice'],
+          target: 'value:initial', options: 'direction-rivals', distract: ['D2', 'D3', 'D3'],
+          narrative: 'words-only:two-year-growth', numeric: ['percent', 'final-value'] } });
+  },
+
+  // A rise and a fall of the same percent, which do NOT cancel.
+  A12c: (rand) => {
+    const p = rand.pick([10, 20, 25, 50]), key = rand.int(2, 9) * 100;
+    const up = key * (100 + p) / 100, final = up * (100 - p) / 100;
+    // Undoing the fall correctly lands on the mid-point price — those are the
+    // same number, which made two options identical on 46 of 60 seeds. The
+    // second slip adds the percent back instead of dividing it out.
+    const fallFirst = key * (100 - p) / 100;             // whole because the key is a multiple of 100
+    if (!Number.isInteger(final)) return { error: 'the final price is not whole' };
+    if ([final, up, fallFirst].some(v => v === key) || final === up || final === fallFirst || up === fallFirst)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('undo the fall', Q(up)), S('undo the rise', Q(key))],
+      [S('note the two percents are equal', Q(p)), S('conclude they cancel, so the price is unchanged', Q(final))],
+      [{ name: 'undid-only-the-fall', value: Q(up), cost: 1 },
+       { name: 'applied-the-fall-to-the-original-price', value: Q(fallFirst), cost: 2 }],
+      { family: 'A12', construct: 'rise-then-fall-does-not-cancel',
+        method: 'undo-each-change-in-turn', rivalName: 'assumed-the-two-percents-cancel',
+        stem: `The price of an item rose by ${p}% and then fell by ${p}%. It is now $${final}. ` +
+              `What was the price, in dollars, before the rise?`,
+        mechanism: { abstraction: 1, nonobvious_rel: 1, reversal: 1 },
+        fingerprintParts: { ctx: 'percent no-stimulus', chain: ['undo-the-second-change', 'undo-the-first'],
+          target: 'value:original', options: 'cancellation-rivals', distract: ['D2', 'D3', 'D2'],
+          narrative: 'words-only:two-price-changes', numeric: ['percent', 'final-price'] } });
+  },
+
+  // The slope of a line of best fit, against the reciprocal slope.
+  A14b: (rand) => {
+    const x1 = rand.int(1, 5), dx = rand.int(2, 6), m = rand.int(2, 6);
+    const y1 = rand.int(2, 15), x2 = x1 + dx, y2 = y1 + m * dx;
+    const inv = Q(dx, m * dx), dy = m * dx;
+    if (qEq(inv, Q(m)) || dy === m || qEq(Q(y1, x1), Q(m)) || qEq(Q(y1, x1), inv) || Q(y1, x1).n === dy * Q(y1, x1).d)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('find the change in y', Q(dy)), S('divide by the change in x', Q(m))],
+      [S('find the change in x', Q(dx)), S('divide by the change in y', inv)],
+      [{ name: 'reported-the-total-rise', value: Q(dy), cost: 1 },
+       { name: 'used-the-first-point-as-a-ratio', value: Q(y1, x1), cost: 2 }],
+      { family: 'A14', construct: 'slope-of-a-line-of-best-fit',
+        method: 'rise-over-run', rivalName: 'run-over-rise',
+        stem: `A line of best fit passes through the points $(${x1}, ${y1})$ and $(${x2}, ${y2})$. What is its slope?`,
+        mechanism: { abstraction: 1, repr_switch: 1, multiconcept: 1 },
+        fingerprintParts: { ctx: 'statistics no-stimulus', chain: ['difference-the-coordinates', 'form-the-ratio'],
+          target: 'value:slope', options: 'ratio-orientation-rivals', distract: ['D2', 'D1', 'D2'],
+          narrative: 'symbols-only:two-points', numeric: ['x1', 'y1', 'run', 'slope'] } });
+  },
+
+  // A trigonometric ratio in disguise: the rival forms a different ratio, correctly.
+  A16b: (rand) => {
+    const [o, a, h] = rand.pick([[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15]]);
+    const key = Q(a, h), tan = Q(o, a), given = Q(o, h), sec = Q(h, a);
+    if ([tan, given, sec].some(v => qEq(v, key)) || qEq(tan, given) || qEq(tan, sec) || qEq(given, sec))
+      return { error: 'two ratios coincide' };
+    return OK(rand,
+      [S('find the third side', Q(a)), S('form adjacent over hypotenuse', key)],
+      [S('find the third side', Q(a)), S('form opposite over adjacent', tan)],
+      [{ name: 'repeated-the-given-ratio', value: given, cost: 1 },
+       { name: 'inverted-the-cosine', value: sec, cost: 2 }],
+      { family: 'A16', construct: 'cosine-from-a-given-sine',
+        method: 'complete-the-triangle-then-take-cosine', rivalName: 'formed-the-tangent-instead',
+        stem: `In a right triangle, the measure of angle $A$ is acute and $\\sin A = \\dfrac{${o}}{${h}}$. ` +
+              `What is the value of $\\cos A$?`,
+        mechanism: { abstraction: 1, repr_switch: 1, multiconcept: 1 },
+        fingerprintParts: { ctx: 'trigonometry no-stimulus', chain: ['find-the-missing-side', 'form-the-named-ratio'],
+          target: 'value:ratio', options: 'which-ratio-rivals', distract: ['D2', 'D6', 'D3'],
+          narrative: 'words-only:right-triangle', numeric: ['opposite', 'hypotenuse'] } });
+  },
+
+  // Circumference in terms of pi, against area in terms of pi.
+  A17b: (rand) => {
+    const r = rand.pick([3, 5, 6, 7]), h = rand.int(-6, 6), k = rand.int(-6, 6);
+    // The doubled-diameter slip is twice the key, so a near distractor is
+    // guaranteed; the earlier guard tested the AREA for nearness and threw away
+    // every radius above five for a distractor that never had to be close.
+    const key = 2 * r, area = r * r;
+    if ([area, r, 4 * r].some(v => v === key) || area === r || area === 4 * r) return { error: 'two options coincide' };
+    return OK(rand,
+      [S('read the radius off the two points', Q(r)), S('apply C = 2 pi r', Q(key))],
+      [S('read the radius off the two points', Q(r)), S('apply A = pi r squared', Q(area))],
+      [{ name: 'reported-the-radius', value: Q(r), cost: 1 },
+       { name: 'doubled-the-diameter', value: Q(4 * r), cost: 2 }],
+      { family: 'A17', construct: 'circumference-from-two-points',
+        method: 'radius-then-circumference', rivalName: 'computed-the-area-instead',
+        stem: `In the $xy$-plane, a circle has centre $(${h}, ${k})$ and passes through $(${h + r}, ${k})$. ` +
+              `The circumference of the circle is $n\\pi$. What is the value of $n$?`,
+        mechanism: { abstraction: 1, repr_switch: 1, multiconcept: 1 },
+        fingerprintParts: { ctx: 'coordinate-geometry no-stimulus', chain: ['measure-the-radius', 'apply-the-circumference-formula'],
+          target: 'value:coefficient', options: 'formula-rivals', distract: ['D2', 'D6', 'D3'],
+          narrative: 'symbols-only:centre-and-point', numeric: ['centre-x', 'centre-y', 'radius'] } });
+  },
+
+  // Two draws WITH replacement, against two draws without.
+  A15c: (rand) => {
+    const red = rand.int(2, 5), blue = rand.int(3, 7), n = red + blue;
+    const key = Q(red * red, n * n), without = Q(red * (red - 1), n * (n - 1));
+    const one = Q(red, n), both = Q(2 * red, n);
+    if (red < 2) return { error: 'a second draw without replacement is impossible' };
+    if ([without, one, both].some(v => qEq(v, key)) || qEq(without, one) || qEq(without, both) || qEq(one, both))
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('probability of a red on one draw', one), S('square it, because the bag is restored', key)],
+      [S('probability of a red on one draw', one), S('multiply by the reduced second draw', without)],
+      [{ name: 'reported-a-single-draw', value: one, cost: 1 },
+       { name: 'added-the-two-draws', value: both, cost: 1 }],
+      { family: 'A15', construct: 'two-draws-with-replacement',
+        method: 'square-the-single-draw-probability', rivalName: 'computed-it-without-replacement',
+        stem: `A bag contains ${red} red marbles and ${blue} blue marbles. A marble is drawn at random, its colour is ` +
+              `recorded, and it is returned to the bag; then a second marble is drawn. What is the probability that ` +
+              `both marbles are red?`,
+        mechanism: { abstraction: 1, filtering: 1, multiconcept: 1 },
+        fingerprintParts: { ctx: 'probability no-stimulus', chain: ['single-draw-probability', 'combine-two-independent-draws'],
+          target: 'value:probability', options: 'replacement-rivals', distract: ['D2', 'D6', 'D3'],
+          narrative: 'words-only:two-draws', numeric: ['red', 'blue'] } });
+  },
+
+  // Two points of a linear function, extrapolated the wrong way by the rival.
+  A05c: (rand) => {
+    const m = rand.nonZero(-6, 6), b = rand.nonZero(-9, 9);
+    const x1 = rand.int(1, 4), x2 = x1 + rand.int(2, 5);
+    const y1 = m * x1 + b, y2 = m * x2 + b;
+    const wrongWay = y1 + m * x1;                        // f(2 x1): a different question
+    if ([wrongWay, m, -b].some(v => v === b) || wrongWay === m || wrongWay === -b || m === -b)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('find the constant difference per unit', Q(m)), S('step back from the first point to x = 0', Q(b))],
+      [S('find the constant difference per unit', Q(m)), S('step the same distance forward instead', Q(wrongWay))],
+      [{ name: 'reported-the-rate-of-change', value: Q(m), cost: 1 },
+       { name: 'stepped-back-with-the-wrong-sign', value: Q(-b), cost: 1 }],
+      { family: 'A05', construct: 'intercept-from-two-table-rows',
+        method: 'rate-then-step-back-to-zero', rivalName: 'stepped-forward-instead-of-back',
+        stem: `A linear function $f$ satisfies $f(${x1}) = ${y1}$ and $f(${x2}) = ${y2}$. What is the value of $f(0)$?`,
+        mechanism: { abstraction: 1, repr_switch: 1, reversal: 1 },
+        fingerprintParts: { ctx: 'lines no-stimulus', chain: ['find-the-rate', 'extrapolate-to-the-intercept'],
+          target: 'value:intercept', options: 'direction-rivals', distract: ['D3', 'D6', 'D6'],
+          narrative: 'symbols-only:two-function-values', numeric: ['x1', 'x2', 'slope', 'intercept'] } });
+  },
+
+  // A01 and A16 each held one Core object against a Core slot the blueprint asks
+  // for every form, so that object appeared in all twelve measured forms. Two
+  // more structures, from the same measured list.
+
+  // Solve, then answer a DIFFERENT expression. The rival applies the target
+  // expression to the number the question printed, which is arithmetic done
+  // correctly on the wrong quantity.
+  A01c: (rand) => {
+    const m = rand.int(2, 5), k = rand.int(2, 9), n = rand.int(2, 9);
+    const total = m * n + k;
+    const tm = rand.int(2, 4), tk = rand.int(2, 9);
+    const key = tm * n - tk, rival = tm * total - tk;
+    const bare = tm * n;
+    if (key <= 0 || [rival, n, bare].some(v => v === key) || rival === n || rival === bare || n === bare)
+      return { error: 'two options coincide' };
+    if (Math.abs(n) <= Math.abs(key) / 3 || Math.abs(n) >= Math.abs(key) * 3)
+      return { error: 'no distractor is near the key' };
+    return OK(rand,
+      [S('undo the addition', Q(m * n)), S('divide by the multiplier', Q(n)), S('evaluate the asked expression', Q(key))],
+      [S('take the stated total', Q(total)), S(`multiply it by ${tm}`, Q(tm * total)), S('subtract the offset', Q(rival))],
+      [{ name: 'reported-the-number-itself', value: Q(n), cost: 2 },
+       { name: 'forgot-the-subtraction-in-the-target', value: Q(bare), cost: 2 }],
+      { family: 'A01', construct: 'solve-then-evaluate-a-different-expression',
+        method: 'solve-for-the-number-then-substitute', rivalName: 'applied-the-target-to-the-printed-total',
+        stem: `${m} times a number, increased by ${k}, is ${total}. What is ${tm} times the number, decreased by ${tk}?`,
+        mechanism: { abstraction: 1, repr_switch: 1, hidden_step: 1 },
+        fingerprintParts: { ctx: 'linear no-stimulus', chain: ['translate-the-sentence', 'solve', 'evaluate-the-target'],
+          target: 'value:expression', options: 'which-quantity-rivals', distract: ['D2', 'D6', 'D3'],
+          narrative: 'words-only:two-expressions', numeric: ['multiplier', 'offset', 'total', 'target-m', 'target-k'] } });
+  },
+
+  // A midline-style similar triangle. The rival forms AD/DB — a real ratio in
+  // the figure, and the wrong one.
+  A16c: (rand) => {
+    const ad = rand.int(2, 8), db = rand.int(2, 8), t = rand.int(2, 5);
+    if (ad === db) return { error: 'the two segments are equal, so the ratios coincide' };
+    const ab = ad + db, bc = ab * t;
+    const key = ad * t, rival = Q(bc * ad, db), wrongPart = Q(bc * db, ab);
+    if (qEq(rival, Q(key)) || qEq(rival, Q(bc)) || qEq(rival, wrongPart) || qEq(rival, Q(ab))
+        || [bc, qNum(wrongPart), ab].some(v => v === key) || bc === qNum(wrongPart))
+      return { error: 'two options coincide' };
+    if (qNum(rival) <= key / 3 || qNum(rival) >= key * 3) return { error: 'the wrong-ratio rival is not a near miss' };
+    return OK(rand,
+      [S('find the whole side', Q(ab)), S('form the ratio of the part to the whole', Q(ad, ab)), S('scale the parallel side', Q(key))],
+      [S('read the two parts', Q(ad)), S('form the ratio of one part to the other', Q(ad, db)), S('scale the parallel side', rival)],
+      [{ name: 'reported-the-given-parallel-side', value: Q(bc), cost: 1 },
+       { name: 'scaled-by-the-other-part', value: wrongPart, cost: 2 }],
+      { family: 'A16', construct: 'parallel-cut-similar-triangles',
+        method: 'part-over-whole-then-scale', rivalName: 'used-part-over-part',
+        stem: `In triangle $ABC$, point $D$ lies on $\\overline{AB}$ and point $E$ lies on $\\overline{AC}$, and ` +
+              `$\\overline{DE}$ is parallel to $\\overline{BC}$. If $AD = ${ad}$, $DB = ${db}$ and $BC = ${bc}$, ` +
+              `what is the length of $\\overline{DE}$?`,
+        mechanism: { abstraction: 1, nonobvious_rel: 1, multiconcept: 1 },
+        fingerprintParts: { ctx: 'geometry no-stimulus', chain: ['identify-the-similar-triangles', 'form-the-correct-ratio', 'scale'],
+          target: 'value:length', options: 'which-ratio-rivals', distract: ['D2', 'D6', 'D3'],
+          narrative: 'words-only:parallel-cut-triangle', numeric: ['ad', 'db', 'bc'] } });
+  },
+
+  // A06 held ONE Core construct against a Core slot the blueprint always asks
+  // for, and one seed in twelve had nothing left that fit. A second structure
+  // is the fix; loosening the slot rules would not have been.
+  //
+  // The intersection of a parabola and a line, where the rival reads the
+  // parabola's own roots — the right relation applied to the wrong equation.
+  A06b: (rand) => {
+    const b = rand.nonZero(-7, 7), c = rand.nonZero(-9, 9);
+    const m = rand.nonZero(-7, 7), d = rand.nonZero(-9, 9);
+    const key = m - b, ownRoots = -b, prod = c - d;
+    if (key === 0 || m === 2 * b) return { error: 'the two root sums coincide' };
+    if ([ownRoots, prod, m].some(v => v === key) || ownRoots === prod || ownRoots === m || prod === m)
+      return { error: 'two options coincide' };
+    if (Math.abs(ownRoots) <= Math.abs(key) / 3 || Math.abs(ownRoots) >= Math.abs(key) * 3)
+      return { error: 'the rival reading is not a near miss' };
+    return OK(rand,
+      [S('set the two expressions equal and collect', Q(b - m)), S('the sum of the roots is minus that coefficient', Q(key))],
+      [S('look at the parabola on its own', Q(b)), S('the sum of ITS roots is minus b', Q(ownRoots))],
+      [{ name: 'reported-the-product-of-the-intersection-abscissae', value: Q(prod), cost: 2 },
+       { name: 'reported-the-slope-of-the-line', value: Q(m), cost: 1 }],
+      { family: 'A06', construct: 'sum-of-intersection-abscissae',
+        method: 'equate-then-use-the-root-sum', rivalName: 'used-the-parabolas-own-roots',
+        stem: `In the $xy$-plane, the graph of $y = x^{2} ${term(b, 'x')} ${term(c, '')}$ intersects the line ` +
+              `$y = ${coef(m, 'x')} ${term(d, '')}$ at two points, whose $x$-coordinates are $p$ and $q$. ` +
+              `What is the value of $p + q$?`,
+        mechanism: { abstraction: 1, nonobvious_rel: 1, hidden_step: 1 },
+        fingerprintParts: { ctx: 'quadratic no-stimulus', chain: ['equate-the-two-curves', 'apply-the-root-sum-relation'],
+          target: 'value:root-sum', options: 'which-equation-rivals', distract: ['D2', 'D3', 'D6'],
+          narrative: 'symbols-only:parabola-and-line', numeric: ['coeff-b', 'const-c', 'slope-m', 'intercept-d'] } });
+  },
+
+  // The parameter that makes a system inconsistent, against matching constants.
+  A03b: (rand) => {
+    // The constants are put in a ratio ONE away from the coefficient ratio, so
+    // the rival answer is a near miss by construction. Sampling them freely put
+    // it outside the factor-of-three window, or on top of another option, on
+    // more than half of all seeds.
+    const c1 = rand.int(2, 5), c2 = rand.int(2, 4);
+    const t = c2 + rand.pick([-1, 1]);
+    if (t < 2) return { error: 'the constant ratio would be degenerate' };
+    const r2 = rand.int(2, 8), r1 = t * r2;
+    const key = c1 * c2;                                 // k / c1 = c2 / 1
+    const consts = Q(c1 * t);                            // matching the constant ratio instead
+    if (qEq(consts, Q(key)) || qEq(consts, Q(c1)) || qEq(consts, Q(c2)) || key === c1 || key === c2 || c1 === c2)
+      return { error: 'two options coincide' };
+    return OK(rand,
+      [S('write the ratio the coefficients must share', Q(c2)), S('solve for the parameter', Q(key))],
+      [S('write the ratio of the constants', Q(r1, r2)), S('solve as if that were the condition', consts)],
+      [{ name: 'matched-the-x-coefficients', value: Q(c1), cost: 1 },
+       { name: 'matched-the-y-coefficients', value: Q(c2), cost: 1 }],
+      { family: 'A03', construct: 'parameter-for-no-solution',
+        method: 'match-the-coefficient-ratios', rivalName: 'matched-the-constant-ratio-instead',
+        stem: `The system of equations $kx + ${coef(c2, 'y')} = ${r1}$ and $${coef(c1, 'x')} + y = ${r2}$ has no solution. ` +
+              `What is the value of $k$?`,
+        mechanism: { abstraction: 1, nonobvious_rel: 1, hidden_step: 1 },
+        fingerprintParts: { ctx: 'systems no-stimulus', chain: ['compare-the-coefficient-ratios', 'solve-for-the-parameter'],
+          target: 'value:parameter', options: 'which-ratio-rivals', distract: ['D2', 'D6', 'D6'],
+          narrative: 'symbols-only:parametric-system', numeric: ['coeff-c1', 'coeff-c2', 'rhs-1', 'rhs-2'] } });
+  },
 };
 
 /* ────────────────────────── registry ────────────────────────── */
@@ -745,6 +1148,11 @@ export const CORE_SERVES = {
   // Non-value targets, added when the authenticity gate measured 88% of a
   // form asking for a value against the reference's 64-76%.
   A03: 'A03', A05b: 'A05', A18b: 'A18',
+  // Series-capacity expansion. Placed where the blueprint's core-slot demand
+  // exceeded the stream's supply, which was measured rather than assumed.
+  A09b: 'A09', A07b: 'A07', A08b: 'A08', A10: 'A10', A11c: 'A11',
+  A12c: 'A12', A14b: 'A14', A16b: 'A16', A17b: 'A17', A15c: 'A15',
+  A05c: 'A05', A03b: 'A03', A06b: 'A06', A01c: 'A01', A16c: 'A16',
 };
 
 /** Generate one Core item for a construct id, or an error. */
@@ -824,6 +1232,64 @@ export const CORE_READERS = {
           fingerprintParts: { ctx: 'stimulus:bar-chart shared', chain: ['total-adjacent-pairs', 'maximise-over-pairs'],
             target: 'value:pair-total', options: 'aggregation-rivals', distract: ['D2', 'D1', 'D1'],
             narrative: 'four-category-display', numeric: ['bar-values'] } });
+    } },
+
+    // "A is what percent of B" — the rival answers "B is what percent of A",
+    // correctly. Six of the blueprint's twenty-eight Core slots are A13 and the
+    // stream had no A13 construct of its own, only this reader pool.
+    { name: 'core-bar-percent-of-another', read: (rand, st) => {
+      const v = st.values, i = rand.int(0, v.length - 1);
+      let j = rand.int(0, v.length - 1);
+      if (i === j) j = (j + 1) % v.length;
+      const a = v[i], b = v[j];
+      if (a === b) return { error: 'the two bars are equal' };
+      const key = Q(a * 100, b), rival = Q(b * 100, a);
+      const total = v.reduce((x, y) => x + y, 0);
+      const ofTotal = Q(a * 100, total), diff = Q(Math.abs(a - b));
+      if ([rival, ofTotal, diff].some(x => qEq(x, key)) || qEq(rival, ofTotal) || qEq(rival, diff) || qEq(ofTotal, diff))
+        return { error: 'two options coincide' };
+      if (qNum(rival) <= qNum(key) / 3 || qNum(rival) >= qNum(key) * 3)
+        return { error: 'the reversed reading is not a near miss' };
+      return READER_OK(rand,
+        [S('read both bars', Q(a)), S('divide the first by the second as a percent', key)],
+        [S('read both bars', Q(b)), S('divide the second by the first as a percent', rival)],
+        [{ name: 'used-the-grand-total-as-the-base', value: ofTotal, cost: 2 },
+         { name: 'reported-the-raw-difference', value: diff, cost: 1 }],
+        { family: 'A13', construct: 'one-bar-as-a-percent-of-another', stimulus: st,
+          method: 'divide-the-named-bar-by-the-reference-bar', rivalName: 'divided-in-the-other-direction',
+          stem: `The bar chart shows the number of items sold on ${v.length} days. The number sold on ` +
+                `${st.categories[i]} is what percent of the number sold on ${st.categories[j]}?`,
+          mechanism: { repr_switch: 1, filtering: 1, inference: 1 },
+          fingerprintParts: { ctx: 'stimulus:bar-chart shared', chain: ['read-two-bars', 'form-the-percent-in-the-stated-direction'],
+            target: 'value:percent', options: 'base-rivals', distract: ['D2', 'D3', 'D6'],
+            narrative: 'four-category-display', numeric: ['bar-values'] } });
+    } },
+
+    // A percent decrease, where the rival divides by the new value — the single
+    // most common wrong base in the corpus's own percent items.
+    { name: 'core-bar-percent-decrease', read: (rand, st) => {
+      const v = st.values, first = v[0], last = v[v.length - 1];
+      if (last >= first) return { error: 'the series does not fall' };
+      const drop = first - last;
+      const key = Q(drop * 100, first), rival = Q(drop * 100, last);
+      if (qEq(key, rival) || qEq(Q(drop), key) || qEq(Q(drop), rival) || qEq(Q(last * 100, first), key)
+          || qEq(Q(last * 100, first), rival) || qEq(Q(last * 100, first), Q(drop)))
+        return { error: 'two options coincide' };
+      if (qNum(rival) <= qNum(key) / 3 || qNum(rival) >= qNum(key) * 3)
+        return { error: 'the wrong-base reading is not a near miss' };
+      return READER_OK(rand,
+        [S('find the fall', Q(drop)), S('divide by the starting value', key)],
+        [S('find the fall', Q(drop)), S('divide by the finishing value', rival)],
+        [{ name: 'reported-the-raw-fall', value: Q(drop), cost: 1 },
+         { name: 'reported-the-finishing-value-as-a-percent-of-the-start', value: Q(last * 100, first), cost: 2 }],
+        { family: 'A13', construct: 'percent-decrease-across-a-series', stimulus: st,
+          method: 'divide-the-fall-by-the-original', rivalName: 'divided-the-fall-by-the-final-value',
+          stem: `The bar chart shows the number of items sold on ${v.length} days. By what percent did the number sold ` +
+                `fall from ${st.categories[0]} to ${st.categories[v.length - 1]}?`,
+          mechanism: { repr_switch: 1, filtering: 1, hidden_step: 1 },
+          fingerprintParts: { ctx: 'stimulus:bar-chart shared', chain: ['difference-the-endpoints', 'divide-by-the-original'],
+            target: 'value:percent', options: 'base-rivals', distract: ['D6', 'D2', 'D3'],
+            narrative: 'four-category-display', numeric: ['bar-values'] } });
     } }],
   },
 
@@ -847,6 +1313,34 @@ export const CORE_READERS = {
           fingerprintParts: { ctx: 'stimulus:table shared', chain: ['total-the-rows', 'divide-by-a-stated-count'],
             target: 'value:share', options: 'denominator-rivals', distract: ['D2', 'D1', 'D1'],
             narrative: 'three-row-table', numeric: ['row-values', 'depots'] } });
+    } },
+
+    // The table is printed in hundreds and the question is asked in units. The
+    // rival totals every row — the right arithmetic on the wrong selection.
+    { name: 'core-table-scaled-pair', read: (rand, st) => {
+      const rows = st.rows;
+      if (rows.length < 3) return { error: 'the table has too few rows to leave one out' };
+      const i = rand.int(0, rows.length - 1);
+      const j = (i + 1) % rows.length;
+      const pair = rows[i][1] + rows[j][1];
+      const total = rows.reduce((a, r) => a + r[1], 0);
+      if (pair === total) return { error: 'the two named rows are the whole table' };
+      if ([total, pair * 100, total * 100].some(x => x === pair) || total * 100 === pair * 100)
+        return { error: 'two options coincide' };
+      if (total * 100 >= pair * 300) return { error: 'the whole-table rival is not a near miss' };
+      return READER_OK(rand,
+        [S('add the two named rows', Q(pair)), S('convert from hundreds to units', Q(pair * 100))],
+        [S('add every row', Q(total)), S('convert from hundreds to units', Q(total * 100))],
+        [{ name: 'forgot-the-scale', value: Q(pair), cost: 1 },
+         { name: 'totalled-every-row-and-forgot-the-scale', value: Q(total), cost: 2 }],
+        { family: 'A13', construct: 'scaled-table-selected-rows', stimulus: st,
+          method: 'select-the-named-rows-then-apply-the-scale', rivalName: 'totalled-every-row',
+          stem: `The table shows deliveries by region, in hundreds. How many deliveries were made in the ` +
+                `${rows[i][0]} and ${rows[j][0]} regions combined?`,
+          mechanism: { repr_switch: 1, filtering: 1, multiconcept: 1 },
+          fingerprintParts: { ctx: 'stimulus:table shared', chain: ['select-the-named-rows', 'apply-the-printed-scale'],
+            target: 'value:count', options: 'selection-and-scale-rivals', distract: ['D2', 'D3', 'D2'],
+            narrative: 'three-row-table', numeric: ['row-values'] } });
     } }],
   },
 

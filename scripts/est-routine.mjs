@@ -40,6 +40,7 @@ import {
 } from './est-primitives.mjs';
 import { fingerprintItem, detectClone } from './est-fingerprint.mjs';
 import { CORE_READERS, assessCore } from './est-core-stream.mjs';
+import { VOCAB_BY_FAMILY } from './est-vocabulary.mjs';
 import { itemSteps } from './est-form-gates.mjs';
 
 /* ────────────────────────── the routine contract ────────────────────────── */
@@ -1573,7 +1574,8 @@ export function kindsFor(families, exclude = new Set()) {
 }
 
 export const ROUTINE_CONSTRUCTS = Object.fromEntries(
-  Object.keys(BASE).map(f => [f, [BASE[f], ...(VARIANTS[f] || []), ...(NON_VALUE_VARIANTS[f] || []), ...(LONG_ROUTINE_VARIANTS[f] || [])]]));
+  Object.keys(BASE).map(f => [f, [BASE[f], ...(VARIANTS[f] || []), ...(NON_VALUE_VARIANTS[f] || []),
+    ...(LONG_ROUTINE_VARIANTS[f] || []), ...(VOCAB_BY_FAMILY[f] || [])]]));
 export const ROUTINE_FAMILIES = Object.keys(ROUTINE_CONSTRUCTS);
 export const EMITS_STIMULUS = new Set(['A13', 'A14', 'A15']);
 
