@@ -78,11 +78,12 @@ const MIG = {
   te_c:     read('supabase/migrations/20260901c_teacher_exam_tables.sql'),
   te_d:     read('supabase/migrations/20260901d_teacher_exam_rls.sql'),
   te_rb:    read('supabase/migrations/20260901x_teacher_exam_rollback.sql'),
-  /* Teacher Homework H2, PREPARED on this branch and not yet applied. Five
-     tables of their own, held to the foundation's blanket academic ban for the
-     same reason 3b is: homework content never touches the platform catalogue or
-     the analyzer (§15.15 decision 2). Its own contract — the six decisions,
-     column by column — lives in tests/teacher-homework.test.mjs. */
+  /* Teacher Homework H2, applied 2026-09-03 as one package. SIX tables of their
+     own, held to the foundation's blanket academic ban for the same reason 3b
+     is: homework content never touches the platform catalogue or the analyzer
+     (§15.15 decision 2). Its own contract — the six decisions column by column,
+     the composite-FK invariant and the reveal latch — lives in
+     tests/teacher-homework.test.mjs. */
   th_b:     read('supabase/migrations/20260902b_teacher_homework_tables.sql'),
   th_c:     read('supabase/migrations/20260902c_teacher_homework_rls.sql'),
   th_d:     read('supabase/migrations/20260902d_teacher_homework_responses.sql'),

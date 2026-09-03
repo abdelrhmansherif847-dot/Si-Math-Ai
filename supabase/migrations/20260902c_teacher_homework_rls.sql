@@ -1,8 +1,8 @@
 -- =====================================================================
 -- Teacher Homework, increment H2.2 — RLS, grants, and the answer-key boundary
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Second file of the ATOMIC H2 SCHEMA PACKAGE:
+-- STATUS: ✅ APPLIED 2026-09-03 as version 20260903123410.
+--         Second file of the ATOMIC H2 SCHEMA PACKAGE:
 --         20260902b, then this, then 20260902d, in that order, all or none.
 --         Rollback: 20260902y, which undoes all three.
 --         NOTE the counts in §4 are POINT-IN-TIME: five tables and seven

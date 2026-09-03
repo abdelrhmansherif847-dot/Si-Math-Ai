@@ -1,8 +1,8 @@
 -- =====================================================================
 -- Teacher Homework, increment H2.3 — the per-item answer record
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Third and last file of the ATOMIC H2
---         SCHEMA PACKAGE: 20260902b, then 20260902c, then this, in that order,
+-- STATUS: ✅ APPLIED 2026-09-03 as version 20260903123458. Third and last file
+--         of the ATOMIC H2 SCHEMA PACKAGE: 20260902b, then 20260902c, then this,
 --         all of them or none. Rollback: 20260902y, which undoes all three.
 -- DEPENDS ON: 20260902b (the five tables, and the two `unique (id, homework_id)`
 --             keys this file's composite foreign keys point at) and 20260902c

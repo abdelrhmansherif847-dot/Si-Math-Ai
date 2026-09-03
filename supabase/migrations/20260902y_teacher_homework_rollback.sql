@@ -1,7 +1,11 @@
 -- =====================================================================
 -- Rollback for the whole H2 package: 20260902b + 20260902c + 20260902d
 -- =====================================================================
--- STATUS: 🟡 PREPARED, deliberately unapplied.
+-- STATUS: 🟡 PREPARED, deliberately unapplied. The package it undoes went LIVE
+--         on 2026-09-03 as versions 20260903123333 / 123410 / 123458, so this is
+--         now a real undo of live schema rather than a hypothetical one. It was
+--         rehearsed in an aborting transaction before the apply and returned
+--         every hash to its exact pre-package value.
 --
 -- One file for all three forward migrations on purpose: dropping a table takes
 -- its policies, its triggers and its grants with it, so a separate "undo the

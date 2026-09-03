@@ -501,7 +501,13 @@ t.ok('all three forward files declare the atomic package and name the other two'
 t.ok('and all three name 20260902y as the single undo',
   [TB, TC, TD].every((f) => /20260902y/.test(f)));
 t.ok('20260902c records that its own counts are point-in-time, not package totals', /POINT-IN-TIME/.test(TC));
-t.ok('all four files are PREPARED, and none claims APPLIED',
-  [TB, TC, TD, TY].every((f) => /STATUS: 🟡 PREPARED/.test(f) && !/APPLIED/.test(f)));
+/* The package went live on 2026-09-03. Each forward file records the version it
+   was applied as — in the order they were applied, which is the order the file
+   headers promise — and the rollback stays PREPARED, which is its whole point. */
+t.is('each forward file records the version it was applied as, in package order',
+  [TB, TC, TD].map((f) => (f.match(/APPLIED 2026-09-03 as version (\d+)/) || [])[1]),
+  ['20260903123333', '20260903123410', '20260903123458']);
+t.ok('and the rollback is still PREPARED and unapplied',
+  /STATUS: 🟡 PREPARED, deliberately unapplied/.test(TY) && !/APPLIED 2026-09-03 as version/.test(TY));
 
 t.done();

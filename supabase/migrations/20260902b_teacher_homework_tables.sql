@@ -1,8 +1,8 @@
 -- =====================================================================
 -- Teacher Homework, increment H2.1 — five tables, their rules, their guards
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Part of the ATOMIC H2 SCHEMA PACKAGE — 20260902b,
+-- STATUS: ✅ APPLIED 2026-09-03 as version 20260903123333. First of the three.
+--         Part of the ATOMIC H2 SCHEMA PACKAGE — 20260902b,
 --         then 20260902c, then 20260902d, in that order, all of them or none.
 --         Rollback: 20260902y, which undoes all three (a clean undo, unlike
 --         20260902z).

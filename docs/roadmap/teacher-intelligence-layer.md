@@ -1498,13 +1498,21 @@ them should be discovered mid-implementation.
     The measured table above is now pinned by `tests/teacher-homework.test.mjs`
     (§17), so a silent change to any of it turns the suite red.
 
-    ### 15.15c · The H2 package as approved — three files, one unit
+    ### 15.15c · The H2 package — approved, then applied
 
     Approved 2026-09-03: **`20260902b` + `20260902c` + `20260902d` apply
     together or not at all**, and `20260902y` undoes all three. The rollback is
     safe on a partially applied package — every drop is `if exists`, every count
     `to_regclass`-guarded — which is what makes three statements behave as one
-    unit. All four files remain PREPARED and unapplied.
+    unit.
+
+    **APPLIED 2026-09-03** as versions `20260903123333` (tables and guards),
+    `20260903123410` (RLS) and `20260903123458` (the answer record), in that
+    order. Production went 184 → **187 migrations**. `20260902y` stays PREPARED
+    and unapplied, and is now a real undo of live schema rather than a
+    hypothetical one. **The homework backend has a complete schema and no write
+    path: all six tables hold 0 rows and will until H3 ships the authoring
+    RPCs.**
 
     **What the approval changed.** `20260902b` gained a `unique (id,
     homework_id)` on the attempts table and another on the questions table — two
@@ -1574,6 +1582,59 @@ them should be discovered mid-implementation.
     decision; solving it needs a retired-code record and would mix access and
     code lifecycle into the base schema.
 
+    ### 15.15d · Post-apply verification, 2026-09-03
+
+    Run before anything else, in the order the owner set.
+
+    **Structure, compared against values pre-computed from the repo files** —
+    not against the paste that was applied, which is the point. All **seven
+    function bodies** are byte-identical (`md5(prosrc)`, which keeps comments, so
+    the 3b failure mode of a paste that silently dropped inline comments would
+    have shown up here). Six tables; 51 constraints = the 36 named in the files
+    plus 15 auto-generated (28 check, 6 unique, 6 pkey, 11 fkey); 17 indexes;
+    7 triggers, all BEFORE; RLS on all six; 9 policies, none of them anything but
+    SELECT; `SELECT` to `authenticated` the only client table grant and `anon`
+    holding nothing; every definer function's `search_path` pinned; and
+    `teacher_homework_is_staff` the only function any client may EXECUTE.
+
+    **Behaviour on the live schema — 21 checks, 0 failures,** in an aborting
+    transaction so no row survived it:
+
+    - *Cross-homework integrity.* An attempt of paper A beside a question of
+      paper B refused `23503` naming `..._question_fk`; the same pair with
+      `homework_id` set to B refused naming `..._attempt_fk`; an omission
+      recorded as wrong refused `23514` on the omission CHECK.
+    - *The latch, all six combinations.* draft / published / **closed**
+      `false → true` all allowed; `true → false` refused `22000` in every
+      status. Revealing on a closed paper left `status` and `closed_at`
+      untouched. A single statement revealing **and** moving `due_at` was still
+      refused `42501` — the exception is not a trojan.
+    - *Access scopes.* Teacher and **ACTIVE assistant** identical (8 papers,
+      2 questions, 1 attempt, 1 answer); the **pending** assistant, created
+      through the real `staff_join_workspace()` RPC, saw nothing; an outsider saw
+      nothing; a member student saw no paper and no content but did see their own
+      attachment, attempt and answer.
+    - *No write path.* Teacher INSERT, staff UPDATE of an answer, a student
+      revealing answers, and an `anon` read all refused `42501`.
+
+    **What did not move.** Analyzer counters `893/11/24` before and after; the
+    audit log still 2 rows at md5 `9ff25122…`; the 21 enum labels unchanged; the
+    `teacher_exam*` tables still empty; every homework table at 0 rows.
+
+    **New production baseline** for the next session to compare against:
+    constraints `44e9608c…`, policies `370ff326…`, relations `a5e244f2…`,
+    triggers `3da9d509…`, client grants `e1f0bb57…`, counts 186 functions /
+    133 policies / 82 tables.
+
+    **One observation recorded, not resolved.** `exam_practice_sessions` read
+    **23** during the pre-apply dry-run and **24** shortly afterwards. The extra
+    row is a real student's session (started 23:03:01, ended 23:03:36, score 700,
+    EST_MATH_1) timestamped roughly thirteen hours *before* the dry-run, so it
+    should have been counted then too, and no row was created during any of this
+    work — every probe transaction aborted. It is logged here as a
+    concurrency/data observation, **not** attributed to H2 and **not** modified.
+    The count was `24` both immediately before and immediately after the apply.
+
 ---
 
 ## 16. Provenance
@@ -1625,6 +1686,14 @@ them should be discovered mid-implementation.
   survived first exposed a prefix-matching grant check, now fixed in two
   suites. The per-item answer record H5 needs was kept out because the approved
   scope named five tables, and it is flagged as its own increment.
+- **2026-09-03 — H2 APPLIED.** The package went live as `20260903123333` /
+  `20260903123410` / `20260903123458`, taking production from 184 to 187
+  migrations. Verification ran before anything else (§15.15d): the seven
+  function bodies byte-identical to the repo files, 21 behavioural checks on the
+  live schema with no failures, the analyzer and the audit log unmoved, and all
+  six tables at zero rows because no write path exists until H3. `20260902y`
+  stays prepared. The homework backend now has a complete schema and nothing
+  that can write to it.
 - **2026-09-03 — the three H2 decisions taken, and the package closed.** The
   owner chose composite foreign keys over a guard ("a foreign key is not an
   opinion"), the one-way `reveal_answers` latch including the closed-status
