@@ -2098,8 +2098,13 @@ them should be discovered mid-implementation.
        slipping between them.
 
        **What enforces it.** The three RPCs on every path a client can reach,
-       and `teacher_homework_code_guard()` — a **BEFORE INSERT trigger on
-       `teacher_homework`** — in the database itself.
+       and `teacher_homework_code_guard()` in the database itself:
+
+       ```sql
+       create trigger teacher_homework_code_guard_trg
+         before insert or update of homework_code on teacher_homework
+         for each row execute function teacher_homework_code_guard();
+       ```
 
        The trigger exists because the first version did not have one and the
        dry-run measured the consequence: a raw INSERT carrying a retired code
@@ -2107,20 +2112,47 @@ them should be discovered mid-implementation.
        reservation table and a CHECK may not subquery. Clients hold no INSERT
        on `teacher_homework`, so nothing reachable today could do it — but an
        invariant that depends on nobody currently holding a grant is an
-       application rule wearing a database rule's clothes. The guard is
-       `SECURITY DEFINER` with a pinned `search_path`, so RLS on the
-       reservation can never blind it, and it is callable by nobody. It raises
-       `22000` rather than `23505` on purpose: `teacher_homework_create()`
-       catches `unique_violation` to retry a collision, and a RAISE carries no
-       `constraint_name`, so a 23505 would enter that handler only to be
-       re-raised opaquely.
+       application rule wearing a database rule's clothes. **Measured again on
+       the live schema on 2026-09-03, before the guard: a raw INSERT of a
+       rotated-away code was accepted, and the only thing that ever refused
+       such a write was the UNIQUE, and only once some other row already held
+       the value.** The guard is `SECURITY DEFINER` with a pinned
+       `search_path`, so RLS on the reservation can never blind it, and it is
+       callable by nobody. It raises `22000` rather than `23505` on purpose:
+       `teacher_homework_create()` catches `unique_violation` to retry a
+       collision, and a RAISE carries no `constraint_name`, so a 23505 would
+       enter that handler only to be re-raised opaquely.
 
-       **What it does not cover, said rather than left to be found:** it is
-       BEFORE INSERT only, so a raw UPDATE of `homework_code` to a retired
-       value is still possible for a table owner or a future migration.
-       Rotation is the only path that changes a code and it goes through the
-       RPC. Extending the guard to UPDATE was deliberately out of this
-       increment's scope and is a separate decision.
+       **It covers BOTH write verbs.** An earlier version was INSERT-only,
+       which left the identical hole behind a different door — a raw UPDATE to
+       a retired value — and an invariant enforced on one write verb and not
+       the other is not enforced. One unconditional check on
+       `new.homework_code` serves both, because that is the code the row is
+       about to carry either way, and a row's own live code is never in the
+       reservation (retirement always accompanies the code *leaving* the row),
+       so rewriting the column to its current value still passes.
+
+       `UPDATE OF homework_code`, not a bare `UPDATE`: the guard must not fire
+       on the title, the due date, the status transitions or the reveal latch,
+       all of which H2 governs and none of which can put a code on a row.
+       **This was measured discriminating rather than assumed** — the dry-run
+       plants a row's own LIVE code in the reservation, a state the RPCs can
+       never produce, so a guard with the wrong scope would refuse every write
+       to that row; the title, `due_at`, publish and reveal writes were all
+       accepted while a write naming the column with that same value was
+       refused `22000`.
+
+       **Rotation still works, and the order is why:** the RPC installs the NEW
+       code first (not retired, so the guard passes) and retires the OLD one
+       afterwards. Rotating A → B and later back to A is therefore refused,
+       which is the invariant doing its job rather than a regression.
+
+       Both triggers now fire on an update of the code column, the code guard
+       first — BEFORE ROW triggers fire in alphabetical name order and
+       `teacher_homework_code_guard_trg` sorts before
+       `teacher_homework_guard_trg`. Measured, not inferred. H2 still sees
+       every update it saw before and none of its own rules move: a raw code
+       write on a CLOSED paper is still refused `42501` by H2's guard.
     2. **`teacher_homework_attach_attempts`** — every submission counted, not
        just successful attachments. It holds who and when and nothing else: not
        the submitted code, not the outcome, because storing the outcome would
@@ -2177,7 +2209,16 @@ them should be discovered mid-implementation.
     | raw INSERT with a deleted draft's code | REFUSED `22000` |
     | raw INSERT with a LIVE code | REFUSED `23505` — the UNIQUE, a separate mechanism |
     | raw INSERT with a fresh code | ACCEPTED — the guard blocks nothing ordinary |
-    | raw UPDATE to a retired code | ACCEPTED — BEFORE INSERT only, exactly as scoped |
+    | **raw UPDATE to a retired code** | **REFUSED `22000`** — the second write verb, and the same message |
+    | raw UPDATE to a retired code, on a *different* row | REFUSED `22000` — it is the CODE that is refused, not the row that retired it |
+    | raw UPDATE to a deleted draft's code | REFUSED `22000` |
+    | raw UPDATE to a FRESH code | ACCEPTED, row carries it — the guard blocks nothing ordinary |
+    | raw UPDATE to a code a LIVE row holds | REFUSED `23505` — the UNIQUE, untouched and still a separate mechanism |
+    | raw UPDATE of the column to its OWN current value | ACCEPTED — a row's own live code is never reserved |
+    | title / `due_at` / publish / reveal, with the row's own code planted in the reservation | all ACCEPTED — the guard did not fire, so the column scope is real |
+    | the same row, naming `homework_code` with that same planted value | REFUSED `22000` — so the four above measure the SCOPE, not a sleeping guard |
+    | raw code UPDATE on a CLOSED paper | REFUSED `42501` — H2's guard still fires on the code column |
+    | trigger firing order on `teacher_homework` | `teacher_homework_code_guard_trg` **then** `teacher_homework_guard_trg` |
     | triggers on `teacher_homework` after install | 2 — H2's, plus the guard, H2's body unchanged |
     | duplicate attachment, raw | `23505` — the PK is what makes a real concurrent double-attach safe |
     | teacher closes the paper | `can_open` false |
@@ -2188,13 +2229,47 @@ them should be discovered mid-implementation.
     the table alias `h`, and plpgsql refuses that (`42702`). The alias is now
     `hw` and the suite pins it.
 
-    **Rollback rehearsal.** Homework tables, functions and triggers-on-
-    `teacher_homework` went **6,22,1 → 8,28,2 → 6,22,1**, and all twelve hashes
-    returned **identical, 0 differing**, with all **three** H3 bodies restored
-    byte-for-byte. The guard sits on a table that survives the rollback, so it
-    is dropped by name — trigger before function — and the rollback asserts
-    `teacher_homework` is back to H2's single trigger with its body unchanged.
-    The refusal was exercised with a reservation planted and fired correctly.
+    **A third, and it is the H3 lesson's mirror image.** The re-run of the
+    dry-run after the guard was widened refused to install the file at all:
+
+    ```
+    ERROR: H4: student_attach_homework() records membership at attach time
+    ```
+
+    §7.8 asserts the attach body never records `was_member_at_request` — and
+    the body says those exact words, in a comment, *in order to say it does not
+    use them*. The check read `prosrc` whole, so it was reading prose, and on
+    the file as written it could **only** ever raise. H3's dry-run found a
+    check that could only ever raise for a different reason (`§6.8` compared
+    `pg_get_function_identity_arguments()` against a value that function never
+    returns); this is the same class of defect reached from the other side, and
+    it means the file as previously committed could not have been applied.
+
+    Every §7 source check now reads the installed body with its `--` comments
+    stripped, and the raw `prosrc` is **not held in a variable at all**, so a
+    later check cannot reach for it. Two mutants pin it: one inlines a raw
+    `p.prosrc` read, one drops the stripping from a single check. The contract
+    suite asserts, over §7 as a whole, that the only remaining reads of
+    `p.prosrc` are stripped ones and whole-body `md5()` comparisons.
+
+    **Paste fidelity was measured, not assumed.** Each of the eleven function
+    bodies installed by the dry-run was compared against an md5 computed from
+    the repo file before the run: **11/11 byte-identical**. That is the check
+    the H3 apply lacked when a paste silently stripped inline comments.
+
+    **Rollback rehearsal** (re-run 2026-09-03 against the widened guard).
+    Homework tables, functions and triggers-on-`teacher_homework` went
+    **6,22,1 → 8,28,2 → 6,22,1**, and all eight hash families —
+    `constraints`, `policies`, `relations`, `triggers`, `grants`,
+    `hw_bodies`, `hw_sigs` and the six counts — returned **identical,
+    0 differing**, with all **three** H3 bodies restored byte-for-byte. The
+    guard sits on a table that survives the rollback, so it is dropped by
+    name — trigger before function — and the rollback asserts
+    `teacher_homework` is back to H2's single trigger, `BEFORE DELETE OR
+    UPDATE`, with its body unchanged. The refusal was exercised both ways in
+    one transaction: with **0** reservations the block proceeds, and with
+    **1** planted it refuses naming the count — so it is a condition that can
+    go green as well as red.
 
     #### The rollback window — written before the apply, not after
 

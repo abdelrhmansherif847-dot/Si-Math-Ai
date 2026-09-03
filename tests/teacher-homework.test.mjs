@@ -1098,10 +1098,15 @@ t.ok('the file states the invariant in those words',
 /* The dry-run measured that a raw INSERT could still claim a retired code —
    UNIQUE cannot see the reservation table and a CHECK may not subquery — so
    the invariant is now enforced one level down as well. */
-t.ok('a BEFORE INSERT guard puts the invariant in the database',
-  /before insert on teacher_homework\s+for each row execute function teacher_homework_code_guard\(\)/.test(H4C));
-t.ok('it is INSERT only — no update, no delete',
+t.ok('a guard on BOTH write verbs puts the invariant in the database',
+  /before insert or update of homework_code on teacher_homework\s+for each row execute function teacher_homework_code_guard\(\)/.test(H4C));
+/* Scoped to the column, not the table. A bare `or update` would fire on every
+   title, due-date, status and reveal-latch write H2 governs — none of which
+   can put a code on a row — and a delete clause would sit in the way of
+   teacher_homework_delete(). */
+t.ok('it is scoped to the code column — no bare UPDATE, no DELETE',
   !/before insert or update on teacher_homework/.test(H4C)
+  && !/create trigger teacher_homework_code_guard_trg\s+before[^;]*\bdelete\b/i.test(H4C)
   && !/create trigger teacher_homework_code_guard_trg\s+before (update|delete)/.test(H4C));
 t.ok('it consults the reservation, and fails closed by being definer',
   /from teacher_homework_retired_codes where code = new\.homework_code/.test(body4('teacher_homework_code_guard'))
@@ -1120,17 +1125,19 @@ t.ok('and it deliberately avoids the errcode the create retry catches',
    file that installs a guard is the easiest place to quietly remove one. */
 t.is('the forward file drops nothing at all',
   [...H4C.matchAll(/drop\s+(trigger|function|table|policy|index|type|constraint)/gi)].map((m) => m[0]), []);
-t.ok('§7.12b pins the trigger, and §7.12c pins H2\u2019s as untouched',
+t.ok('§7.12b pins the trigger on both verbs, and §7.12c pins H2\u2019s as untouched',
   /the invariant is only a convention/.test(H4C)
+  && /BEFORE INSERT OR UPDATE OF homework_code ON public/.test(H4C)
+  && /the code guard is wider than the column it protects/.test(H4C)
   && /19bbc18c825edce8b3c9a03c75f9fecb/.test(H4C)
   && /BEFORE DELETE OR UPDATE ON public/.test(H4C));
-/* Said rather than left to be found: the guard is INSERT-only, so a raw
-   UPDATE of homework_code remains a path. Excluded from this increment's
-   scope on purpose. */
-t.ok('the file states what the guard does NOT cover',
-  /WHAT THE TRIGGER DOES NOT COVER/.test(H4)
-  && /it is BEFORE INSERT only/.test(H4FLAT)
-  && /a raw UPDATE of homework_code to a retired value .* is still possible/.test(H4FLAT.replace(/\s+/g, ' ')));
+/* Said rather than left to be found: an invariant enforced on one write verb
+   and not the other is not enforced, and rotation only survives because the
+   RPC writes the new code BEFORE retiring the old one. */
+t.ok('the file states that the guard covers both verbs, and why rotation still works',
+  /covers BOTH ways a code can arrive on a row: INSERT, and[\s\S]{0,40}UPDATE OF homework_code/.test(H4)
+  && /Rotation still works, and the order is why/.test(H4)
+  && /Rotating A to B and later back to A is[\s\S]{0,40}therefore refused/.test(H4));
 t.ok('§7.5b pins the other exit, and that it precedes the row delete',
   /deleting a draft releases its code back into circulation/.test(H4C)
   && /there is a window where it is free/.test(H4C));
@@ -1225,9 +1232,29 @@ t.section('§7 checks the four things that would actually break H4');
 t.ok('§7.2 forbids a foreign key that could free reserved codes',
   /conrelid = 'teacher_homework_retired_codes'::regclass and contype = 'f'\) then/.test(H4C));
 t.ok('§7.6 compares the positions of the limit and the code lookup',
-  /position\('too many attempts' in v_src\) > position\('''no_match''' in v_src\)/.test(H4C));
+  /position\('too many attempts' in v_code\) > position\('''no_match''' in v_code\)/.test(H4C));
+/* The FIRST H4 dry-run was red on a body that satisfies §7.8: the attach
+   body names was_member_at_request in a comment in order to say it is
+   absent, so a check reading the raw prosrc could ONLY ever raise and the
+   file could not install. Every §7 source check now reads the body with its
+   -- comments stripped, and the raw source is not held in a variable at all
+   so a later check cannot reach for it. */
+t.ok('every §7 source check reads code, never prose',
+  !/\bv_src\b/.test(H4C)
+  // counted on the RAW file: code() strips from the first `--`, and the
+  // needle IS a string literal starting with `--`, so H4C cannot contain it.
+  && H4.split("regexp_replace(p.prosrc, '--[^\\n]*', '', 'g')").length - 1 === 7
+  && /the raw prosrc is deliberately never held in a variable/i.test(H4FLAT));
+/* The clause above pins the idiom; this one pins the ABSENCE of the
+   alternative. Every §7 read of a body is either comment-stripped or an
+   md5 of the whole thing — an inlined `p.prosrc` anywhere else is a check
+   reading prose, whatever variable it lands in. */
+const H4S7 = H4.slice(H4.indexOf('7 \u00b7 verification'));
+t.ok('and no \u00a77 check reads an unstripped body by any route',
+  !/p\.prosrc/.test(H4S7.replace(/regexp_replace\(p\.prosrc/g, '').replace(/md5\(p\.prosrc\)/g, '')));
 t.ok('§7.7 counts the shared reason and requires exactly two',
-  /length\('''no_match'''\) <> 2 then/.test(H4C));
+  /\(length\(v_code\) - length\(replace\(v_code, '''no_match''', ''\)\)\)/.test(H4C)
+  && /length\('''no_match'''\) <> 2 then/.test(H4C));
 t.ok('§7.7b forbids an expected refusal from raising',
   /an expected refusal raises, which discards the attempt it just recorded/.test(H4C));
 t.ok('§7.13 pins the table count at eight',

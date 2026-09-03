@@ -100,8 +100,9 @@
 --       a concurrent create unable to slip between them.
 --
 --       WHAT ENFORCES IT. The three RPCs enforce it on every path a client can
---       reach, and teacher_homework_code_guard() — a BEFORE INSERT trigger on
---       teacher_homework, §2b below — enforces it in the database itself.
+--       reach, and teacher_homework_code_guard() — a BEFORE INSERT OR
+--       UPDATE OF homework_code trigger on teacher_homework, §2b below —
+--       enforces it in the database itself.
 --
 --       The trigger exists because the first version of this file did not have
 --       one, and the dry-run measured the consequence: a raw INSERT carrying a
@@ -113,13 +114,19 @@
 --       project prefers the real thing (H2 chose composite foreign keys over a
 --       trigger for the same reason).
 --
---       WHAT THE TRIGGER DOES NOT COVER, said plainly rather than left to be
---       discovered: it is BEFORE INSERT only, so a raw UPDATE of
---       homework_code to a retired value — by the table owner or a future
---       migration — is still possible. Rotation is the only path that changes
---       a code and it goes through the RPC, which consults the reservation.
---       Extending the guard to UPDATE was deliberately excluded from this
---       increment's scope; it is a separate decision, recorded in §15.17.
+--       The trigger covers BOTH ways a code can arrive on a row: INSERT, and
+--       UPDATE OF homework_code. An earlier version was INSERT-only, which
+--       left the identical hole through a different door — a raw UPDATE to a
+--       retired value — and an invariant enforced on one write verb but not
+--       the other is not enforced. `UPDATE OF homework_code` keeps the guard
+--       off every other update the table takes (title, due_at, status, the
+--       reveal latch), so H2's own lifecycle is untouched.
+--
+--       Rotation still works, and the order is why: the RPC installs the NEW
+--       code first — which is not retired, so the guard passes — and retires
+--       the OLD one afterwards. Rotating A to B and later back to A is
+--       therefore refused, which is the invariant doing its job rather than a
+--       regression.
 --
 --   teacher_homework_attach_attempts
 --       MEASURED GAP (§15.17): the exam limiter counts ROWS CREATED in
@@ -152,7 +159,8 @@ create table teacher_homework_retired_codes (
 );
 
 comment on table teacher_homework_retired_codes is
-  'Homework codes that have been rotated away. A code here is permanently '
+  'Homework codes that have left a homework row, by rotation or by the '
+  'deletion of a draft. A code here is permanently '
   'unavailable to any future homework, so a student holding an old code can '
   'never be attached to a different paper by it. Permanent by decision, not a '
   'TTL. homework_id and workspace_id are provenance and carry no foreign key '
@@ -187,9 +195,9 @@ revoke all on function teacher_homework_retired_codes_guard() from public, anon,
 -- ── 2b · the invariant, in the database ───────────────────────────────
 -- The RPCs check teacher_homework_code_available() before they issue a code.
 -- This is the same rule one level down, where a writer that never called an
--- RPC still meets it. It is BEFORE INSERT only: rotation is the sole path that
--- changes an existing code and it goes through the RPC (see the header for
--- what that leaves open, and why that is a separate decision).
+-- RPC still meets it. One check, both write verbs: a code can only arrive on
+-- a row by INSERT or by an UPDATE that names the column, and refusing one but
+-- not the other leaves the same hole behind a different door.
 create or replace function teacher_homework_code_guard()
 returns trigger
 language plpgsql
@@ -197,6 +205,11 @@ security definer
 set search_path = pg_catalog, public
 as $fn$
 begin
+  -- new.homework_code is the code the row is about to carry, on either verb,
+  -- so one unconditional check covers both. A row's own live code is never in
+  -- the reservation — retirement always accompanies the code LEAVING the row —
+  -- so an update that rewrites the column to its current value still passes.
+  --
   -- SECURITY DEFINER so RLS on the reservation table can never blind the
   -- check: a guard that cannot see the rows it guards against fails open,
   -- which is the one thing a guard must not do.
@@ -215,8 +228,11 @@ $fn$;
 -- re-raised as an opaque error. 22000 keeps this refusal out of the retry
 -- path entirely — the retry is for collisions with LIVE codes, which the
 -- UNIQUE still raises normally.
+-- UPDATE OF homework_code, not a bare UPDATE: the guard must not fire on the
+-- title, the due date, the status transitions or the reveal latch, all of
+-- which H2 governs and none of which can put a code on a row.
 create trigger teacher_homework_code_guard_trg
-  before insert on teacher_homework
+  before insert or update of homework_code on teacher_homework
   for each row execute function teacher_homework_code_guard();
 
 revoke all on function teacher_homework_code_guard() from public, anon, authenticated;
@@ -708,7 +724,7 @@ grant execute on function teacher_homework_students(uuid)      to authenticated;
 -- function never returns), so argument lists here are read as TYPES.
 do $$
 declare
-  v_bad text; v_n integer; v_src text;
+  v_bad text; v_n integer; v_code text;
   NEWFN constant text[] := array['student_attach_homework','teacher_homework_can_open',
     'student_my_homework','teacher_homework_students'];
 begin
@@ -763,66 +779,84 @@ begin
 
   -- 7.5 create and rotate differ from their H3 bodies in the retired-code
   --     check AND NOTHING ELSE. Both must consult the reservation.
-  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  -- EVERY source check below reads v_code, which is the installed body with
+  -- its -- comments stripped. The raw prosrc is deliberately never held in a
+  -- variable here, so a later check cannot reach for it.
+  --
+  -- These bodies explain themselves at length, and an assertion that matches a
+  -- comment tests PROSE: it goes green on a function that only talks about
+  -- doing the thing, and red on one that explains why it does not. The H3
+  -- dry-run found the mirror of this — a check that could ONLY ever raise
+  -- (§15.16b). THE FIRST H4 DRY-RUN FOUND THIS ONE: §7.8 below refused a body
+  -- that satisfies it, because student_attach_homework() writes the words
+  -- "was_member_at_request" in a comment in order to say it does not use them.
+  -- The file could not install at all until this was fixed.
+  select regexp_replace(p.prosrc, '--[^\n]*', '', 'g') into v_code
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'teacher_homework_create';
-  if v_src !~ 'teacher_homework_code_available' then
+  if v_code !~ 'teacher_homework_code_available' then
     raise exception 'H4: teacher_homework_create() can still issue a retired code';
   end if;
-  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  select regexp_replace(p.prosrc, '--[^\n]*', '', 'g') into v_code
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'teacher_homework_rotate_code';
-  if v_src !~ 'teacher_homework_code_available' then
+  if v_code !~ 'teacher_homework_code_available' then
     raise exception 'H4: teacher_homework_rotate_code() can still issue a retired code';
   end if;
-  if v_src !~ 'insert into teacher_homework_retired_codes' then
+  if v_code !~ 'insert into teacher_homework_retired_codes' then
     raise exception 'H4: rotation does not retire the code it replaces — the hazard is unfixed';
   end if;
   -- 7.5b THE INVARIANT'S OTHER EXIT. A deleted draft's code must be retired
   --      too, and BEFORE the row that holds it goes.
-  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  select regexp_replace(p.prosrc, '--[^\n]*', '', 'g') into v_code
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'teacher_homework_delete';
-  if v_src !~ 'insert into teacher_homework_retired_codes' then
+  if v_code !~ 'insert into teacher_homework_retired_codes' then
     raise exception 'H4: deleting a draft releases its code back into circulation';
   end if;
-  if position('insert into teacher_homework_retired_codes' in v_src)
-     > position('delete from teacher_homework where id = p_homework' in v_src) then
+  if position('insert into teacher_homework_retired_codes' in v_code)
+     > position('delete from teacher_homework where id = p_homework' in v_code) then
     raise exception 'H4: the code is retired after its row is gone — there is a window where it is free';
   end if;
-  if v_src ~ 'status = ''published''[^;]*retired' then
+  if v_code ~ 'status = ''published''[^;]*retired' then
     raise exception 'H4: retirement is conditional on status — the invariant does not depend on it';
   end if;
 
   -- 7.6 THE ATTACH ORDER. The limit is checked before the code is resolved,
   --     which is what stops the limiter from being an oracle. Read positionally
   --     off the installed source, so reordering the body turns this red.
-  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  select regexp_replace(p.prosrc, '--[^\n]*', '', 'g') into v_code
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'student_attach_homework';
-  if position('too many attempts' in v_src) > position('''no_match''' in v_src) then
+  if position('too many attempts' in v_code) > position('''no_match''' in v_code) then
     raise exception 'H4: the rate limit is checked AFTER the code is resolved — it has become an oracle';
   end if;
-  if position('insert into teacher_homework_attach_attempts' in v_src)
-     > position('select count(*) into v_recent' in v_src) then
+  if position('insert into teacher_homework_attach_attempts' in v_code)
+     > position('select count(*) into v_recent' in v_code) then
     raise exception 'H4: the attempt is counted after the count is taken — a guess would be free';
   end if;
 
   -- 7.7 ONE reason covers a bad code AND a non-member. Two occurrences of the
   --     same literal is the whole point; one would mean a distinct refusal
   --     leaked which of the two happened.
-  if (length(v_src) - length(replace(v_src, '''no_match''', '')))
+  if (length(v_code) - length(replace(v_code, '''no_match''', '')))
      / length('''no_match''') <> 2 then
     raise exception 'H4: the unknown-code and not-a-member refusals are no longer indistinguishable';
   end if;
   -- 7.7b and an expected refusal must not RAISE: a raise rolls back the
   --      attempt row and turns this limiter back into the exam's.
-  if v_src ~ 'raise exception ''student_attach_homework: that code' then
+  if v_code ~ 'raise exception ''student_attach_homework: that code' then
     raise exception 'H4: an expected refusal raises, which discards the attempt it just recorded';
   end if;
 
   -- 7.8 the attach path never records whether the caller was a member, and
-  --     never reads the exam access model
-  if v_src ~ 'was_member' then
+  --     never reads the exam access model. Read off v_code, for the reason
+  --     recorded at 7.5: the body names was_member_at_request in a comment
+  --     precisely to say it is absent.
+  if v_code ~ 'was_member' then
     raise exception 'H4: student_attach_homework() records membership at attach time — homework has no queue to need it';
   end if;
-  if v_src ~ 'teacher_exam' then
+  if v_code ~ 'teacher_exam' then
     raise exception 'H4: student_attach_homework() reaches into the exam access model';
   end if;
 
@@ -832,7 +866,8 @@ begin
        where n.nspname = 'public' and p.proname = 'teacher_homework_can_open') <> 'uuid' then
     raise exception 'H4: teacher_homework_can_open() takes more than the homework id — it could probe another student';
   end if;
-  if (select p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  if (select regexp_replace(p.prosrc, '--[^\n]*', '', 'g')
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'public' and p.proname = 'teacher_homework_can_open') !~ 'auth\.uid\(\)' then
     raise exception 'H4: teacher_homework_can_open() does not bind the caller';
   end if;
@@ -842,7 +877,8 @@ begin
   select string_agg(p.proname, ', ') into v_bad
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = any (NEWFN)
-     and p.prosrc ~ '(insert\s+into|update|delete\s+from)\s+teacher_homework_(attempts|responses)';
+     and regexp_replace(p.prosrc, '--[^\n]*', '', 'g')
+         ~ '(insert\s+into|update|delete\s+from)\s+teacher_homework_(attempts|responses)';
   if v_bad is not null then
     raise exception 'H4: a function writes an H5 table: %', v_bad;
   end if;
@@ -875,8 +911,9 @@ begin
     raise exception 'H4: teacher_homework_is_staff() was redefined — it belongs to 20260902c';
   end if;
 
-  -- 7.12b THE INVARIANT IS IN THE DATABASE. The guard exists, fires on INSERT
-  --       ONLY, reads the reservation, and is definer with a pinned path.
+  -- 7.12b THE INVARIANT IS IN THE DATABASE. The guard exists, fires on BOTH
+  --       write verbs and on no more than the code column, reads the
+  --       reservation, and is definer with a pinned path.
   select pg_get_triggerdef(tg.oid) into v_bad
     from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
    where c.relname = 'teacher_homework' and tg.tgname = 'teacher_homework_code_guard_trg'
@@ -884,12 +921,18 @@ begin
   if v_bad is null then
     raise exception 'H4: the code guard is not installed — the invariant is only a convention';
   end if;
-  if v_bad !~ 'BEFORE INSERT ON public\.teacher_homework' or v_bad ~ 'UPDATE|DELETE' then
-    raise exception 'H4: the code guard is not BEFORE INSERT only: %', v_bad;
+  if v_bad !~ 'BEFORE INSERT OR UPDATE OF homework_code ON public\.teacher_homework' then
+    raise exception 'H4: the code guard does not cover both write verbs: %', v_bad;
   end if;
-  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  -- A bare UPDATE would fire on every title and due-date edit H2 governs; a
+  -- DELETE clause would put it in the way of teacher_homework_delete().
+  if v_bad ~ 'OR UPDATE ON' or v_bad ~ 'DELETE' then
+    raise exception 'H4: the code guard is wider than the column it protects: %', v_bad;
+  end if;
+  select regexp_replace(p.prosrc, '--[^\n]*', '', 'g') into v_code
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'teacher_homework_code_guard';
-  if v_src !~ 'from teacher_homework_retired_codes where code = new\.homework_code' then
+  if v_code !~ 'from teacher_homework_retired_codes where code = new\.homework_code' then
     raise exception 'H4: the code guard does not consult the reservation';
   end if;
   if not (select p.prosecdef and p.proconfig @> array['search_path=pg_catalog, public']
@@ -902,9 +945,13 @@ begin
     raise exception 'H4: the code guard is client-callable';
   end if;
 
-  -- 7.12c AND H2'S OWN TRIGGER IS UNTOUCHED. The new one is additive: H2's
-  --       guard was BEFORE DELETE OR UPDATE and had no INSERT coverage at all,
-  --       so nothing it does changes.
+  -- 7.12c AND H2'S OWN TRIGGER IS UNTOUCHED. The new one is additive. H2's
+  --       guard has no INSERT coverage at all, and on an UPDATE OF
+  --       homework_code both now fire — the code guard FIRST, because BEFORE
+  --       ROW triggers fire in alphabetical name order and
+  --       teacher_homework_code_guard_trg sorts before
+  --       teacher_homework_guard_trg. H2 still sees every update it saw
+  --       before, and none of its own rules move.
   if (select md5(p.prosrc) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'public' and p.proname = 'teacher_homework_guard')
      <> '19bbc18c825edce8b3c9a03c75f9fecb' then
