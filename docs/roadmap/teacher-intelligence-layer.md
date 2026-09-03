@@ -2915,3 +2915,155 @@ tables, the constraints and the guards are already shaped for it, which is what
 H2 was for.
 
 **H5 remains AUDIT ONLY. No implementation was prepared.**
+
+### 15.19 · H5 decisions D-1 and D-2 — LOCKED, and their measured consequences
+
+**Still AUDIT ONLY.** Nothing was changed: no migration, no SQL, no function,
+no policy, no UI. The probes below ran in a transaction that ended in
+`raise exception`. All eight homework tables held **0 rows** before and after.
+
+#### The two decisions, as locked
+
+> **D-1.** Closing prevents new starts and opens, but an attempt already
+> `in_progress` may be resumed, answered and submitted. Closing must not mutate
+> or terminate the attempt. Membership and workspace authorization stay
+> live-rechecked. No new sitting after close. Racing starts resolve to the
+> existing attempt.
+
+> **D-2.** `reveal_answers` controls exposure of the **correct answer and the
+> teacher's explanation**. It does not hide the student's own per-item
+> correctness once that item has been graded. The flag stays one-way.
+
+---
+
+#### 1 · What must change — D-1
+
+**No constraint and no trigger conflicts with D-1. The database already does
+exactly what it asks**, measured on the live schema:
+
+| probe | result |
+|---|---|
+| close a paper with a sitting in progress | attempt still `in_progress`, `submitted_at` NULL, both responses intact — **closing mutates nothing** |
+| save an answer into that attempt after close | **accepted** — the responses guard consults the ATTEMPT status, never the paper's |
+| grade and submit that attempt after close | **accepted** — the attempts guard requires only `old.status = 'in_progress'` |
+
+So D-1 needs **no schema change at all**. What it needs is a function change,
+and the audit narrows it to one place:
+
+**`student_my_homework()` is the problem, not `can_open()`.** Measured: with a
+sitting in progress, the list's `can_open` column read **true** while published
+and **false** the moment the paper closed. Under D-1 that student may still
+finish — but their own list tells them they may not, so the tile would grey out
+a paper that is still open to them.
+
+`teacher_homework_can_open(uuid)` itself is **already the new-start gate D-1
+wants**: attached · active membership · active workspace · `status='published'`.
+Its predicate is correct; only its *name* now describes something narrower than
+callers assume.
+
+Two shapes, and they are not equal in blast radius:
+
+| option | live functions redefined | note |
+|---|---|---|
+| **(a) leave `can_open` untouched** as the new-start gate; add a resume-aware read for the list | **1** (`student_my_homework`), plus one new helper | one function, one meaning; H5's start RPC resumes first and calls `can_open` only when no attempt exists |
+| (b) widen `can_open` to `published OR an in-progress attempt exists` | **2** (`can_open` and, in effect, every future caller's expectation) | changes what a LIVE H4 function means for callers that have not been written yet |
+
+Option (a) is strictly smaller and is the one this audit would put forward. The
+helper it implies is a `can_resume`-shaped predicate — attached · active
+membership · active workspace · an `in_progress` attempt exists — so the list
+column becomes *may start* **or** *may resume*. `student_my_homework()` already
+LEFT JOINs the attempt, so it has the status in hand.
+
+**A consequence D-1 creates that is not yet decided.** D-1 keeps membership
+live-rechecked on resume. Measured: after removal from the class, `can_open`
+went false — and an attempt **can never be deleted** (`42501`, the attempts
+guard). So a student removed mid-sitting owns an `in_progress` attempt that can
+never be submitted and never be cleared, and it sits on the teacher's roster as
+"in progress" permanently. Teacher Exams avoided this by making resume bypass
+authorization entirely ("a student removed from the class since starting still
+reaches it"). D-1 deliberately diverges, so this state is reachable and needs a
+rule: accept and label it on the roster, allow a removed student to submit but
+not to keep answering, or treat removal as terminal. **Not chosen here.**
+
+**Racing starts.** `UNIQUE (homework_id, user_id)` refuses a second attempt with
+`23505` (measured), so H5's start must catch `unique_violation` and re-select
+rather than surface an error. Separately, nothing in the database gates an
+attempt INSERT on the paper's status, so a start can still land microseconds
+after a close; `SELECT … FOR UPDATE` on the homework row inside the start RPC
+closes that window, exactly as `publish` and `close` already do.
+
+#### 2 · What must change — D-2
+
+**No policy changes. None.** `teacher_homework_responses_own_read` is attempt
+ownership and nothing else, which is precisely what D-2 locks — measured: the
+student read their own verdict with `reveal_answers = false`. **The window that
+made D-2 urgent is therefore closed by the decision itself**: there is no policy
+to narrow, so nothing about it depends on the tables staying empty.
+
+What D-2 *does* require is a read that does not exist. Measured: a student reads
+**0 rows** from `teacher_homework_questions`, so `reveal_answers = true` has no
+path to the key or the explanation today. Two shapes:
+
+- a new RLS policy on `teacher_homework_questions` — it would have to join
+  attempts and the reveal flag, and the grant on that table is column-blind, so
+  the policy would be the only thing standing between a student and
+  `correct_answer`;
+- **a definer RPC with a named column list** — the shape every other
+  student-facing read in this system already uses, and the one
+  `teacher_exam_start()` describes as "never selected in the first place".
+
+The RPC is the smaller and safer of the two.
+
+#### 3 · Existing data affected
+
+**None.** All eight homework tables held 0 rows at the moment of the audit and
+hold 0 rows now. Neither decision has anything to migrate.
+
+#### 4 · Exactly what a student may see, under each state
+
+Assuming D-3 locks grading at submit (see §5 below), the surface is:
+
+| field | source | reveal=false · in progress | reveal=false · submitted | reveal=true · in progress | reveal=true · submitted |
+|---|---|---|---|---|---|
+| title · instructions · status · `due_at` · the reveal flag itself | homework | ✓ | ✓ | ✓ | ✓ |
+| prompt · format · choices · stimulus · ordinal | questions / stimuli | ✓ | ✓ | ✓ | ✓ |
+| own `answer` | responses | ✓ | ✓ | ✓ | ✓ |
+| own `is_correct` | responses | — *(NULL until submit)* | **✓** | — *(NULL until submit)* | **✓** |
+| `correct_answer` | questions | ✗ | ✗ | **✗** | **✓** |
+| `explanation` | questions | ✗ | ✗ | **✗** | **✓** |
+| any other student's answer, verdict or attempt | — | ✗ | ✗ | ✗ | ✗ |
+
+The two bold ✗ in the `reveal=true · in progress` column are the point of §5.
+
+#### 5 · New security implications
+
+**S-1 · Reveal alone is not a sufficient condition, and D-2 must say so.**
+Measured: `teacher_homework_reveal_answers()` was called while the student's
+attempt was still `in_progress`, and it succeeded — the function's body does not
+mention attempts at all (measured, comments stripped). It is also accepted on a
+**closed** paper (measured), which under D-1 can still have a sitting running.
+Since answers remain editable while an attempt is `in_progress`, an H5 read
+gated **only** on `reveal_answers` would hand the key to a student who has not
+submitted, who could then correct their answers. The read must therefore require
+`reveal_answers = true` **AND** the caller's own attempt to be `submitted`.
+This refines D-2 rather than contradicting it, and it is the one thing in this
+report that must be locked before H5's read RPC is written.
+
+**S-2 · D-2 depends on D-3.** `is_correct` is readable by the student the
+instant it is written, with no reveal condition and no submission condition. If
+H5 ever grades on save, the student gets live right/wrong per answer — the paper
+becomes an oracle, and under `reveal=true` an oracle with the key attached.
+**D-2 is safe only if grading happens at submit and never on save.** D-3 is no
+longer an independent decision; it is a precondition of D-2.
+
+**S-3 · No new exposure is created by either decision.** Both leave `anon` at
+zero, leave staff parity untouched, leave the answer key unreachable to
+non-staff except through the read S-1 describes, and leave cross-student access
+impossible (measured throughout §15.18).
+
+---
+
+**Status: D-1 and D-2 are LOCKED. D-3 is now a precondition of D-2 rather than a
+free choice. Two items were surfaced by this audit and are NOT decided:** the
+stranded in-progress attempt of a removed student (§1), and the
+`submitted`-condition refinement S-1. **No implementation was prepared.**
