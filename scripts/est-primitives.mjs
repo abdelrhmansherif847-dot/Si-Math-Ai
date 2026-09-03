@@ -1227,25 +1227,205 @@ export function assertExpensiveFirstMove(item) {
  * distribution, and to let a primitive emit a gentle item where a gentle item
  * is what the mathematics gives. Nothing here manufactures a trap to fill a
  * quota; a primitive that has no natural trap reports 0.
+ *
+ * ─── STAGE 3.5: TWO BRANCHES, BECAUSE "FULL COST" MEANS TWO THINGS ───
+ *
+ * The original definition compared the trap against the INSIGHT route\'s cost.
+ * For an item with no insight route that comparison is against Infinity, so
+ * level 2 was structurally unreachable and every routine item graded 1. The
+ * blind coding of ESTM2-2026-P1 confirmed it from the other side: all 34
+ * routine constructs were coded trap_cost 1, none 2.
+ *
+ * That capped grade then became a live defect, because the Stage-2 Core
+ * signature asked only for `trap >= 1`. Every routine item satisfied it, the
+ * assembler filled 17 Core slots from the routine stream, and the blind coder
+ * put 16 of those 17 items back in Entry.
+ *
+ * The reference says what full cost means for an item with nothing to
+ * discover. `trap_cost = 2` is coded when "the most natural first move leads
+ * somewhere wrong OR EXPENSIVE", and among the 29 reference Core items graded
+ * 2 with no mechanism biting at all, the shape is always the same: the natural
+ * move is a COMPLETE RIVAL METHOD — the direct-variation answer where the
+ * relation is inverse (T3 Q40 D), the mean where the sum is wanted (T3 Q49,
+ * T4 Q19), the negative root\'s absolute value (T4 Q33 A), the exponent itself
+ * instead of its solution (T4 Q27 C). The student answers a different question
+ * correctly and pays the full price for it.
+ *
+ * That is not a cost claim, so it is not graded as one. It is a STRUCTURAL
+ * claim, and it is checked structurally: a rival is a natural wrong route
+ * whose value is NOT an intermediate of the key route. An intermediate means
+ * the student stopped early — a slip, level 1. Intermediates are DERIVED from
+ * the item\'s declared solution path rather than declared alongside it, so an
+ * author cannot widen the rival set by describing it differently; the only way
+ * to widen it is to shorten the solution path, which is separately checked
+ * against `steps` and the time budget.
+ *
+ * The no-insight branch FAILS CLOSED. An item with no `solution` path declares
+ * no intermediates, so it has no way to establish rivalry and grades 1. All 42
+ * pre-existing routine constructs are therefore graded exactly as before.
  */
 export function trapLevel(item) {
   const keyValue = item.options.find(o => o.id === item.key).value;
   const natural = item.routes.filter(r => r.natural);
   const insight = item.routes.filter(r => r.requiresInsight && qEq(r.value, keyValue));
-  const insightCost = insight.length ? Math.min(...insight.map(r => r.cost)) : Infinity;
 
   const trapping = natural.filter(r => {
     const hit = item.options.find(o => qEq(o.value, r.value));
     return hit && hit.id !== item.key;
   });
   if (!trapping.length) return { level: 0, reason: 'no natural route lands on a printed wrong answer' };
-  const worst = Math.max(...trapping.map(r => r.cost));
-  return worst >= insightCost
-    ? { level: 2, reason: `natural route "${trapping[0].name}" costs ${worst} against the insight's ${insightCost} and is wrong` }
-    : { level: 1, reason: `natural route "${trapping[0].name}" is wrong but cheaper (${worst}) than the insight (${insightCost})` };
+
+  // Branch A — the item has an insight to discover. Cost is the measure, and
+  // this is the Stage-1 rule, unchanged.
+  if (insight.length) {
+    const insightCost = Math.min(...insight.map(r => r.cost));
+    const worst = Math.max(...trapping.map(r => r.cost));
+    return worst >= insightCost
+      ? { level: 2, reason: `natural route "${trapping[0].name}" costs ${worst} against the insight's ${insightCost} and is wrong` }
+      : { level: 1, reason: `natural route "${trapping[0].name}" is wrong but cheaper (${worst}) than the insight (${insightCost})` };
+  }
+
+  // Branch B — nothing to discover. Rivalry is the measure.
+  const inter = intermediatesOf(item);
+  if (!inter) return { level: 1, reason: `natural route "${trapping[0].name}" is wrong, and with no declared solution path rivalry cannot be established` };
+  const rivals = trapping.filter(r => !inter.some(v => qEq(v, r.value)));
+  return rivals.length
+    ? { level: 2, reason: `natural route "${rivals[0].name}" is a rival method, not a truncation of the ${inter.length + 1}-step solution` }
+    : { level: 1, reason: `natural route "${trapping[0].name}" stops at an intermediate of the solution path` };
 }
 
+/**
+ * The values a solver produces on the way to the key, excluding the key.
+ *
+ * `item.solution` is an ordered list of `{ label, value }`, and its LAST value
+ * must be the key — checked here, so a path that does not actually terminate on
+ * the answer buys nothing. Returns null when the item declares no path, which
+ * is what makes the no-insight trap branch fail closed.
+ */
+export function intermediatesOf(item) {
+  const path = item.solution;
+  if (!Array.isArray(path) || path.length < 2) return null;
+  const keyValue = item.options.find(o => o.id === item.key)?.value;
+  if (keyValue === undefined) return null;
+  if (!qEq(path[path.length - 1].value, keyValue)) return null;
+  return path.slice(0, -1).map(s => s.value);
+}
+
+/** Steps are DERIVED from the solution path, never declared beside it. */
+export const stepsOf = item => (Array.isArray(item.solution) ? item.solution.length : null);
+
 /* ══════════════════════════ registry & batch generation ══════════════════════════ */
+
+/* ══════════════════ P-PARTITION — Stage 3.5 ══════════════════
+ *
+ * WHY A NINTH PRIMITIVE, AND WHY THESE TWO FAMILIES
+ *
+ * With the Entry/Core boundary corrected, the assembler measured its
+ * Stretch+Peak ceiling at 18 slots against a per-form reference floor of 22.
+ * The cause is FAMILY REACH, not candidate count: six of the nineteen archetype
+ * families hold twenty-one of the fifty slots and had no mechanism sub-form at
+ * all, so those slots could never be anything but Entry or Core.
+ *
+ * A14 (statistics) and A15 (probability and counting) are the two largest of
+ * them, three slots each. Both have a canonical EST mechanism that the eight
+ * Stage-1 primitives do not express: an aggregate that does NOT combine the way
+ * its parts appear to. Means do not average; probabilities do not add. In both
+ * the mechanism-blind route is the one a student reaches for first, it is a
+ * complete calculation, and it lands on a printed option.
+ *
+ * Neither sub-form is a variation on an existing primitive dressed in new
+ * words. P-COMBINATION is about which combination of symbols is determined;
+ * this is about which AGGREGATE is determined by which parts.
+ */
+function pPartition(seed, opts = {}) {
+  const rand = typeof seed === 'function' ? seed : rng(seed);
+  const form = opts.form || rand.pick(['partition_mean', 'inclusion_exclusion']);
+  if (form === 'partition_mean') return partitionMean(rand);
+  return inclusionExclusion(rand);
+}
+
+/** Means do not average: the totals do. */
+function partitionMean(rand) {
+  const n1 = rand.pick([4, 5, 6]), n2 = rand.pick([6, 8, 9, 10]);
+  if (n1 === n2) return { error: 'equal groups make averaging the means correct' };
+  const n = n1 + n2;
+  const m1 = rand.int(28, 48);
+  // The midpoint of the two means is a printed option, so the two means must
+  // have the same parity — otherwise it prints as a half-integer beside three
+  // whole numbers and the option set gives itself away.
+  const mAll = m1 + rand.pick([2, 4, 6]);
+  const total = n * mAll, t1 = n1 * m1;
+  if ((total - t1) % n2 !== 0) return { error: 'the second mean is not a whole number' };
+  const key = Q((total - t1) / n2);
+  const blindMean = Q(m1 + mAll, 2);                 // averaged the two means
+  // Divided the remaining total by the WRONG group size. A remaining-total
+  // distractor was tried first and printed six times the key beside two
+  // two-digit options, which lets magnitude alone pick the answer.
+  const dWrongDenom = Q(total - t1, n1);
+  const dDiff = Q(mAll - m1);                        // difference of the means
+  if (qEq(key, blindMean) || qEq(key, dWrongDenom) || qEq(key, dDiff)) return { error: 'a distractor coincides with the key' };
+  const L = layout(rand, key, [blindMean, dWrongDenom, dDiff]);
+  if (L.error) return { error: L.error };
+  return {
+    primitive: 'P-PARTITION', species: 'aggregate-partition', form: 'partition_mean',
+    stem: `The mean of ${n} measurements is ${mAll}. The mean of ${n1} of them is ${m1}. ` +
+          `What is the mean of the other ${n2} measurements?`,
+    ...L,
+    distractorClasses: ['D2', 'D1', 'D3'],
+    mechanism: { hidden_step: 2, inference: 2, multiconcept: 2, abstraction: 1, nonobvious_rel: 1 },
+    routes: [
+      ROUTE('totals-then-divide', { insight: true, cost: 4, value: key }),
+      ROUTE('average-the-two-means', { insight: false, cost: 2, value: blindMean, natural: true }),
+      ROUTE('divide-by-the-wrong-group-size', { insight: false, cost: 3, value: dWrongDenom }),
+      ROUTE('difference-of-the-means', { insight: false, cost: 1, value: dDiff }),
+    ],
+    // Remove the mechanism — let means combine linearly, as the surface
+    // suggests — and the answer becomes the midpoint of the two means.
+    counterfactual: { kind: 'value', note: 'means treated as combining linearly', value: blindMean },
+    fingerprintParts: {
+      ctx: 'summary-statistic', chain: ['mean-to-total', 'subtract-the-known-part', 'total-to-mean'],
+      target: 'value:partition-mean', options: 'aggregate-rivals', distract: ['D2', 'D1', 'D3'],
+      narrative: 'one-set-split-in-two', numeric: ['size-all', 'mean-all', 'size-part', 'mean-part'],
+    },
+  };
+}
+
+/** Probabilities do not add: the overlap is counted twice. */
+function inclusionExclusion(rand) {
+  const both = rand.int(4, 12);
+  const onlyA = rand.int(6, 20), onlyB = rand.int(6, 20);
+  const neither = rand.int(5, 18);
+  const a = onlyA + both, b = onlyB + both;
+  const n = onlyA + onlyB + both + neither;
+  const blind = n - a - b;                            // forgot that `both` is counted twice
+  const union = a + b - both;
+  if (blind === neither || blind < 0) return { error: 'the blind route does not separate' };
+  if (union === neither || both === neither) return { error: 'a distractor coincides with the key' };
+  const L = layout(rand, Q(neither), [Q(blind), Q(union), Q(both)]);
+  if (L.error) return { error: L.error };
+  return {
+    primitive: 'P-PARTITION', species: 'aggregate-partition', form: 'inclusion_exclusion',
+    stem: `In a group of ${n} students, ${a} study physics and ${b} study chemistry. ` +
+          `${both} of the students study both subjects. How many of the students study neither subject?`,
+    ...L,
+    distractorClasses: ['D2', 'D1', 'D1'],
+    mechanism: { hidden_step: 2, multiconcept: 2, inference: 2, filtering: 1, abstraction: 1 },
+    routes: [
+      ROUTE('union-by-inclusion-exclusion', { insight: true, cost: 4, value: Q(neither) }),
+      ROUTE('subtract-both-counts-from-the-total', { insight: false, cost: 2, value: Q(blind), natural: true }),
+      ROUTE('report-the-union', { insight: false, cost: 3, value: Q(union) }),
+      ROUTE('report-the-overlap', { insight: false, cost: 1, value: Q(both) }),
+    ],
+    // Remove the mechanism — subtract both counts as if the groups were
+    // disjoint — and the answer moves by exactly the size of the overlap.
+    counterfactual: { kind: 'value', note: 'the two groups treated as disjoint', value: Q(blind) },
+    fingerprintParts: {
+      ctx: 'set-counting', chain: ['identify-the-overlap', 'form-the-union', 'subtract-from-the-total'],
+      target: 'value:complement-count', options: 'set-part-rivals', distract: ['D2', 'D1', 'D1'],
+      narrative: 'group-with-two-subjects', numeric: ['total', 'count-a', 'count-b', 'overlap'],
+    },
+  };
+}
 
 export const PRIMITIVES = {
   'P-COMBINATION': pCombination,
@@ -1256,6 +1436,7 @@ export const PRIMITIVES = {
   'P-DECOY': pDecoy,
   'P-UNSTATED-MODEL': pUnstatedModel,
   'P-NAMED-CONFIG': pNamedConfig,
+  'P-PARTITION': pPartition,
 };
 
 /** Species with zero current generator coverage, per artifact 13 section 4. */
@@ -1268,6 +1449,14 @@ export const SPECIES_COVERAGE = {
   'P-CLASSIFY': { species: 'classification-gate', corpusShare: 0.09, priorCoverage: 'none' },
   'P-UNSTATED-MODEL': { species: 'unstated-model', corpusShare: 0.06, priorCoverage: 'L3 recall only' },
   'P-DECOY': { species: 'supplied-decoy', corpusShare: 0.03, priorCoverage: 'none' },
+  // Stage 3.5. Not a species from artifact 13 §4 — that list was written from
+  // the corpus's LOAD-BEARING mechanisms, and this one was found from the other
+  // end: the assembler measured that six of nineteen archetype families held
+  // twenty-one of fifty slots with no mechanism sub-form at all. The corpus
+  // share below is the count of reference items whose mechanism is an aggregate
+  // that does not combine the way its parts appear to — partition means and
+  // inclusion-exclusion — over the 200 coded items.
+  'P-PARTITION': { species: 'aggregate-partition', corpusShare: 0.04, priorCoverage: 'none' },
 };
 
 /**

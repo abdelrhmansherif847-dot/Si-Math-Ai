@@ -48,6 +48,65 @@
 // Generated Peak items therefore sit in the modal Peak profile rather than its
 // tail. That is a design choice, stated rather than hidden, and it is measured:
 // the signature admits 81% of observed Peak items and 0% of Entry or Core.
+//
+// ══════════════ STAGE 3.5: THE ENTRY/CORE BOUNDARY, REBUILT ══════════════
+//
+// The Stage-2 Core signature asked for `trap >= 1` and nothing else that an
+// Entry item could fail. ESTM2-2026-P1 measured the consequence: the assembler
+// filled 17 Core slots from the routine stream and the blind coder put 16 of
+// those 17 back in Entry. Generator/blind band agreement was 25/50.
+//
+// So the question was asked of the corpus directly: on the 200 coded reference
+// items, banded by drift-corrected RLx, what actually separates Entry from
+// Core? Every candidate property was scored by (share admitted in Core) minus
+// (share admitted in Entry):
+//
+//   property             Entry    Core    separation
+//   trap_cost >= 2         16%     60%      +0.44     <- sharpest, and DRIFT-IMMUNE
+//   opacity   >= 2         51%     88%      +0.36     <- also drift-immune
+//   coreMild  >= 1         51%     79%      +0.28
+//   present   >= 5         11%     42%      +0.31
+//   biting    >= 1         11%     31%      +0.20
+//   core      >= 1          0%      2%      +0.02     <- separates NOTHING here
+//   steps     >= 2         84%     96%      +0.12     <- separates almost nothing
+//
+// `trap_cost` and `surface_visible` are two of the three dimensions the blind
+// re-code found MECHANICAL (shifts +0.05 and +0.05); the judgement dimensions
+// moved +0.405. The boundary is therefore built on the two properties a second
+// coder would have measured the same way, and not on the eight that drift.
+//
+// Note what is NOT here. Neither `core` nor `biting` separates Entry from Core
+// in the reference — a Core item is typically an item where NO mechanism bites
+// at all. Requiring one would have described a Stretch item. And `steps` is
+// worth +0.12, which is the whole case for keeping it out of the placement
+// rule.
+//
+// The conjunction search then asked which rule ALSO rejects all 30 routine
+// constructs the blind coder put in Entry. 105 of 460 candidates survived that
+// filter; the best was `(trap>=2 OR biting>=1) AND opacity>=2` at +0.55.
+// Opacity is not modelled by the generator and duplicating it as a second
+// declaration would have added a synonym for the trap, so the rule adopted is
+// its drift-immune half:
+//
+//   CORE REQUIRES trap === 2.
+//
+// Measured on the reference: Entry 16% / Core 60% / Stretch 71% / Peak 76%.
+// Measured on P1: rejects 34 of 34 routine constructs, which is the defect.
+//
+// STRETCH gets the same treatment for the same reason. `biting >= 1` was
+// satisfied by a chart-reading routine item whose `repr_switch` bites for free,
+// so Stretch now requires `core >= 1 OR trap === 2` — a reasoning-core
+// mechanism at full strength, which assessRoutine() contractually forbids a
+// routine item from having, or a full-cost trap, which the routine stream
+// cannot construct. Neither clause is a step count and neither is a sum.
+//
+// WHAT THIS COST, STATED PLAINLY. Under the corrected boundary the generator's
+// Core capacity measured ZERO: every trap-2 item in the mechanism pool has
+// biting >= 3 and core >= 2, and every biting <= 2 item has trap <= 1. Trap
+// level and mechanism density are entangled in the primitives in a way the
+// reference does not share — the corpus has 29 Core items at trap 2 with no
+// mechanism biting at all. That is a PRIMITIVE-COVERAGE gap, not a calibration
+// error, and est-core-stream.mjs is the answer to it.
 
 export const MECHANISMS = [
   'hidden_step', 'inference', 'multiconcept', 'nonobvious_rel',
@@ -91,14 +150,14 @@ export const SIGNATURES = {
   },
   Core: {
     label: 'Core',
-    admits: p => p.biting <= 2 && p.core <= 1 && p.present >= 1 && p.present <= 7 && p.trap >= 1 && !p.composed,
-    describe: 'up to two mechanisms biting, at most one from the reasoning core, some trap present, never composed',
+    admits: p => p.trap === 2 && p.biting <= 2 && p.core <= 1 && p.present >= 1 && p.present <= 7 && !p.composed,
+    describe: 'a FULL-COST trap — the natural first move is a rival method, not a slip — with at most two mechanisms biting and at most one from the reasoning core; never composed',
     composition: 'forbidden',
   },
   Stretch: {
     label: 'Stretch',
-    admits: p => p.biting >= 1 && p.biting <= 3 && p.core <= 2 && p.present >= 2 && p.trap >= 1,
-    describe: 'one to three mechanisms biting, at most two from the reasoning core; composition permitted but never required',
+    admits: p => (p.core >= 1 || p.trap === 2) && p.biting >= 1 && p.biting <= 3 && p.core <= 2 && p.present >= 2,
+    describe: 'one to three mechanisms biting, at most two from the reasoning core, and either a reasoning-core mechanism at full strength or a full-cost trap; composition permitted but never required',
     composition: 'allowed',
   },
   Peak: {
@@ -107,6 +166,23 @@ export const SIGNATURES = {
     describe: 'at least two mechanisms biting with at least one from the reasoning core, and at least four mechanisms in play',
     composition: 'allowed',
   },
+};
+
+/**
+ * What each band's admission rule is measured to do, on the 200 coded reference
+ * items and on the 34 blind-coded ESTM2-2026-P1 routine constructs.
+ *
+ * Kept beside the rules because an admission rule with no measurement beside it
+ * is an assertion. `refEntry` is the share of reference ENTRY items the rule
+ * admits — a rule is only useful to the degree that number is small while
+ * `refBand` is large. `p1Routine` is the count of P1 routine constructs
+ * admitted, and for every band above Entry it must be zero: that was the defect.
+ */
+export const SIGNATURE_EVIDENCE = {
+  Entry:   { refEntry: 0.89, refBand: 0.89, p1Routine: 34, note: 'Entry is where the routine stream belongs; 30 of 34 P1 routine constructs blind-coded Entry' },
+  Core:    { refEntry: 0.16, refBand: 0.60, p1Routine: 0,  note: 'trap === 2 — the sharpest drift-immune Entry/Core separator in the corpus (+0.44)' },
+  Stretch: { refEntry: 0.05, refBand: 0.63, p1Routine: 0,  note: 'core >= 1 OR trap === 2 closes the free-repr_switch leak that admitted chart readers' },
+  Peak:    { refEntry: 0.00, refBand: 0.81, p1Routine: 0,  note: 'unchanged from Stage 2; already admitted no routine item' },
 };
 
 export const BANDS = ['Entry', 'Core', 'Stretch', 'Peak'];
@@ -198,7 +274,12 @@ export const COMPOSITION_LIMITS = {
  */
 export const ARCHETYPE_DIVERSITY = {
   maxPerArchetype: 2,
-  maxPerSubForm: 3,
+  // Lowered from 3 at Stage 3.5. P-NAMED-CONFIG offers fourteen variations on
+  // one special-triangle configuration and ESTM2-2026-P1 printed three of them
+  // (artifact 18, defect D10). Artifact 1 §9 measured the corpus: within a form
+  // an archetype essentially never repeats, and two of the four reference forms
+  // carry 50 distinct archetypes in 50 items. Two is already generous.
+  maxPerSubForm: 2,
   maxPerPrimitive: 8,
   minDistinctArchetypes: 18,
   reason: 'a student meets a form once; repetition inside it is what lets pattern-matching replace the mechanism',

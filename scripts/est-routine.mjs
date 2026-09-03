@@ -39,6 +39,8 @@ import {
   rng, ROUTE, layout, coef, term, signedConst,
 } from './est-primitives.mjs';
 import { fingerprintItem, detectClone } from './est-fingerprint.mjs';
+import { CORE_READERS, assessCore } from './est-core-stream.mjs';
+import { itemSteps } from './est-form-gates.mjs';
 
 /* ────────────────────────── the routine contract ────────────────────────── */
 
@@ -461,6 +463,104 @@ const STIMULUS_CONSTRUCTS = {
    nothing below exists for any other reason. */
 
 const VARIANTS = {
+  /* ── LONG BUT ROUTINE, added at Stage 3.5 ─────────────────────────────────
+     The step-independence gate measured a Spearman r(steps, band) of +0.89
+     against a reference range of +0.13 to +0.47: the generator's bands were
+     almost perfectly predictable from operation count. The cause was not that
+     its hard items are long — it is that its EASY items are short. Reference
+     Entry items average 3.24 operations at the T3/T4 coding standard; the
+     generator's averaged 1.3.
+
+     The corpus is explicit that long-and-easy is a real EST shape and not a
+     contradiction: T1 Q24 is a "fraction grind, no insight required", T3 Q16 is
+     "7 arithmetic operations, zero reasoning", T3 Q4 is "4 operations, zero
+     discovery". These three constructs are that shape. They are pure execution
+     — nothing is discovered, nothing is disguised — and they are long. */
+
+  A10: [(rand) => {                                 // fraction grind
+    // Proper fractions only, drawn as such rather than drawn and rejected. A
+    // real paper does not print 3/3, and a unit-valued term collapses a step
+    // the item exists to ask for.
+    const b = rand.pick([3, 4, 6]), d = rand.pick([2, 3, 4, 6]), f = rand.pick([2, 3, 5]);
+    if (b === d) return { error: 'a common denominator removes the work' };
+    const a = rand.int(1, b - 1), c = rand.int(1, d - 1), e = rand.int(1, f - 1);
+    // ...and in lowest terms. 2/4 is not something a paper prints either.
+    const gcd = (x, y) => (y ? gcd(y, x % y) : x);
+    if (gcd(a, b) !== 1 || gcd(c, d) !== 1 || gcd(e, f) !== 1) return { error: 'a fraction is not in lowest terms' };
+    const sum = qAdd(Q(a, b), Q(c, d));
+    const key = qDiv(sum, Q(e, f));
+    if (qEq(key, Q(0))) return { error: 'the quotient is zero' };
+    const wrong1 = qMul(sum, Q(e, f));               // multiplied instead of inverting
+    const wrong2 = qDiv(Q(a + c, b + d), Q(e, f));   // added numerators and denominators
+    const wrong3 = sum;                              // stopped after the addition
+    return OK(rand, key, [
+      { name: 'multiplied-instead-of-inverting', value: wrong1, cost: 3 },
+      { name: 'added-numerators-and-denominators', value: wrong2, cost: 3 },
+      { name: 'stopped-after-the-addition', value: wrong3, cost: 2 },
+    ], { family: 'A10', construct: 'fraction-grind',
+      stem: `What is the value of $\\left(\\dfrac{${a}}{${b}} + \\dfrac{${c}}{${d}}\\right) \\div \\dfrac{${e}}{${f}}$?`,
+      cost: 4,
+      mechanism: { abstraction: 1 },
+      fingerprintParts: { ctx: 'pure-arithmetic no-stimulus',
+        chain: ['common-denominator', 'add-the-fractions', 'invert-the-divisor', 'multiply-and-simplify'],
+        target: 'value:quotient', options: 'fraction-slips', distract: ['D3', 'D3', 'D1'],
+        narrative: 'symbols-only:fractions', numeric: ['num-a', 'den-b', 'num-c', 'den-d', 'divisor'] } });
+  }],
+
+  A07: [(rand) => {                                 // expand two products and collect
+    const a = rand.int(2, 5), b = rand.nonZero(-6, 6), c = rand.int(2, 5), d = rand.nonZero(-6, 6);
+    const e = rand.int(1, 4), f = rand.nonZero(-6, 6), g = rand.int(1, 4), h = rand.nonZero(-6, 6);
+    const q2 = a * c - e * g, q1 = a * d + b * c - (e * h + f * g), q0 = b * d - f * h;
+    if (q2 === 0 || q1 === 0 || q0 === 0) return { error: 'a vanishing term removes a step' };
+    // A zero coefficient anywhere in the OPTION SET prints as "+ 0", which no
+    // paper does and which announces the option as generated.
+    if (a * c + e * g === 0 || a * d + b * c + e * h + f * g === 0 || b * d + f * h === 0
+        || a * d + b * c - e * h - f * g === 0) return { error: 'a distractor would print a zero term' };
+    const texts = [
+      `${coef(q2, 'x^2')} ${term(q1, 'x')} ${term(q0, '')}`,
+      `${coef(a * c + e * g, 'x^2')} ${term(a * d + b * c + e * h + f * g, 'x')} ${term(b * d + f * h, '')}`,
+      `${coef(q2, 'x^2')} ${term(a * d + b * c - e * h - f * g, 'x')} ${term(b * d + f * h, '')}`,
+      `${coef(q2, 'x^2')} ${term(q1, 'x')} ${term(-q0, '')}`,
+    ];
+    if (new Set(texts).size !== 4) return { error: 'two options print identically' };
+    return OK(rand, Q(0), [
+      { name: 'added-the-two-products-instead-of-subtracting', value: Q(1), cost: 4 },
+      { name: 'distributed-the-minus-over-the-first-term-only', value: Q(2), cost: 4 },
+      { name: 'sign-slip-on-the-constant', value: Q(3), cost: 3 },
+    ], { family: 'A07', construct: 'expand-and-collect',
+      stem: `Which of the following is equivalent to ` +
+            `$(${coef(a, 'x')} ${term(b, '')})(${coef(c, 'x')} ${term(d, '')}) - (${coef(e, 'x')} ${term(f, '')})(${coef(g, 'x')} ${term(h, '')})$?`,
+      cost: 4,
+      mechanism: { abstraction: 1, filtering: 1 },
+      fingerprintParts: { ctx: 'polynomial no-stimulus',
+        chain: ['expand-the-first-product', 'expand-the-second-product', 'distribute-the-subtraction', 'collect-like-terms'],
+        target: 'selection:expression', options: 'expression-set', distract: ['D3', 'D2', 'D3'],
+        narrative: 'symbols-only:difference-of-products', numeric: ['coeffs-first', 'coeffs-second'] } },
+      v => texts[qNum(v)]);
+  }],
+
+  A12: [(rand) => {                                 // chained unit conversion
+    const litresPerCubic = 1000;
+    const cubic = rand.int(2, 9);
+    const rate = rand.pick([200, 250, 400, 500]);
+    const total = cubic * litresPerCubic;
+    if (total % rate !== 0) return { error: 'the time is not a whole number of minutes' };
+    const key = Q(total / rate);
+    return OK(rand, key, [
+      { name: 'rounded-the-volume-up-a-cubic-metre', value: Q((cubic + 1) * litresPerCubic, rate), cost: 3 },
+      { name: 'used-a-hundred-litres-per-cubic-metre', value: Q(cubic * 100, rate), cost: 3 },
+      { name: 'divided-the-rate-by-the-volume-in-cubic-metres', value: Q(rate, cubic), cost: 2 },
+    ], { family: 'A12', construct: 'chained-unit-conversion',
+      stem: `A tank holds $${cubic}$ cubic metres of water, and $1$ cubic metre is $${litresPerCubic}$ litres. ` +
+            `A pump removes ${rate} litres each minute. How many minutes does the pump take to empty the full tank?`,
+      cost: 3,
+      mechanism: { abstraction: 1, repr_switch: 1 },
+      fingerprintParts: { ctx: 'unit-conversion no-stimulus',
+        chain: ['convert-cubic-metres-to-litres', 'divide-by-the-rate', 'read-off-the-minutes'],
+        target: 'value:time', options: 'conversion-slips', distract: ['D4', 'D3', 'D3'],
+        narrative: 'tank-emptied-by-a-pump', numeric: ['volume', 'litres-per-cubic', 'rate'] } });
+  }],
+
   A01: [(rand) => {                                  // rearrange a formula
     const a = rand.int(2, 9), b = rand.int(2, 9), c = rand.int(2, 9) * a * b;
     return OK(rand, Q(c, a * b), [
@@ -865,6 +965,30 @@ export const READERS = {
             options: 'category-set', distract: ['D5', 'D5', 'D5'], narrative: 'four-category-display', numeric: ['bar-values'] } },
           val => DAYS[qNum(val)]); } },
 
+      // A LONG routine reading. The reference's chart blocks are not uniformly
+      // one-step: T4 Q11 "chains the hundreds conversion with a percentage" and
+      // T3 Q16 is "7 arithmetic operations, zero reasoning". Every reader here
+      // was one or two operations, which left the generated Entry band spanning
+      // 1 to 2 steps while the reference's spans 1 to 7 — so band membership
+      // became predictable from length alone.
+      { name: 'bar-percent-change', read: (rand, st) => {
+        const v = st.values, i = 0, j = 3;
+        if (v[i] === v[j] || v[i] === 0) return { error: 'the two bars do not change' };
+        const pct = Q((v[j] - v[i]) * 100, v[i]);
+        if (!qIsInt(pct)) return { error: 'the percentage is not a whole number' };
+        return OK(rand, pct, [
+          { name: 'divided-by-the-later-value', value: Q((v[j] - v[i]) * 100, v[j]), cost: 3 },
+          { name: 'reported-the-ratio-as-a-percentage', value: Q(v[j] * 100, v[i]), cost: 2 },
+          { name: 'reported-the-raw-difference', value: Q(v[j] - v[i]), cost: 1 },
+        ], { family: 'A13', construct: 'read-bar-percent-change', stimulus: st,
+          cost: 3,
+          stem: `The bar chart shows the number of items sold on four days. By what percentage did the number sold change from ${DAYS[i]} to ${DAYS[j]}?`,
+          mechanism: { repr_switch: 2, abstraction: 1 },
+          fingerprintParts: { ctx: 'stimulus:bar-chart shared',
+            chain: ['read-two-bars', 'find-the-difference', 'divide-by-the-base-and-convert'],
+            target: 'value:percent-change', options: 'percentage-slips', distract: ['D2', 'D3', 'D1'],
+            narrative: 'four-category-display', numeric: ['bar-values'] } }); } },
+
       { name: 'bar-above-threshold', read: (rand, st) => {
         const v = st.values, cut = Math.min(...v) + 5;
         const above = v.filter(x => x > cut).length;
@@ -1049,10 +1173,39 @@ export const READERS = {
 };
 
 /** Build one shared display and the items that read it. */
-export function stimulusSet(kind, familiesWanted, seed, exclude = new Set()) {
+/**
+ * Every reader of one display kind, routine and Core together.
+ *
+ * The two pools are kept separate at the source — a Core reader declares a
+ * solution path and a rival and is checked by assessCore(), a routine reader
+ * declares neither and is checked by assessRoutine() — and merged only here,
+ * where a set has to be able to draw from both. Which contract an item is held
+ * to follows the reader it came from, never the pool it was drawn from.
+ */
+export function readersFor(kind) {
+  const out = {};
+  for (const [fam, list] of Object.entries(READERS[kind] || {})) out[fam] = [...list];
+  for (const [fam, list] of Object.entries(CORE_READERS[kind] || {}))
+    (out[fam] ||= []).push(...list.map(r => ({ ...r, core: true })));
+  return out;
+}
+
+/**
+ * Build one shared-display set.
+ *
+ * `coreFirst` is how many of the set's slots should try the CORE readers before
+ * the routine ones. It is not a quota and nothing fails if it cannot be met: a
+ * set with no Core reader for its families simply builds from routine readers,
+ * as it did before Stage 3.5. It exists because the reader list is searched in
+ * order and the routine readers come first, so without it a set of three
+ * questions about one chart is three Entry questions — which is what the P1
+ * prototype did with all ten of its set slots, and is not what the reference
+ * does with a chart block (T3 Q45, T4 Q11 and T4 Q14 are all Core).
+ */
+export function stimulusSet(kind, familiesWanted, seed, exclude = new Set(), { coreFirst = 0, priorFps = [] } = {}) {
   const gen = STIMULUS_KINDS[kind];
   if (!gen) return { error: `unknown stimulus kind ${kind}` };
-  const readersByFam = READERS[kind] || {};
+  const readersByFam = readersFor(kind);
   for (let attempt = 0; attempt < 40; attempt++) {
     const rand = rng(seed + attempt * 997);
     const stim = gen(rand);
@@ -1061,9 +1214,31 @@ export function stimulusSet(kind, familiesWanted, seed, exclude = new Set()) {
     // so it is excluded here rather than caught later as a clone collision.
     const usedReader = new Set(exclude);
     let ok = true;
+    let coreLeft = coreFirst;
+    // A shared display carries AT MOST ONE pure-lookup reading. T1 Q31 — "read
+    // ONE bar", the easiest item on the paper — is singular in its four-item
+    // block, and P1 printed three low-information readings of one five-number
+    // list (artifact 18, defect D9).
+    let lowInfoLeft = 1;
+    // AND no two readings of one display may take the same number of steps.
+    //
+    // A reference chart block asks at different depths — T1's four-item block
+    // runs a single bar read, a scan, a comparison and a computation. Every
+    // generated block asked at one depth, because the reader list is searched
+    // in order and the first match wins, which left the whole Entry band
+    // spanning one to two operations while the reference's spans one to seven.
+    const usedDepth = new Set();
     for (const fam of familiesWanted) {
-      const list = (readersByFam[fam] || []).filter(r => !usedReader.has(r.name));
+      const avail = (readersByFam[fam] || []).filter(r => !usedReader.has(r.name));
+      const list = coreLeft > 0
+        ? [...avail.filter(r => r.core), ...avail.filter(r => !r.core)]
+        : avail;
+      // Distinct reading depths are a PREFERENCE, not a requirement. Enforced
+      // hard it starved the sets — three of fifty slots went unfilled because
+      // no unused depth was left for the third question about one chart.
       let made = null;
+      for (const allowRepeatDepth of [false, true]) {
+      if (made) break;
       for (const r of list) {
         const it = r.read(rng(seed + attempt * 997 + items.length * 31 + 7), stim);
         if (!it || it.error) continue;
@@ -1072,15 +1247,34 @@ export function stimulusSet(kind, familiesWanted, seed, exclude = new Set()) {
         // that contained both would ask one question twice. Caught here rather
         // than later, because by then the set is already assembled.
         it.seed = seed + attempt;
-        const fp = fingerprintItem({ ...it, primitive: `R-${fam}` });
-        if (detectClone(fp, items.map(x => fingerprintItem(x)), 'sibling').clone) continue;
+        // ANTI-CLONE ACROSS SETS, not only inside one. Reader NAMES were
+        // excluded across sets from Stage 2.5, which stops the same reading
+        // twice but not two different readings that are the same question:
+        // "the greatest two-day total" and "the total over four days" share
+        // five of seven fingerprint axes and collided on four of five seeds.
+        const fp = fingerprintItem({ ...it, primitive: `${r.core ? 'C' : 'R'}-${fam}` });
+        if (detectClone(fp, [...priorFps, ...items.map(x => fingerprintItem(x))], 'sibling').clone) continue;
+        const depth = (it.fingerprintParts?.chain || []).length || 1;
+        if (usedDepth.has(depth) && !allowRepeatDepth) continue;
+        const low = depth <= 1;
+        if (low && lowInfoLeft <= 0) continue;
+        if (low) lowInfoLeft--;
+        usedDepth.add(depth);
+        it.__core = !!r.core;
+        if (r.core) coreLeft--;
         made = it; usedReader.add(r.name); break;
       }
+      }
       if (!made) { ok = false; break; }
-      made.primitive = `R-${fam}`; made.species = 'routine'; made.form = made.construct;
-      made.stream = 'routine'; made.subForm = `R-${fam}/${made.construct}`;
+      const isCore = !!made.__core;
+      delete made.__core;
+      made.primitive = isCore ? `C-${fam}` : `R-${fam}`;
+      made.species = isCore ? 'core' : 'routine';
+      made.form = made.construct;
+      made.stream = isCore ? 'core' : 'routine';
+      made.subForm = `${isCore ? 'C' : 'R'}-${fam}/${made.construct}`;
       made.seed = seed + attempt;
-      const v = assessRoutine(made);
+      const v = isCore ? assessCore(made) : assessRoutine(made);
       if (!v.ok) { ok = false; break; }
       items.push(made);
     }
@@ -1093,10 +1287,11 @@ export function stimulusSet(kind, familiesWanted, seed, exclude = new Set()) {
 /** Which display kinds can serve a given multiset of families. */
 export function kindsFor(families, exclude = new Set()) {
   return Object.keys(READERS).filter(kind => {
+    const pool = readersFor(kind);
     const need = {};
     for (const f of families) need[f] = (need[f] || 0) + 1;
     return Object.entries(need).every(([f, n]) =>
-      (READERS[kind][f] || []).filter(r => !exclude.has(r.name)).length >= n);
+      (pool[f] || []).filter(r => !exclude.has(r.name)).length >= n);
   });
 }
 
