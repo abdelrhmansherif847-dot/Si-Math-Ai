@@ -894,7 +894,9 @@ export const A12_ASKS = {
       { name: 'decreased-the-new-price-by-the-same-percent', value: s1, cost: 2 },
       { name: 'added-the-percent-as-an-amount', value: s2, cost: 1 },
       { name: 'subtracted-the-percent-as-an-amount', value: s3, cost: 1 },
-    ], { family: 'A12', construct: 'undo-a-percent-increase', object: 'reverse-percentage',
+      // A12b, not A12: undoing a percent change on a population is a share
+      // question, and A12b held two structures against two slots every form.
+    ], { family: 'A12b', construct: 'undo-a-percent-increase', object: 'reverse-percentage',
       stem: `After a ${pct}% increase, the price of an item is $${now}. What was the price, in dollars, before the increase?`,
       cost: 3, mechanism: { abstraction: 1, reversal: 1 },
       fingerprintParts: FP('percent no-stimulus', ['identify-the-base', 'divide-by-the-growth-factor'], 'value:original',
@@ -1292,7 +1294,8 @@ export const VOCAB_BY_FAMILY = {
   A09: Object.values(A09_ASKS),
   A10: [...Object.values(A10_ASKS), ...Object.values(A10_ASKS_2)],
   A11: Object.values(A11_ASKS),
-  A12: Object.values(A12_ASKS),
+  A12: Object.values(A12_ASKS).filter(f => f !== A12_ASKS['reverse-percentage']),
+  A12b: [A12_ASKS['reverse-percentage']],
   A13: Object.values(A13_ASKS),
   A14: Object.values(A14_ASKS),
   A15: Object.values(A15_ASKS),

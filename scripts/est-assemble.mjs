@@ -40,6 +40,7 @@ import { generateRoutine, ROUTINE_FAMILIES, ROUTINE_CONSTRUCTS, CONSTRUCT_COUNTS
 import { composeClassifyNormalise, composeConvertCombine, composeNamedModel, assessComposed } from './est-compose.mjs';
 import { CORE_CONSTRUCTS, CORE_SERVES, generateCore, assessCore } from './est-core-stream.mjs';
 import { INTERPRET_PRIMITIVES } from './est-interpret.mjs';
+import { MECHANISM_EXPANSION, MECHANISM_EXPANSION_SERVES } from './est-mechanisms.mjs';
 import { fingerprintItem, detectClone } from './est-fingerprint.mjs';
 import { formGates, rebalanceKeys, contentKeysOf, itemSteps, AUTHENTICITY } from './est-form-gates.mjs';
 import { objectOf, objectDiversity, OBJECT_RULES } from './est-objects.mjs';
@@ -77,13 +78,24 @@ export const SERVES = {
   'P-INTERPRET/parameter_meaning': 'A02',
   'P-INTERPRET/axes_comprehension': 'A13',
   'P-SUBSET/roman_properties': 'A18',
-  'P-SUBSET/roman_conditions': 'A08',
+  // Stage B moved this from A08 to A18. The blueprint gives the `roman` device
+  // to ONE slot per form and that slot is A18's; serving a second Roman form to
+  // A08 meant A08's mechanism-band slot went unfilled whenever A18 spent the
+  // budget first — three seeds in eighteen, and worse as more claim-style
+  // structures entered the pool. Under A18 the two Roman forms rotate across
+  // the series for the one slot that wants them, which is what that slot is
+  // for. A08's mechanism band is served by P-EXTRANEOUS instead.
+  'P-SUBSET/roman_conditions': 'A18',
   'P-SELECT-OBJECT/which_equation': 'A05',
   'P-SELECT-OBJECT/which_system': 'A03',
+  // Stage B: the mechanism stream, which Stage 22 did not touch and which fills
+  // more slots than any other. Fourteen structures placed where the family x
+  // band matrix measured exactly one object against standing demand.
+  ...MECHANISM_EXPANSION_SERVES,
 };
 
 /** Every mechanism primitive, Stage-1 and later. */
-const ALL_PRIMITIVES = { ...PRIMITIVES, ...INTERPRET_PRIMITIVES };
+const ALL_PRIMITIVES = { ...PRIMITIVES, ...INTERPRET_PRIMITIVES, ...MECHANISM_EXPANSION };
 
 /**
  * Slots per band in a 50-item form.
@@ -102,6 +114,64 @@ const ALL_PRIMITIVES = { ...PRIMITIVES, ...INTERPRET_PRIMITIVES };
  * builds to.
  */
 export const BAND_PLAN = { Entry: 13, Core: 11, Stretch: 12, Peak: 14 };
+
+/**
+ * How hard `assignBands` avoids planning a slot on a band where the family has
+ * exactly one structure left.
+ *
+ * CHOSEN BY SWEEP, not by taste, and the sweep is in artifact 23 SS2.4. Over 25
+ * assembled forms:
+ *
+ *     w      overlap  every-form  penalty  Stretch/form  verify()
+ *     0        72%        21       2.40x      9.0         25/25
+ *    10        68%        18       2.26x      8.4         25/25
+ *    15        68%        18       2.26x      8.0         21/25
+ *    20        67%        18       2.22x      8.0         25/25
+ *    25        65%        16       2.16x      7.6         13/25
+ *
+ * The penalty buys series diversity by steering slots away from the cells where
+ * a family holds one structure -- and those cells are almost all Stretch and
+ * Peak, so above 20 it buys the diversity by EMPTYING the hard end of the form.
+ * Stretch's floor is 8; at w=25 the mean is 7.6 and half the forms fail their
+ * own band gate. Ten keeps a real margin, and the honest reading is that this
+ * knob is nearly spent: the rest has to come from more structures in those
+ * cells, not from steering around them.
+ */
+export const BAND_SCARCITY_PENALTY = 10;
+
+/**
+ * Fold assembled forms into a ledger: object -> how many of the last `window`
+ * forms it appeared in.
+ *
+ * A window rather than a running total, because the corpus reuses an archetype
+ * after a GAP rather than never: `ANTI_REPETITION.maxArchetypeCarryoverBetween
+ * AdjacentForms` is 4 of 50 and `maxArchetypeUsesAcrossSeries` is 3. A ledger
+ * that never forgave a use would exhaust the library and then stop working;
+ * one that forgets after a few forms reproduces the corpus's actual policy.
+ */
+/*
+ * The window was swept over 25 assembled forms, and it saturates:
+ *
+ *     window   overlap  every-form  objects used  penalty
+ *     none       73%        21          116        2.63x
+ *      2         67%        15          127        2.40x
+ *      4         66%        15          132        2.36x
+ *      6         66%        15          134        2.36x
+ *     10         65%        15          134        2.35x
+ *     25         65%        15          137        2.35x
+ *
+ * Beyond ten forms it stops paying, and the reason is the point of this stage:
+ * the ledger can only rotate among the objects a (family, band) cell actually
+ * has, and fifteen cells have exactly one. Scheduling extracts what rotation is
+ * available and then meets the capacity floor.
+ */
+export function seriesLedger(forms, { window: w = 10 } = {}) {
+  const led = new Map();
+  for (const f of forms.slice(-w)) {
+    for (const o of new Set(f.map(p => objectOf(p.item)))) led.set(o, (led.get(o) || 0) + 1);
+  }
+  return led;
+}
 
 /* ────────────────────────── the candidate pool ────────────────────────── */
 
@@ -258,9 +328,19 @@ export function assignBands(cap, composedFamilies, slots = SLOTS, alreadyPlaced 
           : `family ${slot.fam} offers ${cap[slot.fam].structures.length} distinct structures and the form has used them all` });
       continue;
     }
-    const wantHard = slot.q / SLOTS.length;
+    const wantHard = slot.q / (slots.length || SLOTS.length);
     // Composition first while the floor is unmet, then the band furthest from
     // its target, then the band that suits this position in the form.
+    // How many structures the family still has in each band. A band the family
+    // can serve exactly one more time is a plan with no fallback: if that one
+    // structure turns out inadmissible at fill time — and it can, because two
+    // candidates sharing a structure id can differ in trap level — the slot has
+    // nowhere to go. Measured under a permuting slot plan, that single case was
+    // 31 of 33 unfilled slots across 25 forms, all of them a family pushed into
+    // a band where it holds one primitive.
+    const depthInBand = {};
+    for (const st of pool) for (const b of st.bands) depthInBand[b] = (depthInBand[b] || 0) + 1;
+
     const options = [];
     for (const st of pool) for (const b of st.bands) {
       if (st.composed && !COMPOSITION_LIMITS.allowedBands.includes(b)) continue;
@@ -270,6 +350,7 @@ export function assignBands(cap, composedFamilies, slots = SLOTS, alreadyPlaced 
       options.push({ st, b,
         score: (compNeeded > 0 && st.composed ? -1000 : 0)
              + (remaining[b] <= 0 ? 500 : 0)
+             + ((depthInBand[b] || 0) <= 1 ? BAND_SCARCITY_PENALTY : 0)
              + -(remaining[b] / BAND_PLAN[b]) * 40
              + Math.abs(BANDS.indexOf(b) / 3 - wantHard) });
     }
@@ -289,7 +370,14 @@ export function assignBands(cap, composedFamilies, slots = SLOTS, alreadyPlaced 
 
 /* ────────────────────────── the fill ────────────────────────── */
 
-export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
+export function assemble({ seed = 4100, perConstruct = 10, slots = SLOTS, ledger = null } = {}) {
+  // The slot plan is a PARAMETER, not a constant, and Stage B is why. The
+  // blueprint's `SLOTS` table pins one family to each of the fifty positions
+  // and every form of a series then draws that family at that position, so a
+  // family holding one structure in a band emits the same object twenty-five
+  // times however large the library is. `slots` lets a per-form plan be handed
+  // in — see `scripts/est-allocation.mjs` — while defaulting to the table, so
+  // nothing that does not pass one changes behaviour at all.
   const { pool: builtPool, poolRejections } = buildPool({ seed, perConstruct });
 
   // ── THE POOL IS SHUFFLED PER SEED, AND THAT IS A SERIES FIX ────────────────
@@ -318,7 +406,29 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
     for (let i = out.length - 1; i > 0; i--) { const j = r.int(0, i); [out[i], out[j]] = [out[j], out[i]]; }
     return out;
   };
-  const pool = shuffle(builtPool, seed * 2654435761);
+  const shuffled = shuffle(builtPool, seed * 2654435761);
+
+  // ── THE SERIES LEDGER: scheduled allocation, not an independent draw ────────
+  //
+  // Every measurement up to Stage B treated a 25-form series as 25 independent
+  // draws, and the closed forms say what that costs: an independent draw from a
+  // vocabulary of V overlaps S^2/V and a SCHEDULE that uses each object k times
+  // overlaps S(k-1)/(N-1). At the corpus's own share those differ by a factor of
+  // 2.7 in the vocabulary they require. The corpus does not have a huge library;
+  // it has a schedule.
+  //
+  // `ledger` is how many of the recent forms each object has already appeared
+  // in. Sorting the pool by it — stably, so the per-seed shuffle still breaks
+  // every tie — makes the fill loop reach for what the series has not used
+  // lately, in every pass, including the stimulus sets. Nothing is forbidden: an
+  // object the ledger dislikes is still placed when it is the only thing that
+  // fits, so a full form is never traded for a fresher one.
+  const pool = ledger
+    ? shuffled
+      .map((c, i) => ({ c, i, seen: ledger.get(objectOf(c)) || 0 }))
+      .sort((x, y) => (x.seen - y.seen) || (x.i - y.i))
+      .map(x => x.c)
+    : shuffled;
   const composedFamilies = new Set(pool.filter(c => c.composedOf).map(c => c.family));
 
   const rejected = {};
@@ -364,7 +474,7 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
   // build a set: the second slot needs a second reading of the FIRST slot's
   // chart, and a per-item generator has already moved on to a new one.
   const setSlots = {};
-  for (const slot of SLOTS) if (slot.set) (setSlots[slot.set] ||= []).push(slot);
+  for (const slot of slots) if (slot.set) (setSlots[slot.set] ||= []).push(slot);
   const setSlotQs = new Set();
   const setNeed = { ...BAND_PLAN };
   const usedReaders = new Set();
@@ -448,12 +558,12 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
     return !used.structure[struct];
   });
   const cap = capacityOf(remainingPool);
-  const openSlots = SLOTS.filter(s2 => !setSlotQs.has(s2.q));
+  const openSlots = slots.filter(s2 => !setSlotQs.has(s2.q));
   const bands = assignBands(cap, composedFamilies, openSlots, placed);
 
   // ── PASS 2: the remaining slots ────────────────────────────────────────────
   const bandFor = Object.fromEntries(bands.filter(Boolean).map(b => [b.q, b]));
-  for (const slot of SLOTS) {
+  for (const slot of slots) {
     if (setSlotQs.has(slot.q)) continue;
     const a = bandFor[slot.q] || { band: null, reason: 'no band assigned' };
     if (!a.band) { unfilled.push({ q: slot.q, fam: slot.fam, reason: a.reason }); continue; }
@@ -475,7 +585,15 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
     const valueSoFar = placed.filter(p2 => targetKindOf(p2.item) === 'value').length;
     const overValueBudget = valueSoFar > AUTHENTICITY.maxValueTargetShare * Math.max(1, placed.length);
     let chosen = null;
-    for (const mode of ['preferNonValue', 'strict', 'relaxed']) {
+    // Structures a LATER slot is counting on. The strict pass already refuses to
+    // spend them; the relaxed pass did not, and that is how adding a second A01
+    // mechanism made a seed WORSE — q1 relaxed onto the structure q13 had been
+    // planned for, and q13 then had nothing admissible left. So the relaxed pass
+    // now runs twice: once leaving later plans alone, once not.
+    const laterPlans = new Set();
+    for (const s2 of slots) if (s2.q > slot.q && bandFor[s2.q]?.structure) laterPlans.add(bandFor[s2.q].structure);
+
+    for (const mode of ['preferNonValue', 'strict', 'relaxedSafe', 'relaxed']) {
     // The non-value pass ignores the PLANNED STRUCTURE, and that is the whole
     // reason it works. Its first version kept the plan, so it looked for a
     // candidate that was both the matched structure and non-value — a
@@ -494,6 +612,12 @@ export function assemble({ seed = 4100, perConstruct = 10 } = {}) {
       // and that later slot then had nothing left.
       const cid = c.archetype ? `${c.subForm}#${c.archetype}` : c.subForm;
       if (a.structure && cid !== a.structure && !relaxed) continue;
+      // The non-value pass ignores the planned structure by design, so without
+      // this it is the pass most likely to spend a later slot's only option —
+      // and the new expression-target structures are exactly what it reaches
+      // for. Measured: three seeds in eighteen, every one of them a family
+      // whose non-value structure a later slot had been planned around.
+      if ((mode === 'relaxedSafe' || mode === 'preferNonValue') && cid !== a.structure && laterPlans.has(cid)) continue;
       retries++;
       const prof = profileOf(c, trapLevel);
       if (!admits(band, prof)) { reject(`${band}: signature not satisfied`); continue; }

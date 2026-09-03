@@ -21,7 +21,7 @@ import { SIGNATURES, BANDS, profileOf, admits, SIGNATURE_EVIDENCE } from '../scr
 import { trapLevel, intermediatesOf, stepsOf, Q, qEq } from '../scripts/est-primitives.mjs';
 import { generateCore, assessCore, CORE_CONSTRUCTS } from '../scripts/est-core-stream.mjs';
 import {
-  keyBalance, rebalanceKeys, contentReuse, authenticity, stepIndependence,
+  keyBalance, rebalanceKeys, contentReuse, contentKeysOf, authenticity, stepIndependence,
   formGates, spearman, itemSteps, KEY_BALANCE, AUTHENTICITY, STEP_INDEPENDENCE,
 } from '../scripts/est-form-gates.mjs';
 import { objectOf, objectDiversity, coverage, OBJECT_RULES, REFERENCE_OBJECTS } from '../scripts/est-objects.mjs';
@@ -144,8 +144,20 @@ ok(contentReuse(base.placed).ok, 'BASELINE: no surface content is printed twice'
 {
   ok(contentReuse(base.placed).ok, 'BASELINE: no collision');
 
+  // The donor and recipient are FOUND, not indexed. Picking slots 3 and 7 by
+  // position meant the mutation tested whatever happened to sit there, and when
+  // Stage B's mechanism expansion changed the mix both slots became items the
+  // detector has no key for — so copying one onto the other collided with
+  // nothing and the mutation passed silently.
+  // ...and the donor must carry a key derived from its STEM. Half the items
+  // carry only an `optionSet` key, which comes from the options, so copying
+  // such a stem onto another item changes nothing and the mutation is vacuous.
+  const stemKeyed = p => contentKeysOf(p.item).some(([kind]) => kind !== 'optionSet');
+  const donor = base.placed.find(stemKeyed);
+  const target = base.placed.find(p => p.q !== donor.q);
+  ok(!!donor && !!target, 'the form contains an item whose STEM the content detector has a key for');
   const eq = clone(base);
-  eq.placed[7].item.stem = eq.placed[3].item.stem;
+  eq.placed = eq.placed.map(p => p.q === target.q ? { ...p, item: { ...p.item, stem: donor.item.stem } } : p);
   ok(!contentReuse(eq.placed).ok, 'MUTATION reuse: the same equation printed twice is caught');
 
   const grid = clone(base);

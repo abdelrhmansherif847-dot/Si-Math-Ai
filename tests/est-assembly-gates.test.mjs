@@ -39,12 +39,26 @@ ok(base.placed.every(p => p.item.stream), 'every placed item records which strea
   // What the reference actually requires is that MOST of a form is not
   // mechanism-bearing — 53% of its items have an Entry profile — and that is
   // what is asserted.
+  // The two typed-in numbers here (25 and 25) were passing for the wrong
+  // reason. Only mechanism and composed items can occupy Stretch and Peak, and
+  // BAND_PLAN asks for 12 + 14 = 26 of those — so "mechanism carries at most 25"
+  // was satisfied only while the generator FAILED to reach its own band plan.
+  // Stage B's mechanism expansion reached it (Entry 13.0, Core 11.1, Stretch
+  // 12.0, Peak 14.0 measured over twelve forms) and the assertion broke. The
+  // numbers are now derived from BAND_PLAN, so the test states the architecture
+  // instead of a snapshot of a shortfall.
   const noLow = clone(base);
   noLow.placed = noLow.placed.filter(p => p.item.stream !== 'routine' && p.item.stream !== 'core');
   ok(noLow.placed.length < 50, `MUTATION low-mechanism streams disabled: only ${noLow.placed.length} slots remain`);
-  ok(noLow.placed.length <= 25, 'MUTATION low-mechanism streams disabled: the mechanism library alone cannot approach 50');
+  const hardCeiling = BAND_PLAN.Stretch + BAND_PLAN.Peak + BAND_PLAN.Core;
+  ok(noLow.placed.length <= hardCeiling,
+    `MUTATION low-mechanism streams disabled: ${noLow.placed.length} slots, within the ${hardCeiling} the bands that admit mechanism items can hold`);
   const low = base.placed.filter(p => p.item.stream === 'routine' || p.item.stream === 'core').length;
-  ok(low >= 25, `the routine and Core streams together carry ${low} of 50, as the reference profile requires`);
+  ok(low >= BAND_PLAN.Entry,
+    `the routine and Core streams together carry ${low} of 50, at least the whole Entry band (${BAND_PLAN.Entry})`);
+  const lowInHardBands = base.placed.filter(p => (p.item.stream === 'routine' || p.item.stream === 'core')
+    && (p.band === 'Stretch' || p.band === 'Peak')).length;
+  ok(lowInHardBands === 0, 'and no routine or Core item reaches Stretch or Peak — the signature model forbids it');
   ok(base.placed.filter(p => p.item.stream === 'core').length >= 8,
     'the Core stream carries a real share of the form, not a token one');
 }

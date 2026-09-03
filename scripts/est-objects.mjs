@@ -289,6 +289,28 @@ export const CONSTRUCT_OBJECT = {
   // is held honest instead by tests/est-vocabulary.test.mjs, which builds every
   // ask and asserts its (construct, object) pair appears here exactly once.
 
+  // ── Mechanism-stream expansion (scripts/est-mechanisms.mjs), Stage B ──
+  // Placed where the family x band matrix measured exactly one object against
+  // standing demand. Each names a reference archetype the library could not
+  // build; none is a second name for something it already had.
+  'mechanism:literal_system': 'literal-system',
+  'mechanism:inequality_system_quadrant': 'inequality-system-quadrant',
+  'mechanism:tangent_at_vertex': 'tangent-at-vertex-concept',
+  'mechanism:parabola_inscribed_square': 'parabola-inscribed-square',
+  'mechanism:multi_curve_sum': 'multi-curve-graph-sum',
+  'mechanism:direct_variation_transformed': 'direct-variation-transformed',
+  'mechanism:conditional_branch_word': 'conditional-branch-word',
+  'mechanism:two_model_intersection': 'two-model-intersection-read',
+  'mechanism:parameter_interpret_intercept': 'parameter-interpret-intercept',
+  'mechanism:symbolic_counting_formula': 'symbolic-counting-formula',
+  'mechanism:always_true_parallel_angles': 'always-true-parallel-angles',
+  'mechanism:circle_roman_numeral': 'circle-roman-numeral',
+  'mechanism:coordinate_rectangle_rotated': 'coordinate-rectangle-rotated',
+  'mechanism:which_student_multi_claim': 'which-student-multi-claim',
+  // A second STRUCTURE for A08, not a second object: the archetype is already
+  // built as a routine construct. See the note in est-mechanisms.mjs.
+  'mechanism:extraneous_root': 'rational-equation-composite',
+
   // ── Core-stream expansion (scripts/est-core-stream.mjs) ──
   // Placed where blueprint core-slot demand exceeded the stream's supply.
   'core:other-input-with-the-same-output': 'multi-valued-can-be',

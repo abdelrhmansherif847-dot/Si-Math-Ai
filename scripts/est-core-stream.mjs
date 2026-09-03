@@ -1139,7 +1139,14 @@ export const CORE_CONSTRUCTS = CONSTRUCTS;
 /** Which assembler family each construct serves. Keyed by construct id. */
 export const CORE_SERVES = {
   A11: 'A11', A14: 'A14', A05: 'A05', A12: 'A12', A11b: 'A11',
-  A15: 'A15', A07: 'A07', A17: 'A17', A12b: 'A12', A16: 'A16',
+  A15: 'A15', A07: 'A07', A17: 'A17',
+  // Moved A12 -> A12b in Stage B. A12b held TWO structures against two slots
+  // every form, the only family in the blueprint with no slack at all, and both
+  // of its objects therefore appeared in every one of twelve assembled forms.
+  // This construct is a successive-percentage chain — a share of a population,
+  // which is what A12b is — and it was filed under A12 only because that is
+  // where it was written.
+  A12b: 'A12b', A16: 'A16',
   A08: 'A08', A09: 'A09', A18: 'A18',
   // Added once the assembler measured which families were forcing Entry: with
   // no Core construct, a family holding three slots and one mechanism structure

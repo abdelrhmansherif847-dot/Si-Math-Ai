@@ -204,6 +204,15 @@ const form = (objs) => objs.map((o, i) => ({ q: i + 1, fam: 'A01', band: 'Core',
                     { q: 2, item: { stem: 'Another shape.', options: opts(3) } }];
   ok(!contentCollisions(fourSame).ok, 'but a genuinely repeated four-option grid still collides');
 
+  // An item cannot repeat content with itself. A stem stating two equal values
+  // yields the same signature twice, and the detector reported the item as
+  // colliding with its own q — a form failing its content gate because one item
+  // said something twice.
+  const twice = [{ q: 8, item: { stem: 'The functions satisfy $f(5) = -3$ and $g(5) = -3$.', options: opts(1) } }];
+  const selfSigs = signaturesOf(twice[0].item).map(([k, v]) => `${k}::${v}`);
+  ok(selfSigs.length === new Set(selfSigs).size, 'one item never yields the same signature twice');
+  ok(contentCollisions(twice).ok, 'MUTATION: an item stating the same value twice does not collide with itself');
+
   // ...and it still catches a real repeat.
   const repeat = [{ q: 1, item: { stem: 'The function $f(x) = 2x + 4$ is given. What is $f(3)$?', options: [] } },
                   { q: 2, item: { stem: 'For $f(x) = 2x + 4$, what is $f(-1)$?', options: [] } }];

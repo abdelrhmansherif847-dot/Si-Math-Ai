@@ -181,7 +181,19 @@ export function signaturesOf(item) {
   // review. A signature derived from nothing is not evidence of anything.
   if (item.options && item.options.length >= 2)
     out.push(['optionGrid', item.options.map(o => o.text).sort().join('|')]);
-  return out;
+  // An item cannot repeat content with ITSELF. A stem printing `f(5) = -3` and
+  // `g(5) = -3` yields the equationCoefficients signature `eq:-3,5` twice, and
+  // the collision detector duly reported "q8 and q8 share a signature" — a form
+  // failing its own content gate because one item said something twice. Third
+  // false positive found in this layer by pushing on it; the other two were an
+  // empty option array and a boilerplate answer grid.
+  const seen = new Set();
+  return out.filter(([kind, sig]) => {
+    const id = `${kind}::${sig}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 /** Two items collide when they share any signature. */
