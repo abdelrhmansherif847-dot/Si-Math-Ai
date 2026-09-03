@@ -85,7 +85,11 @@
     "knownObtainableNotHeld": [
       {
         "publisherTest": 4,
-        "note": "The guide contains five sample tests and its own cover says so. Test 4 is the one form we do not hold, and it is official, same publisher, same 2026 specification. It is the only certain +1."
+        "note": "The guide contains five sample tests and its own cover says so. Test 4 is the one form we do not hold, and it is official, same publisher, same 2026 specification.",
+        "locatedInGuide": "guide pages 85-108, a 24-page gap",
+        "howLocated": "The four extracts we hold are contiguous and carry the guide's own printed folios: test 1 at pp.1-32, test 2 at pp.35-58 (first folio 35), test 3 at pp.59-84 (first folio 59), test 5 at pp.109-131 (first folio 109). Exactly one hole remains and it is 24 pages, the same length as the test 2 extract.",
+        "obtained": false,
+        "blockedBy": "no outbound file retrieval in this session: every host tested returns a 403 CONNECT denial from the egress proxy, including example.com, google.com and wikipedia.org. Not specific to the publisher."
       }
     ],
     "excluded": [
@@ -97,6 +101,18 @@
         "what": "1 recalled/reconstructed March 2026 file",
         "reason": "not an official published form. Excluded permanently by standing instruction and by this phase's own corpus rules."
       }
-    ]
+    ],
+    "acquisitionAttempted": "2026-09-03, artifact 27",
+    "publisher": {
+      "entities": [
+        "Academic Assessment Ltd.",
+        "York Press Limited (London)"
+      ],
+      "officialSites": [
+        "estests.com",
+        "egypt.estests.com"
+      ],
+      "verifiedBy": "web search only; neither site could be fetched from this session"
+    }
   }
 }
