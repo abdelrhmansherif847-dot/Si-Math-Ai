@@ -8,13 +8,16 @@
 -- Written here before the apply rather than discovered after it, because two
 -- ordinary events close it and neither is reversible:
 --
---   1 · THE FIRST CODE ROTATION closes this rollback completely.
---       Dropping teacher_homework_retired_codes releases every code it holds
---       back into circulation — which is exactly the hazard 20260904a exists
---       to prevent, and worse than never having fixed it, because a teacher
---       who rotated a leaked code would have been told the old one was dead.
---       So this file REFUSES while any reservation exists. After the first
---       rotation, undoing H4 is a decision about student safety, not a script.
+--   1 · THE FIRST CODE ROTATION *OR* THE FIRST DRAFT DELETION closes this
+--       rollback completely. Both retire a code, and dropping
+--       teacher_homework_retired_codes releases every code it holds back into
+--       circulation — which is exactly the hazard 20260904a exists to prevent,
+--       and worse than never having fixed it, because a teacher who rotated a
+--       leaked code would have been told the old one was dead. Deleting a
+--       draft is the ordinary authoring action of the two, so in practice this
+--       window closes early and by accident rather than by decision. That is
+--       the trade the invariant costs, and it is stated here rather than
+--       discovered. This file REFUSES while any reservation exists.
 --
 --   2 · THE FIRST STUDENT ATTACHMENT closes the H2 rollback, not this one.
 --       teacher_homework_access rows are student records, and 20260902y
@@ -29,14 +32,15 @@
 --
 -- WHAT THIS RESTORES, AND WHY THAT IS THE RISKY PART
 -- ---------------------------------------------------------------------
--- 20260904a REDEFINED two live functions from 20260903b. Undoing it means
+-- 20260904a REDEFINED three live functions from 20260903b. Undoing it means
 -- putting the H3 bodies back byte-for-byte, not approximately — the hazard
--- 20260831e is remembered for. The two bodies below are copied verbatim from
--- 20260903b, and §3 asserts their md5 equals the value H3 installed:
+-- 20260831e is remembered for. The three bodies below are copied verbatim from
+-- 20260903b, and §3 asserts each md5 equals the value H3 installed:
 --     teacher_homework_create      c9c6e06c2f8c7978dd3dc871dfd1f13f
 --     teacher_homework_rotate_code 58cedf72a23d0adcaac12ca27fd41c86
--- If either assertion fails, this file has restored something that is not H3
--- and must not be committed.
+--     teacher_homework_delete      7f3c8934a08ef9a749717fc2d52ff26a
+-- If any assertion fails, this file has restored something that is not H3 and
+-- must not be committed.
 -- =====================================================================
 
 begin;
@@ -170,6 +174,67 @@ begin
 end;
 $fn$;
 
+create or replace function teacher_homework_delete(p_homework uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog, public
+as $fn$
+declare v_status text; v_attached int; v_attempts int;
+begin
+  if not teacher_homework_is_staff(p_homework) then
+    raise exception 'teacher_homework_delete: no such homework, or you are not staff of its class'
+      using errcode = '42501';
+  end if;
+  select status into v_status from teacher_homework where id = p_homework;
+  -- Only a draft may be deleted. The two non-draft statuses get DIFFERENT
+  -- messages because they call for different actions: a published paper should
+  -- be closed, and a closed one is simply final. 3c's teacher_exam_delete()
+  -- (LIVE, 20260901e) says "close it, do not delete it" for both, so a teacher
+  -- deleting a closed exam is told to close it again. That wording was not
+  -- copied here; the live defect is recorded in §15.16b instead.
+  if v_status = 'published' then
+    raise exception 'teacher_homework_delete: this homework is published — close it, do not delete it'
+      using errcode = '42501';
+  elsif v_status <> 'draft' then
+    raise exception 'teacher_homework_delete: this homework is % and can no longer be deleted', v_status
+      using errcode = '42501';
+  end if;
+  -- The H2 guard refuses a non-draft delete too. Asking here as well turns a
+  -- trigger's message into one the caller can act on; the guard remains the
+  -- thing that cannot be bypassed.
+
+  -- Student rows make this not a draft anyone may discard. The guards refuse
+  -- it anyway — an attachment and an attempt are each "a record and never
+  -- deleted", and an answer is held by a RESTRICT — but a raw trigger message
+  -- names none of that, so ask first and say what is in the way. The guards
+  -- remain the thing that cannot be bypassed. (A response cannot exist without
+  -- an attempt, so counting attempts covers all three.)
+  select count(*) into v_attached from teacher_homework_access where homework_id = p_homework;
+  select count(*) into v_attempts from teacher_homework_attempts where homework_id = p_homework;
+  if v_attached > 0 or v_attempts > 0 then
+    raise exception
+      'teacher_homework_delete: % student(s) hold this homework and % have started it — it can no longer be deleted',
+      v_attached, v_attempts using errcode = '42501';
+  end if;
+
+  -- CHILDREN FIRST, and not by cascade. Measured on production (§15.16a):
+  -- PostgreSQL deletes the parent row before running the referential cascade,
+  -- so the content guard fires with the parent already gone, reads a NULL
+  -- status and fails closed — which is exactly what it is for, and which made
+  -- every draft carrying so much as one question undeletable. Removing the
+  -- content while the parent is still present and still a draft lets the guard
+  -- evaluate the real status and permit the write. Questions before stimuli:
+  -- the stimulus foreign key is ON DELETE RESTRICT.
+  delete from teacher_homework_questions where homework_id = p_homework;
+  delete from teacher_homework_stimuli where homework_id = p_homework;
+  delete from teacher_homework where id = p_homework;
+end;
+$fn$;
+
+revoke all on function teacher_homework_delete(uuid)         from public, anon, authenticated;
+grant execute on function teacher_homework_delete(uuid)      to authenticated;
 revoke all on function teacher_homework_create(uuid, text)   from public, anon, authenticated;
 revoke all on function teacher_homework_rotate_code(uuid)    from public, anon, authenticated;
 grant execute on function teacher_homework_create(uuid, text) to authenticated;
@@ -208,6 +273,11 @@ begin
        where n.nspname = 'public' and p.proname = 'teacher_homework_rotate_code')
      <> '58cedf72a23d0adcaac12ca27fd41c86' then
     raise exception 'rollback H4: teacher_homework_rotate_code() was NOT restored to its 20260903b body';
+  end if;
+  if (select md5(p.prosrc) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'teacher_homework_delete')
+     <> '7f3c8934a08ef9a749717fc2d52ff26a' then
+    raise exception 'rollback H4: teacher_homework_delete() was NOT restored to its 20260903b body';
   end if;
 
   -- 4.3 H2 and the rest of H3 are untouched: six tables, nine policies, and

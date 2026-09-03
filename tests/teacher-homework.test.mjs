@@ -1077,10 +1077,43 @@ t.ok('rotation retires the code it replaces, after the new one is in place',
   /insert into teacher_homework_retired_codes/.test(body4('teacher_homework_rotate_code'))
   && body4('teacher_homework_rotate_code').indexOf('update teacher_homework set homework_code')
      < body4('teacher_homework_rotate_code').indexOf('insert into teacher_homework_retired_codes'));
+
+/* THE INVARIANT: once a homework code has existed, it never becomes available
+   again. Rotation is one exit; deleting a draft is the other, and it counts
+   even though a draft's code grants nothing — a draft code can still have been
+   shared, and reissuing it is the same wrong-paper attachment. */
+const DEL4 = body4('teacher_homework_delete');
+t.ok('deleting a draft retires its code too', /insert into teacher_homework_retired_codes/.test(DEL4));
+t.ok('and retires it BEFORE the row that holds it goes — no instant where it is free',
+  DEL4.indexOf('insert into teacher_homework_retired_codes')
+    < DEL4.indexOf('delete from teacher_homework where id = p_homework'));
+t.ok('retirement does not depend on published vs draft',
+  !/if v_status[^;]*then\s*insert into teacher_homework_retired_codes/.test(DEL4));
+t.ok('the delete still refuses on any student row, and still deletes content first',
+  /% student\(s\) hold this homework/.test(DEL4)
+  && DEL4.indexOf('delete from teacher_homework_questions') < DEL4.indexOf('delete from teacher_homework where id'));
+t.ok('the file states the invariant in those words',
+  /ONCE A HOMEWORK CODE HAS EXISTED, IT NEVER BECOMES AVAILABLE AGAIN/.test(H4)
+  && /Both exits are atomic/.test(H4FLAT));
+/* Measured in the dry-run and recorded rather than glossed: the invariant is
+   enforced by the three RPCs, not by a constraint — a raw INSERT carrying a
+   retired code is accepted, because UNIQUE cannot see the reservation table
+   and a CHECK may not subquery. */
+t.ok('the file states what enforces the invariant, and what does not',
+  /enforced by, STATED PLAINLY: the three RPCs,\s+not a constraint/.test(H4FLAT.replace(/\s+/g, ' '))
+  || /not a constraint/.test(H4FLAT));
+t.ok('and names the option it deliberately did not take',
+  /BEFORE INSERT guard on teacher_homework would close it/.test(H4FLAT));
+t.ok('§7.5b pins the other exit, and that it precedes the row delete',
+  /deleting a draft releases its code back into circulation/.test(H4C)
+  && /there is a window where it is free/.test(H4C));
 /* The two redefined bodies are H3's plus this check and nothing else. The
    header carries the 20260831e warning because that is the hazard. */
-t.ok('the file warns that it redefines two LIVE functions',
-  /THIS FILE REDEFINES TWO LIVE FUNCTIONS/.test(H4) && /20260831e/.test(H4));
+t.ok('the file warns that it redefines three LIVE functions',
+  /THIS FILE REDEFINES THREE LIVE FUNCTIONS/.test(H4) && /20260831e/.test(H4));
+t.is('and all three consult the reservation',
+  ['teacher_homework_create', 'teacher_homework_rotate_code', 'teacher_homework_delete']
+    .filter((f) => !/teacher_homework_(code_available|retired_codes)/.test(body4(f))), []);
 
 // ══ 34 · THE AUDIT EVENT ══════════════════════════════════════════════════
 t.section('One attachment, one homework_attached event');
@@ -1118,17 +1151,22 @@ t.ok('it does NOT refuse on attachments, and says what survives instead',
   && !/rollback H4 refused[\s\S]{0,200}attachment/.test(H4ZC));
 /* The point the owner asked to be written down BEFORE the apply rather than
    discovered after it. */
-t.ok('the header names both closing events up front',
-  /THE FIRST CODE ROTATION closes this rollback completely/.test(H4Z)
-  && /THE FIRST STUDENT ATTACHMENT closes the H2 rollback/.test(H4Z));
+t.ok('the header names every closing event up front — including draft deletion',
+  /THE FIRST CODE ROTATION \*OR\* THE FIRST DRAFT DELETION closes this/.test(H4Z)
+  && /THE FIRST STUDENT ATTACHMENT closes the H2 rollback/.test(H4Z)
+  && /the ordinary authoring action of the two/.test(H4Z.replace(/\n--\s*/g, ' ')));
 t.ok('it restores both redefined bodies and asserts their H3 md5',
   /c9c6e06c2f8c7978dd3dc871dfd1f13f/.test(H4ZC) && /58cedf72a23d0adcaac12ca27fd41c86/.test(H4ZC));
 /* Stronger than quoting the hashes: the restored text is compared against the
    H3 file itself. A restore that is nearly right — one lost btrim() — is the
    20260831e failure, and a quoted md5 alone would not catch it here. */
-t.is('and the body it restores IS 20260903b\u2019s, character for character',
-  [fnDef(H4Z, 'teacher_homework_create').body, fnDef(H4Z, 'teacher_homework_rotate_code').body],
-  [fnDef(TA, 'teacher_homework_create').body, fnDef(TA, 'teacher_homework_rotate_code').body]);
+t.is('and all THREE bodies it restores ARE 20260903b\u2019s, character for character',
+  ['teacher_homework_create', 'teacher_homework_rotate_code', 'teacher_homework_delete']
+    .map((f) => fnDef(H4Z, f).body),
+  ['teacher_homework_create', 'teacher_homework_rotate_code', 'teacher_homework_delete']
+    .map((f) => fnDef(TA, f).body));
+t.ok('and it asserts the third md5 as well',
+  /7f3c8934a08ef9a749717fc2d52ff26a/.test(H4ZC));
 t.ok('the refusal is a real condition, not a disabled one',
   /if v_codes > 0 then/.test(H4ZC) && !/if false then/.test(H4ZC));
 t.is('it drops exactly what H4 added — five functions, two guards, two tables',

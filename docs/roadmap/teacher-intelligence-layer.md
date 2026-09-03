@@ -2079,6 +2079,32 @@ them should be discovered mid-implementation.
     1. **`teacher_homework_retired_codes`** — permanent, not a TTL. It carries
        **no foreign key**, because a cascade would free the code the moment its
        draft was deleted, which is the hazard itself.
+
+       **The invariant was then widened, and locked:** *once a homework code
+       has existed, it never becomes available again.* A code leaves
+       circulation by **both** exits — rotation retires the old value, and
+       **deleting a draft retires its code before the row goes**. Deletion
+       counts even though a draft's code grants nothing, because a draft code
+       can still have been read aloud or forwarded, and reissuing it produces
+       exactly the wrong-paper attachment the table exists to prevent.
+       Published and draft are not distinguished: code identity has nothing to
+       do with status. That made `teacher_homework_delete()` the **third** live
+       H3 function H4 redefines.
+
+       Both exits are atomic — rotation writes the new code and the reservation
+       in one transaction, deletion writes the reservation and removes the row
+       in one — so there is no instant at which a code is neither held by a
+       live homework nor reserved, which is what stops a concurrent create
+       slipping between them.
+
+       **What enforces it, stated plainly: the three RPCs, not a constraint.**
+       Measured in the dry-run — a raw INSERT carrying a retired code is
+       ACCEPTED, because the UNIQUE on `homework_code` cannot see the
+       reservation table and a CHECK may not subquery. Clients hold no INSERT
+       on `teacher_homework`, so the only route is a future migration or a
+       service_role writer; a BEFORE INSERT guard would close it, but that
+       touches a live H2 table, so it is recorded as a known limitation rather
+       than taken silently.
     2. **`teacher_homework_attach_attempts`** — every submission counted, not
        just successful attachments. It holds who and when and nothing else: not
        the submitted code, not the outcome, because storing the outcome would
@@ -2125,6 +2151,11 @@ them should be discovered mid-implementation.
     | removed student | `can_open` false, attachment kept, re-attach `no_match` |
     | rejoins the class, then attaches | `can_open` true again |
     | rotation | old code reserved, retired code `no_match`, `code_available` false |
+    | draft created | its code unavailable to anyone else |
+    | draft **with content** deleted | rows gone, code retired, `code_available` false |
+    | empty draft deleted | code retired too |
+    | student presents a deleted draft's code | `no_match` — indistinguishable from any other miss |
+    | deleting a draft a student holds | REFUSED, and **+0** reservations: a refusal retires nothing |
     | reservation / attempt row, as table owner | UPDATE and DELETE both refused |
     | duplicate attachment, raw | `23505` — the PK is what makes a real concurrent double-attach safe |
     | teacher closes the paper | `can_open` false |
@@ -2136,23 +2167,28 @@ them should be discovered mid-implementation.
     `hw` and the suite pins it.
 
     **Rollback rehearsal.** Homework tables and functions went **6,22 → 8,27 →
-    6,22**, and all eleven hashes returned **identical, 0 differing**. The
-    refusal was exercised with a reservation planted and fired correctly.
+    6,22**, and all eleven hashes returned **identical, 0 differing**, with all
+    **three** H3 bodies restored byte-for-byte. The refusal was exercised with
+    a reservation planted and fired correctly.
 
     #### The rollback window — written before the apply, not after
 
     `20260904z` refuses while **any** code is reserved, so **the first code
-    rotation closes it completely**: releasing reserved codes would be worse
-    than never having fixed the hazard, because a teacher who rotated a leaked
-    code was told the old one was dead. The **first student attachment** closes
-    the *H2* rollback rather than this one — `20260902y` already refuses while
+    rotation OR the first draft deletion closes it completely**: releasing
+    reserved codes would be worse than never having fixed the hazard, because a
+    teacher who rotated a leaked code was told the old one was dead. Deleting a
+    draft is the ordinary authoring action of the two, so in practice this
+    window closes early and by accident rather than by decision — that is what
+    the widened invariant costs, and it is written in the file's header rather
+    than discovered afterwards. The **first student attachment** closes the
+    *H2* rollback rather than this one — `20260902y` already refuses while
     attachments exist — and this file deletes no attachment. The limiter table
     is always safe to drop; its rows are one-hour counters.
 
     #### Verification
 
-    331 checks in `tests/teacher-homework.test.mjs`, 109 in
-    `teacher-access-scope`, CI 66/66, **53 of 53 mutants killed with none
+    342 checks in `tests/teacher-homework.test.mjs`, 109 in
+    `teacher-access-scope`, CI 66/66, **58 of 58 mutants killed with none
     unapplied**. One of those mutants exists only because the shared
     access-scope suite's definer/`search_path` check matched `as $$` alone and
     so had been **silently skipping every teacher_exam and teacher_homework

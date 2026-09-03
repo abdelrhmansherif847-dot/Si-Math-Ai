@@ -12,12 +12,12 @@
 --          model), §15.15 (the six locked decisions) and §15.17 (this
 --          increment's audit, and the two approved additions).
 --
--- ⚠️ THIS FILE REDEFINES TWO LIVE FUNCTIONS: teacher_homework_create() and
---    teacher_homework_rotate_code(), both installed by 20260903b. It is the
---    hazard 20260831e is remembered for. Never re-apply this file without
---    first diffing both against production — §6 below asserts that what it
---    installs differs from H3 in exactly the retired-code check and nothing
---    else, and 20260904z restores the H3 bodies byte-for-byte.
+-- ⚠️ THIS FILE REDEFINES THREE LIVE FUNCTIONS: teacher_homework_create(),
+--    teacher_homework_rotate_code() and teacher_homework_delete(), all three
+--    installed by 20260903b. It is the hazard 20260831e is remembered for.
+--    Never re-apply this file without first diffing all three against
+--    production — §7 below asserts each one consults the reservation, and
+--    20260904z restores the H3 bodies byte-for-byte.
 --
 -- WHAT THIS IS. The first student write path in the homework system. A student
 -- types a Homework Code and is attached at once — no queue, no approval. That
@@ -74,9 +74,42 @@
 --       value. Nothing reserved it, and a DIFFERENT homework could then be
 --       given that exact code — demonstrated on production, accepted. A
 --       student still holding the old code would attach to the wrong paper
---       while doing nothing wrong. Retirement is PERMANENT and deliberately
---       not a TTL: the code space is 32^8 (~1.1e12) and there is no practical
---       reason to ever recycle a value that has been in a student's hands.
+--       while doing nothing wrong.
+--
+--       THE INVARIANT, and it is stronger than the hazard that prompted it:
+--
+--           ONCE A HOMEWORK CODE HAS EXISTED, IT NEVER BECOMES AVAILABLE AGAIN.
+--
+--       So a code leaves circulation by BOTH exits, not just rotation:
+--           create        the code is taken, and held by the row itself
+--           rotate        the old code is retired, permanently
+--           delete draft  the code is retired BEFORE the row goes
+--       Deletion is included even though a draft's code grants nothing: a
+--       draft code can still have been read aloud, photographed or forwarded,
+--       and reissuing it later produces exactly the wrong-paper attachment
+--       this table exists to prevent. Published and draft are not
+--       distinguished, because code identity has nothing to do with status.
+--
+--       Retirement is PERMANENT and deliberately not a TTL: the code space is
+--       32^8 (~1.1e12), so recycling buys nothing and risks everything.
+--
+--       Both exits are atomic. Rotation writes the new code and the
+--       reservation in one transaction; deletion writes the reservation and
+--       removes the row in one. There is therefore no instant at which a code
+--       is neither held by a live homework nor reserved, which is what makes
+--       a concurrent create unable to slip between them.
+--
+--       WHAT THIS INVARIANT IS ENFORCED BY, STATED PLAINLY: the three RPCs,
+--       not a constraint. Measured in the dry-run — a raw INSERT into
+--       teacher_homework carrying a retired code is ACCEPTED, because the
+--       UNIQUE on homework_code cannot see this table and no CHECK may
+--       subquery. Clients hold no INSERT on teacher_homework, so the only way
+--       to reach that path is a future migration or a service_role writer;
+--       but this project prefers rules that are constraints (H2 chose
+--       composite foreign keys over a trigger for exactly this reason), and a
+--       BEFORE INSERT guard on teacher_homework would close it. That would
+--       touch a live H2 table, so it is recorded here as a known limitation
+--       and left for its own decision rather than taken silently.
 --
 --   teacher_homework_attach_attempts
 --       MEASURED GAP (§15.17): the exam limiter counts ROWS CREATED in
@@ -307,6 +340,69 @@ begin
   values (v_ws, auth.uid(), 'homework_code_rotated', null, jsonb_build_object('homework_id', p_homework));
 
   return v_code;
+end;
+$fn$;
+
+-- Deleting a draft retires its code. Everything else in this body is
+-- 20260903b's, including the measured reason the children go first: PostgreSQL
+-- removes the parent BEFORE running the cascade, so teacher_homework_content_
+-- guard() would read a NULL status and fail closed (§15.16a).
+create or replace function teacher_homework_delete(p_homework uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog, public
+as $fn$
+declare v_status text; v_attached int; v_attempts int; v_code text; v_ws uuid;
+begin
+  if not teacher_homework_is_staff(p_homework) then
+    raise exception 'teacher_homework_delete: no such homework, or you are not staff of its class'
+      using errcode = '42501';
+  end if;
+  select status, homework_code, workspace_id into v_status, v_code, v_ws
+    from teacher_homework where id = p_homework;
+  -- Only a draft may be deleted. The two non-draft statuses get DIFFERENT
+  -- messages because they call for different actions: a published paper should
+  -- be closed, and a closed one is simply final. 3c's teacher_exam_delete()
+  -- (LIVE, 20260901e) says "close it, do not delete it" for both, so a teacher
+  -- deleting a closed exam is told to close it again. That wording was not
+  -- copied here; the live defect is recorded in §15.16b instead.
+  if v_status = 'published' then
+    raise exception 'teacher_homework_delete: this homework is published — close it, do not delete it'
+      using errcode = '42501';
+  elsif v_status <> 'draft' then
+    raise exception 'teacher_homework_delete: this homework is % and can no longer be deleted', v_status
+      using errcode = '42501';
+  end if;
+
+  -- Student rows make this not a draft anyone may discard. The guards refuse
+  -- it anyway, but a raw trigger message names none of that, so ask first and
+  -- say what is in the way. (A response cannot exist without an attempt, so
+  -- counting attempts covers all three.)
+  select count(*) into v_attached from teacher_homework_access where homework_id = p_homework;
+  select count(*) into v_attempts from teacher_homework_attempts where homework_id = p_homework;
+  if v_attached > 0 or v_attempts > 0 then
+    raise exception
+      'teacher_homework_delete: % student(s) hold this homework and % have started it — it can no longer be deleted',
+      v_attached, v_attempts using errcode = '42501';
+  end if;
+
+  -- CHILDREN FIRST, and not by cascade (§15.16a). Questions before stimuli:
+  -- the stimulus foreign key is ON DELETE RESTRICT.
+  delete from teacher_homework_questions where homework_id = p_homework;
+  delete from teacher_homework_stimuli where homework_id = p_homework;
+
+  -- H4: the code is retired BEFORE the row that holds it goes, so there is no
+  -- instant in this transaction when the code is neither live nor reserved.
+  -- A draft's code granted nothing, but it may still have been shared, and
+  -- reissuing it would be the same wrong-paper attachment rotation guards
+  -- against. Status is not consulted: code identity does not depend on it.
+  insert into teacher_homework_retired_codes (code, homework_id, workspace_id, retired_by)
+  values (v_code, p_homework, v_ws, auth.uid())
+  on conflict (code) do nothing;
+
+  delete from teacher_homework where id = p_homework;
 end;
 $fn$;
 
@@ -542,6 +638,8 @@ end;
 $fn$;
 
 -- ── 6 · privileges ────────────────────────────────────────────────────
+revoke all on function teacher_homework_delete(uuid)            from public, anon, authenticated;
+grant  execute on function teacher_homework_delete(uuid)       to authenticated;
 revoke all on function teacher_homework_code_available(text)   from public, anon, authenticated;
 revoke all on function student_attach_homework(text)           from public, anon, authenticated;
 revoke all on function teacher_homework_can_open(uuid)         from public, anon, authenticated;
@@ -630,6 +728,20 @@ begin
   end if;
   if v_src !~ 'insert into teacher_homework_retired_codes' then
     raise exception 'H4: rotation does not retire the code it replaces — the hazard is unfixed';
+  end if;
+  -- 7.5b THE INVARIANT'S OTHER EXIT. A deleted draft's code must be retired
+  --      too, and BEFORE the row that holds it goes.
+  select p.prosrc into v_src from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'teacher_homework_delete';
+  if v_src !~ 'insert into teacher_homework_retired_codes' then
+    raise exception 'H4: deleting a draft releases its code back into circulation';
+  end if;
+  if position('insert into teacher_homework_retired_codes' in v_src)
+     > position('delete from teacher_homework where id = p_homework' in v_src) then
+    raise exception 'H4: the code is retired after its row is gone — there is a window where it is free';
+  end if;
+  if v_src ~ 'status = ''published''[^;]*retired' then
+    raise exception 'H4: retirement is conditional on status — the invariant does not depend on it';
   end if;
 
   -- 7.6 THE ATTACH ORDER. The limit is checked before the code is resolved,
