@@ -358,3 +358,5 @@ single-form gates is explicitly not production approval.
 | P3 payload, identity, blind render, blind codes, analysis, series study | outside this repository |
 | the generator, gates and object layer | `scripts/est-*.mjs` |
 | mutation suites | `tests/est-*.test.mjs` |
+
+Committed as `27fe881`.
