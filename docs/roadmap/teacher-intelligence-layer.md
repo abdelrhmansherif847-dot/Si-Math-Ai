@@ -3571,3 +3571,213 @@ nothing in the schema would notice.
 Everything else is locked: **D-1, D-2, D-3, D-4, D-5, D-6, D-7, D-8, S-1, S-2,
 repeat-submit semantics, the save/submit locking rule, and the key-selection
 principle.** **No implementation was prepared.**
+
+---
+
+### 15.23 · Teacher Homework H5 — PREPARED (2026-09-03)
+
+**Status: 🟡 PREPARED, not applied.** Two files, `20260905a` (the increment)
+and `20260905z` (its rollback). Nothing was applied to production; the
+migration count is still **190** and the newest applied version is still
+`20260903203209` (H4). The two remaining decisions from §15.22 are now locked
+and implemented, so H5 has no open questions left — only an approval.
+
+#### The last two decisions, as locked
+
+**H-3 — the student read boundary is RPC-only.** `20260905a` executes
+`revoke select on teacher_homework_questions from authenticated;`. The answer
+key stops being separated from students by RLS alone and starts being
+separated by the absence of any reach at all. Homework deliberately diverges
+from Teacher Exams here, whose pages read the equivalent tables directly.
+
+Two consequences, both measured in the dry-run rather than assumed:
+
+1. **The staff-read policy on that table is deliberately LEFT IN PLACE**
+   though nothing can now reach it. The policy is the *rule*; the grant is the
+   *reach*. Keeping the rule means a future `GRANT` cannot silently hand
+   students the key. §12 asserts the policy still exists.
+2. **The revoke is role-wide, so it takes the TEACHER's direct read away too**
+   — probe R2 measured a teacher's own `select` on `teacher_homework_questions`
+   refused `42501` after the revoke. Staff keep their access through
+   `teacher_homework_review()`, added here. Nothing live breaks: a repo-wide
+   grep finds **no** client read of `teacher_homework_questions` or
+   `teacher_homework_stimuli` anywhere, because the homework authoring page
+   does not exist yet. **This is a bill H6 must pay** — see the findings below.
+
+**D-7's optional half — the roster gains an active-membership signal.**
+`teacher_homework_students()` is redefined to carry `active_member` plus the
+per-student correct / wrong / omitted counts. A stranded sitting (S-2: a
+removed student holding an in-progress attempt) is now *distinguishable* from
+an active one. Nothing else changed: no cleanup, no abandonment, no monitoring,
+no new lifecycle state — the signal is a fact on a read, not a mechanism.
+
+#### The package
+
+| | |
+|---|---|
+| forward | `supabase/migrations/20260905a_teacher_homework_h5.sql` — **942 lines** |
+| rollback | `supabase/migrations/20260905z_teacher_homework_h5_rollback.sql` — **317 lines** |
+| tables · policies · enum labels | **none added, none changed** — §12 asserts all three |
+| live functions REDEFINED | **4** — `teacher_homework_attempts_guard` · `teacher_homework_responses_guard` · `student_my_homework` · `teacher_homework_students` |
+| functions added | **8** — `teacher_homework_can_resume` · `student_homework_paper` · `student_homework_start` · `student_homework_save` · `student_homework_submit` · `teacher_homework_review` · `teacher_homework_verdict_guard` · `teacher_homework_verdict_state_guard` |
+| triggers added | **2**, both on `teacher_homework_responses` — the verdict-truth guard (immediate) and the verdict-state guard (**deferred constraint trigger**) |
+| grants | 8 client RPCs `authenticated`-only; the two guards callable by nobody; `anon` gains nothing; **`select` on `teacher_homework_questions` REVOKED from `authenticated`** |
+
+> ⚠️ **It redefines four LIVE functions** — the `20260831e` hazard. The file's
+> header records the four H4 md5s it replaces (`dacf16fd…`, `c5db8f03…`,
+> `04198136…`, `01b0386d…`), §8 asserts each one, and `20260905z` restores all
+> four **byte-for-byte**.
+
+#### Why a deferred constraint trigger — the decisive finding
+
+An **immediate** check that *"a verdict may exist only on a submitted attempt"*
+would refuse the grading that happens **before** the status flip, and so would
+force the submit order to invert. A **deferred** constraint trigger tests the
+**committed state** instead of the statement order, so grade-then-flip
+survives. This was measured both ways before the file was written, and it is
+not a new pattern here — `referral_commission_rates` already carries a
+`DEFERRABLE INITIALLY DEFERRED` constraint trigger.
+
+It is a **backstop, not the first line**: a deferred check reports at COMMIT,
+so the RPC still has to be right. And a note for anything that tries to force
+it early — **`SET CONSTRAINTS ALL IMMEDIATE` is sticky for the rest of the
+transaction** (measured; it made one audit probe fire early and misreport).
+
+**Verify, never compute.** `teacher_homework_verdict_guard()` recomputes the
+verdict through `exam_answer_matches()` — the platform's single grading
+authority — and **refuses** one that disagrees. It does not *write* the value:
+computing it in the trigger would grade on save, which D-3 forbids. The RPC
+decides **when** a verdict is written; the database decides **what** it must
+be. There is no second grading rule anywhere.
+
+#### The dry-run — verbatim, aborting, on production
+
+**Paste fidelity 12/12** bodies byte-identical to the repo file. Trigger firing
+order on `teacher_homework_responses` read back as
+`teacher_homework_responses_guard_trg` → `teacher_homework_responses_verdict_trg`
+→ `teacher_homework_verdict_state_trg [deferred]`.
+
+| probe | result |
+|---|---|
+| R1 student direct SELECT on questions | refused `42501` |
+| R2 **teacher** direct SELECT on questions | refused `42501` — the grant is role-wide |
+| S1 start | `resumed=false`, `in_progress`, 2 response rows pre-created |
+| S2 start again (the racing tab) | `resumed=true`, same attempt — **D-8 idempotent** |
+| S3 a raw second attempt | refused `23505` |
+| S4 save (lowercase, padded) | `answer='b'`, `is_correct=NULL` — **saving never grades** |
+| S5 submit | `{correct:1, wrong:0, omitted:1, total:2, late:false, status:submitted}` |
+| S6 the deferred state guard under grade-then-flip | satisfied; 1 verdict, the omission still NULL |
+| S7 submit AGAIN | **identical payload**, still one attempt row — idempotent |
+| S8 save after submit | refused `42501` |
+| V1 reveal=false, submitted | key absent; **own verdict present** — D-2 |
+| V2 reveal=true, submitted | key `B` and the explanation both visible |
+| V3 reveal=**true** but caller still in progress | key absent — **S-1: reveal is necessary, not sufficient** |
+| C1 paper CLOSED, sitting in progress | save **accepted**; `can_open=false`, `can_resume=true` |
+| C2/C3 resume and `my_homework` mid-sitting on a closed paper | resumes the same attempt; `can_open=true` for that student — **D-1** |
+| C4 a NEW start on a closed paper | refused `42501` |
+| M1/M2/M3 removed student saves · submits · resumes | all refused `42501` — **S-2, re-checked live** |
+| M4 the attempt itself | survives untouched: `in_progress`, 2 answers |
+| M5 rejoined, then saved and submitted a CLOSED paper | accepted, graded `2/0/0` |
+| T1/T2 roster as teacher vs **ACTIVE assistant** | byte-identical — **parity** |
+| T3 review as assistant | sat=true, key visible to staff |
+| T4/T5/T6/T7 pending assistant · outsider read · outsider review · no session | all refused `42501` |
+| A1 analyzer after **two full graded sittings** | **893 / 11 / 24 — unmoved** |
+| A2 audit rows H5 wrote | **none** — only H3/H4's own labels appear; no start/save/submit label, by **D-6** |
+
+**The dry-run found a real defect.** Probe H1c measured the owner forging a
+verdict on an in-progress attempt as **ACCEPTED** — the truth guard verified
+*agreement* but not *state*. The guard was corrected and re-tested; all four
+forgery shapes are now refused:
+
+| re-test | result |
+|---|---|
+| V1 verdict `true` on a **wrong** answer | refused `22000` |
+| V2 verdict `false` on a **right** answer | refused `22000` |
+| V3 INSERT a response **born** with a forged verdict | refused `22000` |
+| V4 the **correct** verdict while in_progress | accepted by the *truth* guard… |
+| V5 …then refused `22000` by the **state** guard | *"a verdict exists on an attempt that is in_progress"* |
+| V6 grade-then-flip, same check | **passes** — the locked submit order is legal |
+
+V4/V5 together are the point: the two guards are **separate rules**, and it
+takes both to make a verdict mean something. An earlier probe of mine failed to
+discriminate — it forged `is_correct=true` on answer `'b'` against key `'B'`,
+which is a *correct* verdict, so its acceptance proved nothing. Re-run with
+genuinely wrong verdicts, all four refuse.
+
+#### Rollback rehearsal
+
+`20260905z` refuses outright while **any** attempt exists — so, exactly like
+H2's, its window closes at the first sitting. Rehearsed in an aborting
+transaction:
+
+```
+trajectory  hw_functions / trg_responses / trg_attempts / questions_grant
+            29 / 1 / 1 / true   →   37 / 3 / 1 / false   →   29 / 1 / 1 / true
+TOTAL DIFFERING: 0
+```
+
+All eight hash families identical to pre-install: constraints `26715f0c…`,
+counts `84/209/138/29/1/1`, grants `9642f485…`, homework bodies `2e2409fe…`,
+homework signatures `8970c415…`, policies `1480dd9e…`, relations `01e30b21…`,
+triggers `59ba9b5a…`. The rollback drops the triggers **before** the functions
+they call, restores the four H4 bodies byte-identically (locally verified
+against the H4 md5s: `dacf16fd…`, `c5db8f03…`, `04198136…`, `01b0386d…` — all
+MATCH), and re-grants `select on teacher_homework_questions to authenticated`.
+
+#### Verification
+
+| | |
+|---|---|
+| contract suite | **422/422** (`tests/teacher-homework.test.mjs`, Part 6 adds ~55 H5 checks) |
+| access-scope suite | **109/109** |
+| CI | **66/66** |
+| mutation suite | **65/65 killed**, none unapplied |
+
+**Fourteen mutants survived the first pass**, and every one was a real gap in
+the tests rather than a quirk of the mutant. The instructive ones:
+
+- **`indexOf(...) === -1` sorts first and passes silently** (three separate
+  checks). A check that asserts a needle is *absent* must also assert the
+  positive form is *present*, or deleting the needle makes it pass. This is the
+  vacuous-assertion rule wearing a new costume.
+- **Submit stopped re-checking membership and nothing failed** — the
+  load-bearing S-2 rule was in the code but not in the contract.
+- `late` was computed but never asserted as *stored*; the state guard's
+  condition, the responses guard's fail-closed branch, definer/`anon` posture,
+  and the rollback's own refusal condition were all unasserted.
+- **The rollback's restored bodies were compared as a string, not computed** —
+  so a rollback restoring the *wrong* body would have passed. Now the suite
+  hashes the file text itself.
+
+**One check was removed rather than fixed.** My §12.9 asserted the analyzer
+boundary by *naming* the analyzer tables in the migration — which breaks
+`teacher-access-scope`'s blanket ban on homework migrations mentioning them at
+all. The blanket ban is the stronger rule and was already enforced, so §12.9
+was deleted as redundant, not weakened.
+
+#### Final findings
+
+1. **H-3 hands H6 a bill.** With `authenticated` holding no `select` on
+   `teacher_homework_questions`, the homework authoring page (H6) cannot read a
+   draft's questions the way `teacher-exams.html` reads its own. It will need a
+   **staff authoring-read RPC** — `teacher_homework_review()` is per-student
+   result review, not authoring. This is a consequence of a locked decision,
+   not a defect, but it must be in H6's scope from the start.
+2. **`20260905z`'s window closes at the first sitting**, and the *first sitting*
+   is the entire point of H5 — so in practice this rollback is usable only
+   between the apply and the first student who opens a paper. That is narrower
+   than H4's window and should be treated as effectively single-use.
+3. **The deferred guard reports at COMMIT.** Any future caller that batches a
+   student write into a larger transaction gets the refusal at the end, not at
+   the statement. Nothing does that today.
+4. **`SET CONSTRAINTS ALL IMMEDIATE` is sticky.** Recorded again because it
+   already cost one misreported probe in this increment.
+
+**Production is unchanged.** Re-measured after every rehearsal: 190 migrations,
+newest `20260903203209`; **0** of the 8 H5 functions and **0** of the 2 H5
+triggers present; `authenticated` still holds `select` on
+`teacher_homework_questions`; all eight homework tables at **0 rows**; audit log
+**2** rows with **0** homework labels; analyzer **893 / 11 / 24**; all eight
+hash families identical to the H4 baseline.
+
+**Nothing is applied. H5 awaits explicit approval, and H6 has not started.**

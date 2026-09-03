@@ -17,6 +17,7 @@
 
 import { suite } from './_assert.mjs';
 import { read } from './_source.mjs';
+import { createHash } from 'node:crypto';
 
 const t = suite('teacher-homework');
 const F = read('supabase/migrations/20260902a_workspace_audit_homework_actions.sql');
@@ -1267,5 +1268,297 @@ t.ok('§7.7b forbids an expected refusal from raising',
 t.ok('§7.13 pins the table count at eight',
   /if v_n <> 8 then/.test(H4C));
 t.ok('and none of §7 has been disabled with a constant', !/if false then/.test(H4C));
+
+// ══════════════════════════════════════════════════════════════════════════
+// Part 6 — increment H5, the student sits the paper.
+//
+// Fourteen invariants were locked before a line was written (§15.19–§15.22),
+// and every check below pins one of them rather than the prose that explains
+// it. The three that could not be settled by reading — that a DEFERRED check
+// leaves grade-then-flip legal, that a forged verdict cannot survive, that a
+// born-submitted attempt cannot exist — were built and exercised against
+// production in an aborting transaction first.
+// ══════════════════════════════════════════════════════════════════════════
+
+const H5  = read('supabase/migrations/20260905a_teacher_homework_h5.sql');
+const H5Z = read('supabase/migrations/20260905z_teacher_homework_h5_rollback.sql');
+const H5C = code(H5), H5ZC = code(H5Z);
+const body5 = (n) => fnDef(H5C, n).body;
+const H5FLAT = H5.replace(/'\s*\n\s*'/g, '').replace(/\n\s*--\s*/g, ' ');
+
+t.section('H5 adds no table, no policy, no enum label — and says so in its own file');
+
+t.is('it creates no table, no policy and no type',
+  [...H5C.matchAll(/create\s+(?:unique\s+)?(table|policy|type|index)\b/gi)].map((m) => m[1].toLowerCase()), []);
+t.ok('it alters no type', !/alter type/i.test(H5C));
+t.ok('§12.1 pins all three counts',
+  /the homework table count moved to/.test(H5C)
+  && /the homework policy count moved to/.test(H5C)
+  && /the audit label count moved to % — D-6 adds none/.test(H5C));
+/* D-6: the attempt row already records who, what and when, permanently and
+   immutably, and no existing label records a student academic act. */
+t.ok('and no audit label is written by any H5 function',
+  !/workspace_audit_log/.test(H5C.replace(/[\s\S]*?-- ── 1 ·/, '')));
+
+t.section('the two gates differ by exactly one condition');
+
+/* can_open is the NEW-START gate and stays untouched; can_resume is D-1's
+   exception. If can_resume ever gained a status condition the two would
+   collapse into one and closing a paper would kill a sitting again. */
+t.ok('can_resume requires an in-progress attempt and live membership',
+  /t\.status = 'in_progress'/.test(body5('teacher_homework_can_resume'))
+  && /ws\.status = 'active'/.test(body5('teacher_homework_can_resume'))
+  && /w\.is_active/.test(body5('teacher_homework_can_resume')));
+t.ok('and it deliberately does NOT look at the paper status',
+  !/h\.status/.test(body5('teacher_homework_can_resume')));
+t.ok('it honours expires_at, like every other membership predicate',
+  /\(ws\.expires_at is null or ws\.expires_at > now\(\)\)/.test(body5('teacher_homework_can_resume')));
+/* D-1's whole visible effect: without the second arm the student's own list
+   greys out a paper they may still finish. */
+t.ok('the student list offers BOTH arms',
+  /teacher_homework_can_open\(h\.id\) or teacher_homework_can_resume\(h\.id\)/
+    .test(body5('student_my_homework')));
+t.ok('teacher_homework_can_open is not redefined here',
+  !/create or replace function teacher_homework_can_open/.test(H5C));
+
+t.section('start · resume · the race');
+
+t.ok('start is the ONLY thing that locks the paper',
+  /from teacher_homework where id = p_homework for update/.test(body5('student_homework_start'))
+  && !/for update/.test(body5('student_homework_submit').replace(
+       /teacher_homework_attempts\s+where id = p_attempt and user_id = auth\.uid\(\) for update/, '')));
+t.ok('it resumes before it asks the new-start gate',
+  body5('student_homework_start').indexOf('teacher_homework_attempts') >= 0
+  && body5('student_homework_start').indexOf('teacher_homework_can_open') >= 0
+  && body5('student_homework_start').indexOf('teacher_homework_attempts')
+    < body5('student_homework_start').indexOf('teacher_homework_can_open'));
+t.ok('and the new-start gate is asked exactly once, after the lookup',
+  (body5('student_homework_start').match(/teacher_homework_can_open/g) || []).length === 1);
+/* Racing tabs converge instead of erroring: the UNIQUE makes the second insert
+   23505, and catching it re-selects the one attempt. */
+/* The handler must RE-SELECT. One that re-raises still matches the keyword and
+   still hands the student an error for something that already succeeded. */
+t.ok('racing starts converge on the one attempt',
+  /when unique_violation then[\s\S]*?select \* into t from teacher_homework_attempts/
+    .test(body5('student_homework_start'))
+  && !/when unique_violation then\s*\n\s*raise;/.test(body5('student_homework_start')));
+t.ok('a submitted attempt is returned, never reopened',
+  !/set status = 'in_progress'/.test(body5('student_homework_start')));
+t.ok('and resuming is AUTHORIZED, unlike teacher_exam_start',
+  /teacher_homework_can_resume/.test(body5('student_homework_start')));
+
+t.section('save writes an answer and never a verdict');
+
+/* indexOf alone would pass on a body with no lock at all: -1 sorts first. */
+t.ok('save takes the attempt lock, and takes it BEFORE it validates',
+  body5('student_homework_save').includes('for update')
+  && body5('student_homework_save').indexOf('for update') >= 0
+  && body5('student_homework_save').indexOf('for update')
+    < body5('student_homework_save').indexOf('teacher_homework_can_resume'));
+/* S-2 is load-bearing: the database will let a removed student's in-progress
+   attempt be written, so this line is the whole of the rule. */
+t.ok('and it re-checks live membership on EVERY call',
+  /teacher_homework_can_resume/.test(body5('student_homework_save')));
+t.ok('save never writes is_correct', !/is_correct/.test(body5('student_homework_save')));
+
+t.section('submit: grade first, flip once, count only');
+
+t.ok('it grades through the platform authority and nothing else',
+  /exam_answer_matches/.test(body5('student_homework_submit')));
+t.ok('an unanswered item stays NULL rather than false',
+  /case when r\.answer is null then null/.test(body5('student_homework_submit')));
+t.ok('it grades BEFORE it flips',
+  body5('student_homework_submit').indexOf('exam_answer_matches')
+    < body5('student_homework_submit').indexOf("set status = 'submitted'"));
+t.ok('it locks the attempt and nothing else',
+  (body5('student_homework_submit').match(/for update/g) || []).length === 1);
+/* Invariant 9: start holds homework -> attempt, so locking the paper here
+   would close a deadlock cycle. */
+t.ok('and it READS the homework without locking it',
+  /from teacher_homework where id = t\.homework_id;/.test(body5('student_homework_submit')));
+t.ok('it is idempotent by branching, not by catching the guard',
+  /if t\.status = 'in_progress' then/.test(body5('student_homework_submit')));
+t.ok('and it re-checks live membership too — S-2 covers submit as well as save',
+  /teacher_homework_can_resume\(t\.homework_id\)/.test(body5('student_homework_submit')));
+t.ok('late is decided once, at submission, and actually stored',
+  /v_late := h\.due_at is not null and now\(\) > h\.due_at/.test(body5('student_homework_submit'))
+  && /set status = 'submitted', submitted_at = now\(\), late = v_late/.test(body5('student_homework_submit')));
+/* The first of the two analyzer locks: a submit that returns no per-item
+   breakdown gives a client nothing analyzer-shaped to forward. */
+t.ok('and it returns counts only — no mistakes array, no session id',
+  !/mistakes/.test(body5('student_homework_submit'))
+  && !/session_id/.test(body5('student_homework_submit'))
+  && /'correct', v_c, 'wrong', v_w, 'omitted', v_o/.test(body5('student_homework_submit')));
+
+t.section('the student read: the key is not selected unless it is owed');
+
+/* Not a masking CASE. The unentitled branch must not name the column at all,
+   so that "the key was never read" is a statement about the query that ran. */
+t.ok('q.correct_answer is named in exactly one branch',
+  (body5('student_homework_paper').match(/q\.correct_answer/g) || []).length === 1);
+t.ok('and so is the explanation',
+  (body5('student_homework_paper').match(/q\.explanation/g) || []).length === 1);
+t.ok('S-1: the flag is necessary but NOT sufficient',
+  /reveal_answers and v_sat and t\.status = 'submitted'/.test(body5('student_homework_paper')));
+t.ok('the gate has all three arms — start, resume, and reading your own finished work',
+  /teacher_homework_can_open\(p_homework\)/.test(body5('student_homework_paper'))
+  && /teacher_homework_can_resume\(p_homework\)/.test(body5('student_homework_paper'))
+  && /v_sat and t\.status = 'submitted'/.test(body5('student_homework_paper')));
+t.ok('§12.8 pins the single-branch rule',
+  /the answer key is read in more than one branch of the student read/.test(H5C));
+
+t.section('the guards H-1 and H-2 close');
+
+t.ok('an attempt is born in_progress — the INSERT branch H2 did not have',
+  /if tg_op = 'INSERT' then/.test(body5('teacher_homework_attempts_guard'))
+  && /an attempt is born in_progress, not/.test(body5('teacher_homework_attempts_guard')));
+t.ok('and the trigger now covers all three verbs',
+  /before insert or delete or update on teacher_homework_attempts/.test(H5C));
+t.ok('H-2: last_answered_at is frozen with the answer, not separately',
+  /new\.answer is distinct from old\.answer\s*\n\s*or new\.last_answered_at is distinct from old\.last_answered_at/
+    .test(body5('teacher_homework_responses_guard')));
+t.ok('H-1c: a verdict is VERIFIED against the canonical rule, never computed',
+  /exam_answer_matches\(q\.question_format, q\.correct_answer, new\.answer\)/
+    .test(body5('teacher_homework_verdict_guard'))
+  && /a verdict must agree with the platform grading rule/.test(body5('teacher_homework_verdict_guard')));
+t.ok('and it fails closed on a question it cannot read',
+  /a verdict cannot be verified against an unreadable question/.test(body5('teacher_homework_verdict_guard')));
+t.ok('the state guard admits exactly one status',
+  /if v_status is distinct from 'submitted' then/.test(body5('teacher_homework_verdict_state_guard')));
+t.ok('and the responses guard still fails closed on an unreadable attempt',
+  /if v_status is null or v_status <> 'in_progress' then/.test(body5('teacher_homework_responses_guard')));
+t.ok('the truth guard fires on BOTH write verbs',
+  /create trigger teacher_homework_responses_verdict_trg\s+before insert or update on teacher_homework_responses/.test(H5C));
+/* Measured, not assumed: an IMMEDIATE check would refuse grading before the
+   flip and force the locked submit order to invert. */
+t.ok('D-4 is enforced by a DEFERRED constraint trigger',
+  /create constraint trigger teacher_homework_verdict_state_trg\s+after insert or update on teacher_homework_responses\s+deferrable initially deferred/.test(H5C));
+t.ok('and §12.5 pins that it really is deferred, in the catalogue as well as the text',
+  /DEFERRABLE INITIALLY DEFERRED/.test(H5C)
+  && /tg\.tgdeferrable and tg\.tginitdeferred/.test(H5C));
+/* BEFORE ROW triggers fire in alphabetical name order — measured during H4. */
+t.ok('the immutability guard sorts before the truth guard',
+  'teacher_homework_responses_guard_trg' < 'teacher_homework_responses_verdict_trg'
+  && /the verdict guard would fire before the immutability guard/.test(H5C));
+
+t.section('the student read boundary becomes RPC-only');
+
+t.ok('the direct grant is revoked',
+  /revoke select on teacher_homework_questions from authenticated;/.test(H5C));
+/* The policy is the rule and the grant is the reach: keeping the rule means a
+   future GRANT cannot silently hand students the key. */
+t.ok('and the staff-read POLICY is deliberately left in place',
+  !/drop policy/.test(H5C)
+  && /the rule must survive the reach/.test(H5C));
+t.ok('staff keep a path to the key, through the review RPC',
+  /q\.correct_answer/.test(body5('teacher_homework_review'))
+  && /teacher_homework_is_staff/.test(body5('teacher_homework_review')));
+t.ok('§12.4 pins the revocation and that nothing else lost a grant',
+  /authenticated still holds a direct SELECT on teacher_homework_questions/.test(H5C)
+  && /it removed a grant it should not have/.test(H5C));
+
+t.section('the roster gains one signal, and no lifecycle');
+
+t.ok('active_member exists so a stranded sitting is distinguishable',
+  /active_member  boolean/.test(H5C)
+  && /ws\.status = 'active'/.test(body5('teacher_homework_students')));
+t.ok('and no terminal state was invented',
+  !/abandoned/.test(H5C) && !/cancelled/.test(H5C));
+t.ok('the roster is still gated on active staff, role-blind',
+  /teacher_homework_is_staff/.test(body5('teacher_homework_students'))
+  && !/staff_role/.test(H5C));
+
+t.section('H5 disturbs nothing it does not own');
+
+t.is('the forward file drops only the two things it replaces',
+  [...H5C.matchAll(/drop\s+(trigger|function|table|policy|index|type|constraint)/gi)]
+    .map((m) => m[0].toLowerCase()).sort(),
+  ['drop function', 'drop trigger']);
+t.ok('§12.2 asserts the four redefined bodies really changed',
+  /these were supposed to be redefined and still carry their H4 body/.test(H5C));
+t.ok('and that nine H2/H3/H4 bodies did NOT',
+  /it disturbed a function it does not own/.test(H5C)
+  && /63ef7fa28bf3a0c48bd6658abd11009a/.test(H5C)
+  && /f54ea68a1b3ef3de5475e92c601a51dc/.test(H5C)
+  && /9ef8d477bede57132177ca896ab4a2f9/.test(H5C));
+/* The first draft asserted the analyzer boundary inside the migration, by
+   naming the analyzer tables in a regex. teacher-access-scope went red: its
+   blanket ban is that no forward migration may NAME an academic table in
+   executable SQL at all, which is the stronger statement and already in CI. The
+   weaker copy bought nothing and broke the real one, so it was removed. */
+t.ok('H5 names no analyzer table in executable SQL',
+  !/weakness_signals|weakness_reports|question_records|mastery_records|exam_mistakes|exam_practice_sessions/
+    .test(H5C));
+t.ok('and the file says why it does not assert that boundary itself',
+  /THE ANALYZER BOUNDARY IS NOT ASSERTED HERE, DELIBERATELY/.test(H5));
+t.ok('every §12 source check reads code, never prose',
+  !/\bv_src\b/.test(H5C)
+  && H5.split("regexp_replace(p.prosrc, '--[^\\n]*', '', 'g')").length - 1 === 4);
+t.ok('and none of §12 has been disabled with a constant', !/if false then/.test(H5C));
+/* The HEADER only — the slice between the signature and the body marker — so a
+   later function's `security definer` can never stand in for a missing one. */
+const header5 = (n) => {
+  const i = H5C.indexOf('create or replace function ' + n + '(');
+  return i < 0 ? '' : H5C.slice(i, H5C.indexOf('as $', i));
+};
+t.is('every one of the eight new or redefined RPCs is definer with a pinned path',
+  ['teacher_homework_can_resume', 'student_homework_paper', 'student_homework_start',
+   'student_homework_save', 'student_homework_submit', 'student_my_homework',
+   'teacher_homework_students', 'teacher_homework_review']
+    .filter((f) => !/security definer\nset search_path = pg_catalog, public/.test(header5(f))), []);
+t.is('and so are the four guards',
+  ['teacher_homework_attempts_guard', 'teacher_homework_responses_guard',
+   'teacher_homework_verdict_guard', 'teacher_homework_verdict_state_guard']
+    .filter((f) => !/security definer\nset search_path = pg_catalog, public/.test(header5(f))), []);
+t.ok('and anon is granted nothing at all', !/to authenticated, anon|to anon/.test(H5C));
+
+t.section('the H5 rollback restores the exact H4 state');
+
+t.ok('it refuses while any sitting exists, and the refusal is a real condition',
+  /rollback H5 refused: % attempt\(s\)/.test(H5ZC)
+  && /select count\(\*\) from teacher_homework_attempts/.test(H5ZC)
+  && /if v_attempts > 0 then/.test(H5ZC));
+t.is('it drops all eight functions H5 added',
+  ['teacher_homework_can_resume', 'student_homework_paper', 'student_homework_start',
+   'student_homework_save', 'student_homework_submit', 'teacher_homework_review',
+   'teacher_homework_verdict_guard', 'teacher_homework_verdict_state_guard']
+    .filter((f) => !new RegExp('drop function if exists ' + f).test(H5ZC)), []);
+t.is('both triggers are dropped, before their functions',
+  ['teacher_homework_verdict_state_trg', 'teacher_homework_responses_verdict_trg']
+    .filter((x) => !H5ZC.includes('drop trigger if exists ' + x)), []);
+t.ok('and the trigger drop precedes the function drop',
+  H5ZC.indexOf('drop trigger if exists teacher_homework_verdict_state_trg') >= 0
+  && H5ZC.indexOf('drop trigger if exists teacher_homework_verdict_state_trg')
+    < H5ZC.indexOf('drop function if exists teacher_homework_verdict_state_guard'));
+/* Naming the md5 is not restoring it. These hash the bodies the rollback file
+   ACTUALLY carries and compare them to what H4 left live, so a body that drifts
+   by one character fails here rather than at apply time. */
+t.is('and the four bodies it carries really are H4\u2019s, byte for byte',
+  [['teacher_homework_attempts_guard', 'dacf16fdbce357a20975d566b3035680'],
+   ['teacher_homework_responses_guard', 'c5db8f0336d0460c0ad1eb534bbbfc0b'],
+   ['student_my_homework', '04198136c9609eb8e73baeb747d13dd3'],
+   ['teacher_homework_students', '01b0386d8a03c5d54d734f7a565c23ee']]
+    .filter(([n, m]) => createHash('md5').update(fnDef(H5Z, n).body).digest('hex') !== m)
+    .map(([n]) => n), []);
+t.is('and it asserts each of those md5s in the file too',
+  ['dacf16fdbce357a20975d566b3035680', 'c5db8f0336d0460c0ad1eb534bbbfc0b',
+   '04198136c9609eb8e73baeb747d13dd3', '01b0386d8a03c5d54d734f7a565c23ee']
+    .filter((m) => !H5ZC.includes(m)), []);
+/* A rollback that leaves the read boundary half-moved is not a rollback: with
+   the RPCs gone and the grant still revoked, staff lose every path. */
+t.ok('it puts the revoked grant back',
+  /grant select on teacher_homework_questions to authenticated;/.test(H5ZC)
+  && /the direct SELECT on teacher_homework_questions was not restored/.test(H5ZC));
+t.ok('and it returns both triggers to their H2 shape',
+  /before delete or update on teacher_homework_attempts/.test(H5ZC)
+  && /teacher_homework_responses carries % trigger\(s\); H2 left exactly one/.test(H5ZC));
+t.ok('it asserts H4 is otherwise intact',
+  /expected the eight H4 tables/.test(H5ZC)
+  && /expected the 30 H4 homework functions/.test(H5ZC)
+  && /it disturbed H4''s code guard/.test(H5ZC));
+t.ok('H5 is PREPARED and its rollback is unapplied',
+  /STATUS: 🟡 PREPARED, not applied/.test(H5)
+  && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H5Z)
+  && !/APPLIED 2026-09-0[0-9] as version/.test(H5));
 
 t.done();
