@@ -1700,6 +1700,90 @@ them should be discovered mid-implementation.
     `20260903z`, the function, policy, constraint, relation-and-index and trigger
     hashes and the 186/133/82 counts all back to baseline.
 
+    ### 15.16a · The two governance audits, 2026-09-03 (measured, nothing changed)
+
+    Both run on production in aborting transactions, with
+    `teacher_homework_delete` created verbatim from `20260903a` and everything
+    else driven as `postgres`, so the probes measure the DATABASE's behaviour —
+    guards and foreign keys — rather than the RPC's opinion of it.
+
+    #### The delete truth table
+
+    | what is being deleted | result |
+    |---|---|
+    | an **empty** draft | **deleted** |
+    | a draft with a **figure** | **REFUSED** `42501` *teacher_homework_stimuli: homework (unreadable) is (unknown) and its content is immutable* |
+    | a draft with **questions** | **REFUSED** `42501`, same message |
+    | a draft with an **attachment** | REFUSED — *an attachment is a record and is never deleted* |
+    | a draft with an **attempt** | REFUSED — *an attempt is a record and is never deleted* |
+    | a draft with an **answered attempt** | REFUSED |
+    | a **published** paper | REFUSED by the RPC — *close it, do not delete it* |
+    | a **closed** paper | REFUSED by the RPC — same |
+
+    **The mechanism.** PostgreSQL deletes the parent row first and then runs the
+    referential-action cascade, so when a child's BEFORE DELETE guard fires the
+    parent is already gone. `teacher_homework_content_guard()` reads the parent's
+    status, finds NULL, and — correctly, by its own fail-closed design — refuses.
+    The guard is not wrong. The consequence is that **only a completely empty
+    draft can ever be deleted**, and a teacher who added one question to a draft
+    can never delete it, with an error message that says *(unreadable)* and
+    *(unknown)*.
+
+    **This contradicts the locked lifecycle**, which permits deleting a draft and
+    forbids it only from publication onward. It is not a new hazard introduced by
+    H3 — H2's applied guard produces it — but H3 is the first increment that
+    exposes it, because H3 is the first thing that can delete anything.
+
+    **Recommended fix, entirely inside the PREPARED H3 file, with no change to
+    applied H2 SQL:** `teacher_homework_delete` deletes the paper's questions and
+    then its stimuli *before* the paper itself. While the parent still exists and
+    is a draft, the content guard permits both; with no children left, the parent
+    delete triggers no cascade. The fail-closed guard is untouched, and a draft
+    carrying student rows still refuses — which is correct and should stay.
+
+    Two alternatives, both worse: weakening the content guard to tolerate a
+    missing parent (it would stop failing closed, the property it exists for), or
+    documenting "empty the paper first" and leaving a teacher facing an
+    *(unreadable)* error. **No SQL was changed pending this decision.**
+
+    #### A structural finding: three cascades that can never fire
+
+    `teacher_homework_access`, `_attempts` and `_responses` each declare
+    `on delete cascade` on their homework/attempt foreign keys, and each carries a
+    BEFORE DELETE guard that refuses **unconditionally**. Measured: a direct
+    delete of an attachment, an attempt and an answer are all refused `42501`. So
+    those cascade clauses are unreachable — dead metadata that reads like a
+    behaviour. Harmless today, and worth knowing before anyone relies on it.
+
+    #### What a reveal leaves behind
+
+    Measured on the live schema: throwing the latch writes **no audit row**
+    (`workspace_audit_log` unchanged), sets `reveal_answers = true`, and stamps
+    `updated_at`. The only actor column on `teacher_homework` is `created_by` —
+    there is no `updated_by`, `revealed_by` or `revealed_at`. And `updated_at` is
+    stamped by *every* accepted update, so a `due_at` change and a reveal are
+    indistinguishable by timestamp.
+
+    So after a reveal the database can say *the answers are revealed*, and cannot
+    say **who revealed them, or when**. Teacher and every active assistant hold
+    identical power here by locked decision 5, so "who" is a real question with
+    more than one possible answer.
+
+    **Recommendation: add `homework_answers_revealed` as its own H1-style enum
+    migration, applied BEFORE H3**, and have `teacher_homework_reveal_answers()`
+    write it. Reasons: the act is irreversible; several people can perform it;
+    and three of the four other consequential acts — created, published, closed,
+    code_rotated — are already logged, so the omission is an accident of the
+    label set rather than a decision. The cost is the one that always applies to
+    enum labels: a new label can never be dropped, and it cannot be written until
+    the migration adding it has committed, which is exactly why it must be its
+    own step rather than part of H3.
+
+    **`homework_deleted` is NOT recommended.** The truth table above shows a
+    delete can only ever destroy an empty draft — no questions, no figures, no
+    student rows. Logging the disposal of something that contained nothing buys
+    an irreversible label for no evidence.
+
     **One thing not yet exercised:** the in-file verification block in
     `20260903a` §6 runs at apply time and has not been executed. Its one
     live-dependent assertion — that H2's `teacher_homework_is_staff` was not
