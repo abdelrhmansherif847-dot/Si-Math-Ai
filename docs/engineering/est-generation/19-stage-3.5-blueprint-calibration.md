@@ -684,3 +684,5 @@ passes blind review.
 | assembly gate, 5 seeds | `scripts/validate-est-assembly.mjs` |
 | mutation suite, 9 classes | `tests/est-form-gates.test.mjs` |
 | P1 (frozen, failed) · P2 (frozen) | outside this repository |
+
+Committed as `30fe947`.
