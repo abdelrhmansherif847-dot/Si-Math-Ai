@@ -87,6 +87,12 @@ const MIG = {
   th_b:     read('supabase/migrations/20260902b_teacher_homework_tables.sql'),
   th_c:     read('supabase/migrations/20260902c_teacher_homework_rls.sql'),
   th_d:     read('supabase/migrations/20260902d_teacher_homework_responses.sql'),
+  /* Teacher Homework H3, PREPARED and not applied: the authoring RPCs. It is in
+     FORWARD so the foundation's blanket academic ban covers the first write path
+     into homework, and in ALL_ROLLBACK so the completeness check below notices
+     if a new RPC ever ships without an undo. */
+  th_a:     read('supabase/migrations/20260903a_teacher_homework_authoring.sql'),
+  th_a_rb:  read('supabase/migrations/20260903z_teacher_homework_authoring_rollback.sql'),
   th_rb:    read('supabase/migrations/20260902y_teacher_homework_rollback.sql'),
 };
 const PAGE = read('teacher.html');
@@ -102,7 +108,7 @@ const exec = (sql) => sql
   .join('\n');
 
 const EXEC = Object.fromEntries(Object.entries(MIG).map(([k, v]) => [k, exec(v)]));
-const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d].join('\n');
+const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d, EXEC.th_a].join('\n');
 /* Migration d is the FIRST deliberate academic read, so it is held to a
    different, narrower contract than the foundation — see section 9. Keeping it
    out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
@@ -128,7 +134,7 @@ const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATT
    drops the foundation it hung from. Completeness has to be checked against
    both, or adding a second rollback file would silently weaken the check. */
 const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb + '\n' + EXEC.ref_rb
-                   + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb;
+                   + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb + '\n' + EXEC.th_a_rb;
 
 // The four tables this system is allowed to create and touch.
 const FOUNDATION_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];

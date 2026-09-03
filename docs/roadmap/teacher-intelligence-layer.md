@@ -1626,6 +1626,89 @@ them should be discovered mid-implementation.
     triggers `3da9d509…`, client grants `e1f0bb57…`, counts 186 functions /
     133 policies / 82 tables.
 
+    ### 15.16 · H3 — the authoring RPCs (PREPARED 2026-09-03)
+
+    The first write path into the homework schema. Until H3, the six tables were
+    governed and unreachable: clients hold SELECT only and H2 shipped no callable
+    function. `20260903a` adds **thirteen RPCs** a teacher or active assistant may
+    call and **two helpers nobody may**; `20260903z` removes all fifteen and
+    nothing else. Neither is applied.
+
+    **Audited first, from production rather than from the repo.** Every 3c exam
+    authoring RPC was read out of `pg_proc` and compared against what Homework
+    needs. What mirrors, unchanged: the staff gate and its ONE indistinguishable
+    refusal (`no such homework, or you are not staff of its class` — the id is
+    never an oracle); draft-only content edits, where the RPC exists to turn a
+    trigger's message into one a teacher can act on while the trigger stays the
+    thing that cannot be bypassed; the bounded code-retry that catches **only** a
+    code collision by constraint name and re-raises everything else; the
+    ordinal-shift that dodges the slot unique; the all-or-nothing reorder; the
+    server-side `media_sha256` with any client value never read; the audit-log
+    insert shape.
+
+    **Four divergences, each traceable to a decision:**
+
+    | | why |
+    |---|---|
+    | no duration, calculator, `opens_at`, `closes_at` | homework is untimed; publishing opens it |
+    | `due_at` has its **own** RPC | it is mutable while published (§15.15b), so folding it into the draft-only update would make one function hold two lifecycles |
+    | `reveal_answers(p_homework)` takes **no boolean** | the latch is one-way; with no parameter, un-revealing is not a call the API can express, which is stronger than a guard refusing it. It is also the one RPC a **closed** homework accepts |
+    | publish has no window/duration gate, and no `due_at` gate | there is no window, and decision 3 makes `due_at` a date and never a lock — so publishing with it already past is legal and describes a homework where every submission is late |
+
+    **The audit labels constrain what H3 may log.** 20260902a shipped five;
+    `homework_attached` is H4's. So exactly four are written — created, published,
+    closed, code_rotated — and update, delete, content edits, reorder and reveal
+    write **nothing**, because no label exists for them. That is a consequence of
+    the label set, not a choice made here, and **one of the four silences deserves
+    a decision: revealing the answers is irreversible and invisible in the audit
+    log.** Adding a label is another irreversible enum migration, so it is raised
+    here rather than smuggled into H3.
+
+    **Evidence, none of it applied.** Contract suite 222 checks (H3 adds nine
+    sections); scope suite 109; CI 66 of 66. **44 of 44 mutants killed** — a
+    deleted staff gate, a role-aware gate, a refusal turned into an oracle, a
+    draft-only `set_due_at`, `due_at` folded back into the update, a reveal that
+    can un-reveal, a reveal with a status gate, each publish check removed in
+    turn, a publish that refuses a past due date, a retry that swallows every
+    unique violation, an ambiguous glyph in the alphabet, a partial reorder, a
+    trusted client hash, a dropped SVG sniff, a helper granted to clients, an RPC
+    granted to `anon`, a lost `security definer`, an RPC reaching into the student
+    tables, and four rollback mutants. Two survivors were fixed by *strengthening
+    the tests*: `fnDef()`'s head begins after the parameter list, so a widened
+    signature was invisible — every signature is now pinned; and the SVG sniff had
+    never been asserted at all.
+
+    **Production dry-run, aborting: 30 probes, 0 unexpected results.** The whole
+    flow driven through the RPCs as real identities — create (title trimmed),
+    update, one stimulus and three questions through the borrowed validators, a
+    figure in use refusing deletion, a partial reorder refused and a full one
+    renumbering 1..3, a delete closing the gap to 1,2, an empty paper refused
+    publication, publish with a past due date **allowed**, then title/content/
+    delete all refused while `due_at`, code rotation and reveal all still work;
+    close, and then **a closed paper still revealing its answers with `status` and
+    `closed_at` untouched** while `due_at` and rotation are refused; a
+    cross-homework figure refused; a non-SVG figure refused; an internal helper
+    not client-callable; an outsider and a **pending** assistant refused; an
+    **active** assistant driving create → publish → close → reveal end to end;
+    `anon` refused. Ten audit rows, exactly the four labels, no `homework_attached`.
+    `teacher_homework_access` / `_attempts` / `_responses` all still 0 — authoring
+    touches no student table.
+
+    **Rollback rehearsal, aborting: 8 checks, 0 failures.** All fifteen bodies
+    byte-identical to the file (`md5(prosrc)` against values pre-computed from the
+    repo); 22 homework functions while H3 stood (7 from H2 + 15); after
+    `20260903z`, the function, policy, constraint, relation-and-index and trigger
+    hashes and the 186/133/82 counts all back to baseline.
+
+    **One thing not yet exercised:** the in-file verification block in
+    `20260903a` §6 runs at apply time and has not been executed. Its one
+    live-dependent assertion — that H2's `teacher_homework_is_staff` was not
+    redefined — was checked directly: the live `md5(prosrc)` equals the constant
+    the file compares against. A failure there would abort the apply and roll it
+    back, not corrupt anything.
+
+    ---
+
     **One observation recorded, not resolved.** `exam_practice_sessions` read
     **23** during the pre-apply dry-run and **24** shortly afterwards. The extra
     row is a real student's session (started 23:03:01, ended 23:03:36, score 700,
@@ -1686,6 +1769,14 @@ them should be discovered mid-implementation.
   survived first exposed a prefix-matching grant check, now fixed in two
   suites. The per-item answer record H5 needs was kept out because the approved
   scope named five tables, and it is flagged as its own increment.
+- **2026-09-03 — H3 PREPARED.** The authoring RPCs, designed after reading every
+  3c exam RPC out of production rather than out of the repo (§15.16). Thirteen
+  client RPCs, two helpers, four audit labels, no student surface. `due_at` and
+  `reveal_answers` each got their own RPC because their lifecycles differ from
+  the paper's, and the latch takes no boolean so that un-revealing is not
+  expressible. 44 of 44 mutants die, 30 dry-run probes and 8 rehearsal checks
+  come back clean on production, and nothing is applied. Raised for decision:
+  revealing the answers is irreversible and has no audit label.
 - **2026-09-03 — H2 APPLIED.** The package went live as `20260903123333` /
   `20260903123410` / `20260903123458`, taking production from 184 to 187
   migrations. Verification ran before anything else (§15.15d): the seven

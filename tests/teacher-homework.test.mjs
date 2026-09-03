@@ -510,4 +510,215 @@ t.is('each forward file records the version it was applied as, in package order'
 t.ok('and the rollback is still PREPARED and unapplied',
   /STATUS: 🟡 PREPARED, deliberately unapplied/.test(TY) && !/APPLIED 2026-09-03 as version/.test(TY));
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PART 4 · H3 — the authoring RPCs (20260903a), and the undo (20260903z)
+// ═══════════════════════════════════════════════════════════════════════════
+const TA = read('supabase/migrations/20260903a_teacher_homework_authoring.sql');
+const TAZ = read('supabase/migrations/20260903z_teacher_homework_authoring_rollback.sql');
+const TAC = code(TA), TAZC = code(TAZ);
+const E3C = read('supabase/migrations/20260901e_teacher_exam_authoring.sql');   // the template, live since 2026-09-01
+
+const CLIENT_RPCS = ['teacher_homework_create', 'teacher_homework_update', 'teacher_homework_set_due_at',
+  'teacher_homework_reveal_answers', 'teacher_homework_delete', 'teacher_homework_save_stimulus',
+  'teacher_homework_delete_stimulus', 'teacher_homework_save_question', 'teacher_homework_delete_question',
+  'teacher_homework_reorder_questions', 'teacher_homework_publish', 'teacher_homework_close',
+  'teacher_homework_rotate_code'];
+const INTERNAL_FNS = ['teacher_homework_new_code', 'teacher_homework_shift_ordinals'];
+/* Draft-only in the RPC as well as in the guard: the trigger is what cannot be
+   bypassed, the RPC is what gives a teacher a message they can act on. */
+const DRAFT_ONLY = ['teacher_homework_update', 'teacher_homework_delete', 'teacher_homework_save_stimulus',
+  'teacher_homework_delete_stimulus', 'teacher_homework_save_question', 'teacher_homework_delete_question',
+  'teacher_homework_reorder_questions'];
+const body3 = (n) => fnDef(TAC, n).body;
+
+// ══ 20 · WHAT H3 SHIPS ════════════════════════════════════════════════════
+t.section('H3: thirteen RPCs a client may call, two helpers nobody may');
+
+t.is('exactly fifteen functions, in the file\'s own order',
+  [...TAC.matchAll(/create or replace function ([a-z_]+)\s*\(/g)].map((m) => m[1]),
+  [...INTERNAL_FNS, ...CLIENT_RPCS]);
+t.is('every one is revoked from public, anon and authenticated first',
+  [...INTERNAL_FNS, ...CLIENT_RPCS].filter((f) => !new RegExp(`revoke all on function ${f}\\(`).test(TAC)), []);
+t.is('exactly the thirteen are granted back, and only to authenticated',
+  [...TAC.matchAll(/grant execute on function ([a-z_]+)\([^)]*\)\s+to ([a-z_, ]+);/g)].map((m) => `${m[1]}:${m[2].trim()}`),
+  CLIENT_RPCS.map((f) => `${f}:authenticated`));
+t.is('the two helpers are granted to nobody', INTERNAL_FNS.filter((f) => new RegExp(`grant execute on function ${f}\\(`).test(TAC)), []);
+t.ok('nothing is granted to anon anywhere', !/to [a-z_, ]*\banon\b/.test(TAC.replace(/revoke[^;]*;/g, '')));
+t.is('every client RPC is SECURITY DEFINER with a pinned search_path',
+  CLIENT_RPCS.filter((f) => !/security definer/.test(fnDef(TAC, f).head)
+                         || !/set search_path = pg_catalog, public/.test(fnDef(TAC, f).head)), []);
+t.ok('H3 creates no table, policy, type, index or column',
+  !/create (table|policy|type|index)|alter table/i.test(TAC));
+t.ok('and it re-uses H2\'s staff helper rather than redefining it',
+  !/create or replace function teacher_homework_is_staff/.test(TAC)
+  && /teacher_homework_is_staff\(\) was redefined/.test(TA));
+
+// ══ 21 · AUTHORIZATION ════════════════════════════════════════════════════
+t.section('One gate, one message, and parity that needs no line of its own');
+
+t.is('every RPC except create gates on teacher_homework_is_staff()',
+  CLIENT_RPCS.filter((f) => f !== 'teacher_homework_create')
+             .filter((f) => !/not teacher_homework_is_staff\(/.test(body3(f))), []);
+/* The two RPCs addressed by a CHILD id must resolve the parent first, and an
+   unresolvable parent has to fail the same way as a foreign one — otherwise a
+   missing row would reach the staff gate as NULL and answer nothing. */
+t.is('delete_stimulus and delete_question fail closed on an unresolvable parent',
+  ['teacher_homework_delete_stimulus', 'teacher_homework_delete_question']
+    .filter((f) => !/if v_homework is null or not teacher_homework_is_staff\(v_homework\) then/.test(body3(f))), []);
+t.ok('create gates on active staff of the WORKSPACE, and on being signed in at all',
+  /if auth\.uid\(\) is null then/.test(body3('teacher_homework_create'))
+  && /if not workspace_is_active_staff\(p_workspace\) then/.test(body3('teacher_homework_create')));
+t.ok('no RPC tests staff_role — teacher/assistant parity is structural (decision 5)', !/staff_role/.test(TAC));
+/* The refusal must not distinguish "no such homework" from "not your class",
+   or the id becomes an oracle. Asserted on every RPC, not spot-checked. */
+t.is('every staff refusal carries the one indistinguishable message',
+  CLIENT_RPCS.filter((f) => f !== 'teacher_homework_create')
+    .filter((f) => !new RegExp(`${f}: no such (homework|stimulus|question), or you are not staff of its class`).test(body3(f))), []);
+t.is('and every one of those refusals is 42501',
+  CLIENT_RPCS.filter((f) => f !== 'teacher_homework_create')
+    .filter((f) => !/or you are not staff of its class'\s*\n\s*using errcode = '42501'/.test(body3(f))), []);
+
+// ══ 22 · THE LIFECYCLE EACH RPC IS ALLOWED TO ACT IN ══════════════════════
+t.section('Draft-only where the paper is fixed, and the three exceptions');
+
+t.is('the seven content/paper RPCs refuse anything but a draft',
+  DRAFT_ONLY.filter((f) => !/if v_status <> 'draft' then\s+raise exception/.test(body3(f))), []);
+/* due_at outlives the draft (§15.15b): mutable while published, refused once
+   closed. If this ever became draft-only it would contradict decision 3. */
+t.ok('set_due_at is NOT draft-only — it refuses only a closed homework',
+  !/v_status <> 'draft'/.test(body3('teacher_homework_set_due_at'))
+  && /if v_status = 'closed' then\s+raise exception/.test(body3('teacher_homework_set_due_at')));
+/* Every parameter list, pinned. fnDef()'s `head` begins AFTER the closing
+   paren, so a widened signature is invisible to any check written against it —
+   a mutant that folded due_at back into the paper update survived exactly that
+   blind spot. These are read from the file's own text instead. */
+const sig = (n) => (TAC.match(new RegExp('create or replace function ' + n + '\\(([^)]*)\\)')) || [])[1]
+  .replace(/\s+/g, ' ').trim();
+t.is('every signature is exactly as designed — no parameter may be added unnoticed',
+  [...INTERNAL_FNS, ...CLIENT_RPCS].map((f) => `${f}(${sig(f)})`), [
+    'teacher_homework_new_code()',
+    'teacher_homework_shift_ordinals(p_homework uuid, p_from integer)',
+    'teacher_homework_create(p_workspace uuid, p_title text)',
+    'teacher_homework_update(p_homework uuid, p_title text, p_instructions text)',
+    'teacher_homework_set_due_at(p_homework uuid, p_due_at timestamptz)',
+    'teacher_homework_reveal_answers(p_homework uuid)',
+    'teacher_homework_delete(p_homework uuid)',
+    'teacher_homework_save_stimulus(p_homework uuid, p_stimulus uuid, p_kind text, p_label text, p_body text, p_spec jsonb, p_media_ref text)',
+    'teacher_homework_delete_stimulus(p_stimulus uuid)',
+    'teacher_homework_save_question(p_homework uuid, p_question uuid, p_ordinal integer, p_prompt text, p_format text, p_correct_answer text, p_choices jsonb, p_explanation text, p_stimulus uuid)',
+    'teacher_homework_delete_question(p_question uuid)',
+    'teacher_homework_reorder_questions(p_homework uuid, p_question_ids uuid[])',
+    'teacher_homework_publish(p_homework uuid)',
+    'teacher_homework_close(p_homework uuid)',
+    'teacher_homework_rotate_code(p_homework uuid)']);
+t.ok('so due_at is absent from the paper update — one function never holds two lifecycles',
+  !/due_at/.test(body3('teacher_homework_update')));
+t.ok('close accepts only a published homework', /if h\.status <> 'published' then\s+raise exception/.test(body3('teacher_homework_close')));
+t.ok('publish accepts only a draft, and takes the row FOR UPDATE first',
+  /select \* into h from teacher_homework where id = p_homework for update;\s+if h\.status <> 'draft' then/.test(body3('teacher_homework_publish')));
+t.ok('rotate refuses a closed homework', /if v_status = 'closed' then\s+raise exception/.test(body3('teacher_homework_rotate_code')));
+
+// ══ 23 · THE LATCH, AS AN API AND NOT ONLY AS A GUARD ═════════════════════
+t.section('reveal_answers: un-revealing is not a call this API can express');
+
+const reveal = fnDef(TAC, 'teacher_homework_reveal_answers');
+t.is('the RPC takes the homework id and nothing else',
+  (TAC.match(/create or replace function teacher_homework_reveal_answers\(([^)]*)\)/) || [])[1].trim(), 'p_homework uuid');
+t.ok('it sets the latch true, and the word false appears nowhere in it',
+  /update teacher_homework set reveal_answers = true where id = p_homework;/.test(reveal.body) && !/false/.test(reveal.body));
+t.ok('it has NO status gate — a closed homework may still be revealed (§15.15b)',
+  !/v_status|h\.status/.test(reveal.body));
+t.ok('the file records why the latch has no parameter rather than a refused one',
+  /would make un-revealing something the API can express/.test(TA.replace(/\n\s*--\s*/g, ' ')));
+
+// ══ 24 · THE PUBLISH GATE ═════════════════════════════════════════════════
+t.section('Publish checks only what a CHECK constraint cannot express');
+
+const pub = body3('teacher_homework_publish');
+t.ok('a paper with no questions is refused', /if v_n = 0 then\s+raise exception/.test(pub));
+t.ok('ordinals must run 1..n with no gaps', /if v_min <> 1 or v_max <> v_n or v_distinct <> v_n then/.test(pub));
+t.ok('and no question may reference another homework\'s figure', /s\.homework_id <> p_homework/.test(pub));
+/* Homework has no window and no duration, so the two exam gates that exist for
+   those must NOT have been copied across. */
+t.ok('no window, duration or calculator check anywhere in H3',
+  !/duration_minutes|calculator_allowed|opens_at|closes_at/.test(TAC));
+t.ok('publishing with a due date already past is deliberately allowed, and the file says why',
+  !/due_at.*(<=|<)\s*now\(\)/.test(pub)
+  && /DELIBERATELY no check on due_at/.test(TA.replace(/\n\s*--\s*/g, ' ')));
+
+// ══ 25 · CODES AND ORDINALS ═══════════════════════════════════════════════
+t.section('The code generator, its retry, and the ordinal shuffle');
+
+const alphabet = (src) => (src.match(/alphabet constant text := '([A-Z0-9]+)'/) || [])[1];
+t.ok('the homework alphabet is the exam alphabet, character for character',
+  !!alphabet(TAC) && alphabet(TAC) === alphabet(E3C));
+t.is('both writers that allocate a code wrap a bounded retry around the write',
+  ['teacher_homework_create', 'teacher_homework_rotate_code']
+    .filter((f) => !/for i in 1\.\.10 loop/.test(body3(f)) || !/if i = 10 then\s+raise exception/.test(body3(f))), []);
+t.is('and each retries ONLY a code collision, named, re-raising anything else',
+  ['teacher_homework_create', 'teacher_homework_rotate_code']
+    .filter((f) => !/if v_con is distinct from 'teacher_homework_homework_code_key' then/.test(body3(f))
+                || !/\braise;/.test(body3(f))), []);
+t.ok('deleting a question closes the gap without ever colliding on the slot unique',
+  /ordinal \+ 1000000/.test(body3('teacher_homework_shift_ordinals'))
+  && /ordinal - 1000000 - 1/.test(body3('teacher_homework_shift_ordinals'))
+  && /perform teacher_homework_shift_ordinals\(v_homework, v_ord\);/.test(body3('teacher_homework_delete_question')));
+t.ok('reorder demands the WHOLE list, so it cannot leave a non-contiguous paper behind',
+  /if v_n <> v_total or array_length\(p_question_ids, 1\) is distinct from v_total then/.test(body3('teacher_homework_reorder_questions')));
+t.ok('a figure that is not base64, or does not look like an SVG, is refused before it is stored',
+  /the figure is not valid base64 text/.test(body3('teacher_homework_save_stimulus'))
+  && /if v_head !~\* '<svg' then\s+raise exception/.test(body3('teacher_homework_save_stimulus')));
+t.ok('a figure is hashed server-side from its bytes, and no parameter offers a hash',
+  /v_sha  := encode\(sha256\(decode\(p_media_ref, 'base64'\)\), 'hex'\);/.test(body3('teacher_homework_save_stimulus'))
+  && !/p_sha|p_media_sha/.test(TAC));
+t.ok('a stimulus still used by a question cannot be deleted, with a message that says by how many',
+  /question\(s\) still use this figure/.test(body3('teacher_homework_delete_stimulus')));
+
+// ══ 26 · THE AUDIT LOG, AND ITS SILENCES ══════════════════════════════════
+t.section('Four labels, written by four RPCs, and nothing else logged');
+
+const audits = [...TAC.matchAll(/insert into workspace_audit_log[\s\S]*?'(homework_[a-z_]+)'/g)].map((m) => m[1]);
+t.is('exactly four audit writes, one each', audits, ['homework_created', 'homework_published', 'homework_closed', 'homework_code_rotated']);
+/* The label appears once in the file, inside the verification that FORBIDS it.
+   The ban therefore has to be read against the function bodies, not the file —
+   otherwise the guard against the mistake would itself trip the check. */
+t.is('homework_attached is H4\'s and no function body writes it',
+  [...INTERNAL_FNS, ...CLIENT_RPCS].filter((f) => /homework_attached/.test(body3(f))), []);
+t.ok('and the in-file verification is what forbids it', /homework_attached/.test(TAC));
+t.is('the RPCs that do NOT log are the ones with no label to log',
+  ['teacher_homework_update', 'teacher_homework_set_due_at', 'teacher_homework_reveal_answers',
+   'teacher_homework_delete', 'teacher_homework_save_question', 'teacher_homework_delete_question',
+   'teacher_homework_save_stimulus', 'teacher_homework_delete_stimulus', 'teacher_homework_reorder_questions']
+    .filter((f) => /workspace_audit_log/.test(body3(f))), []);
+t.ok('and the file raises the reveal-is-unlogged consequence rather than hiding it',
+  /irreversible and invisible in the audit log/.test(TA.replace(/\n\s*--\s*/g, ' ')));
+
+// ══ 27 · THE H3 / H4 / H5 BOUNDARY ════════════════════════════════════════
+t.section('No student surface, and no analyzer');
+
+t.is('no function reads or writes access, attempts or responses',
+  [...TAC.matchAll(/teacher_homework_(?:access|attempts|responses)/g)].map((m) => m[0]), []);
+t.is('and no analyzer table is named',
+  ['weakness_signals', 'weakness_reports', 'exam_mistakes', 'exam_practice_sessions', 'question_records', 'mastery_records']
+    .filter((x) => new RegExp('\\b' + x + '\\b').test(TAC)), []);
+t.ok('no exam table, RPC or predicate is referenced either', !/teacher_exam/.test(TAC));
+t.ok('the in-file verification pins that boundary, so a later edit cannot cross it quietly',
+  /a function touches the student tables/.test(TA) && /homework_attached belongs to H4/.test(TA));
+
+// ══ 28 · THE UNDO ═════════════════════════════════════════════════════════
+t.section('20260903z removes the write path and leaves H2 exactly as it was');
+
+t.is('it drops all fifteen functions',
+  [...INTERNAL_FNS, ...CLIENT_RPCS].filter((f) => !new RegExp(`drop function if exists ${f}\\(`).test(TAZC)), []);
+t.ok('it drops NOTHING else — no table, policy, type, or H2 function',
+  !/drop (table|policy|type|trigger|index)/i.test(TAZC)
+  && !/drop function if exists teacher_homework_is_staff/.test(TAZC)
+  && !/drop function if exists teacher_homework_(guard|content_guard|access_guard|attempts_guard|responses_guard)/.test(TAZC));
+t.ok('it asserts H2 survives: the helper, the five guards, six tables, nine policies',
+  /it destroyed H2 functions/.test(TAZC) && /<> 6 then/.test(TAZC) && /<> 9 then/.test(TAZC));
+t.ok('it reports what it would strand rather than refusing — a draft is not a submitted answer',
+  /raise notice/.test(TAZC) && /uneditable until the RPCs return/.test(TAZ.replace(/\n\s*--\s*/g, ' ')));
+t.ok('both H3 files are PREPARED and unapplied',
+  /STATUS: 🟡 PREPARED/.test(TA) && /STATUS: 🟡 PREPARED/.test(TAZ) && !/APPLIED 2026/.test(TA) && !/APPLIED 2026/.test(TAZ));
+
 t.done();
