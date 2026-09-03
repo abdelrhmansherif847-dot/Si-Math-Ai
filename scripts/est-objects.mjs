@@ -310,6 +310,8 @@ export const CONSTRUCT_OBJECT = {
   // A second STRUCTURE for A08, not a second object: the archetype is already
   // built as a routine construct. See the note in est-mechanisms.mjs.
   'mechanism:extraneous_root': 'rational-equation-composite',
+  'mechanism:parameter_interpret_factor': 'parameter-interpret',
+  'mechanism:parameter_interpret_constant': 'parameter-interpret-constant',
 
   // ── Core-stream expansion (scripts/est-core-stream.mjs) ──
   // Placed where blueprint core-slot demand exceeded the stream's supply.
@@ -328,6 +330,10 @@ export const CONSTRUCT_OBJECT = {
   'core:sum-of-intersection-abscissae': 'curve-line-select-root',
   'core:solve-then-evaluate-a-different-expression': 'translate-composite-target',
   'core:parallel-cut-similar-triangles': 'similar-triangles-parallel-composite',
+  // The supported half of the ten-archetype gap, Stage C. A13/Core carried
+  // 2.12 slots a form drawn from three objects; these are two more.
+  'core:ratio-on-the-remainder': 'pie-ratio-on-remainder',
+  'core:percent-from-a-scaled-display': 'read-then-percent-scaled',
   'core:one-bar-as-a-percent-of-another': 'bar-percent-to-other-category',
   'core:percent-decrease-across-a-series': 'percent-decrease-two-series',
   'core:scaled-table-selected-rows': 'scaled-axis-read',

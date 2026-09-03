@@ -363,6 +363,8 @@ const BUILDERS = {
   coordinate_rectangle_rotated: rotatedRectangle,
   which_student_multi_claim: whichStudentClaim,
   extraneous_root: extraneousRoot,
+  parameter_interpret_factor: parameterInterpretFactor,
+  parameter_interpret_constant: parameterInterpretConstant,
   inequality_system_quadrant: inequalitySystemQuadrant,
   tangent_at_vertex: tangentAtVertex,
   parabola_inscribed_square: parabolaInscribedSquare,
@@ -388,6 +390,8 @@ export const MECHANISM_EXPANSION = {
   'P-ROTATED': (seed, opts = {}) => BUILDERS[opts.form || 'coordinate_rectangle_rotated'](rng(seed)),
   'P-CLAIMANT': (seed, opts = {}) => BUILDERS[opts.form || 'which_student_multi_claim'](rng(seed)),
   'P-EXTRANEOUS': (seed, opts = {}) => BUILDERS[opts.form || 'extraneous_root'](rng(seed)),
+  'P-INTERPRET-FACTOR': (seed, opts = {}) => BUILDERS[opts.form || 'parameter_interpret_factor'](rng(seed)),
+  'P-INTERPRET-K': (seed, opts = {}) => BUILDERS[opts.form || 'parameter_interpret_constant'](rng(seed)),
 };
 
 /** Which family each new structure serves. */
@@ -407,6 +411,8 @@ export const MECHANISM_EXPANSION_SERVES = {
   'P-ROTATED/coordinate_rectangle_rotated': 'A17',
   'P-CLAIMANT/which_student_multi_claim': 'A09',
   'P-EXTRANEOUS/extraneous_root': 'A08',
+  'P-INTERPRET-FACTOR/parameter_interpret_factor': 'A13',
+  'P-INTERPRET-K/parameter_interpret_constant': 'A13',
 };
 
 /**
@@ -429,6 +435,8 @@ export const MECHANISM_SPECIES = {
   'P-ROTATED/coordinate_rectangle_rotated': ['hidden relationship', 'multiple valid approaches'],
   'P-CLAIMANT/which_student_multi_claim': ['non-value target', 'competing interpretation', 'filtering'],
   'P-EXTRANEOUS/extraneous_root': ['filtering', 'hidden relationship', 'multiple valid approaches'],
+  'P-INTERPRET-FACTOR/parameter_interpret_factor': ['non-value target', 'interpretation', 'competing interpretation'],
+  'P-INTERPRET-K/parameter_interpret_constant': ['non-value target', 'interpretation', 'competing interpretation'],
 };
 
 /* ══════════════════════════ A13 — reading a display ══════════════════════════ */
@@ -753,6 +761,83 @@ function extraneousRoot(rand) {
       ctx: 'rational-equation no-stimulus', chain: ['factor-the-numerator', 'cancel-the-common-factor', 'test-the-root-against-the-domain'],
       target: 'value:count', options: 'solution-count-set', distract: ['D2', 'D3', 'D6'],
       narrative: 'symbols-only:rational-equation', numeric: ['root'],
+    },
+  };
+}
+
+/* ══════════════════════════ A13 — the remaining supported interpretations ══════════════════════════ */
+//
+// The corpus names three parameter-interpretation archetypes and the library
+// built one of them (`parameter-interpret-intercept`). These are the other two,
+// and they are genuinely different asks rather than the same ask relabelled:
+// one is the BASE of an exponential, which is a factor and not a rate, and the
+// other is a constant of proportionality, which is a ratio and not an offset.
+
+/** `parameter-interpret`: the base of an exponential model is a FACTOR. */
+function parameterInterpretFactor(rand) {
+  const pct = rand.pick([5, 8, 10, 12, 15, 20, 25]);
+  const start = rand.int(2, 9) * 100;
+  const thing = rand.pick(['subscribers', 'trees in the plot', 'devices in service']);
+  const texts = [
+    `the number of ${thing} is multiplied by ${(100 + pct) / 100} each year`,
+    `${pct} more ${thing} are added each year`,
+    `the number of ${thing} increases by ${(100 + pct) / 100} each year`,
+    `the number of ${thing} reaches ${(100 + pct) / 100} times ${start} in total`,
+  ];
+  const L = choiceLayout(rand, 0, texts);
+  if (L.error) return { error: L.error };
+  return {
+    primitive: 'P-INTERPRET-FACTOR', species: 'parameter-meaning', form: 'parameter_interpret_factor',
+    stem: `The number of ${thing} after $t$ years is modelled by $N(t) = ${start}(${(100 + pct) / 100})^{t}$. ` +
+          `Which of the following is the best interpretation of the number $${(100 + pct) / 100}$ in this model?`,
+    ...L,
+    distractorClasses: ['D5', 'D5', 'D5'],
+    mechanism: { competing_interp: 2, abstraction: 2, repr_switch: 1, nonobvious_rel: 1, trap_cost: 2 },
+    routes: [
+      ROUTE('read-the-base-as-a-repeated-multiplier', { insight: true, cost: 4, value: Q(0) }),
+      ROUTE('read-the-base-as-an-additive-step', { insight: false, cost: 1, natural: true, value: Q(1) }),
+      ROUTE('read-the-base-as-an-increase-rather-than-a-factor', { insight: false, cost: 2, value: Q(2) }),
+      ROUTE('read-the-base-as-a-total-rather-than-a-rate-of-change', { insight: false, cost: 2, value: Q(3) }),
+    ],
+    counterfactual: { kind: 'determinacy', note: 'without the exponent the base could be an offset or a factor', optionsSurviving: 2 },
+    fingerprintParts: {
+      ctx: 'growth no-stimulus', chain: ['identify-the-base', 'recognise-repeated-multiplication', 'name-what-it-measures'],
+      target: 'interpretation:parameter', options: 'prose-claims', distract: ['D5', 'D5', 'D5'],
+      narrative: 'words-plus-symbols:exponential-model', numeric: ['initial', 'percent'],
+    },
+  };
+}
+
+/** `parameter-interpret-constant`: a constant of proportionality is a RATIO. */
+function parameterInterpretConstant(rand) {
+  const k = rand.int(2, 9), unitY = rand.pick(['litres', 'grams', 'joules']);
+  const unitX = rand.pick(['minute', 'kilogram', 'second']);
+  const texts = [
+    `the number of ${unitY} per ${unitX}`,
+    `the number of ${unitY} when the ${unitX} count is zero`,
+    `the number of ${unitX} per ${unitY}`,
+    `the total number of ${unitY} in the experiment`,
+  ];
+  const L = choiceLayout(rand, 0, texts);
+  if (L.error) return { error: L.error };
+  return {
+    primitive: 'P-INTERPRET-K', species: 'parameter-meaning', form: 'parameter_interpret_constant',
+    stem: `In an experiment, $y$ is directly proportional to $x$, so $y = ${k}x$, where $y$ is measured in ` +
+          `${unitY} and $x$ in ${unitX}s. Which of the following is the best interpretation of the constant $${k}$?`,
+    ...L,
+    distractorClasses: ['D5', 'D5', 'D5'],
+    mechanism: { competing_interp: 2, abstraction: 2, repr_switch: 1, inference: 1, trap_cost: 2 },
+    routes: [
+      ROUTE('read-the-constant-as-the-ratio-of-the-two-units', { insight: true, cost: 3, value: Q(0) }),
+      ROUTE('read-a-proportional-constant-as-an-intercept', { insight: false, cost: 1, natural: true, value: Q(1) }),
+      ROUTE('invert-the-ratio', { insight: false, cost: 2, value: Q(2) }),
+      ROUTE('read-the-constant-as-a-total', { insight: false, cost: 2, value: Q(3) }),
+    ],
+    counterfactual: { kind: 'determinacy', note: 'without the direct-proportion statement the constant could be an offset', optionsSurviving: 2 },
+    fingerprintParts: {
+      ctx: 'variation no-stimulus', chain: ['read-the-proportional-relation', 'attach-the-units', 'name-the-ratio'],
+      target: 'interpretation:parameter', options: 'prose-claims', distract: ['D5', 'D5', 'D5'],
+      narrative: 'words-plus-symbols:direct-proportion', numeric: ['constant'],
     },
   };
 }

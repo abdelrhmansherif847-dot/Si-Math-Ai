@@ -1013,6 +1013,74 @@ const CONSTRUCTS = {
           narrative: 'symbols-only:two-function-values', numeric: ['x1', 'x2', 'slope', 'intercept'] } });
   },
 
+  // ── The supported half of the ten-archetype gap (artifact 24 SS2) ──
+  //
+  // A13/Core is the third-largest contributor to the series lower bound: 2.12
+  // slots a form drawn from THREE objects. Both constructs below are A13
+  // archetypes the corpus names and the library could not build, and neither
+  // needed any infrastructure — the first declares a private two-slice pie, the
+  // second a bar chart whose axis is in hundreds.
+
+  // `pie-ratio-on-remainder`: the ratio is asked on what is LEFT after a named
+  // slice, and the rival takes it on the whole, correctly.
+  A13c: (rand) => {
+    const a = rand.int(2, 5) * 5, b = rand.int(2, 5) * 5;
+    const rest = 100 - a - b;
+    if (rest < 20 || a === b) return { error: 'the slices are degenerate' };
+    const total = rand.int(2, 9) * 20;
+    const key = Q(b, 100 - a), whole = Q(b, 100), flipped = Q(a, 100 - b);
+    const counted = Q(Math.round(total * b / 100));
+    if (!qIsInt(counted)) return { error: 'the slice count is not whole' };
+    if ([whole, flipped, counted].some(v => qEq(v, key)) || qEq(whole, flipped)
+        || qEq(whole, counted) || qEq(flipped, counted)) return { error: 'two options coincide' };
+    return OK(rand,
+      [S('remove the named slice from the whole', Q(100 - a)), S('divide the second slice by what is left', key)],
+      [S('read the second slice', Q(b)), S('divide it by the whole', whole)],
+      [{ name: 'formed-the-ratio-the-other-way-round', value: flipped, cost: 2 },
+       { name: 'reported-the-count-rather-than-the-fraction', value: counted, cost: 1 }],
+      { family: 'A13', construct: 'ratio-on-the-remainder',
+        stimulus: { kind: 'pie-chart', title: 'Share of responses', total, slicePct: a, secondPct: b, sharable: false },
+        method: 'restrict-the-whole-then-divide', rivalName: 'divided-by-the-unrestricted-whole',
+        stem: `The pie chart shows how ${total} responses were divided; ${a}% chose the first option and ${b}% chose ` +
+              `the second. Of the responses that did NOT choose the first option, what fraction chose the second?`,
+        mechanism: { repr_switch: 1, filtering: 1, hidden_step: 1 },
+        fingerprintParts: { ctx: 'stimulus:pie-chart private', chain: ['restrict-the-population', 'form-the-conditional-fraction'],
+          target: 'value:fraction', options: 'referent-rivals', distract: ['D2', 'D3', 'D6'],
+          narrative: 'two-slice-pie', numeric: ['slice-a', 'slice-b', 'total'] } });
+  },
+
+  // `read-then-percent-scaled`: the display is printed in hundreds and the
+  // question is asked as a percent, so the scale cancels. The rival never
+  // notices it cancels and reports the scaled count.
+  A13d: (rand) => {
+    const p1 = rand.int(3, 7) * 5, p2 = rand.int(3, 7) * 5, p3 = 100 - p1 - p2;
+    if (p3 < 20 || p1 === p2 || p2 === p3 || p1 === p3) return { error: 'the shares are degenerate' };
+    const u = rand.int(1, 5), pcts = [p1, p2, p3], v = pcts.map(x => x * u);
+    // The complement is the near distractor and is only near when the reported
+    // share is above a quarter; picking the group freely lost it on a quarter of
+    // all seeds. Report the largest share, which is above 33 by construction.
+    const i = pcts.indexOf(Math.max(...pcts));
+    const key = Q(pcts[i]);
+    const scaled = Q(v[i] * 100), raw = Q(v[i]), complement = Q(100 - pcts[i]);
+    if ([scaled, raw, complement].some(x => qEq(x, key)) || qEq(scaled, raw)
+        || qEq(scaled, complement) || qEq(raw, complement)) return { error: 'two options coincide' };
+    return OK(rand,
+      [S('total every bar in the printed units', Q(100 * u)), S('divide the named bar by it as a percent', key)],
+      [S('read the named bar', Q(v[i])), S('convert it from hundreds to units', scaled)],
+      [{ name: 'reported-the-printed-height', value: raw, cost: 1 },
+       { name: 'reported-the-complement', value: complement, cost: 2 }],
+      { family: 'A13', construct: 'percent-from-a-scaled-display',
+        stimulus: { kind: 'bar-chart', title: 'Responses by group, in hundreds',
+          categories: ['Group A', 'Group B', 'Group C'], values: v, sharable: false },
+        method: 'total-then-take-the-percent', rivalName: 'applied-the-scale-instead-of-cancelling-it',
+        stem: `The bar chart shows responses by group, in hundreds. What percent of all responses came from ` +
+              `Group ${['A', 'B', 'C'][i]}?`,
+        mechanism: { repr_switch: 1, hidden_step: 1, abstraction: 1 },
+        fingerprintParts: { ctx: 'stimulus:bar-chart private', chain: ['total-the-display', 'form-the-percent', 'notice-the-scale-cancels'],
+          target: 'value:percent', options: 'scale-rivals', distract: ['D1', 'D6', 'D3'],
+          narrative: 'three-category-scaled-display', numeric: ['bar-values'] } });
+  },
+
   // A01 and A16 each held one Core object against a Core slot the blueprint asks
   // for every form, so that object appeared in all twelve measured forms. Two
   // more structures, from the same measured list.
@@ -1160,6 +1228,7 @@ export const CORE_SERVES = {
   A09b: 'A09', A07b: 'A07', A08b: 'A08', A10: 'A10', A11c: 'A11',
   A12c: 'A12', A14b: 'A14', A16b: 'A16', A17b: 'A17', A15c: 'A15',
   A05c: 'A05', A03b: 'A03', A06b: 'A06', A01c: 'A01', A16c: 'A16',
+  A13c: 'A13', A13d: 'A13',
 };
 
 /** Generate one Core item for a construct id, or an error. */
