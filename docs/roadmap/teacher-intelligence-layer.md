@@ -3067,3 +3067,201 @@ impossible (measured throughout §15.18).
 free choice. Two items were surfaced by this audit and are NOT decided:** the
 stranded in-progress attempt of a removed student (§1), and the
 `submitted`-condition refinement S-1. **No implementation was prepared.**
+
+### 15.20 · H5 decisions D-3 and S-1 — LOCKED, with their measured consequences
+
+**Still AUDIT ONLY.** No migration, no SQL change, no function, no policy, no
+UI. Every probe ran in a transaction ending in `raise exception`. All eight
+homework tables held 0 rows before and after. **S-2 is deliberately NOT decided
+here.**
+
+> **D-3.** Answers are saved without grading; grading happens only at
+> submission, by the canonical grading authority. `is_correct` stays NULL until
+> submit. After submission the attempt and its responses are immutable. A
+> repeated submission is refused. A client must not be able to manufacture
+> `is_correct` or a submitted attempt. Homework must never become an answer
+> oracle through save-time correctness.
+
+> **S-1.** `reveal_answers = true` is **necessary but not sufficient**: the
+> caller must also own a **submitted** attempt for that homework. Closing
+> neither grants nor revokes key access.
+
+---
+
+#### 1 · Which existing functions, policies or triggers must change
+
+**For D-3 and S-1: none.** Measured — **no function in the database writes
+`teacher_homework_attempts` or `teacher_homework_responses` today**, and only
+two functions mention `is_correct` in the homework family at all (the responses
+guard, and nothing else). Both decisions therefore constrain code that does not
+exist yet; they impose no edit on anything live.
+
+The only pending function change remains the one D-1 already implied —
+`student_my_homework()`, whose `can_open` column goes false on close (§15.19).
+D-3 and S-1 add nothing to that list.
+
+#### 2 · Can the canonical grading authority be reused safely — yes, measurably
+
+`exam_answer_matches(p_format, p_correct, p_given)` is:
+
+| property | measured |
+|---|---|
+| volatility | **IMMUTABLE** |
+| `SECURITY DEFINER` | **no** (it needs no privilege) |
+| `search_path` | pinned |
+| `authenticated` EXECUTE | **false** |
+| `anon` EXECUTE | **false** |
+| current callers | `exam_submit`, `teacher_exam_submit` — and nothing else |
+
+So a `SECURITY DEFINER` H5 submit can call it while **a client cannot call it at
+all** — it is not usable as an oracle. It already covers both homework formats,
+which are the same two the question CHECK admits.
+
+**One interaction H5 must respect.** The grader returns `false` for an empty or
+NULL answer, but `teacher_homework_responses_omission_check` forbids a non-NULL
+`is_correct` when `answer IS NULL` — measured `23514`. H5 must therefore not
+feed omissions to the grader. The proven shape, taken from `teacher_exam_submit`
+and **measured working verbatim against the homework tables**:
+
+```sql
+update teacher_homework_responses r
+   set is_correct = case when r.answer is null then null
+                         else exam_answer_matches(q.question_format, q.correct_answer, r.answer) end
+  from teacher_homework_questions q
+ where q.id = r.question_id and r.attempt_id = p_attempt;
+```
+
+Result: answered item `true`, unanswered item `NULL`. Omission stays three-valued
+in code as well as in the constraint.
+
+#### 3 · Exact submit transaction requirements
+
+1. Bind ownership **in the lookup** — `where id = p_attempt and user_id = auth.uid()`.
+2. **Take `FOR UPDATE` on the attempt.** This is where "do not copy blindly"
+   bites: measured, `teacher_homework_close` **does** lock the paper
+   (`for update` = true), while `teacher_exam_submit` **does not** lock the
+   attempt (`for update` = false). H5 should take the lock the exam path omits.
+3. Grade **before** the flip, in one statement joined to the questions.
+4. Flip `status` and `submitted_at` together — the CHECK ties them.
+5. Compute `late` in the same statement (**D-5, still open**).
+6. Return **counts only**. No per-item breakdown, no `mistakes` array — the
+   first of the two analyzer locks.
+
+**Repeat submission needs one line of confirmation, not code.** Measured: a
+second submit write is **already refused at the table** with `22000`, whatever
+the RPC does. So the question is only what the RPC *says*. `teacher_exam_submit`
+treats a repeat as an **idempotent no-op returning the same counts** (measured:
+it wraps the work in `if a.status = 'in_progress' then`). D-3 says "refused". A
+literal refusal turns a retried request after a network timeout into an error for
+a student whose work is already safely submitted. Both satisfy *"the second
+submit changes nothing"*; they differ only in what the student sees.
+
+#### 4 · Is response immutability already enforced — almost entirely
+
+Measured against a real graded, submitted sitting:
+
+| write after submission | result |
+|---|---|
+| change the answer | **refused `42501`** |
+| re-grade an item | **refused `42501`** |
+| **un-grade — set a verdict back to NULL** | **refused `42501`** — "graded once" forbids *erasing* a verdict, not only changing it |
+| turn an omitted item into a verdict | **refused `23514`** — an omission can never become "wrong" |
+| a second submit write | **refused `22000`** |
+| **move `last_answered_at`** | **ACCEPTED** — the single gap (**H-2**) |
+
+D-3's immutability clause is therefore already true of everything except
+`last_answered_at`.
+
+#### 5 · Can graded or submitted state still be manufactured
+
+**By a client: no — D-3's clause is already satisfied.** Measured as a real
+`authenticated` session:
+
+| attempt | result |
+|---|---|
+| UPDATE `is_correct` | `42501` |
+| UPDATE the attempt's `status` | `42501` |
+| INSERT a born-`submitted` attempt | `42501` |
+
+**By the table owner or `service_role`: yes, unchanged.** Measured: a
+born-`submitted` attempt was accepted, and a response marked **correct while
+carrying a wrong answer** was accepted. Two further measurements sharpen it:
+
+- a verdict can be written **while the attempt is `in_progress`** — so D-3's
+  "NULL until submit" is enforced by **nothing** in the database;
+- that verdict read `true` for answer `A` against a key of `B` — **no CHECK can
+  reach the key on another table**, so correctness is only ever as good as the
+  RPC that writes it.
+
+This is **H-1**, unchanged and still deliberately separate from the lifecycle
+decisions.
+
+#### 6 · The student read RPC shape D-1 + D-2 + D-3 + S-1 imply
+
+Definer, `search_path` pinned, granted to `authenticated`, taking
+**`p_homework uuid` and no student parameter** — the same reason `can_open`
+takes none.
+
+**Gate:** attached · active membership · active workspace · **(published OR the
+caller owns an `in_progress` attempt)**.
+
+**Always returned:** title, instructions, status, `due_at`, `reveal_answers`,
+the caller's attempt status / started / submitted / late; and per item —
+`question_id`, `ordinal`, `prompt`, `question_format`, `choices`, the stimulus
+(kind, label, body, spec, media_ref, media_kind), the caller's own `answer`, and
+the caller's own `is_correct` (NULL until submit, by D-3).
+
+**Returned only when `reveal_answers = true` AND the caller's attempt is
+`submitted`:** `correct_answer`, `explanation`.
+
+One shape question worth settling with the RPC rather than after it: 3e's
+principle is that the key is *"never selected in the first place"*, and a
+`case when … then q.correct_answer end` still selects the column. Either branch
+into two aggregate expressions so the key column is literally absent from the
+query that runs when it is not revealed, or accept one conditional query and pin
+the output with a test. The first is truer to the principle; the second is
+simpler. Not chosen here.
+
+#### 7 · Races
+
+| race | status |
+|---|---|
+| **save vs submit** | **real.** The responses guard reads the attempt status with a plain `SELECT` — no lock (measured on the live source). Under READ COMMITTED a save whose guard has already run will not see a concurrent flip, and can land an answer change on a just-submitted attempt. **Both save and submit must take `FOR UPDATE` on the attempt.** |
+| start vs close | nothing gates an attempt INSERT on the paper's status, so a start can land just after a close; `FOR UPDATE` on the homework row inside start closes it (§15.19) |
+| duplicate start | `23505` by UNIQUE — catch and re-select (§15.19) |
+| duplicate submit | `22000` at the table, already impossible |
+| reveal vs read | harmless **because of S-1**: the read also requires `submitted`, and the flag is one-way, so the worst case is the key appearing one request later |
+| reveal vs an in-progress sitting | **this is exactly what S-1 closes.** Without it, the measured scenario in §15.19 (teacher reveals while the attempt is `in_progress`) hands the key to a student who can still edit answers |
+
+#### 8 · Analyzer boundary — re-measured, untouched
+
+No function names both a homework table and an analyzer table (**NONE**); the
+only writer of `weakness_signals`, `exam_mistakes` or `exam_practice_sessions` in
+the whole database is still `exam_submit`; and after a full authored → answered →
+**graded** → submitted sitting the counts stood at **893 / 11 / 24**, the
+baseline. D-3 strengthens the boundary rather than testing it: a submit that
+returns counts only gives the client nothing analyzer-shaped to forward, which
+is the first of the two locks 3g relies on.
+
+---
+
+#### S-2 — OPEN. What an `in_progress` attempt becomes when membership is removed and never restored
+
+**Not decided.** Recorded as a required decision with its option space measured,
+so the choice is made against the schema rather than against an assumption:
+
+| option | schema cost, measured |
+|---|---|
+| **(i) leave it `in_progress` permanently** and let the roster surface say "left the class" | **none** — `teacher_homework_students()` already returns `attempt_status` raw, so this is a surface change, not a database one |
+| **(ii) add a terminal status** (`abandoned` / `cancelled`) | `teacher_homework_attempts_status_check` admits **exactly** `in_progress` and `submitted`, so this means altering a CHECK on a live H2 table, plus the attempts guard (which refuses every update once `old.status <> 'in_progress'`), plus every reader. It is not an enum, so there is no `55P04` two-file problem — but it is a schema change to a table H2 froze |
+| **(iii) allow a removed student to submit but not to keep answering** | an RPC rule only; no schema change |
+
+Deletion is not an option in any of them: an attempt **can never be deleted**
+(`42501`, measured). **No option is chosen here.**
+
+---
+
+**Status: D-1, D-2, D-3 and S-1 are LOCKED.** Two sub-decisions were surfaced by
+this audit and are open: the wording of a repeated submission (§3), and the
+key-selection shape in the read RPC (§6). **S-2 remains open. D-4 to D-8 remain
+open. No implementation was prepared.**
