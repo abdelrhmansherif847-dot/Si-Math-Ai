@@ -3405,3 +3405,169 @@ review surface), **D-8** (start idempotency wording), and the hardening items
 **H-1** (no INSERT guard on attempts or responses), **H-2** (`last_answered_at`
 mutable after submit) and **H-3** (the key sits behind RLS, not behind a grant).
 **No implementation was prepared.**
+
+### 15.22 · D-4 … D-8 LOCKED, and H-1/H-2/H-3 as H5 design requirements
+
+**Still AUDIT ONLY.** No migration, no SQL change, no function, no policy, no
+UI. The enforcement mechanisms below were **built and exercised inside an
+aborting transaction** to measure feasibility rather than assert it; every probe
+object rolled back. All eight homework tables held 0 rows before and after.
+
+---
+
+#### D-4 · Grading enforcement — measured feasible, three mechanisms, no conflict
+
+| # | invariant | smallest mechanism | measured |
+|---|---|---|---|
+| 1 | a verdict exists **only** on a `submitted` attempt | a **deferred constraint trigger** on `teacher_homework_responses` (`AFTER INSERT OR UPDATE … DEFERRABLE INITIALLY DEFERRED`) | grade-then-flip **PASSES**; a verdict left on an `in_progress` attempt **REFUSED `22000`** |
+| 2 | a verdict **agrees with the canonical rule** | an immediate `BEFORE INSERT OR UPDATE` trigger that recomputes through `exam_answer_matches()` | a verdict contradicting the key **REFUSED `22000`** |
+| 3 | an attempt is **born `in_progress`** | one `BEFORE INSERT` branch on the existing attempts guard | a born-`submitted` attempt **REFUSED `22000`, even for the table owner** |
+
+**Why #1 must be deferred, and why that is not exotic.** An *immediate* check
+would refuse grading before the flip and so force the submit order to invert — a
+decision, not a detail. A deferred check tests the **committed state** rather
+than the statement order, so §15.20's locked order (lock → verify → grade →
+flip) survives untouched. And this is an **established pattern in this
+database**, not a new one: `referral_commission_rates.referral_rates_guard_trg`
+is already `AFTER INSERT OR DELETE OR UPDATE … DEFERRABLE INITIALLY DEFERRED FOR
+EACH ROW`.
+
+Two properties to carry into the design:
+
+- a deferred check reports at COMMIT, so an RPC bug appears as a commit-time
+  error rather than at the offending statement. **It is a backstop, not the
+  first line of defence** — the RPC still gets it right.
+- **`SET CONSTRAINTS ALL IMMEDIATE` is sticky for the rest of the transaction.**
+  Measured the hard way: it made a later probe fire early and misreport. Any
+  code or test that forces the check must re-defer afterwards.
+
+**#2 is "verify, don't compute", deliberately.** The trigger *calls* the
+canonical authority; it does not restate it, and it does not create a second
+one. Computing the verdict in the trigger would auto-grade on save, which D-3
+forbids. So the RPC decides **when** a verdict is written and the database
+decides **what** it must be.
+
+#### D-5 · `late` — already frozen, no new mechanism needed
+
+Measured end to end:
+
+| step | result |
+|---|---|
+| due in 7 days, student one submits now | `late = false` |
+| due moved to **yesterday**, student two submits | `late = true`, and student one is **still `false`** |
+| due moved **30 days out** after both submissions | both unchanged |
+| rewriting `late` directly on a submitted attempt | **refused `22000`** |
+| after close: `set_due_at` refused, both verdicts still `false` / `true` | frozen |
+
+The attempts guard already refuses every update to a submitted attempt, so D-5's
+freeze **is enforced today** and H5 need only compute `late` once, in the submit
+statement. One consequence to state rather than discover: two students on the
+same paper can carry different verdicts, each true at their own submission
+moment. That is what freezing means, and it is correct.
+
+#### D-6 · Audit — the recommendation is **no new labels**, for a measured reason
+
+The question was whether attempt creation is sufficient provenance for
+`started`. It is — and the same argument covers `submitted`:
+
+- `teacher_homework_attempts` records `user_id`, `homework_id`, `started_at`
+  and `submitted_at`; the first four columns are immutable by guard, the row can
+  **never be deleted**, and a submitted attempt is frozen entirely. Who, what and
+  when are already permanent facts.
+- **No existing audit label records a student's academic act.** Measured across
+  all 22: the only match for start/submit/answer/attempt is
+  `homework_answers_revealed`, which is a *teacher* act. **Teacher Exams — the
+  more consequential system — audits no sitting events at all.** Every label in
+  the log is either a container lifecycle change or a change in who can reach
+  what.
+
+Adding `homework_started` / `homework_submitted` would make homework the only
+system that audits academic acts, would duplicate facts the attempt row already
+holds permanently, and would cost a separate enum migration. **Recommendation:
+neither label in H5.** If cross-entity chronology is wanted later, widen the log
+for exams and homework together, as a deliberate change to what the log *means*.
+
+#### D-7 · Staff review surface — the minimum field set
+
+Precedent measured: `teacher_exam_results` returns `student_id, full_name,
+status, started_at, submitted_at, total, correct, wrong, omitted` — **counts
+computed, not raw rows** — and `teacher_exam_result_detail` returns jsonb with
+`ordinal, prompt, format, given, correct_answer, is_correct` plus timing.
+
+For homework, and trimmed rather than copied:
+
+| surface | fields |
+|---|---|
+| roster | `student_id`, `student_name`, `attached_at`, `attempt_status`, `started_at`, `submitted_at`, `late`, `total/correct/wrong/omitted`, **and whether the student is still an active member** (S-2) |
+| per-student detail | `ordinal`, `prompt`, `question_format`, `choices`, stimulus, the student's `answer`, `is_correct`, `correct_answer`, `explanation` |
+| paper-level | `status`, `due_at`, `reveal_answers` |
+
+Staff see the key here and that is not a leak — they authored it, and the H2
+policy already lets them read `teacher_homework_questions` directly. **No timing
+fields**: homework has none by design, so `ms_on_item` and `visit_count` have no
+homework equivalent and must not be invented. Today's
+`teacher_homework_students()` lacks `started_at`, the counts and the membership
+signal.
+
+#### D-8 · Start — the two gates differ by exactly one condition
+
+```
+resume  = attached · active membership · active workspace · an in_progress attempt exists
+start   = attached · active membership · active workspace · status = 'published'
+                                                            ^ the only difference
+```
+
+So `teacher_homework_can_open()` is already the start gate and stays untouched;
+H5 adds one `can_resume`-shaped helper. Start then: lock the **homework** row
+`FOR UPDATE` → look for an existing attempt → `in_progress` returns it →
+`submitted` returns its state and never reopens (the attempts guard refuses a
+reopen anyway, `22000`) → none, and the start gate passes, insert exactly one →
+catch `unique_violation` and re-select so racing tabs converge on the same
+attempt.
+
+---
+
+#### H-1 / H-2 / H-3 as first-class requirements
+
+| finding | invariant | belongs in | smallest enforcement | conflicts | rollback |
+|---|---|---|---|---|---|
+| **H-1a** verdict while `in_progress` | a verdict exists only on a submitted attempt | **deferred trigger** — an RPC rule cannot bind the table owner or a future migration | the constraint trigger above | **none measured** — grade-then-flip passes | drop the constraint trigger by name, then its function |
+| **H-1b** born-`submitted` attempt | an attempt is born `in_progress` | **trigger** — a CHECK cannot tell INSERT from UPDATE | one `tg_op = 'INSERT'` branch on the existing attempts guard | none | restore the guard body byte-for-byte and assert its md5, the H4 pattern |
+| **H-1c** forged `is_correct` | a verdict agrees with `exam_answer_matches()` | **trigger** — a CHECK cannot read the key on another table | immediate BEFORE trigger, verifying not computing | none — canonical verdicts pass | drop trigger then function |
+| **H-2** `last_answered_at` moves after submit | a submitted response is immutable in **every** column | **trigger** — the responses guard already refuses `answer` changes; add this column to the same test | one extra term in an existing condition | none | restore the guard body, assert md5 |
+| **H-3** the key sits behind RLS with a table-wide grant | the key is unreachable by structure, not only by policy | **decision** | either leave it (identical to `teacher_exam_questions`) or revoke `authenticated` SELECT on `teacher_homework_questions` and serve staff reads through the D-7 RPC | revoking is **cheap now** — no homework UI exists — but commits the future authoring surface to RPC-only reads, diverging from `teacher-exams.html`, which reads exam tables directly | grant restoration is trivial; the surface cost is not |
+
+**The load-bearing S-2 rule, restated as a contract obligation.** The database
+will happily let a removed student's attempt be written — measured. So **every
+student save and every submit must re-check live membership and workspace
+authorization while holding the attempt lock.** Not start-time authorization,
+and not a comment: an assertion in the contract suite, of the kind §7 already
+carries. If it is ever dropped, removal silently stops meaning anything and
+nothing in the schema would notice.
+
+---
+
+#### Complete H5 design implications
+
+| | |
+|---|---|
+| **tables changed** | **none** |
+| **policies changed** | **none** |
+| **enum labels added** | **none** (D-6) |
+| **triggers redefined** | `teacher_homework_attempts_guard_trg` (extend to INSERT) · `teacher_homework_responses_guard_trg` (freeze `last_answered_at`) |
+| **triggers added** | verdict-truth (immediate) · verdict-state (deferred constraint trigger), both on `teacher_homework_responses` |
+| **live functions redefined** | `teacher_homework_attempts_guard` · `teacher_homework_responses_guard` · `student_my_homework` · optionally `teacher_homework_students` |
+| **functions added** | a `can_resume` helper · the student paper read · start · save · submit · the student result read · the staff review read(s) |
+| **untouched** | `teacher_homework_can_open()`, `teacher_homework_is_staff()`, every policy, every table, the analyzer boundary |
+
+**Remaining decisions — two, and only one has a cost beyond H5:**
+
+1. **H-3** — revoke `authenticated` SELECT on `teacher_homework_questions`, or
+   keep the shared pattern. Cheap now; commits H6's authoring surface to
+   RPC-only reads.
+2. **D-7's optional half** — whether the staff roster gains the active-membership
+   signal, so a stranded sitting is distinguishable from an active one.
+
+Everything else is locked: **D-1, D-2, D-3, D-4, D-5, D-6, D-7, D-8, S-1, S-2,
+repeat-submit semantics, the save/submit locking rule, and the key-selection
+principle.** **No implementation was prepared.**
