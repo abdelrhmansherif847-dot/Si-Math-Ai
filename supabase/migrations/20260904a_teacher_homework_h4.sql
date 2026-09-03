@@ -1,8 +1,11 @@
 -- =====================================================================
 -- Teacher Homework, increment H4 — the student attaches
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback: 20260904z.
+-- STATUS: ✅ APPLIED 2026-09-03 as version 20260903203209, after explicit
+--         owner approval. Rollback: 20260904z, PREPARED and unapplied.
+--         Post-apply evidence: docs/roadmap/teacher-intelligence-layer.md
+--         §15.17. All eleven installed bodies were compared byte-for-byte
+--         against this file after the apply.
 -- DEPENDS ON: H2 (the six tables, LIVE 2026-09-03) and H3 (the authoring RPCs,
 --             LIVE 2026-09-03 as 20260903175957). The audit label this file
 --             writes, homework_attached, has existed since 20260902a — so

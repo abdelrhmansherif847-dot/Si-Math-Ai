@@ -1220,8 +1220,15 @@ t.ok('and it asserts teacher_homework is back to H2\u2019s single trigger',
   /H2 left exactly one/.test(H4ZC) && /19bbc18c825edce8b3c9a03c75f9fecb/.test(H4ZC));
 t.ok('and it asserts H2 and the rest of H3 came back: 6 tables, 9 policies, 22 functions',
   /<> 6 then/.test(H4ZC) && /<> 9 then/.test(H4ZC) && /<> 22 then/.test(H4ZC));
-t.ok('both H4 files are PREPARED and unapplied',
-  /STATUS: 🟡 PREPARED, not applied/.test(H4) && !/APPLIED 2026/.test(H4) && !/STATUS: ✅/.test(H4Z));
+/* H4 is LIVE; its rollback is not. The forward file names the version it
+   went in as, and the rollback names the state its window was in at the
+   post-apply measurement — 0 reservations, 0 attachments — because that is
+   what decides whether it can still be run. */
+t.ok('H4 is APPLIED and names its version; its rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-03 as version 20260903203209/.test(H4)
+  && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H4Z)
+  && !/APPLIED 2026-09-03 as version/.test(H4Z)
+  && /20260904a is LIVE as of 2026-09-03 \(version 20260903203209\)/.test(H4Z));
 
 // ══ 37 · THE FILE'S OWN VERIFICATION MUST BE ABLE TO FAIL ═════════════════
 t.section('§7 checks the four things that would actually break H4');

@@ -2271,6 +2271,102 @@ them should be discovered mid-implementation.
     **1** planted it refuses naming the count — so it is a condition that can
     go green as well as red.
 
+    #### H4 IS LIVE — applied 2026-09-03 as version `20260903203209`
+
+    One file, one transaction, no enum migration: `homework_attached` has been
+    committed and castable since `20260902a`, which was confirmed by reading it
+    back before the apply. The file's own §7 block ran as part of the apply, so
+    the migration could not have committed with any of its assertions red.
+
+    **Structure.** The trigger reads back exactly as written:
+
+    ```
+    CREATE TRIGGER teacher_homework_code_guard_trg
+      BEFORE INSERT OR UPDATE OF homework_code ON public.teacher_homework
+      FOR EACH ROW EXECUTE FUNCTION teacher_homework_code_guard()
+    ```
+
+    H2's own trigger is beside it, unmoved: `BEFORE DELETE OR UPDATE ON
+    public.teacher_homework`, body still `19bbc18c…`, and
+    `teacher_homework_is_staff` still `63ef7fa2…`. Both new tables have RLS on,
+    **no policy and no grant to `anon` or `authenticated`**; the reservation
+    carries a PRIMARY KEY and the code CHECK and **no foreign key**; the limiter
+    carries its primary key and the `(user_id, attempted_at desc)` index.
+
+    **All eleven installed bodies are byte-identical to the repo file** — md5
+    compared against values computed from `20260904a` before the apply, which
+    includes the three redefined H3 functions now at their H4 values
+    (`4fca434e…`, `124b4acb…`, `f7f430e2…`). Every one is `SECURITY DEFINER`
+    with `search_path` pinned; the four client RPCs are callable by
+    `authenticated` and by nothing else; the three guards and
+    `teacher_homework_code_available()` are callable by **nobody**.
+
+    #### Post-apply evidence, on the live functions (43 checks, all aborting)
+
+    | | |
+    |---|---|
+    | **rotation exit** | old code reserved, row carries the new one, the new one NOT reserved, provenance row correct (homework, workspace, actor, timestamp) |
+    | **draft-deletion exit** | code reserved, row gone, `code_available` false |
+    | raw INSERT · rotated-away code | refused `22000` — *code … was retired and can never be issued again* |
+    | raw INSERT · deleted-draft code | refused `22000` |
+    | **raw UPDATE · rotated-away code** | refused `22000` |
+    | raw UPDATE · deleted-draft code, **on a different row** | refused `22000` — it is the code, not the row that retired it |
+    | raw UPDATE · fresh code | accepted, row carries it |
+    | raw UPDATE · a code a live row holds | refused **`23505`** — the UNIQUE, untouched |
+    | raw UPDATE · its own current value | accepted |
+    | raw INSERT · fresh code | accepted — the guard blocks nothing ordinary |
+    | title / `due_at` / publish / reveal, **with the row's own live code planted in the reservation** | all accepted — the guard did not fire |
+    | the same row, naming `homework_code` with that planted value | refused `22000` — so the four above measure the *scope*, not a sleeping guard |
+    | raw code UPDATE on a CLOSED paper | refused `42501` — H2's guard still fires on the code column |
+    | reservation row · UPDATE / DELETE | refused `22000` / `42501` |
+    | **14 wrong codes** | 10 accepted, then `53400` at attempt 11, with **10 attempt rows recorded** |
+    | 5 rows planted 3 h old, then one call | table holds 1 — the in-RPC prune is the only sweep this database can run |
+    | member attaches, code lowercase with spaces | `{ok:true, reason:attached}` |
+    | the same code again | `already_attached`, 1 access row |
+    | `can_open` · `student_my_homework` | true; 1 row, `can_open` true in the list |
+    | outsider (real code · retired code · garbage) · pending assistant | `no_match` for all four |
+    | teacher · ACTIVE assistant | `staff` |
+    | membership removed by the owner | `can_open` false, attachment kept, re-attach `no_match` |
+    | student rejoins | `can_open` true again |
+    | class deactivated | `can_open` false, attach `no_match` |
+    | paper closed | `can_open` false, attach `no_match` |
+    | staff roster · teacher vs ACTIVE assistant | 1 row each — parity |
+    | staff roster · outsider · pending assistant | `42501` |
+    | attach · `student_my_homework` with no session | `42501` |
+    | **audit** | exactly **1** `homework_attached` row for 1 attach + 1 re-entry + 9 refusals; actor and `subject_id` both the student, workspace correct, `meta` = `{homework_id}`, timestamp from the column default |
+    | audit totals for the run | 3 `homework_created`, 1 `homework_code_rotated`, 1 `homework_attached` — update, delete and content edits still log nothing |
+    | H5 tables | `teacher_homework_attempts` 0, `teacher_homework_responses` 0 |
+    | analyzer | 893 / 11 / 24, unmoved |
+
+    **Access scope, driven as the real database roles** (`set local role`): the
+    two internal tables refuse `authenticated` SELECT *and* INSERT (`42501`),
+    `teacher_homework` refuses a client INSERT, `teacher_homework_code_available()`
+    and the code guard both refuse `authenticated` with *permission denied for
+    function*, `anon` cannot call attach and cannot read the reservation, the
+    four client RPCs are 4/4 for `authenticated` and **0/4** for `anon`, and
+    `anon` holds EXECUTE on **0** homework functions.
+
+    **Nothing survived.** After the probes: all **eight** homework tables at
+    **0 rows**, the audit log back at **2** rows with **0** homework labels
+    used, analyzer 893/11/24.
+
+    **New production baseline** (2026-09-03, post-H4):
+
+    | | |
+    |---|---|
+    | migrations | **190**, newest `20260903203209` |
+    | public | 84 tables · 209 functions · 138 policies · 22 enum labels |
+    | homework | 8 tables · 28 functions · 9 policies · 2 triggers on `teacher_homework` |
+    | hashes | constraints `26715f0c…` · policies `1480dd9e…` · relations `01e30b21…` · triggers `59ba9b5a…` · grants `9642f485…` · homework bodies `189231ec…` · homework signatures `9ffa38a1…` |
+
+    The policy hash is **byte-identical** to the value measured before the apply
+    during the rollback rehearsal — "H4 adds no policy" is a measurement, not a
+    claim. `20260904z` stays PREPARED and unapplied, and its window is open: 0
+    reservations and 0 attachments exist right now.
+
+    **H5 has not started.** There is still no way for a student to open, save or
+    submit a homework — only to be attached to one.
+
     #### The rollback window — written before the apply, not after
 
     `20260904z` refuses while **any** code is reserved, so **the first code

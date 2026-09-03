@@ -2,6 +2,11 @@
 -- Rollback for 20260904a — Teacher Homework H4
 -- =====================================================================
 -- STATUS: 🟡 PREPARED, deliberately unapplied.
+--         20260904a is LIVE as of 2026-09-03 (version 20260903203209), so
+--         this file is now the live undo and its window is OPEN: at the
+--         post-apply measurement teacher_homework_retired_codes held 0 rows
+--         and teacher_homework_access held 0. The window closes on the
+--         first rotation or draft deletion — see below.
 --
 -- ⚠️ THIS ROLLBACK HAS A WINDOW, AND THE WINDOW CLOSES ON ITS OWN.
 -- ---------------------------------------------------------------------
