@@ -46,5 +46,57 @@
   "frozen": {
     "estm1PayloadMd5": "38926f22b7869608f310d0a8e21bb55e",
     "note": "ESTM1-2026-A lives outside this repository. The md5 is recorded so a session can check it has not been touched; the payload itself is never committed."
+  },
+  "corpus": {
+    "recordedOn": "2026-09-03",
+    "why": "Stage 26 checked whether additional official EST reference forms had arrived. They had not. The inventory is recorded as hashes and publisher test numbers \u2014 never content \u2014 so a later session can tell at a glance whether the corpus has actually grown rather than re-deriving it from filenames.",
+    "estFormsCoded": 4,
+    "estFormsAvailable": 4,
+    "estFormsNewThisStage": 0,
+    "minimumRequestedExpansion": 8,
+    "source": "EST I Practice Guide \u2014 Math, 2026 Specifications (publisher's own practice book, five sample tests)",
+    "admitted": [
+      {
+        "publisherTest": 1,
+        "md5": "3f3328e2d038e1a6a7ba9ccfeb707a36",
+        "codedAs": "T1-T4 set",
+        "pages": 32
+      },
+      {
+        "publisherTest": 2,
+        "md5": "ef52969f9b1542594c64035c9befdf7c",
+        "codedAs": "T1-T4 set",
+        "pages": 24
+      },
+      {
+        "publisherTest": 3,
+        "md5": "0b06707d4d833cb97ee7f8eda648af43",
+        "codedAs": "T1-T4 set",
+        "pages": 26
+      },
+      {
+        "publisherTest": 5,
+        "md5": "5cc42833c8ef77bf89dbaa735f173153",
+        "codedAs": "T1-T4 set",
+        "pages": 23
+      }
+    ],
+    "duplicateUploads": 1,
+    "knownObtainableNotHeld": [
+      {
+        "publisherTest": 4,
+        "note": "The guide contains five sample tests and its own cover says so. Test 4 is the one form we do not hold, and it is official, same publisher, same 2026 specification. It is the only certain +1."
+      }
+    ],
+    "excluded": [
+      {
+        "what": "3 College Board digital SAT practice tests (4, 8, 10)",
+        "reason": "official, but a different exam: module-structured, 27 questions per module, student-produced responses. EST I Math is 50 MCQ in one 75-minute section. Merging them would break the longitudinal comparability the coding standard exists to protect."
+      },
+      {
+        "what": "1 recalled/reconstructed March 2026 file",
+        "reason": "not an official published form. Excluded permanently by standing instruction and by this phase's own corpus rules."
+      }
+    ]
   }
 }

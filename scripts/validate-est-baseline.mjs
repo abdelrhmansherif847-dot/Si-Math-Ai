@@ -70,6 +70,22 @@ check(Math.abs(c.theoreticalBestOverlapShare / c.achievedOverlapShare - c.alloca
 check(c.allocationPenaltyFloor > 1, 'the penalty floor is above 1 — that is the Stage 24 finding');
 check(c.recommendedCooldownPolicy === 'D', 'policy D is the recommended cooldown policy');
 
+// The corpus inventory: recorded so a later session can tell whether the corpus
+// has actually grown, rather than inferring it from filenames. Hashes and the
+// publisher's own test numbers only — never content.
+const corpus = baseline.corpus;
+check(!!corpus, 'the baseline records a corpus inventory');
+if (corpus) {
+  check(corpus.admitted.length === corpus.estFormsAvailable,
+    `${corpus.admitted.length} forms listed against ${corpus.estFormsAvailable} recorded as available`);
+  check(corpus.estFormsAvailable === corpus.estFormsCoded,
+    'every available form has been coded — an uncoded form would be work owed, not a limitation');
+  const hashes = corpus.admitted.map(a => a.md5);
+  check(hashes.length === new Set(hashes).size, 'no form is listed twice under different test numbers');
+  check(corpus.estFormsNewThisStage < corpus.minimumRequestedExpansion,
+    'the corpus is still short of the requested expansion — if this fails, the expansion arrived and the analysis is owed');
+}
+
 if (failures.length) {
   console.error('FAIL validate-est-baseline: the frozen baseline no longer describes the repository.\n');
   for (const f of failures) console.error(`  - ${f}`);
