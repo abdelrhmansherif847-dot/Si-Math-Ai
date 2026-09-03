@@ -402,3 +402,5 @@ exposed to students, and Forms 2–25 are not generated.
 | the standalone display slot | `scripts/est-blueprint.mjs` |
 | object-diversity mutations | `tests/est-form-gates.test.mjs` §10 |
 | the sum-difference regression | `tests/est-primitives.test.mjs` |
+
+Committed as `110b8fa`.
