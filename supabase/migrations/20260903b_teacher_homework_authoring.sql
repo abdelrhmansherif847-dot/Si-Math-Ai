@@ -2,11 +2,14 @@
 -- Teacher Homework, increment H3 — authoring, publish, close, rotation
 -- =====================================================================
 -- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback: 20260903z.
+--         (CLAUDE.md §3), and only AFTER 20260903a. Rollback: 20260903y.
 -- DEPENDS ON: the H2 package, LIVE since 2026-09-03 (20260903123333 /
 --             123410 / 123458) — the six tables, their guards, and
 --             teacher_homework_is_staff(), which this file CALLS and never
---             redefines; and 20260902a, which supplies the audit labels.
+--             redefines; 20260902a for four of the five audit labels; and
+--             20260903a for the fifth, homework_answers_revealed, which must
+--             be committed before this file can write it (a new enum value
+--             cannot be cast in the transaction that adds it).
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §15.15 (the six locked
 --          decisions) and §15.16 (this increment).
 --
@@ -58,22 +61,38 @@
 --       there is no window. Publishing with a due date already past is
 --       DELIBERATELY allowed: decision 3 makes due_at a date and never a lock,
 --       so such a homework is simply one where every submission is late.
+--   teacher_homework_delete() removes the content itself, in order
+--       3c leaves this to ON DELETE CASCADE. Measured on production (§15.16a),
+--       that does not work here: PostgreSQL removes the parent row BEFORE
+--       running the cascade, so teacher_homework_content_guard() reads a NULL
+--       status and — correctly, by its own fail-closed design — refuses. The
+--       result was that only a completely EMPTY draft could ever be deleted,
+--       which contradicts the locked lifecycle. Deleting the children first,
+--       while the parent still exists and is a draft, lets the guard evaluate
+--       normally. The guard is not weakened, bypassed or touched.
 --   no approval queue anywhere
 --       §15.14. Nothing here touches access; entering the code attaches an
 --       active member at once, and that is H4.
 --
--- THE FOUR AUDIT LABELS, AND THE SILENCE AROUND THEM
+-- THE FIVE AUDIT LABELS, AND THE SILENCE AROUND THEM
 -- --------------------------------------------------
--- 20260902a shipped five labels. Four are writable here: homework_created,
--- homework_published, homework_closed, homework_code_rotated. The fifth,
--- homework_attached, belongs to H4 and is written nowhere in this file.
+-- Five labels are writable here: homework_created, homework_published,
+-- homework_closed and homework_code_rotated from 20260902a, and
+-- homework_answers_revealed from 20260903a. homework_attached belongs to H4
+-- and is written nowhere in this file.
 --
--- There is NO label for an update, a delete, a content edit, or a REVEAL, so
--- this file logs none of them. That is a consequence of the label set, not a
--- decision taken here, and one of the four is worth the owner's attention:
--- revealing the answers is irreversible and invisible in the audit log. Adding
--- a label is another irreversible enum migration, so it is raised in the H3
--- report rather than smuggled in here.
+-- The reveal label exists because the first version of this increment did not
+-- have one, and the audit that found the gap (§15.16a) measured what a reveal
+-- actually left behind: reveal_answers = true, a bumped updated_at, and nothing
+-- else — no actor, and a timestamp column that every accepted update stamps, so
+-- a due-date change and a reveal could not be told apart. An irreversible act
+-- any active staff member can perform now names who performed it.
+--
+-- There is still NO label for an update, a due-date change, a content edit or a
+-- delete, so this file logs none of them. Each is reversible, repeatable and
+-- visible in the row itself — the test the exam labels already applied — and
+-- §15.16a records the measured reason a delete needs none: it can only ever
+-- destroy a draft with no attachment, no attempt and no answer.
 -- =====================================================================
 
 begin;
@@ -232,14 +251,33 @@ volatile
 security definer
 set search_path = pg_catalog, public
 as $fn$
+declare v_ws uuid;
 begin
   if not teacher_homework_is_staff(p_homework) then
     raise exception 'teacher_homework_reveal_answers: no such homework, or you are not staff of its class'
       using errcode = '42501';
   end if;
-  -- Idempotent by construction: setting true over true changes nothing, and
-  -- the guard's tuple comparison lets it through on a closed homework.
-  update teacher_homework set reveal_answers = true where id = p_homework;
+
+  -- `and not reveal_answers` is what makes the audit row honest. A second call
+  -- on an already-revealed paper matches no row, so v_ws stays NULL and this
+  -- returns without logging: the latch is idempotent, and a repeat is not a
+  -- second event. A refused call never reaches here at all. One reveal, one row.
+  -- The guard's tuple comparison lets this through on a CLOSED homework, which
+  -- is the one change a closed paper still accepts (§15.15b).
+  update teacher_homework set reveal_answers = true
+   where id = p_homework and not reveal_answers
+   returning workspace_id into v_ws;
+  if v_ws is null then
+    return;
+  end if;
+
+  -- The convention 20260903a records, matching 20260902a's exactly: the actor
+  -- is auth.uid(), subject_id is NULL because the subject is a paper and
+  -- subject_id references auth.users, meta carries the homework, and the log's
+  -- own created_at default is when it happened.
+  insert into workspace_audit_log (workspace_id, actor_id, action, subject_id, meta)
+  values (v_ws, auth.uid(), 'homework_answers_revealed', null,
+          jsonb_build_object('homework_id', p_homework));
 end;
 $fn$;
 
@@ -250,20 +288,54 @@ volatile
 security definer
 set search_path = pg_catalog, public
 as $fn$
-declare v_status text;
+declare v_status text; v_attached int; v_attempts int;
 begin
   if not teacher_homework_is_staff(p_homework) then
     raise exception 'teacher_homework_delete: no such homework, or you are not staff of its class'
       using errcode = '42501';
   end if;
   select status into v_status from teacher_homework where id = p_homework;
-  if v_status <> 'draft' then
-    raise exception 'teacher_homework_delete: this homework is % — close it, do not delete it', v_status
+  -- Only a draft may be deleted. The two non-draft statuses get DIFFERENT
+  -- messages because they call for different actions: a published paper should
+  -- be closed, and a closed one is simply final. 3c's teacher_exam_delete()
+  -- (LIVE, 20260901e) says "close it, do not delete it" for both, so a teacher
+  -- deleting a closed exam is told to close it again. That wording was not
+  -- copied here; the live defect is recorded in §15.16b instead.
+  if v_status = 'published' then
+    raise exception 'teacher_homework_delete: this homework is published — close it, do not delete it'
+      using errcode = '42501';
+  elsif v_status <> 'draft' then
+    raise exception 'teacher_homework_delete: this homework is % and can no longer be deleted', v_status
       using errcode = '42501';
   end if;
   -- The H2 guard refuses a non-draft delete too. Asking here as well turns a
   -- trigger's message into one the caller can act on; the guard remains the
   -- thing that cannot be bypassed.
+
+  -- Student rows make this not a draft anyone may discard. The guards refuse
+  -- it anyway — an attachment and an attempt are each "a record and never
+  -- deleted", and an answer is held by a RESTRICT — but a raw trigger message
+  -- names none of that, so ask first and say what is in the way. The guards
+  -- remain the thing that cannot be bypassed. (A response cannot exist without
+  -- an attempt, so counting attempts covers all three.)
+  select count(*) into v_attached from teacher_homework_access where homework_id = p_homework;
+  select count(*) into v_attempts from teacher_homework_attempts where homework_id = p_homework;
+  if v_attached > 0 or v_attempts > 0 then
+    raise exception
+      'teacher_homework_delete: % student(s) hold this homework and % have started it — it can no longer be deleted',
+      v_attached, v_attempts using errcode = '42501';
+  end if;
+
+  -- CHILDREN FIRST, and not by cascade. Measured on production (§15.16a):
+  -- PostgreSQL deletes the parent row before running the referential cascade,
+  -- so the content guard fires with the parent already gone, reads a NULL
+  -- status and fails closed — which is exactly what it is for, and which made
+  -- every draft carrying so much as one question undeletable. Removing the
+  -- content while the parent is still present and still a draft lets the guard
+  -- evaluate the real status and permit the write. Questions before stimuli:
+  -- the stimulus foreign key is ON DELETE RESTRICT.
+  delete from teacher_homework_questions where homework_id = p_homework;
+  delete from teacher_homework_stimuli where homework_id = p_homework;
   delete from teacher_homework where id = p_homework;
 end;
 $fn$;
@@ -714,17 +786,33 @@ begin
     raise exception 'H3: teacher_homework_is_staff() was redefined — it belongs to 20260902c';
   end if;
 
-  -- 6.6 no student surface: nothing here reads or writes access, attempts or
-  --     responses. This is the H3/H4/H5 boundary, asserted rather than trusted.
+  -- 6.6 the H3/H4/H5 boundary, in the only form that is actually true after
+  --     the delete fix. H3 may not WRITE access, attempts or responses — those
+  --     are H4's and H5's tables. It does READ two of them, in exactly one
+  --     place: teacher_homework_delete() counts attachments and attempts so it
+  --     can refuse with a message naming what is in the way (§15.16a). A read
+  --     whose only outcome is a refusal is not a student surface; a write is.
+  --     An earlier draft of this file forbade the mention rather than the
+  --     write, and the production dry-run refused to install it — which is
+  --     what a dry-run is for.
   select string_agg(p.proname, ', ') into v_bad
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
    where n.nspname='public' and (p.proname = any (CLIENT) or p.proname = any (INTERNAL))
-     and p.prosrc ~ 'teacher_homework_(access|attempts|responses)';
+     and p.prosrc ~ '(insert\s+into|update|delete\s+from)\s+teacher_homework_(access|attempts|responses)';
   if v_bad is not null then
-    raise exception 'H3: a function touches the student tables: %', v_bad;
+    raise exception 'H3: a function WRITES a student table: %', v_bad;
+  end if;
+  -- and the read stays confined to the one function that needs it
+  select string_agg(p.proname, ', ') into v_bad
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and (p.proname = any (CLIENT) or p.proname = any (INTERNAL))
+     and p.prosrc ~ 'teacher_homework_(access|attempts|responses)'
+     and p.proname <> 'teacher_homework_delete';
+  if v_bad is not null then
+    raise exception 'H3: a function other than the delete pre-check reads a student table: %', v_bad;
   end if;
 
-  -- 6.7 only the four labels this increment may write, and never homework_attached
+  -- 6.7 only the five labels this increment may write, and never homework_attached
   select string_agg(p.proname, ', ') into v_bad
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
    where n.nspname='public' and (p.proname = any (CLIENT) or p.proname = any (INTERNAL))
@@ -733,14 +821,57 @@ begin
     raise exception 'H3: homework_attached belongs to H4, written in: %', v_bad;
   end if;
 
-  -- 6.8 the latch RPC takes no boolean, so un-revealing is unrepresentable
-  if (select pg_get_function_identity_arguments(p.oid) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  -- 6.7b the reveal label must exist before this file can write it. Without
+  -- 20260903a applied the RPC would fail at RUNTIME, on a teacher, rather than
+  -- here — so refuse to install a function that cannot work.
+  if not exists (select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+                  where t.typname = 'workspace_audit_action'
+                    and e.enumlabel = 'homework_answers_revealed') then
+    raise exception 'H3: workspace_audit_action has no homework_answers_revealed label — apply 20260903a first';
+  end if;
+
+  -- 6.7c the reveal writes its row only when the latch actually moved
+  if (select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+       where n.nspname='public' and p.proname='teacher_homework_reveal_answers')
+     !~ 'and not reveal_answers' then
+    raise exception 'H3: teacher_homework_reveal_answers() would log a repeated reveal as a fresh event';
+  end if;
+
+  -- 6.7d the delete removes its content itself rather than trusting a cascade
+  --      that fails closed (§15.16a)
+  if (select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+       where n.nspname='public' and p.proname='teacher_homework_delete')
+     !~ 'delete from teacher_homework_questions where homework_id' then
+    raise exception 'H3: teacher_homework_delete() relies on the cascade, which cannot delete a draft with content';
+  end if;
+
+  -- 6.8 the latch RPC takes no boolean, so un-revealing is unrepresentable.
+  --     Read as an ordered list of argument TYPES. An earlier version of this
+  --     line compared pg_get_function_identity_arguments() against 'uuid',
+  --     which that function never returns — it includes the parameter NAME
+  --     ('p_homework uuid'). The check could therefore only ever raise, so the
+  --     file could not install at all; the production dry-run is what found
+  --     it. A check that cannot go green is as useless as one that cannot go
+  --     red, and rather more expensive.
+  if (select coalesce(array_to_string(array(select t::regtype::text from unnest(p.proargtypes) t), ','), '')
+        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
        where n.nspname='public' and p.proname='teacher_homework_reveal_answers') <> 'uuid' then
-    raise exception 'H3: teacher_homework_reveal_answers() takes more than the homework id';
+    raise exception 'H3: teacher_homework_reveal_answers() takes % rather than just the homework id',
+      (select pg_get_function_identity_arguments(p.oid) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+        where n.nspname='public' and p.proname='teacher_homework_reveal_answers');
   end if;
   if (select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace
        where n.nspname='public' and p.proname='teacher_homework_reveal_answers') ~ 'reveal_answers\s*=\s*false' then
     raise exception 'H3: teacher_homework_reveal_answers() can set the latch back to false';
+  end if;
+  -- And it must not read status AT ALL. §15.15b's exception is that a CLOSED
+  -- homework may still reveal; a gate of any spelling would take that back, so
+  -- the check forbids the word rather than one way of writing it. Comments are
+  -- stripped first, as elsewhere, so this tests the code and not the prose.
+  if (select regexp_replace(p.prosrc, '--[^' || chr(10) || ']*', '', 'g')
+        from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+       where n.nspname='public' and p.proname='teacher_homework_reveal_answers') ~ '\mstatus\M' then
+    raise exception 'H3: teacher_homework_reveal_answers() reads status — a closed homework could no longer be revealed';
   end if;
 
   -- 6.9 this file creates no table, policy or type

@@ -1,9 +1,9 @@
 -- =====================================================================
--- Rollback for 20260903a — the homework authoring RPCs
+-- Rollback for 20260903b — the homework authoring RPCs
 -- =====================================================================
 -- STATUS: 🟡 PREPARED, deliberately unapplied.
 --
--- This is a CLEAN undo, and a cheap one: 20260903a creates no table, no policy,
+-- This is a CLEAN undo, and a cheap one: 20260903b creates no table, no policy,
 -- no type, no column and no row, so removing it is removing fifteen functions.
 -- Dropping them takes the write path away and leaves the H2 schema exactly as
 -- 2026-09-03 left it — six governed tables that clients may read and nobody may
@@ -14,8 +14,12 @@
 --                                     CALLED by these RPCs and outlives them.
 --   the five H2 guards                belong to 20260902b/d.
 --   the six tables, nine policies     belong to the H2 package.
---   the five audit labels             belong to 20260902a and cannot be undone
---                                     at all (no ALTER TYPE ... DROP VALUE).
+--   the six audit labels              belong to 20260902a and 20260903a and
+--                                     cannot be undone at all (no
+--                                     ALTER TYPE ... DROP VALUE). Dropping
+--                                     these RPCs leaves homework_answers_revealed
+--                                     with no writer, which is the same state
+--                                     the other five labels are in today.
 --
 -- ⚠️ Unlike the H2 rollback, this destroys NO student work — there is none to
 -- destroy, because H3 never created a student write path. It does strand any

@@ -40,6 +40,18 @@ const SIXTEEN = ['workspace_created', 'join_code_rotated', 'student_joined', 'st
   'exam_access_requested', 'exam_access_approved', 'exam_access_rejected', 'exam_access_revoked'];
 const FIVE = ['homework_created', 'homework_published', 'homework_closed', 'homework_code_rotated', 'homework_attached'];
 
+/* An enum migration adds a LABEL and nothing else, so this is the pattern both
+   label migrations are scoped by. `alter type` is the one statement they are
+   allowed — every other DDL verb, INCLUDING the `or replace` and `unique`
+   forms an earlier version of this pattern could not see, is out of scope. A
+   mutant that smuggled `create or replace function` past it survived once;
+   that is why the qualifier group exists. */
+const OBJ = String.raw`(table|policy|function|procedure|trigger|index|view|schema|role|sequence|domain|type)`;
+const SCOPE = new RegExp(
+  String.raw`^\s*(create|drop)\s+(or\s+replace\s+|unique\s+|temp(orary)?\s+|materialized\s+)?` + OBJ + String.raw`\b`
+  + String.raw`|^\s*alter\s+(?!type\b)` + OBJ + String.raw`\b`
+  + String.raw`|^\s*(grant|revoke)\b`, 'gim');
+
 // ══ 1 · FIVE LABELS, APPENDED, AND NOTHING ELSE ═══════════════════════════
 t.section('H1 adds exactly the five approved labels, appended');
 
@@ -49,7 +61,7 @@ t.ok('each is IF NOT EXISTS (a run that dies mid-way must be re-runnable)',
   (FC.match(/add value if not exists/g) || []).length === 5 && !/add value '(?!if)/.test(FC));
 t.ok('appended, never positioned', !/\b(before|after)\s+'/i.test(FC));
 t.is('no other object rides along: no table, column, policy, function, trigger, grant',
-  [...FC.matchAll(/^\s*(create|alter|drop)\s+(table|policy|function|trigger|index|view|schema|role)\b|^\s*(grant|revoke)\b/gim)].map((m) => m[0].trim()), []);
+  [...FC.matchAll(SCOPE)].map((m) => m[0].trim()), []);
 t.is('no row is written', [...FC.matchAll(/^\s*(insert|update|delete|truncate)\s/gim)].map((m) => m[0].trim()), []);
 t.is('the type is the only thing altered', [...new Set([...FC.matchAll(/alter type ([a-z_]+)/g)].map((m) => m[1]))], ['workspace_audit_action']);
 
@@ -513,8 +525,11 @@ t.ok('and the rollback is still PREPARED and unapplied',
 // ═══════════════════════════════════════════════════════════════════════════
 // PART 4 · H3 — the authoring RPCs (20260903a), and the undo (20260903z)
 // ═══════════════════════════════════════════════════════════════════════════
-const TA = read('supabase/migrations/20260903a_teacher_homework_authoring.sql');
-const TAZ = read('supabase/migrations/20260903z_teacher_homework_authoring_rollback.sql');
+const TA = read('supabase/migrations/20260903b_teacher_homework_authoring.sql');
+const TAZ = read('supabase/migrations/20260903y_teacher_homework_authoring_rollback.sql');
+const RV = read('supabase/migrations/20260903a_workspace_audit_reveal_action.sql');
+const RVZ = read('supabase/migrations/20260903z_workspace_audit_reveal_action_rollback.sql');
+const RVC = code(RV), RVZC = code(RVZ);
 const TAC = code(TA), TAZC = code(TAZ);
 const E3C = read('supabase/migrations/20260901e_teacher_exam_authoring.sql');   // the template, live since 2026-09-01
 
@@ -625,9 +640,24 @@ const reveal = fnDef(TAC, 'teacher_homework_reveal_answers');
 t.is('the RPC takes the homework id and nothing else',
   (TAC.match(/create or replace function teacher_homework_reveal_answers\(([^)]*)\)/) || [])[1].trim(), 'p_homework uuid');
 t.ok('it sets the latch true, and the word false appears nowhere in it',
-  /update teacher_homework set reveal_answers = true where id = p_homework;/.test(reveal.body) && !/false/.test(reveal.body));
+  /update teacher_homework set reveal_answers = true\s+where id = p_homework and not reveal_answers/.test(reveal.body)
+  && !/false/.test(reveal.body));
+/* Not "no v_status" — no status, in any spelling. A mutant that gated on
+   `exists (select 1 from teacher_homework where ... and status = 'closed')`
+   named neither variable and survived the narrower check. The migration's own
+   §6.8 now refuses the same thing against the live body. */
 t.ok('it has NO status gate — a closed homework may still be revealed (§15.15b)',
-  !/v_status|h\.status/.test(reveal.body));
+  !/\bstatus\b/.test(reveal.body));
+t.ok('and the migration refuses to install one, whatever it is called',
+  /reads status — a closed homework could no longer be revealed/.test(TA));
+/* §6.8 reads the argument TYPES. It used to compare
+   pg_get_function_identity_arguments() against 'uuid', which that function
+   never returns — it carries the parameter name too — so the line could only
+   ever raise and the file could not install. Nothing static caught it; the
+   production dry-run did. This pins the shape that works. */
+t.ok('§6.8 pins the parameter list by type, not by a string that function never returns',
+  /select t::regtype::text from unnest\(p\.proargtypes\) t/.test(TA)
+  && !/pg_get_function_identity_arguments\(p\.oid\)[\s\S]{0,200}<> 'uuid'/.test(TA));
 t.ok('the file records why the latch has no parameter rather than a refused one',
   /would make un-revealing something the API can express/.test(TA.replace(/\n\s*--\s*/g, ' ')));
 
@@ -678,7 +708,11 @@ t.ok('a stimulus still used by a question cannot be deleted, with a message that
 t.section('Four labels, written by four RPCs, and nothing else logged');
 
 const audits = [...TAC.matchAll(/insert into workspace_audit_log[\s\S]*?'(homework_[a-z_]+)'/g)].map((m) => m[1]);
-t.is('exactly four audit writes, one each', audits, ['homework_created', 'homework_published', 'homework_closed', 'homework_code_rotated']);
+/* Compared as a set: the order here is the order the functions happen to be
+   defined in, which is not a property worth pinning. That there are exactly
+   five, each written once, is. */
+t.is('exactly five audit writes, one each', [...audits].sort(),
+  ['homework_answers_revealed', 'homework_closed', 'homework_code_rotated', 'homework_created', 'homework_published']);
 /* The label appears once in the file, inside the verification that FORBIDS it.
    The ban therefore has to be read against the function bodies, not the file —
    otherwise the guard against the mistake would itself trip the check. */
@@ -686,24 +720,144 @@ t.is('homework_attached is H4\'s and no function body writes it',
   [...INTERNAL_FNS, ...CLIENT_RPCS].filter((f) => /homework_attached/.test(body3(f))), []);
 t.ok('and the in-file verification is what forbids it', /homework_attached/.test(TAC));
 t.is('the RPCs that do NOT log are the ones with no label to log',
-  ['teacher_homework_update', 'teacher_homework_set_due_at', 'teacher_homework_reveal_answers',
-   'teacher_homework_delete', 'teacher_homework_save_question', 'teacher_homework_delete_question',
+  ['teacher_homework_update', 'teacher_homework_set_due_at', 'teacher_homework_delete',
+   'teacher_homework_save_question', 'teacher_homework_delete_question',
    'teacher_homework_save_stimulus', 'teacher_homework_delete_stimulus', 'teacher_homework_reorder_questions']
     .filter((f) => /workspace_audit_log/.test(body3(f))), []);
-t.ok('and the file raises the reveal-is-unlogged consequence rather than hiding it',
-  /irreversible and invisible in the audit log/.test(TA.replace(/\n\s*--\s*/g, ' ')));
+t.ok('and the file records why a delete needs no label — it can only destroy an empty draft',
+  /can only ever\s+destroy a draft with no attachment, no attempt and no answer/.test(TA.replace(/\n\s*--\s*/g, ' ')));
+
+// ══ 26b · THE REVEAL EVENT ════════════════════════════════════════════════
+t.section('One reveal, one audit row — and none for a repeat or a refusal');
+
+t.ok('the reveal writes homework_answers_revealed', /'homework_answers_revealed'/.test(body3('teacher_homework_reveal_answers')));
+/* The clause that makes the row honest: an already-revealed paper matches no
+   row, so the function returns before logging. Without it a teacher clicking
+   twice would forge a second event. */
+t.ok('it only logs when the latch actually moved',
+  /update teacher_homework set reveal_answers = true\s+where id = p_homework and not reveal_answers\s+returning workspace_id into v_ws;\s+if v_ws is null then\s+return;\s+end if;/.test(body3('teacher_homework_reveal_answers')));
+t.ok('the audit insert comes AFTER that early return, so a repeat cannot reach it',
+  body3('teacher_homework_reveal_answers').indexOf('if v_ws is null then')
+    < body3('teacher_homework_reveal_answers').indexOf('insert into workspace_audit_log'));
+t.ok('and it follows 20260902a\'s convention: actor is the caller, subject_id NULL, homework in meta',
+  /values \(v_ws, auth\.uid\(\), 'homework_answers_revealed', null,\s+jsonb_build_object\('homework_id', p_homework\)\);/.test(body3('teacher_homework_reveal_answers')));
+t.ok('the migration refuses to install a reveal RPC whose label does not exist yet',
+  /apply 20260903a first/.test(TA));
+
+// ══ 26c · DELETE, AS §15.16a MEASURED IT ══════════════════════════════════
+t.section('A draft with content is deletable; a draft with student rows is not');
+
+const del = body3('teacher_homework_delete');
+t.ok('student rows are refused first, and the message says what is in the way',
+  /select count\(\*\) into v_attached from teacher_homework_access where homework_id = p_homework;/.test(del)
+  && /select count\(\*\) into v_attempts from teacher_homework_attempts where homework_id = p_homework;/.test(del)
+  && /if v_attached > 0 or v_attempts > 0 then\s+raise exception/.test(del));
+t.ok('it deletes the questions, then the stimuli, then the paper — in that order',
+  /delete from teacher_homework_questions where homework_id = p_homework;\s+delete from teacher_homework_stimuli where homework_id = p_homework;\s+delete from teacher_homework where id = p_homework;/.test(del));
+/* The ordering is not cosmetic: the stimulus foreign key is ON DELETE RESTRICT,
+   so a stimulus still referenced by a question cannot go first. */
+t.ok('questions before stimuli, because the stimulus key is RESTRICT',
+  del.indexOf('delete from teacher_homework_questions') < del.indexOf('delete from teacher_homework_stimuli'));
+t.ok('it still refuses anything past draft', /elsif v_status <> 'draft' then\s+raise exception/.test(del));
+/* One message per status, because they ask for different things. The live 3c
+   exam RPC says "close it, do not delete it" for a CLOSED exam too — advice
+   its reader has already followed. The dry-run surfaced it; H3 does not
+   inherit it. */
+t.ok('published and closed get different refusals, and neither tells a closed paper to close',
+  /this homework is published — close it, do not delete it/.test(del)
+  && /this homework is % and can no longer be deleted/.test(del)
+  && del.indexOf("v_status = 'published'") < del.indexOf("elsif v_status <> 'draft'"));
+t.ok('and the file records the measurement that forced this shape',
+  /PostgreSQL removes the parent row BEFORE\s+running the cascade/.test(TA.replace(/\n\s*--\s*/g, ' '))
+  && /§15\.16a/.test(TA));
+t.ok('the content guard is neither weakened nor touched by H3',
+  !/teacher_homework_content_guard/.test(TAC) && !/create or replace function teacher_homework_content_guard/.test(TA));
+
+// ══ 26d · THE REVEAL LABEL MIGRATION (20260903a) ══════════════════════════
+t.section('20260903a adds one label, H1-style, and nothing else');
+
+t.is('exactly one label is added, appended',
+  [...RVC.matchAll(/alter type workspace_audit_action add value if not exists '([a-z_]+)';/g)].map((m) => m[1]),
+  ['homework_answers_revealed']);
+t.ok('it is IF NOT EXISTS, and never positioned',
+  /add value if not exists/.test(RVC) && !/\b(before|after)\s+'/i.test(RVC));
+t.is('no other object rides along',
+  [...RVC.matchAll(SCOPE)].map((m) => m[0].trim()), []);
+t.is('the type is the only thing altered', [...new Set([...RVC.matchAll(/alter type ([a-z_]+)/g)].map((m) => m[1]))], ['workspace_audit_action']);
+t.is('and no row is written', [...RVC.matchAll(/^\s*(insert|update|delete|truncate)\s/gim)].map((m) => m[0].trim()), []);
+t.is('its verification expects the twenty-one existing labels then the new one, in order',
+  constant(RV, 'v_expected').split(','), SIXTEEN.concat(FIVE).concat(['homework_answers_revealed']));
+t.ok('compared as one ordered string, not a count', /is distinct from v_expected/.test(RVC));
+t.is('the stored-row invariant is still the sixteen labels that have writers today',
+  (() => { const m = RVC.match(/action::text <> all \(array\[([\s\S]*?)\]\)/); return m ? [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : null; })(),
+  SIXTEEN);
+t.ok('it says why it must be its own migration, and why it cannot be undone',
+  /unsafe use of new value/.test(RV) && /NOT CLEANLY REVERSIBLE/.test(RV));
+t.ok('it records the measurement that justifies the label, not just an opinion',
+  /teacher_homework has no updated_by, no revealed_by, no revealed_at/.test(RV.replace(/\n\s*--\s*/g, ' '))
+  && /updated_at is stamped by EVERY accepted update/.test(RV.replace(/\n\s*--\s*/g, ' ')));
+t.ok('it states the writing convention it expects H3 to follow',
+  /actor_id   = the staff member who threw the latch/.test(RV) && /subject_id = NULL/.test(RV)
+  && /EXACTLY ONCE per reveal that actually changed something/.test(RV.replace(/\n\s*--\s*/g, ' ')));
+t.ok('and it explains why exactly one label — no un-reveal, no delete, no update',
+  /No 'homework_answers_hidden'/.test(RV) && /No 'homework_deleted'/.test(RV));
+
+const rvRefuse = (() => { const m = RVZC.match(/action::text = any \(array\[([\s\S]*?)\]\)/); return m ? [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : null; })();
+t.is('the rollback refuses if the label is already recorded', rvRefuse, ['homework_answers_revealed']);
+t.ok('the refusal precedes the drop', RVZC.indexOf('rollback refused') < RVZC.indexOf('drop type workspace_audit_action'));
+t.is('it rebuilds exactly the twenty-one labels that preceded it',
+  (() => { const m = RVZC.match(/create type workspace_audit_action as enum \(([\s\S]*?)\);/); return m ? [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : null; })(),
+  SIXTEEN.concat(FIVE));
+t.ok('it widens to text and narrows back onto the type',
+  /alter column action type text/.test(RVZC) && /alter column action type workspace_audit_action\s+using action::workspace_audit_action/.test(RVZC));
+t.ok('and checks the column landed back ON the type', /format_type\(a\.atttypid, a\.atttypmod\)/.test(RVZC));
+t.ok('both reveal-label files are PREPARED and unapplied',
+  /STATUS: 🟡 PREPARED/.test(RV) && /STATUS: 🔴 PREPARED/.test(RVZ) && !/APPLIED 2026/.test(RV));
+/* Order is a real dependency, not a filing convention: the label cannot be
+   written in the transaction that adds it, so 20260903b installed first would
+   give a teacher a runtime failure. Both files say so. */
+t.ok('20260903a must be applied BEFORE 20260903b, and both say so',
+  /only AFTER 20260903a/.test(TA) && /BEFORE 20260903b/.test(RV));
+t.ok('and 20260903b refuses to install if the label is not there yet', /apply 20260903a first/.test(TA));
 
 // ══ 27 · THE H3 / H4 / H5 BOUNDARY ════════════════════════════════════════
 t.section('No student surface, and no analyzer');
 
-t.is('no function reads or writes access, attempts or responses',
-  [...TAC.matchAll(/teacher_homework_(?:access|attempts|responses)/g)].map((m) => m[0]), []);
+/* H3 gained one legitimate READ of the student tables when the delete fix
+   landed: it counts attachments and attempts in order to REFUSE. So the
+   boundary is stated as what it must actually be — no writes at all, and reads
+   confined to that one refusal — rather than as a blanket absence that the
+   approved fix would have to violate. */
+t.is('no function WRITES a student table',
+  [...INTERNAL_FNS, ...CLIENT_RPCS].filter((f) =>
+    /(insert into|update|delete from)\s+teacher_homework_(access|attempts|responses)\b/.test(body3(f))), []);
+t.is('and only the delete RPC mentions one at all',
+  [...INTERNAL_FNS, ...CLIENT_RPCS]
+    .filter((f) => /teacher_homework_(access|attempts|responses)/.test(body3(f)))
+    .filter((f) => f !== 'teacher_homework_delete'), []);
+t.ok('where it is exactly two count(*) reads feeding a refusal',
+  (body3('teacher_homework_delete').match(/select count\(\*\) into v_(attached|attempts) from teacher_homework_(access|attempts) where homework_id = p_homework;/g) || []).length === 2);
+t.ok('teacher_homework_responses is never named anywhere in H3',
+  !/teacher_homework_responses/.test(TAC));
 t.is('and no analyzer table is named',
   ['weakness_signals', 'weakness_reports', 'exam_mistakes', 'exam_practice_sessions', 'question_records', 'mastery_records']
     .filter((x) => new RegExp('\\b' + x + '\\b').test(TAC)), []);
 t.ok('no exam table, RPC or predicate is referenced either', !/teacher_exam/.test(TAC));
+/* And the migration pins the same boundary against the LIVE bodies, in both
+   halves. Its first draft forbade the mention rather than the write, and the
+   production dry-run refused to install the file — so this assertion exists
+   because the looser one shipped a migration that could not run. */
 t.ok('the in-file verification pins that boundary, so a later edit cannot cross it quietly',
-  /a function touches the student tables/.test(TA) && /homework_attached belongs to H4/.test(TA));
+  /a function WRITES a student table/.test(TA)
+  && /a function other than the delete pre-check reads a student table/.test(TA)
+  && /homework_attached belongs to H4/.test(TA));
+/* Both halves are pinned by their PREDICATE, not by their message. A mutant
+   that left the raise text in place and neutered the condition survived an
+   earlier version of these two checks. */
+t.ok('and it forbids the write rather than the word, or the approved delete could not install',
+  /\(insert\\s\+into\|update\|delete\\s\+from\)\\s\+teacher_homework_\(access\|attempts\|responses\)/.test(TA));
+t.ok('and the read-confinement half tests proname, not prose',
+  /and p\.prosrc ~ 'teacher_homework_\(access\|attempts\|responses\)'\s+and p\.proname <> 'teacher_homework_delete';/.test(TA));
 
 // ══ 28 · THE UNDO ═════════════════════════════════════════════════════════
 t.section('20260903z removes the write path and leaves H2 exactly as it was');

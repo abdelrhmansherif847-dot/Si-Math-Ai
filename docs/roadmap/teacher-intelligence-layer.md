@@ -1802,6 +1802,170 @@ them should be discovered mid-implementation.
     concurrency/data observation, **not** attributed to H2 and **not** modified.
     The count was `24` both immediately before and immediately after the apply.
 
+    ### 15.16b · The revised H3 package, 2026-09-03 (PREPARED, unapplied)
+
+    Both recommendations from §15.16a were approved and implemented. The
+    increment is now **two files applied in order**, and the order is a real
+    dependency rather than a filing convention.
+
+    #### 1 · `20260903a` — one audit label, on its own
+
+    `homework_answers_revealed`, appended, `if not exists`, and nothing else:
+    no table, column, policy, function, grant or row. It is a separate migration
+    for the reason `20260902a` was: PostgreSQL runs `alter type … add value`
+    inside a transaction but **refuses to cast the new label until that
+    transaction commits**, so a migration that adds a label and then writes it
+    cannot work as one unit. That is not a claim from the manual — it was
+    measured twice on production, from both directions: with the label added in
+    the same transaction the real RPC raised `55P04 unsafe use of new value`,
+    and with the label never added it raised `22P02 invalid input value for
+    enum`. Either way the RPC's insert genuinely targets the new label, which is
+    what those probes were for.
+
+    The writing convention, matching `20260902a`'s exactly: `actor_id` is
+    `auth.uid()`, `subject_id` is NULL (its subject is a paper, and the column
+    references `auth.users`), `meta` carries `{'homework_id': …}`, and the
+    timestamp is the log's own column default. Exactly one label — there is no
+    `homework_answers_hidden`, because un-revealing is not a call the API can
+    express, and no label for update, delete or content edits, because those
+    have no label today and inventing one here would be smuggling H4's decisions
+    into H3.
+
+    Like every enum migration before it, **it is not cleanly reversible** — there
+    is no `ALTER TYPE … DROP VALUE`. `20260903z` drops and recreates the type
+    around the live column and refuses outright if any row already records the
+    label.
+
+    #### 2 · `20260903b` — the authoring RPCs (renamed from `20260903a`)
+
+    Thirteen client RPCs and two helpers, unchanged in shape from §15.16, plus
+    the two approved changes:
+
+    **The delete fix.** A draft with content is now deletable, because the RPC
+    removes the questions and stimuli itself, in that order, **while the parent
+    row still exists**. §15.16a measured why the cascade could not: PostgreSQL
+    deletes the parent before running the referential cascade, so
+    `teacher_homework_content_guard()` fires with the parent already gone, reads
+    a NULL status and fails closed. The guard is not weakened, bypassed or
+    touched — it now simply evaluates a real `draft` status and permits the
+    write. Anything a student holds still refuses, and refuses with a count
+    rather than a trigger's message.
+
+    **The reveal audit write.** `teacher_homework_reveal_answers()` writes one
+    `homework_answers_revealed` row per reveal that actually moved the latch.
+    The clause that makes that true is `and not reveal_answers` in the UPDATE:
+    a second call on an already-revealed paper matches no row, so `v_ws` stays
+    NULL and the function returns before the INSERT. A refused call never
+    reaches it at all.
+
+    #### What the production dry-runs found
+
+    Five aborting passes. The first two found real defects in the file's own
+    verification block — both of which would have failed the apply, and neither
+    of which any static test could have caught:
+
+    - **§6.6 forbade the mention, not the write.** It rejected any H3 function
+      whose source so much as named `teacher_homework_access` or `_attempts` —
+      which the approved delete pre-check must do. Now it forbids the three
+      write verbs against those tables, and separately confines the *read* to
+      `teacher_homework_delete`. A read whose only outcome is a refusal is not a
+      student surface; a write is.
+    - **§6.8 could only ever go red.** It compared
+      `pg_get_function_identity_arguments()` against `'uuid'`, and that function
+      never returns `'uuid'` — it includes the parameter name (`p_homework
+      uuid`). The file could not install at all. It now reads the argument
+      **types** (`unnest(proargtypes)`), which is also name-independent. The
+      verification-framework rule has a mirror image, and this is it: *a check
+      that cannot go green is as useless as one that cannot go red, and rather
+      more expensive.* Only running the file finds one — which is what a dry-run
+      is for. This line was introduced by the original H3 prepare commit, so the
+      30-probe dry-run recorded in §15.16 did not exercise the file as
+      committed; the evidence below replaces it rather than adding to it.
+
+    A third finding is user-facing rather than structural. The delete refusal
+    said *"this homework is % — close it, do not delete it"* for **both**
+    non-draft statuses, so a teacher deleting a closed paper was told to close
+    it. H3 now gives each status its own message. **The wording was inherited
+    verbatim from `teacher_exam_delete()` in `20260901e`, which is LIVE and
+    still says it** — recorded here as a defect in the exam RPC, not fixed by
+    this increment, because changing a live function needs its own approval.
+
+    **The evidence, after those fixes.** All 15 bodies installed byte-identical
+    to the file (`md5(prosrc)` against values pre-computed from the repo), and
+    the file ran to the end of its own §6.1–6.9 verification.
+
+    | probe | result |
+    |---|---|
+    | empty draft, deleted | DELETED, 0 rows left |
+    | draft with 1 stimulus + 2 questions | DELETED, paper/questions/stimuli all 0 |
+    | draft with an attachment | REFUSED 42501, naming `1 student(s) hold this` |
+    | draft with an attempt | REFUSED 42501, naming `1 have started it` |
+    | draft with an attempt **and a graded answer** | REFUSED 42501 |
+    | published | REFUSED — *close it, do not delete it* |
+    | closed | REFUSED — *can no longer be deleted* (never "close it") |
+    | outsider | REFUSED 42501, no such homework |
+    | active assistant | DELETED (parity) |
+    | every student row after the refusals | untouched: access 1, attempts 2, answers 1 |
+
+    The reveal event was measured with a **shadow** of the live body differing
+    in exactly one label literal — necessary because the real label cannot be
+    cast in the transaction that adds it. Pass 4's shadow borrowed
+    `homework_created`, the label `create()` also writes, and since every row in
+    one transaction shares `now()`, ordering could not tell the two apart; pass
+    5 used `exam_access_requested`, which nothing else in the run writes, and
+    proved the body it tested hashes to the repo value.
+
+    | probe | result |
+    |---|---|
+    | teacher reveals a draft | latch true, **+1** audit row |
+    | that row | workspace correct, actor = the revealing teacher, `subject_id` NULL, `meta` = `{"homework_id": …}` and nothing else |
+    | its timestamp | the column default (equals the transaction's `now()`); the RPC passes no `created_at` |
+    | two further calls on the same paper | **+0** rows, total stays 1 |
+    | an outsider reveals | REFUSED 42501, **+0** rows, latch untouched |
+    | an active assistant reveals | **+1** row, actor = the assistant |
+    | a CLOSED paper reveals | latch true, status still `closed`, `closed_at` kept, **+1** row |
+    | un-reveal, as the table owner | REFUSED 22000 — the latch holds below the API |
+    | ledger | P1=1 P2=1 P3=1 P4=0; every row has an actor and a homework, none has a subject |
+
+    #### Rollback rehearsals
+
+    `20260903y` (the RPCs): installed H3, then undid it, in one aborting
+    transaction. Homework functions went **7 → 22 → 7**, and all nine hashes —
+    function signatures, bodies, ACLs, constraints, policies, relations,
+    triggers, table grants, counts — came back **identical** to their
+    pre-install values, **0 differing**. The install moved exactly the three it
+    should (signatures, bodies, ACLs) and left constraints, policies, relations,
+    triggers and grants untouched, which is what makes "H3 adds no schema" a
+    measurement rather than a claim.
+
+    `20260903z` (the label): the label list returned to the **same md5** as
+    before the add, `homework_answers_revealed` was gone, the log was
+    byte-identical and back **on** the type, and the dropped label was refused
+    again on a fresh insert. Its refusal path was rehearsed with a **stand-in**
+    label (`exam_access_rejected`) planted in the log — the real literal cannot
+    be planted in the transaction that adds it — and it refused with the
+    intended message; the literal itself is pinned by the contract suite.
+
+    #### Verification
+
+    261 checks in `tests/teacher-homework.test.mjs`, 109 in
+    `teacher-access-scope`, CI 66/66 green, and **73 of 73 mutants killed with
+    none unapplied**. Three of those mutants exist because earlier passes let
+    something through: `M60` (a `create or replace function` smuggled into the
+    label migration, which the old scope regex could not see, since "or replace"
+    sits between the verb and the object), `M72` (the delete telling a closed
+    paper to close itself) and `M73` (dropping the student-row pre-check).
+
+    **Production is unchanged.** 187 migrations, newest still
+    `20260903123458`; nothing newer applied; 6 homework tables, 9 policies and
+    **7** functions — H2's five guards, its stimulus trigger and
+    `teacher_homework_is_staff` (md5 `63ef7fa2…`), with **0** H3 RPCs present;
+    all six homework tables at 0 rows; 21 enum labels with
+    `homework_answers_revealed` **absent**; the audit log still 2 rows;
+    analyzer 893/11/24; 186 functions / 133 public policies / 82 tables. (A
+    schema-blind `count(*) from pg_policy` reads 138 — 133 in `public` plus 5 in
+    `storage`. The recorded baseline is the public count.)
+
 ---
 
 ## 16. Provenance

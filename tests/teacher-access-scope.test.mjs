@@ -91,8 +91,8 @@ const MIG = {
      FORWARD so the foundation's blanket academic ban covers the first write path
      into homework, and in ALL_ROLLBACK so the completeness check below notices
      if a new RPC ever ships without an undo. */
-  th_a:     read('supabase/migrations/20260903a_teacher_homework_authoring.sql'),
-  th_a_rb:  read('supabase/migrations/20260903z_teacher_homework_authoring_rollback.sql'),
+  th_a:     read('supabase/migrations/20260903b_teacher_homework_authoring.sql'),
+  th_a_rb:  read('supabase/migrations/20260903y_teacher_homework_authoring_rollback.sql'),
   th_rb:    read('supabase/migrations/20260902y_teacher_homework_rollback.sql'),
 };
 const PAGE = read('teacher.html');
