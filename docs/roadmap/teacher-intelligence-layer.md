@@ -2556,3 +2556,362 @@ them should be discovered mid-implementation.
   `20260901h` applied that evening as `20260901220926` after its own approval,
   and the card built the same night against it — in the repository, not
   deployed.
+
+### 15.18 · Teacher Homework H5 — THE AUDIT (read-only, 2026-09-03)
+
+**Status: AUDIT ONLY.** No SQL was changed, no migration written, no function
+created or modified, no policy, RLS or grant touched, no UI. Every behavioural
+probe ran inside a transaction that ended in `raise exception`, so nothing
+persisted. Baseline: H4 LIVE at `20260903203209`, commit `788927c`, 190
+migrations.
+
+The point of this stage is to learn the lifecycle from the live schema rather
+than assume Homework must behave like Teacher Exams. Where the exam system is
+cited below it is as a *measured comparison*, never as a template.
+
+---
+
+#### 1 · Live architecture inventory
+
+**Eight tables**, all with RLS enabled (none FORCEd), all at **0 rows**.
+
+| table | shape | client grant | policies |
+|---|---|---|---|
+| `teacher_homework` | 13 cols; `status` draft/published/closed; `reveal_answers`; `due_at` | `authenticated: SELECT` | **staff read only** |
+| `teacher_homework_stimuli` | 11 cols; six kinds; SVG media with sha | `authenticated: SELECT` | staff read only |
+| `teacher_homework_questions` | 11 cols; **`correct_answer` NOT NULL**, `explanation` | `authenticated: SELECT` | staff read only |
+| `teacher_homework_access` | `(homework_id, student_id)` PK, `attached_at` | `authenticated: SELECT` | own read · staff read |
+| `teacher_homework_attempts` | `status` in_progress/submitted, `started_at`, `submitted_at`, `late` | `authenticated: SELECT` | own read · staff read |
+| `teacher_homework_responses` | `answer`, **`is_correct` nullable**, `ordinal`, `last_answered_at` | `authenticated: SELECT` | own read · staff read |
+| `teacher_homework_retired_codes` | H4 reservation | **none** | **none** |
+| `teacher_homework_attach_attempts` | H4 limiter | **none** | **none** |
+
+`anon` holds nothing anywhere — 0 table grants and EXECUTE on 0 of the 30
+homework functions. `service_role` holds full DML on all eight, as it does on
+every table in this database.
+
+**Nine triggers.** `teacher_homework` carries two (H4's
+`BEFORE INSERT OR UPDATE OF homework_code`, H2's `BEFORE DELETE OR UPDATE`);
+questions and stimuli carry the content guard and the same-homework check;
+access, attempts, responses, retired codes and attach attempts each carry an
+append-only guard. **Every one of them is `BEFORE DELETE OR UPDATE` or
+narrower — not one covers INSERT on the student tables.** See H-1.
+
+**Thirty functions** (28 `teacher_homework*` + `student_attach_homework` +
+`student_my_homework`). All `SECURITY DEFINER` except
+`teacher_homework_new_code` and `teacher_homework_shift_ordinals`, which are
+callable by nobody; all thirty pin `search_path = pg_catalog, public`.
+**18 callable by `authenticated`, 12 by nobody, 0 by `anon`.**
+
+**No client surface exists.** There is no homework page in the repository, and
+`teacher.html`, `teacher-exams.html` and `exam.html` do not reference homework.
+
+---
+
+#### 2 · Student access and read lifecycle — what exists, and what does not
+
+Measured as a real `authenticated` session for a student **attached to a
+published paper**:
+
+| read | rows returned |
+|---|---|
+| `teacher_homework` | **0** |
+| `teacher_homework_questions` | **0** |
+| `teacher_homework_stimuli` | **0** |
+| `teacher_homework_access` | **1** — their own |
+| `teacher_homework_attempts` (2 exist, one per student) | **1** — their own |
+| `teacher_homework_responses` (4 exist) | **2** — their own attempt's |
+
+So the answer key, the explanations, the prompts, the figures, and the paper
+row itself are **all unreachable to a student today**, and the only student
+read that exists is `student_my_homework()` — a definer RPC returning title,
+class name, status, due date, `reveal_answers`, attachment time, attempt
+status, submitted time, `late`, and `can_open`. It returns no item content.
+
+**There is therefore no way for a student to read a question.** H5 must add
+that read, and it must come from a definer RPC with a **named column list**
+that never selects `correct_answer` or `explanation` — the shape
+`teacher_exam_start()` already uses, where the key "is not filtered out
+downstream; it is never selected in the first place".
+
+---
+
+#### 3 · Start lifecycle — the one decision that shapes everything
+
+There is no start RPC. The gate that exists is `teacher_homework_can_open(uuid)`,
+which takes **no student parameter** and re-reads five live conditions:
+
+```
+attached  AND  membership active (and not expired)  AND  workspace active
+          AND  homework.status = 'published'
+```
+
+No `due_at` condition — decision 3 makes the due date a date, never a lock.
+
+**Measured, and this is the finding that must be settled first (D-1):**
+
+| state | `can_open` |
+|---|---|
+| published, attached, active member | **true** |
+| **the teacher closes the paper while a sitting is in progress** | **false** |
+
+Meanwhile the responses guard consults the **attempt** status and never the
+paper's, so with the paper closed and the attempt still `in_progress`, writing
+an answer was **accepted**. Today those two rules disagree, harmlessly, because
+no start path exists. The moment H5 exists they cannot both stand.
+
+The exam system resolved the same question by **looking up the sitting before
+asking the gate at all** — `teacher_exam_start()` resumes first and calls
+`teacher_exam_can_start()` only when no attempt is found, so "a student removed
+from the class since starting still reaches it". Homework can adopt that, or
+decide the opposite. It is a rule inside H5's start RPC either way: **no schema
+change is required for either answer.**
+
+---
+
+#### 4 · Resume lifecycle
+
+An in-progress attempt is `status = 'in_progress'`; there is no `abandoned`
+state (the CHECK admits two values only). `teacher_homework_attempts_own_read`
+is `user_id = auth.uid()` with **no membership condition**, so a student keeps
+reading their own attempt after removal from the class — consistent with the
+attachment being permanent, and with H4's measured behaviour.
+
+- **Another student's attempt** — unreachable (measured: 1 of 2 rows).
+- **Duplicate attempts** — impossible: `UNIQUE (homework_id, user_id)` refused
+  a second attempt with `23505`. This is stronger than the exam system's
+  `client_request_id`, and it means H5's start must **catch `unique_violation`
+  and re-select**, or two browser tabs produce an error instead of a resume (D-8).
+- **Rejoin** — `can_open` returns true again (measured during H4 post-apply).
+
+---
+
+#### 5 · Answer / write lifecycle
+
+No save RPC exists. What the schema already enforces, measured:
+
+| write | result |
+|---|---|
+| `authenticated` INSERT into `teacher_homework_attempts` | **`42501`** |
+| `authenticated` INSERT into `teacher_homework_responses` | **`42501`** |
+| answer change while the attempt is `in_progress` | accepted |
+| answer change after submission | **`42501`** |
+| a response naming **another paper's** question | **`23503`** — the composite foreign keys, not a trigger |
+| deleting an attempt or a response | **`42501`** |
+| `is_correct` on an **unanswered** item | **`23514`** — the omission CHECK; omission stays three-valued |
+
+The same-homework rule is two composite foreign keys onto `UNIQUE (id,
+homework_id)` keys, so it is a constraint a later migration cannot quietly drop.
+
+---
+
+#### 6 · Submission and grading
+
+**The latch is real and was measured**, on the live tables:
+
+| | |
+|---|---|
+| un-submitting (`submitted → in_progress`) | **refused `22000`** |
+| *any* update to a submitted attempt, including `late` | **refused `22000`** |
+| changing an answer after submission | **refused `42501`** |
+| re-grading an item that already carries a verdict | **refused `42501`** |
+
+The canonical grading rule exists and is
+`exam_answer_matches(format, correct, given)`: an empty answer is never
+correct, `mcq` is trimmed-uppercase equality, `grid_in` tries numeric equality
+and falls back to whitespace-stripped string equality. **H5 must call it, not
+restate it** — the assertion 3e already carries.
+
+Two measured gaps that are not defects today but decide H5's shape:
+
+- **G-2 · grade-before-submit is documented, not enforced.** The responses
+  guard's own comment says *"H5 must therefore grade BEFORE it flips the
+  attempt to submitted"*. It gates only `answer` on attempt status, so an
+  **answered but ungraded** item was successfully graded **after** submission.
+  Convention, not constraint (D-4).
+- **G-4 · `last_answered_at` is unguarded** and moved on a submitted response.
+  It is the only column on a submitted answer that can still change (H-2).
+
+**And the one that changes a product decision (D-2).** A student reads their own
+`is_correct` through `teacher_homework_responses_own_read`, whose predicate is
+attempt ownership and **nothing else** — no reference to `reveal_answers`, none
+to attempt status. Measured: with `reveal_answers = false`, the student read
+both per-item verdicts the instant they were written. So as the schema stands,
+`reveal_answers` gates the *key and the explanation* (already unreachable) and
+**not** the right/wrong verdicts. If that is the intent, say so and grade only
+at submit. If it is not, the H2 policy must be narrowed — and that is cheap only
+while every table holds 0 rows.
+
+---
+
+#### 7 · Teacher / assistant visibility
+
+`teacher_homework_is_staff(homework)` → `workspace_is_active_staff(workspace)`,
+which requires `status = 'active'` **and** `w.is_active`. It is **role-blind**:
+teacher and active assistant are identical, a pending assistant is not staff,
+and a deactivated workspace removes staff powers from everyone. Measured in the
+H4 post-apply run: identical rosters for teacher and active assistant; `42501`
+for a pending assistant and an outsider.
+
+**Staff already read submitted answers and the answer key directly**, through
+the H2 policies — measured: a teacher selected 2 response rows and 2 question
+rows with no RPC involved. So H5 may need no new staff read at all; a shaped
+RPC would be a presentation choice, not a security one (D-7).
+
+`teacher_homework_students(homework)` returns the roster with attempt status,
+submitted time and `late` — but no per-item detail.
+
+---
+
+#### 8 · Membership and workspace predicates, as they are actually written
+
+| predicate | live definition |
+|---|---|
+| active membership | `ws.status = 'active' AND (ws.expires_at IS NULL OR ws.expires_at > now())` |
+| active staff | `s.status = 'active' AND w.is_active` |
+| student gate | `attached AND active membership AND w.is_active AND h.status = 'published'` |
+
+Every one is read **live**, per call. Nothing is cached and no row is stamped,
+so revoking a class link closes the door with no cleanup job. The one stale
+artefact by design is the attachment itself, which is append-only and never
+deleted — it records that a code was once redeemed, and grants nothing on its
+own.
+
+---
+
+#### 9 · State and transition matrix
+
+**Homework** — `draft → published → closed`, one way, enforced by
+`teacher_homework_guard` plus the two stamp CHECKs.
+
+| transition | actor | function | authorization | database enforcement | result |
+|---|---|---|---|---|---|
+| create → draft | staff | `teacher_homework_create` | `workspace_is_active_staff` | code guard + UNIQUE | row + audit |
+| draft → published | staff | `teacher_homework_publish` | `is_staff`, `FOR UPDATE` | guard sets `published_at` | audit |
+| published → closed | staff | `teacher_homework_close` | `is_staff`, `FOR UPDATE` | guard sets `closed_at` | audit |
+| closed → anything | — | — | — | guard `42501` | refused |
+| edit paper after publish | — | `teacher_homework_update` refuses | `<> draft` → `42501` | content guard | refused |
+| `due_at` change | staff | `teacher_homework_set_due_at` | refused only when **closed** | — | **allowed on a published paper** (D-5) |
+| reveal answers | staff | `teacher_homework_reveal_answers` | `is_staff` | one-way latch, allowed even when closed | audit, once |
+| delete | staff | `teacher_homework_delete` | draft only, no student rows | code retired first | row gone |
+
+**Attempt** — `in_progress → submitted`, one way.
+
+| transition | enforcement | measured |
+|---|---|---|
+| create in_progress | UNIQUE(homework, user) | second start `23505` |
+| **create born-submitted** | *nothing* | **accepted** — see H-1 |
+| in_progress → submitted | CHECKs tie `submitted_at`/`late` | as designed |
+| submitted → in_progress | attempts guard | `22000` |
+| any edit of a submitted attempt | attempts guard | `22000` |
+| delete | attempts guard | `42501` |
+
+---
+
+#### 10 · Audit and provenance
+
+Six homework labels exist, at enum positions 17–22: `homework_created`,
+`homework_published`, `homework_closed`, `homework_code_rotated`,
+`homework_attached`, `homework_answers_revealed`. All six are written, each
+once, with the actor bound to `auth.uid()` and `meta` carrying the homework id.
+
+**No label exists for start, save or submit** — measured, not assumed. Whether
+any of those deserve one is D-6, and it matters *now* rather than later: adding
+an enum label is its own migration because a new label cannot be cast until the
+transaction that adds it commits (measured twice on this database). Deciding
+after H5's RPC file is written means splitting it.
+
+Still unaudited from earlier increments, unchanged and out of scope here:
+update, `set_due_at`, delete, question and stimulus edits, reorder.
+
+---
+
+#### 11 · Analyzer boundary — proof
+
+Measured over **every function in `public`**, comments stripped:
+
+| probe | result |
+|---|---|
+| functions naming both a homework table and an analyzer table | **NONE** |
+| functions that write an analyzer table and mention homework | **NONE** |
+| functions that write `weakness_signals` | **NONE — in the whole database** |
+| functions that write `exam_mistakes` | `exam_submit` only |
+| functions that write `exam_practice_sessions` | `exam_submit` only |
+| triggers on any analyzer table | **NONE** |
+| tables written by homework functions | homework tables + `workspace_audit_log`, nothing else |
+
+And behaviourally: a paper authored, published, attached, answered, graded and
+submitted through the live functions moved the analyzer by **zero** —
+`893 / 11 / 24` before and after.
+
+**The honest limit of that proof.** `weakness_signals` is written by *no*
+database function; the analyzer is written from the browser. So the boundary
+that will matter for H5 is a **client-side** one, exactly as 3g's is: `exam.html`
+returns from `finish()` before `ExamMistakesLogger.process`,
+`regenerateWeaknessReports` and `updateStreak`, and `teacher_exam_submit()`
+"returns no session_id and no mistakes array precisely so this path cannot be
+taken by accident — the guard below is the second lock, not the only one."
+H5 must reproduce **both** locks, and the player's guard must be *measured*
+(headless call counts), not asserted.
+
+---
+
+#### 12 · Abuse, race and direct-call findings
+
+| attack | outcome |
+|---|---|
+| direct table write as `authenticated` (attempt or response) | `42501` — SELECT is the only grant |
+| duplicate start (two tabs) | `23505` — H5 must catch and re-select (D-8) |
+| concurrent submit | second flip hits the attempts guard `22000`; H5 should still `SELECT … FOR UPDATE`, as publish and close already do |
+| answering another student's attempt | unreachable — no write grant, and RLS scopes reads |
+| answering another paper's question | `23503`, by composite FK |
+| stale membership | every gate re-reads live; the attachment grants nothing alone |
+| rejoin | `can_open` true again, no new attachment needed |
+| direct RPC call bypassing a UI | every RPC re-checks authorization itself; the UI decides nothing |
+| **raw INSERT of a born-submitted attempt** | **accepted** (H-1) |
+| **raw INSERT of a response marked correct with a wrong answer** | **accepted** (H-1) |
+
+---
+
+#### 13 · Findings, classified
+
+**Confirmed correct** (measured, no action): client grants are SELECT-only and
+`anon` holds nothing; the answer key is unreachable to students; reads are
+scoped to the caller; submission is a one-way latch and a submitted attempt is
+frozen entirely; attempts and responses are never deleted; duplicate sittings
+are impossible; cross-homework answers are impossible by constraint; omission is
+three-valued; staff parity is role-blind and live; the analyzer boundary holds
+at the database layer.
+
+**Defects: none.** Everything H2, H3 and H4 promised behaves as recorded.
+
+**Design decisions required before any H5 line is written**
+
+| # | decision | smallest scope |
+|---|---|---|
+| **D-1** | Does closing a paper end a sitting already in progress? `can_open` says yes, the responses guard says no. | A rule inside H5's start RPC. **No schema change for either answer.** |
+| **D-2** | What does `reveal_answers` gate? Today a student can read their own verdicts with it `false`. | (a) document it as key-only, or (b) narrow `teacher_homework_responses_own_read`. **(b) is cheap only while the tables hold 0 rows.** |
+| **D-3** | Grade at submit only, or on save? On save + D-2(a) makes the paper an oracle. | H5's save RPC writes `answer` and never `is_correct`. |
+| **D-4** | Rely on convention for grade-before-submit, or enforce it? | Convention: order the statements. Enforcement: extend the responses guard. |
+| **D-5** | Is `late` frozen at submit, given `set_due_at` still works on a published paper? | Compute once in the submit RPC and state it. |
+| **D-6** | Which of start / save / submit deserve an audit label? | Decide now — a new label is its own migration, always. |
+| **D-7** | Does staff answer review need a shaped RPC, given the H2 policies already serve it? | Presentation choice; no new policy either way. |
+| **D-8** | How does start behave for a second tab? | Catch `unique_violation`, re-select, return the same attempt. |
+
+**Hardening opportunities** (not required for H5 to be correct; named so the
+choice is deliberate)
+
+| # | opportunity | why |
+|---|---|---|
+| **H-1** | No INSERT guard on `teacher_homework_attempts` or `teacher_homework_responses`. A born-submitted attempt and a mis-graded response were both accepted as the table owner. | Unreachable for clients today because they hold no INSERT — **the exact shape of the H4 code-guard finding**: an invariant that holds only because nobody currently has a grant. |
+| **H-2** | `last_answered_at` can move after submission. | The only mutable column on a frozen answer. |
+| **H-3** | The answer key sits in a table where `authenticated` holds a table-wide SELECT grant; only RLS separates it. `teacher_exam_questions` has the identical posture, so this is a shared pattern rather than a homework defect. | A column-level grant or a separate key table would make the separation structural rather than policy-dependent. |
+
+**What H5 must add** (scope, not design): a definer read of the paper and its
+items with a named column list excluding the key; start/resume; save; submit
+with grading through `exam_answer_matches`; and a student player carrying the
+3g analyzer guard. Nothing in the current schema blocks any of it — the six
+tables, the constraints and the guards are already shaped for it, which is what
+H2 was for.
+
+**H5 remains AUDIT ONLY. No implementation was prepared.**
