@@ -2383,18 +2383,50 @@ them should be discovered mid-implementation.
 
     #### Verification
 
-    350 checks in `tests/teacher-homework.test.mjs`, 109 in
-    `teacher-access-scope`, CI 66/66, **68 of 68 mutants killed with none
+    **352** checks in `tests/teacher-homework.test.mjs`, **109** in
+    `teacher-access-scope`, CI **66/66**, **75 of 75 mutants killed with none
     unapplied**. One of those mutants exists only because the shared
     access-scope suite's definer/`search_path` check matched `as $$` alone and
     so had been **silently skipping every teacher_exam and teacher_homework
     migration** — all of them use `$fn$`. Widened to any dollar-quote tag, it
     passes, so nothing was hiding behind it.
 
-    **Production is unchanged**: 189 migrations, newest `20260903175957`, no H4
-    object present, `teacher_homework_create` and `teacher_homework_rotate_code`
-    still at their H3 md5, six homework tables at 0 rows, and constraints,
-    policies, relations, triggers and grants all at their post-H3 hashes.
+    (The earlier draft of this section closed with *"production is unchanged —
+    189 migrations, no H4 object present"*. That was true while H4 was PREPARED
+    and is not true now. The post-apply state is the section above; this note
+    stays so the reversal is visible rather than silently overwritten.)
+
+    #### H4 CLOSEOUT — accepted 2026-09-03
+
+    | | |
+    |---|---|
+    | migration | `20260903203209` (`20260904a`) |
+    | commit | `788927c` on `claude/teacher-intelligence-layer-8e66b0` |
+    | migrations applied | **190** |
+    | CI | 66/66 |
+    | contract suite | 352/352 |
+    | access-scope suite | 109/109 |
+    | mutation suite | 75/75 killed |
+    | installed bodies | all **11** byte-identical to the prepared file |
+    | analyzer | 893 / 11 / 24, unchanged |
+    | homework data · audit | all eight tables 0 rows; audit log back at 2 rows, 0 homework labels |
+    | baseline hashes | constraints `26715f0c…` · policies `1480dd9e…` · relations `01e30b21…` · triggers `59ba9b5a…` · grants `9642f485…` · homework bodies `189231ec…` · homework signatures `9ffa38a1…` |
+
+    **`20260904z` is the active rollback artifact for H4**, PREPARED and
+    unapplied.
+
+    > **⚠️ ITS ROLLBACK WINDOW IS CURRENTLY OPEN.** Re-measured at closeout:
+    > `teacher_homework_retired_codes` = **0 rows**, `teacher_homework_access` =
+    > **0 rows**, `teacher_homework_attach_attempts` = **0 rows**. The window
+    > closes at the **first code rotation or the first draft deletion** — and a
+    > draft deletion is the ordinary authoring action of the two, so it will
+    > close early and by accident rather than by decision. Anyone who wants H4
+    > reversible should decide that *before* a teacher touches the system, not
+    > after.
+
+    **H5 has not started.** The next stage is an H5 audit, read-only, on the
+    live schema: the whole access / read / start / resume / submission
+    lifecycle understood first, with no SQL, no migration and no UI.
 
     #### Verification
 
