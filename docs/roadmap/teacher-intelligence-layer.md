@@ -4479,3 +4479,323 @@ mutation-checked: naming the wrong version makes it fail.
 **H7 has not started, and no UI was touched.** The homework vertical now runs
 end to end — author, publish, attach, sit, grade, review, and read back — with
 no client code anywhere in the repository.
+
+### 15.28 · Teacher Homework H7 — the staff UI · DECISIONS LOCKED + AUDIT-ONLY (2026-09-04)
+
+Read-only, after H6 was accepted and the roadmap checkpoint approved. **No code,
+no UI, no SQL, no migration.** Production is untouched (newest migration still
+`20260904012019`, CI 66/66 at `93369c8`). This section records the six decisions
+the owner locked before H7, the audit of the surface H7 will be built on, two
+corrections to the premises those decisions were made under, and the proposed
+H7 UI contract — screens, states, wireframes — that waits for approval.
+
+#### The six decisions, as locked
+
+1. **Re-numbering.** §15.14 planned *H6 staff UI → H7 student UI and the
+   dashboard card*. The applied `20260906a` is the **staff-read backend layer**,
+   recorded as **H5.5**. From here: **H7 = Staff Homework UI**, **H8 = Student
+   Homework UI + the dashboard card**.
+2. **Staff UI read boundary.** H7 reads the paper through
+   `teacher_homework_list()` and `teacher_homework_paper()` **only**. No direct
+   SELECT from any homework table in the staff client — `teacher_homework`
+   included, even though its `authenticated` SELECT grant remains.
+3. **`exam.html` reachability.** The 3g player must gain a real product entry
+   point and must not stay URL-only. Not implemented inside H7 unless the shared
+   UI architecture strictly requires it; recorded as a separate item (I-1 below).
+4. **The dashboard card.** *From your teachers* is one unified student
+   assignment surface for **Homework and Teacher Exams**. H8 owns the Homework
+   implementation. H7 does no dashboard work.
+5. **Teacher Exams `select('*')`.** Not modified now; recorded as a separate
+   future hardening item outside H7/H8 (I-2 below).
+6. **Class-patterns card.** The H7 merge must not deploy it as a side effect;
+   isolate and record. **This premise is wrong by fact — see correction C-1.**
+
+#### Two corrections before anything is built
+
+**C-1 · The class-patterns card is already in production.** The card's commit
+`4e468d3` is on `origin/main`; `teacher.html` is byte-identical between this
+branch and `main`; Vercel's newest *production* deployment is `7422cba` (main,
+READY), created after `4e468d3`. Nothing on this branch can deploy the card
+because the branch does not differ from `main` in it. Decision 6 is therefore
+moot, and CLAUDE.md's *"in the repo and NOT deployed"* row is stale (I-5).
+
+**C-2 · The "Teacher Exams" sidebar link is hidden by `nav.js`'s staff filter
+in the common timing — a live defect in the navigation H7 must use.**
+`teacher.html` loads `nav.js` (`defer`). For ACTIVE staff, `applyStaffNav()`
+sets `display:none` on every sidebar `a.nav-item` whose file is not in
+`STAFF_NAV_KEEP = { teacher, partner, profile, settings }` — and runs **four
+times**: at once, next frame, +500 ms, +1500 ms after its identity read.
+`teacher-exams.html` is not in that list. `renderWorkspace()` reveals
+`sideExamsLink` **once**, after `teacher_my_workspaces` → roster → patterns
+(three sequential round trips). Whichever runs last wins. Executed with the
+shipped filter over `teacher.html`'s real sidebar, in browser order:
+
+```
+teacher.html sidebar links: dashboard chat progress teacher teacher-exams(hidden) partner(hidden) profile settings
+0. markup as shipped                              exams="none"  partner="none"
+1. nav.js applyStaffNav (first pass)              exams="none"  partner="none"
+2. teacher.html renderWorkspace() reveals both    exams=""      partner=""
+3. nav.js applyStaffNav (+500ms / +1500ms pass)   exams="none"  partner=""
+```
+
+Partner survives because `partner.html` is in the keep-list; Teacher Exams does
+not. The browser order was not measured with a real session — what is proven is
+that any filter pass **after** the reveal hides the link, and the filter's last
+pass is 1.5 s after `nav.js` resolves. `tests/staff-nav.test.mjs` §6 restates
+the keep-list as exactly four and treats a hidden `teacher-exams.html` as
+*correct* — the suite encodes the defect as the expectation. No test covers the
+reveal-then-filter order. **An H7 link placed the same way is hidden the same
+way**, so this is the one real missing capability the audit found, and it is in
+navigation, not the backend (I-4).
+
+#### The audit — what H7 is built on
+
+**A · `teacher.html` (the hub).** Tokens `--bg --cyan --green --amber --red
+--text-100…500 --border --purple --gold --space-* --r-sm…xl`; fonts Manrope /
+DM Sans / JetBrains Mono from Google Fonts; fixed sidebar `--side-w:262px`.
+States `loadingState / noneState / pendingState / wsState` through `show()`.
+`boot()` → `getSession()` → `api.myWorkspaces()` → `rows.find(staff_status ===
+'active')` (the first active workspace only); a pending assistant lands on
+`pendingState`. `S.isTeacher` gates **only** Partner, staff, activity and
+referrals; `sideExamsLink` is revealed with no role test and a comment saying
+why. `?preview=1` fixture mode exists. No `.rpc` for homework anywhere.
+
+**B · `teacher-exams.html` (the template).** 815 lines, no sidebar, no
+`nav.js`, a *← Teaching* link back. `<head>` pins supabase-js 2.110.8, KaTeX
+0.16.11 (+ auto-render) with SRI, loads `stimulus-view.js`. Four states
+`loadingState / denyState / listState / examState`. `sb` constructed
+defensively; `boot()` → session or `login.html` → `teacher_my_workspaces` →
+`staff_status === 'active'` or `denyState` → `wsPick` (all active workspaces)
+→ list. Helpers `$ esc say clearMsg math show localDT toISO`. `api` = reads by
+`.from(...).select('*')` (the pattern decision 5 sets aside) and every write by
+`.rpc`. Draft-only editing (`fTitle fInstr … disabled = !draft`), code panel
+hidden while draft, rotate only while published, `publishCard` hidden when
+closed. Stimulus form → `stimulusFromForm()`; SVG via `FileReader.readAsText`,
+`/<svg/i`, `btoa(unescape(encodeURIComponent()))`; question form →
+`questionFromForm()` (`choices = ['A','B','C','D'].map(...)`); preview through
+`window.StimulusView.render`; `move(id, delta)` sends the whole id list;
+`confirm()` is not used on the exam page (teacher.html uses it for rotate,
+remove, withdraw).
+
+**C · Design system and delivery constraints.** `vercel.json` CSP: `script-src
+'self' cdn.jsdelivr.net`, `img-src 'self' data: blob: <supabase>`,
+`connect-src <supabase>` — the base64 SVG figure renders under `img-src data:`.
+`tests/repo-integrity.test.mjs` runs on **every** root `*.html`: the inline
+script must parse, every jsdelivr tag must carry `integrity` + `crossorigin`,
+no floating supabase-js version. `validate-knowledge-layer.mjs` enumerates a
+fixed public page list, so a `noindex,nofollow` staff page trips nothing there
+(as `teacher-exams.html` did not). Staff pages are absent from `sitemap.xml`
+and `llms.txt` and must stay absent; `robots.txt` does not list them — the meta
+tag does the work.
+
+**D · Auth, loading, error.** The convention is `const { data, error } = await
+sb.rpc(...)`; `error.message` shown verbatim through `say(el, msg, 'err')`.
+The homework RPCs were written for that: *this homework is published and its
+paper is fixed* (`42501`), *this homework is closed* (`22023`), status-specific
+delete refusals. No in-flight button locking anywhere in the staff pages.
+
+**E · Reuse map.** *By call, unchanged:* `stimulus-view.js` (`render`, `esc`,
+`KINDS`), KaTeX `math()`, `teacher_my_workspaces()`. *As template, copied:*
+the `<head>` pins, the four-state `show()`, `boot()`, the message row, the
+stimulus and question forms, the SVG reader, preview, `move()`, the code panel
+with Copy. *Not reusable, and not to be:* the access queue (`requests`,
+`decide`, `approveMembers` — homework has no queue), `fDur fCalc fOpens
+fCloses` (exam-only fields; `teacher_homework_update` takes title +
+instructions), the `results` counts table (replaced by the H5 roster and
+review), every `.from()` read.
+
+**F · Capabilities H7 needs against what exists.**
+
+| Action | RPC (all live) | Returns | Status rule |
+|---|---|---|---|
+| list papers | `teacher_homework_list(p_workspace)` | 13 columns incl. counts | active staff of the class (`42501`) |
+| open paper | `teacher_homework_paper(p_homework)` | jsonb: header + `can_edit_content` + stimuli[] + questions[] (key included, no `media_sha256`) | staff of the paper |
+| create | `teacher_homework_create(p_workspace, p_title)` | `{homework_id, homework_code}` | — |
+| title / instructions | `teacher_homework_update(p_homework, p_title, p_instructions)` | void | draft only |
+| due date set / clear | `teacher_homework_set_due_at(p_homework, p_due_at)` (NULL clears) | void | not closed |
+| reveal answers | `teacher_homework_reveal_answers(p_homework)` | void | any status, **one-way** |
+| stimulus save | `teacher_homework_save_stimulus(p_homework, p_stimulus, p_kind, p_label, p_body, p_spec, p_media_ref)` | uuid | draft (content guard) |
+| stimulus delete | `teacher_homework_delete_stimulus(p_stimulus)` | void | draft |
+| question save | `teacher_homework_save_question(p_homework, p_question, p_ordinal, p_prompt, p_format, p_correct_answer, p_choices, p_explanation, p_stimulus)` | uuid | draft |
+| question delete | `teacher_homework_delete_question(p_question)` | void | draft |
+| reorder | `teacher_homework_reorder_questions(p_homework, p_question_ids)` | void | draft |
+| publish | `teacher_homework_publish(p_homework)` | `{homework_id, homework_code, questions}` | draft, gate: ≥1 question, ordinals 1..n |
+| close | `teacher_homework_close(p_homework)` | void | published |
+| rotate code | `teacher_homework_rotate_code(p_homework)` | new code | not closed (UI offers it only while published) |
+| delete | `teacher_homework_delete(p_homework)` | void | draft only; deletes its own content first |
+| roster | `teacher_homework_students(p_homework)` | 12 columns incl. `active_member`, counts | staff |
+| review one student | `teacher_homework_review(p_homework, p_student)` | `{sat:false}` or items[] with given / verdict / key | staff |
+
+Column limits the forms should mirror: title 2–200, instructions ≤ 4000, label
+1–200, body 1–8000, prompt 1–8000, explanation ≤ 8000, `media_ref` ≤ 256 KiB.
+
+**No backend capability is missing.** *Stimulus reorder* is not a concept —
+stimuli carry no ordinal and the paper orders them `created_at, id`, as the exam
+page does. *Un-reveal*, *reopen* and *edit after publish* are refused by design
+(§15.16, §15.17). The only gap is C-2, in `nav.js`.
+
+**G · Parity.** The page gates on `staff_status === 'active'` and never reads
+`staff_role`; teacher and active assistant see and do the same thing, as every
+homework RPC already enforces (`teacher_homework_is_staff()` is role-blind).
+
+#### Proposed H7 UI contract — for approval
+
+**Page.** `teacher-homework.html` at the root, `<meta name="robots"
+content="noindex,nofollow">`, no `nav.js`, *← Teaching* back link, the exam
+page's `<head>` pins copied byte-for-byte, `stimulus-view.js` loaded.
+
+**Reads, and nothing else:** `teacher_my_workspaces()` (the picker),
+`teacher_homework_list()`, `teacher_homework_paper()`,
+`teacher_homework_students()`, `teacher_homework_review()`. **Zero `.from(`
+calls** — the contract suite asserts the count is 0, stricter than the exam
+page's own-tables rule. **Writes:** the thirteen H3 RPCs above, by `.rpc` only.
+
+**Gate.** `getSession()` or `login.html`; active-staff rows or `denyState`
+(*This page is for the staff of a class. Ask the teacher whose class it is.*);
+a library that failed to load → `denyState` with its own sentence.
+
+**Navigation.** `teacher.html` gains `<a class="nav-item"
+href="teacher-homework.html" id="sideHomeworkLink" style="display:none">` beside
+`sideExamsLink`, revealed in `renderWorkspace()` on the same line and with no
+role test. **This link is hidden by C-2 unless `nav.js`'s keep-list learns
+both `teacher-exams.html` and `teacher-homework.html`** (I-4).
+
+**States.** `loadingState` → `denyState` | `listState` | `paperState`; inside
+`paperState` a roster card and a review drawer. Every card owns one `.msg` row.
+
+```
+LIST (listState)                                   ┌─────────────────────────┐
+ ← Teaching     Homework                          │ class ▾ [Class A]        │
+ Papers you set for Class A.                      │ [+ New homework]         │
+ ┌────────────────────────────────────────────┐    └─────────────────────────┘
+ │ ● draft      Untitled homework   4 questions │  (tile → paperState)
+ │ ● published  Linear systems      8 questions · code 7KQ2M9XA · due Sep 12 · 12 attached · 5 submitted │
+ │ ● closed     Ratios              6 questions · closed Sep 1 · 20 submitted │
+ └────────────────────────────────────────────┘
+ empty: "No homework yet. Create one and it starts as a draft."
+```
+
+```
+PAPER (paperState) — draft                    PAPER — published / closed
+ ← All homework   [Linear systems] ● draft      ← All homework   Linear systems ● published
+ ┌ Paper ───────────────────────────┐          ┌ Paper ──────────────────────┐
+ │ Title [..............]           │          │ Title / Instructions (read-only, greyed)
+ │ Instructions [...............]   │          └─────────────────────────────┘
+ │ [Save]   [Delete draft]          │          ┌ Code ───────────────────────┐
+ └──────────────────────────────────┘          │ 7KQ2M9XA  [Copy] [Rotate]   │  closed: hidden, "Closed on …"
+ ┌ Schedule & answers ──────────────┐          └─────────────────────────────┘
+ │ Due [datetime-local] [Set] [Clear]           ┌ Schedule & answers ─────────┐
+ │ Answers: [Reveal to students]    │          │ Due … [Set][Clear] (closed: disabled)
+ │   — one-way, needs confirm       │          │ Answers: [Reveal] / "Revealed on …"
+ └──────────────────────────────────┘          └─────────────────────────────┘
+ ┌ Stimuli ─────────────────────────┐          ┌ Stimuli (read-only previews) ┐
+ │ kind ▾ label body spec [file]    │          ┌ Questions (read-only, key visible to staff) ┐
+ │ [Preview] [Save] · list: Edit/Delete        ┌ Students ───────────────────┐
+ └──────────────────────────────────┘          │ name · in class? · attached · status · submitted · late · ✓ ✗ — · [Review]
+ ┌ Questions ───────────────────────┐          │ empty: "Nobody has attached this homework yet."
+ │ fmt ▾ stimulus ▾ prompt A B C D  │          └─────────────────────────────┘
+ │ answer explanation [Preview][Save]           ┌ Review: <student> ──────────┐
+ │ list: #1 … ↑ ↓ Edit Delete       │          │ 1. prompt · given B · ✓ · key B · explanation
+ └──────────────────────────────────┘          │ sat=false: "Has not opened this homework."
+ ┌ Publish ─────────────────────────┐          │ note: "Students see the key: yes/no"
+ │ hint from the gate   [Publish]   │          └─────────────────────────────┘
+ └──────────────────────────────────┘          [Close homework]  (published only)
+```
+
+**Status matrix — what each control does.**
+
+| Control | draft | published | closed |
+|---|---|---|---|
+| Title / instructions | editable, Save | read-only | read-only |
+| Due date Set / Clear | ✓ | ✓ | disabled (`22023`) |
+| Reveal answers (one-way, confirm) | ✓ | ✓ | ✓ |
+| Stimulus add / edit / delete | ✓ | hidden, previews only | hidden |
+| Question add / edit / delete / ↑↓ | ✓ | hidden, read-only list | hidden |
+| Publish (confirm: *fixes the paper*) | ✓ + gate hint | — | — |
+| Code panel + Copy | hidden (a draft's code is `no_match` to students) | ✓ | hidden; *Closed on …* |
+| Rotate (confirm) | hidden | ✓ | hidden |
+| Close (confirm) | — | ✓ | — |
+| Delete | ✓ (draft only, confirm) | hidden | hidden |
+| Students roster + Review | hidden (nothing can attach) | ✓ | ✓ |
+
+**Empty, loading, error.** List empty sentence above; roster empty sentence
+above; review `sat:false` sentence above; every RPC error → `say(msg,
+error.message, 'err')` verbatim, as the exam page does; page-level spinner
+only in `loadingState`, per-card `.msg` otherwise.
+
+**Responsive.** `.wrap{max-width:1080px}`, `.grid2` as `auto-fit minmax(200px,
+1fr)` (collapses by itself), the roster table inside an `overflow-x:auto`
+container, `datetime-local` given `min-width:0; max-width:100%` (the rule
+`teacher-surface.test.mjs` already enforces on `teacher.html`).
+
+**Escaping.** `esc()` on every author string; KaTeX only through `math()`;
+figures only through `StimulusView.render` (sandboxed `data:` image); no own
+SVG markup.
+
+**Confirmations.** `confirm()` before publish, close, rotate, reveal and
+delete — the five irreversible or student-visible actions; `teacher.html`
+already uses `confirm()` for rotate and remove, the exam page uses none.
+
+**Tests H7 ships with.** `tests/teacher-homework-ui.test.mjs`, modelled on
+`teacher-exam-ui.test.mjs`: every `.rpc` name defined by an applied homework
+migration; **`.from(` count is 0**; never `.insert/.update/.upsert/.delete(`;
+gate on `staff_status === 'active'`, no `staff_role`, no `isTeacher`;
+`denyState`; `login.html`; `teacher.html` links to the page and reveals it
+without a role test; `stimulus-view.js` loaded and `StimulusView.render` used,
+no own SVG; all six kinds offered; SVG base64 + non-SVG refused;
+`.pill.draft/.published/.closed`; editing shut after draft; code panel only
+once published; rotate only while published; reorder sends the whole list;
+`confirm()` before the five actions; `esc()` defined and no raw
+interpolation; the three empty sentences present. Mutation-tested like every
+homework suite. `staff-nav.test.mjs` restated if I-4 is approved.
+
+**What the merge deploys.** Merging to `main` deploys the new page and the
+`teacher.html` link (and `nav.js` if I-4) to production at once — INFRA-2's
+missing approval gate still applies, and nothing else on this branch differs
+from `main` in any shipped page.
+
+**H7 will not:** touch student UI, the dashboard, `teacher-exams.html`,
+`exam.html`, the class-patterns card, any migration, any RPC, or any policy.
+
+#### Separate items recorded
+
+- **I-1 · `exam.html` entry point** (decision 3). Decisions 3 and 4 converge:
+  the unified *From your teachers* card is the natural entry point for the 3g
+  player. H8 builds the Homework half; the Teacher Exams half is scheduled on
+  its own, outside H7.
+- **I-2 · Teacher Exams read boundary** (decision 5). `teacher-exams.html`
+  reads `teacher_exams`, `teacher_exam_questions` and `teacher_exam_stimuli`
+  with `select('*')`. Not a leak today — 3b's SELECT policies are staff-only,
+  measured in the 3f audit — but the boundary's *shape* is the one H5's F-5
+  and H6's D6-1…D6-4 replaced for homework: table reads, every column shipped
+  (`media_sha256` included), a student-side grant still held on the questions
+  and stimuli tables. The hardening mirrors H6: two staff read RPCs, then the
+  F-5 revokes. Outside H7/H8.
+- **I-3 · Class-patterns card** (decision 6). Moot by C-1: on `main`, deployed
+  at `7422cba`. Nothing to isolate.
+- **I-4 · `nav.js` keep-list** (C-2). Add `teacher-exams.html` and
+  `teacher-homework.html` to `STAFF_NAV_KEEP`; restate the two keep-list
+  assertions in `staff-nav.test.mjs`; add the reveal-then-filter order as a
+  test so it cannot come back. Recommended as its **own small fix before H7**,
+  because it repairs the live Teacher Exams link, and because H7's link is
+  otherwise hidden on arrival. It touches `nav.js`, a shared file — explicit
+  approval either way.
+- **I-5 · CLAUDE.md stale rows.** *Static site*: the class-patterns card **is**
+  deployed (C-1). *Edge Functions*: `ai-tutor` platform version is **145**, not
+  144 (read 2026-09-03). Bookkeeping only; awaiting approval with H7.
+
+#### Questions that must be answered before a line of H7
+
+- **Q1** Decision 2 names two RPCs. The roster and review screens need
+  `teacher_homework_students()` and `teacher_homework_review()` (H4/H5, staff
+  gated), and the class picker needs `teacher_my_workspaces()`. Read as *no
+  table reads* — confirm these three RPCs are inside the boundary.
+- **Q2** I-4: fix `nav.js` first (recommended), inside H7, or not at all?
+- **Q3** Roster and review inside the paper screen (proposed) or a separate
+  screen?
+- **Q4** Hide a draft's code as the exam page does (proposed), or show it?
+- **Q5** `confirm()` before publish / close / rotate / reveal / delete
+  (proposed), or none, as the exam page?
+- **Q6** Approve I-5's CLAUDE.md correction as part of H7's bookkeeping?
+
+**STOPPED here.** Audit only; nothing prepared, nothing applied, no UI written.
