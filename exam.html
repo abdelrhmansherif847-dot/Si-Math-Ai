@@ -5,7 +5,7 @@
 <link rel="icon" href="assets/si-math-ai-logo.jpg"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <meta name="robots" content="noindex,nofollow"/>
-<title>Exams – Si Math AI</title>
+<title>Exams &amp; homework – Si Math AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
@@ -97,7 +97,13 @@ input{font-family:inherit}
 .dot.answered{border-color:var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3)}
 .dot.now{outline:2px solid var(--cyan);outline-offset:1px;color:#fff}
 
-.tile{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:10px;width:100%;text-align:left}
+/* A row wraps rather than crushing its own title. Measured at 390px: with
+   nowrap the trailing pills — LATE, SUBMITTED, Review — refuse to shrink and
+   drive the title column to about 60px, one word per line, with the meta text
+   running under the pills. The 12rem basis on the title column is what makes
+   the line break happen instead; on a wide screen the sum still fits one line,
+   so nothing above 640px moves. */
+.tile{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:16px;border-radius:var(--r-md);border:1px solid var(--border-soft);background:var(--bg-elev-1);margin-bottom:10px;width:100%;text-align:left}
 .tile:hover{border-color:var(--cyan-border-soft)}
 .tile .nm{display:block;font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
 .tile .mt{display:block;font-family:var(--font-mono);font-size:11px;color:var(--text-500);margin-top:3px}
@@ -152,6 +158,29 @@ input{font-family:inherit}
 .sv-dot-on{fill:var(--cyan);stroke:var(--cyan);stroke-width:2}
 .sv-dot-off{fill:var(--bg-card);stroke:var(--cyan);stroke-width:2}
 .sv-figure{display:block;max-width:100%;height:auto;border-radius:8px;background:#fff}
+/* ── from your teachers ────────────────────────────────────────────────────
+   Two groups under one heading. They are kept visually apart because their two
+   code boxes do different things: a homework code ATTACHES the paper outright,
+   an exam code only RAISES A REQUEST a teacher must approve. A student who
+   confuses the two would sit waiting for an approval that is never coming. */
+.grp{font-family:var(--font-display);font-weight:700;font-size:14.5px;color:var(--text-200);margin:20px 4px 9px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.grp .hint{font-family:var(--font-body);font-weight:400;font-size:12.5px;color:var(--text-500)}
+.st-ok{background:var(--green-soft);color:#86efac;border:1px solid var(--green-border)}
+.st-late{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+/* ── homework review ──────────────────────────────────────────────────────
+   The answer key is drawn only where answers_visible — the flag the SERVER
+   computes — is true. It is not the same thing as reveal_answers: a paper can
+   be revealed while this student is still mid-sitting, and then the key is not
+   in the payload at all. The page reads the server's answer, never the flag. */
+.rv{border:1px solid var(--border-soft);border-radius:var(--r-md);background:var(--bg-elev-1);padding:16px;margin-bottom:12px}
+.rv-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+.rv-p{font-size:15.5px;color:#fff;line-height:1.6;margin-bottom:12px}
+.rv-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+.rv-box{flex:1 1 200px;min-width:0;border:1px solid var(--border-soft);border-radius:var(--r-sm);background:var(--bg-card);padding:10px 12px}
+.rv-box .lb{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-500);margin-bottom:5px}
+.rv-box .vl{color:var(--text-100);font-size:14px;word-break:break-word}
+.rv-exp{margin-top:11px;font-size:13.5px;color:var(--text-300);border-left:2px solid var(--cyan-border);padding:2px 0 2px 12px;line-height:1.65}
+.hw-note{font-size:13.5px;color:var(--text-400);margin-bottom:16px;max-width:640px}
 .empty{text-align:center;padding:44px 20px;color:var(--text-400)}
 .empty .big{font-family:var(--font-display);font-weight:700;font-size:16.5px;color:var(--text-200);margin-bottom:7px}
 .note{border-left:2px solid var(--cyan-border);padding:2px 0 2px 14px;color:var(--text-400);font-size:13px;line-height:1.65}
@@ -171,7 +200,7 @@ input{font-family:inherit}
 <body>
 <header class="bar">
   <div style="min-width:0">
-    <div class="ttl" id="barTitle">Exams</div>
+    <div class="ttl" id="barTitle">Exams &amp; homework</div>
     <div class="sub" id="barSub"></div>
   </div>
   <div class="spacer"></div>
@@ -190,19 +219,37 @@ input{font-family:inherit}
 
   <!-- choose a sitting -->
   <section id="pick" style="display:none">
-    <div class="h1">Exams</div>
-    <div class="sub">One section at a time, timed the way the real paper is. Every answer, and how long it took, becomes evidence for your weakness analysis.</div>
+    <div class="h1">Exams &amp; homework</div>
+    <div class="sub">Platform papers are timed, one section at a time, and every answer — with how long it took — becomes evidence for your weakness analysis. Work set by your teacher is separate: homework is untimed and saved as you go, and neither it nor a teacher's exam changes your weakness analysis.</div>
 
     <!-- Platform exams: the SAT / ACT / EST papers the platform publishes for
          everyone. They belong to no class and are never workspace-specific. -->
     <div class="sec-label" style="margin-top:24px">Platform exams</div>
     <div class="card"><div id="pickList"></div></div>
 
-    <!-- Teachers: papers set by the class a student has connected to. Hidden
-         entirely for a student with no class — an empty section would be
-         advertising a feature they have no way into. -->
+    <!-- From your teachers: papers set by the class a student has connected
+         to. Hidden entirely for a student with nothing from a teacher — an
+         empty section would be advertising a feature they have no way into.
+         Two groups, because homework and exams are different objects: homework
+         is untimed and resumable and its code attaches it outright; an exam is
+         timed and its code only raises a request. -->
     <div id="teachersBlock" style="display:none">
-      <div class="sec-label" style="margin-top:26px">Teachers</div>
+      <div class="sec-label" style="margin-top:26px">From your teachers</div>
+
+      <div class="grp">Homework <span class="hint">Untimed. Your answers are saved as you go.</span></div>
+      <div class="card">
+        <!-- The way in, and it is NOT the exam way in. A homework code attaches
+             the paper immediately: there is no queue and nothing to approve. -->
+        <div class="codebox">
+          <input id="hwCodeIn" maxlength="12" autocomplete="off" spellcheck="false"
+                 placeholder="Homework code from your teacher"/>
+          <button class="btn sm" id="hwCodeGo">Add homework</button>
+        </div>
+        <div class="msg" id="hwCodeMsg" style="display:none"></div>
+        <div id="homeworkList"></div>
+      </div>
+
+      <div class="grp">Exams <span class="hint">Timed, and your teacher approves your access first.</span></div>
       <div class="card">
         <!-- The way in. A teacher exam is not discoverable: it is not listed
              until the student has entered its code, and the code by itself
@@ -252,6 +299,46 @@ input{font-family:inherit}
       </div>
     </div>
   </section>
+
+  <!-- homework sitting · untimed and resumable, so it carries no timer, no
+       duration and no auto-submit. Deliberately its OWN screen and its own
+       player rather than a mode inside the exam one: the exam path is timed,
+       records a visit and a per-item time delta, and hands its result to the
+       analyzer, and none of that is true here. Branching inside those shared
+       functions would have put every one of those behaviours one condition
+       away from a homework sitting. -->
+  <section id="hwSit" style="display:none">
+    <div class="card">
+      <div class="qhead">
+        <span class="qnum" id="hwNum">Question 1</span>
+        <span class="pill" id="hwFmt">Multiple choice</span>
+        <span class="pill" id="hwDue" style="display:none"></span>
+      </div>
+      <div class="stim" id="hwStim" style="display:none"></div>
+      <div class="prompt" id="hwPrompt"></div>
+      <div class="choices" id="hwChoices"></div>
+      <div class="grid-in" id="hwGrid" style="display:none">
+        <input id="hwGridInput" inputmode="text" autocomplete="off" placeholder="Your answer"/>
+        <div class="grid-note">Type your answer. Leave blank to skip.</div>
+      </div>
+      <div class="msg" id="hwMsg"></div>
+    </div>
+  </section>
+
+  <!-- homework review · reached BOTH by submitting and by opening a homework
+       already submitted. It reads the paper directly and never starts one. -->
+  <section id="hwRev" style="display:none">
+    <div class="h1" id="hwRevTitle">Homework</div>
+    <div class="sub" id="hwRevSub"></div>
+    <div class="stats" id="hwRevStats"></div>
+    <div class="sec-label">Your answers</div>
+    <div class="hw-note" id="hwRevNote"></div>
+    <div id="hwRevList"></div>
+    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn ghost" id="hwBackBtn">Back to homework</button>
+      <a class="btn ghost" href="dashboard.html">Back to dashboard</a>
+    </div>
+  </section>
 </main>
 
 <div class="footer" id="footer" style="display:none">
@@ -259,6 +346,13 @@ input{font-family:inherit}
   <div class="mid" id="palette"></div>
   <button class="btn ghost sm" id="nextBtn">Next</button>
   <button class="btn sm" id="submitBtn">Submit section</button>
+</div>
+
+<div class="footer" id="hwFooter" style="display:none">
+  <button class="btn ghost sm" id="hwPrevBtn">Previous</button>
+  <div class="mid" id="hwPalette"></div>
+  <button class="btn ghost sm" id="hwNextBtn">Next</button>
+  <button class="btn sm" id="hwSubmitBtn">Submit homework</button>
 </div>
 
 <script>
@@ -299,6 +393,10 @@ const S = {
      in sectionId for both systems — a second name for the same value is how a
      resume eventually lands on the wrong one. */
   source: 'platform',
+  /* Homework. Kept apart from the exam fields on purpose: hwLive is what the
+     three autosave listeners test, so a homework save can never fire during an
+     exam sitting and an exam save can never fire during a homework one. */
+  hwId: null, hwPaper: null, hwLive: false, hwSubmitting: false,
 };
 
 /* ── preview fixture ────────────────────────────────────────────────────
@@ -397,12 +495,77 @@ const api = {
     if (error) throw error;
     return data;
   },
+
+  /* ── homework ──────────────────────────────────────────────────────────
+     Six calls, all of them functions H4 and H5 already installed. Homework
+     never goes through start/save/submit above: those dispatch on S.source
+     and carry the exam's visit and time-delta arguments, which homework has
+     no column for and no business recording. */
+
+  /* Every homework this student has been attached to, whatever state it is
+     in — including one whose class they have left, so a finished piece of
+     work does not vanish from the list. A failure returns a list, so the
+     platform exams below it survive it. */
+  async myHomework() {
+    if (S.preview) return [];
+    try {
+      const { data, error } = await sb.rpc('student_my_homework');
+      if (error) return [];
+      return data || [];
+    } catch (_) { return []; }
+  },
+  /* A homework code ATTACHES, it does not request. Every refusal that is not
+     the rate limit comes back as ok:false with a reason, so this box never
+     raises for an ordinary wrong code — and 'no_match' is deliberately the
+     same answer for a wrong code, a draft, a closed paper and a real code
+     held by a class this student is not in. */
+  async attachHomework(code) {
+    if (S.preview) return { ok: false, reason: 'no_match' };
+    const { data, error } = await sb.rpc('student_attach_homework', { p_code: code });
+    if (error) throw error;
+    return data;
+  },
+  async hwStart(id) {
+    if (S.preview) throw new Error('Homework is not part of the preview.');
+    const { data, error } = await sb.rpc('student_homework_start', { p_homework: id });
+    if (error) throw error;
+    return data;
+  },
+  async hwPaper(id) {
+    if (S.preview) throw new Error('Homework is not part of the preview.');
+    const { data, error } = await sb.rpc('student_homework_paper', { p_homework: id });
+    if (error) throw error;
+    return data;
+  },
+  /* Three arguments and no more. There is no p_ms_delta and no p_visit here:
+     homework is untimed, so a per-item time would be a pacing number measured
+     on a paper nobody sat under pacing conditions. */
+  async hwSave(attemptId, questionId, answer) {
+    if (S.preview) throw new Error('Homework is not part of the preview.');
+    const { error } = await sb.rpc('student_homework_save',
+      { p_attempt: attemptId, p_question: questionId, p_answer: answer });
+    if (error) throw error;
+  },
+  async hwSubmit(attemptId) {
+    if (S.preview) throw new Error('Homework is not part of the preview.');
+    const { data, error } = await sb.rpc('student_homework_submit', { p_attempt: attemptId });
+    if (error) throw error;
+    return data;
+  },
 };
 
 function show(which) {
-  for (const id of ['loading', 'pick', 'sitting', 'done']) $(id).style.display = (id === which) ? '' : 'none';
+  for (const id of ['loading', 'pick', 'sitting', 'done', 'hwSit', 'hwRev'])
+    $(id).style.display = (id === which) ? '' : 'none';
   $('footer').style.display = (which === 'sitting') ? '' : 'none';
+  $('hwFooter').style.display = (which === 'hwSit') ? '' : 'none';
+  /* The timer belongs to the exam screen and to nothing else. Homework is
+     untimed, so there is no state of this page in which a homework sitting
+     shows a clock — that is enforced here rather than left to the caller. */
   $('timer').style.display = (which === 'sitting') ? '' : 'none';
+  /* The bar carries the paper's name while one is open; back on the picker it
+     carries the page's, so a homework title cannot outlive its screen. */
+  if (which === 'pick') { $('barTitle').textContent = 'Exams & homework'; $('barSub').textContent = ''; }
 }
 
 /* ── bootstrap ─────────────────────────────────────────────────────────── */
@@ -415,20 +578,48 @@ async function boot() {
     S.user = session.user;
   }
 
-  let rows = [], teachers = [], teacherExams = [];
+  let rows = [];
   try { rows = await api.sections(); } catch (_) { rows = []; }
-  try { teachers = await api.myTeachers(); } catch (_) { teachers = []; }
-  /* Asked for unconditionally: a student may hold a pending request for a class
-     they are not in, and that request still has to be visible to them. */
-  if (!S.preview) { try { teacherExams = await api.teacherExams(); } catch (_) { teacherExams = []; } }
 
   show('pick');
   renderPlatform(rows);
-  renderTeachers(teachers, teacherExams);
+  await reloadTeacherLists();
   document.querySelectorAll('#pick [data-sec]').forEach((b) =>
-    b.addEventListener('click', () => startSection(b.getAttribute('data-sec'))));
+    b.addEventListener('click', () => startPlatformSection(b.getAttribute('data-sec'))));
   $('codeGo').addEventListener('click', submitCode);
   $('codeIn').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') submitCode(); });
+  $('hwCodeGo').addEventListener('click', submitHwCode);
+  $('hwCodeIn').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') submitHwCode(); });
+}
+
+/* Everything under "From your teachers", refetched and repainted together.
+   One function, because the three lists decide ONE thing between them —
+   whether the block is shown at all — and a partial repaint would let the
+   block claim a state that only one of them still holds. The platform list
+   above it is deliberately not touched: it cannot change while the student
+   sits on this page, and repainting it would rebind its tiles. */
+async function reloadTeacherLists() {
+  let teachers = [], exams = [], homework = [];
+  try { teachers = await api.myTeachers(); } catch (_) { teachers = []; }
+  /* Asked for unconditionally: a student may hold a pending request for a class
+     they are not in, and that request still has to be visible to them. The same
+     is true of homework — a student removed from a class keeps the work they
+     already submitted, and it must not vanish from this list. */
+  try { exams = await api.teacherExams(); } catch (_) { exams = []; }
+  try { homework = await api.myHomework(); } catch (_) { homework = []; }
+  renderFromTeachers(teachers, exams, homework);
+}
+
+/* The block is shown when the student has ANY of the three, and hidden when
+   they have none — an empty "From your teachers" would advertise a feature
+   whose only way in is a code their teacher gives them. */
+function renderFromTeachers(teachers, exams, homework) {
+  if (!teachers.length && !exams.length && !homework.length) {
+    $('teachersBlock').style.display = 'none'; return;
+  }
+  $('teachersBlock').style.display = '';
+  renderHomework(homework, teachers);
+  renderTeachers(teachers, exams);
 }
 
 async function submitCode() {
@@ -442,8 +633,7 @@ async function submitCode() {
       ? 'Request sent to your teacher for "' + res.title + '". You can sit it once they approve.'
       : 'You have already asked for "' + res.title + '" — it is ' + res.state + '.', 'ok');
     $('codeMsg').style.display = '';
-    const teachers = await api.myTeachers();
-    renderTeachers(teachers, await api.teacherExams());
+    await reloadTeacherLists();
   } catch (e) {
     say($('codeMsg'), e.message || 'That code did not match an open exam.', 'err');
     $('codeMsg').style.display = '';
@@ -454,7 +644,7 @@ async function submitCode() {
    Teachers category renders identical rows once it has content to render. */
 function tile(r) {
   return '<button class="tile" data-sec="' + esc(r.section_id) + '">'
-    + '<span style="flex:1;min-width:0"><span class="nm">' + esc(r.form_title) + ' — ' + esc(r.section_label) + '</span>'
+    + '<span style="flex:1 1 12rem;min-width:0"><span class="nm">' + esc(r.form_title) + ' — ' + esc(r.section_label) + '</span>'
     + '<span class="mt">' + esc(r.exam_code) + ' · ' + esc(r.question_count) + ' questions · '
     + esc(r.duration_minutes) + ' minutes' + (r.calculator_allowed ? ' · calculator' : '') + '</span></span>'
     + '<span class="btn sm">Start</span></button>';
@@ -490,19 +680,14 @@ function renderPlatform(rows) {
     .join('');
 }
 
-/* Hidden outright for a student with no class: an empty Teachers section would
-   advertise a feature they have no way into, and the way in is a code their
-   teacher gives them, not anything on this page. */
+/* The EXAMS group. Whether the block around it is shown at all is
+   renderFromTeachers()'s decision now that homework can open it too, so this
+   function paints one group and decides nothing. */
 function renderTeachers(teachers, exams) {
-  /* Shown to a student with a class, and also to one who has none but has
-     already asked for an exam — otherwise a pending request would have nowhere
-     to appear. */
-  if (!teachers.length && !exams.length) { $('teachersBlock').style.display = 'none'; return; }
-  $('teachersBlock').style.display = '';
   if (!exams.length) {
     const names = teachers.map((t) => esc(t.workspace_name || 'your class')).join(', ');
     $('teacherList').innerHTML = '<div class="empty"><div class="big">No exam yet</div>'
-      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">Papers set by ' + names
+      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">Papers set by ' + (names || 'your teacher')
       + ' appear here once you enter the code your teacher gives you.</div></div>';
     return;
   }
@@ -543,7 +728,7 @@ const when = (ms) => {
 function teacherTile(e) {
   const meta = esc(e.workspace_name || 'Your class') + ' · ' + esc(e.duration_minutes)
     + ' minutes' + (e.calculator_allowed ? ' · calculator' : '');
-  const head = '<span style="flex:1;min-width:0"><span class="nm">' + esc(e.title) + '</span>'
+  const head = '<span style="flex:1 1 12rem;min-width:0"><span class="nm">' + esc(e.title) + '</span>'
     + '<span class="mt">' + meta + '</span></span>';
   if (e.can_start) {
     return '<button class="tile" data-exam="' + esc(e.exam_id) + '">' + head
@@ -557,6 +742,362 @@ function teacherTile(e) {
   return '<div class="tile flat">' + head
     + '<span class="state ' + why[1] + '">' + esc(why[0]) + '</span></div>';
 }
+
+/* ══ HOMEWORK ═════════════════════════════════════════════════════════════
+   Untimed, resumable, and outside the analyzer. Nothing below shares a code
+   path with the exam player above it: no timer, no auto-submit, no visit
+   marker, no per-item time delta, and no hand-off to ExamMistakesLogger,
+   regenerateWeaknessReports or updateStreak. A homework sitting never reaches
+   finish(), which is where all three of those live. */
+
+async function submitHwCode() {
+  const code = $('hwCodeIn').value.trim();
+  if (!code) return;
+  $('hwCodeGo').disabled = true;
+  try {
+    const res = await api.attachHomework(code);
+    if (res && res.ok) {
+      $('hwCodeIn').value = '';
+      say($('hwCodeMsg'), res.reason === 'already_attached'
+        ? '"' + res.title + '" is already on your list.'
+        : '"' + res.title + '" was added from ' + (res.workspace_name || 'your class') + '.', 'ok');
+    } else {
+      /* ONE SENTENCE FOR EVERY REFUSAL BUT ONE. The server answers a wrong
+         code, a draft's code, a closed paper's and a real code held by a class
+         this student is not in with the identical 'no_match', so that the box
+         is never an oracle for which codes are real. Splitting them apart here
+         would hand back exactly what the server withheld. 'staff' is the one
+         distinct reason, and safely: staff already read every homework in
+         their class, code included. */
+      say($('hwCodeMsg'), (res && res.reason === 'staff')
+        ? 'That is your own class\'s homework. You set it, so you cannot sit it.'
+        : 'That code did not match a homework you can open.', 'err');
+    }
+    $('hwCodeMsg').style.display = '';
+    await reloadTeacherLists();
+  } catch (e) {
+    /* The rate limit is the only refusal that raises. */
+    say($('hwCodeMsg'), e.message || 'That code did not match a homework you can open.', 'err');
+    $('hwCodeMsg').style.display = '';
+  } finally { $('hwCodeGo').disabled = false; }
+}
+
+function renderHomework(rows, teachers) {
+  if (!rows.length) {
+    const names = teachers.map((t) => esc(t.workspace_name || 'your class')).join(', ');
+    $('homeworkList').innerHTML = '<div class="empty"><div class="big">No homework yet</div>'
+      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">'
+      + (names ? 'Homework set by ' + names + ' appears here' : 'Homework appears here')
+      + ' once you enter the code your teacher gives you.</div></div>';
+    return;
+  }
+  $('homeworkList').innerHTML = rows.map(homeworkTile).join('');
+  $('homeworkList').querySelectorAll('[data-hw-open]').forEach((b) =>
+    b.addEventListener('click', () => openHomework(b.getAttribute('data-hw-open'))));
+  $('homeworkList').querySelectorAll('[data-hw-review]').forEach((b) =>
+    b.addEventListener('click', () => openHomeworkReview(b.getAttribute('data-hw-review'))));
+}
+
+/* THE ORDER OF THESE BRANCHES IS THE CONTRACT, AND IT IS NOT COSMETIC.
+   attempt_status is read BEFORE can_open because the two answer different
+   questions. can_open is the START-OR-RESUME gate: it goes false the moment
+   the paper is closed, the class is deactivated or the student's membership
+   lapses. A submitted attempt is finished work the student owns, and
+   student_homework_paper() will still serve it — its third gate arm exists
+   for exactly this. Testing can_open first would hide a student's own marked
+   homework the day their teacher closed the paper, which is every paper,
+   eventually. */
+function homeworkTile(h) {
+  const bits = [esc(h.workspace_name || 'Your class')];
+  bits.push(h.due_at ? 'Due ' + esc(when(new Date(h.due_at).getTime())) : 'No due date');
+  const head = '<span style="flex:1 1 12rem;min-width:0"><span class="nm">' + esc(h.title) + '</span>'
+    + '<span class="mt">' + bits.join(' · ') + '</span></span>';
+
+  if (h.attempt_status === 'submitted') {
+    return '<button class="tile" data-hw-review="' + esc(h.homework_id) + '">' + head
+      + (h.late ? '<span class="state st-late">Late</span>' : '')
+      + '<span class="state st-ok">Submitted</span>'
+      + '<span class="btn sm">Review</span></button>';
+  }
+  if (h.can_open) {
+    return '<button class="tile" data-hw-open="' + esc(h.homework_id) + '">' + head
+      + '<span class="btn sm">' + (h.attempt_status === 'in_progress' ? 'Continue' : 'Start')
+      + '</span></button>';
+  }
+  const why = whyNoHomework(h);
+  return '<div class="tile flat">' + head
+    + '<span class="state ' + why[1] + '">' + esc(why[0]) + '</span></div>';
+}
+
+/* WHY a homework is not open, when the page can honestly say. can_open is a
+   single boolean with no reason attached, so this may only report what it can
+   SEE — the paper's own status. A lapsed membership and a deactivated class
+   are both invisible from here, and naming either would be the page inventing
+   a cause for the student. It points at the one person who does know. */
+function whyNoHomework(h) {
+  if (h.status === 'closed') return ['Closed', 'st-no'];
+  if (h.status === 'draft') return ['Not open yet', 'st-pending'];
+  return ['Ask your teacher', 'st-pending'];
+}
+
+/* ── the sitting ───────────────────────────────────────────────────────── */
+async function openHomework(id) {
+  show('loading');
+  S.source = 'homework';
+  S.hwId = id;
+  try {
+    const st = await api.hwStart(id);
+    /* A submitted attempt is RETURNED by start, never reopened — the RPC says
+       so and the attempts guard would refuse it anyway. Land on the review
+       rather than on a sitting the student can no longer change. */
+    if (st.status === 'submitted') return openHomeworkReview(id);
+    S.attempt = st;
+    S.hwPaper = await api.hwPaper(id);
+  } catch (e) {
+    S.source = 'platform'; S.hwId = null;
+    show('pick'); alert(e.message || 'Could not open this homework.'); return;
+  }
+  /* saved carries what the server already holds for this item, so a resumed
+     sitting does not immediately write back every answer it just read. */
+  S.items = (S.hwPaper.items || []).map((i) => Object.assign({}, i, { saved: i.answer }));
+  if (!S.items.length) {
+    S.source = 'platform'; S.hwId = null;
+    show('pick'); alert('This homework has no questions yet.'); return;
+  }
+
+  $('barTitle').textContent = S.hwPaper.title || 'Homework';
+  $('barSub').textContent = (S.hwPaper.workspace_name || 'Your class')
+    + ' · ' + S.items.length + ' questions';
+  const due = S.hwPaper.due_at ? new Date(S.hwPaper.due_at).getTime() : null;
+  $('hwDue').style.display = due ? '' : 'none';
+  if (due) $('hwDue').textContent = 'Due ' + when(due);
+  $('hwMsg').className = 'msg';
+
+  S.cur = 0;
+  S.hwSubmitting = false;
+  S.hwLive = true;
+  show('hwSit');
+  hwRender();
+}
+
+function hwRender() {
+  const it = S.items[S.cur];
+  if (!it) return;
+  $('hwNum').textContent = 'Question ' + (S.cur + 1) + ' of ' + S.items.length;
+  $('hwFmt').textContent = it.format === 'grid_in' ? 'Write-in answer' : 'Multiple choice';
+
+  if (it.stimulus) {
+    $('hwStim').style.display = '';
+    $('hwStim').innerHTML = window.StimulusView
+      ? window.StimulusView.render(it.stimulus)
+      : '<div class="sv-note">This figure could not be displayed. Reload the page.</div>';
+  } else { $('hwStim').style.display = 'none'; $('hwStim').innerHTML = ''; }
+
+  $('hwPrompt').innerHTML = esc(it.prompt);
+
+  if (it.format === 'mcq') {
+    $('hwChoices').style.display = ''; $('hwGrid').style.display = 'none';
+    const list = Array.isArray(it.choices) ? it.choices : [];
+    $('hwChoices').innerHTML = list.map((c) => ''
+      + '<button class="choice' + (it.answer === c.id ? ' on' : '') + '" data-choice="' + esc(c.id) + '">'
+      + '<span class="k">' + esc(c.id) + '</span><span>' + esc(c.text) + '</span></button>').join('');
+    $('hwChoices').querySelectorAll('[data-choice]').forEach((b) =>
+      b.addEventListener('click', () => hwChoose(b.getAttribute('data-choice'))));
+  } else {
+    $('hwChoices').style.display = 'none'; $('hwGrid').style.display = '';
+    $('hwGridInput').value = it.answer == null ? '' : it.answer;
+  }
+
+  math($('hwPrompt')); math($('hwChoices')); math($('hwStim'));
+  hwPalette();
+}
+
+function hwPalette() {
+  $('hwPalette').innerHTML = S.items.map((it, i) => ''
+    + '<button class="dot' + (it.answer != null ? ' answered' : '') + (i === S.cur ? ' now' : '') + '" '
+    + 'data-hwgo="' + i + '" aria-label="Question ' + (i + 1) + '">' + (i + 1) + '</button>').join('');
+  $('hwPalette').querySelectorAll('[data-hwgo]').forEach((b) =>
+    b.addEventListener('click', () => hwGo(parseInt(b.getAttribute('data-hwgo'), 10))));
+  $('hwPrevBtn').disabled = S.cur === 0;
+  $('hwNextBtn').disabled = S.cur === S.items.length - 1;
+}
+
+function hwCurrentTyped() {
+  const it = S.items[S.cur];
+  if (!it) return null;
+  if (it.format !== 'grid_in') return it.answer;
+  const v = $('hwGridInput').value.trim();
+  return v === '' ? null : v;
+}
+
+/* The autosave. Three arguments and no time: student_homework_save() takes an
+   attempt, a question and an answer, and there is nothing else to send. It
+   writes only when the answer has actually MOVED, so the twenty-second tick
+   costs nothing on a page nobody is typing into, and a failed save leaves
+   `saved` behind so the next trigger retries it. */
+function hwFlush() {
+  const it = S.items[S.cur];
+  if (!it || !S.hwLive || !S.attempt) return Promise.resolve();
+  it.answer = hwCurrentTyped();
+  const value = it.answer;
+  if (value === it.saved) return Promise.resolve();
+  return api.hwSave(S.attempt.attempt_id, it.question_id, value)
+    .then(() => { it.saved = value; })
+    .catch(() => {});
+}
+
+function hwChoose(id) {
+  const it = S.items[S.cur];
+  it.answer = (it.answer === id) ? null : id;   // tapping the same choice clears it
+  hwRender();
+  hwFlush();
+}
+
+function hwGo(i) {
+  if (i < 0 || i >= S.items.length || i === S.cur) return;
+  hwFlush();
+  S.cur = i;
+  hwRender();
+}
+
+async function hwDoSubmit() {
+  if (S.hwSubmitting) return;
+  const blank = S.items.filter((i) => i.answer == null).length;
+  /* Never automatic. A homework has no clock, so nothing but the student
+     decides that it is finished. */
+  if (blank > 0 && !confirm(blank + (blank === 1 ? ' question is' : ' questions are')
+      + ' still blank. Submit anyway?')) return;
+  if (blank === 0 && !confirm('Submit this homework?')) return;
+
+  S.hwSubmitting = true;
+  show('loading');
+  try {
+    await hwFlush();
+    await api.hwSubmit(S.attempt.attempt_id);
+    /* The result is READ BACK rather than taken from the submit payload: where
+       the teacher has released the answers, the key only becomes selectable
+       once this attempt is submitted, so a fresh read of the paper is the only
+       thing that carries it. */
+    S.hwLive = false;
+    await openHomeworkReview(S.hwId);
+  } catch (e) {
+    S.hwSubmitting = false;
+    show('hwSit');
+    say($('hwMsg'), e.message || 'Could not submit. Your answers are saved — try again.', 'err');
+  }
+}
+
+/* ── the review ────────────────────────────────────────────────────────────
+   Reached BOTH by submitting and by opening a homework that was submitted on
+   another day. It reads the paper DIRECTLY and never calls
+   student_homework_start(): a submitted attempt is not startable, and a
+   student whose class link has since lapsed can still read their own finished
+   work — which is precisely the state in which can_open is false. */
+async function openHomeworkReview(id) {
+  show('loading');
+  S.source = 'homework';
+  S.hwId = id;
+  S.hwLive = false;
+  let paper;
+  try { paper = await api.hwPaper(id); }
+  catch (e) { show('pick'); alert(e.message || 'Could not open this homework.'); return; }
+  S.hwPaper = paper;
+  const items = paper.items || [];
+
+  $('barTitle').textContent = paper.title || 'Homework';
+  $('barSub').textContent = paper.workspace_name || '';
+  $('hwRevTitle').textContent = paper.title || 'Homework';
+  const sub = [paper.workspace_name || 'Your class'];
+  if (paper.submitted_at) sub.push('Submitted ' + when(new Date(paper.submitted_at).getTime()));
+  if (paper.late) sub.push('Late');
+  $('hwRevSub').textContent = sub.join(' · ');
+
+  /* Counted from the marked items themselves, by the same rule the server
+     uses: an unanswered question is NEVER a wrong one. is_correct is
+     three-valued and stays NULL where nothing was answered. */
+  const stats = [
+    { n: items.filter((i) => i.is_correct === true).length, l: 'Correct' },
+    { n: items.filter((i) => i.is_correct === false).length, l: 'Wrong' },
+    { n: items.filter((i) => i.answer == null).length, l: 'Left blank' },
+    { n: items.length, l: 'Questions' },
+  ];
+  $('hwRevStats').innerHTML = stats.map((s) =>
+    '<div class="stat"><div class="n">' + esc(s.n) + '</div><div class="l">' + esc(s.l) + '</div></div>').join('');
+
+  /* answers_visible is the SERVER's answer to "may this student see the key",
+     and it is not reveal_answers: the flag alone is not enough, the caller
+     must also own this submitted attempt. Where it is false the key was never
+     selected, so there is nothing here to hide. */
+  const keyVisible = !!paper.answers_visible;
+  $('hwRevNote').textContent = (keyVisible
+    ? 'Your teacher has released the answers, so the correct answer and any explanation are shown below. '
+    : 'Your teacher has not released the answers for this homework, so you can see what you answered and how it was marked, but not the answer key. ')
+    + 'This is a class result: it does not change your weakness analysis, which comes from the platform\'s own papers.';
+
+  $('hwRevList').innerHTML = items.map((it) => hwReviewItem(it, keyVisible)).join('');
+  math($('hwRevList'));
+  show('hwRev');
+}
+
+function hwReviewItem(it, keyVisible) {
+  const v = it.is_correct === true ? ['Correct', 'st-ok']
+          : it.is_correct === false ? ['Wrong', 'st-no']
+          : it.answer == null ? ['Left blank', 'st-pending']
+          : ['Not marked', 'st-pending'];
+  let h = '<div class="rv"><div class="rv-hd">'
+    + '<span class="qnum">Question ' + esc(it.ordinal) + '</span>'
+    + '<span class="state ' + v[1] + '">' + esc(v[0]) + '</span></div>';
+  if (it.stimulus) {
+    h += '<div class="stim">' + (window.StimulusView ? window.StimulusView.render(it.stimulus)
+      : '<div class="sv-note">This figure could not be displayed. Reload the page.</div>') + '</div>';
+  }
+  h += '<div class="rv-p">' + esc(it.prompt) + '</div>';
+  h += '<div class="rv-row"><div class="rv-box"><div class="lb">Your answer</div><div class="vl">'
+    + (it.answer == null ? '<span style="color:var(--text-500)">Left blank</span>'
+                         : esc(hwAnswerText(it, it.answer)))
+    + '</div></div>';
+  if (keyVisible && it.correct_answer != null) {
+    h += '<div class="rv-box"><div class="lb">Correct answer</div><div class="vl">'
+      + esc(hwAnswerText(it, it.correct_answer)) + '</div></div>';
+  }
+  h += '</div>';
+  if (keyVisible && it.explanation) h += '<div class="rv-exp">' + esc(it.explanation) + '</div>';
+  return h + '</div>';
+}
+
+/* A choice id on its own tells a student nothing a week later, so an mcq
+   answer is shown with the option's text beside it. A write-in answer has no
+   list to look up and is shown as typed. */
+function hwAnswerText(it, id) {
+  const list = Array.isArray(it.choices) ? it.choices : [];
+  const c = list.find((x) => x && x.id === id);
+  return c ? (c.id + ' — ' + c.text) : String(id);
+}
+
+$('hwPrevBtn').addEventListener('click', () => hwGo(S.cur - 1));
+$('hwNextBtn').addEventListener('click', () => hwGo(S.cur + 1));
+$('hwSubmitBtn').addEventListener('click', () => hwDoSubmit());
+$('hwGridInput').addEventListener('input', () => {
+  const it = S.items[S.cur];
+  if (it) { it.answer = hwCurrentTyped(); hwPalette(); }
+});
+$('hwGridInput').addEventListener('blur', () => { hwFlush(); });
+$('hwBackBtn').addEventListener('click', async () => {
+  S.source = 'platform'; S.hwId = null; S.hwLive = false;
+  show('loading');
+  await reloadTeacherLists();
+  show('pick');
+});
+
+/* The three background saves, registered ONCE for the life of the page and
+   guarded by S.hwLive rather than re-registered per sitting. Registering them
+   inside the start path is how the exam player ends up with one more listener
+   and one more interval on every sitting; here a second sitting reuses these. */
+window.addEventListener('beforeunload', () => { if (S.hwLive) hwFlush(); });
+document.addEventListener('visibilitychange', () => {
+  if (S.hwLive && document.hidden) hwFlush();
+});
+setInterval(() => { if (S.hwLive && !S.hwSubmitting) hwFlush(); }, 20000);
 
 /* A stable request id per section, kept in localStorage, is what makes a
    refresh resume the same sitting instead of starting a second one. */
@@ -576,6 +1117,19 @@ function requestIdFor(sectionId) {
 async function startTeacherExam(examId) {
   S.source = 'teacher';
   return startSection(examId);
+}
+
+/* The mirror of startTeacherExam(), and it exists because of H8. Before
+   homework there was no screen a student could come BACK to the picker from —
+   every exit off a sitting was a full navigation — so S.source could not be
+   stale when a platform tile was clicked. The homework review has a "Back to
+   homework" button, so now it can be. Every dispatch in api.* and in finish()
+   tests for ONE value, which means a stale source is harmless today and one
+   added branch away from starting a platform paper in another system's mode.
+   Saying it outright is cheaper than relying on that. */
+async function startPlatformSection(sectionId) {
+  S.source = 'platform';
+  return startSection(sectionId);
 }
 
 async function startSection(sectionId) {
