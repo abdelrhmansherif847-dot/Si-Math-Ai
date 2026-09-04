@@ -67,7 +67,22 @@ t.is('every RPC it calls is one of the approved ones',
                      // others: nothing here may reach an authoring or staff RPC.
                      'student_my_teacher_exams', 'student_request_exam_access',
                      'teacher_exam_start', 'teacher_exam_save_response',
-                     'teacher_exam_submit'].includes(f)), []);
+                     'teacher_exam_submit',
+                     // H8. The six STUDENT-side homework contracts and no
+                     // others. Every one of them is a function H4 or H5
+                     // installed; nothing here may reach a staff RPC either.
+                     'student_my_homework', 'student_attach_homework',
+                     'student_homework_start', 'student_homework_paper',
+                     'student_homework_save', 'student_homework_submit'].includes(f)), []);
+/* The same rule for homework: the student page must never reach the surface
+   teacher-homework.html uses. Named individually so wiring one in fails. */
+t.is('no staff-only homework RPC is reachable from the student page',
+  ['teacher_homework_create', 'teacher_homework_publish', 'teacher_homework_close',
+   'teacher_homework_list', 'teacher_homework_paper', 'teacher_homework_students',
+   'teacher_homework_review', 'teacher_homework_reveal_answers',
+   'teacher_homework_rotate_code', 'teacher_homework_save_question',
+   'teacher_homework_delete']
+    .filter((fn) => new RegExp(`rpc\\('${fn}'`).test(PAGE)), []);
 /* The student player must never call a STAFF surface. Naming them individually
    is what makes this fail if one is ever wired in by mistake. */
 t.is('no staff-only teacher-exam RPC is reachable from the student page',
@@ -133,8 +148,15 @@ t.ok('an empty catalogue explains itself rather than looking broken',
 // catalogue cannot quietly acquire a class.
 t.section('Platform exams and Teachers are separate categories');
 
+/* H8 renamed the second category and split it in two. The platform catalogue
+   and the teacher-set work are still separate headings, and homework and exams
+   are separate GROUPS under the second — because their two code boxes do
+   different things and a student must be able to tell them apart. */
 t.ok('both categories exist in the markup',
-  /class="sec-label"[^>]*>Platform exams</.test(PAGE) && /class="sec-label"[^>]*>Teachers</.test(PAGE));
+  /class="sec-label"[^>]*>Platform exams</.test(PAGE)
+  && /class="sec-label"[^>]*>From your teachers</.test(PAGE));
+t.ok('and the teacher category is split into homework and exams',
+  /class="grp">Homework /.test(PAGE) && /class="grp">Exams /.test(PAGE));
 t.ok('they render into separate containers',
   /id="pickList"/.test(PAGE) && /id="teacherList"/.test(PAGE));
 
@@ -144,8 +166,11 @@ t.ok('the Teachers block ships hidden', /id="teachersBlock" style="display:none"
 /* 3g widened this by exactly one case: a student with no class but a pending
    request must still see it, or the request they raised has nowhere to appear.
    Anyone with neither still gets nothing. */
+/* H8 widened it by one more case, for the same reason: a student removed from
+   a class keeps the homework they already submitted, so homework alone opens
+   the block too. Anyone with none of the three still gets nothing. */
 t.ok('and is hidden for a student with neither a class nor a request',
-  /if \(!teachers\.length && !exams\.length\) \{ \$\('teachersBlock'\)\.style\.display = 'none'; return; \}/.test(PAGE));
+  /if \(!teachers\.length && !exams\.length && !homework\.length\) \{\n\s*\$\('teachersBlock'\)\.style\.display = 'none'; return;\n\s*\}/.test(PAGE));
 
 /* A student who LEFT a class must not keep the category: student_my_teachers()
    returns revoked and removed links too, ordered active-first but unfiltered. */

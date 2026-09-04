@@ -5100,6 +5100,168 @@ Teacher Exams `select('*')` hardening, stays outside both.
 
 ---
 
+### 15.31 · Teacher Homework H8 — the student surface · BUILT, NOT DEPLOYED (2026-09-04)
+
+H8 is the half of the homework vertical the student can see. Until it, a teacher
+could author, publish and rotate a code, a student could be attached, and the
+database would open, save, grade and read back a sitting — with **no client
+anywhere in the repository** able to reach any of it.
+
+**It added no schema, no RPC, no policy, no grant and no migration.** Every call
+it makes is a function H4 and H5 installed and verified. The Phase 1 audit's
+verdict was that no backend increment was required, and the build did not find
+one: the six student contracts were sufficient exactly as written.
+
+#### What shipped
+
+| | |
+|---|---|
+| `exam.html` | the student player, extended with a third source |
+| `dashboard.html` | one summary card, *From your teachers* |
+| `tests/student-homework-ui.test.mjs` | **102 checks**, new |
+| `tests/exam-page.test.mjs` | 4 assertions updated, 2 added |
+| `tests/teacher-exam-student.test.mjs` | 1 assertion narrowed, 3 added |
+
+The six RPCs, and nothing else: `student_my_homework`, `student_attach_homework`,
+`student_homework_start`, `student_homework_paper`, `student_homework_save`,
+`student_homework_submit`.
+
+#### The decisions, as built
+
+1. **`exam.html`, not a new page.** One player, three sources. The page's
+   `<title>` and heading became *Exams & homework*, because a page that carries
+   homework and calls itself Exams is telling the student something untrue.
+2. **A separate homework player, not a mode inside the exam one.** `api.start`,
+   `api.save` and `api.submit` already dispatch on `S.source`, and the temptation
+   was to add a third branch. It was refused: the exam path is timed, records a
+   visit and a per-item time delta, auto-submits on a clock and hands its result
+   to the analyzer, and **none of those is true of homework**. Branching inside
+   those functions would have left every one of those behaviours one condition
+   away from a homework sitting. `hwRender`, `hwFlush`, `hwGo`, `hwChoose`,
+   `hwDoSubmit`, `openHomework`, `openHomeworkReview` share no code path with
+   the exam player — only `esc`, `math`, `say`, `show` and the renderer.
+3. **Two groups under one heading**, *Homework* and *Exams*, with their own code
+   boxes. They are kept apart because the boxes do different things: a homework
+   code **attaches** the paper outright, an exam code only **raises a request**.
+   A student who confused them would wait for an approval that never comes.
+4. **The dashboard card is a summary and one door.** Counts of states only — no
+   score, no mark, no question count, no paper title — and a single destination.
+   It is loaded by its own function rather than inside `loadDashboard()`, so a
+   failure leaves the dashboard exactly as it was instead of raising the page's
+   error banner.
+
+#### The invariant this increment exists to get right
+
+**`attempt_status` is read before `can_open`, in both places that read them.**
+
+`can_open` is the start-or-resume gate: `teacher_homework_can_open()` requires
+`status = 'published'` and live membership in an active workspace, so it goes
+false the moment a teacher closes the paper — which happens to **every** paper,
+eventually — and the moment a student leaves the class. A submitted attempt is
+finished work the student owns, and `student_homework_paper()`'s third gate arm
+(F-1) serves it regardless. Reading `can_open` first would have hidden a
+student's own marked homework the day their teacher closed it.
+
+Both readers are ordered and asserted: `homeworkTile()` in `exam.html` and the
+counting loop in `loadTeacherSummary()`. Both orders have a mutant.
+
+The other half of the same rule: **the review calls `student_homework_paper()`
+directly and never `student_homework_start()`.** A submitted attempt is not
+startable, and the state in which the review matters most — a student removed
+from the class after submitting — is exactly the state in which start refuses.
+
+#### The analyzer boundary, drawn where it can be drawn
+
+`exam.html` is the one page that loads `ExamMistakesLogger`,
+`regenerateWeaknessReports` and `updateStreak`. The boundary is therefore inside
+this file or nowhere. It is drawn as **unreachability, not a guard**: no
+homework function names any of the three, none calls `finish()`, and `finish()`
+is called from exactly two places, both of them exam paths. A mutant that adds
+`if (S.source === 'homework') return;` **inside** `finish()` is killed on
+purpose — a guard there would turn a claim that can be proved into one that
+cannot.
+
+Measured in a browser: a full homework sitting — start, answer, navigate, type,
+submit — called all three **zero** times, with the three instrumented.
+
+#### The answer key
+
+The page gates the key on `answers_visible`, the flag the **server** computes,
+and never on `reveal_answers`. The two are not the same: S-1 makes the flag
+necessary but not sufficient, so a teacher who reveals mid-sitting hands nothing
+to a student who can still change their answers. Where the caller is not
+entitled, `correct_answer` is not selected at all, so there is nothing on the
+page to hide. `reveal_answers` appears in `exam.html` **zero** times.
+
+The verdict is three-valued and stays that way: `is_correct === true → Correct`,
+`false → Wrong`, `answer == null → Left blank`. An unanswered question is never
+a wrong one, on the page as in the database.
+
+#### One defect found and fixed on the way past
+
+**`S.source` could go stale.** Before H8 there was no screen a student could
+return to the picker *from* — every exit off a sitting was a full navigation —
+so a platform tile could rely on `S.source` still being `'platform'`. The
+homework review has a *Back to homework* button, so it no longer can. Every
+dispatch in `api.*` and in `finish()` tests for one value, which makes a stale
+source harmless **today** and one added branch away from starting a platform
+paper in another system's mode. `startPlatformSection()` now says it outright,
+mirroring `startTeacherExam()`.
+
+**A narrow-screen layout defect, measured not eyeballed.** At 390px the trailing
+pills on a submitted row — LATE, SUBMITTED, Review — refused to shrink and drove
+the title column to about 60px, one word per line, with the meta text running
+under them. It affected the existing teacher-exam rows too. `.tile` now wraps and
+the title column has a 12rem basis; above 640px nothing moves. Pinned by
+measuring the rendered title width at three viewports, not by a screenshot.
+
+#### Evidence
+
+- **CI 69/69 green**, including the new suite.
+- **`tests/student-homework-ui.test.mjs` — 102 checks**: the read boundary
+  (`exam.html` reaches the database through `sb.rpc()` and **zero** `.from(`
+  calls, and names no homework table at all), the analyzer boundary, both
+  branch orders, the untimed guarantees, the six autosave triggers, the key,
+  the two code boxes, the preview guards, and that the platform and
+  teacher-exam functions know nothing about homework.
+- **38 mutants, 35 killed and 3 equivalent mutants survived.** One equivalent
+  mutant was replaced during the run: renaming a function *parameter* is killed,
+  because the suite anchors on function headers — the pattern every page suite
+  in this repo uses. Renaming a local inside a body survives, as it should.
+- **71 browser checks in headless Chromium, 0 failures**, against a stubbed
+  client whose `.from()` throws. Covered: the three tile states with a
+  **closed** paper still offering Review; the sitting with **no clock**; a save
+  carrying exactly `p_attempt`/`p_question`/`p_answer`; resume restoring the
+  saved answers and **writing nothing back**; navigation with no change writing
+  nothing; the confirm dismissed submitting nothing; a refused submit surfacing
+  and leaving the answers intact; the review reached **without** a start call;
+  the key shown and withheld; and the dashboard card's counts, its single
+  destination and its absence for a student with nothing.
+- Screenshots at 390 / 820 / 1280px for the picker, the review and the card.
+
+**The smoke's first run found a defect in its own fixture, not in the page**: the
+stub returned `is_correct: false` for an unanswered question, which the omission
+CHECK on `teacher_homework_responses` makes impossible, and the page faithfully
+rendered the impossible state as *Wrong*. The fixture now mirrors the server's
+three-valued rule. This is the third time in this programme that a test, not the
+code under test, was the thing that was wrong.
+
+#### What H8 did not do
+
+No schema, no RPC, no migration, no policy, no grant. No change to
+`stimulus-view.js`, `teacher-exams.html`, `teacher-homework.html` or `nav.js`.
+No teacher-facing change. No analyzer change. The two real production homework
+drafts were not read, modified or attached, and neither rollback window was
+consumed.
+
+**Known and deliberately not fixed:** the code-box placeholders clip on a narrow
+screen (`.codebox input` is uppercase with `.12em` letter-spacing), which the
+exam box has always done and H8's box does identically. I-6 —
+`teacher-exams.html` carrying 5 of the renderer's 33 `.sv-*` rules — is
+untouched and stays a separate item; `exam.html` has all 33.
+
+---
+
 ## 16 · Figures & Data — the authoring problem, and the architecture that already exists
 
 Audited 2026-09-04, read-only. Seven decisions locked the same day. **No file,

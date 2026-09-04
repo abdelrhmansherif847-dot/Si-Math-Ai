@@ -499,6 +499,23 @@ body::before{
 .card-link:hover{background:var(--cyan-bg-med);border-color:var(--cyan-border);color:#fff}
 .card-link svg{width:12px;height:12px}
 
+/* ═══ FROM YOUR TEACHERS ═══
+   A SUMMARY and nothing more. It carries counts of states and no score, no
+   mark, no question count and no paper title: the dashboard is the student's
+   own picture of their progress, and a teacher's mark is a different kind of
+   fact that belongs on the page that can show it in context. One destination,
+   exam.html, for the same reason — two doors into the same list is how a
+   student ends up believing there are two lists. */
+.ts-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:18px}
+@media(min-width:640px){.ts-grid{grid-template-columns:1fr 1fr}}
+.ts-grp{border:1px solid var(--border-soft);border-radius:14px;background:rgba(255,255,255,.02);padding:14px 16px}
+.ts-name{font-family:var(--font-display);font-weight:700;font-size:13.5px;color:var(--text-200);margin-bottom:10px}
+.ts-counts{display:flex;flex-wrap:wrap;gap:8px}
+.ts-n{display:inline-flex;align-items:baseline;gap:6px;font-size:12.5px;color:var(--text-400);
+  background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:100px;padding:5px 12px}
+.ts-n b{font-family:var(--font-display);font-weight:800;font-size:15px;color:#fff}
+.ts-none{font-size:12.5px;color:var(--text-500)}
+
 /* ═══ STREAK ═══ */
 .streak-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 .streak-stat{
@@ -1298,6 +1315,43 @@ body::before{
 
       <button onclick="location.href='focus.html'" class="full-btn">
         Open Study Plan
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </section>
+
+    <!-- FROM YOUR TEACHERS
+         Hidden unless this student actually has something from a teacher, and
+         it stays hidden by default so a failed read leaves the dashboard
+         exactly as it was rather than showing an empty promise. It deliberately
+         does NOT carry the .reveal class the cards around it use: those fade in
+         on an IntersectionObserver bound at load, and a card that only appears
+         after a round trip must not depend on one having fired. -->
+    <section class="card span2" id="teachSumCard" style="display:none">
+      <div class="card-head">
+        <div class="card-ico">🎓</div>
+        <div>
+          <div class="card-title">From your teachers</div>
+          <div class="card-sub">Homework and exams set by your class</div>
+        </div>
+        <a href="exam.html" class="card-link">
+          Open
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <div class="ts-grid">
+        <div class="ts-grp">
+          <div class="ts-name">Homework</div>
+          <div class="ts-counts" id="tsHwCounts"></div>
+        </div>
+        <div class="ts-grp">
+          <div class="ts-name">Exams</div>
+          <div class="ts-counts" id="tsExCounts"></div>
+        </div>
+      </div>
+
+      <button onclick="location.href='exam.html'" class="full-btn">
+        Open homework and exams
         <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </section>
@@ -2191,6 +2245,70 @@ async function loadDashboard() {
     initOvFills();
   }, 450);
 }
+
+/* ── FROM YOUR TEACHERS ─────────────────────────────────────────────────────
+   A read-only summary, loaded on its own rather than inside loadDashboard():
+   a failure here must not raise the dashboard's error banner, and must not
+   hold up anything above it.
+
+   Two RPCs the exam page already calls and NO new one — every count below is
+   computed here, from rows the server was going to send anyway. It reaches
+   nothing else: no table, no write, and none of the analyzer. A teacher's
+   homework is not learning evidence, and the way that boundary holds is that
+   nothing on this path goes anywhere near it. */
+async function loadTeacherSummary() {
+  try {
+    var ses = await sb.auth.getSession();
+    if (!(ses && ses.data && ses.data.session)) return;
+
+    var hw = [], ex = [];
+    try { var r1 = await sb.rpc('student_my_homework');      if (!r1.error) hw = r1.data || []; } catch(_) {}
+    try { var r2 = await sb.rpc('student_my_teacher_exams'); if (!r2.error) ex = r2.data || []; } catch(_) {}
+
+    /* Hidden when both lists are empty. The card would otherwise advertise a
+       feature whose only way in is a code a teacher hands out in person. */
+    if (!hw.length && !ex.length) return;
+
+    /* THE SAME BRANCH ORDER THE EXAM PAGE USES, for the same reason: a
+       submitted attempt is counted as done whatever can_open says, because
+       can_open is the start-or-resume gate and goes false the day the paper
+       closes or the student leaves the class. Reading it first would quietly
+       stop counting work the student really did finish. */
+    var hwDone = 0, hwDoing = 0, hwTodo = 0;
+    for (var i = 0; i < hw.length; i++) {
+      if (hw[i].attempt_status === 'submitted') hwDone++;
+      else if (hw[i].attempt_status === 'in_progress') hwDoing++;
+      else if (hw[i].can_open) hwTodo++;
+    }
+    var exReady = 0, exWait = 0;
+    for (var j = 0; j < ex.length; j++) {
+      if (ex[j].can_start) exReady++;
+      else if (ex[j].access_state === 'pending') exWait++;
+    }
+
+    tsCounts('tsHwCounts', [[hwTodo, 'to do'], [hwDoing, 'in progress'], [hwDone, 'done']],
+             hw.length ? 'Nothing to do right now' : 'No homework yet');
+    tsCounts('tsExCounts', [[exReady, 'ready'], [exWait, 'waiting for approval']],
+             ex.length ? 'Nothing open right now' : 'No exams yet');
+
+    document.getElementById('teachSumCard').style.display = '';
+  } catch(_) { /* the card simply stays hidden */ }
+}
+
+/* Chips for the non-zero states only — "0 in progress" is noise — and a group
+   with nothing in any state says so in words rather than showing three zeroes. */
+function tsCounts(id, pairs, emptyText) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var shown = pairs.filter(function(p) { return p[0] > 0; });
+  el.innerHTML = shown.length
+    ? shown.map(function(p) {
+        return '<span class="ts-n"><b>' + esc(p[0]) + '</b>' + esc(p[1]) + '</span>';
+      }).join('')
+    : '<span class="ts-none">' + esc(emptyText) + '</span>';
+}
+
+loadTeacherSummary();
 
 loadDashboard().catch(function(err) {
   console.error('Dashboard load error:', err);

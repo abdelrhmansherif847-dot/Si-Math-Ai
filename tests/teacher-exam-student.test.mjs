@@ -27,8 +27,24 @@ t.is('the page reads no teacher-exam table directly',
   ['teacher_exams', 'teacher_exam_questions', 'teacher_exam_stimuli',
    'teacher_exam_access', 'teacher_exam_attempts', 'teacher_exam_responses']
     .filter((n) => new RegExp(`from\\('${n}'`).test(PAGE)), []);
-t.is('the page never names the answer key or an explanation',
-  [...PAGE.matchAll(/correct_answer|\.explanation\b/g)].map((m) => m[0]), []);
+/* H8 gave the page one place that MAY name the key: the homework review, where
+   student_homework_paper() sends correct_answer and explanation only to a
+   caller who owns a submitted attempt on a paper whose teacher has released
+   them. That is a different contract from a teacher EXAM, which never releases
+   its key at all — so rather than dropping this check, it is narrowed to
+   everywhere else, and pinned so the exemption cannot go vacuous. */
+const HWREVIEW = (() => {
+  const a = PAGE.indexOf('function hwReviewItem(it, keyVisible) {');
+  if (a < 0) throw new Error('exam.html: hwReviewItem() could not be located');
+  return PAGE.slice(a, PAGE.indexOf('\n}\n', a));
+})();
+t.ok('hwReviewItem() was located (not a vacuous slice)', HWREVIEW.length > 400);
+t.ok('the homework review is the exemption, and really does name the key',
+  /it\.correct_answer/.test(HWREVIEW) && /it\.explanation/.test(HWREVIEW));
+t.ok('and draws it only where the SERVER said this caller may see it',
+  /keyVisible && it\.correct_answer != null/.test(HWREVIEW));
+t.is('the page names the answer key nowhere else',
+  [...PAGE.replace(HWREVIEW, '').matchAll(/correct_answer|\.explanation\b/g)].map((m) => m[0]), []);
 
 // ══ 2 · THE ANALYZER BOUNDARY ═════════════════════════════════════════════
 t.section('A teacher-authored result is not learning evidence');
