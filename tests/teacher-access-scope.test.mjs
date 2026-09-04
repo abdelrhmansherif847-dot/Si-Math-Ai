@@ -104,6 +104,15 @@ const MIG = {
   th_h4_rb: read('supabase/migrations/20260904z_teacher_homework_h4_rollback.sql'),
   th_h5:    read('supabase/migrations/20260905a_teacher_homework_h5.sql'),
   th_h5_rb: read('supabase/migrations/20260905z_teacher_homework_h5_rollback.sql'),
+  /* Teacher Homework H6, PREPARED and not applied: two STAFF read RPCs, added
+     because F-5 revoked the direct SELECT on both content tables and left
+     authoring blind. It belongs in FORWARD so the foundation's blanket academic
+     ban covers the staff read surface too — a read is exactly where an academic
+     table would be tempting to join — and in ALL_ROLLBACK so a new RPC cannot
+     ship without an undo. It creates no table, so it is outside the
+     create/drop pairing check. */
+  th_h6:    read('supabase/migrations/20260906a_teacher_homework_h6.sql'),
+  th_h6_rb: read('supabase/migrations/20260906z_teacher_homework_h6_rollback.sql'),
 };
 const PAGE = read('teacher.html');
 const SETTINGS = read('settings.html');
@@ -118,7 +127,7 @@ const exec = (sql) => sql
   .join('\n');
 
 const EXEC = Object.fromEntries(Object.entries(MIG).map(([k, v]) => [k, exec(v)]));
-const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d, EXEC.th_a, EXEC.th_h4, EXEC.th_h5].join('\n');
+const FORWARD = [EXEC.a, EXEC.b, EXEC.c, EXEC.te_c, EXEC.te_d, EXEC.th_b, EXEC.th_c, EXEC.th_d, EXEC.th_a, EXEC.th_h4, EXEC.th_h5, EXEC.th_h6].join('\n');
 /* Migration d is the FIRST deliberate academic read, so it is held to a
    different, narrower contract than the foundation — see section 9. Keeping it
    out of FORWARD is what lets the foundation's blanket ban stay a blanket ban. */
@@ -144,7 +153,8 @@ const ALL_FORWARD = FORWARD + '\n' + WEAKNESS + '\n' + INTERVENTION + '\n' + ATT
    drops the foundation it hung from. Completeness has to be checked against
    both, or adding a second rollback file would silently weaken the check. */
 const ALL_ROLLBACK = EXEC.x + '\n' + EXEC.z + '\n' + EXEC.attn_rb + '\n' + EXEC.ref_rb
-                   + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb + '\n' + EXEC.th_a_rb + '\n' + EXEC.th_h4_rb + '\n' + EXEC.th_h5_rb;
+                   + '\n' + EXEC.te_rb + '\n' + EXEC.th_rb + '\n' + EXEC.th_a_rb + '\n' + EXEC.th_h4_rb + '\n' + EXEC.th_h5_rb
+                   + '\n' + EXEC.th_h6_rb;
 
 // The four tables this system is allowed to create and touch.
 const FOUNDATION_TABLES = ['teacher_workspaces', 'workspace_staff', 'workspace_students', 'workspace_audit_log'];

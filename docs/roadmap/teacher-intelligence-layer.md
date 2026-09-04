@@ -4148,3 +4148,200 @@ ready and awaits approval** — it is bookkeeping, not a change to any applied S
 **H6 has not started, and no UI was touched.** `20260905z` remains the active
 rollback artifact, unapplied, and its window closes at the first real sitting.
 H6 still owes a **staff authoring-read RPC** for questions and figures.
+
+---
+
+### 15.26 · Teacher Homework H6 — the staff read · AUDIT + PREPARED (2026-09-04)
+
+**Status: 🟡 PREPARED, not applied.** Two files, `20260906a` and `20260906z`.
+Production is untouched: **191** migrations, newest still `20260904003547` (H5).
+
+#### Why H6 exists — the measured gap
+
+F-5 revoked `authenticated`'s `SELECT` on **both** homework content tables. The
+audit measured the consequence rather than inferring it, driving five ordinary
+`user` profiles as the real `authenticated` role:
+
+| role | `teacher_homework` | questions | stimuli | access | attempts | responses |
+|---|---|---|---|---|---|---|
+| teacher | 2 | **`42501`** | **`42501`** | 1 | 1 | 1 |
+| ACTIVE assistant | 2 | **`42501`** | **`42501`** | 1 | 1 | 1 |
+| pending assistant | 0 | `42501` | `42501` | 0 | 0 | 0 |
+| student | **0** | `42501` | `42501` | 1 | 1 | 1 |
+| outsider | 0 | `42501` | `42501` | 0 | 0 | 0 |
+
+So **staff cannot read the paper they authored**, and the 13 H3 write RPCs
+return only `uuid` / `void` / a two-key `jsonb` — no reshaping could serve a
+read. Authoring is write-only and blind, and there is no path to edit an
+existing question. That is the whole reason for this increment.
+
+> **The first run of that matrix was wrong, and the correction matters.** It
+> used the oldest profiles; profile #1 is a platform `owner` and #3 a
+> `super_admin`, and both matched the staff-read policies' `has_role_at_least('admin')`
+> arm — making a *pending assistant* appear to read three homework rows. That
+> was the fixture, not the policy. It is also why H6's gates deliberately do
+> **not** carry the admin arm: the RPC surface must not inherit that surprise.
+
+Also measured: **the repository contains zero homework client code** — not one
+reference to any homework table or RPC in any `.html` or `.js`. H1–H5 are live
+with no UI at all. Nothing can break.
+
+The contrast that shaped D6-3/D6-4: `teacher-exams.html` reads
+`teacher_exams`, `teacher_exam_questions` and `teacher_exam_stimuli` with
+**`select('*')`**, shipping `correct_answer`, `explanation` *and* `media_sha256`
+to every staff browser. Recorded as an observation; D6-6 keeps it out of scope.
+
+#### The seven decisions, as locked
+
+| | |
+|---|---|
+| **D6-1** | dedicated read RPCs — the H3 write RPCs cannot serve reads |
+| **D6-2** | exactly two: `teacher_homework_list` and `teacher_homework_paper` |
+| **D6-3** | the list is RPC-only and gates on `workspace_is_active_staff` **before** it selects, so an unauthorized workspace id raises `42501` rather than returning an empty set — an empty set is a weak existence oracle |
+| **D6-4** | `media_sha256` is **not** returned |
+| **D6-5** | the F-5 revokes stay; no `GRANT` on any table appears in the file |
+| **D6-6** | the Teacher Exams `select('*')` pattern is untouched |
+| **D6-7** | no audit label; reads stay unaudited |
+
+**D6-4 is a measurement, not a preference.** `stimulus-view.js`, the shared
+renderer, consumes `spec` (66×), `kind`, `label`, `media_ref`, `body`,
+`media_kind` — and `media_sha256` appears in **no client file in the
+repository**. It is server-computed (`teacher_homework_save_stimulus` computes
+it and ignores any client value). Nothing needs it.
+
+#### The package
+
+| | |
+|---|---|
+| forward | `20260906a_teacher_homework_h6.sql` — **378 lines** |
+| rollback | `20260906z_teacher_homework_h6_rollback.sql` — **113 lines** |
+| adds | **2 functions**, and nothing else |
+| tables · policies · grants · triggers · enum labels | **none** |
+| live functions redefined | **NONE** |
+
+**That last row is the headline.** H3, H4 and H5 each redefined live functions
+and each carried the `20260831e` hazard. H6 redefines nothing, so it carries
+none of it — and §4.2 proves it by asserting **seventeen** live bodies are
+byte-identical to what H5 left.
+
+```
+teacher_homework_list(p_workspace uuid) → TABLE
+  homework_id, title, homework_code, status, due_at, reveal_answers,
+  created_at, published_at, closed_at,
+  question_count, attached_count, attempt_count, submitted_count
+
+teacher_homework_paper(p_homework uuid) → jsonb
+  { homework_id, workspace_id, title, instructions, homework_code, status,
+    due_at, reveal_answers, created_at, published_at, closed_at,
+    can_edit_content,
+    stimuli:  [ id, kind, label, body, spec, media_ref, media_kind ],
+    questions:[ id, ordinal, prompt, question_format, choices,
+                correct_answer, explanation, stimulus_id ] }
+```
+
+Both `stable`, `security definer`, `search_path` pinned, `authenticated`-only,
+`anon` denied, and **neither takes a lock**, so H5's homework→attempt lock order
+is untouched. `can_edit_content` mirrors the condition
+`teacher_homework_content_guard()` already enforces, so the page never has to
+know that rule twice.
+
+#### The dry-run — verbatim, aborting, on production
+
+Paste fidelity **2/2**. Fixtures authored through the real H3 RPCs, with a
+draft, a published paper carrying a submitted sitting, a closed paper, and a
+second workspace owned by the outsider.
+
+| probe | result |
+|---|---|
+| teacher / ACTIVE assistant | `list=3`, all three papers readable — **`PARITY=true`** on the full payload |
+| pending assistant · student · outsider | **`42501`** on the list and on all three papers |
+| cross-workspace (A's staff against B) | `42501`; B's own teacher sees B's 0 rows |
+| list order | `DRAFT > PUBLISHED > CLOSED` |
+| counts | draft `q2`; published `q1/at1/tr1/sub1` |
+| stimulus keys | exactly `body, id, kind, label, media_kind, media_ref, spec` |
+| question keys | exactly `choices, correct_answer, explanation, id, ordinal, prompt, question_format, stimulus_id` |
+| key to staff | `correct_answer=B`, `explanation=why B` |
+| **`media_sha256` anywhere in the payload** | **false** |
+| `can_edit_content` | draft `true`, published `false`, closed `false` |
+| **teacher's direct SELECT on questions / stimuli** | **still `42501`** — F-5 intact, the RPC is the only path |
+| no session (list / paper) | `42501` / `42501` |
+| **nonexistent workspace** | **`42501`, not an empty set** — D6-3 |
+| nonexistent homework · `list(null)` | `42501` · `42501` |
+| analyzer | **893 / 11 / 24 — unmoved** |
+| audit | only H3's own labels; **no read label** — D6-7 |
+
+**The dry-run caught a real defect.** §4.1 asserted the homework trigger count
+was **8**; it is **12** (2 on `teacher_homework`, 2 on questions, 3 on
+responses, 1 each on stimuli, access, attempts, retired_codes,
+attach_attempts). I had guessed rather than measured, and the file refused to
+install. Corrected in both files. That is the check working — a page earlier
+than usual.
+
+**A second defect was caught before the dry-run**, by the contract suite: §4.6
+originally counted **bare column references** and required exactly one, but
+`s.id` and `q.ordinal` are each legitimately named twice — once in the payload
+and once in the `ORDER BY` that makes the array deterministic. That check could
+**only ever have raised**, so the file could not have installed. It now counts
+the **JSON pair**, because what must be unique is the *exposure*. Same shape as
+the H3 §6.8 and H4 §7.8 findings.
+
+#### Rollback rehearsal
+
+```
+trajectory: 84/217/138/37/q=false/s=false
+         -> 84/219/138/39/q=false/s=false
+         -> 84/217/138/37/q=false/s=false
+TOTAL DIFFERING: 0
+```
+
+All eight hash families identical. Note the grant flags: **`q=false/s=false`
+throughout** — F-5 is untouched in both directions, which `20260906z` §2.2
+asserts explicitly so a future edit cannot widen this file into an F-5
+reversal.
+
+**`20260906z` has no window, and that is the point.** Every earlier homework
+rollback closed — `20260902y` at the first attachment, `20260903z` once any
+enum label was recorded, `20260904z` at the first rotation or draft deletion,
+`20260905z` at the **first sitting**. This one never closes: nothing is
+restored, no state can be stranded, so a refusal condition would be theatre and
+its absence is deliberate rather than forgotten. Running it costs exactly one
+thing — authoring goes blind again, which is the pre-H6 state, not a degraded
+one.
+
+#### Verification
+
+| | |
+|---|---|
+| contract suite | **486/486** (Part 7 adds 45 H6 checks) |
+| access-scope suite | **109/109** — H6 is in `FORWARD` and `ALL_ROLLBACK` |
+| CI | **66/66** |
+| H6 mutation suite | **46/46 killed** |
+| H5 mutation suite (regression) | **81/81 killed** |
+
+**Nine of the 46 mutants survived the first pass**, all real test gaps:
+
+- a `0` literal replacing a count column passed, because the suite asserted the
+  column *names* and not that each count is a real subquery;
+- `to_jsonb(s.*)` shipped a whole row past a check that only knew `select s.*`;
+- `to authenticated, anon` slipped past a regex that stopped at the first
+  grantee;
+- **three separate checks neutered to `if false then` still passed**, because
+  the suite asserted the *message* and not the *condition* — the same gap three
+  F-5 mutants exposed, and now pinned in five places;
+- the rollback dropping `teacher_homework_review(uuid, uuid)` was invisible to a
+  capture that only matched `(uuid)`.
+
+One mutant was **replaced rather than fixed**: my first "the list filters rows
+instead of raising" added a redundant filter while leaving the raise in place —
+semantically equivalent, so its survival proved nothing. The replacement removes
+the raise and relies on the filter, which is the actual oracle.
+
+#### What H6 preserves
+
+`teacher_homework_content_guard` (draft-only, fail-closed) · H4's code guard and
+the retired-code invariant · H5's three response triggers, the attempts guard and
+the lock order · the F-5 revokes · both staff-read policies · the analyzer
+boundary. H6 reads only; it writes nothing anywhere, takes no lock, and names no
+analyzer table.
+
+**Nothing is applied. H6 awaits explicit approval, and no UI work has started.**

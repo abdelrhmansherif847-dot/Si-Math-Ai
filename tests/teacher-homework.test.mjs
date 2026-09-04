@@ -1639,4 +1639,240 @@ t.ok('H5 is APPLIED and names its version; its rollback stays PREPARED',
   && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H5Z)
   && !/APPLIED 2026-09-0[0-9] as version/.test(H5Z));
 
+// ══════════════════════════════════════════════════════════════════════════
+// Part 7 — increment H6, staff can read the paper they authored.
+//
+// H6 exists to pay a bill F-5 handed it: revoking authenticated's SELECT on
+// both content tables left staff — teacher AND active assistant — unable to
+// read the questions and figures they wrote. Measured before a line was
+// written: both get 42501 on both tables, so authoring is write-only today and
+// there is no path to edit an existing question.
+//
+// The whole increment is two READ functions. What it does NOT do is most of
+// what these checks pin: no table, no policy, no grant on any table, no
+// trigger, no enum label, and — unlike H3, H4 and H5 — no redefinition of any
+// live function, so it carries none of the 20260831e hazard.
+// ══════════════════════════════════════════════════════════════════════════
+
+const H6  = read('supabase/migrations/20260906a_teacher_homework_h6.sql');
+const H6Z = read('supabase/migrations/20260906z_teacher_homework_h6_rollback.sql');
+const H6C = code(H6), H6ZC = code(H6Z);
+const body6 = (n) => fnDef(H6C, n).body;
+
+t.section('H6 adds two functions and changes nothing else');
+
+t.is('it creates no table, policy, type or index',
+  [...H6C.matchAll(/create\s+(?:unique\s+)?(table|policy|type|index)\b/gi)].map((m) => m[1].toLowerCase()), []);
+t.ok('it alters no type and creates no trigger',
+  !/alter type/i.test(H6C) && !/create\s+(constraint\s+)?trigger/i.test(H6C));
+t.is('it creates exactly the two functions it says it does',
+  [...H6C.matchAll(/create or replace function (\w+)/g)].map((m) => m[1]).sort(),
+  ['teacher_homework_list', 'teacher_homework_paper']);
+/* The hazard 20260831e is remembered for is redefining a live function. H6 is
+   the first homework increment since H1 that redefines none, and the check is
+   the count of creates above plus this: neither name existed before. */
+t.ok('and neither name collides with anything H2-H5 installed',
+  !/create or replace function (student_|teacher_homework_(is_staff|can_|code_|content_|create|update|publish|close|delete|save_|reorder|rotate|set_due|reveal|students|review|attempts_guard|responses_guard|verdict))/.test(H6C));
+t.ok('§4.1 pins the table, policy, label and trigger counts',
+  /the homework table count moved to/.test(H6C)
+  && /the homework policy count moved to/.test(H6C)
+  && /the audit label count moved to % — D6-7 adds none/.test(H6C)
+  && /the homework trigger count moved to/.test(H6C));
+t.ok('§4.2 asserts it redefines NOTHING, naming seventeen live bodies',
+  /it disturbed a function it does not own/.test(H6C)
+  && [...H6C.matchAll(/\('(?:teacher|student|workspace)_\w+','[0-9a-f]{32}'\)/g)].length >= 17);
+t.ok('§4.8 pins the resulting function count',
+  /expected 40 homework functions \(38 before \+ 2 new\), found/.test(H6C)
+  && /if v_n <> 40 then/.test(H6C));
+
+t.section('D6-3 — the list gates on the workspace, before it selects');
+
+/* An empty list would answer a question an outsider is not entitled to ask:
+   whether that workspace exists and whether it has homework. 42501 does not. */
+t.ok('it raises 42501 rather than returning an empty set',
+  /if not workspace_is_active_staff\(p_workspace\) then/.test(body6('teacher_homework_list'))
+  && /errcode = '42501'/.test(body6('teacher_homework_list')));
+t.ok('and the gate precedes the query, not the other way round',
+  body6('teacher_homework_list').indexOf('workspace_is_active_staff') >= 0
+  && body6('teacher_homework_list').indexOf('workspace_is_active_staff')
+     < body6('teacher_homework_list').indexOf('return query'));
+/* Asserting the message alone is not asserting the check: `if false then`
+   leaves every message in place while testing nothing. The CONDITION is what
+   must be pinned — the same gap three F-5 mutants exposed. */
+t.ok('§4.5 pins that ordering, so a later edit cannot invert it',
+  /the list gates AFTER it selects — an outsider would get an empty list, not 42501/.test(H6C)
+  && /position\('workspace_is_active_staff' in v_code\) > position\('return query' in v_code\)/.test(H6C));
+t.ok('the list carries the four counts the picker needs',
+  ['question_count', 'attached_count', 'attempt_count', 'submitted_count']
+    .every((c) => new RegExp(c + '\\s+integer').test(H6C)));
+/* Declaring the columns is not returning them: each count must be a real
+   subquery over the right table, or a literal 0 would satisfy the signature. */
+t.is('and each count is a real subquery over the table it names',
+  [[/count\(\*\)::int from teacher_homework_questions q where q\.homework_id = h\.id/, 'question'],
+   [/count\(\*\)::int from teacher_homework_access a where a\.homework_id = h\.id/, 'attached'],
+   [/count\(\*\)::int from teacher_homework_attempts t where t\.homework_id = h\.id\)/, 'attempt'],
+   [/count\(\*\)::int from teacher_homework_attempts t\s+where t\.homework_id = h\.id and t\.status = 'submitted'/, 'submitted']]
+    .filter(([re]) => !re.test(body6('teacher_homework_list'))).map(([, n]) => n), []);
+/* The gate must RAISE. A row filter would return an empty set to an outsider,
+   which is the existence oracle D6-3 exists to close. */
+t.ok('the gate raises and the query does not re-filter on staffness',
+  /raise exception 'teacher_homework_list: no such class/.test(body6('teacher_homework_list'))
+  && (body6('teacher_homework_list').match(/workspace_is_active_staff/g) || []).length === 1);
+
+t.section('parity is structural — neither function may read staff_role');
+
+/* teacher_homework_is_staff -> workspace_is_active_staff tests status='active'
+   and never staff_role, so teacher and ACTIVE assistant are identical here
+   because they are identical there. There is no second copy to drift. */
+t.ok('neither body mentions staff_role',
+  !/staff_role/.test(body6('teacher_homework_list'))
+  && !/staff_role/.test(body6('teacher_homework_paper')));
+t.ok('neither restates the staff predicate instead of calling the helper',
+  !/workspace_staff/.test(body6('teacher_homework_list'))
+  && !/workspace_staff/.test(body6('teacher_homework_paper')));
+t.ok('§4.5 pins both, for both functions',
+  (H6C.match(/must be structurally identical|parity must be structural/g) || []).length === 2
+  && (H6C.match(/restates the staff predicate instead of calling the helper/g) || []).length === 2);
+/* The admin arm lives in the POLICIES and deliberately not in these gates: the
+   H6 audit first mis-measured a PENDING assistant as staff because the profile
+   it used was a platform super_admin matching the policy's admin arm. */
+t.ok('and the gates do not inherit the policies’ admin arm',
+  !/has_role_at_least/.test(body6('teacher_homework_list'))
+  && !/has_role_at_least/.test(body6('teacher_homework_paper')));
+
+t.section('D6-4 — the paper returns the pinned fields and nothing more');
+
+/* Counted as the JSON PAIR. Counting bare references would be wrong AND
+   unsatisfiable: s.id and q.ordinal each appear twice on purpose, once in the
+   payload and once in the ORDER BY that makes the array deterministic. What
+   must be unique is the EXPOSURE. The first draft of §4.6 made exactly this
+   mistake and could only ever have raised. */
+t.is('every stimulus field is exposed exactly once',
+  [`'id', s.id`, `'kind', s.kind`, `'label', s.label`, `'body', s.body`,
+   `'spec', s.spec`, `'media_ref', s.media_ref`, `'media_kind', s.media_kind`]
+    .filter((f) => body6('teacher_homework_paper').split(f).length - 1 !== 1), []);
+t.is('every question field is exposed exactly once',
+  [`'id', q.id`, `'ordinal', q.ordinal`, `'prompt', q.prompt`,
+   `'question_format', q.question_format`, `'choices', q.choices`,
+   `'correct_answer', q.correct_answer`, `'explanation', q.explanation`,
+   `'stimulus_id', q.stimulus_id`]
+    .filter((f) => body6('teacher_homework_paper').split(f).length - 1 !== 1), []);
+/* and the ORDER BY really is there, so the two extra references above are the
+   determinism they claim to be rather than an accidental second exposure */
+t.ok('both arrays are deterministically ordered',
+  /order by s\.created_at, s\.id/.test(body6('teacher_homework_paper'))
+  && /order by q\.ordinal/.test(body6('teacher_homework_paper')));
+/* Server-computed integrity value, staff-only, and read by no client in the
+   repository — stimulus-view.js consumes the six renderer fields and not this. */
+t.ok('media_sha256 appears nowhere in the payload',
+  !/media_sha256/.test(body6('teacher_homework_paper')));
+/* `select s.*` is only one way to ship a whole row; to_jsonb(s.*) and
+   row_to_json(s) are the others, and they would carry media_sha256 straight
+   past a check that only looked for the first spelling. */
+t.ok('and no whole row is shipped, in any spelling',
+  !/\bs\.\*|\bq\.\*|to_jsonb\s*\(|row_to_json\s*\(/.test(body6('teacher_homework_paper')));
+t.ok('§4.6 pins the field lists, the absence and the s.* ban',
+  /a stimulus field is not exposed exactly once in the staff read/.test(H6C)
+  && /a question field is not exposed exactly once in the staff read/.test(H6C)
+  && /exposes media_sha256 — D6-4 forbids it/.test(H6C)
+  && /selects a whole row instead of naming its fields/.test(H6C));
+t.ok('and §4.6 pins the CONDITIONS, not only the messages',
+  /if v_code ~ 'media_sha256' then/.test(H6C)
+  && /where \(length\(v_code\) - length\(replace\(v_code, f\.c, ''\)\)\) \/ length\(f\.c\) <> 1/.test(H6C));
+/* The key is the point of the increment: staff cannot edit what they cannot
+   see. A read that withheld it would leave authoring exactly as blind. */
+t.ok('the answer key and explanation ARE returned, and §4.6 requires it',
+  /'correct_answer', q\.correct_answer/.test(body6('teacher_homework_paper'))
+  && /'explanation', q\.explanation/.test(body6('teacher_homework_paper'))
+  && /withholds the key it exists to return/.test(H6C));
+t.ok('can_edit_content mirrors the content guard’s own condition',
+  /'can_edit_content', \(h\.status = 'draft'\)/.test(body6('teacher_homework_paper')));
+t.ok('the paper gate is teacher_homework_is_staff and precedes the payload',
+  /if not teacher_homework_is_staff\(p_homework\) then/.test(body6('teacher_homework_paper'))
+  && body6('teacher_homework_paper').indexOf('teacher_homework_is_staff')
+     < body6('teacher_homework_paper').indexOf('jsonb_build_object'));
+
+t.section('D6-5 — F-5 stands; these are reads, and they take no lock');
+
+t.ok('H6 grants nothing on any table',
+  !/grant\s+(select|insert|update|delete|all)\s+on\s+(?!function)/i.test(H6C));
+t.is('the only grants are EXECUTE, to authenticated, on the two new functions',
+  [...H6C.matchAll(/grant execute on function (\w+)\(uuid\)\s+to (\w+)/g)].map((m) => m[1] + '->' + m[2]).sort(),
+  ['teacher_homework_list->authenticated', 'teacher_homework_paper->authenticated']);
+t.ok('and each is revoked from public, anon and authenticated first',
+  (H6C.match(/revoke all on function \w+\(uuid\)\s+from public, anon, authenticated;/g) || []).length === 2);
+/* The capture above stops at the first grantee, so a `to authenticated, anon`
+   would slip through it. anon must appear in this file ONLY in a revoke. */
+t.is('anon appears in no grant anywhere in the file',
+  [...H6C.matchAll(/grant[^;]*;/g)].map((m) => m[0]).filter((g) => /\banon\b/.test(g)), []);
+t.ok('§4.4 asserts neither content table regained its grant',
+  /F-5 was reverted — authenticated holds a direct SELECT on/.test(H6C)
+  && /a staff-read policy was dropped/.test(H6C));
+t.ok('neither function takes a lock, and §4.5 pins that',
+  !/for update|for share/.test(body6('teacher_homework_list'))
+  && !/for update|for share/.test(body6('teacher_homework_paper'))
+  && (H6C.match(/takes a lock — these are reads/g) || []).length === 2);
+t.ok('both are STABLE, definer and pinned',
+  /returns table[\s\S]{0,900}?\n\s*stable\n\s*security definer\n\s*set search_path = pg_catalog, public/i.test(H6C)
+  && /returns jsonb\n\s*language plpgsql\n\s*stable\n\s*security definer\n\s*set search_path = pg_catalog, public/i.test(H6C));
+
+t.section('D6-7 — reads stay unaudited, and the analyzer is untouched');
+
+t.ok('H6 writes no audit row',
+  !/workspace_audit_log/.test(H6C));
+t.ok('H6 names no analyzer table in executable SQL',
+  !/weakness_signals|weakness_reports|exam_mistakes|exam_practice_sessions|mastery_records|question_records/.test(H6C));
+/* The same decision H5 §12.9 records: the access-scope suite's blanket ban is
+   the stronger rule, and a weaker copy here would have to name those tables to
+   forbid them — breaking the real one. */
+t.ok('and it says why it does not assert the boundary itself',
+  /THE ANALYZER BOUNDARY IS NOT ASSERTED HERE, DELIBERATELY/.test(H6));
+t.ok('H6 writes nothing at all — no insert, update or delete',
+  !/\b(insert into|update\s+teacher_|delete from)\b/i.test(H6C.slice(0, H6C.indexOf('-- ── 4'))));
+
+t.section('the H6 rollback is two drops, and it never closes');
+
+/* Captures ANY argument list, not just `(uuid)` — a rollback that also dropped
+   teacher_homework_review(uuid, uuid) would be invisible to a narrower match. */
+t.is('it drops exactly the two functions H6 added, and no others',
+  [...H6ZC.matchAll(/drop function if exists (\w+)\s*\([^)]*\)/g)].map((m) => m[1]).sort(),
+  ['teacher_homework_list', 'teacher_homework_paper']);
+t.ok('it drops nothing else',
+  !/drop\s+(table|policy|trigger|type|index)/i.test(H6ZC));
+/* Every earlier homework rollback had a window. This one does not, because
+   nothing is restored and no state can be stranded — so a refusal condition
+   would be theatre, and its absence is deliberate rather than forgotten. */
+t.ok('it carries NO refusal condition, and says why',
+  !/rollback H6 refused/.test(H6ZC)
+  && /THIS ROLLBACK HAS NO WINDOW/.test(H6Z)
+  && /A refusal would be theatre here/.test(H6Z));
+t.ok('it does NOT restore the grants F-5 revoked, and asserts that',
+  !/grant\s+select\s+on/i.test(H6ZC)
+  && /it restored a grant F-5 revoked/.test(H6ZC));
+t.ok('and it checks H2-H5 came through untouched',
+  /expected the eight homework tables/.test(H6ZC)
+  && /expected 9 homework policies/.test(H6ZC)
+  && /expected 12 homework triggers/.test(H6ZC)
+  && /expected the 38 H5 homework functions/.test(H6ZC)
+  && /it disturbed a function it does not own/.test(H6ZC));
+t.ok('and those are real conditions, not messages beside a disabled test',
+  [/if v_n <> 8 then/, /if v_n <> 9 then/, /if v_n <> 38 then/]
+    .every((re) => re.test(H6ZC)));
+
+t.section('the file’s own verification must be able to fail');
+
+/* The H4 dry-run found a check that could ONLY raise, because it matched a word
+   the body used in a COMMENT to disclaim it. Every source check here reads the
+   body with comments stripped, and the raw prosrc is held in no variable. */
+/* Counted on the RAW file, never on H6C: code() strips from the first `--`,
+   and the needle itself contains `--`, so the stripped copy holds zero of them
+   and the check would pass for the wrong reason. Same trap as the H4 round. */
+t.ok('every source check strips comments before matching',
+  (H6.match(/regexp_replace\(p\.prosrc, '--\[\^\\n\]\*', '', 'g'\)/g) || []).length === 2
+  && !/select p\.prosrc into v_code/.test(H6));
+t.ok('H6 is PREPARED and its rollback is unapplied',
+  /STATUS: 🟡 PREPARED, not applied/.test(H6)
+  && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H6Z)
+  && !/APPLIED 2026-09-0[0-9] as version/.test(H6));
+
 t.done();
