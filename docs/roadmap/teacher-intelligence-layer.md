@@ -3924,3 +3924,227 @@ window still closes at the **first sitting**. **H6 still owes a staff
 authoring-read RPC** — F-5 widens that bill from questions to figures as well.
 
 **Nothing is applied. H5 remains PREPARED and awaits explicit approval.**
+
+---
+
+### 15.25 · Teacher Homework H5 — APPLIED (2026-09-04)
+
+**H5 is LIVE.** Applied 2026-09-04 as version **`20260904003547`**, from the
+PREPARED package at commit `1c645b4`, exactly as prepared and with no change
+made during or after the apply.
+
+**The homework system is now complete from code to grade.** A student can be
+attached to a paper, open it, answer it, come back to it, submit it, and see
+their result; staff can read the roster and review any student's sitting.
+
+#### What was applied
+
+| | |
+|---|---|
+| migration | `20260904003547` (`20260905a_teacher_homework_h5.sql`) |
+| applied after | `20260903203209` (H4) — order confirmed before and after |
+| migrations now | **191** |
+| rollback artifact | `20260905z` — PREPARED, **not applied**, window closes at the first sitting |
+
+#### 1 · Migration order and baseline
+
+Last five applied, in order: `20260903123458`, `20260903175543`,
+`20260903175957`, `20260903203209`, **`20260904003547`**. Public schema now
+**84 tables · 217 functions · 133 policies (138 across all schemas) · 22 enum
+labels**; homework **8 tables · 38 functions · 9 policies**.
+
+Tables, policies and enum labels are **unchanged** — H5's own §12.1 asserted all
+three during the apply, and the relations and policies hashes below confirm it
+independently.
+
+#### 2 · Paste fidelity — **12/12**
+
+Every installed function body is **byte-identical** to `20260905a`, compared
+against md5s computed from the repo file rather than retyped:
+
+`teacher_homework_can_resume` `b122cb71…` · `teacher_homework_attempts_guard`
+`33638efc…` · `teacher_homework_responses_guard` `df3c3a65…` ·
+`teacher_homework_verdict_guard` `7ed96174…` ·
+`teacher_homework_verdict_state_guard` `9bd87804…` · `student_homework_paper`
+`ff8ba52d…` · `student_homework_start` `d0f918fd…` · `student_homework_save`
+`f0f77954…` · `student_homework_submit` `2fa7f963…` · `student_my_homework`
+`f123a599…` · `teacher_homework_students` `7e64a334…` · `teacher_homework_review`
+`f572a0ee…`
+
+**9/9 untouched**: the nine functions H5 does not own still carry their exact H4
+bodies (`teacher_homework_is_staff` `63ef7fa2…`, `teacher_homework_guard`
+`19bbc18c…`, `teacher_homework_can_open` `9ef8d477…`, `teacher_homework_create`
+`4fca434e…`, `teacher_homework_rotate_code` `124b4acb…`,
+`teacher_homework_delete` `f7f430e2…`, `student_attach_homework` `e601665a…`,
+`teacher_homework_code_guard` `f54ea68a…`, `teacher_homework_code_available`
+`d4758dfd…`).
+
+#### 3 · Trigger inventory
+
+| table | trigger | timing |
+|---|---|---|
+| `teacher_homework` | `teacher_homework_code_guard_trg` | `BEFORE INSERT OR UPDATE OF homework_code` (H4, unmoved) |
+| `teacher_homework` | `teacher_homework_guard_trg` | `BEFORE DELETE OR UPDATE` (H2, unmoved) |
+| `teacher_homework_attempts` | `teacher_homework_attempts_guard_trg` | **`BEFORE INSERT OR DELETE OR UPDATE`** — INSERT is new |
+| `teacher_homework_responses` | `teacher_homework_responses_guard_trg` | `BEFORE DELETE OR UPDATE` |
+| `teacher_homework_responses` | `teacher_homework_responses_verdict_trg` | `BEFORE INSERT OR UPDATE` |
+| `teacher_homework_responses` | `teacher_homework_verdict_state_trg` | **`AFTER INSERT OR UPDATE … DEFERRABLE INITIALLY DEFERRED`** |
+
+The deferred one reads back deferred **in the catalogue** (`tgdeferrable` and
+`tginitdeferred` both true), not only in the DDL text.
+
+#### 4 · Grants and revokes
+
+| table | `authenticated` | `anon` |
+|---|---|---|
+| `teacher_homework_questions` | **false** | false |
+| `teacher_homework_stimuli` | **false** | false |
+| `teacher_homework`, `_access`, `_attempts`, `_responses` | true | false |
+| `_retired_codes`, `_attach_attempts` | false | false |
+
+Both staff-read **policies survive** (`teacher_homework_questions_staff_read`,
+`teacher_homework_stimuli_staff_read`) though nothing can now reach them — the
+policy is the rule, the grant is the reach.
+
+All **8** client RPCs are `security definer`, `search_path` pinned,
+`authenticated`-callable, `anon`-denied. Both verdict guards are callable by
+**nobody**. `anon` holds EXECUTE on **0** homework functions.
+
+#### 5 · F-1 behaviour, on the live functions
+
+| probe | result |
+|---|---|
+| removed **after** submitting, reveal off | read **ACCEPTED**, `submitted`, own verdicts `true,true`, key absent |
+| the same caller's save | refused `42501` |
+| the same caller's submit | idempotent no-op, no write |
+| removed + **reveal on** | `answers_visible=true`, key `B`, explanation shown |
+| removed **while in_progress** — read / save / submit / resume | **all refused `42501`** |
+| the stranded attempt | survives untouched: `in_progress`, 1 answer |
+| rejoined → resume | `resumed=true`, the same attempt |
+| rejoined → submit | graded `1c / 1w / 0o` |
+| **never sat**, reveal **on** | `answers_visible=false`, **key absent** — S-1 holds |
+
+#### 6 · F-5 behaviour
+
+Student direct SELECT refused `42501` on **both** content tables; the
+**teacher's** direct SELECT refused `42501` on both as well (the grant is
+role-wide — staff read through `teacher_homework_review()`). The student RPC
+returns exactly `body, kind, label, media_kind, media_ref, spec` and
+**`media_sha256` appears nowhere in the payload**.
+
+#### 7 · Lifecycle
+
+Start creates one attempt and **2 response rows**; a racing second start returns
+`resumed=true` on the same attempt (D-8). Save of `' b '` stores `'b'` with
+`is_correct` **NULL** (D-3 — save never grades); the mid-sitting read shows no
+key and no verdicts. Submit returns `2c/0w/0o`, verdicts become `true,true`, and
+a **repeat submit returns the identical payload** with still one attempt row.
+Save after submit is refused `42501`.
+
+Close (D-1): the paper goes `closed` and **the attempt is untouched**;
+`can_open=false` while `can_resume=true`; a save into the closed paper mid-sitting
+is **accepted**; resume returns the same attempt; `student_my_homework().can_open`
+reads **true** for that student; submit succeeds; and a **new** start on the
+closed paper is refused `42501`.
+
+`late` (D-5): a submission past `due_at` stores `late=true`; moving `due_at`
+**30 days out afterwards leaves it true**; a direct rewrite is refused `22000`.
+
+#### 8 · Hardening — every protection exercised as the TABLE OWNER
+
+| attack | result |
+|---|---|
+| verdict `true` on a wrong answer | refused `22000` |
+| verdict `false` on a right answer | refused `22000` |
+| INSERT a response born with a forged verdict | refused `22000` |
+| a **truthful** verdict while `in_progress` | accepted by the truth guard… |
+| …then the **deferred state guard** when checked | **refused `22000`** — *"a verdict exists on an attempt that is in_progress"* |
+| born-`submitted` attempt | refused `22000` (H-1b) |
+| change a submitted answer | refused `42501` |
+| move `last_answered_at` on a submitted answer | refused `42501` (H-2) |
+| set `last_answered_at` NULL on a submitted answer | refused `42501` |
+| re-grade / un-grade a graded item | refused `42501` / `42501` |
+| reopen a submitted attempt | refused `22000` |
+| delete an attempt / an answer | refused `42501` / `42501` |
+| client INSERT an attempt, UPDATE a verdict, UPDATE a homework | refused `42501` ×3 |
+
+The truthful-verdict pair is the point: **the two guards are separate rules**,
+and it takes both for a verdict to mean anything.
+
+> **One probe of mine was not discriminating, and the re-test says so.** The
+> first `last_answered_at` nudge used `now()`, which is **frozen for the whole
+> transaction** — it wrote the identical value `save()` had already written, so
+> "ACCEPTED" meant *nothing changed*, not *the guard is open*. Re-run with
+> `now() + interval '1 hour'` the write is **refused `42501`**, NULL is refused,
+> and the control — the same write on an `in_progress` attempt — is **accepted**,
+> so the check discriminates. This is the third time this session a probe passed
+> for the wrong reason; the rule stands: *a green check is only evidence if it
+> could have gone red.*
+
+#### 9 · Parity
+
+Teacher and **ACTIVE assistant** rosters are **byte-identical** (`PARITY=true`),
+including the new `active_member` column, which correctly reads `false` for the
+student removed after submitting and `true` for the rejoined one. The assistant's
+review shows the key and the given answer. Pending assistant, outsider read,
+outsider review, outsider start, and both no-session calls are all `42501`.
+
+#### 10 · Analyzer — **893 / 11 / 24, unmoved**
+
+Measured after two full graded sittings in one transaction and again after the
+close/late/hardening transaction. Homework is structurally outside the analyzer.
+
+#### 11 · Audit
+
+The only rows H5's own operation wrote for the probe workspace came from H3/H4
+verbs (`homework_created`, `homework_published`, `homework_answers_revealed`,
+`student_removed`). **No start, save or submit label exists or was written** —
+D-6, as designed. Production's audit log is back at **2 rows, 0 homework
+labels**.
+
+#### 12 · Suites
+
+CI **66/66** · contract **440/440** · access-scope **109/109** · mutation
+**81/81 killed**. (`scripts/check-migration-parity.sh` needs
+`SUPABASE_SERVICE_ROLE_KEY`, which this session does not hold; migration count
+and order were verified directly against `supabase_migrations.schema_migrations`
+instead.)
+
+#### 13 · New production baseline
+
+| family | post-H5 | vs H4 |
+|---|---|---|
+| relations | `01e30b21…` | **UNCHANGED** — H5 adds no table |
+| policies | `1480dd9e…` | **UNCHANGED** — H5 adds no policy |
+| constraints | `38224217…` | moved |
+| triggers | `f7b47479…` | moved |
+| grants | `3ef5d986…` | moved |
+| homework bodies | `d11919f4…` | moved |
+| homework signatures | `d1222c2b…` | moved |
+
+**The constraints move was measured, not assumed.** `create constraint trigger`
+writes a `pg_constraint` row (`contype='t'`), so the family had to move. Hashing
+every constraint **except `teacher_homework_verdict_state_trg`** returns
+**`26715f0cc02574e1f727f64f18aaf8e1`** — byte-identical to the H4 baseline. So
+that family moved by exactly one row, the deferred trigger, and H5 added no
+CHECK, no foreign key, no UNIQUE and no primary key. Only two constraint
+triggers exist in the whole schema: this one and
+`referral_commission_rates.referral_rates_guard_trg`, the precedent it follows.
+
+**Nothing survived the probes.** All eight homework tables are back at **0 rows**;
+audit log **2 rows / 0 homework labels**; analyzer **893/11/24**.
+
+#### Deviation to settle
+
+**The migration file still says `STATUS: 🟡 PREPARED, not applied`.** The apply
+instruction was *"do not modify the prepared package after apply"*, so neither
+`20260905a` nor `20260905z` was touched — but every prior increment flipped that
+header to `✅ APPLIED … as version …` on apply, and one contract check
+(*"H5 is PREPARED and its rollback is unapplied"*) now asserts something that is
+no longer true of production. The suite is green because it agrees with the file,
+not with reality. **A one-line header change plus the matching test flip is
+ready and awaits approval** — it is bookkeeping, not a change to any applied SQL.
+
+**H6 has not started, and no UI was touched.** `20260905z` remains the active
+rollback artifact, unapplied, and its window closes at the first real sitting.
+H6 still owes a **staff authoring-read RPC** for questions and figures.
