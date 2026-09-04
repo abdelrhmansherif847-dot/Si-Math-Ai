@@ -1631,9 +1631,12 @@ t.ok('it asserts H4 is otherwise intact',
   /expected the eight H4 tables/.test(H5ZC)
   && /expected the 30 H4 homework functions/.test(H5ZC)
   && /it disturbed H4''s code guard/.test(H5ZC));
-t.ok('H5 is PREPARED and its rollback is unapplied',
-  /STATUS: 🟡 PREPARED, not applied/.test(H5)
+/* The file records the version it actually went in as, and the rollback stays
+   PREPARED — the negative arm is what stops a copied header from claiming the
+   undo was applied too. */
+t.ok('H5 is APPLIED and names its version; its rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-04 as version 20260904003547/.test(H5)
   && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H5Z)
-  && !/APPLIED 2026-09-0[0-9] as version/.test(H5));
+  && !/APPLIED 2026-09-0[0-9] as version/.test(H5Z));
 
 t.done();

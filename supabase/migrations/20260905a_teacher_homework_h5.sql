@@ -1,8 +1,14 @@
 -- =====================================================================
 -- Teacher Homework, increment H5 — the student sits the paper
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback: 20260905z.
+-- STATUS: ✅ APPLIED 2026-09-04 as version 20260904003547, after explicit
+--         owner approval. Rollback: 20260905z, PREPARED and unapplied — its
+--         window closes at the FIRST SITTING, which is the whole point of this
+--         increment, so treat it as effectively single-use.
+--         Post-apply evidence: docs/roadmap/teacher-intelligence-layer.md
+--         §15.25. All twelve installed bodies were compared byte-for-byte
+--         against this file after the apply, and the nine functions this file
+--         does not own were confirmed unchanged from H4.
 -- DEPENDS ON: H2 (the six tables), H3 (authoring) and H4 (the attach path,
 --             LIVE 2026-09-03 as 20260903203209). No enum migration: H5 adds
 --             NO audit label, by the decision recorded in §15.22 D-6.
