@@ -5788,3 +5788,130 @@ RPC changes, zero policy changes.**
 
 **Verdict: no remaining contradictions. The Stage 0 contract is READY FOR
 IMPLEMENTATION APPROVAL.**
+
+### 16.9 · Stage 0 — BUILT, NOT DEPLOYED (2026-09-04)
+
+Implemented against the locked §16.4 + §16.7 contract at `e154bdf`. **Three
+files. No migration, no schema, no policy, no grant, no RPC, no renderer
+change, no Teacher Exams change.** `git diff -- supabase/` is zero lines and
+production is unchanged at 192 migrations, newest `20260904012019`.
+
+| File | Change |
+|---|---|
+| `stimulus-editor.js` | **NEW**, 528 lines. The authoring half: normalise, parse, sample, build, hydrate |
+| `teacher-homework.html` | the four visual editors replace the `Spec (JSON)` textarea |
+| `tests/stimulus-editor.test.mjs` | **NEW**, 194 checks |
+| `tests/teacher-homework-ui.test.mjs` | +22, to 185 |
+
+#### The module, and why it is a module
+
+Every pure function lives in `stimulus-editor.js` — the same pattern
+`stimulus-view.js` and `weakness-view.js` use, so the browser and the Node
+suite run **the same bytes**. It is deliberately not in the renderer and not in
+the database: Stage 0's whole shape is that the *editor* samples a formula and
+stores the result, which is what leaves both of those untouched.
+
+The parser is a recursive-descent reader over a fixed token set with the §16.7.1
+precedence table, and the suite proves it can never be anything else: `eval`,
+`new Function`, `Function(`, `setTimeout`, `setInterval`, `__proto__` and
+`globalThis` appear nowhere in its code, each pattern is shown to fire on a
+string that does contain the construct, and seven attack inputs
+(`eval("1")`, `constructor`, `__proto__`, `process.exit()` …) are refused as
+ordinary unknown tokens.
+
+#### Evidence
+
+**Every pinned fixture reproduces exactly.** F1 `x^2-4*x+3` → 1 branch of 201 ·
+F2 `2*x+5` → 1×201 · F3 `sin(x)` → 1×201 · F4 `sqrt(x+2)` → 1×141 with 60
+samples dropped · F5 `ln(x)` → 1×100 with 101 dropped · F6 `1/x` → 2×100 ·
+F7 `tan(x)` → **5 branches from 13 runs, 8 single-point runs discarded** ·
+F8 `tan(x)` on `[-20,20]` → capped at 8 and the cap reported. F6 has exactly
+one non-finite sample and F7 has **none**, so F7 is the fixture that isolates
+the Y-delta heuristic, as §16.7.9 said it would be.
+
+**13 of 13 generated specs were accepted by the live validator** — read-only
+`exam_stimulus_spec_ok()` calls covering every structural shape the builders
+emit: table with and without a note, bar, line, one-panel and three-panel pie,
+number line with and without points, a function plus a labelled points group
+with axis labels, 2 branches, 5 branches, 8 capped, and points with no
+function. (Function-curve point arrays were truncated to their first two
+entries for transmission; the validator inspects a curve's points for type and
+length ≥ 2 and never for coordinate values, and branch counts are pinned
+separately above.)
+
+**41 of 41 editor mutants handled as designed**, including one **equivalent
+mutant that must survive** — `201` written as `200 + 1`. The first attempt at
+that control appended a comment to a statement sharing its line with a closing
+brace, commenting the brace out; a control that breaks the parse tests nothing,
+which is a lesson about controls rather than about the module. The mutants that
+matter kill: `expr` stored without `points`, `points` without `expr`, only the
+first branch kept, one figure for many curves, a one-point run rescued by
+duplicating its point, a single marked point faked into two, the minimum
+lowered, the sample count and precision changed, a domain error turned into
+`(x, 0)`, the asymptote split removed, `^` made left-associative, `log`
+silently becoming natural, any name accepted as a function, `2e` swallowed as a
+number, each normalisation rule removed, branches hydrating as separate
+functions, every fall-back condition disabled, and the page hand-building a
+spec. Plus **66/66** H7 mutants, unchanged.
+
+#### Three defects the work found
+
+- **D-4 · the preview was not styled like the student's screen.** Visible only
+  by looking at it: a parabola drew as a filled black polygon. `stimulus-view.js`
+  emitted correct SVG, but the page carried **5 of the renderer's 33 `.sv-*`
+  rules** — and an SVG `<polyline>` fills black unless `.sv-line` sets
+  `fill:none`. The canonical stylesheet is now copied verbatim from `exam.html`,
+  and a new assertion derives the class list **from the renderer itself**, so
+  adding a class there turns the page red until it carries a rule.
+  **`teacher-exams.html` has the identical gap** — its plot and chart previews
+  are broken the same way today. Out of scope by decision; recorded as **I-6**.
+- **D-5 · a contract check matched `Array.from(`.** The zero-table-reads
+  assertion used a bare `\.from\(` and went red on the editor's own array
+  building. It is now two checks — no `sb.from(` at all, and no `.from('…')`
+  with a quoted argument — neither of which matches `Array.from`, and a third
+  proving the client is used for RPCs so the pair is not vacuous.
+- **D-6 · the page was reshaping chart inputs.** A mutant showed
+  `currentInputs()` writing `panels:` and `chartType:` itself. The module
+  already reads whichever half of the chart state the type calls for, so the
+  page now hands the state over untouched. Nine spec keys are banned on the
+  whole save path, and the ban is proven non-vacuous against the module.
+
+#### The teacher's experience, driven in a real browser
+
+Chromium, the real page (only the four CDN tags swapped for local stand-ins;
+byte-identical from `<style>` onward), **no failing checks and no page
+errors**. Table: type into the grid, add rows and columns, and a paste of
+`City⇥Pop / Cairo⇥9 / Giza⇥4` fills headers and rows. Graph: the axes, `y =
+x^2 - 4*x + 3`, `(2, -1) A` and `(4, 3) B` — and the preview draws one
+polyline, two amber points and their labels **with no "defined by a formula"
+note**. `y = x² − 4*x + 3` normalises through the superscript and the Unicode
+minus; `2x` is refused with *"Write 2*x rather than 2x"*; `sec(x)` names the
+token; a reversed axis is refused. `1/x` stores **two curves carrying the same
+expr** and draws **two polylines**. Chart: a category/series grid and a panel
+editor for pie, whose spec carries none of the bar keys. Number line: included
+● / excluded ○ toggles that flip live. Advanced hides the visual editor,
+pre-fills itself from what was built, and hands it back on close; SVG appears
+only under the Advanced group and shows no visual editor at all.
+
+#### Suites
+
+| | |
+|---|---|
+| `stimulus-editor` | **194/194** (new) |
+| `teacher-homework-ui` | **185/185** (was 163) |
+| `stimulus-view` · `staff-nav` · `teacher-homework` · `teacher-access-scope` | 38 · 56 · 486 · 109 |
+| `teacher-exam-ui` · `teacher-surface` · `repo-integrity` · `exam-page` · `teacher-exam-student` | 48 · 62 · 33 · 45 · 37 |
+| Full CI | **68/68 green** (was 67) |
+| Mutants | ed **41/41** · H7 66/66 · H4 75/75 · H5 81/81 · H6 46/46 |
+
+#### Recorded, not done
+
+- **I-6 · `teacher-exams.html` carries 5 of 33 renderer rules**, so its plot,
+  chart and pie previews mis-draw exactly as the homework page did. A
+  four-line CSS fix, deliberately not made here: Teacher Exams is out of Stage
+  0's scope.
+- **L-1 stands.** A single marked point still cannot be stored; the editor says
+  *"A group needs at least two points — the paper format cannot store a single
+  one."* rather than faking one. Stage 3.
+- Stages 1–4 untouched: no expression rendering, no raster images, no
+  accessibility or `display` work, no AI, no image→editable.

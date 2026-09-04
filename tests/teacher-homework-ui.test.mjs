@@ -85,7 +85,18 @@ t.section('Nothing is read from a table, not even where a grant still allows it'
 /* teacher-exams.html reads its own tables and that is allowed there. Here it
    is not, and the assertion is a COUNT rather than an allow-list, because an
    allow-list would quietly admit the next table added to it. */
-t.is('the page issues no table query at all', (CODE.match(/\.from\(/g) || []).length, 0);
+/* Two checks, because one regex cannot be both broad and precise. The first
+   catches ANY query through the client whatever its argument; the second
+   catches the literal `.from('table')` shape even through a different binding.
+   Neither matches `Array.from(...)`, which an earlier draft of this check did
+   — it went red on the editor's own array building and would have pushed the
+   page to avoid a standard library call for no reason. */
+t.is('the page never queries through the supabase client',
+  (CODE.match(/\bsb\s*\.\s*from\(/g) || []).length, 0);
+t.is('and no table is named in a query anywhere',
+  (CODE.match(/\.from\(\s*['"`]/g) || []).length, 0);
+t.ok('the checks are not vacuous — the client is used, just never for a table',
+  (CODE.match(/\bsb\s*\.\s*rpc\(/g) || []).length >= 18);
 t.is('and not through the postgrest url form either', (CODE.match(/\/rest\/v1\//g) || []).length, 0);
 
 /* The specific step-around this forbids: teacher_homework still grants SELECT
@@ -131,6 +142,36 @@ t.ok('the Homework link is revealed without a role test',
 t.ok('and the Partner link still IS role-gated (the check is not vacuous)',
   /if \(S\.isTeacher\) \$\('sidePartnerLink'\)\.style\.display = '';/.test(TEACHER));
 
+// ══ 4b · ONE BUILDER ══════════════════════════════════════════════════════
+t.section('Every spec comes from the shared module, never assembled in the page');
+
+t.ok('the page loads stimulus-editor.js', /<script src="stimulus-editor\.js"><\/script>/.test(PAGE));
+const FROM_FORM = (CODE.match(/function stimulusFromForm\(\) \{[\s\S]*?\n\}/) || [''])[0];
+t.ok('stimulusFromForm was found (not a vacuous slice)', FROM_FORM.length > 400);
+t.ok('…and it builds through the module', /ED\(\)\.build\(kind, currentInputs\(\)\)/.test(FROM_FORM));
+/* One reader of the live inputs, so preview and save cannot disagree about
+   what the teacher typed. */
+t.is('and the preview reads them the same way',
+  (CODE.match(/currentInputs\(\)/g) || []).length >= 2, true);
+/* The one JSON.parse it may contain is the Advanced path, and it must be
+   behind the Advanced flag. A page that parsed the textarea unconditionally
+   would be the JSON editor again wearing a different name. */
+t.is('it parses JSON in exactly one place', (FROM_FORM.match(/JSON\.parse/g) || []).length, 1);
+t.ok('…and only when Advanced is open', /if \(S\.ed\.advanced\) \{\s*\n?\s*try \{ st\.spec = JSON\.parse/.test(FROM_FORM));
+/* No spec key is ever written by the page itself: the module owns the shape.
+   Both halves of the path are checked — the builder call AND the function that
+   gathers the live inputs for it, because a reshape in either one is the page
+   deciding the spec's shape again. */
+const CUR_INPUTS = (CODE.match(/function currentInputs\(\) \{[\s\S]*?\n\}/) || [''])[0];
+t.ok('currentInputs was found (not a vacuous slice)', CUR_INPUTS.length > 300);
+for (const key of ['headers:', 'xRange:', 'yRange:', 'curves:', 'figures:', 'panels:', 'segments:', 'fromClosed:', 'chartType:']) {
+  t.ok(`the spec key ${key} is never written on the save path`,
+    !FROM_FORM.includes(key) && !CUR_INPUTS.includes(key));
+}
+/* …and the ban is not vacuous: those keys DO exist in the module that owns them. */
+t.ok('the module writes them instead',
+  ['headers:', 'xRange:', 'curves:', 'figures:', 'panels:'].every((k) => read('stimulus-editor.js').includes(k)));
+
 // ══ 5 · ONE RENDERER ══════════════════════════════════════════════════════
 t.section('Preview uses the shipped renderer, not a second one');
 
@@ -144,6 +185,22 @@ t.ok('the page does not read spec.headers or spec.rows itself',
   !/spec\.headers|spec\.rows|\.spec\['headers'\]/.test(CODE));
 t.ok('and it does not compute media_sha256 or expect one',
   !/media_sha256/.test(PAGE));
+
+/* A preview is only a preview if it is STYLED like the student's screen.
+   The class list is derived from the renderer itself, so this cannot rot: add
+   a class there and this goes red until the page carries a rule for it. The
+   defect it was written for was visible only by looking — stimulus-view.js
+   emitted the right SVG and a curve drew as a filled black polygon, because
+   an SVG <polyline> fills black unless .sv-line sets fill:none. */
+const RENDERER = read('stimulus-view.js');
+const EMITTED = [...new Set([...RENDERER.matchAll(/class="((?:sv-[a-z-]+\s*)+)"/g)]
+  .flatMap((m) => m[1].trim().split(/\s+/)))].sort();
+t.ok('the renderer emits sv- classes (not a vacuous list)', EMITTED.length >= 20);
+const styled = new Set([...PAGE.matchAll(/\.(sv-[a-z-]+)/g)].map((m) => m[1]));
+t.is('every class the renderer emits has a rule on this page',
+  EMITTED.filter((c) => !styled.has(c)), []);
+t.ok('…including the one that stops a curve filling itself black',
+  /\.sv-line\{[^}]*fill:none/.test(PAGE));
 /* A preview that does not typeset is not a preview: a prompt written with $x$
    would look right to the teacher and wrong to nobody until a student saw it. */
 t.ok('both previews and the question list run KaTeX',
