@@ -28,8 +28,9 @@
 --     teacher_homework_responses_guard   c5db8f0336d0460c0ad1eb534bbbfc0b
 --     student_my_homework                04198136c9609eb8e73baeb747d13dd3
 --     teacher_homework_students          01b0386d8a03c5d54d734f7a565c23ee
--- It also RESTORES THE GRANT H5 revoked, because a rollback that leaves the
--- student read boundary half-moved is not a rollback.
+-- It also RESTORES THE TWO GRANTS H5 revoked -- teacher_homework_questions and,
+-- since decision F-5, teacher_homework_stimuli -- because a rollback that leaves
+-- the student read boundary half-moved is not a rollback.
 -- If any assertion fails, this file has restored something that is not H4 and
 -- must not be committed.
 -- =====================================================================
@@ -226,11 +227,13 @@ revoke all on function teacher_homework_students(uuid) from public, anon, authen
 grant execute on function student_my_homework()        to authenticated;
 grant execute on function teacher_homework_students(uuid) to authenticated;
 
--- ── 4 · restore the grant H5 revoked ──────────────────────────────────
+-- ── 4 · restore BOTH grants H5 revoked ────────────────────────────────
 -- A rollback that leaves the student read boundary half-moved is not a
--- rollback: with the RPCs gone and the grant still revoked, staff would lose
--- every path to the questions they authored.
+-- rollback: with the RPCs gone and the grants still revoked, staff would lose
+-- every path to the questions and figures they authored. F-5 added the second
+-- table, so this section restores two grants, not one, and §5.3 asserts both.
 grant select on teacher_homework_questions to authenticated;
+grant select on teacher_homework_stimuli   to authenticated;
 
 -- ── 5 · verification ──────────────────────────────────────────────────
 do $$
@@ -279,9 +282,27 @@ begin
     raise exception 'rollback H5: teacher_homework_students() was NOT restored';
   end if;
 
-  -- 5.3 the grant is back, and the policy never left
-  if not has_table_privilege('authenticated', 'teacher_homework_questions', 'select') then
-    raise exception 'rollback H5: the direct SELECT on teacher_homework_questions was not restored';
+  -- 5.3 BOTH grants are back, and the policies never left
+  select string_agg(c.relname, ', ') into v_left
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public'
+     and c.relname in ('teacher_homework_questions','teacher_homework_stimuli')
+     and not has_table_privilege('authenticated', c.oid, 'select');
+  if v_left is not null then
+    raise exception 'rollback H5: the direct SELECT was not restored on: %', v_left;
+  end if;
+  if has_table_privilege('anon', 'teacher_homework_questions', 'select')
+     or has_table_privilege('anon', 'teacher_homework_stimuli', 'select') then
+    raise exception 'rollback H5: it granted anon a read it never had';
+  end if;
+  select string_agg(x.t, ', ') into v_left from (values
+      ('teacher_homework_questions','teacher_homework_questions_staff_read'),
+      ('teacher_homework_stimuli','teacher_homework_stimuli_staff_read')
+    ) as x(t, pol)
+   where not exists (select 1 from pg_policy p join pg_class c on c.oid = p.polrelid
+                      where c.relname = x.t and p.polname = x.pol);
+  if v_left is not null then
+    raise exception 'rollback H5: a staff-read policy is missing: %', v_left;
   end if;
 
   -- 5.4 H2, H3 and H4 are otherwise untouched

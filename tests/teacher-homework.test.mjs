@@ -1443,19 +1443,82 @@ t.ok('the immutability guard sorts before the truth guard',
 
 t.section('the student read boundary becomes RPC-only');
 
-t.ok('the direct grant is revoked',
+/* F-5: BOTH content tables, or the sentence "the student read boundary is
+   RPC-only" is only half true and a later reader resolves it the wrong way. */
+t.ok('the direct grant is revoked on the questions table',
   /revoke select on teacher_homework_questions from authenticated;/.test(H5C));
+t.ok('and on the stimuli table too (F-5)',
+  /revoke select on teacher_homework_stimuli\s+from authenticated;/.test(H5C));
+t.is('exactly two table grants are revoked, and no more',
+  [...H5C.matchAll(/revoke select on (\w+)\s+from authenticated/g)].map((m) => m[1]).sort(),
+  ['teacher_homework_questions', 'teacher_homework_stimuli']);
 /* The policy is the rule and the grant is the reach: keeping the rule means a
    future GRANT cannot silently hand students the key. */
-t.ok('and the staff-read POLICY is deliberately left in place',
+t.ok('and BOTH staff-read POLICIES are deliberately left in place',
   !/drop policy/.test(H5C)
-  && /the rule must survive the reach/.test(H5C));
+  && /the rule must survive the reach/.test(H5C)
+  && /teacher_homework_questions_staff_read/.test(H5C)
+  && /teacher_homework_stimuli_staff_read/.test(H5C));
 t.ok('staff keep a path to the key, through the review RPC',
   /q\.correct_answer/.test(body5('teacher_homework_review'))
   && /teacher_homework_is_staff/.test(body5('teacher_homework_review')));
-t.ok('§12.4 pins the revocation and that nothing else lost a grant',
-  /authenticated still holds a direct SELECT on teacher_homework_questions/.test(H5C)
+t.ok('§12.4 pins both revocations and that nothing else lost a grant',
+  /authenticated still holds a direct SELECT on: %/.test(H5C)
   && /it removed a grant it should not have/.test(H5C));
+/* The message alone is not the assertion — the SET it checks is. A §12.4 that
+   still says the right sentence about a one-table list proves nothing. */
+t.ok('and §12.4 checks BOTH tables, not just the questions table',
+  /c\.relname in \('teacher_homework_questions','teacher_homework_stimuli'\)\s*\n\s*and has_table_privilege\('authenticated', c\.oid, 'select'\)/.test(H5C));
+/* The check that used to assert stimuli KEPT its grant is the one F-5 flipped;
+   if it survived, the file would contradict itself and could not install. */
+t.ok('and the old "stimuli keeps its grant" assertion is gone, not merely edited',
+  !/'teacher_homework','teacher_homework_stimuli','teacher_homework_access'/.test(H5C)
+  && /'teacher_homework','teacher_homework_access'/.test(H5C));
+t.ok('anon is asserted to hold neither content grant',
+  /anon holds a direct SELECT on a homework content table/.test(H5C));
+
+/* F-5's other half: the RPC is now the ONLY reach, so what it returns is the
+   whole of the student-visible contract. It must name its fields. */
+/* Counted PER BRANCH. Presence alone would let a field be dropped from one of
+   the two branches, and entitled and unentitled students would then see
+   different figures for the same question. */
+t.is('every stimulus field the student read exposes appears once in EACH branch',
+  ['s.kind', 's.label', 's.body', 's.spec', 's.media_ref', 's.media_kind']
+    .filter((f) => body5('student_homework_paper').split(f).length - 1 !== 2), []);
+t.ok('and nothing staff-only rides along',
+  !body5('student_homework_paper').includes('media_sha256')
+  && !body5('student_homework_paper').includes('s.homework_id'));
+t.ok('§12.8 pins that list per branch, so a later s.* or a dropped field breaches it',
+  /a stimulus field is not named exactly once in each branch/.test(H5C)
+  && /the student read exposes media_sha256/.test(H5C)
+  && /selects a whole stimulus row instead of naming its fields/.test(H5C));
+
+t.section('F-1 — removal after submission does not revoke the result');
+
+/* LOCKED: the sitting is over and the result is the student's. Removal governs
+   what they may still DO, not what they already earned. */
+t.ok('the read gate carries a third arm for the caller\'s own submitted work',
+  /\(v_sat and t\.status = 'submitted'\)\)/.test(body5('student_homework_paper')));
+t.ok('and that arm is an OR, so it survives can_open and can_resume both false',
+  /teacher_homework_can_open\(p_homework\)\s*or teacher_homework_can_resume\(p_homework\)\s*or \(v_sat and t\.status = 'submitted'\)/
+    .test(body5('student_homework_paper')));
+/* Nothing else in the file would notice the arm being dropped, which is exactly
+   why it is asserted in the migration's own verification block. */
+t.ok('§12.8 asserts the arm, so a later edit cannot drop it silently',
+  /the read gate lost its third arm/.test(H5C)
+  && /F-1 says a submitted result survives removal from the class/.test(H5C));
+t.ok('the key still rides S-1 on top of it, not the arm alone',
+  /v_key_ok := coalesce\(h\.reveal_answers and v_sat and t\.status = 'submitted', false\)/
+    .test(body5('student_homework_paper')));
+/* The asymmetry F-1 accepts: removed mid-sitting, all three arms are false. */
+t.ok('a student removed while in_progress still fails every arm',
+  /teacher_homework_can_resume/.test(body5('student_homework_paper'))
+  && /t\.status = 'in_progress'/.test(read('supabase/migrations/20260905a_teacher_homework_h5.sql')
+       .slice(0, read('supabase/migrations/20260905a_teacher_homework_h5.sql')
+         .indexOf('create or replace function teacher_homework_attempts_guard'))));
+t.ok('and save and submit are unchanged by F-1 — they still refuse',
+  /teacher_homework_can_resume/.test(body5('student_homework_save'))
+  && /teacher_homework_can_resume/.test(body5('student_homework_submit')));
 
 t.section('the roster gains one signal, and no lifecycle');
 
@@ -1546,9 +1609,21 @@ t.is('and it asserts each of those md5s in the file too',
     .filter((m) => !H5ZC.includes(m)), []);
 /* A rollback that leaves the read boundary half-moved is not a rollback: with
    the RPCs gone and the grant still revoked, staff lose every path. */
-t.ok('it puts the revoked grant back',
+t.ok('it puts BOTH revoked grants back',
   /grant select on teacher_homework_questions to authenticated;/.test(H5ZC)
-  && /the direct SELECT on teacher_homework_questions was not restored/.test(H5ZC));
+  && /grant select on teacher_homework_stimuli\s+to authenticated;/.test(H5ZC)
+  && /the direct SELECT was not restored on: %/.test(H5ZC));
+t.is('and exactly those two, so it cannot over-grant on the way back',
+  [...H5ZC.matchAll(/grant select on (\w+)\s+to authenticated/g)].map((m) => m[1]).sort(),
+  ['teacher_homework_questions', 'teacher_homework_stimuli']);
+t.ok('it refuses to hand anon a read it never had',
+  /it granted anon a read it never had/.test(H5ZC));
+/* The over-grant a to-authenticated-only scan cannot see. */
+t.is('and the rollback grants no table read to anon or public at all',
+  [...H5ZC.matchAll(/grant\s+select\s+on\s+\w+\s+to\s+(\w+)/g)]
+    .map((m) => m[1]).filter((r) => r !== 'authenticated'), []);
+t.ok('and it checks both staff-read policies are still there',
+  /a staff-read policy is missing/.test(H5ZC));
 t.ok('and it returns both triggers to their H2 shape',
   /before delete or update on teacher_homework_attempts/.test(H5ZC)
   && /teacher_homework_responses carries % trigger\(s\); H2 left exactly one/.test(H5ZC));

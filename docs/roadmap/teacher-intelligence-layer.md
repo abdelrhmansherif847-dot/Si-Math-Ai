@@ -3781,3 +3781,146 @@ triggers present; `authenticated` still holds `select` on
 hash families identical to the H4 baseline.
 
 **Nothing is applied. H5 awaits explicit approval, and H6 has not started.**
+
+---
+
+### 15.24 · F-1 and F-5 LOCKED — H5 PREPARED, revision 2 (2026-09-04)
+
+The two decisions the function-by-function review left open are now settled and
+implemented. Still **nothing applied**: 190 migrations, newest `20260903203209`.
+
+#### F-1 — removal after submission does not revoke the result
+
+**LOCKED.** A student removed from the class **after** submitting keeps access to
+their own submitted result, and to `correct_answer` + `explanation` when
+`reveal_answers` is true. The sitting is finished and the result is theirs;
+removal governs what they may still **do**, not what they already earned.
+Removal still prevents a new start, a resume, a save and a submit, and a student
+removed **while `in_progress`** stays under S-2 exactly as locked.
+
+**This required no code change — the prepared read already behaved this way.**
+What it required was an *assertion*, because the behaviour rested on one
+un-asserted arm of a three-arm gate and nothing in the package would have
+noticed a later edit dropping it. §12.8 now pins the arm, pins that it is a
+third arm of an `OR` rather than the S-1 condition counted twice, and the
+contract suite pins both plus the fact that save and submit are unmoved.
+
+The asymmetry F-1 accepts, measured rather than argued:
+
+| state at read time | paper read | key when reveal=true |
+|---|---|---|
+| removed **after** submitting | **accepted** | **shown** |
+| removed **while in_progress** | refused `42501` | — |
+| rejoined after removal | accepted | shown once submitted |
+| never sat, reveal on | accepted | **withheld** (S-1) |
+
+#### F-5 — the read boundary is RPC-only for both content tables
+
+**LOCKED.** `20260905a` now revokes `authenticated`'s direct `select` on
+**`teacher_homework_stimuli`** as well as `teacher_homework_questions`.
+
+Stated honestly: **neither revoke closes a live leak.** RLS on both tables
+carries a staff-read policy and nothing else, so a student's direct select
+already returned zero rows — measured on the live catalogue, not assumed. What
+the revokes remove is the *reach*, and with it the possibility that a future
+policy makes the grant matter. The value is that the architecture is now one
+thing rather than two:
+
+```
+Student → SECURITY DEFINER student read RPC → questions + stimuli → named fields only
+```
+
+Both staff-read **policies** stay in place though nothing can reach them — the
+policy is the rule, the grant is the reach. The student RPC names its six
+stimulus fields one by one (`kind`, `label`, `body`, `spec`, `media_ref`,
+`media_kind`); `media_sha256` is a server-computed integrity value and stays
+staff-only, and the ids and timestamps are internal. §12.8 counts each field
+**per branch** — presence alone would let a field be dropped from one of the two
+branches, so entitled and unentitled students would see different figures.
+
+One check in §12.4 had to be **flipped rather than added**: before F-5 it
+asserted that `teacher_homework_stimuli` *kept* its grant. The file now asserts
+the opposite, and the contract suite asserts the old form is gone, so the
+reversal is visible instead of silent.
+
+#### Verification, re-run in full
+
+| | |
+|---|---|
+| contract suite | **440/440** (was 422) |
+| access-scope suite | **109/109** |
+| CI | **66/66** |
+| mutation suite | **81/81 killed** (was 65), none unapplied |
+| production | unchanged — 190 migrations, 0 of 8 H5 functions, 0 of 2 H5 triggers, both grants still held, all eight homework tables 0 rows, audit 2 rows, analyzer 893/11/24 |
+
+**Sixteen new mutants** cover the two decisions — reverting F-5, aiming the
+revoke at the wrong table, narrowing §12.4 to one table, dropping the stimuli
+policy assertion, leaking `media_sha256`, dropping a stimulus field from one
+branch, the rollback leaving the stimuli grant revoked or over-granting to
+`anon`, reverting F-1's third arm, turning it into an `AND`, dropping the
+`submitted` condition, un-asserting it, and widening F-1 into `save`.
+
+**Three survived the first pass, and all three were real test gaps:**
+
+- **§12.4 narrowed to one table still passed** — the suite asserted the *message*
+  but not the *set* it checks. A check that says the right sentence about the
+  wrong list proves nothing.
+- **A stimulus field dropped from one branch still passed** — the suite used
+  `every(includes(...))`, which a two-branch function satisfies from one branch.
+  Both the suite and §12.8 now count **per branch**.
+- **The rollback granting `anon` a read still passed** — the scan matched only
+  `to authenticated`. It now asserts no table grant to any other role.
+
+#### The dry-run — verbatim, aborting, on production
+
+The forward file installed with **§12 raising nothing**, which is the reachability
+proof that matters: the rewritten §12.4 and §12.8 can go green, and the H3/H4
+class of defect (*a check that could only ever raise*) is absent. Fixtures were
+authored through the **real H3 RPCs** — create, save stimulus, save question,
+publish — not raw inserts.
+
+| probe | result |
+|---|---|
+| P1 both grants after the revokes | `questions=false stimuli=false` |
+| P1b both staff-read policies | present |
+| P1c the other four grants | all still `true` |
+| P1d `anon` on both content tables | `false false` |
+| P2 / P2b student direct SELECT | refused `42501` on **both** |
+| P2c / P2d **teacher** direct SELECT | refused `42501` on both — role-wide, by design |
+| P3 s1 sits and submits | `2 correct / 0 wrong / 0 omitted`, mcq `' b '`→B and grid-in `1.50`→1.5 |
+| P3b stimulus fields the student receives | exactly `body, kind, label, media_kind, media_ref, spec` |
+| P3c | `media_sha256` **absent** from the whole payload; key absent (reveal off); own verdict present |
+| **P4 F-1** removed after submitting, reveal off | read **ACCEPTED**, `submitted`, own verdicts visible, key absent |
+| P4b / P4c | save refused `42501`; start returns the submitted attempt (`resumed=true`) |
+| **P4d F-1 + reveal on** | `answers_visible=true`, key `B`, explanation shown |
+| **P5** removed mid-sitting | paper read refused `42501`, submit refused `42501` |
+| P5c / P5d | rejoined → submitted `0c/1w/1o`; then sees the key |
+| P6 / P6b roster | teacher ≡ ACTIVE assistant, **parity=true**; `active_member` reads `false` for the removed-but-submitted student and `true` for the rejoined one |
+| P6c review as assistant | key visible to staff |
+| P6d–P6g | pending assistant, outsider read, outsider review, no session — all `42501` |
+| **P7** never sat, reveal **on** | `answers_visible=false`, **key absent** — S-1 holds for a non-sitter |
+| P8 analyzer after two graded sittings | **893 / 11 / 24 — unmoved** |
+
+#### Rollback rehearsal
+
+`20260905z` restores **two** grants now, and §5.3 asserts both plus "no grant to
+`anon`" plus both policies. Rehearsed aborting:
+
+```
+trajectory  84/209/138/29/1/1/q=true/s=true
+        ->  84/217/138/37/3/1/q=false/s=false
+        ->  84/209/138/29/1/1/q=true/s=true
+TOTAL DIFFERING: 0
+```
+
+All eight hash families identical to pre-install. Both grants move together in
+both directions, which is the property F-5 adds.
+
+#### What did not change
+
+No table, no policy, no enum label. The same four live functions are redefined,
+the same two triggers added, the same eight functions added. `20260905z`'s
+window still closes at the **first sitting**. **H6 still owes a staff
+authoring-read RPC** — F-5 widens that bill from questions to figures as well.
+
+**Nothing is applied. H5 remains PREPARED and awaits explicit approval.**

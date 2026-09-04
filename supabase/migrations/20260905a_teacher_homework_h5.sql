@@ -67,17 +67,47 @@
 -- forbids. The RPC decides WHEN a verdict is written; the database decides
 -- WHAT it must be. There is no second grading rule anywhere.
 --
--- THE STUDENT READ BOUNDARY IS NOW RPC-ONLY (§15.22 H-3)
--- ------------------------------------------------------
--- This file REVOKES SELECT on teacher_homework_questions from authenticated.
--- The answer key stops being separated from students by RLS alone and starts
--- being separated by the absence of any reach at all. The staff-read policy on
--- that table is deliberately LEFT IN PLACE though nothing can now reach it:
--- the policy is the rule, the grant is the reach, and keeping the rule means a
--- future GRANT cannot silently hand students the key. Staff keep their access
--- through teacher_homework_review(), added below. This deliberately diverges
--- from Teacher Exams, whose pages read those tables directly; homework's
--- student boundary is RPC-only by decision, not by accident.
+-- THE STUDENT READ BOUNDARY IS NOW RPC-ONLY (§15.22 H-3, extended by F-5)
+-- -------------------------------------------------------------------------
+-- This file REVOKES SELECT on BOTH teacher_homework_questions AND
+-- teacher_homework_stimuli from authenticated. The content a student sees stops
+-- being separated from them by RLS alone and starts being separated by the
+-- absence of any reach at all.
+--
+-- Stimuli were added to the revoke by decision F-5, and the reason is
+-- consistency rather than a leak: RLS on that table already carries only a
+-- STAFF-READ policy, so a student's direct select returns zero rows today
+-- either way. But "the homework student read boundary is RPC-only" was only
+-- literally true of one of the two content tables, and half an architecture is
+-- the kind of thing a later reader resolves in the wrong direction.
+--
+-- The staff-read policies on BOTH tables are deliberately LEFT IN PLACE though
+-- nothing can now reach them: the policy is the rule, the grant is the reach,
+-- and keeping the rule means a future GRANT cannot silently hand students the
+-- key. Staff keep their access through teacher_homework_review(), added below.
+--
+-- The student RPC names its stimulus fields ONE BY ONE -- kind, label, body,
+-- spec, media_ref, media_kind -- and never selects s.*. media_sha256 is a
+-- server-computed integrity field and is staff-only; id, homework_id and the
+-- timestamps are internal. §12.8 pins the exposed list.
+--
+-- This deliberately diverges from Teacher Exams, whose pages read the
+-- equivalent tables directly; homework's student boundary is RPC-only by
+-- decision, not by accident. The bill it hands H6 is a staff authoring-read RPC.
+--
+-- REMOVAL AFTER SUBMISSION (F-1, LOCKED)
+-- --------------------------------------
+-- A student removed from the class AFTER submitting keeps access to their own
+-- submitted result, and to the correct answer and explanation when
+-- reveal_answers is true. The sitting is finished and the result is theirs;
+-- removal governs what they may still DO, not what they already earned.
+--
+-- Removal continues to prevent a new start, a resume, a save and a submit, and
+-- a student removed while in_progress stays under S-2 exactly as locked: the
+-- attempt survives untouched and access returns only on rejoining as an ACTIVE
+-- member. The asymmetry is deliberate and is now asserted (§12.8) rather than
+-- merely true, because it is the third gate arm of student_homework_paper()
+-- and nothing else would notice if a later edit dropped it.
 -- =====================================================================
 
 begin;
@@ -300,10 +330,16 @@ begin
   v_sat := found;
 
   -- THE GATE. can_open is the new-start gate; can_resume is invariant 1's
-  -- exception. The third arm is a read of the caller's OWN finished work: S-2
-  -- blocks starting, resuming, saving and submitting, and says nothing about
-  -- reading — and RLS already lets a removed student read their own responses,
-  -- so refusing here would hide what they can already reach through PostgREST.
+  -- exception. The third arm is F-1, LOCKED: a read of the caller's OWN
+  -- finished work survives removal from the class. S-2 blocks starting,
+  -- resuming, saving and submitting, and says nothing about reading; the
+  -- sitting is over and the result is the student's. RLS already lets them read
+  -- their own responses, so refusing here would only hide what they can still
+  -- reach through PostgREST — while withholding the key they are entitled to.
+  --
+  -- Note the deliberate asymmetry this creates, which F-1 accepts: removed
+  -- while in_progress, all three arms are false and the paper cannot be read at
+  -- all; removed after submitting, it can. §12.8 asserts this arm exists.
   if not (teacher_homework_can_open(p_homework)
           or teacher_homework_can_resume(p_homework)
           or (v_sat and t.status = 'submitted')) then
@@ -709,10 +745,19 @@ grant execute on function teacher_homework_students(uuid)               to authe
 grant execute on function teacher_homework_review(uuid, uuid)           to authenticated;
 
 -- ── 11 · the student read boundary becomes RPC-only ───────────────────
--- H-3. The answer key stops being separated from students by RLS alone. The
--- staff-read POLICY stays: the policy is the rule and the grant is the reach,
--- so keeping the rule means a future GRANT cannot silently hand out the key.
+-- H-3, extended by F-5 to BOTH content tables. The content a student sees stops
+-- being separated from them by RLS alone. The staff-read POLICIES stay: the
+-- policy is the rule and the grant is the reach, so keeping the rules means a
+-- future GRANT cannot silently hand out the key.
+--
+-- Neither revoke closes a live leak — RLS on both tables carries a staff-read
+-- policy and nothing else, so a student's direct select already returned zero
+-- rows. What they remove is the REACH, and with it the possibility that a later
+-- policy makes the grant matter. They also remove STAFF's direct read, because
+-- a grant to authenticated is role-wide: that is what teacher_homework_review()
+-- restores, and what H6 must restore for authoring.
 revoke select on teacher_homework_questions from authenticated;
+revoke select on teacher_homework_stimuli   from authenticated;
 
 -- ── 12 · verification ─────────────────────────────────────────────────
 -- Every assertion names what would breach it, so each one could go red. Each
@@ -799,21 +844,38 @@ begin
     raise exception 'H5: a verdict guard is client-callable';
   end if;
 
-  -- 12.4 THE STUDENT READ BOUNDARY IS RPC-ONLY. The grant is gone; the policy
-  --      stays, so a future GRANT cannot silently hand students the key.
-  if has_table_privilege('authenticated', 'teacher_homework_questions', 'select') then
-    raise exception 'H5: authenticated still holds a direct SELECT on teacher_homework_questions';
-  end if;
-  if not exists (select 1 from pg_policy p join pg_class c on c.oid = p.polrelid
-                  where c.relname = 'teacher_homework_questions'
-                    and p.polname = 'teacher_homework_questions_staff_read') then
-    raise exception 'H5: the staff-read policy on teacher_homework_questions was dropped — the rule must survive the reach';
-  end if;
-  -- and nothing else lost its grant
+  -- 12.4 THE STUDENT READ BOUNDARY IS RPC-ONLY, for BOTH content tables (F-5).
+  --      The grants are gone; the policies stay, so a future GRANT cannot
+  --      silently hand students the key.
   select string_agg(c.relname, ', ') into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public'
-     and c.relname in ('teacher_homework','teacher_homework_stimuli','teacher_homework_access',
+     and c.relname in ('teacher_homework_questions','teacher_homework_stimuli')
+     and has_table_privilege('authenticated', c.oid, 'select');
+  if v_bad is not null then
+    raise exception 'H5: authenticated still holds a direct SELECT on: %', v_bad;
+  end if;
+  select string_agg(x.t, ', ') into v_bad from (values
+      ('teacher_homework_questions','teacher_homework_questions_staff_read'),
+      ('teacher_homework_stimuli','teacher_homework_stimuli_staff_read')
+    ) as x(t, pol)
+   where not exists (select 1 from pg_policy p join pg_class c on c.oid = p.polrelid
+                      where c.relname = x.t and p.polname = x.pol);
+  if v_bad is not null then
+    raise exception 'H5: a staff-read policy was dropped — the rule must survive the reach: %', v_bad;
+  end if;
+  -- anon never held either grant and must not gain one
+  if has_table_privilege('anon', 'teacher_homework_questions', 'select')
+     or has_table_privilege('anon', 'teacher_homework_stimuli', 'select') then
+    raise exception 'H5: anon holds a direct SELECT on a homework content table';
+  end if;
+  -- and nothing else lost its grant. teacher_homework_stimuli is DELIBERATELY
+  -- absent from this list now: before F-5 this same check asserted it KEPT the
+  -- grant, so the flip is visible here rather than silent.
+  select string_agg(c.relname, ', ') into v_bad
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public'
+     and c.relname in ('teacher_homework','teacher_homework_access',
                        'teacher_homework_attempts','teacher_homework_responses')
      and not has_table_privilege('authenticated', c.oid, 'select');
   if v_bad is not null then
@@ -917,6 +979,40 @@ begin
   end if;
   if v_code !~ 'reveal_answers and v_sat and t\.status = ''submitted''' then
     raise exception 'H5: the key is exposed on reveal alone — S-1 requires the caller''s own SUBMITTED attempt';
+  end if;
+
+  -- F-1, LOCKED: the third gate arm is what lets a student removed AFTER
+  -- submitting still read their own result. Nothing else in the file would
+  -- notice its removal, so it is asserted here rather than left merely true.
+  if v_code !~ 'v_sat and t\.status = ''submitted''\)\) then' then
+    raise exception 'H5: the read gate lost its third arm — F-1 says a submitted result survives removal from the class';
+  end if;
+  -- and it really is a THIRD arm of an OR, not the S-1 condition counted twice
+  if (length(v_code) - length(replace(v_code, 'teacher_homework_can_resume', '')))
+     / length('teacher_homework_can_resume') <> 1 then
+    raise exception 'H5: the read gate does not call can_resume exactly once';
+  end if;
+
+  -- F-5: the stimulus fields the student read exposes are named ONE BY ONE.
+  -- media_sha256 is a server-computed integrity value and is staff-only; the
+  -- ids and timestamps are internal. A future s.* would breach this.
+  if v_code ~ 'media_sha256' then
+    raise exception 'H5: the student read exposes media_sha256 — that is a staff-only integrity field';
+  end if;
+  if v_code ~ 'select\s+s\.\*' or v_code ~ 'jsonb_build_object\(s\.\*' then
+    raise exception 'H5: the student read selects a whole stimulus row instead of naming its fields';
+  end if;
+  -- Counted PER BRANCH, not merely present: the read has two branches and a
+  -- field dropped from one of them would still be found by a presence test,
+  -- so the entitled and unentitled students would see different figures.
+  select string_agg(f.c || '×' || ((length(v_code) - length(replace(v_code, f.c, '')))
+                                   / length(f.c))::text, ', ' order by f.c)
+    into v_bad
+    from unnest(array['s.kind','s.label','s.body','s.spec',
+                      's.media_ref','s.media_kind']) as f(c)
+   where (length(v_code) - length(replace(v_code, f.c, ''))) / length(f.c) <> 2;
+  if v_bad is not null then
+    raise exception 'H5: a stimulus field is not named exactly once in each branch of the student read: %', v_bad;
   end if;
 
   -- 12.9 THE ANALYZER BOUNDARY IS NOT ASSERTED HERE, DELIBERATELY.
