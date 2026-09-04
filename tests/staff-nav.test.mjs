@@ -34,9 +34,15 @@ t.ok('the filter exists and is real code', /function applyStaffNav/.test(CODE) &
    for. Note this list is about the FILTER: whether the Partner LINK is drawn
    at all is a separate, stricter question, asserted below, because can_staff
    includes assistants and the Partner Program does not. */
-t.is('the keep-list is exactly the four staff destinations',
+/* teacher-exams.html and teacher-homework.html joined the list with the H7
+   staff UI, and they closed a real defect rather than adding a nicety: both
+   pages carry a link that teacher.html reveals AFTER this filter's first
+   pass, and the +500ms and +1500ms passes then hid it again. See the
+   executable regression in §7. */
+t.is('the keep-list is exactly the six staff destinations',
   (FILTER.match(/'([a-z-]+\.html)': 1/g) || []).map((m) => m.match(/'(.+)'/)[1]).sort(),
-  ['partner.html', 'profile.html', 'settings.html', 'teacher.html']);
+  ['partner.html', 'profile.html', 'settings.html', 'teacher-exams.html',
+   'teacher-homework.html', 'teacher.html']);
 
 /* The money belongs to whoever's class it is. `teaching` is can_staff, which
    an ACTIVE ASSISTANT also satisfies, so the Partner link must be gated on
@@ -242,7 +248,8 @@ const parseSidebar = (html) => {
 /* Restated rather than read from nav.js on purpose: this sweep is the second
    opinion on the filter, and a copy that derives its expectation from the
    thing it is checking cannot disagree with it. */
-const KEEP = new Set(['teacher.html', 'partner.html', 'profile.html', 'settings.html']);
+const KEEP = new Set(['teacher.html', 'teacher-exams.html', 'teacher-homework.html',
+                      'partner.html', 'profile.html', 'settings.html']);
 const leaks = [];
 const emptied = [];
 for (const page of SIDEBAR_PAGES) {
@@ -294,5 +301,101 @@ const NO_SLOT = SIDEBAR_PAGES.filter((f) => !/id="adminNavSection"/.test(read(f)
    and this goes red. */
 t.is('every sidebar page loads nav.js', NO_NAV, []);
 t.is('every sidebar page carries the slot it needs', NO_SLOT, []);
+
+
+// ══ 7 · THE REVEAL-THEN-FILTER ORDER ══════════════════════════════════════
+t.section('A link the page reveals must still be there a second later');
+
+/* The defect this pins, measured before it was fixed:
+ *
+ *   teacher.html draws its Teacher Exams and Homework links with an inline
+ *   style="display:none" and reveals them in renderWorkspace(), three round
+ *   trips into boot(). nav.js runs applyStaffNav FOUR times — at once, next
+ *   frame, +500ms and +1500ms. Whichever runs last wins, and the last one is
+ *   nav.js. With those files missing from the keep-list, the link was drawn
+ *   and then taken away again, so the staff surface advertised neither of the
+ *   two pages where staff actually work.
+ *
+ * The sweep in §6 could not see it: makeDom() starts every anchor visible, so
+ * a link that is hidden ends up looking like a student destination correctly
+ * hidden. This drives the REAL markup — inline display:none preserved — in
+ * the REAL order, and asserts the end state. It fails on a keep-list that
+ * omits either page. */
+const parseSidebarWithDisplay = (html) => {
+  const a = html.indexOf('<aside class="sidebar"');
+  const b = html.indexOf('</aside>', a);
+  if (a < 0 || b < 0) return null;
+  const region = html.slice(a, b);
+  const out = [];
+  const re = /<div class="side-sec"[^>]*>|<a\b[^>]*class="[^"]*\bnav-item\b[^"]*"[^>]*>/g;
+  let m;
+  while ((m = re.exec(region))) {
+    const tag = m[0];
+    if (tag.startsWith('<div')) out.push(['side-sec', null, '']);
+    else out.push(['nav-item', (tag.match(/href="([^"]*)"/) || [, ''])[1],
+                   /style="display:none"/.test(tag) ? 'none' : '']);
+  }
+  return out;
+};
+
+const HW_SPEC = parseSidebarWithDisplay(PAGE);
+t.ok('teacher.html\'s sidebar was parsed (not a vacuous probe)',
+  !!HW_SPEC && HW_SPEC.filter(([c]) => c === 'nav-item').length >= 8);
+
+/* The two staff pages really are born hidden — that is what makes the order
+   matter. If they were visible in the markup this whole test would be moot,
+   and it would quietly stop testing anything. */
+const bornHidden = HW_SPEC.filter(([c, h, d]) => c === 'nav-item' && d === 'none').map(([, h]) => h);
+t.is('both staff-work links are born hidden in the markup',
+  bornHidden.filter((h) => /teacher-(exams|homework)\.html/.test(h)).sort(),
+  ['teacher-exams.html', 'teacher-homework.html']);
+
+const makeDomD = (spec) => {
+  const mk = (cls, href, disp) => ({
+    classList: { contains: (c) => cls.split(' ').includes(c) },
+    style: { display: disp },
+    getAttribute: (n) => (n === 'href' ? href : null),
+    _cls: cls, _href: href,
+  });
+  const children = spec.map(([cls, href, disp]) => mk(cls, href, disp));
+  const slot = { contains: () => false };
+  const sidebar = {
+    children,
+    querySelectorAll: (sel) => (sel === 'a.nav-item' ? children.filter((c) => c._cls.includes('nav-item')) : []),
+  };
+  return { children, slot, document: { querySelector: (s) => (s === '.sidebar' ? sidebar : null) } };
+};
+
+{
+  const dom = makeDomD(HW_SPEC);
+  const pass = new Function('document', 'slot', 'teaching',
+    `${FILTER.slice(0, FILTER.lastIndexOf('function render('))}\napplyStaffNav(slot, teaching);`);
+  const by = (href) => dom.children.find((c) => c._href === href && c._cls.includes('nav-item'));
+
+  pass(dom.document, dom.slot, true);              // nav.js, first pass
+  t.is('before the page reveals them, both stay hidden — the filter never shows anything',
+    [by('teacher-exams.html').style.display, by('teacher-homework.html').style.display],
+    ['none', 'none']);
+
+  // renderWorkspace(): the two lines that reveal them, with no role test.
+  by('teacher-exams.html').style.display = '';
+  by('teacher-homework.html').style.display = '';
+  by('partner.html').style.display = '';           // the teacher-only one
+
+  pass(dom.document, dom.slot, true);              // the +500ms pass
+  pass(dom.document, dom.slot, true);              // and the +1500ms pass
+  t.is('after the page reveals them, the later filter passes leave them alone',
+    [by('teacher-exams.html').style.display, by('teacher-homework.html').style.display],
+    ['', '']);
+  t.is('and the student destinations are still hidden, so the fix did not widen the surface',
+    ['dashboard.html', 'chat.html', 'progress.html'].filter((h) => by(h).style.display !== 'none'), []);
+}
+
+/* teacher.html must actually reveal the new link, or the keep-list entry is
+   protecting a link nobody ever shows. */
+t.ok('teacher.html reveals the Homework link, with no role test',
+  /^\s*\$\('sideHomeworkLink'\)\.style\.display = '';/m.test(PAGE));
+t.ok('and it is the teacher-homework.html destination',
+  /href="teacher-homework\.html" id="sideHomeworkLink"/.test(PAGE));
 
 t.done();

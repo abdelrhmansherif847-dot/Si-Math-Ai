@@ -4799,3 +4799,265 @@ from `main` in any shipped page.
 - **Q6** Approve I-5's CLAUDE.md correction as part of H7's bookkeeping?
 
 **STOPPED here.** Audit only; nothing prepared, nothing applied, no UI written.
+
+### 15.29 · Teacher Homework H7 — the staff UI · PLAN (2026-09-04)
+
+The audit of §15.28 was approved and its six questions answered. This section
+records the decisions as locked, then the plan: file list, state matrix,
+RPC-to-UI mapping, the `nav.js` patch and the test plan. **H7 is UI/product
+work only** — no migration, no table, no policy, no grant, no backend function,
+no change to H1–H6 behaviour, no student UI, no dashboard, no Teacher Exams
+content or read architecture, no analyzer change.
+
+#### 1 · The six decisions, LOCKED
+
+1. **Re-numbering.** Applied `20260906a` is the staff-read backend layer,
+   **H5.5**. **H7 = Staff Homework UI. H8 = Student Homework UI + the unified
+   *From your teachers* dashboard card** (Homework and Teacher Exams).
+2. **RPC-only read boundary, confirmed to five.** `teacher_my_workspaces()`,
+   `teacher_homework_list()`, `teacher_homework_paper()`,
+   `teacher_homework_students()`, `teacher_homework_review()` are all inside
+   the boundary. The client makes **zero `.from()` calls** — asserted as a
+   count of zero, not as a table allow-list, which is stricter than the rule
+   `teacher-exams.html` is held to.
+3. **`nav.js` is fixed inside H7.** C-2 is a live navigation defect, not scope
+   expansion: the smallest possible patch, no redesign of navigation,
+   permissions, routing or role semantics, `staff_status === 'active'`
+   semantics kept, no `staff_role` gate introduced, and regression coverage so
+   it cannot silently return.
+4. **Roster and review live inside the paper screen.** Homework → paper →
+   roster → select student → review. No separate page.
+5. **A draft's code is hidden.** `homework_code` appears only once published,
+   with Copy and Rotate. No usable-looking access code before publish.
+6. **`confirm()` before publish, close, rotate, reveal and delete** — those
+   five and no others invented. Backend one-way and final semantics respected.
+
+Bookkeeping approved with H7: CLAUDE.md's two stale facts (the class-patterns
+card is deployed; `ai-tutor` platform version is 145) are corrected, and
+nothing else in the documentation is touched.
+
+#### 2 · File and change list — exactly six files
+
+| File | Change |
+|---|---|
+| `teacher-homework.html` | **NEW.** The staff surface. Root page, `noindex,nofollow`, no `nav.js`, *← Teaching* back link |
+| `teacher.html` | **+2 lines.** `sideHomeworkLink` beside `sideExamsLink`, revealed on the existing no-role-test line |
+| `nav.js` | **+2 keep-list entries.** `teacher-exams.html` and `teacher-homework.html` in `STAFF_NAV_KEEP` |
+| `tests/teacher-homework-ui.test.mjs` | **NEW.** The contract suite for the page |
+| `tests/staff-nav.test.mjs` | Keep-list restated to six; the reveal-then-filter order added as an executable regression |
+| `CLAUDE.md`, `docs/roadmap/teacher-intelligence-layer.md` | Bookkeeping and this record |
+
+No file under `supabase/` is touched. No frozen file is touched.
+
+#### 3 · Page state matrix
+
+`show()` over `loadingState | denyState | listState | paperState`, the
+`teacher-exams.html` shape exactly.
+
+| State | Entered when | Shows |
+|---|---|---|
+| `loadingState` | first paint | spinner card |
+| `denyState` | no supabase client, RPC error, or **no ACTIVE staff row** | *This page is for teachers and their assistants* |
+| (redirect) | no session | `location.href = 'login.html'` |
+| `listState` | active staff | class picker, **+ New homework**, the paper tiles |
+| `paperState` | a tile clicked, or a create | the eight cards below |
+
+Inside `paperState`, per status:
+
+| Card | draft | published | closed |
+|---|---|---|---|
+| Paper (title, instructions, Save, Delete) | editable; Delete shown | inputs disabled, Save disabled, Delete hidden | same as published |
+| Schedule & answers (due Set/Clear, Reveal) | both live | both live | **due disabled** (`22023`); Reveal still live, per backend |
+| Figures | full form + Edit/Delete | form hidden; previews only | form hidden; previews only |
+| Questions | full form + ↑ ↓ Edit Delete | form hidden; read-only list **with the key**, staff-only | same as published |
+| Publishing (hint, Publish, Close) | hint + Publish | Close only | **card hidden** |
+| Code (Copy, Rotate) | **hidden** (decision 5) | shown, Rotate shown | shown, **Rotate hidden** |
+| Students (roster) | hidden — nothing can attach to a draft | shown | shown |
+| Review (one student) | hidden | shown once a student is picked | shown once picked |
+
+#### 4 · RPC-to-UI action mapping — every call, and nothing else
+
+**Reads (5).** `teacher_my_workspaces()` → the class picker, filtered to
+`staff_status === 'active'`. `teacher_homework_list(p_workspace)` → the tiles
+(title, status pill, question / attached / attempt / submitted counts, code
+when not draft, due date). `teacher_homework_paper(p_homework)` → the whole
+paper screen in **one** call: header, `can_edit_content`, `stimuli[]`,
+`questions[]` (with `correct_answer` and `explanation`, which staff authored,
+and never `media_sha256`). `teacher_homework_students(p_homework)` → the
+roster. `teacher_homework_review(p_homework, p_student)` → the review card.
+
+**Writes (13), all H3, all by `.rpc`.**
+
+| UI action | RPC | Confirm |
+|---|---|---|
+| + New homework | `teacher_homework_create(p_workspace, 'Untitled homework')` | — |
+| Save paper | `teacher_homework_update(p_homework, p_title, p_instructions)` | — |
+| Set due / Clear due | `teacher_homework_set_due_at(p_homework, p_due_at\|null)` | — |
+| Reveal answers | `teacher_homework_reveal_answers(p_homework)` | ✓ one-way |
+| Add / Save figure | `teacher_homework_save_stimulus(…7 args)` | — |
+| Delete figure | `teacher_homework_delete_stimulus(p_stimulus)` | — |
+| Add / Save question | `teacher_homework_save_question(…9 args)` | — |
+| Delete question | `teacher_homework_delete_question(p_question)` | — |
+| ↑ / ↓ | `teacher_homework_reorder_questions(p_homework, p_question_ids)` — the **whole** id list | — |
+| Publish | `teacher_homework_publish(p_homework)` | ✓ fixes the paper |
+| Close | `teacher_homework_close(p_homework)` | ✓ |
+| Rotate | `teacher_homework_rotate_code(p_homework)` | ✓ old code dies |
+| Delete draft | `teacher_homework_delete(p_homework)` | ✓ |
+
+Client-side form limits mirror the CHECK constraints: title 2–200,
+instructions ≤ 4000, label ≤ 200, body ≤ 8000, prompt ≤ 8000, explanation
+≤ 8000. The publish hint restates the live gate (≥ 1 question; ordinals 1..n
+with no gaps). Every refusal is surfaced as `error.message`, verbatim.
+
+#### 5 · The `nav.js` patch — the smallest one that fixes C-2
+
+```
+-  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'partner.html': 1, 'profile.html': 1, 'settings.html': 1 };
++  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'teacher-exams.html': 1,
++                         'teacher-homework.html': 1, 'partner.html': 1,
++                         'profile.html': 1, 'settings.html': 1 };
+```
+
+Two entries and a comment. Nothing else in `nav.js` changes: no new RPC, no
+role read, no href rewrite, no element removed, and the filter still only ever
+sets `display:'none'`. It stays correct in both directions because the filter
+never un-hides: a link born `display:none` in the markup stays hidden until
+`renderWorkspace()` reveals it, and the later filter passes now leave it alone
+instead of hiding it again.
+
+#### 6 · Test plan
+
+**`tests/teacher-homework-ui.test.mjs`** — the contract, modelled on
+`teacher-exam-ui.test.mjs`, every check written so it could go red:
+provenance (every `.rpc` name defined by an applied homework migration; the
+read set is exactly the five; **`.from(` count is 0**; no `.insert/.update/
+.upsert/.delete(`); the gate (`staff_status === 'active'`, no `staff_role`, no
+`isTeacher`, `denyState`, `login.html`, the link and its role-free reveal in
+`teacher.html`); one renderer (`stimulus-view.js` loaded, `StimulusView.render`
+used, no own `<svg`, all six kinds offered, SVG base64 + non-SVG refused);
+status behaviour (editing shut after draft, code hidden while draft, rotate
+only while published, publishing card hidden when closed, due disabled when
+closed, roster hidden while draft); the five `confirm()` calls; reorder sends
+the whole list; `esc()` defined and every author string escaped; the empty
+sentences present; the head pins and `noindex`.
+
+**`tests/staff-nav.test.mjs`** — keep-list restated to six (the deliberate
+second opinion, still not read from `nav.js`), plus **the C-2 regression**: the
+real `teacher.html` sidebar, parsed with its `style="display:none"` intact,
+driven through the shipped filter in browser order — markup → filter → the
+page's reveal → the +500 ms and +1500 ms passes — asserting both staff links
+are still visible at the end. That test fails on today's `nav.js`.
+
+Then: the full CI gate, the homework mutation suite over the new page checks,
+and a report. **No deploy, no merge.**
+
+### 15.30 · Teacher Homework H7 — the staff UI · BUILT, NOT DEPLOYED (2026-09-04)
+
+The plan of §15.29, implemented. **Six files, no seventh.** No migration, no
+table, no policy, no grant, no backend function, no change to any H1–H6
+behaviour — `git diff HEAD -- supabase/` is **zero lines**, and production is
+unchanged at 192 migrations with `20260904012019` (H6) still newest.
+**Not merged and not deployed.**
+
+#### What was built
+
+| File | Change |
+|---|---|
+| `teacher-homework.html` | **NEW**, 913 lines. Four states, eight cards, 18 RPC calls, **zero table queries** |
+| `teacher.html` | **+2 lines** — `sideHomeworkLink` beside `sideExamsLink`, revealed on the existing no-role-test line |
+| `nav.js` | **+2 keep-list entries** and the comment that says why |
+| `tests/teacher-homework-ui.test.mjs` | **NEW** — **160 checks** |
+| `tests/staff-nav.test.mjs` | keep-list restated to six; **§7**, the reveal-then-filter regression (**56 checks**, was 47) |
+| `CLAUDE.md` | the three stale rows corrected (below) |
+
+#### The read boundary, as measured
+
+The page calls **18 RPCs and nothing else** — the five reads decision 2 names
+and the thirteen H3 writes. `.from(` appears **zero times** in the whole file,
+including its comments: an earlier draft explained the rule using the literal
+`.from()`, which would have forced the contract check to read prose, so the
+sentence was rewritten. The contract asserts a **count of zero** rather than an
+allow-list, because an allow-list quietly admits the next table added to it,
+and it names each of the eight tables separately — `teacher_homework` above all,
+whose `authenticated` SELECT grant still exists, so a direct read of it would
+have *worked*.
+
+`teacher_homework_paper()` fills the whole screen in one call, so no state
+exists in which half a paper is on screen. Every write is followed by a
+re-read (ten of them, counted exactly), so the screen always shows what the
+database holds rather than what the client hoped.
+
+#### Two defects found and fixed during the work
+
+**The suite caught its own page.** The first draft built the list tile's meta
+line by concatenating `h.homework_code` and escaping the joined result. That
+is safe today — the code is server-generated from a 32-character alphabet —
+but it escapes at the wrong place, and the rule the page is held to is *escape
+at the point of interpolation*. Fixed: each fragment is escaped as it is
+added, and the join is plain.
+
+**Five mutants survived the first run, and each named a real gap.** A preview
+that stopped typesetting maths; a figure label unescaped inside a `||`
+fallback, which the direct-form regex could not see; a roster pill that
+treated any attempt status as *submitted*, so an in-progress sitting would
+have shown as handed in; a dropped re-read leaving a stale card; and a refusal
+whose own words were replaced by *Something went wrong*. The assertions were
+rewritten — a named-field escape table of fifteen entries, a slice of the
+roster pill, an exact count of ten re-reads plus a per-function check, and an
+exact count of sixteen verbatim refusals. **63 of 63 mutants killed** on the
+re-run.
+
+#### The `nav.js` fix, proven both ways
+
+Two keep-list entries. The regression executes the shipped filter over
+`teacher.html`'s **real** sidebar with the inline `style="display:none"`
+preserved, in browser order: markup → filter → the page's reveal → the +500 ms
+and +1500 ms passes. It asserts both staff links are still visible at the end,
+and that the student destinations are still hidden, so the fix did not widen
+the surface. **On the original `nav.js` it goes red** (two failures, measured
+by reverting the patch and re-running); on the fixed one, green.
+
+#### Behaviour the page carries
+
+Draft: everything editable, publish with the live gate restated, delete.
+Published: the code with Copy and Rotate, Close, the roster, review, due date,
+reveal. Closed: read-only, **due date disabled** because `set_due_at` raises
+`22023`, **reveal still available** because the RPC allows it in every status
+and *close it, then show the answers* is the ordinary way to use it, rotate
+gone. A draft's code is never printed — not on the paper screen and not in the
+list. Editability comes from the server's `can_edit_content`, not from a
+second copy of the rule here. After publish the figures and questions stay on
+screen read-only, with the key visible, because staff wrote it and this is the
+only place left to check it. The roster marks a student who is no longer in
+the class, since a sitting stranded by removal otherwise looks identical to a
+live one. The review renders **three** verdicts, never two: an omission is not
+a wrong answer. Five `confirm()` gates, each proven to be the early return in
+front of its own RPC, and saving, reordering and setting a due date ask
+nothing.
+
+#### Suites
+
+| | |
+|---|---|
+| `teacher-homework-ui` | **160/160** |
+| `staff-nav` | **56/56** (was 47) |
+| `teacher-homework` (H1–H6 contract) | 486/486, unchanged |
+| `teacher-access-scope` | 109/109, unchanged |
+| Full CI | **67/67 green** (was 66) |
+| Mutants | **63/63 killed** |
+
+#### CLAUDE.md, corrected
+
+The class-patterns card **is** deployed — `4e468d3` is on `main`, `teacher.html`
+is byte-identical branch to `main`, and production deploy `7422cba` postdates
+it. `ai-tutor` is at platform version **145**, sha `efedd0f8…`, not 144 /
+`2c91aa15…`. A third Edge Function, **`support-actions`** (version 1, ACTIVE),
+existed and had never been recorded. Nothing else in the documentation was
+touched.
+
+#### What H7 did not do
+
+No student UI, no dashboard card, no `exam.html` entry point, no Teacher Exams
+change, no class-patterns change, no analyzer change, no SQL. **H8 is the
+student surface and the unified *From your teachers* card.** Item I-2, the
+Teacher Exams `select('*')` hardening, stays outside both.

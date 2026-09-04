@@ -130,7 +130,17 @@
      still carries the student menu: a PENDING assistant reaches that page (the
      Settings link exists for exactly that) and can_staff is false for them, so
      they keep their whole student sidebar and their way back. */
-  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'partner.html': 1, 'profile.html': 1, 'settings.html': 1 };
+  /* The staff surface is the pages a member of staff works in, and that is
+     more than one page now: teacher.html is the hub, teacher-exams.html and
+     teacher-homework.html are where the work is done. Both were missing, and
+     because this filter re-runs at +500ms and +1500ms it ran AFTER
+     teacher.html revealed its own Teacher Exams link and hid it again — the
+     link was drawn and then taken away. Adding them here is the whole fix:
+     the filter still only ever hides, so a link born display:none in the
+     markup stays hidden until the page reveals it, and now stays revealed. */
+  var STAFF_NAV_KEEP = { 'teacher.html': 1, 'teacher-exams.html': 1,
+                         'teacher-homework.html': 1, 'partner.html': 1,
+                         'profile.html': 1, 'settings.html': 1 };
 
   function applyStaffNav(slot, teaching) {
     if (!teaching) return;

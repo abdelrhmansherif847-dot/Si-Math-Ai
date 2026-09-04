@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="assets/si-math-ai-logo.jpg"/>
+<link rel="apple-touch-icon" href="assets/si-math-ai-logo.jpg"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Teacher Homework — Si Math AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" referrerpolicy="no-referrer"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.js" integrity="sha384-M65KxMm/JqBppck6onbmAgPVMBHrmPCf1L17Q+71EcvI9/VVI8j5cqoxQf6lj6h2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" referrerpolicy="no-referrer"></script>
+<!-- THE renderer. The same file the student player uses, so what a teacher sees
+     in Preview is what a student will see, and a second drawing implementation
+     can never drift from the first. -->
+<script src="stimulus-view.js"></script>
+<style>
+:root{
+  --bg:#050a14;--bg-elev-1:#0a1224;--bg-elev-2:#0e1830;--bg-card:#0c1428;--bg-card-hi:#101a32;
+  --cyan:#38bdf8;--cyan-2:#0ea5e9;--cyan-bg-soft:rgba(56,189,248,.1);
+  --cyan-border:rgba(56,189,248,.28);--cyan-border-soft:rgba(56,189,248,.14);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);--green-border:rgba(34,197,94,.32);
+  --amber:#f5b942;--amber-soft:rgba(245,185,66,.12);--amber-border:rgba(245,185,66,.32);
+  --red:#ef4f5f;--red-soft:rgba(239,79,95,.12);--red-border:rgba(239,79,95,.32);
+  --text-100:#fff;--text-200:#dde8f7;--text-300:#a8bcd9;--text-400:#7a90b2;--text-500:#536b8c;
+  --border-soft:#1a2540;--border-mid:#26334d;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;
+  --font-display:'Manrope', system-ui, -apple-system, sans-serif;
+  --font-body:'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-200);font-family:var(--font-body);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--cyan)}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+.page-title{font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--text-100);letter-spacing:-.02em}
+.page-sub{color:var(--text-400);font-size:14px;margin-top:4px}
+.head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
+.card h3{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-100);margin:0 0 12px}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--cyan-border);
+  background:var(--cyan-bg-soft);color:var(--cyan);border-radius:var(--r-sm);padding:9px 15px;
+  font:600 13.5px/1 var(--font-body);cursor:pointer}
+.btn:hover{background:rgba(56,189,248,.18)}
+.btn.ghost{background:transparent;border-color:var(--border-mid);color:var(--text-300)}
+.btn.danger{background:var(--red-soft);border-color:var(--red-border);color:var(--red)}
+.btn.go{background:var(--green-soft);border-color:var(--green-border);color:var(--green)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{display:block;font-size:12px;font-weight:600;color:var(--text-400);
+  text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+input,select,textarea{width:100%;background:var(--bg-elev-1);border:1px solid var(--border-mid);
+  color:var(--text-100);border-radius:var(--r-sm);padding:10px 12px;font:400 14px/1.5 var(--font-body)}
+textarea{min-height:90px;resize:vertical;font-family:var(--font-mono);font-size:12.5px}
+/* The date control sizes itself as a native widget on iOS and then overflows
+   its card. Same rule teacher.html carries, and for the same reason. */
+input[type="datetime-local"]{min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.field{margin-bottom:14px}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font:700 11px/1.6 var(--font-body);
+  text-transform:uppercase;letter-spacing:.06em}
+.pill.draft{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+.pill.published{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.pill.closed{background:rgba(120,140,170,.12);color:var(--text-400);border:1px solid var(--border-mid)}
+.pill.member{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.pill.outsider{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+.pill.in_progress{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+.pill.submitted{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.pill.notstarted{background:rgba(120,140,170,.12);color:var(--text-400);border:1px solid var(--border-mid)}
+.pill.late{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+.pill.mcq{background:var(--cyan-bg-soft);color:var(--cyan);border:1px solid var(--cyan-border)}
+.pill.gridin{background:rgba(120,140,170,.12);color:var(--text-400);border:1px solid var(--border-mid)}
+.tile{display:flex;align-items:center;gap:12px;background:var(--bg-elev-1);border:1px solid var(--border-soft);
+  border-radius:var(--r-md);padding:14px 16px;margin-bottom:10px;cursor:pointer}
+.tile:hover{border-color:var(--cyan-border-soft);background:var(--bg-card-hi)}
+.tile .nm{display:block;font-weight:700;color:var(--text-100);font-size:15px}
+.tile .mt{display:block;color:var(--text-400);font-size:12.5px;margin-top:2px}
+.code{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--cyan);letter-spacing:.16em}
+.empty{text-align:center;padding:34px 18px;color:var(--text-400)}
+.empty .big{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--text-200);margin-bottom:6px}
+.q{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:14px 16px;margin-bottom:10px}
+.q .qh{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.q .ord{font-family:var(--font-mono);font-weight:700;color:var(--cyan);font-size:13px}
+.q .key{font-size:12.5px;color:var(--text-400);margin-top:6px}
+.q .key b{color:var(--green);font-family:var(--font-mono)}
+.msg{margin-top:10px;padding:9px 12px;border-radius:var(--r-sm);font-size:13px;display:none}
+.msg.on{display:block}
+.msg.ok{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.msg.err{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+/* A roster is wider than a phone. It scrolls inside its own box rather than
+   pushing the page sideways. */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.q-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+table.q-tbl th,table.q-tbl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+table.q-tbl th{color:var(--text-400);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.prev{background:var(--bg-elev-2);border:1px dashed var(--cyan-border-soft);border-radius:var(--r-md);
+  padding:16px;margin-top:12px}
+.prev-h{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin-bottom:8px}
+.sv-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0}
+.sv-table th,.sv-table td{border:1px solid var(--border-mid);padding:6px 9px;text-align:left}
+.sv-note{color:var(--text-400);font-size:12.5px;font-style:italic}
+.sv-label{font-weight:700;color:var(--text-200);font-size:13px;margin-bottom:4px}
+.sv-dot-on{fill:currentColor}.sv-dot-off{fill:var(--bg)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div style="flex:1;min-width:240px">
+      <div class="page-title">Homework</div>
+      <div class="page-sub" id="subLine">Practice you set for your own class.</div>
+    </div>
+    <a class="btn ghost" href="teacher.html">← Teaching</a>
+  </div>
+
+  <div id="loadingState" class="card"><div class="empty">Loading…</div></div>
+
+  <div id="denyState" class="card hide">
+    <div class="empty">
+      <div class="big">This page is for teachers and their assistants</div>
+      <div>You are not active staff of any class. If your teacher has invited you,
+           the invitation has to be activated by them first.</div>
+    </div>
+  </div>
+
+  <!-- ── LIST ─────────────────────────────────────────────────────── -->
+  <div id="listState" class="hide">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div style="flex:1;min-width:200px">
+          <label for="wsPick">Class</label>
+          <select id="wsPick"></select>
+        </div>
+        <button class="btn" id="btnNew" style="align-self:flex-end">+ New homework</button>
+      </div>
+      <div class="msg" id="listMsg"></div>
+    </div>
+    <div class="card">
+      <h3>Homework</h3>
+      <div id="hwList"></div>
+    </div>
+  </div>
+
+  <!-- ── ONE HOMEWORK ─────────────────────────────────────────────── -->
+  <div id="paperState" class="hide">
+    <div class="row" style="justify-content:space-between;margin-bottom:14px">
+      <button class="btn ghost sm" id="btnBack">← All homework</button>
+      <span class="pill" id="hwStatus">draft</span>
+    </div>
+
+    <div class="card" id="metaCard">
+      <h3>The paper</h3>
+      <div class="field"><label for="fTitle">Title</label><input id="fTitle" maxlength="200"/></div>
+      <div class="field"><label for="fInstr">Instructions for the student (optional)</label>
+        <textarea id="fInstr" maxlength="4000" style="min-height:64px;font-family:var(--font-body);font-size:14px"></textarea></div>
+      <div class="row">
+        <button class="btn" id="btnSaveMeta">Save</button>
+        <button class="btn danger sm" id="btnDelete">Delete draft</button>
+      </div>
+      <div class="msg" id="metaMsg"></div>
+    </div>
+
+    <div class="card" id="dueCard">
+      <h3>Due date and answers</h3>
+      <div class="page-sub" style="margin:-6px 0 12px">
+        Homework is untimed. A late submission is never refused — it is accepted and marked late.
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="fDue">Due (optional)</label><input id="fDue" type="datetime-local"/></div>
+      </div>
+      <div class="row">
+        <button class="btn sm" id="btnSetDue">Set due date</button>
+        <button class="btn ghost sm" id="btnClearDue">Clear</button>
+      </div>
+      <div class="page-sub" style="margin:14px 0 8px" id="revealLine"></div>
+      <div class="row">
+        <button class="btn sm" id="btnReveal">Show answers to students</button>
+      </div>
+      <div class="msg" id="dueMsg"></div>
+    </div>
+
+    <div class="card" id="stimCard">
+      <h3>Figures and data</h3>
+      <div class="page-sub" style="margin:-6px 0 12px">
+        A figure can be shared by several questions in this homework. Preview shows exactly what the student will see.
+      </div>
+      <div id="stimList"></div>
+      <div id="stimForm">
+        <div class="grid2">
+          <div class="field"><label for="sKind">Kind</label>
+            <select id="sKind">
+              <option value="text">Text</option><option value="table">Table</option>
+              <option value="chart">Chart</option><option value="plot">Plot / graph</option>
+              <option value="number_line">Number line</option><option value="figure">Figure (SVG)</option>
+            </select></div>
+          <div class="field"><label for="sLabel">Label (optional)</label><input id="sLabel" maxlength="200"/></div>
+        </div>
+        <div class="field" id="sBodyWrap"><label for="sBody">Text</label>
+          <textarea id="sBody" maxlength="8000" style="font-family:var(--font-body);font-size:14px"></textarea></div>
+        <div class="field hide" id="sSpecWrap"><label for="sSpec">Spec (JSON)</label>
+          <textarea id="sSpec" spellcheck="false"></textarea></div>
+        <div class="field hide" id="sFileWrap"><label for="sFile">SVG file</label><input id="sFile" type="file" accept=".svg,image/svg+xml"/></div>
+        <div class="row">
+          <button class="btn" id="btnPreviewStim">Preview</button>
+          <button class="btn go" id="btnSaveStim">Add figure</button>
+          <button class="btn ghost sm" id="btnCancelStim">Cancel edit</button>
+        </div>
+      </div>
+      <div class="msg" id="stimMsg"></div>
+      <div class="prev hide" id="stimPrev"><div class="prev-h">Preview — as the student sees it</div><div id="stimPrevBody"></div></div>
+    </div>
+
+    <div class="card" id="qCard">
+      <h3>Questions</h3>
+      <div id="qList"></div>
+      <div id="qForm">
+        <div class="grid2">
+          <div class="field"><label for="qFmt">Format</label>
+            <select id="qFmt"><option value="mcq">Multiple choice</option><option value="grid_in">Grid-in</option></select></div>
+          <div class="field"><label for="qStim">Figure</label><select id="qStim"><option value="">None</option></select></div>
+        </div>
+        <div class="field"><label for="qPrompt">Question</label>
+          <textarea id="qPrompt" maxlength="8000" style="font-family:var(--font-body);font-size:14px"></textarea></div>
+        <div class="grid2 hide" id="qChoiceWrap">
+          <div class="field"><label for="qA">A</label><input id="qA"/></div>
+          <div class="field"><label for="qB">B</label><input id="qB"/></div>
+          <div class="field"><label for="qC">C</label><input id="qC"/></div>
+          <div class="field"><label for="qD">D</label><input id="qD"/></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="qAns">Correct answer</label><input id="qAns" maxlength="20"/></div>
+          <div class="field"><label for="qExpl">Explanation for the student (optional)</label><input id="qExpl" maxlength="8000"/></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnPreviewQ">Preview</button>
+          <button class="btn go" id="btnSaveQ">Add question</button>
+          <button class="btn ghost sm" id="btnCancelQ">Cancel edit</button>
+        </div>
+      </div>
+      <div class="msg" id="qMsg"></div>
+      <div class="prev hide" id="qPrev"><div class="prev-h">Preview — the answer key is never shown to a student before you reveal it</div><div id="qPrevBody"></div></div>
+    </div>
+
+    <div class="card" id="publishCard">
+      <h3>Publishing</h3>
+      <div id="pubHint" class="page-sub" style="margin:-6px 0 12px"></div>
+      <div class="row">
+        <button class="btn go" id="btnPublish">Publish</button>
+        <button class="btn danger sm" id="btnClose">Close homework</button>
+      </div>
+      <div class="msg" id="pubMsg"></div>
+    </div>
+
+    <div class="card hide" id="codeCard">
+      <h3>Homework code</h3>
+      <div class="page-sub" style="margin:-6px 0 12px">
+        Give this to the students in this class. Entering it attaches the homework straight away —
+        there is no queue to approve, and a student who is not in your class cannot use it.
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="code" id="hwCode">--------</span>
+        <div class="row">
+          <button class="btn ghost sm" id="btnCopyCode">Copy</button>
+          <button class="btn ghost sm" id="btnRotate">Rotate</button>
+        </div>
+      </div>
+      <div class="msg" id="codeMsg"></div>
+    </div>
+
+    <div class="card hide" id="rosterCard">
+      <h3>Students</h3>
+      <div id="rosterList"></div>
+      <div class="msg" id="rosterMsg"></div>
+    </div>
+
+    <div class="card hide" id="reviewCard">
+      <h3 id="reviewHead">Review</h3>
+      <div id="reviewBody"></div>
+      <div class="msg" id="reviewMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igvkyxkmjnkzscqgommj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MTRD_njnCX-1CobeqTIMiw_QhNYarXp';
+/* Guarded rather than `supabase.createClient(...)` outright, for the same reason
+   teacher.html, partner.html and teacher-exams.html guard it: if the CDN bundle
+   fails to load, the bare form throws on the first line and takes the page with it. */
+const sb = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function say(el, text, kind) { el.className = 'msg on ' + (kind || 'ok'); el.textContent = text; }
+function clearMsg(el) { el.className = 'msg'; el.textContent = ''; }
+/* KaTeX where it loaded; where it did not, the text still reads. */
+function math(el) {
+  if (!window.renderMathInElement) return;
+  try {
+    window.renderMathInElement(el, {
+      delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],
+      throwOnError: false,
+    });
+  } catch (_) {}
+}
+const S = { ws: null, staff: [], hw: null, questions: [], stimuli: [],
+            editStim: null, editQ: null, pendingSvg: null };
+
+/* ── the only place the database is reached ──────────────────────────────
+   EVERY read is an RPC. This page issues no table query at all — not even
+   against teacher_homework, whose SELECT grant to `authenticated` still
+   exists. H5's F-5 and H6's read functions made the paper reachable only
+   through a function that gates first and names its columns one by one; a
+   direct table read here would step around that boundary while it is still
+   new, and a grant that happens to exist is not a reason to use it. Every WRITE is an
+   RPC too, because no client role holds a write privilege on any homework
+   table and none ever should. */
+const api = {
+  workspaces: () => sb.rpc('teacher_my_workspaces'),
+  list:      (ws) => sb.rpc('teacher_homework_list', { p_workspace: ws }),
+  paper:     (id) => sb.rpc('teacher_homework_paper', { p_homework: id }),
+  students:  (id) => sb.rpc('teacher_homework_students', { p_homework: id }),
+  review: (id, s) => sb.rpc('teacher_homework_review', { p_homework: id, p_student: s }),
+
+  create:  (ws, t) => sb.rpc('teacher_homework_create', { p_workspace: ws, p_title: t }),
+  update:  (id, t, i) => sb.rpc('teacher_homework_update',
+              { p_homework: id, p_title: t, p_instructions: i }),
+  setDue:  (id, d) => sb.rpc('teacher_homework_set_due_at', { p_homework: id, p_due_at: d }),
+  reveal:  (id) => sb.rpc('teacher_homework_reveal_answers', { p_homework: id }),
+  del:     (id) => sb.rpc('teacher_homework_delete', { p_homework: id }),
+  saveStim:(p) => sb.rpc('teacher_homework_save_stimulus', p),
+  delStim: (id) => sb.rpc('teacher_homework_delete_stimulus', { p_stimulus: id }),
+  saveQ:   (p) => sb.rpc('teacher_homework_save_question', p),
+  delQ:    (id) => sb.rpc('teacher_homework_delete_question', { p_question: id }),
+  reorder: (id, ids) => sb.rpc('teacher_homework_reorder_questions',
+              { p_homework: id, p_question_ids: ids }),
+  publish: (id) => sb.rpc('teacher_homework_publish', { p_homework: id }),
+  closeHw: (id) => sb.rpc('teacher_homework_close', { p_homework: id }),
+  rotate:  (id) => sb.rpc('teacher_homework_rotate_code', { p_homework: id }),
+};
+
+function show(which) {
+  ['loadingState','denyState','listState','paperState'].forEach((s) => {
+    $(s).classList.toggle('hide', s !== which);
+  });
+}
+const localDT = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate())
+       + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+};
+const toISO = (v) => (v ? new Date(v).toISOString() : null);
+const readable = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined,
+  { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
+/* ── list ─────────────────────────────────────────────────────────────── */
+async function loadList() {
+  const { data, error } = await api.list(S.ws);
+  if (error) { say($('listMsg'), error.message, 'err'); return; }
+  const rows = data || [];
+  if (!rows.length) {
+    $('hwList').innerHTML = '<div class="empty"><div class="big">No homework yet</div>'
+      + '<div>Create one, add the questions, then publish it. A draft has no code and '
+      + 'no student can reach it.</div></div>';
+    return;
+  }
+  $('hwList').innerHTML = rows.map((h) => {
+    const bits = [h.question_count + (h.question_count === 1 ? ' question' : ' questions')];
+    /* A draft's code is deliberately absent here as well as on the paper
+       screen: showing one that no student can use invites it being handed
+       out before publish. */
+    if (h.status !== 'draft') bits.push('code ' + esc(h.homework_code));
+    if (h.due_at) bits.push('due ' + readable(h.due_at));
+    if (h.attached_count) bits.push(h.attached_count + ' attached');
+    if (h.submitted_count) bits.push(h.submitted_count + ' submitted');
+    return '<div class="tile" data-hw="' + esc(h.homework_id) + '">'
+      + '<div style="flex:1"><span class="nm">' + esc(h.title) + '</span>'
+      + '<span class="mt">' + bits.join(' · ') + '</span></div>'
+      + '<span class="pill ' + esc(h.status) + '">' + esc(h.status) + '</span></div>';
+  }).join('');
+  $('hwList').querySelectorAll('[data-hw]').forEach((el) => {
+    el.addEventListener('click', () => openPaper(el.getAttribute('data-hw')));
+  });
+}
+
+/* ── one homework ─────────────────────────────────────────────────────── */
+/* ONE call fills the whole screen: teacher_homework_paper() returns the
+   header, the figures and the questions together, so there is no window in
+   which the page shows a paper half-loaded. */
+async function openPaper(id) {
+  show('paperState');
+  const { data: h, error } = await api.paper(id);
+  if (error || !h) { show('listState'); say($('listMsg'), error ? error.message : 'That homework is gone.', 'err'); return; }
+  S.hw = h;
+  S.stimuli = h.stimuli || [];
+  S.questions = h.questions || [];
+  const draft = h.can_edit_content;
+  const closed = h.status === 'closed';
+
+  $('hwStatus').className = 'pill ' + esc(h.status);
+  $('hwStatus').textContent = h.status;
+  $('fTitle').value = h.title || '';
+  $('fInstr').value = h.instructions || '';
+  ['fTitle','fInstr'].forEach((f) => { $(f).disabled = !draft; });
+  $('btnSaveMeta').disabled = !draft;
+  $('btnDelete').classList.toggle('hide', !draft);
+
+  $('fDue').value = localDT(h.due_at);
+  /* Closing fixes the schedule: teacher_homework_set_due_at refuses a closed
+     paper with 22023. Disabling the control says so before the round trip. */
+  $('fDue').disabled = closed;
+  $('btnSetDue').disabled = closed;
+  $('btnClearDue').disabled = closed;
+  $('btnReveal').classList.toggle('hide', !!h.reveal_answers);
+  $('revealLine').textContent = h.reveal_answers
+    ? 'Answers are shown to a student once they have submitted. This cannot be undone.'
+    : 'Students see their own score, not the correct answers. Showing the answers is one-way — it cannot be undone.'
+      + (closed ? ' You can still do it after closing.' : '');
+
+  /* Editing stops at publish — teacher_homework_content_guard refuses a write
+     to a paper that is not a draft, so the forms come off the screen rather
+     than failing on save. The figures and questions stay, read-only. */
+  $('stimForm').classList.toggle('hide', !draft);
+  $('qForm').classList.toggle('hide', !draft);
+  $('publishCard').classList.toggle('hide', closed);
+  $('btnPublish').classList.toggle('hide', !draft);
+  $('btnClose').classList.toggle('hide', h.status !== 'published');
+  /* Decision 5: a draft has a code in the database, but it resolves to the
+     same no_match a wrong code does, so showing it would hand out something
+     that looks usable and is not. */
+  $('codeCard').classList.toggle('hide', draft);
+  $('btnRotate').classList.toggle('hide', h.status !== 'published');
+  $('hwCode').textContent = h.homework_code || '--------';
+  $('rosterCard').classList.toggle('hide', draft);
+  $('reviewCard').classList.add('hide');
+  ['metaMsg','dueMsg','stimMsg','qMsg','pubMsg','codeMsg','rosterMsg','reviewMsg'].forEach((m) => clearMsg($(m)));
+
+  renderStimuli();
+  renderQuestions();
+  if (!draft) await loadRoster();
+}
+
+async function reloadPaper() { await openPaper(S.hw.homework_id); }
+
+function updatePublishHint() {
+  if (!S.hw || S.hw.status !== 'draft') { $('pubHint').textContent = ''; return; }
+  const n = S.questions.length;
+  const ords = S.questions.map((q) => q.ordinal);
+  const contiguous = n > 0 && Math.min.apply(null, ords) === 1 && Math.max.apply(null, ords) === n;
+  $('pubHint').textContent = n === 0
+    ? 'Add at least one question before publishing.'
+    : (contiguous
+        ? n + ' question' + (n === 1 ? '' : 's') + ', numbered 1 to ' + n
+          + '. Once published the paper is fixed — only the due date, the code and the answers can change.'
+        : 'Question numbers must run 1 to ' + n + ' with no gaps.');
+}
+
+/* ── figures ──────────────────────────────────────────────────────────── */
+function renderStimuli() {
+  const draft = S.hw.can_edit_content;
+  $('stimList').innerHTML = S.stimuli.length
+    ? S.stimuli.map((s) =>
+        '<div class="q"><div class="qh"><span class="ord">' + esc(s.kind) + '</span>'
+        + '<b>' + esc(s.label || '(no label)') + '</b>'
+        + '<span style="flex:1"></span>'
+        + (draft
+            ? '<button class="btn ghost sm" data-es="' + esc(s.id) + '">Edit</button>'
+              + '<button class="btn danger sm" data-ds="' + esc(s.id) + '">Delete</button>' : '')
+        + '</div></div>').join('')
+    : '<div class="page-sub" style="margin-bottom:10px">No figures yet.</div>';
+  $('stimList').querySelectorAll('[data-es]').forEach((b) =>
+    b.addEventListener('click', () => editStimulus(b.getAttribute('data-es'))));
+  $('stimList').querySelectorAll('[data-ds]').forEach((b) =>
+    b.addEventListener('click', () => deleteStimulus(b.getAttribute('data-ds'))));
+  $('qStim').innerHTML = '<option value="">None</option>'
+    + S.stimuli.map((s) => '<option value="' + esc(s.id) + '">'
+        + esc(s.kind) + ' — ' + esc(s.label || s.id.slice(0, 8)) + '</option>').join('');
+}
+
+function stimulusFromForm() {
+  const kind = $('sKind').value;
+  const st = { kind: kind, label: $('sLabel').value.trim() || null,
+               body: null, spec: null, media_ref: null };
+  if (kind === 'text') st.body = $('sBody').value;
+  else if (kind === 'figure') st.media_ref = S.pendingSvg || null;
+  else {
+    try { st.spec = JSON.parse($('sSpec').value || 'null'); }
+    catch (err) { throw new Error('The spec is not valid JSON.'); }
+  }
+  return st;
+}
+
+function syncStimulusForm() {
+  const k = $('sKind').value;
+  $('sBodyWrap').classList.toggle('hide', k !== 'text');
+  $('sSpecWrap').classList.toggle('hide', k === 'text' || k === 'figure');
+  $('sFileWrap').classList.toggle('hide', k !== 'figure');
+}
+
+function previewStimulus() {
+  clearMsg($('stimMsg'));
+  let st;
+  try { st = stimulusFromForm(); }
+  catch (e) { say($('stimMsg'), e.message, 'err'); return; }
+  $('stimPrev').classList.remove('hide');
+  $('stimPrevBody').innerHTML = window.StimulusView
+    ? window.StimulusView.render(st)
+    : '<div class="sv-note">The renderer did not load. Reload the page.</div>';
+  math($('stimPrevBody'));
+}
+
+async function saveStimulus() {
+  clearMsg($('stimMsg'));
+  let st;
+  try { st = stimulusFromForm(); }
+  catch (e) { say($('stimMsg'), e.message, 'err'); return; }
+  const { error } = await api.saveStim({
+    p_homework: S.hw.homework_id, p_stimulus: S.editStim, p_kind: st.kind, p_label: st.label,
+    p_body: st.body, p_spec: st.spec, p_media_ref: st.media_ref });
+  if (error) { say($('stimMsg'), error.message, 'err'); return; }
+  const was = S.editStim;
+  cancelStimulusEdit();
+  await reloadPaper();
+  say($('stimMsg'), was ? 'Figure updated.' : 'Figure added.', 'ok');
+}
+
+function editStimulus(id) {
+  const s = S.stimuli.find((x) => x.id === id);
+  if (!s) return;
+  S.editStim = id;
+  $('sKind').value = s.kind;
+  $('sLabel').value = s.label || '';
+  $('sBody').value = s.body || '';
+  $('sSpec').value = s.spec ? JSON.stringify(s.spec, null, 2) : '';
+  S.pendingSvg = s.media_ref || null;
+  syncStimulusForm();
+  $('btnSaveStim').textContent = 'Save figure';
+  say($('stimMsg'), 'Editing "' + (s.label || s.kind) + '".', 'ok');
+}
+
+function cancelStimulusEdit() {
+  S.editStim = null; S.pendingSvg = null;
+  $('sLabel').value = ''; $('sBody').value = ''; $('sSpec').value = ''; $('sFile').value = '';
+  $('btnSaveStim').textContent = 'Add figure';
+  $('stimPrev').classList.add('hide');
+}
+
+async function deleteStimulus(id) {
+  const { error } = await api.delStim(id);
+  if (error) { say($('stimMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+  say($('stimMsg'), 'Figure deleted.', 'ok');
+}
+
+/* ── questions ────────────────────────────────────────────────────────── */
+function renderQuestions() {
+  const draft = S.hw.can_edit_content;
+  $('qList').innerHTML = S.questions.length
+    ? S.questions.map((q, i) =>
+        '<div class="q"><div class="qh"><span class="ord">' + esc(String(q.ordinal)) + '</span>'
+        + '<span class="pill ' + (q.question_format === 'mcq' ? 'mcq' : 'gridin') + '">'
+        + (q.question_format === 'mcq' ? 'MCQ' : 'Grid-in') + '</span>'
+        + '<span style="flex:1"></span>'
+        + (draft
+            ? (i > 0 ? '<button class="btn ghost sm" data-up="' + esc(q.id) + '">↑</button>' : '')
+              + (i < S.questions.length - 1 ? '<button class="btn ghost sm" data-dn="' + esc(q.id) + '">↓</button>' : '')
+              + '<button class="btn ghost sm" data-eq="' + esc(q.id) + '">Edit</button>'
+              + '<button class="btn danger sm" data-dq="' + esc(q.id) + '">Delete</button>' : '')
+        + '</div><div class="qp">' + esc(q.prompt) + '</div>'
+        /* The key, on a page only active staff can open. They wrote it, and
+           after publish this read-only list is the only place they can check
+           it. It is never on a student screen unless the paper is revealed
+           and their own attempt is submitted — that gate is the server's. */
+        + '<div class="key">Answer <b>' + esc(q.correct_answer) + '</b>'
+        + (q.explanation ? ' · ' + esc(q.explanation) : '') + '</div>'
+        + '</div>').join('')
+    : '<div class="page-sub" style="margin-bottom:10px">No questions yet.</div>';
+  $('qList').querySelectorAll('.qp').forEach(math);
+  $('qList').querySelectorAll('[data-eq]').forEach((b) =>
+    b.addEventListener('click', () => editQuestion(b.getAttribute('data-eq'))));
+  $('qList').querySelectorAll('[data-dq]').forEach((b) =>
+    b.addEventListener('click', () => deleteQuestion(b.getAttribute('data-dq'))));
+  $('qList').querySelectorAll('[data-up]').forEach((b) =>
+    b.addEventListener('click', () => move(b.getAttribute('data-up'), -1)));
+  $('qList').querySelectorAll('[data-dn]').forEach((b) =>
+    b.addEventListener('click', () => move(b.getAttribute('data-dn'), 1)));
+  updatePublishHint();
+}
+
+function questionFromForm() {
+  const fmt = $('qFmt').value;
+  let choices = null;
+  if (fmt === 'mcq') {
+    const t = ['qA','qB','qC','qD'].map((f) => $(f).value.trim());
+    if (t.some((x) => !x)) throw new Error('A multiple-choice question needs all four options.');
+    choices = ['A','B','C','D'].map((id, i) => ({ id: id, text: t[i] }));
+  }
+  return { fmt: fmt, choices: choices, prompt: $('qPrompt').value,
+           ans: $('qAns').value.trim(), expl: $('qExpl').value.trim() || null,
+           stim: $('qStim').value || null };
+}
+
+function previewQuestion() {
+  clearMsg($('qMsg'));
+  let q;
+  try { q = questionFromForm(); } catch (e) { say($('qMsg'), e.message, 'err'); return; }
+  const st = S.stimuli.find((s) => s.id === q.stim);
+  $('qPrev').classList.remove('hide');
+  $('qPrevBody').innerHTML =
+    (st && window.StimulusView ? window.StimulusView.render(st) : '')
+    + '<div style="margin:10px 0;color:var(--text-100)">' + esc(q.prompt) + '</div>'
+    + (q.choices
+        ? q.choices.map((c) => '<div style="margin:4px 0">'
+            + '<b style="color:var(--cyan)">' + esc(c.id) + '</b> &nbsp;' + esc(c.text) + '</div>').join('')
+        : '<div class="sv-note">Grid-in — the student types a value.</div>');
+  math($('qPrevBody'));
+}
+
+async function saveQuestion() {
+  clearMsg($('qMsg'));
+  let q;
+  try { q = questionFromForm(); } catch (e) { say($('qMsg'), e.message, 'err'); return; }
+  const ordinal = S.editQ
+    ? (S.questions.find((x) => x.id === S.editQ) || {}).ordinal
+    : S.questions.length + 1;
+  const { error } = await api.saveQ({
+    p_homework: S.hw.homework_id, p_question: S.editQ, p_ordinal: ordinal, p_prompt: q.prompt,
+    p_format: q.fmt, p_correct_answer: q.ans, p_choices: q.choices,
+    p_explanation: q.expl, p_stimulus: q.stim });
+  if (error) { say($('qMsg'), error.message, 'err'); return; }
+  const was = S.editQ;
+  cancelQuestionEdit();
+  await reloadPaper();
+  say($('qMsg'), was ? 'Question updated.' : 'Question added.', 'ok');
+}
+
+function editQuestion(id) {
+  const q = S.questions.find((x) => x.id === id);
+  if (!q) return;
+  S.editQ = id;
+  $('qFmt').value = q.question_format;
+  $('qPrompt').value = q.prompt;
+  $('qAns').value = q.correct_answer || '';
+  $('qExpl').value = q.explanation || '';
+  $('qStim').value = q.stimulus_id || '';
+  const ch = q.choices || [];
+  ['qA','qB','qC','qD'].forEach((f, i) => { $(f).value = ch[i] ? ch[i].text : ''; });
+  syncQuestionForm();
+  $('btnSaveQ').textContent = 'Save question';
+  say($('qMsg'), 'Editing question ' + q.ordinal + '.', 'ok');
+}
+
+function cancelQuestionEdit() {
+  S.editQ = null;
+  ['qPrompt','qAns','qExpl','qA','qB','qC','qD'].forEach((f) => { $(f).value = ''; });
+  $('qStim').value = '';
+  $('btnSaveQ').textContent = 'Add question';
+  $('qPrev').classList.add('hide');
+}
+
+function syncQuestionForm() { $('qChoiceWrap').classList.toggle('hide', $('qFmt').value !== 'mcq'); }
+
+async function deleteQuestion(id) {
+  const { error } = await api.delQ(id);
+  if (error) { say($('qMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+  say($('qMsg'), 'Question deleted, and the numbering closed up.', 'ok');
+}
+
+/* Reordering sends the WHOLE list, because that is what the RPC requires: a
+   partial list would leave questions behind at their old numbers and produce
+   exactly the state publish refuses. */
+async function move(id, delta) {
+  const ids = S.questions.map((q) => q.id);
+  const i = ids.indexOf(id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  ids[i] = ids[j]; ids[j] = id;
+  const { error } = await api.reorder(S.hw.homework_id, ids);
+  if (error) { say($('qMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+}
+
+/* ── due date and answers ─────────────────────────────────────────────── */
+async function setDue(value) {
+  clearMsg($('dueMsg'));
+  const { error } = await api.setDue(S.hw.homework_id, toISO(value));
+  if (error) { say($('dueMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+  say($('dueMsg'), value ? 'Due date set.' : 'Due date cleared.', 'ok');
+}
+
+/* One-way, and the RPC takes no boolean — there is no un-reveal to offer. */
+async function doReveal() {
+  if (!confirm('Show the correct answers to students who have submitted? This cannot be undone.')) return;
+  clearMsg($('dueMsg'));
+  const { error } = await api.reveal(S.hw.homework_id);
+  if (error) { say($('dueMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+  say($('dueMsg'), 'Answers are now shown to students who have submitted.', 'ok');
+}
+
+/* ── publish / close / rotate / delete ────────────────────────────────── */
+async function doPublish() {
+  if (!confirm('Publish this homework? The paper is fixed after this — questions and figures can no longer be changed.')) return;
+  clearMsg($('pubMsg'));
+  const { error } = await api.publish(S.hw.homework_id);
+  if (error) { say($('pubMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+  say($('pubMsg'), 'Published. The homework code is below.', 'ok');
+}
+
+async function doClose() {
+  if (!confirm('Close this homework? Nobody new can start it. A student already working on it can still finish and submit.')) return;
+  clearMsg($('pubMsg'));
+  const { error } = await api.closeHw(S.hw.homework_id);
+  if (error) { say($('pubMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+}
+
+async function doRotate() {
+  if (!confirm('Rotate the code? The old one stops working immediately, and it can never be used again. Students already attached keep their homework.')) return;
+  clearMsg($('codeMsg'));
+  const { data, error } = await api.rotate(S.hw.homework_id);
+  if (error) { say($('codeMsg'), error.message, 'err'); return; }
+  $('hwCode').textContent = data;
+  S.hw.homework_code = data;
+  say($('codeMsg'), 'New code. The old one is retired for good — students already attached are unaffected.', 'ok');
+}
+
+async function doDelete() {
+  if (!confirm('Delete this draft? Its questions and figures go with it. This cannot be undone.')) return;
+  clearMsg($('metaMsg'));
+  const { error } = await api.del(S.hw.homework_id);
+  if (error) { say($('metaMsg'), error.message, 'err'); return; }
+  show('listState');
+  await loadList();
+}
+
+/* ── roster ───────────────────────────────────────────────────────────── */
+const attemptPill = (r) => {
+  if (r.attempt_status === 'submitted') return '<span class="pill submitted">submitted</span>';
+  if (r.attempt_status === 'in_progress') return '<span class="pill in_progress">in progress</span>';
+  return '<span class="pill notstarted">not started</span>';
+};
+
+async function loadRoster() {
+  const { data, error } = await api.students(S.hw.homework_id);
+  if (error) { say($('rosterMsg'), error.message, 'err'); return; }
+  const rows = data || [];
+  if (!rows.length) {
+    $('rosterList').innerHTML = '<div class="empty"><div class="big">Nobody has this homework yet</div>'
+      + '<div>Give the code to your class. A student who enters it appears here straight away.</div></div>';
+    return;
+  }
+  $('rosterList').innerHTML = '<div class="tbl-wrap"><table class="q-tbl"><thead><tr>'
+    + '<th>Student</th><th>In this class</th><th>State</th><th>Submitted</th>'
+    + '<th>Correct</th><th>Wrong</th><th>Left blank</th><th></th></tr></thead><tbody>'
+    + rows.map((r) =>
+        '<tr><td>' + esc(r.student_name) + '</td>'
+        /* A student removed from the class mid-homework keeps an attempt that
+           can never be finished. The roster would otherwise show that exactly
+           like an active one. */
+        + '<td>' + (r.active_member
+            ? '<span class="pill member">member</span>'
+            : '<span class="pill outsider">no longer in this class</span>') + '</td>'
+        + '<td>' + attemptPill(r) + (r.late ? ' <span class="pill late">late</span>' : '') + '</td>'
+        + '<td>' + esc(r.submitted_at ? readable(r.submitted_at) : '—') + '</td>'
+        + '<td>' + (r.attempt_status === 'submitted' ? r.correct : '—') + '</td>'
+        + '<td>' + (r.attempt_status === 'submitted' ? r.wrong : '—') + '</td>'
+        + '<td>' + (r.attempt_status === 'submitted' ? r.omitted : '—') + '</td>'
+        + '<td style="text-align:right"><button class="btn ghost sm" data-rv="' + esc(r.student_id)
+        + '" data-nm="' + esc(r.student_name) + '">Review</button></td></tr>').join('')
+    + '</tbody></table></div>';
+  $('rosterList').querySelectorAll('[data-rv]').forEach((b) =>
+    b.addEventListener('click', () => openReview(b.getAttribute('data-rv'), b.getAttribute('data-nm'))));
+}
+
+/* ── review, in the same screen ───────────────────────────────────────── */
+async function openReview(student, name) {
+  $('reviewCard').classList.remove('hide');
+  clearMsg($('reviewMsg'));
+  $('reviewHead').textContent = 'Review — ' + name;
+  $('reviewBody').innerHTML = '<div class="page-sub">Loading…</div>';
+  $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const { data, error } = await api.review(S.hw.homework_id, student);
+  if (error) { $('reviewBody').innerHTML = ''; say($('reviewMsg'), error.message, 'err'); return; }
+  if (!data || !data.sat) {
+    $('reviewBody').innerHTML = '<div class="empty"><div class="big">Not opened yet</div>'
+      + '<div>This student has the homework but has not started it.</div></div>';
+    return;
+  }
+  const items = data.items || [];
+  const head = '<div class="page-sub" style="margin:-6px 0 12px">'
+    + esc(data.status === 'submitted'
+        ? 'Submitted ' + readable(data.submitted_at) + (data.late ? ' · late' : '')
+        : 'Still working on it — nothing is graded until they submit.')
+    + ' · ' + (data.reveal_answers
+        ? 'They can see the correct answers.'
+        : 'They cannot see the correct answers.')
+    + '</div>';
+  $('reviewBody').innerHTML = head + (items.length
+    ? items.map((it) => {
+        /* Three-valued on purpose: an unanswered question is not a wrong
+           one, and the database keeps is_correct NULL to say so. */
+        const mark = it.is_correct === true ? '<span class="pill submitted">correct</span>'
+          : it.is_correct === false ? '<span class="pill outsider">wrong</span>'
+          : '<span class="pill notstarted">left blank</span>';
+        return '<div class="q"><div class="qh"><span class="ord">' + esc(String(it.ordinal)) + '</span>'
+          + mark + '<span style="flex:1"></span></div>'
+          + '<div class="qp">' + esc(it.prompt) + '</div>'
+          + '<div class="key">Their answer <b>' + esc(it.given == null ? '—' : it.given) + '</b>'
+          + ' · correct <b>' + esc(it.correct_answer) + '</b>'
+          + (it.explanation ? '<br/>' + esc(it.explanation) : '') + '</div></div>';
+      }).join('')
+    : '<div class="page-sub">No answers recorded.</div>');
+  $('reviewBody').querySelectorAll('.qp').forEach(math);
+}
+
+/* ── boot ─────────────────────────────────────────────────────────────── */
+async function boot() {
+  if (!sb) { show('denyState'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = 'login.html'; return; }
+
+  const { data, error } = await api.workspaces();
+  /* ACTIVE staff only. A pending assistant has applied, not been admitted, and
+     teacher_my_workspaces() returns their row all the same. The gate is the
+     STATUS and never the ROLE: a teacher and an active assistant have the same
+     academic power here, which every homework RPC enforces on its own. */
+  S.staff = (data || []).filter((w) => w.staff_status === 'active');
+  if (error || !S.staff.length) { show('denyState'); return; }
+
+  $('wsPick').innerHTML = S.staff.map((w) =>
+    '<option value="' + esc(w.workspace_id) + '">' + esc(w.name) + '</option>').join('');
+  S.ws = S.staff[0].workspace_id;
+  $('subLine').textContent = S.staff.length === 1
+    ? 'Practice you set for ' + S.staff[0].name + '.'
+    : 'Practice you set for your classes.';
+  show('listState');
+  await loadList();
+}
+
+$('wsPick').addEventListener('change', async () => { S.ws = $('wsPick').value; await loadList(); });
+$('btnBack').addEventListener('click', async () => { show('listState'); await loadList(); });
+$('btnNew').addEventListener('click', async () => {
+  clearMsg($('listMsg'));
+  const { data, error } = await api.create(S.ws, 'Untitled homework');
+  if (error) { say($('listMsg'), error.message, 'err'); return; }
+  await openPaper(data.homework_id);
+});
+$('btnSaveMeta').addEventListener('click', async () => {
+  clearMsg($('metaMsg'));
+  const { error } = await api.update(S.hw.homework_id, $('fTitle').value, $('fInstr').value);
+  if (error) { say($('metaMsg'), error.message, 'err'); return; }
+  await reloadPaper();
+  say($('metaMsg'), 'Saved.', 'ok');
+});
+$('btnDelete').addEventListener('click', doDelete);
+$('btnSetDue').addEventListener('click', () => setDue($('fDue').value));
+$('btnClearDue').addEventListener('click', () => { $('fDue').value = ''; setDue(''); });
+$('btnReveal').addEventListener('click', doReveal);
+$('sKind').addEventListener('change', syncStimulusForm);
+$('sFile').addEventListener('change', () => {
+  const f = $('sFile').files && $('sFile').files[0];
+  if (!f) { S.pendingSvg = null; return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    const txt = String(rd.result || '');
+    if (!/<svg/i.test(txt)) { say($('stimMsg'), 'That file does not look like an SVG.', 'err'); return; }
+    // btoa needs latin1; unescape(encodeURIComponent(..)) is the standard
+    // round-trip for UTF-8 source text.
+    try { S.pendingSvg = btoa(unescape(encodeURIComponent(txt))); }
+    catch (_) { say($('stimMsg'), 'That figure could not be encoded.', 'err'); return; }
+    say($('stimMsg'), 'Figure loaded — press Preview to check it.', 'ok');
+  };
+  rd.readAsText(f);
+});
+$('btnPreviewStim').addEventListener('click', previewStimulus);
+$('btnSaveStim').addEventListener('click', saveStimulus);
+$('btnCancelStim').addEventListener('click', cancelStimulusEdit);
+$('qFmt').addEventListener('change', syncQuestionForm);
+$('btnPreviewQ').addEventListener('click', previewQuestion);
+$('btnSaveQ').addEventListener('click', saveQuestion);
+$('btnCancelQ').addEventListener('click', cancelQuestionEdit);
+$('btnPublish').addEventListener('click', doPublish);
+$('btnClose').addEventListener('click', doClose);
+$('btnRotate').addEventListener('click', doRotate);
+$('btnCopyCode').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('hwCode').textContent); say($('codeMsg'), 'Code copied.', 'ok'); }
+  catch (_) { say($('codeMsg'), 'Copy failed — read it out instead.', 'err'); }
+});
+
+syncStimulusForm();
+syncQuestionForm();
+boot();
+</script>
+</body>
+</html>
