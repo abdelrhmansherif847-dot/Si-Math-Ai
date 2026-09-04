@@ -91,11 +91,55 @@ table.q-tbl th{color:var(--text-400);font-size:11.5px;text-transform:uppercase;l
 .prev{background:var(--bg-elev-2);border:1px dashed var(--cyan-border-soft);border-radius:var(--r-md);
   padding:16px;margin-top:12px}
 .prev-h{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin-bottom:8px}
-.sv-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0}
-.sv-table th,.sv-table td{border:1px solid var(--border-mid);padding:6px 9px;text-align:left}
-.sv-note{color:var(--text-400);font-size:12.5px;font-style:italic}
-.sv-label{font-weight:700;color:var(--text-200);font-size:13px;margin-bottom:4px}
-.sv-dot-on{fill:currentColor}.sv-dot-off{fill:var(--bg)}
+/* The renderer's stylesheet, the same set exam.html serves to students.
+   These six rules used to be a hand-written approximation of it, and an
+   approximation is the one thing this cannot be: the six DISAGREED with the
+   canonical rules rather than merely being fewer, and the 25 that were absent
+   included every rule that makes a figure a figure. Measured on this page
+   before the fix — a plot curve filled SOLID BLACK (an SVG <polyline> fills
+   black unless .sv-line sets fill:none), a number line lost its segment
+   entirely (.sv-seg carried no stroke), a plot had no axes and no grid, a
+   figure was near-invisible (.sv-figure sets the white card behind it), and
+   the two panels of a pie chart stacked instead of sitting side by side.
+   A teacher was previewing something no student would ever see.
+
+   So this is a REPLACEMENT, not an addition. Anything that drifts from
+   exam.html here is a preview that lies, and tests/renderer-css-parity.test.mjs
+   compares all three pages against the classes stimulus-view.js really emits. */
+.sv{font-size:14px;color:var(--text-300)}
+.sv-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-500);margin-bottom:9px}
+.sv-text{white-space:pre-wrap}
+.sv-note{font-size:12.5px;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:8px;padding:8px 11px;margin-top:9px}
+.sv-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sv-table{border-collapse:collapse;font-size:13.5px;min-width:min(100%,320px)}
+.sv-table th,.sv-table td{border:1px solid var(--border-mid);padding:7px 12px;text-align:left;white-space:nowrap}
+.sv-table th{background:var(--bg-elev-2);color:var(--text-200);font-weight:700}
+.sv-table td{color:var(--text-300);font-variant-numeric:tabular-nums}
+.sv-cap{font-size:12.5px;color:var(--text-400);margin-top:7px}
+.sv-svg{display:block;max-width:100%;height:auto;margin:2px 0}
+.sv-plot,.sv-pie{max-width:420px}
+.sv-nline{max-width:520px}
+.sv-grid{stroke:var(--border-soft);stroke-width:1}
+.sv-axis{stroke:var(--text-500);stroke-width:1.4}
+.sv-tick{fill:var(--text-400);font-family:var(--font-mono);font-size:10px}
+.sv-tick-x{text-anchor:middle}
+.sv-tick-y{text-anchor:end}
+.sv-axlabel{fill:var(--text-300);font-size:11.5px;text-anchor:middle}
+.sv-end{text-anchor:end}
+.sv-line{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.sv-poly{fill:none;stroke-width:2.2;stroke-linejoin:round}
+.sv-dash{stroke-dasharray:6 5}
+.sv-plabel{fill:var(--text-200);font-size:11.5px;font-weight:700}
+.sv-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:9px;font-size:12.5px;color:var(--text-400)}
+.sv-key{display:inline-flex;align-items:center;gap:6px}
+.sv-key i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.sv-panels{display:flex;flex-wrap:wrap;gap:22px}
+.sv-panel{margin:0;flex:1 1 200px;min-width:0}
+.sv-panel .sv-cap{margin:0 0 6px;color:var(--text-300);font-weight:700}
+.sv-seg{stroke:var(--cyan);stroke-width:3.4;stroke-linecap:round}
+.sv-dot-on{fill:var(--cyan);stroke:var(--cyan);stroke-width:2}
+.sv-dot-off{fill:var(--bg-card);stroke:var(--cyan);stroke-width:2}
+.sv-figure{display:block;max-width:100%;height:auto;border-radius:8px;background:#fff}
 .hide{display:none}
 </style>
 </head>

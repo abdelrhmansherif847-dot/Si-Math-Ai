@@ -5271,6 +5271,113 @@ untouched and stays a separate item; `exam.html` has all 33.
 
 ---
 
+### 15.32 · I-6 · the renderer's stylesheet, and the test that could not see it (2026-09-04)
+
+`stimulus-view.js` draws a stimulus and styles **nothing**: every colour, weight
+and geometry constraint comes from CSS the page provides. That makes the
+stylesheet part of the renderer's contract, and a page carrying a subset of it
+does not draw a plainer figure — it draws a wrong one.
+
+Three pages serve that stylesheet: `exam.html` (the student player, canonical),
+`teacher-homework.html` and `teacher-exams.html` (the two staff previews).
+
+#### What the audit measured, against the brief it was given
+
+| | brief said | measured |
+|---|---|---|
+| classes the renderer emits | 33 | **30** — "33" was a *rule* count, and rules are not classes |
+| `teacher-exams.html` | 5 of 33, 22 unstyled | 5 of 30, **25 unstyled** |
+| `teacher-homework.html` | complete | **29/30 — missing `.sv`** |
+| `exam.html` | complete | complete, 30/30 |
+
+And the finding that changed the shape of the fix: **the six rules
+`teacher-exams.html` did have DISAGREED with the canonical ones** rather than
+being a subset of them — its `.sv-label` was 13px bold body text where the
+canonical rule is 10.5px tracked mono, its `.sv-note` grey italics where the
+canonical is an amber box. So this was a **replacement**, never an append.
+
+#### It was broken, not cosmetic
+
+Measured as computed styles in Chromium, rendering real `exam_stimuli` rows
+under each page's verbatim stylesheet — **58 computed properties** differed:
+
+- **plot — BROKEN.** `.sv-line`/`.sv-poly` carried no `fill:none`, so a curve
+  **filled solid black**; `.sv-grid`/`.sv-axis` had no stroke, so there were no
+  axes and no grid.
+- **number_line — BROKEN.** `.sv-seg` had no stroke: the interval line was
+  **invisible**, leaving unstroked dots floating.
+- **figure — BROKEN.** `.sv-figure` sets the white card an author's black-ink
+  SVG needs; without it the figure was near-invisible on the dark page.
+- **chart — degraded.** Panels stacked instead of sitting side by side and the
+  legend collapsed inline, running entries together.
+- **table / text — cosmetic**, plus a wide table that could not scroll and a
+  text stimulus that lost its authored line breaks.
+
+**No stored content was affected, because there is none**: `teacher_exam_stimuli`
+and `teacher_homework_stimuli` are both at 0 rows. The damage was entirely to
+the authoring preview — which is the thing that decides whether a teacher saves
+the question at all.
+
+#### The test that let it happen
+
+The parity check lived in `teacher-homework-ui.test.mjs` and derived its class
+list with `/class="((?:sv-[a-z-]+\s*)+)"/`. That pattern needs a hyphen **and** a
+closing quote immediately after, so it never saw four classes the renderer
+really emits — `sv`, `sv-dash`, `sv-dot-off`, `sv-poly` — three of which the
+renderer builds by concatenation (`class="sv-line' + dashed + '"`).
+
+**`teacher-homework.html` shipped missing `.sv` with that suite green.** A guard
+copied from it would have passed on a `teacher-exams.html` that still left
+`sv-poly` and `sv-dash` unstyled.
+
+`tests/renderer-css-parity.test.mjs` is now the single owner of the claim. It
+derives from every `sv` token in the comment-stripped renderer, and then
+**keeps the old pattern in the suite** to assert it saw only 26 and that the
+four missing ones are exactly those four — so the fix cannot regress into the
+bug. One mutant reverts the suite's own derivation, and is killed.
+
+#### What changed
+
+| file | change |
+|---|---|
+| `teacher-exams.html` | 6 divergent rules **replaced** by the canonical 34 |
+| `teacher-homework.html` | `+1` line: the missing `.sv` rule |
+| `tests/renderer-css-parity.test.mjs` | new, 78 checks |
+| `tests/teacher-homework-ui.test.mjs` | the broken derivation removed |
+
+All three pages now carry **34 rules, 30/30 classes, 2188 normalised bytes,
+byte-identical after normalisation**. No renderer change, no schema, no RPC, no
+permissions, no JS behaviour.
+
+#### Evidence
+
+- CI **70/70**; `renderer-css-parity` 78/78, `teacher-exam-ui` 48/48,
+  `teacher-homework-ui` 186/186, and every H8 suite unchanged.
+- **23 mutants, 20 killed, 3 equivalent survivors.** Four are named BLIND —
+  dropping `.sv`, `.sv-poly`, `.sv-dash` or `.sv-dot-off` — because those are
+  precisely what the old derivation could not see; all four are killed now.
+- **84 browser checks at 390 / 820 / 1280px, 0 failures**: computed renderer
+  properties identical across all three pages over 31 selectors, plus the eight
+  breakages asserted on rendered geometry — curves not black, axes and grid
+  visible, the number-line segment visible, the figure's white card measured
+  200×90, chart panels sharing a row above 820px and wrapping cleanly below it,
+  10px legend swatches, a wide table scrolling inside itself (2587px of content
+  in 1213px), and a three-line text stimulus 65px tall.
+
+**Three of those checks failed on the first run and all three were defects in
+the harness, not the pages**: `.sv-note` is only emitted by an unplottable
+curve so no element existed to measure; the wide-table probe read the *narrow*
+table above it; and two chart panels legitimately wrap at 390px, so demanding
+one row there asserted a bug rather than a contract. Fixed and re-measured.
+
+#### Left open
+
+The stylesheet is now triplicated and identical, guarded by a test rather than
+by construction. A shared `assets/stimulus-view.css` would end the drift
+permanently but adds a request and touches `exam.html`; recorded, not done.
+
+---
+
 ## 16 · Figures & Data — the authoring problem, and the architecture that already exists
 
 Audited 2026-09-04, read-only. Seven decisions locked the same day. **No file,
