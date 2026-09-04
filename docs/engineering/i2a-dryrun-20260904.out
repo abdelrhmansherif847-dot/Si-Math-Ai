@@ -1,0 +1,46 @@
+=== I-2a DRY-RUN · RUN_ID 7f3a91c4-2d68-4b05-9e17-c8a4b0d35e2f ===
+  ok    P01 teacher_exam_list body md5 = a0a8cf0c09e0dac4de4ab1c881b03c19
+  ok    P02 teacher_exam_paper body md5 = 28953b6e6d2b0c7c5b0df3dfd40ca639
+  ok    P03 assistant joined via staff_join_workspace = pending
+  ok    P04 second assistant joined, left pending = pending
+  ok    P05 assistant activated by the owner = active
+  ok    P06 the other assistant is still pending = pending
+  ok    P07 the figure really has a media_sha256 (non-vacuity) = present
+  ok    P08 list returns EXACTLY the workspace's exams = EXACT SET
+  ok    P08b …and that set is not empty (non-vacuity) = non-empty (4)
+  ok    P08c …in created_at desc order, as the page asks the table for = ORDERED
+  ok    P09 teacher paper exam_id = 688b3dd3-c08e-4617-9a51-439e5ca6b102
+  ok    P10 teacher paper stimuli = 1
+  ok    P11 teacher paper questions = 1
+  ok    P12 can_edit_content is true for a draft = true
+  ok    P13 ACTIVE assistant paper == teacher paper = PARITY
+  ok    P14 ACTIVE assistant list == teacher list = PARITY
+  ok    D · pending assistant -> list = 42501
+  ok    D · pending assistant -> paper = 42501
+  ok    D · enrolled student -> list = 42501
+  ok    D · enrolled student -> paper = 42501
+  ok    D · outsider -> list = 42501
+  ok    D · outsider -> paper = 42501
+  ok    D · platform super_admin -> list = 42501
+  ok    D · platform super_admin -> paper = 42501
+  ok    D · no session -> list = 42501
+  ok    D · no session -> paper = 42501
+  ok    D · nonexistent workspace -> list (not an empty set) = 42501
+  ok    D · nonexistent exam -> paper = 42501
+  ok    P15 media_sha256 absent from the paper payload = absent
+  ok    P16 stimulus field count = 7
+  ok    P17 stimulus fields, exactly = body,id,kind,label,media_kind,media_ref,spec
+  ok    P18 question field count = 8
+  ok    P19 question fields, exactly = choices,correct_answer,explanation,id,ordinal,prompt,question_format,stimulus_id
+  ok    P20 list declares 15 OUT columns = 15
+  ok    P21 teacher direct SELECT on teacher_exam_questions = ok (1 rows)
+  ok    P22 teacher direct SELECT on teacher_exam_stimuli = ok (1 rows)
+  ok    P23 content-table grants to authenticated (I-2b has not run) = 2
+  ok    P24 teacher_exam* functions installed (29 + these 2) = 31
+  ok    P25 anon holds EXECUTE on neither read = false
+  ok    R01 I-2a functions surviving the rollback = 0
+  ok    R02 teacher_exam* functions after rollback = 29
+  ok    R03 surviving bodies are byte-for-byte the pre-I-2a set = a664e4521cbaffc1d0cce3f051dbdcfd
+  ok    R04 grants unmoved by the rollback = 2
+
+=== 43/43 passed, 0 failed · TRANSACTION ABORTED ===

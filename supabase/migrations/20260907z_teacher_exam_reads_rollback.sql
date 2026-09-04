@@ -74,7 +74,7 @@ begin
     raise exception 'I-2a rollback: content-table grants moved (found %)', n;
   end if;
 
-  raise notice 'I-2a rollback verified: both reads gone, 28 teacher_exam* functions remain.';
+  raise notice 'I-2a rollback verified: both reads gone, 29 teacher_exam* functions remain.';
 end;
 $v$;
 
