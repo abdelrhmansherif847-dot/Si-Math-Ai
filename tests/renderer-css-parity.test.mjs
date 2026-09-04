@@ -101,9 +101,19 @@ t.section('The three copies have not drifted');
 const norm = (rules) => rules.map(([s, b]) => s + '{' + b + '}').sort().join('\n');
 const CANON = norm(RULES['exam.html']);
 t.ok('the canonical set is substantial (not vacuous)', CANON.length > 1800);
+/* THE COMPARISONS ARE COUNTED, not assumed. This loop is the ONLY thing that
+   detects drift between the three copies — measured: with it disabled, a
+   changed declaration on teacher-homework.html goes undetected by every other
+   section — so it needs a guard against being silently emptied, which is the
+   same failure mode as the derivation bug this whole suite was written for.
+   Counting what the loop DID is the guard; asserting PAGES.slice(1).length is
+   not, because that expression is still 2 however the loop is edited. */
+let compared = 0;
 for (const p of PAGES.slice(1)) {
   t.is(`${p} is byte-identical to exam.html after normalisation`, norm(RULES[p]), CANON);
+  compared++;
 }
+t.is('and both staff pages really were compared', compared, 2);
 t.is('all three carry the same number of rules',
   PAGES.map((p) => RULES[p].length), [34, 34, 34]);
 
