@@ -286,6 +286,8 @@ for (const [what, kind, inputs, needle] of [
   ['a pie with one slice',      'chart', { chartType: 'pie', panels: [{ categories: ['A'], values: [1] }] }, /between 2 and 4/],
   ['a pie of zeroes',           'chart', { chartType: 'pie', panels: [{ categories: ['A', 'B'], values: [0, 0] }] }, /cannot all be zero/],
   ['a number line with nothing','number_line', { min: 0, max: 1, points: [], segments: [] },  /at least one point or one interval/],
+  ['a half-finished interval', 'number_line', { min: -5, max: 5, points: [], segments: [{ from: '-3', to: '', fromClosed: true, toClosed: false }] }, /must be a number/],
+  ['a point outside the range','number_line', { min: -5, max: 5, points: ['99'] },              /must sit between -5 and 5/],
   ['a reversed number line',    'number_line', { min: 5, max: 1, points: [1] },               /smaller than/],
   ['a reversed X axis',         'plot', { xMin: 5, xMax: -5, yMin: -5, yMax: 5, functions: ['x'] }, /X axis must run/],
   ['a reversed Y axis',         'plot', { xMin: -5, xMax: 5, yMin: 5, yMax: -5, functions: ['x'] }, /Y axis must run/],
@@ -298,6 +300,36 @@ for (const [what, kind, inputs, needle] of [
   const off = plot({ xMin: -5, xMax: 5, yMin: 100, yMax: 200, functions: ['x'], pointGroups: [] });
   t.ok('a function entirely off-screen is refused', /does not pass through the visible part/.test(off.error));
 }
+
+// ══ 11b · A ROW NOT FILLED IN YET IS NOT A TYPE ERROR ═════════════════════
+t.section('Blank rows are skipped; bad values are still refused');
+
+/* The editors open with an empty row so there is somewhere to type. Pressing
+   Preview straight away must answer with the empty-state sentence, not with
+   "Every value must be a number" about a field nobody touched. The graph
+   already skipped a blank function row; the number line did not, which is the
+   defect this pins. */
+const nl = (inp) => E.build('number_line', Object.assign({ min: -5, max: 5 }, inp));
+t.ok('1 · a blank point row gives the empty-state sentence',
+  /at least one point or one interval/.test(nl({ points: [''], segments: [] }).error));
+t.ok('    …and so does a blank point row beside a blank interval row',
+  /at least one point or one interval/.test(
+    nl({ points: [''], segments: [{ from: '', to: '', fromClosed: true, toClosed: false }] }).error));
+t.ok('2 · a non-empty value that is not a number is still refused',
+  /must be a number/.test(nl({ points: ['abc'] }).error));
+t.ok('    …as is an interval with only one end filled',
+  /must be a number/.test(nl({ points: [], segments: [{ from: '-3', to: '', fromClosed: true, toClosed: false }] }).error));
+t.is('3 · a valid point is accepted, with a blank row beside it',
+  nl({ points: ['2', ''] }).spec, { min: -5, max: 5, points: [2] });
+t.is('4 · an interval alone is accepted, with a blank point row beside it',
+  nl({ points: [''], segments: [{ from: -3, to: 1, fromClosed: true, toClosed: false }] }).spec,
+  { min: -5, max: 5, segments: [{ from: -3, to: 1, fromClosed: true, toClosed: false }] });
+t.ok('a point outside the range is still refused',
+  /must sit between/.test(nl({ points: ['99'] }).error));
+/* The graph's behaviour is unchanged, and is what the number line now matches. */
+t.ok('the graph still skips a blank function row the same way',
+  /at least one function or one point/.test(
+    E.build('plot', { xMin: -5, xMax: 5, yMin: -5, yMax: 5, functions: [''], pointGroups: [] }).error));
 
 // ══ 12 · ROUND TRIP, AND THE LAW AGAINST PARTIAL LOADS ════════════════════
 t.section('hydrate(build(inputs)) returns the inputs');

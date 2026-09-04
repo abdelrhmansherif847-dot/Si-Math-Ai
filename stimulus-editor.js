@@ -50,6 +50,8 @@
 
   function round(v) { var f = Math.pow(10, DP); return Math.round(v * f) / f; }
   var isNum = function (v) { return typeof v === 'number' && isFinite(v); };
+  /** An input the teacher has not filled in yet. Not the same as a bad one. */
+  function blank(v) { return v == null || String(v).trim() === ''; }
   function num(v) {
     if (typeof v === 'number') return isFinite(v) ? v : null;
     var s = String(v == null ? '' : v).trim();
@@ -343,7 +345,13 @@
     if (min === null || max === null) return { error: ERR.chartNum };
     if (!(min < max)) return { error: ERR.nlOrder };
     var points = [], segs = [], i;
+    /* A row the teacher has not filled in yet is not an error — it is an empty
+       row. The graph editor already skips a blank function row this way, and
+       without the same rule here, opening the number line and pressing Preview
+       answers "Every value must be a number" about a field nobody typed in.
+       A row with something in it that is not a number is still refused. */
     for (i = 0; i < (inp.points || []).length; i++) {
+      if (blank(inp.points[i])) continue;
       var v = num(inp.points[i]);
       if (v === null) return { error: ERR.chartNum };
       if (v < min || v > max) return { error: 'Every point must sit between ' + min + ' and ' + max + '.' };
@@ -351,6 +359,9 @@
     }
     for (i = 0; i < (inp.segments || []).length; i++) {
       var g = inp.segments[i];
+      /* Both ends blank is an untouched row; ONE end blank is a half-finished
+         interval, and that is a real mistake worth naming. */
+      if (blank(g.from) && blank(g.to)) continue;
       var a = num(g.from), b = num(g.to);
       if (a === null || b === null) return { error: ERR.chartNum };
       if (!(a < b)) return { error: ERR.nlOrder };

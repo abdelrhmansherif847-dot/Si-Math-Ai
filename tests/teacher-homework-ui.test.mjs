@@ -146,6 +146,15 @@ t.ok('and the Partner link still IS role-gated (the check is not vacuous)',
 t.section('Every spec comes from the shared module, never assembled in the page');
 
 t.ok('the page loads stimulus-editor.js', /<script src="stimulus-editor\.js"><\/script>/.test(PAGE));
+/* The page paints the EDITOR; stimulus-view.js renders the FIGURE. The two
+   used to share the name renderPlot, in different scopes — harmless, and one
+   rename away from never confusing a reader again. */
+t.ok('the page defines paintPlot, not a second renderPlot', /function paintPlot\(\)/.test(CODE));
+t.is('no page function shadows a renderer name',
+  ['renderPlot', 'renderTable', 'renderBarOrLine', 'renderPie', 'renderNumberLine', 'renderFigure']
+    .filter((n) => new RegExp(`function ${n}\\(`).test(CODE)), []);
+t.ok('…and the renderer still owns those names',
+  /function renderPlot\(/.test(read('stimulus-view.js')));
 const FROM_FORM = (CODE.match(/function stimulusFromForm\(\) \{[\s\S]*?\n\}/) || [''])[0];
 t.ok('stimulusFromForm was found (not a vacuous slice)', FROM_FORM.length > 400);
 t.ok('…and it builds through the module', /ED\(\)\.build\(kind, currentInputs\(\)\)/.test(FROM_FORM));

@@ -694,7 +694,7 @@ function syncStimulusForm() {
   if (structured && S.ed.advanced) $('advWrap').open = true;
   if (k === 'table') renderTblGrid();
   if (k === 'chart') renderChart();
-  if (k === 'plot') renderPlot();
+  if (k === 'plot') paintPlot();
   if (k === 'number_line') renderNline();
 }
 
@@ -833,7 +833,10 @@ function renderPanels() {
 }
 
 /* ── graph ──────────────────────────────────────────────────────────── */
-function renderPlot() {
+/* paintPlot, not renderPlot: stimulus-view.js has a private renderPlot() that
+   draws the FIGURE, and these five functions draw the EDITOR. The editor is
+   painted; the figure is rendered. */
+function paintPlot() {
   const g = S.ed.plot;
   $('plX0').value = g.xMin; $('plX1').value = g.xMax;
   $('plY0').value = g.yMin; $('plY1').value = g.yMax;
@@ -858,17 +861,17 @@ function renderPlot() {
   const wire = (attr, ev, fn) => document.querySelectorAll('[' + attr + ']').forEach((el) =>
     el.addEventListener(ev, () => fn(el)));
   wire('data-fn', 'input', (el) => { g.functions[+el.getAttribute('data-fn')] = el.value; });
-  wire('data-delfn', 'click', (el) => { g.functions.splice(+el.getAttribute('data-delfn'), 1); renderPlot(); });
-  wire('data-delgrp', 'click', (el) => { g.pointGroups.splice(+el.getAttribute('data-delgrp'), 1); renderPlot(); });
+  wire('data-delfn', 'click', (el) => { g.functions.splice(+el.getAttribute('data-delfn'), 1); paintPlot(); });
+  wire('data-delgrp', 'click', (el) => { g.pointGroups.splice(+el.getAttribute('data-delgrp'), 1); paintPlot(); });
   wire('data-px', 'input', (el) => { const [i, j] = el.getAttribute('data-px').split('.').map(Number); g.pointGroups[i].points[j].x = el.value; });
   wire('data-py', 'input', (el) => { const [i, j] = el.getAttribute('data-py').split('.').map(Number); g.pointGroups[i].points[j].y = el.value; });
   wire('data-pl', 'input', (el) => { const [i, j] = el.getAttribute('data-pl').split('.').map(Number); g.pointGroups[i].points[j].label = el.value; });
   wire('data-delpt', 'click', (el) => {
     const [i, j] = el.getAttribute('data-delpt').split('.').map(Number);
-    g.pointGroups[i].points.splice(j, 1); renderPlot();
+    g.pointGroups[i].points.splice(j, 1); paintPlot();
   });
   wire('data-addpt', 'click', (el) => {
-    g.pointGroups[+el.getAttribute('data-addpt')].points.push({ x: '', y: '', label: '' }); renderPlot();
+    g.pointGroups[+el.getAttribute('data-addpt')].points.push({ x: '', y: '', label: '' }); paintPlot();
   });
 }
 
@@ -1337,12 +1340,12 @@ $('chAddPanel').addEventListener('click', () => {
 $('chX').addEventListener('input', () => { S.ed.chart.xLabel = $('chX').value; });
 $('chY').addEventListener('input', () => { S.ed.chart.yLabel = $('chY').value; });
 
-$('plAddFn').addEventListener('click', () => { S.ed.plot.functions.push(''); renderPlot(); });
+$('plAddFn').addEventListener('click', () => { S.ed.plot.functions.push(''); paintPlot(); });
 $('plAddPts').addEventListener('click', () => {
   /* Two rows, because the paper format cannot store a single marked point —
      and nothing here duplicates one to pretend it can. */
   S.ed.plot.pointGroups.push({ points: [{ x: '', y: '', label: '' }, { x: '', y: '', label: '' }] });
-  renderPlot();
+  paintPlot();
 });
 for (const id of ['plX0', 'plX1', 'plY0', 'plY1', 'plXL', 'plYL']) {
   $(id).addEventListener('input', () => {

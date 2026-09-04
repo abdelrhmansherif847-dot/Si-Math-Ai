@@ -5897,12 +5897,48 @@ only under the Advanced group and shows no visual editor at all.
 
 | | |
 |---|---|
-| `stimulus-editor` | **194/194** (new) |
-| `teacher-homework-ui` | **185/185** (was 163) |
+| `stimulus-editor` | **204/204** (new) |
+| `teacher-homework-ui` | **188/188** (was 163) |
 | `stimulus-view` · `staff-nav` · `teacher-homework` · `teacher-access-scope` | 38 · 56 · 486 · 109 |
 | `teacher-exam-ui` · `teacher-surface` · `repo-integrity` · `exam-page` · `teacher-exam-student` | 48 · 62 · 33 · 45 · 37 |
 | Full CI | **68/68 green** (was 67) |
-| Mutants | ed **41/41** · H7 66/66 · H4 75/75 · H5 81/81 · H6 46/46 |
+| Mutants | ed **47/47** · H7 66/66 · H4 75/75 · H5 81/81 · H6 46/46 |
+
+#### The pre-merge review, and the two things it changed
+
+The review of `b6212d5` verified §16.4 and §16.7 against the code rather than
+only through the tests, and proved three boundaries by measurement:
+`stimulus-view.js` is **byte-identical to `main`** (`cdd6e6b7…` both sides);
+the copied stylesheet is **33 of 33 rules byte-identical to `exam.html`, in
+order**, with all 13 tokens they resolve against identical too; and rendering
+the same six specs in the student player's style context and the homework
+page's gives **pixel-identical output**, the two `expr + points` plots
+included. The persistence chain is the existing one end to end — the page
+writes the same seven RPC parameters H3 defined, names no new table, uses no
+browser storage, and the module touches neither the network nor the DOM.
+Sharing is intact: editing sends the existing id so the RPC updates in place,
+the figure editor never writes a question's `stimulus_id`, and a figure held by
+two questions warns before it is changed.
+
+Two findings were raised and then fixed on approval:
+
+- **F-1 · a row not yet filled in was a type error.** Opening the number line
+  and pressing Preview answered *"Every value must be a number."* about a field
+  nobody had typed in — the empty-state sentence the contract specifies was
+  unreachable. The graph editor already skipped a blank function row; the
+  number line did not. It now skips a blank point row, and a blank interval row
+  (both ends empty) with it, while **one** end filled is still a real mistake
+  and still refused. Nothing else moved: a non-numeric value, an out-of-range
+  point and a reversed interval are refused exactly as before. Five mutants
+  cover it, including one that "helpfully" invents `0` for a blank point.
+- **R-1 · the page shadowed a renderer name.** Its editor painter was called
+  `renderPlot()` — the same name as `stimulus-view.js`'s private figure-drawing
+  `renderPlot()`. Different scopes, so nothing was broken, but nothing stopped
+  a future reader confusing them. Renamed to `paintPlot()` across eight
+  references, with a comment giving the rule — *the editor is painted, the
+  figure is rendered* — and an assertion that **no page function shadows any of
+  the renderer's six private names**, which also proves the renderer still owns
+  them.
 
 #### Recorded, not done
 
