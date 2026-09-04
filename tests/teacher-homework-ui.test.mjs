@@ -195,21 +195,18 @@ t.ok('the page does not read spec.headers or spec.rows itself',
 t.ok('and it does not compute media_sha256 or expect one',
   !/media_sha256/.test(PAGE));
 
-/* A preview is only a preview if it is STYLED like the student's screen.
-   The class list is derived from the renderer itself, so this cannot rot: add
-   a class there and this goes red until the page carries a rule for it. The
-   defect it was written for was visible only by looking — stimulus-view.js
-   emitted the right SVG and a curve drew as a filled black polygon, because
-   an SVG <polyline> fills black unless .sv-line sets fill:none. */
-const RENDERER = read('stimulus-view.js');
-const EMITTED = [...new Set([...RENDERER.matchAll(/class="((?:sv-[a-z-]+\s*)+)"/g)]
-  .flatMap((m) => m[1].trim().split(/\s+/)))].sort();
-t.ok('the renderer emits sv- classes (not a vacuous list)', EMITTED.length >= 20);
-const styled = new Set([...PAGE.matchAll(/\.(sv-[a-z-]+)/g)].map((m) => m[1]));
-t.is('every class the renderer emits has a rule on this page',
-  EMITTED.filter((c) => !styled.has(c)), []);
-t.ok('…including the one that stops a curve filling itself black',
-  /\.sv-line\{[^}]*fill:none/.test(PAGE));
+/* A preview is only a preview if it is STYLED like the student's screen, and
+   that claim now lives in ONE place for all three pages that carry the
+   renderer's stylesheet: tests/renderer-css-parity.test.mjs.
+   
+   It used to live here, and it was WRONG in a way that let a real gap ship.
+   It derived the class list with /class="((?:sv-[a-z-]+\s*)+)"/, which needs a
+   hyphen and a closing quote immediately after — so it never saw `sv`,
+   `sv-dash`, `sv-dot-off` or `sv-poly`, three of which the renderer builds by
+   concatenation. This page shipped with `.sv` missing and this suite green.
+   Two derivations of the same fact is how that happens, so there is now one. */
+t.ok('the renderer stylesheet parity check exists and covers this page',
+  /teacher-homework\.html/.test(read('tests/renderer-css-parity.test.mjs')));
 /* A preview that does not typeset is not a preview: a prompt written with $x$
    would look right to the teacher and wrong to nobody until a student saw it. */
 t.ok('both previews and the question list run KaTeX',
