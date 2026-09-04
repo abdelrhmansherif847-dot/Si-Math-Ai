@@ -5097,3 +5097,355 @@ No student UI, no dashboard card, no `exam.html` entry point, no Teacher Exams
 change, no class-patterns change, no analyzer change, no SQL. **H8 is the
 student surface and the unified *From your teachers* card.** Item I-2, the
 Teacher Exams `select('*')` hardening, stays outside both.
+
+---
+
+## 16 · Figures & Data — the authoring problem, and the architecture that already exists
+
+Audited 2026-09-04, read-only. Seven decisions locked the same day. **No file,
+schema, policy, migration or renderer was changed by this work** — it is a
+design record and a Stage 0 contract, nothing more.
+
+### 16.1 · The finding that reframes the task
+
+The Homework "Figures & Data" surface asks a teacher for `Spec (JSON)` in a
+monospace textarea, or for an SVG file. That is unacceptable for teacher
+authoring, and it was easy to assume the fix was a new structured-visual
+architecture.
+
+**It is not. The structured visual model already exists, and it is enforced in
+the database.** What is wrong is that the authoring UI shows the teacher the
+raw serialisation of a model that is already semantic.
+
+| | measured 2026-09-04 |
+|---|---|
+| Storage | `kind` + `label` + `body` + `spec jsonb` + `media_ref/media_kind/media_sha256` |
+| Kinds | `text` · `table` · `chart` · `plot` · `number_line` · `figure` |
+| Shape rule | `exam_stimulus_shape_ok()` — mutually exclusive: text→`body`, four structured kinds→`spec`, figure→`media_ref` |
+| Spec schema | `exam_stimulus_spec_ok()` — **4,632 characters of per-kind schema, enforced as a CHECK constraint**, with `exam_pie_panels_ok`, `exam_plot_figures_ok`, `exam_plot_frame_mode_ok` |
+| Renderer | `stimulus-view.js`, 399 lines, `spec → SVG` at read time |
+| Shared by | `exam_stimuli`, `teacher_exam_stimuli`, `teacher_homework_stimuli` — the teacher tables **call** the platform validators, they do not copy them |
+| Consumers | `exam.html`, `teacher-exams.html`, `teacher-homework.html` |
+
+**The live corpus:**
+
+| table | rows | structured | figures / SVG | `display` used |
+|---|---|---|---|---|
+| `exam_stimuli` | **33** — 8 table, 6 chart, 15 plot, 4 number_line | **33** | **0** | 0 |
+| `teacher_exam_stimuli` | **0** | — | — | — |
+| `teacher_homework_stimuli` | **0** | — | — | — |
+
+**SVG has never been used in production, and no teacher has ever authored a
+stimulus.** There is nothing to migrate and nothing to break.
+
+Four capabilities the brief assumed were missing already exist:
+
+1. **SVG is already an internal output format.** The renderer generates it from
+   the spec. `figure` is the escape hatch, and it is unused.
+2. **`curves[].expr` is already valid in the database.** The schema accepts
+   `{"expr": "x^2-4*x+3"}` as an alternative to `points`. The renderer declines
+   to draw it and says so in the output. *Typing a function is a renderer gap,
+   not a data-model gap.* 0 of 17 live curves use it.
+3. **A stimulus is already shared across questions** — 43 questions reference
+   33 distinct stimuli, up to 3 questions on one figure.
+4. **`display` is already reserved** — the validator requires it to be an
+   object if present, and nothing reads it. A designed extension slot, unused.
+
+**The real gaps**, separated from the imagined ones: raster images cannot be
+stored at all (`media_kind` is CHECK-constrained to `'svg'`); `media_ref` is
+inline base64 in the row and is returned in every read payload, so it could
+never carry a photograph; teacher questions have no `reading` / alt-text, while
+`exam_questions.reading` plus `exam_stimulus_reading_still_valid()` enforce one
+for the platform's own charts and graphs; and there is no `spec_version` and no
+provenance field.
+
+### 16.2 · The seven decisions, LOCKED
+
+1. **Stage 0 is the next increment**: a teacher-friendly authoring UI for
+   **Table, Graph/plot, Chart, Number line**. **Zero database, schema, policy,
+   migration or renderer changes.**
+2. **Raster images are NOT in Stage 0.** PNG/JPG/WEBP is **Stage 2**, together
+   with the Storage and media-model work it genuinely requires.
+3. **Accessibility is required, later.** Teacher `reading` / alt-text for
+   charts and graphs is the additive accessibility stage, **Stage 3**.
+4. **Expression curves use a deterministic, explicitly whitelisted grammar** —
+   polynomials, standard mathematical functions, constants, operators,
+   parentheses. **No arbitrary JavaScript, no `eval`, no unrestricted
+   expression language.** The exact function list is an **open design item**
+   (§16.6 O-1) to be settled before any expression renderer is written.
+5. **Raw SVG stays** for backward compatibility and advanced users, behind an
+   Advanced disclosure. **The normal teacher workflow must never require SVG,
+   JSON, specification syntax or coding knowledge.**
+6. **AI visual generation is Stage 4.** AI will emit validated structured
+   specs, never raw SVG. Not now.
+7. **Image → editable visual is Stage 4**, additive and non-destructive; the
+   uploaded original is always preserved.
+
+**Architecture decision: extend, do not replace.** The pipeline stays
+`kind + validated spec JSONB → shared renderer → SVG output`. The teacher UI
+becomes a visual editor over that model. **No parallel visual system.**
+
+### 16.3 · The mechanism that makes Stage 0 possible — measured, not assumed
+
+The requirement is that choosing *Graph* should feel like building a graph:
+
+```
+Graph
+  Add function     y = x² - 4x + 3
+  Add points       (2, -1)   (4, 3)
+  X axis  -5 → 5
+  Y axis  -5 → 10
+  [Preview]
+```
+
+The obstacle looks fatal: the renderer does not draw `expr`, and Stage 0
+forbids changing the renderer. It is not fatal, because of a property of the
+live validator that was tested rather than assumed:
+
+**A curve may carry BOTH `expr` and `points`.** The validator's rule is an
+`OR`, so a curve holding the typed formula *and* its sampled points is valid;
+and the renderer reads `points` first, so it draws the curve and never consults
+`expr`. Verified against production with pure function calls:
+
+| probe | `exam_stimulus_spec_ok('plot', …)` |
+|---|---|
+| curve with **both** `expr` and `points` | **true** |
+| curve with `expr` only | true |
+| function curve **+** a labelled points curve (the example above, exactly) | **true** |
+
+And through the shipped `stimulus-view.js`, on that exact spec: a `sv-line`
+polyline is drawn, both marked points render as circles, the labels A and B
+appear, and **no** *"defined by a formula and is not drawn here"* note is
+emitted. The contrast holds: `expr` with **no** points draws nothing and says
+so.
+
+So Stage 0's rule is:
+
+> **The editor stores the teacher's meaning AND its drawing.** A function curve
+> is saved as `{expr: "<the teacher's formula>", points: [<sampled>]}`. The
+> formula is the record of intent, which Stage 1 will render directly; the
+> points are what today's renderer draws. **Stage 0 never stores `expr` without
+> `points`** — that is the one shape that would show a teacher an empty graph.
+
+This is why Stage 0 needs no migration and no renderer change, and why the
+teacher's typed formula is not thrown away.
+
+### 16.4 · Stage 0 implementation contract
+
+Four editors replacing the `Spec (JSON)` textarea in `teacher-homework.html`.
+`text` keeps its plain textarea; `figure` moves behind **Advanced**, unchanged.
+
+**Rules that bind every editor.** The UI emits a spec that
+`exam_stimulus_spec_ok()` would accept, and validates before the round trip so
+the teacher sees a sentence rather than a `23514`. It emits **no `display`
+key** (Stage 3). It writes through `teacher_homework_save_stimulus()`
+unchanged, with `p_spec` as the object. Preview is `window.StimulusView.render()`
+and nothing else — **the only renderer entry point Stage 0 may call**; the
+module exports `render`, `esc` and `KINDS`, and internal functions are not
+reachable by design. Every teacher string reaches the DOM through the page's
+`esc()`. Numbers are parsed once, at the edge, and a field that is not a number
+is an error state, never a silent `0`.
+
+**Round-trip safety — the rule that prevents data loss.** An editor hydrates
+from the stored `spec`. If a stored spec contains anything the visual editor
+cannot represent, the stimulus opens in the **Advanced JSON** editor with a
+sentence saying why, and the visual editor is not offered for it. **The UI must
+never load a spec partially and save it back with fields dropped.** In Stage 0
+that means: a `plot` whose `figures[]` carry `closed`, `dashed` or `vertices`;
+a `polygon` or `scatter` mode; a `frame` of `data`; or any key the editor does
+not know.
+
+---
+
+#### Editor 1 · Table
+
+- **Inputs.** A spreadsheet-like grid. Add / remove row, add / remove column,
+  rename a column header inline, paste TSV from Excel or Sheets (first pasted
+  row becomes headers when the grid is empty), an optional **note** under the
+  table.
+- **Validation.** ≥ 1 column and ≥ 1 row; every row has exactly as many cells
+  as there are headers (enforced structurally by the grid, so it cannot be
+  violated); every cell is stored as a **string** — the validator requires
+  strings, so numeric input is stringified at the edge, never coerced to a
+  number.
+- **Canonical spec.** `{ "headers": [string…], "rows": [[string…]…] }`, plus
+  `"note": string` when the field is non-empty.
+- **Preview.** Live, through `StimulusView.render`, redrawn on blur of any
+  cell — `renderTable` reuse, including its `sv-scroll` wrapper and `sv-cap`
+  note.
+- **Edit.** Hydrates from `spec.headers` / `spec.rows` / `spec.note`. Every
+  table spec the schema permits is representable, so a table never falls back
+  to Advanced.
+- **Errors.** *"A table needs at least one column."* · *"A table needs at
+  least one row."* · paste that yields ragged rows is padded to the header
+  count and the padding is stated: *"Pasted 4 rows; two were short and have
+  been padded with blanks."*
+- **Empty.** A 2 × 2 grid with placeholder headers and a single hint line.
+
+---
+
+#### Editor 2 · Graph (plot) — the one that must not feel like a form
+
+- **Inputs.**
+  - **X axis** `from` → `to`, **Y axis** `from` → `to` (four numbers).
+  - **Add function** → a text field prefixed `y =`, accepting the whitelisted
+    grammar (§16.6 O-1). Optional per-function: dashed off (Stage 0 emits no
+    `dashed`; see round-trip safety).
+  - **Add points** → a repeatable row of `(x, y)` with an optional label per
+    point, rendered as `(2, -1)` chips.
+  - Optional **X label** / **Y label**.
+  - **Preview** button and live redraw.
+- **Validation.** `from < to` on both axes. A function must parse under the
+  whitelisted grammar and must produce **at least 2 finite samples inside the
+  Y range** — otherwise it is refused with *"That function does not pass
+  through the visible part of the graph. Widen the Y axis, or change the
+  function."* A points curve needs ≥ 1 point in Stage 0; labels, when given,
+  must be given for every point in that curve (the validator ties label count
+  to distinct vertices). At least one function or one points group must exist.
+- **Canonical spec.**
+  ```
+  { "frame": "plane",
+    "xRange": [x0, x1], "yRange": [y0, y1],
+    "curves":  [ {"expr": "x^2-4*x+3", "points": [[x,y]…]},   // a function
+                 {"points": [[2,-1],[4,3]]} ],                 // marked points
+    "figures": [ {"mode": "curve"},
+                 {"mode": "points", "labels": ["A","B"]} ] }
+  ```
+  `curves` and `figures` are **index-matched and equal in length** — the
+  validator requires it. `frame` is `plane` (axes cross at the origin), which
+  is what a teacher means by "a graph"; `graph` and `data` frames are not
+  offered in Stage 0 and force Advanced on load.
+- **Sampling.** A function is sampled at a fixed count across the X range,
+  rounded to a fixed precision, and clipped to the Y range, so the same formula
+  and the same ranges always produce the same points — determinism is a
+  property of the sampler, and the golden test pins it.
+- **Preview.** `renderPlot` reuse, unchanged.
+- **Edit.** A curve with `expr` loads its formula into the function field; a
+  curve with only `points` loads into the points editor; `labels` load onto the
+  points. Anything else → Advanced, per the round-trip rule.
+- **Errors.** *"The X axis must run from a smaller number to a larger one."* ·
+  *"`sin x` is not one of the functions this editor understands."* (naming the
+  token) · *"A graph needs at least one function or one point."*
+- **Empty.** Axes pre-filled `-5 → 5` and `-5 → 5`, one empty function row, and
+  the hint *"Type a function like `x^2 - 4x + 3`, or add points."*
+
+---
+
+#### Editor 3 · Chart
+
+- **Inputs.** Type: **Bar**, **Line**, **Pie**. Bar/line: a category column
+  plus one column per series, each series named; add / remove category, add /
+  remove series; optional X and Y labels. Pie: 1–3 panels, each with 2–4
+  category/value pairs and an optional panel title.
+- **Validation.** Bar/line: ≥ 1 category, ≥ 1 series, every series has exactly
+  one numeric value per category (structural), all values numbers. Pie: values
+  ≥ 0, each panel's values **sum > 0**, 2–4 categories per panel, 1–3 panels,
+  and the spec carries **none** of `categories` / `series` / `xLabel` /
+  `yLabel` — the validator refuses a pie that does.
+- **Canonical spec.** Bar/line
+  `{ "chartType": "bar"|"line", "categories": [string…], "series": [{"name": string, "values": [number…]}…] }`
+  plus `xLabel` / `yLabel` when set. Pie
+  `{ "chartType": "pie", "panels": [{"categories": [string…], "values": [number…], "title"?: string}…] }`.
+- **Preview.** `renderBarOrLine` / `renderPie` reuse, chosen by `chartType`
+  exactly as `render()` does.
+- **Edit.** Fully representable both ways; charts never fall back to Advanced.
+- **Errors.** *"Every value must be a number."* naming the cell · *"A pie chart
+  needs between 2 and 4 slices in each panel."* · *"A pie panel's values cannot
+  all be zero."*
+- **Empty.** Bar, 3 categories, 1 series named "Series 1", all values blank.
+
+---
+
+#### Editor 4 · Number line
+
+- **Inputs.** **From** / **To**; **Add point** (a number, repeatable); **Add
+  interval** with `from`, `to` and two toggles rendered as *included* ● /
+  *excluded* ○ rather than as the field names `fromClosed` / `toClosed`.
+- **Validation.** `min < max`; **at least one point or one interval** — the
+  validator refuses a number line with neither; every endpoint a number.
+  Intervals outside `[min, max]` are refused with the range named.
+- **Canonical spec.**
+  `{ "min": n, "max": n, "points": [n…], "segments": [{"from": n, "to": n, "fromClosed": bool, "toClosed": bool}…] }`
+  — each array omitted when empty.
+- **Preview.** `renderNumberLine` reuse. The filled/hollow endpoint is the
+  whole question in most number-line items, so the toggle previews live.
+- **Edit.** Fully representable; never falls back.
+- **Errors.** *"A number line needs at least one point or one interval."* ·
+  *"From must be smaller than To."*
+- **Empty.** `-5 → 5`, one empty point row.
+
+---
+
+#### Shared stimuli — unchanged, and finally visible
+
+The mechanism does not change: a question references a stimulus by
+`stimulus_id`, several questions may reference one, and the question form's
+**Figure** dropdown already offers every stimulus of the homework. What Stage 0
+adds is honesty about it — each stimulus row shows **"used by N questions"**,
+and editing one used by more than one question says so before saving:
+*"This figure is used by 3 questions. Changing it changes all of them."* No
+schema, no RPC, no policy change; the count comes from the `questions[]` array
+`teacher_homework_paper()` already returns.
+
+#### Renderer reuse — the complete list
+
+`window.StimulusView.render(stimulus)` and `window.StimulusView.KINDS`.
+Nothing else. The editors must not reimplement `renderTable`, `renderPlot`,
+`renderBarOrLine`, `renderPie` or `renderNumberLine`, and cannot: they are
+private to the module. Preview is therefore the same code path a student runs,
+which is the property that makes preview meaningful.
+
+### 16.5 · Tests Stage 0 must ship
+
+Following the repository's established pattern — the builder logic is a **pure
+function lifted out of the page** and executed in Node, exactly as the
+class-patterns rule was:
+
+1. **`tests/stimulus-editor.test.mjs`** — for each of the four editors:
+   inputs → canonical spec, asserted field by field; the four validation
+   refusals per editor with their exact sentences; the round-trip law
+   `hydrate(emit(inputs)) === inputs` on a representative set; and the
+   fall-back-to-Advanced rule fired by each unrepresentable shape
+   (`closed` / `dashed` / `vertices` / `polygon` / `scatter` / `frame:"data"` /
+   an unknown key).
+2. **The `expr` + `points` law** — asserted directly: every function curve the
+   graph editor emits carries **both**, and a mutant that emits `expr` alone is
+   killed.
+3. **Golden renders** — each canonical spec through the real
+   `stimulus-view.js`, asserting the drawn features (a `sv-line` polyline for a
+   function, one circle per marked point, the labels, and **the absence** of
+   the *"defined by a formula"* note) plus a hash of the SVG so an accidental
+   renderer change is visible.
+4. **Sampler determinism** — the same formula and ranges produce byte-identical
+   points across runs.
+5. **A production read-only dry-run** as an acceptance step: every generated
+   fixture passed to `exam_stimulus_spec_ok()` on the live database and
+   required to return `true`. Pure function calls, no writes, no transaction
+   that could leave anything behind.
+6. **`teacher-homework-ui` extensions** — no `.from(` still 0; the RPC set
+   still exactly 18; the JSON textarea no longer on the normal path; Advanced
+   still reachable; `StimulusView.render` still the only preview.
+7. **Mutation testing** to the standard of the H4–H7 suites.
+
+### 16.6 · Open design items, and what Stage 0 is not
+
+- **O-1 · The whitelisted function list.** Decision 4 fixes the shape of the
+  grammar but not its contents. To be settled, explicitly, before any
+  expression code is written: which of `sqrt` `abs` `sin` `cos` `tan` `log`
+  `ln` `exp` `min` `max` `floor` `ceil` are in; whether `^` means power;
+  whether implicit multiplication (`2x`, `4x^2`) is accepted; how `π` and `e`
+  are written; and what a division by zero or a domain error does to a sample
+  (proposal: that sample is dropped, not zeroed). **The parser is a total
+  function over a fixed token set — never `eval`, never `Function`.**
+- **O-2.** Sample count and rounding precision for the sampler (they decide the
+  golden hashes).
+- **O-3.** Whether Stage 0 offers `dashed`, and so whether it may emit a
+  `figures[]` key beyond `mode` and `labels`. Proposal: **no** — it keeps the
+  round-trip law simple and Stage 3 can add it with `display`.
+
+**Stage 0 does not**: change the database, any policy, any grant, any RPC, the
+renderer, Teacher Exams, the student player, or the analyzer. It does not add
+raster images (Stage 2), `reading` / alt-text (Stage 3), expression rendering
+(Stage 1), AI generation or image→editable (Stage 4). It does not remove raw
+SVG — it moves it behind Advanced, where a teacher who does not want it will
+never meet it.
