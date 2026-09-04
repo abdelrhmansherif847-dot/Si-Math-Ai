@@ -5296,8 +5296,9 @@ not know.
   - Optional **X label** / **Y label**.
   - **Preview** button and live redraw.
 - **Validation.** `from < to` on both axes. A function must parse under the
-  whitelisted grammar and must produce **at least 2 finite samples inside the
-  Y range** — otherwise it is refused with *"That function does not pass
+  grammar of §16.7 and must produce **at least one drawable branch**, of which
+  at least 2 samples fall **inside** the Y range — a visibility check, not a
+  clip (§16.7.4) — otherwise it is refused with *"That function does not pass
   through the visible part of the graph. Widen the Y axis, or change the
   function."* A points curve needs ≥ 1 point in Stage 0; labels, when given,
   must be given for every point in that curve (the validator ties label count
@@ -5312,13 +5313,20 @@ not know.
                  {"mode": "points", "labels": ["A","B"]} ] }
   ```
   `curves` and `figures` are **index-matched and equal in length** — the
-  validator requires it. `frame` is `plane` (axes cross at the origin), which
+  validator requires it. A function that breaks across a domain gap contributes
+  **one curve per branch**, each with its own `{"mode":"curve"}` entry and each
+  carrying the same `expr` (§16.7.4). `frame` is `plane` (axes cross at the origin), which
   is what a teacher means by "a graph"; `graph` and `data` frames are not
   offered in Stage 0 and force Advanced on load.
-- **Sampling.** A function is sampled at a fixed count across the X range,
-  rounded to a fixed precision, and clipped to the Y range, so the same formula
-  and the same ranges always produce the same points — determinism is a
-  property of the sampler, and the golden test pins it.
+- **Sampling.** Fully specified in **§16.7.4**. A function is sampled at a
+  fixed count across the X range and rounded to a fixed precision, so the same
+  formula and the same ranges always produce byte-identical points —
+  determinism is a property of the sampler, and the golden test pins it.
+  Samples are **not** clipped to the Y range: a parabola that leaves the top of
+  the frame should leave the top of the frame, and the SVG viewport clips it.
+  Only a **domain error** removes a sample, and a run of removed samples
+  **splits the function into separate curves** — which is how a segment break
+  is expressed without touching the renderer.
 - **Preview.** `renderPlot` reuse, unchanged.
 - **Edit.** A curve with `expr` loads its formula into the function field; a
   curve with only `points` loads into the points editor; `labels` load onto the
@@ -5437,8 +5445,8 @@ class-patterns rule was:
   are written; and what a division by zero or a domain error does to a sample
   (proposal: that sample is dropped, not zeroed). **The parser is a total
   function over a fixed token set — never `eval`, never `Function`.**
-- **O-2.** Sample count and rounding precision for the sampler (they decide the
-  golden hashes).
+- **O-2 · CLOSED by §16.7.4** — 201 samples, 4 decimal places, at most 8
+  branches per function, at least 2 points per branch.
 - **O-3.** Whether Stage 0 offers `dashed`, and so whether it may emit a
   `figures[]` key beyond `mode` and `labels`. Proposal: **no** — it keeps the
   round-trip law simple and Stage 3 can add it with `display`.
@@ -5449,3 +5457,176 @@ raster images (Stage 2), `reading` / alt-text (Stage 3), expression rendering
 (Stage 1), AI generation or image→editable (Stage 4). It does not remove raw
 SVG — it moves it behind Advanced, where a teacher who does not want it will
 never meet it.
+
+### 16.7 · Stage 0 expression grammar — LOCKED (O-1 closed, 2026-09-04)
+
+Conservative on purpose. The four functions a teacher actually reaches for —
+`x^2 - 4*x + 3`, `sqrt(x + 2)`, `sin(x)`, `2*x + 5` — must all work, and
+nothing beyond the list below is admitted. The parser is a **total
+deterministic function over a fixed token set**: never `eval`, never
+`Function`, never an expression engine.
+
+#### 16.7.1 · The grammar
+
+**Variable** — `x`, and nothing else. No parameters, no second variable.
+
+**Numeric constants** — integers (`3`), decimals (`0.5`, `.5`, `2.`), and
+**scientific notation** (`1e3`, `2.5e-4`). Named constants **`pi`** and **`e`**.
+
+> Scientific notation and the constant `e` collide, so the tokenizer's rule is
+> stated rather than left to chance: a number token is read **greedily from a
+> digit or a leading `.`**, and an `e` immediately following the digits, with
+> an optional `+`/`-` and **at least one digit**, is part of that number.
+> Everywhere else `e` is the constant. So `1e3` is one thousand, `e` is
+> 2.718…, `e^2` is the constant squared, and `2e` is a **parse error** — not
+> `2*e`, because implicit multiplication does not exist here. Deterministic,
+> and no input silently means two things.
+
+**Operators**, with the only precedence table Stage 0 has:
+
+| level | operators | associativity |
+|---|---|---|
+| 1 (loosest) | `+` `-` (binary) | left |
+| 2 | `*` `/` | left |
+| 3 | unary `-` (and unary `+`) | right |
+| 4 (tightest) | `^` | **right** |
+
+So `-x^2` is `-(x^2)`, and `2^3^2` is `2^(3^2) = 512`. Both are the
+conventional mathematical reading, and both are pinned by a test.
+
+**Grouping** — `(` … `)`. Nothing else groups.
+
+**Functions**, exactly eight, each taking exactly one argument in parentheses:
+`sqrt` · `abs` · `sin` · `cos` · `tan` · `exp` · `ln` · `log`.
+
+- `ln` is the natural logarithm; `log` is **base 10**. Stated because the two
+  conventions differ by country and a silent choice here is a wrong graph.
+- `sin` / `cos` / `tan` take **radians**.
+- A function name must be followed by `(`. `sin x` is a parse error naming the
+  token, never an implicit application.
+
+**No implicit multiplication.** `2*x` not `2x`; `2*(x+1)` not `2(x+1)`;
+`x*(x+1)` not `x(x+1)`. This is a deliberate Stage 0 boundary: implicit
+multiplication needs extra grammar and several normalisation judgements
+(`e*x` vs `ex`, `pi*x` vs a name `pix`) and buys nothing Stage 0 needs. The
+error message teaches the fix: *"Write `2*x` rather than `2x` — this editor
+needs the multiplication sign."*
+
+#### 16.7.2 · Normalisation, and what gets stored
+
+Teachers paste from books, Word and WhatsApp, so the input is normalised
+**before** parsing. The rules are total and ordered:
+
+1. Trim, and collapse every Unicode space (including U+00A0) to a single ASCII
+   space.
+2. Strip a leading `y =`, `y=`, `f(x) =` or `f(x)=`.
+3. Superscript digits → `^`: `x²` → `x^2`, `x³` → `x^3`, and so on for
+   `⁰¹²³⁴⁵⁶⁷⁸⁹`. Consecutive superscripts fold into one exponent (`x¹²` →
+   `x^12`).
+4. Unicode operators → ASCII: `−` (U+2212) → `-`, `×` and `·` → `*`, `÷` → `/`,
+   `–`/`—` → `-`.
+5. `π` → `pi`, `√(` → `sqrt(`. A bare `√` **not** followed by `(` is an error,
+   because `√x+1` is genuinely ambiguous.
+6. Lower-case the function and constant names (`SIN(` → `sin(`), leaving
+   nothing else case-sensitive since `x` is the only variable.
+
+**The stored `expr` is the normalised string** — not a re-serialised AST. A
+re-serialisation would rewrite the teacher's formula back at them (`x^2 - 4*x +
+3` returned as `((x^2)-(4*x))+3`) for no gain: determinism only requires that
+the same input always yields the same stored string, which normalisation
+already guarantees. The invariant that matters is pinned by a test instead:
+
+> **`expr` must always re-parse to the same AST that produced the points.**
+
+#### 16.7.3 · Domain and error behaviour
+
+A sample is **invalid** — it produces no point — when evaluation yields
+division by zero, `sqrt` of a negative, `ln`/`log` of a non-positive, `tan` at
+a pole, or any non-finite result (`NaN`, `±Infinity`), by whatever route. No
+substitution, no zero, no clamp: the sampler never invents a point.
+
+Overflow counts as non-finite, so an intermediate that overflows to `Infinity`
+invalidates its sample rather than drawing a spike to the horizon.
+
+#### 16.7.4 · Sampling, branching, and how a break is expressed (O-2 closed)
+
+| constant | value | why |
+|---|---|---|
+| samples | **201** across `[x0, x1]` | dx = span/200; smooth at the sizes teachers use, ~4 KB of JSONB per function |
+| precision | **4 decimal places** | fixes the golden hashes; below visual resolution at every frame size |
+| max branches | **8** per function | `tan` over a wide range would otherwise produce dozens of curves |
+| min points per branch | **2** | the validator refuses `points` shorter than 2 |
+
+**The branch rule, which is how the segment break is achieved without touching
+the renderer.** `renderPlot` draws each curve's points as one `<polyline>`, and
+neither the schema nor the renderer has a break token — so a break becomes a
+**new curve**:
+
+1. Sample the normalised expression at the 201 x-values.
+2. Split the run wherever a sample is invalid (§16.7.3), **or** where the
+   change in y between consecutive valid samples exceeds the full height of the
+   Y range. That second clause is the one heuristic in Stage 0 and it exists
+   for a measured reason: without it `tan(x)` and `1/x` draw a full-height
+   vertical line straight through the asymptote, which reads as a continuous
+   function and is simply a wrong graph. Its worst failure is cosmetic — a
+   genuinely steep curve is split into two polylines that abut — and the
+   constant is one number in one place.
+3. Discard any run shorter than 2 points.
+4. Emit **one curve per surviving run**, each `{"expr": <normalised>, "points":
+   [...]}` and each with its own `{"mode": "curve"}` in `figures`.
+5. If nothing survives, refuse the function: *"This function has no drawable
+   part in the range you set."*
+6. If more than 8 branches survive, keep the first 8 and say so: *"This
+   function breaks into more than 8 pieces in this range. Showing the first 8 —
+   narrowing the X axis will show it properly."*
+
+**Samples are not clipped to the Y range.** A parabola that leaves the top of
+the frame leaves the top of the frame; the SVG viewport clips it, which is what
+a real graph looks like. The Y range is used only for the **visibility check**
+(§16.4) and for the branch heuristic above.
+
+#### 16.7.5 · The Stage 0 storage law
+
+> **Every function curve stores `expr` AND its sampled `points`.**
+> `expr` preserves the mathematical meaning, for Stage 1 to render directly;
+> `points` are the Stage 0 drawing. **Stage 0 must never save an `expr`
+> without valid drawing points** — that is the one shape the live renderer
+> answers with *"defined by a formula and is not drawn here"*, which would show
+> a teacher an empty graph.
+
+Enforced in three places: the builder refuses to emit it, a contract assertion
+requires every emitted function curve to carry both keys, and a mutant that
+drops `points` is required to be killed.
+
+#### 16.7.6 · Explicitly out of Stage 0
+
+Not admitted, and not to be added quietly: implicit multiplication · any named
+function outside the eight · derivatives and integrals · piecewise syntax ·
+inequalities · any parameter other than `x` · complex numbers · constants
+beyond `pi` and `e` · user-defined functions · equations solved for something
+other than `y` · units. Each is a future extension on its own evidence, and
+none is a Stage 0 defect.
+
+#### 16.7.7 · What the grammar adds to the test plan
+
+On top of §16.5: a **token-and-AST table** — every accepted token, and the two
+precedence readings (`-x^2` = `-(x^2)`, `2^3^2` = 512); the six normalisation
+rules, each with an input that only that rule fixes; the `1e3` / `e` / `e^2` /
+`2e` tokenizer table; every rejection with the exact sentence, `2x` and `sin x`
+included; a **domain table** — `1/x`, `sqrt(x+2)`, `ln(x)`, `tan(x)` over
+`[-5,5]`, asserting branch counts and that no branch is shorter than 2 points;
+the **no-invented-points law** (an invalid sample never becomes `0`); the
+**re-parse invariant** (`parse(stored_expr)` equals the AST that produced the
+points); byte-identical output across runs; and a **grammar-closure test** —
+`eval`, `Function`, `new Function`, `setTimeout` and `constructor` appear
+nowhere in the parser, and an input containing them is a parse error like any
+other unknown token.
+
+#### 16.7.8 · One item this opens
+
+- **O-4 · Stage 1 and multi-branch functions.** A function that breaks stores
+  the same `expr` on each branch, which is the honest statement — every branch
+  *is* that function on part of its domain. When Stage 1 renders from `expr`
+  directly it must treat consecutive curves sharing an identical `expr` as one
+  function, or it will draw it several times. A Stage 1 design item, recorded
+  now so it is not discovered then.
