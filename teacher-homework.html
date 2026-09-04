@@ -98,7 +98,16 @@ input[type="datetime-local"]{min-width:0;max-width:100%;box-sizing:border-box;-w
    pushing the page sideways. */
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.q-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
-table.q-tbl th,table.q-tbl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+table.q-tbl th,table.q-tbl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border-soft)}
+/* Only the columns that would read wrongly broken stay on one line: the state
+   pills, the submitted date, and the Review button. The name and the
+   in-this-class column wrap, which lets the table shrink to its container
+   instead of pushing Review — the row's whole point — off the right edge.
+   Measured with a realistic roster: without this the table is 1063px and
+   Review is clipped even at 1440px. The positions are pinned by the header
+   order, which the contract suite asserts alongside this rule. */
+table.q-tbl td:nth-child(3),table.q-tbl td:nth-child(4),
+table.q-tbl td:last-child{white-space:nowrap}
 table.q-tbl th{color:var(--text-400);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
 .prev{background:var(--bg-elev-2);border:1px dashed var(--cyan-border-soft);border-radius:var(--r-md);
   padding:16px;margin-top:12px}

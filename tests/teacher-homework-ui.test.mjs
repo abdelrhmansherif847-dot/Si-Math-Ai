@@ -399,6 +399,24 @@ t.ok('the two-column grid collapses by itself',
    than pushing the whole page sideways. */
 t.ok('the roster table scrolls inside its own container',
   /\.tbl-wrap\{overflow-x:auto/.test(PAGE) && /<div class="tbl-wrap">/.test(CODE));
+
+/* Scrolling inside the box is necessary but not sufficient: with every cell on
+   one line the table was 1063px wide against a 998px container, so the Review
+   button — the only action on the row — sat off the right edge even at 1440px,
+   and clicking one scrolled the student names out of view. The two text
+   columns wrap so the table can shrink to its container; only the columns that
+   would read wrongly broken stay on one line. */
+t.ok('no blanket nowrap on every roster cell',
+  !/table\.q-tbl th,table\.q-tbl td\{[^}]*white-space:nowrap/.test(PAGE));
+const NOWRAP = (PAGE.match(/table\.q-tbl td:nth-child\(3\),\s*\n?table\.q-tbl td:nth-child\(4\),\s*\n?table\.q-tbl td:last-child\{white-space:nowrap\}/) || [''])[0];
+t.ok('exactly the state, submitted and action columns stay on one line', NOWRAP.length > 0);
+/* nth-child is positional, so the rule is only correct while the columns are
+   in this order. Pin the header row next to it: insert or move a column and
+   this goes red rather than silently putting nowrap on the wrong cells. */
+const HEAD = (CODE.match(/<thead><tr>'\s*\n?\s*\+ '([\s\S]*?)<\/tr><\/thead>/) || [, ''])[1];
+t.is('the roster header is exactly the eight columns the rule is written for',
+  [...HEAD.matchAll(/<th>([^<]*)<\/th>/g)].map((m) => m[1]),
+  ['Student', 'In this class', 'State', 'Submitted', 'Correct', 'Wrong', 'Left blank', '']);
 /* The date control sizes itself as a native widget on iOS and overflows its
    card — the rule teacher.html already carries for the same reason. */
 const DATE_RULE = (PAGE.match(/input\[type="datetime-local"\]\{[^}]*\}/) || [''])[0];

@@ -5039,12 +5039,12 @@ nothing.
 
 | | |
 |---|---|
-| `teacher-homework-ui` | **160/160** |
+| `teacher-homework-ui` | **163/163** |
 | `staff-nav` | **56/56** (was 47) |
 | `teacher-homework` (H1–H6 contract) | 486/486, unchanged |
 | `teacher-access-scope` | 109/109, unchanged |
 | Full CI | **67/67 green** (was 66) |
-| Mutants | **63/63 killed** |
+| Mutants | **66/66 killed** |
 
 #### CLAUDE.md, corrected
 
@@ -5054,6 +5054,42 @@ it. `ai-tutor` is at platform version **145**, sha `efedd0f8…`, not 144 /
 `2c91aa15…`. A third Edge Function, **`support-actions`** (version 1, ACTIVE),
 existed and had never been recorded. Nothing else in the documentation was
 touched.
+
+#### The pre-merge review, and the one defect it found
+
+The page was driven in Chromium across every state — deny, empty list, draft,
+figures, questions, reorder, publish, code, roster, review, due date, reveal,
+rotate, close, refusal, delete — with the real file (only the four CDN tags
+swapped for local stand-ins; everything from `<style>` onward byte-identical)
+and a stub client whose `.from()` **throws and is recorded**. Result: **zero
+table queries attempted**, all **18 RPCs exercised**, 0 unhandled, the five
+`confirm()` texts captured, and the paper screen **byte-identical for a teacher
+and an ACTIVE assistant**. The `nav.js` fix was confirmed in the browser too:
+on the pre-fix keep-list both staff links read `hidden` at 2.4 s; on the fixed
+one both are visible, with every student link still hidden.
+
+**The visual review found one real defect the contract suite could not see.**
+With a realistic roster the table was **1063 px against a 998 px container**, so
+the Review button — the only action on the row — sat off the right edge **even
+at 1440 px**, and clicking one scrolled the student names out of view. The
+cause was a blanket `white-space:nowrap` on every roster cell. Fixed by letting
+the two text columns wrap and keeping one line only where breaking would read
+wrongly (state pills, submitted date, the button):
+
+| width | before | after |
+|---|---|---|
+| 1440 / 1280 | 1063 px in 998 px, **clipped** | 998 px in 998 px, **clear** |
+| 1024 | 1063 px in 942 px, clipped | 942 px in 942 px, **clear** |
+| 820 | 325 px overflow | 65 px overflow, scrolls in its box |
+| 390 | 755 px overflow | 495 px overflow, scrolls in its box |
+
+The page never scrolled sideways at any width, before or after — `.tbl-wrap`
+was doing its job; what was wrong was that the *action* was the thing outside
+it. `nth-child` is positional, so the contract now pins the header row next to
+the rule: insert or move a column and the suite goes red rather than putting
+`nowrap` on the wrong cells. Three mutants cover it — the blanket rule
+restored, the positions moved onto the columns that must wrap, and a column
+inserted at the front.
 
 #### What H7 did not do
 
