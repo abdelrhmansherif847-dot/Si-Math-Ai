@@ -1,7 +1,18 @@
 -- =====================================================================
 -- Teacher Exams, item I-2a — staff read the paper through an RPC
 -- =====================================================================
--- STATUS: 🟡 PREPARED. NOT APPLIED. Needs explicit owner approval.
+-- STATUS: ✅ APPLIED 2026-09-04 as version 20260904144132, after explicit
+--         owner approval, from the package at commit 0d3c3e9 exactly as
+--         committed. Rollback: 20260907z, PREPARED and unapplied — like
+--         H6's it has NO WINDOW, and running it today costs nothing
+--         operationally because authenticated still holds SELECT on the
+--         tables the pre-I-2a page reads. THAT CHANGES THE DAY I-2b SHIPS.
+--         Post-apply evidence: docs/engineering/i2a-dryrun-20260904.sql,
+--         the exact bytes dry-run against production (43/43, aborted),
+--         plus 26/26 behavioural checks on the live functions. Both
+--         installed bodies were compared byte-for-byte against this file
+--         after the apply, and the 29 teacher_exam* functions this file
+--         does not own were confirmed unchanged.
 -- DEPENDS ON: 3b (20260901c/d — the six tables, RLS and the staff-read
 --             policies), 3c (20260901e — the authoring RPCs and
 --             teacher_exam_is_staff()).
