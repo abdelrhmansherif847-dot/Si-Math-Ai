@@ -1,8 +1,13 @@
 -- =====================================================================
 -- Teacher Homework, increment H6 — staff can read the paper they authored
 -- =====================================================================
--- STATUS: 🟡 PREPARED, not applied. Apply only with explicit owner approval
---         (CLAUDE.md §3). Rollback: 20260906z.
+-- STATUS: ✅ APPLIED 2026-09-04 as version 20260904012019, after explicit
+--         owner approval. Rollback: 20260906z, PREPARED and unapplied — and
+--         unlike every earlier homework rollback, ITS WINDOW NEVER CLOSES.
+--         Post-apply evidence: docs/roadmap/teacher-intelligence-layer.md
+--         §15.27. Both installed bodies were compared byte-for-byte against
+--         this file after the apply, and 23 live bodies from H2-H5 were
+--         confirmed unchanged.
 -- DEPENDS ON: H2 (the tables), H3 (the authoring writes), H4 (the attach path)
 --             and H5 (the sitting, LIVE 2026-09-04 as 20260904003547).
 -- CONTEXT: docs/roadmap/teacher-intelligence-layer.md §15.26 (the H6 audit and

@@ -1870,9 +1870,12 @@ t.section('the file’s own verification must be able to fail');
 t.ok('every source check strips comments before matching',
   (H6.match(/regexp_replace\(p\.prosrc, '--\[\^\\n\]\*', '', 'g'\)/g) || []).length === 2
   && !/select p\.prosrc into v_code/.test(H6));
-t.ok('H6 is PREPARED and its rollback is unapplied',
-  /STATUS: 🟡 PREPARED, not applied/.test(H6)
+/* The file records the version it actually went in as, and the rollback stays
+   PREPARED — the negative arm sits on the ROLLBACK, which is what stops a
+   copied header from claiming the undo was applied too. */
+t.ok('H6 is APPLIED and names its version; its rollback stays PREPARED',
+  /STATUS: ✅ APPLIED 2026-09-04 as version 20260904012019/.test(H6)
   && /STATUS: 🟡 PREPARED, deliberately unapplied/.test(H6Z)
-  && !/APPLIED 2026-09-0[0-9] as version/.test(H6));
+  && !/APPLIED 2026-09-0[0-9] as version/.test(H6Z));
 
 t.done();

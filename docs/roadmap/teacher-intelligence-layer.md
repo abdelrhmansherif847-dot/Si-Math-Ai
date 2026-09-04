@@ -4345,3 +4345,137 @@ boundary. H6 reads only; it writes nothing anywhere, takes no lock, and names no
 analyzer table.
 
 **Nothing is applied. H6 awaits explicit approval, and no UI work has started.**
+
+---
+
+### 15.27 · Teacher Homework H6 — APPLIED (2026-09-04)
+
+**H6 is LIVE.** Applied 2026-09-04 as version **`20260904012019`**, from the
+PREPARED package at commit `d94f39c`, exactly as prepared. Only `20260906a` was
+applied; `20260906z` was not touched.
+
+**Staff can now read the paper they authored.** The gap F-5 opened — teacher and
+ACTIVE assistant both refused `42501` on both content tables, authoring
+write-only and blind — is closed, through the RPC boundary rather than by
+handing the grant back.
+
+#### 1 · Migration order and baseline
+
+**191 → 192**, newest `20260904012019`, applied directly after `20260904003547`
+(H5). Public: 84 tables · **219** functions · 138 policies · 22 enum labels.
+Homework: 8 tables · **40** functions · 9 policies · 12 triggers.
+
+#### 2 · Paste fidelity — 2/2, and 23/23 untouched
+
+`teacher_homework_list` `bbeb59e0…` · `teacher_homework_paper` `473c8f7b…`,
+both byte-identical to the file. Signatures read back exactly as prepared: the
+list's thirteen columns, the paper's `jsonb`.
+
+**23 of 23** live bodies from H2–H5 are byte-identical to the pre-H6 baseline —
+including all four H5 redefined, both guards, `student_homework_*`,
+`teacher_homework_review`, `teacher_homework_students`, both content guards and
+`workspace_is_active_staff`. **H6 redefined nothing**, and that is now measured.
+
+#### 3 · Grants and ACLs
+
+| | `authenticated` | `anon` |
+|---|---|---|
+| `teacher_homework_questions` | **false** | false |
+| `teacher_homework_stimuli` | **false** | false |
+
+Both staff-read policies present. Both new functions: `definer=true`,
+`pinned=true`, `stable`, `auth=true`, `anon=false`. **0** homework functions
+`anon` may call.
+
+#### 4 · The list, on the live function
+
+| | |
+|---|---|
+| teacher vs ACTIVE assistant | **`PARITY=true`** on the full payload |
+| ordering | `DRAFT > PUBLISHED > CLOSED` |
+| counts | draft `q2/at0/tr0/sub0` · published `q1/at1/tr1/sub1` · closed `q1/at0/tr0/sub0` |
+| nonexistent workspace | **`42501` — not an empty set** (D6-3) |
+| `list(null)` | `42501` |
+
+#### 5 · The paper, on the live function
+
+Top-level keys: `can_edit_content, closed_at, created_at, due_at, homework_code,
+homework_id, instructions, published_at, questions, reveal_answers, status,
+stimuli, title, workspace_id`.
+
+| | |
+|---|---|
+| stimulus keys | exactly `body, id, kind, label, media_kind, media_ref, spec` |
+| question keys | exactly `choices, correct_answer, explanation, id, ordinal, prompt, question_format, stimulus_id` |
+| key to staff | `correct_answer=B`, `explanation=why B` |
+| **`media_sha256` anywhere in the payload** | **false** |
+| `can_edit_content` | draft `true` · published `false` · closed `false` |
+| teacher vs ACTIVE assistant | payloads **identical** |
+| question order | `1,2` |
+
+#### 6 · Denial
+
+| role | list(A) | draft | published | closed | list(B) |
+|---|---|---|---|---|---|
+| teacher | 3 | ok | ok | ok | **`42501`** |
+| ACTIVE assistant | 3 | ok | ok | ok | **`42501`** |
+| pending assistant | `42501` | `42501` | `42501` | `42501` | `42501` |
+| student | `42501` | `42501` | `42501` | `42501` | `42501` |
+| outsider | `42501` | `42501` | `42501` | `42501` | 0 (B is theirs) |
+
+No session: list and paper both `42501`.
+
+#### 7 · F-5 after H6 — still closed
+
+Driven as the real `authenticated` role: the **teacher's** direct SELECT on
+`teacher_homework_questions` and `teacher_homework_stimuli` is **still refused
+`42501`**, and so is the student's. The RPC is the only path, which is the whole
+architecture D6-5 protects.
+
+#### 9 / 10 · Analyzer and audit
+
+Analyzer **893 / 11 / 24 — unmoved**. The only audit rows the probe workspace
+carried came from H3 verbs (`homework_created`, `homework_published`,
+`homework_closed`); **no read label exists or was written** (D6-7). Production's
+audit log is back at 2 rows, 0 homework labels; all eight homework tables at 0
+rows.
+
+#### 12 · Suites
+
+CI **66/66** · contract **486/486** · access-scope **109/109** · H6 mutants
+**46/46** · H5 mutants **81/81** · H4 mutants **75/75**.
+
+#### 13 · New baseline — the cleanest hash profile in the vertical
+
+| family | post-H6 | vs pre-H6 |
+|---|---|---|
+| constraints | `38224217…` | **UNCHANGED** |
+| policies | `1480dd9e…` | **UNCHANGED** |
+| relations | `01e30b21…` | **UNCHANGED** |
+| triggers | `f7b47479…` | **UNCHANGED** |
+| **grants** | `3ef5d986…` | **UNCHANGED** — F-5 untouched, no table grant added |
+| homework bodies | `05386146…` | moved |
+| homework signatures | `4b3066a1…` | moved |
+
+**Five of seven families did not move at all.** H5 moved five of seven; H6 moves
+two. That is what "two read functions and nothing else" looks like measured
+rather than claimed.
+
+#### 14 · Rollback
+
+`20260906z` is **PREPARED and unapplied**, byte-identical to its prepared state
+(`446c88c8…`), still reading `STATUS: 🟡 PREPARED, deliberately unapplied`.
+**Its window never closes** — nothing is restored, no state can be stranded.
+
+#### Bookkeeping
+
+Per the repository convention and the explicit apply instruction, `20260906a`'s
+`STATUS:` header now reads `✅ APPLIED 2026-09-04 as version 20260904012019`,
+and the one contract assertion flipped with it. **Comment-only in the
+migration** — a diff filter stripping `--` lines and blanks returns nothing, and
+both installed body hashes still match the file. The flipped assertion was
+mutation-checked: naming the wrong version makes it fail.
+
+**H7 has not started, and no UI was touched.** The homework vertical now runs
+end to end — author, publish, attach, sit, grade, review, and read back — with
+no client code anywhere in the repository.
