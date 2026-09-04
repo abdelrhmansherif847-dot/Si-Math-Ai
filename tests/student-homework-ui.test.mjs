@@ -287,6 +287,15 @@ t.ok('and the page does not branch on any reason but staff',
   [...HWCODE.matchAll(/res\.reason === '([a-z_]+)'/g)].map((m) => m[1]).sort().join(',')
   === 'already_attached,staff');
 
+/* H8 widened the block-visibility rule so that homework ALONE opens it, which
+   made both empty states reachable with no active class link — the F-1 student,
+   removed from their class and still holding submitted work. `names` is then
+   empty and neither state may render a sentence with a hole where the class
+   name goes. The exams half is pinned by exam-page.test.mjs; this is its
+   sibling, which that suite does not cover. */
+t.ok('the homework empty state names a subject with no class link',
+  /\(names \? 'Homework set by ' \+ names \+ ' appears here' : 'Homework appears here'\)/.test(CODE));
+
 // ══ 8 · THE PREVIEW ═══════════════════════════════════════════════════════
 t.section('A preview reaches no homework');
 

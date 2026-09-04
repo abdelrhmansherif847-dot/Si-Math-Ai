@@ -687,7 +687,7 @@ function renderTeachers(teachers, exams) {
   if (!exams.length) {
     const names = teachers.map((t) => esc(t.workspace_name || 'your class')).join(', ');
     $('teacherList').innerHTML = '<div class="empty"><div class="big">No exam yet</div>'
-      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">Papers set by ' + names
+      + '<div style="font-size:13.5px;max-width:460px;margin:0 auto">Papers set by ' + (names || 'your teacher')
       + ' appear here once you enter the code your teacher gives you.</div></div>';
     return;
   }

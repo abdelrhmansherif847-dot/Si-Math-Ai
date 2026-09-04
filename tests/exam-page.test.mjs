@@ -202,7 +202,12 @@ t.is('the student page reads no teacher-exam table directly',
    page is empty today and will be until a form is published. */
 t.ok('the Teachers empty state is honest about being empty',
   /No exam yet/.test(PAGE) && /appear here once you enter the code your teacher gives you/.test(PAGE));
-t.ok('it names the class the papers would come from', /Papers set by ' \+ names/.test(PAGE));
+/* H8 made this state reachable with NO active class link — a student removed
+   from their class who still holds submitted homework opens the block on the
+   strength of the homework alone. `names` is then empty, so the sentence needs
+   a subject either way and this check covers both halves. */
+t.ok('it names the class the papers would come from, and never leaves a hole',
+  /Papers set by ' \+ \(names \|\| 'your teacher'\)/.test(PAGE));
 
 /* The platform side must stay exactly what it was. */
 t.ok('platform exams still come from the unparameterised published read',
