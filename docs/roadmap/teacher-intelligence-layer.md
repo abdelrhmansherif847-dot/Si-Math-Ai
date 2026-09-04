@@ -5100,7 +5100,16 @@ Teacher Exams `select('*')` hardening, stays outside both.
 
 ---
 
-### 15.31 · Teacher Homework H8 — the student surface · BUILT, NOT DEPLOYED (2026-09-04)
+### 15.31 · Teacher Homework H8 — the student surface · LIVE (2026-09-04)
+
+**Merged and deployed 2026-09-04.** `main` = `3e45e4b`, Vercel production
+`dpl_58baS9rsyeSu48LD8SH7NGmV1zbC` READY, and the served bytes verified
+byte-identical on `www.si-math-ai.com` — `exam.html` md5 `17222b18…`,
+`dashboard.html` `7bd3e37a…`, each ETag equal to the local file. The merge
+tree was proved identical to the branch tree before the commit was made, and
+CI was green on the merged tree before the push. **The homework vertical now
+runs end to end from a teacher writing a paper to a student reading their
+mark.**
 
 H8 is the half of the homework vertical the student can see. Until it, a teacher
 could author, publish and rotate a code, a student could be attached, and the
