@@ -5300,9 +5300,10 @@ not know.
   at least 2 samples fall **inside** the Y range — a visibility check, not a
   clip (§16.7.4) — otherwise it is refused with *"That function does not pass
   through the visible part of the graph. Widen the Y axis, or change the
-  function."* A points curve needs ≥ 1 point in Stage 0; labels, when given,
-  must be given for every point in that curve (the validator ties label count
-  to distinct vertices). At least one function or one points group must exist.
+  function."* A points group needs **at least 2 points** — not a UI preference
+  but the live validator's rule, measured (§16.8 D-3); labels, when given, must
+  be given for every point in that group (the validator ties label count to
+  distinct vertices). At least one function or one points group must exist.
 - **Canonical spec.**
   ```
   { "frame": "plane",
@@ -5491,8 +5492,9 @@ deterministic function over a fixed token set**: never `eval`, never
 | 3 | unary `-` (and unary `+`) | right |
 | 4 (tightest) | `^` | **right** |
 
-So `-x^2` is `-(x^2)`, and `2^3^2` is `2^(3^2) = 512`. Both are the
-conventional mathematical reading, and both are pinned by a test.
+So `-x^2` is `-(x^2)`, and `2^3^2` is `2^(3^2) = 512`. The right operand of
+`^` may itself be unary, so `2^-3` parses as `2^(-3)`. All three are the
+conventional mathematical reading, and all three are pinned by a test.
 
 **Grouping** — `(` … `)`. Nothing else groups.
 
@@ -5525,10 +5527,16 @@ Teachers paste from books, Word and WhatsApp, so the input is normalised
    `x^12`).
 4. Unicode operators → ASCII: `−` (U+2212) → `-`, `×` and `·` → `*`, `÷` → `/`,
    `–`/`—` → `-`.
-5. `π` → `pi`, `√(` → `sqrt(`. A bare `√` **not** followed by `(` is an error,
-   because `√x+1` is genuinely ambiguous.
-6. Lower-case the function and constant names (`SIN(` → `sin(`), leaving
-   nothing else case-sensitive since `x` is the only variable.
+5. `π` → `pi`, `√(` → `sqrt(`.
+6. **Lower-case the entire string.** Safe because every token in the grammar is
+   lower-case ASCII and `x` is the only variable, so `X`, `SIN(` and `1E3` all
+   normalise correctly and nothing else in the language is case-sensitive.
+
+**Normalisation is a total rewriting function and never raises.** Anything it
+cannot rewrite — a bare `√` not followed by `(`, a stray `∫`, a second
+variable — simply survives it and is rejected by the tokenizer as an unknown
+token, with one error path rather than two. (`√x+1` is genuinely ambiguous, so
+a bare `√` is meant to fail; it fails *there*.)
 
 **The stored `expr` is the normalised string** — not a re-serialised AST. A
 re-serialisation would rewrite the teacher's formula back at them (`x^2 - 4*x +
@@ -5541,9 +5549,16 @@ already guarantees. The invariant that matters is pinned by a test instead:
 #### 16.7.3 · Domain and error behaviour
 
 A sample is **invalid** — it produces no point — when evaluation yields
-division by zero, `sqrt` of a negative, `ln`/`log` of a non-positive, `tan` at
-a pole, or any non-finite result (`NaN`, `±Infinity`), by whatever route. No
-substitution, no zero, no clamp: the sampler never invents a point.
+division by zero, `sqrt` of a negative, `ln`/`log` of a non-positive, or any
+non-finite result (`NaN`, `±Infinity`), by whatever route. No substitution, no
+zero, no clamp: the sampler never invents a point.
+
+> **`tan` is not in that list, and the reason is measured.** A pole of `tan`
+> is unreachable in double precision on this grid — over `[-5, 5]` at 201
+> samples **0 values are non-finite** and the largest is `8.07e+1`. `tan`'s
+> poles are therefore caught by the Y-delta split of §16.7.4 and **never** by
+> this finiteness check. An earlier draft of this section claimed otherwise;
+> it was wrong, and a test written from it could only ever have gone red.
 
 Overflow counts as non-finite, so an intermediate that overflows to `Infinity`
 invalidates its sample rather than drawing a spike to the horizon.
@@ -5630,3 +5645,146 @@ other unknown token.
   directly it must treat consecutive curves sharing an identical `expr` as one
   function, or it will draw it several times. A Stage 1 design item, recorded
   now so it is not discovered then.
+
+### 16.7.9 · The pinned branch fixtures (clarification 1)
+
+A branch count means nothing without the parameters that produce it, so every
+fixture below pins **expression, X range, Y range, sample count (201) and
+precision (4 dp)**, and asserts the exact count. These numbers were **derived
+by executing §16.7.4 as written**, not estimated; a test may assert them
+literally.
+
+| # | `expr` | X range | Y range | invalid samples | runs | 1-point runs discarded | **branches stored** | branch sizes |
+|---|---|---|---|---|---|---|---|---|
+| F1 | `x^2-4*x+3` | `[-5, 5]` | `[-5, 10]` | 0 | 1 | 0 | **1** | `[201]` |
+| F2 | `2*x+5` | `[-5, 5]` | `[-5, 10]` | 0 | 1 | 0 | **1** | `[201]` |
+| F3 | `sin(x)` | `[-5, 5]` | `[-5, 5]` | 0 | 1 | 0 | **1** | `[201]` |
+| F4 | `sqrt(x+2)` | `[-5, 5]` | `[-5, 10]` | 60 | 1 | 0 | **1** | `[141]` |
+| F5 | `ln(x)` | `[-5, 5]` | `[-5, 5]` | 101 | 1 | 0 | **1** | `[100]` |
+| F6 | `1/x` | `[-5, 5]` | `[-5, 5]` | 1 | 2 | 0 | **2** | `[100, 100]` |
+| F7 | `tan(x)` | `[-5, 5]` | `[-5, 5]` | 0 | 13 | **8** | **5** | `[5, 61, 61, 61, 5]` |
+| F8 | `tan(x)` | `[-20, 20]` | `[-5, 5]` | 0 | 21 | 8 | 13 → **capped to 8** | cap message fires |
+
+Each fixture earns its place:
+
+- **F1–F3** are the everyday case: one branch, every sample valid.
+- **F4** is a domain boundary that does **not** break the curve — `x < -2` is
+  simply absent, and the branch starts at `x = -2`. One branch, 141 points.
+- **F5** is a one-sided domain: 101 invalid samples, still one branch.
+- **F6** splits on the **domain rule** (`1/0` is non-finite). The Y-delta rule
+  would also have split it — `|Δ| = 40` against a span of `10` — so the two
+  mechanisms agree, and a test that removed either would still pass. **F7 is
+  therefore the fixture that isolates the heuristic**, because there the
+  finiteness check catches nothing at all.
+- **F7** is the min-2 rule's proof (below) and the heuristic's only isolated
+  evidence: 4 poles → 5 branches, via 13 runs of which 8 are discarded.
+- **F8** is the only fixture that fires the 8-branch cap and its message.
+
+If any constant in §16.7.4 changes, **every number in this table changes with
+it** — which is the point of pinning them together.
+
+### 16.7.10 · The minimum-2-point rule, stated exactly (clarification 2)
+
+1. A contiguous run of valid samples becomes a stored curve **only when it
+   contains at least 2 valid samples**.
+2. A run containing **exactly 1** valid sample is **discarded**.
+3. The sampler must **never invent, duplicate, extrapolate, mirror,
+   interpolate or otherwise synthesise a point** in order to reach the
+   two-point minimum. A run that cannot reach it on real samples alone does
+   not become a curve.
+4. Therefore **every coordinate in every stored `curves[].points` is an actual
+   sample produced by the deterministic evaluator** at one of the 201 grid
+   x-values, rounded once to 4 decimal places.
+
+The rule is not decoration: **F7 discards 8 single-point runs** — the samples
+immediately beside each `tan` pole, each isolated between two over-height
+deltas — and stores 5 branches from the 13 runs. A build that "rescued" those
+8 by duplicating a coordinate would store 13 curves, 8 of them a degenerate
+two-identical-points polyline drawn as a dot at an asymptote: a mark on the
+graph that no sample supports. The mutant that does exactly that must be
+killed.
+
+The minimum is also the database's: `exam_stimulus_spec_ok` requires
+`jsonb_array_length(points) >= 2`, so a 1-point curve is not merely discouraged
+— it cannot be stored.
+
+The Y-delta split heuristic of §16.7.4 is **unchanged** by this clarification.
+
+### 16.8 · Line-by-line contract review (2026-09-04)
+
+Read-only. Five checks, three defects found and corrected in place, one
+limitation surfaced. Nothing outside `docs/` was touched.
+
+**Check 1 · §16.4 agrees with §16.7.** After correction, yes. §16.4's sampling
+paragraph now defers to §16.7.4 rather than restating it, its canonical-spec
+block names the one-curve-per-branch rule, and its validation line separates
+the two different "2"s that previously collided in one sentence — the
+**visibility** check (at least 2 samples inside the Y range) and the
+**min-2-points-per-branch** rule are different rules about different things.
+
+**Check 2 · the `expr + points` invariant is consistent everywhere.** Stated in
+§16.3, shown in §16.4's canonical spec, emitted per branch by §16.7.4 step 4,
+and restated as law with three enforcement points in §16.7.5. No section
+permits `expr` alone. §16.7.10 point 4 closes the other side: no point exists
+that a sample did not produce.
+
+**Check 3 · the segment-break representation is consistent with the live
+validator and the shipped renderer.** Verified, not reasoned:
+
+| probe | result |
+|---|---|
+| two curves carrying the **same** `expr`, two `{"mode":"curve"}` figures → `exam_stimulus_spec_ok` | **true** |
+| the same spec through `stimulus-view.js` | **2 polylines**, no line across the gap, no *"defined by a formula"* note |
+
+The `figures[]` entries Stage 0 emits carry `mode` only, which satisfies
+`exam_plot_figures_ok`'s closed key-set; `exam_plot_frame_mode_ok('plane',
+'curve')` is true; and `renderPlot` reads `figures[i] || {}` and defaults the
+mode, so an index-matched pair is exactly what it expects.
+
+**Check 4 · normalisation, precedence and tokenisation do not contradict.**
+Two contradictions were found and fixed. Normalisation was described as a
+*total* function while rule 5 *raised* on a bare `√` — it is now purely a
+rewriter, and anything it cannot rewrite falls through to the tokenizer's one
+rejection path. Rule 6 said "lower-case the function and constant names …
+leaving nothing else case-sensitive", which is two rules pretending to be one;
+it now lower-cases the whole string, which is safe because every token in the
+grammar is lower-case ASCII and also makes `X` and `1E3` normalise correctly.
+The `^` right-operand case (`2^-3`) is now stated. The `e` / `1e3` tokenizer
+rule and the no-implicit-multiplication rule agree: `2e` is a parse error under
+both, never `2*e`.
+
+**Check 5 · no Stage 0 requirement needs a renderer or database change.**
+Walked item by item: the four editors emit specs the live CHECK already
+accepts; multi-branch functions are validated and drawn today (Check 3); the
+"used by N questions" count comes from the `questions[]` array
+`teacher_homework_paper()` already returns; Advanced JSON and raw SVG use
+`teacher_homework_save_stimulus`'s existing `p_spec` and `p_media_ref`; preview
+is `StimulusView.render`. **Zero renderer changes, zero schema changes, zero
+RPC changes, zero policy changes.**
+
+#### The three defects, and one limitation
+
+- **D-1 · normalisation contradicted itself** — "total function" vs a raising
+  rule. Fixed (Check 4).
+- **D-2 · §16.7.3 was factually wrong about `tan`.** It listed "tan at a pole"
+  as a domain error. Measured: over `[-5, 5]` at 201 samples, **0** `tan`
+  values are non-finite and the largest is `8.07e+1`. `tan`'s poles are caught
+  by the Y-delta heuristic and never by the finiteness check. A test written
+  from the old sentence could only ever have failed. Corrected, with the
+  measurement recorded beside it.
+- **D-3 · §16.4 permitted a 1-point points group; the database refuses it.**
+  Measured against the live validator: a curve with `points` of length 1 →
+  `exam_stimulus_spec_ok` = **false**; length 2 → **true**. Corrected to "at
+  least 2 points", and the reason is now attributed to the validator rather
+  than to taste.
+- **L-1 · a teacher cannot mark a single point on a graph in Stage 0.** This
+  falls out of D-3 and is a genuine product limitation, not a bug:
+  `jsonb_array_length(points) >= 2` is a live CHECK constraint shared with the
+  33-row platform corpus, so relaxing it is a **schema change** and therefore
+  out of Stage 0 by decision 1. Stage 0 must say so in the UI — *"Mark at
+  least two points, or use a function."* Relaxing the minimum to 1 for a
+  `points`-mode curve is recorded as a **Stage 3** candidate; it must be proven
+  additive against the existing corpus first.
+
+**Verdict: no remaining contradictions. The Stage 0 contract is READY FOR
+IMPLEMENTATION APPROVAL.**
