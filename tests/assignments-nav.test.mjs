@@ -1,8 +1,13 @@
-// Assignments in the sidebar — A2.1, and the drift it deliberately does not fix.
+// Assignments in the sidebar — A2.1 + A2.2, and the drift they deliberately
+// do not fix.
 //
 // A1 put a permanent Assignments card on the dashboard. A2.1 puts the
 // destination in the sidebar, so it is reachable from anywhere a student
-// already is, rather than from one card on one page.
+// already is, rather than from one card on one page. A2.2 extends that to
+// weakness.html and focus.html, which A2.1 skipped only because they are
+// frozen — they were UNFROZEN FOR THAT ONE NAVIGATION CHANGE AND NOTHING ELSE
+// and are still frozen otherwise, so this suite covers their nav item and
+// asserts nothing else about either file.
 //
 // STRATEGY (b): PRESENCE PLUS A NAMED EXCEPTION LIST.
 // --------------------------------------------------
@@ -14,13 +19,15 @@
 // parity assertion would go red on eleven of seventeen pages the moment it was
 // written — a test of a fix nobody has approved.
 //
-// So this suite asserts what A2.1 actually promises, and records every page it
-// deliberately skips WITH A REASON. The exception list is the artifact: it is
-// what makes the drift visible instead of invisible, and it is where a future
+// So this suite asserts what A2.1 and A2.2 actually promise, and records every
+// page it deliberately skips WITH A REASON. The exception list is the artifact:
+// it is what makes the drift visible instead of invisible, and where a future
 // parity increment starts. A page that silently stops carrying the link fails;
 // a page that is knowingly without it is named here and says why.
 //
-// It fixes no drift, normalises no sidebar, and touches no frozen file.
+// It fixes no drift and normalises no sidebar. A2.1 touched no frozen file;
+// A2.2 touched two, by one line each, under an explicit one-change unfreeze
+// that did not remove either from CLAUDE.md's frozen list.
 import { suite } from './_assert.mjs';
 import { read, REPO } from './_source.mjs';
 import { readdirSync } from 'node:fs';
@@ -41,10 +48,12 @@ const SIDEBAR_PAGES = readdirSync(REPO)
    this way. An entry that stops being true fails below. */
 const EXCEPTIONS = [
   {
-    pages: ['mock-exam.html', 'weakness.html', 'focus.html'],
-    reason: 'FROZEN per CLAUDE.md §2. Adding a nav item would mean editing a frozen '
-      + 'file, which needs an explicit unfreeze — deferred to A2.2 as a decision to '
-      + 'take deliberately rather than one to take by accident while adding a link.',
+    pages: ['mock-exam.html'],
+    reason: 'FROZEN per CLAUDE.md §2, and unlike the other two it stays frozen. '
+      + 'weakness.html and focus.html sat in this group until A2.2 unfroze them for '
+      + 'one navigation change; mock-exam.html is held back for a second reason that '
+      + 'outlives the freeze — whether Mock Exams and Assignments should both exist '
+      + 'is A3, and a nav increment must not settle an IA question by editing it.',
   },
   {
     pages: ['admin.html', 'admin-support.html', 'ai-monitor.html', 'teacher.html', 'partner.html'],
@@ -64,20 +73,28 @@ const EXCEPTED = EXCEPTIONS.flatMap((e) => e.pages);
    Deriving COVERED as "every sidebar page that is not excepted" closes that
    path structurally rather than by good intentions. Moving a page into an
    exception group now SHRINKS the derived set, which stops matching the pinned
-   nine below, and the suite goes red. To drop a page from A2.1's coverage a
+   eleven below, and the suite goes red. To drop a page from A2.1's coverage a
    future editor must edit the pin — which is a visible line in a diff and a
    decision someone reviews, instead of a silent regression. */
 const COVERED = SIDEBAR_PAGES.filter((p) => !EXCEPTED.includes(p));
 
-/* The nine A2.1 was approved for, and the five staff pages it excepts, pinned
-   as literals. The frozen three need no pin here: they are already grounded in
-   CLAUDE.md below, which is a fact outside this file. The staff five have no
-   such external source — 'is a staff surface' is not a property any file
-   declares — so a pin is the honest instrument, and its weakness is stated
-   rather than hidden: it stops a silent move, not a determined editor. */
-const COVERED_PIN = ['chat.html', 'dashboard.html', 'devices.html', 'history.html',
-                     'pricing.html', 'profile.html', 'progress.html', 'settings.html',
-                     'support.html'];
+/* The eleven covered pages — A2.1's nine plus A2.2's two — and the five staff
+   pages excepted, pinned as literals. The remaining frozen page needs no pin
+   here: it is already grounded in CLAUDE.md below, which is a fact outside this
+   file. The staff five have no such external source — 'is a staff surface' is
+   not a property any file declares — so a pin is the honest instrument, and its
+   weakness is stated rather than hidden: it stops a silent move, not a
+   determined editor.
+
+   weakness.html and focus.html appear HERE while CLAUDE.md still lists them as
+   frozen, and that disagreement is deliberate rather than stale: A2.2 unfroze
+   them for one navigation change and nothing else. The check below reads
+   CLAUDE.md one way only — every page this suite calls frozen must be frozen
+   there — precisely so that a page can be frozen in CLAUDE.md and still carry
+   the one link an explicit unfreeze put in it. */
+const COVERED_PIN = ['chat.html', 'dashboard.html', 'devices.html', 'focus.html',
+                     'history.html', 'pricing.html', 'profile.html', 'progress.html',
+                     'settings.html', 'support.html', 'weakness.html'];
 /* Sorted, and the order is measured rather than guessed: JS sorts
    'admin-support.html' BEFORE 'admin.html', because '-' (0x2D) sorts under '.'
    (0x2E). The first version of this pin listed them the other way round and the
@@ -101,13 +118,13 @@ t.is('the excepted pages all ship a sidebar',
    now true by construction — COVERED is defined as the complement — so it
    could never go red, and a green check that cannot fail reports safety it has
    not tested. These replace it, and they can. */
-t.is('the derived coverage is exactly the nine A2.1 was approved for',
+t.is('the derived coverage is exactly the eleven A2.1 and A2.2 were approved for',
   COVERED, COVERED_PIN);
 t.is('and the staff exception group is exactly the five it was approved with',
   EXCEPTIONS.find((e) => /Staff and admin/.test(e.reason)).pages.slice().sort(), STAFF_PIN);
 t.is('no page is both covered and excepted', COVERED.filter((p) => EXCEPTED.includes(p)), []);
 
-t.section('2 · the nine covered pages carry the link');
+t.section('2 · the eleven covered pages carry the link');
 
 t.is('every covered page has an Assignments nav item',
   COVERED.filter((p) => !navHrefs(p).includes('assignments.html')), []);
@@ -154,22 +171,35 @@ const RAILS = {
   'chat.html': 'dashboard chat focus weakness mock-exam history assignments progress profile devices settings support pricing admin',
   'dashboard.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin',
   'devices.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin',
+  /* A2.2's two. Both are shorter than the other nine — no support, no admin —
+     and weakness.html's third item is a literal '#', which is its OWN self-link
+     — the only page in the repo written that way — and a convention this file
+     records rather than a broken destination to fix; the A3 audit corrected an
+     earlier claim here that it was a live defect. Pinned as found: A2.2 added
+     one item to each rail and reordered nothing. */
+  'focus.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings pricing',
   'history.html': 'dashboard chat mock-exam weakness focus history assignments progress profile devices settings pricing admin',
   'pricing.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin',
   'profile.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin',
   'progress.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin',
   'settings.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin',
   'support.html': 'dashboard chat weakness focus mock-exam history assignments progress profile devices settings support pricing admin admin-support',
+  'weakness.html': 'dashboard chat # focus mock-exam history assignments progress profile devices settings pricing',
 };
 t.is('every covered page has a pinned rail', COVERED.filter((p) => !RAILS[p]), []);
 t.is('and every rail is exactly as expected',
   COVERED.filter((p) => navHrefs(p).map((h) => h.replace('.html', '')).join(' ') !== RAILS[p]), []);
-/* Four of the nine differ from the other five, and that is recorded rather than
-   corrected: chat swaps focus/weakness, history reorders three and drops
-   support, support adds admin-support. Naming them here is what stops a future
-   reader assuming the rails already agree. */
-t.is('the drift A2.1 does not fix is still exactly these three pages',
-  [...new Set(Object.entries(RAILS).map(([, v]) => v))].length, 4);
+/* Six of the eleven differ from the other five, and that is recorded rather
+   than corrected: chat swaps focus/weakness, history reorders three and drops
+   support, support adds admin-support, and A2.2's focus and weakness each drop
+   support and admin (weakness with a '#' self-link besides). Naming them here
+   is what stops a future reader assuming the rails already agree.
+
+   The number moved 4 → 6 with A2.2 because two more distinct rails joined the
+   set, not because any existing rail changed — the nine A2.1 pinned are still
+   pinned, character for character, in the block above. */
+t.is('the drift A2.1 and A2.2 do not fix is still exactly these six shapes',
+  [...new Set(Object.entries(RAILS).map(([, v]) => v))].length, 6);
 t.ok('it is never marked active — none of these pages IS assignments.html',
   COVERED.every((p) => !/<a\b[^>]*href="assignments\.html"[^>]*class="[^"]*\bactive\b/.test(read(p))
                     && !/<a\b[^>]*class="[^"]*\bactive\b[^"]*"[^>]*href="assignments\.html"/.test(read(p))));
@@ -185,9 +215,24 @@ const FROZEN = EXCEPTIONS.find((e) => /FROZEN/.test(e.reason)).pages;
 t.is('the frozen list matches CLAUDE.md',
   FROZEN.filter((p) => !new RegExp(`^- \`${p}\``, 'm').test(read('CLAUDE.md'))), []);
 
-t.section('5 · A2.1 touched nothing it was not meant to');
+/* A2.2's two pages are COVERED here and STILL FROZEN in CLAUDE.md, because the
+   unfreeze was for one navigation change and was never a removal from the
+   freeze. Nothing else in the repo pins that: quietly deleting either line from
+   CLAUDE.md's frozen list would turn a one-change exception into a permanent
+   one and every other check in this file would stay green.
 
-t.is('no frozen page was modified',
+   Pinned as literals rather than derived, and that is the point. Deriving this
+   as 'covered pages that CLAUDE.md calls frozen' would SHRINK to match a
+   deletion — it would satisfy itself in exactly the direction being guarded
+   against. The pin's honest weakness is the same as STAFF_PIN's: it stops a
+   silent removal, not a determined editor who edits both lines. */
+const UNFROZEN_ONCE = ['weakness.html', 'focus.html'];
+t.is('the two pages A2.2 unfroze for one line are still frozen in CLAUDE.md',
+  UNFROZEN_ONCE.filter((p) => !new RegExp(`^- \`${p}\``, 'm').test(read('CLAUDE.md'))), []);
+
+t.section('5 · A2.1 and A2.2 touched nothing they were not meant to');
+
+t.is('the still-frozen page was not modified',
   FROZEN.filter((p) => navHrefs(p).includes('assignments.html')), []);
 /* nav.js stays out of it: a student link needs no keep-list entry, because the
    filter hides what is NOT in the list rather than showing what is. */
@@ -195,7 +240,7 @@ t.ok('nav.js does not name assignments.html', !read('nav.js').includes('assignme
 t.ok('and its keep-list is unchanged',
   /STAFF_NAV_KEEP = \{ 'teacher\.html': 1, 'teacher-exams\.html': 1,\s*'teacher-homework\.html': 1, 'partner\.html': 1,\s*'profile\.html': 1, 'settings\.html': 1 \};/
     .test(read('nav.js')));
-/* A2.1 is navigation only. The destination itself is A1's and Increment 2's. */
+/* A2.1 and A2.2 are navigation only. The destination is A1's and Increment 2's. */
 t.ok('assignments.html still holds the hub', /<section id="pick"/.test(read('assignments.html')));
 t.ok('and the A1 dashboard card is still there', /id="assignmentsCard"/.test(read('dashboard.html')));
 

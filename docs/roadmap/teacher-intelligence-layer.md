@@ -8381,6 +8381,12 @@ still carries an extra admin link; `weakness.html` still ships a literal
 frozen, cannot touch. Normalising the rails is a different increment and needs
 its own approval.
 
+> **Corrected — see §17.19.3.** That last clause is wrong on both halves. The
+> `href="#"` is `weakness.html`'s **own self-link**, a convention rather than a
+> defect (established by the A3 audit, never written back until now), and A2.2
+> did touch the file under a one-line unfreeze. The sentence is left standing as
+> the record of what A2.1 believed.
+
 **The freeze is policy, not machinery.** **[measured]** Nothing hashes the
 frozen files. Two files honour the rule — `scripts/normalize-tokens.mjs` skips
 them, `scripts/validate-tokens.mjs` exempts them from a `--font-*` rule — and
@@ -8443,3 +8449,153 @@ keyboard focusable, `nav.js` hiding nothing for a signed-out visitor — and
 `assignments.html` · `nav.js` · the three frozen pages · every RPC, schema, RLS
 and policy · `vercel.json` · routing · **A3** (Mock Exams vs Assignments) ·
 R2 / Increment 3 · Desmos · audio · W-1…W-4.
+
+---
+
+### 17.19 · A2.2 — the two frozen pages, unfrozen for one line (2026-09-05)
+
+A2.1 put Assignments in nine sidebars and named three it could not touch.
+**A2.2 takes two of the three**, under an unfreeze that is deliberately the
+narrowest thing that could be called one.
+
+#### 17.19.1 · The unfreeze, stated exactly
+
+> **Unfrozen for this one navigation change; still frozen otherwise.**
+
+`weakness.html` and `focus.html` were unfrozen to receive **one sidebar item
+each and nothing else**. Both **remain on the frozen list in `CLAUDE.md` §2**,
+by explicit instruction — the list was not edited, and the next person to open
+either file is still under the freeze. Nothing about A2.2 generalises: it is not
+a precedent for editing a frozen file, and it does not make a nav change a
+category of edit the freeze permits.
+
+That leaves a deliberate disagreement between two records — these two pages are
+frozen in `CLAUDE.md` and covered in `tests/assignments-nav.test.mjs` — and it is
+resolved by writing it down here rather than by making one of them agree. The
+suite's `CLAUDE.md` check reads **one direction only**: every page the suite
+calls frozen must be listed frozen there. It deliberately does **not** assert the
+converse, precisely so a page can be frozen in `CLAUDE.md` and still carry the
+one link an explicit unfreeze put in it.
+
+A **second** check, added on review, holds the other half in place for these two
+pages only: `weakness.html` and `focus.html` must **stay listed frozen in
+`CLAUDE.md`**. Without it, deleting either line would silently promote a
+one-change exception into a permanent unfreeze — see §17.19.4.
+
+#### 17.19.2 · Why `mock-exam.html` is still excepted
+
+Not because of the freeze. **A3 is why.** Whether Mock Exams and Assignments
+should both exist as destinations is an open IA question with five undecided
+sub-decisions, and adding a nav item to that page would settle part of it by
+accident. The freeze was A2.1's reason for skipping all three; for this page a
+second reason outlives it, and the exception entry now says so instead of
+citing a freeze that A2.2 has shown is negotiable by approval.
+
+#### 17.19.3 · What changed, measured
+
+**Two lines. One per page.** Each is an `<a class="nav-item"
+href="assignments.html">` inserted directly after that page's own History item,
+written in **that page's local convention** — both pages use the single-line
+inline form, so both items are single-line and inline. No existing line was
+edited, moved or reformatted.
+
+**[measured] Byte-reversible.** Deleting the inserted line from each file
+returns it byte-for-byte to its `main` state. That is the strongest available
+statement that the unfreeze was spent on exactly one line.
+
+The two resulting rails, read in document order:
+
+| page | rail after A2.2 |
+|---|---|
+| `weakness.html` | `dashboard chat #` `focus mock-exam history` **`assignments`** `progress profile devices settings pricing` |
+| `focus.html` | `dashboard chat weakness focus mock-exam history` **`assignments`** `progress profile devices settings pricing` |
+
+Both are shorter than the other nine — neither carries `support` or `admin` —
+and A2.2 corrects neither. That is drift these pages already had.
+
+**The `#` is not a defect, and §17.18.2 above is wrong about it.** That section
+calls `weakness.html`'s literal `href="#"` "a live defect A2.1 surfaces and,
+being frozen, cannot touch". **[measured]** It is the page's **own self-link** —
+`<a class="nav-item active" href="#">…Weakness Analyzer</a>` — the one place in
+the repo written that way, a convention rather than a broken destination. The A3
+audit established this and the correction was never written back; it is written
+here. The same sentence's second half is now stale twice over, since A2.2 did
+touch the file. Neither claim was acted on, and the `#` is pinned as found.
+
+#### 17.19.4 · The test changes
+
+`tests/assignments-nav.test.mjs` only. No new suite; the CI suite count is
+unchanged.
+
+- the frozen exception group **3 → 1**, leaving `mock-exam.html`, with a reason
+  rewritten to cite A3 rather than the freeze
+- `COVERED_PIN` **9 → 11**
+- `RAILS` gains both pages, pinned character-for-character
+- **the derived `COVERED` logic is preserved untouched** — it is the structural
+  answer to Attack B (an exception list that satisfies itself) that A2.1's review
+  gate forced, and A2.2 changes the pins on either side of it, never the
+  derivation
+- **one hardening assertion, added on review**: the two pages must still be
+  *listed frozen in `CLAUDE.md`*. Nothing else in the repo pinned that, so
+  quietly deleting either line would have turned a one-change exception into a
+  permanent unfreeze with every check still green. It is pinned as literals on
+  purpose — deriving it as "covered pages `CLAUDE.md` calls frozen" would shrink
+  to match the deletion, satisfying itself in exactly the direction guarded
+  against. Its honest weakness is `STAFF_PIN`'s: it stops a silent removal, not
+  an editor who edits both lines
+
+One consequence had to move with them: the distinct-rail count **4 → 6**. Two
+more distinct rails joined the set; **no existing rail changed**, and the nine
+A2.1 pinned are still pinned character-for-character.
+
+#### 17.19.5 · How it is proved
+
+`tests/assignments-nav.test.mjs` **25/25**; full CI **77/77**.
+
+**Nine mutants, nine killed**, and every one was verified to have *applied*
+before it was run — the "a mutant that silently never ran" failure this project
+has hit twice:
+
+| | mutant | killed by |
+|---|---|---|
+| M1 | `focus.html` loses its link | 5 checks |
+| M2 | `weakness.html` ships it `display:none` | *no covered page ships the link hidden* |
+| M3 | `focus.html` relabels it "Homework" | *the visible label is exactly "Assignments"* |
+| M4 | `weakness.html` moves it away from History | *directly after History* + *rail is exactly as expected* |
+| M5 | `mock-exam.html` gains it | *no excepted page carries the link* + *the still-frozen page was not modified* |
+| M6 | `focus.html` re-excepted **with its link left in place** | 3 checks, coverage pin first |
+| M7 | `COVERED_PIN` left at the A2.1 nine | *the derived coverage is exactly the eleven* |
+| M8 | `weakness.html` dropped from `CLAUDE.md`'s frozen list | *the two pages A2.2 unfroze are still frozen in CLAUDE.md* |
+| M9 | `focus.html` dropped from the same list | the same check |
+
+**M6 is the one that matters.** It is Attack B aimed at A2.2: move a page into an
+exception group and leave the page alone. Under A2.1's original hand-written
+`COVERED` this would have been invisible; under the derived set it fails on the
+coverage pin **before** it reaches any page check.
+
+**M8 and M9 each fail exactly one check — the new one — and leave *the frozen
+list matches `CLAUDE.md`* green.** That is the measurement that the hardening
+assertion covers something nothing else did, rather than restating a check the
+file already had.
+
+**Chromium, 19 checks across the three pages, all green** (8 · 8 · 3). Each page rendered
+with its real scripts (only the signed-out redirect to `login.html` aborted, so
+the shipped DOM could be measured): exactly one item on each unfrozen page,
+label `Assignments`, actually visible by computed style *and* box *and*
+`offsetParent`, immediately preceded by History, and **clicked** — landing on
+`assignments.html` with `#pick` present, so reachability was driven rather than
+inferred. `mock-exam.html` rendered **zero**.
+
+**The browser harness was itself checked against two negative controls**, because
+a green browser check is worth no more than a green unit check that cannot go
+red: shipping the `weakness.html` link hidden turned the visibility check red
+(and the click then timed out, which is the same finding twice), and planting a
+link on `mock-exam.html` turned its zero-count red. Both files were restored and
+re-verified by md5 against their pre-mutation snapshots.
+
+#### 17.19.6 · Untouched
+
+`CLAUDE.md`'s frozen list · `mock-exam.html` · `nav.js` · `assignments.html` ·
+every other sidebar page · all JS and CSS · every RPC, schema, RLS and policy ·
+routing · `vercel.json` · **A3** and its five open sub-decisions · R2 /
+Increment 3 · Desmos · audio · W-1…W-4.
