@@ -254,6 +254,39 @@
       "statement_b": "34 of the 143 items are coded away from Triangles — 30 to Geometry (Lines & Angles) and 3 to Polygons, with 33 of the 34 in block B",
       "why": "block B is a wider bank than the title admits: roughly a third of it is the parallel-lines and transversal construction, which block A never uses once",
       "resolution": "NONE. The heading is preserved as observed_topic for block A; block B observes UNKNOWN. The coded topic is separate from both and neither is edited to agree."
+    },
+    {
+      "conflict_id": "TAX-0011",
+      "kind": "TAXONOMY_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "standard deviation, which the exam topic \"Interquartile Range\" is made to carry",
+      "statement_a": "the exam-topic axis has Mean, Median, Mode and Interquartile Range, and no topic for standard deviation",
+      "statement_b": "eight items in S-011 test standard deviation directly, comparing spread between distributions",
+      "why": "the only spread topic on the axis names a different statistic. STA_003 \"Range & Interval\" and N-SPREAD do cover it, so the frozen taxonomy is fine; the EXAM axis is what has no home",
+      "resolution": "NONE. The eight are filed on Interquartile Range with STA_003 and N-SPREAD, which is where spread lives, and this records that the topic name is wrong for them."
+    },
+    {
+      "conflict_id": "SRC-0014",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the printed answer for item 34 of S-011",
+      "statement_a": "the key on page 17 gives D, which is 9.5",
+      "statement_b": "the table gives five times of 8, 6, 14, 11 and 11, whose mean is 10 — option B",
+      "why": "derived with exact arithmetic and checked against a render of both the item and the key page. No reading of the five rows produces 9.5",
+      "resolution": "NONE. The record carries the source key unchanged and an observed note that it is wrong. The compiler is not corrected, only contradicted on the record."
+    },
+    {
+      "conflict_id": "SRC-0015",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "what the S-011 filename and heading count and name",
+      "statement_a": "the file is named \"42 Real Questions\" and headed \"Mean, Median, Mode, Range\"",
+      "statement_b": "it holds 49 numbered items, its key stops at 42, no item asks for a mode, and eight test standard deviation",
+      "why": "the filename counts the KEY rather than the questions, and the heading names one measure the items never use while omitting the one eight of them turn on",
+      "resolution": "NONE. The heading is preserved as observed_topic and source_label; items 43-49 are recorded as beyond the key rather than dropped."
     }
   ]
 }

@@ -57318,6 +57318,4662 @@
         "tgt:value"
       ],
       "duplicate_group": "DG-0063"
+    },
+    {
+      "question_id": "Q-011-p1-q1",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "1",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-COMPARE-MEDIANS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "each table must be expanded into a data set before a median exists"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one table carries a zero frequency, which disappears from the set and is easy to count anyway"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the medians read as the middle ROW of each table"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_frequency_tables"
+        ],
+        "relations": [
+          "median = middle_ordered_value",
+          "zero_frequency_contributes_nothing"
+        ],
+        "given_roles": [
+          "frequency_table",
+          "frequency_table"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "a_zero_frequency_row_is_present"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-1",
+      "structural_fingerprint": "44b1551d5fcc7a34",
+      "mathematical_fingerprint": "660175a91865e3cd",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:a_zero_frequency_row_is_present",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:frequency_table",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:two_frequency_tables",
+        "rel:median = middle_ordered_value",
+        "rel:zero_frequency_contributes_nothing",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p1-q2",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "2",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the value is a position on the axis rather than a printed number"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "dot_plot"
+        ],
+        "relations": [
+          "maximum = rightmost_marked_value"
+        ],
+        "given_roles": [
+          "plot"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "axis_labelled_at_intervals"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-2",
+      "structural_fingerprint": "92118ebff761a5e0",
+      "mathematical_fingerprint": "9ad95b79acaa59f6",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:axis_labelled_at_intervals",
+        "giv:plot",
+        "mech:representation_switch",
+        "obj:dot_plot",
+        "rel:maximum = rightmost_marked_value",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p1-q3",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "3",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SKEW-FROM-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "removing the extreme value moves the mean and leaves the median where it is"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "the four options pair the two movements, so both must be settled"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "both statistics assumed to move"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the movements assigned to the wrong statistics"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "neither statistic assumed to move"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "dot_plot",
+          "removed_value"
+        ],
+        "relations": [
+          "mean_moves_toward_removed_value",
+          "median_position_shifts_by_half_a_step"
+        ],
+        "given_roles": [
+          "plot",
+          "value"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "odd_count_becomes_even"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-3",
+      "structural_fingerprint": "a3a317540873509c",
+      "mathematical_fingerprint": "f47be491271ba6bc",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:odd_count_becomes_even",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:plot",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:dot_plot",
+        "obj:removed_value",
+        "rel:mean_moves_toward_removed_value",
+        "rel:median_position_shifts_by_half_v1_step",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p2-q4",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "4",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "relationship",
+      "archetype": "A-STAT-COMPARE-RANGE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the two sets are quoted at different decimal scales, so the set with the larger maximum has the smaller range"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "only the extremes matter; the paragraph about open and closed systems is context"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the maxima compared instead of the differences"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the ranges declared equal"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets"
+        ],
+        "relations": [
+          "range = maximum - minimum"
+        ],
+        "given_roles": [
+          "extreme",
+          "extreme",
+          "extreme",
+          "extreme"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "values_at_different_decimal_scales"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "49563c59eb2a8bca",
+      "mathematical_fingerprint": "10afc1262356317d",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:values_at_different_decimal_scales",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:extreme",
+        "mech:filtering",
+        "mech:trap_cost",
+        "obj:two_data_sets",
+        "rel:range = maximum - minimum",
+        "rep:verbal",
+        "stim:none",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p2-q5",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "5",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the median and the mode of the same list are printed, so reading the wrong definition still lands on an option"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "data_given_as_a_list"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "30c43e722c546e93",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:data_given_as_a_list",
+        "giv:value_list",
+        "mech:trap_cost",
+        "obj:data_list",
+        "rel:mean = sum / count",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0082"
+    },
+    {
+      "question_id": "Q-011-p2-q6",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "6",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEDIAN-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the table is in year order, not value order, and must be sorted before the middle can be taken"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the mean of the extremes and the first value are both printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the value in the middle ROW of the table reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the mean of the extremes reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the smallest value reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "ordered_table"
+        ],
+        "relations": [
+          "median = middle_ordered_value"
+        ],
+        "given_roles": [
+          "value_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "table_ordered_by_a_second_variable"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-6",
+      "structural_fingerprint": "037e81917dd9bf26",
+      "mathematical_fingerprint": "1d348d89713b8111",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:table_ordered_by_a_second_variable",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:value_column",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:ordered_table",
+        "rel:median = middle_ordered_value",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p2-q7",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "7",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Tables (Data)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-FREQUENCY-LOOKUP",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the total, the value itself and a neighbouring frequency are all printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the value reported instead of its frequency"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the total frequency reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "a neighbouring frequency reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "frequency_of(value)"
+        ],
+        "given_roles": [
+          "value"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_lookup"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-7",
+      "structural_fingerprint": "6733eda83b35ed47",
+      "mathematical_fingerprint": "629d4b6fc59b0f55",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:single_lookup",
+        "dis:arithmetic_slip",
+        "dis:wrong_interpretation",
+        "giv:value",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:frequency_of(value)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p3-q8",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 3,
+      "source_question_number": "8",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SKEW-FROM-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the answer follows from the skew alone; computing both statistics also works and is slower"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "\"cannot be determined\" is printed and is what a solver who will not read the shape chooses"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the inequality reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the two declared equal"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the relationship declared undeterminable"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "dot_plot"
+        ],
+        "relations": [
+          "skew_pulls_the_mean",
+          "median_resists_the_tail"
+        ],
+        "given_roles": [
+          "plot"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "must_be_true_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-8",
+      "structural_fingerprint": "6189cbef71a747e2",
+      "mathematical_fingerprint": "3ab0f80d1a39262f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:must_be_true_asked",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:plot",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:dot_plot",
+        "rel:median_resists_the_tail",
+        "rel:skew_pulls_the_mean",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p3-q9",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 3,
+      "source_question_number": "9",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Graphs (Data)",
+      "taxonomy_subtopics": [
+        "STA_005",
+        "STA_001"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the axis is ruled in tens and the tallest bar does not end on a label, so every printed option is a plausible read"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the axis gridline above the bar read"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the gridline below the bar read"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the second-tallest bar read"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "bar_graph"
+        ],
+        "relations": [
+          "maximum = tallest_bar"
+        ],
+        "given_roles": [
+          "graph"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "bar_does_not_end_on_a_label"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-9",
+      "structural_fingerprint": "7099167c89cdfe16",
+      "mathematical_fingerprint": "08526861d8d6b3e4",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:bar_does_not_end_on_a_label",
+        "dis:arithmetic_slip",
+        "dis:wrong_interpretation",
+        "giv:graph",
+        "mech:trap_cost",
+        "obj:bar_graph",
+        "rel:maximum = tallest_bar",
+        "rep:graph",
+        "stim:graph",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p3-q10",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 3,
+      "source_question_number": "10",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "relationship",
+      "archetype": "A-STAT-OUTLIER-EFFECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the unrecorded probe reads far below every plotted value, so it can only pull the mean down"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the plot itself need not be read at all — only that all of it lies above the added value"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the direction of the shift reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the two means declared equal"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "dot_plot",
+          "added_value"
+        ],
+        "relations": [
+          "mean_moves_toward_added_value"
+        ],
+        "given_roles": [
+          "plot",
+          "value"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "added_value_below_every_plotted_value"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-10",
+      "structural_fingerprint": "a4593385937a0eeb",
+      "mathematical_fingerprint": "29321cfe393695ee",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:added_value_below_every_plotted_value",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:plot",
+        "giv:value",
+        "mech:filtering",
+        "mech:nonobvious_relationship",
+        "obj:added_value",
+        "obj:dot_plot",
+        "rel:mean_moves_toward_added_value",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p4-q11",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "11",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEDIAN-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the list arrives already sorted, so the only work is selecting the middle entry"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "median = middle_ordered_value"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "list_already_sorted"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "e681331d1c240c35",
+      "mathematical_fingerprint": "c9f5a98c43503d5f",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:list_already_sorted",
+        "giv:value_list",
+        "mech:filtering",
+        "obj:data_list",
+        "rel:median = middle_ordered_value",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p4-q12",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "12",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August US 2023",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the two smallest options are frequencies from the plot, not values on its axis"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a dot count reported instead of an axis value"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "another dot count reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the axis endpoint reported rather than the leftmost marked value"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "dot_plot"
+        ],
+        "relations": [
+          "minimum = leftmost_marked_value"
+        ],
+        "given_roles": [
+          "plot"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "axis_starts_below_the_first_marked_value"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-12",
+      "structural_fingerprint": "9a9e30ec6925cfe5",
+      "mathematical_fingerprint": "ff7d5abc1c7a1372",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:axis_starts_below_the_first_marked_value",
+        "dis:wrong_interpretation",
+        "giv:plot",
+        "mech:trap_cost",
+        "obj:dot_plot",
+        "rel:minimum = leftmost_marked_value",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p4-q13",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "13",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the smallest number in the table is a FREQUENCY, and it is printed as option A"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the smallest frequency reported instead of the smallest value"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "another frequency reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the second value reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "minimum = first_value"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "smallest_number_in_the_table_is_a_frequency"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-13",
+      "structural_fingerprint": "a948c38e850f9d21",
+      "mathematical_fingerprint": "ebc990f01625a49e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:smallest_number_in_the_table_is_a_frequency",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:minimum = first_value",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0083"
+    },
+    {
+      "question_id": "Q-011-p4-q14",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "14",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the value is the end of a whisker, which lies between two labelled ticks"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "box_plot"
+        ],
+        "relations": [
+          "minimum = left_whisker_end"
+        ],
+        "given_roles": [
+          "plot"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "whisker_end_between_labelled_ticks"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-14",
+      "structural_fingerprint": "92118ebff761a5e0",
+      "mathematical_fingerprint": "1f3252dfdd536d08",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:whisker_end_between_labelled_ticks",
+        "giv:plot",
+        "mech:representation_switch",
+        "obj:box_plot",
+        "rel:minimum = left_whisker_end",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p4-q15",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "15",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the smallest number in the table is a FREQUENCY, and it is printed as option A"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the smallest frequency reported instead of the smallest value"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "another frequency reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the second value reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "minimum = first_value"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "smallest_number_in_the_table_is_a_frequency"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-15",
+      "structural_fingerprint": "a948c38e850f9d21",
+      "mathematical_fingerprint": "ebc990f01625a49e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:smallest_number_in_the_table_is_a_frequency",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:minimum = first_value",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0083"
+    },
+    {
+      "question_id": "Q-011-p5-q16",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 5,
+      "source_question_number": "16",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "statement_truth",
+      "archetype": "A-STAT-MUST-BE-TRUE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the sets are described only by their extremes, so each claim must be tested against what that does and does not fix"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the median claim is likely and not forced, which is the whole distinction the item draws"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the spread claim taken in the wrong direction"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the range claim taken in the wrong direction"
+        },
+        {
+          "category": "plausible_competing_interpretation",
+          "wrong_route": "the median claim accepted although it is not forced"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets"
+        ],
+        "relations": [
+          "range = maximum - minimum",
+          "mean_moves_toward_added_value",
+          "median_not_forced"
+        ],
+        "given_roles": [
+          "extreme",
+          "extreme",
+          "value"
+        ],
+        "asked_role": "statement_truth",
+        "constraints": [
+          "must_be_true_asked",
+          "set_described_only_by_extremes"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "b6acb50a6747db21",
+      "mathematical_fingerprint": "c7cfa6ed513b122d",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:statement_truth",
+        "con:must_be_true_asked",
+        "con:set_described_only_by_extremes",
+        "dis:plausible_competing_interpretation",
+        "dis:reversal_error",
+        "giv:extreme",
+        "giv:value",
+        "mech:abstraction",
+        "mech:filtering",
+        "obj:two_data_sets",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_not_forced",
+        "rel:range = maximum - minimum",
+        "rep:verbal",
+        "stim:none",
+        "tgt:statement_truth"
+      ],
+      "duplicate_group": "DG-0084"
+    },
+    {
+      "question_id": "Q-011-p5-q17",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 5,
+      "source_question_number": "17",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "December 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-RANGE-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the list is unsorted, so both extremes must be found before the subtraction"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "range = maximum - minimum"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "list_unsorted"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "e681331d1c240c35",
+      "mathematical_fingerprint": "694c78233cbfbaaf",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:list_unsorted",
+        "giv:value_list",
+        "mech:filtering",
+        "obj:data_list",
+        "rel:range = maximum - minimum",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p5-q18",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 5,
+      "source_question_number": "18",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEDIAN-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the frequency total is not printed and must be summed before the middle position exists"
+        },
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the answer is a VALUE at that position, and the table is full of frequencies that look like answers"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "median = value_at_middle_cumulative_position"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "frequency_total_not_printed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-18",
+      "structural_fingerprint": "680ab2023dbf9861",
+      "mathematical_fingerprint": "0f092fc6261c895c",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:frequency_total_not_printed",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:hidden_step",
+        "mech:nonobvious_relationship",
+        "obj:frequency_table",
+        "rel:median = value_at_middle_cumulative_position",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p5-q19",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 5,
+      "source_question_number": "19",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-SD-CONSTRAINT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "the candidates straddle the point where the second set becomes the wider one, so each must be tested"
+        },
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "five of each set’s six values are fixed and nearly parallel, so only the last entry decides"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "one qualifying candidate chosen where two qualify"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the candidates that fail the ordering chosen"
+        },
+        {
+          "category": "omitted_condition",
+          "wrong_route": "the boundary candidate accepted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets",
+          "unknown_value"
+        ],
+        "relations": [
+          "sd(first) > sd(second)"
+        ],
+        "given_roles": [
+          "value_list",
+          "value_list",
+          "candidate_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "roman_numeral_candidates_tested"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "14492bad92a8d191",
+      "mathematical_fingerprint": "2634b830aa598592",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:roman_numeral_candidates_tested",
+        "dis:incomplete_reasoning",
+        "dis:omitted_condition",
+        "dis:reversal_error",
+        "giv:candidate_list",
+        "giv:value_list",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:two_data_sets",
+        "obj:unknown_value",
+        "rel:sd(first) > sd(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p6-q20",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 6,
+      "source_question_number": "20",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the smallest number in the table is a FREQUENCY, and it is printed as option A"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the smallest frequency reported instead of the smallest value"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "another frequency reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the second value reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "minimum = first_value"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "smallest_number_in_the_table_is_a_frequency"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-20",
+      "structural_fingerprint": "a948c38e850f9d21",
+      "mathematical_fingerprint": "ebc990f01625a49e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:smallest_number_in_the_table_is_a_frequency",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:minimum = first_value",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0083"
+    },
+    {
+      "question_id": "Q-011-p6-q21",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 6,
+      "source_question_number": "21",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "December US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the median and the mode of the same list are printed, so reading the wrong definition still lands on an option"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the median of the list reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the mode of the list reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an extreme value of the list reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "data_given_as_a_list"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "90a62466115dead0",
+      "mathematical_fingerprint": "30c43e722c546e93",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:data_given_as_a_list",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:value_list",
+        "mech:trap_cost",
+        "obj:data_list",
+        "rel:mean = sum / count",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0085"
+    },
+    {
+      "question_id": "Q-011-p6-q22",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 6,
+      "source_question_number": "22",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "relationship",
+      "archetype": "A-STAT-OUTLIER-EFFECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the mean is a balance point and moves; the median is a position and usually does not"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "the four options are the four pairings of the two movements, so both must be settled"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "both statistics assumed to move"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "neither statistic assumed to move"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the two movements assigned to the wrong statistics"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "data_set",
+          "added_value"
+        ],
+        "relations": [
+          "mean_moves_toward_added_value",
+          "median_moves_at_most_one_position"
+        ],
+        "given_roles": [
+          "data_set",
+          "value"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "added_value_far_outside_the_set"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-22",
+      "structural_fingerprint": "a3a317540873509c",
+      "mathematical_fingerprint": "41cf7e2bea74cbb5",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:added_value_far_outside_the_set",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:data_set",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:added_value",
+        "obj:data_set",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_moves_at_most_one_position",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0086"
+    },
+    {
+      "question_id": "Q-011-p7-q23",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 7,
+      "source_question_number": "23",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-OUTLIER-EFFECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the mean is a balance point and moves; the median is a position and usually does not"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "the four options are the four pairings of the two movements, so both must be settled"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "both statistics assumed to move"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "neither statistic assumed to move"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the two movements assigned to the wrong statistics"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "data_set",
+          "added_value"
+        ],
+        "relations": [
+          "mean_moves_toward_added_value",
+          "median_moves_at_most_one_position"
+        ],
+        "given_roles": [
+          "data_set",
+          "value"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "added_value_far_outside_the_set"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-23",
+      "structural_fingerprint": "55bd924e0c2ef008",
+      "mathematical_fingerprint": "41cf7e2bea74cbb5",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:added_value_far_outside_the_set",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:data_set",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:added_value",
+        "obj:data_set",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_moves_at_most_one_position",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0087"
+    },
+    {
+      "question_id": "Q-011-p7-q24",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 7,
+      "source_question_number": "24",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SD-COMPARE-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the comparison is made from the picture; no standard deviation is computed"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the taller histogram is not the wider one, and the option that reverses the ordering is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the two declared equal from equal totals"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "two_histograms"
+        ],
+        "relations": [
+          "spread_from_distance_to_centre"
+        ],
+        "given_roles": [
+          "distribution",
+          "distribution"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "no_statistic_is_computed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-24",
+      "structural_fingerprint": "81174c09823d7a5e",
+      "mathematical_fingerprint": "30b32558c5708a48",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:no_statistic_is_computed",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:distribution",
+        "mech:representation_switch",
+        "mech:trap_cost",
+        "obj:two_histograms",
+        "rel:spread_from_distance_to_centre",
+        "rep:graph",
+        "stim:graph",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0088"
+    },
+    {
+      "question_id": "Q-011-p8-q25",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 8,
+      "source_question_number": "25",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEDIAN-GROUPED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "grouped data fixes only the interval the median falls in, which is why the item asks what COULD be"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "one option sits in each of the neighbouring intervals"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a value from the interval above taken"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a value from the interval below taken"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the middle interval by row taken rather than by cumulative count"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "grouped_frequency_table"
+        ],
+        "relations": [
+          "median_interval_from_cumulative_frequency"
+        ],
+        "given_roles": [
+          "interval_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "exact_median_not_recoverable"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-25",
+      "structural_fingerprint": "c6aea46dffb2b794",
+      "mathematical_fingerprint": "7eb72df392ede289",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:exact_median_not_recoverable",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "giv:interval_column",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:grouped_frequency_table",
+        "rel:median_interval_from_cumulative_frequency",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p8-q26",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 8,
+      "source_question_number": "26",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "relationship",
+      "archetype": "A-STAT-COMPARE-MEDIANS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the second set is the first with one large value appended, and that leaves the median exactly where it was"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "both strict orderings are printed, and the appended value is large enough to suggest one"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering taken as increasing"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering taken as decreasing"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets"
+        ],
+        "relations": [
+          "median = middle_ordered_value",
+          "one_set_extends_the_other"
+        ],
+        "given_roles": [
+          "value_list",
+          "value_list"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "even_count_becomes_odd"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "a269f8a32bb8b415",
+      "mathematical_fingerprint": "c8d1c351218afa1f",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:even_count_becomes_odd",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:value_list",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:two_data_sets",
+        "rel:median = middle_ordered_value",
+        "rel:one_set_extends_the_other",
+        "rep:verbal",
+        "stim:none",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p8-q27",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 8,
+      "source_question_number": "27",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-OUTLIER-EFFECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the mean is a balance point and moves; the median is a position and usually does not"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "the four options are the four pairings of the two movements, so both must be settled"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "both statistics assumed to move"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "neither statistic assumed to move"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the two movements assigned to the wrong statistics"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "data_set",
+          "added_value"
+        ],
+        "relations": [
+          "mean_moves_toward_added_value",
+          "median_moves_at_most_one_position"
+        ],
+        "given_roles": [
+          "data_set",
+          "value"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "added_value_far_outside_the_set"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-27",
+      "structural_fingerprint": "55bd924e0c2ef008",
+      "mathematical_fingerprint": "41cf7e2bea74cbb5",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:added_value_far_outside_the_set",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:data_set",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:added_value",
+        "obj:data_set",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_moves_at_most_one_position",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0087"
+    },
+    {
+      "question_id": "Q-011-p9-q28",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 9,
+      "source_question_number": "28",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "November US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Graphs (Data)",
+      "taxonomy_subtopics": [
+        "STA_005",
+        "STA_001"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "value",
+      "archetype": "A-STAT-FREQUENCY-LOOKUP",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the frequency is a bar height read against a ruled axis"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "bar_graph"
+        ],
+        "relations": [
+          "frequency_of(value)"
+        ],
+        "given_roles": [
+          "value"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "single_lookup"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-28",
+      "structural_fingerprint": "cf487ab7c9573426",
+      "mathematical_fingerprint": "0de4c63d486718f1",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:single_lookup",
+        "giv:value",
+        "mech:representation_switch",
+        "obj:bar_graph",
+        "rel:frequency_of(value)",
+        "rep:graph",
+        "stim:graph",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p9-q29",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 9,
+      "source_question_number": "29",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-WEIGHTED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "means do not subtract — the sums do, and the two counts differ"
+        },
+        {
+          "id": "multiconcept",
+          "load_bearing": true,
+          "counterfactual": "the item needs the total sum, the subgroup sum, and the remaining count together"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "partitioned_data_set"
+        ],
+        "relations": [
+          "mean = sum / count",
+          "sum(whole) = sum(part) + sum(rest)"
+        ],
+        "given_roles": [
+          "mean",
+          "count",
+          "mean",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "subgroup_mean_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "d099fbd02fab4f1f",
+      "mathematical_fingerprint": "e0e04f4f922453b3",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:subgroup_mean_asked",
+        "giv:count",
+        "giv:mean",
+        "mech:multiconcept",
+        "mech:nonobvious_relationship",
+        "obj:partitioned_data_set",
+        "rel:mean = sum / count",
+        "rel:sum(whole) = sum(part) + sum(rest)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p9-q30",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 9,
+      "source_question_number": "30",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEDIAN-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the frequency total is not printed and must be summed before the middle position exists"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the largest frequency and the largest value are both printed as options"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a frequency reported instead of a value"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the middle row of the table reported"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the position miscounted by one"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "median = value_at_middle_cumulative_position"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "frequency_total_not_printed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-30",
+      "structural_fingerprint": "40917a44ddb6ee5a",
+      "mathematical_fingerprint": "0f092fc6261c895c",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:frequency_total_not_printed",
+        "dis:arithmetic_slip",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:median = value_at_middle_cumulative_position",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p10-q31",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 10,
+      "source_question_number": "31",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "October US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SD-COMPARE-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the value column is identical in all four options, so only the shape of the frequency column matters"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "four distributions must be ranked by concentration; no single one can be judged alone"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the uniform distribution chosen"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the mildly peaked distribution chosen"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the distribution with weight at both ends chosen"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "four_frequency_tables"
+        ],
+        "relations": [
+          "spread_from_concentration_of_frequency"
+        ],
+        "given_roles": [
+          "frequency_column",
+          "frequency_column",
+          "frequency_column",
+          "frequency_column"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "shared_value_column",
+          "smallest_spread_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-31",
+      "structural_fingerprint": "c58fd4f247d3a520",
+      "mathematical_fingerprint": "114040d1e605feda",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:shared_value_column",
+        "con:smallest_spread_asked",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:frequency_column",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:four_frequency_tables",
+        "rel:spread_from_concentration_of_frequency",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p10-q32",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 10,
+      "source_question_number": "32",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "November 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "statement_truth",
+      "archetype": "A-STAT-OUTLIER-EFFECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the set is described only by a size and a bound, so both claims must be settled without any values"
+        },
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the median of the extended set is the average of two neighbours, which can equal the old median when they are equal"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "plausible_competing_interpretation",
+          "wrong_route": "the median claim accepted although repeats can prevent it"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "both claims accepted"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "neither claim accepted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_set",
+          "added_value"
+        ],
+        "relations": [
+          "mean_moves_toward_added_value",
+          "median_moves_at_most_one_position"
+        ],
+        "given_roles": [
+          "count",
+          "bound",
+          "value"
+        ],
+        "asked_role": "statement_truth",
+        "constraints": [
+          "must_be_less_asked",
+          "values_never_stated"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "e1f92a0174270353",
+      "mathematical_fingerprint": "ef9cc3429cc7e550",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:statement_truth",
+        "con:must_be_less_asked",
+        "con:values_never_stated",
+        "dis:plausible_competing_interpretation",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:bound",
+        "giv:count",
+        "giv:value",
+        "mech:abstraction",
+        "mech:nonobvious_relationship",
+        "obj:added_value",
+        "obj:data_set",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_moves_at_most_one_position",
+        "rep:verbal",
+        "stim:none",
+        "tgt:statement_truth"
+      ]
+    },
+    {
+      "question_id": "Q-011-p10-q33",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 10,
+      "source_question_number": "33",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "November US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Median",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-COMPARE-MEDIANS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "a set can be extended at one end without moving its median, so the larger set need not have the larger median"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "both strict orderings are printed, and so is \"not enough information\""
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the means compared instead"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets"
+        ],
+        "relations": [
+          "median = middle_ordered_value"
+        ],
+        "given_roles": [
+          "data_set",
+          "data_set"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "sets_differ_in_size_or_shape"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-33",
+      "structural_fingerprint": "e9fd1c7bc153d501",
+      "mathematical_fingerprint": "bd4b67fe6485992e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:sets_differ_in_size_or_shape",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:data_set",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:two_data_sets",
+        "rel:median = middle_ordered_value",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p11-q34",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 11,
+      "source_question_number": "34",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "December 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the mode of the five times is printed, and so is a half-integer that no reading of the table produces"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the mode of the times reported, which is also their median"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an extreme of the times reported"
+        },
+        {
+          "category": "weak_random",
+          "wrong_route": "a value the table cannot produce under any reading"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "table"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "one_row_per_observation",
+          "no_frequency_column"
+        ]
+      },
+      "conflicts": [
+        "SOURCE_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key; KEY WRONG: mean is 10, option B; key says D",
+      "stimulus_id": "ST-011-34",
+      "structural_fingerprint": "13323e2d3ad758bd",
+      "mathematical_fingerprint": "a95f26881a334e72",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:no_frequency_column",
+        "con:one_row_per_observation",
+        "dis:weak_random",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:value_column",
+        "mech:trap_cost",
+        "obj:table",
+        "rel:mean = sum / count",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0089"
+    },
+    {
+      "question_id": "Q-011-p11-q35",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 11,
+      "source_question_number": "35",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Data Analysis (Basics)",
+      "taxonomy_subtopics": [
+        "STA_005"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the smallest number in the table is a FREQUENCY, and it is printed as option A"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the smallest frequency reported instead of the smallest value"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "another frequency reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the second value reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "minimum = first_value"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "smallest_number_in_the_table_is_a_frequency"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-35",
+      "structural_fingerprint": "a948c38e850f9d21",
+      "mathematical_fingerprint": "ebc990f01625a49e",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:smallest_number_in_the_table_is_a_frequency",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:minimum = first_value",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0083"
+    },
+    {
+      "question_id": "Q-011-p11-q36",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 11,
+      "source_question_number": "36",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the median and the mode of the same list are printed, so reading the wrong definition still lands on an option"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "data_given_as_a_list"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "30c43e722c546e93",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:data_given_as_a_list",
+        "giv:value_list",
+        "mech:trap_cost",
+        "obj:data_list",
+        "rel:mean = sum / count",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0082"
+    },
+    {
+      "question_id": "Q-011-p11-q37",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 11,
+      "source_question_number": "37",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the divisor is the frequency total, not the number of rows, and the stem states it in prose instead of the table"
+        },
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "each value must be weighted by its frequency before the division"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "mean = weighted_sum / frequency_total"
+        ],
+        "given_roles": [
+          "value_column",
+          "frequency_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "count_stated_in_prose_not_the_table"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-37",
+      "structural_fingerprint": "680ab2023dbf9861",
+      "mathematical_fingerprint": "65793370927595e3",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:count_stated_in_prose_not_the_table",
+        "giv:frequency_column",
+        "giv:value_column",
+        "mech:hidden_step",
+        "mech:nonobvious_relationship",
+        "obj:frequency_table",
+        "rel:mean = weighted_sum / frequency_total",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p12-q38",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 12,
+      "source_question_number": "38",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March US 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the median and the mode of the same list are printed, so reading the wrong definition still lands on an option"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the median of the list reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the mode of the list reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an extreme value of the list reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "data_given_as_a_list"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "90a62466115dead0",
+      "mathematical_fingerprint": "30c43e722c546e93",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:data_given_as_a_list",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:value_list",
+        "mech:trap_cost",
+        "obj:data_list",
+        "rel:mean = sum / count",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0085"
+    },
+    {
+      "question_id": "Q-011-p12-q39",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 12,
+      "source_question_number": "39",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SD-COMPARE-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the comparison is made from the picture; no standard deviation is computed"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the taller histogram is not the wider one, and the option that reverses the ordering is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the two declared equal from equal totals"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "two_histograms"
+        ],
+        "relations": [
+          "spread_from_distance_to_centre"
+        ],
+        "given_roles": [
+          "distribution",
+          "distribution"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "no_statistic_is_computed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-39",
+      "structural_fingerprint": "81174c09823d7a5e",
+      "mathematical_fingerprint": "30b32558c5708a48",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:no_statistic_is_computed",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:distribution",
+        "mech:representation_switch",
+        "mech:trap_cost",
+        "obj:two_histograms",
+        "rel:spread_from_distance_to_centre",
+        "rep:graph",
+        "stim:graph",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0088"
+    },
+    {
+      "question_id": "Q-011-p12-q40",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 12,
+      "source_question_number": "40",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-INVERSE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "reversal",
+          "load_bearing": true,
+          "counterfactual": "the mean is given as an equality between two sets and the unknown is inside one of them"
+        },
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the two sets have the same count, so the equality of means is an equality of sums and no division is needed"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets",
+          "unknown_value"
+        ],
+        "relations": [
+          "mean(first) = mean(second)",
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_list",
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "equal_counts_remove_the_division"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "e3da12762098cf9b",
+      "mathematical_fingerprint": "823ce66d9c0fa726",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:equal_counts_remove_the_division",
+        "giv:value_list",
+        "mech:nonobvious_relationship",
+        "mech:reversal",
+        "obj:two_data_sets",
+        "obj:unknown_value",
+        "rel:mean = sum / count",
+        "rel:mean(first) = mean(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p13-q41",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 13,
+      "source_question_number": "41",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "May 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SD-COMPARE-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the comparison is made from the picture; no standard deviation is computed"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the taller histogram is not the wider one, and the option that reverses the ordering is printed"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the two declared equal from equal totals"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "two_histograms"
+        ],
+        "relations": [
+          "spread_from_distance_to_centre"
+        ],
+        "given_roles": [
+          "distribution",
+          "distribution"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "no_statistic_is_computed"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "stimulus_id": "ST-011-41",
+      "structural_fingerprint": "81174c09823d7a5e",
+      "mathematical_fingerprint": "30b32558c5708a48",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:no_statistic_is_computed",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:distribution",
+        "mech:representation_switch",
+        "mech:trap_cost",
+        "obj:two_histograms",
+        "rel:spread_from_distance_to_centre",
+        "rep:graph",
+        "stim:graph",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0088"
+    },
+    {
+      "question_id": "Q-011-p13-q42",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 13,
+      "source_question_number": "42",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "statement_truth",
+      "archetype": "A-STAT-MUST-BE-TRUE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "abstraction",
+          "load_bearing": true,
+          "counterfactual": "the sets are described only by their extremes, so each claim must be tested against what that does and does not fix"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the median claim is likely and not forced, which is the whole distinction the item draws"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the spread claim taken in the wrong direction"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the range claim taken in the wrong direction"
+        },
+        {
+          "category": "plausible_competing_interpretation",
+          "wrong_route": "the median claim accepted although it is not forced"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets"
+        ],
+        "relations": [
+          "range = maximum - minimum",
+          "mean_moves_toward_added_value",
+          "median_not_forced"
+        ],
+        "given_roles": [
+          "extreme",
+          "extreme",
+          "value"
+        ],
+        "asked_role": "statement_truth",
+        "constraints": [
+          "must_be_true_asked",
+          "set_described_only_by_extremes"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; covered by the printed key",
+      "structural_fingerprint": "b6acb50a6747db21",
+      "mathematical_fingerprint": "c7cfa6ed513b122d",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:statement_truth",
+        "con:must_be_true_asked",
+        "con:set_described_only_by_extremes",
+        "dis:plausible_competing_interpretation",
+        "dis:reversal_error",
+        "giv:extreme",
+        "giv:value",
+        "mech:abstraction",
+        "mech:filtering",
+        "obj:two_data_sets",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_not_forced",
+        "rel:range = maximum - minimum",
+        "rep:verbal",
+        "stim:none",
+        "tgt:statement_truth"
+      ],
+      "duplicate_group": "DG-0084"
+    },
+    {
+      "question_id": "Q-011-p14-q43",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 14,
+      "source_question_number": "43",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June US 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the mode of the five times is printed, and so is the value one above the mean"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the mode of the times reported, which is also their median"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an extreme of the times reported"
+        },
+        {
+          "category": "weak_random",
+          "wrong_route": "a value the table cannot produce under any reading"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "table"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_column"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "one_row_per_observation",
+          "no_frequency_column"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "stimulus_id": "ST-011-43",
+      "structural_fingerprint": "13323e2d3ad758bd",
+      "mathematical_fingerprint": "a95f26881a334e72",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:no_frequency_column",
+        "con:one_row_per_observation",
+        "dis:weak_random",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:value_column",
+        "mech:trap_cost",
+        "obj:table",
+        "rel:mean = sum / count",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0089"
+    },
+    {
+      "question_id": "Q-011-p14-q44",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 14,
+      "source_question_number": "44",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June US 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-STAT-MEAN-LIST",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the median and the mode of the same list are printed, so reading the wrong definition still lands on an option"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the median of the list reported"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the mode of the list reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "an extreme value of the list reported"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "data_list"
+        ],
+        "relations": [
+          "mean = sum / count"
+        ],
+        "given_roles": [
+          "value_list"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "data_given_as_a_list"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "structural_fingerprint": "90a62466115dead0",
+      "mathematical_fingerprint": "30c43e722c546e93",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:data_given_as_a_list",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:value_list",
+        "mech:trap_cost",
+        "obj:data_list",
+        "rel:mean = sum / count",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0085"
+    },
+    {
+      "question_id": "Q-011-p14-q45",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 14,
+      "source_question_number": "45",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "June US 2025",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "number_line",
+      "target_type": "relationship",
+      "archetype": "A-STAT-OUTLIER-EFFECT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the mean is a balance point and moves; the median is a position and usually does not"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "the four options are the four pairings of the two movements, so both must be settled"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "both statistics assumed to move"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "neither statistic assumed to move"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the two movements assigned to the wrong statistics"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "number_line",
+      "mathematical_signature": {
+        "objects": [
+          "data_set",
+          "added_value"
+        ],
+        "relations": [
+          "mean_moves_toward_added_value",
+          "median_moves_at_most_one_position"
+        ],
+        "given_roles": [
+          "data_set",
+          "value"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "added_value_far_outside_the_set"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "stimulus_id": "ST-011-45",
+      "structural_fingerprint": "a3a317540873509c",
+      "mathematical_fingerprint": "41cf7e2bea74cbb5",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:added_value_far_outside_the_set",
+        "dis:reversal_error",
+        "dis:wrong_statistical_operation",
+        "giv:data_set",
+        "giv:value",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:added_value",
+        "obj:data_set",
+        "rel:mean_moves_toward_added_value",
+        "rel:median_moves_at_most_one_position",
+        "rep:number_line",
+        "stim:number_line",
+        "tgt:relationship"
+      ],
+      "duplicate_group": "DG-0086"
+    },
+    {
+      "question_id": "Q-011-p15-q46",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 15,
+      "source_question_number": "46",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "March 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Graphs (Data)",
+      "taxonomy_subtopics": [
+        "STA_005",
+        "STA_001"
+      ],
+      "knowledge_nodes": [
+        "N-DATAREP"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "graph",
+      "target_type": "value",
+      "archetype": "A-STAT-EXTREME-PLOT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "representation_switch",
+          "load_bearing": true,
+          "counterfactual": "the value is a bar height read against a ruled axis"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "graph",
+      "mathematical_signature": {
+        "objects": [
+          "bar_graph"
+        ],
+        "relations": [
+          "maximum = tallest_bar"
+        ],
+        "given_roles": [
+          "graph"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "axis_ruled_in_tens"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "stimulus_id": "ST-011-46",
+      "structural_fingerprint": "cf487ab7c9573426",
+      "mathematical_fingerprint": "ed77cbe57cd3c0d6",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:axis_ruled_in_tens",
+        "giv:graph",
+        "mech:representation_switch",
+        "obj:bar_graph",
+        "rel:maximum = tallest_bar",
+        "rep:graph",
+        "stim:graph",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-011-p15-q47",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 15,
+      "source_question_number": "47",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-COMPARE-MEANS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the four sets share a value column, so the comparison is decided by which end carries the frequency"
+        },
+        {
+          "id": "option_testing",
+          "load_bearing": true,
+          "counterfactual": "four distributions must be ranked; computing four means also works and is slower"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the set with weight at the low end chosen"
+        },
+        {
+          "category": "wrong_statistical_operation",
+          "wrong_route": "the set with the largest single frequency chosen"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the set with the largest total chosen"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "four_frequency_tables"
+        ],
+        "relations": [
+          "mean_follows_the_weighted_end"
+        ],
+        "given_roles": [
+          "frequency_column",
+          "frequency_column",
+          "frequency_column",
+          "frequency_column"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "shared_value_column",
+          "greatest_mean_asked"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "stimulus_id": "ST-011-47",
+      "structural_fingerprint": "45c76e6d524612f7",
+      "mathematical_fingerprint": "df634ed575d002f0",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:greatest_mean_asked",
+        "con:shared_value_column",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "dis:wrong_statistical_operation",
+        "giv:frequency_column",
+        "mech:nonobvious_relationship",
+        "mech:option_testing",
+        "obj:four_frequency_tables",
+        "rel:mean_follows_the_weighted_end",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p16-q48",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 16,
+      "source_question_number": "48",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "August 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Mean",
+      "taxonomy_subtopics": [
+        "STA_002"
+      ],
+      "knowledge_nodes": [
+        "N-CENTRAL"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-COMPARE-MEANS",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the two frequency columns are mirror images over a shared value column, so one mean is above the centre and the other below"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the equal totals are stated in the stem and suggest equal means"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the means declared equal from the equal counts"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the comparison declared impossible"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_frequency_tables"
+        ],
+        "relations": [
+          "mean_follows_the_weighted_end"
+        ],
+        "given_roles": [
+          "frequency_column",
+          "frequency_column"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "shared_value_column",
+          "equal_counts_stated"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "stimulus_id": "ST-011-48",
+      "structural_fingerprint": "04dcc8c8c72e7158",
+      "mathematical_fingerprint": "b6b627d6b5e23312",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:equal_counts_stated",
+        "con:shared_value_column",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:frequency_column",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:two_frequency_tables",
+        "rel:mean_follows_the_weighted_end",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ]
+    },
+    {
+      "question_id": "Q-011-p16-q49",
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "source_page": 16,
+      "source_question_number": "49",
+      "source_block": "A",
+      "source_label": "Mean, Median, Mode, Range",
+      "source_administration": "November US 2024",
+      "observed_topic": "mean_median_mode_range",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Interquartile Range",
+      "taxonomy_subtopics": [
+        "STA_003"
+      ],
+      "knowledge_nodes": [
+        "N-SPREAD"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "relationship",
+      "archetype": "A-STAT-SD-INVARIANCE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "every value of the second set is the first set’s value less the same constant, so the spread is untouched"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the first set’s values are several times larger, which is what both strict orderings are built on"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "common_misconception",
+          "wrong_route": "the larger values assumed to give the larger spread"
+        },
+        {
+          "category": "reversal_error",
+          "wrong_route": "the ordering reversed"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the relationship declared undeterminable"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_data_sets"
+        ],
+        "relations": [
+          "second_set = first_set - constant",
+          "spread_unchanged_by_translation"
+        ],
+        "given_roles": [
+          "value_list",
+          "value_list"
+        ],
+        "asked_role": "relationship",
+        "constraints": [
+          "sets_differ_by_a_constant_shift"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Mean, Median, Mode, Range; BEYOND the printed key, which stops at item 42",
+      "stimulus_id": "ST-011-49",
+      "structural_fingerprint": "9b307b088bf43ed1",
+      "mathematical_fingerprint": "3b51dfc37947e7ac",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:relationship",
+        "con:sets_differ_by_a_constant_shift",
+        "dis:common_misconception",
+        "dis:incomplete_reasoning",
+        "dis:reversal_error",
+        "giv:value_list",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:two_data_sets",
+        "rel:second_set = first_set - constant",
+        "rel:spread_unchanged_by_translation",
+        "rep:table",
+        "stim:table",
+        "tgt:relationship"
+      ]
     }
   ]
 }

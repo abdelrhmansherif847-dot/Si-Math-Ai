@@ -265,6 +265,9 @@ export const OBSERVED_TOPICS = [
   // block B carries no topic word of its own, so its items observe UNKNOWN
   // however plainly a reader can see what they are about.
   'triangles',
+  // seen in the statistics corpus, 2026-09-05. The heading names four measures
+  // and the items test a fifth the heading does not mention — see SRC-0015.
+  'mean_median_mode_range',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

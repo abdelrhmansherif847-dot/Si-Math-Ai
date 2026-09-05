@@ -334,6 +334,44 @@
       "questions_found": 79,
       "questions_coded": 79,
       "continues": "S-009"
+    },
+    {
+      "source_id": "S-011",
+      "source_file": "28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf",
+      "sha256": "5c3f636830f254ef929563e086799c80b37106ea82f4d4498e5904564937b5ee",
+      "md5": "8083f29a6187a6bbd5decfc6896d3dac",
+      "bytes": 301986,
+      "pages": 17,
+      "title": "Mean, Median, Mode, Range (compiled extract, 49 items with a key covering 42)",
+      "declared_topic": null,
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/5c3f636830f2",
+      "registered": "2026-09-05",
+      "questions_coded": 49,
+      "source_block": "A",
+      "block_label": "Mean, Median, Mode, Range",
+      "page_from": 1,
+      "page_to": 16,
+      "questions": 49,
+      "answer_key_pages": [
+        17
+      ],
+      "answer_key_covers": "items 1-42 only; items 43-49 have no key",
+      "provenance_evidence": "49 administration tags over 20 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "telegram_channel",
+        "administration_tag",
+        "social_handle"
+      ],
+      "same_compiler_as": "S-001, S-006, S-007, S-008 and S-009 — same Telegram channel and watermark",
+      "filename_claims": 42,
+      "questions_found": 49,
+      "file_sha256": "5c3f636830f254ef929563e086799c80b37106ea82f4d4498e5904564937b5ee"
     }
   ]
 }

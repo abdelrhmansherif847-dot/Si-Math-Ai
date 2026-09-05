@@ -1332,3 +1332,128 @@ output shape* and not an input one — were fixed in the data.
 artifact are untouched.
 
 *Seventh ingestion, 2026-09-05.*
+
+---
+
+## 24. Eighth ingestion: the statistics corpus
+
+`28aebb42-Mean_Median_Mode_Range_42_Real_Questions.pdf` — sha256 `5c3f636830f2…`,
+301,986 bytes, **17 pages**. One block: **49 items** on pages 1–16, an answer
+key on page 17. Registered as **S-011**, `recalled_unofficial` at OBSERVED
+confidence — every one of the 49 items carries a named administration, over 20
+of them, plus the same Telegram annotation and handle watermark as five earlier
+files from this compiler.
+
+### The filename counts the key, not the questions
+
+It says *42 Real Questions*. The document holds **49**, numbered 1–49 with no
+gaps and no repeats. The printed key stops at **42**. So 42 is the size of the
+key, and **items 43–49 have no answer at all** — they are recorded as such
+rather than dropped, and five of them were derived here for the first time.
+
+### The heading names a measure the file never tests, and omits one it tests eight times
+
+Not one of the 49 items asks for a **mode**. Eight test **standard deviation**,
+which the heading does not mention. Registered as **SRC-0015**.
+
+That omission has a taxonomy consequence. The exam-topic axis carries Mean,
+Median, Mode and Interquartile Range — and **nothing for standard deviation.**
+The frozen taxonomy is fine: `STA_003` is "Range & Interval" and `N-SPREAD` is
+Data Spread, both of which hold it. It is the *exam* axis that has no home, so
+the eight items are filed under Interquartile Range, a topic named for a
+different statistic. **TAX-0011.**
+
+### A printed key is wrong
+
+Item 34 gives five task times — 8, 6, 14, 11, 11 — and asks for their mean. They
+sum to 50, so the mean is **10, which is option B**. The key says **D**, which is
+9.5, a number no reading of those five rows produces. Derived with exact rational
+arithmetic and checked against a render of both the item page and the key page
+before the claim was made. **SRC-0014.**
+
+The record keeps the source key unchanged and notes that it is wrong. The
+compiler is contradicted on the record, not corrected in the data.
+
+One further key entry is odd rather than wrong: item 15 is multiple choice and
+its key is written as `13` — the value — where the other 33 multiple-choice
+entries give a letter. 13 is option C, so it agrees in substance.
+
+### Verification: 29 of 30, and what could not be checked
+
+| | items |
+|---|---|
+| derivable from the text alone | 35 of 49 |
+| …of those, within the key's range | 30 — **29 agree**, 1 does not (item 34) |
+| …of those, beyond the key | 5, derived here for the first time |
+| data lives only in a dot plot, box plot, bar graph or histogram | **14** |
+
+The 14 are not guessed. Two of them were settled by rendering their pages while
+checking something else, and the rest are recorded as coded-but-unverified.
+
+### The signal count is a floor, and here is how far below
+
+The pipeline prints that its text-derived provenance signals are "a FLOOR, not a
+count". This file lets the gap be measured: the content-stream probe found **46**
+administration tags; an independent layout extraction finds **49**, one per item.
+Three tags are in the document and not in the probe's decoded text. The caveat
+was right, and the floor was 6% low.
+
+### What 49 items were worth
+
+**21 constructions.** 34 distinct mathematical fingerprints for 49 items.
+
+The load-bearing mechanisms are `trap_cost` (27) and `nonobvious_relationship`
+(20), and in this material the trap is almost always the same one: **a frequency
+mistaken for a value.** Four separate items ask for the minimum value of a
+frequency table and print the smallest *frequency* as option A. A median-from-a-
+table item prints frequencies as three of its four options. This is a corpus
+about reading a table correctly, dressed as a corpus about averages.
+
+Eighteen of the 49 are single-step. The difficulty lives almost entirely in
+**where the data is stored** — a list, a frequency table, a grouped table, a dot
+plot, a box plot, a bar graph, a histogram — which is why `representation_switch`
+appears here (7 items) after being nearly absent from the seven earlier files.
+
+### Repetition, across six sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | 51% |
+| triangles | 38% |
+| statistics | **37%** |
+
+37%–60% over six sets. The largest single family is the minimum-from-a-frequency-
+table item, **four times**.
+
+### The detector caught one coding inconsistency, and hid one true repeat
+
+Items 34 and 43 are the same item with different digits. They did not group,
+because I had coded their option sets as if their architectures differed; both
+are in fact {the mode, which is also the median} + {an extreme} + {a value the
+table cannot produce}. Coded consistently, they group.
+
+Items 9 and 46 are the same bar-graph question in multiple-choice and
+student-produced form. They stay distinct, and should: the multiple-choice
+version has a distractor architecture the other cannot have.
+
+**`same_construction_different_shape` hid a true repeat for the second corpus
+running.** `groupDuplicates` places only `duplicate_or_renumbered` and
+`near_duplicate`; a pair with an identical mathematical fingerprint but a
+different structural one is never grouped, whatever its similarity — 34 and 43
+sat at 0.929 and were invisible. That is a property of the grouping, not of the
+data, and it is now recorded twice.
+
+### Standing state
+
+CI **84/84 green** · 11 sources, 630 questions, 179 archetypes, 26 conflicts
+(**11** taxonomy + 15 source, all open) · 89 duplicate groups covering 224 of 630
+records. One validator catch — the prose guard on a 164-character note of my own
+— was fixed by shortening the note. That is the **sixth** time the copyright
+guard has fired on my own prose and the sixth time the prose was shortened rather
+than the guard loosened. `taxonomy.core.js`, the KDG, the generator, the EST
+system and every exam artifact are untouched.
+
+*Eighth ingestion, 2026-09-05.*
