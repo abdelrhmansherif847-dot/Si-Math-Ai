@@ -1,5 +1,60 @@
 {
   "schema_version": 1,
-  "note": "One row per ingested PDF. Question text is NOT here — see CORPUS_ROOT.",
-  "sources": []
+  "note": "One row per SOURCE BLOCK, not per file: a PDF may bind several sources with different provenance.",
+  "sources": [
+    {
+      "source_id": "S-001",
+      "source_file": "0f2ec69d-Exponents_103_Questions.pdf",
+      "sha256": "cdc15e64d10b1a46d94c0123f7203330b8363c10794001435f90aad710692e08",
+      "file_sha256": "cdc15e64d10b1a46d94c0123f7203330b8363c10794001435f90aad710692e08",
+      "bytes": 1543518,
+      "pages": 86,
+      "source_block": "A",
+      "block_label": "Exponents Real",
+      "page_from": 1,
+      "page_to": 4,
+      "questions": 15,
+      "title": "Exponents Real (compiled extract, guide pages 154-155)",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "15 per-question administration tags, section titled Real, https://t.me/satashkent linked on all four pages",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "telegram_channel",
+        "administration_tag",
+        "real_labelling",
+        "social_handle"
+      ],
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/cdc15e64d10b",
+      "registered": "2026-09-05",
+      "questions_coded": 15
+    },
+    {
+      "source_id": "S-002",
+      "source_file": "0f2ec69d-Exponents_103_Questions.pdf",
+      "sha256": "cdc15e64d10b1a46d94c0123f7203330b8363c10794001435f90aad710692e08",
+      "file_sha256": "cdc15e64d10b1a46d94c0123f7203330b8363c10794001435f90aad710692e08",
+      "bytes": 1543518,
+      "pages": 86,
+      "source_block": "B",
+      "block_label": "Questions / Answer Key",
+      "page_from": 5,
+      "page_to": 86,
+      "questions": 88,
+      "title": "Untitled question set, one item per page with skill labels",
+      "provenance": "unknown",
+      "provenance_confidence": "UNKNOWN",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "NOT_DIRECT_SOURCE",
+      "provenance_signals": [],
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/cdc15e64d10b",
+      "registered": "2026-09-05",
+      "questions_coded": 88
+    }
+  ]
 }

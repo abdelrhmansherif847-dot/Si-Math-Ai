@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'no
 import { createHash } from 'node:crypto';
 import { basename, join } from 'node:path';
 import * as S from './dsat-kb/schema.mjs';
+import { pageCount, provenanceScan, extractUris } from './dsat-kb/pdf.mjs';
 import * as R from './dsat-kb/registry.mjs';
 
 const args = process.argv.slice(2);
@@ -53,9 +54,8 @@ const name = basename(file);
 // Page count from the PDF's own page tree, and a text-layer probe. Both are
 // read from the bytes, so neither depends on a tool that may not be installed.
 const text = buf.toString('latin1');
-const countMatch = text.match(/\/Count\s+(\d+)/);
-const pages = countMatch ? Number(countMatch[1]) : null;
-const pageObjects = (text.match(/\/Type\s*\/Page[^s]/g) || []).length;
+const pc = pageCount(buf);
+const pages = pc.pages;
 const hasFont = /\/Font\b/.test(text);
 const hasImage = /\/Image\b/.test(text);
 const revisions = (text.match(/%%EOF/g) || []).length;
@@ -64,14 +64,10 @@ console.log(`file        ${name}`);
 console.log(`bytes       ${statSync(file).size}`);
 console.log(`sha256      ${sha256}`);
 console.log(`md5         ${md5}`);
-console.log(`pages       ${pages ?? '?'}${pageObjects && pages && pageObjects !== pages ? `  (page objects: ${pageObjects} — CHECK)` : ''}`);
+console.log(`pages       ${pages ?? '?'}  (via ${pc.method}${pc.agree ? ', both routes agree' : `; /Count=${pc.byCount} page objects=${pc.byType}`})`);
 console.log(`revisions   ${revisions}`);
 console.log(`text layer  ${hasFont ? 'present' : 'ABSENT — image-only, pages must be read visually'}`);
 console.log(`images      ${hasImage ? 'present' : 'none'}`);
-
-// ── 2. excluded sources ─────────────────────────────────────────────────────
-for (const x of S.EXCLUDED_SOURCES)
-  if (x.pattern.test(name)) fail(`"${name}" matches an excluded source pattern — ${x.why}`);
 
 // ── 3. provenance, with the no-silent-upgrade rule enforced here ────────────
 const provenance = opt('provenance') ?? 'unknown';
@@ -80,6 +76,22 @@ if (!S.PROVENANCE_IDS.includes(provenance))
 const evidence = opt('evidence') ?? '';
 if (S.provenanceNeedsEvidence(provenance) && !evidence.trim())
   fail(`provenance "${provenance}" requires --evidence="…". A source is never silently upgraded to official.`);
+
+// ── 2. content-level provenance scan (D-1, as corrected) ────────────────────
+// This CLASSIFIES. It does not discard: unofficial material is reference
+// knowledge, and refusing to read it would be the wrong kind of caution. The one
+// hard block is pinned by hash.
+const scan = provenanceScan({ buf, text: '', uris: extractUris(buf) });
+if (scan.hardExcluded) fail(`${scan.hardExcluded.what}: ${scan.hardExcluded.why}`);
+if (scan.signals.length) {
+  console.log('\nprovenance signals read from the file itself:');
+  for (const sg of scan.signals)
+    console.log(`  ${sg.id} x${sg.hits}  ${sg.means}  -> suggests ${sg.suggests}`);
+  console.log(`  suggested provenance: ${scan.suggestedProvenance}`);
+  if (scan.suggestedProvenance !== 'unknown' && provenance !== scan.suggestedProvenance)
+    console.log(`  NOTE: --provenance=${provenance} was given; the file's own content suggests ${scan.suggestedProvenance}.`);
+}
+
 
 const existing = R.rows('sources');
 const already = existing.find(s => s.sha256 === sha256);

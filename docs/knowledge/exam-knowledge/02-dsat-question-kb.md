@@ -130,14 +130,37 @@ any is deleted or silently closed.
 
 ---
 
-## 5. Provenance
+## 5. Provenance, use, and eligibility — four axes, not one
 
-Five levels, ranked, weakest first:
+**The correction of 2026-09-05:** provenance is metadata, not a prohibition.
+"Unofficial source" must never silently become "cannot be learned from". Four
+independent axes replace the old accept/reject decision:
+
+| axis | question it answers |
+|---|---|
+| `provenance` | where did it come from |
+| `provenance_confidence` | how well is that established |
+| `knowledge_use` | may the KB learn construction logic from it |
+| `generation_eligibility` | may the generator draw on it, and how directly |
+
+A record can be `provenance=recalled_unofficial`, `knowledge_use=REFERENCE`,
+`generation_eligibility=EXCLUDED` — fully analysed, never a direct source. The
+user controls eligibility; the system records it and never silently downgrades
+learning because a source is unofficial.
+
+`generation_eligibility` values: `EXCLUDED` · `NOT_DIRECT_SOURCE` · `APPROVED`.
+Marking recalled material `APPROVED` requires a recorded decision, which the gate
+checks.
+
+### 5.1 The levels
+
+Six levels, ranked, weakest first:
 
 | level | rank | evidence required |
 |---|--:|---|
 | `unknown` | 0 | no |
 | `third_party` | 1 | no |
+| `recalled_unofficial` | 1 | no |
 | `project_authored` | 1 | no |
 | `real_released_practice` | 2 | **yes** |
 | `official_college_board` | 3 | **yes** |
@@ -148,10 +171,17 @@ is refused by the pipeline before anything is written, and by CI afterwards.
 Re-running ingestion on an already-registered file cannot raise its provenance:
 that is a deliberate, evidenced edit, never a side effect.
 
-Some sources are excluded permanently and matched by pattern — leaked material,
-recalled live exams. The pipeline refuses them by filename before hashing
-finishes; this was tested against the actual leaked file in the uploads
-directory, and it refused.
+**Exclusion is now by content signal and by hash, not by filename.** The pipeline
+reads the file's own annotation URIs and text for signals — Telegram links,
+per-administration tags, "Real" labelling, social handles, College Board
+attribution — and each one *classifies* the source and suggests a provenance. It
+never discards. The one hard block that survives is pinned by **sha256** to the
+single artifact excluded by an earlier explicit instruction, so it cannot catch
+anything else by accident.
+
+The old filename-pattern guard is gone because the pilot proved it useless: the
+first PDF's name was `Exponents_103_Questions.pdf` and matched nothing, while its
+pages carried `https://t.me/satashkent` and fifteen administration tags.
 
 ---
 
@@ -387,5 +417,47 @@ on purpose.
 
 ---
 
-*Prepared 2026-09-05; reviewed and hardened the same day. Generator frozen,
-taxonomy frozen, corpus empty.*
+---
+
+## 16. Pilot: the exponents corpus
+
+The first ingestion, 2026-09-05. One PDF, **two source blocks**, 103 records.
+
+| | block A | block B |
+|---|---|---|
+| pages | 1–4 | 5–86 |
+| questions | 15 | 88 |
+| provenance | `recalled_unofficial` / OBSERVED | `unknown` / UNKNOWN |
+| evidence | per-question administration tags, section titled *Real*, Telegram link on every page | none — the layout resembles a question bank, which is not evidence |
+| knowledge_use | REFERENCE | REFERENCE |
+| generation_eligibility | EXCLUDED | NOT_DIRECT_SOURCE |
+
+**Neither block is a direct generation source, and both were fully analysed.**
+That is the correction working: the recalled block contributes construction
+knowledge without ever becoming a template.
+
+What the pilot changed in the layer itself:
+
+- **D-1** filename patterns → content signals plus one hash-pinned block.
+- **D-2** page counting through inflated object streams. The pilot file reported
+  `?` before; it is 86 pages.
+- **D-3** a source row is a *block* of a file, not a file.
+- The numeral guard now permits standalone `0` and `1`: the strict form rejected
+  the standard growth schematic `(1 + p)^x` itself.
+- An **unknown construction is never grouped as a duplicate** — two items whose
+  content did not survive extraction were being called the same question.
+
+Three defects the manual audit caught, all fixed:
+
+1. **The key was recorded as a distractor.** Option letters are gone entirely: a
+   distractor is a wrong route, and naming letters both mislabelled the key and
+   leaked it by omission.
+2. **One item was mis-archetyped** — a Roman-numeral range question filed as an
+   exponent evaluation.
+3. **Family-level signatures made the mathematical fingerprint a restatement of
+   the archetype id.** Every item in a family collided; the detector reported 21
+   groups covering nearly the whole corpus. Per-item structural constraints
+   brought it to 8 defensible groups.
+
+*Prepared 2026-09-05; reviewed, hardened and first-ingested the same day.
+Generator frozen, taxonomy frozen, 103 reference records.*

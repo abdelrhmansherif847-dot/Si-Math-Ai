@@ -94,6 +94,11 @@ export function gate({
   // ── sources ───────────────────────────────────────────────────────────────
   const sourceIds = new Set(sources.map(s => s.source_id));
   check(sourceIds.size === sources.length, 'SRC-DUPLICATE-ID', 'duplicate source_id in the source registry');
+  // Two blocks of one PDF legitimately share source_file and file hash; what must
+  // be unique is the (file, block) pair.
+  const blockKeys = sources.filter(s => s.source_block != null).map(s => `${s.file_sha256}#${s.source_block}`);
+  check(new Set(blockKeys).size === blockKeys.length, 'SRC-DUPLICATE-BLOCK',
+    'two source rows claim the same block of the same file');
   for (const s of sources) {
     check(S.SOURCE_ID_RE.test(s.source_id ?? ''), 'SRC-ID-FORMAT', `source id "${s.source_id}" is malformed`);
     check(/^[0-9a-f]{64}$/.test(s.sha256 ?? ''), 'SRC-NO-SHA256',
@@ -105,9 +110,27 @@ export function gate({
     if (S.provenanceNeedsEvidence(s.provenance))
       check((s.provenance_evidence ?? '').trim(), 'SRC-EVIDENCE-MISSING',
         `${s.source_id} claims "${s.provenance}" with no evidence — an unknown source is never silently upgraded`);
-    for (const x of S.EXCLUDED_SOURCES)
-      check(!x.pattern.test(s.source_file ?? '') && !x.pattern.test(s.title ?? ''),
-        'SRC-EXCLUDED', `${s.source_id} matches an excluded source pattern: ${x.why}`);
+    // D-1 as corrected: a source is CLASSIFIED, not discarded. The only hard
+    // block left is pinned by hash, so it cannot catch anything by accident.
+    const hard = S.HARD_EXCLUDED_SHA256.find(x => x.sha256 === s.sha256);
+    check(!hard, 'SRC-HARD-EXCLUDED', `${s.source_id} is ${hard?.what}: ${hard?.why}`);
+    check(S.KNOWLEDGE_USE.includes(s.knowledge_use), 'SRC-KNOWLEDGE-USE',
+      `${s.source_id} has knowledge_use "${s.knowledge_use}"`);
+    check(S.GENERATION_ELIGIBILITY.includes(s.generation_eligibility), 'SRC-GENERATION-ELIGIBILITY',
+      `${s.source_id} has generation_eligibility "${s.generation_eligibility}"`);
+    // Unofficial provenance never blocks learning, but it must not silently
+    // become a direct generation source either.
+    if (s.provenance === 'recalled_unofficial')
+      check(s.generation_eligibility !== 'APPROVED' || (s.provenance_evidence ?? '').trim(),
+        'SRC-APPROVED-WITHOUT-EVIDENCE',
+        `${s.source_id} is recalled/unofficial and marked APPROVED for direct generation with no recorded decision`);
+    // D-3: a source row is a BLOCK of a file, so its page range must be sane.
+    if (s.source_block != null) {
+      check(Number.isInteger(s.page_from) && Number.isInteger(s.page_to) && s.page_from <= s.page_to,
+        'SRC-BLOCK-RANGE', `${s.source_id} block ${s.source_block} has no valid page range`);
+      check(/^[0-9a-f]{64}$/.test(s.file_sha256 ?? ''), 'SRC-BLOCK-FILE-HASH',
+        `${s.source_id} block ${s.source_block} does not record the hash of the file it came from`);
+    }
     check(!(s.text ?? s.content ?? s.ocr), 'SRC-CARRIES-TEXT',
       `${s.source_id} carries extracted text; that belongs in the corpus`);
   }

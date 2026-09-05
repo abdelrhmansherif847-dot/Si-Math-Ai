@@ -36,6 +36,7 @@ function fixture(over = {}) {
     question_id: 'Q-001-p3-q7',
     source_id: 'S-001', source_file: 'fixture.pdf', source_page: 3, source_question_number: '7',
     provenance: 'third_party', provenance_confidence: 'OBSERVED',
+    knowledge_use: 'REFERENCE', generation_eligibility: 'NOT_DIRECT_SOURCE',
     exam: 'DSAT', topic: 'Linear Equations',
     taxonomy_subtopics: ['ALG_006'], knowledge_nodes: ['N-LINEQ'], kdg_confidence: 'INFERRED',
     representation: 'symbolic_algebraic', target_type: 'parameter',

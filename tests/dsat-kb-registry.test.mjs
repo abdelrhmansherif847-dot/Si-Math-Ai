@@ -11,7 +11,10 @@
 
 import { gate } from '../scripts/dsat-kb/gate.mjs';
 import { insideRepo, assertCorpusOutsideRepo, REPO_ROOT } from '../scripts/dsat-kb/registry.mjs';
-import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint }
+import { HARD_EXCLUDED_SHA256 } from '../scripts/dsat-kb/schema.mjs';
+import { pageCount, provenanceScan, inflateAll } from '../scripts/dsat-kb/pdf.mjs';
+import { readFileSync, existsSync } from 'node:fs';
+import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint, classifyPair }
   from '../scripts/dsat-kb/fingerprint.mjs';
 import { TAXONOMY_SUBTOPICS, KDG_NODE_IDS } from '../scripts/dsat-kb/schema.mjs';
 import { join } from 'node:path';
@@ -96,7 +99,8 @@ fires('STORE-MALFORMED-JSON', { storeIssues: [{ code: 'STORE-MALFORMED-JSON', me
 
 console.log('\n── sources: provenance, evidence, exclusion, identity ──');
 const src = (o = {}) => ({ source_id: 'S-001', source_file: 'f.pdf', sha256: 'a'.repeat(64),
-  provenance: 'third_party', provenance_confidence: 'OBSERVED', ...o });
+  provenance: 'third_party', provenance_confidence: 'OBSERVED',
+  knowledge_use: 'REFERENCE', generation_eligibility: 'NOT_DIRECT_SOURCE', ...o });
 fires('SRC-DUPLICATE-ID', { sources: [src(), src()] }, 'a duplicate source_id is rejected');
 fires('SRC-ID-FORMAT', { sources: [src({ source_id: 'nope' })] }, 'a malformed source id is rejected');
 fires('SRC-NO-SHA256', { sources: [src({ sha256: undefined })] }, 'a source with no sha256 is rejected');
@@ -106,10 +110,37 @@ fires('SRC-EVIDENCE-MISSING', { sources: [src({ provenance: 'official_college_bo
   'an official claim with no evidence is rejected — no silent upgrade');
 fires('SRC-EVIDENCE-MISSING', { sources: [src({ provenance: 'real_released_practice' })] },
   'a released-practice claim with no evidence is rejected');
-fires('SRC-EXCLUDED', { sources: [src({ source_file: 'leaked_march_2026.pdf' })] },
-  'a leaked source is rejected by pattern');
-fires('SRC-EXCLUDED', { sources: [src({ title: 'recalled live exam, Nov' })] },
-  'a recalled live exam is rejected by pattern');
+fires('SRC-HARD-EXCLUDED', { sources: [src({ sha256: HARD_EXCLUDED_SHA256[0].sha256 })] },
+  'the one hash-pinned hard exclusion still refuses that specific file');
+fires('SRC-KNOWLEDGE-USE', { sources: [src({ knowledge_use: 'whatever' })] },
+  'an invalid knowledge_use is rejected');
+fires('SRC-GENERATION-ELIGIBILITY', { sources: [src({ generation_eligibility: 'sure' })] },
+  'an invalid generation_eligibility is rejected');
+fires('SRC-APPROVED-WITHOUT-EVIDENCE',
+  { sources: [src({ provenance: 'recalled_unofficial', generation_eligibility: 'APPROVED' })] },
+  'recalled material marked APPROVED for direct generation needs a recorded decision');
+fires('SRC-BLOCK-RANGE', { sources: [src({ source_block: 'A', file_sha256: 'b'.repeat(64), page_from: 9, page_to: 2 })] },
+  'a source block with an inverted page range is rejected');
+fires('SRC-BLOCK-FILE-HASH', { sources: [src({ source_block: 'A', page_from: 1, page_to: 4 })] },
+  'a source block that does not record its file hash is rejected');
+fires('SRC-DUPLICATE-BLOCK', { sources: [
+  src({ source_id: 'S-001', source_block: 'A', file_sha256: 'c'.repeat(64), page_from: 1, page_to: 4 }),
+  src({ source_id: 'S-002', source_block: 'A', file_sha256: 'c'.repeat(64), page_from: 1, page_to: 4 })] },
+  'two rows claiming the same block of the same file are rejected');
+
+console.log('\n── unofficial provenance is CLASSIFIED, never discarded (the 2026-09-05 correction) ──');
+for (const p of ['unknown', 'third_party', 'recalled_unofficial']) {
+  const c = codes(gate(clean({ sources: [src({ provenance: p, provenance_confidence: p === 'unknown' ? 'UNKNOWN' : 'OBSERVED' })] })));
+  ok(c.length === 0, `provenance "${p}" is accepted as reference knowledge`);
+}
+{
+  const c = codes(gate(clean({ sources: [
+    src({ source_id: 'S-001', source_block: 'A', file_sha256: 'd'.repeat(64), page_from: 1, page_to: 4,
+      provenance: 'recalled_unofficial', generation_eligibility: 'EXCLUDED' }),
+    src({ source_id: 'S-002', source_block: 'B', file_sha256: 'd'.repeat(64), page_from: 5, page_to: 86,
+      provenance: 'unknown', provenance_confidence: 'UNKNOWN', generation_eligibility: 'NOT_DIRECT_SOURCE' })] })));
+  ok(c.length === 0, 'one file split into two blocks with different provenance is accepted (D-3)');
+}
 fires('SRC-CARRIES-TEXT', { sources: [src({ ocr: 'some extracted text' })] },
   'a source row carrying extracted text is rejected');
 {
@@ -128,7 +159,9 @@ const SIG = { objects: ['linear_equation'], relations: ['a*x + b = c'],
 const q = (o = {}) => {
   const base = {
     question_id: 'Q-001-p1-q1', source_id: 'S-001', source_file: 'f.pdf', source_page: 1,
-    provenance: 'unknown', provenance_confidence: 'UNKNOWN', exam: 'DSAT', topic: 'Linear Equations',
+    provenance: 'unknown', provenance_confidence: 'UNKNOWN',
+    knowledge_use: 'REFERENCE', generation_eligibility: 'NOT_DIRECT_SOURCE',
+    exam: 'DSAT', topic: 'Linear Equations',
     taxonomy_subtopics: ['ALG_006'], knowledge_nodes: ['N-LINEQ'],
     representation: 'verbal', target_type: 'value', archetype: 'A-UNCLASSIFIED',
     archetype_confidence: 'UNKNOWN', reasoning_mechanisms: [], distractor_logic: [],
@@ -199,6 +232,41 @@ fires('TEXT-FORBIDDEN-FIELD', { raw: { 'questions.json': '{"stem": "short"}' } }
 {
   const c = codes(gate(clean({ raw: { 'questions.json': '{"note":"table has 4 rows"}' } })));
   ok(c.length === 0, 'a short structural note in a store is accepted');
+}
+
+console.log('\n── D-2: page counting survives compressed cross-reference streams ──');
+{
+  // The pilot PDF reported "?" before this: its page tree is inside compressed
+  // object streams. Skipped rather than failed when the file is not present, so
+  // the suite stays green on a machine without the corpus.
+  const F = '/root/.claude/uploads/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/0f2ec69d-Exponents_103_Questions.pdf';
+  if (existsSync(F)) {
+    const buf = readFileSync(F);
+    const pc = pageCount(buf);
+    ok(pc.pages === 86, `a compressed-xref PDF counts 86 pages (got ${pc.pages})`);
+    ok(pc.agree === true, 'both counting routes agree once the streams are inflated');
+    ok(inflateAll(buf).length > 100000, 'inflateAll reaches the object streams (the endstream bug made this 516 bytes)');
+    const scan = provenanceScan({ buf, text: '[March US 2023] Exponents Real @handle' });
+    ok(scan.uris.includes('https://t.me/satashkent'), 'the annotation URI is recovered from the compressed streams');
+    ok(scan.signals.some(x => x.id === 'telegram_channel'), 'the Telegram signal is raised');
+    ok(scan.signals.some(x => x.id === 'administration_tag'), 'the administration-tag signal is raised');
+    ok(scan.suggestedProvenance === 'recalled_unofficial', 'the file is classified, not discarded');
+    ok(scan.hardExcluded === null, 'and it is not on the hash-pinned hard exclusion list');
+  } else {
+    ok(true, 'D-2 corpus file not present on this machine — page-count checks skipped');
+  }
+}
+
+console.log('\n── an unknown construction is never grouped as a duplicate ──');
+{
+  const unk = id => ({ question_id: id, structural_fingerprint: 'a'.repeat(16),
+    mathematical_fingerprint: 'b'.repeat(16), fingerprint_components: ['obj:UNKNOWN', 'rep:other'] });
+  ok(classifyPair(unk('Q-1'), unk('Q-2')).relation === 'unknown_construction',
+    'two items whose construction could not be read are not called duplicates');
+  const known = id => ({ question_id: id, structural_fingerprint: 'a'.repeat(16),
+    mathematical_fingerprint: 'b'.repeat(16), fingerprint_components: ['obj:linear', 'rep:other'] });
+  ok(classifyPair(known('Q-3'), known('Q-4')).relation === 'duplicate_or_renumbered',
+    'but two items with the same known construction still are');
 }
 
 console.log(`\n  ${passed} passed, ${failed} failed`);

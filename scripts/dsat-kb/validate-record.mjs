@@ -48,6 +48,8 @@ export function validateRecord(rec, ctx = {}) {
       at(`${field} "${rec[field]}" is not one of the bound values`);
   };
   inEnum('provenance', S.PROVENANCE_IDS);
+  inEnum('knowledge_use', S.KNOWLEDGE_USE);
+  inEnum('generation_eligibility', S.GENERATION_ELIGIBILITY);
   inEnum('exam', S.EXAMS);
   inEnum('representation', S.REPRESENTATIONS);
   inEnum('target_type', S.TARGET_TYPES);
@@ -120,6 +122,8 @@ export function validateRecord(rec, ctx = {}) {
     if (de.kind === 'INFERRED' && !(de.structural_basis ?? '').trim())
       at('difficulty is INFERRED with no structural basis — difficulty is explained by mechanisms, not by counting operations');
   }
+  if (rec.generation_eligibility === 'APPROVED' && !(rec.provenance_evidence ?? '').trim())
+    at('generation_eligibility APPROVED carries no provenance_evidence — direct use is a recorded decision, not a default');
   if (rec.archetype && !archetypeIds.has(rec.archetype))
     at(`archetype "${rec.archetype}" is not in the archetype registry`);
   if (rec.archetype_confidence === 'UNKNOWN' && rec.archetype && rec.archetype !== 'A-UNCLASSIFIED')
@@ -148,8 +152,17 @@ export function validateRecord(rec, ctx = {}) {
   }
   // The stored signature must already have its numerals erased, so the actual
   // printed numbers of a copyrighted item never enter the repository.
+  // The guard exists to stop an ITEM'S printed numbers entering the repository.
+  // 0 and 1 are structural — the 1 in (1 + p) is the growth-factor form, the 0 in
+  // (0, v) is a y-intercept — and are not data from any source, so standalone 0
+  // and 1 are permitted. Everything else must already be erased. The pilot found
+  // this: the strict form rejected the standard exponential schematic itself.
   for (const r of rec.mathematical_signature?.relations ?? []) {
-    if (/\d/.test(String(r).replace(/\^\d+/g, '').replace(/#/g, '')))
+    const stripped = String(r)
+      .replace(/\^\d+/g, '')     // exponent notation, e.g. x^2
+      .replace(/#/g, '')          // the erase token
+      .replace(/\b[01]\b/g, ''); // structural zero and one, standalone only
+    if (/\d/.test(stripped))
       at(`mathematical_signature relation "${r}" still carries literal numerals — store the erased schematic only`);
   }
 

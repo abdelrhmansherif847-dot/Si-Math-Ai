@@ -125,7 +125,15 @@ export const SIMILARITY_THRESHOLDS =
 // The relation a pair stands in. Ordered most specific first; the first match
 // wins. `renumbered` is the interesting one — identical mathematics, identical
 // shape, different printed numbers — and it is exactly what a text hash misses.
+// A record whose construction could not be determined carries objects:['UNKNOWN'].
+// Two such records share a fingerprint because both are empty, not because they
+// are the same question — the pilot produced two spurious groups that way. An
+// unknown construction cannot be asserted equal to anything.
+const unknownConstruction = r => (r.fingerprint_components ?? []).includes('obj:UNKNOWN');
+
 export function classifyPair(a, b) {
+  if (unknownConstruction(a) || unknownConstruction(b))
+    return { relation: 'unknown_construction', similarity: 0 };
   const sameS = a.structural_fingerprint === b.structural_fingerprint;
   const sameM = a.mathematical_fingerprint === b.mathematical_fingerprint;
   const sim = jaccard(a.fingerprint_components ?? [], b.fingerprint_components ?? []);

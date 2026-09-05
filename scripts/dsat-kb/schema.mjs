@@ -42,6 +42,10 @@ export const EXAM_TOPICS = {
 export const PROVENANCE = [
   { id: 'unknown', rank: 0, needsEvidence: false, label: 'Unknown' },
   { id: 'third_party', rank: 1, needsEvidence: false, label: 'Third-party' },
+  // Attributed to live administrations by an unofficial compiler. A REAL grade,
+  // not a euphemism: it says what the material is, and says nothing about
+  // whether the KB may learn from it.
+  { id: 'recalled_unofficial', rank: 1, needsEvidence: false, label: 'Recalled / unofficial' },
   { id: 'project_authored', rank: 1, needsEvidence: false, label: 'Project-authored' },
   { id: 'real_released_practice', rank: 2, needsEvidence: true, label: 'Real released / practice DSAT' },
   { id: 'official_college_board', rank: 3, needsEvidence: true, label: 'Official College Board / official DSAT' },
@@ -50,12 +54,52 @@ export const PROVENANCE_IDS = PROVENANCE.map(p => p.id);
 export const provenanceRank = id => PROVENANCE.find(p => p.id === id)?.rank ?? -1;
 export const provenanceNeedsEvidence = id => !!PROVENANCE.find(p => p.id === id)?.needsEvidence;
 
-// Sources the project has ruled out permanently. A record naming one of these
-// is a hard failure, not a provenance grade.
-export const EXCLUDED_SOURCES = [
-  { pattern: /leaked/i, why: 'leaked material is excluded from the corpus permanently' },
-  { pattern: /elitex|bluebook.?leak/i, why: 'the leaked March 2026 file is excluded permanently' },
-  { pattern: /recalled.?(live|exam)/i, why: 'recalled live exams are not permitted reference material' },
+// ── knowledge use and generation eligibility ─────────────────────────────────
+// The correction of 2026-09-05: provenance is METADATA, not a prohibition.
+// "Unofficial source" must never silently become "cannot be learned from". Four
+// independent axes replace the single reject/accept decision:
+//
+//   provenance             where it came from
+//   provenance_confidence  how well that is established
+//   knowledge_use          may the KB learn construction logic from it
+//   generation_eligibility may the generator draw on it, and how directly
+//
+// A record can be provenance=recalled_unofficial, knowledge_use=REFERENCE,
+// generation_eligibility=EXCLUDED: fully analysed, never a direct source.
+export const KNOWLEDGE_USE = ['REFERENCE', 'REFERENCE_ONLY'];
+
+export const GENERATION_ELIGIBILITY = [
+  'EXCLUDED',            // never a direct source; construction knowledge only
+  'NOT_DIRECT_SOURCE',   // may inform construction, never be reproduced or renumbered
+  'APPROVED',            // the user has explicitly authorised direct use
+];
+
+// Signals read from a file's CONTENT, not its name. They CLASSIFY, they do not
+// discard — that is the D-1 correction. Each signal raises a provenance
+// question and suggests a generation_eligibility; none of them blocks ingestion.
+export const PROVENANCE_SIGNALS = [
+  { id: 'telegram_channel', pattern: /t\.me\/|telegram/i, where: 'uri|text',
+    means: 'distributed through a Telegram channel', suggests: 'recalled_unofficial' },
+  { id: 'administration_tag', pattern: /\[(January|March|April|May|June|August|October|November|December)(\s+US)?\s+20\d{2}\]/,
+    where: 'text', means: 'questions attributed to named live administrations', suggests: 'recalled_unofficial' },
+  { id: 'real_labelling', pattern: /\b(Real|Recalled|Actual)\s+(SAT|Test|Exam|Questions?)\b|\bReal\s*$/m,
+    where: 'text', means: 'material labelled as real/recalled exam content', suggests: 'recalled_unofficial' },
+  { id: 'social_handle', pattern: /@[A-Za-z0-9_]{4,32}/, where: 'text',
+    means: 'an individual or channel handle appears as a watermark', suggests: 'third_party' },
+  { id: 'official_attribution', pattern: /College\s*Board|collegeboard\.org|satsuite/i, where: 'uri|text',
+    means: 'explicit College Board attribution', suggests: 'official_college_board' },
+];
+
+// The ONE hard block that survives, and it is pinned by hash rather than by a
+// filename pattern so it cannot catch anything else by accident. The March 2026
+// Bluebook file was excluded by an explicit, separate instruction; the scope
+// correction of 2026-09-05 widened what may be LEARNED FROM and did not revisit
+// that specific artifact. If it should now be admitted, that is a decision to
+// take deliberately, not a side effect.
+export const HARD_EXCLUDED_SHA256 = [
+  { sha256: 'feed3619ed8846f106a8a8bd6d1e666a98e61cb25af1c3e166e5522de9f42b9e',
+    what: '2026_March_USA_EliteXSAT.pdf',
+    why: 'excluded permanently by explicit instruction, predating the scope correction' },
 ];
 
 // ── confidence ───────────────────────────────────────────────────────────────
@@ -208,14 +252,16 @@ export function looksLikeSourceText(value) {
 export const QUESTION_RECORD_FIELDS = {
   required: [
     'question_id', 'source_id', 'source_file', 'source_page', 'provenance',
-    'provenance_confidence', 'exam', 'topic', 'taxonomy_subtopics',
+    'provenance_confidence', 'knowledge_use', 'generation_eligibility',
+    'exam', 'topic', 'taxonomy_subtopics',
     'knowledge_nodes', 'representation', 'target_type', 'archetype',
     'archetype_confidence', 'reasoning_mechanisms', 'distractor_logic',
     'difficulty_evidence', 'difficulty_confidence', 'answer_structure',
     'stimulus_type', 'structural_fingerprint', 'mathematical_fingerprint',
   ],
   optional: [
-    'source_question_number', 'mathematical_signature', 'provenance_evidence', 'subtopic_note', 'secondary_knowledge_nodes',
+    'source_question_number', 'source_block', 'source_label', 'source_administration',
+    'mathematical_signature', 'provenance_evidence', 'subtopic_note', 'secondary_knowledge_nodes',
     'prerequisite_nodes', 'kdg_confidence', 'representation_transition',
     'step_count', 'stimulus_id', 'duplicate_group', 'near_duplicate_group',
     'fingerprint_components', 'source_notes', 'observed_notes',
