@@ -744,3 +744,127 @@ generator, the EST system and every exam artifact are untouched; ESTM1's payload
 md5 is unchanged.
 
 *Third ingestion, 2026-09-05.*
+
+---
+
+## 19. Closeout: the polynomials corpus
+
+Two files, three source rows, **130 records** — which is exactly the number the
+set was named for. 28 + 49 + 53 = 130, and the arithmetic is the completeness
+evidence: the answer key covers only the 102 question-bank items, so the "130"
+in the set's name counts the administration-tagged block too. Nothing is
+outstanding.
+
+| | S-003 | S-004 | S-005 |
+|---|---|---|---|
+| file | part 1, pp 1–6 | part 1, pp 7–55 | part 2, pp 1–56 |
+| questions | 28 | 49 | 53 |
+| block | A | B | B *(continues S-004)* |
+| provenance | `recalled_unofficial` / OBSERVED | `unknown` | `unknown` |
+| eligibility | REFERENCE / **EXCLUDED** | REFERENCE / **NOT_DIRECT_SOURCE** | REFERENCE / **NOT_DIRECT_SOURCE** |
+
+**No polynomial record is a generation source.** All 130 are reference
+knowledge, which is the corrected model working exactly as specified: the
+material is analysed in full and never becomes a template.
+
+### What the source calls it, and what it is
+
+`observed_topic` holds the source's own words for all 130 — `polynomials` (28),
+`equivalent_expressions` (102). The coded topic disagrees for 27 of them, and
+that disagreement is recorded rather than resolved:
+
+| coded topic | records | frozen subtopics reached |
+|---|---|---|
+| Polynomials | 103 | ALG_004 |
+| Exponential Functions | 17 | ALG_002, ALG_003, ALG_011 |
+| Linear Equations | 10 | ALG_006 |
+
+Eight KDG nodes are reached: N-POLY and N-FACTOR (93 each), then N-RADICAL (12),
+N-LINEQ and N-RATEXP (10 each), N-EXPON (4), N-EXPLOG and N-FUNC (1). **The
+taxonomy was not touched and the KDG was not touched.** 42 records carry
+`SOURCE_CONFLICT`, 26 `KDG_MAPPING_CONFLICT`, 16 `TOPIC_CLASSIFICATION_CONFLICT`;
+80 carry none.
+
+### Six source conflicts, all open
+
+`SRC-0001` a uniform Skill label over a block that is 36% something else ·
+`SRC-0002` pre-2024 paper phrasing on 17 items, which is why provenance stays
+`unknown` · `SRC-0003` a *Polynomials* heading over an exponential model ·
+`SRC-0004` a stem naming a constant its printed function does not carry ·
+`SRC-0005` an answer depending on an unstated multiplicity · `SRC-0006` an
+answer key mangled by a spreadsheet.
+
+None is resolved. **Nothing was silently repaired** — the item with the dropped
+symbol still has it dropped, because correcting it would erase the evidence that
+this source drops symbols.
+
+### What 130 items were worth
+
+**33 constructions.** The head is thin and the tail is long: the top five
+archetypes cover 70 of 130 records, while 11 constructions appear once and 8
+appear twice. A corpus this size buys breadth of *shape*, not depth per shape.
+
+Load-bearing mechanisms are dominated by `trap_cost` (82) — in this material the
+option set is usually where the difficulty lives — then `filtering` (20),
+`multiconcept` (18), `reversal` (17), `hidden_step` (15).
+
+Step counts run 1–5 (median 2). **`step_count` is a time-budget descriptor and
+not a difficulty claim**: `difficulty_confidence` is UNKNOWN for all 130, because
+the one source that printed a Difficulty field left it empty on every page.
+
+Diversity, measured: 119 distinct mathematical fingerprints and 72 distinct
+structural fingerprints across 130 records. 19 records (14%) sit inside a
+duplicate group — 9 groups, of which **2 are cross-file and 2 cross-block**. The
+"smallest constant in a linear factor of a cubic" construction appears three
+times across two files and two provenance blocks, twice on the same quadratic.
+
+### What the two files changed in the layer itself
+
+Each file exposed one defect, both of the same species — a check that could not
+have gone red:
+
+1. **Part 1: four of five D-1 provenance signals were dead code.** The pipeline
+   passed `provenanceScan` an empty string; the only test covering them handed
+   the scanner its own answer. A file announcing its provenance 28 times scanned
+   as carrying none. Fixed with a text probe that *reports how much it could
+   read* rather than reporting silence.
+2. **Part 2: the fingerprint read the source's letters.** `eraseNumerals`
+   erased the numbers a source picks and not the symbols. Two identical literal
+   equations had been filed as different mathematics since the pilot. Fixed with
+   `eraseNames`, measured across all 233 records before adopting: two groups
+   merged, both true, none split.
+
+Plus one model extension, forced by the material and no wider: **a source block
+can span files** (`continues` / `continued_by`). The second half of a
+compilation is not a new source.
+
+### The audit
+
+**All 130 polynomial records have an independently checked answer, and every one
+agrees.** Block A's 28 against its own printed key (16 of them re-derived
+symbolically, the rest against the printed options); all 102 question-bank items
+against the key that arrived with part 2 — 49 of them *after* they had been coded
+and committed blind. 13 student-produced-response items are machine-checked with
+exact rational arithmetic. Nothing in the coding had to be revised as a result.
+
+**The exponents pilot's 103 records are NOT in that figure**, and this closeout
+is where that becomes visible. No key was used for them. S-002's own block label
+is *"Questions / Answer Key"*, so a key may well sit in that file unread — which
+would make the same after-the-fact check available for the pilot corpus that
+part 2's key made available here. Recorded as open, not done: it is a separate
+piece of work on a closed ingestion, and inventing a verification claim for it
+would be worse than naming the gap.
+
+Six coding errors were found by hand-audit and fixed across the two ingestions,
+the largest being a symmetry stated backwards in an archetype that claimed
+simultaneous equations nobody has to solve.
+
+### Standing state at closeout
+
+CI **84/84 green** · 5 sources, 233 questions, 46 archetypes, 14 conflicts
+(8 taxonomy + 6 source, **all open**) · longest string in `questions.json` 149
+characters · no question text, no answer key and no option letter in this
+repository. `taxonomy.core.js`, the KDG, the generator, the EST system and every
+exam artifact are untouched; ESTM1's payload md5 is unchanged.
+
+*Polynomials closed 2026-09-05. The next topic starts from this state.*

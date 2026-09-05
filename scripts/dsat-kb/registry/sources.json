@@ -83,7 +83,11 @@
    "provenance_signals": [
     "administration_tag"
    ],
-   "questions_coded": 28
+   "questions_coded": 28,
+   "answer_key_pages": [
+    6
+   ],
+   "answer_key_covers": "its own 28 items, by item number"
   },
   {
    "source_id": "S-004",

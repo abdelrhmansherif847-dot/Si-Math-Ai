@@ -95,10 +95,10 @@
    "kind": "SOURCE_CONFLICT",
    "opened": "2026-09-05",
    "status": "open",
-   "about": "the Skill label printed on all 49 pages of S-004 against what the items test",
-   "statement_a": "every page of block B prints Domain \"Advanced Math\" and Skill \"Equivalent expressions\"",
-   "statement_b": "8 of the 49 test exponent rules or radicals, 7 manipulate rational expressions, 3 are one- or two-step linear collections",
-   "why": "the label is uniform across a block whose contents are not; 11 are coded to another topic and the 7 rational ones need a KDG node the Polynomials mapping does not carry",
+   "about": "the Skill label printed on all 102 pages of the S-004/S-005 block against what the items test",
+   "statement_a": "every page of the block prints Domain \"Advanced Math\" and Skill \"Equivalent expressions\", across both files",
+   "statement_b": "16 of the 102 test exponent rules or radicals, 10 manipulate rational expressions, 10 are one- or two-step linear collections",
+   "why": "the label is uniform across a block whose contents are not; 26 are coded to another topic and the 10 rational ones need a KDG node the Polynomials mapping does not carry",
    "resolution": "NONE. The label is preserved verbatim as observed_topic and source_label; the coded topic is separate and neither is edited to agree."
   },
   {
@@ -106,9 +106,9 @@
    "kind": "SOURCE_CONFLICT",
    "opened": "2026-09-05",
    "status": "open",
-   "about": "whether block B is Digital SAT material at all",
+   "about": "whether the S-004/S-005 block is Digital SAT material at all",
    "statement_a": "every page prints Assessment \"SAT\" and the question-bank field layout, and the bank carries Digital SAT items",
-   "statement_b": "7 items refer to \"the expression above\" or \"the polynomial above\", the pre-2024 paper layout in which a stimulus sat above the stem; the Digital SAT wording is \"the given expression\"",
+   "statement_b": "17 items across the block refer to a stimulus printed \"above\" them, the pre-2024 paper layout; the Digital SAT wording is \"the given expression\"",
    "why": "the metadata does not distinguish the paper SAT from the Digital SAT, and the wording points the other way for part of the block",
    "resolution": "NONE. Provenance stays \"unknown\" with confidence UNKNOWN, and generation_eligibility stays NOT_DIRECT_SOURCE. The observation is recorded on the affected records."
   },
