@@ -452,6 +452,83 @@
       "statement_b": "the figure labels those five lines a, b, c, d and e, and the letter d also names one of the marked angles in the prose",
       "why": "one defect printed twice, which is itself the evidence that item 104 is a reprint rather than a re-authoring. A solver has to guess which \"d\" the given refers to",
       "resolution": "NONE. Both copies are coded identically and both carry the note; the mismatch is recorded on the conflict rather than repaired in the record."
+    },
+    {
+      "conflict_id": "SRC-0030",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "how many documents the inequalities file is",
+      "statement_a": "the filename describes two parts, 96 real and 70 question bank",
+      "statement_b": "it is THREE documents: a typeset extract of 56 tagged items, a scanned worksheet of 40 renumbered from 1, and a 70-page bank export",
+      "why": "the first three-block file in the corpus. D-3 already says a source row is a block; this is the first file needing THREE, and the middle one is the block the filename does not admit exists",
+      "resolution": "NONE. Registered as S-018, S-019 and S-020, each with its own provenance state."
+    },
+    {
+      "conflict_id": "SRC-0031",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "what \"96 REAL\" claims",
+      "statement_a": "the filename asserts 96 real administered questions",
+      "statement_b": "56 carry an administration tag; the other 40 are a scan with no tag, no heading and no signal",
+      "why": "provenance is read from content, never from a filename (D-1). Here the claim \"real\" is split ACROSS a block boundary: evidenced for part of itself, unevidenced for the rest",
+      "resolution": "NONE. S-018 is recalled_unofficial / OBSERVED; S-019 and S-020 are unknown / UNKNOWN and NOT_DIRECT_SOURCE."
+    },
+    {
+      "conflict_id": "SRC-0032",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the text layer of block A2",
+      "statement_a": "the block has a text layer and the extractor returns text for all ten of its pages",
+      "statement_b": "that text is OCR of a photocopy: the relation symbol comes through as a tilde and the digit one as a letter l or a bracket",
+      "why": "a pipeline trusting the layer would mis-read forty items without failing anywhere. S-016 block B had NO text and was obviously visual; this block is the dangerous case because it looks fine",
+      "resolution": "NONE. All forty items were read from 125-dpi page renders instead, and the layer is recorded as unreliable on the S-019 row."
+    },
+    {
+      "conflict_id": "SRC-0033",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the count of distinct items in block B",
+      "statement_a": "the filename claims 70 question-bank items and 70 pages are printed",
+      "statement_b": "the 70 pages carry 69 distinct ids: one id is printed on two consecutive pages that are identical down to their four answer tables",
+      "why": "the id is the export’s own identifier, so the file contradicts itself mechanically. Found by counting ids before any page was read",
+      "resolution": "NONE. Both pages are coded, both carry the id, and the question ids differ by page."
+    },
+    {
+      "conflict_id": "SRC-0034",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "two items of block A1 printed twice under different administration tags",
+      "statement_a": "every block A1 item carries a tag naming the administration it came from",
+      "statement_b": "items 43 and 56 are one item under two tags, and items 27 and 40 are another such pair",
+      "why": "the tag IS this block’s provenance evidence, so identical items under different tags means at least one tag is wrong — the tags are a compiler’s annotation, not a record",
+      "resolution": "NONE. Both copies keep the tag as printed; the disagreement is recorded here rather than resolved by choosing one."
+    },
+    {
+      "conflict_id": "SRC-0035",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "printed defects in two items",
+      "statement_a": "each multiple-choice item prints four options labelled A, B, C and D, and each stem states its own numbers",
+      "statement_b": "block A1 item 45 labels two options C and none D; block B page 86 prints 4,332 in an option whose stem says 4,334",
+      "why": "both are checkable from the page alone, which matters because this file prints NO answer key to disagree with",
+      "resolution": "NONE. Both items are coded on their construction and carry SOURCE_CONFLICT."
+    },
+    {
+      "conflict_id": "SRC-0036",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "how much of the file is a reprint of the rest of it",
+      "statement_a": "the filename claims 166 questions and 166 items are printed",
+      "statement_b": "twenty cross-block groups place 35 A1 items, 18 A2 items and 26 B items together, and 98 of the 166 records sit in some group",
+      "why": "the three blocks were compiled independently and overlap heavily: A2 reprints A1 verbatim in at least eight places and B reprints both. Counting printed items would over-count this source",
+      "resolution": "NONE. All 166 are coded and the groups carry the relation; which copy a future reader meets is itself a fact about the source."
     }
   ]
 }

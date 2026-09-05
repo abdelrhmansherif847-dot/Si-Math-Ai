@@ -2118,3 +2118,149 @@ S-017's 27 per cent. Block A is the block that gets reprinted, so nearly every
 item in it has a twin somewhere; block B is where the copies land, diluted among
 eighty-seven items that appear once. The file-level figure averages those two
 facts into neither of them.
+
+## 30. Fourteenth ingestion: the inequalities corpus — and the first topic the library could not predict
+
+`32e47afd-Inequalities_166_QUESTIONS_96_REAL__70_QUESTION_BANK.pdf` — sha256
+`f8b795e1c71b…`, 2,900,781 bytes, **93 pages**, read from the page tree with both
+routes agreeing and confirmed independently by PyMuPDF. Registered as **three**
+sources, the first file in the programme to need three:
+
+| | S-018 | S-019 | S-020 |
+|---|---|---|---|
+| pages | 1–13 | 14–23 | 24–93 |
+| items | 56 | 40 | 70 |
+| form | typeset extract | **scanned worksheet** | bank export |
+| heading | "Linear Inequalities" | none | none |
+| per-item metadata | a named administration | nothing | an eight-character id |
+| numbering | 1–56 | **restarts at 1**–40 | one per page |
+| provenance | `recalled_unofficial`, **OBSERVED** | `unknown`, **UNKNOWN** | `unknown`, **UNKNOWN** |
+| generation | EXCLUDED | NOT_DIRECT_SOURCE | NOT_DIRECT_SOURCE |
+
+56 + 40 + 70 = 166, and 56 + 40 = 96. **The filename's arithmetic is exact and
+its structure is wrong**: it describes two parts where there are three, and the
+part it does not admit exists is the one with no provenance at all. Registered as
+**SRC-0030** and **SRC-0031**.
+
+**No answer key anywhere in 93 pages** — the third such file in a row. Eighteen of
+the 166 are student-produced responses whose answers cannot be checked.
+
+### The library predicted almost none of it
+
+Thirteen files and 905 records had produced **no `A-INEQ-*` archetype at all**.
+This file needed 37 new constructions, and **165 of its 166 records land on one of
+them**. The single record that reuses an existing archetype is a triangle
+inequality item — `A-TRI-INEQUALITY`, from the lines-and-angles corpus.
+
+The measurement that says the same thing from the other side: against the other
+905 records there is **exactly one cross-file pair at or above 0.60 similarity**,
+and it is that triangle item. The previous ingestion produced 57 such pairs. This
+corpus is very nearly disjoint from everything before it — not because the
+fingerprints failed, but because the topic genuinely had not appeared.
+
+That is the first useful negative result the library has produced. Its value is
+not that it filled a gap; it is that the gap was **visible in advance** from the
+archetype ids, and would have been visible to anyone asking "what can this corpus
+generate?" before a single item was read.
+
+### The scanned block is the dangerous kind of unreadable
+
+Block A2 has a text layer and the extractor returns text for all ten of its
+pages. That text is OCR of a photocopy: the relation symbol comes through as a
+tilde, the digit one as a letter l or a bracket. **A pipeline that trusted the
+layer would have mis-read forty items and failed nowhere.**
+
+Contrast S-016 block B, whose pages carried 16 to 130 characters each: obviously
+image-only, obviously requiring a visual read. This block is worse precisely
+because it looks fine. All forty items were read from 125-dpi renders instead,
+and the layer is recorded as unreliable on the S-019 row. **SRC-0032.**
+
+The rule this adds to D-2: *the presence of a text layer is not evidence that the
+text layer is the document.*
+
+### Three defects the file can be convicted of without a key
+
+1. **Block B prints 70 pages carrying 69 ids.** `d8539e09` appears on pages 64
+   and 65, and the two pages are identical down to their four answer tables.
+   Found by counting ids before a single page was read. **SRC-0033.**
+2. **Two block A1 items appear twice under different administration tags** —
+   items 43 and 56, and items 27 and 40. The tag is this block's only provenance
+   evidence, so identical items bearing different tags means at least one tag is
+   wrong. It does not make the block unreliable; it makes the tags a compiler's
+   annotation rather than a record. **SRC-0034.**
+3. **Two printed defects**: block A1 item 45 labels two of its options C and none
+   D; block B page 86 prints 4,332 inside an option whose stem says 4,334.
+   **SRC-0035.**
+
+### The three blocks overlap heavily
+
+Twenty cross-block duplicate groups place **35 block A1 items, 18 block A2 items
+and 26 block B items** together, and **98 of the 166 records sit in some group**.
+Block A2 reprints block A1 verbatim in **eleven** places — its items 11, 14, 18,
+19, 21, 23, 28, 35, 36, 37 and 38 are block A1 items word for word, better than a
+quarter of the block — and block B reprints both. **SRC-0036.**
+
+Split by block, the share of records in a group runs **S-018 79 per cent, S-019
+50 per cent, S-020 49 per cent**. S-018's 79 per cent is the second-highest of
+any source in the corpus, after S-016's 82 per cent, and for the same reason: it
+is the block the other two copy from.
+
+### The duplicate detector found four defects in my own coding
+
+Not in the file. Four helpers asserted a shared signature across items that do
+not share a construction, and the detector produced groups of fourteen, ten, six
+and six that said so:
+
+1. **`tableMember`** collapsed three constructions — a single inequality in
+   slope-intercept form, one in standard form whose four options permute the
+   *pairing* of a fixed set of numerals, and a *system* that doubles every row.
+2. **`graphParam`** collapsed recovering one constant with recovering two and
+   summing them.
+3. **`valueInRange`** collapsed testing values against a stated range with
+   testing them against a range that must be built first.
+4. **`systemModel`** collapsed a capacity-plus-ratio system with a
+   capacity-plus-weighted-total one.
+
+All four are now branches on the same helper rather than one signature. The group
+count ROSE, from 25 to 28, which is the right direction: splitting one false
+group of fourteen into three true ones of ten, three and one makes more groups
+and fewer wrong claims. The lesson carried forward from
+the lines-and-angles ingestion held again: **a helper shared between two things
+that differ is the same defect as a second copy of a file.**
+
+Two further findings came from the mechanical scans rather than the detector: the
+schema refused a `source_item_id` field I had invented for block B's eight-character
+ids — the established convention, set by S-010, puts them in
+`source_question_number` — and the copyright guard fired on five notes and
+counterfactuals, which were shortened rather than the guard being widened. That
+is now the tenth occurrence of that guard firing on my own prose across the
+programme.
+
+### An off-by-one I would not have caught by reading
+
+Three block B readings were persisted one page along from where they belonged,
+because I assigned them by the order I had queued the renders rather than by the
+page. The error was invisible in the readings themselves — every entry was a
+correct description of *some* page.
+
+What caught it was noticing that two consecutive pages seemed to carry the same
+item. The fix was to make the readings self-checking: every block B entry now
+carries the eight-character id its page prints, and `checkB.mjs` refuses any entry
+whose id disagrees with the page it claims, or whose ordinal is not the page less
+twenty-three. It reported `OK 70 readings, every id matches the page it claims`
+before any coding began.
+
+### What the numbers are
+
+| | before | after |
+|---|---|---|
+| sources | 17 | **20** |
+| questions | 905 | **1,071** |
+| archetypes | 254 | **291** |
+| conflicts | 41 | **48**, all open |
+| duplicate groups | 143 | **171** |
+| CI checks | 84 | **84**, green |
+
+The corpus passes a thousand coded questions with this ingestion. It now covers
+fourteen files across algebra, geometry, statistics, probability and — as of
+today — inequalities.

@@ -284,6 +284,10 @@ export const OBSERVED_TOPICS = [
   // is a general geometry pool rather than more lines and angles.
   'lines_and_angles',
   'geometry',
+  // seen in the inequalities corpus, 2026-09-05. Block A1's section heading
+  // only: block A2 is an untitled scan and block B a bank export, so both
+  // observe UNKNOWN however plainly a reader can see what they are about.
+  'linear_inequalities',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────
