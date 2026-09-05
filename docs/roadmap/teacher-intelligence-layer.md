@@ -8349,3 +8349,97 @@ same lesson twice.**
    and `.reveal` mutants died *at the slice* rather than at the checks written
    to catch them. It now anchors on the id and walks back. **A check only
    reachable when nothing is wrong is not a check.**
+
+### 17.18 · A2.1 — Assignments in the sidebar (2026-09-05)
+
+A1 gave the dashboard a permanent door. **A2.1 puts the destination in the
+sidebar**, so it is reachable from anywhere a student already is rather than
+from one card on one page.
+
+#### 17.18.1 · The four decisions
+
+- **D1 — no unfreeze.** Nine non-frozen student pages only. `mock-exam.html`,
+  `weakness.html` and `focus.html` carry a sidebar and are frozen; a nav link is
+  not a reason to break a freeze. **A2.2 is the separate decision.**
+- **D2 — immediately after History**, never beside Mock Exams. Placing it there
+  would pre-answer A3.
+- **D3 — test strategy (b): presence plus a named exception list.** Not full
+  parity.
+- **D4 — the label is exactly `Assignments`**, linking to `assignments.html`.
+
+#### 17.18.2 · What the audit measured, and what A2.1 does with it
+
+**[measured]** The 17 pages carrying a sidebar contain **twelve distinct link
+sets**. An earlier estimate of "five ways" was wrong twice over: it compared
+sorted sets, and it assumed `class` precedes `href`, which several pages do not
+do. Read in document order and order-agnostically, the drift is twelve.
+
+**A2.1 fixes none of it.** `chat.html` still swaps focus and weakness;
+`history.html` still moves mock-exam to third and omits support; `support.html`
+still carries an extra admin link; `weakness.html` still ships a literal
+`href="#"` where its own self-link belongs — a live defect A2.1 surfaces and, being
+frozen, cannot touch. Normalising the rails is a different increment and needs
+its own approval.
+
+**The freeze is policy, not machinery.** **[measured]** Nothing hashes the
+frozen files. Two files honour the rule — `scripts/normalize-tokens.mjs` skips
+them, `scripts/validate-tokens.mjs` exempts them from a `--font-*` rule — and
+neither would notice a new nav item. **Editing a frozen page would pass CI
+silently**, which makes the convention the only protection and D1 a decision
+rather than a constraint.
+
+**`nav.js` is untouched, and that is a measurement.** `STAFF_NAV_KEEP` is a
+*hide*-list applied only when the account is active staff, so a new student link
+is hidden for staff automatically and left alone for students — the behaviour
+`tests/staff-nav.test.mjs` already pins. No keep-list entry, no code change.
+
+#### 17.18.3 · The implementation
+
+One `<a class="nav-item" href="assignments.html">` per page, on nine pages,
+inserted directly after each page's own History item. **Four distinct markup
+styles were measured across those nine** — single-line, block, `href`-before-
+`class`, and one using `<span class="nav-label">` — and each page received the
+item **in its own local style**. Imposing one style would have been sidebar
+normalisation, which D3 excludes.
+
+Every page gained **exactly one** item and **no existing position moved**:
+asserted per page against its own pinned rail, not against the other pages.
+
+#### 17.18.4 · How it is proved
+
+`tests/assignments-nav.test.mjs`, **24 checks**, new. It asserts coverage
+(every covered page carries exactly one visible, correctly-labelled link
+directly after History), completeness (**every** sidebar page is either covered
+or excepted, and none is both), and containment (no frozen page gained it,
+`nav.js` is unchanged, Mock Exams keeps its own entry so A3 stays open).
+
+The **exception list is the artifact**: eight pages named with reasons — three
+frozen, five staff — so the drift is recorded rather than invisible, and a
+future parity increment starts from it.
+
+**Ten mutants, ten killed** — a page hides its link · loses it · relabels it ·
+points at the old `exam.html` · moves it away from History · gains a second one ·
+a frozen page gains it · `nav.js`'s keep-list is widened · Mock Exams is replaced
+by Assignments · the link is wrongly marked active.
+
+**Two of the ten found real gaps in the suite, and both are lessons this project
+has learned before.**
+
+1. A check written as `h.join('|') !== h.join('|')` is **constantly false** and
+   could never go red — it reported safety it had not tested. Replaced by
+   per-page pinned rails, which can fail.
+2. **Presence is not reachability.** Adding `style="display:none"` to one page's
+   link passed every other check in the file. A1's card carries a never-hidden
+   assertion for exactly this reason and the nav suite was written without it;
+   it now has one, and that mutant is what put it there.
+
+Also driven in Chromium across five student pages plus one frozen page,
+**26/26**: exactly one link each, label `Assignments`, positioned after History,
+keyboard focusable, `nav.js` hiding nothing for a signed-out visitor — and
+`mock-exam.html` correctly carrying **no** link.
+
+#### 17.18.5 · Untouched
+
+`assignments.html` · `nav.js` · the three frozen pages · every RPC, schema, RLS
+and policy · `vercel.json` · routing · **A3** (Mock Exams vs Assignments) ·
+R2 / Increment 3 · Desmos · audio · W-1…W-4.
