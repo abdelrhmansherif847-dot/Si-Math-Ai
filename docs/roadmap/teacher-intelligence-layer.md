@@ -8162,3 +8162,99 @@ its schedule and `enable()` starts it. Its fixed points sit at 10:00, 20:00,
 the SAT module shape. A platform section or a teacher exam has a duration to
 hang that on. **Homework does not**: it is untimed and has no module, so what a
 module clock would even mean there is an open question, not a wiring detail.
+
+### 17.16 · F-4 — CLOSED: the room-sound control (2026-09-05)
+
+Increment 2 shipped a capability nothing could start. **F-4 is the control that
+starts it**, and it is deliberately the smallest one that works: an icon button
+in R1, on the exam screen, off until a student asks.
+
+**What this closure authorizes, exactly.** The **minimum R1 integration on
+`assignments.html`** and nothing else. It is **not** authorization for R2, for
+Increment 3, for a settings surface, or for any further shell work.
+**[user constraint]:** *"Do not interpret this as authorization for Increment
+3/R2 work."*
+
+#### 17.16.1 · The three locked decisions
+
+**DEFAULT OFF.** One boolean at `localStorage['simath_exam_ambience']`, and
+**only the exact string `'on'` counts as on** — `'ON'`, `'true'`, `'1'` and
+`'yes'` all read as off, each asserted. Every failure path returns false:
+storage that throws, and storage that does not exist as an identifier at all,
+are two different failures and both are tested. A student who has never chosen
+hears nothing, and a blocked `localStorage` is not a reason to start playing
+sound at somebody.
+
+**SITTING ONLY.** The control is shown on `sitting` and on no other screen —
+`pick`, `hwSit`, `hwRev`, `done` and `loading` all hide it *and* silence the
+layer. The reason is the one `show()` already gives for the clock: ambience is a
+**module** clock with fixed points at 10:00, 20:00 and 32:00 of a module, and
+homework is untimed and has no module. **No ambience control on homework.**
+
+**`assignments.html` IS in scope**, for F-4 and for the reason the audit gave:
+R1 on that page is the only student shell that exists. R2 is a §17.3
+specification that nothing builds yet.
+
+#### 17.16.2 · The control
+
+An **icon button**, 34×34, between the spacer and `#timer`. Not a labelled pill:
+the bar is 58px, already carries three things on a phone, and **this page has no
+width breakpoint at all** — its only `@media` is `prefers-reduced-motion`.
+
+It carries a **real accessible name**, `aria-label="Room sound"`, and its state
+lives in **`aria-pressed`** — which is also what the CSS keys on, so the styling
+and the accessibility tree cannot disagree; there is no second class to forget.
+The SVG is `aria-hidden`. **The house `.toggle` was deliberately not reused:**
+`settings.html` ships four of them and **none has an accessible name**, so a
+screen reader announces an unnamed checkbox.
+
+**Lifecycle.** Entering `sitting`: paint from the stored preference, call
+`noteModule(attempt_id)`, and `enable()` **only if the preference is already
+on**. Leaving `sitting`: always `disable()`, so the layer can never outlive the
+sitting it belongs to — the failure the old engine's calculator panel needed a
+`MutationObserver` to fix. A click flips, persists, paints and applies.
+`noteModule()` is idempotent on an unchanged key, so the `show('sitting')` that
+recovers from a failed submit does not restart the schedule.
+
+With no `SiExamAmbience` loaded the control **is not rendered at all**, rather
+than rendered dead.
+
+#### 17.16.3 · Isolation, asserted rather than asserted-to
+
+| Boundary | How it is held |
+|---|---|
+| **W-1, still OPEN** | The three `.timer` rules are asserted **byte-identical**, the page still contains exactly **one** `animation:pulse`, and the control animates nothing. The preference block is asserted to contain no `S.tick`, `S.endsAt`, `startTimer` or `timer`. |
+| **W-5, still CLOSED** | The page still has exactly **two** footer ids. The block contains no `createElement` and no `Footer`. |
+| **Desmos / calculator** | The block contains no `desmos`, `checkMode` or `Calculator`. No bypass was added, and none could be: this control never consults `available()`. |
+| **Audio / registry** | No `SiExamAudio`, no `SiExamRegistry`. W-3 is untouched. |
+| **Delivery** | The block calls no RPC and reads no `S.source`. It reads one storage key and `S.attempt.attempt_id`. |
+| **Schema** | None. `profiles` carries **column-level UPDATE grants** — 24 of 39 columns — so a profile-backed preference would need a column *and* a grant, i.e. a migration. `localStorage` avoids that entirely. |
+
+#### 17.16.4 · How it is proved
+
+The suite proves **wiring** by reading the page source and **rules** by *running*
+them: the preference block is sliced out and executed against fake storage,
+because *"returns false when `localStorage` throws"* is not a claim a regex can
+make. `tests/teacher-class-patterns.test.mjs` set that precedent.
+
+`tests/exam-page.test.mjs` goes **47 → 119 checks**. **Ten mutants, ten killed:**
+
+| Mutant | Checks failed |
+|---|---|
+| default ON when the key is absent | 14 |
+| storage failure falls back to ON | 3 |
+| gate widened to homework | 2 |
+| leaving the screen no longer silences | 5 |
+| autoplay — enable regardless of choice | 1 |
+| accessible name removed | 1 |
+| `noteModule` no longer called | 3 |
+| the preference is never written | 7 |
+| an animation added to the control | 2 |
+| the button moved after the clock | 1 |
+
+**One of them had to be rewritten, and that is worth recording.** The first
+attempt at the last mutant appended a comment after the clock instead of moving
+the button, so both `indexOf` values were unchanged and it survived — a mutant
+that tested nothing, not a check that missed something. Re-run as a genuine
+swap of the two elements, it was caught. *A surviving mutant is a claim about
+the test only once the mutant is known to bite.*

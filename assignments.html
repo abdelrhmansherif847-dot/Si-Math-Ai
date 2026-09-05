@@ -22,6 +22,7 @@
 <script src="regenerate-reports.js"></script>
 <script src="stimulus-expr.js"></script>
 <script src="stimulus-view.js"></script>
+<script src="exam-ambience.js"></script>
 <script src="exam-mistakes-logger.js"></script>
 <script src="assets/streak.js"></script>
 <style>
@@ -56,6 +57,20 @@ input{font-family:inherit}
 .timer{font-family:var(--font-mono);font-size:19px;font-weight:700;color:var(--cyan-3);padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--cyan-border);background:var(--cyan-bg-soft);white-space:nowrap}
 .timer.warn{color:#fcd34d;border-color:var(--amber-border);background:var(--amber-soft)}
 .timer.crit{color:#fca5a5;border-color:var(--red-border);background:var(--red-soft);animation:pulse 1.6s ease-in-out infinite}
+/* Room sound. Icon-sized because the bar is 58px and carries three things
+   already on a phone, and this page has no width breakpoint to fall back on.
+   State is carried by aria-pressed, so the styling and the accessibility tree
+   cannot disagree — there is no second class to forget to toggle. No
+   animation here, deliberately: the clock's pulse is W-1's question and this
+   control must not quietly answer it. */
+.ambtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex-shrink:0;padding:0;border-radius:var(--r-sm);border:1px solid var(--border-mid);background:transparent;color:var(--text-400);cursor:pointer}
+.ambtn:hover{border-color:var(--cyan-border);color:var(--cyan-3)}
+.ambtn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.ambtn[aria-pressed="true"]{border-color:var(--cyan-border);background:var(--cyan-bg-soft);color:var(--cyan-3)}
+.ambtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ambtn .wv,.ambtn .sl{display:none}
+.ambtn[aria-pressed="true"] .wv{display:block}
+.ambtn[aria-pressed="false"] .sl{display:block}
 
 .wrap{max-width:1180px;margin:0 auto;padding:calc(var(--nav-h) + env(safe-area-inset-top,0px) + 22px) 16px 120px}
 .card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);padding:22px}
@@ -205,6 +220,14 @@ input{font-family:inherit}
     <div class="sub" id="barSub"></div>
   </div>
   <div class="spacer"></div>
+  <button class="ambtn" id="ambBtn" type="button" style="display:none"
+          aria-pressed="false" aria-label="Room sound">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 9h4l5-4v14l-5-4H4z"/>
+      <path class="wv" d="M16.5 8.5a5 5 0 0 1 0 7"/>
+      <path class="sl" d="M17 9.5l5 5M22 9.5l-5 5"/>
+    </svg>
+  </button>
   <div class="timer" id="timer" style="display:none">--:--</div>
   <a class="btn ghost sm" id="leaveBtn" href="dashboard.html">Leave</a>
 </header>
@@ -555,11 +578,73 @@ const api = {
   },
 };
 
+/* ── room sound ─────────────────────────────────────────────────────────
+   OPT-IN, AND OFF WHENEVER THE ANSWER IS NOT A CLEAR YES. A student who has
+   never asked for this hears nothing, and a localStorage that cannot be read
+   is not a reason to start playing sound at somebody — every failure path
+   here returns false rather than falling back to the friendlier answer.
+
+   The module is never enabled because it loaded. enable() is reached from
+   exactly two places: a click on this control, and entering the exam screen
+   with the preference already stored on. There is no third.
+
+   INDEPENDENT OF THE CLOCK. This reads no timer state, writes none, and adds
+   no animation; it is a sibling of #timer in the bar and nothing more. W-1
+   stays open and .timer is untouched. */
+const AMB_KEY = 'simath_exam_ambience';
+
+function ambModule() {
+  try { return window.SiExamAmbience || null; } catch (_) { return null; }
+}
+/* Only the exact string counts as on, so a half-written or foreign value
+   reads as off rather than as truthy. */
+function ambWanted() {
+  try { return localStorage.getItem(AMB_KEY) === 'on'; } catch (_) { return false; }
+}
+function ambRemember(on) {
+  try { localStorage.setItem(AMB_KEY, on ? 'on' : 'off'); } catch (_) {}
+}
+function ambApply(on) {
+  const A = ambModule();
+  if (!A) return false;
+  try { return !!(on ? A.enable() : A.disable()); } catch (_) { return false; }
+}
+function ambPaint(on) {
+  const b = $('ambBtn');
+  if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+function ambToggle() {
+  const on = !ambWanted();
+  ambRemember(on);
+  ambPaint(on);
+  ambApply(on);
+}
+/* Called from show(). Leaving the exam screen always silences the layer, so
+   the ambience can never outlive the sitting it belongs to — the failure the
+   old engine's calculator panel had to grow a MutationObserver to fix.
+   noteModule() is idempotent on an unchanged key, so the show('sitting') that
+   recovers from a failed submit does not restart the schedule. */
+function ambSync(which) {
+  const b = $('ambBtn');
+  const live = which === 'sitting' && !!ambModule();
+  if (b) b.style.display = live ? '' : 'none';
+  if (!live) { ambApply(false); return; }
+  const on = ambWanted();
+  ambPaint(on);
+  try { ambModule().noteModule(S.attempt && S.attempt.attempt_id); } catch (_) {}
+  if (on) ambApply(true);
+}
+
 function show(which) {
   for (const id of ['loading', 'pick', 'sitting', 'done', 'hwSit', 'hwRev'])
     $(id).style.display = (id === which) ? '' : 'none';
   $('footer').style.display = (which === 'sitting') ? '' : 'none';
   $('hwFooter').style.display = (which === 'hwSit') ? '' : 'none';
+  /* Room sound belongs to the exam screen, for the reason the clock does: the
+     ambience is a MODULE clock, with fixed points at 10:00, 20:00 and 32:00 of
+     a module. Homework is untimed and has no module, so there is no state of
+     this page in which a homework sitting offers it. */
+  ambSync(which);
   /* The timer belongs to the exam screen and to nothing else. Homework is
      untimed, so there is no state of this page in which a homework sitting
      shows a clock — that is enforced here rather than left to the caller. */
@@ -1263,6 +1348,7 @@ function go(i) {
   S.cur = i;
   renderItem(true);
 }
+$('ambBtn').addEventListener('click', ambToggle);
 $('prevBtn').addEventListener('click', () => go(S.cur - 1));
 $('nextBtn').addEventListener('click', () => go(S.cur + 1));
 $('gridInput').addEventListener('input', () => { S.items[S.cur].answer = currentTyped(); drawPalette(); });
