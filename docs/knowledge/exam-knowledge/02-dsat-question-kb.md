@@ -2264,3 +2264,203 @@ before any coding began.
 The corpus passes a thousand coded questions with this ingestion. It now covers
 fourteen files across algebra, geometry, statistics, probability and — as of
 today — inequalities.
+
+## 31. Fifteenth ingestion: the functions corpus — and a block that split inside its own heading
+
+`7d1526fc-Function_1.pdf`, sha256 `983c4f96…aede4`, 13,859,899 bytes, **89 pages**.
+The upload banner said 136. That is the third consecutive file whose banner page
+count was wrong — the two before it are recorded in this session's working notes
+rather than here — and the fourth in a row that prints **no answer key
+anywhere**.
+
+The filename claims no question count at all — the first such file in the
+programme. Every earlier filename asserted a number, and three of them were
+wrong; this one simply declines to say, which turns out to be the honest option.
+
+**220 items in four blocks**, and the file is a compilation of four different
+things:
+
+| block | pages | items | what it physically is | heading |
+|---|---|---|---|---|
+| A1 | 1–15 | 73 | typeset, one administration tag per item | `Functions` |
+| A2 | 16–29 | 53 | photocopy scan, four boxed items per page | `Function But Undefined Month` |
+| B | 30–79 | 50 | **part typeset, part scan** — see below | `PART 2 OF REAL BUT UNDEFINED MONTH` |
+| C | 80–89 | 44 | screen captures of a test delivery interface | `PART 3 OF REAL BUT UNDEFINED MONTH` |
+
+Block A2 numbers 1 to 54 and prints no item 41, so it holds 53 items rather than
+the 54 its numbering implies.
+
+### The block that was not one block
+
+FN1 registered block B as "a 50-page scan". Measured page by page with
+`get_image_rects`, that is wrong, and wrong in a way that matters:
+
+| kind | pages | count |
+|---|---|---|
+| typeset vector text, no raster | 30–34, 36–63, 66, 77, 79 | 36 |
+| typeset plus one pasted figure | 35 | 1 |
+| **page-scale raster (a scan)** | **64, 65, 67–76, 78** | **13** |
+
+Thirteen scanned pages are spliced into the middle of a typeset run, under a
+heading printed for the typeset pages. Two things corroborate the measurement
+independently: page 64 renders in **Computer Modern**, a face that appears nowhere
+else in block B, which is set throughout in a Microsoft substitution face; and the
+classifier found page 35's pasted image without being told, which is exactly the
+grid stimulus item 6 was coded with.
+
+This is **D-3 one level finer**. D-3 said a source row is a *block* of a file, not
+a file, and that blocks may carry different provenance. The functions corpus says
+a block can split **inside a single printed heading** — and that only measurement
+finds it, because the heading reads continuously across the seam. The typeset
+pages are registered as S-023 and inherit the heading's provenance claim; the
+spliced scans are S-025 and carry no heading of their own, so they stay `unknown`.
+Registered as `SRC-0037`.
+
+It is also SRC-0032 from the other end. A2 taught that *the presence of a text
+layer is not evidence that the text layer is the document*. Block B teaches the
+converse: **a block whose first pages are typeset is not thereby a typeset block
+throughout.** Neither end of a run is evidence about its middle.
+
+### A detector that does not fire on the claim it exists to catch
+
+`PROVENANCE_SIGNALS` defines `real_labelling` to catch material labelled as real
+or recalled exam content. Two of this file's four headings say
+`PART 2/3 OF REAL BUT UNDEFINED MONTH`, and the detector reports **no
+`real_labelling` hit at all**.
+
+Two independent reasons, either sufficient on its own: those headings sit on pages
+whose text never reaches `contentText`, and the pattern requires `Real` to be
+followed by `SAT`, `Test`, `Exam` or `Questions`, or to end a line — so `REAL BUT`
+would not match even if it were extracted. Registered as `SRC-0038`. **The pipeline
+is unchanged.** Widening a signal pattern is a decision to take on its own, not a
+side effect of an ingestion.
+
+The opposite conclusion, on the same file, is `SRC-0040`. The detector finds 72
+`administration_tag` hits where 73 are printed. The missing one is a `[June2023]`
+on page 1, which carries four such items and yields three tags — and the pattern
+matches that tag in isolation. So this gap is an **extraction loss, not a detector
+gap**, and the two must not be filed together merely because both are a count that
+came up short.
+
+### The library had no linear function in it
+
+Before this file the archetype library held 291 entries. Twelve were `A-EXPFN-*`,
+one was `A-RATFN-*`, and **not one** described a linear function, a quadratic
+function, an absolute-value function or a transformation of any function. The
+whole corpus of 1,071 records carried exactly **one** record on topic
+`Linear Functions`.
+
+That gap was visible in advance from the archetype ids, exactly as the
+inequalities gap was — and it was much larger:
+
+- **97 new archetypes**, the largest single addition the library has taken by a
+  wide margin: the next largest were the triangles corpus at 38 and the
+  inequalities corpus at 37.
+- **190 of 220 records (86%) land on an archetype that did not exist this morning.**
+- 19 existing archetypes were reused, and one — `A-POLY-SHIFTED-SQUARE-PAIR` —
+  turned out to describe A2 items 53/54 and B item 49 *exactly*, including the
+  printed defect its two earlier records already noted.
+- `Linear Functions` goes from **1 record to 88**.
+
+The new families are `A-LINFN-*` (54 records), `A-FNGRAPH-*` (32), `A-FN-*` (25),
+`A-QUADFN-*` (24), `A-RATFN-*` (12), `A-ABSFN-*` (10), `A-RADFN-*` (10) and
+`A-FNTRANS-*` (8), the last covering the translations and dilations that block A2
+is built almost entirely out of.
+
+### The strongest disjointness result so far
+
+`groupDuplicates` places **zero** cross-file groups for this file. To check that
+this was a real result and not an artefact of the 0.85 threshold, all
+**235,620** cross-file pairs were scored directly:
+
+| Jaccard | pairs |
+|---|---|
+| ≥ 0.60 | **0** |
+| ≥ 0.50 | 2 |
+| ≥ 0.45 | 16 |
+| ≥ 0.40 | 181 |
+
+Not one cross-file pair reaches 0.60, and the whole distribution tops out below
+0.55. The lines-and-angles corpus had 57 pairs at ≥ 0.60; the inequalities corpus
+had exactly one. Three files in a row now say the same thing from different
+directions: **the reference material the programme is being given is largely
+disjoint, file to file**, and the archetype library is still nowhere near
+saturated.
+
+Within the file the picture is the opposite. 25 groups touch it — 13 cross-block,
+12 within a block — and 52 of its 220 records sit in one. **Seven** groups pair
+block A2 with block A1 (A2 items 16, 45, 46, 47, 49, 50 and 51, several of them
+identical in wording and numerals), and block B reprints constructions from both.
+
+### Block C, and what it is not
+
+Block C was the one question put to the user during this ingestion, and the ruling
+was **ingest, flag, EXCLUDED**. It is coded as read, registered as S-024, and
+marked `EXCLUDED` from generation.
+
+Worth recording as `SRC-0039`: block C's *content* matches neither its heading nor
+the rest of the file. It is 44 elementary items — one-step evaluations,
+scale-the-equation, a perimeter expression, an isosceles-triangle perimeter — a
+whole difficulty band below blocks A and B, and several of them are not about
+functions at all. The heading claims the same provenance as block B. Provenance
+and content are separate axes, and this file separates them visibly.
+
+### Printed defects, in a file with no key to check against
+
+Eighteen items carry a `SOURCE_CONFLICT` for a defect checkable from the page
+itself, which matters precisely because this file prints no answer key to
+disagree with. Among them:
+
+- **A1 item 61** prints **eight** options; the last four belong to a different question.
+- **A2 item 53** declares a constant that does not appear in its printed formula —
+  and item 54, on the same page, prints the same construction *with* it.
+- **B item 24** introduces a function as `g`, then names `f` in both its condition
+  and one of its options, with no second function defined anywhere.
+- **B item 4** calls a degree-four polynomial a quadratic function.
+- **B items 41 and 49** each print two terms that are like terms, so the constants
+  they name are determined only as a sum or a difference — which, in both cases,
+  is exactly what the item asks for.
+- **C item 39** renders its table at a fraction of the scale of every other table
+  in the block and says "in the table above" of an interface where tables sit inline.
+
+Four items also carry scan damage: pages 60, 62, 65 and 70 are cropped at a
+margin, truncating the first or last characters of several lines.
+
+### What the checks caught
+
+`checkR.mjs` ran from the start of this ingestion rather than being added after a
+failure, as it was in the inequalities corpus. Every one of the 147 visual
+readings is keyed by page and by an index built mechanically from the file, and
+the check refused any entry sitting on a page the index disagreed with. It
+reported `OK 147 readings, every one on the page its index gives` before any
+coding began. There was no off-by-one this time.
+
+The mechanical scans then found one thing worth having: `A-QUADFN-SYMMETRIC-EVAL`,
+which I had drafted, was **used by no record** — because the construction it
+describes was already in the library as `A-POLY-SHIFTED-SQUARE-PAIR`. It was
+deleted rather than given a record to justify it. A second copy of an archetype is
+the same defect as a second copy of a file.
+
+Two schema refusals, both correct, both fixed by changing the record and not the
+rule. `Word Problems / Mixed` is in `EXAM_TOPIC_TAXONOMY` but is **not** one of the
+22 DSAT topics, so the five word-problem items are coded on the topic their
+mathematics is, with `N-WORD` named alongside — which raises a KDG conflict on
+purpose. And the copyright prose guard fired first on `provenance_evidence` — 298
+characters, on all 73 block A1 records — and then on `observed_notes` in sixteen
+records. Every one was shortened, the guard was not widened, and the block-level
+facts moved onto the source rows where they belong. That is now the eleventh
+occurrence of that guard firing on my own prose across the programme.
+
+### What the numbers are
+
+| | before | after |
+|---|---|---|
+| sources | 20 | **25** |
+| questions | 1,071 | **1,291** |
+| archetypes | 291 | **388** |
+| conflicts | 48 | **52**, all open |
+| duplicate groups | 171 | **196** |
+| CI checks | 84 | **84**, green |
+
+Fifteen files, and the first whose ingestion added more archetypes than the two
+largest previous additions combined (38 + 37 = 75, against 97 here).

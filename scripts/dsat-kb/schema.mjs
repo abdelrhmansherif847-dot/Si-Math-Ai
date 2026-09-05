@@ -288,6 +288,13 @@ export const OBSERVED_TOPICS = [
   // only: block A2 is an untitled scan and block B a bank export, so both
   // observe UNKNOWN however plainly a reader can see what they are about.
   'linear_inequalities',
+  // seen in the functions corpus, 2026-09-05. Blocks A1 and A2 only: A1 prints
+  // "Functions" and A2 prints "Function But Undefined Month", which names the
+  // topic and the provenance claim in one line. Blocks B and C print
+  // "PART 2/3 OF REAL BUT UNDEFINED MONTH" — a provenance claim with NO topic
+  // word in it — so they observe UNKNOWN, and block C in fact drifts well away
+  // from functions into elementary linear equations and one geometry item.
+  'functions',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

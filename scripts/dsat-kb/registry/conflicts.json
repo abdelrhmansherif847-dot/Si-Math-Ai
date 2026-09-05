@@ -529,6 +529,50 @@
       "statement_b": "twenty cross-block groups place 35 A1 items, 18 A2 items and 26 B items together, and 98 of the 166 records sit in some group",
       "why": "the three blocks were compiled independently and overlap heavily: A2 reprints A1 verbatim in at least eight places and B reprints both. Counting printed items would over-count this source",
       "resolution": "NONE. All 166 are coded and the groups carry the relation; which copy a future reader meets is itself a fact about the source."
+    },
+    {
+      "conflict_id": "SRC-0037",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "a printed heading spanning two physically different documents",
+      "statement_a": "a block is the run of pages under one printed heading, and the heading says where one source ends and the next begins",
+      "statement_b": "the PART 2 run is 36 typeset pages with 13 page-scale scans spliced into their middle, set in a different typeface",
+      "why": "D-3 one level finer: a block can split INSIDE a single printed heading, and only measurement finds it. The heading belongs to the run it was printed for",
+      "resolution": "SPLIT. Typeset pages are S-023, spliced scans S-025. S-023 inherits the heading’s claim; S-025 has no heading of its own and stays unknown."
+    },
+    {
+      "conflict_id": "SRC-0038",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the real_labelling detector does not fire on this file’s own real-labelling claim",
+      "statement_a": "PROVENANCE_SIGNALS defines real_labelling to catch material labelled as real or recalled exam content",
+      "statement_b": "two of this file’s four block headings read \"PART 2/3 OF REAL BUT UNDEFINED MONTH\" and the detector reports no real_labelling hit at all",
+      "why": "two independent reasons, either enough on its own: the headings never reach contentText, and the pattern would not match REAL BUT in any case",
+      "resolution": "NONE, and the pipeline is unchanged. Widening the pattern is a deliberate decision to take on its own, not a side effect of an ingestion."
+    },
+    {
+      "conflict_id": "SRC-0039",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "a block whose content matches neither its heading nor the rest of the file",
+      "statement_a": "the file is named for functions and blocks A and B test them at exam difficulty",
+      "statement_b": "block C is 44 elementary items, several of which are not about functions at all",
+      "why": "the heading claims the same provenance as block B, but the content sits a whole difficulty band below the rest of the file",
+      "resolution": "NONE. Block C is coded as read, registered as S-024 and marked EXCLUDED from generation on explicit instruction; the mismatch is recorded, not resolved."
+    },
+    {
+      "conflict_id": "SRC-0040",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the count of administration tags the detector finds and the count printed",
+      "statement_a": "73 items of block A1 each print one administration tag, counted from the readings",
+      "statement_b": "the D-1 detector finds 72 administration_tag hits in the extracted text",
+      "why": "the missing tag is one [June2023] on page 1, which carries four such items and yields three. The pattern matches it in isolation, so this is an extraction loss, not a detector gap",
+      "resolution": "NONE. The source row records 73 printed and 72 detected, and says which of the two the difference belongs to."
     }
   ]
 }
