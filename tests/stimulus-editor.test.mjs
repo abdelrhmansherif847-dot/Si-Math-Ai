@@ -41,7 +41,17 @@ t.is('the sampler constants are the pinned ones',
 const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '')
   .split('\n').map((l) => l.replace(/(^|\s)\/\/.*$/, '$1')).join('\n');
 t.ok('the comment strip removed prose', CODE.length < SRC.length - 2000);
-t.ok('…and left the code', CODE.includes('function parse(') && CODE.includes('function sample('));
+/* STAGE 1 RE-POINTED THIS GUARD, IT DID NOT NARROW IT. Its job is to prove the
+   comment strip left real code, so the functions it names must be functions
+   that live in THIS file — and the parser and sampler moved to
+   stimulus-expr.js (§16.10.12, U-2), where tests/stimulus-expr.test.mjs runs
+   the same strip and the same seven banned patterns against them
+   non-vacuously. `parse` is still here as a re-export shim; `buildPlot` and
+   `hydratePlot` are the authoring half this module kept. The seven checks
+   below are UNCHANGED and still fire on this file: an eval planted in
+   stimulus-editor.js turns them red, measured. */
+t.ok('…and left the code', CODE.includes('function parse(')
+  && CODE.includes('function buildPlot(') && CODE.includes('function hydratePlot('));
 t.ok('the promise really is made in the prose (so the strip is doing work)', /no eval/i.test(SRC));
 /* Word-boundary patterns, not substrings: a plain `Function(` search matches
    this module's own `sampleFunction(` and could only ever go red. */
