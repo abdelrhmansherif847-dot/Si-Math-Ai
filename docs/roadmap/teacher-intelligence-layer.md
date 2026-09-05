@@ -8023,10 +8023,23 @@ Approved so far: **Increment 1 only**, and Increment 1 is this section.
 | # | Increment | Status | Adds |
 |---|---|---|---|
 | **1** | Shell definition | **APPROVED with three decisions, 2026-09-05** (§17.10.2 LOCKED · W-1 open · W-5 closed) | nothing executable |
-| **2** | Audio / ambience | **not started, not approved** | `exam-audio.js`, `exam-ambience.js`, 7 mp3 assets absent from `main`; no CSP change (`media-src 'self' data: blob:` already covers them) |
+| **2** | Ambience | **BUILT, INERT — 2026-09-05, §17.15** | `exam-ambience.js` + 7 mp3 assets + the `.gitattributes` audio rules. **No CSP change** — see the correction below |
+| **2b** | Audio / announcements | **DEFERRED to its own increment** | `exam-audio.js` needs `exam-registry.js` for its schedule and can serve only the platform source until W-3 is settled (§17.15.3) |
 | **3** | Chrome adaptation | not started | `exam-chrome.js` Timer + Navigator into R2/R5 — **blocked on W-1** (W-5 closed, §17.12.1) |
 | **4** | Calculator / Desmos | not started | licence-gated; nothing student-visible until §17.10.4 is done |
 | — | Integrity | not scheduled | **blocked on W-2** |
+
+**CSP — a correction to this table, 2026-09-05.** The Increment 2 row read
+*"no CSP change (`media-src 'self' data: blob:` already covers them)"*. The
+conclusion was right and **the directive was wrong**. `media-src` governs
+`<audio>` and `<video>` elements; `exam-ambience.js` loads its clips with
+`root.fetch('assets/exam-ambience/<name>.mp3')` and `decodeAudioData`, and a
+`fetch` is governed by **`connect-src`**. The live policy is
+`connect-src 'self' https://…supabase.co wss://…supabase.co`, and `'self'`
+covers a same-origin relative fetch — so **no CSP change is required**, for that
+reason and not the one first recorded. Naming the wrong directive is how a later
+CSP edit breaks this silently: someone tightening `connect-src` would have no
+reason to think audio depended on it.
 
 **[user constraint]** *"Do not begin Increment 2 (audio) until this shell
 definition is reviewed and explicitly approved."* Approval of this section is
@@ -8043,3 +8056,109 @@ not a rule.
 still blocked — on W-1 alone now that W-5 is closed. Increment 2 is unblocked
 and adds a capability in R7 that touches no DOM at all. That is why audio comes
 first: it is the increment that can be built without pre-answering W-1.
+
+### 17.15 · Increment 2 — Ambience: BUILT AND INERT (2026-09-05)
+
+**The capability ships; nothing calls it.** `exam-ambience.js` is in the tree
+with its seven recordings and a 58-check suite, and **no page loads it, no page
+enables it, and no student can hear it.** That is the increment as approved, not
+an omission: turning it on needs a control, the control is a shell decision, and
+inventing one to make the capability look finished is exactly the move this
+process exists to stop.
+
+#### 17.15.1 · What shipped
+
+| File | Change | Evidence |
+|---|---|---|
+| `.gitattributes` | **+6 lines** — `*.mp3` / `*.wav` / `*.ogg` / `*.m4a` marked `binary` | now byte-identical to the old branch's copy; was 49 lines / 1,961 B with **no audio rule** |
+| `assets/exam-ambience/voice-1…7.mp3` | **7 new binaries**, 1,341,954 B | every one byte-identical to source — blob sha, md5 and size all matched, and all seven begin `49 44 33` (`ID3`) |
+| `exam-ambience.js` | **new**, 441 lines / 21,311 B | verbatim from source **except** the F-5 fix; the full diff against source is 9 added lines and nothing else |
+| `tests/exam-ambience.test.mjs` | **new**, 58 checks | the source suite ported unchanged, plus the F-5 section |
+
+**`.gitattributes` had to land first, and that ordering is the point.** `main`
+carries `* text=auto eol=lf` and binary rules for eleven image, font and
+document types — and none for audio. Committing an mp3 under that policy invites
+`text=auto` to sniff it as text and rewrite bytes on checkout; the old branch's
+own note says so in as many words: *"The first audio in this repository; without
+these lines `text=auto` would sniff them as text and rewrite bytes on
+checkout."*
+
+**The per-clip measurements came across untouched.** `TRIM`, `PEAK_DBFS` and
+`DURATION_S` describe the same bytes as the shipped files, and the suite asserts
+the no-clipping invariant arithmetically — `PEAK + TRIM + gain` under 0 dBFS for
+every clip, at the shipped gain and at `safeMax` — so it can be checked in CI
+without decoding an mp3.
+
+#### 17.15.2 · F-5 — the one behavioural change, and why it is a fix
+
+**The defect, measured before the fix.** In the module as written,
+`disable()` called `ctx.suspend()` and **nothing anywhere called `resume()`** —
+the whole file referenced `ctx.state` exactly once, in `disable()`. So:
+
+- `disable()` then `enable()` left the context suspended. The layer reported
+  success, armed the full schedule, and played **silence**.
+- A context constructed outside a user gesture is **born suspended**, so this
+  was silence on the *first* enable too, not only the second.
+
+**The fix is one guarded line** in `enable()`, immediately after `context()`
+succeeds and before `on = true`:
+
+```js
+try { if (ctx.state === 'suspended' && ctx.resume) ctx.resume(); } catch (e) {}
+```
+
+Deliberately not awaited, for the reason nothing else in this file is awaited:
+events are armed against the module clock rather than against the resume, and a
+rejected promise must not take the layer down. Nothing else moved — no schedule
+rule, no gain, no trim, no planner, no measurement table.
+
+**Why the existing suite could never have caught it.** Its harness supplies
+**no `AudioContext`**, so `context()` returns null and `enable()` returns false;
+every one of its original assertions passes without the layer ever having run.
+The F-5 section therefore builds its own sandbox with a fake context that
+records `suspend`/`resume` calls — a call log, because a state assignment that
+merely looks like a fix would satisfy a state check alone.
+
+**Mutation-tested, three mutants, all killed:**
+
+| Mutant | Result |
+|---|---|
+| the fix removed entirely (the pre-fix module) | **5 checks FAILED** |
+| `resume()` called unconditionally (state guard dropped) | **4 checks FAILED** |
+| the `&& ctx.resume` existence guard dropped | **1 check FAILED** |
+
+The second mutant matters as much as the first: it proves the assertions test
+the *guard* and not merely the presence of a `resume()` call, so "resume
+everything, always" is not a passing answer.
+
+#### 17.15.3 · What this increment deliberately did NOT do
+
+Each of these was decided, not overlooked.
+
+- **No caller.** `assignments.html` is untouched — zero lines changed. The
+  capability is inert by construction.
+- **No student control (F-4).** Ambience has **no preference storage at all** —
+  zero `localStorage` references in the module — and its only controls lived in
+  `exam-reviewer-bar.js`, which §17.4 excludes. A control is a shell decision
+  and belongs to its own increment.
+- **No audio / announcements (Increment 2b).** `exam-audio.js` is not here and
+  neither is `exam-registry.js`. Two measured reasons: the announcement schedule
+  must come from the registry (*"No timing rule is duplicated here, and none may
+  be added"*), and of the three sources only **platform** carries an `exam_code`
+  the registry recognises — `student_my_teacher_exams` returns none and
+  `student_my_homework` has no duration column at all. That is **W-3** biting
+  exactly where §17.6.1 predicted, and it is not settled here.
+- **No CSP change.** Measured unnecessary — see the correction in §17.14.
+- **No schema, RPC, migration, Stage 1, renderer, calculator, Desmos, integrity,
+  reviewer-bar or workspace work**, and no timer or animation change: **W-1
+  stays open** and `.timer.crit` is untouched. **W-5 stays closed** — a module
+  that creates no element cannot create a second footer.
+
+#### 17.15.4 · A note for whoever wires this up
+
+`exam-ambience.js` is a **module-clock** capability: `noteModule(key)` resets
+its schedule and `enable()` starts it. Its fixed points sit at 10:00, 20:00,
+32:00, 33:00 and 34:00 of a module, and `schedule()` defaults to **35 minutes** —
+the SAT module shape. A platform section or a teacher exam has a duration to
+hang that on. **Homework does not**: it is untimed and has no module, so what a
+module clock would even mean there is an open question, not a wiring detail.
