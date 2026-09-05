@@ -331,6 +331,28 @@
       "statement_b": "S-013 is 24 items headed Trigonometry, every one tagged to a named DSAT administration",
       "why": "the DSAT list folds trigonometry into Triangles, which is why that row alone carries GEO_005 and N-TRIG. The omission is a modelling choice, not a claim that the DSAT does not test it",
       "resolution": "NONE, and none needed in the data: the 24 are filed under Triangles with GEO_005 and N-TRIG, which raises no record-level conflict. Recorded so the next DSAT trigonometry file does not repeat the investigation."
+    },
+    {
+      "conflict_id": "SRC-0019",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the species count stated in item 17 of S-014",
+      "statement_a": "the stem says the researcher measured 34 different species",
+      "statement_b": "the table sums to 29 in both directions, and prints 29 as its own total",
+      "why": "the table is internally consistent — rows 3, 20, 6 and columns 6, 19, 4, 0 both give 29 — so the stem is the part that disagrees. Four other tables in this file sum exactly",
+      "resolution": "NONE. The item is coded and the discrepancy recorded; it does not change the answer, which conditions on two rows and never uses the total."
+    },
+    {
+      "conflict_id": "SRC-0020",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the item count claimed by the S-014 filename",
+      "statement_a": "the file is named \"18 Real Questions\"",
+      "statement_b": "it holds 19 numbered items with no gaps, and its key covers all 19",
+      "why": "the second file in this corpus to undercount by exactly one, after S-012 claimed 66 of 67",
+      "resolution": "NONE. All 19 are coded; the claim is recorded on the source row as filename_claims."
     }
   ]
 }

@@ -70550,6 +70550,1788 @@
         "stim:none",
         "tgt:value"
       ]
+    },
+    {
+      "question_id": "Q-014-p1-q1",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "1",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "June 2023",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-SIMPLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the inverted fraction and the complement are printed, and so is each count over a round hundred"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "sample_space"
+        ],
+        "relations": [
+          "p = favourable / total"
+        ],
+        "given_roles": [
+          "count",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "both_counts_stated_directly"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "32c4e58f06aaebf2",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:both_counts_stated_directly",
+        "giv:count",
+        "mech:trap_cost",
+        "obj:sample_space",
+        "rel:v1 = favourable / total",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0108"
+    },
+    {
+      "question_id": "Q-014-p1-q2",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "2",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "March 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-COMPLEMENT-COUNT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the answer is a COUNT and both givens are probabilities, so the total is applied last"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the counts of the two named rooms are printed, and so is the third probability scaled by the wrong base"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the count of one of the two named rooms reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "only one probability subtracted from one"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the remaining probability applied to the wrong total"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "three_exhaustive_categories"
+        ],
+        "relations": [
+          "p(third) = one - p(first) - p(second)",
+          "count = p * total"
+        ],
+        "given_roles": [
+          "count",
+          "probability",
+          "probability"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "answer_is_a_count_not_a_probability"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "dd132742d6af4f6d",
+      "mathematical_fingerprint": "929eb2afeefdffbd",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_is_a_count_not_a_probability",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:count",
+        "giv:probability",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:three_exhaustive_categories",
+        "rel:count = v1 * total",
+        "rel:v1(third) = one - v1(first) - v1(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0109"
+    },
+    {
+      "question_id": "Q-014-p1-q3",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "3",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "March 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-SIMPLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the inverted fraction and the complement are printed, and so is each count over a round hundred"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the fraction inverted"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the complement reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a count taken over a round number the stem never states"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "sample_space"
+        ],
+        "relations": [
+          "p = favourable / total"
+        ],
+        "given_roles": [
+          "count",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "both_counts_stated_directly"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "c95a30a87ab1a0ea",
+      "mathematical_fingerprint": "32c4e58f06aaebf2",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:both_counts_stated_directly",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:count",
+        "mech:trap_cost",
+        "obj:sample_space",
+        "rel:v1 = favourable / total",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0110"
+    },
+    {
+      "question_id": "Q-014-p1-q4",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "4",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "May 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-SIMPLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the inverted fraction and the complement are printed, and so is each count over a round hundred"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the fraction inverted"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the complement reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a count taken over a round number the stem never states"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "sample_space"
+        ],
+        "relations": [
+          "p = favourable / total"
+        ],
+        "given_roles": [
+          "count",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "both_counts_stated_directly"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "c95a30a87ab1a0ea",
+      "mathematical_fingerprint": "32c4e58f06aaebf2",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:both_counts_stated_directly",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:count",
+        "mech:trap_cost",
+        "obj:sample_space",
+        "rel:v1 = favourable / total",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0110"
+    },
+    {
+      "question_id": "Q-014-p1-q5",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "5",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "May 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-PROPORTION",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the four percentages sum over all ages and the conditional needs them to sum over the adult rows only"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the unconditional percentage is printed and is what skipping the renormalisation gives"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the unconditional percentage reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the wrong subset used as the new whole"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the renormalisation applied to the wrong numerator"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "proportion_table"
+        ],
+        "relations": [
+          "p(a | b) = p(a) / p(b)"
+        ],
+        "given_roles": [
+          "proportion",
+          "proportion",
+          "proportion",
+          "proportion"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "distribution_given_as_percentages",
+          "renormalisation_required"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-5",
+      "structural_fingerprint": "3be1792d4f64cf6a",
+      "mathematical_fingerprint": "85464213fc426a57",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:distribution_given_as_percentages",
+        "con:renormalisation_required",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:proportion",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:proportion_table",
+        "rel:v1(v2 | v3) = v1(v2) / v1(v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p1-q6",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 1,
+      "source_question_number": "6",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "May US 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-COMPLEMENT-COUNT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the answer is a COUNT and both givens are probabilities, so the total is applied last"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the counts of the two named rooms are printed, and so is the third probability scaled by the wrong base"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the count of one of the two named rooms reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "only one probability subtracted from one"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the remaining probability applied to the wrong total"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "three_exhaustive_categories"
+        ],
+        "relations": [
+          "p(third) = one - p(first) - p(second)",
+          "count = p * total"
+        ],
+        "given_roles": [
+          "count",
+          "probability",
+          "probability"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "answer_is_a_count_not_a_probability"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "dd132742d6af4f6d",
+      "mathematical_fingerprint": "929eb2afeefdffbd",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_is_a_count_not_a_probability",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:count",
+        "giv:probability",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:three_exhaustive_categories",
+        "rel:count = v1 * total",
+        "rel:v1(third) = one - v1(first) - v1(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0109"
+    },
+    {
+      "question_id": "Q-014-p2-q7",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "7",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "December US 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-SIMPLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the inverted fraction and the complement are printed, and so is each count over a round hundred"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "reversal_error",
+          "wrong_route": "the fraction inverted"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the complement reported"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a count taken over a round number the stem never states"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "sample_space"
+        ],
+        "relations": [
+          "p = favourable / total"
+        ],
+        "given_roles": [
+          "count",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "both_counts_stated_directly"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "c95a30a87ab1a0ea",
+      "mathematical_fingerprint": "32c4e58f06aaebf2",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:both_counts_stated_directly",
+        "dis:reversal_error",
+        "dis:wrong_interpretation",
+        "giv:count",
+        "mech:trap_cost",
+        "obj:sample_space",
+        "rel:v1 = favourable / total",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0110"
+    },
+    {
+      "question_id": "Q-014-p2-q8",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "8",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "March 2025",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-COMPLEMENT-COUNT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the answer is a COUNT and both givens are probabilities, so the total is applied last"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the counts of the two named rooms are printed, and so is the third probability scaled by the wrong base"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the count of one of the two named rooms reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "only one probability subtracted from one"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the remaining probability applied to the wrong total"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "three_exhaustive_categories"
+        ],
+        "relations": [
+          "p(third) = one - p(first) - p(second)",
+          "count = p * total"
+        ],
+        "given_roles": [
+          "count",
+          "probability",
+          "probability"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "answer_is_a_count_not_a_probability"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "dd132742d6af4f6d",
+      "mathematical_fingerprint": "929eb2afeefdffbd",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_is_a_count_not_a_probability",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:count",
+        "giv:probability",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:three_exhaustive_categories",
+        "rel:count = v1 * total",
+        "rel:v1(third) = one - v1(first) - v1(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0109"
+    },
+    {
+      "question_id": "Q-014-p2-q9",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "9",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "May 2025",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-COMPLEMENT-COUNT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the answer is a COUNT and both givens are probabilities, so the total is applied last"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the counts of the two named rooms are printed, and so is the third probability scaled by the wrong base"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the count of one of the two named rooms reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "only one probability subtracted from one"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the remaining probability applied to the wrong total"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "three_exhaustive_categories"
+        ],
+        "relations": [
+          "p(third) = one - p(first) - p(second)",
+          "count = p * total"
+        ],
+        "given_roles": [
+          "count",
+          "probability",
+          "probability"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "answer_is_a_count_not_a_probability"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "dd132742d6af4f6d",
+      "mathematical_fingerprint": "929eb2afeefdffbd",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_is_a_count_not_a_probability",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:count",
+        "giv:probability",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:three_exhaustive_categories",
+        "rel:count = v1 * total",
+        "rel:v1(third) = one - v1(first) - v1(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0109"
+    },
+    {
+      "question_id": "Q-014-p2-q10",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "10",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "May 2025",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-SIMPLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the inverted fraction and the complement are printed, and so is each count over a round hundred"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "sample_space"
+        ],
+        "relations": [
+          "p = favourable / total"
+        ],
+        "given_roles": [
+          "count",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "both_counts_stated_directly"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "f8d5b7657dbeb4f4",
+      "mathematical_fingerprint": "32c4e58f06aaebf2",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:both_counts_stated_directly",
+        "giv:count",
+        "mech:trap_cost",
+        "obj:sample_space",
+        "rel:v1 = favourable / total",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0108"
+    },
+    {
+      "question_id": "Q-014-p2-q11",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "11",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "June US 2025",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-FROM-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "every option is the same numerator over a different entry of the table, so only the denominator is in question"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "a sum of two other categories used as the denominator"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "another single category used as the denominator"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the remaining category used as the denominator"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "frequency_table"
+        ],
+        "relations": [
+          "p = category / total"
+        ],
+        "given_roles": [
+          "count",
+          "count",
+          "count"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "total_printed",
+          "options_share_a_numerator"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-11",
+      "structural_fingerprint": "914d18accf63453f",
+      "mathematical_fingerprint": "dd487f38fd04870b",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:options_share_a_numerator",
+        "con:total_printed",
+        "dis:wrong_equation_setup",
+        "giv:count",
+        "mech:trap_cost",
+        "obj:frequency_table",
+        "rel:v1 = category / total",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p2-q12",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 2,
+      "source_question_number": "12",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "March 2025",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "verbal",
+      "target_type": "value",
+      "archetype": "A-PROB-COMPLEMENT-COUNT",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "hidden_step",
+          "load_bearing": true,
+          "counterfactual": "the answer is a COUNT and both givens are probabilities, so the total is applied last"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the counts of the two named rooms are printed, and so is the third probability scaled by the wrong base"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "the count of one of the two named rooms reported"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "only one probability subtracted from one"
+        },
+        {
+          "category": "arithmetic_slip",
+          "wrong_route": "the remaining probability applied to the wrong total"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "none",
+      "mathematical_signature": {
+        "objects": [
+          "three_exhaustive_categories"
+        ],
+        "relations": [
+          "p(third) = one - p(first) - p(second)",
+          "count = p * total"
+        ],
+        "given_roles": [
+          "count",
+          "probability",
+          "probability"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "answer_is_a_count_not_a_probability"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 3,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "structural_fingerprint": "dd132742d6af4f6d",
+      "mathematical_fingerprint": "929eb2afeefdffbd",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:answer_is_a_count_not_a_probability",
+        "dis:arithmetic_slip",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:count",
+        "giv:probability",
+        "mech:hidden_step",
+        "mech:trap_cost",
+        "obj:three_exhaustive_categories",
+        "rel:count = v1 * total",
+        "rel:v1(third) = one - v1(first) - v1(second)",
+        "rep:verbal",
+        "stim:none",
+        "tgt:value"
+      ],
+      "duplicate_group": "DG-0109"
+    },
+    {
+      "question_id": "Q-014-p3-q13",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 3,
+      "source_question_number": "13",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "August US 2023",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-MERGED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "neither the numerator nor the denominator is a printed margin — both must be summed out of cells"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the condition covers two of the three columns, so one column of every row is discarded"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "p(a | b) = n(a and b) / n(b)"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "condition_spans_several_columns",
+          "neither_part_is_a_printed_margin"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-13",
+      "structural_fingerprint": "ba66211a89f1aee2",
+      "mathematical_fingerprint": "0e157ea87dfe9f72",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:condition_spans_several_columns",
+        "con:neither_part_is_a_printed_margin",
+        "giv:cell_counts",
+        "mech:filtering",
+        "mech:nonobvious_relationship",
+        "obj:two_way_table",
+        "rel:v1(v2 | v3) = v4(v2 and v3) / v4(v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p3-q14",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 3,
+      "source_question_number": "14",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "August 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the denominator is a column margin and the grand total is printed in the same corner"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "p(a | b) = n(a and b) / n(b)"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "condition_is_a_single_column",
+          "denominator_is_a_printed_margin"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-14",
+      "structural_fingerprint": "9204c6ffaff82d55",
+      "mathematical_fingerprint": "55919d88e8aba42c",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:condition_is_a_single_column",
+        "con:denominator_is_a_printed_margin",
+        "giv:cell_counts",
+        "mech:nonobvious_relationship",
+        "obj:two_way_table",
+        "rel:v1(v2 | v3) = v4(v2 and v3) / v4(v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p3-q15",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 3,
+      "source_question_number": "15",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "June 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-MERGED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "neither the numerator nor the denominator is a printed margin — both must be summed out of cells"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the condition covers two of the three columns, so one column of every row is discarded"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "a printed margin used as the denominator"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the grand total used as the denominator"
+        },
+        {
+          "category": "incomplete_reasoning",
+          "wrong_route": "only one of the two conditioning columns counted"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "p(a | b) = n(a and b) / n(b)"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "condition_spans_several_columns",
+          "neither_part_is_a_printed_margin"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-15",
+      "structural_fingerprint": "d7374817a94b5a08",
+      "mathematical_fingerprint": "0e157ea87dfe9f72",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:condition_spans_several_columns",
+        "con:neither_part_is_a_printed_margin",
+        "dis:incomplete_reasoning",
+        "dis:wrong_equation_setup",
+        "giv:cell_counts",
+        "mech:filtering",
+        "mech:nonobvious_relationship",
+        "obj:two_way_table",
+        "rel:v1(v2 | v3) = v4(v2 and v3) / v4(v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p4-q16",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "16",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "October 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-FROM-TABLE",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "every option is one of the four printed margins over the grand total, so the item is a lookup with four plausible reads"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the other age margin taken"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "a residence margin taken"
+        },
+        {
+          "category": "wrong_interpretation",
+          "wrong_route": "the other residence margin taken"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "p = margin / total"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "all_options_are_printed_margins"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 1,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-16",
+      "structural_fingerprint": "81f6b92887699641",
+      "mathematical_fingerprint": "d796675c0b310646",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:all_options_are_printed_margins",
+        "dis:wrong_interpretation",
+        "giv:cell_counts",
+        "mech:trap_cost",
+        "obj:two_way_table",
+        "rel:v1 = margin / total",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p4-q17",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "17",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "August US 2023",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-MERGED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the condition spans two rows and the event spans two columns, so neither part is a printed margin"
+        },
+        {
+          "id": "filtering",
+          "load_bearing": true,
+          "counterfactual": "the stem states a species count the table does not support, and it is not needed"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "p(a | b) = n(a and b) / n(b)"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "condition_spans_rows",
+          "event_spans_columns",
+          "stated_total_disagrees_with_the_table"
+        ]
+      },
+      "conflicts": [
+        "SOURCE_CONFLICT"
+      ],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Probability; agrees with the printed key; stem says 34 species; the table sums to 29 in both directions",
+      "stimulus_id": "ST-014-17",
+      "structural_fingerprint": "ba66211a89f1aee2",
+      "mathematical_fingerprint": "ddae4429b80ebdc0",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:condition_spans_rows",
+        "con:event_spans_columns",
+        "con:stated_total_disagrees_with_the_table",
+        "giv:cell_counts",
+        "mech:filtering",
+        "mech:nonobvious_relationship",
+        "obj:two_way_table",
+        "rel:v1(v2 | v3) = v4(v2 and v3) / v4(v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p4-q18",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 4,
+      "source_question_number": "18",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "November US 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-CONDITIONAL-NEGATED",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "nonobvious_relationship",
+          "load_bearing": true,
+          "counterfactual": "the condition is a complement, so it is every row but the named one"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "the excluded row carries the most extreme counts, so including it moves the answer sharply"
+        }
+      ],
+      "distractor_logic": [],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "student_produced_response",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "p(a | not b) = n(a and not b) / n(not b)"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "condition_is_a_negation",
+          "event_spans_columns"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 4,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-18",
+      "structural_fingerprint": "931908677aee864c",
+      "mathematical_fingerprint": "7c973eaf38ac2933",
+      "fingerprint_components": [
+        "ans:student_produced_response",
+        "ask:value",
+        "con:condition_is_a_negation",
+        "con:event_spans_columns",
+        "giv:cell_counts",
+        "mech:nonobvious_relationship",
+        "mech:trap_cost",
+        "obj:two_way_table",
+        "rel:v1(v2 | not v3) = v4(v2 and not v3) / v4(not v3)",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
+    },
+    {
+      "question_id": "Q-014-p5-q19",
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "source_page": 5,
+      "source_question_number": "19",
+      "source_block": "A",
+      "source_label": "Probability",
+      "source_administration": "November 2024",
+      "observed_topic": "probability",
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "exam": "DSAT",
+      "topic": "Probability",
+      "taxonomy_subtopics": [
+        "PR_001"
+      ],
+      "knowledge_nodes": [
+        "N-PROBBAS"
+      ],
+      "kdg_confidence": "INFERRED",
+      "representation": "table",
+      "target_type": "value",
+      "archetype": "A-PROB-MARGINAL-FRACTION",
+      "archetype_confidence": "INFERRED",
+      "reasoning_mechanisms": [
+        {
+          "id": "competing_interpretations",
+          "load_bearing": true,
+          "counterfactual": "the wording never says \"probability\" or \"given\", so the item must be recognised as a conditional"
+        },
+        {
+          "id": "trap_cost",
+          "load_bearing": true,
+          "counterfactual": "every option is a ratio of two printed entries of the table"
+        }
+      ],
+      "distractor_logic": [
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the cell taken over its row total"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the column margin taken over the grand total"
+        },
+        {
+          "category": "wrong_equation_setup",
+          "wrong_route": "the two margins taken against each other"
+        }
+      ],
+      "difficulty_evidence": {
+        "kind": "UNKNOWN"
+      },
+      "difficulty_confidence": "UNKNOWN",
+      "answer_structure": "mcq_4",
+      "stimulus_type": "table",
+      "mathematical_signature": {
+        "objects": [
+          "two_way_table"
+        ],
+        "relations": [
+          "fraction = cell / column_total"
+        ],
+        "given_roles": [
+          "cell_counts"
+        ],
+        "asked_role": "value",
+        "constraints": [
+          "conditional_not_worded_as_one",
+          "options_are_ratios_of_printed_entries"
+        ]
+      },
+      "conflicts": [],
+      "ingested_on": "2026-09-05",
+      "step_count": 2,
+      "observed_notes": "section heading: Probability; agrees with the printed key",
+      "stimulus_id": "ST-014-19",
+      "structural_fingerprint": "770ae5fef671d9d4",
+      "mathematical_fingerprint": "8758e5d5c684eb62",
+      "fingerprint_components": [
+        "ans:mcq_4",
+        "ask:value",
+        "con:conditional_not_worded_as_one",
+        "con:options_are_ratios_of_printed_entries",
+        "dis:wrong_equation_setup",
+        "giv:cell_counts",
+        "mech:competing_interpretations",
+        "mech:trap_cost",
+        "obj:two_way_table",
+        "rel:fraction = cell / column_total",
+        "rep:table",
+        "stim:table",
+        "tgt:value"
+      ]
     }
   ]
 }

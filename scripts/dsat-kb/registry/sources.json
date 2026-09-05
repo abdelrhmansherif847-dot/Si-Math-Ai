@@ -448,6 +448,42 @@
       "filename_claims": 24,
       "questions_found": 24,
       "file_sha256": "a4b51a8252b2b37b0ae1a0b86bc398d8b2c0a15cd956afeb88c8f08bf8776084"
+    },
+    {
+      "source_id": "S-014",
+      "source_file": "4a1c3cf5-Probability_18_Real_Questions.pdf",
+      "sha256": "22798a72c97ae635452be7ac46530c42db093891e3580e82c5af914792abc8a9",
+      "md5": "71524569eeba9f3c46d427926d6e12d3",
+      "bytes": 231572,
+      "pages": 6,
+      "title": "Probability (compiled extract, 19 items with a key)",
+      "declared_topic": null,
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/22798a72c97a",
+      "registered": "2026-09-05",
+      "questions_coded": 19,
+      "source_block": "A",
+      "block_label": "Probability",
+      "page_from": 1,
+      "page_to": 5,
+      "questions": 19,
+      "answer_key_pages": [
+        6
+      ],
+      "answer_key_covers": "all 19 items; every one of them verified and correct",
+      "provenance_evidence": "19 administration tags over 14 named administrations; no Telegram annotation and no watermark, matching S-013 and unlike the nine files before it",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "administration_tag"
+      ],
+      "same_compiler_as": "LAYOUT matches S-001 and S-006 through S-013 — same LaTeX form and \"Answers: <topic>\" key page. Like S-013 it carries NO Telegram annotation and no watermark",
+      "filename_claims": 18,
+      "questions_found": 19,
+      "file_sha256": "22798a72c97ae635452be7ac46530c42db093891e3580e82c5af914792abc8a9"
     }
   ]
 }

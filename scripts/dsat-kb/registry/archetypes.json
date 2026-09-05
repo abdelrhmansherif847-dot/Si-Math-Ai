@@ -2629,6 +2629,102 @@
       "wrong_route": "multiply by the tangent rather than dividing, or keep the inequality direction",
       "distractor_basis": "not applicable where the response is student-produced",
       "cognitive_demand": "inverting an inequality through a reciprocal"
+    },
+    {
+      "archetype_id": "A-PROB-SIMPLE",
+      "label": "a probability from two stated counts",
+      "given": "a total and a favourable count",
+      "find": "the probability",
+      "transformation": "divide the favourable count by the total",
+      "hidden_relationship": "none",
+      "representation": "verbal",
+      "wrong_route": "invert the fraction, or divide by a round number the stem never states",
+      "distractor_basis": "the inverted fraction, the complement, and both counts over one hundred",
+      "cognitive_demand": "identifying which number is the whole"
+    },
+    {
+      "archetype_id": "A-PROB-FROM-TABLE",
+      "label": "a marginal probability read out of a frequency table",
+      "given": "a table of counts",
+      "find": "the probability of one category",
+      "transformation": "take that category’s count over the grand total",
+      "hidden_relationship": "the grand total may be printed or may have to be summed, and the other categories are printed as denominators",
+      "representation": "table",
+      "wrong_route": "divide by another category rather than by the total",
+      "distractor_basis": "the same numerator over each of the other categories, and over a partial total",
+      "cognitive_demand": "choosing the denominator out of a table full of candidates"
+    },
+    {
+      "archetype_id": "A-PROB-COMPLEMENT-COUNT",
+      "label": "the count of the third category from the other two probabilities",
+      "given": "a total and the probabilities of two of three exhaustive categories",
+      "find": "the count in the third",
+      "transformation": "subtract both probabilities from one, then multiply by the total",
+      "hidden_relationship": "the answer is a COUNT and the givens are probabilities, so the total must be applied last",
+      "representation": "verbal",
+      "wrong_route": "report the probability rather than the count, or apply the total to the wrong complement",
+      "distractor_basis": "the counts of the two named categories, and the third probability scaled by the wrong total",
+      "cognitive_demand": "moving from a probability back to a count"
+    },
+    {
+      "archetype_id": "A-PROB-CONDITIONAL-PROPORTION",
+      "label": "a conditional probability from a table of proportions",
+      "given": "a distribution given as percentages",
+      "find": "a conditional probability",
+      "transformation": "restrict to the conditioning rows and renormalise",
+      "hidden_relationship": "the percentages sum to one hundred over ALL rows, and the conditional needs them to sum to one hundred over a subset",
+      "representation": "table",
+      "wrong_route": "report the unconditional percentage",
+      "distractor_basis": "the unconditional percentage, and the same numerator over other subsets",
+      "cognitive_demand": "renormalising a distribution"
+    },
+    {
+      "archetype_id": "A-PROB-CONDITIONAL-TABLE",
+      "label": "a conditional probability from one row or column of a two-way table",
+      "given": "a two-way table of counts and a conditioning category",
+      "find": "the conditional probability",
+      "transformation": "take the intersecting cell over the conditioning total",
+      "hidden_relationship": "the conditioning total is a margin, and the grand total is printed right next to it",
+      "representation": "table",
+      "wrong_route": "divide by the grand total instead of by the margin",
+      "distractor_basis": "not applicable where the response is student-produced",
+      "cognitive_demand": "reading a margin rather than a total"
+    },
+    {
+      "archetype_id": "A-PROB-CONDITIONAL-MERGED",
+      "label": "a conditional whose condition or event spans several rows or columns",
+      "given": "a two-way table and a condition covering more than one category",
+      "find": "the conditional probability",
+      "transformation": "sum the cells the condition covers, sum the ones the event also covers, and divide",
+      "hidden_relationship": "neither the numerator nor the denominator is a printed margin — both must be built",
+      "representation": "table",
+      "wrong_route": "use a single printed margin as the denominator",
+      "distractor_basis": "the numerator over a printed margin, and over the grand total",
+      "cognitive_demand": "building both parts of a fraction out of cells"
+    },
+    {
+      "archetype_id": "A-PROB-CONDITIONAL-NEGATED",
+      "label": "a conditional whose condition is stated as a complement",
+      "given": "a two-way table and a condition of the form \"not X\"",
+      "find": "the conditional probability",
+      "transformation": "take every row but the excluded one, then sum for the event within them",
+      "hidden_relationship": "the excluded category is the one with the most extreme counts, so including it by mistake changes the answer sharply",
+      "representation": "table",
+      "wrong_route": "condition on the named category rather than on its complement",
+      "distractor_basis": "not applicable where the response is student-produced",
+      "cognitive_demand": "reading a negation as a set of rows"
+    },
+    {
+      "archetype_id": "A-PROB-MARGINAL-FRACTION",
+      "label": "a conditional asked as \"what fraction of X are Y\"",
+      "given": "a two-way table",
+      "find": "a part of one margin as a fraction of that margin",
+      "transformation": "take the cell over its own column or row total",
+      "hidden_relationship": "the wording never says \"probability\" or \"given\", but the operation is a conditional",
+      "representation": "table",
+      "wrong_route": "use the grand total, or the other margin, as the denominator",
+      "distractor_basis": "the cell over its row total, the margin over the grand total, and the two margins against each other",
+      "cognitive_demand": "recognising a conditional that is not worded as one"
     }
   ]
 }

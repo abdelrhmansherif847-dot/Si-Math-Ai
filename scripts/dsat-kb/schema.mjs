@@ -273,6 +273,7 @@ export const OBSERVED_TOPICS = [
   'percent_ratio_proportion',
   // seen in the trigonometry corpus, 2026-09-05
   'trigonometry',
+  'probability',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

@@ -1700,3 +1700,109 @@ archetype does not belong in a field about the document.
 artifact are untouched.
 
 *Tenth ingestion, 2026-09-05.*
+
+---
+
+## 27. Eleventh ingestion: the probability corpus
+
+`4a1c3cf5-Probability_18_Real_Questions.pdf` — sha256 `22798a72c97a…`,
+231,572 bytes, **6 pages**. One block: **19 items** on pages 1–5, an answer key
+on page 6 covering all 19. Registered as **S-014**.
+
+The filename says 18. That is the second file in this corpus to undercount by
+exactly one, after S-012 claimed 66 of 67. **SRC-0020.**
+
+### 19 of 19
+
+Every item is fully determined by its text — no figure has to be read — and
+**all 19 agree with the printed key**, derived with exact rational arithmetic.
+Two consecutive files now verify completely, after nine that did not.
+
+### The signal profile of S-013 repeats
+
+Like the trigonometry file, this one carries **no Telegram annotation and no
+watermark**; its only provenance signal is the 19 administration tags. The
+layout is the compiler's — same LaTeX form, same `Answers: <topic>` key page.
+Two files in a row now share that profile, which makes it a pattern rather than
+a one-off, and the source row still records it as a layout match rather than
+asserting the compiler.
+
+### A stem that disagrees with its own table
+
+Item 17 says a researcher measured **34** different species. Its table sums to
+**29** — rows 3, 20, 6 and columns 6, 19, 4, 0, with 29 printed as its own
+total. The table is internally consistent and the stem is the part that is
+wrong. The four other tables in this file sum exactly.
+
+It does not change the answer, which conditions on two rows and never uses the
+total. Recorded as **SRC-0019** rather than corrected.
+
+### One item, five times
+
+The convention-centre item — a total, two of three category probabilities, find
+the third category's count — appears as items **2, 6, 8, 9 and 12**:
+
+| item | total | P(A) | P(B) | answer |
+|---|---|---|---|---|
+| 2 | 325 | 0.48 | 0.16 | 117 |
+| 6 | 375 | 0.48 | 0.32 | 75 |
+| 8 | 275 | 0.68 | 0.24 | 22 |
+| 9 | 375 | 0.48 | 0.24 | 105 |
+| 12 | 375 | 0.68 | 0.24 | 30 |
+
+Five copies in a nineteen-item file: **26% of this document is one question.**
+The highest single-family concentration measured anywhere in this corpus.
+
+### What 19 items were worth
+
+**8 constructions**, and only **10 distinct mathematical fingerprints for 19
+items** — the least varied file in the programme. One operation runs through
+almost all of it, and the difficulty lives entirely in **which cells the
+denominator is built from**:
+
+- 5 items divide two stated counts,
+- 2 take a margin over a grand total,
+- 5 recover a count from a complement of probabilities,
+- 6 are conditionals, and those are where the file has its range — one on a
+  single column, three whose condition spans several rows or columns so that
+  *neither* part of the fraction is a printed margin, one conditioning on a
+  negation, and one that never uses the words "probability" or "given" at all.
+
+`trap_cost` is load-bearing on 15 of 19, and the trap is nearly always the same:
+**a printed number that is the wrong denominator.** Item 11 offers the same
+numerator over four different table entries; item 16 offers all four printed
+margins over the grand total.
+
+### Repetition, across nine sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | 51% |
+| triangles | 38% |
+| statistics | 37% |
+| percent & ratio | 43% |
+| trigonometry | 54% |
+| probability | **53%** |
+
+37%–60% over nine sets.
+
+**No cross-file match at all**, at any similarity above 0.75 — including against
+the statistics corpus, which is also table-heavy. Probability tables and
+statistics tables turn out to be different constructions, and the fingerprints
+say so without being told.
+
+Items 13 and 15 are the same question in student-produced and multiple-choice
+form, and stay separate at `same_construction_different_shape` — the same
+correct behaviour as items 9 and 46 of the statistics corpus.
+
+### Standing state
+
+CI **84/84 green** · 14 sources, 740 questions, 227 archetypes, 32 conflicts
+(12 taxonomy + **20** source, all open) · 110 duplicate groups covering 277 of
+740 records. `taxonomy.core.js`, the KDG, the generator, the EST system and
+every exam artifact are untouched.
+
+*Eleventh ingestion, 2026-09-05.*
