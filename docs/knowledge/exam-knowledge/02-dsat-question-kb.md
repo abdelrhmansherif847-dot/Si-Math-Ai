@@ -41,10 +41,20 @@ page number, which is enough to find any item again and not enough to reproduce
 one.
 
 **This is enforced, not merely intended.** `FORBIDDEN_TEXT_FIELDS` refuses
-nineteen field names outright; `looksLikeSourceText()` catches prose smuggled
-into a field that is allowed to hold a short label; the CI gate rescans the raw
-JSON for any string over 220 characters. `CORPUS_ROOT` is asserted to be outside
-the repository tree.
+twenty field names outright; `looksLikeSourceText()` catches prose smuggled into
+a field that is allowed to hold a short label, at every nesting level; the CI
+gate rescans the raw JSON for any string over 220 characters.
+
+**The corpus boundary is enforced at ingestion time, not only in CI.**
+`assertCorpusOutsideRepo()` runs in `ingest-dsat-pdf.mjs` before anything is
+written — before a dry run even reports a path — and the same helper backs the CI
+check, so there is one implementation rather than two. This closed a real hole:
+CI reads the same `DSAT_CORPUS_ROOT` the pipeline does, so ingesting with it
+pointed inside the tree and then running CI without it used to pass while the
+corpus sat in the working tree. The earlier CI-only check also missed the case
+of a corpus root *equal* to the repository root, because `startsWith(root + '/')`
+is false for the root itself. `.gitignore` carries `/dsat-corpus*` and `/corpus*`
+as a second net, never as the guard.
 
 ---
 
@@ -56,13 +66,15 @@ the repository tree.
 | `scripts/dsat-kb/fingerprint.mjs` | structural and mathematical fingerprints, similarity, duplicate grouping |
 | `scripts/dsat-kb/registry.mjs` | the four stores, id allocation, `CORPUS_ROOT` |
 | `scripts/dsat-kb/validate-record.mjs` | per-record validation, shared by CI and the pipeline |
+| `scripts/dsat-kb/gate.mjs` | the registry-level checks, each with a stable guard code |
 | `scripts/dsat-kb/registry/sources.json` | one row per ingested PDF |
 | `scripts/dsat-kb/registry/questions.json` | coded question records |
 | `scripts/dsat-kb/registry/archetypes.json` | reusable constructions |
 | `scripts/dsat-kb/registry/conflicts.json` | everything unresolved |
 | `scripts/validate-dsat-kb.mjs` | the CI gate |
 | `scripts/ingest-dsat-pdf.mjs` | the ingestion pipeline |
-| `tests/dsat-kb.test.mjs` | 83 checks, mostly firing the guards |
+| `tests/dsat-kb.test.mjs` | 83 checks on schema, records and fingerprints |
+| `tests/dsat-kb-registry.test.mjs` | 58 checks on the gate and the corpus boundary |
 
 Both `scripts/validate-*.mjs` and `tests/*.test.mjs` are auto-discovered by
 `tests/run-all.mjs`, so this runs on every commit with no wiring.
@@ -184,6 +196,13 @@ Fingerprints answer "identical?". Near-duplicates need a distance, so each recor
 also stores a component set scored by Jaccard: ≥ 0.85 near-duplicate, ≥ 0.65 same
 archetype family.
 
+**Both numbers are provisional, and that is machine-readable.**
+`SIMILARITY.provisional` lists every threshold that has not been measured and
+`SIMILARITY.fittedOn` is `null`; the gate fails if a numeric threshold is neither
+listed as provisional nor recorded as fitted. They were chosen by judgement, not
+fitted — there are no records yet to fit them against — and this stops them
+hardening quietly into settled constants.
+
 **Duplicates are grouped, never deleted.** Every copy's provenance is the evidence
 for measuring source overlap later; dropping one destroys it.
 
@@ -294,10 +313,19 @@ distractor categories without a route · provenance upgrades without evidence ·
 excluded sources · **question text in any field** · the eight taxonomy conflicts
 being deleted or silently closed.
 
-`tests/dsat-kb.test.mjs` fires each guard against a record built to trip exactly
-it — 83 checks. **The test suite found two real bugs in the validator on its
-first run:** a required field explicitly set to `undefined` passed, because
-`hasOwnProperty` is true for it.
+Two suites, 141 checks:
+
+- `tests/dsat-kb.test.mjs` (83) fires each record-level guard against a record
+  built to trip exactly it. **It found two real validator bugs on its first
+  run:** a required field explicitly set to `undefined` passed, because
+  `hasOwnProperty` is true for it.
+- `tests/dsat-kb-registry.test.mjs` (58) covers the registry gate and the corpus
+  boundary, asserting on **stable guard codes** rather than message prose — so a
+  test says which protection it proves, and cannot pass because a different guard
+  fired. **It caught that too:** its own question fixture carried hardcoded
+  fingerprints, so every rejection was firing on a fingerprint mismatch instead
+  of the thing under test. The suite now proves its baseline fixture is clean
+  before relying on it.
 
 ---
 
@@ -343,15 +371,21 @@ on purpose.
    topic with no taxonomy counterpart will always land on `Exponential
    Functions`, so a diagnosis cannot distinguish them. That needs a taxonomy
    decision, and the taxonomy is frozen.
-2. **The near-duplicate threshold (0.85) is unvalidated.** It is a starting
-   value; it should be re-fitted once a few hundred records exist and its
-   false-positive rate can be measured.
+2. **The near-duplicate threshold (0.85) is unvalidated**, and now says so in
+   code (`SIMILARITY.provisional`, `fittedOn: null`), enforced by the gate. It
+   should be re-fitted once a few hundred records exist and its false-positive
+   rate can be measured. Nothing here claims it has been fitted.
 3. **`looksLikeSourceText()` is blunt on purpose.** It will occasionally
    complain about a long legitimate note. That is the right direction to fail.
 4. **Mechanism assignment is a judgement.** Nothing automates it, and two coders
    will disagree. Load-bearing counterfactuals exist so the disagreement is
    visible and arguable rather than silent.
+5. **Record-level tests still assert on message prose** (38 of them), so
+   rewording a validator message breaks a test. The registry suite already uses
+   stable codes; extending them to `validate-record.mjs` is a known,
+   non-blocking improvement, deliberately not done here.
 
 ---
 
-*Prepared 2026-09-05. Generator frozen, taxonomy frozen, corpus empty.*
+*Prepared 2026-09-05; reviewed and hardened the same day. Generator frozen,
+taxonomy frozen, corpus empty.*

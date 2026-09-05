@@ -13,8 +13,8 @@
 // construction logic, the corpus holds the copyrighted material, and the two
 // are joined by a hash rather than by copying.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -24,6 +24,37 @@ export const REPO_ROOT = join(here, '..', '..');
 // Outside the repository, deliberately. Override with DSAT_CORPUS_ROOT.
 export const CORPUS_ROOT = process.env.DSAT_CORPUS_ROOT
   || join(process.env.SCRATCHPAD || '/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad', 'dsat-corpus');
+
+// ── the corpus boundary ──────────────────────────────────────────────────────
+// One implementation, used by the ingestion pipeline BEFORE it writes anything
+// and by the CI gate afterwards. Two copies of a boundary check is one copy too
+// many, and the earlier CI-only version had a hole this closes: a corpus root
+// EQUAL to the repository root passed, because `startsWith(root + '/')` is false
+// for the root itself.
+//
+// Symlinks are resolved where the path exists, so a link out of the tree cannot
+// be used to smuggle the corpus back in.
+function realish(p) {
+  try { return realpathSync(resolve(p)); } catch { return resolve(p); }
+}
+
+export function insideRepo(p, repoRoot = REPO_ROOT) {
+  const target = realish(p);
+  const root = realish(repoRoot);
+  return target === root || target.startsWith(root + sep);
+}
+
+// Throws rather than returning a flag: at ingestion time there is no sensible
+// way to continue, and a caller that ignored a boolean would write the corpus
+// into the working tree anyway.
+export function assertCorpusOutsideRepo(dir, repoRoot = REPO_ROOT) {
+  if (insideRepo(dir, repoRoot)) {
+    throw new Error(
+      `corpus directory "${resolve(dir)}" is inside the repository (${realish(repoRoot)}). ` +
+      'Question text must never enter the working tree. Set DSAT_CORPUS_ROOT to a path outside it.');
+  }
+  return true;
+}
 
 export const STORES = {
   sources: { file: 'sources.json', key: 'sources' },

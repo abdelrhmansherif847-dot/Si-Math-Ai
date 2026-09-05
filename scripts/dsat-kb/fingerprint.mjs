@@ -102,10 +102,25 @@ export function jaccard(a, b) {
   return inter / (A.size + B.size - inter);
 }
 
+// PROVISIONAL. Both numbers are starting values chosen by judgement, NOT fitted
+// against real records — there are none yet. `provisional` names every threshold
+// that has not been measured, and `fittedOn` stays null until one is: a validator
+// fails if a numeric threshold is neither listed as provisional nor recorded as
+// fitted, so these cannot quietly harden into settled constants.
+//
+// Re-fit once a few hundred records exist and the false-positive rate can be
+// measured. Changing a number without recording the fit is the failure this
+// guards against.
 export const SIMILARITY = {
-  nearDuplicate: 0.85,     // same construction, cosmetic differences
+  nearDuplicate: 0.85,        // same construction, cosmetic differences
   sameArchetypeFamily: 0.65,
+  provisional: ['nearDuplicate', 'sameArchetypeFamily'],
+  fittedOn: null,             // e.g. { records: 412, date: '…', falsePositiveRate: … }
 };
+
+// The numeric thresholds, so a new one cannot be added without being classified.
+export const SIMILARITY_THRESHOLDS =
+  Object.keys(SIMILARITY).filter(k => typeof SIMILARITY[k] === 'number');
 
 // The relation a pair stands in. Ordered most specific first; the first match
 // wins. `renumbered` is the interesting one — identical mathematics, identical

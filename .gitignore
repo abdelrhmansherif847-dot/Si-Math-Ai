@@ -49,3 +49,11 @@ tests/visual-out/
 # committed and served. It carries noindex; it is not public-site surface.
 !scripts/pie-directions.html
 pie-directions.html
+
+# The DSAT question corpus lives OUTSIDE this repository (see
+# scripts/dsat-kb/registry.mjs CORPUS_ROOT). These patterns are a second net only
+# — the runtime boundary check in ingest-dsat-pdf.mjs is the actual guard, and a
+# gitignore rule must never be relied on to keep copyrighted text out of a public
+# working tree.
+/dsat-corpus*
+/corpus*

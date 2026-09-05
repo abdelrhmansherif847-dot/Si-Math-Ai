@@ -98,6 +98,13 @@ if (topic && !S.EXAM_TOPICS.DSAT.includes(topic))
 
 // ── 4. the corpus, outside the repository ───────────────────────────────────
 const corpusDir = join(R.CORPUS_ROOT, sha256.slice(0, 12));
+
+// The boundary is enforced HERE, before anything is written and before a dry run
+// even reports a path — not only in CI. CI reads the same DSAT_CORPUS_ROOT this
+// script does, so ingesting with it pointed inside the tree and then running CI
+// without it would have passed while the corpus sat in the working tree.
+try { R.assertCorpusOutsideRepo(corpusDir); }
+catch (e) { fail(e.message); }
 const manifest = {
   source_id: sourceId, source_file: name, sha256, md5,
   pages, text_layer: hasFont, image_only: !hasFont,
