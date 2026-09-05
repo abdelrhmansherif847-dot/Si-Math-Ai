@@ -1,7 +1,23 @@
 -- =====================================================================
 -- Teacher Exams, item I-2b — the client loses its direct reach
 -- =====================================================================
--- STATUS: 🟡 PREPARED. NOT APPLIED. Needs explicit owner approval.
+-- STATUS: ✅ APPLIED 2026-09-05 as version 20260905030858, after explicit
+--         owner approval, from the reviewed package at commit 62643da
+--         exactly as committed. Rollback: 20260908z, PREPARED and
+--         unapplied — it has NO WINDOW, because a grant is not state and
+--         nothing accumulates while it is absent.
+--         ⚠️ THE UNDO ORDER IS NOW LOAD-BEARING: 20260908z FIRST, THEN
+--         20260907z. Running 20260907z alone drops the two I-2a reads
+--         while these grants are gone and leaves staff with no read at
+--         all — the H5 blind state exactly.
+--         Post-apply evidence: 19/19 behavioural checks on the live
+--         database — both RPCs still serve staff, the teacher's own
+--         direct SELECT on both tables is now 42501, all four kept
+--         grants still resolve, and student / outsider / super_admin /
+--         no-session / nonexistent-exam are all 42501. The policies
+--         hash, all 31 teacher_exam* bodies, the function, policy and
+--         table counts and every data count were byte-identical before
+--         and after.
 -- DEPENDS ON: I-2a (20260907a, LIVE as 20260904144132 — the two staff read
 --             RPCs) AND the page switch that put teacher-exams.html on them
 --             (merged 5c064fa, deployed and verified 2026-09-05).

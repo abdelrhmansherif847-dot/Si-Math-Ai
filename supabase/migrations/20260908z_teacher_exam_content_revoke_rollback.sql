@@ -20,15 +20,21 @@
 -- broken a consumer nobody enumerated, and expect that consumer to be
 -- something outside this repo.
 --
--- ⚠️ AND THE ONE THAT MATTERS: 20260907z — I-2a's rollback — MUST NOT BE RUN
--- ALONE once 20260908a is applied. That file drops teacher_exam_list() and
--- teacher_exam_paper(). With those gone AND the grants revoked, staff have no
--- read at all: not through an RPC, not through the table. That is precisely
--- the blind state H5 created on the homework side, where authoring was
--- write-only with no way to edit an existing question. From the day 20260908a
--- ships, the order for a full undo is THIS FILE FIRST, THEN 20260907z —
--- and §2.4 below refuses if the I-2a reads are already gone, so the wrong
--- order fails loudly instead of quietly blinding the staff surface.
+-- ⚠️ AND THE ONE THAT MATTERS, AND IT IS NOW IN FORCE: 20260907z — I-2a's
+-- rollback — MUST NOT BE RUN ALONE. 20260908a was applied 2026-09-05 as
+-- version 20260905030858, so this is a live rule and no longer a future
+-- contingency. That file drops teacher_exam_list() and teacher_exam_paper().
+-- With those gone AND the grants revoked, staff have no read at all: not
+-- through an RPC, not through the table. That is precisely the blind state H5
+-- created on the homework side, where authoring was write-only with no way to
+-- edit an existing question. The order for a full undo is THIS FILE FIRST,
+-- THEN 20260907z.
+--
+-- §2.4 below does NOT refuse in that case — it raises a WARNING. An earlier
+-- version of this header said "refuses", which contradicted both the code and
+-- §2.4's own comment. Refusing would be wrong: if 20260907z has already run,
+-- staff are blind RIGHT NOW and restoring the grants is the repair, so this
+-- file must proceed and say loudly that it happened.
 -- =====================================================================
 
 begin;
