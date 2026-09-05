@@ -29,6 +29,7 @@ const MIG = {
   c: read('supabase/migrations/20260901e_teacher_exam_authoring.sql'),
   d: read('supabase/migrations/20260901f_teacher_exam_access.sql'),
   e: read('supabase/migrations/20260901g_teacher_exam_sitting.sql'),
+  f: read('supabase/migrations/20260907a_teacher_exam_reads.sql'),
 };
 const exec = (sql) => sql.split('\n').map((l) => l.replace(/--.*$/, '')).join('\n');
 const DEFINED = Object.values(MIG).map(exec).join('\n');
@@ -47,9 +48,15 @@ t.is('every RPC is defined by an applied teacher-exam migration',
   rpcs.filter((fn) => !new RegExp(`create or replace function ${fn}\\s*\\(`, 'i').test(DEFINED)
                    && fn !== 'teacher_my_workspaces'), []);
 
-const tables = [...new Set([...PAGE.matchAll(/\.from\('([a-z_]+)'\)/g)].map((m) => m[1]))];
-t.ok('the page reads tables directly (not vacuous)', tables.length >= 3);
-t.is('every table it touches is one of this system\'s own', tables.filter((x) => !OWN.includes(x)), []);
+const TABLE_RE = /\.from\('([a-z_]+)'\)/g;
+const tables = [...new Set([...PAGE.matchAll(TABLE_RE)].map((m) => m[1]))];
+/* Until the I-2a page switch this read `tables.length >= 3`. The page now
+   reaches the database ONLY through RPCs, so the claim inverts. OWN is kept
+   because it still names what a table read would have to be if one came back. */
+t.is('the page reads NO table directly — every read is an RPC', tables, []);
+t.ok('…and the detector can still find a table read when there is one',
+  [...`sb.from('teacher_exams').select('*')`.matchAll(TABLE_RE)].map((m) => m[1])
+    .filter((x) => OWN.includes(x)).length === 1);
 
 // ══ 2 · WRITES GO THROUGH RPCs, NEVER THROUGH A TABLE ═════════════════════
 t.section('No client write path — there is no grant for one');
@@ -147,5 +154,84 @@ t.ok('escaped interpolations exist (not vacuous)',
 const raw = [...PAGE.matchAll(new RegExp(`\\+\\s*(?!esc\\()[a-z]\\.(?:${TEXTY})\\b`, 'g'))]
   .map((m) => m[0].trim());
 t.is('no author-controlled field is concatenated into HTML without esc()', raw, []);
+
+// ══ 9 · THE I-2a PAGE SWITCH ══════════════════════════════════════════════
+t.section('Reads go through the two staff RPCs, not the tables');
+
+/* I-2a installed teacher_exam_list and teacher_exam_paper; this increment
+   moved the page onto them. The grants the page used to rely on are still in
+   place — I-2b takes them, and only once this is live. */
+t.ok('the page calls teacher_exam_list', /sb\.rpc\('teacher_exam_list', \{ p_workspace: ws \}\)/.test(PAGE));
+t.ok('the page calls teacher_exam_paper', /sb\.rpc\('teacher_exam_paper', \{ p_exam: id \}\)/.test(PAGE));
+t.is('and the four table-read api entries are gone',
+  ['exams:', 'exam:', 'questions:', 'stimuli:'].filter((k) => PAGE.includes(`  ${k}`)), []);
+
+/* The id is called exam_id by the RPC and homework_id by H6's twin. The page
+   follows the RPC rather than keeping a local alias, so a reader greps the
+   function and finds the field. */
+t.is('no S.exam.id survives the rename', (PAGE.match(/S\.exam\.id\b/g) || []), []);
+/* EXACT, not a lower bound. The pre/post parity is measured 18 -> 18, and a
+   loose `>= 15` let a real regression through: swapping three of these for
+   S.exam.exam_code sends three RPCs the exam CODE instead of its id, and the
+   suite stayed green because 15 still cleared the bound. */
+t.is('every one of the 18 S.exam sites uses exam_id',
+  (PAGE.match(/S\.exam\.exam_id\b/g) || []).length, 18);
+t.ok('the list tile keys on exam_id', /data-exam="' \+ esc\(e\.exam_id\)/.test(PAGE));
+
+/* Every field the page reads off S.exam must be one teacher_exam_paper
+   actually returns, or the screen renders undefined. Checked against the
+   migration's own jsonb_build_object rather than a list retyped here. */
+const PAPER_SQL = read('supabase/migrations/20260907a_teacher_exam_reads.sql')
+  .split('\n').map((l) => l.replace(/--.*$/, '')).join('\n');
+const headerKeys = [...PAPER_SQL.slice(PAPER_SQL.indexOf('jsonb_build_object'),
+                                       PAPER_SQL.indexOf("'stimuli'"))
+  .matchAll(/'(\w+)',/g)].map((m) => m[1]);
+t.ok('the paper header keys were located (not vacuous)', headerKeys.length >= 13);
+const examReads = [...new Set([...PAGE.matchAll(/S\.exam\.(\w+)/g)].map((m) => m[1]))];
+t.ok('S.exam reads were located (not vacuous)', examReads.length >= 3);
+t.is('every S.exam field is one the paper returns',
+  examReads.filter((f) => !headerKeys.includes(f)), []);
+
+/* Same claim for the list, against its returns-table. */
+const listCols = [...PAPER_SQL.slice(PAPER_SQL.indexOf('returns table ('),
+                                     PAPER_SQL.indexOf('language plpgsql'))
+  .matchAll(/^\s{2}(\w+)\s+\w/gm)].map((m) => m[1]);
+t.ok('the list columns were located (not vacuous)', listCols.length === 15);
+const tileReads = [...new Set([...PAGE.slice(PAGE.indexOf("$('examList').innerHTML = rows.map"),
+                                             PAGE.indexOf("$('examList').querySelectorAll"))
+  .matchAll(/\be\.(\w+)/g)].map((m) => m[1]))];
+t.ok('the tile field reads were located (not vacuous)', tileReads.length >= 4);
+t.is('every field the tile reads is a column the list returns',
+  tileReads.filter((f) => !listCols.includes(f)), []);
+
+/* media_sha256 was shipped to this page by the old select('*') and is not in
+   the RPC. Its absence is the read-boundary narrowing I-2a exists for. */
+t.is('media_sha256 reaches the page nowhere', (PAGE.match(/media_sha256/g) || []), []);
+
+/* openExam fetches the paper ONCE and hands it to both loaders — three reads
+   became one. The loaders still re-read when called with nothing, which is
+   what the five content handlers do. */
+t.ok('openExam passes its fetched paper to both loaders',
+  /await Promise\.all\(\[loadStimuli\(e\), loadQuestions\(e\)\]\)/.test(PAGE));
+for (const fn of ['loadStimuli', 'loadQuestions']) {
+  t.ok(`${fn} re-reads through api.paper when called with nothing`,
+    new RegExp(`async function ${fn}\\(paper\\) \\{\\s*const p = paper \\|\\| \\(await api\\.paper\\(S\\.exam\\.exam_id\\)\\)\\.data;`).test(PAGE));
+}
+
+/* The five content handlers must NOT refresh through openExam(): it clears
+   stimMsg and qMsg, and each of them has just written a success message
+   there. teacher-homework.html can reload the whole screen because it shows
+   no success message at all; this page shows five. */
+for (const [label, msg] of [['Figure updated.', 'stimMsg'], ['Figure deleted.', 'stimMsg'],
+                            ['Question updated.', 'qMsg'],
+                            ['Question deleted, and the numbering closed up.', 'qMsg']]) {
+  t.ok(`"${label}" is still written to ${msg}`,
+    new RegExp(`say\\(\\$\\('${msg}'\\),[^;]*${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(PAGE));
+}
+const handlers = PAGE.slice(PAGE.indexOf('async function saveStimulus'),
+                            PAGE.indexOf('/* ── publish / close / rotate'));
+t.ok('the content handlers were located (not vacuous)', handlers.length > 2000);
+t.is('and none of them refreshes through openExam()',
+  (handlers.match(/openExam\(/g) || []), []);
 
 t.done();

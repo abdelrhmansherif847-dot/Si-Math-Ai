@@ -337,18 +337,16 @@ const S = { ws: null, staff: [], exam: null, questions: [], stimuli: [],
             editStim: null, editQ: null };
 
 /* ── the only place the database is reached ──────────────────────────────
-   Reads go straight to the tables, which is what 3b's staff-read policies are
-   for; every WRITE is an RPC, because no client role holds a write privilege
-   on any of these tables and none ever should. */
+   Reads go through I-2a's two staff RPCs, not the tables. 3b's staff-read
+   policies and the SELECT grants behind them are still in place — I-2b takes
+   the grants away, and it ships only once this page is live on these two
+   functions, because H5 revoked before H6 restored the read and staff were
+   blind in between. Every WRITE was already an RPC, because no client role
+   holds a write privilege on any of these tables and none ever should. */
 const api = {
   workspaces: () => sb.rpc('teacher_my_workspaces'),
-  exams:     (ws) => sb.from('teacher_exams').select('*').eq('workspace_id', ws)
-                       .order('created_at', { ascending: false }),
-  exam:      (id) => sb.from('teacher_exams').select('*').eq('id', id).maybeSingle(),
-  questions: (id) => sb.from('teacher_exam_questions').select('*').eq('exam_id', id)
-                       .order('ordinal', { ascending: true }),
-  stimuli:   (id) => sb.from('teacher_exam_stimuli').select('*').eq('exam_id', id)
-                       .order('created_at', { ascending: true }),
+  list:      (ws) => sb.rpc('teacher_exam_list', { p_workspace: ws }),
+  paper:     (id) => sb.rpc('teacher_exam_paper', { p_exam: id }),
   create:  (ws, t, d, c) => sb.rpc('teacher_exam_create',
               { p_workspace: ws, p_title: t, p_duration_minutes: d, p_calculator_allowed: c }),
   update:  (p) => sb.rpc('teacher_exam_update', p),
@@ -386,7 +384,7 @@ const toISO = (v) => (v ? new Date(v).toISOString() : null);
 
 /* ── list ─────────────────────────────────────────────────────────────── */
 async function loadExams() {
-  const { data, error } = await api.exams(S.ws);
+  const { data, error } = await api.list(S.ws);
   if (error) { say($('listMsg'), 'Could not load exams.', 'err'); return; }
   const rows = data || [];
   if (!rows.length) {
@@ -396,7 +394,7 @@ async function loadExams() {
     return;
   }
   $('examList').innerHTML = rows.map((e) =>
-    '<div class="tile" data-exam="' + esc(e.id) + '">'
+    '<div class="tile" data-exam="' + esc(e.exam_id) + '">'
     + '<div style="flex:1"><span class="nm">' + esc(e.title) + '</span>'
     + '<span class="mt">' + e.duration_minutes + ' min'
     + (e.status === 'draft' ? '' : ' · code ' + esc(e.exam_code)) + '</span></div>'
@@ -409,7 +407,7 @@ async function loadExams() {
 /* ── one exam ─────────────────────────────────────────────────────────── */
 async function openExam(id) {
   show('examState');
-  const { data: e } = await api.exam(id);
+  const { data: e } = await api.paper(id);
   if (!e) { show('listState'); return; }
   S.exam = e;
   const draft = e.status === 'draft';
@@ -436,7 +434,7 @@ async function openExam(id) {
   $('exCode').textContent = e.exam_code || '--------';
   [ 'metaMsg','stimMsg','qMsg','pubMsg','codeMsg','reqMsg' ].forEach((m) => clearMsg($(m)));
 
-  await Promise.all([loadStimuli(), loadQuestions()]);
+  await Promise.all([loadStimuli(e), loadQuestions(e)]);
   if (!draft) { await loadRequests(); await loadResults(); }
   updatePublishHint();
 }
@@ -455,9 +453,13 @@ function updatePublishHint() {
 }
 
 /* ── stimuli ──────────────────────────────────────────────────────────── */
-async function loadStimuli() {
-  const { data } = await api.stimuli(S.exam.id);
-  S.stimuli = data || [];
+/* `paper` is passed by openExam(), which has just fetched it; the five
+   content handlers call these with nothing and re-read. They deliberately do
+   NOT go through openExam(): it clears stimMsg and qMsg, and every one of those
+   callers has just written a success message into one of them. */
+async function loadStimuli(paper) {
+  const p = paper || (await api.paper(S.exam.exam_id)).data;
+  S.stimuli = (p && p.stimuli) || [];
   $('stimList').innerHTML = S.stimuli.length
     ? S.stimuli.map((s) =>
         '<div class="q"><div class="qh"><span class="ord">' + esc(s.kind) + '</span>'
@@ -515,7 +517,7 @@ async function saveStimulus() {
   try { st = stimulusFromForm(); }
   catch (e) { say($('stimMsg'), e.message, 'err'); return; }
   const { data, error } = await api.saveStim({
-    p_exam: S.exam.id, p_stimulus: S.editStim, p_kind: st.kind, p_label: st.label,
+    p_exam: S.exam.exam_id, p_stimulus: S.editStim, p_kind: st.kind, p_label: st.label,
     p_body: st.body, p_spec: st.spec, p_media_ref: st.media_ref });
   if (error) { say($('stimMsg'), error.message, 'err'); return; }
   say($('stimMsg'), S.editStim ? 'Figure updated.' : 'Figure added.', 'ok');
@@ -552,9 +554,9 @@ async function deleteStimulus(id) {
 }
 
 /* ── questions ────────────────────────────────────────────────────────── */
-async function loadQuestions() {
-  const { data } = await api.questions(S.exam.id);
-  S.questions = data || [];
+async function loadQuestions(paper) {
+  const p = paper || (await api.paper(S.exam.exam_id)).data;
+  S.questions = (p && p.questions) || [];
   const draft = S.exam.status === 'draft';
   $('qList').innerHTML = S.questions.length
     ? S.questions.map((q, i) =>
@@ -618,7 +620,7 @@ async function saveQuestion() {
     ? (S.questions.find((x) => x.id === S.editQ) || {}).ordinal
     : S.questions.length + 1;
   const { error } = await api.saveQ({
-    p_exam: S.exam.id, p_question: S.editQ, p_ordinal: ordinal, p_prompt: q.prompt,
+    p_exam: S.exam.exam_id, p_question: S.editQ, p_ordinal: ordinal, p_prompt: q.prompt,
     p_format: q.fmt, p_correct_answer: q.ans, p_choices: q.choices,
     p_explanation: q.expl, p_stimulus: q.stim });
   if (error) { say($('qMsg'), error.message, 'err'); return; }
@@ -669,7 +671,7 @@ async function move(id, delta) {
   const j = i + delta;
   if (i < 0 || j < 0 || j >= ids.length) return;
   ids[i] = ids[j]; ids[j] = id;
-  const { error } = await api.reorder(S.exam.id, ids);
+  const { error } = await api.reorder(S.exam.exam_id, ids);
   if (error) { say($('qMsg'), error.message, 'err'); return; }
   await loadQuestions();
 }
@@ -677,23 +679,23 @@ async function move(id, delta) {
 /* ── publish / close / rotate ─────────────────────────────────────────── */
 async function doPublish() {
   clearMsg($('pubMsg'));
-  const { data, error } = await api.publish(S.exam.id);
+  const { data, error } = await api.publish(S.exam.exam_id);
   if (error) { say($('pubMsg'), error.message, 'err'); return; }
   say($('pubMsg'), 'Published. The exam code is below — the paper is now fixed.', 'ok');
-  await openExam(S.exam.id);
+  await openExam(S.exam.exam_id);
   void data;
 }
 
 async function doClose() {
   clearMsg($('pubMsg'));
-  const { error } = await api.closeEx(S.exam.id);
+  const { error } = await api.closeEx(S.exam.exam_id);
   if (error) { say($('pubMsg'), error.message, 'err'); return; }
-  await openExam(S.exam.id);
+  await openExam(S.exam.exam_id);
 }
 
 async function doRotate() {
   clearMsg($('codeMsg'));
-  const { data, error } = await api.rotate(S.exam.id);
+  const { data, error } = await api.rotate(S.exam.exam_id);
   if (error) { say($('codeMsg'), error.message, 'err'); return; }
   $('exCode').textContent = data;
   S.exam.exam_code = data;
@@ -702,7 +704,7 @@ async function doRotate() {
 
 /* ── requests ─────────────────────────────────────────────────────────── */
 async function loadRequests() {
-  const { data, error } = await api.requests(S.exam.id);
+  const { data, error } = await api.requests(S.exam.exam_id);
   if (error) { $('reqList').innerHTML = '<div class="page-sub">Could not load requests.</div>'; return; }
   const rows = data || [];
   if (!rows.length) {
@@ -736,7 +738,7 @@ async function loadRequests() {
 
 async function decide(student, state) {
   clearMsg($('reqMsg'));
-  const { error } = await api.decide(S.exam.id, student, state);
+  const { error } = await api.decide(S.exam.exam_id, student, state);
   if (error) { say($('reqMsg'), error.message, 'err'); return; }
   await loadRequests();
 }
@@ -746,11 +748,11 @@ async function decide(student, state) {
    sweep one in. */
 async function approveAll() {
   clearMsg($('reqMsg'));
-  const { data: rows } = await api.requests(S.exam.id);
+  const { data: rows } = await api.requests(S.exam.exam_id);
   const ids = (rows || []).filter((r) => r.state === 'pending' && r.is_member_now)
                           .map((r) => r.student_id);
   if (!ids.length) { say($('reqMsg'), 'Nobody in this class is waiting.', 'ok'); return; }
-  const { data, error } = await api.approveMembers(S.exam.id, ids);
+  const { data, error } = await api.approveMembers(S.exam.exam_id, ids);
   if (error) { say($('reqMsg'), error.message, 'err'); return; }
   say($('reqMsg'), 'Approved ' + data.approved
       + (data.skipped ? ', skipped ' + data.skipped + ' who are not in this class.' : '.'), 'ok');
@@ -759,7 +761,7 @@ async function approveAll() {
 
 /* ── results ──────────────────────────────────────────────────────────── */
 async function loadResults() {
-  const { data, error } = await api.results(S.exam.id);
+  const { data, error } = await api.results(S.exam.exam_id);
   if (error) { $('resList').innerHTML = '<div class="page-sub">Could not load results.</div>'; return; }
   const rows = data || [];
   $('resList').innerHTML = rows.length
@@ -806,16 +808,16 @@ $('btnNew').addEventListener('click', async () => {
 $('btnSaveMeta').addEventListener('click', async () => {
   clearMsg($('metaMsg'));
   const { error } = await api.update({
-    p_exam: S.exam.id, p_title: $('fTitle').value, p_instructions: $('fInstr').value,
+    p_exam: S.exam.exam_id, p_title: $('fTitle').value, p_instructions: $('fInstr').value,
     p_duration_minutes: Number($('fDur').value), p_calculator_allowed: $('fCalc').value === 'true',
     p_opens_at: toISO($('fOpens').value), p_closes_at: toISO($('fCloses').value) });
   if (error) { say($('metaMsg'), error.message, 'err'); return; }
   say($('metaMsg'), 'Saved.', 'ok');
-  const { data: e } = await api.exam(S.exam.id);
+  const { data: e } = await api.paper(S.exam.exam_id);
   S.exam = e || S.exam;
 });
 $('btnDelete').addEventListener('click', async () => {
-  const { error } = await api.del(S.exam.id);
+  const { error } = await api.del(S.exam.exam_id);
   if (error) { say($('metaMsg'), error.message, 'err'); return; }
   show('listState'); await loadExams();
 });
