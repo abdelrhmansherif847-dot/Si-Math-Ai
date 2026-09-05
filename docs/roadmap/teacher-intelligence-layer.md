@@ -6555,7 +6555,10 @@ or during Stage 1, in the way O-1, O-2 and O-4 were decided.
   repository's `_shared/` single-source pattern and §16.2's *no parallel visual
   system* both point one way, but **pointing is not deciding**, and a second
   evaluator would be exactly the divergence §16.7.11 warns about. UNSPECIFIED.
-- **U-3 · Which surfaces Stage 1 reaches, and when it deploys.** Stage 0 is
+- **U-3 · CLOSED by §16.10.13** (2026-09-05) — **Policy A**: Stage 1 reaches
+  every page that loads `stimulus-view.js`, with no source-level exception
+  inside `exam.html`, and ships as ONE increment. The question it answered:
+  **which surfaces Stage 1 reaches, and when it deploys.** Stage 0 is
   BUILT, NOT DEPLOYED (§16.9). Whether Stage 1 ships with it, after it, or
   separately — and whether it reaches the student player, the staff pages, or
   both — is not stated anywhere. UNSPECIFIED.
@@ -7137,3 +7140,127 @@ narrow from *every page loading the renderer* to *every page loading the
 renderer that may meet an `expr`*, and would need re-stating.
 
 **V-1 remains OPEN and unfixed.** The grammar is consumed, not extended.
+
+#### 16.10.13 · U-3 CLOSED — which surfaces Stage 1 reaches, and when it ships (2026-09-05)
+
+Read-only audit, then a decision. No code, no test, no HTML, no schema.
+
+##### The policy, LOCKED
+
+> **U-3 (CLOSED) · Policy A.** Stage 1 reaches **every page that loads
+> `stimulus-view.js`** — `exam.html`, `teacher-exams.html` and
+> `teacher-homework.html`. **There is no source-level exception inside
+> `exam.html`**: its `platform`, `teacher` and `homework` paths use the same
+> renderer contract, and Stage 1 stays consistent across all three.
+
+**[design decision]** — the roadmap names no surface scope, and the rejected
+alternative is recorded below.
+
+**Consistent with U-2 by construction.** §16.10.12's **C-1** already requires
+that every page loading `stimulus-view.js` also load `stimulus-expr.js`.
+Policy A is that rule and nothing more; it needs no new machinery, and it is
+why §16.10.12 §6 could say this decision survives U-3 either way.
+
+##### What the surface inventory actually is
+
+**`exam.html` is the SINGLE student delivery surface** for all three systems —
+platform exams, teacher exams and homework. There is no `homework.html` and no
+separate student-exams page; the repository has 53 root pages and neither
+exists on `main`. `dashboard.html` carries a summary card whose one button
+reads *"Open homework and exams"* and whose own comment gives the reason:
+*"two doors into the same list is how a student ends up believing there are
+two lists."*
+
+`exam.html` has exactly **three** `StimulusView.render()` call sites, and
+**none of them branches on `S.source`**:
+
+| line | function | serves |
+|---|---|---|
+| 891-892 | `hwRender()` | homework, sitting screen |
+| 1051 | `hwReviewItem()` | homework, review screen |
+| 1196-1197 | `renderItem()` | **platform AND teacher**, question screen |
+
+`S.source` dispatches start / save / submit (`:434`, `:444`, `:492`) and
+**never rendering**. Platform and teacher already share one render site.
+
+The staff previews are `teacher-exams.html:508-509` and `:606`, and
+`teacher-homework.html:941-942` and `:1069` — and they call the identical
+renderer entry point. **Teacher exam and homework previews therefore get the
+same Stage 1 behaviour as delivery**, which is the property this policy exists
+to keep.
+
+##### Why Policy B is rejected
+
+- **Page-level ("staff-only") is incoherent here.** Withholding
+  `stimulus-expr.js` from `exam.html` would withhold expression rendering from
+  **teacher-authored papers on the very screen students sit them**. A teacher
+  would author a formula, see it drawn in preview, publish it — and their
+  student would be told it *"is not drawn here"*. That is not staff-only; it is
+  a **preview/delivery mismatch**.
+- **Source-level branching inside `exam.html`** would require *new* branching
+  at render sites that have none today, and would thread `S.source` into
+  `renderItem()` for the first time — making U-1/U-4 source-dependent.
+- **Per-call configuration** is **option E, already rejected in §16.10.12**: it
+  makes the same spec draw differently by page wiring, contradicts one
+  renderer, and makes U-5's **D-4** untestable as a global property.
+
+##### Deployment timing, LOCKED
+
+> **Stage 1 ships as ONE increment after U-3 closes.** The U-2 extraction is
+> **not** shipped separately as a production increment — U-2 was a design
+> decision, and the extraction has not been written.
+
+**[design decision]** — and the reason it is safe to ship as one thing is
+measured, not assumed.
+
+**Deployment is behaviourally zero-impact on the current production corpus.**
+Measured on production 2026-09-05:
+
+| table | rows | plots | curves | **with `expr`** | with `points` |
+|---|---|---|---|---|---|
+| `exam_stimuli` (platform) | **33** | 15 | 17 | **0** | 17 |
+| `teacher_exam_stimuli` | **0** | — | — | — | — |
+| `teacher_homework_stimuli` | **0** | — | — | — | — |
+
+And nothing is sittable at all: **0 published** `exam_forms`, **0 published**
+`teacher_exams`, **0 published** `teacher_homework`. So Stage 1 changes the
+rendered output of **zero live rows on every one of the five surfaces** — not
+because the feature is inert, but because there is no `expr` in the database
+and nothing published for a student to open.
+
+*(The 12 / 5 / 6 figures quoted in §16.10.4 and §16.10.12 are
+`tests/fixtures/stimuli.json`, a verbatim subset. Production is 33 / 15 / 17.
+Both are 100% points-only, so both statements hold.)*
+
+**It is not hypothetical, though.** All three stimulus tables carry the
+identical constraint — `CHECK ((spec IS NULL) OR exam_stimulus_spec_ok(kind,
+spec))` — which permits `expr` alone (§16.10.10). So **expr-only content can
+reach a student surface today**, hand-written through either staff page's JSON
+path, and it draws the *"defined by a formula and is not drawn here"* note.
+That is the gap Stage 1 closes, and it is reachable now.
+
+Storage is untouched either way: U-1/U-4 rule 5 keeps `expr` **and** `points`
+stored, so `git diff -- supabase/` stays zero (§16.10.7 exit criterion 8), and
+points-only content is unchanged by U-1/U-4 rule 4 and §16.10.12's C-5, with
+**M-3** as the assertion.
+
+##### I-6 — recorded, NOT taken into scope
+
+`teacher-exams.html` still has **no Stage 0 visual editor**: it authors specs
+through a **`Spec (JSON)` textarea** (`:227-228`), because Stage 0 was applied
+to `teacher-homework.html` only — which has the visual editor (`:676`) **and**
+an Advanced JSON path (`:384`). So the exam page reaches `expr` only through
+raw JSON.
+
+Stage 1 arguably makes **I-6** (giving that page the visual editor) more
+pressing. **It is recorded here and nothing more.** I-6 is Stage 0 scope, it is
+not modified, and **Stage 1's scope is not expanded to include it.**
+
+##### Still open
+
+**V-1 remains OPEN and unfixed** — the storage-layer defect of §16.10.10.
+**I-6 is unchanged.** The grammar is consumed, not extended.
+
+**Every Stage 1 design decision is now closed**: O-1, O-2, O-4, U-1, U-2, U-3,
+U-4 and U-5. What remains before implementation is approval to write code, not
+a decision to take.
