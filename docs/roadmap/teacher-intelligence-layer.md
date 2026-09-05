@@ -6338,3 +6338,236 @@ Two findings were raised and then fixed on approval:
   one."* rather than faking one. Stage 3.
 - Stages 1–4 untouched: no expression rendering, no raster images, no
   accessibility or `display` work, no AI, no image→editable.
+
+### 16.10 · Stage 1 — DEFINITION (2026-09-05)
+
+Stage 1 has been referred to five times in this document and defined nowhere.
+The Stage 1 entry audit found exactly that and blocked on it, so this section
+is the definition — **and nothing more**. No renderer, no evaluator, no code,
+no schema, no migration.
+
+**Provenance, marked throughout.** Every clause below carries one of four
+labels, so a later reader can tell a standing requirement from a decision taken
+today from a gap still open:
+
+- **[roadmap]** — already stated elsewhere in this document, with the section
+  cited. This section restates it, it does not create it.
+- **[formalized]** — written down here for the first time, but derived entirely
+  from a **[roadmap]** statement. It adds no requirement the roadmap does not
+  already imply.
+- **[stage-1 scope]** — a constraint the roadmap imposes on **Stage 0** and
+  never on Stage 1, which Stage 1 adopts by explicit approval. It is a real
+  requirement, and it is **not** something this document already said.
+- **UNSPECIFIED** — a genuine gap. §16.10.8 lists them. **None is filled by
+  guessing**, and Stage 1 is not complete while one of them is being answered
+  implicitly by code rather than explicitly by a decision.
+
+#### 16.10.1 · Goal
+
+> **Stage 1 renders a supported `expr` curve directly from the existing
+> structured stimulus model** — the formula becomes a drawn line at render
+> time, rather than only at authoring time.
+
+**[roadmap]** §16.3: *"The formula is the record of intent, which Stage 1 will
+render directly; the points are what today's renderer draws."* §16.7.5 says the
+same of the storage law. §16.6 names expression rendering as Stage 1 and
+excludes it from Stage 0.
+
+The problem it solves, measured on the live renderer: `stimulus-view.js` has
+**one** `expr` reference and it is a comment saying it does not evaluate one
+(lines 271-273). A curve with no `points` array is counted as `unplottable` and
+reported under the figure as *"…is defined by a formula and is not drawn
+here."* That note is honest degradation, not a defect — and Stage 1 is the
+increment that makes it unnecessary **for a supported expression**. What
+becomes of the note itself is **U-4**, which this section does not decide.
+
+#### 16.10.2 · Scope
+
+1. **The locked expression grammar of §16.7, and nothing beyond it.**
+   **[roadmap]** §16.2 decision 4 and §16.7 (O-1 CLOSED). The whitelisted
+   function list, the precedence table, the normalisation rules and the
+   rejection sentences are fixed. Stage 1 **consumes** that grammar; it does
+   not extend it.
+2. **The `expr` + `points` storage law is unchanged.** **[roadmap]** §16.7.5,
+   restated by O-4 in §16.7.11. A function curve continues to store **both**.
+   Stage 1 changes what is *drawn*, never what is *stored*.
+3. **The structured stimulus architecture is unchanged.** **[roadmap]** §16.2:
+   *"extend, do not replace"* — the pipeline stays
+   `kind + validated spec JSONB → shared renderer → SVG output`, and there is
+   **no parallel visual system**.
+4. **The O-4 adjacency rule is mandatory, not advisory.** **[roadmap]**
+   §16.7.11. Stage 1 groups `curves[]` into functions by adjacency; its
+   function identity must agree with `hydratePlot`'s.
+5. **Raw SVG stays.** **[roadmap]** §16.2 decision 5. Stage 1 neither removes
+   it nor touches it.
+
+#### 16.10.3 · Deliverables
+
+1. **An expression evaluation capability available at render time.**
+   **[formalized]** from §16.3 and §16.7.5 — rendering `expr` directly requires
+   evaluating it somewhere the renderer can reach. **Where that code lives is
+   UNSPECIFIED (U-2).**
+2. **Integration with the existing renderer**, through the existing entry
+   point. **[roadmap]** §16.4 names `window.StimulusView.render()` as the only
+   renderer entry point Stage 0 may call; §16.2's *no parallel visual system*
+   extends the constraint past Stage 0. **[formalized]:** Stage 1 adds a
+   capability *behind* that entry point and does not introduce a second one.
+3. **Tests for the locked grammar and for O-4 behaviour.** **[roadmap]**
+   §16.7.7 lists what the grammar adds to the test plan; §16.7.11 lists the
+   seven O-4 obligations and the four mutants. Stage 1 ships both sets against
+   whatever code it adds.
+
+#### 16.10.4 · Success criteria
+
+1. **Supported expressions render correctly** — the eight pinned fixtures of
+   §16.7.9 (F1–F8) draw, and their branch counts, **taken through the Stage 0
+   sampler's constants**, are exactly the pinned numbers. **[roadmap]**
+   §16.7.9. Whether the renderer itself draws at that density is **U-5**, which
+   this criterion does not decide.
+2. **Multi-branch expressions follow O-4 exactly** — the seven obligations of
+   §16.7.11 pass and its four mutants are killed. **[roadmap]** §16.7.11.
+3. **Each branch remains a separate polyline.** N branches draw N polylines;
+   grouping is function *identity* and never merged geometry. **[roadmap]**
+   §16.7.11 obligation 2, already half-pinned at
+   `tests/stimulus-editor.test.mjs:419`.
+4. **Renderer function identity agrees with `hydratePlot`** — for every
+   fixture, the renderer's function count equals
+   `hydrate('plot', spec).inputs.functions.length`. **[roadmap]** §16.7.11
+   obligation 7.
+5. **No arbitrary JavaScript evaluation.** `eval`, `Function(`, `new Function`,
+   `setTimeout`, `setInterval`, `__proto__` and `globalThis` appear nowhere in
+   the code Stage 1 adds; each pattern is shown to fire on a string that does
+   contain it; and attack inputs are refused as ordinary unknown tokens.
+   **[roadmap]** §16.2 decision 4 and §16.7; the precedent is the Stage 0
+   grammar-closure test recorded in §16.9.
+6. **Existing points-based behaviour is intact.** Every fixture in
+   `tests/fixtures/stimuli.json` renders as it does today. **[formalized]**
+   from §16.2's *extend, do not replace*.
+
+   *Measured 2026-09-05, and it makes this criterion cheap to meet honestly:*
+   the fixture corpus is **12 stimuli, 5 of them plots, 6 curves — and
+   `expr` appears on zero of them.** Every live curve is points-only. **Stage
+   1 therefore cannot regress the stored corpus, because the stored corpus
+   contains no expression to re-draw.** The population that changes is content
+   Stage 0 authors (which always carries both keys — U-1) and hand-written
+   `expr`-only specs (which draw nothing at all today).
+
+#### 16.10.5 · Explicit non-goals
+
+All **[roadmap]**, from §16.2 and §16.6:
+
+- **No new visual architecture** — no parallel renderer, no second entry point.
+- **No raster images / Storage** — that is Stage 2 (§16.2 decision 2).
+- **No `reading` / alt-text, no `display` key** — that is Stage 3 (§16.2
+  decision 3, §16.6 O-3).
+- **No AI generation, no image → editable** — that is Stage 4 (§16.2 decisions
+  6 and 7).
+- **No expansion of the locked expression grammar** — §16.7 is closed; a new
+  function, operator or constant is a separate decision, not a Stage 1
+  convenience.
+- **No raw SVG changes** — §16.2 decision 5.
+
+Two more, and they are **[stage-1 scope]** rather than **[roadmap]**: the
+roadmap states both of **Stage 0** (§16.2 decision 1 — *"Zero database, schema,
+policy, migration or renderer changes"* — and §16.6's *"Stage 0 does not"*
+list) and never of Stage 1. Stage 1 adopts them by explicit approval, and they
+are labelled so that a later reader is not told the document already said them:
+
+- **No new schema** — no table, column, policy, grant, RPC or migration.
+- Stage 1 does not change the database, any policy, any grant, any RPC,
+  Teacher Exams' or the student player's access model, or the analyzer
+  boundary. The Stage 0 sentence *"`git diff -- supabase/` is zero lines"*
+  (§16.9) is the standard Stage 1 inherits.
+
+#### 16.10.6 · Dependencies
+
+| | | |
+|---|---|---|
+| **O-1** · the whitelisted function list | **CLOSED** 2026-09-04 | §16.7 |
+| **O-2** · sampling, precision, branch caps | **CLOSED** 2026-09-04 | §16.7.4 |
+| **O-4** · function identity | **CLOSED** 2026-09-05 | §16.7.11 |
+
+**O-1 is a hard precondition, not a courtesy.** §16.2 decision 4 states it in
+those terms: the function list is *"to be settled before any expression
+renderer is written."* All three are now closed, so **no dependency blocks
+Stage 1**.
+
+**O-3 (whether Stage 0 offers `dashed`) remains OPEN and does not block Stage
+1** — it governs what the *editor* emits, and §16.6's proposal defers `display`
+to Stage 3 either way.
+
+#### 16.10.7 · Exit criteria
+
+Stage 1 is complete when all of the following are true and have been measured,
+not asserted. Each is checkable by running something.
+
+1. **F1–F8 render**, with the branch counts of §16.7.9 reproduced exactly
+   through the Stage 0 sampler's constants (renderer density is **U-5**).
+2. **The seven O-4 obligations of §16.7.11 pass**, and its four mutants are
+   killed.
+3. **Function-identity agreement holds for every fixture** — renderer count
+   equals `hydrate('plot', spec).inputs.functions.length`.
+4. **Branch geometry is preserved** — N branches, N polylines.
+5. **The grammar-closure test passes** on every module the renderer reaches to
+   evaluate an expression, newly written **or reused**, in the shape §16.9
+   records for Stage 0: each forbidden pattern proven able to fire, and attack
+   inputs refused as unknown tokens.
+6. **Every fixture in `tests/fixtures/stimuli.json` renders as it does today**,
+   compared output-to-output rather than by inspection.
+7. **Stage 0's round trip is unmoved** — `hydrate` → `build` still holds for
+   the corpus, and the authoring side's function identity is unchanged,
+   wherever that module lives (**U-2**).
+8. **`git diff -- supabase/` is zero lines**, and the applied migration count
+   and newest version are unchanged from before the increment.
+9. **CI is green**, the whole gate, with the new checks counted and the count
+   recorded.
+10. **Every UNSPECIFIED item in §16.10.8 has been explicitly closed or
+    explicitly deferred.** An item answered only by what the code happens to do
+    is not closed. This criterion exists because the Stage 1 entry audit was
+    blocked by exactly that failure at the stage boundary.
+
+#### 16.10.8 · What remains UNSPECIFIED
+
+Recorded as gaps, **not decided here**. Each needs an explicit decision before
+or during Stage 1, in the way O-1, O-2 and O-4 were decided.
+
+- **U-1 · Which source a curve carrying BOTH `expr` and `points` draws from.**
+  Every Stage 0 curve carries both — that is the storage law (§16.7.5). §16.3
+  says `points` are *"what today's renderer draws"* and `expr` is what *"Stage 1
+  will render directly"*, which implies a preference but never states a rule.
+  Draw from `expr` and ignore `points`? Prefer `expr` and fall back? Draw
+  `points` and use `expr` only when there are none? The three differ in what a
+  teacher sees for content already authored, and **this is the only case that
+  occurs in practice** (§16.10.4 criterion 6). UNSPECIFIED.
+- **U-2 · Where the Stage 1 evaluator lives.** §16.9 records that the parser and
+  sampler already exist in `stimulus-editor.js`, as a module the browser and
+  the Node suite run as the same bytes. Whether Stage 1 reuses that module,
+  moves it to a shared core, or writes a second evaluator is not stated. The
+  repository's `_shared/` single-source pattern and §16.2's *no parallel visual
+  system* both point one way, but **pointing is not deciding**, and a second
+  evaluator would be exactly the divergence §16.7.11 warns about. UNSPECIFIED.
+- **U-3 · Which surfaces Stage 1 reaches, and when it deploys.** Stage 0 is
+  BUILT, NOT DEPLOYED (§16.9). Whether Stage 1 ships with it, after it, or
+  separately — and whether it reaches the student player, the staff pages, or
+  both — is not stated anywhere. UNSPECIFIED.
+- **U-4 · What becomes of the *"defined by a formula and is not drawn here"*
+  note.** It is the renderer's honest-degradation path for a curve with no
+  points, and `tests/stimulus-view.test.mjs:112-113` asserts it fires for
+  `{expr: 'x^2'}` with no points — **an assertion Stage 1 will make false**.
+  Whether the note is removed, narrowed to unsupported expressions, or kept for
+  a parse failure is not stated. UNSPECIFIED, and it is a shipped contract, so
+  it cannot be changed silently.
+- **U-5 · The rendering resolution.** O-2 fixed 201 samples and 4 decimal
+  places **for storage** (§16.7.4). Whether the renderer resamples for display,
+  and at what density, is a separate question O-2 did not answer. §16.7.11's
+  *"introduces no new sampling constant"* binds the **test fixtures**; it does
+  not settle the renderer. UNSPECIFIED.
+
+#### 16.10.9 · Scope of this section
+
+This section defines Stage 1. It **implements nothing**: no renderer, no
+evaluator, no test, no Stage 0 change, no database or schema change, no
+migration. Stages 2–4 are untouched. The first Stage 1 increment is the
+expression renderer, built on the closed O-4 decision — and it starts by
+closing U-1, U-2 and U-4, because all three change what it must be written to
+do.
