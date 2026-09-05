@@ -155,6 +155,28 @@
    "statement_b": "one ID is destroyed by scientific-notation autoformatting and two answers are truncated to a bare decimal point",
    "why": "a hex id that reads as a number was reformatted, so the key cannot be joined on ID alone without repairing it",
    "resolution": "NONE. The key is not stored in this repository and no id is corrected in it. The affected row is recoverable only by page position, which is recorded here and nowhere relied on."
+  },
+  {
+   "conflict_id": "SRC-0007",
+   "kind": "SOURCE_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "the section heading \"Linear System of Equations\" over items that are not linear systems",
+   "statement_a": "S-006 is headed \"Linear System of Equations\" and its answer key repeats that heading",
+   "statement_b": "3 of the 86 items pair a line with a parabola, so the system is not linear",
+   "why": "a heading applied to a compiled section is a filing decision, not a property of each item under it",
+   "resolution": "NONE. observed_topic stays the source heading; those records also carry ALG_010 and N-QUAD, and the mismatch is declared."
+  },
+  {
+   "conflict_id": "SRC-0008",
+   "kind": "SOURCE_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "option-letter labelling is inconsistent within S-006",
+   "statement_a": "the set labels choices A) B) C) D) throughout",
+   "statement_b": "one item runs A) B) C) E) with no D, and two items parenthesise the letters as (A) (B) (C) (D)",
+   "why": "the letters are transcription, not content, but a missing D means one printed choice cannot be selected as written",
+   "resolution": "NONE. Recorded on the affected records. No letter is corrected: the KB stores no option letters at all, and repairing the source would hide that this compiler mis-transcribes."
   }
  ]
 }

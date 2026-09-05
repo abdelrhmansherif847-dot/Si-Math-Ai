@@ -253,6 +253,8 @@ export const OBSERVED_TOPICS = [
   // seen in Polynomial_Part_1, 2026-09-05
   'polynomials',            // block A section heading "Polynomials"
   'equivalent_expressions', // block B Skill label, printed on all 49 pages
+  // seen in the linear-systems corpus, 2026-09-05
+  'linear_system_of_equations', // the section heading, and the answer-key heading
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

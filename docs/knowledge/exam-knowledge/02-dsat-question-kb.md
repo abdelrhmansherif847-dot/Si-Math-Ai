@@ -868,3 +868,126 @@ repository. `taxonomy.core.js`, the KDG, the generator, the EST system and every
 exam artifact are untouched; ESTM1's payload md5 is unchanged.
 
 *Polynomials closed 2026-09-05. The next topic starts from this state.*
+
+---
+
+## 20. Fourth ingestion: the linear-systems corpus
+
+`System_of_Equation_86_Real_Questions.pdf`, 2026-09-05, sha256
+`0dcfc1c66fdd…0c711`, 19 pages, **86 records**. The corpus is now **319**.
+
+One block, not two: 86 administration-tagged items on pages 1–17, the answer key
+for all 86 on pages 18–19. Guide pages **52–70**.
+
+| | S-006 |
+|---|---|
+| questions | 86, every one administration-tagged |
+| administrations | 22 named, March US 2023 → June US 2025 |
+| provenance | `recalled_unofficial` / **OBSERVED** |
+| eligibility | REFERENCE / **EXCLUDED** |
+| answer key | printed, all 86 |
+| difficulty | not printed |
+
+### Provenance read from content, not from the filename
+
+The file is *named* "86 Real Questions". **That is not what classified it** — D-1
+was rewritten during the pilot precisely to stop filename patterns being taken
+as evidence, and `real_labelling` did not fire, because the scan reads the
+document and the word "Real" is not in it.
+
+What did fire, from the bytes: `administration_tag` ×86, `telegram_channel` ×1
+(`https://t.me/satashkent` in the annotations), `social_handle` ×19 (one
+watermark per page). The text probe read **19 of 19** content streams.
+
+That channel and that guide are the **same as the exponents pilot** — S-001 is
+pages 154–155 of it, this is pages 52–70. The two files have one compiler, which
+`sources.json` now records (`same_compiler_as`). It is still not attribution and
+the provenance is still `recalled_unofficial`.
+
+### Verification: 19 of 21, and two I am not claiming
+
+All 21 student-produced-response items were re-derived independently. **19 agree
+with the printed key**, checked with exact rational arithmetic. The remaining
+two ask for a constant recoverable only by reading a plotted line, and the plot
+is drawn with path operators this pass did not reduce to coordinates. **They are
+recorded as unverified rather than counted as agreeing** — the arithmetic would
+have been a guess dressed as a check.
+
+The 65 multiple-choice items were derived against the printed options by hand.
+
+### This set repeats itself, heavily
+
+**41 of 86 records (48%) sit inside a duplicate group** — 16 groups, against 14%
+for the polynomials. 61 distinct mathematical fingerprints for 86 items.
+
+The largest families: the dependent-system parametric point **six** times, the
+two-lines-through-the-origin item **four** times, the inconsistent-partner
+construction **four** times, and one parameter-for-infinitely-many item **three**
+times. One pair (items 10 and 12) is the *same question printed twice*, four
+pages apart, options included.
+
+**The detector found that pair on its own.** It did not at first — because I had
+written `repeats_an_earlier_item_verbatim` into item 12's signature, which is me
+doing the detector's job inside the data it consumes. Removing the label made
+the check real, and it passed.
+
+### Three ways I leaked source accidents into the numeral-erased signature
+
+The same mistake three times, each one suppressing a true duplicate:
+
+1. **Typography** — `option_letters_A_B_C_E`, `option_letters_parenthesised`.
+   How a source prints its choices is not mathematics.
+2. **A hand-written duplicate label** — see above.
+3. **Numerals** — `scale_factor_three`/`four`/`five`/`six` and
+   `large_coefficients`. The literal multiple between two proportional equations
+   is a *source number*, and the mathematical fingerprint exists to see past
+   those. Encoding it split one six-item family into three and one four-item
+   family into two.
+
+All are now in `observed_notes`, where they belong. `scale_factor_from_the_y_terms`
+was kept: it names *which* terms fix the scale, which is structure.
+
+The lesson generalises past this file: **the erasure only works on what is given
+to it.** `eraseNumerals` and `eraseNames` cannot erase a number I have spelled
+out in words inside a constraint.
+
+### What 86 items were worth
+
+**20 constructions**, and unlike the polynomials the head is heavy: the top five
+cover 45 of 86. Load-bearing mechanisms lean on `trap_cost` (37) and `filtering`
+(27) — this material's difficulty is mostly in *what is asked* rather than in the
+algebra, which is why "solve, then evaluate a stated combination" is the single
+commonest shape (15 items).
+
+Two constructions are worth naming because they are pedagogy, not arithmetic:
+
+- **`A-SYS-COMPOUND-UNKNOWN`** (6 items) — the system and the question are both
+  built on a grouped expression, so the individual variables never need solving
+  and solving for them is the long way round.
+- **`A-SYS-DEPENDENT-FEATURE`** (4 items) — infinitely many solutions means one
+  line, so the asked slope or intercept is *copied* from the printed equation.
+  Every one of these prints the negative reciprocal as a distractor: the item
+  exists to catch a student reaching for the perpendicular rule.
+
+All 86 map to `Systems of Equations` / ALG_007 / N-SYSEQ. 16 records reach a node
+outside that mapping (N-WORD, N-COORD, N-QUAD) and declare the conflict; 70 carry
+no conflict at all.
+
+### Two source conflicts, both open
+
+- **SRC-0007** — the section is headed *Linear System of Equations*; three items
+  pair a line with a parabola.
+- **SRC-0008** — one item's options run **A) B) C) E)**, with no D, and two items
+  parenthesise the letters. Nothing is corrected: the KB stores no option letters
+  at all, and repairing the source would hide that this compiler mis-transcribes.
+
+### Standing state
+
+CI **84/84 green** · 6 sources, 319 questions, 66 archetypes, 16 conflicts
+(8 taxonomy + 8 source, all open) · 33 duplicate groups covering 85 of 319
+records · longest string in `questions.json` 192 characters. The copyright guard
+fired once more, on my own provenance-evidence string; the string was shortened.
+`taxonomy.core.js`, the KDG, the generator, the EST system and every exam
+artifact are untouched; ESTM1's payload md5 is unchanged.
+
+*Fourth ingestion, 2026-09-05.*
