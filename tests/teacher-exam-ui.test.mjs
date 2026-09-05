@@ -170,8 +170,12 @@ t.is('and the four table-read api entries are gone',
    follows the RPC rather than keeping a local alias, so a reader greps the
    function and finds the field. */
 t.is('no S.exam.id survives the rename', (PAGE.match(/S\.exam\.id\b/g) || []), []);
-t.ok('S.exam.exam_id is used throughout (not vacuous)',
-  (PAGE.match(/S\.exam\.exam_id\b/g) || []).length >= 15);
+/* EXACT, not a lower bound. The pre/post parity is measured 18 -> 18, and a
+   loose `>= 15` let a real regression through: swapping three of these for
+   S.exam.exam_code sends three RPCs the exam CODE instead of its id, and the
+   suite stayed green because 15 still cleared the bound. */
+t.is('every one of the 18 S.exam sites uses exam_id',
+  (PAGE.match(/S\.exam\.exam_id\b/g) || []).length, 18);
 t.ok('the list tile keys on exam_id', /data-exam="' \+ esc\(e\.exam_id\)/.test(PAGE));
 
 /* Every field the page reads off S.exam must be one teacher_exam_paper
