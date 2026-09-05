@@ -372,6 +372,46 @@
       "filename_claims": 42,
       "questions_found": 49,
       "file_sha256": "5c3f636830f254ef929563e086799c80b37106ea82f4d4498e5904564937b5ee"
+    },
+    {
+      "source_id": "S-012",
+      "source_file": "e034649c-Ratiopropitional_66_Real_Questions.pdf",
+      "sha256": "ce017ccd3687093dcbc23e7be19d26e9881f241696b11aa1da6027e97c32073a",
+      "md5": "3fbd81b0ab04bb789d9705cadee4cdd6",
+      "bytes": 334783,
+      "pages": 14,
+      "title": "Percent; Ratio & Proportion (compiled extract, 67 items with a key)",
+      "declared_topic": null,
+      "provenance": "recalled_unofficial",
+      "provenance_confidence": "OBSERVED",
+      "text_layer": true,
+      "image_only": false,
+      "corpus_dir": "/tmp/claude-0/-home-user-Si-Math-Ai/04b11b7c-9e5a-5d76-8bd0-64a172a5c12c/scratchpad/dsat-corpus/ce017ccd3687",
+      "registered": "2026-09-05",
+      "questions_coded": 67,
+      "source_block": "A",
+      "block_label": "Percent; Ratio & Proportion",
+      "page_from": 1,
+      "page_to": 12,
+      "questions": 67,
+      "answer_key_pages": [
+        13,
+        14
+      ],
+      "answer_key_covers": "all 67 items; two of its answers are wrong",
+      "provenance_evidence": "67 administration tags over 22 named administrations; https://t.me/satashkent in the annotations; a handle watermark on every page",
+      "knowledge_use": "REFERENCE",
+      "generation_eligibility": "EXCLUDED",
+      "provenance_signals": [
+        "telegram_channel",
+        "administration_tag",
+        "social_handle"
+      ],
+      "same_compiler_as": "S-001, S-006 through S-009 and S-011 — same Telegram channel and watermark",
+      "filename_claims": 66,
+      "questions_found": 67,
+      "shared_stimulus_pairs": 1,
+      "file_sha256": "ce017ccd3687093dcbc23e7be19d26e9881f241696b11aa1da6027e97c32073a"
     }
   ]
 }

@@ -287,6 +287,39 @@
       "statement_b": "it holds 49 numbered items, its key stops at 42, no item asks for a mode, and eight test standard deviation",
       "why": "the filename counts the KEY rather than the questions, and the heading names one measure the items never use while omitting the one eight of them turn on",
       "resolution": "NONE. The heading is preserved as observed_topic and source_label; items 43-49 are recorded as beyond the key rather than dropped."
+    },
+    {
+      "conflict_id": "SRC-0016",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the printed answer for item 62 of S-012",
+      "statement_a": "the key on page 14 gives 90",
+      "statement_b": "prey end at 28 times start, predators at 2.8 times start, so prey is 900% greater",
+      "why": "\"increased by 2,700%\" makes the end 28 times the start, and \"p% greater than\" divides by the SECOND quantity. 90 is what dividing by the larger count gives. Checked against a render of page 11",
+      "resolution": "NONE. The record keeps the source key and notes that it is wrong."
+    },
+    {
+      "conflict_id": "SRC-0017",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "the printed answer for item 67 of S-012",
+      "statement_a": "the key on page 14 gives B, which is 493",
+      "statement_b": "the residents who voted total 425,779 over 1,949 square miles, which is 218 — option C",
+      "why": "493 is the prose population of 960,000 per square mile, ignoring the words \"who voted\". Three of the four options are the same division under a different numerator, and the key took one of the traps",
+      "resolution": "NONE. The record keeps the source key and notes that it is wrong."
+    },
+    {
+      "conflict_id": "SRC-0018",
+      "kind": "SOURCE_CONFLICT",
+      "opened": "2026-09-05",
+      "status": "open",
+      "about": "what the S-012 filename and heading count and name",
+      "statement_a": "the file is named \"66 Real Questions\" and headed \"Percent; Ratio & Proportion\"",
+      "statement_b": "it holds 67 numbered items, its key covers all 67, and one of them is a radical-to-exponent item",
+      "why": "the count is one short of the document and of its own key. Item 23 asks for the exponent form of a square root and belongs to neither named topic",
+      "resolution": "NONE. All 67 are coded; item 23 is filed on Exponential Functions where the exponents pilot filed its radicals, which raises the record-level conflicts that mapping already carries."
     }
   ]
 }

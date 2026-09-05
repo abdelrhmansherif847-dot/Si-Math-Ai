@@ -268,6 +268,9 @@ export const OBSERVED_TOPICS = [
   // seen in the statistics corpus, 2026-09-05. The heading names four measures
   // and the items test a fifth the heading does not mention — see SRC-0015.
   'mean_median_mode_range',
+  // seen in the percent/ratio corpus, 2026-09-05. The heading names two of the
+  // three things the file tests; one item is a radical, and belongs to neither.
+  'percent_ratio_proportion',
 ];
 
 // ── the copyright guard ──────────────────────────────────────────────────────

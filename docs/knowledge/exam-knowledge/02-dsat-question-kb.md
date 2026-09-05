@@ -1457,3 +1457,131 @@ than the guard loosened. `taxonomy.core.js`, the KDG, the generator, the EST
 system and every exam artifact are untouched.
 
 *Eighth ingestion, 2026-09-05.*
+
+---
+
+## 25. Ninth ingestion: the percent and ratio corpus
+
+`e034649c-Ratiopropitional_66_Real_Questions.pdf` — sha256 `ce017ccd3687…`,
+334,783 bytes, **14 pages**. One block: **67 items** on pages 1–12, an answer
+key on pages 13–14 covering **all 67**. Registered as **S-012**,
+`recalled_unofficial` at OBSERVED confidence — every item carries a named
+administration, 22 of them, plus the compiler's usual Telegram annotation and
+per-page watermark.
+
+The filename says 66. The document holds 67, and so does its own key, so the
+count is one short of both. The heading is *Percent; Ratio & Proportion*, which
+the filename drops the first half of — and item 23 asks for the exponent form of
+a square root, belonging to neither. **SRC-0018.**
+
+### Two printed answers are wrong
+
+Both were derived with exact rational arithmetic and then checked against a
+render of the item page before the claim was made.
+
+**Item 62.** Two mite populations start equal. Prey increase *by* 2,700% — so
+the end is 28× the start. Predators increase *by* 180% — 2.8× the start. Prey is
+then 900% greater than predators. **The key says 90**, which is what dividing by
+the larger count gives. **SRC-0016.**
+
+**Item 67.** 425,779 residents voted across 1,949 square miles: **218 per square
+mile, option C**. The key says B, which is 493 — the prose population of 960,000
+per square mile, ignoring the words *who voted*. Three of the four options are
+the same division under a different numerator, and the key took one of the traps.
+**SRC-0017.**
+
+### Verification: 65 of 67, and two of my own errors first
+
+The first pass disagreed with the key on four items. Two of those four were
+**mine**: I had inverted the ratio in items 24 and 37, both of the form *a% of h
+equals b% of j*. The equated percents give a ratio that is the reciprocal of the
+order they are written in — which is exactly the trap the items are built on, and
+I walked into it while checking them. Corrected, the key is right on both.
+
+That leaves 65 of 67 agreeing and two genuinely wrong. **A disagreement with a
+key is a hypothesis about the key, and the first thing to test is the derivation.**
+
+### One preposition, two different items
+
+Four items give a wholesale price, a retail markup, and a discount. Three say the
+discounted price is a percent **off** the retail price. One — item 9 — says it
+**is** a percent **of** it. Same shape, same kind of numbers, opposite second
+factor, and the key confirms both readings: 9.45 for the "of" item, 4.05 for the
+"off" item at identical numbers.
+
+The tooling separates them correctly. Items 28, 29 and 31 group as duplicates;
+item 9 stands apart from all three at `same_shape_different_mathematics`. The
+constraint that carries the difference is one word in the signature.
+
+### The first shared stimulus in this corpus
+
+Items 66 and 67 both read from one two-way table of election results. They carry
+**one** `stimulus_id` between them, not two — the first time this corpus has had
+to represent a stimulus shared by more than one item.
+
+### What `groupDuplicates` cannot say, measured
+
+`classifyPair` distinguishes six relations. `groupDuplicates` places **two** of
+them. The other four are computed and discarded, and two of them carry real
+information:
+
+| relation | pairs across all 697 records | grouped |
+|---|---|---|
+| `duplicate_or_renumbered` | 247 | yes |
+| `same_shape_different_mathematics` | 778 | **no** |
+| `same_archetype_family` | 100 | **no** |
+| `same_construction_different_shape` | 68 | **no** |
+
+**62 pairs sit at 0.85 similarity or above in a relation the grouping can never
+place** — across five source files, and one of them spans the S-004/S-005 file
+boundary, which is exactly the cross-file reuse this register exists to measure.
+
+This is the third corpus running where a true relationship was invisible in the
+group list: triangles, statistics, and now items 20 and 30 here at 0.929. The
+function is not wrong — "same shape, different mathematics" genuinely is not a
+duplicate. What is missing is that **nothing consumes the other four relations**,
+so a later reader of the registry cannot see them at all.
+
+Recorded, not fixed. Changing the grouping would rewrite group ids across 697
+records mid-programme, and that is a decision to take deliberately rather than as
+a side effect of an ingestion.
+
+### What 67 items were worth
+
+**26 new constructions**, plus one reused from the exponents pilot for item 23.
+50 distinct mathematical fingerprints for 67 items.
+
+The load-bearing mechanisms are `trap_cost` (43) and `nonobvious_relationship`
+(29), and here the trap is nearly always **which quantity the percent is a
+percent of.** Seven items chain three quantities through two percent relations,
+one of them below one percent so that inverting it produces a factor in the
+thousands. Two more take a percent of a sum and ask for a percent of one part,
+so the base shrinks mid-item. `reversal` appears 12 times, its highest count in
+any corpus so far, because so many of these run a percent backwards.
+
+### Repetition, across seven sets from one compiler
+
+| ingestion | records in a duplicate group |
+|---|---|
+| polynomials, block A | 43% |
+| linear systems | 48% |
+| circles | 60% |
+| areas & volumes | 51% |
+| triangles | 38% |
+| statistics | 37% |
+| percent & ratio | **43%** |
+
+37%–60% over seven sets. The largest families here are the map-scale item and
+the plain percent-of item, **four times each**.
+
+### Standing state
+
+CI **84/84 green** · 12 sources, 697 questions, 205 archetypes, 29 conflicts
+(11 taxonomy + **18** source, all open) · 101 duplicate groups covering 253 of
+697 records. Three validator catches, all the prose guard on notes of my own,
+all fixed by shortening the note — the **seventh, eighth and ninth** times that
+guard has fired on my writing and been obeyed rather than loosened.
+`taxonomy.core.js`, the KDG, the generator, the EST system and every exam
+artifact are untouched.
+
+*Ninth ingestion, 2026-09-05.*
