@@ -144,6 +144,17 @@
    "statement_b": "the count follows only if that intercept has multiplicity one, which the source never states",
    "why": "the answer key gives a single value, so the source treats an unstated assumption as given",
    "resolution": "NONE. Recorded on the record as observed; the archetype notes the dependence."
+  },
+  {
+   "conflict_id": "SRC-0006",
+   "kind": "SOURCE_CONFLICT",
+   "opened": "2026-09-05",
+   "status": "open",
+   "about": "the answer key on S-005 pages 54-56 was produced through a spreadsheet and is machine-mangled",
+   "statement_a": "the key lists 102 rows as Number / ID / Answer, matching both files in page order",
+   "statement_b": "one ID is destroyed by scientific-notation autoformatting and two answers are truncated to a bare decimal point",
+   "why": "a hex id that reads as a number was reformatted, so the key cannot be joined on ID alone without repairing it",
+   "resolution": "NONE. The key is not stored in this repository and no id is corrected in it. The affected row is recoverable only by page position, which is recorded here and nowhere relied on."
   }
  ]
 }

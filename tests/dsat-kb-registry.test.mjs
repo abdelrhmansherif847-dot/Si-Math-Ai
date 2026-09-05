@@ -15,8 +15,8 @@ import { HARD_EXCLUDED_SHA256, OBSERVED_TOPICS } from '../scripts/dsat-kb/schema
 import { pageCount, provenanceScan, inflateAll, contentText, looksLikeText } from '../scripts/dsat-kb/pdf.mjs';
 import { deflateSync } from 'node:zlib';
 import { readFileSync, existsSync } from 'node:fs';
-import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint, classifyPair }
-  from '../scripts/dsat-kb/fingerprint.mjs';
+import { SIMILARITY, SIMILARITY_THRESHOLDS, structuralFingerprint, mathematicalFingerprint, classifyPair,
+  eraseNumerals, eraseNames, eraseIncidentals } from '../scripts/dsat-kb/fingerprint.mjs';
 import { TAXONOMY_SUBTOPICS, KDG_NODE_IDS } from '../scripts/dsat-kb/schema.mjs';
 import { join } from 'node:path';
 
@@ -313,6 +313,34 @@ console.log('\n── D-1: the text signals are reachable from the pipeline, not
      'ingest-dsat-pdf.mjs passes the probe text to provenanceScan');
   ok(!/provenanceScan\(\{[^}]*text:\s*''/.test(pipeline),
      'and never passes the empty string, which made four of five signals dead code');
+}
+
+console.log('\n── the letter a source picks is as incidental as the number ──');
+{
+  // Two literal equations that differ only in which letters were printed. Before
+  // eraseNames these scored 0.87 and were filed as "same shape, different
+  // mathematics" — a false negative sitting in the committed corpus.
+  const sigA = { objects: ['literal_equation_radical'], relations: ['r = sqrt(a*w - b)'],
+                 given_roles: ['coefficient', 'constant'], asked_role: 'equation', constraints: [] };
+  const sigB = { ...sigA, relations: ['p = sqrt(a*c - b)'] };
+  ok(mathematicalFingerprint(sigA) === mathematicalFingerprint(sigB),
+     'renaming every symbol leaves the mathematical fingerprint unchanged');
+
+  ok(eraseNames('a*x^2 + b*x') === eraseNames('a*w^2 + b*w'),
+     'the variable letter does not distinguish two identical constructions');
+
+  // …but the erasure must not flatten everything it touches.
+  const sigC = { ...sigA, relations: ['r = sqrt(a*w + b)'] };   // minus -> plus
+  ok(mathematicalFingerprint(sigA) !== mathematicalFingerprint(sigC),
+     'an operator still distinguishes, so the erasure is not collapsing everything');
+  ok(eraseNames('a*x + b*y') !== eraseNames('a*x + b*x'),
+     'two distinct symbols stay distinct from one repeated symbol');
+  ok(eraseIncidentals('sqrt(a*x)') === 'sqrt(v1*v2)',
+     'multi-letter operator names survive, so sqrt and root still discriminate');
+  ok(eraseIncidentals('root(x^p, n)').startsWith('root('),
+     'root() is not renamed either');
+  ok(eraseNumerals('a*x^2') === 'a*x^#' && eraseIncidentals('a*x^2') === 'v1*v2^#',
+     'numerals are erased before names, so a digit is never read as an identifier');
 }
 
 console.log('\n── an unknown construction is never grouped as a duplicate ──');

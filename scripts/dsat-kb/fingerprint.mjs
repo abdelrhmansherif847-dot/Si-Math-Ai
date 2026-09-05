@@ -44,6 +44,28 @@ export function eraseNumerals(s) {
   return String(s).replace(/\d+(\.\d+)?/g, m => (m.includes('.') ? '#.#' : '#'));
 }
 
+// The letter a source happens to use is as accidental as the number it happens
+// to pick, and the detector was blind to that: two literal equations differing
+// only in `r = sqrt(a*w - b)` versus `p = sqrt(a*c - b)` scored 0.87 and were
+// filed as "same shape, different mathematics" when the mathematics is the same.
+// Single-letter identifiers are therefore renamed positionally, first appearance
+// first. Multi-letter names — sqrt, root, log — are left alone, so the operators
+// still discriminate.
+//
+// Measured before adopting: across 233 records this merges exactly two groups,
+// both of them true duplicates, and splits none.
+export function eraseNames(s) {
+  const seen = new Map();
+  return String(s).replace(/(?<![A-Za-z])[A-Za-z](?![A-Za-z])/g, m => {
+    if (!seen.has(m)) seen.set(m, 'v' + (seen.size + 1));
+    return seen.get(m);
+  });
+}
+
+// Both accidents, in one pass. Order matters: numerals go first so a digit can
+// never be mistaken for an identifier.
+export const eraseIncidentals = s => eraseNames(eraseNumerals(s));
+
 // ── structural ───────────────────────────────────────────────────────────────
 export function structuralTuple(rec) {
   return {
@@ -66,7 +88,7 @@ export const structuralFingerprint = rec => hash('S1|' + canonical(structuralTup
 export function mathematicalTuple(sig = {}) {
   return {
     objects: [...(sig.objects ?? [])].sort(),
-    relations: [...(sig.relations ?? [])].map(eraseNumerals).sort(),
+    relations: [...(sig.relations ?? [])].map(eraseIncidentals).sort(),
     given_roles: [...(sig.given_roles ?? [])].sort(),
     asked_role: sig.asked_role ?? null,
     constraints: [...(sig.constraints ?? [])].sort(),

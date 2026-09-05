@@ -493,6 +493,66 @@
       "wrong_route": "add numerators and denominators separately, or drop a sign in the second numerator",
       "distractor_basis": "numerators combined without the common denominator, and one sign dropped",
       "cognitive_demand": "two levels of bookkeeping at once, above and below the bar"
+    },
+    {
+      "archetype_id": "A-POLY-DIVIDE-EXACT",
+      "label": "a quotient that divides exactly, the resulting coefficients asked",
+      "given": "a quadratic over a linear factor asserted equal to a linear form with symbolic coefficients",
+      "find": "a coefficient of the quotient, or a stated combination of them",
+      "transformation": "factor the numerator, cancel the divisor, and read the quotient off",
+      "hidden_relationship": "the divisor is a factor of the numerator, so nothing survives the division and long division is never needed",
+      "representation": "symbolic",
+      "wrong_route": "divide term by term, or assume a remainder the exact division does not leave",
+      "distractor_basis": "combinations formed from the numerator constants rather than the quotient",
+      "cognitive_demand": "seeing that the division closes rather than starting an algorithm"
+    },
+    {
+      "archetype_id": "A-POLY-DIVIDE-REMAINDER",
+      "label": "a quotient that does not divide exactly, rewritten as a polynomial plus a remainder term",
+      "given": "a quadratic over a linear expression that is not a factor of it",
+      "find": "the equivalent quotient-plus-remainder form",
+      "transformation": "divide, then carry the remainder over the original divisor",
+      "hidden_relationship": "the remainder is the difference between the numerator and the product the quotient reconstructs, and it keeps the original denominator",
+      "representation": "symbolic",
+      "wrong_route": "take a quotient one step short, or compute the remainder against the wrong product",
+      "distractor_basis": "the right quotient with the wrong remainder, and the wrong quotient with a plausible one",
+      "cognitive_demand": "carrying two results out of one division and keeping them attached correctly"
+    },
+    {
+      "archetype_id": "A-POLY-TELESCOPE",
+      "label": "a product that collapses because all but two terms cancel",
+      "given": "a binomial times a long geometric-looking sum",
+      "find": "the equivalent short form",
+      "transformation": "distribute and observe that consecutive terms annihilate in pairs",
+      "hidden_relationship": "only the first and last terms survive, so the degree of the answer is one more than the highest printed power",
+      "representation": "symbolic",
+      "wrong_route": "count the terms in the sum and use that count as the surviving exponent",
+      "distractor_basis": "exponents one above and one below the surviving one",
+      "cognitive_demand": "trusting a cancellation across a long expression rather than expanding it"
+    },
+    {
+      "archetype_id": "A-POLY-FACTOR-THEOREM",
+      "label": "a stated factor used as a root to recover a parameter",
+      "given": "an expression with a symbolic parameter and the assertion that a named linear expression divides it",
+      "find": "the parameter",
+      "transformation": "set the stated factor to zero and substitute that value into the expression",
+      "hidden_relationship": "a factor supplies a root, so the whole expression must vanish there whatever the other symbols are",
+      "representation": "symbolic",
+      "wrong_route": "match coefficients as if the factorisation were known, or invert the fraction the parameter sits under",
+      "distractor_basis": "the parameter reciprocated, negated, and both",
+      "cognitive_demand": "converting a divisibility statement into an evaluation"
+    },
+    {
+      "archetype_id": "A-RADEXP-TO-RADICAL",
+      "label": "a rational exponent rewritten as a radical, where index and radicand must move together",
+      "given": "a power with a fractional exponent",
+      "find": "the equivalent radical form",
+      "transformation": "read the denominator as the index and the numerator as the inner power, scaling both if the printed radicand is already fixed",
+      "hidden_relationship": "multiplying the inner exponent by a factor requires multiplying the index by the same factor",
+      "representation": "symbolic",
+      "wrong_route": "take the index from the numerator, or scale the radicand without scaling the index",
+      "distractor_basis": "index and inner exponent exchanged, and indices that scale by the wrong factor",
+      "cognitive_demand": "keeping a ratio invariant while both of its parts change"
     }
   ]
 }

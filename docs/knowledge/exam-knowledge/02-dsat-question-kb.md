@@ -638,3 +638,109 @@ exam artifact are untouched; ESTM1's payload md5 is unchanged.
 
 *Second ingestion, 2026-09-05. Further parts of this set are expected and will
 join the same file and block model.*
+
+---
+
+## 18. Third ingestion: the polynomials corpus, part 2
+
+`Polynomial_2.pdf`, 2026-09-05, sha256 `9396add0ba2a…be7e6`, 56 pages, 53
+records. The corpus is now **233**.
+
+**This file is not a new source. It is the rest of one that was already here.**
+Pages 1–53 carry the same layout, the same uniform `Skill: Equivalent
+expressions`, the same empty `Difficulty` field as `Polynomial_Part_1`'s block B
+— and pages 54–56 carry a **single answer key for 102 items**: the 49 of
+Part 1's block B first, then these 53, by Question ID, in exact page order.
+
+So a source *block* can span files. `sources.json` records that directly —
+S-005 `continues: S-004`, S-004 `continued_by: S-005` — rather than pretending
+the second half is an independent source. Nothing else in the D-3 model changed.
+
+| | S-004 (part 1) | S-005 (part 2) |
+|---|---|---|
+| pages | 7–55 | 1–53, key on 54–56 |
+| questions | 49 | 53 |
+| provenance | `unknown` / UNKNOWN | `unknown` / UNKNOWN |
+| eligibility | REFERENCE / NOT_DIRECT_SOURCE | REFERENCE / NOT_DIRECT_SOURCE |
+
+**The key does not change the provenance.** It is not attribution: it says what
+the answers are, not who wrote the questions. SRC-0002 — the pre-2024 paper
+phrasing on part of the block — stays open, and both rows stay `unknown`.
+
+### What the key was worth: 102 of 102
+
+The key arrived *after* 49 of these items were already coded and committed
+blind. That makes it an independent check on work already done, which is rarer
+and more useful than a check run before.
+
+- **All 102 items re-derived and compared. 102 agree.** Nothing in the coding
+  had to be revised.
+- The **13 student-produced-response items** across both files are machine-
+  checked with exact rational arithmetic: 13/13. The other 89 were derived by
+  hand against the printed options.
+
+No answer is stored. The KB records constructions, not keys, and the pilot's
+rule stands: naming an option letter both mislabels the key and leaks it by
+omission.
+
+### The key is machine-mangled (SRC-0006)
+
+The key was produced through a spreadsheet, and it shows:
+
+- Question ID `70482e20` is stored as **`7.05E+24`**. A hex id that reads as a
+  number was reformatted into scientific notation and destroyed.
+- Two answers are truncated to a bare `.`.
+
+The row is recoverable only by page position. **No id is corrected anywhere**,
+the key is not stored, and nothing joins on it — the finding is recorded so that
+a later reader does not assume this source's identifiers are reliable.
+
+### The defect this file exposed: the fingerprint read the source's letters
+
+`eraseNumerals` erases the numbers a source happens to pick. It did not erase
+the **letters**. Two literal equations differing only in `r = sqrt(a*w - b)`
+versus `p = sqrt(a*c - b)` scored 0.87 and were filed as *same shape, different
+mathematics* — when the mathematics is identical. That pair has been sitting in
+the committed pilot corpus since the first ingestion.
+
+`eraseNames` renames single-letter identifiers positionally, first appearance
+first; multi-letter names (`sqrt`, `root`, `log`) survive so the operators still
+discriminate. **Measured before adopting**, across all 233 records: it merges
+exactly **two** groups, both true duplicates, and splits none.
+
+| | before | after |
+|---|---|---|
+| mathematical-fingerprint collision groups | 18 | 20 |
+| false positives introduced | — | 0 |
+
+219 of 233 mathematical fingerprints changed value; **no structural fingerprint
+did**, which is the right shape for a change to the mathematical erasure only.
+Three mutations of the fix go red.
+
+### Duplicates across the whole corpus
+
+17 groups. Two are **cross-file** and two are **cross-block** — the same
+construction reappearing in a different file, or under different provenance:
+
+- the "smallest constant in a linear factor of a cubic" item appears **three
+  times**: twice in the administration-tagged block and once here. Two of the
+  three share the *same quadratic* under a different monomial coefficient.
+- "combine two like monomials" repeats across the two files.
+
+One pair the fix newly relates — the two literal equations — is classified
+`same_construction_different_shape` rather than grouped, because their option
+sets encode different wrong routes. That distinction is the point of having two
+fingerprints.
+
+### Standing state
+
+CI **84/84 green**. 5 sources, 233 questions, 46 archetypes, 14 conflicts
+(8 taxonomy + 6 source, all open). 42 records carry `SOURCE_CONFLICT`, 46
+`TOPIC_CLASSIFICATION_CONFLICT`, 57 `KDG_MAPPING_CONFLICT`. Longest string in
+`questions.json`: 149 characters — the copyright guard fired twice during this
+ingestion, both times on my own note prose, and both times the prose was
+shortened rather than the guard loosened. `taxonomy.core.js`, the KDG, the
+generator, the EST system and every exam artifact are untouched; ESTM1's payload
+md5 is unchanged.
+
+*Third ingestion, 2026-09-05.*
